@@ -4,7 +4,7 @@
 id: example-total-conversion
 name: Example Total Conversion
 version: 0.1.0
-framework_version: ">=0.24.0 <0.26.0"
+framework_version: ">=0.24.0 <1.0.0"
 author: DINOForge Team
 type: total_conversion
 description: |

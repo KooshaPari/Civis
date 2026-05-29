@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Faction Crest: Galactic Republic
+  Motif: 12-tooth sunburst cog ring with inner starburst and central circle.
+  All geometry original. No trademarked Lucasfilm/Disney assets.
+  Palette: rep-gold #FFE81F, rep-white #F5F7FA, rep-jedi-blue #2D7DD2,
+           rep-steel #8A94A3, rep-deep-navy #0B1B3A
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Outer glow for crest -->
+    <filter id="rep-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <!-- Radial gradient: gold center to deep-navy edge -->
+    <radialGradient id="rep-bg-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#0B1B3A"/>
+      <stop offset="100%" stop-color="#05060A"/>
+    </radialGradient>
+    <!-- Gold ring gradient -->
+    <linearGradient id="rep-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#FFE81F"/>
+      <stop offset="60%" stop-color="#B8A415"/>
+      <stop offset="100%" stop-color="#FFE81F"/>
+    </linearGradient>
+    <!-- Inner sunburst gradient -->
+    <radialGradient id="rep-inner-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#F5F7FA"/>
+      <stop offset="45%" stop-color="#C5CCD6"/>
+      <stop offset="100%" stop-color="#8A94A3"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background disc -->
+  <circle cx="128" cy="128" r="124" fill="url(#rep-bg-grad)" stroke="#2D7DD2" stroke-width="2"/>
+
+  <!-- ── 12-tooth cog ring ─────────────────────────────────────────────────
+       Outer radius 118, inner radius 90. Teeth: 12 rectangular extrusions
+       (width 14° each) spaced 30° apart, height 18px above inner ring.
+       Built as a single path using polar-to-cartesian math.
+       The path describes: for each tooth, arc along inner ring, then step
+       out to outer ring, straight top, step back in, arc back.
+       Pre-computed for 12 teeth at 0°,30°,60°,...,330°.
+  ──────────────────────────────────────────────────────────────────────── -->
+  <!--
+    Cog: outer R=118, inner R=90, tooth half-angle=7° (14° wide).
+    For each tooth at angle θ (0-indexed, step 30°):
+      tooth occupies [θ-7°, θ+7°] on outer ring
+      gap occupies [θ+7°, θ+23°] on inner ring
+    Rendered as a filled shape (ring + teeth merged).
+  -->
+  <g filter="url(#rep-glow)">
+    <path fill="url(#rep-gold-grad)" d="
+      M 228,128
+      A 100,100 0 0,1 221.58,153.26
+      L 207.65,146.24
+      A 90,90 0 0,0 213.97,128
+      A 90,90 0 0,0 207.65,109.76
+      L 221.58,102.74
+      A 100,100 0 0,1 228,128 Z
+
+      M 221.58,153.26
+      A 100,100 0 0,1 210.43,176.07
+      L 197.79,167.16
+      A 90,90 0 0,0 208.29,147.81
+      A 90,90 0 0,0 207.65,146.24
+      L 221.58,153.26 Z
+    " opacity="0"/>
+    <!-- Proper cog: polygon-based 12-tooth gear -->
+    <path id="cog-ring" fill="url(#rep-gold-grad)" stroke="#B8A415" stroke-width="1.2">
+      <!-- Generated 12-tooth cog, outer R=118, inner R=90, tooth angle=7deg each side -->
+    </path>
+  </g>
+
+  <!-- Cog ring drawn as a polygon path (12 teeth, pre-computed) -->
+  <!-- Each tooth: outer arc segment at R=118 spanning ±7°, inner arc at R=90 spanning ±15° gap between teeth -->
+  <!-- Using SVG arc commands. All angles relative to center (128,128). 0° = right (3 o'clock). -->
+  <path fill="url(#rep-gold-grad)" stroke="#0B1B3A" stroke-width="0.8"
+    d="
+    M 246,128
+    A 118,118 0 0,1 243.74,141.44
+    L 217.65,136.71
+    A 90,90 0 0,0 217.98,128
+    A 90,90 0 0,0 217.65,119.29
+    L 243.74,114.56
+    A 118,118 0 0,1 246,128 Z
+
+    M 243.74,141.44
+    A 118,118 0 0,1 237.06,153.84
+    L 214.05,144.07
+    A 90,90 0 0,0 215.92,136.71
+    M 217.65,136.71 L 243.74,141.44
+
+    M 237.06,153.84
+    A 118,118 0 0,1 226.46,164.53
+    L 207.14,150.33
+    A 90,90 0 0,0 211.50,144.07
+
+    M 226.46,164.53
+    A 118,118 0 0,1 212.82,172.95
+    L 197.91,155.73
+    A 90,90 0 0,0 204.08,150.33
+
+    M 212.82,172.95
+    A 118,118 0 0,1 196.91,178.81
+    L 186.77,159.29
+    A 90,90 0 0,0 193.72,155.73
+
+    M 196.91,178.81
+    A 118,118 0 0,1 179.64,181.86
+    L 174.97,161.07
+    A 90,90 0 0,0 182.55,159.29
+
+    M 179.64,181.86
+    A 118,118 0 0,1 162,181.86
+    L 161.03,161.07
+    A 90,90 0 0,0 168.61,159.29 Z
+    " opacity="0"/>
+
+  <!-- CLEAN 12-tooth cog, fully rendered as interleaved arc/line path -->
+  <!-- Outer R=118, inner R=92. Tooth spans 14° (±7° from tooth-center). Gap spans 16° between teeth. Pitch=30°. -->
+  <!-- Pre-computed Cartesian coords (center=128,128): -->
+  <!-- Tooth at θ: outer pts at θ±7°, inner pts at θ±8° (slightly narrower at root) -->
+  <path fill="url(#rep-gold-grad)" stroke="#0B1B3A" stroke-width="1"
+    d="
+    M 245.49,115.08
+    L 218.84,120.47
+    A 92,92 0 0,0 218.84,135.53
+    L 245.49,140.92
+    A 118,118 0 0,0 246,128
+    A 118,118 0 0,0 245.49,115.08 Z
+
+    M 236.56,85.34
+    L 215.55,103.11
+    A 92,92 0 0,0 207.28,115.70
+    L 229.03,131.90
+    A 118,118 0 0,0 237.06,102.16
+    A 118,118 0 0,0 236.56,85.34 Z
+    " opacity="0"/>
+
+  <!-- ─── DEFINITIVE clean 12-tooth cog via clipping and arcs ────────────── -->
+  <!-- Two concentric annuli: outer filled ring R_o=118 R_i=92, plus 12 tooth rects -->
+
+  <!-- Base ring: outer circle minus inner circle via even-odd fill -->
+  <circle cx="128" cy="128" r="118" fill="url(#rep-gold-grad)" stroke="#B8A415" stroke-width="1.2"/>
+  <circle cx="128" cy="128" r="92" fill="url(#rep-bg-grad)"/>
+
+  <!-- 12 teeth: rectangles centred on 30° increments, rotated, R_outer tip = 118, R_inner root = 92 -->
+  <!-- Tooth rect: width=24px (chord at r=105 mid), height=26px (118-92), centred on ring mid R=105 -->
+  <!-- Rendered as rotated rects from ring inner edge outward -->
+  <g fill="url(#rep-gold-grad)" stroke="#0B1B3A" stroke-width="0.8">
+    <!-- Tooth 0: 0° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(0 128 128)"/>
+    <!-- Tooth 1: 30° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(30 128 128)"/>
+    <!-- Tooth 2: 60° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(60 128 128)"/>
+    <!-- Tooth 3: 90° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(90 128 128)"/>
+    <!-- Tooth 4: 120° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(120 128 128)"/>
+    <!-- Tooth 5: 150° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(150 128 128)"/>
+    <!-- Tooth 6: 180° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(180 128 128)"/>
+    <!-- Tooth 7: 210° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(210 128 128)"/>
+    <!-- Tooth 8: 240° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(240 128 128)"/>
+    <!-- Tooth 9: 270° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(270 128 128)"/>
+    <!-- Tooth 10: 300° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(300 128 128)"/>
+    <!-- Tooth 11: 330° -->
+    <rect x="103" y="10" width="24" height="26" rx="2"
+      transform="rotate(330 128 128)"/>
+  </g>
+
+  <!-- Restore inner field over tooth bleed -->
+  <circle cx="128" cy="128" r="92" fill="url(#rep-bg-grad)"/>
+
+  <!-- ── Inner sunburst: 16 thin rays emanating from centre, R 20–78 ──── -->
+  <g fill="#F5F7FA" opacity="0.18">
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(0   128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(22.5 128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(45  128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(67.5 128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(90  128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(112.5 128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(135 128 128)"/>
+    <rect x="126" y="52" width="4" height="76" rx="2" transform="rotate(157.5 128 128)"/>
+  </g>
+
+  <!-- ── Mid ring: thin blue accent circle ──── -->
+  <circle cx="128" cy="128" r="78" fill="none" stroke="#2D7DD2" stroke-width="3" opacity="0.8"/>
+  <circle cx="128" cy="128" r="74" fill="none" stroke="#5FB3FF" stroke-width="1" opacity="0.4"/>
+
+  <!-- ── Inner field: silver-white disc ──── -->
+  <circle cx="128" cy="128" r="68" fill="url(#rep-inner-grad)"/>
+
+  <!-- ── 8-pointed star / cross inside inner disc ──── -->
+  <!-- Large cross arms -->
+  <g fill="#2D7DD2" opacity="0.85">
+    <rect x="124" y="80" width="8" height="96" rx="4" transform="rotate(0  128 128)"/>
+    <rect x="124" y="80" width="8" height="96" rx="4" transform="rotate(45 128 128)"/>
+    <rect x="124" y="80" width="8" height="96" rx="4" transform="rotate(90 128 128)"/>
+    <rect x="124" y="80" width="8" height="96" rx="4" transform="rotate(135 128 128)"/>
+  </g>
+
+  <!-- Centre disc: gold with blue ring -->
+  <circle cx="128" cy="128" r="22" fill="#FFE81F" stroke="#2D7DD2" stroke-width="3"/>
+  <circle cx="128" cy="128" r="12" fill="#0B1B3A"/>
+  <circle cx="128" cy="128" r="6"  fill="#FFE81F"/>
+
+  <!-- Fine outer border ring -->
+  <circle cx="128" cy="128" r="124" fill="none" stroke="#FFE81F" stroke-width="2" opacity="0.6"/>
+</svg>

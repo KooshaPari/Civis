@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Faction Crest: Confederacy of Independent Systems (CIS)
+  Motif: Hexagonal outer frame with honeycomb inner lattice and droid-eye motif.
+  All geometry original. No trademarked Lucasfilm/Disney assets.
+  Palette: cis-hex-amber #D99A3C, cis-bronze #9A6B2F, cis-rust #7A3B1E,
+           cis-sep-red #C0392B, cis-gunmetal #33302C, cis-droid-tan #C8A87A
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Background: dark rust gradient -->
+    <radialGradient id="cis-bg-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#3E1E10"/>
+      <stop offset="100%" stop-color="#1A0D08"/>
+    </radialGradient>
+    <!-- Bronze/amber gradient for hex frame -->
+    <linearGradient id="cis-bronze-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#D99A3C"/>
+      <stop offset="50%" stop-color="#9A6B2F"/>
+      <stop offset="100%" stop-color="#C8A87A"/>
+    </linearGradient>
+    <!-- Rust fill for inner hex -->
+    <radialGradient id="cis-inner-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#7A3B1E"/>
+      <stop offset="100%" stop-color="#3E1E10"/>
+    </radialGradient>
+    <!-- Red glow filter -->
+    <filter id="cis-glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#C0392B" flood-opacity="0.6" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ── Outer hexagonal background shape ───────────────────────────────── -->
+  <!-- Regular hexagon, flat-top, circumradius=124. Vertices at 0°,60°,120°,180°,240°,300° -->
+  <!-- For flat-top hex (vertex at top): angles 30°,90°,150°,210°,270°,330° -->
+  <!-- Vertices (cx=128, cy=128, R=124):
+       30°:  (128+124*cos30, 128-124*sin30) = (235.4, 66)
+       90°:  (128+124*cos90, 128-124*sin90) = (128, 4)
+       150°: (128+124*cos150,128-124*sin150)= (20.6, 66)
+       210°: (20.6, 190)
+       270°: (128, 252)
+       330°: (235.4, 190)
+  -->
+  <polygon points="235,66 128,4 21,66 21,190 128,252 235,190"
+    fill="url(#cis-bg-grad)"
+    stroke="url(#cis-bronze-grad)" stroke-width="3"/>
+
+  <!-- ── Outer hex frame: thick beveled border (hex ring) ──────────────── -->
+  <!-- Outer hex R=124, inner hex R=100 — creates the thick frame -->
+  <polygon points="235,66 128,4 21,66 21,190 128,252 235,190"
+    fill="none" stroke="url(#cis-bronze-grad)" stroke-width="22"/>
+  <!-- Highlight edge: brighter inner stroke -->
+  <polygon points="235,66 128,4 21,66 21,190 128,252 235,190"
+    fill="none" stroke="#D99A3C" stroke-width="2" opacity="0.7"/>
+
+  <!-- Inner hex field (smaller, R≈98) -->
+  <!-- Vertices at R=100:
+       30°:  (214, 78)
+       90°:  (128, 28)
+       150°: (42, 78)
+       210°: (42, 178)
+       270°: (128, 228)
+       330°: (214, 178)
+  -->
+  <polygon points="214,78 128,28 42,78 42,178 128,228 214,178"
+    fill="url(#cis-inner-grad)"/>
+
+  <!-- ── Honeycomb lattice inside inner hex ───────────────────────────── -->
+  <!-- 7-hex honeycomb: 1 centre + 6 surrounding, small hex size r=28 -->
+  <!-- Each small hex: flat-top, circumradius=26 -->
+  <!-- Centre hex at (128,128) -->
+  <!-- Surrounding 6 at distance 50 (= 2*r*sin60 = 2*26*0.866 ≈ 45, use 50 for spacing) -->
+  <!-- Surrounding centres:
+       0°:   (178, 128)
+       60°:  (153, 79)
+       120°: (103, 79)
+       180°: (78, 128)
+       240°: (103, 177)
+       300°: (153, 177)
+  -->
+  <g fill="none" stroke="#D99A3C" stroke-width="1.8" opacity="0.55">
+    <!-- Centre hex -->
+    <polygon points="154,128 141,106 115,106 102,128 115,150 141,150"/>
+    <!-- Top-right hex -->
+    <polygon points="179,79  166,57  140,57  127,79  140,101 166,101"/>
+    <!-- Top-left hex -->
+    <polygon points="129,79  116,57   90,57   77,79   90,101 116,101"/>
+    <!-- Right hex -->
+    <polygon points="204,128 191,106 165,106 152,128 165,150 191,150"/>
+    <!-- Left hex -->
+    <polygon points="104,128  91,106  65,106  52,128  65,150  91,150"/>
+    <!-- Bottom-right hex -->
+    <polygon points="179,177 166,155 140,155 127,177 140,199 166,199"/>
+    <!-- Bottom-left hex -->
+    <polygon points="129,177 116,155  90,155  77,177  90,199 116,199"/>
+  </g>
+
+  <!-- ── Central emblem: stylised droid eye / targeting reticle ──────── -->
+  <!-- Outer target ring -->
+  <circle cx="128" cy="128" r="38" fill="#3E1E10" stroke="#C0392B" stroke-width="3"
+    filter="url(#cis-glow)"/>
+  <!-- Mid accent ring -->
+  <circle cx="128" cy="128" r="30" fill="none" stroke="#D99A3C" stroke-width="1.5" opacity="0.7"/>
+  <!-- Cross reticle lines -->
+  <line x1="128" y1="90"  x2="128" y2="166" stroke="#C0392B" stroke-width="2.5" opacity="0.9"/>
+  <line x1="90"  y1="128" x2="166" y2="128" stroke="#C0392B" stroke-width="2.5" opacity="0.9"/>
+  <!-- Diagonal cut lines (angular feel) -->
+  <line x1="101" y1="101" x2="155" y2="155" stroke="#9A6B2F" stroke-width="1.2" opacity="0.6"/>
+  <line x1="155" y1="101" x2="101" y2="155" stroke="#9A6B2F" stroke-width="1.2" opacity="0.6"/>
+  <!-- Inner lens: amber -->
+  <circle cx="128" cy="128" r="18" fill="#7A3B1E" stroke="#D99A3C" stroke-width="2"/>
+  <!-- Pupil / core: deep red -->
+  <circle cx="128" cy="128" r="9" fill="#C0392B" filter="url(#cis-glow)"/>
+  <circle cx="128" cy="128" r="4" fill="#E8642F"/>
+
+  <!-- ── Corner rivet details on outer hex frame ───────────────────────── -->
+  <g fill="#9A6B2F" stroke="#D99A3C" stroke-width="0.8">
+    <circle cx="235" cy="66"  r="5"/>
+    <circle cx="128" cy="4"   r="5"/>
+    <circle cx="21"  cy="66"  r="5"/>
+    <circle cx="21"  cy="190" r="5"/>
+    <circle cx="128" cy="252" r="5"/>
+    <circle cx="235" cy="190" r="5"/>
+  </g>
+
+  <!-- ── Outer hex border accent ───────────────────────────────────────── -->
+  <polygon points="235,66 128,4 21,66 21,190 128,252 235,190"
+    fill="none" stroke="#C0392B" stroke-width="1" opacity="0.4"/>
+</svg>

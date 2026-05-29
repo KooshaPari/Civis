@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  loading-cis.svg — CIS (Separatist) faction loading-screen background
+  Size: 1920 × 1080
+  Palette: cis-rust-dark #3E1E10 (base), cis-gunmetal #33302C, cis-rust #7A3B1E,
+           cis-droid-tan #C8A87A, cis-bronze #9A6B2F, cis-hex-amber #D99A3C,
+           cis-sep-red #C0392B, cis-ember #E8642F, ui-void #05060A
+  Layout:
+    - Full-bleed space background (void→rust-dark radial)
+    - 36 starfield dots
+    - 18 hyperspace-streak radial lines from vanishing point (960, 540)
+      tinted cis-ember→cis-droid-tan (hot orange-rust motion-blur)
+    - CIS Hex watermark (hexagon + honeycomb lattice, 280px) centered-upper at 20% opacity
+    - CIS color wash: rust-dark vignette with amber ember secondary glow
+    - Lower-third caption bar (1920×140 at y=940): ui-panel + cis-sep-red 2px top rule
+    - Amber progress-bar track (right zone)
+  Safe zones:
+    - Logo: center 800×200 at y=280..480
+    - Progress bar: x=1560..1880 y=975..985
+    - Tip text: x=40..1500 y=960..1020
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <!-- Space background: void center rising to rust/gunmetal at edges -->
+    <radialGradient id="bgGrad" cx="50%" cy="55%" r="72%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#3E1E10"/>
+      <stop offset="45%"  stop-color="#1E0F08"/>
+      <stop offset="100%" stop-color="#05060A"/>
+    </radialGradient>
+
+    <!-- Rust-ember nebula cloud (lower-left) -->
+    <radialGradient id="nebulaA" cx="25%" cy="65%" r="45%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#7A3B1E" stop-opacity="0.38"/>
+      <stop offset="55%"  stop-color="#3E1E10" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Ember glow nebula (upper-right) -->
+    <radialGradient id="nebulaB" cx="78%" cy="20%" r="35%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#E8642F" stop-opacity="0.16"/>
+      <stop offset="60%"  stop-color="#9A6B2F" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Hyperspace streak: ember→tan (CIS warm tones) -->
+    <linearGradient id="streakCISA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#E8642F" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#E8642F" stop-opacity="0.65"/>
+      <stop offset="80%"  stop-color="#C8A87A" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#C8A87A" stop-opacity="0.20"/>
+    </linearGradient>
+    <linearGradient id="streakCISB" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9A6B2F" stop-opacity="0"/>
+      <stop offset="55%"  stop-color="#D99A3C" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#C8A87A" stop-opacity="0.75"/>
+    </linearGradient>
+
+    <!-- Amber gradient for hex watermark -->
+    <radialGradient id="hexWatermark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#D99A3C" stop-opacity="0.28"/>
+      <stop offset="65%"  stop-color="#9A6B2F" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#9A6B2F" stop-opacity="0.05"/>
+    </radialGradient>
+
+    <!-- Lower-third bar gradient -->
+    <linearGradient id="lowerThirdGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1A0C07" stop-opacity="0.94"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0.97"/>
+    </linearGradient>
+
+    <!-- Progress bar fill (amber/ember) -->
+    <linearGradient id="progressFill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9A6B2F"/>
+      <stop offset="60%"  stop-color="#D99A3C"/>
+      <stop offset="100%" stop-color="#E8642F"/>
+    </linearGradient>
+
+    <!-- Vanishing point glow -->
+    <radialGradient id="vpGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#E8642F" stop-opacity="0.50"/>
+      <stop offset="30%"  stop-color="#9A6B2F" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <clipPath id="screen">
+      <rect x="0" y="0" width="1920" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <!-- === LAYER 1: Space Background === -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#bgGrad)"/>
+
+  <!-- === LAYER 2: Nebula Clouds === -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#nebulaA)"/>
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#nebulaB)"/>
+
+  <!-- === LAYER 3: Starfield (36 stars) === -->
+  <g fill="#C8A87A" clip-path="url(#screen)">
+    <!-- amber-tinted stars for warm CIS palette -->
+    <circle cx="94"   cy="48"  r="1.1" opacity="0.75"/>
+    <circle cx="241"  cy="118" r="0.8" opacity="0.55"/>
+    <circle cx="408"  cy="33"  r="1.4" opacity="0.90"/>
+    <circle cx="597"  cy="82"  r="0.9" opacity="0.65"/>
+    <circle cx="782"  cy="59"  r="1.0" opacity="0.70"/>
+    <circle cx="1018" cy="24"  r="1.3" opacity="0.85"/>
+    <circle cx="1201" cy="96"  r="0.7" opacity="0.50"/>
+    <circle cx="1362" cy="41"  r="1.2" opacity="0.80"/>
+    <circle cx="1571" cy="67"  r="1.0" opacity="0.70"/>
+    <circle cx="1738" cy="113" r="0.8" opacity="0.60"/>
+    <circle cx="1871" cy="36"  r="1.1" opacity="0.75"/>
+    <circle cx="148"  cy="204" r="1.0" opacity="0.65"/>
+    <circle cx="334"  cy="251" r="1.3" opacity="0.85"/>
+    <circle cx="523"  cy="187" r="0.7" opacity="0.50"/>
+    <circle cx="715"  cy="232" r="1.1" opacity="0.75"/>
+    <circle cx="901"  cy="179" r="0.8" opacity="0.60"/>
+    <circle cx="1138" cy="216" r="1.4" opacity="0.90"/>
+    <circle cx="1317" cy="263" r="0.8" opacity="0.55"/>
+    <circle cx="1492" cy="197" r="1.0" opacity="0.70"/>
+    <circle cx="1681" cy="243" r="1.2" opacity="0.80"/>
+    <circle cx="1815" cy="170" r="0.7" opacity="0.50"/>
+    <circle cx="66"   cy="347" r="1.2" opacity="0.80"/>
+    <circle cx="283"  cy="394" r="0.9" opacity="0.60"/>
+    <circle cx="472"  cy="323" r="1.0" opacity="0.70"/>
+    <circle cx="659"  cy="376" r="0.7" opacity="0.50"/>
+    <circle cx="848"  cy="333" r="1.3" opacity="0.85"/>
+    <circle cx="1083" cy="365" r="0.9" opacity="0.65"/>
+    <circle cx="1250" cy="408" r="1.1" opacity="0.75"/>
+    <circle cx="1439" cy="342" r="0.8" opacity="0.55"/>
+    <circle cx="1628" cy="380" r="1.4" opacity="0.90"/>
+    <circle cx="1806" cy="324" r="0.8" opacity="0.60"/>
+    <!-- Red-tinted brighter stars: CIS accent -->
+    <circle cx="1542" cy="147" r="1.5" fill="#C0392B" opacity="0.80"/>
+    <circle cx="1564" cy="132" r="0.7" fill="#C0392B" opacity="0.60"/>
+    <circle cx="324"  cy="812" r="0.9" opacity="0.38"/>
+    <circle cx="748"  cy="839" r="0.7" opacity="0.35"/>
+    <circle cx="1134" cy="818" r="1.0" opacity="0.42"/>
+    <circle cx="1667" cy="807" r="0.8" opacity="0.38"/>
+  </g>
+
+  <!-- === LAYER 4: Hyperspace Streaks (ember/rust from 960,540) === -->
+  <g clip-path="url(#screen)" opacity="0.70">
+    <polygon points="960,538 960,542 1920,498 1920,518" fill="url(#streakCISA)" opacity="0.62"/>
+    <polygon points="961,537 963,541 1920,330 1912,342" fill="url(#streakCISB)" opacity="0.48"/>
+    <polygon points="962,536 964,539 1878,172 1870,184" fill="url(#streakCISA)" opacity="0.52"/>
+    <polygon points="961,535 963,538 1608,0 1600,0"     fill="url(#streakCISB)" opacity="0.44"/>
+    <polygon points="959,535 961,538 1116,0 1110,0"     fill="url(#streakCISA)" opacity="0.38"/>
+    <polygon points="957,535 959,538 816,0 810,0"       fill="url(#streakCISB)" opacity="0.38"/>
+    <polygon points="956,536 958,539 300,0 294,0"       fill="url(#streakCISA)" opacity="0.44"/>
+    <polygon points="955,537 957,540 38,168 44,178"     fill="url(#streakCISB)" opacity="0.48"/>
+    <polygon points="955,538 957,541 0,340 0,350"       fill="url(#streakCISA)" opacity="0.52"/>
+    <polygon points="957,538 957,542 0,498 0,518"       fill="url(#streakCISB)" opacity="0.62"/>
+    <polygon points="956,540 958,543 0,730 0,740"       fill="url(#streakCISA)" opacity="0.52"/>
+    <polygon points="956,541 958,544 44,894 50,904"     fill="url(#streakCISB)" opacity="0.48"/>
+    <polygon points="957,542 959,545 302,1080 310,1080" fill="url(#streakCISA)" opacity="0.44"/>
+    <polygon points="958,542 960,545 816,1080 822,1080" fill="url(#streakCISB)" opacity="0.38"/>
+    <polygon points="960,542 962,545 1114,1080 1120,1080" fill="url(#streakCISA)" opacity="0.38"/>
+    <polygon points="961,541 963,544 1612,1080 1618,1080" fill="url(#streakCISB)" opacity="0.44"/>
+    <polygon points="962,540 964,543 1874,892 1880,902" fill="url(#streakCISA)" opacity="0.48"/>
+    <polygon points="962,539 964,542 1922,722 1920,732" fill="url(#streakCISB)" opacity="0.52"/>
+  </g>
+
+  <!-- Vanishing point ember glow -->
+  <ellipse cx="960" cy="540" rx="130" ry="130" fill="url(#vpGlow)"/>
+
+  <!-- === LAYER 5: CIS Hex Watermark (centered-upper, cy=290) ===
+       Regular hexagon: circumradius 280, flat-top orientation.
+       Inner honeycomb: 7-cell pattern (center + 6 surrounding).
+       Opacity 0.18 bronze/amber watermark.
+  -->
+  <g transform="translate(960, 290)" opacity="0.18" fill="url(#hexWatermark)" stroke="#D99A3C" stroke-width="1.5" stroke-opacity="0.28">
+    <!-- Outer hex outline (flat-top, 6 vertices at 0°/60°/120°/180°/240°/300°) -->
+    <!-- circumradius 280 -->
+    <polygon points="280,0 140,242.49 -140,242.49 -280,0 -140,-242.49 140,-242.49"
+             fill="#D99A3C" opacity="0.12"/>
+    <polygon points="280,0 140,242.49 -140,242.49 -280,0 -140,-242.49 140,-242.49"
+             fill="none" stroke="#D99A3C" stroke-width="3"/>
+
+    <!-- Inner ring at r=248 -->
+    <polygon points="248,0 124,215.07 -124,215.07 -248,0 -124,-215.07 124,-215.07"
+             fill="none" stroke="#9A6B2F" stroke-width="1.5" opacity="0.6"/>
+
+    <!-- Honeycomb lattice: 7-cell (center + 6 surrounding), cell circumradius 72 -->
+    <!-- Center cell -->
+    <polygon points="0,-72 62.35,-36 62.35,36 0,72 -62.35,36 -62.35,-36"
+             fill="none" stroke="#D99A3C" stroke-width="2.5"/>
+    <!-- 6 surrounding cells: flat-top, spaced at 124 units (= 2×62 side-to-side) -->
+    <!-- Cell N (top): cy = -124 -->
+    <polygon points="0,-196 62.35,-160 62.35,-88 0,-52 -62.35,-88 -62.35,-160"
+             fill="none" stroke="#D99A3C" stroke-width="2"/>
+    <!-- Cell NE: translated (+107.4, -62) -->
+    <polygon points="107.4,-134 169.75,-98 169.75,-26 107.4,10 45.05,-26 45.05,-98"
+             fill="none" stroke="#D99A3C" stroke-width="2"/>
+    <!-- Cell SE: (+107.4, +62) -->
+    <polygon points="107.4,-10 169.75,26 169.75,98 107.4,134 45.05,98 45.05,26"
+             fill="none" stroke="#D99A3C" stroke-width="2"/>
+    <!-- Cell S: (0, +124) -->
+    <polygon points="0,52 62.35,88 62.35,160 0,196 -62.35,160 -62.35,88"
+             fill="none" stroke="#D99A3C" stroke-width="2"/>
+    <!-- Cell SW: (-107.4, +62) -->
+    <polygon points="-45.05,26 17.3,62 17.3,134 -45.05,170 -107.4,134 -107.4,62"
+             fill="none" stroke="#D99A3C" stroke-width="2"/>
+    <!-- Cell NW: (-107.4, -62) -->
+    <polygon points="-45.05,-98 17.3,-62 17.3,10 -45.05,46 -107.4,10 -107.4,-62"
+             fill="none" stroke="#D99A3C" stroke-width="2"/>
+
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="14" fill="#D99A3C" opacity="0.6"/>
+    <circle cx="0" cy="0" r="14" fill="none" stroke="#D99A3C" stroke-width="2"/>
+  </g>
+
+  <!-- === LAYER 6: Lower-Third Caption Bar (1920×140, y=940) === -->
+  <rect x="0" y="940" width="1920" height="140" fill="url(#lowerThirdGrad)"/>
+  <!-- Separatist red 2px top rule -->
+  <line x1="0" y1="940" x2="1920" y2="940" stroke="#C0392B" stroke-width="2"/>
+  <!-- Subtle amber accent below rule -->
+  <line x1="0" y1="942" x2="1920" y2="942" stroke="#D99A3C" stroke-width="0.5" opacity="0.18"/>
+
+  <!-- CIS riveted corner dots (top-left of bar) — 4 small circles -->
+  <circle cx="18" cy="952" r="3" fill="#9A6B2F" opacity="0.70"/>
+  <circle cx="30" cy="952" r="3" fill="#9A6B2F" opacity="0.70"/>
+  <circle cx="18" cy="964" r="3" fill="#9A6B2F" opacity="0.70"/>
+  <circle cx="30" cy="964" r="3" fill="#9A6B2F" opacity="0.70"/>
+
+  <!-- Transmission indicator glyphs (hex shape, small) -->
+  <polygon points="46,965 52,962 58,965 58,971 52,974 46,971" fill="none" stroke="#D99A3C" stroke-width="1.2" opacity="0.55"/>
+  <polygon points="63,965 69,962 75,965 75,971 69,974 63,971" fill="none" stroke="#D99A3C" stroke-width="1.2" opacity="0.55"/>
+
+  <!-- Progress bar track (right zone: x=1560..1880, y=975) -->
+  <rect x="1560" y="975" width="320" height="10" rx="3"
+        fill="#33302C" stroke="#9A6B2F" stroke-width="0.5"/>
+  <!-- Rivets on track ends -->
+  <circle cx="1563" cy="980" r="2.5" fill="#9A6B2F" opacity="0.7"/>
+  <circle cx="1877" cy="980" r="2.5" fill="#9A6B2F" opacity="0.7"/>
+  <!-- Progress fill (~40% filled — placeholder) -->
+  <rect x="1560" y="975" width="128" height="10" rx="3" fill="url(#progressFill)"/>
+</svg>

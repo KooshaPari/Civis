@@ -14,9 +14,12 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.Bridge;
 using DINOForge.Runtime.HotReload;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.Runtime.UI;
+using DINOForge.Runtime.Updates;
 using DINOForge.SDK;
 using DINOForge.SDK.HotReload;
+using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
 using Unity.Entities;
 using UnityEngine;
@@ -127,6 +130,54 @@ namespace DINOForge.Runtime
 
         /// <summary>Returns the last pack load result (including errors) for UI display.</summary>
         internal ContentLoadResult? GetLastLoadResult() => _lastLoadResult;
+
+        /// <summary>
+        /// Collects <see cref="Updates.PackUpdateTarget"/> entries for every pack that declares
+        /// an <c>update_check</c> block in its <c>pack.yaml</c> manifest.
+        /// Best-effort: missing/malformed manifests are silently skipped.
+        /// </summary>
+        internal IReadOnlyList<Updates.PackUpdateTarget> GetPackUpdateTargets()
+        {
+            List<Updates.PackUpdateTarget> targets = new List<Updates.PackUpdateTarget>();
+            try
+            {
+                string packsDir = _packsDirectory?.Value ?? string.Empty;
+                if (!Directory.Exists(packsDir))
+                    return targets;
+
+                PackLoader packLoader = new PackLoader();
+                foreach (string dir in Directory.GetDirectories(packsDir))
+                {
+                    string manifestPath = Path.Combine(dir, "pack.yaml");
+                    if (!File.Exists(manifestPath))
+                        continue;
+                    try
+                    {
+                        PackManifest manifest = packLoader.LoadFromFile(manifestPath);
+                        if (manifest.UpdateCheck == null
+                            || string.IsNullOrEmpty(manifest.UpdateCheck.Owner)
+                            || string.IsNullOrEmpty(manifest.UpdateCheck.Repo))
+                            continue;
+
+                        targets.Add(new Updates.PackUpdateTarget(
+                            manifest.Id,
+                            string.IsNullOrEmpty(manifest.Name) ? manifest.Id : manifest.Name,
+                            manifest.UpdateCheck.Owner,
+                            manifest.UpdateCheck.Repo,
+                            manifest.Version ?? "0.0.0"));
+                    }
+                    catch
+                    {
+                        // safe-swallow: best-effort per-pack (Pattern #232 extension)
+                    }
+                }
+            }
+            catch
+            {
+                // safe-swallow: update check MUST NOT crash the plugin (Pattern #232)
+            }
+            return targets;
+        }
 
         /// <summary>Returns whether the last pack load result is available for diagnostics.</summary>
         internal bool HasLastLoadResult => _lastLoadResult != null;
@@ -401,6 +452,26 @@ namespace DINOForge.Runtime
             {
                 try
                 {
+                    // Iter-148 #912: same world-resolution fix as AssetSwapSystem.FindBestEntityManager.
+                    // The incoming `world` may be Default World (~25 entities); gameplay entities live
+                    // in a different World (49K+). Reroute when the entity count is suspiciously low.
+                    int worldCount = 0;
+                    try { worldCount = world.EntityManager.UniversalQuery.CalculateEntityCount(); } catch { }
+                    if (worldCount < 1000)
+                    {
+                        World? better = FindBestWorld();
+                        if (better != null)
+                        {
+                            int betterCount = 0;
+                            try { betterCount = better.EntityManager.UniversalQuery.CalculateEntityCount(); } catch { }
+                            if (betterCount > worldCount)
+                            {
+                                _log.LogInfo($"[ModPlatform] Stats: rerouting from '{world.Name}' ({worldCount}) to '{better.Name}' ({betterCount})");
+                                world = better;
+                            }
+                        }
+                    }
+
                     int injectedWrites = PackStatInjector.Apply(
                         world.EntityManager,
                         _registryManager,
@@ -442,6 +513,32 @@ namespace DINOForge.Runtime
         }
 
         /// <summary>
+        /// Iter-148 #912: Scan all live ECS worlds and return the one with the most entities.
+        /// Mirrors AssetSwapSystem.FindBestEntityManager so both stat injection and asset swap
+        /// target the same gameplay world rather than the sparse Default World.
+        /// </summary>
+        private static World? FindBestWorld()
+        {
+            World? best = null;
+            int bestCount = -1;
+            try
+            {
+                foreach (World w in World.All)
+                {
+                    if (w == null || !w.IsCreated) continue;
+                    int c;
+                    try { c = w.EntityManager.UniversalQuery.CalculateEntityCount(); } catch { continue; }
+                    if (c > bestCount) { bestCount = c; best = w; }
+                }
+            }
+            catch
+            {
+                // World.All access failed — return null and let caller use its original world
+            }
+            return best;
+        }
+
+        /// <summary>
         /// Loads all content packs from the configured packs directory.
         /// After loading, updates the UI overlay and enqueues stat modifications.
         /// </summary>
@@ -463,6 +560,7 @@ namespace DINOForge.Runtime
 
         private ContentLoadResult LoadPacksImpl()
         {
+            var __metricsSw = System.Diagnostics.Stopwatch.StartNew();
             // Iter-144 #547 H6 gray-freeze fix: short-circuit if RuntimeDriver is being destroyed.
             // Pack-load can race scene teardown — a new RuntimeDriver may attempt LoadPacks while
             // the previous one's OnDestroy chain is still running and disposing shared state
@@ -612,6 +710,19 @@ namespace DINOForge.Runtime
 
             // Update UI
             UpdateUI(result);
+
+            // #920: Telemetry instrumentation — record pack load duration and counts.
+            try
+            {
+                __metricsSw.Stop();
+                MetricsCollector.Instance.RecordDuration("pack_load.duration_ms", __metricsSw.Elapsed);
+                MetricsCollector.Instance.RecordValue("pack_load.count_loaded", result.LoadedPacks.Count);
+                MetricsCollector.Instance.RecordValue("pack_load.count_failed", result.Errors.Count);
+            }
+            catch
+            {
+                // Best-effort: telemetry must never throw
+            }
 
             return result;
         }
@@ -802,6 +913,7 @@ namespace DINOForge.Runtime
                 }
 
                 bool isDisabled = _disabledPacks.Contains(loadedId);
+                PackTier fallbackTier = DerivePackTier(null, loadedId);
                 packInfos.Add(new PackDisplayInfo(
                     id: loadedId,
                     name: loadedId,
@@ -813,7 +925,11 @@ namespace DINOForge.Runtime
                     isEnabled: !isDisabled,
                     dependencies: Array.Empty<string>(),
                     conflicts: Array.Empty<string>(),
-                    errors: new List<string>().AsReadOnly()));
+                    errors: new List<string>().AsReadOnly(),
+                    contentSummary: null,
+                    detectedConflicts: null,
+                    classification: null,
+                    tier: fallbackTier));
             }
 
             DetectContentConflicts(packInfos);
@@ -821,29 +937,49 @@ namespace DINOForge.Runtime
             return packInfos;
         }
 
-        private static Dictionary<string, int> ExtractContentSummary(PackManifest manifest)
+        private static Dictionary<string, int> ExtractContentSummary(PackManifest manifest, string? packDirectory = null)
         {
+            // #896: Pack manifests reference DIRECTORY names ("units", "buildings"), not individual files.
+            // Counting the manifest's string list always gives "1 file(s)" per category, which is useless.
+            // Instead, scan the pack directory and count actual definition items inside each category's
+            // YAML files. Falls back to manifest counts only if directory scan yields zero.
             var summary = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (manifest.Loads == null) return summary;
+            if (manifest.Loads == null && manifest.Overrides == null) return summary;
 
-            void Add(string key, List<string>? items)
+            void AddFromScan(string key, List<string>? loadEntries)
             {
-                if (items != null && items.Count > 0)
-                    summary[key] = items.Count;
+                if (loadEntries == null || loadEntries.Count == 0) return;
+                int itemCount = ScanCategoryItemCount(packDirectory, loadEntries);
+                if (itemCount > 0)
+                    summary[key] = itemCount;
+                else
+                    // Fall back to declared count so the UI still reports *something* if scanning fails.
+                    summary[key] = loadEntries.Count;
             }
 
-            Add("factions", manifest.Loads.Factions);
-            Add("units", manifest.Loads.Units);
-            Add("buildings", manifest.Loads.Buildings);
-            Add("weapons", manifest.Loads.Weapons);
-            Add("doctrines", manifest.Loads.Doctrines);
-            Add("scenarios", manifest.Loads.Scenarios);
-            Add("wave_templates", manifest.Loads.WaveTemplates);
-            Add("tech_nodes", manifest.Loads.TechNodes);
-            Add("audio", manifest.Loads.Audio);
-            Add("visuals", manifest.Loads.Visuals);
-            Add("localization", manifest.Loads.Localization);
-            Add("faction_patches", manifest.Loads.FactionPatches);
+            if (manifest.Loads != null)
+            {
+                AddFromScan("factions", manifest.Loads.Factions);
+                AddFromScan("units", manifest.Loads.Units);
+                AddFromScan("buildings", manifest.Loads.Buildings);
+                AddFromScan("weapons", manifest.Loads.Weapons);
+                AddFromScan("doctrines", manifest.Loads.Doctrines);
+                AddFromScan("scenarios", manifest.Loads.Scenarios);
+                AddFromScan("wave_templates", manifest.Loads.WaveTemplates);
+                AddFromScan("tech_nodes", manifest.Loads.TechNodes);
+                AddFromScan("audio", manifest.Loads.Audio);
+                AddFromScan("visuals", manifest.Loads.Visuals);
+                AddFromScan("localization", manifest.Loads.Localization);
+                AddFromScan("faction_patches", manifest.Loads.FactionPatches);
+                AddFromScan("resources", manifest.Loads.Resources);
+                AddFromScan("economy_profiles", manifest.Loads.EconomyProfiles);
+                AddFromScan("trade_routes", manifest.Loads.TradeRoutes);
+                AddFromScan("hud_elements", manifest.Loads.HudElements);
+                AddFromScan("menus", manifest.Loads.Menus);
+                AddFromScan("ui_themes", manifest.Loads.UiThemes);
+                AddFromScan("waves", manifest.Loads.Waves);
+                AddFromScan("stats", manifest.Loads.Stats);
+            }
 
             if (manifest.Overrides != null)
             {
@@ -852,7 +988,8 @@ namespace DINOForge.Runtime
                     if (items != null && items.Count > 0)
                     {
                         string overrideKey = key + " (overrides)";
-                        summary[overrideKey] = items.Count;
+                        int itemCount = ScanCategoryItemCount(packDirectory, items);
+                        summary[overrideKey] = itemCount > 0 ? itemCount : items.Count;
                     }
                 }
                 AddOverride("units", manifest.Overrides.Units);
@@ -861,6 +998,187 @@ namespace DINOForge.Runtime
             }
 
             return summary;
+        }
+
+        /// <summary>
+        /// Counts the number of top-level definition items in a content category.
+        /// Each manifest entry is either a directory name (containing one or more *.yaml files)
+        /// or a relative file path. For each *.yaml file we count list entries (lines starting
+        /// with "- " at column 0) — if zero such lines exist we treat the file as a single object
+        /// definition (count = 1). Returns 0 on any I/O error so callers can fall back.
+        /// </summary>
+        private static int ScanCategoryItemCount(string? packDirectory, List<string> entries)
+        {
+            if (string.IsNullOrEmpty(packDirectory) || !Directory.Exists(packDirectory))
+                return 0;
+
+            int total = 0;
+            foreach (string entry in entries)
+            {
+                if (string.IsNullOrWhiteSpace(entry)) continue;
+
+                string resolved = Path.Combine(packDirectory, entry);
+                try
+                {
+                    if (Directory.Exists(resolved))
+                    {
+                        foreach (string yamlFile in Directory.GetFiles(resolved, "*.yaml", SearchOption.TopDirectoryOnly))
+                        {
+                            total += CountYamlTopLevelItems(yamlFile);
+                        }
+                    }
+                    else if (File.Exists(resolved))
+                    {
+                        total += CountYamlTopLevelItems(resolved);
+                    }
+                    else
+                    {
+                        // Try with .yaml extension appended (entry is a basename without extension).
+                        string withExt = resolved + ".yaml";
+                        if (File.Exists(withExt))
+                            total += CountYamlTopLevelItems(withExt);
+                    }
+                }
+                catch
+                {
+                    // swallow: best-effort UI display only; falls back to manifest declared count.
+                }
+            }
+            return total;
+        }
+
+        private static int CountYamlTopLevelItems(string yamlFile)
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines(yamlFile);
+                int listItems = 0;
+                foreach (string line in lines)
+                {
+                    // Top-level YAML list entries start with "- " at column 0.
+                    if (line.Length >= 2 && line[0] == '-' && line[1] == ' ')
+                        listItems++;
+                }
+                // If no top-level list found, assume the file is a single mapping (1 item).
+                return listItems > 0 ? listItems : 1;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// #897: Reads up to <paramref name="maxNames"/> item names (the "name:" YAML field value)
+        /// from the YAML files listed under a pack category (e.g., units, buildings, factions).
+        /// Falls back to bare file-stem names when "name:" is absent. Best-effort only.
+        /// </summary>
+        private static List<string> ExtractContentNames(string? packDirectory, List<string>? loadEntries, int maxNames)
+        {
+            List<string> names = new List<string>(maxNames);
+            if (string.IsNullOrEmpty(packDirectory) || loadEntries == null || loadEntries.Count == 0)
+                return names;
+
+            foreach (string entry in loadEntries)
+            {
+                if (string.IsNullOrWhiteSpace(entry)) continue;
+                string resolved = Path.Combine(packDirectory, entry);
+                try
+                {
+                    IEnumerable<string> yamlFiles;
+                    if (Directory.Exists(resolved))
+                        yamlFiles = Directory.GetFiles(resolved, "*.yaml", SearchOption.TopDirectoryOnly);
+                    else if (File.Exists(resolved))
+                        yamlFiles = new[] { resolved };
+                    else
+                    {
+                        string withExt = resolved + ".yaml";
+                        yamlFiles = File.Exists(withExt) ? new[] { withExt } : new string[0];
+                    }
+
+                    foreach (string yamlFile in yamlFiles)
+                    {
+                        if (names.Count >= maxNames) break;
+                        string? itemName = ReadYamlNameField(yamlFile)
+                            ?? Path.GetFileNameWithoutExtension(yamlFile);
+                        if (!string.IsNullOrEmpty(itemName))
+                            names.Add(itemName!);
+                    }
+                }
+                catch
+                {
+                    // safe-swallow: UI preview only, non-critical
+                }
+                if (names.Count >= maxNames) break;
+            }
+            return names;
+        }
+
+        /// <summary>
+        /// #897: Reads the first "name:" value from a YAML file (handles both mapping and list-of-mappings).
+        /// Returns null if not found or on any error.
+        /// </summary>
+        private static string? ReadYamlNameField(string yamlFile)
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines(yamlFile, System.Text.Encoding.UTF8);
+                // Walk through lines looking for "name:" (top-level key in mapping, or after "- " list entry)
+                foreach (string raw in lines)
+                {
+                    string line = raw.TrimStart();
+                    // Handle list entries: "- name: Foo" or nested "  name: Foo"
+                    if (line.StartsWith("name:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string value = line.Substring(5).Trim().Trim('"', '\'');
+                        if (!string.IsNullOrEmpty(value))
+                            return value;
+                    }
+                    // Support "- name: Foo" syntax (list item starting with dash)
+                    if (line.StartsWith("- name:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string value = line.Substring(7).Trim().Trim('"', '\'');
+                        if (!string.IsNullOrEmpty(value))
+                            return value;
+                    }
+                }
+            }
+            catch
+            {
+                // safe-swallow: UI preview only
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// #897: Returns absolute paths to screenshot images under packs/&lt;id&gt;/screenshots/.
+        /// Supports PNG and JPG. Returns at most <paramref name="maxCount"/> paths.
+        /// </summary>
+        private static List<string> ScanScreenshots(string? packDirectory, int maxCount)
+        {
+            List<string> paths = new List<string>(maxCount);
+            if (string.IsNullOrEmpty(packDirectory)) return paths;
+            string screenshotsDir = Path.Combine(packDirectory, "screenshots");
+            if (!Directory.Exists(screenshotsDir)) return paths;
+            try
+            {
+                string[] pngs = Directory.GetFiles(screenshotsDir, "*.png", SearchOption.TopDirectoryOnly);
+                string[] jpgs = Directory.GetFiles(screenshotsDir, "*.jpg", SearchOption.TopDirectoryOnly);
+                List<string> all = new List<string>(pngs.Length + jpgs.Length);
+                all.AddRange(pngs);
+                all.AddRange(jpgs);
+                all.Sort(StringComparer.OrdinalIgnoreCase);
+                foreach (string p in all)
+                {
+                    paths.Add(p);
+                    if (paths.Count >= maxCount) break;
+                }
+            }
+            catch
+            {
+                // safe-swallow: UI gallery is optional
+            }
+            return paths;
         }
 
         private static void DetectContentConflicts(List<PackDisplayInfo> packs)
@@ -908,6 +1226,23 @@ namespace DINOForge.Runtime
             }
         }
 
+        /// <summary>
+        /// Derives the pack tier from the manifest's classification string and pack ID.
+        /// </summary>
+        private static PackTier DerivePackTier(string? classification, string packId)
+        {
+            if (packId == "vanilla-dino")
+                return PackTier.Baseline;
+
+            return classification?.ToLowerInvariant() switch
+            {
+                "engine_extension" => PackTier.EngineExtension,
+                "content" => PackTier.Content,
+                "total_conversion" => PackTier.TotalConversion,
+                _ => PackTier.Content // default
+            };
+        }
+
         private PackDisplayInfo GetCachedPackDisplayInfo(string manifestPath, PackLoader packLoader)
         {
             FileInfo manifestFile = new FileInfo(manifestPath);
@@ -919,7 +1254,22 @@ namespace DINOForge.Runtime
             }
 
             PackManifest manifest = packLoader.LoadFromFile(manifestPath);
-            Dictionary<string, int> contentSummary = ExtractContentSummary(manifest);
+            string packDirectory = Path.GetDirectoryName(manifestPath) ?? string.Empty;
+            Dictionary<string, int> contentSummary = ExtractContentSummary(manifest, packDirectory);
+
+            // #897: Populate rich metadata — names preview, links, license, tags, screenshots.
+            List<string> unitNames = ExtractContentNames(packDirectory, manifest.Loads?.Units, maxNames: 5);
+            List<string> buildingNames = ExtractContentNames(packDirectory, manifest.Loads?.Buildings, maxNames: 3);
+            List<string> factionNames = ExtractContentNames(packDirectory, manifest.Loads?.Factions, maxNames: 5);
+            List<string> screenshotPaths = ScanScreenshots(packDirectory, maxCount: 10);
+            List<string> tags = manifest.Tags != null ? new List<string>(manifest.Tags) : new List<string>();
+
+            // #928-935: Merge author-declared badges with auto-computed badges.
+            List<string> badges = BadgeComputer.ComputeBadges(manifest);
+
+            // #902: Derive pack tier from classification.
+            PackTier tier = DerivePackTier(manifest.Classification, manifest.Id);
+
             PackDisplayInfo displayInfo = new PackDisplayInfo(
                 id: manifest.Id,
                 name: manifest.Name,
@@ -932,7 +1282,20 @@ namespace DINOForge.Runtime
                 dependencies: manifest.DependsOn.AsReadOnly(),
                 conflicts: manifest.ConflictsWith.AsReadOnly(),
                 errors: new List<string>().AsReadOnly(),
-                contentSummary: contentSummary);
+                contentSummary: contentSummary,
+                detectedConflicts: null,
+                homepageUrl: manifest.HomepageUrl,
+                githubUrl: manifest.GithubUrl,
+                discordUrl: manifest.DiscordUrl,
+                license: manifest.License,
+                tags: tags.AsReadOnly(),
+                unitNames: unitNames.AsReadOnly(),
+                buildingNames: buildingNames.AsReadOnly(),
+                factionNames: factionNames.AsReadOnly(),
+                screenshotPaths: screenshotPaths.AsReadOnly(),
+                classification: manifest.Classification,
+                tier: tier,
+                badges: badges.AsReadOnly());
 
             _packDisplayInfoCache[manifestPath] = new CachedPackDisplayInfo(
                 manifestFile.LastWriteTimeUtc,

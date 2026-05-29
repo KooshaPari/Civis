@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge Warfare: Clone Wars — Split-Crest Emblem (Option B)
+  File: logo-emblem.svg
+  ViewBox: 0 0 512 512
+
+  ORIGINAL FAN-ART — DINOForge project (github.com/KooshaPari/Dino)
+  Compact square emblem for app-icon, installer, and social card use.
+  Depicts an original dual-faction crest: Republic (gold cog ring, upper-left)
+  vs. CIS (bronze hex lattice, lower-right), split by a gold lightning seam.
+  Not affiliated with or endorsed by Lucasfilm Ltd. or The Walt Disney Company.
+  Star Wars and related marks are trademarks of their respective owners.
+  All geometry is original — no copyrighted assets have been traced or reproduced.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512"
+     width="512" height="512"
+     preserveAspectRatio="xMidYMid meet">
+
+  <defs>
+    <!-- Outer ring gradient — gold sweep -->
+    <linearGradient id="outerRingGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#FFE81F"/>
+      <stop offset="50%"  stop-color="#D4BF18"/>
+      <stop offset="100%" stop-color="#7A6E12"/>
+    </linearGradient>
+
+    <!-- Republic half background -->
+    <radialGradient id="repHalfBg" cx="35%" cy="35%" r="70%">
+      <stop offset="0%"   stop-color="#1A2D4A"/>
+      <stop offset="100%" stop-color="#0B1B3A"/>
+    </radialGradient>
+
+    <!-- CIS half background -->
+    <radialGradient id="cisHalfBg" cx="65%" cy="65%" r="70%">
+      <stop offset="0%"   stop-color="#3E1E10"/>
+      <stop offset="100%" stop-color="#1A0D07"/>
+    </radialGradient>
+
+    <!-- Republic cog fill gradient -->
+    <radialGradient id="repCogFill" cx="50%" cy="40%" r="60%">
+      <stop offset="0%"   stop-color="#FFE81F"/>
+      <stop offset="100%" stop-color="#B8A415"/>
+    </radialGradient>
+
+    <!-- CIS hex fill gradient -->
+    <linearGradient id="cisHexFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#D99A3C"/>
+      <stop offset="100%" stop-color="#9A6B2F"/>
+    </linearGradient>
+
+    <!-- Outer glow -->
+    <filter id="emblemGlow" x="-6%" y="-6%" width="112%" height="112%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#FFE81F" flood-opacity="0.22" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- CIS ember glow -->
+    <filter id="cisGlow" x="-8%" y="-8%" width="116%" height="116%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#E8642F" flood-opacity="0.18" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Clip to the outer 12-tooth cog ring boundary (octagonal approximation) -->
+    <clipPath id="outerCrestClip">
+      <circle cx="256" cy="256" r="234"/>
+    </clipPath>
+
+    <!-- Lightning seam clip — Republic upper half (above the diagonal seam) -->
+    <!-- Seam is a jagged diagonal from approx (60,450) to (450,60) with zigzag -->
+    <clipPath id="repHalfClip">
+      <polygon points="22,22 490,22 490,78 420,90 390,50 350,95 310,60 275,100 240,68 200,108 165,75 130,115 95,82 60,450 22,490"/>
+    </clipPath>
+
+    <!-- CIS lower half clip (below the lightning seam) -->
+    <clipPath id="cisHalfClip">
+      <polygon points="60,450 490,78 490,490 22,490"/>
+    </clipPath>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════════
+       BASE BACKGROUND — void black circle
+  ═══════════════════════════════════════════════════════ -->
+  <circle cx="256" cy="256" r="248" fill="#05060A"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       REPUBLIC HALF — upper-left quadrant
+       Background: deep navy, with cog motif
+  ═══════════════════════════════════════════════════════ -->
+  <g clip-path="url(#repHalfClip)">
+    <!-- Republic field background -->
+    <circle cx="256" cy="256" r="248" fill="url(#repHalfBg)"/>
+
+    <!-- Subtle blue accent glow in upper-left -->
+    <radialGradient id="repBlueGlow" cx="30%" cy="30%" r="55%">
+      <stop offset="0%"   stop-color="#2D7DD2" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#2D7DD2" stop-opacity="0"/>
+    </radialGradient>
+    <circle cx="256" cy="256" r="248" fill="url(#repBlueGlow)"/>
+
+    <!-- Republic large cog watermark (centered slightly upper-left) -->
+    <!-- 12-tooth gear ring: OD=240, tooth width ~18, ring thickness 30 -->
+    <!-- Main ring -->
+    <g transform="translate(175, 170)" filter="url(#emblemGlow)">
+      <!-- Outer gear ring (annular) -->
+      <circle cx="80" cy="80" r="80" fill="none" stroke="url(#repCogFill)" stroke-width="28" opacity="0.55"/>
+      <!-- Inner void -->
+      <circle cx="80" cy="80" r="52" fill="#0B1B3A" opacity="0.6"/>
+      <!-- 12 gear teeth (rotated rects) -->
+      <g fill="url(#repCogFill)" opacity="0.65" transform="translate(80,80)">
+        <rect x="-7" y="-92" width="14" height="20" rx="3"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(30)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(60)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(90)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(120)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(150)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(180)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(210)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(240)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(270)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(300)"/>
+        <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(330)"/>
+      </g>
+      <!-- Clone-helmet T-visor silhouette inside cog (original geometry) -->
+      <!-- Dome: rounded rectangle at top; visor: vertical slot with T-cross -->
+      <g transform="translate(80,80)">
+        <!-- Dome (helmet crown) -->
+        <ellipse cx="0" cy="-12" rx="22" ry="20" fill="#F5F7FA" opacity="0.7"/>
+        <!-- Cheek-guards (lower helmet sides) -->
+        <rect x="-22" y="4" width="10" height="14" rx="3" fill="#C5CCD6" opacity="0.65"/>
+        <rect x="12"  y="4" width="10" height="14" rx="3" fill="#C5CCD6" opacity="0.65"/>
+        <!-- T-visor slot -->
+        <rect x="-16" y="-6" width="32" height="8" rx="1.5" fill="#05060A" opacity="0.9"/>
+        <!-- Vertical visor bar -->
+        <rect x="-3" y="-16" width="6" height="28" rx="1.5" fill="#05060A" opacity="0.85"/>
+      </g>
+    </g>
+
+    <!-- "REPUBLIC" faction label (upper-left area) -->
+    <text x="145" y="340"
+      font-family="Orbitron, 'Arial Black', sans-serif"
+      font-size="24" font-weight="700"
+      letter-spacing="6"
+      fill="#FFE81F" opacity="0.72"
+      text-anchor="middle">REPUBLIC</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════
+       CIS HALF — lower-right quadrant
+       Background: rust/dark, with hex lattice
+  ═══════════════════════════════════════════════════════ -->
+  <g clip-path="url(#cisHalfClip)">
+    <!-- CIS field background -->
+    <circle cx="256" cy="256" r="248" fill="url(#cisHalfBg)"/>
+
+    <!-- Ember accent glow lower-right -->
+    <radialGradient id="cisEmberGlow" cx="70%" cy="70%" r="55%">
+      <stop offset="0%"   stop-color="#E8642F" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#E8642F" stop-opacity="0"/>
+    </radialGradient>
+    <circle cx="256" cy="256" r="248" fill="url(#cisEmberGlow)"/>
+
+    <!-- CIS hex lattice watermark (lower-right area) -->
+    <!-- Large central hex + surrounding ring of 6 -->
+    <g transform="translate(256, 320)" filter="url(#cisGlow)" opacity="0.65">
+      <!-- Center large hexagon -->
+      <polygon points="0,-70 60.6,-35 60.6,35 0,70 -60.6,35 -60.6,-35"
+               fill="none" stroke="url(#cisHexFill)" stroke-width="6"/>
+      <!-- Center inner hexagon -->
+      <polygon points="0,-38 32.9,-19 32.9,19 0,38 -32.9,19 -32.9,-19"
+               fill="none" stroke="url(#cisHexFill)" stroke-width="4" opacity="0.8"/>
+      <!-- 7 honeycomb fill dots -->
+      <circle cx="0"    cy="0"   r="6"  fill="#D99A3C"/>
+      <circle cx="0"    cy="-26" r="5"  fill="#9A6B2F"/>
+      <circle cx="22.5" cy="-13" r="5"  fill="#9A6B2F"/>
+      <circle cx="22.5" cy="13"  r="5"  fill="#9A6B2F"/>
+      <circle cx="0"    cy="26"  r="5"  fill="#9A6B2F"/>
+      <circle cx="-22.5" cy="13" r="5"  fill="#9A6B2F"/>
+      <circle cx="-22.5" cy="-13" r="5" fill="#9A6B2F"/>
+      <!-- Outer ring of 6 smaller hexes -->
+      <polygon points="0,-110 18,-101 18,-86 0,-77 -18,-86 -18,-101"
+               fill="#D99A3C" opacity="0.5"/>
+      <polygon points="0,-110 18,-101 18,-86 0,-77 -18,-86 -18,-101"
+               fill="#D99A3C" opacity="0.5" transform="rotate(60)"/>
+      <polygon points="0,-110 18,-101 18,-86 0,-77 -18,-86 -18,-101"
+               fill="#D99A3C" opacity="0.5" transform="rotate(120)"/>
+      <polygon points="0,-110 18,-101 18,-86 0,-77 -18,-86 -18,-101"
+               fill="#D99A3C" opacity="0.5" transform="rotate(180)"/>
+      <polygon points="0,-110 18,-101 18,-86 0,-77 -18,-86 -18,-101"
+               fill="#D99A3C" opacity="0.5" transform="rotate(240)"/>
+      <polygon points="0,-110 18,-101 18,-86 0,-77 -18,-86 -18,-101"
+               fill="#D99A3C" opacity="0.5" transform="rotate(300)"/>
+    </g>
+
+    <!-- B1-droid head silhouette (original elongated geometry) -->
+    <g transform="translate(340, 175)" opacity="0.68">
+      <!-- Elongated head dome -->
+      <ellipse cx="0" cy="-18" rx="16" ry="22" fill="#C8A87A"/>
+      <!-- Eye socket rectangle (sensor strip) -->
+      <rect x="-10" y="-24" width="20" height="8" rx="2" fill="#33302C"/>
+      <!-- Narrow neck/jaw  -->
+      <rect x="-8" y="4" width="16" height="12" rx="2" fill="#C8A87A"/>
+      <!-- Neck strut -->
+      <rect x="-4" y="16" width="8" height="10" rx="1" fill="#9A6B2F"/>
+    </g>
+
+    <!-- "CIS" faction label (lower-right area) -->
+    <text x="368" y="460"
+      font-family="'Saira Condensed', Saira, Orbitron, sans-serif"
+      font-size="24" font-weight="700"
+      letter-spacing="6"
+      fill="#D99A3C" opacity="0.72"
+      text-anchor="middle">SEPARATISTS</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════
+       LIGHTNING SEAM — gold jagged diagonal splitting the halves
+  ═══════════════════════════════════════════════════════ -->
+  <g filter="url(#emblemGlow)">
+    <!-- Lightning path: from upper-right area to lower-left, with zigzag jags -->
+    <polyline
+      points="430,52 390,90 350,62 310,100 272,72 238,110 200,82 162,120 124,92 88,140 58,442"
+      fill="none"
+      stroke="#FFE81F"
+      stroke-width="5"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      opacity="0.92"/>
+    <!-- Seam glow highlight (thinner inner) -->
+    <polyline
+      points="430,52 390,90 350,62 310,100 272,72 238,110 200,82 162,120 124,92 88,140 58,442"
+      fill="none"
+      stroke="#FFFBE8"
+      stroke-width="1.5"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      opacity="0.55"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════
+       OUTER 12-TOOTH COG RING — the emblem border
+  ═══════════════════════════════════════════════════════ -->
+  <!-- Outer ring band (annulus) -->
+  <circle cx="256" cy="256" r="234"
+          fill="none"
+          stroke="url(#outerRingGrad)"
+          stroke-width="22"/>
+  <!-- 12 teeth on the outer ring -->
+  <g fill="url(#outerRingGrad)" transform="translate(256,256)">
+    <rect x="-11" y="-256" width="22" height="30" rx="4"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(30)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(60)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(90)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(120)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(150)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(180)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(210)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(240)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(270)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(300)"/>
+    <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(330)"/>
+  </g>
+
+  <!-- Inner ring border (thin, inside the teeth) -->
+  <circle cx="256" cy="256" r="222"
+          fill="none"
+          stroke="#B8A415"
+          stroke-width="1.5"
+          opacity="0.55"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       CENTER "DF" MONOGRAM at seam intersection
+       Small bold "DF" in gold as DINOForge marker
+  ═══════════════════════════════════════════════════════ -->
+  <g transform="translate(256,256)">
+    <!-- Small circle backdrop -->
+    <circle cx="0" cy="0" r="24" fill="#05060A" opacity="0.9"/>
+    <circle cx="0" cy="0" r="24" fill="none" stroke="#FFE81F" stroke-width="2" opacity="0.75"/>
+    <text x="0" y="8"
+      font-family="Orbitron, 'Arial Black', sans-serif"
+      font-size="18" font-weight="900"
+      text-anchor="middle"
+      fill="#FFE81F" opacity="0.95">DF</text>
+  </g>
+
+</svg>

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge Badge — Primary Mark
+  512x512 — works on dark and light backgrounds
+  Palette:
+    Anvil steel:   #6B7280 / #9CA3AF / #D1D5DB
+    Forge ember:   #E8743B
+    DINOForge teal:#4ECDC4
+    Dark base:     #1A1F2E
+  Motif: stylized anvil body + dino head silhouette rising from left horn + ember sparks
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Radial glow behind mark -->
+    <radialGradient id="bgGlow" cx="50%" cy="55%" r="45%">
+      <stop offset="0%" stop-color="#2A3040" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#0F1219" stop-opacity="1"/>
+    </radialGradient>
+
+    <!-- Anvil face gradient (steel sheen) -->
+    <linearGradient id="anvilFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#D1D5DB"/>
+      <stop offset="40%"  stop-color="#9CA3AF"/>
+      <stop offset="100%" stop-color="#4B5563"/>
+    </linearGradient>
+
+    <!-- Anvil side shadow -->
+    <linearGradient id="anvilSide" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#6B7280"/>
+      <stop offset="100%" stop-color="#374151"/>
+    </linearGradient>
+
+    <!-- Dino head fill -->
+    <linearGradient id="dinoFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#4ECDC4"/>
+      <stop offset="100%" stop-color="#2AA89F"/>
+    </linearGradient>
+
+    <!-- Ember glow filter -->
+    <filter id="emberGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Outer ring drop shadow -->
+    <filter id="ringGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Clip to circle -->
+    <clipPath id="circleClip">
+      <circle cx="256" cy="256" r="236"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="248" fill="url(#bgGlow)"/>
+
+  <!-- Outer ring (teal, thin) -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#4ECDC4" stroke-width="3" opacity="0.7" filter="url(#ringGlow)"/>
+  <circle cx="256" cy="256" r="235" fill="none" stroke="#4ECDC4" stroke-width="1" opacity="0.3"/>
+
+  <!-- ═══════════════════════════════════════════════
+       ANVIL BODY
+       Classic anvil: wide flat top face, narrowing body, horn on left, bick on right
+       ═══════════════════════════════════════════════ -->
+
+  <!-- Anvil horn (left taper) -->
+  <polygon points="88,258  160,242  160,278" fill="url(#anvilFace)" clip-path="url(#circleClip)"/>
+  <!-- Horn underside shadow -->
+  <polygon points="88,258  160,278  152,286" fill="url(#anvilSide)" opacity="0.6" clip-path="url(#circleClip)"/>
+
+  <!-- Anvil top face (main flat surface) -->
+  <rect x="148" y="220" width="264" height="68" rx="6" fill="url(#anvilFace)" clip-path="url(#circleClip)"/>
+
+  <!-- Anvil body narrowing section -->
+  <polygon points="180,288  332,288  320,318  192,318" fill="url(#anvilSide)" clip-path="url(#circleClip)"/>
+
+  <!-- Anvil base block -->
+  <rect x="170" y="318" width="172" height="48" rx="4" fill="#4B5563" clip-path="url(#circleClip)"/>
+
+  <!-- Top face highlight edge -->
+  <rect x="148" y="220" width="264" height="6" rx="3" fill="#E8E8E8" opacity="0.45" clip-path="url(#circleClip)"/>
+
+  <!-- Face center groove / seam -->
+  <line x1="200" y1="254" x2="390" y2="254" stroke="#374151" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- ═══════════════════════════════════════════════
+       DINO HEAD — stylized theropod silhouette
+       Rising from upper-left of the anvil horn area
+       ═══════════════════════════════════════════════ -->
+  <!--
+    The dino head is a simplified, angular theropod skull:
+    - Elongated snout pointing right
+    - Jaw open slightly
+    - Single triangular crest/spike on crown
+    - Eye as teal dot
+    Positioned so jaw rests on/above the anvil horn tip
+  -->
+
+  <!-- Skull main body -->
+  <polygon
+    points="
+      96,170
+      168,148
+      200,152
+      220,164
+      216,188
+      188,200
+      148,210
+      110,208
+      88,195
+      82,180
+    "
+    fill="url(#dinoFill)"
+    clip-path="url(#circleClip)"
+  />
+
+  <!-- Snout extension (upper jaw) -->
+  <polygon
+    points="
+      200,152
+      248,158
+      260,168
+      252,178
+      216,180
+      216,164
+    "
+    fill="#3DBFB7"
+    clip-path="url(#circleClip)"
+  />
+
+  <!-- Lower jaw -->
+  <polygon
+    points="
+      148,210
+      188,200
+      216,188
+      230,196
+      220,215
+      170,224
+      130,222
+    "
+    fill="#35AFAA"
+    clip-path="url(#circleClip)"
+  />
+
+  <!-- Jaw gap (mouth opening) highlight -->
+  <line x1="216" y1="180" x2="232" y2="196" stroke="#0F1219" stroke-width="2.5" opacity="0.7"/>
+
+  <!-- Crown spike -->
+  <polygon
+    points="
+      138,170
+      152,128
+      168,148
+    "
+    fill="#4ECDC4"
+    clip-path="url(#circleClip)"
+  />
+
+  <!-- Secondary smaller spine -->
+  <polygon
+    points="
+      116,178
+      124,148
+      136,170
+    "
+    fill="#3DBFB7"
+    opacity="0.8"
+    clip-path="url(#circleClip)"
+  />
+
+  <!-- Eye socket -->
+  <ellipse cx="142" cy="182" rx="10" ry="9" fill="#0F1219" opacity="0.8"/>
+  <!-- Eye iris -->
+  <ellipse cx="143" cy="181" rx="6" ry="6" fill="#E8743B"/>
+  <!-- Eye highlight -->
+  <circle cx="145" cy="179" r="2" fill="#FFCBA4" opacity="0.9"/>
+
+  <!-- Nostril slit -->
+  <ellipse cx="238" cy="166" rx="4" ry="2.5" fill="#0F1219" opacity="0.5" transform="rotate(-10, 238, 166)"/>
+
+  <!-- Neck line connecting to anvil area -->
+  <path d="M 88,195 C 80,210 82,235 110,248" stroke="#2AA89F" stroke-width="3" fill="none" opacity="0.6" clip-path="url(#circleClip)"/>
+
+  <!-- ═══════════════════════════════════════════════
+       EMBER SPARKS — scattered from the strike zone
+       ═══════════════════════════════════════════════ -->
+
+  <!-- Main impact glow on anvil top-right -->
+  <ellipse cx="330" cy="232" rx="22" ry="12" fill="#E8743B" opacity="0.18" filter="url(#emberGlow)"/>
+  <ellipse cx="330" cy="232" rx="10" ry="5"  fill="#E8743B" opacity="0.35"/>
+
+  <!-- Spark cluster — large sparks -->
+  <!-- Spark 1 -->
+  <path d="M 345,218 L 358,196 L 351,214 L 367,202 Z" fill="#E8743B" filter="url(#emberGlow)" opacity="0.95"/>
+  <!-- Spark 2 -->
+  <path d="M 362,208 L 372,184 L 366,206 L 380,194 Z" fill="#FFAA4A" filter="url(#emberGlow)" opacity="0.85"/>
+  <!-- Spark 3 (teal ember — hot core) -->
+  <path d="M 326,214 L 332,192 L 328,212 L 340,200 Z" fill="#4ECDC4" filter="url(#emberGlow)" opacity="0.9"/>
+
+  <!-- Medium sparks -->
+  <circle cx="350" cy="188" r="3.5" fill="#E8743B" opacity="0.8"/>
+  <circle cx="374" cy="178" r="2.5" fill="#FFAA4A" opacity="0.7"/>
+  <circle cx="340" cy="196" r="2"   fill="#4ECDC4" opacity="0.75"/>
+  <circle cx="388" cy="192" r="2"   fill="#E8743B" opacity="0.6"/>
+  <circle cx="362" cy="172" r="1.5" fill="#FFCBA4" opacity="0.65"/>
+  <circle cx="318" cy="202" r="1.5" fill="#4ECDC4" opacity="0.7"/>
+
+  <!-- Trailing ember arcs -->
+  <path d="M 354,212 Q 368,190 375,175" stroke="#E8743B" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>
+  <path d="M 362,208 Q 380,188 386,172" stroke="#FFAA4A" stroke-width="1"   fill="none" opacity="0.4" stroke-linecap="round"/>
+
+  <!-- ═══════════════════════════════════════════════
+       WORDMARK beneath (small, for full badge)
+       ═══════════════════════════════════════════════ -->
+  <text
+    x="256" y="400"
+    font-family="'Segoe UI', Arial, sans-serif"
+    font-size="38"
+    font-weight="700"
+    letter-spacing="3"
+    text-anchor="middle"
+    fill="#D1D5DB"
+  >DINOForge</text>
+
+  <!-- Teal underline accent -->
+  <line x1="156" y1="410" x2="356" y2="410" stroke="#4ECDC4" stroke-width="2" opacity="0.7"/>
+
+  <!-- Tagline -->
+  <text
+    x="256" y="440"
+    font-family="'Segoe UI', Arial, sans-serif"
+    font-size="16"
+    letter-spacing="4"
+    text-anchor="middle"
+    fill="#9CA3AF"
+    opacity="0.8"
+  >MOD PLATFORM</text>
+
+</svg>

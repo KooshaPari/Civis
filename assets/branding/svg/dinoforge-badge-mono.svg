@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge Badge — Monochrome Variant
+  128x128 — single-color use: small/corner/watermark
+  All geometry in white; intended for use over dark or colored backgrounds.
+  Scale internally from full badge at 4:1 ratio, geometry simplified for legibility.
+  Motif: compact anvil + dino head silhouette + minimal spark dot cluster
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <clipPath id="monoCircle">
+      <circle cx="64" cy="64" r="60"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background transparent — mono badge floats on any surface -->
+
+  <!-- Outer ring -->
+  <circle cx="64" cy="64" r="61" fill="none" stroke="currentColor" stroke-width="2" opacity="0.9"/>
+
+  <!-- ═══════════════════════════════════════════
+       ANVIL — simplified for 128px
+       ═══════════════════════════════════════════ -->
+
+  <!-- Horn -->
+  <polygon points="18,63  40,58  40,68" fill="currentColor" clip-path="url(#monoCircle)"/>
+
+  <!-- Anvil top face -->
+  <rect x="38" y="52" width="70" height="20" rx="2" fill="currentColor" clip-path="url(#monoCircle)"/>
+
+  <!-- Narrowing waist -->
+  <polygon points="44,72  94,72  90,84  48,84" fill="currentColor" opacity="0.75" clip-path="url(#monoCircle)"/>
+
+  <!-- Base block -->
+  <rect x="42" y="84" width="44" height="12" rx="2" fill="currentColor" opacity="0.65" clip-path="url(#monoCircle)"/>
+
+  <!-- ═══════════════════════════════════════════
+       DINO HEAD — minimal silhouette
+       ═══════════════════════════════════════════ -->
+
+  <!-- Head mass -->
+  <polygon
+    points="
+      22,40
+      42,34
+      54,36
+      60,42
+      58,52
+      44,56
+      28,55
+      18,49
+      16,42
+    "
+    fill="currentColor"
+    clip-path="url(#monoCircle)"
+  />
+
+  <!-- Snout -->
+  <polygon
+    points="
+      54,36
+      68,39
+      70,44
+      66,48
+      58,48
+      58,42
+    "
+    fill="currentColor"
+    opacity="0.85"
+    clip-path="url(#monoCircle)"
+  />
+
+  <!-- Lower jaw -->
+  <polygon
+    points="
+      44,56
+      58,52
+      66,48
+      70,52
+      62,59
+      40,60
+    "
+    fill="currentColor"
+    opacity="0.7"
+    clip-path="url(#monoCircle)"
+  />
+
+  <!-- Crown spike -->
+  <polygon points="34,40  38,26  44,34" fill="currentColor" clip-path="url(#monoCircle)"/>
+
+  <!-- Eye cutout (dark circle punch) -->
+  <circle cx="34" cy="46" r="3.5" fill="black" opacity="0.9"/>
+
+  <!-- ═══════════════════════════════════════════
+       SPARKS — three dots + one line
+       ═══════════════════════════════════════════ -->
+  <circle cx="88" cy="48" r="2.5" fill="currentColor"/>
+  <circle cx="96" cy="42" r="1.5" fill="currentColor" opacity="0.8"/>
+  <circle cx="84" cy="42" r="1.5" fill="currentColor" opacity="0.7"/>
+  <line  x1="88" y1="54" x2="95" y2="41" stroke="currentColor" stroke-width="1" opacity="0.5" stroke-linecap="round"/>
+
+</svg>

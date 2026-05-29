@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using DINOForge.SDK.Models;
 using UnityEngine;
 
 namespace DINOForge.Runtime.UI
@@ -449,6 +450,51 @@ namespace DINOForge.Runtime.UI
         /// <summary>Auto-detected content conflicts with other loaded packs (e.g., "warfare-starwars also loads: factions, units").</summary>
         public IReadOnlyList<string> DetectedConflicts { get; }
 
+        // ── Rich metadata (added for #897) ──────────────────────────────────────
+
+        /// <summary>Optional homepage URL (from pack.yaml homepage_url).</summary>
+        public string? HomepageUrl { get; }
+
+        /// <summary>Optional GitHub repository URL (from pack.yaml github_url).</summary>
+        public string? GithubUrl { get; }
+
+        /// <summary>Optional Discord invite URL (from pack.yaml discord_url).</summary>
+        public string? DiscordUrl { get; }
+
+        /// <summary>SPDX license string (from pack.yaml license), e.g. "MIT", "CC-BY-4.0", "CC0-1.0".</summary>
+        public string? License { get; }
+
+        /// <summary>Searchable tags from pack.yaml (e.g., ["warfare", "sci-fi"]).</summary>
+        public IReadOnlyList<string> Tags { get; }
+
+        /// <summary>First up to 5 unit IDs/names loaded by this pack (for rich content display).</summary>
+        public IReadOnlyList<string> UnitNames { get; }
+
+        /// <summary>First up to 3 building IDs/names loaded by this pack.</summary>
+        public IReadOnlyList<string> BuildingNames { get; }
+
+        /// <summary>Faction display names with archetype hints.</summary>
+        public IReadOnlyList<string> FactionNames { get; }
+
+        /// <summary>Absolute paths to screenshot images under packs/&lt;id&gt;/screenshots/ (lazy-scanned on select).</summary>
+        public IReadOnlyList<string> ScreenshotPaths { get; }
+
+        /// <summary>Pack classification tier (derived from manifest).</summary>
+        public PackTier Tier { get; }
+
+        /// <summary>Raw classification string from manifest (engine_extension, content, total_conversion, baseline).</summary>
+        public string? Classification { get; }
+
+        /// <summary>User-configurable runtime settings for this pack (from pack.yaml settings).</summary>
+        public IReadOnlyList<PackSetting>? Settings { get; }
+
+        /// <summary>
+        /// Merged badge list: author-declared badges from pack.yaml, curated badges from the
+        /// signed allowlist, and auto-computed badges appended at runtime
+        /// (<c>popular</c>, <c>compatibility-tested</c>).
+        /// </summary>
+        public IReadOnlyList<string> Badges { get; }
+
         /// <summary>
         /// Creates a new pack display info instance.
         /// </summary>
@@ -465,7 +511,20 @@ namespace DINOForge.Runtime.UI
             IReadOnlyList<string> conflicts,
             IReadOnlyList<string>? errors = null,
             IReadOnlyDictionary<string, int>? contentSummary = null,
-            IReadOnlyList<string>? detectedConflicts = null)
+            IReadOnlyList<string>? detectedConflicts = null,
+            string? homepageUrl = null,
+            string? githubUrl = null,
+            string? discordUrl = null,
+            string? license = null,
+            IReadOnlyList<string>? tags = null,
+            IReadOnlyList<string>? unitNames = null,
+            IReadOnlyList<string>? buildingNames = null,
+            IReadOnlyList<string>? factionNames = null,
+            IReadOnlyList<string>? screenshotPaths = null,
+            string? classification = null,
+            PackTier tier = PackTier.Content,
+            IReadOnlyList<PackSetting>? settings = null,
+            IReadOnlyList<string>? badges = null)
         {
             Id = id;
             Name = name;
@@ -480,10 +539,26 @@ namespace DINOForge.Runtime.UI
             Errors = errors ?? new List<string>().AsReadOnly();
             ContentSummary = contentSummary ?? (IReadOnlyDictionary<string, int>)new Dictionary<string, int>(StringComparer.Ordinal);
             DetectedConflicts = detectedConflicts ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
+            HomepageUrl = homepageUrl;
+            GithubUrl = githubUrl;
+            DiscordUrl = discordUrl;
+            License = license;
+            Tags = tags ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
+            UnitNames = unitNames ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
+            BuildingNames = buildingNames ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
+            FactionNames = factionNames ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
+            ScreenshotPaths = screenshotPaths ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
+            Classification = classification;
+            Tier = tier;
+            Settings = settings;
+            Badges = badges ?? (IReadOnlyList<string>)new List<string>().AsReadOnly();
         }
 
         /// <summary>Returns a copy with the enabled state changed.</summary>
         public PackDisplayInfo WithEnabled(bool enabled)
-            => new PackDisplayInfo(Id, Name, Version, Author, Type, Description, LoadOrder, enabled, Dependencies, Conflicts, Errors, ContentSummary, DetectedConflicts);
+            => new PackDisplayInfo(Id, Name, Version, Author, Type, Description, LoadOrder, enabled,
+                Dependencies, Conflicts, Errors, ContentSummary, DetectedConflicts,
+                HomepageUrl, GithubUrl, DiscordUrl, License, Tags,
+                UnitNames, BuildingNames, FactionNames, ScreenshotPaths, Classification, Tier, Settings, Badges);
     }
 }

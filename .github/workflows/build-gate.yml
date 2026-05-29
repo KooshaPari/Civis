@@ -1,0 +1,133 @@
+name: Build Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'packs/**'
+      - 'Directory.Build.props'
+      - '*.sln'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'packs/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.x'
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: 'src/SDK/**/packages.lock.json'
+          include-prerelease: true
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-sdk-${{ hashFiles('src/SDK/**/*.csproj', 'src/SDK/**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - name: Restore and Build SDK
+        run: |
+          dotnet restore src/SDK/DINOForge.SDK.csproj /p:RestoreLockedMode=true
+          dotnet build src/SDK/DINOForge.SDK.csproj -c Release --no-restore --verbosity normal
+
+  build-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.x'
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: 'src/Runtime/**/packages.lock.json'
+          include-prerelease: true
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-runtime-${{ hashFiles('src/Runtime/**/*.csproj', 'src/Runtime/**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - name: Restore and Build Runtime
+        run: |
+          dotnet restore src/Runtime/DINOForge.Runtime.csproj /p:RestoreLockedMode=true
+          dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=netstandard2.0 --no-restore --verbosity normal
+
+  build-runtime-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.x'
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: 'src/Runtime/**/packages.lock.json'
+          include-prerelease: true
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-runtime-${{ hashFiles('src/Runtime/**/*.csproj', 'src/Runtime/**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - name: Restore and Build Runtime (Windows)
+        run: |
+          dotnet restore src/Runtime/DINOForge.Runtime.csproj /p:RestoreLockedMode=true
+          dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=netstandard2.0 --no-restore --verbosity minimal
+
+  build-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.x'
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: 'src/Tools/Cli/**/packages.lock.json'
+          include-prerelease: true
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-cli-${{ hashFiles('src/Tools/Cli/**/*.csproj', 'src/Tools/Cli/**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - name: Restore and Build CLI
+        run: |
+          dotnet restore src/Tools/Cli/DINOForge.Tools.Cli.csproj /p:RestoreLockedMode=true
+          dotnet build src/Tools/Cli/DINOForge.Tools.Cli.csproj -c Release --no-restore --verbosity normal
+
+  build-packcompiler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
+        with:
+          dotnet-version: '11.0.x'
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: 'src/Tools/PackCompiler/**/packages.lock.json'
+          include-prerelease: true
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-packcompiler-${{ hashFiles('src/Tools/PackCompiler/**/*.csproj', 'src/Tools/PackCompiler/**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - name: Restore and Build PackCompiler
+        run: |
+          dotnet restore src/Tools/PackCompiler/ /p:RestoreLockedMode=true
+          dotnet build src/Tools/PackCompiler/ -c Release --no-restore --verbosity normal

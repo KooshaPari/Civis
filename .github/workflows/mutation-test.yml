@@ -3,7 +3,7 @@ name: Mutation Testing
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * 1'  # Monday 6am UTC
+    - cron: '0 3 * * 0'  # Sunday 3am UTC
 
 permissions:
   contents: read

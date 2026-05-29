@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Support (medic / resupply / field engineer)
+  Motif: A plus/cross symbol inside a rounded shield — universal "support/medic" read.
+         Shield has a flat top and angled bottom. Original geometry.
+  64×64, monochrome white.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Support</title>
+  <!-- Shield outline -->
+  <path fill="#F5F7FA"
+    d="M 10,8 L 54,8 L 54,38 C 54,52 32,60 32,60 C 32,60 10,52 10,38 Z"/>
+  <!-- Inner cutout to create outline effect -->
+  <path fill="#05060A"
+    d="M 15,13 L 49,13 L 49,37 C 49,48 32,55 32,55 C 32,55 15,48 15,37 Z"/>
+  <!-- Plus cross (support symbol) -->
+  <!-- Vertical arm -->
+  <rect x="28" y="21" width="8" height="20" rx="2" fill="#F5F7FA"/>
+  <!-- Horizontal arm -->
+  <rect x="22" y="27" width="20" height="8" rx="2" fill="#F5F7FA"/>
+</svg>

@@ -5,7 +5,7 @@ type: total_conversion
 author: DINOForge Agents
 theme: star-wars
 description: "Replaces all factions with Star Wars Clone Wars equivalents. Republic vs CIS vs Separatist forces."
-framework_version: ">=0.5.0 <0.26.0"
+framework_version: ">=0.5.0 <1.0.0"
 singleton: true
 
 replaces_vanilla:

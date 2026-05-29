@@ -14,6 +14,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-rust:
     # Matrix pattern-gates cover PRs; full multi-platform Rust builds run on main push only.

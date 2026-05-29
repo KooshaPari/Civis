@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using DINOForge.SDK.Models;
+using DINOForge.SDK.Patching;
 using YamlDotNet.Serialization;
 
 namespace DINOForge.SDK
@@ -47,6 +49,13 @@ namespace DINOForge.SDK
         public string Type { get; set; } = "content";
 
         /// <summary>
+        /// Pack classification tier: engine_extension, content, total_conversion, or baseline.
+        /// Determines how the pack is displayed in mod menus and which features it can access.
+        /// </summary>
+        [YamlMember(Alias = "classification")]
+        public string? Classification { get; set; }
+
+        /// <summary>
         /// Optional description of the pack's purpose and content.
         /// </summary>
         [YamlMember(Alias = "description")]
@@ -89,6 +98,38 @@ namespace DINOForge.SDK
         public string UnityVersion { get; set; } = ">=2021.3.0 <2022.0.0";
 
         /// <summary>
+        /// Optional homepage URL for the pack (opened in browser from mod menu).
+        /// </summary>
+        [YamlMember(Alias = "homepage_url")]
+        public string? HomepageUrl { get; set; }
+
+        /// <summary>
+        /// Optional GitHub repository URL for the pack.
+        /// </summary>
+        [YamlMember(Alias = "github_url")]
+        public string? GithubUrl { get; set; }
+
+        /// <summary>
+        /// Optional Discord server/channel invite URL for the pack.
+        /// </summary>
+        [YamlMember(Alias = "discord_url")]
+        public string? DiscordUrl { get; set; }
+
+        /// <summary>
+        /// SPDX license identifier (e.g., "CC0-1.0", "CC-BY-4.0", "MIT").
+        /// Displayed as a badge in the mod menu detail pane.
+        /// </summary>
+        [YamlMember(Alias = "license")]
+        public string? License { get; set; }
+
+        /// <summary>
+        /// Searchable tags for the pack (e.g., ["warfare", "sci-fi", "total-conversion"]).
+        /// Displayed as colored chips in the mod menu detail pane.
+        /// </summary>
+        [YamlMember(Alias = "tags")]
+        public List<string>? Tags { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
         /// Content types and files to load from this pack.
         /// </summary>
         [YamlMember(Alias = "loads")]
@@ -101,10 +142,65 @@ namespace DINOForge.SDK
         public PackOverrides? Overrides { get; set; }
 
         /// <summary>
+        /// Optional GitHub release update-check configuration.
+        /// When set, the runtime polls the specified repository for newer releases and
+        /// displays an "Update available" row in the F10 mod menu.
+        /// </summary>
+        [YamlMember(Alias = "update_check")]
+        public PackUpdateCheck? UpdateCheck { get; set; }
+
+        /// <summary>
+        /// RimWorld-style cross-pack patch operations.
+        /// Each entry targets another loaded pack and applies a sequence of field mutations
+        /// (replace, add, remove, multiply) AFTER all packs are loaded but BEFORE registries
+        /// are populated. Patches are applied by <see cref="DINOForge.SDK.Patching.PatchApplicator"/>.
+        /// </summary>
+        [YamlMember(Alias = "patches")]
+        public List<PatchSet>? Patches { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
+        /// User-configurable runtime settings for this pack.
+        /// Exposed in the F10 mod menu's detail pane, allowing players to customize
+        /// difficulty, enabled features, and other mod behaviors.
+        /// </summary>
+        [YamlMember(Alias = "settings")]
+        public List<PackSetting>? Settings { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
+        /// Author-declared badges for this pack.
+        /// Valid author-declared values: <c>early-access</c>, <c>total-conversion</c>.
+        /// Curated values (<c>verified-author</c>, <c>editors-choice</c>) are assigned externally
+        /// via a signed list and will be silently stripped if declared directly in pack.yaml.
+        /// Auto-computed values (<c>popular</c>, <c>compatibility-tested</c>) are appended at runtime
+        /// based on download counters and CI results — do not declare them here.
+        /// </summary>
+        [YamlMember(Alias = "badges")]
+        public List<string>? Badges { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
         /// UI theme for total_conversion packs. Applied to the main menu and loading screens.
         /// </summary>
         [YamlMember(Alias = "ui_theme")]
         public PackUiTheme? UiTheme { get; set; }
+    }
+
+    /// <summary>
+    /// GitHub release update-check configuration for a pack.
+    /// Maps to the <c>update_check</c> key in pack.yaml.
+    /// </summary>
+    public sealed class PackUpdateCheck
+    {
+        /// <summary>
+        /// GitHub repository owner (user or organisation), e.g. "KooshaPari".
+        /// </summary>
+        [YamlMember(Alias = "owner")]
+        public string Owner { get; set; } = "";
+
+        /// <summary>
+        /// GitHub repository name, e.g. "warfare-starwars".
+        /// </summary>
+        [YamlMember(Alias = "repo")]
+        public string Repo { get; set; } = "";
     }
 
     /// <summary>

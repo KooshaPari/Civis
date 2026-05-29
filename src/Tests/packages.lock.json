@@ -52,12 +52,6 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[7.*, )",
-        "resolved": "7.0.0",
-        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
-      },
       "NetArchTest.Rules": {
         "type": "Direct",
         "requested": "[1.*, )",
@@ -1300,8 +1294,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -1318,32 +1312,34 @@
       "dinoforge.domains.economy": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.domains.scenario": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.domains.ui": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.domains.warfare": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.runtime": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "AssetsTools.NET": "[3.0.4, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
+          "Microsoft.Bcl.TimeProvider": "[8.0.0, )"
         }
       },
       "dinoforge.sdk": {
@@ -1361,7 +1357,7 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Octokit": "[13.0.1, )"
         }
       }

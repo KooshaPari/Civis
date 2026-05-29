@@ -1,0 +1,10 @@
+{
+  "id": "warfare-starwars",
+  "name": "Star Wars - Clone Wars",
+  "version": "0.1.0",
+  "author": "DINOForge",
+  "type": "total_conversion",
+  "description": "A total conversion transporting DINO into the Star Wars universe during the Clone Wars. Command the clone trooper legions of the Galactic Republic against the mechanized forces of the Separatist Confederacy.\n\nFactions included:\n- Galactic Republic: disciplined elite clone army with Jedi commanders, strong morale, and specialized forces\n- Confederacy (CIS): mechanized swarm doctrine with rolling thunder tactics and droid legions\n\nContent features:\n- 26 units per side: clone troopers, arc troopers, heavy troops, vehicle crews, ARF troopers, speeder pilots, jedi knights, commandos, battle droids, super battle droids\n- 20 buildings: clone facilities, weapons factories, vehicle bays, guard towers, shield generators, command centers, supply stations, tibanna refineries, research labs, blast walls\n- 6 doctrines: elite discipline, jedi leadership, defensive formation, mechanized attrition, rolling thunder, swarm protocol\n- 1 weapon set: blasters and energy weapons\n- Clone Wars wave templates for themed campaigns\n\nVisual assets: placeholder - community contributions welcome. See assets/ASSET_PIPELINE.md for the\nTABS-style art guide, free CC0/CC-BY source list (Kenney.nl, PolyPizza, Sketchfab), and Unity\n2021.3 \u002B Addressables import workflow.\n\nExperience the conflict between biological discipline and mechanical coordination in a galaxy far, far away.\n",
+  "dependsOn": [],
+  "conflictsWith": []
+}

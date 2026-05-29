@@ -42,6 +42,8 @@
     <Compile Remove="UI\UiSelectorEngine.cs" />
     <Compile Remove="UI\UiTreeSnapshotBuilder.cs" />
     <Compile Remove="UI\UiBuilder.cs" />
+    <Compile Remove="UI\BadgeComputer.cs" />
+    <Compile Remove="UI\Badges\BadgeRenderer.cs" />
   </ItemGroup>
 
   <!-- BepInEx core - only when game is installed -->
@@ -59,9 +61,12 @@
   <!-- Game assemblies - only when game is installed -->
   <ItemGroup Condition="'$(GameInstalled)' == 'true'">
     <!-- Unity ECS / DOTS -->
+    <!-- Publicize=true: AssemblyPublicizer makes internal ECS members directly callable, -->
+    <!-- eliminating fragile reflection-based access (Mono type-identity bugs).           -->
     <Reference Include="Unity.Entities">
       <HintPath>$(ManagedDir)\Unity.Entities.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="Unity.Entities.Hybrid">
       <HintPath>$(ManagedDir)\Unity.Entities.Hybrid.dll</HintPath>
@@ -147,9 +152,12 @@
     </Reference>
 
     <!-- Game DLLs -->
+    <!-- Publicize=true: AssemblyPublicizer makes internal game members directly callable, -->
+    <!-- eliminating fragile reflection-based access in AssetSwapSystem and EntityQueries. -->
     <Reference Include="DNO.Main">
       <HintPath>$(ManagedDir)\DNO.Main.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
@@ -172,9 +180,13 @@
   </ItemGroup>
 
   <!-- AssetsTools.NET for asset bundle reading/writing (Runtime-specific, not SDK) -->
+  <!-- BepInEx.AssemblyPublicizer: strips internal/private modifiers from game DLLs at build time -->
+  <!-- giving compile-time (not reflection-based) access to ECS internals. PrivateAssets=all so    -->
+  <!-- the tool package is never shipped as a runtime dependency.                                   -->
   <ItemGroup Condition="'$(GameInstalled)' == 'true'">
     <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
   </ItemGroup>
 
   <!--
@@ -213,6 +225,7 @@
   -->
   <Target Name="DeployDll" AfterTargets="Build"
           Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <!-- Always deploy the Runtime DLL itself -->
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
           DestinationFolder="$(BepInExDir)\plugins"
           SkipUnchangedFiles="false"
@@ -222,7 +235,22 @@
           SkipUnchangedFiles="false"
           OverwriteReadOnlyFiles="true"
           Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+    <!--
+      [#942] Deploy all first-party DINOForge.*.dll companions (SDK, Bridge.Protocol, Domains, etc.)
+      so a stale deployed DLL can never cause TypeLoadException when SDK/Protocol types change.
+      Only DINOForge.*.dll are copied — Unity, BepInEx, and third-party DLLs are intentionally
+      excluded (the game provides those at runtime).
+    -->
+    <ItemGroup>
+      <DinoForgeDeployDlls Include="$(OutputPath)DINOForge.*.dll"
+                            Exclude="$(OutputPath)$(AssemblyName).dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DinoForgeDeployDlls)"
+          DestinationFolder="$(BepInExDir)\plugins"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
     <Message Text="[DeployDll] Deployed $(AssemblyName).dll to $(BepInExDir)\plugins" Importance="high" />
+    <Message Text="[DeployDll] Also deployed companion DLLs: @(DinoForgeDeployDlls->'%(Filename)%(Extension)', ', ')" Importance="high" Condition="'@(DinoForgeDeployDlls)' != ''" />
   </Target>
 
   <!--
@@ -271,6 +299,31 @@
     <Message Text="[RustAssetPipeline] DLL not found — P/Invoke will gracefully degrade"
              Importance="low"
              Condition="'@(RustAssetPipelineDll)' == ''" />
+  </Target>
+
+  <!--
+    Deploy badge PNG placeholders to BepInEx/plugins/dinoforge-ui-assets/badges/.
+    BadgeRenderer.LoadBadgeSprite() looks for badges/{name}.png under the same asset root
+    as Kenney sprites.  Placeholder PNGs live at assets/badges/ in the repo root and are
+    generated once by scripts/generate-badge-placeholders.ps1.
+  -->
+  <Target Name="DeployBadgeAssets" AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <ItemGroup>
+      <BadgePngFiles Include="$(MSBuildThisFileDirectory)..\..\..\assets\badges\*.png" />
+    </ItemGroup>
+    <MakeDir Directories="$(BepInExDir)\plugins\dinoforge-ui-assets\badges"
+             Condition="'@(BadgePngFiles)' != '' And !Exists('$(BepInExDir)\plugins\dinoforge-ui-assets\badges')" />
+    <Copy SourceFiles="@(BadgePngFiles)"
+          DestinationFolder="$(BepInExDir)\plugins\dinoforge-ui-assets\badges"
+          SkipUnchangedFiles="true"
+          Condition="'@(BadgePngFiles)' != ''" />
+    <Message Text="[DeployBadgeAssets] Deployed $(BadgePngFiles->Count()) badge PNGs to $(BepInExDir)\plugins\dinoforge-ui-assets\badges"
+             Importance="normal"
+             Condition="'@(BadgePngFiles)' != ''" />
+    <Message Text="[DeployBadgeAssets] No badge PNGs found at assets/badges/ — run scripts/generate-badge-placeholders.ps1 first."
+             Importance="normal"
+             Condition="'@(BadgePngFiles)' == ''" />
   </Target>
 
   <!-- Deploy packs from repo to game directory -->

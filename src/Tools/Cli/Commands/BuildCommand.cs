@@ -6,28 +6,38 @@ using Spectre.Console;
 namespace DINOForge.Tools.Cli.Commands;
 
 /// <summary>
-/// Builds the DINOForge Runtime DLL targeting netstandard2.0.
+/// Builds the DINOForge Runtime DLL via <c>dotnet build</c>.
 /// </summary>
 internal static class BuildCommand
 {
+    private const string RuntimeProject = "src/Runtime/DINOForge.Runtime.csproj";
+    private const string TargetFramework = "netstandard2.0";
+
     /// <summary>
     /// Creates the <c>build</c> command.
     /// </summary>
     public static Command Create()
     {
-        Option<string> configOpt = new("--configuration")
+        Option<string> configOpt = new("--configuration", "-c")
         {
             Description = "Build configuration (Release or Debug)",
             DefaultValueFactory = _ => "Release"
         };
+        Option<bool> cleanOpt = new("--clean")
+        {
+            Description = "Force clean build (removes obj/bin first; prevents Pattern #233 stale-cache TFM bugs)",
+            DefaultValueFactory = _ => false
+        };
 
         Command command = new("build", "Build the DINOForge Runtime DLL");
         command.Add(configOpt);
+        command.Add(cleanOpt);
 
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
             string config = parseResult.GetValue(configOpt) ?? "Release";
-            int exitCode = await RunBuildAsync(config, ct).ConfigureAwait(false);
+            bool clean = parseResult.GetValue(cleanOpt);
+            int exitCode = await RunBuildAsync(config, ct, clean).ConfigureAwait(false);
             Environment.ExitCode = exitCode;
         });
 
@@ -35,115 +45,130 @@ internal static class BuildCommand
     }
 
     /// <summary>
-    /// Runs the dotnet build for the Runtime project. Returns the process exit code.
+    /// Runs <c>dotnet build</c> for the Runtime project, streaming colorized output.
     /// </summary>
-    internal static async Task<int> RunBuildAsync(string configuration, CancellationToken ct)
+    /// <param name="config">Configuration (e.g. Release).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Process exit code (0 on success).</returns>
+    internal static async Task<int> RunBuildAsync(string config, CancellationToken ct, bool clean = false)
     {
-        // Resolve the Runtime csproj relative to the repo root.
-        string repoRoot = FindRepoRoot();
-        string csproj = Path.Combine(repoRoot, "src", "Runtime", "DINOForge.Runtime.csproj");
+        AnsiConsole.MarkupLine($"[bold]Building[/] {Markup.Escape(RuntimeProject)} ([cyan]{Markup.Escape(config)}[/], TFM=[cyan]{TargetFramework}[/]){(clean ? " [yellow]--clean[/]" : "")}");
 
-        if (!File.Exists(csproj))
+        if (clean)
         {
-            AnsiConsole.MarkupLine($"[red]Error:[/] Runtime project not found at {Markup.Escape(csproj)}");
-            return 1;
+            try
+            {
+                string runtimeDir = Path.GetDirectoryName(RuntimeProject)!;
+                foreach (string sub in new[] { "obj", "bin" })
+                {
+                    string path = Path.Combine(runtimeDir, sub);
+                    if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, recursive: true);
+                        AnsiConsole.MarkupLine($"  [grey]removed {Markup.Escape(path)}[/]");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Warning:[/] clean failed: {Markup.Escape(ex.Message)}");
+            }
         }
-
-        AnsiConsole.MarkupLine($"[bold]Building[/] DINOForge.Runtime ({Markup.Escape(configuration)}) ...");
 
         Stopwatch sw = Stopwatch.StartNew();
 
-        ProcessStartInfo psi = new("dotnet", $"build \"{csproj}\" -c {configuration} -p:TargetFramework=netstandard2.0")
+        ProcessStartInfo psi = new("dotnet")
         {
+            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false,
             CreateNoWindow = true
         };
-
-        using Process? proc = Process.Start(psi);
-        if (proc is null)
+        psi.ArgumentList.Add("build");
+        psi.ArgumentList.Add(RuntimeProject);
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(config);
+        psi.ArgumentList.Add($"-p:TargetFramework={TargetFramework}");
+        if (clean)
         {
-            AnsiConsole.MarkupLine("[red]Error:[/] Failed to start dotnet build process.");
+            psi.ArgumentList.Add("--no-incremental");
+        }
+
+        using Process process = new() { StartInfo = psi };
+
+        process.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is null) return;
+            AnsiConsole.MarkupLine(ColorizeLine(e.Data));
+        };
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is null) return;
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(e.Data)}[/]");
+        };
+
+        try
+        {
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Failed to start dotnet:[/] {Markup.Escape(ex.Message)}");
             return 1;
         }
 
-        // Stream output
-        Task readOut = Task.Run(async () =>
-        {
-            while (await proc.StandardOutput.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
-            {
-                if (line.Contains("error", StringComparison.OrdinalIgnoreCase))
-                {
-                    AnsiConsole.MarkupLine($"  [red]{Markup.Escape(line)}[/]");
-                }
-                else if (line.Contains("warning", StringComparison.OrdinalIgnoreCase))
-                {
-                    AnsiConsole.MarkupLine($"  [yellow]{Markup.Escape(line)}[/]");
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(line)}[/]");
-                }
-            }
-        }, ct);
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
-        Task readErr = Task.Run(async () =>
+        try
         {
-            while (await proc.StandardError.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
-            {
-                AnsiConsole.MarkupLine($"  [red]{Markup.Escape(line)}[/]");
-            }
-        }, ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* best-effort */ }
+            throw;
+        }
 
-        await proc.WaitForExitAsync(ct).ConfigureAwait(false);
-        await Task.WhenAll(readOut, readErr).ConfigureAwait(false);
         sw.Stop();
 
-        int exitCode = proc.ExitCode;
-
-        if (exitCode == 0)
+        if (process.ExitCode == 0)
         {
-            string dllPath = Path.Combine(repoRoot, "src", "Runtime", "bin", configuration, "netstandard2.0", "DINOForge.Runtime.dll");
+            AnsiConsole.MarkupLine($"[green]Build succeeded[/] in {sw.Elapsed.TotalSeconds:F2}s");
+            string dllPath = GetOutputDllPath(config);
             if (File.Exists(dllPath))
             {
-                long sizeBytes = new FileInfo(dllPath).Length;
-                AnsiConsole.MarkupLine($"\n[green]Build succeeded[/] in {sw.Elapsed.TotalSeconds:F1}s");
-                AnsiConsole.MarkupLine($"  Output: {Markup.Escape(dllPath)}");
-                AnsiConsole.MarkupLine($"  Size:   {sizeBytes / 1024.0:F1} KB");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine($"\n[green]Build succeeded[/] in {sw.Elapsed.TotalSeconds:F1}s");
-                AnsiConsole.MarkupLine("[yellow]Warning:[/] Output DLL not found at expected path.");
+                long size = new FileInfo(dllPath).Length;
+                AnsiConsole.MarkupLine($"[green]Output:[/] {Markup.Escape(dllPath)} ([cyan]{size:N0} bytes[/])");
             }
         }
         else
         {
-            AnsiConsole.MarkupLine($"\n[red]Build FAILED[/] (exit code {exitCode}) after {sw.Elapsed.TotalSeconds:F1}s");
+            AnsiConsole.MarkupLine($"[red]Build failed[/] (exit code {process.ExitCode}) after {sw.Elapsed.TotalSeconds:F2}s");
         }
 
-        return exitCode;
+        return process.ExitCode;
     }
 
     /// <summary>
-    /// Walks up from the current directory to find the repo root (contains .git or DINOForge.sln).
+    /// Returns the expected path to the built Runtime DLL.
     /// </summary>
-    private static string FindRepoRoot()
-    {
-        string? dir = Directory.GetCurrentDirectory();
-        while (dir is not null)
-        {
-            if (Directory.Exists(Path.Combine(dir, ".git")) ||
-                File.Exists(Path.Combine(dir, "src", "DINOForge.sln")))
-            {
-                return dir;
-            }
+    internal static string GetOutputDllPath(string config) =>
+        Path.Combine("src", "Runtime", "bin", config, TargetFramework, "DINOForge.Runtime.dll");
 
-            dir = Directory.GetParent(dir)?.FullName;
+    private static string ColorizeLine(string line)
+    {
+        string escaped = Markup.Escape(line);
+        if (line.Contains(": error", StringComparison.OrdinalIgnoreCase) || line.Contains("Build FAILED", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"[red]{escaped}[/]";
         }
 
-        // Fallback to current directory
-        return Directory.GetCurrentDirectory();
+        if (line.Contains(": warning", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"[yellow]{escaped}[/]";
+        }
+
+        return escaped;
     }
 }

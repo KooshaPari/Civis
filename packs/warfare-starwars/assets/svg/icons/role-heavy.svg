@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Heavy (heavy weapons / armoured trooper)
+  Motif: Wide squat helmet with prominent shoulder pauldrons and a thick barrel.
+  Original geometry. 64×64, monochrome white.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Heavy</title>
+  <!-- Left shoulder pauldron -->
+  <rect x="4" y="30" width="14" height="10" rx="3" fill="#F5F7FA"/>
+  <!-- Right shoulder pauldron -->
+  <rect x="46" y="30" width="14" height="10" rx="3" fill="#F5F7FA"/>
+  <!-- Helmet: wider, lower dome -->
+  <path fill="#F5F7FA"
+    d="M 32,6 C 16,6 8,17 8,27 L 8,36 C 8,40 11,43 15,43 L 49,43
+       C 53,43 56,40 56,36 L 56,27 C 56,17 48,6 32,6 Z"/>
+  <!-- Visor: wide horizontal slit -->
+  <rect x="17" y="25" width="30" height="8" rx="2" fill="#05060A"/>
+  <!-- Heavy cannon barrel below chin -->
+  <rect x="22" y="44" width="20" height="7" rx="2" fill="#F5F7FA"/>
+  <rect x="27" y="51" width="10" height="7" rx="2" fill="#F5F7FA"/>
+  <!-- Barrel tip ring -->
+  <rect x="25" y="56" width="14" height="4" rx="2" fill="#C5CCD6"/>
+</svg>

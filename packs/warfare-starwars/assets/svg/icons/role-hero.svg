@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Hero (Jedi / elite commander)
+  Motif: A lightsaber energy blade — straight blade with cross-guard quillons,
+         cylindrical hilt, lens emitter disc. No trademarked character likenesses.
+         Original geometry.
+  64×64, monochrome white with inner glow suggestion.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Hero</title>
+  <defs>
+    <linearGradient id="blade-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#F5F7FA"/>
+      <stop offset="70%" stop-color="#C5CCD6"/>
+      <stop offset="100%" stop-color="#8A94A3"/>
+    </linearGradient>
+  </defs>
+  <!-- Blade (tapers to point at top) -->
+  <polygon points="29,4 35,4 33,38 31,38" fill="url(#blade-grad)"/>
+  <!-- Blade tip point -->
+  <polygon points="30,4 34,4 32,2" fill="#F5F7FA"/>
+  <!-- Emitter disc -->
+  <ellipse cx="32" cy="39" rx="5" ry="2.5" fill="#C5CCD6"/>
+  <!-- Crossguard quillons -->
+  <rect x="18" y="40" width="12" height="4" rx="2" fill="#F5F7FA"/>
+  <rect x="34" y="40" width="12" height="4" rx="2" fill="#F5F7FA"/>
+  <!-- Hilt / grip -->
+  <rect x="27" y="43" width="10" height="14" rx="3" fill="#F5F7FA"/>
+  <!-- Grip ridges (detail) -->
+  <line x1="27" y1="47" x2="37" y2="47" stroke="#05060A" stroke-width="1.2"/>
+  <line x1="27" y1="51" x2="37" y2="51" stroke="#05060A" stroke-width="1.2"/>
+  <!-- Pommel cap -->
+  <rect x="28" y="57" width="8" height="5" rx="2" fill="#8A94A3"/>
+  <!-- Activation button -->
+  <rect x="25" y="44" width="4" height="3" rx="1" fill="#8A94A3"/>
+</svg>

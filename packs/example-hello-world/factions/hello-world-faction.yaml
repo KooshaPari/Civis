@@ -1,0 +1,84 @@
+# Hello World Faction Definition
+# A simple faction demonstrating core faction concepts.
+
+faction:
+  id: hello_world_faction
+  theme: custom
+  archetype: order
+  doctrine: elite_discipline
+  display_name: Hello World Army
+
+  # Why this matters: The faction ID is how other packs and the game engine
+  # refer to this faction. Always use lowercase with underscores.
+
+economy:
+  gather_bonus: 1.0          # 1.0x = normal speed. 1.2x = 20% faster
+  upkeep_modifier: 1.0       # 1.0x = normal cost. 0.8x = 20% cheaper
+  research_speed: 1.0        # 1.0x = normal speed
+  build_speed: 1.0           # 1.0x = normal speed
+
+  # Why this matters: These multipliers control how fast your faction can gather
+  # resources, build structures, and research tech. Great for balance tweaking!
+
+army:
+  morale_style: disciplined  # How units respond to combat stress
+  unit_cap_modifier: 1.0     # 1.0x = normal limit. Raise to allow bigger armies
+  elite_cost_modifier: 1.0   # 1.0x = normal cost for elite units
+  spawn_rate_modifier: 1.0   # 1.0x = normal training speed
+
+  # Why this matters: These settings control army composition and training pace.
+  # They affect how strong your faction feels in battle.
+
+roster:
+  # Roster maps abstract "roles" to actual unit IDs. The game engine uses these
+  # roles to decide which units to train in different situations.
+  cheap_infantry: hello_world_swordsman
+  line_infantry: hello_world_swordsman
+  elite_infantry: hello_world_swordsman  # In real mods, use different units for variety
+  anti_armor: hello_world_swordsman
+  support_weapon: hello_world_swordsman
+  recon: hello_world_swordsman
+  light_vehicle: hello_world_swordsman
+  heavy_vehicle: hello_world_swordsman
+  artillery: hello_world_swordsman
+  hero_commander: hello_world_swordsman
+  spike_unit: hello_world_swordsman
+
+  # Why this matters: By mapping all roles to swordsman, this pack shows the
+  # *minimum* viable faction. Real packs diversify units by role. See
+  # warfare-starwars/factions/ for a full example with 11 different units.
+
+buildings:
+  # Building roster works the same way as unit roster.
+  barracks: vanilla_barracks
+  workshop: vanilla_barracks
+  artillery_foundry: vanilla_barracks
+  tower_mg: vanilla_barracks
+  heavy_defense: vanilla_barracks
+  command_center: vanilla_barracks
+  economy_primary: vanilla_barracks
+  economy_secondary: vanilla_barracks
+  research_facility: vanilla_barracks
+  wall_segment: vanilla_barracks
+
+  # Why this matters: This example reuses vanilla buildings. In real mods,
+  # you would define custom buildings with different costs, production rates,
+  # and visual styles.
+
+visuals:
+  primary_color: "#4ECDC4"    # Cyan: primary faction color
+  accent_color: "#45B7D1"     # Blue: secondary accent
+  projectile_pack: "vanilla"  # Asset bundle ID (would point to custom pack in real mods)
+  ui_skin: "default"
+
+  # Why this matters: These colors are applied to unit models, UI elements,
+  # and faction banners. They make your faction visually distinct.
+
+audio:
+  weapon_pack: "vanilla"      # Audio bundle for weapon sounds
+  structure_pack: "vanilla"   # Audio bundle for building sounds
+  ambient_pack: "vanilla"     # Background audio and ambient sounds
+  music_pack: "vanilla"       # Faction theme music
+
+  # Why this matters: Audio makes your faction feel unique. Custom audio packs
+  # can change how units sound, buildings are constructed, and battles feel.

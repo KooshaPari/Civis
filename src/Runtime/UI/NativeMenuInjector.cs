@@ -3,6 +3,7 @@ using System;
 using System.Text;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -329,6 +330,9 @@ namespace DINOForge.Runtime.UI
             _injectionAttemptCount++;
             long attemptId = _injectionAttemptCount;
 
+            // #920: Telemetry — count each injection attempt.
+            try { MetricsCollector.Instance.IncrementCounter("mods_button.inject_attempts"); } catch { /* best-effort */ }
+
             try
             {
                 LogInfo($"[NativeMenuInjector::{_sessionId}] ═══ INJECTION ATTEMPT #{attemptId} at {System.DateTime.UtcNow:HH:mm:ss.fff} UTC ═══");
@@ -378,6 +382,8 @@ namespace DINOForge.Runtime.UI
                             if (_injected)
                             {
                                 LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ SELECTABLE-DONOR INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                                // #920: Telemetry — count successful injections (selectable-donor path).
+                                try { MetricsCollector.Instance.IncrementCounter("mods_button.inject_success"); } catch { /* best-effort */ }
                                 TakeAutoCheckpointScreenshot("cp1_mods_injected_selectable", 180);
                                 return;
                             }
@@ -396,6 +402,8 @@ namespace DINOForge.Runtime.UI
                     if (_injected)
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} ✓✓✓✓✓ INJECTION SUCCESSFUL! Mods button is now ACTIVE.");
+                        // #920: Telemetry — count successful injections.
+                        try { MetricsCollector.Instance.IncrementCounter("mods_button.inject_success"); } catch { /* best-effort */ }
                         // Auto-checkpoint screenshot: schedule 180 frames later (Update-based, may not fire)
                         TakeAutoCheckpointScreenshot("cp1_mods_injected", 180);
                         return;
@@ -1432,15 +1440,51 @@ namespace DINOForge.Runtime.UI
         }
 
         /// <summary>
-        /// Replaces all click handlers on a Mods button with only the DINOForge toggle.
-        /// This avoids inherited persistent callbacks from cloned Settings/Options buttons.
+        /// Replaces ALL click handlers — both runtime-registered AND serialized persistent callbacks —
+        /// on the Mods button with only the DINOForge toggle.
+        ///
+        /// Fix #944/D1: RemoveAllListeners() only strips runtime (non-persistent) listeners.
+        /// Cloned Options/Settings buttons carry DINO's own serialized persistent onClick
+        /// (e.g. hide-menu, navigation calls) that RemoveAllListeners() cannot strip.
+        /// Those persistent callbacks execute AFTER our listener, hide the menu, and make
+        /// the Mods page invisible. We clear them via reflection on the UnityEvent's
+        /// m_PersistentCalls backing field before wiring our own handler.
         /// </summary>
         private void RewireModsButtonClick(Button modsButton, long attemptId)
         {
+            int persistentBefore = modsButton.onClick.GetPersistentEventCount();
+            // Clear persistent (serialized) listeners via reflection — the only reliable way
+            // since Unity provides no public API to remove them at runtime.
+            try
+            {
+                System.Reflection.FieldInfo? fi = typeof(UnityEngine.Events.UnityEventBase)
+                    .GetField("m_PersistentCalls",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (fi != null)
+                {
+                    object? persistentCalls = fi.GetValue(modsButton.onClick);
+                    if (persistentCalls != null)
+                    {
+                        System.Reflection.MethodInfo? clearMethod = persistentCalls.GetType()
+                            .GetMethod("Clear",
+                                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                        clearMethod?.Invoke(persistentCalls, null);
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Cleared {persistentBefore} persistent onClick callbacks via reflection");
+                    }
+                }
+                else
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     m_PersistentCalls field not found — persistent listeners may remain");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Persistent clear via reflection failed (non-fatal): {ex.Message}");
+            }
             modsButton.onClick.RemoveAllListeners();
-            LogInfo($"[NativeMenuInjector.probe] WIRING onClick listener — button name={modsButton.name}, listenerCount-before={modsButton.onClick.GetPersistentEventCount()}");
+            LogInfo($"[NativeMenuInjector.probe] WIRING onClick listener — button name={modsButton.name}, persistentBefore={persistentBefore}, now={modsButton.onClick.GetPersistentEventCount()}");
             modsButton.onClick.AddListener(OnModsButtonClicked);
-            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Click handler replaced with DINOForge toggle only");
+            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Click handler replaced with DINOForge toggle only (persistent cleared)");
         }
 
         /// <summary>

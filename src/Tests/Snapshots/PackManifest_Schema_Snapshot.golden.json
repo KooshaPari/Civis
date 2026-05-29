@@ -1,0 +1,431 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/pack-manifest.schema.json",
+  "title": "DINOForge Pack Manifest",
+  "description": "Schema for DINOForge pack manifest files (pack.yaml).",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "version",
+    "author",
+    "type"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "Unique pack identifier (lowercase, hyphens, underscores)."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable pack name."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d\u002B\\.\\d\u002B\\.\\d\u002B",
+      "description": "Semantic version string."
+    },
+    "framework_version": {
+      "type": "string",
+      "description": "Required DINOForge framework version range."
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pack author name."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "content",
+        "balance",
+        "ruleset",
+        "scenario",
+        "total_conversion",
+        "utility"
+      ],
+      "description": "Pack type category."
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "engine_extension",
+        "content",
+        "total_conversion",
+        "baseline"
+      ],
+      "description": "Pack classification tier: determines mod menu display and accessible features."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the pack."
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "List of pack IDs this pack depends on."
+    },
+    "conflicts_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "List of pack IDs this pack conflicts with."
+    },
+    "load_order": {
+      "type": "integer",
+      "default": 100,
+      "description": "Load priority within the same dependency tier."
+    },
+    "game_version": {
+      "type": "string",
+      "description": "Compatible game version."
+    },
+    "bepinex_version": {
+      "type": "string",
+      "description": "Required BepInEx version range (e.g., \u0027\u003E=5.4.0 \u003C6.0.0\u0027)."
+    },
+    "unity_version": {
+      "type": "string",
+      "description": "Required Unity version range (e.g., \u0027\u003E=2021.3.0 \u003C2022.0.0\u0027)."
+    },
+    "homepage_url": {
+      "type": "string",
+      "description": "Optional homepage URL for the pack."
+    },
+    "github_url": {
+      "type": "string",
+      "description": "Optional GitHub repository URL for the pack."
+    },
+    "discord_url": {
+      "type": "string",
+      "description": "Optional Discord server/channel invite URL."
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier (e.g., \u0027CC0-1.0\u0027, \u0027MIT\u0027)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Searchable tags for the pack (e.g., [\u0027warfare\u0027, \u0027sci-fi\u0027])."
+    },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "verified-author",
+          "popular",
+          "editors-choice",
+          "early-access",
+          "total-conversion",
+          "compatibility-tested"
+        ]
+      },
+      "description": "Author-declared or curated badges. Author-declarable: early-access, total-conversion. Curated (assigned externally): verified-author, editors-choice. Auto-computed: popular, compatibility-tested."
+    },
+    "ui_theme": {
+      "type": "object",
+      "description": "Custom color theme for this pack\u0027s mod menu detail pane.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Pack title override for display."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Pack subtitle shown below title."
+        },
+        "primary_color": {
+          "type": "string",
+          "description": "Primary color (hex, e.g. \u0027#FFE81F\u0027)."
+        },
+        "secondary_color": {
+          "type": "string",
+          "description": "Secondary color (hex)."
+        },
+        "accent_color": {
+          "type": "string",
+          "description": "Accent/highlight color (hex)."
+        },
+        "text_color": {
+          "type": "string",
+          "description": "Text color (hex)."
+        },
+        "background_tint": {
+          "type": "string",
+          "description": "Background tint overlay color (hex)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "settings": {
+      "type": "array",
+      "description": "User-configurable runtime settings exposed in the F10 mod menu.",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "display_name",
+          "type",
+          "default_value"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Unique identifier for this setting."
+          },
+          "display_name": {
+            "type": "string",
+            "description": "Human-readable label shown in the mod menu."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bool",
+              "int",
+              "float",
+              "string",
+              "enum"
+            ],
+            "description": "Data type; determines which UI control is rendered."
+          },
+          "default_value": {
+            "description": "Default value (bool, number, or string depending on type)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Tooltip or help text for this setting."
+          },
+          "enum_options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Valid options for type=enum settings."
+          },
+          "min": {
+            "type": "number",
+            "description": "Minimum value for type=int or type=float (inclusive)."
+          },
+          "max": {
+            "type": "number",
+            "description": "Maximum value for type=int or type=float (inclusive)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "update_check": {
+      "type": "object",
+      "description": "GitHub release update-check configuration. When set, the runtime polls for newer releases.",
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub repository owner (user or organisation)."
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name."
+        }
+      },
+      "additionalProperties": false
+    },
+    "patches": {
+      "type": "array",
+      "description": "RimWorld-style cross-pack patch operations applied after all packs load.",
+      "items": {
+        "type": "object"
+      }
+    },
+    "loads": {
+      "type": "object",
+      "description": "Content type declarations to load.",
+      "properties": {
+        "factions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "buildings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "weapons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "doctrines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "audio": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "visuals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "localization": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "wave_templates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tech_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "faction_patches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Faction patch definition IDs to apply to existing factions."
+        },
+        "economy_profiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M6 Economy profile definition file paths."
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M6 Economy resource definition file paths."
+        },
+        "trade_routes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M6 Economy trade route definition file paths."
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Stat override definition file paths."
+        },
+        "waves": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Wave definition file paths."
+        },
+        "hud_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M11 UI HUD element definition file paths."
+        },
+        "menus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M11 UI menu definition file paths."
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M11 UI theme definition file paths."
+        },
+        "ui_themes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M11 UI theme definition file paths (alternate naming)."
+        },
+        "ui_overlays": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "M11 UI overlay definition file paths."
+        }
+      },
+      "additionalProperties": false
+    },
+    "overrides": {
+      "type": "object",
+      "description": "Override declarations.",
+      "properties": {
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "buildings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

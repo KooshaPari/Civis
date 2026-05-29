@@ -25,13 +25,13 @@ namespace DINOForge.Runtime
             _outputDir = outputDir;
         }
 
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("DumpSystem", "DumpSystem.OnCreate called");
         }
 
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             _frameCount++;
 

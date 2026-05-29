@@ -235,4 +235,11 @@ public interface IGameClient : IDisposable
     /// <param name="condition">Condition assertion to evaluate.</param>
     /// <param name="ct">Cancellation token.</param>
     Task<UiExpectationResult> ExpectUiAsync(string selector, string condition, CancellationToken ct = default);
+
+    /// <summary>
+    /// Retrieves the current in-memory metrics snapshot from <c>MetricsCollector</c>.
+    /// Returns a JSON object whose keys are metric names and values are their current readings.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    Task<Newtonsoft.Json.Linq.JObject> GetMetricsAsync(CancellationToken ct = default);
 }

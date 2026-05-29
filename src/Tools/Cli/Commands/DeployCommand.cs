@@ -6,10 +6,12 @@ using Spectre.Console;
 namespace DINOForge.Tools.Cli.Commands;
 
 /// <summary>
-/// Deploys the DINOForge Runtime DLL and packs to the game directory.
+/// Builds (optionally) and deploys the DINOForge Runtime DLL plus packs to a DINO install.
 /// </summary>
 internal static class DeployCommand
 {
+    private const string RuntimeDllName = "DINOForge.Runtime.dll";
+
     /// <summary>
     /// Creates the <c>deploy</c> command.
     /// </summary>
@@ -17,144 +19,147 @@ internal static class DeployCommand
     {
         Option<string?> gamePathOpt = new("--game-path")
         {
-            Description = "Game installation path (auto-detected if omitted)"
+            Description = "Path to the DINO install root (overrides DINO_GAME_PATH)"
         };
-
         Option<bool> buildOpt = new("--build")
         {
-            Description = "Build before deploying",
+            Description = "Build the Runtime DLL before deploying",
             DefaultValueFactory = _ => true
         };
-
-        Option<string> configOpt = new("--configuration")
+        Option<string> configOpt = new("--configuration", "-c")
         {
-            Description = "Build configuration",
+            Description = "Build configuration (Release or Debug)",
             DefaultValueFactory = _ => "Release"
         };
 
-        Command command = new("deploy", "Deploy Runtime DLL and packs to the game directory");
+        Command command = new("deploy", "Deploy the DINOForge Runtime DLL and packs to a DINO install");
         command.Add(gamePathOpt);
         command.Add(buildOpt);
         command.Add(configOpt);
 
         command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
         {
-            string? gamePathVal = parseResult.GetValue(gamePathOpt);
+            string? gamePath = parseResult.GetValue(gamePathOpt);
             bool doBuild = parseResult.GetValue(buildOpt);
             string config = parseResult.GetValue(configOpt) ?? "Release";
 
-            string? gamePath = GamePathHelper.Detect(gamePathVal);
-            if (gamePath is null)
-            {
-                Environment.ExitCode = 1;
-                return;
-            }
-
-            AnsiConsole.MarkupLine($"[bold]Game path:[/] {Markup.Escape(gamePath)}");
-
-            // Step 1: Build if requested
-            if (doBuild)
-            {
-                int buildExit = await BuildCommand.RunBuildAsync(config, ct).ConfigureAwait(false);
-                if (buildExit != 0)
-                {
-                    AnsiConsole.MarkupLine("[red]Build failed — aborting deploy.[/]");
-                    Environment.ExitCode = buildExit;
-                    return;
-                }
-            }
-
-            // Step 2: Deploy DLL
-            string repoRoot = Directory.GetCurrentDirectory();
-            // Walk up to find repo root
-            string? dir = repoRoot;
-            while (dir is not null && !Directory.Exists(Path.Combine(dir, ".git")))
-            {
-                dir = Directory.GetParent(dir)?.FullName;
-            }
-
-            repoRoot = dir ?? repoRoot;
-
-            string sourceDll = Path.Combine(repoRoot, "src", "Runtime", "bin", config, "netstandard2.0", "DINOForge.Runtime.dll");
-            string pluginsDir = GamePathHelper.GetPluginsDir(gamePath);
-            string destDll = Path.Combine(pluginsDir, "DINOForge.Runtime.dll");
-
-            if (!File.Exists(sourceDll))
-            {
-                AnsiConsole.MarkupLine($"[red]Error:[/] Built DLL not found at {Markup.Escape(sourceDll)}");
-                Environment.ExitCode = 1;
-                return;
-            }
-
-            Directory.CreateDirectory(pluginsDir);
-            File.Copy(sourceDll, destDll, overwrite: true);
-
-            // Compute SHA256
-            string hash = ComputeSha256(destDll);
-            long sizeBytes = new FileInfo(destDll).Length;
-
-            AnsiConsole.MarkupLine($"\n[green]DLL deployed[/]");
-            AnsiConsole.MarkupLine($"  Destination: {Markup.Escape(destDll)}");
-            AnsiConsole.MarkupLine($"  Size:        {sizeBytes / 1024.0:F1} KB");
-            AnsiConsole.MarkupLine($"  SHA256:      {hash}");
-
-            // Step 3: Deploy packs
-            string packsSource = Path.Combine(repoRoot, "packs");
-            string packsTarget = GamePathHelper.GetPacksDir(gamePath);
-
-            if (Directory.Exists(packsSource))
-            {
-                int packCount = DeployPacks(packsSource, packsTarget);
-                AnsiConsole.MarkupLine($"\n[green]Packs deployed:[/] {packCount} pack(s) to {Markup.Escape(packsTarget)}");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine("[yellow]Warning:[/] No packs/ directory found — skipping pack deploy.");
-            }
+            int exitCode = await RunDeployAsync(gamePath, doBuild, config, ct).ConfigureAwait(false);
+            Environment.ExitCode = exitCode;
         });
 
         return command;
     }
 
     /// <summary>
-    /// Copies pack directories (mirroring structure) from source to target.
-    /// Returns the number of packs deployed.
+    /// Runs the deploy pipeline: optional build, copy DLL, mirror packs.
     /// </summary>
-    private static int DeployPacks(string source, string target)
+    internal static async Task<int> RunDeployAsync(string? gamePath, bool doBuild, string config, CancellationToken ct)
     {
-        Directory.CreateDirectory(target);
-        int count = 0;
-
-        foreach (string packDir in Directory.GetDirectories(source))
+        if (doBuild)
         {
-            string packName = Path.GetFileName(packDir);
-            string destPack = Path.Combine(target, packName);
-            Directory.CreateDirectory(destPack);
-
-            // Copy all files in the pack directory (shallow — pack.yaml + content)
-            foreach (string file in Directory.GetFiles(packDir, "*", SearchOption.AllDirectories))
+            int buildExit = await BuildCommand.RunBuildAsync(config, ct).ConfigureAwait(false);
+            if (buildExit != 0)
             {
-                string relativePath = Path.GetRelativePath(packDir, file);
-                string destFile = Path.Combine(destPack, relativePath);
-                string? destDir = Path.GetDirectoryName(destFile);
-                if (destDir is not null)
-                {
-                    Directory.CreateDirectory(destDir);
-                }
-
-                File.Copy(file, destFile, overwrite: true);
+                AnsiConsole.MarkupLine("[red]Deploy aborted: build failed.[/]");
+                return buildExit;
             }
-
-            count++;
         }
 
-        return count;
+        string resolvedGamePath = GamePathHelper.Detect(gamePath);
+        AnsiConsole.MarkupLine($"[bold]Deploying to[/] {Markup.Escape(resolvedGamePath)}");
+
+        string sourceDll = BuildCommand.GetOutputDllPath(config);
+        if (!File.Exists(sourceDll))
+        {
+            AnsiConsole.MarkupLine($"[red]Runtime DLL not found at[/] {Markup.Escape(sourceDll)}");
+            return 1;
+        }
+
+        string pluginsDir = GamePathHelper.GetPluginsDir(resolvedGamePath);
+        try
+        {
+            Directory.CreateDirectory(pluginsDir);
+            string destDll = Path.Combine(pluginsDir, RuntimeDllName);
+            File.Copy(sourceDll, destDll, overwrite: true);
+
+            long size = new FileInfo(destDll).Length;
+            string hash = await ComputeSha256Async(destDll, ct).ConfigureAwait(false);
+            AnsiConsole.MarkupLine($"[green]Copied DLL:[/] {Markup.Escape(destDll)}");
+            AnsiConsole.MarkupLine($"  Size:   [cyan]{size:N0} bytes[/]");
+            AnsiConsole.MarkupLine($"  SHA256: [cyan]{hash}[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Failed to copy DLL:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+
+        // Mirror packs/ → BepInEx/dinoforge_packs/
+        int packsCopied = 0;
+        const string packsRoot = "packs";
+        if (Directory.Exists(packsRoot))
+        {
+            string destPacksDir = GamePathHelper.GetPacksDir(resolvedGamePath);
+            try
+            {
+                Directory.CreateDirectory(destPacksDir);
+                foreach (string packDir in Directory.EnumerateDirectories(packsRoot))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    string packName = Path.GetFileName(packDir);
+                    if (packName.StartsWith("test-", StringComparison.OrdinalIgnoreCase) ||
+                        packName.StartsWith("Test", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string destPack = Path.Combine(destPacksDir, packName);
+                    MirrorDirectory(packDir, destPack);
+                    packsCopied++;
+                }
+
+                AnsiConsole.MarkupLine($"[green]Mirrored {packsCopied} pack(s) to[/] {Markup.Escape(destPacksDir)}");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Pack mirroring failed:[/] {Markup.Escape(ex.Message)}");
+            }
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[yellow]No packs/ directory found at[/] {Markup.Escape(Path.GetFullPath(packsRoot))}");
+        }
+
+        AnsiConsole.MarkupLine("[green]Deploy complete.[/]");
+        return 0;
     }
 
-    private static string ComputeSha256(string filePath)
+    private static void MirrorDirectory(string source, string dest)
     {
-        using FileStream fs = File.OpenRead(filePath);
-        byte[] hashBytes = SHA256.HashData(fs);
-        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        Directory.CreateDirectory(dest);
+        foreach (string dir in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
+        {
+            string rel = Path.GetRelativePath(source, dir);
+            Directory.CreateDirectory(Path.Combine(dest, rel));
+        }
+
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            string rel = Path.GetRelativePath(source, file);
+            string destFile = Path.Combine(dest, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile)!);
+            File.Copy(file, destFile, overwrite: true);
+        }
+    }
+
+    private static async Task<string> ComputeSha256Async(string path, CancellationToken ct)
+    {
+        await using FileStream fs = File.OpenRead(path);
+        byte[] hash = await SHA256.HashDataAsync(fs, ct).ConfigureAwait(false);
+        return Convert.ToHexString(hash);
     }
 }

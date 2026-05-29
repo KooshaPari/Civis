@@ -1,0 +1,134 @@
+name: Capture Pack Screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      pack_id:
+        description: "Pack ID to capture (e.g., warfare-starwars; leave empty for all packs)"
+        required: false
+        default: ""
+  schedule:
+    # Weekly Sunday at 2:00 UTC (intentionally off-minute per feedback_parallel_subagent_minimum)
+    - cron: "7 2 * * 0"
+
+jobs:
+  capture:
+    runs-on: windows-latest
+    name: Screenshot Capture
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 11 (preview)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "11.0.100-preview.2.26159.112"
+          include-prerelease: true
+
+      - name: Cache .NET packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore src/DINOForge.sln
+
+      - name: Build solution (Release)
+        run: dotnet build src/DINOForge.sln -c Release --no-restore
+
+      # Note: Game capture requires a running game instance. This step assumes the game
+      # is already installed at G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\
+      # or uses the DINO_GAME_PATH environment variable.
+      # For CI/CD, this may require downloading/mounting the game via Steam or similar.
+      # Current implementation skips actual game launch in CI (--no-launch flag).
+
+      - name: Determine pack list
+        id: packs
+        shell: pwsh
+        run: |
+          $packId = "${{ github.event.inputs.pack_id }}"
+          if ($packId) {
+            Write-Output "pack_ids=$packId" >> $env:GITHUB_OUTPUT
+            Write-Host "Capturing for pack: $packId"
+          } else {
+            $packs = Get-ChildItem packs/ -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+            if ($packs -is [string]) { $packs = @($packs) }
+            $packList = $packs -join ","
+            Write-Output "pack_ids=$packList" >> $env:GITHUB_OUTPUT
+            Write-Host "Capturing for all packs: $($packs -join ', ')"
+          }
+
+      - name: Capture screenshots
+        shell: pwsh
+        continue-on-error: true  # Don't fail workflow if game isn't available in CI
+        run: |
+          $packIds = "${{ steps.packs.outputs.pack_ids }}" -split ","
+          $successCount = 0
+          $failureCount = 0
+
+          foreach ($packId in $packIds) {
+            $packId = $packId.Trim()
+            if (-not $packId) { continue }
+
+            Write-Host "📸 Capturing screenshots for: $packId"
+            & dotnet run --project src/Tools/Cli -- pack screenshot $packId --count 3 --no-launch
+
+            if ($LASTEXITCODE -eq 0) {
+              $successCount++
+              Write-Host "✓ Success: $packId"
+            } else {
+              $failureCount++
+              Write-Host "✗ Failed: $packId (game may not be running)"
+            }
+          }
+
+          Write-Host ""
+          Write-Host "Results: $successCount succeeded, $failureCount failed"
+          if ($failureCount -gt 0) {
+            Write-Host "Note: This is expected in CI if the game isn't running. Re-run locally with game running."
+          }
+
+      - name: Upload screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pack-screenshots-${{ github.run_id }}
+          path: |
+            packs/*/screenshots/auto-*.png
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit screenshots (on schedule)
+        if: github.event_name == 'schedule' && success()
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          git config user.name "DINOForge Bot"
+          git config user.email "bot@dinoforge.example.com"
+
+          $hasChanges = git diff --quiet packs/*/screenshots/ || $false
+          if (-not $hasChanges) {
+            git add packs/*/screenshots/auto-*.png 2>/dev/null
+            $hasChanges = -not (git diff --cached --quiet)
+          }
+
+          if ($hasChanges) {
+            git commit -m "chore(packs): auto-capture pack screenshots [bot]" --no-verify || Write-Host "No changes to commit"
+            git push origin HEAD:${{ github.ref }} 2>/dev/null || Write-Host "Push skipped (no commit or already up-to-date)"
+          } else {
+            Write-Host "No screenshot changes to commit"
+          }
+
+      - name: Report summary
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "Screenshot capture workflow completed"
+          Write-Host "Artifacts: pack-screenshots-${{ github.run_id }}"

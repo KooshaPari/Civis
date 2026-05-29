@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using Spectre.Console;
 using DINOForge.SDK;
 using DINOForge.SDK.Assets;
 using DINOForge.SDK.IO;
 using DINOForge.SDK.Models;
+using DINOForge.SDK.Signing;
 using DINOForge.SDK.Validation;
 using DINOForge.Tools.PackCompiler.Json;
 using DINOForge.Tools.PackCompiler.Models;
@@ -32,14 +35,20 @@ namespace DINOForge.Tools.PackCompiler
             var formatOption = new Option<string>("--format") { Description = "Output format: text or json (default: text)", DefaultValueFactory = _ => "text" };
 
             // Validate command
-            var validateCommand = new Command("validate") { Description = "Validate a pack directory" };
+            var validateCommand = new Command("validate") { Description = "Validate a pack directory with enhanced error messages and suggestions" };
             validateCommand.Arguments.Add(packPathArg);
             validateCommand.Options.Add(formatOption);
+            var validateFixOption = new Option<bool>("--fix") { Description = "Attempt to auto-fix common validation issues" };
+            var validateStrictOption = new Option<bool>("--strict") { Description = "Fail on warnings in addition to errors (strict CI mode)" };
+            validateCommand.Options.Add(validateFixOption);
+            validateCommand.Options.Add(validateStrictOption);
             validateCommand.SetAction(parseResult =>
             {
                 string packPath = parseResult.GetValue(packPathArg)!;
                 string format = parseResult.GetValue(formatOption) ?? "text";
-                ValidatePack(packPath, format);
+                bool fix = parseResult.GetValue(validateFixOption);
+                bool strict = parseResult.GetValue(validateStrictOption);
+                ValidatePack(packPath, format, fix, strict);
             });
 
             // Build command
@@ -146,21 +155,43 @@ namespace DINOForge.Tools.PackCompiler
             // bundlesCommand.Subcommands.Add(bundlesInspectCommand);
             // bundlesCommand.Subcommands.Add(bundlesValidateCommand);
 
-            // Thunderstore command
-            var thunderstorePackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
-            var authorOption = new Option<string?>("--author") { Description = "Thunderstore author name (default: from DINOForge config or 'DINOForge')" };
-            var thunderstoreOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory (defaults to pack-path)" };
-            var thunderstoreCommand = new Command("thunderstore") { Description = "Generate Thunderstore-compatible manifest.json from a DINOForge pack" };
-            thunderstoreCommand.Arguments.Add(thunderstorePackDirArg);
-            thunderstoreCommand.Options.Add(authorOption);
-            thunderstoreCommand.Options.Add(thunderstoreOutputOption);
-            thunderstoreCommand.SetAction(parseResult =>
+            // Thunderstore command group
+            var thunderstoreCommand = new Command("thunderstore") { Description = "Thunderstore publishing tools" };
+
+            // thunderstore manifest - generate manifest.json
+            var tsManifestPackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
+            var tsManifestAuthorOption = new Option<string?>("--author") { Description = "Thunderstore author name (default: from DINOForge config or 'DINOForge')" };
+            var tsManifestOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory (defaults to pack-path)" };
+            var tsManifestCommand = new Command("manifest") { Description = "Generate Thunderstore-compatible manifest.json" };
+            tsManifestCommand.Arguments.Add(tsManifestPackDirArg);
+            tsManifestCommand.Options.Add(tsManifestAuthorOption);
+            tsManifestCommand.Options.Add(tsManifestOutputOption);
+            tsManifestCommand.SetAction(parseResult =>
             {
-                string packPath = parseResult.GetValue(thunderstorePackDirArg)!;
-                string author = parseResult.GetValue(authorOption) ?? GetDefaultAuthor();
-                string? outputDir = parseResult.GetValue(thunderstoreOutputOption);
+                string packPath = parseResult.GetValue(tsManifestPackDirArg)!;
+                string author = parseResult.GetValue(tsManifestAuthorOption) ?? GetDefaultAuthor();
+                string? outputDir = parseResult.GetValue(tsManifestOutputOption);
                 GenerateThunderstoreManifest(packPath, author, outputDir ?? "");
             });
+
+            // thunderstore package - create full Thunderstore ZIP
+            var tsPackPackDirArg = new Argument<string>("pack-path") { Description = "Path to the pack directory containing pack.yaml" };
+            var tsPackAuthorOption = new Option<string?>("--author") { Description = "Thunderstore author name (default: from DINOForge config or 'DINOForge')" };
+            var tsPackOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory for ZIP (defaults to dist/)" };
+            var tsPackCommand = new Command("package") { Description = "Create Thunderstore-compatible ZIP package" };
+            tsPackCommand.Arguments.Add(tsPackPackDirArg);
+            tsPackCommand.Options.Add(tsPackAuthorOption);
+            tsPackCommand.Options.Add(tsPackOutputOption);
+            tsPackCommand.SetAction(parseResult =>
+            {
+                string packPath = parseResult.GetValue(tsPackPackDirArg)!;
+                string author = parseResult.GetValue(tsPackAuthorOption) ?? GetDefaultAuthor();
+                string? outputDir = parseResult.GetValue(tsPackOutputOption);
+                CreateThunderstorePackage(packPath, author, outputDir ?? "dist");
+            });
+
+            thunderstoreCommand.Subcommands.Add(tsManifestCommand);
+            thunderstoreCommand.Subcommands.Add(tsPackCommand);
 
             // Validate total conversion command
             var validateTcCommand = new Command("validate-tc") { Description = "Validate a total conversion pack manifest" };
@@ -205,6 +236,35 @@ namespace DINOForge.Tools.PackCompiler
             packCommand.Subcommands.Add(packUpdateCommand);
             packCommand.Subcommands.Add(packLockCommand);
 
+            // Sign command - cryptographic pack signing
+            var signPackPathArg = new Argument<string>("pack-path") { Description = "Path to the pack directory" };
+            var signKeyPathOption = new Option<string>("--key", "-k") { Description = "Path to PEM-format RSA private key file (required)" };
+            var signOutputOption = new Option<string?>("--output", "-o") { Description = "Output directory for signature file (defaults to pack-path)" };
+            var signCommand = new Command("sign") { Description = "Sign a pack with an RSA private key" };
+            signCommand.Arguments.Add(signPackPathArg);
+            signCommand.Options.Add(signKeyPathOption);
+            signCommand.Options.Add(signOutputOption);
+            signCommand.SetAction(parseResult =>
+            {
+                string packPath = parseResult.GetValue(signPackPathArg)!;
+                string keyPath = parseResult.GetValue(signKeyPathOption)!;
+                string? outputDir = parseResult.GetValue(signOutputOption);
+                SignPack(packPath, keyPath, outputDir ?? packPath);
+            });
+
+            // Verify command - cryptographic pack verification
+            var verifyPackPathArg = new Argument<string>("pack-path") { Description = "Path to the pack directory" };
+            var verifyKeysOption = new Option<string?>("--trusted-keys", "-t") { Description = "Path to trusted keys file (optional)" };
+            var verifyCommand = new Command("verify") { Description = "Verify a pack signature" };
+            verifyCommand.Arguments.Add(verifyPackPathArg);
+            verifyCommand.Options.Add(verifyKeysOption);
+            verifyCommand.SetAction(parseResult =>
+            {
+                string packPath = parseResult.GetValue(verifyPackPathArg)!;
+                string? trustedKeysFile = parseResult.GetValue(verifyKeysOption);
+                VerifyPack(packPath, trustedKeysFile);
+            });
+
             var rootCommand = new RootCommand("DINOForge PackCompiler - Validate and bundle content packs");
             rootCommand.Subcommands.Add(validateCommand);
             rootCommand.Subcommands.Add(buildCommand);
@@ -213,6 +273,8 @@ namespace DINOForge.Tools.PackCompiler
             rootCommand.Subcommands.Add(assetsCommand);
             rootCommand.Subcommands.Add(bundlesCommand);
             rootCommand.Subcommands.Add(packCommand);
+            rootCommand.Subcommands.Add(signCommand);
+            rootCommand.Subcommands.Add(verifyCommand);
 
             ParseResult parseResultObj = rootCommand.Parse(args);
 
@@ -253,7 +315,7 @@ namespace DINOForge.Tools.PackCompiler
         }
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-        private static void ValidatePack(string packPath, string format = "text")
+        private static void ValidatePack(string packPath, string format = "text", bool fix = false, bool strict = false)
         {
             bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
             try
@@ -261,7 +323,9 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode)
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Validate[/]");
-                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
+                    if (fix) AnsiConsole.MarkupLine("[yellow]Mode: Auto-repair enabled[/]");
+                    if (strict) AnsiConsole.MarkupLine("[yellow]Mode: Strict (warnings treated as errors)[/]");
                     AnsiConsole.WriteLine();
                 }
 
@@ -289,7 +353,7 @@ namespace DINOForge.Tools.PackCompiler
                     bool aggregateSucceeded = true;
                     foreach (string childPackDir in aggregatePackDirs)
                     {
-                        aggregateSucceeded &= ValidateSinglePack(childPackDir, format);
+                        aggregateSucceeded &= ValidateSinglePack(childPackDir, format, fix, strict);
                     }
 
                     if (!aggregateSucceeded)
@@ -298,7 +362,7 @@ namespace DINOForge.Tools.PackCompiler
                     return;
                 }
 
-                ValidateSinglePack(packPath, format);
+                ValidateSinglePack(packPath, format, fix, strict);
             }
             catch (Exception ex)
             {
@@ -308,7 +372,7 @@ namespace DINOForge.Tools.PackCompiler
         }
 
         [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
-        private static bool ValidateSinglePack(string packPath, string format = "text")
+        private static bool ValidateSinglePack(string packPath, string format = "text", bool fix = false, bool strict = false)
         {
             bool jsonMode = string.Equals(format, "json", StringComparison.OrdinalIgnoreCase);
             try
@@ -316,7 +380,7 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode)
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Validate[/]");
-                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
                     AnsiConsole.WriteLine();
                 }
 
@@ -342,10 +406,6 @@ namespace DINOForge.Tools.PackCompiler
                 DINOForge.SDK.Validation.ValidationResult schemaResult = schemaValidator.Validate("pack-manifest", manifestYaml);
                 if (!schemaResult.IsValid)
                 {
-                    string[] errMessages = schemaResult.Errors
-                        .Select(e => string.IsNullOrEmpty(e.Path) ? e.Message : $"{e.Path}: {e.Message}")
-                        .ToArray();
-
                     if (jsonMode)
                     {
                         WriteJsonLine(writer =>
@@ -354,17 +414,38 @@ namespace DINOForge.Tools.PackCompiler
                             writer.WriteString("pack", manifest.Id);
                             writer.WritePropertyName("errors");
                             writer.WriteStartArray();
-                            foreach (string err in errMessages)
-                                writer.WriteStringValue(err);
+                            foreach (var err in schemaResult.Errors)
+                            {
+                                writer.WriteStringValue($"{(string.IsNullOrEmpty(err.Path) ? "" : err.Path + ": ")}{err.Message}");
+                            }
                             writer.WriteEndArray();
                         });
                     }
                     else
                     {
                         AnsiConsole.MarkupLine("[bold red]Schema validation failed:[/]");
-                        foreach (string msg in errMessages)
+                        AnsiConsole.WriteLine();
+
+                        // Load schema for enriched error messages
+                        try
                         {
-                            AnsiConsole.MarkupLine($"  [red]- {Markup.Escape(msg)}[/]");
+                            var schemaObj = NJsonSchema.JsonSchema.FromJsonAsync(schemaYaml).Result;
+                            var enhancedValidator = new EnhancedValidationService(schemaObj, manifestYaml, packPath);
+
+                            foreach (var error in schemaResult.Errors)
+                            {
+                                var enriched = enhancedValidator.EnrichError(error);
+                                DisplayEnrichedError(enriched);
+                            }
+                        }
+                        catch
+                        {
+                            // Fallback to simple error display if enrichment fails
+                            foreach (var error in schemaResult.Errors)
+                            {
+                                string msg = string.IsNullOrEmpty(error.Path) ? error.Message : $"{error.Path}: {error.Message}";
+                                AnsiConsole.MarkupLine($"  [red]✗ {Markup.Escape(msg)}[/]");
+                            }
                         }
                     }
                     return false;
@@ -387,21 +468,21 @@ namespace DINOForge.Tools.PackCompiler
                 var table = new Table();
                 table.AddColumn("Field");
                 table.AddColumn("Value");
-                table.AddRow("ID", manifest.Id);
-                table.AddRow("Name", manifest.Name);
-                table.AddRow("Version", manifest.Version);
-                table.AddRow("Author", manifest.Author ?? "[dim]<not set>[/]");
-                table.AddRow("Type", manifest.Type);
-                table.AddRow("Description", manifest.Description ?? "[dim]<not set>[/]");
-                table.AddRow("Framework Version", manifest.FrameworkVersion);
-                table.AddRow("Game Version", manifest.GameVersion ?? "[dim]<not set>[/]");
+                table.AddRow("ID", Markup.Escape(manifest.Id));
+                table.AddRow("Name", Markup.Escape(manifest.Name));
+                table.AddRow("Version", Markup.Escape(manifest.Version));
+                table.AddRow("Author", manifest.Author is not null ? Markup.Escape(manifest.Author) : "[dim]<not set>[/]");
+                table.AddRow("Type", Markup.Escape(manifest.Type));
+                table.AddRow("Description", manifest.Description is not null ? Markup.Escape(manifest.Description) : "[dim]<not set>[/]");
+                table.AddRow("Framework Version", Markup.Escape(manifest.FrameworkVersion));
+                table.AddRow("Game Version", manifest.GameVersion is not null ? Markup.Escape(manifest.GameVersion) : "[dim]<not set>[/]");
                 table.AddRow("Load Order", manifest.LoadOrder.ToString());
 
                 if (manifest.DependsOn.Count > 0)
-                    table.AddRow("Depends On", string.Join(", ", manifest.DependsOn));
+                    table.AddRow("Depends On", Markup.Escape(string.Join(", ", manifest.DependsOn)));
 
                 if (manifest.ConflictsWith.Count > 0)
-                    table.AddRow("Conflicts With", string.Join(", ", manifest.ConflictsWith));
+                    table.AddRow("Conflicts With", Markup.Escape(string.Join(", ", manifest.ConflictsWith)));
 
                 AnsiConsole.Write(table);
                 AnsiConsole.WriteLine();
@@ -448,6 +529,37 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        /// <summary>
+        /// Displays an enriched validation error with context and suggestions.
+        /// </summary>
+        private static void DisplayEnrichedError(EnrichedValidationError error)
+        {
+            // Error header with line number if available
+            if (error.LineNumber > 0)
+            {
+                AnsiConsole.MarkupLine($"[red]✗ Line {error.LineNumber}:[/] {Markup.Escape(error.ContextualMessage)}");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]✗ {Markup.Escape(error.ContextualMessage)}[/]");
+            }
+
+            // Original error message (indented)
+            AnsiConsole.MarkupLine($"  [dim]Error: {Markup.Escape(error.OriginalError.Message)}[/]");
+
+            // Suggestions
+            if (error.Suggestions.Count > 0)
+            {
+                AnsiConsole.MarkupLine("[yellow]  Suggestions:[/]");
+                foreach (var suggestion in error.Suggestions)
+                {
+                    AnsiConsole.MarkupLine($"    • {Markup.Escape(suggestion)}");
+                }
+            }
+
+            AnsiConsole.WriteLine();
+        }
+
         private static void WriteValidationError(bool jsonMode, string? pack, string message)
         {
             if (jsonMode)
@@ -491,9 +603,9 @@ namespace DINOForge.Tools.PackCompiler
                 if (!jsonMode)
                 {
                     AnsiConsole.MarkupLine("[bold blue]PackCompiler Build[/]");
-                    AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                    AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
                     if (!string.IsNullOrEmpty(outputDir))
-                        AnsiConsole.MarkupLine($"Output Directory: {outputDir}");
+                        AnsiConsole.MarkupLine($"Output Directory: {Markup.Escape(outputDir)}");
                     AnsiConsole.WriteLine();
                 }
 
@@ -535,7 +647,7 @@ namespace DINOForge.Tools.PackCompiler
                 var manifest = loader.LoadFromFile(manifestPath);
                 if (!jsonMode)
                 {
-                    AnsiConsole.MarkupLine($"[green]v[/] Manifest valid: {manifest.Name} v{manifest.Version}");
+                    AnsiConsole.MarkupLine($"[green]v[/] Manifest valid: {Markup.Escape(manifest.Name)} v{Markup.Escape(manifest.Version)}");
                     AnsiConsole.WriteLine();
                 }
 
@@ -570,7 +682,7 @@ namespace DINOForge.Tools.PackCompiler
                 {
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[bold green]Build successful![/]");
-                    AnsiConsole.MarkupLine($"Output: {finalOutputDir}");
+                    AnsiConsole.MarkupLine($"Output: {Markup.Escape(finalOutputDir)}");
                 }
             }
             catch (Exception ex)
@@ -585,7 +697,174 @@ namespace DINOForge.Tools.PackCompiler
                         writer.WriteEndArray();
                     });
                 else
-                    AnsiConsole.MarkupLine($"[bold red]Build failed:[/] {ex.Message}");
+                    AnsiConsole.MarkupLine($"[bold red]Build failed:[/] {Markup.Escape(ex.Message)}");
+                Environment.Exit(1);
+            }
+        }
+
+        [RequiresUnreferencedCode("Calls System.Text.Json.JsonSerializer.Serialize<TValue>(TValue, JsonSerializerOptions)")]
+        private static void CreateThunderstorePackage(string packPath, string author, string outputDir)
+        {
+            try
+            {
+                AnsiConsole.MarkupLine("[bold blue]Thunderstore Package Creation[/]");
+                AnsiConsole.MarkupLine($"Pack Path: {Markup.Escape(packPath)}");
+                AnsiConsole.MarkupLine($"Author: {Markup.Escape(author)}");
+                AnsiConsole.MarkupLine($"Output Directory: {Markup.Escape(outputDir)}");
+                AnsiConsole.WriteLine();
+
+                if (!Directory.Exists(packPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
+                    Environment.Exit(1);
+                    return;
+                }
+
+                string manifestPath = Path.Combine(packPath, "pack.yaml");
+                if (!File.Exists(manifestPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] pack.yaml not found in directory");
+                    Environment.Exit(1);
+                    return;
+                }
+
+                AnsiConsole.MarkupLine("[yellow]Loading manifest...[/]");
+                var loader = new PackLoader();
+                var manifest = loader.LoadFromFile(manifestPath);
+
+                // Build Thunderstore package name: "Author-PackId" (sanitized to alphanumeric + dash)
+                string safeName = System.Text.RegularExpressions.Regex.Replace(
+                    manifest.Id, @"[^a-zA-Z0-9_]", "-");
+                string tsName = $"{author}-{safeName}";
+
+                // Map DINOForge depends_on to Thunderstore format
+                var dependencies = new List<string> { "BepInEx-BepInExPack-5.4.2100" };
+                if (manifest.DependsOn != null && manifest.DependsOn.Count > 0)
+                {
+                    foreach (string dep in manifest.DependsOn)
+                    {
+                        string safeDep = System.Text.RegularExpressions.Regex.Replace(dep, @"[^a-zA-Z0-9_]", "-");
+                        dependencies.Add($"{author}-{safeDep}-1.0.0");
+                    }
+                }
+
+                // Truncate description to 250 chars (Thunderstore limit)
+                string description = manifest.Description ?? $"DINOForge pack: {manifest.Name}";
+                if (description.Length > 250)
+                    description = description[..247] + "...";
+
+                // Create staging directory
+                string stagingDir = Path.Combine(outputDir, tsName);
+                if (Directory.Exists(stagingDir))
+                {
+                    AnsiConsole.MarkupLine("[yellow]Clearing existing staging directory...[/]");
+                    Directory.Delete(stagingDir, true);
+                }
+                Directory.CreateDirectory(stagingDir);
+
+                AnsiConsole.MarkupLine("[yellow]Copying pack contents (excluding raw assets)...[/]");
+
+                // Copy pack files, excluding raw asset working directories
+                var excludedPatterns = new[] { "assets/raw", "assets/working", @"\.blend$", @"\.fbx$", @"\.psd$" };
+                CopyDirectoryExcluding(packPath, stagingDir, excludedPatterns);
+
+                // Generate manifest.json manually (trimming-safe approach)
+                AnsiConsole.MarkupLine("[yellow]Generating manifest.json...[/]");
+                string manifestJsonPath = Path.Combine(stagingDir, "manifest.json");
+                var manifestJson = BuildThunderstoreManifestJson(tsName, manifest.Version, GetDefaultWebsiteUrl(), description, dependencies);
+                File.WriteAllText(manifestJsonPath, manifestJson, Encoding.UTF8);
+                AnsiConsole.MarkupLine($"[green]✓[/] manifest.json created");
+
+                // Check for icon.png (required by Thunderstore)
+                string iconPath = Path.Combine(stagingDir, "icon.png");
+                if (!File.Exists(iconPath))
+                {
+                    AnsiConsole.MarkupLine("[yellow]⚠[/] Warning: icon.png not found. Thunderstore requires a 256x256 PNG icon.");
+                    AnsiConsole.MarkupLine($"    Place icon.png at: {Markup.Escape(iconPath)}");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[green]✓[/] icon.png found");
+                }
+
+                // Check for README.md (optional but recommended)
+                string readmePath = Path.Combine(stagingDir, "README.md");
+                if (!File.Exists(readmePath))
+                {
+                    AnsiConsole.MarkupLine("[yellow]ℹ[/] Info: README.md not found. Creating a basic one...");
+                    string basicReadme = $@"# {manifest.Name}
+
+{manifest.Description ?? $"A DINOForge mod pack for Diplomacy is Not an Option"}
+
+## Installation
+
+1. Install [BepInEx](https://valheim.thunderstore.io/package/denikson/BepInExPack/)
+2. Extract this mod to your BepInEx plugins folder
+3. Launch the game
+
+## Dependencies
+
+- BepInEx 5.4.2100+
+{(manifest.DependsOn?.Count > 0 ? $"- {string.Join("\n- ", manifest.DependsOn)}" : "")}
+
+## Version
+
+{manifest.Version}
+
+## Author
+
+{author}
+";
+                    File.WriteAllText(readmePath, basicReadme, Encoding.UTF8);
+                    AnsiConsole.MarkupLine("[green]✓[/] Basic README.md created");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[green]✓[/] README.md found");
+                }
+
+                // Create ZIP archive
+                string zipFileName = $"{tsName}-{manifest.Version}.zip";
+                string zipPath = Path.Combine(outputDir, zipFileName);
+
+                if (File.Exists(zipPath))
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Removing existing ZIP: {zipPath}[/]");
+                    File.Delete(zipPath);
+                }
+
+                AnsiConsole.MarkupLine("[yellow]Creating ZIP archive...[/]");
+                using (var zipFile = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    foreach (string file in Directory.GetFiles(stagingDir, "*", SearchOption.AllDirectories))
+                    {
+                        string relativePath = Path.GetRelativePath(stagingDir, file);
+                        // Normalize path separators for ZIP (always forward slash)
+                        string zipPath_normalized = relativePath.Replace(Path.DirectorySeparatorChar, '/');
+                        ZipFileExtensions.CreateEntryFromFile(zipFile, file, zipPath_normalized);
+                    }
+                }
+
+                // Compute ZIP size
+                long zipSize = new FileInfo(zipPath).Length;
+
+                // Clean up staging directory
+                AnsiConsole.MarkupLine("[yellow]Cleaning up staging directory...[/]");
+                Directory.Delete(stagingDir, true);
+
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[bold green]Package created successfully![/]");
+                AnsiConsole.MarkupLine($"[bold]ZIP:[/] {Markup.Escape(zipPath)}");
+                AnsiConsole.MarkupLine($"[bold]Size:[/] {Markup.Escape(FormatBytes(zipSize))}");
+                AnsiConsole.MarkupLine($"[bold]Package Name:[/] {Markup.Escape(tsName)}");
+                AnsiConsole.MarkupLine($"[bold]Version:[/] {Markup.Escape(manifest.Version)}");
+                AnsiConsole.MarkupLine($"[bold]Dependencies:[/] {dependencies.Count}");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[green]Ready to upload to Thunderstore![/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[bold red]Package creation failed:[/] {Markup.Escape(ex.Message)}");
                 Environment.Exit(1);
             }
         }
@@ -598,7 +877,7 @@ namespace DINOForge.Tools.PackCompiler
                 string manifestPath = Path.Combine(packPath, "pack.yaml");
                 if (!File.Exists(manifestPath))
                 {
-                    AnsiConsole.MarkupLine($"[bold red]ERROR:[/] No pack.yaml found in {packPath}");
+                    AnsiConsole.MarkupLine($"[bold red]ERROR:[/] No pack.yaml found in {Markup.Escape(packPath)}");
                     Environment.Exit(1);
                     return;
                 }
@@ -645,13 +924,13 @@ namespace DINOForge.Tools.PackCompiler
                 string json = JsonSerializer.Serialize(tsManifest, PackCompilerJsonOptions.GoFfi);
                 File.WriteAllText(outPath, json, Encoding.UTF8);
 
-                AnsiConsole.MarkupLine($"[green]✓[/] Thunderstore manifest written to: [bold]{outPath}[/]");
-                AnsiConsole.MarkupLine($"  Package: [bold]{tsManifest.name}[/] v{tsManifest.version_number}");
+                AnsiConsole.MarkupLine($"[green]✓[/] Thunderstore manifest written to: [bold]{Markup.Escape(outPath)}[/]");
+                AnsiConsole.MarkupLine($"  Package: [bold]{Markup.Escape(tsManifest.name)}[/] v{Markup.Escape(tsManifest.version_number)}");
                 AnsiConsole.MarkupLine($"  Dependencies: [dim]{dependencies.Count}[/]");
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($"[bold red]Thunderstore generation failed:[/] {ex.Message}");
+                AnsiConsole.MarkupLine($"[bold red]Thunderstore generation failed:[/] {Markup.Escape(ex.Message)}");
                 Environment.Exit(1);
             }
         }
@@ -741,6 +1020,66 @@ namespace DINOForge.Tools.PackCompiler
                 string destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
                 CopyDirectory(dir, destSubDir);
             }
+        }
+
+        /// <summary>
+        /// Copies a directory tree, excluding paths matching any of the exclusion patterns.
+        /// Patterns can be directory names (e.g., "assets/raw") or file extensions (e.g., "\.blend$").
+        /// </summary>
+        private static void CopyDirectoryExcluding(string sourceDir, string destDir, string[] excludePatterns)
+        {
+            Directory.CreateDirectory(destDir);
+
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                string relativePath = Path.GetRelativePath(sourceDir, file);
+                if (ShouldExclude(relativePath, excludePatterns))
+                    continue;
+
+                string destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                string dirName = Path.GetFileName(dir);
+                string relativePath = Path.GetRelativePath(sourceDir, dir);
+
+                if (ShouldExclude(relativePath, excludePatterns))
+                    continue;
+
+                string destSubDir = Path.Combine(destDir, dirName);
+                CopyDirectoryExcluding(dir, destSubDir, excludePatterns);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the given path matches any of the exclusion patterns.
+        /// </summary>
+        private static bool ShouldExclude(string path, string[] patterns)
+        {
+            // Normalize path separators for consistent matching
+            string normalizedPath = path.Replace(Path.DirectorySeparatorChar, '/');
+
+            foreach (var pattern in patterns)
+            {
+                // Direct substring match (e.g., "assets/raw")
+                if (normalizedPath.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // Regex pattern match (e.g., "\.blend$")
+                if (pattern.StartsWith(@"\.") || pattern.Contains("$"))
+                {
+                    try
+                    {
+                        if (System.Text.RegularExpressions.Regex.IsMatch(normalizedPath, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                            return true;
+                    }
+                    catch { /* skip invalid regex patterns */ }
+                }
+            }
+
+            return false;
         }
 
         private static void ValidateTotalConversion(string manifestPath)
@@ -1390,6 +1729,35 @@ namespace DINOForge.Tools.PackCompiler
             }
         }
 
+        /// <summary>
+        /// Builds Thunderstore manifest.json manually to avoid reflection-based serialization issues.
+        /// Trimming-safe: doesn't rely on anonymous type reflection.
+        /// </summary>
+        private static string BuildThunderstoreManifestJson(string name, string version, string websiteUrl, string description, List<string> dependencies)
+        {
+            using var stream = new MemoryStream();
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+
+            writer.WriteStartObject();
+            writer.WriteString("name", name);
+            writer.WriteString("version_number", version);
+            writer.WriteString("website_url", websiteUrl);
+            writer.WriteString("description", description);
+
+            writer.WritePropertyName("dependencies");
+            writer.WriteStartArray();
+            foreach (var dep in dependencies)
+            {
+                writer.WriteStringValue(dep);
+            }
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+            writer.Flush();
+
+            return Encoding.UTF8.GetString(stream.ToArray());
+        }
+
         private static string GetDefaultAuthor()
         {
             return Environment.GetEnvironmentVariable("DINOFORGE_AUTHOR") ?? "DINOForge";
@@ -1398,6 +1766,120 @@ namespace DINOForge.Tools.PackCompiler
         private static string GetDefaultWebsiteUrl()
         {
             return Environment.GetEnvironmentVariable("DINOFORGE_WEBSITE_URL") ?? "https://github.com/DINOForge/DINOForge";
+        }
+
+        /// <summary>
+        /// Signs a pack with an RSA private key and writes the signature to pack.signature.
+        /// </summary>
+        private static void SignPack(string packPath, string keyPath, string outputDir)
+        {
+            try
+            {
+                AnsiConsole.MarkupLine("[bold blue]PackCompiler Sign[/]");
+                AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                AnsiConsole.MarkupLine($"Key File: {keyPath}");
+                AnsiConsole.WriteLine();
+
+                if (!Directory.Exists(packPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
+                    Environment.Exit(1);
+                }
+
+                if (!File.Exists(keyPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Private key file not found");
+                    Environment.Exit(1);
+                }
+
+                // Load the private key from PEM file
+                var keyContent = File.ReadAllText(keyPath, Encoding.UTF8);
+                var rsa = RSA.Create();
+                rsa.ImportFromPem(keyContent.ToCharArray());
+
+                // Sign the pack
+                AnsiConsole.MarkupLine("[cyan]Computing pack hash...[/]");
+                var packHash = PackSigner.ComputePackHash(packPath);
+                AnsiConsole.MarkupLine($"Pack hash: {packHash}");
+
+                AnsiConsole.MarkupLine("[cyan]Signing pack...[/]");
+                var signature = PackSigner.SignPack(packPath, rsa);
+
+                // Write signature to file
+                var outputPath = Path.Combine(outputDir, "pack.signature");
+                Directory.CreateDirectory(outputDir);
+                File.WriteAllText(outputPath, signature, Encoding.UTF8);
+
+                AnsiConsole.MarkupLine($"[bold green]Success![/] Signature written to: {outputPath}");
+                AnsiConsole.MarkupLine($"Signature: {signature[..Math.Min(64, signature.Length)]}...");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}");
+                Environment.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// Verifies a pack's signature.
+        /// </summary>
+        private static void VerifyPack(string packPath, string? trustedKeysFile)
+        {
+            try
+            {
+                AnsiConsole.MarkupLine("[bold blue]PackCompiler Verify[/]");
+                AnsiConsole.MarkupLine($"Pack Path: {packPath}");
+                if (trustedKeysFile != null)
+                {
+                    AnsiConsole.MarkupLine($"Trusted Keys: {trustedKeysFile}");
+                }
+                AnsiConsole.WriteLine();
+
+                if (!Directory.Exists(packPath))
+                {
+                    AnsiConsole.MarkupLine("[bold red]Error:[/] Pack directory not found");
+                    Environment.Exit(1);
+                }
+
+                var verifier = new PackVerifier();
+
+                // Load trusted keys if provided
+                int trustedCount = 0;
+                if (!string.IsNullOrEmpty(trustedKeysFile) && File.Exists(trustedKeysFile))
+                {
+                    trustedCount = verifier.LoadTrustedKeys(trustedKeysFile);
+                    AnsiConsole.MarkupLine($"[cyan]Loaded {trustedCount} trusted author(s)[/]");
+                }
+
+                // Verify the pack
+                AnsiConsole.MarkupLine("[cyan]Verifying pack signature...[/]");
+                var result = verifier.Verify(packPath);
+
+                AnsiConsole.WriteLine();
+                switch (result.Status)
+                {
+                    case SignatureStatus.Unsigned:
+                        AnsiConsole.MarkupLine("[yellow]⚠ Unsigned:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.VerifiedAuthor:
+                        AnsiConsole.MarkupLine("[bold green]✓ Verified:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.UnknownAuthor:
+                        AnsiConsole.MarkupLine("[yellow]⚠ Unknown Author:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.TamperedSignatureMismatch:
+                        AnsiConsole.MarkupLine("[bold red]✗ Tampered:[/] " + result.Message);
+                        break;
+                    case SignatureStatus.VerificationError:
+                        AnsiConsole.MarkupLine("[bold red]✗ Error:[/] " + result.Message);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}");
+                Environment.Exit(1);
+            }
         }
     }
 }

@@ -21,12 +21,6 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[7.*, )",
-        "resolved": "7.0.0",
-        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
-      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.*, )",
@@ -299,6 +293,11 @@
           "Newtonsoft.Json": "13.0.3"
         }
       },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "9opKRyOKMCi2xJ7Bj7kxtZ1r9vbzosMvRrdEhVhDz8j8MoBGgB+WmC94yH839NPH+BclAjtQ/pyagvi/8gDLkw=="
+      },
       "Namotion.Reflection": {
         "type": "Transitive",
         "resolved": "2.1.2",
@@ -422,6 +421,14 @@
           "System.Security.Cryptography.ProtectedData": "4.4.0"
         }
       },
+      "System.Drawing.Common": {
+        "type": "Transitive",
+        "resolved": "8.0.27",
+        "contentHash": "G/4T2mE+RElzXxHO+PdCngA2lEjGbZvEMyfsFjZHZXROdbI6n5AQC3LHcTKJ2wTHILf4U5eA5zF/ili0YAj+BQ==",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "8.0.0"
+        }
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "4.4.0",
@@ -475,8 +482,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -504,10 +511,10 @@
       "dinoforge.tools.cli": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Client": "[0.25.0-dev, )",
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
-          "DINOForge.Tools.Installer": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Client": "[0.26.0, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
+          "DINOForge.Tools.Installer": "[0.26.0, )",
           "Microsoft.Data.Sqlite": "[8.*, )",
           "Microsoft.Extensions.Configuration": "[8.*, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[8.*, )",
@@ -520,13 +527,14 @@
           "Sentry": "[4.11.0, )",
           "SketchFabApi.Net": "[1.0.4, )",
           "Spectre.Console": "[0.*, )",
-          "System.CommandLine": "[2.*, )"
+          "System.CommandLine": "[2.*, )",
+          "System.Drawing.Common": "[8.*, )"
         }
       },
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Octokit": "[13.0.1, )"
         }
       }

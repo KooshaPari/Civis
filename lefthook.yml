@@ -45,7 +45,8 @@ pre-push:
       priority: 2
       env:
         CI: "true"
-      run: pwsh -NoProfile -Command "dotnet test src/Tests/DINOForge.Tests.csproj -c Release -p:GameInstalled=false --verbosity normal"
+        GameInstalled: "false"
+      run: dotnet test src/Tests/DINOForge.Tests.csproj -c Release --verbosity normal
 
     test-integration:
       priority: 3

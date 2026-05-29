@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-05-28T18:30:45.123456Z",
+  "metrics": {
+    "asset_swap.update_calls": {
+      "value": "42",
+      "type": "Counter",
+      "samples": 1,
+      "raw": 42
+    },
+    "asset_swap.world_entity_count": {
+      "value": "49014.00",
+      "type": "Value",
+      "samples": 1,
+      "raw": 49014.0
+    },
+    "asset_swap.prefab_swaps_total": {
+      "value": "156",
+      "type": "Counter",
+      "samples": 1,
+      "raw": 156
+    },
+    "pack_load.total_ms": {
+      "value": "Σ 512.8ms, avg 256.4ms",
+      "type": "Duration",
+      "samples": 2,
+      "raw": {
+        "total_ms": 512.8,
+        "avg_ms": 256.4
+      }
+    },
+    "pack_load.warfare_modern": {
+      "value": "Σ 187.3ms, avg 187.3ms",
+      "type": "Duration",
+      "samples": 1,
+      "raw": {
+        "total_ms": 187.3,
+        "avg_ms": 187.3
+      }
+    },
+    "pack_load.example_balance": {
+      "value": "Σ 325.5ms, avg 325.5ms",
+      "type": "Duration",
+      "samples": 1,
+      "raw": {
+        "total_ms": 325.5,
+        "avg_ms": 325.5
+      }
+    },
+    "registry.insert_count": {
+      "value": "1842",
+      "type": "Counter",
+      "samples": 1,
+      "raw": 1842
+    },
+    "registry.conflict_skips": {
+      "value": "3",
+      "type": "Counter",
+      "samples": 1,
+      "raw": 3
+    },
+    "stat_inject.writes_total": {
+      "value": "4521",
+      "type": "Counter",
+      "samples": 1,
+      "raw": 4521
+    },
+    "stat_inject.frame_time_ms": {
+      "value": "Σ 1024.6ms, avg 5.1ms",
+      "type": "Duration",
+      "samples": 200,
+      "raw": {
+        "total_ms": 1024.6,
+        "avg_ms": 5.1
+      }
+    },
+    "memory.current_mb": {
+      "value": "1247.50",
+      "type": "Value",
+      "samples": 1,
+      "raw": 1247.5
+    },
+    "pack.active_count": {
+      "value": "3.00",
+      "type": "Value",
+      "samples": 1,
+      "raw": 3.0
+    },
+    "entity_query.execution_ms": {
+      "value": "Σ 89.3ms, avg 0.9ms",
+      "type": "Duration",
+      "samples": 100,
+      "raw": {
+        "total_ms": 89.3,
+        "avg_ms": 0.9
+      }
+    }
+  }
+}

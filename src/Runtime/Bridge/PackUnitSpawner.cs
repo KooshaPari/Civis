@@ -81,13 +81,13 @@ namespace DINOForge.Runtime.Bridge
             }
         }
 
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("PackUnitSpawner", "PackUnitSpawner.OnCreate");
         }
 
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             _frameCount++;
 

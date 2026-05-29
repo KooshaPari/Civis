@@ -21,12 +21,6 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[7.*, )",
-        "resolved": "7.0.0",
-        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
-      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.*, )",
@@ -1308,8 +1302,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -1326,32 +1320,34 @@
       "dinoforge.domains.economy": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.domains.scenario": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.domains.ui": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.domains.warfare": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "DINOForge.SDK": "[0.26.0, )"
         }
       },
       "dinoforge.runtime": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )"
+          "AssetsTools.NET": "[3.0.4, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
+          "Microsoft.Bcl.TimeProvider": "[8.0.0, )"
         }
       },
       "dinoforge.sdk": {
@@ -1371,15 +1367,15 @@
         "dependencies": {
           "AutoFixture": "[4.*, )",
           "AutoFixture.Xunit2": "[4.*, )",
-          "DINOForge.Analyzers": "[0.25.0-dev, )",
-          "DINOForge.Bridge.Client": "[0.25.0-dev, )",
-          "DINOForge.Domains.Economy": "[0.25.0-dev, )",
-          "DINOForge.Domains.Scenario": "[0.25.0-dev, )",
-          "DINOForge.Domains.UI": "[0.25.0-dev, )",
-          "DINOForge.Domains.Warfare": "[0.25.0-dev, )",
-          "DINOForge.Runtime": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
-          "DINOForge.Tools.Installer": "[0.25.0-dev, )",
+          "DINOForge.Analyzers": "[0.26.0, )",
+          "DINOForge.Bridge.Client": "[0.26.0, )",
+          "DINOForge.Domains.Economy": "[0.26.0, )",
+          "DINOForge.Domains.Scenario": "[0.26.0, )",
+          "DINOForge.Domains.UI": "[0.26.0, )",
+          "DINOForge.Domains.Warfare": "[0.26.0, )",
+          "DINOForge.Runtime": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
+          "DINOForge.Tools.Installer": "[0.26.0, )",
           "FluentAssertions": "[6.*, )",
           "FsCheck.Xunit": "[3.*, )",
           "Microsoft.NET.Test.Sdk": "[17.*, )",
@@ -1393,7 +1389,7 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Octokit": "[13.0.1, )"
         }
       }

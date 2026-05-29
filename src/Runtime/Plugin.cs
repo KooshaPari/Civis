@@ -14,7 +14,10 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Localization;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.Runtime.UI;
+using DINOForge.Runtime.Updates;
 using DINOForge.SDK;
 using HarmonyLib;
 using Unity.Entities;
@@ -887,6 +890,9 @@ namespace DINOForge.Runtime
         // UGUI system (preferred). Null if UGUI setup failed.
         internal DFCanvas? _dfCanvas;
 
+        // Loading overlay (shown during mod init, hidden when scene loads)
+        private ModLoadingOverlay? _loadingOverlay;
+
         // Active UI hosts.
         // _modMenuHost is always set to the active menu (UGUI when healthy, IMGUI fallback otherwise).
         // _debugOverlay is ALWAYS added (it owns the IMGUI F9 debug panel).
@@ -952,6 +958,18 @@ namespace DINOForge.Runtime
         private bool _pendingPackToggleEnabled;
         private World? _pendingCatalogWorld;
 
+        // HMR tiered reloader — created once ModPlatform is available.
+        private HotReload.HmrTieredReloader? _hmrTieredReloader;
+
+        // Profiles manager (#918) — created once BepInEx root path is known.
+        private Profiles.ProfileManager? _profileManager;
+
+        // ── Step 8: Update checker (#899) ─────────────────────────────────────────
+        // The Task is fired on the thread pool after pack-load and polled in the
+        // deferred-work coroutine loop. Results are pushed to the UI panel when ready.
+        private System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Updates.UpdateInfo>>? _updateCheckTask;
+        private bool _updateCheckPushed;
+
         // Iter-144 #543 gray-freeze fix: cross-thread static flag observable by any subsystem
         // (e.g. VanillaCatalog.Build, ContentLoader pack registration) so they can short-circuit
         // cleanly when DINO is tearing down the ECS world. Set true at the TOP of OnDestroy
@@ -987,6 +1005,20 @@ namespace DINOForge.Runtime
 
         private IEnumerator InitializeRoutine()
         {
+            yield return null;
+
+            RunPhaseWithAbortGuard("L10n.Initialize", () =>
+            {
+                try
+                {
+                    Localization.L10n.Initialize();
+                    _log.LogInfo($"[RuntimeDriver] L10n initialized with locale: {Localization.L10n.CurrentLocale}");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] L10n initialization failed: {ex}");
+                }
+            });
             yield return null;
 
             RunPhaseWithAbortGuard("CleanupUiInterceptors", CleanupUiInterceptors);
@@ -1033,6 +1065,39 @@ namespace DINOForge.Runtime
             });
             yield return null;
 
+            RunPhaseWithAbortGuard("ProfileManager.Initialize", () =>
+            {
+                try
+                {
+                    string profilesDir = System.IO.Path.Combine(
+                        BepInEx.Paths.BepInExRootPath, "dinoforge-profiles");
+                    _profileManager = new Profiles.ProfileManager(profilesDir, _log);
+                    _log.LogInfo($"[RuntimeDriver] ProfileManager initialised at '{profilesDir}'.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] ProfileManager initialisation failed: {ex.Message}");
+                }
+            });
+            yield return null;
+
+            RunPhaseWithAbortGuard("PackSettingsStore.Initialize", () =>
+            {
+                try
+                {
+                    // Fix(iter-148): use BepInEx root path so settings land under BepInEx/,
+                    // not next to the game executable (AppDomain.CurrentDomain.BaseDirectory bug).
+                    var store = Settings.PackSettingsStore.GetOrCreate(BepInEx.Paths.BepInExRootPath);
+                    store.SetLogger(_log);
+                    _log.LogInfo($"[RuntimeDriver] PackSettingsStore initialised at '{BepInEx.Paths.BepInExRootPath}'.");
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] PackSettingsStore initialisation failed: {ex.Message}");
+                }
+            });
+            yield return null;
+
             RunPhaseWithAbortGuard("MainThreadDispatcher/DebugOverlay", () =>
             {
                 // Add MainThreadDispatcher for IPC bridge support.
@@ -1067,11 +1132,13 @@ namespace DINOForge.Runtime
                 // The background thread's GetAsyncKeyState DOES NOT reliably see synthetic
                 // keybd_event input from external processes, so ECS callbacks are preferred.
                 // Background thread F9/F10 polling is disabled to prevent double-toggles.
+                // Key mapping: F9=Debug panel, F10=Mods menu (#944 fix: correct swap from ff1455b2)
+                DebugLog.Write("Plugin", "[RuntimeDriver] Key mapping: F9=Debug, F10=Mods");
                 Bridge.KeyInputSystem.OnF9Pressed = () =>
                 {
                     try
                     {
-                        DebugLog.Write("Plugin", "[RuntimeDriver] F9 pressed (via KeyInputSystem)");
+                        DebugLog.Write("Plugin", "[RuntimeDriver] F9 pressed → DEBUG panel (via KeyInputSystem)");
                         if (_uguiReady && _dfCanvas != null)
                         {
                             _dfCanvas.ToggleDebug();
@@ -1093,7 +1160,7 @@ namespace DINOForge.Runtime
                 {
                     try
                     {
-                        DebugLog.Write("Plugin", "[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                        DebugLog.Write("Plugin", "[RuntimeDriver] F10 pressed → MODS menu (via KeyInputSystem)");
                         if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
                         else _modMenuHost?.Toggle();
                     }
@@ -1206,6 +1273,24 @@ namespace DINOForge.Runtime
                 // When detected, triggers soft UI + pack reload without full game restart
                 if (Plugin._enableHotReload?.Value != false)
                 {
+                    // Create the tiered reloader so the watcher can classify signals.
+                    // The reloader captures the loaded-DLL hash at construction time.
+                    try
+                    {
+                        string runtimeDllPath = System.IO.Path.Combine(
+                            BepInEx.Paths.PluginPath, "DINOForge.Runtime.dll");
+                        _hmrTieredReloader = new HotReload.HmrTieredReloader(
+                            _log,
+                            packActions: new HmrPackActionsAdapter(this),
+                            uiActions: new HmrUiActionsAdapter(this),
+                            runtimeDllPath: runtimeDllPath);
+                        _log.LogInfo("[RuntimeDriver] HmrTieredReloader created.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] HmrTieredReloader creation failed (will use flat reload): {ex}");
+                    }
+
                     StartHmrWatcher();
                 }
                 else
@@ -1221,6 +1306,26 @@ namespace DINOForge.Runtime
             // ── Step 6: Log key handler registration ────────────────────────────────
             DebugLog.Write("Plugin", $"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
+
+            // ── Step 6.5: Create loading overlay ────────────────────────────────────
+            // Show a skeleton UI during the ~30-45s mod initialization phase.
+            // This overlay is hidden when the MainMenu scene fully loads.
+            RunPhaseWithAbortGuard("ModLoadingOverlay.Create", () =>
+            {
+                try
+                {
+                    _loadingOverlay = ModLoadingOverlay.Create(gameObject);
+                    if (_loadingOverlay != null)
+                    {
+                        _log.LogInfo("[RuntimeDriver] ModLoadingOverlay created.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[RuntimeDriver] ModLoadingOverlay creation failed: {ex}");
+                }
+            });
+            yield return null;
 
             // ── Step 7: MainMenu-mode pack-load (no ECS world needed) ────────────────
             // Pack loading is YAML parsing — it does NOT require an ECS World.
@@ -1238,6 +1343,13 @@ namespace DINOForge.Runtime
                         _log.LogInfo($"[RuntimeDriver] MainMenu-mode pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
                         WireUguiToModPlatform();
                         PushLoadedPacksToUgui("main-menu init");
+
+                        // Hide loading overlay now that packs are loaded
+                        if (_loadingOverlay != null)
+                        {
+                            _loadingOverlay.Hide();
+                            _log.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (MainMenu-mode pack-load complete).");
+                        }
 
                         // Apply total_conversion theme to main menu
                         try
@@ -1259,6 +1371,30 @@ namespace DINOForge.Runtime
                 else
                 {
                     _log.LogWarning("[RuntimeDriver] MainMenu-mode pack-load skipped — _modPlatform is null.");
+                }
+            });
+
+            // ── Step 8: Fire update check on the thread pool (best-effort, never blocks) ──
+            RunPhaseWithAbortGuard("UpdateChecker.Launch", () =>
+            {
+                if (_modPlatform != null && !_updateCheckPushed)
+                {
+                    try
+                    {
+                        string bepInExRoot = BepInEx.Paths.BepInExRootPath;
+                        string dinoForgeVersion = PluginInfo.VERSION;
+                        IReadOnlyList<Updates.PackUpdateTarget> packTargets =
+                            _modPlatform.GetPackUpdateTargets();
+                        Updates.UpdateChecker checker = new Updates.UpdateChecker(bepInExRoot);
+                        System.Threading.CancellationToken ct =
+                            new System.Threading.CancellationToken(false);
+                        _updateCheckTask = checker.RunAllChecksAsync(packTargets, dinoForgeVersion, ct);
+                        _log.LogInfo($"[RuntimeDriver] Update check launched for DINOForge + {packTargets.Count} pack(s).");
+                    }
+                    catch (Exception updateEx)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] Update check launch failed: {updateEx.Message}");
+                    }
                 }
             });
 
@@ -1289,6 +1425,33 @@ namespace DINOForge.Runtime
                         }
                         catch { /* safe-swallow: theme retry is best-effort */ }
                     }
+                }
+
+                // ── Step 8 deferred: push update-check results to UI once the Task completes ──
+                if (!_updateCheckPushed && _updateCheckTask != null
+                    && _updateCheckTask.IsCompleted && _dfCanvas?.ModMenuPanel != null)
+                {
+                    _updateCheckPushed = true;
+                    try
+                    {
+                        System.Collections.Generic.IReadOnlyList<Updates.UpdateInfo> updates =
+                            _updateCheckTask.Result;
+                        if (updates.Count > 0)
+                        {
+                            _dfCanvas.ModMenuPanel.SetUpdatesAvailable(updates);
+                            _log?.LogInfo($"[RuntimeDriver] Update check: {updates.Count} update(s) pushed to UI.");
+                        }
+                        else
+                        {
+                            _log?.LogInfo("[RuntimeDriver] Update check: up to date.");
+                        }
+                    }
+                    catch (Exception updateEx)
+                    {
+                        // safe-swallow: update-check result delivery is best-effort
+                        _log?.LogWarning($"[RuntimeDriver] Update check result delivery failed: {updateEx.Message}");
+                    }
+                    _updateCheckTask = null;
                 }
 
                 if (TryDequeuePendingWorldReady(out World? pendingWorld))
@@ -1363,7 +1526,7 @@ namespace DINOForge.Runtime
             }
         }
 
-        private void RequestPackReload(string reason)
+        internal void RequestPackReload(string reason)
         {
             lock (_deferredWorkLock)
             {
@@ -1490,6 +1653,13 @@ namespace DINOForge.Runtime
                         $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
+
+                    // Hide the loading overlay now that world is ready and packs are loaded
+                    if (_loadingOverlay != null)
+                    {
+                        _loadingOverlay.Hide();
+                        _log?.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (world ready).");
+                    }
                 }
 
                 yield return null;
@@ -1669,31 +1839,61 @@ namespace DINOForge.Runtime
 
                         if (System.IO.File.Exists(signalPath))
                         {
-                            try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
-
-                            _log?.LogInfo("[RuntimeDriver] HMR: Signal detected, enqueueing reload...");
-
-                            // #891: unified reload path — enqueue via RequestPackReload so
-                            // ProcessPackReloadCoroutine handles LoadPacks + UGUI refresh +
-                            // SetStatus + ShowToast consistently (same path as F10 "Reload Packs" button).
+                            // Read optional path hint written alongside the signal (first line of file).
+                            string changedPath = string.Empty;
                             try
                             {
-                                RuntimeDriver? driver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
-                                if (driver != null)
-                                {
-                                    driver.RequestPackReload("HMR signal");
-                                }
-                                else
-                                {
-                                    Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
-                                }
+                                string signalContent = System.IO.File.ReadAllText(signalPath).Trim();
+                                changedPath = signalContent;
                             }
-                            catch (System.Exception ex)
+                            catch { } // safe-swallow: path hint is optional; empty string → HandleUnknown()
+
+                            try { System.IO.File.Delete(signalPath); } catch { } // safe-swallow: HMR signal file cleanup, non-critical
+
+                            _log?.LogInfo($"[RuntimeDriver] HMR: Signal detected. changedPath='{changedPath}'");
+
+                            // #898: tiered reload — classify changed path and act accordingly.
+                            HotReload.HmrTieredReloader? reloader = _hmrTieredReloader;
+                            if (reloader != null)
                             {
-                                _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload enqueue failed: {ex}");
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(changedPath))
+                                        reloader.HandleUnknown();
+                                    else
+                                        reloader.Handle(changedPath);
+                                    _log?.LogInfo("[RuntimeDriver] HMR: Tiered reloader handled signal.");
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] HMR: TieredReloader.Handle failed, falling back to flat reload: {ex}");
+                                    // Fall through to legacy path below
+                                    reloader = null;
+                                }
                             }
 
-                            _log?.LogInfo("[RuntimeDriver] HMR: Reload complete.");
+                            if (reloader == null)
+                            {
+                                // #891: legacy flat reload path — used when tiered reloader is unavailable.
+                                try
+                                {
+                                    RuntimeDriver? driver = Plugin.PersistentRoot?.GetComponent<RuntimeDriver>();
+                                    if (driver != null)
+                                    {
+                                        driver.RequestPackReload("HMR signal (fallback)");
+                                    }
+                                    else
+                                    {
+                                        Bridge.KeyInputSystem.OnPackReloadRequested?.Invoke();
+                                    }
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    _log?.LogWarning($"[RuntimeDriver] HMR: Pack reload enqueue failed: {ex}");
+                                }
+                            }
+
+                            _log?.LogInfo("[RuntimeDriver] HMR: Signal handling complete.");
                         }
                     }
                     // #873: explicit exit log — proves thread terminated cleanly on OnDestroy.
@@ -2039,6 +2239,39 @@ namespace DINOForge.Runtime
                 _dfCanvas.ModMenuPanel.OnReloadRequested = () => RequestPackReload("UGUI reload button");
                 _dfCanvas.ModMenuPanel.OnPackToggled = RequestPackToggle;
 
+                // ── Profiles (#918) ──────────────────────────────────────────
+                if (_profileManager != null)
+                {
+                    RuntimeDriver capturedDriver = this;
+                    _dfCanvas.ModMenuPanel.SetProfileManager(_profileManager);
+                    _dfCanvas.ModMenuPanel.OnProfileLoaded = enabledPackIds =>
+                    {
+                        try
+                        {
+                            // Disable all packs then enable only those in the profile
+                            foreach (UI.PackDisplayInfo p in platform.GetLoadedPackDisplayInfos())
+                            {
+                                bool shouldEnable = false;
+                                foreach (string id in enabledPackIds)
+                                {
+                                    if (string.Equals(id, p.Id, StringComparison.Ordinal))
+                                    {
+                                        shouldEnable = true;
+                                        break;
+                                    }
+                                }
+                                if (p.IsEnabled != shouldEnable)
+                                    capturedDriver.RequestPackToggle(p.Id, shouldEnable);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _log?.LogWarning($"[RuntimeDriver] OnProfileLoaded failed: {ex.Message}");
+                        }
+                    };
+                    _log.LogInfo("[RuntimeDriver] ProfileManager wired to ModMenuPanel.");
+                }
+
                 TryWireNativeMenuInjectorHost();
 
                 // Wire UGUI DebugPanel to ModPlatform so it displays platform status
@@ -2226,7 +2459,122 @@ namespace DINOForge.Runtime
             {
                 DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: ShutdownNonBridge dispatch failed: {ex.Message}");
             }
+            // #923: Persist metrics snapshot on shutdown (best-effort).
+            try
+            {
+                string snapshotPath = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge-metrics-snapshot.json");
+                string metricsJson = MetricsCollector.Instance.DumpJson();
+                File.WriteAllText(snapshotPath, metricsJson, System.Text.Encoding.UTF8);
+                DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: metrics snapshot written to '{snapshotPath}'.");
+            }
+            catch (Exception ex)
+            {
+                // Best-effort: metrics persistence must never throw from OnDestroy
+                DebugLog.Write("Plugin", $"[RuntimeDriver] OnDestroy: metrics snapshot failed (non-fatal): {ex.Message}");
+            }
+
             DebugLog.Write("Plugin", "[RuntimeDriver] OnDestroy: returning to Unity (resurrection flags set, fallback thread will revive).");
+        }
+    }
+
+    // ── HMR adapter implementations ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Bridges <see cref="HotReload.IHmrPackActions"/> to the <see cref="RuntimeDriver"/>
+    /// deferred-work queue so tier-1 and tier-2 actions run safely on the Unity main thread.
+    /// </summary>
+    internal sealed class HmrPackActionsAdapter : HotReload.IHmrPackActions
+    {
+        private readonly RuntimeDriver _driver;
+
+        internal HmrPackActionsAdapter(RuntimeDriver driver)
+        {
+            _driver = driver;
+        }
+
+        /// <inheritdoc/>
+        public void TriggerPackReload()
+        {
+            // Enqueue through the existing deferred-work mechanism so LoadPacks +
+            // UGUI refresh + SetStatus + ShowToast all fire from the main-thread coroutine.
+            _driver.RequestPackReload("HMR tier-1");
+        }
+
+        /// <inheritdoc/>
+        public void TriggerSceneReload()
+        {
+            // Load scene 1 (MainMenu) — asset bundles are re-evaluated on re-enter.
+            try
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(1);
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[HmrPackActionsAdapter] TriggerSceneReload LoadScene(1) failed: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Bridges <see cref="HotReload.IHmrUiActions"/> to <see cref="DFCanvas"/> /
+    /// <see cref="UI.ModMenuPanel"/>. Called from the HMR background thread;
+    /// MonoBehaviour calls are permitted for DontDestroyOnLoad objects in Mono 2021.3
+    /// (confirmed by existing F9/F10 background-thread pattern).
+    /// </summary>
+    internal sealed class HmrUiActionsAdapter : HotReload.IHmrUiActions
+    {
+        private readonly RuntimeDriver _driver;
+
+        internal HmrUiActionsAdapter(RuntimeDriver driver)
+        {
+            _driver = driver;
+        }
+
+        /// <inheritdoc/>
+        public void ShowToast(string message, HotReload.HmrToastKind kind)
+        {
+            try
+            {
+                UI.ToastType toastType = kind switch
+                {
+                    HotReload.HmrToastKind.Warning => UI.ToastType.Warning,
+                    HotReload.HmrToastKind.Error => UI.ToastType.Error,
+                    _ => UI.ToastType.Info,
+                };
+
+                if (_driver._uguiReady && _driver._dfCanvas != null)
+                {
+                    _driver._dfCanvas.ShowToast(message, toastType);
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[HmrUiActionsAdapter] ShowToast failed: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc/>
+        public void ShowConfirmDialog(string message, Action onConfirm, Action onCancel)
+        {
+            try
+            {
+                UI.ModMenuPanel? panel = _driver._dfCanvas?.ModMenuPanel;
+                if (panel != null)
+                {
+                    panel.ShowConfirmDialog(message, onConfirm, onCancel);
+                }
+                else
+                {
+                    // No panel available — auto-cancel so we never silently block.
+                    DebugLog.Write("Plugin", "[HmrUiActionsAdapter] ShowConfirmDialog: ModMenuPanel unavailable, auto-cancelling.");
+                    onCancel?.Invoke();
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[HmrUiActionsAdapter] ShowConfirmDialog failed: {ex.Message}");
+                onCancel?.Invoke();
+            }
         }
     }
 }

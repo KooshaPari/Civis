@@ -20,6 +20,8 @@ internal static class PackCommand
         packCommand.Add(CreateListCommand());
         packCommand.Add(CreateUpdateCommand());
         packCommand.Add(CreateLockCommand());
+        packCommand.Add(PackDiffCommand.Create());
+        packCommand.Add(PackScreenshotCommand.Create());
         return packCommand;
     }
 

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Scout (fast recon / pathfinder)
+  Motif: A stylised eye / targeting reticle with a speed chevron — "sight + speed".
+         Outer circle, iris ellipse, pupil dot, and two side chevrons pointing outward.
+         Original geometry.
+  64×64, monochrome white.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Scout</title>
+  <!-- Outer eye outline: ellipse -->
+  <ellipse cx="32" cy="32" rx="22" ry="14" fill="none" stroke="#F5F7FA" stroke-width="3"/>
+  <!-- Eyelid top/bottom arcs as filled almond outline -->
+  <!-- Iris circle -->
+  <circle cx="32" cy="32" r="9" fill="#F5F7FA"/>
+  <!-- Pupil cutout -->
+  <circle cx="32" cy="32" r="4.5" fill="#05060A"/>
+  <!-- Highlight dot in pupil -->
+  <circle cx="34" cy="30" r="1.5" fill="#F5F7FA"/>
+  <!-- Speed chevron left (pointing left = scanning outward) -->
+  <polyline points="8,26 3,32 8,38" fill="none" stroke="#F5F7FA" stroke-width="2.5"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Speed chevron right -->
+  <polyline points="56,26 61,32 56,38" fill="none" stroke="#F5F7FA" stroke-width="2.5"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tick marks on iris ring for "rangefinder" feel -->
+  <line x1="32" y1="18" x2="32" y2="22" stroke="#05060A" stroke-width="2"/>
+  <line x1="32" y1="42" x2="32" y2="46" stroke="#05060A" stroke-width="2"/>
+  <line x1="10" y1="32" x2="14" y2="32" stroke="#05060A" stroke-width="2"/>
+  <line x1="50" y1="32" x2="54" y2="32" stroke="#05060A" stroke-width="2"/>
+</svg>

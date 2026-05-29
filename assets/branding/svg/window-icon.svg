@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge Window / Taskbar Icon
+  256x256 master — scales cleanly to 16x16 via SVG simplicity
+  Design principle: at 16px the anvil silhouette + dino spike must read as a
+  recognizable compound shape with the ember dot as the only color accent.
+  Geometry is kept to large, high-contrast filled shapes — no thin strokes.
+
+  Palette:
+    BG:           #1A1F2E (dark navy)
+    Anvil:        #9CA3AF (mid steel)
+    Anvil shadow: #4B5563
+    Dino:         #4ECDC4 (teal)
+    Ember:        #E8743B
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Squircle background (rounded square ~icon convention) -->
+    <clipPath id="iconClip">
+      <rect x="0" y="0" width="256" height="256" rx="52" ry="52"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background squircle -->
+  <rect x="0" y="0" width="256" height="256" rx="52" fill="#1A1F2E"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       ANVIL — bold, reads at 16px
+       Occupies roughly bottom-center of the frame
+       ═══════════════════════════════════════════════════ -->
+
+  <!-- Horn (left) — bold triangle -->
+  <polygon points="28,134  82,120  82,148" fill="#9CA3AF"/>
+
+  <!-- Top face — wide rectangle, generous height -->
+  <rect x="70" y="106" width="148" height="44" rx="6" fill="#9CA3AF"/>
+
+  <!-- Waist taper -->
+  <polygon points="86,150  202,150  192,174  96,174" fill="#6B7280"/>
+
+  <!-- Base -->
+  <rect x="88" y="174" width="100" height="32" rx="5" fill="#4B5563"/>
+
+  <!-- Top-face highlight stripe -->
+  <rect x="70" y="106" width="148" height="8" rx="4" fill="#D1D5DB" opacity="0.5"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       DINO HEAD — teal silhouette, upper-left quadrant
+       At 16px this merges with anvil into one compound icon shape.
+       ═══════════════════════════════════════════════════ -->
+
+  <!-- Head + neck mass -->
+  <polygon
+    points="
+      32,88
+      74,70
+      100,74
+      114,86
+      110,108
+      84,118
+      52,116
+      30,104
+      24,92
+    "
+    fill="#4ECDC4"
+  />
+
+  <!-- Snout -->
+  <polygon
+    points="
+      100,74
+      130,80
+      134,90
+      126,100
+      110,100
+      110,86
+    "
+    fill="#3DBFB7"
+  />
+
+  <!-- Lower jaw (slightly open, readable) -->
+  <polygon
+    points="
+      84,118
+      110,108
+      126,100
+      134,110
+      120,122
+      80,124
+    "
+    fill="#35AFAA"
+  />
+
+  <!-- Crown spike — tall, readable at small size -->
+  <polygon points="62,88  70,50  82,72" fill="#4ECDC4"/>
+
+  <!-- Eye — dark + ember pupil — the key accent -->
+  <circle cx="68"  cy="94" r="8"   fill="#0F1219"/>
+  <circle cx="69"  cy="93" r="4.5" fill="#E8743B"/>
+  <circle cx="71"  cy="91" r="1.5" fill="#FFD4A8" opacity="0.9"/>
+
+  <!-- ═══════════════════════════════════════════════════
+       EMBER ACCENT — bold single spark cluster
+       Must survive 16x16 — only the glow dot matters at that size
+       ═══════════════════════════════════════════════════ -->
+
+  <!-- Glow blob (soft, large) -->
+  <circle cx="170" cy="116" r="18" fill="#E8743B" opacity="0.12"/>
+
+  <!-- Main ember dot -->
+  <circle cx="170" cy="116" r="9"  fill="#E8743B"/>
+
+  <!-- Secondary sparks -->
+  <circle cx="186" cy="100" r="5"  fill="#FFAA4A" opacity="0.9"/>
+  <circle cx="158" cy="104" r="4"  fill="#E8743B" opacity="0.8"/>
+  <circle cx="192" cy="112" r="3"  fill="#FFCBA4" opacity="0.7"/>
+
+  <!-- Spark line up -->
+  <line x1="170" y1="114" x2="178" y2="92" stroke="#E8743B" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+
+</svg>

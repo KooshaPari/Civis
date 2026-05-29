@@ -1,0 +1,395 @@
+#nullable enable
+using System;
+using System.CommandLine;
+using System.CommandLine.Invocation;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using Newtonsoft.Json.Linq;
+using Spectre.Console;
+
+namespace DINOForge.Tools.Cli.Commands;
+
+/// <summary>
+/// Generates an interactive HTML telemetry viewer from the metrics snapshot
+/// and opens it in the default browser.
+/// </summary>
+internal static class TelemetryViewCommand
+{
+    /// <summary>
+    /// Creates the <c>telemetry view</c> command.
+    /// Usage: <c>dinoforge telemetry view [--metrics-path PATH] [--output-path PATH] [--no-open]</c>
+    /// </summary>
+    public static Command Create()
+    {
+        var command = new Command("view", "Generate and display an interactive telemetry HTML viewer");
+
+        var metricsPathOpt = new Option<string>("--metrics-path") { Description = "Path to the metrics JSON snapshot file" };
+        var outputPathOpt = new Option<string>("--output-path") { Description = "Path for the generated HTML file" };
+        var noBrowserOpt = new Option<bool>("--no-open") { Description = "Generate HTML but don't open in browser" };
+
+        command.Add(metricsPathOpt);
+        command.Add(outputPathOpt);
+        command.Add(noBrowserOpt);
+
+        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
+        {
+            string metricsPath = parseResult.GetValue(metricsPathOpt) ?? "";
+            string outputPath = parseResult.GetValue(outputPathOpt) ?? "";
+            bool noBrowser = parseResult.GetValue(noBrowserOpt);
+
+            await ExecuteAsync(metricsPath, outputPath, noBrowser);
+        });
+
+        return command;
+    }
+
+    private static async Task ExecuteAsync(string metricsPath, string outputPath, bool noBrowser)
+    {
+        try
+        {
+            // Determine metrics path
+            if (string.IsNullOrWhiteSpace(metricsPath))
+            {
+                string gameRoot = Environment.GetEnvironmentVariable("DINO_GAME_PATH")
+                    ?? "G:\\SteamLibrary\\steamapps\\common\\Diplomacy is Not an Option";
+
+                metricsPath = Path.Combine(gameRoot, "BepInEx", "dinoforge-metrics-snapshot.json");
+            }
+
+            // Determine output path
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                string repoRoot = FindRepoRoot();
+                outputPath = Path.Combine(repoRoot, "docs", "telemetry", "snapshot.html");
+            }
+
+            // Verify metrics file exists
+            if (!File.Exists(metricsPath))
+            {
+                AnsiConsole.MarkupLine($"[red]Error:[/] Metrics file not found: {metricsPath}");
+                AnsiConsole.MarkupLine("[dim]Hint: Make sure the game has run and metrics were captured.[/]");
+                return;
+            }
+
+            AnsiConsole.MarkupLine($"[cyan]Reading metrics from:[/] {metricsPath}");
+
+            // Read and parse metrics JSON
+            string jsonContent = await File.ReadAllTextAsync(metricsPath).ConfigureAwait(false);
+            JObject metricsObj = JObject.Parse(jsonContent);
+
+            // Ensure output directory exists
+            string outputDir = Path.GetDirectoryName(outputPath)!;
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            // Generate HTML
+            string html = GenerateHtml(metricsObj);
+            await File.WriteAllTextAsync(outputPath, html, Encoding.UTF8).ConfigureAwait(false);
+
+            AnsiConsole.MarkupLine($"[green]✓ Generated:[/] {outputPath}");
+
+            // Open in browser if requested
+            if (!noBrowser)
+            {
+                AnsiConsole.MarkupLine("[cyan]Opening in browser...[/]");
+                try
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = outputPath,
+                        UseShellExecute = true
+                    };
+                    using Process? browser = Process.Start(psi);
+                    browser?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Warning:[/] Could not open browser: {ex.Message}");
+                    AnsiConsole.MarkupLine($"[dim]File is available at: {outputPath}[/]");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+            if (!string.IsNullOrEmpty(ex.StackTrace))
+            {
+                AnsiConsole.MarkupLine($"[dim]{ex.StackTrace}[/]");
+            }
+        }
+    }
+
+    private static string GenerateHtml(JObject metricsObj)
+    {
+        string timestamp = metricsObj.Value<string>("timestamp") ?? DateTime.UtcNow.ToString("O");
+
+        // Extract metrics by type
+        var counters = new List<(string Name, long Value)>(StringComparer.Ordinal.GetHashCode().GetType() == typeof(int) ? 10 : 10);
+        var gauges = new List<(string Name, double Value)>(StringComparer.Ordinal.GetHashCode().GetType() == typeof(int) ? 10 : 10);
+        var durations = new List<(string Name, double Avg, double Total, long Samples)>(StringComparer.Ordinal.GetHashCode().GetType() == typeof(int) ? 10 : 10);
+
+        var metricsDict = metricsObj.Value<JObject>("metrics");
+        if (metricsDict != null)
+        {
+            foreach (var kvp in metricsDict)
+            {
+                string name = kvp.Key;
+                var metric = kvp.Value as JObject;
+                if (metric == null) continue;
+
+                string? type = metric.Value<string>("type");
+                var raw = metric.Value<JToken>("raw");
+
+                if (type == "Counter" && raw?.Type == JTokenType.Integer)
+                {
+                    counters.Add((name, raw.Value<long>()));
+                }
+                else if (type == "Value" && raw?.Type == JTokenType.Float || raw?.Type == JTokenType.Integer)
+                {
+                    gauges.Add((name, Convert.ToDouble(raw)));
+                }
+                else if (type == "Duration" && raw is JObject durObj)
+                {
+                    double avg = durObj.Value<double>("avg_ms");
+                    double total = durObj.Value<double>("total_ms");
+                    long samples = metric.Value<long>("samples");
+                    durations.Add((name, avg, total, samples));
+                }
+            }
+        }
+
+        // Build Chart.js datasets
+        var counterLabels = JsonSerializer.Serialize(counters.Select(c => c.Name).ToList());
+        var counterData = JsonSerializer.Serialize(counters.Select(c => c.Value).ToList());
+
+        var gaugeLabels = JsonSerializer.Serialize(gauges.Select(g => g.Name).ToList());
+        var gaugeData = JsonSerializer.Serialize(gauges.Select(g => g.Value).ToList());
+
+        var durationLabels = JsonSerializer.Serialize(durations.Select(d => d.Name).ToList());
+        var durationAvgData = JsonSerializer.Serialize(durations.Select(d => d.Avg).ToList());
+        var durationTotalData = JsonSerializer.Serialize(durations.Select(d => d.Total).ToList());
+
+        // Build metrics table
+        var tableRows = new StringBuilder();
+        if (metricsDict != null)
+        {
+            var keys = metricsDict.Properties().OrderBy(p => p.Name, StringComparer.Ordinal);
+            foreach (var prop in keys)
+            {
+                string name = System.Web.HttpUtility.HtmlEncode(prop.Name);
+                var metric = prop.Value as JObject;
+                if (metric == null) continue;
+
+                string? value = metric.Value<string>("value");
+                string? type = metric.Value<string>("type");
+                long samples = metric.Value<long>("samples");
+
+                if (value != null)
+                {
+                    value = System.Web.HttpUtility.HtmlEncode(value);
+                    tableRows.AppendLine($"        <tr>");
+                    tableRows.AppendLine($"            <td>{name}</td>");
+                    tableRows.AppendLine($"            <td>{value}</td>");
+                    tableRows.AppendLine($"            <td>{type}</td>");
+                    tableRows.AppendLine($"            <td>{samples}</td>");
+                    tableRows.AppendLine($"        </tr>");
+                }
+            }
+        }
+
+        // Generate chart sections (conditional)
+        var counterChartHtml = counters.Count > 0
+            ? """
+            <div class="card">
+                <h2>Counters</h2>
+                <div class="chart-container">
+                    <canvas id="counterChart"></canvas>
+                </div>
+            </div>
+
+            """
+            : string.Empty;
+
+        var gaugeChartHtml = gauges.Count > 0
+            ? """
+            <div class="card">
+                <h2>Gauges</h2>
+                <div class="chart-container">
+                    <canvas id="gaugeChart"></canvas>
+                </div>
+            </div>
+
+            """
+            : string.Empty;
+
+        var durationChartHtml = durations.Count > 0
+            ? """
+            <div class="card">
+                <h2>Durations</h2>
+                <div class="chart-container">
+                    <canvas id="durationChart"></canvas>
+                </div>
+            </div>
+
+            """
+            : string.Empty;
+
+        // Generate chart scripts (conditional)
+        var chartsScript = new StringBuilder();
+
+        if (counters.Count > 0)
+        {
+            chartsScript.AppendLine("        new Chart(document.getElementById('counterChart'), {");
+            chartsScript.AppendLine("            type: 'doughnut',");
+            chartsScript.AppendLine("            data: {");
+            chartsScript.AppendLine($"                labels: {counterLabels},");
+            chartsScript.AppendLine($"                datasets: [{{ data: {counterData},");
+            chartsScript.AppendLine("                    backgroundColor: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7',");
+            chartsScript.AppendLine("                        '#dfe6e9', '#fd79a8', '#fdcb6e', '#6c5ce7', '#a29bfe'],");
+            chartsScript.AppendLine("                    borderColor: 'rgba(255, 255, 255, 0.1)',");
+            chartsScript.AppendLine("                    borderWidth: 2");
+            chartsScript.AppendLine("                }]");
+            chartsScript.AppendLine("            },");
+            chartsScript.AppendLine("            options: chartConfig");
+            chartsScript.AppendLine("        });");
+            chartsScript.AppendLine();
+        }
+
+        if (gauges.Count > 0)
+        {
+            chartsScript.AppendLine("        new Chart(document.getElementById('gaugeChart'), {");
+            chartsScript.AppendLine("            type: 'bar',");
+            chartsScript.AppendLine("            data: {");
+            chartsScript.AppendLine($"                labels: {gaugeLabels},");
+            chartsScript.AppendLine($"                datasets: [{{ label: 'Value', data: {gaugeData},");
+            chartsScript.AppendLine("                    backgroundColor: '#4caf50',");
+            chartsScript.AppendLine("                    borderColor: 'rgba(76, 175, 80, 0.5)',");
+            chartsScript.AppendLine("                    borderWidth: 1");
+            chartsScript.AppendLine("                }]");
+            chartsScript.AppendLine("            },");
+            chartsScript.AppendLine("            options: { ...chartConfig, indexAxis: 'y' }");
+            chartsScript.AppendLine("        });");
+            chartsScript.AppendLine();
+        }
+
+        if (durations.Count > 0)
+        {
+            chartsScript.AppendLine("        new Chart(document.getElementById('durationChart'), {");
+            chartsScript.AppendLine("            type: 'line',");
+            chartsScript.AppendLine("            data: {");
+            chartsScript.AppendLine($"                labels: {durationLabels},");
+            chartsScript.AppendLine("                datasets: [");
+            chartsScript.AppendLine($"                    {{ label: 'Average (ms)', data: {durationAvgData},");
+            chartsScript.AppendLine("                        borderColor: '#ffc107',");
+            chartsScript.AppendLine("                        backgroundColor: 'rgba(255, 193, 7, 0.1)',");
+            chartsScript.AppendLine("                        fill: false,");
+            chartsScript.AppendLine("                        tension: 0.3,");
+            chartsScript.AppendLine("                        pointRadius: 4,");
+            chartsScript.AppendLine("                        pointHoverRadius: 6");
+            chartsScript.AppendLine("                    },");
+            chartsScript.AppendLine($"                    {{ label: 'Total (ms)', data: {durationTotalData},");
+            chartsScript.AppendLine("                        borderColor: '#ff6b6b',");
+            chartsScript.AppendLine("                        backgroundColor: 'rgba(255, 107, 107, 0.1)',");
+            chartsScript.AppendLine("                        fill: false,");
+            chartsScript.AppendLine("                        tension: 0.3,");
+            chartsScript.AppendLine("                        pointRadius: 4,");
+            chartsScript.AppendLine("                        pointHoverRadius: 6");
+            chartsScript.AppendLine("                    }");
+            chartsScript.AppendLine("                ]");
+            chartsScript.AppendLine("            },");
+            chartsScript.AppendLine("            options: chartConfig");
+            chartsScript.AppendLine("        });");
+            chartsScript.AppendLine();
+        }
+
+        // Build final HTML using string builder for compatibility
+        var htmlBuilder = new StringBuilder();
+        htmlBuilder.AppendLine("<!DOCTYPE html>");
+        htmlBuilder.AppendLine("<html lang=\"en\">");
+        htmlBuilder.AppendLine("<head>");
+        htmlBuilder.AppendLine("    <meta charset=\"UTF-8\">");
+        htmlBuilder.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        htmlBuilder.AppendLine("    <title>DINOForge Telemetry Snapshot</title>");
+        htmlBuilder.AppendLine("    <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js\"></script>");
+        htmlBuilder.AppendLine("    <style>");
+        htmlBuilder.AppendLine("        *{margin:0;padding:0;box-sizing:border-box}");
+        htmlBuilder.AppendLine("        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#1e1e2e 0%,#2a2a3e 100%);color:#e0e0e0;padding:20px}");
+        htmlBuilder.AppendLine("        .container{max-width:1400px;margin:0 auto}");
+        htmlBuilder.AppendLine("        header{background:rgba(0,0,0,0.4);border-left:4px solid #00d4ff;padding:20px;margin-bottom:30px;border-radius:4px}");
+        htmlBuilder.AppendLine("        h1{font-size:28px;color:#00d4ff;margin-bottom:8px}");
+        htmlBuilder.AppendLine("        .timestamp{font-size:12px;color:#888;font-family:monospace}");
+        htmlBuilder.AppendLine("        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin-bottom:30px}");
+        htmlBuilder.AppendLine("        .card{background:rgba(255,255,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:20px}");
+        htmlBuilder.AppendLine("        .card h2{font-size:16px;margin-bottom:15px;color:#00d4ff;border-bottom:1px solid rgba(0,212,255,0.3);padding-bottom:10px}");
+        htmlBuilder.AppendLine("        .chart-container{position:relative;height:300px;margin-bottom:20px}");
+        htmlBuilder.AppendLine("        table{width:100%;border-collapse:collapse;font-size:13px}");
+        htmlBuilder.AppendLine("        th{background:rgba(0,212,255,0.1);color:#00d4ff;padding:10px;text-align:left;font-weight:600;border-bottom:2px solid rgba(0,212,255,0.3)}");
+        htmlBuilder.AppendLine("        td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:monospace;font-size:12px}");
+        htmlBuilder.AppendLine("        tr:hover{background:rgba(0,212,255,0.05)}");
+        htmlBuilder.AppendLine("        .full-width{grid-column:1/-1}");
+        htmlBuilder.AppendLine("        footer{text-align:center;color:#666;font-size:12px;margin-top:40px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05)}");
+        htmlBuilder.AppendLine("        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px}");
+        htmlBuilder.AppendLine("        .stat-box{background:rgba(0,212,255,0.1);border-left:3px solid #00d4ff;padding:10px;border-radius:4px}");
+        htmlBuilder.AppendLine("        .stat-value{font-size:20px;font-weight:bold;color:#00d4ff;font-family:monospace}");
+        htmlBuilder.AppendLine("    </style>");
+        htmlBuilder.AppendLine("</head>");
+        htmlBuilder.AppendLine("<body>");
+        htmlBuilder.AppendLine("    <div class=\"container\">");
+        htmlBuilder.AppendLine("        <header>");
+        htmlBuilder.AppendLine("            <h1>🔬 DINOForge Telemetry Snapshot</h1>");
+        htmlBuilder.AppendLine($"            <div class=\"timestamp\">Captured: {timestamp}</div>");
+        htmlBuilder.AppendLine("        </header>");
+        htmlBuilder.AppendLine("        <div class=\"grid\">");
+        htmlBuilder.AppendLine("            <div class=\"card full-width\">");
+        htmlBuilder.AppendLine("                <h2>📊 Overview</h2>");
+        htmlBuilder.AppendLine("                <div class=\"stats-grid\">");
+        htmlBuilder.AppendLine($"                    <div class=\"stat-box\"><strong>Total Metrics</strong><div class=\"stat-value\">{metricsObj.Value<JObject>("metrics")?.Count ?? 0}</div></div>");
+        htmlBuilder.AppendLine($"                    <div class=\"stat-box\"><strong>Counters</strong><div class=\"stat-value\">{counters.Count}</div></div>");
+        htmlBuilder.AppendLine($"                    <div class=\"stat-box\"><strong>Gauges</strong><div class=\"stat-value\">{gauges.Count}</div></div>");
+        htmlBuilder.AppendLine($"                    <div class=\"stat-box\"><strong>Durations</strong><div class=\"stat-value\">{durations.Count}</div></div>");
+        htmlBuilder.AppendLine("                </div>");
+        htmlBuilder.AppendLine("            </div>");
+        htmlBuilder.Append(counterChartHtml);
+        htmlBuilder.Append(gaugeChartHtml);
+        htmlBuilder.Append(durationChartHtml);
+        htmlBuilder.AppendLine("            <div class=\"card full-width\">");
+        htmlBuilder.AppendLine("                <h2>📋 All Metrics</h2>");
+        htmlBuilder.AppendLine("                <table>");
+        htmlBuilder.AppendLine("                    <thead><tr><th>Metric Name</th><th>Value</th><th>Type</th><th>Samples</th></tr></thead>");
+        htmlBuilder.AppendLine("                    <tbody>");
+        htmlBuilder.Append(tableRows);
+        htmlBuilder.AppendLine("                    </tbody>");
+        htmlBuilder.AppendLine("                </table>");
+        htmlBuilder.AppendLine("            </div>");
+        htmlBuilder.AppendLine("        </div>");
+        htmlBuilder.AppendLine("        <footer><p>Generated by DINOForge Telemetry Viewer | Chart.js v4.4.0</p></footer>");
+        htmlBuilder.AppendLine("    </div>");
+        htmlBuilder.AppendLine("    <script>");
+        htmlBuilder.AppendLine("        const chartConfig = {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e0e0e0'}}},scales:{y:{ticks:{color:'#888'}},x:{ticks:{color:'#888'}}}};");
+        htmlBuilder.Append(chartsScript);
+        htmlBuilder.AppendLine("    </script>");
+        htmlBuilder.AppendLine("</body>");
+        htmlBuilder.AppendLine("</html>");
+
+        return htmlBuilder.ToString();
+    }
+
+    private static string FindRepoRoot()
+    {
+        string current = Directory.GetCurrentDirectory();
+        while (current != null)
+        {
+            if (File.Exists(Path.Combine(current, "DINOForge.sln"))
+                || File.Exists(Path.Combine(current, ".git")))
+            {
+                return current;
+            }
+            current = Directory.GetParent(current)?.FullName;
+        }
+        return Directory.GetCurrentDirectory();
+    }
+}

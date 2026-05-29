@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge HUD Corner Chip — "mods active" indicator
+  320x64 — semi-transparent dark pill/bar for in-game HUD corner overlay
+  Layout (left-to-right):
+    [8px pad] [mini anvil+dino mark 40x40] [8px gap] [hammer icon ⚒ equiv] [space]
+    [DINOFORGE text bold] [bullet] [mods active text] [8px pad]
+
+  Palette:
+    BG pill:       rgba(15,18,30, 0.82) — near-black semi-transparent
+    Border:        #4ECDC4 (teal) thin
+    Icon area:     compact anvil+dino geometry
+    Ember dot:     #E8743B
+    Teal accent:   #4ECDC4
+    Primary text:  #E8E8E8
+    Secondary text:#9CA3AF
+    Divider:       #4ECDC4
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64">
+  <defs>
+    <!-- Background pill gradient (darker left, lighter right) -->
+    <linearGradient id="chipBg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#0F1219" stop-opacity="0.90"/>
+      <stop offset="100%" stop-color="#161B28" stop-opacity="0.82"/>
+    </linearGradient>
+
+    <!-- Teal glow on left edge -->
+    <linearGradient id="leftGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#4ECDC4" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#4ECDC4" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Ember pulse glow (static, simulates soft glow) -->
+    <radialGradient id="emberDotGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#E8743B" stop-opacity="0.8"/>
+      <stop offset="60%"  stop-color="#E8743B" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#E8743B" stop-opacity="0"/>
+    </radialGradient>
+
+    <clipPath id="chipClip">
+      <rect x="0" y="0" width="320" height="64" rx="10" ry="10"/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Background pill ── -->
+  <rect x="0" y="0" width="320" height="64" rx="10" fill="url(#chipBg)"/>
+
+  <!-- Left teal glow wash -->
+  <rect x="0" y="0" width="60" height="64" rx="10" fill="url(#leftGlow)" clip-path="url(#chipClip)"/>
+
+  <!-- Border ring (teal, thin) -->
+  <rect x="0.75" y="0.75" width="318.5" height="62.5" rx="9.5" fill="none" stroke="#4ECDC4" stroke-width="1.5" opacity="0.65"/>
+
+  <!-- Top highlight line (glass-pane feel) -->
+  <line x1="10" y1="1.5" x2="310" y2="1.5" stroke="#FFFFFF" stroke-width="0.75" opacity="0.12"/>
+
+  <!-- ── Mini Mark (40x40, centered vertically at 12px left pad) ── -->
+  <!--
+    All coordinates offset: x+12, y+12 (to center in 64-tall strip at left)
+    Mini anvil: horn at ~(12,32), face ~(22,22)-(52,42), body below
+    Mini dino head: upper-left of anvil
+  -->
+
+  <!-- Anvil horn -->
+  <polygon points="12,33  24,29  24,37" fill="#9CA3AF"/>
+
+  <!-- Anvil top face -->
+  <rect x="22" y="22" width="34" height="16" rx="2" fill="#9CA3AF"/>
+
+  <!-- Anvil waist -->
+  <polygon points="26,38  52,38  50,46  28,46" fill="#6B7280"/>
+
+  <!-- Anvil base -->
+  <rect x="28" y="46" width="22" height="8" rx="2" fill="#4B5563"/>
+
+  <!-- Dino head mass (over anvil horn zone) -->
+  <polygon
+    points="
+      13,22
+      26,17
+      34,18
+      38,23
+      37,30
+      26,33
+      15,32
+      10,27
+      9,22
+    "
+    fill="#4ECDC4"
+  />
+
+  <!-- Dino snout -->
+  <polygon
+    points="
+      34,18
+      43,20
+      44,24
+      40,27
+      37,27
+      37,23
+    "
+    fill="#3DBFB7"
+  />
+
+  <!-- Dino crown spike -->
+  <polygon points="21,21  24,11  29,18" fill="#4ECDC4"/>
+
+  <!-- Eye -->
+  <circle cx="21" cy="26" r="3"   fill="#0F1219" opacity="0.9"/>
+  <circle cx="22" cy="25" r="1.5" fill="#E8743B"/>
+
+  <!-- Ember spark dot above right anvil corner -->
+  <circle cx="52" cy="21" r="5"   fill="#E8743B" opacity="0.15"/>
+  <circle cx="52" cy="21" r="3"   fill="#E8743B" opacity="0.9"/>
+  <circle cx="55" cy="17" r="1.5" fill="#FFAA4A" opacity="0.8"/>
+  <circle cx="49" cy="16" r="1"   fill="#E8743B" opacity="0.6"/>
+
+  <!-- ── Divider line between mark and text ── -->
+  <line x1="62" y1="12" x2="62" y2="52" stroke="#4ECDC4" stroke-width="1" opacity="0.5"/>
+
+  <!-- ── DINOFORGE wordmark ── -->
+  <text
+    x="74" y="28"
+    font-family="'Segoe UI', 'Arial', sans-serif"
+    font-size="13"
+    font-weight="700"
+    letter-spacing="1.5"
+    fill="#E8E8E8"
+  >DINOForge</text>
+
+  <!-- Teal underline accent under wordmark -->
+  <line x1="74" y1="31" x2="152" y2="31" stroke="#4ECDC4" stroke-width="1" opacity="0.6"/>
+
+  <!-- Bullet separator -->
+  <circle cx="162" cy="24" r="2.5" fill="#4ECDC4" opacity="0.8"/>
+
+  <!-- "mods active" label -->
+  <text
+    x="172" y="28"
+    font-family="'Segoe UI', 'Arial', sans-serif"
+    font-size="12"
+    letter-spacing="0.5"
+    fill="#9CA3AF"
+  >mods active</text>
+
+  <!-- ── Pulse indicator dot (rightmost) ── -->
+  <!-- Outer glow -->
+  <circle cx="298" cy="24" r="8" fill="url(#emberDotGlow)"/>
+  <!-- Inner active dot -->
+  <circle cx="298" cy="24" r="4" fill="#4ECDC4"/>
+  <!-- Highlight -->
+  <circle cx="299" cy="23" r="1.5" fill="#FFFFFF" opacity="0.6"/>
+
+  <!-- ── Second row: version / pack count hint ── -->
+  <text
+    x="74" y="48"
+    font-family="'Segoe UI', 'Arial', sans-serif"
+    font-size="9"
+    letter-spacing="0.5"
+    fill="#6B7280"
+  >⚒  DINOForge Platform</text>
+
+</svg>

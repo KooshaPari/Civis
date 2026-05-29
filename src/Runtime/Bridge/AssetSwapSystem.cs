@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.SDK.Assets;
 // #613 dedup: was alias to DINOForge.Runtime.Assets.AssetService (retired); now points to SDK canonical impl.
 using RuntimeAssetService = DINOForge.SDK.Assets.AssetService;
@@ -104,6 +105,49 @@ namespace DINOForge.Runtime.Bridge
         private int _reflectionFailCount;
         private const int ReflectionFailLogEvery = 50;
 
+        // Iter-148 #912: track which world we selected so we log the switch only once.
+        private string _loggedWorldSelection = "";
+
+        /// <summary>
+        /// Iter-148 #912: AssetSwapSystem may run in a World that has only prefab templates
+        /// (Default World ~25 entities) while gameplay entities live in a separate World.
+        /// Scan all worlds and return the EntityManager from the one with the most entities.
+        /// </summary>
+        private EntityManager FindBestEntityManager(out int bestCount, out string bestName)
+        {
+            EntityManager best = EntityManager;
+            bestCount = -1;
+            bestName = World.Name;
+            try
+            {
+                foreach (World w in World.All)
+                {
+                    if (w == null || !w.IsCreated) continue;
+                    int c;
+                    try
+                    {
+                        c = w.EntityManager.UniversalQuery.CalculateEntityCount();
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    if (c > bestCount)
+                    {
+                        bestCount = c;
+                        best = w.EntityManager;
+                        bestName = w.Name;
+                    }
+                }
+            }
+            catch
+            {
+                // World.All access failed — keep our own EntityManager as fallback
+            }
+            if (bestCount < 0) bestCount = 0;
+            return best;
+        }
+
         /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
         public static void ScheduleReset()
         {
@@ -132,14 +176,14 @@ namespace DINOForge.Runtime.Bridge
         private const string PatchedBundlesDir = "dinoforge_patched_bundles";
 
         /// <inheritdoc/>
-        protected override void OnCreate()
+        public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("AssetSwap", "AssetSwapSystem.OnCreate");
         }
 
         /// <inheritdoc/>
-        protected override void OnUpdate()
+        public override void OnUpdate()
         {
             if (_resetPending)
             {
@@ -151,12 +195,40 @@ namespace DINOForge.Runtime.Bridge
 
             _frameCount++;
 
+            // #920: Telemetry — count every OnUpdate invocation.
+            try { MetricsCollector.Instance.IncrementCounter("asset_swap.update_calls"); } catch { /* best-effort */ }
+
             if (_frameCount < MinFrameDelay)
                 return;
 
             IReadOnlyList<AssetSwapRequest> pending = AssetSwapRegistry.GetPending();
             if (pending.Count == 0)
                 return;
+
+            // Gate at OnUpdate level: skip the entire swap pass until the world is populated.
+            // Iter-148 #912: AssetSwapSystem may run in Default World which only has prefab
+            // templates (~25 entities). The actual gameplay world has 49K+ entities. Find
+            // the world with the most entities (likely the gameplay world) and use its EM.
+            EntityManager bestEm = FindBestEntityManager(out int bestCount, out string bestName);
+
+            // #920: Telemetry — record current best world entity count.
+            try { MetricsCollector.Instance.RecordValue("asset_swap.world_entity_count", bestCount); } catch { /* best-effort */ }
+            if (bestCount < 1000)
+            {
+                if (_frameCount % 60 == 0)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"AssetSwapSystem: waiting for entities (best world='{bestName}' count={bestCount}, need>=1000, frame={_frameCount})");
+                }
+                return;
+            }
+
+            if (_loggedWorldSelection != bestName)
+            {
+                _loggedWorldSelection = bestName;
+                DebugLog.Write("AssetSwap",
+                    $"AssetSwapSystem: using world '{bestName}' with {bestCount} entities (was running in '{World.Name}')");
+            }
 
             DebugLog.Write("AssetSwap", $"AssetSwapSystem: processing {pending.Count} pending swap(s)");
 
@@ -170,7 +242,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 try
                 {
-                    bool result = ApplySwap(request, patchDir, assetService);
+                    bool result = ApplySwap(request, patchDir, assetService, bestEm);
                     if (result)
                     {
                         AssetSwapRegistry.MarkApplied(request.AssetAddress);
@@ -215,7 +287,7 @@ namespace DINOForge.Runtime.Bridge
         /// if the mod bundle contains a Unity Mesh or Material, attempts a live
         /// RenderMesh swap on matched ECS entities.
         /// </summary>
-        private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService)
+        private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService, EntityManager bestEm)
         {
             // Resolve the mod bundle path (relative paths against BepInEx plugins dir).
             string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);
@@ -275,7 +347,7 @@ namespace DINOForge.Runtime.Bridge
 
             // Best-effort live RenderMesh swap on ECS entities.
             bool entitySwapResult = TrySwapRenderMeshFromBundle(
-                modBundleFullPath, request.AssetName, request.VanillaMapping);
+                modBundleFullPath, request.AssetName, request.VanillaMapping, bestEm);
             DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
 
             return patchResult || entitySwapResult;
@@ -289,7 +361,7 @@ namespace DINOForge.Runtime.Bridge
         /// <c>Components.MeleeUnit</c>), preventing the replacement from touching unrelated geometry.
         /// </summary>
         private bool TrySwapRenderMeshFromBundle(
-            string modBundlePath, string assetName, string? vanillaMapping)
+            string modBundlePath, string assetName, string? vanillaMapping, EntityManager em)
         {
             AssetBundle? bundle = LoadBundle(modBundlePath);
             if (bundle == null) return false;
@@ -386,9 +458,28 @@ namespace DINOForge.Runtime.Bridge
                 queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
             }
 
-            EntityQuery query = EntityManager.CreateEntityQuery(
+            EntityQuery query = em.CreateEntityQuery(
                 new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
+
+            // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
+            // fires before gameplay-scene entity population completes (observed ~9s gap
+            // between AssetSwapSystem first OnUpdate at frame 600 and entities arriving
+            // around frame 1000+). Returning false (not true) causes AssetSwapRegistry
+            // to MarkFailed, which keeps the request in the pending queue for the next
+            // OnUpdate retry. MaxRetries=200 gives a wide retry window past warmup.
+            if (entities.Length == 0)
+            {
+                if (_reportedFailures.Add($"empty-query:{assetName}"))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: entity query returned 0 results for asset='{assetName}' " +
+                        $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — entities not yet populated, will retry next frame.");
+                }
+                entities.Dispose();
+                query.Dispose();
+                return false;
+            }
 
             // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
             // The generic GetSharedComponentData<T>(Entity) throws "Ambiguous match found"
@@ -541,8 +632,25 @@ namespace DINOForge.Runtime.Bridge
             }
 
             int swapCount = 0;
+
+            // Iter-148 safety cap: bundle-to-archetype swaps can match tens of thousands of
+            // entities (observed 25,713 RenderMesh entities matching a single bundle). Applying
+            // the same replacement mesh+material to every match makes every unit look identical
+            // — the "everything looks the same" disaster. Cap at 100 entities per swap call
+            // until proper per-unit selective targeting lands. Logged once per bundle so the
+            // operator knows the cap was hit and additional matches were skipped.
+            const int MaxEntitiesPerSwap = 100;
+            int swapBudget = Math.Min(entities.Length, MaxEntitiesPerSwap);
+            if (entities.Length > MaxEntitiesPerSwap && _reportedFailures.Add($"cap:{assetName}"))
+            {
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: capping swap at {MaxEntitiesPerSwap}/{entities.Length} entities for asset='{assetName}' " +
+                    $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — prevents 'everything looks the same' disaster. " +
+                    "Selective targeting is a separate concern; tracked as follow-up.");
+            }
+
             int skippedNoMatch = 0;
-            for (int i = 0; i < entities.Length; i++)
+            for (int i = 0; i < swapBudget; i++)
             {
                 if (swapCount >= MaxSwapsPerBundle)
                 {
@@ -554,12 +662,12 @@ namespace DINOForge.Runtime.Bridge
                 Entity entity = entities[i];
                 try
                 {
-                    if (!EntityManager.HasComponent(entity, renderMeshComponentType))
+                    if (!em.HasComponent(entity, renderMeshComponentType))
                         continue;
 
                     // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
                     object? renderMesh = getSharedNonGeneric.Invoke(
-                        EntityManager, new object[] { entity, renderMeshComponentType });
+                        em, new object[] { entity, renderMeshComponentType });
                     if (renderMesh == null) continue;
 
                     // ---- Selective mesh-name check ----
@@ -608,7 +716,7 @@ namespace DINOForge.Runtime.Bridge
 
                     if (changed)
                     {
-                        genericSet.Invoke(EntityManager, new object[] { entity, renderMesh });
+                        genericSet.Invoke(em, new object[] { entity, renderMesh });
                         swapCount++;
                     }
                 }
@@ -629,8 +737,8 @@ namespace DINOForge.Runtime.Bridge
             }
 
             DebugLog.Write("AssetSwap",
-                $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{entities.Length} entities " +
-                $"(skipped {skippedNoMatch} non-matching meshes, cap={MaxSwapsPerBundle})");
+                $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{swapBudget} entities (total matching={entities.Length}, " +
+                $"skipped {skippedNoMatch} non-matching meshes, cap={MaxEntitiesPerSwap})");
             entities.Dispose();
             query.Dispose();
 
@@ -847,7 +955,7 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <inheritdoc/>
-        protected override void OnDestroy()
+        public override void OnDestroy()
         {
             // Iter-144 #543 fix: skip bundle unload when RuntimeDriver is being destroyed as part
             // of a scene transition (NeedsResurrection / s_skipBundleUnload). AssetBundle.Unload(false)

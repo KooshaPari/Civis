@@ -1,6 +1,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
 using DINOForge.SDK;
 using DINOForge.SDK.Models;
 using DINOForge.SDK.Registry;
@@ -42,11 +45,36 @@ namespace DINOForge.Runtime.Bridge
         /// <param name="log">Logging callback. Null is treated as a no-op.</param>
         /// <returns>Total number of entity-field writes performed across all units.</returns>
         /// <exception cref="ArgumentNullException">If <paramref name="registry"/> is null.</exception>
+        /// <summary>
+        /// Minimum live-entity count required before PackStatInjector will attempt to apply stats.
+        /// In MainMenu state the ECS world holds only prefab templates (~100-300 entities); attempting
+        /// to write component data into prefab archetypes that haven't been instantiated yet causes
+        /// EntityManager.GetComponentData to throw NullReferenceException because the underlying
+        /// chunk buffers are in a transitional state. Gameplay scenes typically report >1000 entities
+        /// (3474+ in prior successful runs), so this threshold cleanly distinguishes the two states.
+        /// </summary>
+        public const int MinEntityCountForApply = 1000;
+
         public static int Apply(EntityManager em, RegistryManager registry, Action<string>? log)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
 
+            var __metricsSw = System.Diagnostics.Stopwatch.StartNew();
             Action<string> write = log ?? (_ => { });
+
+            // Gate on total entity count: in MainMenu only prefab templates exist (~100s of entities)
+            // and GetComponentData on those archetypes throws NRE from EntityManager internals because
+            // chunk buffers are transitional. Gameplay scenes report >1000 real entities. Skipping the
+            // injection here is safe because RebuildCatalogAndApplyStats is re-invoked on scene
+            // transitions — once gameplay loads, this will be called again with a populated world.
+            int totalEntities = SafeEntityCount(em);
+            if (totalEntities < MinEntityCountForApply)
+            {
+                write($"[PackStatInjector] Skipping — only {totalEntities} entities in world " +
+                      $"(threshold {MinEntityCountForApply}). Likely MainMenu state; will retry " +
+                      "when gameplay scene populates the world.");
+                return 0;
+            }
 
             int totalWrites = 0;
             int unitsProcessed = 0;
@@ -105,6 +133,20 @@ namespace DINOForge.Runtime.Bridge
             write($"[PackStatInjector] Done. " +
                   $"Processed {unitsProcessed} unit(s), skipped {unitsSkipped}, " +
                   $"total writes {totalWrites}.");
+
+            // #920: Telemetry — record stat injection metrics.
+            try
+            {
+                __metricsSw.Stop();
+                MetricsCollector.Instance.RecordValue("stat_inject.writes_total", totalWrites);
+                MetricsCollector.Instance.RecordValue("stat_inject.units_processed", unitsProcessed);
+                MetricsCollector.Instance.RecordDuration("stat_inject.duration_ms", __metricsSw.Elapsed);
+            }
+            catch
+            {
+                // Best-effort: telemetry must never throw
+            }
+
             return totalWrites;
         }
 
@@ -142,13 +184,37 @@ namespace DINOForge.Runtime.Bridge
                 }
                 catch (Exception ex)
                 {
-                    // Per-stat isolation: log and continue with the next stat
+                    // Per-stat isolation: log and continue with the next stat.
+                    // Unwrap TargetInvocationException so the user-facing log surfaces the real
+                    // exception type (was previously masked, making NRE source unidentifiable).
+                    Exception root = ex is TargetInvocationException tie ? (tie.InnerException ?? ex) : ex;
                     log($"[PackStatInjector]   ERROR applying '{sdkPath}' " +
-                        $"for unit '{unit.Id}': {ex.Message}");
+                        $"for unit '{unit.Id}': {root.GetType().Name}: {root.Message}");
+                    // Full stack trace to dedicated debug log for diagnosis; user log stays concise.
+                    DebugLog.Write("PackStatInjector",
+                        $"ERROR applying '{sdkPath}' for unit '{unit.Id}': {root}");
                 }
             }
 
             return writes;
+        }
+
+        /// <summary>
+        /// Defensively reads <see cref="EntityManager.UniversalQuery"/> entity count.
+        /// Returns 0 if the EntityManager is in a transitional state that throws on access.
+        /// </summary>
+        private static int SafeEntityCount(EntityManager em)
+        {
+            try
+            {
+                return em.UniversalQuery.CalculateEntityCount();
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("PackStatInjector",
+                    $"SafeEntityCount: EntityManager not queryable yet: {ex.GetType().Name}: {ex.Message}");
+                return 0;
+            }
         }
     }
 }

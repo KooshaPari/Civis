@@ -502,6 +502,12 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<UiExpectationResult>("expectUi", new { selector, condition }, ct);
 
     /// <summary>
+    /// Retrieves the current in-memory metrics snapshot from <c>MetricsCollector</c>.
+    /// </summary>
+    public Task<JObject> GetMetricsAsync(CancellationToken ct = default) =>
+        SendRequestAsync<JObject>("getMetrics", null, ct);
+
+    /// <summary>
     /// Sends a JSON-RPC request and returns the deserialized result.
     /// Handles serialization, pipe I/O, error checking, timeout, and retries.
     /// </summary>

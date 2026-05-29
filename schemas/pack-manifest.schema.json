@@ -35,6 +35,11 @@
       "enum": ["content", "balance", "ruleset", "scenario", "total_conversion", "utility"],
       "description": "Pack type category."
     },
+    "classification": {
+      "type": "string",
+      "enum": ["engine_extension", "content", "total_conversion", "baseline"],
+      "description": "Pack classification tier: determines mod menu display and accessible features."
+    },
     "description": {
       "type": "string",
       "description": "Optional description of the pack."
@@ -59,6 +64,131 @@
     "game_version": {
       "type": "string",
       "description": "Compatible game version."
+    },
+    "bepinex_version": {
+      "type": "string",
+      "description": "Required BepInEx version range (e.g., '>=5.4.0 <6.0.0')."
+    },
+    "unity_version": {
+      "type": "string",
+      "description": "Required Unity version range (e.g., '>=2021.3.0 <2022.0.0')."
+    },
+    "homepage_url": {
+      "type": "string",
+      "description": "Optional homepage URL for the pack."
+    },
+    "github_url": {
+      "type": "string",
+      "description": "Optional GitHub repository URL for the pack."
+    },
+    "discord_url": {
+      "type": "string",
+      "description": "Optional Discord server/channel invite URL."
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier (e.g., 'CC0-1.0', 'MIT')."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Searchable tags for the pack (e.g., ['warfare', 'sci-fi'])."
+    },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "verified-author",
+          "popular",
+          "editors-choice",
+          "early-access",
+          "total-conversion",
+          "compatibility-tested"
+        ]
+      },
+      "description": "Author-declared or curated badges. Author-declarable: early-access, total-conversion. Curated (assigned externally): verified-author, editors-choice. Auto-computed: popular, compatibility-tested."
+    },
+    "ui_theme": {
+      "type": "object",
+      "description": "Custom color theme for this pack's mod menu detail pane.",
+      "properties": {
+        "title": { "type": "string", "description": "Pack title override for display." },
+        "subtitle": { "type": "string", "description": "Pack subtitle shown below title." },
+        "primary_color": { "type": "string", "description": "Primary color (hex, e.g. '#FFE81F')." },
+        "secondary_color": { "type": "string", "description": "Secondary color (hex)." },
+        "accent_color": { "type": "string", "description": "Accent/highlight color (hex)." },
+        "text_color": { "type": "string", "description": "Text color (hex)." },
+        "background_tint": { "type": "string", "description": "Background tint overlay color (hex)." }
+      },
+      "additionalProperties": false
+    },
+    "settings": {
+      "type": "array",
+      "description": "User-configurable runtime settings exposed in the F10 mod menu.",
+      "items": {
+        "type": "object",
+        "required": ["key", "display_name", "type", "default_value"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Unique identifier for this setting."
+          },
+          "display_name": {
+            "type": "string",
+            "description": "Human-readable label shown in the mod menu."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["bool", "int", "float", "string", "enum"],
+            "description": "Data type; determines which UI control is rendered."
+          },
+          "default_value": {
+            "description": "Default value (bool, number, or string depending on type)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Tooltip or help text for this setting."
+          },
+          "enum_options": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Valid options for type=enum settings."
+          },
+          "min": {
+            "type": "number",
+            "description": "Minimum value for type=int or type=float (inclusive)."
+          },
+          "max": {
+            "type": "number",
+            "description": "Maximum value for type=int or type=float (inclusive)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "update_check": {
+      "type": "object",
+      "description": "GitHub release update-check configuration. When set, the runtime polls for newer releases.",
+      "required": ["owner", "repo"],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub repository owner (user or organisation)."
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name."
+        }
+      },
+      "additionalProperties": false
+    },
+    "patches": {
+      "type": "array",
+      "description": "RimWorld-style cross-pack patch operations applied after all packs load.",
+      "items": {
+        "type": "object"
+      }
     },
     "loads": {
       "type": "object",

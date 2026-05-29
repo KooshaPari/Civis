@@ -40,11 +40,27 @@ impl Plugin for LiveAttachPlugin {
             })
             .add_systems(
                 Update,
-                (poll_live_meta, sync_live_hud_stats, sync_live_selection),
+                (
+                    poll_live_meta,
+                    sync_live_hud_connection,
+                    sync_live_hud_stats,
+                    sync_live_selection,
+                ),
             );
         #[cfg(feature = "egui")]
         app.add_systems(Update, sync_live_game_ui);
     }
+}
+
+fn sync_live_hud_connection(
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut hud: ResMut<LiveHudSnapshot>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+    hud.connection = bridge.client.latest_connection_state();
 }
 
 fn poll_live_meta(

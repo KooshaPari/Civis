@@ -93,6 +93,8 @@ cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
 | `Space` | Toggle HUD speed pause (`GameSpeed` `0` / `1x`) |
 | `1`–`3` | HUD speed `1x` / `2x` / `5x` |
 | Settings (pause menu) | Graphics quality, volume, sim speed stubs |
+| **L** | Toggle scrollable **Event Log** (egui); stacked toasts bottom-right (~8s) |
+| Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`) |
 
 Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause does not gate remote ticks.
 

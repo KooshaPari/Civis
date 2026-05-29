@@ -131,7 +131,11 @@
 44. **bevy_window day/night sync** — **done** (item 45): `sim.snapshot` `is_day` drives `DayNightCycle` + `update_lighting` (sun/moon/clear/ambient parity with `live_attach`); web blend via `presentation_day_factor_target` (`FR-CIV-BEVY-020`).
 46. **GitHub Actions live-smoke CI** — **done** (item 46): `.github/workflows/civis-3d-live-smoke.yml` runs `just civis-3d-live-smoke` on path-filtered PR/push to `clients/bevy-ref`, `crates/server`, `crates/protocol-3d`, or `justfile` (`FR-CIV-BEVY-021`).
 47. **Live attach smoke harness v3** — **done** (item 47): `just civis-3d-live-smoke` runs `live_focus::` and `live_minimap::` lib tests (`FR-CIV-BEVY-022`).
+48. **Event feed HUD (egui toasts + log)** — **done** (item 48): `EventFeedPlugin` on `civ-standalone`; bottom-right toasts + **L** toggles scrollable log; `live_attach` pushes `EventKind::System` on connection changes (`FR-CIV-BEVY-023`).
+49. **Pause / settings menus** — **done** (item 49): `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; sim tick gated while paused (`FR-CIV-BEVY-024`).
+50. **Live attach smoke harness v4** — **done** (item 50): `just civis-3d-live-smoke` runs `live_pick::` lib tests (`FR-CIV-BEVY-025`).
 51. **Native GPU backend env + tests** — **done** (item 51): `CIV_BEVY_BACKEND` (`dx12` \| `vulkan` \| `metal`); Windows defaults DX12 \| Vulkan; `native_backend` unit tests + README; cross-link `wgpu-native-escape-hatches.md` (`FR-CIV-BEVY-026`).
+52. **Live attach polish integration** — **done** (item 52): `civ-bevy-window` wires `LivePickPlugin`, minimap `MinimapRoot`, HUD `selected_live`; `live_attach` mirrors selection; smoke/README cover `live_focus` + `live_minimap` tests.
 
 ## Run
 

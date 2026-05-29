@@ -125,7 +125,11 @@
 39. **bevy_window live scene focus** — **done** (item 40): shared `live_focus`; orbit centre lerps to streamed bounds when WS connected; minimap UV + click pan use focus rect (FR-CIV-BEVY-015).
 40. **Live attach smoke harness v2** — **done** (item 41): `just civis-3d-live-smoke` runs `live_stream::`, minimap UV lib tests, and both Bevy bins (`FR-CIV-BEVY-016`).
 41. **Live attach HUD scene stats** — **done** (item 42): `LiveHudSnapshot` overlay shows tick, connection, C/A/B/G counts, optional `sim.snapshot` RTT; wired in `civ-bevy-window` and `civ-standalone` server attach (`FR-CIV-BEVY-017`).
+42. **WebSocket reconnect backoff + HUD connection state** — **done** (item 43): exponential reconnect backoff (1s→30s cap) in `ws_client`; HUD shows `connected` / `reconnecting` / `disconnected` via `WsConnectionState` (`FR-CIV-BEVY-018`).
+43. **Live stream entity pick** — **done** (item 44): `live_pick` ray–AABB pick on left-click (skip orbit drag + minimap); HUD `sel: agent #N`; `civ-standalone` server attach via `LivePickPlugin` (`FR-CIV-BEVY-019`).
+44. **bevy_window day/night sync** — **done** (item 45): `sim.snapshot` `is_day` drives `DayNightCycle` + `update_lighting` (sun/moon/clear/ambient parity with `live_attach`); web blend via `presentation_day_factor_target` (`FR-CIV-BEVY-020`).
 46. **GitHub Actions live-smoke CI** — **done** (item 46): `.github/workflows/civis-3d-live-smoke.yml` runs `just civis-3d-live-smoke` on path-filtered PR/push to `clients/bevy-ref`, `crates/server`, `crates/protocol-3d`, or `justfile` (`FR-CIV-BEVY-021`).
+47. **Live attach smoke harness v3** — **done** (item 47): `just civis-3d-live-smoke` runs `live_focus::` and `live_minimap::` lib tests (`FR-CIV-BEVY-022`).
 
 ## Run
 

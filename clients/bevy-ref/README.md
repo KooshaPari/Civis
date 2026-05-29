@@ -78,6 +78,24 @@ Payload decode order (text or binary WebSocket frame): **F3D0 binary first**, th
 Default camera orbits chunk centre `(8, 8, 8)` at ~48 world units with 45° azimuth
 and ~35° elevation — see `CameraTarget` in `src/lib.rs`.
 
+### `civ-standalone` sandbox (HUD + menus)
+
+Requires `--features bevy,egui`:
+
+```bash
+cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+```
+
+| Input | Action |
+|-------|--------|
+| `Escape` | Toggle pause overlay (dims world; halts in-process sim ticks) |
+| Pause overlay **Resume** | Dismiss overlay (same as `Escape` while paused) |
+| `Space` | Toggle HUD speed pause (`GameSpeed` `0` / `1x`) |
+| `1`–`3` | HUD speed `1x` / `2x` / `5x` |
+| Settings (pause menu) | Graphics quality, volume, sim speed stubs |
+
+Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause does not gate remote ticks.
+
 ### Orbit camera controls (`civ-bevy-window`)
 
 | Input | Action |

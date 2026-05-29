@@ -68,7 +68,13 @@ fn advance_simulation(
     time: Res<Time>,
     mut timer: ResMut<SimTickTimer>,
     mut sim: ResMut<SimState>,
+    #[cfg(feature = "egui")] mode: Res<crate::menus::GameUiMode>,
+    #[cfg(feature = "egui")] speed: Res<crate::game_ui::GameSpeed>,
 ) {
+    #[cfg(feature = "egui")]
+    if *mode == crate::menus::GameUiMode::Paused || speed.multiplier == 0 {
+        return;
+    }
     timer.0.tick(time.delta());
     if timer.0.just_finished() {
         sim.0.tick();

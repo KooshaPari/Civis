@@ -1253,6 +1253,89 @@ mod tests {
         assert_eq!(parse_ws_payload(&bytes).expect("binary-first"), frame);
     }
 
+    /// FR-CIV-BEVY-035 — `parse_ws_payload` decodes F3D0 binary for all six `Frame3d` kinds.
+    #[test]
+    fn parse_ws_payload_decodes_all_frame_kinds() {
+        use civ_protocol_3d::{
+            encode_frame3d_binary, AgentAppearanceFrame, AgentAppearanceUpdate,
+            BuildingDiffEntry, BuildingDiffFrame, BuildingKind3d, BuildingProvenance,
+            CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, EventFeedFrame,
+            EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
+            Frame3d, Government3d, TechEvent3d, VoxelChunkDelta, VoxelDeltaFrame, WorldXZ,
+        };
+        use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
+
+        let frames = [
+            Frame3d::VoxelDelta(VoxelDeltaFrame {
+                tick: 1,
+                deltas: vec![VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: ChunkId(1),
+                        write_seq: WriteSeq(1),
+                    },
+                    voxels: vec![MaterialId(0); 4],
+                }],
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 2,
+                provenance: BuildingProvenance::Procedural,
+                buildings: vec![BuildingDiffEntry {
+                    id: 1,
+                    kind: BuildingKind3d::House,
+                    tier: 0,
+                    position: WorldXZ { x: 0.0, z: 0.0 },
+                }],
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 3,
+                updates: vec![AgentAppearanceUpdate {
+                    agent_id: 1,
+                    era: 0,
+                    wardrobe: MaterialId(0),
+                    tools: MaterialId(0),
+                    scale: 1.0,
+                    position: None,
+                }],
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 4,
+                civilians: vec![CivilianStateEntry {
+                    id: 1,
+                    needs: CivilianNeeds3d::default(),
+                    profession: String::new(),
+                    genome_summary: Default::default(),
+                    species: String::new(),
+                    health: 1.0,
+                }],
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 5,
+                factions: vec![FactionStateEntry {
+                    id: 1,
+                    era: 0,
+                    government: Government3d::Unknown,
+                    treasury: FactionTreasury3d::default(),
+                }],
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 6,
+                events: vec![EventFeedMessage3d::Tech(TechEvent3d {
+                    faction_id: 1,
+                    era: 1,
+                    tech: "wheel".to_string(),
+                })],
+            }),
+        ];
+
+        for frame in frames {
+            let bytes = encode_frame3d_binary(&frame).expect("encode");
+            assert_eq!(parse_ws_payload(&bytes).expect("binary decode"), frame);
+            let json = serde_json::to_string(&frame).expect("json");
+            assert_eq!(parse_ws_payload(json.as_bytes()).expect("text decode"), frame);
+        }
+    }
+
     /// FR-CIV-BEVY-003 — F3D0 binary `Frame3d` payloads round-trip without a live socket.
     #[test]
     fn parse_frame3d_binary_roundtrips_building_diff() {

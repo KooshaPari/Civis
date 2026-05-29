@@ -562,7 +562,6 @@ pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_planet::WeatherCell;
 
     /// FR-CIV-PROTO3D-000 — schema version is exposed.
     #[test]
@@ -852,6 +851,104 @@ mod tests {
         let with_scale = r#"{"agent_id":3,"era":1,"wardrobe":0,"tools":0,"scale":1.25}"#;
         let scaled: AgentAppearanceUpdate = serde_json::from_str(with_scale).expect("deserialize");
         assert!((scaled.scale - 1.25).abs() < f32::EPSILON);
+    }
+
+    /// FR-CIV-PROTO3D-014 — every `Frame3d` variant round-trips through the F3D0 envelope.
+    #[test]
+    fn frame_bundle_binary_roundtrip_all_kinds() {
+        let frames = sample_all_frame3d_kinds();
+        for (idx, frame) in frames.iter().enumerate() {
+            let bytes = encode_frame3d_binary(frame).unwrap_or_else(|err| {
+                panic!("encode frame kind index {idx}: {err:?}");
+            });
+            assert!(
+                bytes.starts_with(FRAME3D_BINARY_MAGIC),
+                "frame kind index {idx} missing F3D0 magic"
+            );
+            let back = decode_frame3d_binary(&bytes).unwrap_or_else(|err| {
+                panic!("decode frame kind index {idx}: {err:?}");
+            });
+            assert_eq!(back, *frame, "frame kind index {idx}");
+        }
+    }
+
+    fn sample_all_frame3d_kinds() -> [Frame3d; 6] {
+        [
+            Frame3d::VoxelDelta(VoxelDeltaFrame {
+                tick: 60,
+                deltas: vec![VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: ChunkId(3),
+                        write_seq: WriteSeq(2),
+                    },
+                    voxels: vec![MaterialId(1); 16],
+                }],
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 61,
+                provenance: BuildingProvenance::Freehand,
+                buildings: vec![BuildingDiffEntry {
+                    id: 9,
+                    kind: BuildingKind3d::Temple,
+                    tier: 2,
+                    position: WorldXZ { x: 4.0, z: 8.0 },
+                }],
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 62,
+                updates: vec![AgentAppearanceUpdate {
+                    agent_id: 5,
+                    era: 2,
+                    wardrobe: MaterialId(3),
+                    tools: MaterialId(4),
+                    scale: 1.1,
+                    position: Some(WorldXZ { x: 1.0, z: 2.0 }),
+                }],
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 63,
+                civilians: vec![CivilianStateEntry {
+                    id: 11,
+                    needs: CivilianNeeds3d {
+                        food: 0.5,
+                        shelter: 0.6,
+                        safety: 0.7,
+                        social: 0.4,
+                        rest: 0.8,
+                    },
+                    profession: "smith".to_string(),
+                    genome_summary: GenomeSummary3d {
+                        summary: "sturdy".to_string(),
+                        lineage: "line-b".to_string(),
+                        traits: vec!["strong".to_string()],
+                    },
+                    species: "human".to_string(),
+                    health: 0.9,
+                }],
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 64,
+                factions: vec![FactionStateEntry {
+                    id: 2,
+                    era: 3,
+                    government: Government3d::Republic,
+                    treasury: FactionTreasury3d {
+                        amount: 500.0,
+                        currency: "civ".to_string(),
+                    },
+                }],
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 65,
+                events: vec![EventFeedMessage3d::Birth(BirthEvent3d {
+                    entity_id: 20,
+                    faction_id: 2,
+                    species: "human".to_string(),
+                    position: Some(WorldXZ { x: 5.0, z: 6.0 }),
+                })],
+            }),
+        ]
     }
 
     /// FR-CIV-PROTO3D-005 — corrupt magic is rejected.

@@ -1,6 +1,6 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 
-//! Menus and overlay plugin for the Civis reference client.
+//! Menus and overlay plugin for the Civis reference client (FR-CIV-BEVY-024 / item 49).
 
 use bevy::app::AppExit;
 use bevy::prelude::*;

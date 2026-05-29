@@ -148,7 +148,7 @@ namespace DINOForge.SDK.Signing
                         count++;
                     }
                 }
-                catch  // safe-swallow: invalid key format, just skip this author
+                catch (Exception) // safe-swallow: invalid key format, just skip this author
                 {
                     // Skip invalid keys
                 }
@@ -232,7 +232,7 @@ namespace DINOForge.SDK.Signing
                 // to Unsigned (not TamperedSignatureMismatch) to avoid false positives.
                 return null;
             }
-            catch  // safe-swallow: key import failed (invalid format / corrupt base64), skip entry
+            catch (Exception) // safe-swallow: key import failed (invalid format / corrupt base64), skip entry
             {
                 return null;
             }
@@ -296,7 +296,7 @@ namespace DINOForge.SDK.Signing
                                 authorName);
                         }
                     }
-                    catch  // safe-swallow: signature verification failed, continue to next author
+                    catch (Exception) // safe-swallow: signature verification failed, continue to next author
                     {
                         // Continue checking other authors
                     }
@@ -321,7 +321,7 @@ namespace DINOForge.SDK.Signing
                                 "Pack has a valid signature from an unknown/untrusted author");
                         }
                     }
-                    catch  // safe-swallow: embedded public key format unsupported, treat as unsigned
+                    catch (Exception) // safe-swallow: embedded public key format unsupported, treat as unsigned
                     {
                         // Could not verify with public key from pack
                     }

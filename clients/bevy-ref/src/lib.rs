@@ -20,7 +20,13 @@ pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod menus;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
@@ -175,7 +181,7 @@ pub struct LiveHudSnapshot {
 }
 
 #[cfg(feature = "bevy")]
-pub use live_pick::SelectedLiveEntity;
+pub use live_pick::{format_live_selection, LiveEntityKind, SelectedLiveEntity};
 
 impl LiveHudSnapshot {
     /// Copy streamed entity counts from a live attach scene map.
@@ -213,6 +219,9 @@ impl LiveHudSnapshot {
         }
         if let Some(chunk) = self.focused_chunk {
             line.push_str(&format!(" | chunk: {}", chunk.0));
+        }
+        if let Some(selection) = self.selected_live {
+            line.push_str(&format!(" | {}", crate::live_pick::format_live_selection(selection)));
         }
         line
     }
@@ -805,6 +814,40 @@ mod tests {
         }
         .format_overlay();
         assert!(line.contains("chunk: 42"));
+    }
+
+    #[test]
+    fn format_live_selection_labels_entity_kind() {
+        assert_eq!(
+            format_live_selection(SelectedLiveEntity {
+                kind: LiveEntityKind::Agent,
+                id: 7,
+            }),
+            "sel: agent #7"
+        );
+        assert_eq!(
+            format_live_selection(SelectedLiveEntity {
+                kind: LiveEntityKind::Building,
+                id: 3,
+            }),
+            "sel: building #3"
+        );
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_selected_live_entity() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            selected_live: Some(SelectedLiveEntity {
+                kind: LiveEntityKind::GraphParcel,
+                id: 11,
+            }),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("sel: graph #11"));
     }
 
     #[test]

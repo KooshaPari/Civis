@@ -6,9 +6,38 @@ use bevy::ui::RelativeCursorPosition;
 
 use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
 use crate::minimap::{MinimapCamera, MinimapRoot};
-use crate::{
-    LiveEntityKind, SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
-};
+use crate::{AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH};
+
+/// Kind of streamed entity selected in the live viewport.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveEntityKind {
+    /// Civilian / agent marker.
+    Agent,
+    /// Building marker.
+    Building,
+    /// Building-graph parcel marker.
+    GraphParcel,
+}
+
+/// Selected streamed entity for HUD overlays and inspectors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SelectedLiveEntity {
+    /// Entity category.
+    pub kind: LiveEntityKind,
+    /// Server-side entity id.
+    pub id: u64,
+}
+
+/// Format a compact HUD label for a live selection.
+#[must_use]
+pub fn format_live_selection(selection: SelectedLiveEntity) -> String {
+    let label = match selection.kind {
+        LiveEntityKind::Agent => "agent",
+        LiveEntityKind::Building => "building",
+        LiveEntityKind::GraphParcel => "graph",
+    };
+    format!("sel: {label} #{}", selection.id)
+}
 
 /// Optional live selection for HUD overlays and inspectors.
 #[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -315,5 +344,20 @@ mod tests {
             .expect("pick");
         assert_eq!(picked.kind, LiveEntityKind::Agent);
         assert_eq!(picked.id, 1);
+    }
+
+    #[test]
+    fn agent_marker_half_extents_match_mesh_constants() {
+        let half = agent_marker_half_extents();
+        assert!((half[0] - AGENT_MARKER_WIDTH * 0.5).abs() < f32::EPSILON);
+        assert!((half[1] - AGENT_MARKER_HEIGHT * 0.5).abs() < f32::EPSILON);
+        assert!((half[2] - AGENT_MARKER_DEPTH * 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn pick_live_entity_rejects_zero_direction() {
+        assert!(
+            pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[]).is_none()
+        );
     }
 }

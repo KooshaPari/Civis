@@ -10,7 +10,11 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
+use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
+
+use crate::live_pick::LiveSelection;
 use crate::spawn_tools::{ActiveTool, SpawnTool};
+use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 
 /// Lightweight sim snapshot consumed by the HUD.
 #[derive(Resource, Debug, Clone)]
@@ -78,6 +82,10 @@ pub struct SelectedEntityDetails {
     pub health: String,
     /// Profession shown in the right panel.
     pub profession: String,
+    /// Species label shown in the right panel.
+    pub species: String,
+    /// Needs summary (food / shelter / safety / social / rest).
+    pub needs: String,
     /// World position shown in the right panel.
     pub position: String,
 }
@@ -159,8 +167,9 @@ fn draw_game_ui(
     mut contexts: EguiContexts,
     snapshot: Res<GameUiSnapshot>,
     selected: Res<SelectedEntity>,
+    live_selection: Res<LiveSelection>,
     details: Res<SelectedEntityDetails>,
-    attach_mode: Res<crate::AttachMode>,
+    attach_mode: Res<AttachMode>,
     live_attach: Option<Res<crate::live_attach::LiveAttachState>>,
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
@@ -183,7 +192,9 @@ fn draw_game_ui(
             tool_palette_ui(ui, &mut active_tool, &mut speed);
         });
 
-    if selected.entity.is_some() {
+    let show_live_inspector =
+        *attach_mode == AttachMode::Server && live_selection.0.is_some();
+    if selected.entity.is_some() || show_live_inspector {
         egui::SidePanel::right("civis_game_selected_panel")
             .resizable(true)
             .default_width(268.0)
@@ -191,6 +202,115 @@ fn draw_game_ui(
             .show(ctx, |ui| {
                 inspector_ui(ui, &details);
             });
+    }
+}
+
+/// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
+#[must_use]
+pub fn format_civilian_needs_summary(needs: &CivilianNeeds3d) -> String {
+    format!(
+        "F {:.0}% · Sh {:.0}% · Sa {:.0}% · So {:.0}% · R {:.0}%",
+        needs.food * 100.0,
+        needs.shelter * 100.0,
+        needs.safety * 100.0,
+        needs.social * 100.0,
+        needs.rest * 100.0,
+    )
+}
+
+/// Health label for the inspector progress bar (`87%`).
+#[must_use]
+pub fn format_civilian_health_display(health: f32) -> String {
+    format!("{:.0}%", health.clamp(0.0, 1.0) * 100.0)
+}
+
+/// Display name for a civilian wire entry (genome summary or stable id).
+#[must_use]
+pub fn civilian_display_name(entry: &CivilianStateEntry) -> String {
+    if entry.genome_summary.summary.is_empty() {
+        format!("Civilian #{}", entry.id)
+    } else {
+        entry.genome_summary.summary.clone()
+    }
+}
+
+/// Faction label from genome lineage (`faction-3` → `Faction 3`).
+#[must_use]
+pub fn civilian_faction_label(entry: &CivilianStateEntry) -> String {
+    let lineage = entry.genome_summary.lineage.trim();
+    if lineage.is_empty() {
+        return "—".to_string();
+    }
+    if let Some(id) = lineage.strip_prefix("faction-") {
+        return format!("Faction {id}");
+    }
+    lineage.to_string()
+}
+
+/// Build inspector rows from a `CivilianState` wire entry.
+#[must_use]
+pub fn inspector_details_from_civilian(entry: &CivilianStateEntry) -> SelectedEntityDetails {
+    let profession = if entry.profession.is_empty() {
+        "—".to_string()
+    } else {
+        entry.profession.clone()
+    };
+    let species = if entry.species.is_empty() {
+        "—".to_string()
+    } else {
+        entry.species.clone()
+    };
+    SelectedEntityDetails {
+        name: civilian_display_name(entry),
+        faction: civilian_faction_label(entry),
+        health: format_civilian_health_display(entry.health),
+        profession,
+        species,
+        needs: format_civilian_needs_summary(&entry.needs),
+        position: "—".to_string(),
+    }
+}
+
+/// Format a world-space point for the inspector position row.
+#[must_use]
+pub fn format_world_position(position: Vec3) -> String {
+    format!(
+        "{:.1}, {:.1}, {:.1}",
+        position.x, position.y, position.z
+    )
+}
+
+/// Inspector rows for a live-streamed entity without civilian wire data.
+#[must_use]
+pub fn inspector_details_for_live_entity(
+    entity: SelectedLiveEntity,
+    position: Option<Vec3>,
+) -> SelectedEntityDetails {
+    let position = position
+        .map(format_world_position)
+        .unwrap_or_else(|| "—".to_string());
+    let (name, profession) = match entity.kind {
+        LiveEntityKind::Agent => (
+            format!("Agent #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::Building => (
+            format!("Building #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::GraphParcel => (
+            format!("Parcel #{}", entity.id),
+            "—".to_string(),
+        ),
+    };
+    SelectedEntityDetails {
+        name,
+        faction: "—".to_string(),
+        health: "—".to_string(),
+        profession,
+        species: "—".to_string(),
+        needs: "—".to_string(),
+        position,
     }
 }
 
@@ -417,6 +537,8 @@ fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
     ui.add_space(2.0);
 
     inspector_row(ui, "Profession", &details.profession);
+    inspector_row(ui, "Species", &details.species);
+    inspector_row(ui, "Needs", &details.needs);
     inspector_row(ui, "Position", &details.position);
 }
 
@@ -484,6 +606,67 @@ mod tests {
         assert_eq!(parse_health_fraction(""), None);
         assert_eq!(parse_health_fraction("Healthy"), None);
         assert_eq!(parse_health_fraction("10/0"), None);
+    }
+
+    #[test]
+    fn civilian_needs_summary_formats_percentages() {
+        let needs = CivilianNeeds3d {
+            food: 0.82,
+            shelter: 0.7,
+            safety: 0.55,
+            social: 0.4,
+            rest: 0.9,
+        };
+        let summary = format_civilian_needs_summary(&needs);
+        assert!(summary.contains("F 82%"));
+        assert!(summary.contains("Sh 70%"));
+        assert!(summary.contains("R 90%"));
+    }
+
+    #[test]
+    fn inspector_details_from_civilian_entry() {
+        use civ_protocol_3d::GenomeSummary3d;
+
+        let entry = CivilianStateEntry {
+            id: 42,
+            needs: CivilianNeeds3d {
+                food: 1.0,
+                shelter: 0.5,
+                safety: 0.5,
+                social: 0.5,
+                rest: 0.5,
+            },
+            profession: "farmer".to_string(),
+            genome_summary: GenomeSummary3d {
+                summary: "era-2".to_string(),
+                lineage: "faction-3".to_string(),
+                traits: Vec::new(),
+            },
+            species: "human".to_string(),
+            health: 0.87,
+        };
+        let details = inspector_details_from_civilian(&entry);
+        assert_eq!(details.name, "era-2");
+        assert_eq!(details.faction, "Faction 3");
+        assert_eq!(details.health, "87%");
+        assert_eq!(details.profession, "farmer");
+        assert_eq!(details.species, "human");
+        assert!(details.needs.contains("F 100%"));
+    }
+
+    #[test]
+    fn civilian_display_name_falls_back_to_id() {
+        use civ_protocol_3d::GenomeSummary3d;
+
+        let entry = CivilianStateEntry {
+            id: 7,
+            needs: CivilianNeeds3d::default(),
+            profession: String::new(),
+            genome_summary: GenomeSummary3d::default(),
+            species: String::new(),
+            health: 1.0,
+        };
+        assert_eq!(civilian_display_name(&entry), "Civilian #7");
     }
 
     #[test]

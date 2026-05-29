@@ -30,6 +30,8 @@ pub mod live_focus;
 #[cfg(feature = "bevy")]
 pub mod live_minimap;
 #[cfg(feature = "bevy")]
+pub mod live_pick;
+#[cfg(feature = "bevy")]
 pub mod live_ground;
 #[cfg(feature = "bevy")]
 pub mod live_scene;
@@ -148,7 +150,9 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LiveHudSnapshot {
-    /// Whether the WebSocket client is connected and receiving frames.
+    /// WebSocket session state from the reconnecting client.
+    pub connection: WsConnectionState,
+    /// Whether live frames or snapshot metadata have been received (stream activity).
     pub connected: bool,
     /// Latest simulation tick from the server, if any frame has arrived yet.
     pub tick: Option<u64>,
@@ -166,7 +170,12 @@ pub struct LiveHudSnapshot {
     pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
     pub focused_chunk: Option<ChunkId>,
+    /// Streamed agent/building/graph selection from viewport pick, if any.
+    pub selected_live: Option<SelectedLiveEntity>,
 }
+
+#[cfg(feature = "bevy")]
+pub use live_pick::SelectedLiveEntity;
 
 impl LiveHudSnapshot {
     /// Copy streamed entity counts from a live attach scene map.
@@ -186,10 +195,10 @@ impl LiveHudSnapshot {
     /// Format a single-line overlay string suitable for Bevy UI or CI log checks.
     #[must_use]
     pub fn format_overlay(&self) -> String {
-        let status = if self.connected {
-            "connected"
-        } else {
-            "disconnected"
+        let status = match self.connection {
+            WsConnectionState::Connected => "connected",
+            WsConnectionState::Reconnecting => "reconnecting",
+            WsConnectionState::Disconnected => "disconnected",
         };
         let tick = self
             .tick
@@ -707,6 +716,7 @@ pub mod bevy_render;
 #[cfg(feature = "bevy")]
 /// Live Bevy/WebSocket attach path for the 3D reference client.
 pub mod ws_client;
+pub use ws_client::{WsClient, WsClientConfig, WsConnectionState};
 
 #[cfg(test)]
 mod tests {
@@ -736,6 +746,7 @@ mod tests {
     #[test]
     fn live_hud_overlay_includes_connection_and_tick() {
         let line = LiveHudSnapshot {
+            connection: WsConnectionState::Connected,
             connected: true,
             tick: Some(42),
             fps: 59.7,
@@ -758,6 +769,7 @@ mod tests {
     #[test]
     fn live_hud_overlay_includes_ws_rtt_when_present() {
         let line = LiveHudSnapshot {
+            connection: WsConnectionState::Connected,
             connected: true,
             tick: Some(1),
             fps: 60.0,
@@ -771,6 +783,7 @@ mod tests {
     #[test]
     fn live_hud_overlay_shows_disconnected_without_tick() {
         let line = LiveHudSnapshot {
+            connection: WsConnectionState::Disconnected,
             connected: false,
             tick: None,
             fps: 0.0,

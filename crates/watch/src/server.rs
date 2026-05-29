@@ -20,8 +20,8 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::info;
 
 use crate::app::{
-    env_u16, load_law_db, resolve_data_dir, resolve_session_id, AppState, Snapshot,
-    TerrainCache, REMOTE_FETCH_TIMEOUT,
+    env_u16, load_law_db, resolve_data_dir, resolve_session_id, AppState, Snapshot, TerrainCache,
+    REMOTE_FETCH_TIMEOUT,
 };
 use crate::control_routes::{
     damage_handler, place_voxel_handler, spawn_civilian_handler, spawn_entity_handler,

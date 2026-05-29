@@ -123,8 +123,7 @@ impl LawDb {
     /// Parse and validate the embedded [`DEFAULT_LAW_RON`] canon database.
     pub fn default_canon() -> Result<Self, ValidationError> {
         let db = Self::load_ron(DEFAULT_LAW_RON)?;
-        db.validate()
-            .map_err(|mut errs| errs.remove(0))?;
+        db.validate().map_err(|mut errs| errs.remove(0))?;
         Ok(db)
     }
 
@@ -147,8 +146,7 @@ impl LawDb {
             let overlay = Self::load_path(&law_path)?;
             db = db.merge_overlay(overlay);
         }
-        db.validate()
-            .map_err(|mut errs| errs.remove(0))?;
+        db.validate().map_err(|mut errs| errs.remove(0))?;
         Ok(db)
     }
 
@@ -500,10 +498,8 @@ mod tests {
     /// FR-CIV-LAWS-009 — mod directory loader merges child `laws.ron` overlays.
     #[test]
     fn load_with_mod_overlays_merges_child_laws_ron() {
-        let temp = std::env::temp_dir().join(format!(
-            "civ-laws-mod-overlay-{}",
-            std::process::id()
-        ));
+        let temp =
+            std::env::temp_dir().join(format!("civ-laws-mod-overlay-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&temp);
         std::fs::create_dir_all(temp.join("example-mod")).expect("mod dir");
         std::fs::write(

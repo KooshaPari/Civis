@@ -88,6 +88,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-LAWS-006 | Era unlock graph respects dependency closure and ordering. | `crates/laws/` | `laws::unlockable_at_era_respects_dependencies`, `laws::dependency_order_respects_prereqs` | implemented |
 | FR-CIV-LAWS-007 | Mod overlay merge replaces laws by id. | `crates/laws/` | `laws::merge_overlay_replaces_by_id` | implemented |
 | FR-CIV-LAWS-008 | Embedded default RON loads and validates. | `crates/laws/` | `laws::default_canon_loads_embedded_ron` | implemented |
+| FR-CIV-LAWS-009 | Mod directory loader merges validated `mods/*/laws.ron`. | `crates/laws/` | `laws::load_with_mod_overlays_merges_child_laws_ron` | implemented |
 
 ---
 
@@ -99,6 +100,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-RESEARCH-001 | LLM cache hit is byte-identical to cached value. | `crates/research/` | `research::llm_cache_hit` | implemented |
 | FR-CIV-RESEARCH-002 | Canonical replay refuses first `LlmEvent` in log. | `crates/research/` | `research::canonical_replay_refuses_llm` | implemented |
 | FR-CIV-RESEARCH-003 | Hybrid replay on cache miss refuses to advance. | `crates/research/` | `research::hybrid_cache_miss_refuses` | implemented |
+| FR-CIV-RESEARCH-013 | Validator rejects dependencies not unlockable at card era. | `crates/research/` | `research::rejects_prereq_gated_dependency` | implemented |
 
 ---
 

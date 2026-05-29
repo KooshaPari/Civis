@@ -17,17 +17,19 @@
 | FR-CIV-LAWS-006 | implemented | `unlockable_at_era` + `dependency_order` |
 | FR-CIV-LAWS-007 | implemented | `merge_overlay` for mod RON |
 | FR-CIV-LAWS-008 | implemented | embedded `laws/default.ron` + `default_canon` |
+| FR-CIV-LAWS-009 | implemented | `load_with_mod_overlays` scans `mods/*/laws.ron` |
 
 ## Kickoff slices
 
 1. **Embedded canon RON + mod overlay** — **done** (item 1): `crates/laws/laws/default.ron`, `DEFAULT_LAW_RON`, `load_path`, `merge_overlay`, `civ-watch` uses `LawDb::default_canon()`.
 2. **Era unlock graph** — **done** (item 2): `unlockable_at_era`, `dependency_order` with cycle error.
-3. **Mod directory loader** — **next** (item 3): scan `mods/*/laws.ron` at civ-watch startup and merge overlays after validation.
-4. **Research gate integration** — **next** (item 4): wire `civ-research::validate` + tech tree UI to `unlockable_at_era` instead of inline era checks.
+3. **Mod directory loader** — **done** (item 3): `load_with_mod_overlays`, `civ-watch` `load_law_db` at startup; sample `mods/example-policy/laws.ron`.
+4. **Research gate integration** — **done** (item 4): `civ-research::validate` + tech tree use `unlockable_at_era` dependency closure.
 
 ## Run
 
 ```bash
 cargo test -p civ-laws
+cargo test -p civ-research
 cargo test -p civ-watch
 ```

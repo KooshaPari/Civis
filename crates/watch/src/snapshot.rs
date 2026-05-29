@@ -1,5 +1,7 @@
 //! Snapshot synthesis from simulation state.
 
+use std::collections::BTreeSet;
+
 use civ_agents::{drift_toward_home, Civilian as AgentCivilian, Needs, Position3d, Velocity};
 use civ_engine::{Citizen, DiplomacyKind, Simulation};
 use civ_laws::{LawDb, LawKind};
@@ -426,6 +428,11 @@ pub(crate) fn faction_for_point(x: f32, y: f32) -> Option<u32> {
 }
 
 pub(crate) fn tech_tree(db: &LawDb, current_era: u16) -> Vec<TechNode> {
+    let unlockable: BTreeSet<&str> = db
+        .unlockable_at_era(current_era)
+        .into_iter()
+        .map(|law| law.id.as_str())
+        .collect();
     let mut nodes = db
         .laws
         .iter()
@@ -437,7 +444,7 @@ pub(crate) fn tech_tree(db: &LawDb, current_era: u16) -> Vec<TechNode> {
                 LawKind::FictionalExtension => "FictionalExtension".to_string(),
             },
             era_min: law.era_min,
-            unlocked: current_era >= law.era_min,
+            unlocked: unlockable.contains(law.id.as_str()),
         })
         .collect::<Vec<_>>();
     nodes.sort_by(|a, b| a.era_min.cmp(&b.era_min).then_with(|| a.id.cmp(&b.id)));

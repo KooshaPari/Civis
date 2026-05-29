@@ -20,7 +20,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::info;
 
 use crate::app::{
-    default_law_db, env_u16, resolve_data_dir, resolve_session_id, AppState, Snapshot,
+    env_u16, load_law_db, resolve_data_dir, resolve_session_id, AppState, Snapshot,
     TerrainCache, REMOTE_FETCH_TIMEOUT,
 };
 use crate::control_routes::{
@@ -78,7 +78,6 @@ pub async fn run() {
     let (tx, _) = broadcast::channel::<Snapshot>(64);
     let terrain = Terrain::generate(42);
     let terrain_cache = TerrainCache::from_terrain(&terrain);
-    let laws = Arc::new(default_law_db());
     let data_dir = resolve_data_dir();
     let saves_dir = Arc::new(data_dir.join("saves"));
     std::fs::create_dir_all(&*saves_dir).expect("create saves dir");
@@ -99,6 +98,7 @@ pub async fn run() {
     std::fs::create_dir_all(mods_dir.join("uploads")).ok();
     std::fs::create_dir_all(mods_dir.join("publish")).ok();
     std::fs::create_dir_all(mods_dir.join("remote")).ok();
+    let laws = Arc::new(load_law_db(mods_dir.as_path()));
     let http = reqwest::Client::builder()
         .timeout(REMOTE_FETCH_TIMEOUT)
         .redirect(reqwest::redirect::Policy::limited(5))

@@ -1,7 +1,7 @@
 //! Shared app state, snapshot DTOs, and helpers.
 
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU16, AtomicU8},
         Arc,
@@ -507,6 +507,16 @@ pub(crate) struct RemoteModRegistryEntry {
 
 pub(crate) fn default_law_db() -> LawDb {
     LawDb::default_canon().expect("embedded default law db")
+}
+
+pub(crate) fn load_law_db(mods_dir: &Path) -> LawDb {
+    match LawDb::load_with_mod_overlays(mods_dir) {
+        Ok(db) => db,
+        Err(err) => {
+            tracing::warn!(%err, ?mods_dir, "failed to load mod law overlays; using embedded canon");
+            default_law_db()
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,0 +1,14 @@
+(
+    version: 0,
+    laws: [
+        (
+            id: "policy_audit_trail",
+            kind: Conservation,
+            era_min: 2,
+            inputs: [],
+            outputs: [],
+            losses: [],
+            dependencies: ["mass_conservation"],
+        ),
+    ],
+)

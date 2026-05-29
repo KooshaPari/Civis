@@ -87,6 +87,13 @@ pub enum RejectReason {
         /// The law's `era_min`.
         law_era_min: u16,
     },
+    /// A dependency exists and meets `era_min` but is not unlockable (prereq chain incomplete).
+    DependencyNotUnlockable {
+        /// The dependency law ID.
+        law: String,
+        /// The card's declared era.
+        card_era: u16,
+    },
     /// The card declared no inputs, outputs, or byproducts — equivalent to
     /// `FictionalExtensionUnderspecified` for tech cards.
     NoEffects,
@@ -202,17 +209,27 @@ pub fn validate(card: &TechCard, db: &LawDb) -> ValidationOutcome {
     if card.inputs.is_empty() && card.byproducts.is_empty() {
         return ValidationOutcome::Reject(RejectReason::NoEffects);
     }
-    // 2) Every declared dependency must exist.
+    // 2) Every declared dependency must exist and be unlockable at the card's era.
+    let unlockable: std::collections::BTreeSet<&str> = db
+        .unlockable_at_era(card.era)
+        .into_iter()
+        .map(|law| law.id.as_str())
+        .collect();
     for dep in &card.dependencies {
         let Some(law) = db.get(dep) else {
             return ValidationOutcome::Reject(RejectReason::UnknownDependency(dep.clone()));
         };
-        // 3) And be unlocked at or before the card's era.
         if law.era_min > card.era {
             return ValidationOutcome::Reject(RejectReason::DependencyEraGated {
                 law: law.id.clone(),
                 card_era: card.era,
                 law_era_min: law.era_min,
+            });
+        }
+        if !unlockable.contains(dep.as_str()) {
+            return ValidationOutcome::Reject(RejectReason::DependencyNotUnlockable {
+                law: dep.clone(),
+                card_era: card.era,
             });
         }
     }
@@ -472,6 +489,56 @@ mod tests {
         assert!(matches!(
             validate(&card, &db),
             ValidationOutcome::Reject(RejectReason::NoEffects)
+        ));
+    }
+
+    /// FR-CIV-RESEARCH-013 — dependency must be unlockable, not just present in DB.
+    #[test]
+    fn rejects_prereq_gated_dependency() {
+        use civ_laws::{Law, LawDb, LawKind};
+        let db = LawDb {
+            version: 0,
+            laws: vec![
+                Law {
+                    id: "base".into(),
+                    kind: LawKind::Conservation,
+                    era_min: 0,
+                    inputs: vec![],
+                    outputs: vec![],
+                    losses: vec![],
+                    dependencies: vec![],
+                },
+                Law {
+                    id: "early_child".into(),
+                    kind: LawKind::Material,
+                    era_min: 0,
+                    inputs: vec![],
+                    outputs: vec![],
+                    losses: vec![],
+                    dependencies: vec!["late_parent".into()],
+                },
+                Law {
+                    id: "late_parent".into(),
+                    kind: LawKind::Conservation,
+                    era_min: 5,
+                    inputs: vec![],
+                    outputs: vec![],
+                    losses: vec![],
+                    dependencies: vec![],
+                },
+            ],
+        };
+        let card = TechCard {
+            id: "child_tech".into(),
+            era: 3,
+            inputs: vec!["ore".into()],
+            energy_cost: 1,
+            byproducts: vec![],
+            dependencies: vec!["early_child".into()],
+        };
+        assert!(matches!(
+            validate(&card, &db),
+            ValidationOutcome::Reject(RejectReason::DependencyNotUnlockable { .. })
         ));
     }
 

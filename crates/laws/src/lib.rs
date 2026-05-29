@@ -25,6 +25,9 @@ pub const SCHEMA_VERSION: u32 = 0;
 /// Embedded canonical law database shipped with the game (mod-friendly RON source).
 pub const DEFAULT_LAW_RON: &str = include_str!("../laws/default.ron");
 
+/// Filename for per-mod law overlays inside each mod directory.
+pub const MOD_LAW_FILENAME: &str = "laws.ron";
+
 /// Kinds of law the DB recognises.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum LawKind {
@@ -120,6 +123,30 @@ impl LawDb {
     /// Parse and validate the embedded [`DEFAULT_LAW_RON`] canon database.
     pub fn default_canon() -> Result<Self, ValidationError> {
         let db = Self::load_ron(DEFAULT_LAW_RON)?;
+        db.validate()
+            .map_err(|mut errs| errs.remove(0))?;
+        Ok(db)
+    }
+
+    /// Load embedded canon, then merge validated `mods/*/laws.ron` overlays (if present).
+    pub fn load_with_mod_overlays(mods_dir: &Path) -> Result<Self, ValidationError> {
+        let mut db = Self::default_canon()?;
+        let entries = match std::fs::read_dir(mods_dir) {
+            Ok(entries) => entries,
+            Err(_) => return Ok(db),
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let law_path = path.join(MOD_LAW_FILENAME);
+            if !law_path.is_file() {
+                continue;
+            }
+            let overlay = Self::load_path(&law_path)?;
+            db = db.merge_overlay(overlay);
+        }
         db.validate()
             .map_err(|mut errs| errs.remove(0))?;
         Ok(db)
@@ -468,5 +495,39 @@ mod tests {
         let db = LawDb::default_canon().expect("default canon");
         assert_eq!(db.laws.len(), 3);
         assert!(db.get("mass_conservation").is_some());
+    }
+
+    /// FR-CIV-LAWS-009 — mod directory loader merges child `laws.ron` overlays.
+    #[test]
+    fn load_with_mod_overlays_merges_child_laws_ron() {
+        let temp = std::env::temp_dir().join(format!(
+            "civ-laws-mod-overlay-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(temp.join("example-mod")).expect("mod dir");
+        std::fs::write(
+            temp.join("example-mod").join(MOD_LAW_FILENAME),
+            r#"(
+                version: 0,
+                laws: [
+                    (
+                        id: "policy_audit_trail",
+                        kind: Conservation,
+                        era_min: 2,
+                        inputs: [],
+                        outputs: [],
+                        losses: [],
+                        dependencies: ["mass_conservation"],
+                    ),
+                ],
+            )"#,
+        )
+        .expect("write overlay");
+
+        let db = LawDb::load_with_mod_overlays(&temp).expect("load with overlays");
+        assert_eq!(db.laws.len(), 4);
+        assert!(db.get("policy_audit_trail").is_some());
+        let _ = std::fs::remove_dir_all(&temp);
     }
 }

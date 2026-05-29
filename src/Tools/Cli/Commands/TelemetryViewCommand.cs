@@ -103,7 +103,8 @@ internal static class TelemetryViewCommand
                         FileName = outputPath,
                         UseShellExecute = true
                     };
-                    Process.Start(psi);
+                    using Process? browser = Process.Start(psi);
+                    browser?.Dispose();
                 }
                 catch (Exception ex)
                 {

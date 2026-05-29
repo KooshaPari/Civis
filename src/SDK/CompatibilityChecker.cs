@@ -51,6 +51,16 @@ namespace DINOForge.SDK
                     return fileVer;
                 }
 
+                // Try InformationalVersion (semver prefix before +metadata)
+                var infoVerAttr = asm.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false);
+                if (infoVerAttr.Length > 0 &&
+                    infoVerAttr[0] is AssemblyInformationalVersionAttribute iva &&
+                    TryParseVersion(iva.InformationalVersion, out var infoVer) &&
+                    infoVer.Major + infoVer.Minor > 0)
+                {
+                    return infoVer;
+                }
+
                 // Fallback: known framework version constant
                 return new Version(0, 5, 0);
             }

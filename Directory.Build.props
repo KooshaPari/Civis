@@ -34,6 +34,8 @@
     <!-- MinVer: git-tag-based versioning for all projects -->
     <!-- Disable MinVer in MSYS2 bash due to crash issues with native binary execution -->
     <DisableMinVer Condition="'$(OS)' == 'Windows_NT' and '$(MSYSTEM)' != ''">true</DisableMinVer>
+    <!-- CI: use VERSION file (not shallow-clone MinVer) so pack compatibility tests see 0.26.x -->
+    <DisableMinVer Condition="'$(CI)' == 'true'">true</DisableMinVer>
     <MinVerDefaultPreReleaseIdentifiers Condition="'$(DisableMinVer)' != 'true'">preview.0</MinVerDefaultPreReleaseIdentifiers>
     <MinVerTagPrefix Condition="'$(DisableMinVer)' != 'true'">v</MinVerTagPrefix>
 

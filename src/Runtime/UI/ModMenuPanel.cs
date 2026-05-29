@@ -2043,9 +2043,10 @@ namespace DINOForge.Runtime.UI
                     tex = null;
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // safe-swallow: screenshot load is best-effort UI decoration
+                System.Diagnostics.Debug.WriteLine($"ModMenuPanel screenshot load failed: {ex.Message}");
             }
 
             if (target == null) yield break; // UI was destroyed while loading
@@ -2229,9 +2230,10 @@ namespace DINOForge.Runtime.UI
                     sb.Append("\n... (").Append(lines.Length - lineLimit).Append(" more lines)");
                 return sb.ToString();
             }
-            catch
+            catch (Exception ex)
             {
                 // safe-swallow: diff preview is best-effort UI decoration
+                System.Diagnostics.Debug.WriteLine($"ModMenuPanel pack.yaml preview failed for {packId}: {ex.Message}");
                 return "(error reading pack.yaml for " + packId + ")";
             }
         }
@@ -3479,9 +3481,10 @@ namespace DINOForge.Runtime.UI
                 string md = MetricsCollector.Instance.DumpMarkdown();
                 GUIUtility.systemCopyBuffer = string.IsNullOrWhiteSpace(md) ? "(no metrics)" : md;
             }
-            catch
+            catch (Exception ex)
             {
                 // best-effort
+                System.Diagnostics.Debug.WriteLine($"ModMenuPanel metrics clipboard copy failed: {ex.Message}");
             }
         }
 

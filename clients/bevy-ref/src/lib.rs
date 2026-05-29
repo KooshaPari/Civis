@@ -22,6 +22,8 @@ pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod diplomacy_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;

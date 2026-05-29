@@ -1,5 +1,3 @@
-#![cfg(all(feature = "bevy", feature = "egui"))]
-
 //! Faction Diplomacy panel for the Civis reference client.
 //!
 //! Provides a dark-glassmorphism overlay (matching `game_ui.rs` palette) that
@@ -14,8 +12,11 @@
 //! app.insert_resource(DiplomacyState::demo());
 //! ```
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 
 // ---------------------------------------------------------------------------
 // Palette (mirrors game_ui.rs)
@@ -83,6 +84,19 @@ impl Default for DiplomacyState {
 }
 
 impl DiplomacyState {
+    /// Build [`DiplomacyState`] from a live `FactionState` wire frame.
+    ///
+    /// Faction rows use government labels and deterministic banner colours.
+    /// Population comes from `population_by_faction` when present, otherwise a
+    /// treasury-scaled stub. Relations are a square neutral matrix (`0`).
+    #[must_use]
+    pub fn from_faction_frame(
+        frame: &FactionStateFrame,
+        population_by_faction: &HashMap<u32, u32>,
+    ) -> Self {
+        diplomacy_state_from_faction_frame(frame, population_by_faction)
+    }
+
     /// Build a 4-faction demo suitable for screenshots and unit tests.
     pub fn demo() -> Self {
         let factions = vec![
@@ -99,6 +113,82 @@ impl DiplomacyState {
             vec![ 30,-55,  10,   0],  // Yellow→ {Red, Blue, Green, self}
         ];
         Self { factions, relations, open: true }
+    }
+}
+
+/// Maps a `FactionState` wire frame into panel rows and a neutral relation matrix.
+#[must_use]
+pub fn diplomacy_state_from_faction_frame(
+    frame: &FactionStateFrame,
+    population_by_faction: &HashMap<u32, u32>,
+) -> DiplomacyState {
+    let mut entries = frame.factions.clone();
+    entries.sort_by_key(|entry| entry.id);
+    let factions: Vec<DipFaction> = entries
+        .iter()
+        .map(|entry| dip_faction_from_entry(entry, population_by_faction))
+        .collect::<Vec<_>>();
+    let relations = neutral_relations_matrix(factions.len());
+    DiplomacyState {
+        factions,
+        relations,
+        open: false,
+    }
+}
+
+/// Symmetric N×N relation matrix with neutral (`0`) off-diagonal cells.
+#[must_use]
+pub fn neutral_relations_matrix(n: usize) -> Vec<Vec<i8>> {
+    (0..n).map(|_| vec![0_i8; n]).collect()
+}
+
+/// Display name for a faction row (`"Republic #2"`).
+#[must_use]
+pub fn faction_display_name(entry: &FactionStateEntry) -> String {
+    format!("{} #{}", government_label(&entry.government), entry.id)
+}
+
+/// Deterministic sRGB triple for a faction id (matches agent colour hashing).
+#[must_use]
+pub fn faction_color_from_id(id: u32) -> [f32; 3] {
+    crate::agent_color_from_id(u64::from(id))
+}
+
+fn dip_faction_from_entry(
+    entry: &FactionStateEntry,
+    population_by_faction: &HashMap<u32, u32>,
+) -> DipFaction {
+    DipFaction {
+        id: entry.id,
+        name: faction_display_name(entry),
+        color: faction_color_from_id(entry.id),
+        population: population_for_faction(entry, population_by_faction),
+    }
+}
+
+fn population_for_faction(
+    entry: &FactionStateEntry,
+    population_by_faction: &HashMap<u32, u32>,
+) -> u32 {
+    if let Some(count) = population_by_faction.get(&entry.id).copied() {
+        return count;
+    }
+    let amount = entry.treasury.amount;
+    if amount.is_finite() && amount > 0.0 {
+        return (amount / 10.0).clamp(100.0, 999_999.0) as u32;
+    }
+    1_000 * (entry.id + 1)
+}
+
+fn government_label(government: &Government3d) -> &'static str {
+    match government {
+        Government3d::Unknown => "Faction",
+        Government3d::Monarchy => "Monarchy",
+        Government3d::Republic => "Republic",
+        Government3d::Theocracy => "Theocracy",
+        Government3d::Junta => "Junta",
+        Government3d::Council => "Council",
+        Government3d::Corporate => "Corporate",
     }
 }
 
@@ -337,8 +427,8 @@ pub fn stance_label(stance: i8) -> &'static str {
         s if s > 50  => "Allied",
         s if s > 0   => "Friendly",
         0            => "Neutral",
-        s if s > -50 => "Tense",
-        _            => "At War",
+        s if s >= -50 => "Tense",
+        _             => "At War",
     }
 }
 
@@ -348,7 +438,7 @@ fn stance_colors(stance: i8) -> (egui::Color32, egui::Color32) {
         s if s > 50  => (GREEN.gamma_multiply(0.25),  GREEN),
         s if s > 0   => (GREEN.gamma_multiply(0.12),  GREEN),
         0            => (CHIP_FILL,                   DIM),
-        s if s > -50 => (GOLD.gamma_multiply(0.20),   GOLD),
+        s if s >= -50 => (GOLD.gamma_multiply(0.20),   GOLD),
         _            => (RED.gamma_multiply(0.25),    RED),
     }
 }
@@ -422,5 +512,59 @@ mod tests {
         assert_eq!(text, GREEN);
         let (_, text_war) = stance_colors(-99);
         assert_eq!(text_war, RED);
+    }
+
+    /// FR-CIV-BEVY-034 — faction wire frame maps to diplomacy panel rows + neutral matrix.
+    #[test]
+    fn diplomacy_state_from_faction_frame_maps_entries() {
+        use civ_protocol_3d::{FactionTreasury3d, Government3d};
+
+        let frame = FactionStateFrame {
+            tick: 9,
+            factions: vec![
+                FactionStateEntry {
+                    id: 2,
+                    era: 1,
+                    government: Government3d::Republic,
+                    treasury: FactionTreasury3d {
+                        amount: 25_000.0,
+                        currency: "joules".to_string(),
+                    },
+                },
+                FactionStateEntry {
+                    id: 0,
+                    era: 1,
+                    government: Government3d::Monarchy,
+                    treasury: FactionTreasury3d::default(),
+                },
+            ],
+        };
+        let mut counts = HashMap::new();
+        counts.insert(0, 42);
+
+        let state = diplomacy_state_from_faction_frame(&frame, &counts);
+        assert_eq!(state.factions.len(), 2);
+        assert_eq!(state.factions[0].id, 0);
+        assert_eq!(state.factions[0].name, "Monarchy #0");
+        assert_eq!(state.factions[0].population, 42);
+        assert_eq!(state.factions[1].id, 2);
+        assert_eq!(state.factions[1].name, "Republic #2");
+        assert_eq!(state.factions[1].population, 2_500);
+        assert_eq!(state.relations, neutral_relations_matrix(2));
+        for row in &state.relations {
+            assert!(row.iter().all(|cell| *cell == 0));
+        }
+    }
+
+    #[test]
+    fn faction_display_name_uses_government_label() {
+        use civ_protocol_3d::FactionStateEntry;
+
+        let entry = FactionStateEntry {
+            id: 7,
+            government: Government3d::Corporate,
+            ..Default::default()
+        };
+        assert_eq!(faction_display_name(&entry), "Corporate #7");
     }
 }

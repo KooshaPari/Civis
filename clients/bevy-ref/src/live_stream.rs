@@ -10,7 +10,8 @@ use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
     agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
     BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d, FacadeStyle,
+    CivilianStateEntry, CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d,
+    FacadeStyle,
     FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
 };
 #[cfg(feature = "egui")]
@@ -114,8 +115,12 @@ pub struct LiveStreamScene {
     pub building_provenance: BuildingProvenance,
     /// Civilian entity ids from the latest `Frame3d::CivilianState` (HUD counts).
     pub civilian_ids: HashSet<u64>,
+    /// Latest civilian payloads keyed by stable civilian id (inspector + HUD).
+    pub civilian_entries: HashMap<u64, CivilianStateEntry>,
     /// Faction ids from the latest `Frame3d::FactionState` (HUD counts).
     pub factions: HashSet<u32>,
+    /// Latest faction payloads (diplomacy panel + HUD era).
+    pub faction_entries: Vec<civ_protocol_3d::FactionStateEntry>,
     /// Max era from the latest faction state frame (HUD era chip).
     pub faction_era: u16,
 }
@@ -136,7 +141,9 @@ impl Default for LiveStreamScene {
             // simply tracks the last-observed provenance, starting Procedural.
             building_provenance: BuildingProvenance::Procedural,
             civilian_ids: HashSet::default(),
+            civilian_entries: HashMap::default(),
             factions: HashSet::default(),
+            faction_entries: Vec::new(),
             faction_era: 0,
         }
     }
@@ -145,9 +152,11 @@ impl Default for LiveStreamScene {
 /// Replaces civilian HUD tracking from a server `CivilianState` snapshot (may truncate at 256).
 pub fn apply_civilian_state_frame(scene: &mut LiveStreamScene, frame: CivilianStateFrame) {
     scene.civilian_ids.clear();
-    scene
-        .civilian_ids
-        .extend(frame.civilians.into_iter().map(|entry| entry.id));
+    scene.civilian_entries.clear();
+    for entry in frame.civilians {
+        scene.civilian_ids.insert(entry.id);
+        scene.civilian_entries.insert(entry.id, entry);
+    }
 }
 
 /// Replaces faction HUD tracking from a server `FactionState` snapshot.
@@ -159,9 +168,28 @@ pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStat
         .map(|entry| entry.era)
         .max()
         .unwrap_or(0);
+    scene.faction_entries = frame.factions;
+    scene.faction_entries.sort_by_key(|entry| entry.id);
     scene
         .factions
-        .extend(frame.factions.into_iter().map(|entry| entry.id));
+        .extend(scene.faction_entries.iter().map(|entry| entry.id));
+}
+
+/// Maps a `FactionState` wire frame into [`DiplomacyState`] for the egui panel.
+///
+/// Relation cells are neutral (`0`) until a diplomacy simulation feeds stance data.
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub fn sync_diplomacy_from_faction_frame(
+    diplomacy: &mut crate::diplomacy_ui::DiplomacyState,
+    frame: &FactionStateFrame,
+    population_by_faction: &HashMap<u32, u32>,
+) {
+    let open = diplomacy.open;
+    *diplomacy = crate::diplomacy_ui::diplomacy_state_from_faction_frame(
+        frame,
+        population_by_faction,
+    );
+    diplomacy.open = open;
 }
 
 /// HUD population count from the latest civilian state snapshot.
@@ -1075,6 +1103,9 @@ mod tests {
         assert!(scene.civilian_ids.contains(&1));
         assert!(scene.civilian_ids.contains(&2));
         assert!(!scene.civilian_ids.contains(&99));
+        let entry = scene.civilian_entries.get(&1).expect("civilian 1");
+        assert_eq!(entry.id, 1);
+        assert_eq!(entry.profession, String::new());
     }
 
     #[test]
@@ -1103,8 +1134,41 @@ mod tests {
 
         assert_eq!(faction_hud_count(&scene), 2);
         assert_eq!(scene.faction_era, 5);
+        assert_eq!(scene.faction_entries.len(), 2);
+        assert_eq!(scene.faction_entries[0].id, 0);
+        assert_eq!(scene.faction_entries[1].id, 4);
         assert!(scene.factions.contains(&0));
         assert!(scene.factions.contains(&4));
         assert!(!scene.factions.contains(&9));
+    }
+
+    #[cfg(all(feature = "bevy", feature = "egui"))]
+    #[test]
+    fn sync_diplomacy_from_faction_frame_preserves_open_flag() {
+        use civ_protocol_3d::{
+            FactionStateEntry, FactionStateFrame, FactionTreasury3d, Government3d,
+        };
+
+        let frame = FactionStateFrame {
+            tick: 1,
+            factions: vec![FactionStateEntry {
+                id: 1,
+                era: 0,
+                government: Government3d::Junta,
+                treasury: FactionTreasury3d::default(),
+            }],
+        };
+        let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
+            open: true,
+            ..Default::default()
+        };
+        sync_diplomacy_from_faction_frame(
+            &mut diplomacy,
+            &frame,
+            &HashMap::new(),
+        );
+        assert!(diplomacy.open);
+        assert_eq!(diplomacy.factions.len(), 1);
+        assert_eq!(diplomacy.factions[0].name, "Junta #1");
     }
 }

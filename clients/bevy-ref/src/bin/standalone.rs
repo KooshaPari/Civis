@@ -42,6 +42,7 @@ fn main() {
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
+        .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
         .add_plugins(civ_bevy_ref::menus::MenusPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)

@@ -124,7 +124,7 @@ civis-3d-standalone-live-url URL:
     powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
 
 # Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
-# P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027; item 57 / FR-CIV-BEVY-032; item 60 / FR-CIV-BEVY-035; item 62 / FR-CIV-BEVY-037.
+# P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027; item 57 / FR-CIV-BEVY-032; item 58 / FR-CIV-BEVY-033; item 60 / FR-CIV-BEVY-035; item 62 / FR-CIV-BEVY-037.
 civis-3d-live-smoke:
     cargo test -p civ-server frame_bundle
     cargo test -p civ-protocol-3d frame_bundle_binary_roundtrip
@@ -137,6 +137,7 @@ civis-3d-live-smoke:
     cargo test -p civ-bevy-ref --features bevy,egui --lib event_feed::
     cargo test -p civ-bevy-ref --features bevy,egui --lib menus::
     cargo test -p civ-bevy-ref --features bevy,egui --lib diplomacy_ui::
+    cargo test -p civ-bevy-ref --features bevy,egui --lib game_ui::
     cargo test -p civ-protocol-3d civilian_state
     cargo test -p civ-protocol-3d event_feed
     cargo test -p civ-bevy-ref --lib chunk_to_minimap

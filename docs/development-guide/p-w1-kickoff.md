@@ -88,6 +88,7 @@
 | FR-CIV-BEVY-031 | implemented | `pbr-textures` feature + `materials.rs` biome loader; sandbox-only `BiomeMaterialsPlugin` on `civ-standalone` (item 56) |
 | FR-CIV-BEVY-032 | implemented | `just civis-3d-live-smoke` / CI: `event_feed::`, `menus::`, `civ-protocol-3d` `civilian_state` + `event_feed` round-trips (item 57) |
 | FR-CIV-BEVY-033 | implemented | live pick → egui inspector from `CivilianState` wire entries; `game_ui::` formatting helpers (item 58) |
+| FR-CIV-BEVY-034 | implemented | `DiplomacyUiPlugin` on `civ-standalone`; `FactionState` → `DipFaction` + neutral relations matrix; **G** toggles panel (item 59) |
 | FR-CIV-BEVY-035 | implemented | F3D0 encode/decode round-trip for all six `Frame3d` kinds; `parse_ws_payload` decodes each kind (item 60) |
 | FR-CIV-BEVY-037 | implemented | `just civis-3d-live-smoke` gates optional features: `gpu_features::` (bevy) + `materials::` (`pbr-textures`; headless, no GPU) (item 62) |
 
@@ -149,6 +150,7 @@
 55. **Civilian/faction HUD from wire frames** — **done** (item 55): `live_stream` merges `CivilianState` / `FactionState` into HUD counts; `GameUiSnapshot` + `LiveHudSnapshot` overlay `P`/`F`; `live_scene`, `live_attach`, `civ-bevy-window` apply frames (`FR-CIV-BEVY-030`).
 56. **PBR biome materials feature** — **done** (item 56): `pbr-textures` cargo feature; `materials.rs` + `BiomeMaterialsPlugin` on `civ-standalone` sandbox only; `terrain::pbr_biome_at_height` height-band material assignment; README asset/LICENSE paths (`FR-CIV-BEVY-031`).
 57. **Live attach smoke harness v5** — **done** (item 57): `just civis-3d-live-smoke` runs `event_feed::`, `menus::`, and `civ-protocol-3d` `civilian_state` / `event_feed` round-trip tests (`FR-CIV-BEVY-032`).
+59. **Diplomacy panel from faction frames** — **done** (item 59): `diplomacy_ui` exported; `live_stream::sync_diplomacy_from_faction_frame`; `live_attach` sync on server attach; `DiplomacyUiPlugin` on `civ-standalone`; `diplomacy_ui::` tests in smoke (`FR-CIV-BEVY-034`).
 60. **F3D0 round-trip all frame kinds** — **done** (item 60): `frame_bundle_binary_roundtrip_all_kinds` in `civ-protocol-3d`; `parse_ws_payload_decodes_all_frame_kinds` in `civ-bevy-ref`; `just civis-3d-live-smoke` runs both (`FR-CIV-BEVY-035`).
 61. **GPU capabilities in pause Settings** — **done** (item 61): `MenusPlugin` settings panel reads `Option<Res<GpuCapabilities>>` — backend, est. VRAM, ray tracing / DLSS / FSR (read-only); unavailable message when missing (`FR-CIV-BEVY-036`).
 62. **Live attach smoke optional features** — **done** (item 62): `just civis-3d-live-smoke` runs `gpu_features::` (`bevy`) and `materials::` (`pbr-textures`; pure lib tests, no render window) (`FR-CIV-BEVY-037`).

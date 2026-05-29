@@ -67,14 +67,14 @@ pub struct SpawnBuildingRequest {
 }
 
 /// Request to select the entity nearest the clicked point.
-#[derive(Message, Debug, Clone, Copy, PartialEq)]
+#[derive(Event, Debug, Clone, Copy, PartialEq)]
 pub struct SelectEntityRequest {
     /// World-space click position.
     pub position: Vec3,
 }
 
 /// Request to destroy the entity nearest the clicked point.
-#[derive(Message, Debug, Clone, Copy, PartialEq)]
+#[derive(Event, Debug, Clone, Copy, PartialEq)]
 pub struct DestroyEntityRequest {
     /// World-space click position.
     pub position: Vec3,
@@ -187,17 +187,17 @@ fn handle_spawn_tool_clicks(
 
     match active.tool {
         SpawnTool::Select => {
-            select_entity.write(SelectEntityRequest { position });
+            select_entity.send(SelectEntityRequest { position });
         }
         SpawnTool::SpawnCivilian => {
-            spawn_civilian.write(SpawnCivilianRequest { position });
+            spawn_civilian.send(SpawnCivilianRequest { position });
         }
         SpawnTool::SpawnBuilding => {
-            spawn_building.write(SpawnBuildingRequest { position });
+            spawn_building.send(SpawnBuildingRequest { position });
         }
         SpawnTool::Terraform => {}
         SpawnTool::Destroy => {
-            destroy_entity.write(DestroyEntityRequest { position });
+            destroy_entity.send(DestroyEntityRequest { position });
         }
     }
 }

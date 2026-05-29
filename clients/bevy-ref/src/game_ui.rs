@@ -1,5 +1,3 @@
-#![cfg(all(feature = "bevy", feature = "egui"))]
-
 //! Bevy Egui gameplay HUD for the Civis reference client.
 //!
 //! This module keeps the HUD state isolated from the renderer binaries. The
@@ -139,8 +137,6 @@ fn draw_game_ui(
     snapshot: Res<GameUiSnapshot>,
     selected: Res<SelectedEntity>,
     details: Res<SelectedEntityDetails>,
-    attach_mode: Res<crate::AttachMode>,
-    live_attach: Option<Res<crate::live_attach::LiveAttachState>>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -160,20 +156,6 @@ fn draw_game_ui(
                 multiplier: snapshot.speed_multiplier,
             }
             .multiplier_display()));
-            if *attach_mode == crate::AttachMode::Server {
-                ui.separator();
-                let status = live_attach
-                    .as_ref()
-                    .map(|state| {
-                        if state.connected {
-                            "WS: connected"
-                        } else {
-                            "WS: connecting"
-                        }
-                    })
-                    .unwrap_or("WS: connecting");
-                ui.label(status);
-            }
         });
     });
 

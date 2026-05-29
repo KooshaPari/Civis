@@ -4,84 +4,47 @@ use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use civ_bevy_ref::{
     atmosphere::{
-        animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface,
+        animate_water, setup_atmosphere, update_lighting, DayNightCycle, SunLight, WaterSurface,
     },
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
-    live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
-    resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
-    AttachMode,
 };
 
 fn main() {
-    let attach_mode = resolve_attach_mode_from_env();
-    let window_title = match attach_mode {
-        AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
-        AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),
-    };
-
-    let mut app = App::new();
-    app.insert_resource(DayNightCycle::default())
+    App::new()
+        .insert_resource(DayNightCycle::default())
         .insert_resource(CameraRig::default())
-        .insert_resource(attach_mode)
-        .add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: window_title,
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(native_render_plugin()),
-        )
+        .add_plugins(DefaultPlugins.set(native_render_plugin()))
         .add_plugins(GpuFeaturesPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
-        .add_systems(Startup, setup_atmosphere)
         .add_systems(
             Startup,
-            (
-                setup_camera,
-                setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
-                spawn_decorations.run_if(in_sandbox_attach_mode),
-            )
-                .chain(),
+            (setup_atmosphere, setup_world, spawn_decorations).chain(),
         )
         .add_systems(
             Update,
             (camera_input, update_camera, animate_water, update_lighting),
-        );
-
-    if attach_mode == AttachMode::Server {
-        app.add_plugins(LiveAttachPlugin);
-    }
-
-    app.run();
+        )
+        .run();
 }
 
-fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
-    *mode == AttachMode::Standalone
-}
-
-fn setup_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(60.0, 80.0, 60.0).looking_at(Vec3::new(128.0, 30.0, 128.0), Vec3::Y),
-    ));
-}
-
-fn setup_sandbox_terrain(
+fn setup_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(60.0, 80.0, 60.0).looking_at(Vec3::new(128.0, 30.0, 128.0), Vec3::Y),
+    ));
+
     let terrain = terrain_mesh();
     commands.spawn((
         Mesh3d(meshes.add(terrain)),

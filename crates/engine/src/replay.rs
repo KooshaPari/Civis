@@ -8,10 +8,11 @@ use std::fmt;
 use std::path::Path;
 
 use crate::hash_chain::{
-    chain_advance, chain_root_from_payloads, combat_event_bytes, tick_event_bytes, GENESIS,
-    HASH_LEN,
+    chain_advance, chain_root_from_payloads, climate_event_bytes, combat_event_bytes,
+    tick_event_bytes, GENESIS, HASH_LEN,
 };
 use crate::io::{read_text, write_text};
+use civ_planet::{Climate, GeologyMap, WeatherCell};
 use civ_voxel::MaterialId;
 
 /// A single replayable simulation event.
@@ -37,6 +38,13 @@ pub enum ReplayEvent {
         tick: u64,
         snapshot_hash: Vec<u8>,
         accepted: bool,
+    },
+    /// Climate + weather-grid + geology snapshot (FR-CIV-PLANET-060).
+    Climate {
+        tick: u64,
+        climate: Climate,
+        weather_grid: Vec<WeatherCell>,
+        geology_map: GeologyMap,
     },
     /// End-of-tick marker.
     Tick { tick: u64 },
@@ -219,6 +227,26 @@ impl ReplayLog {
             tick,
             snapshot_hash,
             accepted,
+        });
+    }
+
+    /// Record a climate snapshot and fold it into the running hash chain
+    /// (FR-CIV-PLANET-060).
+    pub fn record_climate(
+        &mut self,
+        tick: u64,
+        climate: Climate,
+        weather_grid: Vec<WeatherCell>,
+        geology_map: GeologyMap,
+    ) {
+        let payload = climate_event_bytes(tick, &climate, &weather_grid, &geology_map);
+        let prev = self.running_hash.unwrap_or(GENESIS);
+        self.running_hash = Some(chain_advance(&prev, &payload));
+        self.events.push(ReplayEvent::Climate {
+            tick,
+            climate,
+            weather_grid,
+            geology_map,
         });
     }
 
@@ -438,7 +466,7 @@ impl ReplayLog {
         self.running_hash = Some(chain_advance(&prev, &tick_event_bytes(tick)));
     }
 
-    /// Recompute the hash-chain root from tick + combat markers in event order.
+    /// Recompute the hash-chain root from tick + combat + climate markers in event order.
     #[must_use]
     pub fn recompute_running_hash(&self) -> Option<[u8; HASH_LEN]> {
         chain_root_from_payloads(self.events.iter().filter_map(|event| match event {
@@ -458,6 +486,17 @@ impl ReplayLog {
                 event.radius_voxels,
                 event.energy,
                 0,
+            )),
+            ReplayEvent::Climate {
+                tick,
+                climate,
+                weather_grid,
+                geology_map,
+            } => Some(climate_event_bytes(
+                *tick,
+                climate,
+                weather_grid,
+                geology_map,
             )),
             _ => None,
         }))
@@ -536,6 +575,7 @@ impl ReplayLog {
                 ReplayEvent::Tick { tick } => {
                     into.apply_replay_tick(*tick);
                 }
+                ReplayEvent::Climate { .. } => {}
                 ReplayEvent::ModLoaded { .. } => {}
                 ReplayEvent::ModUnloaded { .. } => {}
                 ReplayEvent::SessionSaved { .. } => {}

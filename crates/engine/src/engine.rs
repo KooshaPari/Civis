@@ -10,14 +10,17 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
-use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
+use civ_planet::{
+    compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
+    PlanetConfig, WeatherCell,
+};
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
     tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
-use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
+use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
 use hecs::{Entity, World};
 use rand::Rng;
 use rand::SeedableRng;
@@ -45,10 +48,11 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "citizen_lifecycle",
     "military",
     "economy",
+    "planet",
+    "diplomacy",
     "tactics",
     "voxel",
     "compact",
-    "planet",
     "buildings",
     "diffusion",
 ];
@@ -408,6 +412,31 @@ pub struct Simulation {
     pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
+    /// Coastal water columns whose water-level voxel shifts with the tide
+    /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
+    /// world coords; iteration order is deterministic.
+    coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
+    /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
+    weather_grid: Vec<WeatherCell>,
+}
+
+/// Voxel material id used to mark coastal water-level voxels written by
+/// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Kept as a small
+/// integer so it is stable across saves and replays.
+pub const WATER_MARKER_MATERIAL: MaterialId = MaterialId(2);
+
+/// A coastal water column registered with the engine. Each column anchors a
+/// single water-marker voxel that shifts vertically with the climate tide
+/// offset every tick (FR-CIV-PLANET-020). Iteration order is deterministic
+/// because columns live in a [`BTreeMap`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+struct CoastalColumn {
+    /// Sea-level y in fixed-point world units.
+    base_y: i64,
+    /// Last y the water marker was written at (so we can clear it before
+    /// writing the new level — preserves FR-CIV-VOXEL-002 dirty-event
+    /// invariants by going through `VoxelWorld::write`).
+    last_water_y: i64,
 }
 
 /// Default doctrine population for three factions (deterministic seed layout).
@@ -544,6 +573,8 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
+        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
         let state = WorldState::default();
 
         Self {
@@ -583,6 +614,8 @@ impl Simulation {
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
+            coastal_columns: BTreeMap::new(),
+            weather_grid,
         }
     }
 
@@ -597,6 +630,8 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
+        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -639,6 +674,8 @@ impl Simulation {
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
+            coastal_columns: BTreeMap::new(),
+            weather_grid,
         }
     }
 
@@ -992,12 +1029,12 @@ impl Simulation {
         self.phase_citizen_lifecycle();
         self.phase_military();
         self.phase_economy();
+        self.phase_planet();
         self.diplomacy_events.clear();
         self.phase_diplomacy();
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
-        self.phase_planet();
         self.phase_buildings();
         self.phase_diffusion();
         self.replay_log.record_tick(self.state.tick);
@@ -1074,9 +1111,100 @@ impl Simulation {
         Ok(sim)
     }
 
-    /// Planet phase - recompute climate from the current tick.
+    /// Planet phase - recompute climate and weather grid from the current tick,
+    /// then apply the resulting tide offset to any registered coastal water
+    /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
+        let axial_tilt_fp = i32::from(self.planet.axial_tilt_deg) * 1_000;
+        self.weather_grid = compute_weather(
+            self.state.tick,
+            self.weather_grid.len().max(1) as u32,
+            axial_tilt_fp,
+            self.planet.year_length_ticks,
+        );
+        self.apply_tide_offset();
+    }
+
+    /// Register (or update) a coastal water column at horizontal `(x, z)` with
+    /// sea-level baseline `base_y`. The column's water-marker voxel will be
+    /// shifted vertically each tick by the climate `tide_offset` (FR-CIV-PLANET-020).
+    ///
+    /// Coordinates are fixed-point world units (see [`FIXED_SCALE`]). Calling
+    /// this for an already-registered column resets its baseline; the next
+    /// `phase_planet` will clear the old water voxel and write the new one.
+    pub fn register_coastal_water_column(&mut self, x: i64, z: i64, base_y: i64) {
+        let column = CoastalColumn {
+            base_y,
+            last_water_y: base_y,
+        };
+        // Seed the initial water voxel through the replay-aware write path so
+        // FR-CIV-VOXEL-002 dirty-event invariants stay intact.
+        self.push_voxel_write(WorldCoord { x, y: base_y, z }, WATER_MARKER_MATERIAL);
+        self.coastal_columns.insert((x, z), column);
+    }
+
+    /// Borrow the registered coastal water columns (for tests + tooling).
+    #[must_use]
+    pub fn coastal_column_count(&self) -> usize {
+        self.coastal_columns.len()
+    }
+
+    /// Read the current water-level y for the column at `(x, z)`, if registered.
+    #[must_use]
+    pub fn coastal_water_level(&self, x: i64, z: i64) -> Option<i64> {
+        self.coastal_columns.get(&(x, z)).map(|c| c.last_water_y)
+    }
+
+    /// Shift every registered coastal water-level voxel by the current
+    /// `climate.tide_offset` (FR-CIV-PLANET-020). The offset is scaled into
+    /// fixed-point world units, rounded deterministically, and applied through
+    /// [`VoxelWorld::write`] so dirty events propagate normally
+    /// (FR-CIV-VOXEL-002).
+    ///
+    /// For each column we clear the previously occupied water voxel (write
+    /// `MaterialId(0)`) and write [`WATER_MARKER_MATERIAL`] at the new height.
+    /// If the new height matches the old one we skip the redundant pair of
+    /// writes to avoid emitting spurious dirty events.
+    fn apply_tide_offset(&mut self) {
+        if self.coastal_columns.is_empty() {
+            return;
+        }
+
+        // Fixed-point conversion: `tide_offset` is a float amplitude in the
+        // same world-unit space as the voxel grid; multiply by FIXED_SCALE and
+        // round to the nearest integer for determinism. f32::round() is
+        // deterministic per the IEEE-754 round-half-away-from-zero rule used
+        // across our target platforms.
+        let scale = FIXED_SCALE as f32;
+        let offset_units = (self.climate.tide_offset * scale).round() as i64;
+
+        // Collect updates first so we can mutate `self.voxel` and
+        // `self.coastal_columns` without aliasing.
+        let updates: Vec<((i64, i64), i64, i64)> = self
+            .coastal_columns
+            .iter()
+            .map(|(&(x, z), column)| {
+                let new_y = column.base_y.saturating_add(offset_units);
+                ((x, z), column.last_water_y, new_y)
+            })
+            .collect();
+
+        for ((x, z), prev_y, new_y) in updates {
+            if prev_y == new_y {
+                continue;
+            }
+            // Clear previous water marker, then place the new one. Both go
+            // through `VoxelWorld::write` so the dirty queue stays
+            // deterministic (FR-CIV-VOXEL-002).
+            self.voxel
+                .write(WorldCoord { x, y: prev_y, z }, MaterialId(0));
+            self.voxel
+                .write(WorldCoord { x, y: new_y, z }, WATER_MARKER_MATERIAL);
+            if let Some(column) = self.coastal_columns.get_mut(&(x, z)) {
+                column.last_water_y = new_y;
+            }
+        }
     }
 
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
@@ -1600,6 +1728,9 @@ impl Simulation {
             diplomacy_events: self.diplomacy_events.clone(),
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
+            climate: self.climate,
+            weather_grid: self.weather_grid.clone(),
+            geology_map: GeologyMap::seed(&self.planet),
         }
     }
 }
@@ -1681,6 +1812,18 @@ pub struct SimulationSnapshot {
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
     /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
     pub damage_events: usize,
+    /// Deterministic climate snapshot computed by `phase_planet` for the current tick
+    /// (FR-CIV-PLANET-010 — bit-identical to `compute_climate(tick, planet, moon)`).
+    pub climate: Climate,
+    /// Per-region weather grid for the current tick (FR-CIV-PLANET-030).
+    ///
+    /// Each entry is a [`WeatherCell`] with fixed-point temp and precipitation.
+    /// The grid is re-derived from `tick` and `planet.axial_tilt_deg` every tick.
+    pub weather_grid: Vec<WeatherCell>,
+    /// Deterministic geology map for the planet (FR-CIV-PLANET-040).
+    ///
+    /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
+    pub geology_map: GeologyMap,
 }
 
 // ============================================================================
@@ -1752,10 +1895,11 @@ mod tests {
                 "citizen_lifecycle",
                 "military",
                 "economy",
+                "planet",
+                "diplomacy",
                 "tactics",
                 "voxel",
                 "compact",
-                "planet",
                 "buildings",
                 "diffusion",
             ]
@@ -1886,6 +2030,156 @@ mod tests {
         sim.tick();
         let expected = compute_climate(sim.state.tick, &planet, &moon);
         assert_eq!(sim.climate(), &expected);
+    }
+
+    /// FR-CIV-PLANET-010 — `Simulation::snapshot()` surfaces the deterministic
+    /// `Climate` produced by `phase_planet`, bit-identical to `compute_climate`.
+    #[test]
+    fn engine_tick_includes_climate_in_snapshot() {
+        let mut sim = Simulation::with_seed(2026);
+        let planet = *sim.planet();
+        let moon = *sim.moon();
+
+        // Tick 0 — pre-tick climate is computed at construction time.
+        let snap0 = sim.snapshot();
+        let expected0 = compute_climate(sim.state.tick, &planet, &moon);
+        assert_eq!(snap0.tick, 0);
+        assert_eq!(snap0.climate, expected0);
+
+        // Advance ticks and confirm snapshot.climate stays bit-identical.
+        for _ in 0..5 {
+            sim.tick();
+            let snap = sim.snapshot();
+            let expected = compute_climate(sim.state.tick, &planet, &moon);
+
+            assert_eq!(snap.tick, sim.state.tick);
+            assert_eq!(snap.climate.tick, expected.tick);
+            assert_eq!(
+                snap.climate.day_phase.to_bits(),
+                expected.day_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.year_phase.to_bits(),
+                expected.year_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.moon_phase.to_bits(),
+                expected.moon_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.tide_offset.to_bits(),
+                expected.tide_offset.to_bits()
+            );
+            assert_eq!(snap.climate, *sim.climate());
+        }
+    }
+
+    /// FR-CIV-PLANET-020 — `apply_tide_offset` shifts a registered coastal
+    /// water-level voxel deterministically as the tide cycles, and the shift
+    /// is symmetric around the registered sea-level baseline within tight
+    /// numeric tolerance (≤ 1e-4 of the tidal amplitude in fixed-point units).
+    #[test]
+    fn tide_offset_shifts_coastal_voxel_height() {
+        // Use a moon config whose orbit period is a clean factor so we can land
+        // on the peak (+amplitude), trough (-amplitude), and zero-crossing
+        // ticks exactly. sin(TAU * phase) = +1 at phase=0.25, -1 at phase=0.75.
+        let mut sim = Simulation::with_seed(2026);
+        sim.moon = MoonConfig {
+            orbit_period_ticks: 4,
+            tidal_amplitude: 1.0,
+        };
+        sim.planet = PlanetConfig {
+            radius_km: 1,
+            axial_tilt_deg: 0,
+            day_length_ticks: 4,
+            year_length_ticks: 4,
+        };
+
+        let base_y: i64 = 10 * FIXED_SCALE;
+        let x: i64 = 5 * FIXED_SCALE;
+        let z: i64 = 7 * FIXED_SCALE;
+        sim.register_coastal_water_column(x, z, base_y);
+        assert_eq!(sim.coastal_column_count(), 1);
+        assert_eq!(sim.coastal_water_level(x, z), Some(base_y));
+
+        let amplitude_units = FIXED_SCALE; // tidal_amplitude * FIXED_SCALE
+        let tolerance: i64 = ((FIXED_SCALE as f64) * 1.0e-4_f64).ceil() as i64;
+
+        // Tick 1 -> moon_phase = 0.25 -> tide_offset = +1.0 -> peak.
+        sim.tick();
+        let peak = sim
+            .coastal_water_level(x, z)
+            .expect("water level after peak tick");
+        let peak_delta = peak - base_y;
+        assert!(
+            (peak_delta - amplitude_units).abs() <= tolerance,
+            "expected peak delta ≈ +{amplitude_units}, got {peak_delta}"
+        );
+        // The water marker now occupies the shifted y, and the old base_y has
+        // been cleared back to MaterialId(0). Both writes flow through the
+        // voxel dirty queue (FR-CIV-VOXEL-002).
+        assert_eq!(
+            sim.voxel().read(WorldCoord { x, y: peak, z }),
+            WATER_MARKER_MATERIAL
+        );
+        assert_eq!(
+            sim.voxel().read(WorldCoord { x, y: base_y, z }),
+            MaterialId(0)
+        );
+
+        // Tick 2 -> moon_phase = 0.5 -> tide_offset = 0 -> back to baseline.
+        sim.tick();
+        let mid = sim
+            .coastal_water_level(x, z)
+            .expect("water level at zero crossing");
+        let mid_delta = mid - base_y;
+        assert!(
+            mid_delta.abs() <= tolerance,
+            "expected zero-crossing delta ≈ 0, got {mid_delta}"
+        );
+
+        // Tick 3 -> moon_phase = 0.75 -> tide_offset = -1.0 -> trough.
+        sim.tick();
+        let trough = sim
+            .coastal_water_level(x, z)
+            .expect("water level after trough tick");
+        let trough_delta = trough - base_y;
+        assert!(
+            (trough_delta + amplitude_units).abs() <= tolerance,
+            "expected trough delta ≈ -{amplitude_units}, got {trough_delta}"
+        );
+
+        // Symmetry: peak and trough are mirror images around base_y within tolerance.
+        let symmetry_residual = (peak_delta + trough_delta).abs();
+        assert!(
+            symmetry_residual <= tolerance,
+            "peak {peak_delta} and trough {trough_delta} should mirror around baseline; residual {symmetry_residual} > tolerance {tolerance}"
+        );
+
+        // Tick 4 -> moon_phase = 0 -> back to baseline.
+        sim.tick();
+        let close = sim
+            .coastal_water_level(x, z)
+            .expect("water level at cycle close");
+        assert!(
+            (close - base_y).abs() <= tolerance,
+            "expected end-of-cycle delta ≈ 0, got {}",
+            close - base_y
+        );
+
+        // Determinism: a second simulation with the same seed + registration
+        // produces bit-identical voxel water levels at every tick.
+        let mut sim2 = Simulation::with_seed(2026);
+        sim2.moon = sim.moon;
+        sim2.planet = sim.planet;
+        sim2.register_coastal_water_column(x, z, base_y);
+        for _ in 0..4 {
+            sim2.tick();
+        }
+        assert_eq!(
+            sim.coastal_water_level(x, z),
+            sim2.coastal_water_level(x, z)
+        );
     }
 
     /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
@@ -2500,5 +2794,57 @@ mod tests {
         // After a cadence tick with ≥2 opposing military units the pulses list
         // must be non-empty; the snapshot field must match.
         assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
+    }
+
+    /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
+    /// year phase (summer equatorial > winter equatorial) and results are
+    /// deterministic across re-runs.
+    #[test]
+    fn weather_grid_temperature_varies_with_year_phase() {
+        // Earth-like defaults: year_length_ticks = 8_766_000, tilt = 23°.
+        let year_length_ticks = 8_766_000_u64;
+        let equatorial_idx = 8_usize; // middle of 16-region grid
+
+        // Northern summer: year ¼ → sin(year_phase) is at peak
+        let summer_tick = year_length_ticks / 4;
+        // Northern winter: year ¾ → sin(year_phase) is at trough
+        let winter_tick = year_length_ticks * 3 / 4;
+
+        let mut sim_s = Simulation::with_seed(0);
+        // Fast-forward to summer_tick by running ticks (use state manipulation
+        // for test speed: set tick directly and recompute phase_planet).
+        sim_s.state.tick = summer_tick;
+        let planet_s = *sim_s.planet();
+        let moon_s = *sim_s.moon();
+        sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
+        let axial_tilt_fp = i32::from(planet_s.axial_tilt_deg) * 1_000;
+        sim_s.weather_grid =
+            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        let snap_summer = sim_s.snapshot();
+
+        let mut sim_w = Simulation::with_seed(0);
+        sim_w.state.tick = winter_tick;
+        let planet_w = *sim_w.planet();
+        let moon_w = *sim_w.moon();
+        sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
+        sim_w.weather_grid =
+            compute_weather(winter_tick, 16, axial_tilt_fp, planet_w.year_length_ticks);
+        let snap_winter = sim_w.snapshot();
+
+        let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
+        let winter_temp = snap_winter.weather_grid[equatorial_idx].temp_c_fp;
+
+        assert!(
+            summer_temp > winter_temp,
+            "summer equatorial temp ({summer_temp} fp) should exceed winter ({winter_temp} fp)"
+        );
+
+        // Determinism: re-running the same ticks must produce identical grids.
+        let summer_grid_2 =
+            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        assert_eq!(
+            snap_summer.weather_grid, summer_grid_2,
+            "weather grid must be deterministic across re-runs"
+        );
     }
 }

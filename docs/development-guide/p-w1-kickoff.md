@@ -77,9 +77,6 @@
 | FR-CIV-TACTICS-075 | implemented | `mod.permission_violation.v1` on replay bus + snapshot/SSE |
 | FR-CIV-TACTICS-076 | implemented | civ-server session-scoped `SaveDb` on `save.slot` |
 | FR-CIV-TACTICS-077 | implemented | signed remote mod registry (`mods/remote-registry.json`) |
-| FR-CIV-BEVY-001 | implemented | `civ-standalone` gameplay plugins (sim bridge, HUD, spawn tools, minimap) |
-| FR-CIV-BEVY-002 | implemented | live attach scene sync (`live_scene`: voxel chunks + agent markers from `Frame3d`) |
-| FR-CIV-BEVY-014 | implemented | `live_stream` unit tests (colors, ground Y, voxel delta apply) |
 
 ## First PR slice (recommended)
 
@@ -107,21 +104,7 @@
 22. **Save/mod distribution v3** — **done** (item 23): `civ-save-db` session metadata; `POST /control/mods/fetch` remote cache; CIV-0700 capability enforcement stubs.
 23. **Session bus + remote UI + PolicyMod** — **done** (item 24): `session.saved.v1` on replay bus + SSE; dashboard remote fetch/cache UI; `world_read`/`action_emit` capability enforcement + `PolicyMod` trait in civlab-sdk.
 24. **Permission bus + server save DB + signed registry** — **done** (item 25): `mod.permission_violation.v1` on replay bus + `sim.snapshot`; civ-server `SaveDb` on `save.slot`; `mods/remote-registry.json` allowlist for remote fetch.
-25. **Bevy gameplay client** — **done** (item 26): export gameplay modules in `civ-bevy-ref`, `civ-standalone` with `bevy,egui`, sim tick + spawn-tool → `Simulation`, HUD/minimap plugins.
-26. **Live WS attach + render-to-texture minimap** — **done** (item 27): `civ-standalone` server attach via `CIVIS_ATTACH=server` / `CIV_WS_URL`, `LiveAttachPlugin`, RTT minimap camera.
-27. **Live attach scene sync** — **done** (item 28): `live_scene` applies `Frame3d::VoxelDelta` / `AgentAppearance`; server mode skips sandbox terrain; minimap dots from live chunks/agents.
-28. **Building-diff + agent positions** — **done** (item 29): protocol `WorldXZ` / `BuildingDiffEntry`; civ-server fills frames; `live_scene` renders buildings and uses `agent_world_translation`.
-29. **Live scene focus + provenance styling** — **done** (item 30): `LiveSceneFocus` drives camera rig + minimap ortho; procedural vs freehand building materials and minimap dots.
-30. **Terrain anchoring for live entities** — **done** (item 31): `terrain_surface_y` snaps streamed agents/buildings to procedural height in `live_scene`.
-31. **BuildingGraph on live attach** — **done** (item 32): optional `BuildingDiffFrame.graph` from civ-server; `live_scene` renders parcels with facade/provenance styling.
-32. **Voxel-surface anchoring** — **done** (item 33): cached `chunk_voxels` + column sampling in `live_scene`; falls back to `terrain_surface_y`.
-33. **Live attach smoke harness** — **done** (item 34): `just civis-3d-live-smoke` (F3D0 + voxel ground + standalone check); `just civis-3d-standalone-live-url URL=ws://…` for remote civ-server.
-34. **Shared live ground + bevy_window parity** — **done** (item 35): `live_ground` module; `bevy_window` caches voxels, anchors agents/buildings, applies `BuildingDiff`.
-35. **Shared live_stream frame apply** — **done** (item 36): `live_stream` module dedupes `LiveScenePlugin` and `bevy_window`; graph parcels render in both paths.
-36. **bevy_window live minimap parity** — **done** (item 37): HUD minimap shows streamed agents, buildings, graph parcels, and camera position (matches `live_scene`).
-37. **live_stream unit tests** — **done** (item 39): `#[cfg(test)]` in `live_stream.rs` — color/provenance helpers, parcel→kind mapping, `live_ground_y` offsets, minimal `VoxelDeltaFrame` apply via Bevy `World`.
-38. **bevy_window live scene focus** — **done** (item 40): shared `live_focus`; orbit centre lerps to streamed bounds when WS connected; minimap UV + click pan use focus rect (FR-CIV-BEVY-015).
-39. **Live attach HUD scene stats** — **done** (item 42): `LiveHudSnapshot` overlay shows tick, connection, C/A/B/G counts, optional `sim.snapshot` RTT; wired in `civ-bevy-window` and `civ-standalone` server attach (`FR-CIV-BEVY-017`).
+25. **Next:** TBD (post–kickoff slice planning).
 
 ## Run
 
@@ -129,7 +112,5 @@
 cargo test -p civ-tactics
 cargo test -p civ-engine pending_damage
 cargo test -p civ-engine war_bridge_records
-cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-just civis-3d-live-smoke
 just civis-3d-verify
 ```

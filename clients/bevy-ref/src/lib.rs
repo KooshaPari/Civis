@@ -14,35 +14,9 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "bevy")]
-pub mod atmosphere;
-#[cfg(feature = "bevy")]
-pub mod camera;
-#[cfg(feature = "bevy")]
-pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_ui;
-#[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
-pub mod live_attach;
-#[cfg(feature = "bevy")]
-pub mod live_ground;
-#[cfg(feature = "bevy")]
-pub mod live_scene;
-#[cfg(feature = "bevy")]
-pub mod live_stream;
-#[cfg(feature = "bevy")]
-pub mod minimap;
-#[cfg(feature = "bevy")]
 pub mod native_backend;
-#[cfg(feature = "bevy")]
-pub mod native_renderer;
-#[cfg(feature = "bevy")]
-pub mod sim_bridge;
-#[cfg(feature = "bevy")]
-pub mod spawn_tools;
-#[cfg(feature = "bevy")]
-pub mod terrain;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
@@ -255,41 +229,6 @@ pub fn resolve_live_ws_url() -> String {
     } else {
         base
     }
-}
-
-/// How the Bevy standalone client runs simulation state.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-pub enum AttachMode {
-    /// In-process [`civ_engine::Simulation`] tick (default sandbox).
-    #[default]
-    Standalone,
-    /// Live attach to `civ-server` over WebSocket (`CIVIS_ATTACH=server` or `CIV_WS_URL`).
-    Server,
-}
-
-/// Resolve attach mode from environment (mirrors web dashboard precedence for server attach).
-#[must_use]
-pub fn resolve_attach_mode_from_env() -> AttachMode {
-    resolve_attach_mode(
-        std::env::var("CIVIS_ATTACH").ok().as_deref(),
-        std::env::var("CIV_WS_URL").ok().as_deref(),
-    )
-}
-
-/// Resolve attach mode from explicit env strings (testable without mutating process env).
-#[must_use]
-pub fn resolve_attach_mode(civis_attach: Option<&str>, civ_ws_url: Option<&str>) -> AttachMode {
-    if civis_attach
-        .map(|value| value.trim().eq_ignore_ascii_case("server"))
-        .unwrap_or(false)
-    {
-        return AttachMode::Server;
-    }
-    if civ_ws_url.map(|value| !value.trim().is_empty()).unwrap_or(false) {
-        return AttachMode::Server;
-    }
-    AttachMode::Standalone
 }
 
 /// Resolve attach URL without the binary broadcast hint query parameter.
@@ -511,18 +450,6 @@ pub type MinimapBounds = (i32, i32, i32, i32);
 #[must_use]
 pub fn chunk_to_minimap_uv(chunk_id: ChunkId, bounds: MinimapBounds) -> [f32; 2] {
     let (cx, _cy, cz) = decode_chunk_id(chunk_id);
-    world_chunk_grid_to_minimap_uv(cx, cz, bounds)
-}
-
-/// Map world XZ (metres) into normalised minimap UV within `bounds`.
-#[must_use]
-pub fn world_xz_to_minimap_uv(x: f32, z: f32, bounds: MinimapBounds) -> [f32; 2] {
-    let cx = (x / VOXEL_CHUNK_EDGE as f32).floor() as i32;
-    let cz = (z / VOXEL_CHUNK_EDGE as f32).floor() as i32;
-    world_chunk_grid_to_minimap_uv(cx, cz, bounds)
-}
-
-fn world_chunk_grid_to_minimap_uv(cx: i32, cz: i32, bounds: MinimapBounds) -> [f32; 2] {
     let (min_x, min_z, max_x, max_z) = bounds;
     let span_x = (max_x - min_x + 1).max(1) as f32;
     let span_z = (max_z - min_z + 1).max(1) as f32;
@@ -782,34 +709,6 @@ mod tests {
     }
 
     #[test]
-    fn resolve_attach_mode_defaults_to_standalone() {
-        assert_eq!(
-            resolve_attach_mode(None, None),
-            AttachMode::Standalone
-        );
-        assert_eq!(
-            resolve_attach_mode(Some("watch"), None),
-            AttachMode::Standalone
-        );
-    }
-
-    #[test]
-    fn resolve_attach_mode_server_from_env_strings() {
-        assert_eq!(
-            resolve_attach_mode(Some("server"), None),
-            AttachMode::Server
-        );
-        assert_eq!(
-            resolve_attach_mode(None, Some("ws://127.0.0.1:3000/ws")),
-            AttachMode::Server
-        );
-        assert_eq!(
-            resolve_attach_mode(Some("standalone"), Some("ws://127.0.0.1:3000/ws")),
-            AttachMode::Server
-        );
-    }
-
-    #[test]
     fn default_live_ws_url_matches_builder() {
         assert_eq!(
             default_live_ws_url(),
@@ -1027,8 +926,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("serialize");
         let parsed = parse_frame3d_json(&json).expect("parse");
@@ -1052,8 +949,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 3,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("serialize");
         let bytes = encode_frame3d_binary(&frame).expect("encode");
@@ -1071,8 +966,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 11,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         assert_eq!(parse_ws_payload(&bytes).expect("binary-first"), frame);
@@ -1088,8 +981,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         let parsed = parse_frame3d_binary(&bytes).expect("parse");

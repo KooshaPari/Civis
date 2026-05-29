@@ -403,6 +403,8 @@ pub struct SnapshotFields {
     pub session_saved: Vec<String>,
     /// `mod.permission_violation.v1` replay-bus JSON from the most recent tick.
     pub mod_permission_violations: Vec<String>,
+    /// Deterministic planet climate from `phase_planet` (FR-CIV-PLANET-010).
+    pub climate: civ_engine::Climate,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -531,6 +533,10 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.mod_permission_violations).unwrap_or(Value::Null),
         );
     }
+    obj.insert(
+        "climate".to_owned(),
+        serde_json::to_value(fields.climate).unwrap_or(Value::Null),
+    );
     Value::Object(obj)
 }
 
@@ -614,6 +620,7 @@ pub fn snapshot_fields_from_sim(
         mod_permission_violations: sim
             .replay_log()
             .mod_permission_violation_bus_at_tick(sim.state.tick),
+        climate: *sim.climate(),
     }
 }
 
@@ -1938,6 +1945,13 @@ mod tests {
                     mod_lifecycle: vec![],
                     session_saved: vec![],
                     mod_permission_violations: vec![],
+                    climate: civ_engine::Climate {
+                        tick: 42,
+                        day_phase: 0.0,
+                        year_phase: 0.0,
+                        moon_phase: 0.0,
+                        tide_offset: 0.0,
+                    },
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -1962,6 +1976,13 @@ mod tests {
                 "speed_multiplier": 1,
                 "damage_events_count": 0,
                 "voxel_damage_removed_this_tick": 0,
+                "climate": {
+                    "tick": 42,
+                    "day_phase": 0.0,
+                    "year_phase": 0.0,
+                    "moon_phase": 0.0,
+                    "tide_offset": 0.0,
+                },
             }))
         );
     }
@@ -1993,6 +2014,13 @@ mod tests {
                     mod_lifecycle: vec![],
                     session_saved: vec![],
                     mod_permission_violations: vec![],
+                    climate: civ_engine::Climate {
+                        tick: 1,
+                        day_phase: 0.0,
+                        year_phase: 0.0,
+                        moon_phase: 0.0,
+                        tide_offset: 0.0,
+                    },
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -2013,6 +2041,13 @@ mod tests {
                 "speed_multiplier": 1,
                 "damage_events_count": 0,
                 "voxel_damage_removed_this_tick": 0,
+                "climate": {
+                    "tick": 1,
+                    "day_phase": 0.0,
+                    "year_phase": 0.0,
+                    "moon_phase": 0.0,
+                    "tide_offset": 0.0,
+                },
             }))
         );
         assert!(plan
@@ -2053,6 +2088,13 @@ mod tests {
                     mod_lifecycle: vec![],
                     session_saved: vec![],
                     mod_permission_violations: vec![],
+                    climate: civ_engine::Climate {
+                        tick: 1,
+                        day_phase: 0.0,
+                        year_phase: 0.0,
+                        moon_phase: 0.0,
+                        tide_offset: 0.0,
+                    },
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -2073,6 +2115,13 @@ mod tests {
                 "speed_multiplier": 1,
                 "damage_events_count": 0,
                 "voxel_damage_removed_this_tick": 0,
+                "climate": {
+                    "tick": 1,
+                    "day_phase": 0.0,
+                    "year_phase": 0.0,
+                    "moon_phase": 0.0,
+                    "tide_offset": 0.0,
+                },
             }))
         );
     }

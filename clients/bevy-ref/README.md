@@ -23,7 +23,7 @@ Live window (WebSocket attach + HUD overlay):
 
 ```bash
 # Headless CI gate (no GPU): F3D0 WS smoke, live_*, event_feed, menus, protocol extended frames, minimap UV tests, compile checks
-# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027; item 54 / FR-CIV-BEVY-029; item 57 / FR-CIV-BEVY-032; item 58 / FR-CIV-BEVY-033; item 59 / FR-CIV-BEVY-034; item 62 / FR-CIV-BEVY-037 — run before merging live-attach changes
+# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027; item 54 / FR-CIV-BEVY-029; item 57 / FR-CIV-BEVY-032; item 58 / FR-CIV-BEVY-033; item 59 / FR-CIV-BEVY-034; item 62 / FR-CIV-BEVY-037; items 63–67 / FR-CIV-BEVY-038–042 — run before merging live-attach changes
 just civis-3d-live-smoke
 
 # Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)
@@ -56,6 +56,24 @@ Headless gate for live attach — no window or running civ-server required:
 | GPU capability defaults (`gpu_features`) | `cargo test -p civ-bevy-ref --features bevy --lib gpu_features::` |
 | PBR biome helpers (`pbr-textures`; no render window) | `cargo test -p civ-bevy-ref --features pbr-textures --lib materials::` |
 | Client compile | `cargo check … civ-standalone`, `cargo check … civ-bevy-window` |
+| Game UI inspector helpers | `cargo test -p civ-bevy-ref --features bevy,egui --lib game_ui::` |
+| Server six-frame bundle | `cargo test -p civ-server frame_bundle` |
+| F3D0 decode all kinds | `cargo test -p civ-bevy-ref --lib parse_ws_payload_decodes_all_frame_kinds` |
+
+### Six-frame bundle (`FRAME_BUNDLE_LEN = 6`)
+
+Each civ-server simulation tick broadcasts **six** binary `F3D0` `Frame3d` messages (see `build_frame_bundle` in `crates/server/src/ws_bridge.rs`). Clients decode with `parse_ws_payload` and dispatch through `live_stream` (and `live_scene` / `live_attach` on server attach).
+
+| `Frame3d` kind | Client handler (`live_stream` / scene) | Notes |
+|----------------|--------------------------------------|--------|
+| `VoxelDelta` | `apply_voxel_delta_frame` | Chunk meshes + voxel cache for anchoring |
+| `BuildingDiff` | `apply_building_diff_frame` (+ optional `apply_building_graph_frame`) | Buildings + graph parcels on minimap |
+| `AgentAppearance` | `apply_agent_appearance_frame_with_labels` | 3D markers; `agent_id` keys `LiveStreamScene::agents` |
+| `CivilianState` | `apply_civilian_state_frame` | HUD population; `civilian_entries` map for inspector |
+| `FactionState` | `apply_faction_state_frame` | HUD faction chips + diplomacy sync (`egui`) |
+| `EventFeed` | `apply_event_feed_frame` (`egui`); `push_event_feed_to_hud_summary` (window HUD) | Toasts on `civ-standalone`; `civ-bevy-window` sets `LiveHudSnapshot::last_event` (`| evt:` in overlay) |
+
+**Agent / civilian id alignment:** the server sets `AgentAppearanceUpdate.agent_id` and `CivilianStateEntry.id` from the same ECS `civilian.id`. Clients resolve wire civilians with `live_stream::resolve_civilian_for_live_pick` (stable id first, legacy 1:1 agent-key fallback when marker keys differ). Live attach pick + egui inspector and `civ-bevy-window` HUD pick detail use that resolver.
 
 ### Remote civ-server URL recipes
 

@@ -1,7 +1,7 @@
 name: Civis 3D Live Smoke
 
 # Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
-# FR-CIV-BEVY-021 / P-W1 kickoff item 46; item 57 / FR-CIV-BEVY-032; item 62 / FR-CIV-BEVY-037 — mirrors `just civis-3d-live-smoke`.
+# FR-CIV-BEVY-021 / P-W1 kickoff item 46; item 57 / FR-CIV-BEVY-032; item 62 / FR-CIV-BEVY-037; items 63–67 / FR-CIV-BEVY-038–042 — mirrors `just civis-3d-live-smoke`.
 # Local-first: live-attach smoke is attested via lefthook `civis_3d_verify` / `just civis-3d-live-smoke` locally.
 on:
   push:

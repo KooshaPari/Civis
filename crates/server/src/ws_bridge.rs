@@ -18,11 +18,17 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use civ_agents::{Tools, Wardrobe};
-use civ_engine::{decode_civreplay, encode_civreplay, Citizen, CivSaveBundle, Simulation};
+use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
+use civ_engine::{
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
+    DiplomacyKind, JobType, Simulation,
+};
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BuildingDiffFrame, BuildingProvenance, Frame3d,
+    AgentAppearanceUpdate, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
+    BattleEvent3d, CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, DeathEvent3d,
+    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
+    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -41,6 +47,9 @@ use crate::{
     saves::save_archive_path,
     voxel_frame_builder::build_voxel_delta_frame,
 };
+
+/// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
+pub const FRAME_BUNDLE_LEN: usize = 6;
 
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -67,11 +76,11 @@ impl TickBroadcastFormat {
         matches!(self, Self::Binary | Self::Both)
     }
 
-    /// WebSocket frames emitted per simulation tick (three `Frame3d` values).
+    /// WebSocket frames emitted per simulation tick ([`FRAME_BUNDLE_LEN`] `Frame3d` values).
     #[must_use]
     pub fn messages_per_tick(self) -> usize {
-        let kinds = 3;
-        kinds * usize::from(self.sends_text()) + kinds * usize::from(self.sends_binary())
+        FRAME_BUNDLE_LEN * usize::from(self.sends_text())
+            + FRAME_BUNDLE_LEN * usize::from(self.sends_binary())
     }
 
     /// Parse `CIVIS_TICK_BROADCAST` values: `text`, `binary`, or `both` (case-insensitive).
@@ -406,7 +415,230 @@ fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceF
     AgentAppearanceFrame { tick, updates }
 }
 
-fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
+fn need_satisfaction(pressure: f32) -> f32 {
+    (1.0 - pressure).clamp(0.0, 1.0)
+}
+
+fn job_profession_label(job: JobType) -> &'static str {
+    match job {
+        JobType::Farmer => "farmer",
+        JobType::Warrior => "warrior",
+        JobType::Scholar => "scholar",
+        JobType::Trader => "trader",
+        JobType::Priest => "priest",
+        JobType::Admin => "admin",
+        JobType::Unemployed => "unemployed",
+    }
+}
+
+fn government_for_faction(faction_id: u32) -> Government3d {
+    match faction_id % 6 {
+        0 => Government3d::Monarchy,
+        1 => Government3d::Republic,
+        2 => Government3d::Theocracy,
+        3 => Government3d::Junta,
+        4 => Government3d::Council,
+        _ => Government3d::Corporate,
+    }
+}
+
+fn faction_for_norm(x: f32, y: f32, sim: &Simulation) -> u32 {
+    sim.spectator_view()
+        .factions
+        .iter()
+        .min_by(|a, b| {
+            let da = (x - a.capital[0]).powi(2) + (y - a.capital[1]).powi(2);
+            let db = (x - b.capital[0]).powi(2) + (y - b.capital[1]).powi(2);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|faction| faction.id)
+        .unwrap_or(0)
+}
+
+fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame {
+    let mut civilians: Vec<CivilianStateEntry> = sim
+        .world
+        .query::<(&AgentCivilian, &Needs, &Wardrobe)>()
+        .iter()
+        .map(|(entity, (civilian, needs, wardrobe))| {
+            let (profession, health) = sim
+                .world
+                .get::<&Citizen>(entity)
+                .ok()
+                .map(|citizen| {
+                    let job = citizen
+                        .job
+                        .unwrap_or_else(|| job_type_for_civilian_id(civilian.id));
+                    (
+                        job_profession_label(job).to_string(),
+                        citizen.health.to_f64() as f32,
+                    )
+                })
+                .unwrap_or_else(|| {
+                    (
+                        job_profession_label(job_type_for_civilian_id(civilian.id)).to_string(),
+                        1.0,
+                    )
+                });
+            let rest = (need_satisfaction(needs.food)
+                + need_satisfaction(needs.shelter)
+                + need_satisfaction(needs.safety)
+                + need_satisfaction(needs.belonging))
+                / 4.0;
+            CivilianStateEntry {
+                id: civilian.id,
+                needs: CivilianNeeds3d {
+                    food: need_satisfaction(needs.food),
+                    shelter: need_satisfaction(needs.shelter),
+                    safety: need_satisfaction(needs.safety),
+                    social: need_satisfaction(needs.belonging),
+                    rest,
+                },
+                profession,
+                genome_summary: GenomeSummary3d {
+                    summary: format!("era-{}", wardrobe.era),
+                    lineage: format!("faction-{}", civilian.faction),
+                    traits: Vec::new(),
+                },
+                species: "human".to_string(),
+                health,
+            }
+        })
+        .collect();
+    civilians.sort_by_key(|entry| entry.id);
+    civilians.truncate(256);
+    CivilianStateFrame { tick, civilians }
+}
+
+fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
+    let era = ((tick / 120) % 6) as u16;
+    let institutions = crate::jsonrpc::institutions_from_sim(sim);
+    let market_balance = institutions
+        .iter()
+        .find(|row| row.kind == "market")
+        .map(|row| row.balance_joules as f64)
+        .unwrap_or(0.0);
+    let treasury_balance = institutions
+        .iter()
+        .find(|row| row.kind == "treasury")
+        .map(|row| row.balance_joules as f64)
+        .unwrap_or(0.0);
+
+    let mut factions: Vec<FactionStateEntry> = sim
+        .spectator_view()
+        .factions
+        .iter()
+        .map(|faction| {
+            let mut amount = sim
+                .state
+                .faction_treasury
+                .get(&faction.id)
+                .map(|value| value.to_f64())
+                .unwrap_or(0.0);
+            if faction.id == 0 {
+                amount += market_balance + treasury_balance;
+            }
+            FactionStateEntry {
+                id: faction.id,
+                era,
+                government: government_for_faction(faction.id),
+                treasury: FactionTreasury3d {
+                    amount,
+                    currency: "joules".to_string(),
+                },
+            }
+        })
+        .collect();
+    factions.sort_by_key(|entry| entry.id);
+    FactionStateFrame { tick, factions }
+}
+
+/// Build event-feed messages for one tick.
+///
+/// Maps births/deaths/diplomacy/combat from the live sim. `last_tick_mod_lifecycle` JSON is
+/// surfaced as [`EventFeedMessage3d::Tech`] stubs until a dedicated system/lifecycle wire kind
+/// exists (Bevy maps those to `EventKind::System` locally).
+fn build_event_feed_frame(sim: &Simulation, tick: u64) -> EventFeedFrame {
+    let mut events = Vec::new();
+
+    for birth in sim.last_births() {
+        events.push(EventFeedMessage3d::Birth(BirthEvent3d {
+            entity_id: birth.entity_id,
+            faction_id: faction_for_norm(birth.x, birth.y, sim),
+            species: "human".to_string(),
+            position: Some(WorldXZ {
+                x: birth.x,
+                z: birth.y,
+            }),
+        }));
+    }
+
+    for death in sim.last_deaths() {
+        events.push(EventFeedMessage3d::Death(DeathEvent3d {
+            entity_id: death.entity_id,
+            faction_id: faction_for_norm(death.x, death.y, sim),
+            position: Some(WorldXZ {
+                x: death.x,
+                z: death.y,
+            }),
+            cause: String::new(),
+        }));
+    }
+
+    for diplomacy in sim.diplomacy_events() {
+        if diplomacy.tick != tick {
+            continue;
+        }
+        let outcome = match diplomacy.kind {
+            DiplomacyKind::TradeAgreement => "trade_agreement",
+            DiplomacyKind::Conflict => "conflict",
+            DiplomacyKind::Peace => "peace",
+        };
+        events.push(EventFeedMessage3d::Battle(BattleEvent3d {
+            attacker_faction: diplomacy.faction_a,
+            defender_faction: diplomacy.faction_b,
+            outcome: outcome.to_string(),
+            position: None,
+        }));
+    }
+
+    for pulse in sim.last_tick_combat_pulses() {
+        events.push(EventFeedMessage3d::Battle(BattleEvent3d {
+            attacker_faction: 0,
+            defender_faction: 0,
+            outcome: "combat_pulse".to_string(),
+            position: Some(WorldXZ {
+                x: pulse.x,
+                z: pulse.y,
+            }),
+        }));
+    }
+
+    for line in sim.last_tick_mod_lifecycle() {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let Some(event_name) = value.get("event").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if event_name == "mod.loaded.v1" {
+            let mod_name = value
+                .get("mod_name")
+                .or_else(|| value.get("mod_id"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("mod");
+            events.push(EventFeedMessage3d::Tech(TechEvent3d {
+                faction_id: 0,
+                era: ((tick / 120) % 6) as u16,
+                tech: format!("mod.loaded:{mod_name}"),
+            }));
+        }
+    }
+
+    EventFeedFrame { tick, events }
+}
+
+fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], String> {
     let tick = sim.state.tick;
     let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
         .map_err(|e| e.to_string())?;
@@ -420,11 +652,13 @@ fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
         buildings: Vec::new(),
         graph: None,
     };
-    let agents = build_agent_appearance_frame(sim, tick);
     Ok([
         Frame3d::VoxelDelta(voxel),
         Frame3d::BuildingDiff(building),
-        Frame3d::AgentAppearance(agents),
+        Frame3d::AgentAppearance(build_agent_appearance_frame(sim, tick)),
+        Frame3d::CivilianState(build_civilian_state_frame(sim, tick)),
+        Frame3d::FactionState(build_faction_state_frame(sim, tick)),
+        Frame3d::EventFeed(build_event_feed_frame(sim, tick)),
     ])
 }
 
@@ -660,7 +894,7 @@ fn set_replay_io_error(response: &mut JsonRpcResponse, message: String) {
 }
 
 fn encode_tick_broadcast_messages(
-    frames: [Frame3d; 3],
+    frames: &[Frame3d],
     format: TickBroadcastFormat,
 ) -> Result<Vec<Message>, String> {
     let mut payloads = Vec::with_capacity(format.messages_per_tick());
@@ -669,7 +903,7 @@ fn encode_tick_broadcast_messages(
 
     if send_text && send_binary {
         let mut json_by_frame = Vec::with_capacity(frames.len());
-        for frame in &frames {
+        for frame in frames {
             json_by_frame.push(serde_json::to_vec(frame).map_err(|e| e.to_string())?);
         }
         for json in &json_by_frame {
@@ -684,7 +918,7 @@ fn encode_tick_broadcast_messages(
         return Ok(payloads);
     }
 
-    for frame in &frames {
+    for frame in frames {
         if send_text {
             let text = serde_json::to_string(frame).map_err(|e| e.to_string())?;
             payloads.push(Message::Text(text));
@@ -703,9 +937,10 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         sim.tick();
         let tick = sim.state.tick;
         state.tick.store(tick, Ordering::SeqCst);
-        let frames = build_frame_triple(&sim)?;
+        let bundle = build_frame_bundle(&sim)?;
         Arc::from(
-            encode_tick_broadcast_messages(frames, state.tick_broadcast_format)?.into_boxed_slice(),
+            encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
+                .into_boxed_slice(),
         )
     };
 
@@ -759,18 +994,20 @@ mod tests {
 
     #[test]
     fn tick_broadcast_both_sends_text_then_binary() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let messages =
-            encode_tick_broadcast_messages(frames, TickBroadcastFormat::Both).expect("encode");
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
         assert_eq!(
             messages.len(),
             TickBroadcastFormat::Both.messages_per_tick()
         );
-        assert!(matches!(&messages[0], Message::Text(_)));
-        assert!(matches!(&messages[1], Message::Text(_)));
-        assert!(matches!(&messages[2], Message::Text(_)));
-        assert!(matches!(&messages[3], Message::Binary(_)));
-        if let Message::Binary(bytes) = &messages[3] {
+        for msg in &messages[..FRAME_BUNDLE_LEN] {
+            assert!(matches!(msg, Message::Text(_)));
+        }
+        for msg in &messages[FRAME_BUNDLE_LEN..] {
+            assert!(matches!(msg, Message::Binary(_)));
+        }
+        if let Message::Binary(bytes) = &messages[FRAME_BUNDLE_LEN] {
             assert!(bytes.starts_with(civ_protocol_3d::FRAME3D_BINARY_MAGIC));
         }
     }
@@ -795,38 +1032,48 @@ mod tests {
 
     #[test]
     fn tick_broadcast_message_count_per_format() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         for format in [
             TickBroadcastFormat::Text,
             TickBroadcastFormat::Binary,
             TickBroadcastFormat::Both,
         ] {
-            let messages = encode_tick_broadcast_messages(frames.clone(), format).expect("encode");
+            let messages =
+                encode_tick_broadcast_messages(&frames, format).expect("encode");
             assert_eq!(
                 messages.len(),
                 format.messages_per_tick(),
                 "{format:?} message count"
             );
         }
-        assert_eq!(TickBroadcastFormat::Text.messages_per_tick(), 3);
-        assert_eq!(TickBroadcastFormat::Binary.messages_per_tick(), 3);
-        assert_eq!(TickBroadcastFormat::Both.messages_per_tick(), 6);
+        assert_eq!(
+            TickBroadcastFormat::Text.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
+        assert_eq!(
+            TickBroadcastFormat::Binary.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
+        assert_eq!(
+            TickBroadcastFormat::Both.messages_per_tick(),
+            FRAME_BUNDLE_LEN * 2
+        );
     }
 
     #[test]
     fn tick_broadcast_binary_only_skips_text_frames() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let messages =
-            encode_tick_broadcast_messages(frames, TickBroadcastFormat::Binary).expect("encode");
-        assert_eq!(messages.len(), 3);
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Binary).expect("encode");
+        assert_eq!(messages.len(), FRAME_BUNDLE_LEN);
         assert!(messages.iter().all(|msg| matches!(msg, Message::Binary(_))));
     }
 
     #[test]
     fn tick_broadcast_both_binary_payload_matches_text_json() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let messages =
-            encode_tick_broadcast_messages(frames, TickBroadcastFormat::Both).expect("encode");
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
         let half = messages.len() / 2;
         for i in 0..half {
             let Message::Text(text) = &messages[i] else {
@@ -841,17 +1088,15 @@ mod tests {
         }
     }
 
-    fn sample_frame_triple() -> [Frame3d; 3] {
+    fn sample_frame_bundle() -> [Frame3d; FRAME_BUNDLE_LEN] {
         [
-            Frame3d::BuildingDiff(BuildingDiffFrame {
+            Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
                 tick: 1,
-                provenance: BuildingProvenance::Procedural,
-                buildings: Vec::new(),
-                graph: None,
+                deltas: Vec::new(),
             }),
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
-                provenance: BuildingProvenance::Freehand,
+                provenance: BuildingProvenance::Procedural,
                 buildings: Vec::new(),
                 graph: None,
             }),
@@ -859,7 +1104,50 @@ mod tests {
                 tick: 1,
                 updates: Vec::new(),
             }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 1,
+                civilians: Vec::new(),
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 1,
+                factions: Vec::new(),
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 1,
+                events: Vec::new(),
+            }),
         ]
+    }
+
+    #[test]
+    fn frame_bundle_includes_all_wire_kinds() {
+        let sim = Simulation::with_seed(11);
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        assert_eq!(bundle.len(), FRAME_BUNDLE_LEN);
+        let mut kinds = [false; FRAME_BUNDLE_LEN];
+        for frame in &bundle {
+            let idx = match frame {
+                Frame3d::VoxelDelta(_) => 0,
+                Frame3d::BuildingDiff(_) => 1,
+                Frame3d::AgentAppearance(_) => 2,
+                Frame3d::CivilianState(_) => 3,
+                Frame3d::FactionState(_) => 4,
+                Frame3d::EventFeed(_) => 5,
+            };
+            kinds[idx] = true;
+        }
+        assert!(kinds.iter().all(|present| *present));
+        let Frame3d::CivilianState(civilian) = &bundle[3] else {
+            panic!("expected civilian state frame");
+        };
+        assert!(
+            !civilian.civilians.is_empty(),
+            "seed 11 should emit agent civilians"
+        );
+        let Frame3d::FactionState(faction) = &bundle[4] else {
+            panic!("expected faction state frame");
+        };
+        assert_eq!(faction.factions.len(), 4);
     }
 
     /// Manual probe: `cargo test -p civ-server tick_broadcast_encode_bench --release -- --ignored --nocapture`
@@ -868,12 +1156,13 @@ mod tests {
     fn tick_broadcast_encode_bench() {
         use std::time::Instant;
 
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let iterations = 20_000u32;
         for format in [TickBroadcastFormat::Binary, TickBroadcastFormat::Both] {
             let start = Instant::now();
             for _ in 0..iterations {
-                let _ = encode_tick_broadcast_messages(frames.clone(), format).expect("encode");
+                let _ =
+                    encode_tick_broadcast_messages(&frames, format).expect("encode");
             }
             let elapsed = start.elapsed();
             eprintln!(
@@ -917,7 +1206,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn frame_triple_is_deterministic_for_fixed_seed() {
+    async fn frame_bundle_is_deterministic_for_fixed_seed() {
         let make = || async {
             let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
             let (_dir, state) = test_app_state(sim, 0, 1, false);

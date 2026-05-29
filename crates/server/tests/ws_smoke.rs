@@ -1189,25 +1189,37 @@ async fn ws_jsonrpc_sim_set_speed_rejects_invalid_multiplier() {
     );
 }
 
-fn assert_three_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
+fn assert_six_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
     assert_eq!(
         frames.len(),
-        3,
-        "expected VoxelDelta + BuildingDiff + AgentAppearance for tick {expected_tick}"
+        civ_server::ws_bridge::FRAME_BUNDLE_LEN,
+        "expected full F3D0 bundle for tick {expected_tick}"
     );
     let mut has_voxel = false;
     let mut has_building = false;
     let mut has_agent = false;
+    let mut has_civilian = false;
+    let mut has_faction = false;
+    let mut has_event = false;
     for frame in frames {
         assert_eq!(frame.tick(), expected_tick);
         match frame {
             Frame3d::VoxelDelta(_) => has_voxel = true,
             Frame3d::BuildingDiff(_) => has_building = true,
             Frame3d::AgentAppearance(_) => has_agent = true,
-            Frame3d::CivilianState(_) | Frame3d::FactionState(_) | Frame3d::EventFeed(_) => {}
+            Frame3d::CivilianState(_) => has_civilian = true,
+            Frame3d::FactionState(_) => has_faction = true,
+            Frame3d::EventFeed(_) => has_event = true,
         }
     }
-    assert!(has_voxel && has_building && has_agent);
+    assert!(
+        has_voxel
+            && has_building
+            && has_agent
+            && has_civilian
+            && has_faction
+            && has_event
+    );
 }
 
 async fn collect_f3d0_frames_after_sim_command_tick(
@@ -1240,7 +1252,7 @@ async fn collect_f3d0_frames_after_sim_command_tick(
     let mut frames_for_tick = Vec::new();
 
     timeout(Duration::from_secs(3), async {
-        while tick_after.is_none() || frames_for_tick.len() < 3 {
+        while tick_after.is_none() || frames_for_tick.len() < civ_server::ws_bridge::FRAME_BUNDLE_LEN {
             let frame = socket
                 .next()
                 .await
@@ -1291,22 +1303,22 @@ async fn collect_f3d0_frames_after_sim_command_tick(
     (tick, frames_for_tick)
 }
 
-/// CIV-0200: `sim.command` tick broadcasts decodable F3D0 triple when format is `Both`.
+/// CIV-0200 / FR-CIV-BEVY-028: `sim.command` tick broadcasts decodable six-frame F3D0 bundle when format is `Both`.
 #[tokio::test]
 async fn ws_sim_command_tick_broadcasts_f3d0_when_both() {
     let (tick, frames) =
         collect_f3d0_frames_after_sim_command_tick(TickBroadcastFormat::Both).await;
     assert!(tick > 0, "sim.command should advance tick");
-    assert_three_valid_frame3d_kinds(&frames, tick);
+    assert_six_valid_frame3d_kinds(&frames, tick);
 }
 
-/// CIV-0200: `sim.command` tick broadcasts decodable F3D0 triple when format is `Binary`.
+/// CIV-0200 / FR-CIV-BEVY-028: `sim.command` tick broadcasts decodable six-frame F3D0 bundle when format is `Binary`.
 #[tokio::test]
 async fn ws_sim_command_tick_broadcasts_f3d0_when_binary() {
     let (tick, frames) =
         collect_f3d0_frames_after_sim_command_tick(TickBroadcastFormat::Binary).await;
     assert!(tick > 0, "sim.command should advance tick");
-    assert_three_valid_frame3d_kinds(&frames, tick);
+    assert_six_valid_frame3d_kinds(&frames, tick);
 }
 
 /// Tick push after `sim.command` emits the configured number of WebSocket frames.

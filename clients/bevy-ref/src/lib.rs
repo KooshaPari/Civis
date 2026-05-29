@@ -628,8 +628,8 @@ pub fn chunk_to_minimap_uv(chunk_id: ChunkId, bounds: MinimapBounds) -> [f32; 2]
 /// Map world XZ (metres) into normalised minimap UV within `bounds`.
 #[must_use]
 pub fn world_xz_to_minimap_uv(x: f32, z: f32, bounds: MinimapBounds) -> [f32; 2] {
-    let cx = (x / VOXEL_CHUNK_EDGE as f32).floor() as i32;
-    let cz = (z / VOXEL_CHUNK_EDGE as f32).floor() as i32;
+    let cx = (x / VOXEL_CHUNK_EDGE).floor() as i32;
+    let cz = (z / VOXEL_CHUNK_EDGE).floor() as i32;
     world_chunk_grid_to_minimap_uv(cx, cz, bounds)
 }
 

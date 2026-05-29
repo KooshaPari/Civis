@@ -176,6 +176,15 @@ pub fn faction_hud_count(scene: &LiveStreamScene) -> usize {
     scene.factions.len()
 }
 
+/// Copies civilian/faction HUD counts from the latest state frames into [`LiveHudSnapshot`].
+pub fn sync_live_hud_civilian_faction_counts(
+    hud: &mut crate::LiveHudSnapshot,
+    scene: &LiveStreamScene,
+) {
+    hud.civilian_count = civilian_hud_count(scene);
+    hud.faction_count = faction_hud_count(scene);
+}
+
 /// Maps one wire event-feed message to an egui toast category and human-readable text.
 #[cfg(feature = "egui")]
 #[must_use]
@@ -1020,6 +1029,20 @@ mod tests {
             },
         );
         assert_eq!(feed.events.len(), 2);
+    }
+
+    #[test]
+    fn sync_live_hud_civilian_faction_counts_reads_scene_state() {
+        let mut scene = LiveStreamScene::default();
+        scene.civilian_ids.insert(1);
+        scene.civilian_ids.insert(2);
+        scene.factions.insert(7);
+
+        let mut hud = crate::LiveHudSnapshot::default();
+        sync_live_hud_civilian_faction_counts(&mut hud, &scene);
+
+        assert_eq!(hud.civilian_count, 2);
+        assert_eq!(hud.faction_count, 1);
     }
 
     #[test]

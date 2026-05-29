@@ -107,13 +107,15 @@ fn sync_live_hud_stats(
     if *attach != AttachMode::Server {
         return;
     }
+    let civilians = crate::live_stream::civilian_hud_count(&scene);
+    let factions = crate::live_stream::faction_hud_count(&scene);
     hud.sync_scene_counts(
         scene.chunks.len(),
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
-        scene.civilian_ids.len(),
-        scene.factions.len(),
+        civilians,
+        factions,
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.ws_rtt_ms = Some(rtt);
@@ -168,8 +170,8 @@ fn sync_live_game_ui(
         return;
     }
     let tick = hud.tick.or(state.tick).unwrap_or(0);
-    let population = scene.civilian_ids.len() as u64;
-    let factions = scene.factions.len() as u32;
+    let population = crate::live_stream::civilian_hud_count(&scene) as u64;
+    let factions = crate::live_stream::faction_hud_count(&scene) as u32;
     let era = if scene.faction_era > 0 {
         scene.faction_era.to_string()
     } else {

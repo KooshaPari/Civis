@@ -212,13 +212,15 @@ fn sync_live_hud_stats(
     scene: Res<LiveStreamScene>,
     mut hud: ResMut<HudState>,
 ) {
+    let civilians = civ_bevy_ref::live_stream::civilian_hud_count(&scene);
+    let factions = civ_bevy_ref::live_stream::faction_hud_count(&scene);
     hud.snapshot.sync_scene_counts(
         scene.chunks.len(),
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
-        scene.civilian_ids.len(),
-        scene.factions.len(),
+        civilians,
+        factions,
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);

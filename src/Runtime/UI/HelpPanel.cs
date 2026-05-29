@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BepInEx.Logging;
+using DINOForge.SDK.Json;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -224,13 +225,7 @@ namespace DINOForge.Runtime.UI
                 }
 
                 string json = File.ReadAllText(faqPath);
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    WriteIndented = false
-                };
-
-                FaqRoot? root = JsonSerializer.Deserialize<FaqRoot>(json, options);
+                FaqRoot? root = JsonSerializer.Deserialize<FaqRoot>(json, JsonOptions.Compact);
                 if (root?.Categories == null)
                 {
                     _log?.LogWarning("FAQ JSON is invalid or missing categories");

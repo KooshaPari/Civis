@@ -2,6 +2,7 @@
 using System.CommandLine;
 using System.Net.Http;
 using System.Text.Json;
+using DINOForge.SDK.Json;
 using Spectre.Console;
 
 namespace DINOForge.Tools.Cli.Commands;
@@ -254,10 +255,7 @@ internal static class RegistryCommand
                     continue;
 
                 var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-                return JsonSerializer.Deserialize<PackRegistry>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                return JsonSerializer.Deserialize<PackRegistry>(json, JsonOptions.Default);
             }
             catch
             {

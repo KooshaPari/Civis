@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using BepInEx.Logging;
+using DINOForge.Runtime.Json;
 
 namespace DINOForge.Runtime.Settings
 {
@@ -54,14 +55,6 @@ namespace DINOForge.Runtime.Settings
         private readonly Dictionary<string, Dictionary<string, object>> _settings = new Dictionary<string, Dictionary<string, object>>(StringComparer.Ordinal);
         private readonly object _settingsLock = new object();
         private ManualLogSource? _log;
-
-        // ── Shared JSON options (Pattern #109: one static instance, not per-call) ─
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNameCaseInsensitive = false,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
 
         // ── Constructor ──────────────────────────────────────────────────────────
 
@@ -137,7 +130,7 @@ namespace DINOForge.Runtime.Settings
                     // Try JSON round-trip for numeric conversions (e.g., long to float)
                     if (value is JsonElement je)
                     {
-                        return JsonSerializer.Deserialize<T>(je.GetRawText(), JsonOptions) ?? defaultValue;
+                        return JsonSerializer.Deserialize<T>(je.GetRawText(), RuntimeJsonOptions.PackSettings) ?? defaultValue;
                     }
 
                     return defaultValue;
@@ -222,7 +215,7 @@ namespace DINOForge.Runtime.Settings
                 try
                 {
                     var json = File.ReadAllText(_settingsPath);
-                    var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json, JsonOptions);
+                    var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json, RuntimeJsonOptions.PackSettings);
 
                     if (data != null)
                     {
@@ -249,7 +242,7 @@ namespace DINOForge.Runtime.Settings
             {
                 try
                 {
-                    var json = JsonSerializer.Serialize(_settings, JsonOptions);
+                    var json = JsonSerializer.Serialize(_settings, RuntimeJsonOptions.PackSettings);
                     File.WriteAllText(_settingsPath, json);
                     _log?.LogDebug($"[PackSettingsStore] Saved settings to {_settingsPath}");
                 }

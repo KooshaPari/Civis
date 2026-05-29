@@ -5,6 +5,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.CommandLine;
+using DINOForge.SDK.Json;
 using Spectre.Console;
 
 namespace DINOForge.Tools.Cli.Commands;
@@ -220,13 +221,7 @@ internal static class HelpCommand
             }
 
             string json = File.ReadAllText(faqPath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                WriteIndented = false
-            };
-
-            _faqData = JsonSerializer.Deserialize<FaqRoot>(json, options);
+            _faqData = JsonSerializer.Deserialize<FaqRoot>(json, JsonOptions.Compact);
             return _faqData?.Categories != null && _faqData.Categories.Count > 0;
         }
         catch (Exception ex)

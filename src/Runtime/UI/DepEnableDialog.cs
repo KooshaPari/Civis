@@ -76,6 +76,7 @@ namespace DINOForge.Runtime.UI
             Canvas? sortCanvas = gameObject.AddComponent<Canvas>();
             sortCanvas.overrideSorting = true;
             sortCanvas.sortingOrder = 200; // well above the mod-menu panel
+            Plugin.EnsureEventSystemAlive(); // Pattern #235: EventSystem before GraphicRaycaster
             gameObject.AddComponent<GraphicRaycaster>();
 
             // ── Centered card ──

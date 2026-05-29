@@ -20,10 +20,13 @@ impl Default for CameraRig {
             // Map is centred on the origin (terrain/water span roughly
             // -WORLD_SIZE/2..WORLD_SIZE/2), so frame the centre, not the old
             // corner-based (128,30,128) target.
-            target: Vec3::new(0.0, 12.0, 0.0),
+            // Frame the map centre slightly above sea level (WATER_LEVEL ≈ 64)
+            // so the camera looks down onto the islands/relief instead of along
+            // a flooded plane at y≈12 (which filled the frame with water).
+            target: Vec3::new(0.0, 70.0, 0.0),
             yaw: -0.12,
             pitch: -0.72,
-            distance: 170.0,
+            distance: 220.0,
         }
     }
 }

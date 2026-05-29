@@ -101,7 +101,7 @@ pub fn setup_atmosphere(
         unlit: true,
         ..default()
     });
-    commands.spawn((StarField, Visibility::Hidden)).with_children(|parent| {
+    commands.spawn((StarField, Transform::default(), Visibility::Hidden)).with_children(|parent| {
         for i in 0..STAR_COUNT {
             let (theta, phi) = star_angles(i as u32);
             let dir = Vec3::new(

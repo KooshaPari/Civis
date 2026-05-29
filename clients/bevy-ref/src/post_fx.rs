@@ -74,8 +74,11 @@ pub struct PostFxPlugin;
 
 impl Plugin for PostFxPlugin {
     fn build(&self, app: &mut App) {
+        // NOTE: `ScreenSpaceAmbientOcclusionPlugin` is already registered by
+        // `DefaultPlugins` (Bevy 0.18 PbrPlugin), so re-adding it panics with
+        // "plugin was already added". We only insert the SSAO *component* on the
+        // camera in `apply_post_fx`; the plugin itself is already present.
         app.init_resource::<PostFxSettings>()
-            .add_plugins(bevy::pbr::ScreenSpaceAmbientOcclusionPlugin)
             .add_systems(Update, apply_post_fx)
             .add_systems(Update, tune_sun_shadows);
     }

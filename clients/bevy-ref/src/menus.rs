@@ -1,7 +1,9 @@
 #![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Menus and overlay plugin for the Civis reference client (FR-CIV-BEVY-024 / item 49).
+//! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
+use crate::gpu_features::GpuCapabilities;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -132,6 +134,7 @@ fn draw_settings_window(
     mut contexts: EguiContexts,
     mut settings_open: ResMut<SettingsOpen>,
     mut state: ResMut<SettingsState>,
+    gpu_caps: Option<Res<GpuCapabilities>>,
 ) {
     if !settings_open.0 {
         return;
@@ -139,7 +142,12 @@ fn draw_settings_window(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    settings_window(ctx, &mut settings_open, &mut state);
+    settings_window(
+        ctx,
+        &mut settings_open,
+        &mut state,
+        gpu_caps.as_deref(),
+    );
 }
 
 fn dim_overlay(ctx: &egui::Context) {
@@ -239,7 +247,12 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
         });
 }
 
-fn settings_window(ctx: &egui::Context, settings_open: &mut SettingsOpen, state: &mut SettingsState) {
+fn settings_window(
+    ctx: &egui::Context,
+    settings_open: &mut SettingsOpen,
+    state: &mut SettingsState,
+    gpu_caps: Option<&GpuCapabilities>,
+) {
     const QUALITIES: &[&str] = &["Low", "Medium", "High", "Ultra"];
     egui::Window::new(egui::RichText::new("\u{2699} Settings").color(ACCENT).strong())
         .collapsible(false)
@@ -253,10 +266,15 @@ fn settings_window(ctx: &egui::Context, settings_open: &mut SettingsOpen, state:
                 .inner_margin(egui::Margin::same(18)),
         )
         .open(&mut settings_open.0)
-        .show(ctx, |ui| settings_rows(ui, state, QUALITIES));
+        .show(ctx, |ui| settings_rows(ui, state, QUALITIES, gpu_caps));
 }
 
-fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str]) {
+fn settings_rows(
+    ui: &mut egui::Ui,
+    state: &mut SettingsState,
+    qualities: &[&str],
+    gpu_caps: Option<&GpuCapabilities>,
+) {
     ui.label(egui::RichText::new("Graphics Quality").color(DIM).small());
     egui::ComboBox::from_id_salt("graphics_quality_combo")
         .selected_text(*qualities.get(state.graphics_quality).unwrap_or(&"High"))
@@ -275,6 +293,84 @@ fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str
             .text("x")
             .show_value(true),
     );
+    ui.add_space(12.0);
+    ui.separator();
+    ui.add_space(8.0);
+    gpu_capabilities_settings_section(ui, gpu_caps);
+}
+
+/// User-facing yes/no for read-only GPU capability flags.
+#[must_use]
+pub fn format_gpu_capability_flag(enabled: bool) -> &'static str {
+    if enabled {
+        "Yes"
+    } else {
+        "No"
+    }
+}
+
+/// Read-only settings labels for detected GPU capabilities (FR-CIV-BEVY-036).
+#[must_use]
+pub fn format_gpu_settings_labels(caps: &GpuCapabilities) -> Vec<(&'static str, String)> {
+    vec![
+        ("Backend", caps.backend_name.clone()),
+        (
+            "Est. VRAM",
+            format_gpu_vram_label_mb(caps.max_vram_mb),
+        ),
+        (
+            "Ray tracing",
+            format_gpu_capability_flag(caps.ray_tracing).to_string(),
+        ),
+        (
+            "DLSS",
+            format_gpu_capability_flag(caps.dlss_available).to_string(),
+        ),
+        (
+            "FSR",
+            format_gpu_capability_flag(caps.fsr_available).to_string(),
+        ),
+    ]
+}
+
+/// Format estimated VRAM for the settings panel.
+#[must_use]
+pub fn format_gpu_vram_label_mb(max_vram_mb: u32) -> String {
+    if max_vram_mb == 0 {
+        "Unknown".to_string()
+    } else {
+        format!("{max_vram_mb} MB")
+    }
+}
+
+/// Message when [`GpuCapabilities`] is not on the main world yet (headless / pre-startup).
+#[must_use]
+pub fn format_gpu_capabilities_unavailable_message() -> &'static str {
+    "GPU capabilities unavailable (headless or still starting up)"
+}
+
+fn gpu_capabilities_settings_section(ui: &mut egui::Ui, gpu_caps: Option<&GpuCapabilities>) {
+    ui.label(
+        egui::RichText::new("GPU (detected)")
+            .color(DIM)
+            .small()
+            .strong(),
+    );
+    ui.add_space(4.0);
+    let Some(caps) = gpu_caps else {
+        ui.label(
+            egui::RichText::new(format_gpu_capabilities_unavailable_message())
+                .color(DIM)
+                .italics(),
+        );
+        return;
+    };
+    for (name, value) in format_gpu_settings_labels(caps) {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new(format!("{name}:")).color(DIM));
+            ui.label(value);
+        });
+    }
 }
 
 fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
@@ -300,5 +396,36 @@ mod tests {
     #[test]
     fn game_ui_mode_default_is_playing() {
         assert_eq!(GameUiMode::default(), GameUiMode::Playing);
+    }
+
+    #[test]
+    fn format_gpu_settings_labels_lists_backend_vram_and_flags() {
+        let caps = GpuCapabilities {
+            ray_tracing: true,
+            mesh_shaders: false,
+            dlss_available: true,
+            fsr_available: false,
+            metal_fx: false,
+            max_vram_mb: 8192,
+            backend_name: "Vulkan".to_string(),
+        };
+        let labels = format_gpu_settings_labels(&caps);
+        assert_eq!(labels[0], ("Backend", "Vulkan".to_string()));
+        assert_eq!(labels[1], ("Est. VRAM", "8192 MB".to_string()));
+        assert_eq!(labels[2], ("Ray tracing", "Yes".to_string()));
+        assert_eq!(labels[3], ("DLSS", "Yes".to_string()));
+        assert_eq!(labels[4], ("FSR", "No".to_string()));
+    }
+
+    #[test]
+    fn format_gpu_vram_label_mb_unknown_when_zero() {
+        assert_eq!(format_gpu_vram_label_mb(0), "Unknown");
+        assert_eq!(format_gpu_vram_label_mb(512), "512 MB");
+    }
+
+    #[test]
+    fn format_gpu_capability_flag_yes_no() {
+        assert_eq!(format_gpu_capability_flag(true), "Yes");
+        assert_eq!(format_gpu_capability_flag(false), "No");
     }
 }

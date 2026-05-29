@@ -23,7 +23,7 @@ Live window (WebSocket attach + HUD overlay):
 
 ```bash
 # Headless CI gate (no GPU): F3D0 WS smoke, live_*, event_feed, menus, protocol extended frames, minimap UV tests, compile checks
-# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027; item 54 / FR-CIV-BEVY-029; item 57 / FR-CIV-BEVY-032 — run before merging live-attach changes
+# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027; item 54 / FR-CIV-BEVY-029; item 57 / FR-CIV-BEVY-032; item 58 / FR-CIV-BEVY-033; item 59 / FR-CIV-BEVY-034; item 62 / FR-CIV-BEVY-037 — run before merging live-attach changes
 just civis-3d-live-smoke
 
 # Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)
@@ -49,9 +49,12 @@ Headless gate for live attach — no window or running civ-server required:
 | Live minimap dots (layout, UV, spawn helpers) | `cargo test -p civ-bevy-ref --features bevy --lib live_minimap::` |
 | Live viewport pick (ray–AABB helpers) | `cargo test -p civ-bevy-ref --features bevy --lib live_pick::` |
 | Event feed HUD (toasts + log helpers) | `cargo test -p civ-bevy-ref --features bevy,egui --lib event_feed::` |
-| Pause / settings menus | `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::` |
+| Pause / settings menus (+ GPU capability readout) | `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::` |
+| Diplomacy panel (`FactionState` → egui) | `cargo test -p civ-bevy-ref --features bevy,egui --lib diplomacy_ui::` |
 | Protocol extended frames (civilian state + event feed) | `cargo test -p civ-protocol-3d civilian_state` + `event_feed` |
 | Minimap UV mapping (`world_xz_to_minimap_uv` path) | `cargo test -p civ-bevy-ref --lib chunk_to_minimap` + `minimap_uv_to_chunk` |
+| GPU capability defaults (`gpu_features`) | `cargo test -p civ-bevy-ref --features bevy --lib gpu_features::` |
+| PBR biome helpers (`pbr-textures`; no render window) | `cargo test -p civ-bevy-ref --features pbr-textures --lib materials::` |
 | Client compile | `cargo check … civ-standalone`, `cargo check … civ-bevy-window` |
 
 ### Remote civ-server URL recipes
@@ -109,7 +112,8 @@ cargo run -p civ-bevy-ref --features bevy,egui,pbr-textures --bin civ-standalone
 | `1`–`3` | HUD speed `1x` / `2x` / `5x` |
 | Settings (pause menu) | Graphics quality, volume, sim speed stubs |
 | **L** | Toggle scrollable **Event Log** (egui); stacked toasts bottom-right (~8s) |
-| Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`); F3D0 `EventFeed` frames → simulation toasts (birth/death/tech/battle/disaster) |
+| **G** | Toggle **Diplomacy** panel (faction list + neutral relation matrix; live attach fills rows from `FactionState` frames) |
+| Live attach (`CIVIS_ATTACH=server`) | Toasts on WebSocket `connected` / `reconnecting` / `disconnected` (`EventKind::System`); F3D0 `EventFeed` frames → simulation toasts (birth/death/tech/battle/disaster); `FactionState` frames refresh diplomacy rows |
 
 Live attach (`CIVIS_ATTACH=server` or `CIV_WS_URL`) skips local terrain; pause does not gate remote ticks.
 

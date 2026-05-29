@@ -256,7 +256,7 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.SDK": "[0.26.0-dev, )",
           "Octokit": "[13.0.1, )"
         }
       }

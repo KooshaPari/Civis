@@ -118,8 +118,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.25.0-dev, )",
-          "DINOForge.SDK": "[0.25.0-dev, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0-dev, )",
+          "DINOForge.SDK": "[0.26.0-dev, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",

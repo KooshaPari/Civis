@@ -5,7 +5,7 @@
 id: example-hello-world
 name: Hello World Example
 version: 1.0.0
-framework_version: ">=0.24.0 <0.26.0"
+framework_version: ">=0.24.0 <1.0.0"
 author: DINOForge
 type: content
 description: |

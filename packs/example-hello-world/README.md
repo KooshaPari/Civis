@@ -36,7 +36,7 @@ Every DINOForge pack must have a `pack.yaml` file at the root. This file defines
 | `id` | Unique identifier (kebab-case) | `example-hello-world` |
 | `name` | Human-readable name | `Hello World Example` |
 | `version` | Semantic version | `1.0.0` |
-| `framework_version` | DINOForge compatibility | `>=0.24.0 <0.26.0` |
+| `framework_version` | DINOForge compatibility | `>=0.24.0 <1.0.0` |
 | `author` | Your name | `DINOForge` |
 | `type` | Pack category | `content` / `balance` / `scenario` |
 | `description` | What your pack does | Multi-line text |

@@ -8,10 +8,13 @@ use bevy::prelude::*;
 use bevy::sprite::Text2d;
 use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
-    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BuildingDiffFrame,
-    BuildingGraph, BuildingKind3d, BuildingProvenance, FacadeStyle, ParcelKind, VoxelDeltaFrame,
-    WorldXZ,
+    agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
+    BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
+    CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d, FacadeStyle,
+    FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
 };
+#[cfg(feature = "egui")]
+use crate::event_feed::{EventFeed, EventKind};
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
@@ -109,6 +112,12 @@ pub struct LiveStreamScene {
     pub building_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub graph_parcel_materials: HashMap<u64, Handle<StandardMaterial>>,
     pub building_provenance: BuildingProvenance,
+    /// Civilian entity ids from the latest `Frame3d::CivilianState` (HUD counts).
+    pub civilian_ids: HashSet<u64>,
+    /// Faction ids from the latest `Frame3d::FactionState` (HUD counts).
+    pub factions: HashSet<u32>,
+    /// Max era from the latest faction state frame (HUD era chip).
+    pub faction_era: u16,
 }
 
 impl Default for LiveStreamScene {
@@ -126,8 +135,174 @@ impl Default for LiveStreamScene {
             // (intentional — every diff carries an explicit tag). The renderer
             // simply tracks the last-observed provenance, starting Procedural.
             building_provenance: BuildingProvenance::Procedural,
+            civilian_ids: HashSet::default(),
+            factions: HashSet::default(),
+            faction_era: 0,
         }
     }
+}
+
+/// Replaces civilian HUD tracking from a server `CivilianState` snapshot (may truncate at 256).
+pub fn apply_civilian_state_frame(scene: &mut LiveStreamScene, frame: CivilianStateFrame) {
+    scene.civilian_ids.clear();
+    scene
+        .civilian_ids
+        .extend(frame.civilians.into_iter().map(|entry| entry.id));
+}
+
+/// Replaces faction HUD tracking from a server `FactionState` snapshot.
+pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStateFrame) {
+    scene.factions.clear();
+    scene.faction_era = frame
+        .factions
+        .iter()
+        .map(|entry| entry.era)
+        .max()
+        .unwrap_or(0);
+    scene
+        .factions
+        .extend(frame.factions.into_iter().map(|entry| entry.id));
+}
+
+/// HUD population count from the latest civilian state snapshot.
+#[must_use]
+pub fn civilian_hud_count(scene: &LiveStreamScene) -> usize {
+    scene.civilian_ids.len()
+}
+
+/// HUD faction count from the latest faction state snapshot.
+#[must_use]
+pub fn faction_hud_count(scene: &LiveStreamScene) -> usize {
+    scene.factions.len()
+}
+
+/// Maps one wire event-feed message to an egui toast category and human-readable text.
+#[cfg(feature = "egui")]
+#[must_use]
+pub fn map_event_feed_message(msg: &EventFeedMessage3d) -> (EventKind, String) {
+    match msg {
+        EventFeedMessage3d::Birth(ev) => (EventKind::Birth, format_birth_event(ev)),
+        EventFeedMessage3d::Death(ev) => (EventKind::Death, format_death_event(ev)),
+        EventFeedMessage3d::Tech(ev) => (EventKind::Tech, format_tech_event(ev)),
+        EventFeedMessage3d::Battle(ev) => (EventKind::Battle, format_battle_event(ev)),
+        EventFeedMessage3d::Disaster(ev) => (EventKind::Disaster, format_disaster_event(ev)),
+    }
+}
+
+/// Pushes all messages from an `EventFeed` frame into the HUD toast feed.
+#[cfg(feature = "egui")]
+pub fn apply_event_feed_frame(
+    feed: &mut EventFeed,
+    frame: civ_protocol_3d::EventFeedFrame,
+) {
+    for msg in frame.events {
+        let (kind, text) = map_event_feed_message(&msg);
+        feed.push(kind, text);
+    }
+}
+
+/// Human-readable text for logging (`civ-bevy-window`, no egui).
+#[must_use]
+pub fn format_event_feed_message(msg: &EventFeedMessage3d) -> String {
+    match msg {
+        EventFeedMessage3d::Birth(ev) => format_birth_event(ev),
+        EventFeedMessage3d::Death(ev) => format_death_event(ev),
+        EventFeedMessage3d::Tech(ev) => format_tech_event(ev),
+        EventFeedMessage3d::Battle(ev) => format_battle_event(ev),
+        EventFeedMessage3d::Disaster(ev) => format_disaster_event(ev),
+    }
+}
+
+fn format_birth_event(ev: &BirthEvent3d) -> String {
+    let who = if ev.species.is_empty() {
+        format!("Entity #{}", ev.entity_id)
+    } else {
+        ev.species.clone()
+    };
+    let mut text = format!("{who} was born");
+    if ev.faction_id != 0 {
+        text.push_str(&format!(" (faction {})", ev.faction_id));
+    }
+    if let Some(pos) = &ev.position {
+        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
+    }
+    text
+}
+
+fn format_death_event(ev: &DeathEvent3d) -> String {
+    if !ev.cause.is_empty() {
+        let mut text = ev.cause.clone();
+        if ev.entity_id != 0 {
+            text.push_str(&format!(" (entity #{})", ev.entity_id));
+        }
+        return text;
+    }
+    let mut text = format!("Entity #{} died", ev.entity_id);
+    if ev.faction_id != 0 {
+        text.push_str(&format!(" (faction {})", ev.faction_id));
+    }
+    if let Some(pos) = &ev.position {
+        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
+    }
+    text
+}
+
+fn format_tech_event(ev: &TechEvent3d) -> String {
+    if !ev.tech.is_empty() {
+        let mut text = ev.tech.clone();
+        if ev.faction_id != 0 {
+            text = format!("Faction {} unlocked {text}", ev.faction_id);
+        } else {
+            text = format!("Unlocked {text}");
+        }
+        if ev.era != 0 {
+            text.push_str(&format!(" (era {})", ev.era));
+        }
+        return text;
+    }
+    if ev.faction_id != 0 {
+        format!("Faction {} reached era {}", ev.faction_id, ev.era)
+    } else {
+        format!("Technology unlocked (era {})", ev.era)
+    }
+}
+
+fn format_battle_event(ev: &BattleEvent3d) -> String {
+    let sides = match (ev.attacker_faction, ev.defender_faction) {
+        (0, 0) => String::new(),
+        (a, 0) => format!("faction {a}"),
+        (0, d) => format!("faction {d}"),
+        (a, d) => format!("faction {a} vs faction {d}"),
+    };
+    let mut text = if sides.is_empty() {
+        "Battle".to_string()
+    } else {
+        format!("Battle: {sides}")
+    };
+    if !ev.outcome.is_empty() {
+        text.push_str(&format!(" — {}", ev.outcome.replace('_', " ")));
+    }
+    if let Some(pos) = &ev.position {
+        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
+    }
+    text
+}
+
+fn format_disaster_event(ev: &DisasterEvent3d) -> String {
+    let label = if ev.disaster_kind.is_empty() {
+        "Disaster".to_string()
+    } else {
+        ev.disaster_kind.replace('_', " ")
+    };
+    let mut text = if ev.severity > 0.0 {
+        format!("{label} (severity {:.0}%)", ev.severity * 100.0)
+    } else {
+        label
+    };
+    if let Some(pos) = &ev.position {
+        text.push_str(&format!(" at ({:.0}, {:.0})", pos.x, pos.z));
+    }
+    text
 }
 
 /// Shared marker meshes for agents and buildings.
@@ -740,5 +915,173 @@ mod tests {
 
         assert_eq!(scene.chunks.len(), 1);
         assert!(scene.chunk_voxels.chunks().contains_key(&chunk_id.0));
+    }
+
+    #[test]
+    fn format_event_feed_message_birth_with_species() {
+        use civ_protocol_3d::{BirthEvent3d, EventFeedMessage3d, WorldXZ};
+
+        let text = format_event_feed_message(&EventFeedMessage3d::Birth(BirthEvent3d {
+            entity_id: 9,
+            faction_id: 2,
+            species: "human".to_string(),
+            position: Some(WorldXZ { x: 10.0, z: 12.0 }),
+        }));
+        assert!(text.contains("human"));
+        assert!(text.contains("faction 2"));
+        assert!(text.contains("(10"));
+    }
+
+    #[test]
+    fn format_event_feed_message_death_uses_cause() {
+        use civ_protocol_3d::{DeathEvent3d, EventFeedMessage3d};
+
+        let text = format_event_feed_message(&EventFeedMessage3d::Death(DeathEvent3d {
+            entity_id: 3,
+            cause: "battle".to_string(),
+            ..Default::default()
+        }));
+        assert_eq!(text, "battle (entity #3)");
+    }
+
+    #[test]
+    fn format_event_feed_message_tech_unlock() {
+        use civ_protocol_3d::{EventFeedMessage3d, TechEvent3d};
+
+        let text = format_event_feed_message(&EventFeedMessage3d::Tech(TechEvent3d {
+            faction_id: 5,
+            era: 2,
+            tech: "agriculture".to_string(),
+        }));
+        assert!(text.contains("Faction 5"));
+        assert!(text.contains("agriculture"));
+    }
+
+    #[test]
+    fn format_event_feed_message_battle_outcome() {
+        use civ_protocol_3d::{BattleEvent3d, EventFeedMessage3d};
+
+        let text = format_event_feed_message(&EventFeedMessage3d::Battle(BattleEvent3d {
+            attacker_faction: 1,
+            defender_faction: 2,
+            outcome: "attacker_won".to_string(),
+            ..Default::default()
+        }));
+        assert!(text.contains("faction 1 vs faction 2"));
+        assert!(text.contains("attacker won"));
+    }
+
+    #[test]
+    fn format_event_feed_message_disaster_kind() {
+        use civ_protocol_3d::{DisasterEvent3d, EventFeedMessage3d};
+
+        let text = format_event_feed_message(&EventFeedMessage3d::Disaster(DisasterEvent3d {
+            disaster_kind: "flood".to_string(),
+            severity: 0.5,
+            ..Default::default()
+        }));
+        assert!(text.contains("flood"));
+        assert!(text.contains("50%"));
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn map_event_feed_message_assigns_kinds() {
+        use crate::event_feed::EventKind;
+        use civ_protocol_3d::{BirthEvent3d, EventFeedMessage3d};
+
+        let (kind, _) = map_event_feed_message(&EventFeedMessage3d::Birth(BirthEvent3d::default()));
+        assert_eq!(kind, EventKind::Birth);
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn apply_event_feed_frame_pushes_all_events() {
+        use crate::event_feed::EventFeed;
+        use civ_protocol_3d::{
+            DeathEvent3d, EventFeedFrame, EventFeedMessage3d, TechEvent3d,
+        };
+
+        let mut feed = EventFeed::default();
+        apply_event_feed_frame(
+            &mut feed,
+            EventFeedFrame {
+                tick: 1,
+                events: vec![
+                    EventFeedMessage3d::Death(DeathEvent3d {
+                        entity_id: 1,
+                        ..Default::default()
+                    }),
+                    EventFeedMessage3d::Tech(TechEvent3d {
+                        tech: "iron".to_string(),
+                        ..Default::default()
+                    }),
+                ],
+            },
+        );
+        assert_eq!(feed.events.len(), 2);
+    }
+
+    #[test]
+    fn apply_civilian_state_frame_replaces_tracked_ids() {
+        use civ_protocol_3d::{
+            CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, GenomeSummary3d,
+        };
+
+        let mut scene = LiveStreamScene::default();
+        scene.civilian_ids.insert(99);
+
+        let entry = |id: u64| CivilianStateEntry {
+            id,
+            needs: CivilianNeeds3d::default(),
+            profession: String::new(),
+            genome_summary: GenomeSummary3d::default(),
+            species: String::new(),
+            health: 1.0,
+        };
+
+        apply_civilian_state_frame(
+            &mut scene,
+            CivilianStateFrame {
+                tick: 7,
+                civilians: vec![entry(1), entry(2)],
+            },
+        );
+
+        assert_eq!(civilian_hud_count(&scene), 2);
+        assert!(scene.civilian_ids.contains(&1));
+        assert!(scene.civilian_ids.contains(&2));
+        assert!(!scene.civilian_ids.contains(&99));
+    }
+
+    #[test]
+    fn apply_faction_state_frame_replaces_tracked_ids_and_era() {
+        use civ_protocol_3d::{
+            FactionStateEntry, FactionStateFrame, FactionTreasury3d, Government3d,
+        };
+
+        let mut scene = LiveStreamScene::default();
+        scene.factions.insert(9);
+
+        let entry = |id: u32, era: u16| FactionStateEntry {
+            id,
+            era,
+            government: Government3d::Republic,
+            treasury: FactionTreasury3d::default(),
+        };
+
+        apply_faction_state_frame(
+            &mut scene,
+            FactionStateFrame {
+                tick: 3,
+                factions: vec![entry(0, 2), entry(4, 5)],
+            },
+        );
+
+        assert_eq!(faction_hud_count(&scene), 2);
+        assert_eq!(scene.faction_era, 5);
+        assert!(scene.factions.contains(&0));
+        assert!(scene.factions.contains(&4));
+        assert!(!scene.factions.contains(&9));
     }
 }

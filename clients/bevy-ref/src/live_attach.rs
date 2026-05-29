@@ -8,6 +8,12 @@ use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
 use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
 
+#[cfg(feature = "egui")]
+use crate::WsConnectionState;
+
+#[cfg(feature = "egui")]
+use crate::event_feed::{connection_toast_message, EventFeed, EventKind};
+
 /// Connection state mirrored from the live attach WebSocket client.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct LiveAttachState {
@@ -48,9 +54,20 @@ impl Plugin for LiveAttachPlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_live_game_ui);
+        {
+            app.init_resource::<LastConnectionToastState>()
+                .add_systems(
+                    Update,
+                    (sync_live_connection_toasts, sync_live_game_ui).chain(),
+                );
+        }
     }
 }
+
+/// Last WebSocket state used for connection toasts (egui only).
+#[cfg(feature = "egui")]
+#[derive(Resource, Default)]
+struct LastConnectionToastState(Option<WsConnectionState>);
 
 fn sync_live_hud_connection(
     attach: Res<AttachMode>,
@@ -95,6 +112,8 @@ fn sync_live_hud_stats(
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
+        scene.civilian_ids.len(),
+        scene.factions.len(),
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.ws_rtt_ms = Some(rtt);
@@ -113,18 +132,50 @@ fn sync_live_selection(
 }
 
 #[cfg(feature = "egui")]
+fn sync_live_connection_toasts(
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut feed: ResMut<EventFeed>,
+    mut last: ResMut<LastConnectionToastState>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+
+    let state = bridge.client.latest_connection_state();
+    if last.0 == Some(state) {
+        return;
+    }
+
+    if last.0.is_some() || state == WsConnectionState::Connected {
+        feed.push(
+            EventKind::System,
+            connection_toast_message(state).to_string(),
+        );
+    }
+    last.0 = Some(state);
+}
+
+#[cfg(feature = "egui")]
 fn sync_live_game_ui(
     attach: Res<crate::AttachMode>,
     state: Res<LiveAttachState>,
     hud: Res<LiveHudSnapshot>,
+    scene: Res<crate::live_stream::LiveStreamScene>,
     mut snapshot: ResMut<crate::game_ui::GameUiSnapshot>,
 ) {
     if *attach != crate::AttachMode::Server {
         return;
     }
     let tick = hud.tick.or(state.tick).unwrap_or(0);
-    let era = tick.to_string();
-    snapshot.set_sim_state(tick, 0, 0, era, 1);
+    let population = scene.civilian_ids.len() as u64;
+    let factions = scene.factions.len() as u32;
+    let era = if scene.faction_era > 0 {
+        scene.faction_era.to_string()
+    } else {
+        tick.to_string()
+    };
+    snapshot.set_sim_state(tick, population, factions, era, 1);
     snapshot.live_hud_overlay = Some(hud.format_overlay());
 }
 

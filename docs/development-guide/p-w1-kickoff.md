@@ -83,8 +83,10 @@
 | FR-CIV-BEVY-021 | implemented | GitHub Actions `.github/workflows/civis-3d-live-smoke.yml` (headless `just civis-3d-live-smoke`) |
 | FR-CIV-BEVY-025 | implemented | `live_pick::` ray–AABB unit tests in `just civis-3d-live-smoke` (item 50) |
 | FR-CIV-BEVY-026 | implemented | `CIV_BEVY_BACKEND` native GPU selection + `native_backend` unit tests; README + `wgpu-native-escape-hatches.md` cross-link (item 51) |
+| FR-CIV-BEVY-029 | implemented | `Frame3d::EventFeed` → `live_stream::apply_event_feed_frame` egui toasts; `live_scene` + `live_attach` connection toasts; `bevy_window` logs (item 54) |
 | FR-CIV-BEVY-030 | implemented | `CivilianState` / `FactionState` wire frames → HUD population + faction chips (item 55) |
 | FR-CIV-BEVY-031 | implemented | `pbr-textures` feature + `materials.rs` biome loader; sandbox-only `BiomeMaterialsPlugin` on `civ-standalone` (item 56) |
+| FR-CIV-BEVY-032 | implemented | `just civis-3d-live-smoke` / CI: `event_feed::`, `menus::`, `civ-protocol-3d` `civilian_state` + `event_feed` round-trips (item 57) |
 
 ## First PR slice (recommended)
 

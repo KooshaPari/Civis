@@ -19,10 +19,10 @@ use civ_bevy_ref::{
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_voxel_delta_frame, default_stream_meshes,
-        AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag,
-        LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling,
-        LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
+        apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        default_stream_meshes, format_event_feed_message, AgentLabelConfig, LiveAgentTag,
+        LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes,
+        LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
     minimap_uv_to_chunk_grid, minimap::MinimapRoot, native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
@@ -217,6 +217,8 @@ fn sync_live_hud_stats(
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
+        scene.civilian_ids.len(),
+        scene.factions.len(),
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);
@@ -448,7 +450,17 @@ fn apply_live_frames(
                 assets.as_ref(),
                 building,
             ),
-            Frame3d::CivilianState(_) | Frame3d::FactionState(_) | Frame3d::EventFeed(_) => {}
+            Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
+            Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
+            Frame3d::EventFeed(event_frame) => {
+                for msg in &event_frame.events {
+                    info!(
+                        "event feed (tick {}): {}",
+                        event_frame.tick,
+                        format_event_feed_message(msg),
+                    );
+                }
+            }
         }
     }
 }

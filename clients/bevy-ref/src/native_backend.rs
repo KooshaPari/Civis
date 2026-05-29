@@ -63,7 +63,12 @@ pub fn native_render_plugin() -> RenderPlugin {
 }
 
 fn forced_backend_from_env() -> Option<Backends> {
-    let raw = std::env::var(BACKEND_ENV).ok()?;
+    forced_backend_from_var(std::env::var(BACKEND_ENV).ok())
+}
+
+/// Resolve `CIV_BEVY_BACKEND` from an optional env string (used by [`forced_backend_from_env`] and tests).
+fn forced_backend_from_var(raw: Option<String>) -> Option<Backends> {
+    let raw = raw?;
     match parse_forced_backend_value(&raw) {
         Some(backends) => Some(backends),
         None => {

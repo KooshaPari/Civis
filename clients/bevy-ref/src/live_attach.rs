@@ -48,7 +48,10 @@ impl Plugin for LiveAttachPlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_live_game_ui);
+        app.add_systems(
+            Update,
+            (sync_live_game_ui, sync_live_connection_toasts),
+        );
     }
 }
 
@@ -110,6 +113,26 @@ fn sync_live_selection(
         return;
     }
     hud.selected_live = selection.0;
+}
+
+#[cfg(feature = "egui")]
+fn sync_live_connection_toasts(
+    attach: Res<AttachMode>,
+    bridge: Res<LiveAttachBridge>,
+    mut feed: ResMut<crate::event_feed::EventFeed>,
+    mut last: Local<Option<crate::WsConnectionState>>,
+) {
+    use crate::event_feed::{connection_toast_message, EventKind};
+
+    if *attach != AttachMode::Server {
+        return;
+    }
+    let state = bridge.client.latest_connection_state();
+    if *last == Some(state) {
+        return;
+    }
+    *last = Some(state);
+    feed.push(EventKind::System, connection_toast_message(state));
 }
 
 #[cfg(feature = "egui")]

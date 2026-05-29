@@ -3,16 +3,14 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use civ_bevy_ref::{
-    atmosphere::{
-        animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface,
-    },
+    atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
     resolve_attach_mode_from_env,
-    terrain::{terrain_mesh, WORLD_SIZE},
+    terrain::terrain_mesh,
     AttachMode,
 };
 
@@ -40,6 +38,8 @@ fn main() {
         )
         .add_plugins(GpuFeaturesPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
+        .add_plugins(civ_bevy_ref::skybox::SkyboxPlugin)
+        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
@@ -62,6 +62,9 @@ fn main() {
             (camera_input, update_camera, animate_water, update_lighting),
         );
 
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin);
+
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
     }
@@ -76,6 +79,12 @@ fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
+        // Far plane raised well past the sky dome (radius 4000) and star shell
+        // (1500) so the skybox/stars are not frustum-culled at any zoom.
+        Projection::Perspective(PerspectiveProjection {
+            far: 10_000.0,
+            ..default()
+        }),
         Transform::from_xyz(0.0, 90.0, 150.0).looking_at(Vec3::new(0.0, 12.0, 0.0), Vec3::Y),
     ));
 }
@@ -95,17 +104,7 @@ fn setup_sandbox_terrain(
         })),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
-
-    let water_size = WORLD_SIZE * 1.05;
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(water_size, 0.2, water_size))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgba(0.12, 0.35, 0.62, 0.55),
-            alpha_mode: AlphaMode::Blend,
-            perceptual_roughness: 0.2,
-            ..default()
-        })),
-        Transform::from_xyz(0.0, -0.1, 0.0),
-        WaterSurface,
-    ));
+    // NOTE: the single water body is owned by `atmosphere::setup_atmosphere`
+    // (a `WaterSurface` plane at `WATER_LEVEL`). Spawning another here would
+    // double up the water; intentionally not spawned in this setup.
 }

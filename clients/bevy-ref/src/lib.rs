@@ -20,6 +20,8 @@ pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod diplomacy_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
@@ -50,7 +52,11 @@ pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
+pub mod post_fx;
+#[cfg(feature = "bevy")]
 pub mod sim_bridge;
+#[cfg(feature = "bevy")]
+pub mod skybox;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(feature = "bevy")]

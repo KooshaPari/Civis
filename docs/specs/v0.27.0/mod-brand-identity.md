@@ -1,12 +1,25 @@
 # SW-005: Mod Brand Identity Applied (SW + Modern)
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 5
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 2 — Identity
 **Story Points**: 8
 **Priority**: P1
+**File Scope**:
+  - `packs/warfare-starwars/pack.yaml`
+  - `packs/warfare-modern/pack.yaml`
+  - `packs/warfare-starwars/assets/ui/`
+  - `packs/warfare-starwars/assets/fonts/`
+  - `packs/warfare-modern/assets/ui/`
+  - `packs/warfare-modern/assets/fonts/`
+  - `src/Runtime/UI/Theme/MainMenuReskinner.cs`
+**Depends On**: [SW-006-P1]
+**Requirements**: EPIC-027-FR-010, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-007, EPIC-027-NFR-008, EPIC-027-NFR-015, EPIC-027-NFR-018, EPIC-027-NFR-020, EPIC-027-NFR-021
 
 ---
 
@@ -118,6 +131,24 @@ ThemeEngine (SW-006) can apply them. SW-006 must land in the same sprint.
 - [ ] No vanilla DINO UI visible in either screenshot.
 - [ ] OFL.txt present for every shipped font.
 - [ ] `dotnet test` green.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-010 | ManualAttestation | `docs/proof/judge-receipts/SW-005-brand-sw.md` + `SW-005-brand-modern.md` (SW menu: deep-space bg, gold title, Republic palette; Modern: satellite bg, stencil title, amber palette — no vanilla DINO art visible) | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (Runtime csproj `netstandard2.0`; no direct TMPro compile refs in identity wiring) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | TMP font bundles built with Unity 2021.3.45f2 load without silent failure under BepInEx 5.4.x (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-007 | CodeReview | No Harmony patch targets DINO ECS/UI types in SW-005 scope (grep of `[HarmonyPatch` in identity files) | Implementing → Validated |
+| EPIC-027-NFR-008 | CodeReview | Logo/overlay GameObject named `DINOForge_ModLogo`; no unnamed injected objects (grep `new GameObject` in MainMenuReskinner for the logo path) | Implementing → Validated |
+| EPIC-027-NFR-015 | CodeReview | `DINOForge_ModLogo` Image has `raycastTarget = false`; EventSystem guard precedes any GraphicRaycaster add (Pattern #235) | Implementing → Validated |
+| EPIC-027-NFR-018 | CiOutput | New user-visible strings in SW-005 resolve through locale layer; non-English locale shows translated labels (i18n CI check) | Implementing → Validated |
+| EPIC-027-NFR-020 | ManualAttestation | Full play session judge receipt per mod shows no native medieval 2D art on main menu (cross-references SW-005-brand receipts above) | Implementing → Validated |
+| EPIC-027-NFR-021 | ManualAttestation | Faction emblems (Republic + CIS; Alliance + Enemy) visible in-game per mod; unit portraits present on spawnable units (screenshot per mod) | Implementing → Validated |
+| SW-005 | SchemaValidation | `PackCompiler validate packs/warfare-starwars` and `packs/warfare-modern` exits 0; `ui_theme` block validates against `schemas/ui_theme.schema.json` with 0 errors | Implementing → Validated |
+| SW-005 | ManualAttestation | `OFL.txt` present in every shipped font directory for both packs (code review + directory listing artifact) | Implementing → Validated |
+| SW-005 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-005 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

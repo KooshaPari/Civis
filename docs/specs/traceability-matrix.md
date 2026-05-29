@@ -360,6 +360,34 @@ public class PackLoadingTests
 
 ---
 
+## EPIC-027 NFR Traceability (v0.27.0)
+
+| NFR ID | Category | Owning Stories | Description |
+|--------|----------|----------------|-------------|
+| EPIC-027-NFR-001 | Performance | SW-001, SW-013 | Mods page opens ≤ 500 ms |
+| EPIC-027-NFR-002 | Regression | SW-006, SW-007, SW-013 | No regressions from v0.26.0 |
+| EPIC-027-NFR-003 | Compatibility | SW-003 | Unity 2021.3.45f2 bundle version enforcement |
+| EPIC-027-NFR-004 | Memory | SW-001, SW-004 | No monotonic GameObject/memory growth on open/close |
+| EPIC-027-NFR-005 | Build | SW-002–SW-013 | `netstandard2.0` TFM; no compile-time TMPro/Addressables refs |
+| EPIC-027-NFR-006 | Compatibility | SW-003–SW-012 | BepInEx 5.4.23.5 load without TypeLoadException |
+| EPIC-027-NFR-007 | Architecture | SW-001, SW-005, SW-006 | No Harmony patches on DINO UI types |
+| EPIC-027-NFR-008 | Naming | SW-001, SW-004–SW-007 | All injected GameObjects prefixed `DINOForge_` |
+| EPIC-027-NFR-009 | Security | SW-001 | No unvalidated pack data passed to Process.Start / URL open |
+| EPIC-027-NFR-010 | Security | SW-003, SW-008 | Tampered/wrong-version bundles skipped with warning |
+| EPIC-027-NFR-011 | Security | SW-003, SW-007, SW-008 | PackCompiler rejects `../` or absolute asset paths |
+| EPIC-027-NFR-013 | Stability | SW-004, SW-006–SW-012 | No TypeLoadException in LogOutput.log after clean launch |
+| EPIC-027-NFR-014 | Resilience | SW-004, SW-007, SW-009 | Missing asset bundles degrade gracefully; vanilla fallback + WARNING |
+| EPIC-027-NFR-015 | Input Safety | SW-001, SW-004–SW-008 | `raycastTarget=false` on injected Images; EventSystem guard (Pattern #235) |
+| EPIC-027-NFR-016 | UX | SW-001, SW-006 | Injected UI matches native DINO button hover/layout |
+| EPIC-027-NFR-017 | UX | SW-001 | Escape closes Mods page; keyboard navigation works |
+| EPIC-027-NFR-018 | i18n | SW-001, SW-002, SW-005 | All new strings pass through locale layer |
+| EPIC-027-NFR-019 | Asset Gate | SW-003, SW-008 | `detect_stub_bundles.py` exits 0; visual_asset count == non-stub bundle count |
+| EPIC-027-NFR-020 | Visual | SW-005, SW-007, SW-008 | No vanilla DINO medieval 2D art visible with TC active (judge receipt) |
+| EPIC-027-NFR-021 | Visual | SW-005, SW-008 | Faction emblems + unit portraits visible in-game for both mods |
+| EPIC-027-NFR-022 | Legal | SW-008, SW-012 | Asset licensing manifest complete; all shipped audio/images/3D documented as original or CC0; `LICENSE-audio.md`/`LICENSE-assets.md` present in each pack |
+
+---
+
 ## AgilePlus Story Links
 
 | AgilePlus Story ID | User Story | Test Methods |

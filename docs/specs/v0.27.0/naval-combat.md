@@ -1,12 +1,31 @@
 # SW-010: Naval Combat
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 10
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 4 — Mechanics
 **Story Points**: 13
 **Priority**: P2
+**File Scope**:
+  - `src/Runtime/Naval/NavalUnitComponent.cs`
+  - `src/Runtime/Naval/NavalUnitMapper.cs`
+  - `src/Runtime/Naval/NavalMovementSystem.cs`
+  - `src/Runtime/Naval/NavalTargetingSystem.cs`
+  - `src/Runtime/Naval/NavalSpawnSystem.cs`
+  - `src/Runtime/Naval/WaterProbe.cs`
+  - `src/Runtime/Naval/NavalPlugin.cs`
+  - `src/SDK/Models/NavalProperties.cs`
+  - `src/SDK/Models/UnitDefinition.cs`
+  - `schemas/naval-combat.schema.json`
+  - `packs/warfare-modern/units/naval/`
+  - `packs/warfare-starwars/units/naval/`
+  - `src/Tests/NavalArchetypeTests.cs`
+**Depends On**: [SW-009]
+**Requirements**: EPIC-027-FR-017, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-013
 
 ---
 
@@ -99,6 +118,20 @@ otherwise the default DINO projectile) and the target takes damage per the YAML 
 - [ ] `naval-combat.schema.json` added; `PackCompiler validate` exercises it.
 - [ ] External judge receipt: in-game screenshot of naval unit on water tile.
 - [ ] `dotnet test` green with ≥ 5 new naval archetype tests.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-017 | ManualAttestation | `docs/proof/judge-receipts/SW-010-naval.md` (naval unit builds, traverses water, engages a target in-game — screenshot per mod) | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (`netstandard2.0` TFM check; NavalPlugin does not add compile-time TMPro/Addressables refs) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | Naval unit bundles (if any) built with Unity 2021.3.45f2 load under BepInEx 5.4.x; plugin Awake fires with NavalPlugin registered (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no `TypeLoadException` after clean launch with NavalPlugin active | Implementing → Validated |
+| SW-010 | TestResult | `docs/test-results/SW-010/NavalArchetypeTests.xml` (≥5 tests: terrain-affinity validation, stat block correctness, ground-pathfinding regression N-01) | Implementing → Validated |
+| SW-010 | SchemaValidation | `PackCompiler validate` exercises `naval-combat.schema.json`; malformed naval unit fixture rejected | Implementing → Validated |
+| SW-010 | ManualAttestation | Ground units blocked by deep water (screenshot showing pathfinding boundary; no regression to vanilla ground movement) | Implementing → Validated |
+| SW-010 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-010 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

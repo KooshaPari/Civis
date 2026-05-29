@@ -1,12 +1,23 @@
 # SW-001: Native Mods Page Visible
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 1
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 1 — Foundation
 **Story Points**: 8
 **Priority**: P0 — Sprint blocker
+**File Scope**:
+  - `src/Runtime/UI/NativeMenuInjector.cs`
+  - `src/Runtime/UI/NativeMainMenuModMenu.cs`
+  - `src/Runtime/UI/ContextualModMenuHost.cs`
+  - `src/Runtime/UI/NativeModsPage.cs`
+  - `src/Tests/ModsPageControllerTests.cs`
+**Depends On**: []
+**Requirements**: EPIC-027-FR-001, EPIC-027-FR-002, EPIC-027-FR-003, EPIC-027-FR-004, EPIC-027-FR-020, EPIC-027-NFR-001, EPIC-027-NFR-004, EPIC-027-NFR-007, EPIC-027-NFR-008, EPIC-027-NFR-009, EPIC-027-NFR-015, EPIC-027-NFR-016, EPIC-027-NFR-017, EPIC-027-NFR-018
 
 ---
 
@@ -104,6 +115,28 @@ reports both Active,
 - [ ] `dotnet test` green — unit tests for `ModsPageController` construction + pack entry population.
 - [ ] In-game screenshot with Mods page open deposited in `docs/proof/`
   + external judge receipt in `docs/proof/judge-receipts/`.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-001 | ManualAttestation | `docs/proof/judge-receipts/SW-001-mods-page.md` (clicking "Mods" opens `DINOForge_ModsPage`; screenshot shows full-region page, not blank overlay) | Implementing → Validated |
+| EPIC-027-FR-002 | ManualAttestation | Mods page lists both packs with name+version+status; zero-pack "No additional packs loaded" message visible (screenshot per scenario) | Implementing → Validated |
+| EPIC-027-FR-003 | ManualAttestation | After close, all native buttons are clickable; re-scan while open produces no duplicate rows (log confirmation + screenshot) | Implementing → Validated |
+| EPIC-027-FR-004 | ManualAttestation | F10 toggles Mods surface; F9 toggles Debug overlay; verified via Win32 background-thread key path (in-game screenshot) | Implementing → Validated |
+| EPIC-027-FR-020 | ManualAttestation | Toggling a pack updates its active badge; `dinoforge status` reflects the toggle after relaunch (log + status output) | Implementing → Validated |
+| EPIC-027-NFR-001 | ManualAttestation | Timed Mods page open ≤ 500 ms on 60 FPS host (F9 overlay timestamp or log timing) | Implementing → Validated |
+| EPIC-027-NFR-004 | TestResult | Open/close cycles show no monotonic GameObject/memory growth in snapshot (docs/test-results/SW-001/MemorySnapshot.txt) | Implementing → Validated |
+| EPIC-027-NFR-007 | CodeReview | No `[HarmonyPatch` attribute targets DINO UI type in SW-001 scope (grep in NativeMenuInjector + NativeModsPage) | Implementing → Validated |
+| EPIC-027-NFR-008 | CodeReview | Page GameObject named `DINOForge_ModsPage`; no unnamed injected objects (grep `new GameObject` in NativeModsPage.BuildUI) | Implementing → Validated |
+| EPIC-027-NFR-009 | CodeReview | No `Process.Start` / URL-open path consumes unvalidated pack data (grep in NativeModsPage + ContextualModMenuHost) | Implementing → Validated |
+| EPIC-027-NFR-015 | CodeReview | Mods button injection has `raycastTarget = false` on any overlay Image; EventSystem guard present (Pattern #235) | Implementing → Validated |
+| EPIC-027-NFR-016 | ManualAttestation | Mods page hover/layout matches adjacent native buttons (verified against live `dinoforge ui-tree` dump) | Implementing → Validated |
+| EPIC-027-NFR-017 | ManualAttestation | Escape closes Mods page; keyboard navigation moves focus across entries (in-game confirmation) | Implementing → Validated |
+| EPIC-027-NFR-018 | CiOutput | New UI strings resolve through locale layer; non-English locale shows translated labels (i18n CI check) | Implementing → Validated |
+| SW-001 | TestResult | `docs/test-results/SW-001/ModsPageControllerTests.xml` (page construction + pack-entry population + no-blank-state path) | Implementing → Validated |
+| SW-001 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-001 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

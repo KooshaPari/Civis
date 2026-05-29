@@ -1,12 +1,25 @@
 # SW-012: Audio Takeover (Music + SFX per Mod)
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 12
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 4 — Mechanics
 **Story Points**: 8
 **Priority**: P2
+**File Scope**:
+  - `src/Runtime/Audio/AudioTakeoverSystem.cs`
+  - `src/Runtime/Audio/CrossfadeController.cs`
+  - `src/SDK/Models/UiThemeDefinition.cs`
+  - `schemas/ui_theme.schema.json`
+  - `packs/warfare-starwars/assets/audio/`
+  - `packs/warfare-modern/assets/audio/`
+  - `src/Tests/AudioTakeoverTests.cs`
+**Depends On**: [SW-006]
+**Requirements**: EPIC-027-FR-019, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-013, EPIC-027-NFR-022
 
 ---
 
@@ -116,6 +129,19 @@ Audio replacement is split into two tiers:
 - [ ] Schema additions for `audio` block validated by `PackCompiler`.
 - [ ] All shipped audio is original / CC0 (license declaration in pack README).
 - [ ] `dotnet test` green.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-019 | ManualAttestation | `docs/proof/judge-receipts/SW-012-audio-takeover.md` (SW menu music plays; Modern menu music plays; crossfade observed — screenshot + audio description per mod) | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (netstandard2.0 TFM check; AudioTakeoverSystem does not add compile-time TMPro/Addressables refs) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | Audio bundles built with Unity 2021.3.45f2 load under BepInEx 5.4.x; plugin Awake fires with AudioTakeoverSystem registered (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no TypeLoadException after clean launch with AudioTakeoverSystem active | Implementing → Validated |
+| EPIC-027-NFR-022 | LintResult | `packs/warfare-starwars/LICENSE-audio.md` and `packs/warfare-modern/LICENSE-audio.md` present; all entries are original or CC0 (code review + PackCompiler manifest check) | Validated → Shipped |
+| SW-012 | TestResult | `docs/test-results/SW-012/AudioTakeoverTests.xml` (missing-bundle graceful degradation test; re-application after scene reload) | Implementing → Validated |
+| SW-012 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-012 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

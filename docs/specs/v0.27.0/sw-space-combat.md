@@ -1,12 +1,22 @@
 # SW-013: SW Space Combat (R&D / Stretch)
 
 **Status**: Proposed (Stretch)
+**AgilePlus WP State**: planned
+**Sequence**: 13
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 5 — Stretch
 **Story Points**: 13
 **Priority**: P3 — Stretch; not a v0.27.0 release blocker
+**File Scope**:
+  - `docs/specs/v0.28.0/sw-space-combat-design.md` (R&D deliverable)
+  - `src/Runtime/SpaceCombat/SpaceCombatHudPanel.cs` (if prototype approved)
+  - `packs/warfare-starwars/pack.yaml` (optional `space_combat:` block)
+  - `src/Tests/SpaceCombatTests.cs` (if prototype implemented)
+**Depends On**: [SW-006]
+**Requirements**: EPIC-027-NFR-001, EPIC-027-NFR-002, EPIC-027-NFR-005
 
 ---
 
@@ -82,6 +92,17 @@ a reinforcement bonus or penalty.
 - [ ] If prototype implemented: HUD overlay appears and resolves without crash (screenshot proof).
 - [ ] Feature flag disables space combat cleanly.
 - [ ] `dotnet test` green.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-NFR-001 | ManualAttestation | `docs/specs/v0.28.0/sw-space-combat-design.md` exists with recommendation, risk assessment, revised estimate, and relevant ECS component list | Implementing → Validated |
+| EPIC-027-NFR-002 | CiOutput | `dotnet test` green; no regressions from v0.26.0 (R&D spike adds 0 production code — CI gate is pass-through) | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (netstandard2.0 TFM check; prototype panel, if implemented, does not add compile-time TMPro refs) | Implementing → Validated |
+| SW-013 | ManualAttestation | If prototype implemented: `docs/proof/judge-receipts/SW-013-space-combat-prototype.md` (HUD overlay appears; resolves after 30s; feature flag disables cleanly — screenshot) | Implementing → Validated |
+| SW-013 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-013 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

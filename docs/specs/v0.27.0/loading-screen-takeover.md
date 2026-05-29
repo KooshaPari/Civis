@@ -1,12 +1,29 @@
 # SW-004: Loading Screen Takeover
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 4
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 2 — Identity
 **Story Points**: 13
 **Priority**: P1
+**File Scope**:
+  - `src/Runtime/UI/LoadingScreenController.cs`
+  - `src/Runtime/UI/ModLoadingOverlay.cs`
+  - `src/Runtime/Loading/ThemeScanner.cs`
+  - `src/SDK/Models/LoadingScreenConfig.cs`
+  - `src/SDK/Models/PackManifest.cs`
+  - `schemas/pack-manifest.schema.json`
+  - `src/Runtime/ModPlatform.cs`
+  - `src/Runtime/Plugin.cs`
+  - `BepInEx/plugins/dinoforge-ui-assets/loading/`
+  - `src/Tests/Loading/ThemeScannerTests.cs`
+  - `src/Tests/Loading/LoadingScreenConfigValidationTests.cs`
+**Depends On**: [SW-006-P0]
+**Requirements**: EPIC-027-FR-009, EPIC-027-NFR-004, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-008, EPIC-027-NFR-013, EPIC-027-NFR-014, EPIC-027-NFR-015
 
 ---
 
@@ -115,6 +132,24 @@ in the scene hierarchy.
 - [ ] Schema rejects `loading_screen:` on content packs.
 - [ ] Canvas destroyed after fade-out (no memory leak).
 - [ ] `dotnet test` green — `ThemeScanner` + `LoadingScreenConfig` validation unit tests.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-009 | ManualAttestation | `docs/proof/judge-receipts/SW-004-loading-screen.md` (DINOForge default screen during init; SW/Modern themed screens per pack) | Implementing → Validated |
+| EPIC-027-NFR-004 | TestResult | Memory snapshot before/after open/close cycles shows no monotonic growth; recorded in `docs/test-results/SW-004/MemorySnapshot.txt` | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (Runtime csproj TFM is `netstandard2.0`; no direct TMP/Addressables compile refs) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | Bundles built with Unity 2021.3.45f2 load without silent failure under BepInEx 5.4.x (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-008 | CodeReview | All injected GameObjects carry `DINOForge_` prefix (grep of `new GameObject` in LoadingScreenController) | Implementing → Validated |
+| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no `TypeLoadException` after clean launch | Implementing → Validated |
+| EPIC-027-NFR-014 | TestResult | `docs/test-results/SW-004/ThemeScannerTests.xml` — missing-asset test: default background renders, warning logged, no crash | Implementing → Validated |
+| EPIC-027-NFR-015 | CodeReview | `LoadingScreenController` canvas has `raycastTarget = false` on overlaid images; `EventSystem.current != null` guard before `GraphicRaycaster.AddComponent` | Implementing → Validated |
+| SW-004 | SchemaValidation | `PackCompiler validate` rejects `loading_screen:` on `type: content` pack fixture | Implementing → Validated |
+| SW-004 | TestResult | `docs/test-results/SW-004/LoadingScreenConfigValidationTests.xml` | Implementing → Validated |
+| SW-004 | ManualAttestation | Canvas destroyed after fade-out (no `DINOForge_LoadingScreen` in hierarchy after MainMenu loads — log/screenshot confirmation) | Implementing → Validated |
+| SW-004 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-004 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

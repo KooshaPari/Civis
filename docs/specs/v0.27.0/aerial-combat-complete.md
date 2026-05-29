@@ -1,12 +1,24 @@
 # SW-011: Aerial Combat Complete
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 11
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 4 — Mechanics
 **Story Points**: 13
 **Priority**: P2
+**File Scope**:
+  - `src/Runtime/Aviation/AerialMovementSystem.cs`
+  - `src/Runtime/Aviation/AerialTargetingSystem.cs`
+  - `src/SDK/Models/UnitDefinition.cs`
+  - `packs/warfare-starwars/units/`
+  - `packs/warfare-modern/units/`
+  - `src/Tests/AerialCombatTests.cs`
+**Depends On**: [SW-009]
+**Requirements**: EPIC-027-FR-018, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-013
 
 ---
 
@@ -99,6 +111,19 @@ of an enemy aerial unit,
 - [ ] Aerial pathfinding regression test: ground units unaffected.
 - [ ] External judge receipt: in-game screenshot showing aerial unit mid-flight.
 - [ ] `dotnet test` green with ≥ 5 new aerial combat tests.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-018 | ManualAttestation | `docs/proof/judge-receipts/SW-011-aerial-combat.md` (aerial unit mid-flight; air+ground targets engaged) | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (netstandard2.0 TFM check) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | Plugin loads under BepInEx 5.4.x; aerial units functional (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no TypeLoadException after clean launch | Implementing → Validated |
+| SW-011 | TestResult | `docs/test-results/SW-011/AerialCombatTests.xml` (≥5 tests incl. ground-pathfinding regression N-01) | Implementing → Validated |
+| SW-011 | ManualAttestation | Anti-air unit preferentially targets aerial units (log + screenshot confirmation) | Implementing → Validated |
+| SW-011 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-011 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

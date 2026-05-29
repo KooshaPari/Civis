@@ -91,6 +91,9 @@ pub struct BuildingDiffEntry {
     pub id: u64,
     /// Building classification for client-side styling.
     pub kind: BuildingKind3d,
+    /// Building tier or upgrade level. Defaults to `0` for legacy payloads.
+    #[serde(default)]
+    pub tier: u8,
     /// World-space anchor for the building marker mesh.
     pub position: WorldXZ,
 }
@@ -110,6 +113,238 @@ pub struct BuildingDiffFrame {
     /// Full `BuildingGraph` snapshot for facade/provenance detail (optional).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub graph: Option<BuildingGraph>,
+}
+
+/// Snapshot of civilian needs for client-side overlays.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct CivilianNeeds3d {
+    /// Food satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub food: f32,
+    /// Shelter satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub shelter: f32,
+    /// Safety satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub safety: f32,
+    /// Social satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub social: f32,
+    /// Rest satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub rest: f32,
+}
+
+/// Summary of a civilian genome for deterministic visual tagging.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct GenomeSummary3d {
+    /// Human-readable summary string.
+    #[serde(default)]
+    pub summary: String,
+    /// Optional short lineage or haplogroup label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub lineage: String,
+    /// Optional compact trait tags.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub traits: Vec<String>,
+}
+
+/// A single civilian state payload for the 3D wire protocol.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CivilianStateEntry {
+    /// Stable civilian entity id from the simulation ECS.
+    pub id: u64,
+    /// Latest needs snapshot.
+    #[serde(default)]
+    pub needs: CivilianNeeds3d,
+    /// Occupation label for UI filtering and badges.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub profession: String,
+    /// Genome summary payload. Defaults to an empty summary for legacy JSON.
+    #[serde(default, rename = "genome-summary")]
+    pub genome_summary: GenomeSummary3d,
+    /// Species label used by the deepened sim.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub species: String,
+    /// Health snapshot. Defaults to `1.0` for legacy JSON.
+    #[serde(default = "default_civilian_health")]
+    pub health: f32,
+}
+
+fn default_civilian_health() -> f32 {
+    1.0
+}
+
+/// Batch of civilian state updates for one server tick.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CivilianStateFrame {
+    /// Server tick at which the state was produced.
+    pub tick: u64,
+    /// One entry per civilian whose state changed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub civilians: Vec<CivilianStateEntry>,
+}
+
+/// Treasury snapshot for a faction in the 3D wire protocol.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct FactionTreasury3d {
+    /// Treasury balance in simulation currency units.
+    #[serde(default)]
+    pub amount: f64,
+    /// Optional human-readable currency label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency: String,
+}
+
+/// Government label carried on faction snapshots.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum Government3d {
+    /// Unknown or legacy payload.
+    #[default]
+    Unknown,
+    /// Monarchy or dynastic rule.
+    Monarchy,
+    /// Republic or elected civic rule.
+    Republic,
+    /// Theocracy or priestly rule.
+    Theocracy,
+    /// Military administration.
+    Junta,
+    /// Council or committee rule.
+    Council,
+    /// Corporate or merchant rule.
+    Corporate,
+}
+
+/// A single faction state payload for the 3D wire protocol.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FactionStateEntry {
+    /// Stable faction id from the simulation ECS.
+    pub id: u32,
+    /// Current era index.
+    #[serde(default)]
+    pub era: u16,
+    /// Government label.
+    #[serde(default)]
+    pub government: Government3d,
+    /// Treasury snapshot.
+    #[serde(default)]
+    pub treasury: FactionTreasury3d,
+}
+
+/// Batch of faction state updates for one server tick.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct FactionStateFrame {
+    /// Server tick at which the state was produced.
+    pub tick: u64,
+    /// One entry per faction whose state changed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub factions: Vec<FactionStateEntry>,
+}
+
+/// A birth event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct BirthEvent3d {
+    /// Stable entity id for the newborn.
+    #[serde(default)]
+    pub entity_id: u64,
+    /// Owning faction id, if known.
+    #[serde(default)]
+    pub faction_id: u32,
+    /// Species label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub species: String,
+    /// Optional spawn location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+}
+
+/// A death event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct DeathEvent3d {
+    /// Stable entity id for the deceased.
+    #[serde(default)]
+    pub entity_id: u64,
+    /// Owning faction id, if known.
+    #[serde(default)]
+    pub faction_id: u32,
+    /// Optional death location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+    /// Optional cause or short cause label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cause: String,
+}
+
+/// A technology event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TechEvent3d {
+    /// Owning faction id, if known.
+    #[serde(default)]
+    pub faction_id: u32,
+    /// Era reached or unlocked.
+    #[serde(default)]
+    pub era: u16,
+    /// Technology label or identifier.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tech: String,
+}
+
+/// A battle event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct BattleEvent3d {
+    /// Attacking faction id, if known.
+    #[serde(default)]
+    pub attacker_faction: u32,
+    /// Defending faction id, if known.
+    #[serde(default)]
+    pub defender_faction: u32,
+    /// Short outcome summary.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub outcome: String,
+    /// Optional battle location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+}
+
+/// A disaster event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct DisasterEvent3d {
+    /// Disaster kind or label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub kind: String,
+    /// Optional disaster severity.
+    #[serde(default)]
+    pub severity: f32,
+    /// Optional disaster location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+}
+
+/// One feed event emitted by the deepened sim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum EventFeedMessage3d {
+    /// Birth message.
+    Birth(BirthEvent3d),
+    /// Death message.
+    Death(DeathEvent3d),
+    /// Technology message.
+    Tech(TechEvent3d),
+    /// Battle message.
+    Battle(BattleEvent3d),
+    /// Disaster message.
+    Disaster(DisasterEvent3d),
+}
+
+/// Batch of event-feed messages for one server tick.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct EventFeedFrame {
+    /// Server tick at which the events were emitted.
+    pub tick: u64,
+    /// One feed message per simulation event.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<EventFeedMessage3d>,
 }
 
 /// One delta event for a single chunk. The renderer pairs `event` with the
@@ -188,6 +423,12 @@ pub enum Frame3d {
     BuildingDiff(BuildingDiffFrame),
     /// Agent appearance batch for one tick.
     AgentAppearance(AgentAppearanceFrame),
+    /// Civilian state batch for one tick.
+    CivilianState(CivilianStateFrame),
+    /// Faction state batch for one tick.
+    FactionState(FactionStateFrame),
+    /// Event-feed batch for one tick.
+    EventFeed(EventFeedFrame),
 }
 
 impl Frame3d {
@@ -198,6 +439,9 @@ impl Frame3d {
             Self::VoxelDelta(f) => f.tick,
             Self::BuildingDiff(f) => f.tick,
             Self::AgentAppearance(f) => f.tick,
+            Self::CivilianState(f) => f.tick,
+            Self::FactionState(f) => f.tick,
+            Self::EventFeed(f) => f.tick,
         }
     }
 }
@@ -234,6 +478,9 @@ enum Frame3dKind {
     VoxelDelta = 0,
     BuildingDiff = 1,
     AgentAppearance = 2,
+    CivilianState = 3,
+    FactionState = 4,
+    EventFeed = 5,
 }
 
 impl Frame3dKind {
@@ -242,6 +489,9 @@ impl Frame3dKind {
             Frame3d::VoxelDelta(_) => Self::VoxelDelta,
             Frame3d::BuildingDiff(_) => Self::BuildingDiff,
             Frame3d::AgentAppearance(_) => Self::AgentAppearance,
+            Frame3d::CivilianState(_) => Self::CivilianState,
+            Frame3d::FactionState(_) => Self::FactionState,
+            Frame3d::EventFeed(_) => Self::EventFeed,
         }
     }
 }
@@ -351,6 +601,25 @@ mod tests {
         assert_eq!(back.provenance, BuildingProvenance::Freehand);
     }
 
+    /// FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
+    #[test]
+    fn building_diff_entry_tier_roundtrip_and_backward_compat() {
+        let entry = BuildingDiffEntry {
+            id: 99,
+            kind: BuildingKind3d::Market,
+            tier: 3,
+            position: WorldXZ { x: 1.5, z: 2.5 },
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: BuildingDiffEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":99,"kind":"Market","position":{"x":1.5,"z":2.5}}"#;
+        let legacy: BuildingDiffEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.tier, 0);
+    }
+
     /// FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
     #[test]
     fn building_graph_snapshot_roundtrips() {
@@ -386,6 +655,7 @@ mod tests {
             buildings: vec![BuildingDiffEntry {
                 id: 42,
                 kind: BuildingKind3d::House,
+                tier: 1,
                 position: WorldXZ { x: 12.5, z: 48.0 },
             }],
             graph: None,
@@ -410,6 +680,106 @@ mod tests {
         assert_eq!(agent_world_translation(&agent_back, 0.8), (3.0, 0.8, 9.0));
     }
 
+    /// FR-CIV-PROTO3D-011 — civilian state entries round-trip and legacy payloads get defaults.
+    #[test]
+    fn civilian_state_entry_roundtrip_and_backward_compat() {
+        let entry = CivilianStateEntry {
+            id: 17,
+            needs: CivilianNeeds3d {
+                food: 0.8,
+                shelter: 0.6,
+                safety: 0.7,
+                social: 0.5,
+                rest: 0.9,
+            },
+            profession: "farmer".to_string(),
+            genome_summary: GenomeSummary3d {
+                summary: "dominant traits".to_string(),
+                lineage: "line-a".to_string(),
+                traits: vec!["hardy".to_string(), "curious".to_string()],
+            },
+            species: "human".to_string(),
+            health: 0.95,
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: CivilianStateEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":17}"#;
+        let legacy: CivilianStateEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.needs, CivilianNeeds3d::default());
+        assert_eq!(legacy.profession, "");
+        assert_eq!(legacy.genome_summary, GenomeSummary3d::default());
+        assert_eq!(legacy.species, "");
+        assert_eq!(legacy.health, 1.0);
+    }
+
+    /// FR-CIV-PROTO3D-012 — faction state entries round-trip and legacy payloads get defaults.
+    #[test]
+    fn faction_state_entry_roundtrip_and_backward_compat() {
+        let entry = FactionStateEntry {
+            id: 4,
+            era: 9,
+            government: Government3d::Republic,
+            treasury: FactionTreasury3d {
+                amount: 1234.5,
+                currency: "civ".to_string(),
+            },
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: FactionStateEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":4}"#;
+        let legacy: FactionStateEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.era, 0);
+        assert_eq!(legacy.government, Government3d::Unknown);
+        assert_eq!(legacy.treasury, FactionTreasury3d::default());
+    }
+
+    /// FR-CIV-PROTO3D-013 — event feed messages round-trip as a tagged enum.
+    #[test]
+    fn event_feed_roundtrip() {
+        let frame = EventFeedFrame {
+            tick: 27,
+            events: vec![
+                EventFeedMessage3d::Birth(BirthEvent3d {
+                    entity_id: 1,
+                    faction_id: 2,
+                    species: "human".to_string(),
+                    position: Some(WorldXZ { x: 10.0, z: 12.0 }),
+                }),
+                EventFeedMessage3d::Death(DeathEvent3d {
+                    entity_id: 3,
+                    faction_id: 4,
+                    position: Some(WorldXZ { x: 8.0, z: 9.0 }),
+                    cause: "battle".to_string(),
+                }),
+                EventFeedMessage3d::Tech(TechEvent3d {
+                    faction_id: 5,
+                    era: 6,
+                    tech: "agriculture".to_string(),
+                }),
+                EventFeedMessage3d::Battle(BattleEvent3d {
+                    attacker_faction: 7,
+                    defender_faction: 8,
+                    outcome: "attacker_won".to_string(),
+                    position: Some(WorldXZ { x: 1.0, z: 2.0 }),
+                }),
+                EventFeedMessage3d::Disaster(DisasterEvent3d {
+                    kind: "flood".to_string(),
+                    severity: 0.75,
+                    position: Some(WorldXZ { x: 3.0, z: 4.0 }),
+                }),
+            ],
+        };
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let back: EventFeedFrame = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, frame);
+    }
+
     /// FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
     #[test]
     fn frame3d_tick_extraction() {
@@ -418,6 +788,12 @@ mod tests {
             deltas: Vec::new(),
         });
         assert_eq!(f.tick(), 17);
+
+        let faction = Frame3d::FactionState(FactionStateFrame {
+            tick: 21,
+            factions: Vec::new(),
+        });
+        assert_eq!(faction.tick(), 21);
     }
 
     /// FR-CIV-PROTO3D-004 — BuildingDiff round-trips through the binary envelope.
@@ -447,6 +823,21 @@ mod tests {
         let from_json = encode_frame3d_binary_from_json(&frame, &json).expect("from json");
         let full = encode_frame3d_binary(&frame).expect("full");
         assert_eq!(from_json, full);
+
+        let event_frame = Frame3d::EventFeed(EventFeedFrame {
+            tick: 8,
+            events: vec![EventFeedMessage3d::Tech(TechEvent3d {
+                faction_id: 1,
+                era: 2,
+                tech: "printing".to_string(),
+            })],
+        });
+        let event_bytes = encode_frame3d_binary(&event_frame).expect("full event");
+        assert_eq!(event_bytes[4], Frame3dKind::EventFeed as u8);
+        assert_eq!(
+            decode_frame3d_binary(&event_bytes).expect("decode event"),
+            event_frame
+        );
     }
 
     /// FR-CIV-PROTO3D-007 — agent appearance accepts optional scale with default.

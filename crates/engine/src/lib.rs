@@ -42,7 +42,7 @@ pub use civ_mod_host::{
     ModGuestStateSave, ModHost, ModLoadedRecord, ModManifest, ModRegistry, ModType,
     ModUnloadedRecord,
 };
-pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
+pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,

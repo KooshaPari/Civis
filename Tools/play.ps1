@@ -5,7 +5,8 @@
 .DESCRIPTION
     Production-grade launcher for `just play`. Kills any existing
     civ-standalone process, builds the release binary, launches it
-    detached, and tails the log to stdout.
+    detached (stderr -> .process-compose/logs/civ-standalone.log),
+    prints PID + "Game ready", then optionally tails the log.
 
 .PARAMETER Profile
     Cargo profile: 'release' (default) or 'debug'.
@@ -13,12 +14,16 @@
 .PARAMETER LogLevel
     RUST_LOG value. Default: 'info'.
 
+.PARAMETER Backtrace
+    RUST_BACKTRACE value: '1' (default) or 'full'.
+
 .PARAMETER NoTail
     If set, returns immediately after launch without tailing.
 
 .EXAMPLE
     pwsh Tools/play.ps1
     pwsh Tools/play.ps1 -Profile debug -LogLevel 'info,civ_bevy_ref=debug'
+    pwsh Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
 #>
 [CmdletBinding()]
 param(
@@ -27,18 +32,22 @@ param(
 
     [string]$LogLevel = 'info',
 
+    [ValidateSet('1', 'full')]
+    [string]$Backtrace = '1',
+
     [switch]$NoTail
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$RepoRoot = Split-Path -Parent $PSScriptRoot
-$LogDir = Join-Path $RepoRoot '.process-compose/logs'
-$PidDir = Join-Path $RepoRoot '.process-compose/pids'
-$LogFile = Join-Path $LogDir 'civ-standalone.log'
-$ErrFile = Join-Path $LogDir 'civ-standalone.err.log'
-$PidFile = Join-Path $PidDir 'civ-standalone.pid'
+# Resolve repo root robustly — handles paths with spaces on any drive.
+$RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$LogDir   = [System.IO.Path]::Combine($RepoRoot, '.process-compose', 'logs')
+$PidDir   = [System.IO.Path]::Combine($RepoRoot, '.process-compose', 'pids')
+$LogFile  = [System.IO.Path]::Combine($LogDir, 'civ-standalone.log')
+$ErrFile  = [System.IO.Path]::Combine($LogDir, 'civ-standalone.err.log')
+$PidFile  = [System.IO.Path]::Combine($PidDir, 'civ-standalone.pid')
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
@@ -57,15 +66,18 @@ function Write-Err([string]$Message) {
 
 # --- 1. Kill stale civ-standalone processes ---
 Write-Step "Killing any stale civ-standalone processes..."
-$stale = Get-Process -Name 'civ-standalone' -ErrorAction SilentlyContinue
-if ($stale) {
-    $stale | ForEach-Object {
+# -ErrorAction SilentlyContinue: Get-Process emits a non-terminating error when no match;
+# suppress it so "process not found" is silent and non-erroring.
+$stale = @(Get-Process -Name 'civ-standalone' -ErrorAction SilentlyContinue)
+if ($stale.Count -gt 0) {
+    foreach ($p in $stale) {
         try {
-            Stop-Process -Id $_.Id -Force -ErrorAction Stop
-            Write-Ok "  killed pid $($_.Id)"
+            Stop-Process -Id $p.Id -Force -ErrorAction Stop
+            Write-Ok "  killed pid $($p.Id)"
         }
         catch {
-            Write-Err "  failed to kill pid $($_.Id): $_"
+            # Process may have exited between enumeration and kill — not fatal.
+            Write-Ok "  pid $($p.Id) already gone"
         }
     }
     Start-Sleep -Milliseconds 500
@@ -73,22 +85,23 @@ if ($stale) {
     Write-Ok "  none running"
 }
 
-if (Test-Path $PidFile) {
-    $oldPid = Get-Content $PidFile -ErrorAction SilentlyContinue
-    if ($oldPid) {
-        $oldProc = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
-        if ($oldProc) {
-            Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
-            Write-Ok "  killed tracked pid $oldPid"
+# Clean up any PID-file-tracked process from a previous session.
+if (Test-Path -LiteralPath $PidFile) {
+    $rawPid = ((Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue) -join '').Trim()
+    if ($rawPid -match '^\d+$') {
+        $trackedProc = Get-Process -Id ([int]$rawPid) -ErrorAction SilentlyContinue
+        if ($trackedProc) {
+            Stop-Process -Id ([int]$rawPid) -Force -ErrorAction SilentlyContinue
+            Write-Ok "  killed tracked pid $rawPid"
         }
     }
-    Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
 
 # --- 2. Build ---
-$profileFlag = if ($Profile -eq 'release') { '--release' } else { '' }
-$targetDir = Join-Path $RepoRoot "target/$Profile"
-$exePath = Join-Path $targetDir 'civ-standalone.exe'
+# Use [System.IO.Path]::Combine so paths with spaces are handled correctly on all drives.
+$targetDir = [System.IO.Path]::Combine($RepoRoot, 'target', $Profile)
+$exePath   = [System.IO.Path]::Combine($targetDir, 'civ-standalone.exe')
 
 Write-Step "Building civ-standalone ($Profile)..."
 Push-Location $RepoRoot
@@ -111,20 +124,17 @@ finally {
     Pop-Location
 }
 
-if (-not (Test-Path $exePath)) {
+if (-not (Test-Path -LiteralPath $exePath)) {
     Write-Err "Expected binary not found: $exePath"
     exit 1
 }
 Write-Ok "Built: $exePath"
 
 # --- 3. Launch detached, redirect logs ---
-Write-Step "Launching civ-standalone (RUST_LOG=$LogLevel)..."
+Write-Step "Launching civ-standalone (RUST_LOG=$LogLevel, RUST_BACKTRACE=$Backtrace)..."
 
-if (Test-Path $LogFile) { Clear-Content $LogFile }
-if (Test-Path $ErrFile) { Clear-Content $ErrFile }
-
-$env:RUST_LOG = $LogLevel
-$env:RUST_BACKTRACE = '1'
+if (Test-Path -LiteralPath $LogFile) { Clear-Content -LiteralPath $LogFile }
+if (Test-Path -LiteralPath $ErrFile) { Clear-Content -LiteralPath $ErrFile }
 
 $startInfo = New-Object System.Diagnostics.ProcessStartInfo
 $startInfo.FileName = $exePath
@@ -134,7 +144,7 @@ $startInfo.RedirectStandardOutput = $true
 $startInfo.RedirectStandardError = $true
 $startInfo.CreateNoWindow = $false
 $startInfo.EnvironmentVariables['RUST_LOG'] = $LogLevel
-$startInfo.EnvironmentVariables['RUST_BACKTRACE'] = '1'
+$startInfo.EnvironmentVariables['RUST_BACKTRACE'] = $Backtrace
 
 $proc = [System.Diagnostics.Process]::new()
 $proc.StartInfo = $startInfo
@@ -142,8 +152,8 @@ $proc.EnableRaisingEvents = $true
 
 # Async stream copy so the buffers don't deadlock.
 $outAction = {
-    if ($EventArgs.Data -ne $null) {
-        Add-Content -Path $Event.MessageData -Value $EventArgs.Data
+    if ($null -ne $EventArgs.Data) {
+        Add-Content -LiteralPath $Event.MessageData -Value $EventArgs.Data
     }
 }
 Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived `
@@ -155,8 +165,9 @@ Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived `
 $proc.BeginOutputReadLine()
 $proc.BeginErrorReadLine()
 
-Set-Content -Path $PidFile -Value $proc.Id
+Set-Content -LiteralPath $PidFile -Value $proc.Id
 Write-Ok "Launched pid $($proc.Id) -> $LogFile"
+Write-Host "[play] Game ready (pid $($proc.Id))." -ForegroundColor Green
 
 if ($NoTail) {
     exit 0
@@ -166,11 +177,16 @@ if ($NoTail) {
 Write-Step "Tailing log (Ctrl+C to detach; game keeps running)..."
 Write-Host ""
 
-$tailJob = Start-Job -ArgumentList $LogFile, $ErrFile -ScriptBlock {
-    param($Out, $Err)
-    # Wait for files to exist
-    while (-not (Test-Path $Out)) { Start-Sleep -Milliseconds 100 }
-    Get-Content -Path $Out, $Err -Wait -Tail 0
+$tailJob = Start-Job -ArgumentList $LogFile -ScriptBlock {
+    param($Out)
+    # Wait up to 10 s for the log file to appear.
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((-not (Test-Path -LiteralPath $Out)) -and ((Get-Date) -lt $deadline)) {
+        Start-Sleep -Milliseconds 100
+    }
+    if (Test-Path -LiteralPath $Out) {
+        Get-Content -LiteralPath $Out -Wait -Tail 0
+    }
 }
 
 try {
@@ -178,7 +194,7 @@ try {
         Receive-Job -Job $tailJob | ForEach-Object { Write-Host $_ }
         Start-Sleep -Milliseconds 200
     }
-    # Drain final output
+    # Drain final output.
     Receive-Job -Job $tailJob | ForEach-Object { Write-Host $_ }
 
     Write-Host ""
@@ -190,7 +206,7 @@ try {
     exit $proc.ExitCode
 }
 finally {
-    Stop-Job -Job $tailJob -ErrorAction SilentlyContinue
+    Stop-Job  -Job $tailJob -ErrorAction SilentlyContinue
     Remove-Job -Job $tailJob -Force -ErrorAction SilentlyContinue
     Get-EventSubscriber | Where-Object { $_.SourceObject -eq $proc } |
         Unregister-Event -ErrorAction SilentlyContinue

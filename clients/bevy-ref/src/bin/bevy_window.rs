@@ -16,6 +16,7 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
+    live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_voxel_delta_frame, default_stream_meshes,
@@ -23,7 +24,7 @@ use civ_bevy_ref::{
         LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
-    minimap_uv_to_chunk_grid, native_backend::native_render_plugin,
+    minimap_uv_to_chunk_grid, minimap::MinimapRoot, native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     ws_client::{WsClient, WsClientConfig},
@@ -158,6 +159,7 @@ fn main() {
                 .set(native_render_plugin()),
             WireframePlugin::default(),
             GpuFeaturesPlugin,
+            LivePickPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -326,6 +328,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             BackgroundColor(Color::srgba(0.03, 0.06, 0.11, 0.88)),
             BorderColor::all(Color::srgba(0.35, 0.42, 0.52, 0.65)),
             MinimapPanel,
+            MinimapRoot,
             Interaction::default(),
             RelativeCursorPosition::default(),
         ))
@@ -445,6 +448,7 @@ fn apply_live_frames(
                 assets.as_ref(),
                 building,
             ),
+            Frame3d::CivilianState(_) | Frame3d::FactionState(_) | Frame3d::EventFeed(_) => {}
         }
     }
 }
@@ -535,6 +539,7 @@ fn update_orbit_camera_transform(
 
 fn update_hud(
     time: Res<Time>,
+    selection: Res<LiveSelection>,
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
@@ -544,6 +549,7 @@ fn update_hud(
     } else {
         hud.snapshot.fps * 0.9 + fps * 0.1
     };
+    hud.snapshot.selected_live = selection.0;
 
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;

@@ -20,13 +20,9 @@ pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
@@ -141,6 +137,49 @@ pub struct WsSpectatorMeta {
     pub tick: Option<u64>,
 }
 
+/// WebSocket session state exposed to live attach HUD and event feed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WsConnectionState {
+    /// Active stream to `civ-server`.
+    Connected,
+    /// Backing off after a disconnect; will retry.
+    Reconnecting,
+    /// No successful connection yet (initial boot).
+    #[default]
+    Disconnected,
+}
+
+/// Streamed entity kind for viewport pick and HUD labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveEntityKind {
+    /// Streamed agent marker.
+    Agent,
+    /// Streamed building marker.
+    Building,
+    /// Streamed building-graph parcel marker.
+    GraphParcel,
+}
+
+/// A single streamed entity selected in the live viewport.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SelectedLiveEntity {
+    /// Entity category.
+    pub kind: LiveEntityKind,
+    /// Server-assigned entity id.
+    pub id: u64,
+}
+
+/// Format selection for HUD overlay (`sel: agent #N`).
+#[must_use]
+pub fn format_live_selection(entity: SelectedLiveEntity) -> String {
+    let label = match entity.kind {
+        LiveEntityKind::Agent => "agent",
+        LiveEntityKind::Building => "building",
+        LiveEntityKind::GraphParcel => "graph",
+    };
+    format!("sel: {label} #{}", entity.id)
+}
+
 /// Parse `sim.snapshot` JSON-RPC text (not F3D0 tick frames).
 #[cfg(any(test, feature = "bevy"))]
 #[must_use]
@@ -180,9 +219,6 @@ pub struct LiveHudSnapshot {
     pub selected_live: Option<SelectedLiveEntity>,
 }
 
-#[cfg(feature = "bevy")]
-pub use live_pick::{format_live_selection, LiveEntityKind, SelectedLiveEntity};
-
 impl LiveHudSnapshot {
     /// Copy streamed entity counts from a live attach scene map.
     pub fn sync_scene_counts(
@@ -221,7 +257,7 @@ impl LiveHudSnapshot {
             line.push_str(&format!(" | chunk: {}", chunk.0));
         }
         if let Some(selection) = self.selected_live {
-            line.push_str(&format!(" | {}", crate::live_pick::format_live_selection(selection)));
+            line.push_str(&format!(" | {}", format_live_selection(selection)));
         }
         line
     }
@@ -725,7 +761,9 @@ pub mod bevy_render;
 #[cfg(feature = "bevy")]
 /// Live Bevy/WebSocket attach path for the 3D reference client.
 pub mod ws_client;
-pub use ws_client::{WsClient, WsClientConfig, WsConnectionState};
+
+#[cfg(feature = "bevy")]
+pub use ws_client::{WsClient, WsClientConfig};
 
 #[cfg(test)]
 mod tests {

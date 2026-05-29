@@ -7,24 +7,13 @@ use std::{
 use civ_protocol_3d::Frame3d;
 
 use crate::{
-    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsSpectatorMeta,
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsConnectionState,
+    WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
 use futures_util::{SinkExt, StreamExt};
 use tokio::runtime::Builder;
 use tokio_tungstenite::tungstenite::Message;
-
-/// WebSocket session state exposed to the Bevy main thread.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum WsConnectionState {
-    /// Active stream to `civ-server`.
-    Connected,
-    /// Backing off after a disconnect; will retry.
-    Reconnecting,
-    /// No successful connection yet (initial boot).
-    #[default]
-    Disconnected,
-}
 
 /// Live attach WebSocket client preferences.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

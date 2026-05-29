@@ -128,6 +128,7 @@ fn apply_live_scene_frames(
                 assets.as_ref(),
                 building,
             ),
+            Frame3d::CivilianState(_) | Frame3d::FactionState(_) | Frame3d::EventFeed(_) => {}
         }
     }
 }

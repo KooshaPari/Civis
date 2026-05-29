@@ -124,12 +124,15 @@ civis-3d-standalone-live-url URL:
     powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
 
 # Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
-# P-W1 kickoff item 41 / FR-CIV-BEVY-016: CI gate for live attach + minimap lib tests.
+# P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025.
 civis-3d-live-smoke:
     cargo test -p civ-server frame_triple
     cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick
     cargo test -p civ-bevy-ref --features bevy --lib live_ground::
     cargo test -p civ-bevy-ref --features bevy --lib live_stream::
+    cargo test -p civ-bevy-ref --features bevy --lib live_focus::
+    cargo test -p civ-bevy-ref --features bevy --lib live_minimap::
+    cargo test -p civ-bevy-ref --features bevy --lib live_pick::
     cargo test -p civ-bevy-ref --lib chunk_to_minimap
     cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
     cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
@@ -165,9 +168,26 @@ dev:
 dev-stop:
     process-compose down
 
-# Build and run the Bevy desktop client.
+# Build the release civ-standalone binary, kill stale instances, launch with log capture, print PID.
+# Delegates to Tools/play.ps1 (Windows) or Tools/play.sh (Linux/macOS).
 play:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
+
+# Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn.
+play-debug:
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
+
+# Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn and RUST_BACKTRACE=full.
+play-trace:
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
+
+# Kill a running civ-standalone game process.
+stop:
+    powershell -NoProfile -Command "Get-Process -Name civ-standalone -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Host '[stop] civ-standalone stopped.' -ForegroundColor Green"
+
+# Tail the civ-standalone game log (live follow).
+logs:
+    powershell -NoProfile -Command "Get-Content -LiteralPath '.process-compose/logs/civ-standalone.log' -Wait -Tail 50"
 
 # Build all clients.
 build-all:

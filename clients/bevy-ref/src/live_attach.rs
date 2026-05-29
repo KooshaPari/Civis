@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::atmosphere::DayNightCycle;
+use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
 use crate::ws_client::{WsClient, WsClientConfig};
 use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
@@ -28,7 +29,7 @@ pub struct LiveAttachPlugin;
 
 impl Plugin for LiveAttachPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(LiveScenePlugin)
+        app.add_plugins((LiveScenePlugin, LivePickPlugin))
             .init_resource::<LiveAttachState>()
             .init_resource::<LiveHudSnapshot>()
             .insert_resource(LiveAttachBridge {
@@ -37,7 +38,10 @@ impl Plugin for LiveAttachPlugin {
                     WsClientConfig::default(),
                 ),
             })
-            .add_systems(Update, (poll_live_meta, sync_live_hud_stats));
+            .add_systems(
+                Update,
+                (poll_live_meta, sync_live_hud_stats, sync_live_selection),
+            );
         #[cfg(feature = "egui")]
         app.add_systems(Update, sync_live_game_ui);
     }
@@ -79,6 +83,17 @@ fn sync_live_hud_stats(
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.ws_rtt_ms = Some(rtt);
     }
+}
+
+fn sync_live_selection(
+    attach: Res<AttachMode>,
+    selection: Res<LiveSelection>,
+    mut hud: ResMut<LiveHudSnapshot>,
+) {
+    if *attach != AttachMode::Server {
+        return;
+    }
+    hud.selected_live = selection.0;
 }
 
 #[cfg(feature = "egui")]

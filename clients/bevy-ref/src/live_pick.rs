@@ -6,38 +6,9 @@ use bevy::ui::RelativeCursorPosition;
 
 use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
 use crate::minimap::{MinimapCamera, MinimapRoot};
-use crate::{AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH};
-
-/// Kind of streamed entity selected in the live viewport.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LiveEntityKind {
-    /// Civilian / agent marker.
-    Agent,
-    /// Building marker.
-    Building,
-    /// Building-graph parcel marker.
-    GraphParcel,
-}
-
-/// Selected streamed entity for HUD overlays and inspectors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SelectedLiveEntity {
-    /// Entity category.
-    pub kind: LiveEntityKind,
-    /// Server-side entity id.
-    pub id: u64,
-}
-
-/// Format a compact HUD label for a live selection.
-#[must_use]
-pub fn format_live_selection(selection: SelectedLiveEntity) -> String {
-    let label = match selection.kind {
-        LiveEntityKind::Agent => "agent",
-        LiveEntityKind::Building => "building",
-        LiveEntityKind::GraphParcel => "graph",
-    };
-    format!("sel: {label} #{}", selection.id)
-}
+use crate::{
+    LiveEntityKind, SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+};
 
 /// Optional live selection for HUD overlays and inspectors.
 #[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]

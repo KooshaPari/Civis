@@ -2,6 +2,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+#[cfg(feature = "egui")]
+use crate::event_feed::{EventFeed, EventKind};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -11,11 +13,8 @@ use civ_protocol_3d::{
     agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
     BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
     CivilianStateEntry, CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d,
-    FacadeStyle,
-    FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
+    FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
 };
-#[cfg(feature = "egui")]
-use crate::event_feed::{EventFeed, EventKind};
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
@@ -185,10 +184,8 @@ pub fn sync_diplomacy_from_faction_frame(
     population_by_faction: &HashMap<u32, u32>,
 ) {
     let open = diplomacy.open;
-    *diplomacy = crate::diplomacy_ui::diplomacy_state_from_faction_frame(
-        frame,
-        population_by_faction,
-    );
+    *diplomacy =
+        crate::diplomacy_ui::diplomacy_state_from_faction_frame(frame, population_by_faction);
     diplomacy.open = open;
 }
 
@@ -228,10 +225,7 @@ pub fn map_event_feed_message(msg: &EventFeedMessage3d) -> (EventKind, String) {
 
 /// Pushes all messages from an `EventFeed` frame into the HUD toast feed.
 #[cfg(feature = "egui")]
-pub fn apply_event_feed_frame(
-    feed: &mut EventFeed,
-    frame: civ_protocol_3d::EventFeedFrame,
-) {
+pub fn apply_event_feed_frame(feed: &mut EventFeed, frame: civ_protocol_3d::EventFeedFrame) {
     for msg in frame.events {
         let (kind, text) = map_event_feed_message(&msg);
         feed.push(kind, text);
@@ -405,9 +399,7 @@ pub fn apply_voxel_delta_frame(
     for chunk in delta.deltas {
         let chunk_id = chunk.event.chunk_id;
         if chunk.voxels.len() == LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
-            scene
-                .chunk_voxels
-                .insert(chunk_id, chunk.voxels.clone());
+            scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
         if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
@@ -467,10 +459,9 @@ pub fn apply_voxel_delta_frame(
         ));
 
         if let Some(color) = wireframe_line_color {
-            commands.entity(entity).insert((
-                Wireframe,
-                WireframeColor { color },
-            ));
+            commands
+                .entity(entity)
+                .insert((Wireframe, WireframeColor { color }));
         } else {
             commands
                 .entity(entity)
@@ -620,11 +611,10 @@ pub fn apply_building_diff_frame(
             BUILDING_GROUND_Y,
         );
         let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
-        let entity = *scene.buildings.entry(entry.id).or_insert_with(|| {
-            commands
-                .spawn(LiveBuildingTag { id: entry.id })
-                .id()
-        });
+        let entity = *scene
+            .buildings
+            .entry(entry.id)
+            .or_insert_with(|| commands.spawn(LiveBuildingTag { id: entry.id }).id());
         commands.entity(entity).insert((
             Mesh3d(meshes.building_mesh.clone()),
             MeshMaterial3d(material_handle),
@@ -693,11 +683,10 @@ pub fn apply_building_graph_frame(
         let transform = Transform::from_xyz(anchor.x, ground + height * 0.5, anchor.z)
             .with_scale(Vec3::new(width.max(0.5), height.max(0.5), depth.max(0.5)));
 
-        let entity = *scene.graph_parcels.entry(id).or_insert_with(|| {
-            commands
-                .spawn(LiveGraphParcelTag { id })
-                .id()
-        });
+        let entity = *scene
+            .graph_parcels
+            .entry(id)
+            .or_insert_with(|| commands.spawn(LiveGraphParcelTag { id }).id());
         commands.entity(entity).insert((
             Mesh3d(meshes.building_mesh.clone()),
             MeshMaterial3d(material_handle),
@@ -729,11 +718,7 @@ fn parcel_kind_color(kind: ParcelKind) -> Color {
 }
 
 fn facade_material_color(facade: &FacadeStyle) -> Color {
-    let material = facade
-        .materials
-        .first()
-        .copied()
-        .unwrap_or(MaterialId(0));
+    let material = facade.materials.first().copied().unwrap_or(MaterialId(0));
     material_id_color(material)
 }
 
@@ -857,7 +842,10 @@ mod tests {
             BuildingKind3d::House,
             BuildingKind3d::CityCenter,
         ];
-        let colors: Vec<_> = kinds.iter().map(|k| color_rgb(building_kind_color(*k))).collect();
+        let colors: Vec<_> = kinds
+            .iter()
+            .map(|k| color_rgb(building_kind_color(*k)))
+            .collect();
         for (i, left) in colors.iter().enumerate() {
             for (j, right) in colors.iter().enumerate() {
                 if i != j {
@@ -1035,9 +1023,7 @@ mod tests {
     #[test]
     fn apply_event_feed_frame_pushes_all_events() {
         use crate::event_feed::EventFeed;
-        use civ_protocol_3d::{
-            DeathEvent3d, EventFeedFrame, EventFeedMessage3d, TechEvent3d,
-        };
+        use civ_protocol_3d::{DeathEvent3d, EventFeedFrame, EventFeedMessage3d, TechEvent3d};
 
         let mut feed = EventFeed::default();
         apply_event_feed_frame(
@@ -1162,11 +1148,7 @@ mod tests {
             open: true,
             ..Default::default()
         };
-        sync_diplomacy_from_faction_frame(
-            &mut diplomacy,
-            &frame,
-            &HashMap::new(),
-        );
+        sync_diplomacy_from_faction_frame(&mut diplomacy, &frame, &HashMap::new());
         assert!(diplomacy.open);
         assert_eq!(diplomacy.factions.len(), 1);
         assert_eq!(diplomacy.factions[0].name, "Junta #1");

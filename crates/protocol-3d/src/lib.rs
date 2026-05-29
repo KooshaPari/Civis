@@ -631,7 +631,11 @@ mod tests {
         graph.insert_parcel(Parcel {
             id: BuildingId(7),
             kind: ParcelKind::Residential,
-            origin: civ_voxel::WorldCoord { x: 128, y: 0, z: 256 },
+            origin: civ_voxel::WorldCoord {
+                x: 128,
+                y: 0,
+                z: 256,
+            },
             size: [8, 6, 4],
             era_min: 1,
         });
@@ -967,6 +971,4 @@ mod tests {
             Err(Frame3dBinaryError::BadMagic)
         );
     }
-
-
 }

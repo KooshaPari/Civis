@@ -192,8 +192,7 @@ fn draw_game_ui(
             tool_palette_ui(ui, &mut active_tool, &mut speed);
         });
 
-    let show_live_inspector =
-        *attach_mode == AttachMode::Server && live_selection.0.is_some();
+    let show_live_inspector = *attach_mode == AttachMode::Server && live_selection.0.is_some();
     if selected.entity.is_some() || show_live_inspector {
         egui::SidePanel::right("civis_game_selected_panel")
             .resizable(true)
@@ -274,10 +273,7 @@ pub fn inspector_details_from_civilian(entry: &CivilianStateEntry) -> SelectedEn
 /// Format a world-space point for the inspector position row.
 #[must_use]
 pub fn format_world_position(position: Vec3) -> String {
-    format!(
-        "{:.1}, {:.1}, {:.1}",
-        position.x, position.y, position.z
-    )
+    format!("{:.1}, {:.1}, {:.1}", position.x, position.y, position.z)
 }
 
 /// Inspector rows for a live-streamed entity without civilian wire data.
@@ -290,18 +286,9 @@ pub fn inspector_details_for_live_entity(
         .map(format_world_position)
         .unwrap_or_else(|| "—".to_string());
     let (name, profession) = match entity.kind {
-        LiveEntityKind::Agent => (
-            format!("Agent #{}", entity.id),
-            "—".to_string(),
-        ),
-        LiveEntityKind::Building => (
-            format!("Building #{}", entity.id),
-            "—".to_string(),
-        ),
-        LiveEntityKind::GraphParcel => (
-            format!("Parcel #{}", entity.id),
-            "—".to_string(),
-        ),
+        LiveEntityKind::Agent => (format!("Agent #{}", entity.id), "—".to_string()),
+        LiveEntityKind::Building => (format!("Building #{}", entity.id), "—".to_string()),
+        LiveEntityKind::GraphParcel => (format!("Parcel #{}", entity.id), "—".to_string()),
     };
     SelectedEntityDetails {
         name,
@@ -341,7 +328,10 @@ fn apply_theme(ctx: &egui::Context) {
         (TextStyle::Body, FontId::new(15.0, Proportional)),
         (TextStyle::Button, FontId::new(15.0, Proportional)),
         (TextStyle::Small, FontId::new(11.0, Proportional)),
-        (TextStyle::Monospace, FontId::new(13.0, egui::FontFamily::Monospace)),
+        (
+            TextStyle::Monospace,
+            FontId::new(13.0, egui::FontFamily::Monospace),
+        ),
     ]
     .into();
 
@@ -388,7 +378,12 @@ fn top_bar_ui(
         chip(ui, "\u{23f1}", &format!("{}", snapshot.tick), ACCENT);
         chip(ui, "\u{1f465}", &format!("{}", snapshot.population), green);
         chip(ui, "\u{1f6a9}", &format!("{}", snapshot.factions), gold);
-        chip(ui, "\u{1f30d}", &format!("Era {}", snapshot.era), egui::Color32::WHITE);
+        chip(
+            ui,
+            "\u{1f30d}",
+            &format!("Era {}", snapshot.era),
+            egui::Color32::WHITE,
+        );
         chip(ui, "\u{25b6}", &speed_label, ACCENT);
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -419,13 +414,43 @@ struct ToolDef {
 /// Bottom bar: tool palette (left) + segmented speed control (right).
 fn tool_palette_ui(ui: &mut egui::Ui, active: &mut ActiveTool, speed: &mut GameSpeed) {
     let tools = [
-        ToolDef { icon: "\u{1f446}", label: "Select", hotkey: "Q", tool: Some(SpawnTool::Select) },
-        ToolDef { icon: "\u{1f9cd}", label: "Spawn Civ", hotkey: "W", tool: Some(SpawnTool::SpawnCivilian) },
-        ToolDef { icon: "\u{1f3e0}", label: "Building", hotkey: "E", tool: Some(SpawnTool::SpawnBuilding) },
-        ToolDef { icon: "\u{26f0}", label: "Terraform", hotkey: "R", tool: Some(SpawnTool::Terraform) },
-        ToolDef { icon: "\u{1f4a5}", label: "Destroy", hotkey: "T", tool: Some(SpawnTool::Destroy) },
+        ToolDef {
+            icon: "\u{1f446}",
+            label: "Select",
+            hotkey: "Q",
+            tool: Some(SpawnTool::Select),
+        },
+        ToolDef {
+            icon: "\u{1f9cd}",
+            label: "Spawn Civ",
+            hotkey: "W",
+            tool: Some(SpawnTool::SpawnCivilian),
+        },
+        ToolDef {
+            icon: "\u{1f3e0}",
+            label: "Building",
+            hotkey: "E",
+            tool: Some(SpawnTool::SpawnBuilding),
+        },
+        ToolDef {
+            icon: "\u{26f0}",
+            label: "Terraform",
+            hotkey: "R",
+            tool: Some(SpawnTool::Terraform),
+        },
+        ToolDef {
+            icon: "\u{1f4a5}",
+            label: "Destroy",
+            hotkey: "T",
+            tool: Some(SpawnTool::Destroy),
+        },
         // Weather has no SpawnTool variant yet: present but inert.
-        ToolDef { icon: "\u{1f327}", label: "Weather", hotkey: "Y", tool: None },
+        ToolDef {
+            icon: "\u{1f327}",
+            label: "Weather",
+            hotkey: "Y",
+            tool: None,
+        },
     ];
 
     ui.horizontal(|ui| {
@@ -468,7 +493,11 @@ fn tool_button(ui: &mut egui::Ui, def: &ToolDef, active: bool) -> egui::Response
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new(def.icon).size(22.0));
                 let lbl = egui::RichText::new(def.label).small();
-                ui.label(if active { lbl.color(ACCENT).strong() } else { lbl.color(DIM) });
+                ui.label(if active {
+                    lbl.color(ACCENT).strong()
+                } else {
+                    lbl.color(DIM)
+                });
             });
         })
         .response;
@@ -496,7 +525,11 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
             text = text.color(DIM);
         }
         let btn = egui::Button::new(text)
-            .fill(if active { ACCENT.gamma_multiply(0.30) } else { CHIP_FILL })
+            .fill(if active {
+                ACCENT.gamma_multiply(0.30)
+            } else {
+                CHIP_FILL
+            })
             .min_size(egui::vec2(38.0, 30.0));
         if ui.add(btn).clicked() {
             speed.multiplier = mult;

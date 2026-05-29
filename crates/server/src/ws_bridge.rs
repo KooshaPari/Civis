@@ -25,10 +25,10 @@ use civ_engine::{
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
-    BattleEvent3d, CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, DeathEvent3d,
-    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
-    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
+    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
+    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, DeathEvent3d, EventFeedFrame,
+    EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d, Frame3d,
+    GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -1038,8 +1038,7 @@ mod tests {
             TickBroadcastFormat::Binary,
             TickBroadcastFormat::Both,
         ] {
-            let messages =
-                encode_tick_broadcast_messages(&frames, format).expect("encode");
+            let messages = encode_tick_broadcast_messages(&frames, format).expect("encode");
             assert_eq!(
                 messages.len(),
                 format.messages_per_tick(),
@@ -1161,8 +1160,7 @@ mod tests {
         for format in [TickBroadcastFormat::Binary, TickBroadcastFormat::Both] {
             let start = Instant::now();
             for _ in 0..iterations {
-                let _ =
-                    encode_tick_broadcast_messages(&frames, format).expect("encode");
+                let _ = encode_tick_broadcast_messages(&frames, format).expect("encode");
             }
             let elapsed = start.elapsed();
             eprintln!(

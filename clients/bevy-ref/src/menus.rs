@@ -114,7 +114,9 @@ fn draw_pause_menu(
     egui::Area::new(egui::Id::new("pause_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
-        .show(ctx, |ui| pause_panel(ui, &mut mode, &mut settings_open, &mut exit));
+        .show(ctx, |ui| {
+            pause_panel(ui, &mut mode, &mut settings_open, &mut exit)
+        });
 }
 
 fn draw_era_banner(mut contexts: EguiContexts, banner: Res<EraBanner>) {
@@ -142,12 +144,7 @@ fn draw_settings_window(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    settings_window(
-        ctx,
-        &mut settings_open,
-        &mut state,
-        gpu_caps.as_deref(),
-    );
+    settings_window(ctx, &mut settings_open, &mut state, gpu_caps.as_deref());
 }
 
 fn dim_overlay(ctx: &egui::Context) {
@@ -254,19 +251,23 @@ fn settings_window(
     gpu_caps: Option<&GpuCapabilities>,
 ) {
     const QUALITIES: &[&str] = &["Low", "Medium", "High", "Ultra"];
-    egui::Window::new(egui::RichText::new("\u{2699} Settings").color(ACCENT).strong())
-        .collapsible(false)
-        .resizable(false)
-        .min_width(320.0)
-        .frame(
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .corner_radius(egui::CornerRadius::same(10))
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
-                .inner_margin(egui::Margin::same(18)),
-        )
-        .open(&mut settings_open.0)
-        .show(ctx, |ui| settings_rows(ui, state, QUALITIES, gpu_caps));
+    egui::Window::new(
+        egui::RichText::new("\u{2699} Settings")
+            .color(ACCENT)
+            .strong(),
+    )
+    .collapsible(false)
+    .resizable(false)
+    .min_width(320.0)
+    .frame(
+        egui::Frame::NONE
+            .fill(PANEL_FILL)
+            .corner_radius(egui::CornerRadius::same(10))
+            .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
+            .inner_margin(egui::Margin::same(18)),
+    )
+    .open(&mut settings_open.0)
+    .show(ctx, |ui| settings_rows(ui, state, QUALITIES, gpu_caps));
 }
 
 fn settings_rows(
@@ -314,10 +315,7 @@ pub fn format_gpu_capability_flag(enabled: bool) -> &'static str {
 pub fn format_gpu_settings_labels(caps: &GpuCapabilities) -> Vec<(&'static str, String)> {
     vec![
         ("Backend", caps.backend_name.clone()),
-        (
-            "Est. VRAM",
-            format_gpu_vram_label_mb(caps.max_vram_mb),
-        ),
+        ("Est. VRAM", format_gpu_vram_label_mb(caps.max_vram_mb)),
         (
             "Ray tracing",
             format_gpu_capability_flag(caps.ray_tracing).to_string(),

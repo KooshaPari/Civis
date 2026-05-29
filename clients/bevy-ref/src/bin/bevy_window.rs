@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
-    chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
-    focused_chunk_at_grid, gpu_features::GpuFeaturesPlugin,
+    chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv, focused_chunk_at_grid,
+    gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
     },
@@ -24,7 +24,9 @@ use civ_bevy_ref::{
         LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes,
         LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
-    minimap_uv_to_chunk_grid, minimap::MinimapRoot, native_backend::native_render_plugin,
+    minimap::MinimapRoot,
+    minimap_uv_to_chunk_grid,
+    native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     ws_client::{WsClient, WsClientConfig},
@@ -654,7 +656,14 @@ fn update_minimap(
                 } else {
                     LIVE_MINIMAP_CHUNK_LOADED_COLOR
                 };
-                spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, MINIMAP_DOT, dot_color, false);
+                spawn_minimap_dot(
+                    parent,
+                    MINIMAP_HUD_LAYOUT,
+                    uv,
+                    MINIMAP_DOT,
+                    dot_color,
+                    false,
+                );
             }
 
             for transform in &agents {
@@ -716,15 +725,18 @@ fn update_minimap(
             } else {
                 LIVE_MINIMAP_CHUNK_LOADED_COLOR
             };
-            spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, MINIMAP_DOT, dot_color, false);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                uv,
+                MINIMAP_DOT,
+                dot_color,
+                false,
+            );
         }
 
         for transform in &agents {
-            let uv = world_minimap_uv(
-                transform.translation.x,
-                transform.translation.z,
-                bounds,
-            );
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
             spawn_minimap_dot(
                 parent,
                 MINIMAP_HUD_LAYOUT,
@@ -736,11 +748,7 @@ fn update_minimap(
         }
 
         for transform in &buildings {
-            let uv = world_minimap_uv(
-                transform.translation.x,
-                transform.translation.z,
-                bounds,
-            );
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
             spawn_minimap_dot(
                 parent,
                 MINIMAP_HUD_LAYOUT,
@@ -752,11 +760,7 @@ fn update_minimap(
         }
 
         for transform in &graph_parcels {
-            let uv = world_minimap_uv(
-                transform.translation.x,
-                transform.translation.z,
-                bounds,
-            );
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
             spawn_minimap_dot(
                 parent,
                 MINIMAP_HUD_LAYOUT,
@@ -876,7 +880,11 @@ fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(Entity, &mut LiveChunkFade, &MeshMaterial3d<StandardMaterial>)>,
+    mut fades: Query<(
+        Entity,
+        &mut LiveChunkFade,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if debug.wireframe {

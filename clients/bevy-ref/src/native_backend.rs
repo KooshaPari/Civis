@@ -127,7 +127,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn forced_backend_from_var_unset_returns_none() {
         assert_eq!(forced_backend_from_var(None), None);
@@ -176,8 +175,6 @@ mod tests {
     fn native_wgpu_settings_use_native_only_backends() {
         let settings = native_wgpu_settings();
         assert_eq!(settings.backends, Some(native_only_backends()));
-        assert!(settings
-            .features
-            .contains(WgpuFeatures::POLYGON_MODE_LINE));
+        assert!(settings.features.contains(WgpuFeatures::POLYGON_MODE_LINE));
     }
 }

@@ -179,10 +179,7 @@ mod loader {
 
         /// Iterate over `(biome, handle)` pairs in canonical order.
         pub fn iter(&self) -> impl Iterator<Item = (Biome, &Handle<StandardMaterial>)> {
-            Biome::ALL
-                .iter()
-                .copied()
-                .zip(self.handles.iter())
+            Biome::ALL.iter().copied().zip(self.handles.iter())
         }
     }
 
@@ -231,7 +228,7 @@ mod loader {
 }
 
 #[cfg(feature = "pbr-textures")]
-pub use loader::{BiomeAssetPaths, BiomeMaterials, BiomeMaterialsPlugin, load_biome_materials};
+pub use loader::{load_biome_materials, BiomeAssetPaths, BiomeMaterials, BiomeMaterialsPlugin};
 
 #[cfg(test)]
 mod tests {

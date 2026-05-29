@@ -20,15 +20,11 @@ pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod menus;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
@@ -36,19 +32,21 @@ pub mod live_attach;
 #[cfg(feature = "bevy")]
 pub mod live_focus;
 #[cfg(feature = "bevy")]
+pub mod live_ground;
+#[cfg(feature = "bevy")]
 pub mod live_minimap;
 #[cfg(feature = "bevy")]
 pub mod live_pick;
 #[cfg(feature = "bevy")]
-pub mod live_ground;
-#[cfg(feature = "bevy")]
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
-#[cfg(feature = "bevy")]
-pub mod minimap;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod menus;
+#[cfg(feature = "bevy")]
+pub mod minimap;
 #[cfg(feature = "bevy")]
 pub mod native_backend;
 #[cfg(feature = "bevy")]
@@ -57,6 +55,8 @@ pub mod native_renderer;
 pub mod sim_bridge;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod terrain;
 
@@ -397,7 +397,10 @@ pub fn resolve_attach_mode(civis_attach: Option<&str>, civ_ws_url: Option<&str>)
     {
         return AttachMode::Server;
     }
-    if civ_ws_url.map(|value| !value.trim().is_empty()).unwrap_or(false) {
+    if civ_ws_url
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
+    {
         return AttachMode::Server;
     }
     AttachMode::Standalone
@@ -960,10 +963,7 @@ mod tests {
 
     #[test]
     fn resolve_attach_mode_defaults_to_standalone() {
-        assert_eq!(
-            resolve_attach_mode(None, None),
-            AttachMode::Standalone
-        );
+        assert_eq!(resolve_attach_mode(None, None), AttachMode::Standalone);
         assert_eq!(
             resolve_attach_mode(Some("watch"), None),
             AttachMode::Standalone
@@ -1259,11 +1259,11 @@ mod tests {
     #[test]
     fn parse_ws_payload_decodes_all_frame_kinds() {
         use civ_protocol_3d::{
-            encode_frame3d_binary, AgentAppearanceFrame, AgentAppearanceUpdate,
-            BuildingDiffEntry, BuildingDiffFrame, BuildingKind3d, BuildingProvenance,
-            CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, EventFeedFrame,
-            EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
-            Frame3d, Government3d, TechEvent3d, VoxelChunkDelta, VoxelDeltaFrame, WorldXZ,
+            encode_frame3d_binary, AgentAppearanceFrame, AgentAppearanceUpdate, BuildingDiffEntry,
+            BuildingDiffFrame, BuildingKind3d, BuildingProvenance, CivilianNeeds3d,
+            CivilianStateEntry, CivilianStateFrame, EventFeedFrame, EventFeedMessage3d,
+            FactionStateEntry, FactionStateFrame, FactionTreasury3d, Frame3d, Government3d,
+            TechEvent3d, VoxelChunkDelta, VoxelDeltaFrame, WorldXZ,
         };
         use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
 
@@ -1334,7 +1334,10 @@ mod tests {
             let bytes = encode_frame3d_binary(&frame).expect("encode");
             assert_eq!(parse_ws_payload(&bytes).expect("binary decode"), frame);
             let json = serde_json::to_string(&frame).expect("json");
-            assert_eq!(parse_ws_payload(json.as_bytes()).expect("text decode"), frame);
+            assert_eq!(
+                parse_ws_payload(json.as_bytes()).expect("text decode"),
+                frame
+            );
         }
     }
 

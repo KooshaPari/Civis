@@ -137,10 +137,22 @@ impl EventFeed {
     pub fn demo_seed(&mut self) {
         self.push(EventKind::Birth, "A child was born in Ironmere.");
         self.push(EventKind::Tech, "Ironmere unlocked Iron Smelting.");
-        self.push(EventKind::Battle, "Clash at Dustford — Ironmere victorious.");
-        self.push(EventKind::Diplomacy, "Ironmere and Thalmark signed a ceasefire.");
-        self.push(EventKind::Disaster, "Volcanic eruption buried the eastern mines.");
-        self.push(EventKind::Death, "General Varen fell in the Battle of Crestholm.");
+        self.push(
+            EventKind::Battle,
+            "Clash at Dustford — Ironmere victorious.",
+        );
+        self.push(
+            EventKind::Diplomacy,
+            "Ironmere and Thalmark signed a ceasefire.",
+        );
+        self.push(
+            EventKind::Disaster,
+            "Volcanic eruption buried the eastern mines.",
+        );
+        self.push(
+            EventKind::Death,
+            "General Varen fell in the Battle of Crestholm.",
+        );
     }
 }
 
@@ -253,7 +265,11 @@ fn toast_card(ui: &mut egui::Ui, ev: &GameEvent) {
         .inner_margin(egui::Margin::symmetric(10, 6))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new(ev.kind.emoji()).color(accent_color).size(16.0));
+                ui.label(
+                    egui::RichText::new(ev.kind.emoji())
+                        .color(accent_color)
+                        .size(16.0),
+                );
                 ui.label(egui::RichText::new(&ev.text).color(text_color).size(13.0));
             });
         });
@@ -280,11 +296,13 @@ fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLo
                     .small(),
             );
             ui.add_space(4.0);
-            egui::ScrollArea::vertical().auto_shrink([false; 2]).show(ui, |ui| {
-                for ev in feed.events.iter() {
-                    log_row(ui, ev);
-                }
-            });
+            egui::ScrollArea::vertical()
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    for ev in feed.events.iter() {
+                        log_row(ui, ev);
+                    }
+                });
         });
     log_open.0 = open;
 }
@@ -332,7 +350,11 @@ mod tests {
     use super::*;
 
     fn make_event(kind: EventKind, age: f32) -> GameEvent {
-        GameEvent { kind, text: "test".into(), age }
+        GameEvent {
+            kind,
+            text: "test".into(),
+            age,
+        }
     }
 
     #[test]
@@ -361,7 +383,11 @@ mod tests {
         deque.push_back(make_event(EventKind::Battle, 5.0));
 
         let young = events_younger_than(&deque, TOAST_LIFETIME);
-        assert_eq!(young.len(), 2, "only events younger than 8 s should be returned");
+        assert_eq!(
+            young.len(),
+            2,
+            "only events younger than 8 s should be returned"
+        );
         assert!(young.iter().all(|e| e.age < TOAST_LIFETIME));
     }
 
@@ -375,7 +401,10 @@ mod tests {
     fn demo_seed_populates_feed() {
         let mut feed = EventFeed::default();
         feed.demo_seed();
-        assert!(!feed.events.is_empty(), "demo_seed must add at least one event");
+        assert!(
+            !feed.events.is_empty(),
+            "demo_seed must add at least one event"
+        );
         assert!(feed.events.len() <= FEED_CAP);
     }
 

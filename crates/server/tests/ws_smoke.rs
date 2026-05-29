@@ -1212,14 +1212,7 @@ fn assert_six_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
             Frame3d::EventFeed(_) => has_event = true,
         }
     }
-    assert!(
-        has_voxel
-            && has_building
-            && has_agent
-            && has_civilian
-            && has_faction
-            && has_event
-    );
+    assert!(has_voxel && has_building && has_agent && has_civilian && has_faction && has_event);
 }
 
 async fn collect_f3d0_frames_after_sim_command_tick(
@@ -1252,7 +1245,9 @@ async fn collect_f3d0_frames_after_sim_command_tick(
     let mut frames_for_tick = Vec::new();
 
     timeout(Duration::from_secs(3), async {
-        while tick_after.is_none() || frames_for_tick.len() < civ_server::ws_bridge::FRAME_BUNDLE_LEN {
+        while tick_after.is_none()
+            || frames_for_tick.len() < civ_server::ws_bridge::FRAME_BUNDLE_LEN
+        {
             let frame = socket
                 .next()
                 .await

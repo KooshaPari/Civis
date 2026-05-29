@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
-use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
 use crate::live_scene::LiveScenePlugin;
+use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
 use crate::ws_client::{WsClient, WsClientConfig};
 use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
 
@@ -56,17 +56,16 @@ impl Plugin for LiveAttachPlugin {
             );
         #[cfg(feature = "egui")]
         {
-            app.init_resource::<LastConnectionToastState>()
-                .add_systems(
-                    Update,
-                    (
-                        sync_live_connection_toasts,
-                        sync_live_game_ui,
-                        sync_live_selection_to_inspector,
-                        sync_diplomacy_panel_from_scene,
-                    )
-                        .chain(),
-                );
+            app.init_resource::<LastConnectionToastState>().add_systems(
+                Update,
+                (
+                    sync_live_connection_toasts,
+                    sync_live_game_ui,
+                    sync_live_selection_to_inspector,
+                    sync_diplomacy_panel_from_scene,
+                )
+                    .chain(),
+            );
         }
     }
 }
@@ -211,12 +210,7 @@ fn sync_live_selection_to_inspector(
         return;
     };
 
-    let position = live_entity_world_position(
-        selected,
-        &agents,
-        &buildings,
-        &graph_parcels,
-    );
+    let position = live_entity_world_position(selected, &agents, &buildings, &graph_parcels);
 
     *details = if selected.kind == crate::LiveEntityKind::Agent {
         scene

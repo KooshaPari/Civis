@@ -56,10 +56,7 @@ impl Plugin for SimBridgePlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(
-            Update,
-            sync_game_ui_snapshot.run_if(in_process_sim_active),
-        );
+        app.add_systems(Update, sync_game_ui_snapshot.run_if(in_process_sim_active));
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
 }
@@ -132,8 +129,12 @@ fn sync_visible_gameplay(
         commands.entity(entity).despawn();
     }
 
-    let civilian_mesh = meshes.add(Mesh::from(bevy::math::primitives::Capsule3d::new(0.45, 1.1)));
-    let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(2.0, 2.5, 2.0)));
+    let civilian_mesh = meshes.add(Mesh::from(bevy::math::primitives::Capsule3d::new(
+        0.45, 1.1,
+    )));
+    let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(
+        2.0, 2.5, 2.0,
+    )));
 
     for (_, (civilian, position)) in sim
         .0
@@ -222,10 +223,7 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
 }
 
 #[cfg(feature = "egui")]
-fn sync_game_ui_snapshot(
-    sim: Res<SimState>,
-    mut snapshot: ResMut<crate::game_ui::GameUiSnapshot>,
-) {
+fn sync_game_ui_snapshot(sim: Res<SimState>, mut snapshot: ResMut<crate::game_ui::GameUiSnapshot>) {
     if !sim.is_changed() {
         return;
     }

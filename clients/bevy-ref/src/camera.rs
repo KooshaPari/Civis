@@ -56,7 +56,9 @@ pub fn camera_input(
     }
 
     if mouse_buttons.pressed(MouseButton::Right) {
-        let delta = mouse_motion.read().fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
+        let delta = mouse_motion
+            .read()
+            .fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
         rig.yaw -= delta.x * 0.003;
         rig.pitch = (rig.pitch - delta.y * 0.003).clamp(-1.45, -0.2);
     } else {

@@ -6,33 +6,32 @@ use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 
 use crate::bevy_render::apply_chunk_material;
+use crate::camera::CameraRig;
+#[cfg(feature = "egui")]
+use crate::event_feed::EventFeed;
 use crate::live_attach::{LiveAttachBridge, LiveAttachState};
-use crate::live_focus::{
-    compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
-};
+use crate::live_focus::{compute_live_scene_focus, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED};
 use crate::live_minimap::{
     chunk_centre_world_xz, live_building_dot_color, spawn_minimap_dot, MinimapDotLayout,
     MinimapFocusRect, LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CHUNK_COLOR, LIVE_MINIMAP_DOT,
     LIVE_MINIMAP_GRAPH_DOT_SCALE,
 };
+#[cfg(feature = "egui")]
+use crate::live_stream::apply_event_feed_frame;
 use crate::live_stream::{
     apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
     apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
     default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
     LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
-#[cfg(feature = "egui")]
-use crate::event_feed::EventFeed;
-#[cfg(feature = "egui")]
-use crate::live_stream::apply_event_feed_frame;
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
-use crate::camera::CameraRig;
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
 
 const LIVE_RENDER_MAX_DISTANCE: f32 = 200.0;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
-const LIVE_MINIMAP_PANEL_LAYOUT: MinimapDotLayout =
-    MinimapDotLayout::FullPanel { panel_size: MINIMAP_SIZE };
+const LIVE_MINIMAP_PANEL_LAYOUT: MinimapDotLayout = MinimapDotLayout::FullPanel {
+    panel_size: MINIMAP_SIZE,
+};
 
 /// Entity maps and voxel cache for the live attach renderer (alias of [`LiveStreamScene`]).
 pub type LiveScene = LiveStreamScene;
@@ -153,7 +152,11 @@ fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(Entity, &mut LiveChunkFade, &MeshMaterial3d<StandardMaterial>)>,
+    mut fades: Query<(
+        Entity,
+        &mut LiveChunkFade,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if *attach != AttachMode::Server || debug.wireframe {

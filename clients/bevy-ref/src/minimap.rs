@@ -7,8 +7,8 @@ use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_agents::Civilian as AgentCivilian;
 use civ_engine::Building;
 
-use crate::sim_bridge::SimState;
 use crate::camera::CameraRig;
+use crate::sim_bridge::SimState;
 use crate::terrain::WORLD_SIZE;
 use crate::AttachMode;
 
@@ -49,10 +49,7 @@ impl Plugin for MinimapPlugin {
     }
 }
 
-fn setup_minimap_render_target(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-) {
+fn setup_minimap_render_target(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let extent = Extent3d {
         width: MINIMAP_TEXTURE_SIZE,
         height: MINIMAP_TEXTURE_SIZE,
@@ -144,7 +141,10 @@ fn civilian_color(civilian: &AgentCivilian) -> Color {
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
-fn world_position_for_civilian(_civilian: &AgentCivilian, position: &civ_agents::Position3d) -> Vec3 {
+fn world_position_for_civilian(
+    _civilian: &AgentCivilian,
+    position: &civ_agents::Position3d,
+) -> Vec3 {
     let scale = civ_voxel::FIXED_SCALE as f32;
     Vec3::new(
         position.coord.x as f32 / scale,

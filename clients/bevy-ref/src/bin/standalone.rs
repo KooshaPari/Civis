@@ -3,9 +3,7 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use civ_bevy_ref::{
-    atmosphere::{
-        animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface,
-    },
+    atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
@@ -130,7 +128,6 @@ fn spawn_sandbox_water(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
-
     let water_size = WORLD_SIZE * 1.05;
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::new(water_size, 0.2, water_size))),

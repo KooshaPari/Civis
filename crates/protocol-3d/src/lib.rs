@@ -414,25 +414,6 @@ fn default_agent_scale() -> f32 {
     1.0
 }
 
-/// Climate + weather-grid snapshot delivered once per server tick.
-///
-/// Bundles the deterministic [`Climate`] output from `civ-planet` together with
-/// the per-region [`WeatherCell`] grid so clients can drive atmospheric rendering
-/// without recomputing it themselves.
-///
-/// Wire note: `climate` is ~40 bytes; `weather_grid` is `N × 12` bytes where N
-/// is the number of regions. For typical maps (≤64 regions) the uncompressed
-/// payload is under 800 bytes — well within one WebSocket frame.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ClimateFrame {
-    /// Server tick at which the snapshot was produced.
-    pub tick: u64,
-    /// Deterministic planet-climate for this tick.
-    pub climate: Climate,
-    /// Per-region weather cells for this tick.
-    pub weather_grid: Vec<WeatherCell>,
-}
-
 /// Discriminated union of all 3D-extension protocol frames. The existing Civis
 /// protocol carries this inside its binary-frame envelope.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -889,65 +870,5 @@ mod tests {
         );
     }
 
-    /// FR-CIV-PLANET-050 — ClimateFrame round-trips through bincode with
-    /// bit-identical bytes on encode/decode.
-    #[test]
-    fn climate_replay_event_round_trips_via_bincode() {
-        let frame = ClimateFrame {
-            tick: 42_000,
-            climate: Climate {
-                tick: 42_000,
-                day_phase: 0.5,
-                year_phase: 0.25,
-                moon_phase: 0.1,
-                tide_offset: 0.3,
-            },
-            weather_grid: vec![
-                WeatherCell {
-                    region_id: 0,
-                    temp_c_fp: 20_000,
-                    precip_mm_fp: 500,
-                },
-                WeatherCell {
-                    region_id: 1,
-                    temp_c_fp: -5_000,
-                    precip_mm_fp: 1_200,
-                },
-            ],
-        };
 
-        let config = bincode::config::standard();
-        let encoded: Vec<u8> =
-            bincode::serde::encode_to_vec(&frame, config).expect("bincode encode");
-        let (decoded, consumed): (ClimateFrame, usize) =
-            bincode::serde::decode_from_slice(&encoded, config).expect("bincode decode");
-
-        assert_eq!(consumed, encoded.len(), "all bytes consumed");
-        assert_eq!(
-            frame, decoded,
-            "ClimateFrame must be bit-identical after bincode round-trip"
-        );
-
-        // Verify a second encode produces identical bytes (determinism).
-        let encoded2: Vec<u8> =
-            bincode::serde::encode_to_vec(&decoded, config).expect("bincode encode 2");
-        assert_eq!(encoded, encoded2, "bincode encoding must be deterministic");
-    }
-
-    /// FR-CIV-PLANET-050 — ClimateFrame tick is accessible via Frame3d::tick().
-    #[test]
-    fn climate_frame_tick_extraction() {
-        let f = Frame3d::Climate(ClimateFrame {
-            tick: 99,
-            climate: Climate {
-                tick: 99,
-                day_phase: 0.0,
-                year_phase: 0.0,
-                moon_phase: 0.0,
-                tide_offset: 0.0,
-            },
-            weather_grid: Vec::new(),
-        });
-        assert_eq!(f.tick(), 99);
-    }
 }

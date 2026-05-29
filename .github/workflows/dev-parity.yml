@@ -1,8 +1,11 @@
 name: Dev Parity
 
+# Local-first: PR merge is gated by lefthook pre-push + quality.yml manifest verify.
+# Heavy Rust/web/client checks run on the developer machine, not on pull_request.
 on:
-  pull_request:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read

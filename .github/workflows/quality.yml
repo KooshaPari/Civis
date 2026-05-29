@@ -18,6 +18,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # Must match the PR branch tip: default pull_request checkout is the
+          # ephemeral merge commit, which breaks git_sha attestation in the manifest.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - name: Verify local quality manifest
         run: bash scripts/quality/verify-quality-manifest.sh
 

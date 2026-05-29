@@ -146,6 +146,7 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS
 
 | Task | Command |
 |---|---|
+| Bevy live-attach smoke (headless, no GPU) | `just civis-3d-live-smoke` — F3D0 WS, `live_*`, `event_feed` / `menus`, protocol extended frames; see `clients/bevy-ref/README.md` |
 | Run all Rust tests | `cargo test --workspace` |
 | FR-CORE-001 tick budget (10k ticks, release) | `cargo test -p civ-engine --release ten_thousand_ticks_under_budget -- --ignored` |
 | Lint (deny warnings) | `cargo clippy --workspace -- -D warnings` |

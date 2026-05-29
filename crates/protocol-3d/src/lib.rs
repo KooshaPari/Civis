@@ -218,9 +218,10 @@ pub enum Government3d {
 }
 
 /// A single faction state payload for the 3D wire protocol.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct FactionStateEntry {
     /// Stable faction id from the simulation ECS.
+    #[serde(default)]
     pub id: u32,
     /// Current era index.
     #[serde(default)]
@@ -311,9 +312,9 @@ pub struct BattleEvent3d {
 /// A disaster event in the wire-level event feed.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DisasterEvent3d {
-    /// Disaster kind or label.
+    /// Disaster kind or label (not `kind` — collides with [`EventFeedMessage3d`] tag).
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub kind: String,
+    pub disaster_kind: String,
     /// Optional disaster severity.
     #[serde(default)]
     pub severity: f32,
@@ -771,7 +772,7 @@ mod tests {
                     position: Some(WorldXZ { x: 1.0, z: 2.0 }),
                 }),
                 EventFeedMessage3d::Disaster(DisasterEvent3d {
-                    kind: "flood".to_string(),
+                    disaster_kind: "flood".to_string(),
                     severity: 0.75,
                     position: Some(WorldXZ { x: 3.0, z: 4.0 }),
                 }),

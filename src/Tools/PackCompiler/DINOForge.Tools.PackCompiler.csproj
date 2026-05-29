@@ -25,6 +25,8 @@
 
   <!-- Wrapped dependencies (ADR-008) -->
   <ItemGroup>
+    <!-- Pin ILLink to global.json SDK band; avoids NU1004 when CI rollForward resolves a newer SDK. -->
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="11.0.0-preview.2.26159.112" />
     <PackageReference Include="Spectre.Console" Version="0.*" />
     <PackageReference Include="System.CommandLine" Version="2.0.3" />
     <!-- Asset Pipeline -->

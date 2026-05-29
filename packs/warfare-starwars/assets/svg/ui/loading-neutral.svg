@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  loading-neutral.svg — Neutral / Title-screen loading background
+  Size: 1920 × 1080
+  Palette: ui-void #05060A (base), ui-panel #10131A, ui-panel-edge #2A3140,
+           ui-gold #FFE81F, rep-gold-muted #B8A415, rep-deep-navy #0B1B3A,
+           ui-scanline #7FE0FF (very subtle)
+  Design: "Crawl Plate" motif — the universal gold-on-black title-card aesthetic.
+    - Near-void starfield background with deep-navy radial center
+    - 32 starfield dots (neutral cool-white)
+    - 12 hyperspace streaks gold→white: crawl-era transition aesthetic
+    - Gold-on-black perspective crawl plate zone (upper-center, receding vanishing point)
+    - "Lightning seam" Republic/CIS split motif as a subtle background element
+    - Logo safe zone center-upper (clean dark rectangle, no faction branding)
+    - Lower-third bar: gold 2px top rule (universal brand chrome)
+  Safe zones:
+    - Logo: x=560..1360, y=260..480 (800×220)
+    - Progress bar: x=1560..1880, y=975..985
+    - Tip text: x=40..1500, y=960..1020
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <!-- Background: ui-void at edges, slight navy at center -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#0B1B3A"/>
+      <stop offset="40%"  stop-color="#080D18"/>
+      <stop offset="100%" stop-color="#05060A"/>
+    </radialGradient>
+
+    <!-- Subtle blue-violet nebula left -->
+    <radialGradient id="nebulaL" cx="20%" cy="40%" r="40%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#1A2850" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Subtle gold nebula right (crawl motif echo) -->
+    <radialGradient id="nebulaR" cx="80%" cy="30%" r="35%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#4A3800" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Hyperspace streak: gold → white (neutral crawl tones) -->
+    <linearGradient id="streakNeutA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#FFE81F" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#FFE81F" stop-opacity="0.55"/>
+      <stop offset="85%"  stop-color="#F5F7FA" stop-opacity="0.80"/>
+      <stop offset="100%" stop-color="#F5F7FA" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="streakNeutB" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#B8A415" stop-opacity="0"/>
+      <stop offset="55%"  stop-color="#FFE81F" stop-opacity="0.40"/>
+      <stop offset="100%" stop-color="#F5F7FA" stop-opacity="0.65"/>
+    </linearGradient>
+
+    <!-- Perspective crawl vignette: dark trapezoid receding to top -->
+    <linearGradient id="crawlVignette" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%"   stop-color="#05060A" stop-opacity="0.70"/>
+      <stop offset="60%"  stop-color="#05060A" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0.80"/>
+    </linearGradient>
+
+    <!-- Lower-third bar -->
+    <linearGradient id="lowerThirdGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#10131A" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0.96"/>
+    </linearGradient>
+
+    <!-- Progress fill: gold neutral -->
+    <linearGradient id="progressFill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#B8A415"/>
+      <stop offset="60%"  stop-color="#FFE81F"/>
+      <stop offset="100%" stop-color="#F5F7FA"/>
+    </linearGradient>
+
+    <!-- Vanishing point glow (muted gold) -->
+    <radialGradient id="vpGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFE81F" stop-opacity="0.35"/>
+      <stop offset="30%"  stop-color="#B8A415" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Gold cog end-cap (small, for logo underline termination motif) -->
+    <radialGradient id="cogSmall" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFE81F" stop-opacity="0.90"/>
+      <stop offset="100%" stop-color="#B8A415" stop-opacity="0.60"/>
+    </radialGradient>
+
+    <clipPath id="screen">
+      <rect x="0" y="0" width="1920" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <!-- === LAYER 1: Background === -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#bgGrad)"/>
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#nebulaL)"/>
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#nebulaR)"/>
+
+  <!-- === LAYER 2: Starfield (32 neutral stars) === -->
+  <g fill="#E6EAF0" clip-path="url(#screen)">
+    <circle cx="78"   cy="52"  r="1.2" opacity="0.85"/>
+    <circle cx="221"  cy="108" r="0.8" opacity="0.60"/>
+    <circle cx="389"  cy="31"  r="1.4" opacity="0.90"/>
+    <circle cx="574"  cy="74"  r="0.9" opacity="0.65"/>
+    <circle cx="763"  cy="47"  r="1.1" opacity="0.75"/>
+    <circle cx="998"  cy="18"  r="1.3" opacity="0.85"/>
+    <circle cx="1189" cy="88"  r="0.7" opacity="0.55"/>
+    <circle cx="1344" cy="39"  r="1.2" opacity="0.80"/>
+    <circle cx="1553" cy="63"  r="1.0" opacity="0.70"/>
+    <circle cx="1722" cy="105" r="0.8" opacity="0.62"/>
+    <circle cx="1859" cy="29"  r="1.1" opacity="0.75"/>
+    <circle cx="134"  cy="194" r="1.0" opacity="0.68"/>
+    <circle cx="318"  cy="241" r="1.3" opacity="0.84"/>
+    <circle cx="507"  cy="179" r="0.7" opacity="0.52"/>
+    <circle cx="698"  cy="224" r="1.1" opacity="0.76"/>
+    <circle cx="884"  cy="171" r="0.9" opacity="0.62"/>
+    <circle cx="1119" cy="208" r="1.4" opacity="0.92"/>
+    <circle cx="1298" cy="255" r="0.8" opacity="0.58"/>
+    <circle cx="1475" cy="189" r="1.0" opacity="0.72"/>
+    <circle cx="1664" cy="235" r="1.2" opacity="0.78"/>
+    <circle cx="1799" cy="162" r="0.7" opacity="0.50"/>
+    <circle cx="53"   cy="338" r="1.2" opacity="0.78"/>
+    <circle cx="268"  cy="385" r="0.9" opacity="0.62"/>
+    <circle cx="457"  cy="314" r="1.0" opacity="0.70"/>
+    <circle cx="644"  cy="367" r="0.7" opacity="0.52"/>
+    <circle cx="834"  cy="325" r="1.3" opacity="0.84"/>
+    <circle cx="1244" cy="395" r="1.1" opacity="0.74"/>
+    <circle cx="1518" cy="147" r="1.5" fill="#FFE81F" opacity="0.70"/>
+    <circle cx="1540" cy="132" r="0.8" fill="#FFE81F" opacity="0.50"/>
+    <circle cx="302"  cy="815" r="0.7" opacity="0.38"/>
+    <circle cx="734"  cy="842" r="0.8" opacity="0.36"/>
+    <circle cx="1448" cy="826" r="0.7" opacity="0.40"/>
+  </g>
+
+  <!-- === LAYER 3: Hyperspace Streaks (gold/white from 960,540) === -->
+  <g clip-path="url(#screen)" opacity="0.65">
+    <polygon points="960,538 960,542 1920,500 1920,518" fill="url(#streakNeutA)" opacity="0.58"/>
+    <polygon points="961,537 963,541 1920,332 1913,344" fill="url(#streakNeutB)" opacity="0.44"/>
+    <polygon points="962,536 964,539 1876,174 1868,186" fill="url(#streakNeutA)" opacity="0.50"/>
+    <polygon points="961,535 963,538 1610,0 1602,0"     fill="url(#streakNeutB)" opacity="0.42"/>
+    <polygon points="959,535 961,538 1118,0 1112,0"     fill="url(#streakNeutA)" opacity="0.36"/>
+    <polygon points="957,535 959,538 818,0 812,0"       fill="url(#streakNeutB)" opacity="0.36"/>
+    <polygon points="956,536 958,539 302,0 296,0"       fill="url(#streakNeutA)" opacity="0.42"/>
+    <polygon points="955,537 957,540 40,170 46,180"     fill="url(#streakNeutB)" opacity="0.44"/>
+    <polygon points="955,538 957,541 0,342 0,352"       fill="url(#streakNeutA)" opacity="0.50"/>
+    <polygon points="957,538 957,542 0,500 0,518"       fill="url(#streakNeutB)" opacity="0.58"/>
+    <polygon points="956,540 958,543 0,732 0,742"       fill="url(#streakNeutA)" opacity="0.50"/>
+    <polygon points="957,542 959,545 304,1080 312,1080" fill="url(#streakNeutB)" opacity="0.42"/>
+    <polygon points="960,542 962,545 1116,1080 1122,1080" fill="url(#streakNeutA)" opacity="0.36"/>
+    <polygon points="961,541 963,544 1614,1080 1620,1080" fill="url(#streakNeutB)" opacity="0.42"/>
+    <polygon points="962,540 964,543 1872,894 1878,904" fill="url(#streakNeutA)" opacity="0.44"/>
+    <polygon points="962,539 964,542 1920,724 1920,734" fill="url(#streakNeutB)" opacity="0.50"/>
+  </g>
+
+  <!-- Vanishing point glow -->
+  <ellipse cx="960" cy="540" rx="110" ry="110" fill="url(#vpGlow)"/>
+
+  <!-- === LAYER 4: Perspective Crawl Trapezoid (background motif) ===
+       Trapezoidal dark overlay that echoes the "opening crawl" perspective.
+       Bottom-wide (1400px), top-narrow (1040px), spans upper portion of screen.
+       Very subtle — establishes the crawl-plate reading zone.
+  -->
+  <polygon points="260,940 1660,940 1480,80 440,80"
+           fill="#05060A" opacity="0.45"/>
+  <!-- Gold perspective guide lines (very faint) -->
+  <line x1="960" y1="80" x2="260"  y2="940" stroke="#FFE81F" stroke-width="0.8" opacity="0.06"/>
+  <line x1="960" y1="80" x2="1660" y2="940" stroke="#FFE81F" stroke-width="0.8" opacity="0.06"/>
+
+  <!-- === LAYER 5: Lightning Seam motif (background diagonal, very subtle) ===
+       A jagged diagonal gold line representing Republic/CIS divide — brand texture.
+  -->
+  <polyline
+    points="860,100 880,180 840,260 870,340 850,420 880,500 855,580 875,660 845,740 870,820 855,900"
+    fill="none" stroke="#FFE81F" stroke-width="1.5" opacity="0.04" stroke-linejoin="round"/>
+  <polyline
+    points="1060,100 1080,180 1040,260 1070,340 1050,420 1080,500 1055,580 1075,660 1045,740 1070,820 1055,900"
+    fill="none" stroke="#FFE81F" stroke-width="1.5" opacity="0.04" stroke-linejoin="round"/>
+
+  <!-- === LAYER 6: Logo Safe Zone — subtle dark vignette card ===
+       The engine will composite the actual logo PNG here.
+       Vignette darkens the zone slightly to ensure gold text reads at any content.
+  -->
+  <rect x="560" y="260" width="800" height="220" rx="4"
+        fill="#05060A" opacity="0.35"/>
+
+  <!-- Logo underline rule zone — gold 2px bar at y=480, 1400px wide centered -->
+  <line x1="260" y1="480" x2="1660" y2="480"
+        stroke="#FFE81F" stroke-width="2" opacity="0.55"/>
+
+  <!-- Logo underline end-caps -->
+  <!-- Left cap: small 8-tooth cog (circumradius 14) at (260, 480) -->
+  <g transform="translate(260, 480)" fill="#FFE81F" opacity="0.55">
+    <circle r="14"/>
+    <circle r="8" fill="#05060A"/>
+    <g fill="#FFE81F">
+      <rect x="-3" y="-14" width="6" height="6" rx="1"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(45)"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(90)"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(135)"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(180)"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(225)"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(270)"/>
+      <rect x="-3" y="-14" width="6" height="6" rx="1" transform="rotate(315)"/>
+    </g>
+  </g>
+  <!-- Right cap: small hex at (1660, 480) -->
+  <g transform="translate(1660, 480)" fill="#FFE81F" opacity="0.55">
+    <polygon points="14,0 7,12.12 -7,12.12 -14,0 -7,-12.12 7,-12.12"/>
+    <polygon points="8,0 4,6.93 -4,6.93 -8,0 -4,-6.93 4,-6.93"
+             fill="none" stroke="#FFE81F" stroke-width="1.5"/>
+  </g>
+
+  <!-- === LAYER 7: Lower-Third Caption Bar (1920×140, y=940) === -->
+  <rect x="0" y="940" width="1920" height="140" fill="url(#lowerThirdGrad)"/>
+  <!-- Gold 2px top rule (universal brand chrome) -->
+  <line x1="0" y1="940" x2="1920" y2="940" stroke="#FFE81F" stroke-width="2"/>
+  <!-- Faint scanline hint below rule (holographic reference) -->
+  <line x1="0" y1="943" x2="1920" y2="943" stroke="#7FE0FF" stroke-width="0.5" opacity="0.08"/>
+
+  <!-- Transmission indicator: small cog + hex glyphs (neutral: both) -->
+  <g transform="translate(46, 970)" fill="#FFE81F" opacity="0.50">
+    <circle r="7"/>
+    <circle r="4" fill="#10131A"/>
+    <g fill="#FFE81F">
+      <rect x="-2" y="-7" width="4" height="3" rx="0.5"/>
+      <rect x="-2" y="-7" width="4" height="3" rx="0.5" transform="rotate(90)"/>
+      <rect x="-2" y="-7" width="4" height="3" rx="0.5" transform="rotate(180)"/>
+      <rect x="-2" y="-7" width="4" height="3" rx="0.5" transform="rotate(270)"/>
+    </g>
+  </g>
+  <g transform="translate(64, 970)" fill="none" stroke="#FFE81F" stroke-width="1.2" opacity="0.50">
+    <polygon points="7,0 3.5,6.06 -3.5,6.06 -7,0 -3.5,-6.06 3.5,-6.06"/>
+  </g>
+
+  <!-- Progress bar track -->
+  <rect x="1560" y="975" width="320" height="10" rx="5"
+        fill="#2A3140" stroke="#2A3140" stroke-width="0.5"/>
+  <!-- Progress fill (~40% — placeholder) -->
+  <rect x="1560" y="975" width="128" height="10" rx="5" fill="url(#progressFill)"/>
+</svg>

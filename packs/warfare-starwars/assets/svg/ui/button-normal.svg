@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  button-normal.svg — Holographic button background, normal (idle) state
+  Size: 256 × 96
+
+  Design: "Polished Durasteel + Holo" (Republic chrome spec §5)
+    - Base fill: brushed-metal gradient rep-armor-grey (#C5CCD6) → rep-white (#F5F7FA)
+    - Border: rep-jedi-blue #2D7DD2, 1px
+    - Top highlight: 1px white at 12% (bevel lit edge)
+    - Bottom shadow: 1px #0B1B3A at 35% (undercut)
+    - Left/right edge bevel: 1px white at 6% left, 1px #1A1A2E at 20% right
+    - Subtle scanline overlay: #7FE0FF @ 6% on top half (holographic glimmer)
+    - Corner cut: top-right 8×8 notch (angular sci-fi)
+    - No glow in normal state (hover adds saber-blue fill at 18%)
+
+  9-SLICE INSETS: left=18, right=18, top=18, bottom=18
+    Corner regions: 18×18 px at each corner
+    Center stretch region: x=18..238, y=18..78 (220×60 px)
+
+  Text safe area: x=24..232, y=12..84 — engine renders text label here
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 96" width="256" height="96">
+  <defs>
+    <!-- Brushed-metal base gradient (top-lit) -->
+    <linearGradient id="btnBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#D8DDE5"/>
+      <stop offset="20%"  stop-color="#C5CCD6"/>
+      <stop offset="65%"  stop-color="#B2BAC4"/>
+      <stop offset="100%" stop-color="#9AA3AE"/>
+    </linearGradient>
+
+    <!-- Top highlight sheen (short gradient, top 30%) -->
+    <linearGradient id="btnSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F5F7FA" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#F5F7FA" stop-opacity="0.00"/>
+    </linearGradient>
+
+    <!-- Scanline holographic overlay (horizontal) -->
+    <pattern id="scanlines" x="0" y="0" width="1" height="4" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="256" height="1" fill="#7FE0FF" opacity="0.07"/>
+      <rect x="0" y="1" width="256" height="3" fill="none"/>
+    </pattern>
+
+    <!-- Button clip path: top-right 8×8 notch -->
+    <clipPath id="btnClip">
+      <polygon points="0,0 248,0 256,8 256,96 0,96"/>
+    </clipPath>
+
+    <!-- Drop shadow -->
+    <filter id="btnShadow" x="-5%" y="-5%" width="115%" height="125%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- === BASE BODY (clipped) === -->
+  <g clip-path="url(#btnClip)" filter="url(#btnShadow)">
+    <!-- Metal fill -->
+    <rect x="0" y="0" width="256" height="96" fill="url(#btnBase)"/>
+    <!-- Top sheen -->
+    <rect x="0" y="0" width="256" height="30" fill="url(#btnSheen)"/>
+    <!-- Scanline overlay (top 50%) -->
+    <rect x="0" y="0" width="256" height="48" fill="url(#scanlines)"/>
+  </g>
+
+  <!-- === OUTER BORDER (1px jedi-blue) === -->
+  <g clip-path="url(#btnClip)">
+    <!-- Top edge -->
+    <rect x="0" y="0" width="248" height="1" fill="#2D7DD2"/>
+    <!-- Notch diagonal -->
+    <line x1="248" y1="0" x2="256" y2="8" stroke="#2D7DD2" stroke-width="1"/>
+    <!-- Right edge -->
+    <rect x="255" y="8" width="1" height="88" fill="#2D7DD2"/>
+    <!-- Bottom edge -->
+    <rect x="0" y="95" width="256" height="1" fill="#2D7DD2"/>
+    <!-- Left edge -->
+    <rect x="0" y="0" width="1" height="96" fill="#2D7DD2"/>
+  </g>
+
+  <!-- === BEVEL LINES === -->
+  <!-- Top highlight (inner bevel lit) -->
+  <line x1="1" y1="1" x2="247" y2="1" stroke="#F5F7FA" stroke-width="1" opacity="0.14" clip-path="url(#btnClip)"/>
+  <!-- Left highlight -->
+  <line x1="1" y1="1" x2="1" y2="95" stroke="#F5F7FA" stroke-width="1" opacity="0.08" clip-path="url(#btnClip)"/>
+  <!-- Bottom shadow -->
+  <line x1="1" y1="94" x2="255" y2="94" stroke="#0B1B3A" stroke-width="1" opacity="0.38" clip-path="url(#btnClip)"/>
+  <!-- Right shadow -->
+  <line x1="254" y1="8" x2="254" y2="94" stroke="#1A1A2E" stroke-width="1" opacity="0.20" clip-path="url(#btnClip)"/>
+
+  <!-- === TOP-RIGHT NOTCH FILL ===-->
+  <polygon points="248,0 256,0 256,8" fill="#8A94A3" opacity="0.55" clip-path="url(#btnClip)"/>
+  <line x1="249" y1="1" x2="255" y2="7" stroke="#2D7DD2" stroke-width="0.8" opacity="0.55"/>
+
+  <!-- === GOLD ACCENT LINES (thin horizontal rule at 1/3 and 2/3 height) ===
+       Very faint — adds depth/detail to the metal surface.
+  -->
+  <line x1="18" y1="32" x2="238" y2="32" stroke="#FFE81F" stroke-width="0.5" opacity="0.10"/>
+  <line x1="18" y1="64" x2="238" y2="64" stroke="#FFE81F" stroke-width="0.5" opacity="0.08"/>
+
+  <!-- === CORNER BRACKET ACCENTS (gold, 8px arms at 8px inset) ===
+       Top-left and bottom-right only for asymmetric sci-fi feel.
+  -->
+  <g stroke="#FFE81F" stroke-width="1.5" fill="none" opacity="0.65">
+    <!-- Top-left -->
+    <polyline points="8,18 8,8 18,8"/>
+    <!-- Bottom-right -->
+    <polyline points="238,78 238,88 248,88"/>
+  </g>
+
+  <!-- 9-SLICE GUIDE:
+    left=18, right=18 (from right = 256-18=238), top=18, bottom=18 (from bottom = 96-18=78)
+  -->
+</svg>

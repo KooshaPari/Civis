@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Infantry (standard ground soldier)
+  Motif: Stylised T-visor helmet silhouette — rounded dome, vertical visor slot.
+  Original geometry. 64×64 viewBox, monochrome (white on transparent).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Infantry</title>
+  <!-- Helmet dome: rounded top -->
+  <path fill="#F5F7FA"
+    d="
+    M 32,8
+    C 18,8 10,18 10,28
+    L 10,38
+    C 10,42 13,44 16,44
+    L 16,46
+    C 16,48 17,49 18,49
+    L 46,49
+    C 47,49 48,48 48,46
+    L 48,44
+    C 51,44 54,42 54,38
+    L 54,28
+    C 54,18 46,8 32,8 Z
+    "
+  />
+  <!-- T-visor slot: dark cut-out -->
+  <rect x="28" y="22" width="8" height="16" rx="2" fill="#05060A"/>
+  <!-- Visor cross: horizontal band -->
+  <rect x="20" y="28" width="24" height="5" rx="1.5" fill="#05060A"/>
+  <!-- Chin guard nub -->
+  <rect x="27" y="49" width="10" height="5" rx="2" fill="#F5F7FA"/>
+</svg>

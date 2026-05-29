@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  button-hover.svg — Holographic button background, hover (focused) state
+  Size: 256 × 96
+
+  Design: "Holographic Hover" variant of button-normal (Republic chrome spec §5)
+    - Base fill shifts to rep-saber-blue at 18% over the metal gradient
+      (metal still shows through — translucent holo fill)
+    - Border upgrades to rep-saber-blue #5FB3FF, 1.5px (brighter on hover)
+    - Outer glow: saber-blue at 30%, 8px blur (holographic activation aura)
+    - Scanline overlay: #7FE0FF @ 14% on full height (scanlines intensify on hover)
+    - Top highlight sheen brightened to 28% (glass/holo lit surface)
+    - Animated-look: two horizontal saber-blue scan bands (simulated motion)
+    - Gold corner brackets brighten to 90% opacity (activated accents)
+    - Corner cut: same top-right 8×8 notch
+    - Inner focus ring: 1px saber-blue at 55%, 3px inset from border
+
+  9-SLICE INSETS: left=18, right=18, top=18, bottom=18
+    (identical to button-normal — same 9-slice config, just swap texture)
+
+  Text safe area: x=24..232, y=12..84
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 96" width="256" height="96">
+  <defs>
+    <!-- Metal base (same as normal — hover is a layer on top, not replacement) -->
+    <linearGradient id="btnBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#D8DDE5"/>
+      <stop offset="20%"  stop-color="#C5CCD6"/>
+      <stop offset="65%"  stop-color="#B2BAC4"/>
+      <stop offset="100%" stop-color="#9AA3AE"/>
+    </linearGradient>
+
+    <!-- Holo tint overlay (saber-blue wash) -->
+    <linearGradient id="holoTint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#5FB3FF" stop-opacity="0.28"/>
+      <stop offset="45%"  stop-color="#5FB3FF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#2D7DD2" stop-opacity="0.10"/>
+    </linearGradient>
+
+    <!-- Top sheen (brightened) -->
+    <linearGradient id="btnSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F5F7FA" stop-opacity="0.30"/>
+      <stop offset="60%"  stop-color="#5FB3FF" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#F5F7FA" stop-opacity="0.00"/>
+    </linearGradient>
+
+    <!-- Intensified scanline overlay -->
+    <pattern id="scanlines" x="0" y="0" width="1" height="4" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="256" height="1" fill="#7FE0FF" opacity="0.14"/>
+      <rect x="0" y="1" width="256" height="3" fill="none"/>
+    </pattern>
+
+    <!-- Outer glow filter (saber-blue aura) -->
+    <filter id="outerGlow" x="-12%" y="-25%" width="124%" height="150%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#5FB3FF" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Inner glow filter (border edge bloom) -->
+    <filter id="borderGlow" x="-5%" y="-15%" width="115%" height="135%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Button clip path: top-right 8×8 notch -->
+    <clipPath id="btnClip">
+      <polygon points="0,0 248,0 256,8 256,96 0,96"/>
+    </clipPath>
+
+    <!-- Outer glow clip (slightly expanded for glow bleed) -->
+    <clipPath id="glowClip">
+      <polygon points="-8,-8 254,-8 264,6 264,104 -8,104"/>
+    </clipPath>
+  </defs>
+
+  <!-- === OUTER GLOW LAYER (rendered before clip to allow bleed) === -->
+  <g filter="url(#outerGlow)" opacity="0.70">
+    <polygon points="0,0 248,0 256,8 256,96 0,96"
+             fill="none" stroke="#5FB3FF" stroke-width="2"/>
+  </g>
+
+  <!-- === BASE BODY (clipped) === -->
+  <g clip-path="url(#btnClip)">
+    <!-- Metal fill -->
+    <rect x="0" y="0" width="256" height="96" fill="url(#btnBase)"/>
+    <!-- Holo tint wash -->
+    <rect x="0" y="0" width="256" height="96" fill="url(#holoTint)"/>
+    <!-- Top sheen (brightened) -->
+    <rect x="0" y="0" width="256" height="40" fill="url(#btnSheen)"/>
+    <!-- Scanline overlay (full height on hover) -->
+    <rect x="0" y="0" width="256" height="96" fill="url(#scanlines)"/>
+  </g>
+
+  <!-- === SIMULATED SCAN BANDS (animated-feel: 2 horizontal glowing strips) ===
+       Represent a holographic scan sweep paused mid-frame.
+  -->
+  <g clip-path="url(#btnClip)">
+    <!-- Primary scan band: y≈26, 3px tall, saber-blue at 25% -->
+    <rect x="1" y="25" width="254" height="3" fill="#5FB3FF" opacity="0.22"/>
+    <!-- Secondary scan band: y≈58, 2px tall, scanline tint at 15% -->
+    <rect x="1" y="57" width="254" height="2" fill="#7FE0FF" opacity="0.16"/>
+  </g>
+
+  <!-- === OUTER BORDER (1.5px saber-blue, brighter than normal) === -->
+  <g clip-path="url(#btnClip)" filter="url(#borderGlow)">
+    <!-- Top edge -->
+    <rect x="0" y="0" width="248" height="1.5" fill="#5FB3FF"/>
+    <!-- Notch diagonal -->
+    <line x1="248" y1="0" x2="256" y2="8" stroke="#5FB3FF" stroke-width="1.5"/>
+    <!-- Right edge -->
+    <rect x="254.5" y="8" width="1.5" height="88" fill="#5FB3FF"/>
+    <!-- Bottom edge -->
+    <rect x="0" y="94.5" width="256" height="1.5" fill="#5FB3FF"/>
+    <!-- Left edge -->
+    <rect x="0" y="0" width="1.5" height="96" fill="#5FB3FF"/>
+  </g>
+
+  <!-- === INNER FOCUS RING (3px inset from border, 1px saber-blue) === -->
+  <g clip-path="url(#btnClip)" opacity="0.55">
+    <!-- Top inner -->
+    <line x1="3" y1="3" x2="245" y2="3" stroke="#5FB3FF" stroke-width="1"/>
+    <!-- Left inner -->
+    <line x1="3" y1="3" x2="3" y2="93" stroke="#5FB3FF" stroke-width="1"/>
+    <!-- Right inner -->
+    <line x1="253" y1="10" x2="253" y2="93" stroke="#5FB3FF" stroke-width="1"/>
+    <!-- Bottom inner -->
+    <line x1="3" y1="93" x2="253" y2="93" stroke="#5FB3FF" stroke-width="1"/>
+  </g>
+
+  <!-- === BEVEL HIGHLIGHTS === -->
+  <!-- Top highlight -->
+  <line x1="2" y1="2" x2="246" y2="2" stroke="#F5F7FA" stroke-width="1" opacity="0.22" clip-path="url(#btnClip)"/>
+  <!-- Bottom shadow -->
+  <line x1="2" y1="93.5" x2="254" y2="93.5" stroke="#0B1B3A" stroke-width="1" opacity="0.30" clip-path="url(#btnClip)"/>
+
+  <!-- === TOP-RIGHT NOTCH FILL === -->
+  <polygon points="248,0 256,0 256,8" fill="#5FB3FF" opacity="0.40" clip-path="url(#btnClip)"/>
+  <line x1="249" y1="1" x2="255" y2="7" stroke="#5FB3FF" stroke-width="1" opacity="0.80"/>
+
+  <!-- === GOLD CORNER BRACKET ACCENTS (brightened on hover) === -->
+  <g stroke="#FFE81F" stroke-width="2" fill="none" opacity="0.90">
+    <!-- Top-left -->
+    <polyline points="8,18 8,8 18,8"/>
+    <!-- Bottom-right -->
+    <polyline points="238,78 238,88 248,88"/>
+  </g>
+  <!-- Additional brackets appear on hover (top-right, bottom-left) -->
+  <g stroke="#FFE81F" stroke-width="1.5" fill="none" opacity="0.55">
+    <!-- Top-right (partial — notch interferes) -->
+    <polyline points="225,8 235,8 235,18"/>
+    <!-- Bottom-left -->
+    <polyline points="18,78 8,78 8,88"/>
+  </g>
+
+  <!-- === GOLD ACCENT LINES (same as normal but slightly more visible) === -->
+  <line x1="18" y1="32" x2="238" y2="32" stroke="#FFE81F" stroke-width="0.5" opacity="0.16"/>
+  <line x1="18" y1="64" x2="238" y2="64" stroke="#FFE81F" stroke-width="0.5" opacity="0.12"/>
+
+  <!-- 9-SLICE GUIDE: left=18, right=18, top=18, bottom=18 (same as button-normal) -->
+</svg>

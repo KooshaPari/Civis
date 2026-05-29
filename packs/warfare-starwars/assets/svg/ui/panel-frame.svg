@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  panel-frame.svg — 9-slice-ready menu panel frame (beveled durasteel / holographic edge)
+  Size: 256 × 256
+  Palette: ui-panel #10131A, ui-panel-edge #2A3140, ui-gold #FFE81F,
+           rep-jedi-blue #2D7DD2, ui-scanline #7FE0FF, ui-void #05060A
+
+  9-SLICE BORDER INSETS:
+    Corner size:  28 × 28 px (top-left, top-right, bottom-left, bottom-right)
+    Edge strips:  28 px wide on all four sides
+    Center tile:  200 × 200 px (x=28..228, y=28..228) — freely scalable
+    Inset values for 9-slice: left=28, right=28, top=28, bottom=28
+
+  Frame anatomy (outer→inner):
+    1. Outer border ring: 2px #2A3140 (panel-edge)
+    2. Bevel highlight (inner-top-left edge): 1px #F5F7FA @ 10% — "durasteel lit edge"
+    3. Frame body: #10131A fill
+    4. Inner rule: 1px #2D7DD2 @ 60% (jedi-blue inner glow line, 4px inset)
+    5. Gold corner accents: 12×12 L-shaped bracket in each corner (6px inset from inner rule)
+    6. Scanline overlay strip at top edge: #7FE0FF @ 8% (holographic shimmer)
+    7. Center transparent (alpha=0) — safe area for content
+
+  Corner cut: top-right corner clipped at 14×14 45° notch (angular sci-fi motif).
+  All four corners have the gold L-bracket accent.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Panel body gradient: slight top-lit highlight -->
+    <linearGradient id="panelBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#181C26"/>
+      <stop offset="35%"  stop-color="#10131A"/>
+      <stop offset="100%" stop-color="#0A0D12"/>
+    </linearGradient>
+
+    <!-- Inner edge jedi-blue glow -->
+    <linearGradient id="innerGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#2D7DD2" stop-opacity="0.55"/>
+      <stop offset="40%"  stop-color="#2D7DD2" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#2D7DD2" stop-opacity="0.08"/>
+    </linearGradient>
+
+    <!-- Scanline overlay (top strip) -->
+    <linearGradient id="scanlineTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#7FE0FF" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#7FE0FF" stop-opacity="0.00"/>
+    </linearGradient>
+
+    <!-- Corner notch clip path: top-right 14×14 notch -->
+    <clipPath id="frameClip">
+      <!-- Full rect minus top-right notch -->
+      <polygon points="
+        0,0
+        242,0
+        256,14
+        256,256
+        0,256
+      "/>
+    </clipPath>
+
+    <!-- Drop shadow filter for frame depth -->
+    <filter id="frameShadow" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.50"/>
+    </filter>
+
+    <!-- Blue inner edge glow filter -->
+    <filter id="blueGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- === BACKGROUND / TRANSPARENT CENTER ===
+       The center 200×200 area (inside the 28px border) is left transparent
+       so content can show through. We only draw the frame border region.
+  -->
+
+  <!-- Full panel background (clipped to frame shape with notch) -->
+  <g clip-path="url(#frameClip)" filter="url(#frameShadow)">
+    <rect x="0" y="0" width="256" height="256" fill="url(#panelBody)"/>
+  </g>
+
+  <!-- Center cutout: make interior transparent (content area) -->
+  <rect x="28" y="28" width="200" height="200" fill="none"/>
+  <!-- NOTE: In engine usage, set the center tile as transparent.
+       The SVG renders the full frame body; when used as 9-slice in Unity,
+       the border regions render and the center 200×200 is replaced by content. -->
+
+  <!-- === OUTER BORDER RING (2px, panel-edge color) === -->
+  <g clip-path="url(#frameClip)">
+    <!-- Top edge -->
+    <rect x="0" y="0" width="256" height="2" fill="#2A3140"/>
+    <!-- Left edge -->
+    <rect x="0" y="0" width="2" height="256" fill="#2A3140"/>
+    <!-- Right edge -->
+    <rect x="254" y="14" width="2" height="242" fill="#2A3140"/>
+    <!-- Bottom edge -->
+    <rect x="0" y="254" width="256" height="2" fill="#2A3140"/>
+    <!-- Top-right notch edge (diagonal 14×14) -->
+    <line x1="242" y1="0" x2="256" y2="14" stroke="#2A3140" stroke-width="2"/>
+  </g>
+
+  <!-- === BEVEL HIGHLIGHT (inner-top and inner-left 1px, simulated lit edge) === -->
+  <g clip-path="url(#frameClip)" opacity="0.12">
+    <!-- Top bevel highlight -->
+    <rect x="2" y="2" width="240" height="1" fill="#F5F7FA"/>
+    <!-- Left bevel highlight -->
+    <rect x="2" y="2" width="1" height="252" fill="#F5F7FA"/>
+  </g>
+
+  <!-- === SCANLINE TOP STRIP (holographic shimmer, 28px tall) === -->
+  <g clip-path="url(#frameClip)">
+    <rect x="2" y="2" width="252" height="28" fill="url(#scanlineTop)"/>
+  </g>
+
+  <!-- === INNER JEDI-BLUE RULE LINE (4px inset from outer border, 1px line) === -->
+  <!-- Runs around the inside of the border band (at x=27, y=27 inner boundary) -->
+  <g clip-path="url(#frameClip)" filter="url(#blueGlow)">
+    <!-- Top inner rule -->
+    <line x1="27" y1="27" x2="229" y2="27" stroke="#2D7DD2" stroke-width="1" opacity="0.60"/>
+    <!-- Left inner rule -->
+    <line x1="27" y1="27" x2="27" y2="229" stroke="#2D7DD2" stroke-width="1" opacity="0.40"/>
+    <!-- Right inner rule -->
+    <line x1="229" y1="27" x2="229" y2="229" stroke="#2D7DD2" stroke-width="1" opacity="0.40"/>
+    <!-- Bottom inner rule -->
+    <line x1="27" y1="229" x2="229" y2="229" stroke="#2D7DD2" stroke-width="1" opacity="0.60"/>
+  </g>
+
+  <!-- === GOLD CORNER BRACKET ACCENTS ===
+       L-shaped 2px gold brackets in each of the 4 corners.
+       Positioned at 6px inset from the inner rule edge (i.e. at x=33/y=33 from corners).
+       Each bracket: 12px arm length, 2px stroke.
+  -->
+  <!-- Top-left bracket -->
+  <g stroke="#FFE81F" stroke-width="2" fill="none" opacity="0.85">
+    <polyline points="33,45 33,33 45,33"/>
+  </g>
+  <!-- Top-right bracket (adjusted for notch — inset from 229,33) -->
+  <g stroke="#FFE81F" stroke-width="2" fill="none" opacity="0.85">
+    <polyline points="211,33 223,33 223,45"/>
+  </g>
+  <!-- Bottom-left bracket -->
+  <g stroke="#FFE81F" stroke-width="2" fill="none" opacity="0.85">
+    <polyline points="33,211 33,223 45,223"/>
+  </g>
+  <!-- Bottom-right bracket -->
+  <g stroke="#FFE81F" stroke-width="2" fill="none" opacity="0.85">
+    <polyline points="211,223 223,223 223,211"/>
+  </g>
+
+  <!-- === TOP-RIGHT NOTCH FILL (visual polish) ===
+       Fill the notch triangle with a slightly darker inset color to look recessed.
+  -->
+  <polygon points="242,0 256,0 256,14"
+           fill="#05060A" opacity="0.80"/>
+  <polygon points="242,2 254,2 254,14"
+           fill="#1A1E28" opacity="0.60"/>
+  <!-- Notch inner accent line -->
+  <line x1="243" y1="2" x2="254" y2="13" stroke="#2D7DD2" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- === CORNER RIVET DOTS (4 small circles at outer frame corners) ===
+       Subtle durasteel rivet markers — 3px radius at each corner.
+  -->
+  <circle cx="8" cy="8" r="3" fill="#3A4155" opacity="0.70"/>
+  <circle cx="8" cy="248" r="3" fill="#3A4155" opacity="0.70"/>
+  <circle cx="248" cy="248" r="3" fill="#3A4155" opacity="0.70"/>
+  <!-- Top-right: no rivet (notch area) -->
+
+  <!-- === EDGE TICK MARKS (center of each edge strip, mid-chrome detail) === -->
+  <!-- Top center tick -->
+  <rect x="126" y="4" width="4" height="8" rx="1" fill="#2A3140" opacity="0.60"/>
+  <!-- Bottom center tick -->
+  <rect x="126" y="244" width="4" height="8" rx="1" fill="#2A3140" opacity="0.60"/>
+  <!-- Left center tick -->
+  <rect x="4" y="124" width="8" height="4" rx="1" fill="#2A3140" opacity="0.60"/>
+  <!-- Right center tick -->
+  <rect x="244" y="124" width="8" height="4" rx="1" fill="#2A3140" opacity="0.60"/>
+
+  <!-- 9-SLICE GUIDE LINES (invisible in output — reference only)
+    top:    28
+    bottom: 28  (from bottom = 256-28=228)
+    left:   28
+    right:  28  (from right  = 256-28=228)
+  -->
+</svg>

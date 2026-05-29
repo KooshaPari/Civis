@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Special (saboteur / elite ops / unique ability)
+  Motif: A lightning bolt / energy discharge overlaid on a diamond — "wild card / special ops".
+         Bold, asymmetric, reads at 16px as "special/power".
+         Original geometry.
+  64×64, monochrome white.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Special</title>
+  <!-- Background diamond -->
+  <polygon points="32,4 58,32 32,60 6,32"
+    fill="#F5F7FA"/>
+  <!-- Inner diamond cutout -->
+  <polygon points="32,12 50,32 32,52 14,32"
+    fill="#05060A"/>
+  <!-- Lightning bolt zigzag (energetic, angular) -->
+  <!-- Bolt: top-right → mid-left → bottom-right, spanning inner diamond -->
+  <polygon points="37,15 27,33 33,33 26,51 40,28 33,28 42,15"
+    fill="#F5F7FA"/>
+</svg>

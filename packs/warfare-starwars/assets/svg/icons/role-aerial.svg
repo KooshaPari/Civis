@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge — warfare-starwars
+  Role Icon: Aerial (gunship / fighter craft)
+  Motif: Top-down silhouette of a delta-wing gunship — swept wings, central fuselage,
+         twin engine nacelles, forward cockpit bubble. Original geometry.
+  64×64, monochrome white.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Aerial</title>
+  <!-- Main fuselage: narrow pill -->
+  <rect x="27" y="6" width="10" height="52" rx="5" fill="#F5F7FA"/>
+  <!-- Left swept wing -->
+  <polygon points="27,20 4,50 16,52 27,36" fill="#F5F7FA"/>
+  <!-- Right swept wing -->
+  <polygon points="37,20 60,50 48,52 37,36" fill="#F5F7FA"/>
+  <!-- Left engine nacelle -->
+  <rect x="6"  y="46" width="12" height="7" rx="3" fill="#C5CCD6"/>
+  <!-- Right engine nacelle -->
+  <rect x="46" y="46" width="12" height="7" rx="3" fill="#C5CCD6"/>
+  <!-- Cockpit bubble -->
+  <ellipse cx="32" cy="12" rx="5" ry="7" fill="#C5CCD6"/>
+  <!-- Cockpit dark glass -->
+  <ellipse cx="32" cy="12" rx="3" ry="5" fill="#05060A"/>
+  <!-- Wing-root detail lines -->
+  <line x1="27" y1="28" x2="12" y2="46" stroke="#05060A" stroke-width="1.5"/>
+  <line x1="37" y1="28" x2="52" y2="46" stroke="#05060A" stroke-width="1.5"/>
+  <!-- Aft thruster exhaust -->
+  <rect x="29" y="56" width="6" height="5" rx="2" fill="#8A94A3"/>
+</svg>

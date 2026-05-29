@@ -20,7 +20,8 @@ use civ_bevy_ref::{
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
-        default_stream_meshes, format_event_feed_message, AgentLabelConfig, LiveAgentTag,
+        default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
+        AgentLabelConfig, LiveAgentTag,
         LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes,
         LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
@@ -180,6 +181,7 @@ fn main() {
                 apply_live_frames,
                 apply_spectator_meta,
                 sync_live_hud_stats,
+                sync_live_pick_detail,
                 update_live_focus,
                 follow_live_orbit_focus,
                 sync_chunk_debug_render,
@@ -207,6 +209,15 @@ fn apply_spectator_meta(
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);
     }
+}
+
+fn sync_live_pick_detail(
+    selection: Res<LiveSelection>,
+    scene: Res<LiveStreamScene>,
+    mut hud: ResMut<HudState>,
+) {
+    hud.snapshot.pick_detail =
+        civ_bevy_ref::live_stream::format_live_pick_hud_line(selection.0, &scene);
 }
 
 fn sync_live_hud_stats(
@@ -456,7 +467,7 @@ fn apply_live_frames(
             ),
             Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
-            Frame3d::EventFeed(event_frame) => {
+            Frame3d::EventFeed(ref event_frame) => {
                 for msg in &event_frame.events {
                     info!(
                         "event feed (tick {}): {}",
@@ -464,6 +475,7 @@ fn apply_live_frames(
                         format_event_feed_message(msg),
                     );
                 }
+                push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
             }
         }
     }

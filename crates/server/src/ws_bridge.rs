@@ -399,18 +399,16 @@ async fn handle_jsonrpc_text(
 fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceFrame {
     let updates = sim
         .world
-        .query::<(&Citizen, &Wardrobe, &Tools)>()
+        .query::<(&AgentCivilian, &Wardrobe, &Tools)>()
         .iter()
-        .map(
-            |(entity, (_citizen, wardrobe, tools))| AgentAppearanceUpdate {
-                agent_id: u64::from(entity.id()),
-                era: wardrobe.era,
-                wardrobe: wardrobe.material,
-                tools: tools.material,
-                scale: 1.0,
-                position: None,
-            },
-        )
+        .map(|(_entity, (civilian, wardrobe, tools))| AgentAppearanceUpdate {
+            agent_id: civilian.id,
+            era: wardrobe.era,
+            wardrobe: wardrobe.material,
+            tools: tools.material,
+            scale: 1.0,
+            position: None,
+        })
         .collect();
     AgentAppearanceFrame { tick, updates }
 }
@@ -1147,6 +1145,33 @@ mod tests {
             panic!("expected faction state frame");
         };
         assert_eq!(faction.factions.len(), 4);
+    }
+
+    #[test]
+    fn agent_appearance_ids_match_civilian_state_ids() {
+        let sim = Simulation::with_seed(11);
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        let Frame3d::AgentAppearance(appearance) = &bundle[2] else {
+            panic!("expected agent appearance frame");
+        };
+        let Frame3d::CivilianState(civilian) = &bundle[3] else {
+            panic!("expected civilian state frame");
+        };
+        let appearance_ids: std::collections::BTreeSet<u64> = appearance
+            .updates
+            .iter()
+            .map(|update| update.agent_id)
+            .collect();
+        let civilian_ids: std::collections::BTreeSet<u64> =
+            civilian.civilians.iter().map(|entry| entry.id).collect();
+        assert_eq!(
+            appearance_ids, civilian_ids,
+            "agent appearance and civilian state must share civilian.id keys"
+        );
+        assert!(
+            !appearance_ids.is_empty(),
+            "seed 11 should emit matching agent ids"
+        );
     }
 
     /// Manual probe: `cargo test -p civ-server tick_broadcast_encode_bench --release -- --ignored --nocapture`

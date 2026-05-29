@@ -91,6 +91,11 @@
 | FR-CIV-BEVY-034 | implemented | `DiplomacyUiPlugin` on `civ-standalone`; `FactionState` → `DipFaction` + neutral relations matrix; **G** toggles panel (item 59) |
 | FR-CIV-BEVY-035 | implemented | F3D0 encode/decode round-trip for all six `Frame3d` kinds; `parse_ws_payload` decodes each kind (item 60) |
 | FR-CIV-BEVY-037 | implemented | `just civis-3d-live-smoke` gates optional features: `gpu_features::` (bevy) + `materials::` (`pbr-textures`; headless, no GPU) (item 62) |
+| FR-CIV-BEVY-038 | implemented | `AgentAppearanceUpdate.agent_id` uses `civilian.id` (same id space as `CivilianStateEntry.id`) for live pick + inspector (item 63) |
+| FR-CIV-BEVY-039 | implemented | `resolve_civilian_for_live_pick` — stable civilian id lookup + legacy agent-key fallback; inspector/HUD use resolver (item 64) |
+| FR-CIV-BEVY-040 | implemented | `civ-bevy-window` HUD shows recent `Frame3d::EventFeed` via `LiveHudSnapshot::last_event` + `live_stream::push_event_feed_to_hud_summary` (item 65) |
+| FR-CIV-BEVY-041 | implemented | `format_live_pick_hud_line` + `LiveHudSnapshot::pick_detail` on `civ-bevy-window` from `civilian_entries` (item 66) |
+| FR-CIV-BEVY-042 | implemented | P-W1 live attach documentation closure — kickoff items 58 + 63–67, README 6-frame table, traceability rows (item 67) |
 
 ## First PR slice (recommended)
 
@@ -150,10 +155,16 @@
 55. **Civilian/faction HUD from wire frames** — **done** (item 55): `live_stream` merges `CivilianState` / `FactionState` into HUD counts; `GameUiSnapshot` + `LiveHudSnapshot` overlay `P`/`F`; `live_scene`, `live_attach`, `civ-bevy-window` apply frames (`FR-CIV-BEVY-030`).
 56. **PBR biome materials feature** — **done** (item 56): `pbr-textures` cargo feature; `materials.rs` + `BiomeMaterialsPlugin` on `civ-standalone` sandbox only; `terrain::pbr_biome_at_height` height-band material assignment; README asset/LICENSE paths (`FR-CIV-BEVY-031`).
 57. **Live attach smoke harness v5** — **done** (item 57): `just civis-3d-live-smoke` runs `event_feed::`, `menus::`, and `civ-protocol-3d` `civilian_state` / `event_feed` round-trip tests (`FR-CIV-BEVY-032`).
+58. **Live pick → egui inspector** — **done** (item 58): `LiveStreamScene::civilian_entries` from `CivilianState` frames; `sync_live_selection_to_inspector` fills `SelectedEntityDetails`; `game_ui::inspector_details_from_civilian` (`FR-CIV-BEVY-033`).
 59. **Diplomacy panel from faction frames** — **done** (item 59): `diplomacy_ui` exported; `live_stream::sync_diplomacy_from_faction_frame`; `live_attach` sync on server attach; `DiplomacyUiPlugin` on `civ-standalone`; `diplomacy_ui::` tests in smoke (`FR-CIV-BEVY-034`).
 60. **F3D0 round-trip all frame kinds** — **done** (item 60): `frame_bundle_binary_roundtrip_all_kinds` in `civ-protocol-3d`; `parse_ws_payload_decodes_all_frame_kinds` in `civ-bevy-ref`; `just civis-3d-live-smoke` runs both (`FR-CIV-BEVY-035`).
 61. **GPU capabilities in pause Settings** — **done** (item 61): `MenusPlugin` settings panel reads `Option<Res<GpuCapabilities>>` — backend, est. VRAM, ray tracing / DLSS / FSR (read-only); unavailable message when missing (`FR-CIV-BEVY-036`).
 62. **Live attach smoke optional features** — **done** (item 62): `just civis-3d-live-smoke` runs `gpu_features::` (`bevy`) and `materials::` (`pbr-textures`; pure lib tests, no render window) (`FR-CIV-BEVY-037`).
+63. **Agent appearance id alignment** — **done** (item 63): `build_agent_appearance_frame` sets `agent_id` from `AgentCivilian.id` (not `entity.id()`); `agent_appearance_ids_match_civilian_state_ids` in `ws_bridge` tests (`FR-CIV-BEVY-038`).
+64. **Live pick civilian resolver** — **done** (item 64): `live_stream::resolve_civilian_for_live_pick`; `live_attach` + `game_ui` inspector use resolver; legacy 1:1 agent/civilian fallback (`FR-CIV-BEVY-039`).
+65. **bevy_window HUD event feed line** — **done** (item 65): `push_event_feed_to_hud_summary` + `LiveHudSnapshot::last_event`; `format_overlay` `| evt:` suffix; `civ-bevy-window` applies `EventFeed` frames (`FR-CIV-BEVY-040`).
+66. **HUD pick detail (inspector-lite)** — **done** (item 66): `format_live_pick_hud_line` + `LiveHudSnapshot::pick_detail`; `civ-bevy-window` `sync_live_pick_detail` from `civilian_entries` each frame (`FR-CIV-BEVY-041`).
+67. **P-W1 live attach documentation closure** — **done** (item 67): kickoff + traceability for items 58 + 63–67; README six-frame bundle handler table and id-alignment note; smoke recipe cross-links (`FR-CIV-BEVY-042`).
 
 ## Run
 

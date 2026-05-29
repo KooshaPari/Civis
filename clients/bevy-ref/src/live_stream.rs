@@ -21,8 +21,8 @@ use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
     agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
-    decode_chunk_id, mesh_lod_level, should_render_chunk, DebugRender, AGENT_MARKER_DEPTH,
-    AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    decode_chunk_id, mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind,
+    SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
 
 /// Chunk edge length in voxels (matches kernel).
@@ -210,6 +210,62 @@ pub fn sync_live_hud_civilian_faction_counts(
     hud.faction_count = faction_hud_count(scene);
 }
 
+/// Resolves a live viewport pick id to the latest [`CivilianStateEntry`].
+///
+/// Primary lookup uses stable civilian ids in [`LiveStreamScene::civilian_entries`].
+/// Fallback: when the picked id is a streamed agent key in [`LiveStreamScene::agents`]
+/// but differs from the stable civilian id (legacy servers used ECS entity ids in
+/// `AgentAppearanceUpdate::agent_id` while `CivilianStateEntry::id` is
+/// `AgentCivilian::id`; item 63 aligns server agent ids), return the sole civilian
+/// wire entry when exactly one agent marker and one civilian payload are tracked.
+#[must_use]
+pub fn resolve_civilian_for_live_pick(
+    picked_id: u64,
+    scene: &LiveStreamScene,
+) -> Option<&CivilianStateEntry> {
+    if let Some(entry) = scene.civilian_entries.get(&picked_id) {
+        return Some(entry);
+    }
+    if scene.agents.contains_key(&picked_id)
+        && scene.agents.len() == 1
+        && scene.civilian_entries.len() == 1
+    {
+        return scene.civilian_entries.values().next();
+    }
+    None
+}
+
+/// One-line pick detail for HUD overlay (name, profession, health% when wire data exists).
+#[must_use]
+pub fn format_live_pick_hud_line(
+    selection: Option<SelectedLiveEntity>,
+    scene: &LiveStreamScene,
+) -> Option<String> {
+    let selected = selection?;
+    match selected.kind {
+        LiveEntityKind::Agent => resolve_civilian_for_live_pick(selected.id, scene)
+            .map(format_civilian_pick_hud_line)
+            .or_else(|| Some(format!("Agent #{}", selected.id))),
+        LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
+        LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
+    }
+}
+
+fn format_civilian_pick_hud_line(entry: &CivilianStateEntry) -> String {
+    let name = if entry.genome_summary.summary.is_empty() {
+        format!("Civilian #{}", entry.id)
+    } else {
+        entry.genome_summary.summary.clone()
+    };
+    let profession = if entry.profession.is_empty() {
+        "—".to_string()
+    } else {
+        entry.profession.clone()
+    };
+    let health = format!("{:.0}%", entry.health.clamp(0.0, 1.0) * 100.0);
+    format!("{name} | {profession} | {health}")
+}
+
 /// Maps one wire event-feed message to an egui toast category and human-readable text.
 #[cfg(feature = "egui")]
 #[must_use]
@@ -230,6 +286,46 @@ pub fn apply_event_feed_frame(feed: &mut EventFeed, frame: civ_protocol_3d::Even
         let (kind, text) = map_event_feed_message(&msg);
         feed.push(kind, text);
     }
+}
+
+/// Maximum characters for [`crate::LiveHudSnapshot::last_event`] overlay text.
+pub const LIVE_HUD_EVENT_MAX_CHARS: usize = 80;
+
+/// Truncates event-feed HUD text to [`LIVE_HUD_EVENT_MAX_CHARS`] (Unicode-safe).
+#[must_use]
+pub fn truncate_event_feed_hud_line(text: &str) -> String {
+    let char_count = text.chars().count();
+    if char_count <= LIVE_HUD_EVENT_MAX_CHARS {
+        return text.to_string();
+    }
+    let mut truncated: String = text
+        .chars()
+        .take(LIVE_HUD_EVENT_MAX_CHARS.saturating_sub(1))
+        .collect();
+    truncated.push('…');
+    truncated
+}
+
+/// Updates [`crate::LiveHudSnapshot::last_event`] from the latest wire event-feed frame.
+///
+/// Keeps the last one or two formatted messages (joined with ` · `) for the HUD line.
+pub fn push_event_feed_to_hud_summary(
+    hud: &mut crate::LiveHudSnapshot,
+    frame: &civ_protocol_3d::EventFeedFrame,
+) {
+    if frame.events.is_empty() {
+        return;
+    }
+    let formatted: Vec<String> = frame
+        .events
+        .iter()
+        .map(format_event_feed_message)
+        .collect();
+    let summary = match formatted.len() {
+        1 => formatted[0].clone(),
+        n => formatted[n.saturating_sub(2)..].join(" · "),
+    };
+    hud.last_event = Some(truncate_event_feed_hud_line(&summary));
 }
 
 /// Human-readable text for logging (`civ-bevy-window`, no egui).
@@ -1043,6 +1139,233 @@ mod tests {
             },
         );
         assert_eq!(feed.events.len(), 2);
+    }
+
+    #[test]
+    fn push_event_feed_to_hud_summary_stores_last_messages() {
+        use civ_protocol_3d::{DeathEvent3d, EventFeedFrame, EventFeedMessage3d, TechEvent3d};
+
+        let mut hud = crate::LiveHudSnapshot::default();
+        push_event_feed_to_hud_summary(
+            &mut hud,
+            &EventFeedFrame {
+                tick: 4,
+                events: vec![
+                    EventFeedMessage3d::Death(DeathEvent3d {
+                        entity_id: 1,
+                        ..Default::default()
+                    }),
+                    EventFeedMessage3d::Tech(TechEvent3d {
+                        tech: "agriculture".into(),
+                        faction_id: 2,
+                        ..Default::default()
+                    }),
+                ],
+            },
+        );
+        let line = hud.last_event.expect("last_event");
+        assert!(line.contains("Entity #1 died"));
+        assert!(line.contains("agriculture"));
+        assert!(line.contains('·'));
+    }
+
+    #[test]
+    fn truncate_event_feed_hud_line_caps_length() {
+        let long = "x".repeat(LIVE_HUD_EVENT_MAX_CHARS + 20);
+        let truncated = truncate_event_feed_hud_line(&long);
+        assert!(truncated.chars().count() <= LIVE_HUD_EVENT_MAX_CHARS);
+        assert!(truncated.ends_with('…'));
+    }
+
+    #[test]
+    fn resolve_civilian_for_live_pick_by_stable_id() {
+        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
+
+        let mut scene = LiveStreamScene::default();
+        scene.civilian_entries.insert(
+            100,
+            CivilianStateEntry {
+                id: 100,
+                needs: CivilianNeeds3d::default(),
+                profession: "smith".to_string(),
+                genome_summary: GenomeSummary3d::default(),
+                species: String::new(),
+                health: 1.0,
+            },
+        );
+
+        let entry = resolve_civilian_for_live_pick(100, &scene).expect("stable id");
+        assert_eq!(entry.id, 100);
+        assert_eq!(entry.profession, "smith");
+    }
+
+    #[test]
+    fn resolve_civilian_for_live_pick_fallback_when_agent_key_differs() {
+        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
+
+        let mut scene = LiveStreamScene::default();
+        scene.agents.insert(999, Entity::PLACEHOLDER);
+        scene.civilian_entries.insert(
+            42,
+            CivilianStateEntry {
+                id: 42,
+                needs: CivilianNeeds3d::default(),
+                profession: "farmer".to_string(),
+                genome_summary: GenomeSummary3d {
+                    summary: "Ada".to_string(),
+                    ..Default::default()
+                },
+                species: String::new(),
+                health: 0.5,
+            },
+        );
+
+        let entry = resolve_civilian_for_live_pick(999, &scene).expect("1:1 fallback");
+        assert_eq!(entry.id, 42);
+        assert_eq!(entry.profession, "farmer");
+    }
+
+    #[test]
+    fn resolve_civilian_for_live_pick_none_when_multiple_agents() {
+        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
+
+        let mut scene = LiveStreamScene::default();
+        scene.agents.insert(1, Entity::PLACEHOLDER);
+        scene.agents.insert(2, Entity::PLACEHOLDER);
+        scene.civilian_entries.insert(
+            10,
+            CivilianStateEntry {
+                id: 10,
+                needs: CivilianNeeds3d::default(),
+                profession: String::new(),
+                genome_summary: GenomeSummary3d::default(),
+                species: String::new(),
+                health: 1.0,
+            },
+        );
+        scene.civilian_entries.insert(
+            20,
+            CivilianStateEntry {
+                id: 20,
+                needs: CivilianNeeds3d::default(),
+                profession: String::new(),
+                genome_summary: GenomeSummary3d::default(),
+                species: String::new(),
+                health: 1.0,
+            },
+        );
+
+        assert!(resolve_civilian_for_live_pick(1, &scene).is_none());
+    }
+
+    #[test]
+    fn format_live_pick_hud_line_civilian_entry_shows_name_profession_health() {
+        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
+
+        let mut scene = LiveStreamScene::default();
+        scene.civilian_entries.insert(
+            7,
+            CivilianStateEntry {
+                id: 7,
+                needs: CivilianNeeds3d::default(),
+                profession: "Farmer".to_string(),
+                genome_summary: GenomeSummary3d {
+                    summary: "Ada".to_string(),
+                    ..Default::default()
+                },
+                species: String::new(),
+                health: 0.87,
+            },
+        );
+
+        let line = format_live_pick_hud_line(
+            Some(SelectedLiveEntity {
+                kind: LiveEntityKind::Agent,
+                id: 7,
+            }),
+            &scene,
+        )
+        .expect("pick line");
+        assert_eq!(line, "Ada | Farmer | 87%");
+    }
+
+    #[test]
+    fn format_live_pick_hud_line_agent_without_civilian_entry_uses_id_stub() {
+        let scene = LiveStreamScene::default();
+        let line = format_live_pick_hud_line(
+            Some(SelectedLiveEntity {
+                kind: LiveEntityKind::Agent,
+                id: 42,
+            }),
+            &scene,
+        )
+        .expect("pick line");
+        assert_eq!(line, "Agent #42");
+    }
+
+    #[test]
+    fn format_live_pick_hud_line_uses_resolver_fallback_for_legacy_agent_key() {
+        use civ_protocol_3d::{CivilianNeeds3d, GenomeSummary3d};
+
+        let mut scene = LiveStreamScene::default();
+        scene.agents.insert(999, Entity::PLACEHOLDER);
+        scene.civilian_entries.insert(
+            42,
+            CivilianStateEntry {
+                id: 42,
+                needs: CivilianNeeds3d::default(),
+                profession: "Farmer".to_string(),
+                genome_summary: GenomeSummary3d {
+                    summary: "Ada".to_string(),
+                    ..Default::default()
+                },
+                species: String::new(),
+                health: 0.87,
+            },
+        );
+
+        let line = format_live_pick_hud_line(
+            Some(SelectedLiveEntity {
+                kind: LiveEntityKind::Agent,
+                id: 999,
+            }),
+            &scene,
+        )
+        .expect("pick line");
+        assert_eq!(line, "Ada | Farmer | 87%");
+    }
+
+    #[test]
+    fn format_live_pick_hud_line_none_when_unselected() {
+        let scene = LiveStreamScene::default();
+        assert!(format_live_pick_hud_line(None, &scene).is_none());
+    }
+
+    #[test]
+    fn format_live_pick_hud_line_building_and_parcel_stubs() {
+        let scene = LiveStreamScene::default();
+        assert_eq!(
+            format_live_pick_hud_line(
+                Some(SelectedLiveEntity {
+                    kind: LiveEntityKind::Building,
+                    id: 3,
+                }),
+                &scene,
+            )
+            .as_deref(),
+            Some("Building #3")
+        );
+        assert_eq!(
+            format_live_pick_hud_line(
+                Some(SelectedLiveEntity {
+                    kind: LiveEntityKind::GraphParcel,
+                    id: 11,
+                }),
+                &scene,
+            )
+            .as_deref(),
+            Some("Parcel #11")
+        );
     }
 
     #[test]

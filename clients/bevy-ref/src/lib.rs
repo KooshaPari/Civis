@@ -201,7 +201,7 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct LiveHudSnapshot {
     /// WebSocket session state from the reconnecting client.
     pub connection: WsConnectionState,
@@ -229,6 +229,10 @@ pub struct LiveHudSnapshot {
     pub focused_chunk: Option<ChunkId>,
     /// Streamed agent/building/graph selection from viewport pick, if any.
     pub selected_live: Option<SelectedLiveEntity>,
+    /// Most recent event-feed line for HUD overlay (`civ-bevy-window`, no egui).
+    pub last_event: Option<String>,
+    /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
+    pub pick_detail: Option<String>,
 }
 
 impl LiveHudSnapshot {
@@ -280,6 +284,12 @@ impl LiveHudSnapshot {
         }
         if let Some(selection) = self.selected_live {
             line.push_str(&format!(" | {}", format_live_selection(selection)));
+        }
+        if let Some(event) = &self.last_event {
+            line.push_str(&format!(" | evt: {event}"));
+        }
+        if let Some(detail) = &self.pick_detail {
+            line.push_str(&format!(" | {detail}"));
         }
         line
     }
@@ -915,6 +925,32 @@ mod tests {
         }
         .format_overlay();
         assert!(line.contains("sel: graph #11"));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_last_event_suffix() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(9),
+            fps: 60.0,
+            last_event: Some("Entity #3 died (faction 1)".to_string()),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("| evt: Entity #3 died (faction 1)"));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_pick_detail_suffix() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            pick_detail: Some("Ada | Farmer | 87%".to_string()),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("| Ada | Farmer | 87%"));
     }
 
     #[test]

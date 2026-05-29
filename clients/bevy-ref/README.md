@@ -22,8 +22,8 @@ cargo run -p civ-bevy-ref
 Live window (WebSocket attach + HUD overlay):
 
 ```bash
-# Headless CI gate (no GPU): F3D0 WS smoke, live_ground, live_stream, minimap UV tests, compile checks
-# P-W1 item 41 / FR-CIV-BEVY-016 — run before merging live-attach changes
+# Headless CI gate (no GPU): F3D0 WS smoke, live_ground, live_stream, live_focus, live_minimap, live_pick, minimap UV tests, compile checks
+# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025 — run before merging live-attach changes
 just civis-3d-live-smoke
 
 # Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)
@@ -45,6 +45,9 @@ Headless gate for live attach — no window or running civ-server required:
 | WS binary tick after sim tick | `cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick` |
 | Voxel column ground anchoring | `cargo test -p civ-bevy-ref --features bevy --lib live_ground::` |
 | Shared frame apply (`live_stream`) | `cargo test -p civ-bevy-ref --features bevy --lib live_stream::` |
+| Live scene focus (orbit + minimap bounds) | `cargo test -p civ-bevy-ref --features bevy --lib live_focus::` |
+| Live minimap dots (layout, UV, spawn helpers) | `cargo test -p civ-bevy-ref --features bevy --lib live_minimap::` |
+| Live viewport pick (ray–AABB helpers) | `cargo test -p civ-bevy-ref --features bevy --lib live_pick::` |
 | Minimap UV mapping (`world_xz_to_minimap_uv` path) | `cargo test -p civ-bevy-ref --lib chunk_to_minimap` + `minimap_uv_to_chunk` |
 | Client compile | `cargo check … civ-standalone`, `cargo check … civ-bevy-window` |
 

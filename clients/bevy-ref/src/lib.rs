@@ -20,9 +20,13 @@ pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]

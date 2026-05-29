@@ -41,6 +41,9 @@ fn main() {
         .add_plugins(GpuFeaturesPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
+        .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
+        .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
+        .add_plugins(civ_bevy_ref::menus::MenusPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
@@ -73,7 +76,7 @@ fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
 fn setup_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(60.0, 80.0, 60.0).looking_at(Vec3::new(128.0, 30.0, 128.0), Vec3::Y),
+        Transform::from_xyz(0.0, 90.0, 150.0).looking_at(Vec3::new(0.0, 12.0, 0.0), Vec3::Y),
     ));
 }
 

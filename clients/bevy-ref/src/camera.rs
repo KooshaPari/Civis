@@ -11,7 +11,10 @@ pub struct CameraRig {
 impl Default for CameraRig {
     fn default() -> Self {
         Self {
-            target: Vec3::new(128.0, 30.0, 128.0),
+            // Map is centred on the origin (terrain/water span roughly
+            // -WORLD_SIZE/2..WORLD_SIZE/2), so frame the centre, not the old
+            // corner-based (128,30,128) target.
+            target: Vec3::new(0.0, 12.0, 0.0),
             yaw: -0.12,
             pitch: -0.72,
         }

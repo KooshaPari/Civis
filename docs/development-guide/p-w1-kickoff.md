@@ -83,6 +83,8 @@
 | FR-CIV-BEVY-021 | implemented | GitHub Actions `.github/workflows/civis-3d-live-smoke.yml` (headless `just civis-3d-live-smoke`) |
 | FR-CIV-BEVY-025 | implemented | `live_pick::` ray–AABB unit tests in `just civis-3d-live-smoke` (item 50) |
 | FR-CIV-BEVY-026 | implemented | `CIV_BEVY_BACKEND` native GPU selection + `native_backend` unit tests; README + `wgpu-native-escape-hatches.md` cross-link (item 51) |
+| FR-CIV-BEVY-030 | implemented | `CivilianState` / `FactionState` wire frames → HUD population + faction chips (item 55) |
+| FR-CIV-BEVY-031 | implemented | `pbr-textures` feature + `materials.rs` biome loader; sandbox-only `BiomeMaterialsPlugin` on `civ-standalone` (item 56) |
 
 ## First PR slice (recommended)
 
@@ -137,6 +139,11 @@
 50. **Live attach smoke harness v4** — **done** (item 50): `just civis-3d-live-smoke` runs `live_pick::` lib tests (`FR-CIV-BEVY-025`).
 51. **Native GPU backend env + tests** — **done** (item 51): `CIV_BEVY_BACKEND` (`dx12` \| `vulkan` \| `metal`); Windows defaults DX12 \| Vulkan; `native_backend` unit tests + README; cross-link `wgpu-native-escape-hatches.md` (`FR-CIV-BEVY-026`).
 52. **Live attach polish integration** — **done** (item 52): `civ-bevy-window` wires `LivePickPlugin`, minimap `MinimapRoot`, HUD `selected_live`; `live_attach` mirrors selection; smoke/README cover `live_focus` + `live_minimap` tests.
+53. **Server F3D0 civilian/faction/event broadcast** — **done** (item 53): `build_frame_bundle` emits six `Frame3d` variants per tick (civilian/faction/event from sim snapshot + lifecycle stub); `ws_smoke` expects full bundle (`FR-CIV-BEVY-028`).
+54. **EventFeed F3D0 → egui toasts** — **done** (item 54): `live_stream::apply_event_feed_frame` maps wire feed messages to `EventFeed` toasts; `live_scene` applies on server attach; `live_attach` connection toasts; `bevy_window` logs (`FR-CIV-BEVY-029`).
+55. **Civilian/faction HUD from wire frames** — **done** (item 55): `live_stream` merges `CivilianState` / `FactionState` into HUD counts; `GameUiSnapshot` + `LiveHudSnapshot` overlay `P`/`F`; `live_scene`, `live_attach`, `civ-bevy-window` apply frames (`FR-CIV-BEVY-030`).
+56. **PBR biome materials feature** — **done** (item 56): `pbr-textures` cargo feature; `materials.rs` + `BiomeMaterialsPlugin` on `civ-standalone` sandbox only; `terrain::pbr_biome_at_height` height-band material assignment; README asset/LICENSE paths (`FR-CIV-BEVY-031`).
+57. **Live attach smoke harness v5** — **done** (item 57): `just civis-3d-live-smoke` runs `event_feed::`, `menus::`, and `civ-protocol-3d` `civilian_state` / `event_feed` round-trip tests (`FR-CIV-BEVY-032`).
 
 ## Run
 

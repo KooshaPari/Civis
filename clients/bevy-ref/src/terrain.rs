@@ -127,6 +127,16 @@ pub fn terrain_height(x: f32, z: f32) -> f32 {
 /// Legacy height-banded palette, kept exported for callers that colour by
 /// elevation alone (e.g. materials gradient documentation). Biome colouring
 /// in the mesh uses [`biome_color`] instead.
+/// Map terrain elevation to a PBR [`crate::materials::Biome`] height band.
+///
+/// Only compiled with `pbr-textures`; uses the same normalised thresholds as
+/// [`crate::materials::Biome::from_height_norm`].
+#[cfg(feature = "pbr-textures")]
+#[must_use]
+pub fn pbr_biome_at_height(height: f32) -> crate::materials::Biome {
+    crate::materials::Biome::from_height_norm(height / HEIGHT_SCALE)
+}
+
 pub fn color_for_height(height: f32) -> [f32; 4] {
     let t = height / HEIGHT_SCALE;
     if t < WATER_LEVEL / HEIGHT_SCALE {
@@ -583,6 +593,15 @@ mod tests {
         }
         let distinct = seen.iter().filter(|&&s| s).count();
         assert!(distinct >= 5, "only {distinct} distinct biomes");
+    }
+
+    #[cfg(feature = "pbr-textures")]
+    #[test]
+    fn pbr_biome_at_height_uses_height_norm_bands() {
+        let beach = pbr_biome_at_height(0.20 * HEIGHT_SCALE);
+        assert_eq!(beach, crate::materials::Biome::SandBeach);
+        let snow = pbr_biome_at_height(0.95 * HEIGHT_SCALE);
+        assert_eq!(snow, crate::materials::Biome::SnowPure);
     }
 
     #[test]

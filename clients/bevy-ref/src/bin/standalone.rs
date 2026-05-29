@@ -12,7 +12,7 @@ use civ_bevy_ref::{
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
     resolve_attach_mode_from_env,
-    terrain::{terrain_mesh, WORLD_SIZE},
+    terrain::{terrain_height, terrain_mesh, WORLD_SIZE},
     AttachMode,
 };
 
@@ -62,6 +62,11 @@ fn main() {
             (camera_input, update_camera, animate_water, update_lighting),
         );
 
+    if attach_mode == AttachMode::Standalone {
+        #[cfg(feature = "pbr-textures")]
+        app.add_plugins(civ_bevy_ref::materials::BiomeMaterialsPlugin);
+    }
+
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
     }
@@ -80,6 +85,26 @@ fn setup_camera(mut commands: Commands) {
     ));
 }
 
+#[cfg(feature = "pbr-textures")]
+fn setup_sandbox_terrain(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    biome_materials: Res<civ_bevy_ref::materials::BiomeMaterials>,
+) {
+    let terrain = terrain_mesh();
+    let centre_h = terrain_height(WORLD_SIZE * 0.5, WORLD_SIZE * 0.5);
+    let biome = civ_bevy_ref::terrain::pbr_biome_at_height(centre_h);
+    commands.spawn((
+        Mesh3d(meshes.add(terrain)),
+        MeshMaterial3d(biome_materials.handle(biome).clone()),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+    ));
+
+    spawn_sandbox_water(&mut commands, &mut meshes, &mut materials);
+}
+
+#[cfg(not(feature = "pbr-textures"))]
 fn setup_sandbox_terrain(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -95,6 +120,15 @@ fn setup_sandbox_terrain(
         })),
         Transform::from_xyz(0.0, 0.0, 0.0),
     ));
+
+    spawn_sandbox_water(&mut commands, &mut meshes, &mut materials);
+}
+
+fn spawn_sandbox_water(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+) {
 
     let water_size = WORLD_SIZE * 1.05;
     commands.spawn((

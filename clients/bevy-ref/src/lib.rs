@@ -45,6 +45,8 @@ pub mod live_scene;
 pub mod live_stream;
 #[cfg(feature = "bevy")]
 pub mod minimap;
+#[cfg(feature = "pbr-textures")]
+pub mod materials;
 #[cfg(feature = "bevy")]
 pub mod native_backend;
 #[cfg(feature = "bevy")]
@@ -215,6 +217,10 @@ pub struct LiveHudSnapshot {
     pub building_count: usize,
     /// Streamed building-graph parcel entities in the live scene.
     pub graph_parcel_count: usize,
+    /// Civilians tracked from `Frame3d::CivilianState` wire frames.
+    pub civilian_count: usize,
+    /// Factions tracked from `Frame3d::FactionState` wire frames.
+    pub faction_count: usize,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
@@ -231,11 +237,15 @@ impl LiveHudSnapshot {
         agents: usize,
         buildings: usize,
         graph_parcels: usize,
+        civilians: usize,
+        factions: usize,
     ) {
         self.chunk_count = chunks;
         self.agent_count = agents;
         self.building_count = buildings;
         self.graph_parcel_count = graph_parcels;
+        self.civilian_count = civilians;
+        self.faction_count = factions;
     }
 
     /// Format a single-line overlay string suitable for Bevy UI or CI log checks.
@@ -251,8 +261,14 @@ impl LiveHudSnapshot {
             .map(|value| value.to_string())
             .unwrap_or_else(|| "—".to_string());
         let mut line = format!(
-            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{}",
-            self.fps, self.chunk_count, self.agent_count, self.building_count, self.graph_parcel_count
+            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{} | P:{} F:{}",
+            self.fps,
+            self.chunk_count,
+            self.agent_count,
+            self.building_count,
+            self.graph_parcel_count,
+            self.civilian_count,
+            self.faction_count,
         );
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
@@ -805,6 +821,8 @@ mod tests {
             agent_count: 5,
             building_count: 2,
             graph_parcel_count: 1,
+            civilian_count: 12,
+            faction_count: 2,
             ..Default::default()
         }
         .format_overlay();
@@ -815,6 +833,8 @@ mod tests {
         assert!(line.contains("A:5"));
         assert!(line.contains("B:2"));
         assert!(line.contains("G:1"));
+        assert!(line.contains("P:12"));
+        assert!(line.contains("F:2"));
     }
 
     #[test]

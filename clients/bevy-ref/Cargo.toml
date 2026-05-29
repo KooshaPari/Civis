@@ -60,6 +60,8 @@ solari = [
     "bevy",
     "bevy/bevy_solari",
 ]
+# PBR biome ground materials (sandbox terrain only; see `src/materials.rs`).
+pbr-textures = ["bevy"]
 
 [[bin]]
 name = "civ-bevy-window"

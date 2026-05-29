@@ -23,7 +23,7 @@ Live window (WebSocket attach + HUD overlay):
 
 ```bash
 # Headless CI gate (no GPU): F3D0 WS smoke, live_ground, live_stream, live_focus, live_minimap, live_pick, minimap UV tests, compile checks
-# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025 — run before merging live-attach changes
+# P-W1 item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027 — run before merging live-attach changes
 just civis-3d-live-smoke
 
 # Start civ-server first (default ws://127.0.0.1:3000/ws, tick broadcast Both)

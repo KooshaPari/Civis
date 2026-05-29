@@ -124,7 +124,7 @@ civis-3d-standalone-live-url URL:
     powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
 
 # Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
-# P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025.
+# P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025; item 52 / FR-CIV-BEVY-027.
 civis-3d-live-smoke:
     cargo test -p civ-server frame_triple
     cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick

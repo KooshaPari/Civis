@@ -63,7 +63,12 @@ pub fn native_render_plugin() -> RenderPlugin {
 }
 
 fn forced_backend_from_env() -> Option<Backends> {
-    let raw = std::env::var(BACKEND_ENV).ok()?;
+    forced_backend_from_var(std::env::var(BACKEND_ENV).ok())
+}
+
+/// Resolve `CIV_BEVY_BACKEND` from an optional env string (used by [`forced_backend_from_env`] and tests).
+fn forced_backend_from_var(raw: Option<String>) -> Option<Backends> {
+    let raw = raw?;
     match parse_forced_backend_value(&raw) {
         Some(backends) => Some(backends),
         None => {
@@ -119,6 +124,39 @@ mod tests {
     fn parse_forced_backend_value_rejects_gles_and_unknown() {
         for raw in ["", "gles", "gl", "webgpu", "browser_webgpu", "opengl"] {
             assert_eq!(parse_forced_backend_value(raw), None, "raw={raw:?}");
+        }
+    }
+
+
+    #[test]
+    fn forced_backend_from_var_unset_returns_none() {
+        assert_eq!(forced_backend_from_var(None), None);
+    }
+
+    #[test]
+    fn forced_backend_from_var_accepts_valid_tokens() {
+        assert_eq!(
+            forced_backend_from_var(Some("vulkan".into())),
+            Some(Backends::VULKAN)
+        );
+        assert_eq!(
+            forced_backend_from_var(Some(" DX12 ".into())),
+            Some(Backends::DX12)
+        );
+        assert_eq!(
+            forced_backend_from_var(Some("metal".into())),
+            Some(Backends::METAL)
+        );
+    }
+
+    #[test]
+    fn forced_backend_from_var_rejects_gles_and_unknown() {
+        for raw in ["gles", "webgpu", "not-a-backend"] {
+            assert_eq!(
+                forced_backend_from_var(Some(raw.into())),
+                None,
+                "raw={raw:?}"
+            );
         }
     }
 

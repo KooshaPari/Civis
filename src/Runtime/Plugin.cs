@@ -1131,24 +1131,13 @@ namespace DINOForge.Runtime
                 // The background thread's GetAsyncKeyState DOES NOT reliably see synthetic
                 // keybd_event input from external processes, so ECS callbacks are preferred.
                 // Background thread F9/F10 polling is disabled to prevent double-toggles.
+                // Key mapping: F9=Debug panel, F10=Mods menu (#944 fix: correct swap from ff1455b2)
+                DebugLog.Write("Plugin", "[RuntimeDriver] Key mapping: F9=Debug, F10=Mods");
                 Bridge.KeyInputSystem.OnF9Pressed = () =>
                 {
                     try
                     {
-                        DebugLog.Write("Plugin", "[RuntimeDriver] F9 pressed (via KeyInputSystem)");
-                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
-                        else _modMenuHost?.Toggle();
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLog.Write("Plugin", $"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
-                    }
-                };
-                Bridge.KeyInputSystem.OnF10Pressed = () =>
-                {
-                    try
-                    {
-                        DebugLog.Write("Plugin", "[RuntimeDriver] F10 pressed (via KeyInputSystem)");
+                        DebugLog.Write("Plugin", "[RuntimeDriver] F9 pressed → DEBUG panel (via KeyInputSystem)");
                         if (_uguiReady && _dfCanvas != null)
                         {
                             _dfCanvas.ToggleDebug();
@@ -1160,6 +1149,19 @@ namespace DINOForge.Runtime
                             }
                         }
                         else _debugOverlay?.Toggle();
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Write("Plugin", $"[RuntimeDriver] F9 toggle failed: {ex.GetType().Name} - {ex.Message}");
+                    }
+                };
+                Bridge.KeyInputSystem.OnF10Pressed = () =>
+                {
+                    try
+                    {
+                        DebugLog.Write("Plugin", "[RuntimeDriver] F10 pressed → MODS menu (via KeyInputSystem)");
+                        if (_uguiReady && _dfCanvas != null) _dfCanvas.ToggleModMenu();
+                        else _modMenuHost?.Toggle();
                     }
                     catch (Exception ex)
                     {

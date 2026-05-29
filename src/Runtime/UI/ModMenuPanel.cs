@@ -261,9 +261,12 @@ namespace DINOForge.Runtime.UI
                     "Packs will queue and render when UI is ready. Check DFCanvas.Start() completion.");
             }
 
-            _log?.LogInfo($"[ModMenuPanel.SetPacks] Calling RebuildPackList()...");
-            RebuildPackList();
-            _log?.LogInfo($"[ModMenuPanel.SetPacks] RebuildPackList() complete. Calling RefreshDetail()...");
+            // Fix #944/B2: ApplyFilters initialises _filteredIndices from the new pack set.
+            // Without this, _filteredIndices stays empty after SetPacks → counter shows "0 of N"
+            // and filtering is broken on first display.
+            _log?.LogInfo($"[ModMenuPanel.SetPacks] Calling ApplyFilters() to populate _filteredIndices...");
+            ApplyFilters();
+            _log?.LogInfo($"[ModMenuPanel.SetPacks] ApplyFilters() complete ({_filteredIndices.Count} of {_presenter.Packs.Count} visible). Calling RefreshDetail()...");
             RefreshDetail();
             _log?.LogInfo($"[ModMenuPanel.SetPacks] RefreshDetail() complete. EXIT.");
             _log?.LogInfo($"");
@@ -705,16 +708,15 @@ namespace DINOForge.Runtime.UI
                 return;
             }
 
+            // Fix #944/B1: Do NOT override offsetMin/Max with absolute values here.
+            // The ListPane uses a VerticalLayoutGroup (header 32px + FilterContainer ~240px +
+            // scroll). Manually setting offsetMax to -32px collapses the scroll rect behind the
+            // filter bar. Let the LayoutGroup manage positions via LayoutElement.flexibleHeight.
             RectTransform scrollRt = scrollRect.GetComponent<RectTransform>();
-            scrollRt.anchorMin = Vector2.zero;
-            scrollRt.anchorMax = Vector2.one;
-            scrollRt.offsetMin = new Vector2(0f, 0f);
-            scrollRt.offsetMax = new Vector2(0f, -32f);
-            scrollRt.sizeDelta = Vector2.zero;
             LayoutElement scrollLe = scrollRect.gameObject.AddComponent<LayoutElement>();
             scrollLe.preferredWidth = ListWidth;
             scrollLe.minWidth = ListWidth;
-            scrollLe.flexibleHeight = 1f;
+            scrollLe.flexibleHeight = 1f;  // fills remaining space below filter container
 
             content.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ListWidth);
             content.sizeDelta = new Vector2(ListWidth, content.sizeDelta.y);
@@ -1408,6 +1410,12 @@ namespace DINOForge.Runtime.UI
         {
             _filteredIndices.Clear();
 
+            // Fix #944/B3: use dropdown VALUE (index) to compare filters, NOT localized option text.
+            // Comparing against "All"/"Engine Extension"/etc. breaks once i18n renames the labels
+            // (e.g. "All Tiers" in some locales). Index 0 always means "no filter" regardless of locale.
+            int tierIndex = _tierDropdown != null ? _tierDropdown.value : 0;
+            int stateIndex = _stateDropdown != null ? _stateDropdown.value : 0;
+
             for (int i = 0; i < _presenter.Packs.Count; i++)
             {
                 PackDisplayInfo pack = _presenter.Packs[i];
@@ -1423,33 +1431,24 @@ namespace DINOForge.Runtime.UI
                     }
                 }
 
-                // Tier filter
-                if (_tierFilter != "All")
+                // Tier filter (index 0 = All; 1 = Engine Extension, 2 = Content, 3 = Total Conversion, 4 = Baseline)
+                if (tierIndex != 0)
                 {
                     bool matches = false;
-                    if (_tierFilter == "Engine Extension" && pack.Classification == "engine_extension")
-                        matches = true;
-                    if (_tierFilter == "Content" && pack.Classification == "content")
-                        matches = true;
-                    if (_tierFilter == "Total Conversion" && pack.Classification == "total_conversion")
-                        matches = true;
-                    if (_tierFilter == "Baseline" && pack.Classification == "baseline")
-                        matches = true;
-
+                    if (tierIndex == 1 && pack.Classification == "engine_extension") matches = true;
+                    if (tierIndex == 2 && pack.Classification == "content") matches = true;
+                    if (tierIndex == 3 && pack.Classification == "total_conversion") matches = true;
+                    if (tierIndex == 4 && pack.Classification == "baseline") matches = true;
                     if (!matches) continue;
                 }
 
-                // State filter
-                if (_stateFilter != "All")
+                // State filter (index 0 = All; 1 = Enabled, 2 = Disabled, 3 = Has Errors)
+                if (stateIndex != 0)
                 {
                     bool matches = false;
-                    if (_stateFilter == "Enabled" && pack.IsEnabled)
-                        matches = true;
-                    if (_stateFilter == "Disabled" && !pack.IsEnabled)
-                        matches = true;
-                    if (_stateFilter == "Has Errors" && pack.Errors.Count > 0)
-                        matches = true;
-
+                    if (stateIndex == 1 && pack.IsEnabled) matches = true;
+                    if (stateIndex == 2 && !pack.IsEnabled) matches = true;
+                    if (stateIndex == 3 && pack.Errors.Count > 0) matches = true;
                     if (!matches) continue;
                 }
 

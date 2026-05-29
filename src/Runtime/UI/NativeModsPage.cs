@@ -149,6 +149,10 @@ namespace DINOForge.Runtime.UI
             rootRt.offsetMin = Vector2.zero;
             rootRt.offsetMax = Vector2.zero;
 
+            // Fix #944/D2: render above all menu siblings so the mods page isn't hidden
+            // behind DINO's native buttons/panels that share the same canvas.
+            _root.transform.SetAsLastSibling();
+
             Image rootBg = _root.GetComponent<Image>();
             rootBg.color = BgColor;
 

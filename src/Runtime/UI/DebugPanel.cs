@@ -213,7 +213,7 @@ namespace DINOForge.Runtime.UI
 
             // Keyboard shortcuts strip
             Text shortcutsLabel = UiBuilder.MakeText(header.transform, "Shortcuts",
-                "F8=Dump  F9=Debug  F10=Menu", 10, UiBuilder.TextSecondary);
+                "F8=Dump  F9=Debug  F10=Mods", 10, UiBuilder.TextSecondary);
             LayoutElement scLe = shortcutsLabel.gameObject.AddComponent<LayoutElement>();
             scLe.preferredWidth = 160f;
 
@@ -488,8 +488,11 @@ namespace DINOForge.Runtime.UI
             }
             else
             {
-                UiBuilder.MakeText(parent, "NoPlatform", "  ModPlatform: not available",
-                    11, UiBuilder.TextSecondary);
+                // Platform not yet initialised — likely still at main menu startup
+                UiBuilder.MakeText(parent, "NoPlatform",
+                    "  ModPlatform: initializing…", 11, UiBuilder.TextSecondary);
+                UiBuilder.MakeText(parent, "NoPlatformHint",
+                    "  (packs load after first scene transition)", 10, UiBuilder.TextSecondary);
             }
         }
 
@@ -499,7 +502,9 @@ namespace DINOForge.Runtime.UI
             {
                 if (Unity.Entities.World.All.Count == 0)
                 {
-                    UiBuilder.MakeText(parent, "NoWorlds", "  No worlds found", 11, UiBuilder.TextSecondary);
+                    // Normal during main menu — DINO has no ECS world until gameplay starts
+                    UiBuilder.MakeText(parent, "NoWorlds",
+                        "  No ECS world (main menu — expected)", 11, UiBuilder.TextSecondary);
                     return;
                 }
 

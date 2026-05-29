@@ -161,28 +161,14 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-075 | `mod.permission_violation.v1` on replay bus + snapshot. | `engine/replay.rs`, `engine.rs`, `civ-watch` | `mod_permission_violation_*` | implemented |
 | FR-CIV-TACTICS-076 | civ-server session-scoped SQLite on `save.slot`. | `civ-save-db`, `server/ws_bridge.rs` | `save.slot` smoke | implemented |
 | FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
-| FR-CIV-BEVY-001 | `civ-standalone` gameplay plugins (sim tick, HUD, spawn tools, minimap). | `clients/bevy-ref` | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
-| FR-CIV-BEVY-002 | `civ-standalone` live WS attach + render-to-texture minimap. | `clients/bevy-ref` (`live_attach`, `minimap`) | `resolve_attach_mode_*`, `cargo check … civ-standalone` | implemented |
-| FR-CIV-BEVY-003 | Live attach scene sync (`Frame3d` voxel/agent streams) in `civ-standalone`. | `clients/bevy-ref` (`live_scene`) | `cargo check … civ-standalone`, server attach smoke | implemented |
-| FR-CIV-BEVY-004 | Building diff entries + agent `WorldXZ` positions in live attach. | `live_scene`, `civ-protocol-3d` | `building_and_agent_position_*`, server attach smoke | implemented |
-| FR-CIV-BEVY-005 | Live scene focus follow + building provenance styling. | `live_scene`, `camera`, `minimap` | server attach smoke, `cargo check … civ-standalone` | implemented |
-| FR-CIV-BEVY-006 | Terrain height anchoring for live-streamed agents and buildings. | `clients/bevy-ref` (`terrain`, `live_scene`) | `cargo test -p civ-bevy-ref terrain::` | implemented |
-| FR-CIV-BEVY-007 | Optional `BuildingGraph` snapshot on `BuildingDiffFrame` (live attach parcels). | `civ-protocol-3d`, `civ-server`, `live_scene` | `cargo test -p civ-protocol-3d building_graph` | implemented |
-| FR-CIV-BEVY-008 | Voxel column ground anchoring for live agents/buildings (streamed chunks over analytic terrain). | `clients/bevy-ref` (`live_ground`, `live_scene`) | `cargo test -p civ-bevy-ref --features bevy live_ground::` | implemented |
-| FR-CIV-BEVY-009 | Live attach smoke harness (F3D0 WS + Bevy compile gate). | `justfile` (`civis-3d-live-smoke`) | `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-010 | `bevy_window` live attach parity — shared `live_ground`, `BuildingDiff` markers. | `clients/bevy-ref` (`bevy_window`, `live_ground`) | `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window` | implemented |
-| FR-CIV-BEVY-011 | Shared `live_stream` frame apply — dedupe `live_scene` and `bevy_window`; graph parcels in both. | `clients/bevy-ref` (`live_stream`, `live_scene`, `bevy_window`) | `cargo check -p civ-bevy-ref --features bevy`, `cargo test -p civ-bevy-ref --features bevy live_ground` | implemented |
-| FR-CIV-BEVY-012 | `civ-bevy-window` minimap shows live agents, buildings, graph parcels, and camera. | `clients/bevy-ref` (`bevy_window`, `lib.rs` `world_xz_to_minimap_uv`) | `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-013 | Shared `live_minimap` module — dot layout, UV mapping, colors, spawn helpers for `live_scene` and `bevy_window`. | `clients/bevy-ref` (`live_minimap`, `live_focus`, `live_scene`, `bevy_window`) | `cargo test -p civ-bevy-ref --features bevy --lib live_minimap::`, `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-014 | `live_stream` frame-apply helpers — unit tests for colors, parcel mapping, ground Y, voxel delta apply. | `clients/bevy-ref` (`live_stream`, `live_ground`) | `cargo test -p civ-bevy-ref --features bevy --lib live_stream::`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-015 | `civ-bevy-window` live scene focus — orbit centre and minimap bounds follow streamed agents, buildings, graph, and chunks (parity with `live_scene`). | `clients/bevy-ref` (`live_focus`, `bevy_window`) | `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-016 | P-W1 kickoff **item 41**: extend `civis-3d-live-smoke` CI gate — F3D0 WS, `live_ground`, `live_stream::`, minimap UV lib tests, Bevy compile checks; document live attach + remote URL recipes. | `justfile` (`civis-3d-live-smoke`), `clients/bevy-ref/README.md` | `just civis-3d-live-smoke`, `cargo test -p civ-bevy-ref --lib chunk_to_minimap`, `cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk` | implemented |
-| FR-CIV-BEVY-017 | Live attach HUD overlay shows streamed scene stats (chunks, agents, buildings, graph parcels) and optional WS RTT. | `clients/bevy-ref` (`lib.rs` `LiveHudSnapshot`, `bevy_window`, `live_attach`, `game_ui`, `ws_client`) | `live_hud_overlay_*`, `cargo check … civ-bevy-window`, `cargo check … civ-standalone` | implemented |
-| FR-CIV-BEVY-018 | P-W1 kickoff **item 43**: WebSocket reconnect backoff + HUD `WsConnectionState`. | `clients/bevy-ref` (`ws_client`, `LiveHudSnapshot`) | `reconnect_backoff_*`, `live_hud_overlay_shows_reconnecting`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-019 | P-W1 kickoff **item 44**: viewport pick streamed live agents/buildings/graph parcels (`live_pick`); HUD `sel: agent #N`; `civ-standalone` mirrors pick. | `clients/bevy-ref` (`live_pick`, `bevy_window`, `live_attach`) | `cargo test -p civ-bevy-ref --features bevy --lib live_pick::`, `cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-020 | P-W1 kickoff **item 45**: `civ-bevy-window` day/night from `sim.snapshot` — `DayNightCycle` + `update_lighting` via `apply_ws_spectator_day_night` and `presentation_day_factor_target`. | `clients/bevy-ref` (`atmosphere`, `bevy_window`, `live_attach`) | `set_from_is_day_snaps_time_and_presentation_target`, `cargo check … civ-bevy-window`, `just civis-3d-live-smoke` | implemented |
-| FR-CIV-BEVY-021 | P-W1 kickoff **item 46**: GitHub Actions workflow runs headless `just civis-3d-live-smoke` on PR/push when Bevy live-attach paths change (no GPU). | `.github/workflows/civis-3d-live-smoke.yml`, `justfile` (`civis-3d-live-smoke`) | `just civis-3d-live-smoke`, workflow **Civis 3D Live Smoke** on path-filtered PR/push | implemented |
-| FR-CIV-BEVY-022 | P-W1 kickoff **item 47**: extend `civis-3d-live-smoke` with `live_focus::` and `live_minimap::` lib tests. | `justfile` (`civis-3d-live-smoke`), `clients/bevy-ref` (`live_focus`, `live_minimap`), `clients/bevy-ref/README.md` | `just civis-3d-live-smoke`, `cargo test -p civ-bevy-ref --features bevy --lib live_focus::`, `cargo test -p civ-bevy-ref --features bevy --lib live_minimap::` | implemented |
+
+---
+
+## Bevy reference client (FR-CIV-BEVY-*)
+
+| FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
+|---|---|---|---|---|
+| FR-CIV-BEVY-026 | P-W1 kickoff **item 51**: document and test native GPU backend selection (`CIV_BEVY_BACKEND`, DX12/Vulkan/Metal; no GLES). | `clients/bevy-ref` (`native_backend`), `clients/bevy-ref/README.md`, `docs/research/wgpu-native-escape-hatches.md` | `cargo test -p civ-bevy-ref --features bevy --lib native_backend`, `just civis-3d-live-smoke` | implemented |
 
 ---
 
@@ -203,8 +189,6 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-PROTO3D-000 | Stub. | `crates/protocol-3d/` | `protocol3d::schema_version_stub` | implemented |
 | FR-CIV-PROTO3D-001 | Voxel delta frames binary serialize; lossless round-trip. | `crates/protocol-3d/` | `protocol3d::voxel_delta_roundtrip` | implemented |
 | FR-CIV-PROTO3D-002 | Building diff frames carry procedural vs freehand provenance. | `crates/protocol-3d/` | `protocol3d::building_diff_provenance` | implemented |
-| FR-CIV-PROTO3D-008 | Building diff entries + agent `WorldXZ` positions on wire. | `crates/protocol-3d/` | `building_and_agent_position_extensions_roundtrip` | implemented |
-| FR-CIV-PROTO3D-009 | Optional `BuildingGraph` snapshot on `BuildingDiffFrame`. | `crates/protocol-3d/` | `building_graph_snapshot_roundtrips` | implemented |
 
 ---
 

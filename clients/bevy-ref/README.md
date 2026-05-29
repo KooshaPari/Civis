@@ -87,6 +87,35 @@ and ~35° elevation — see `CameraTarget` in `src/lib.rs`.
 | `W` / `A` / `S` / `D` | Pan orbit centre on the horizontal plane (stub) |
 | `F3` | Toggle chunk mesh wireframe debug overlay |
 
+### Native GPU backends (`CIV_BEVY_BACKEND`)
+
+Bevy still routes through `wgpu`, but Civis restricts adapter search to **native HAL backends only** (no GLES, no browser WebGPU). Implementation: [`src/native_backend.rs`](src/native_backend.rs) (`native_only_backends`, `native_render_plugin`).
+
+| `CIV_BEVY_BACKEND` | Effect |
+|--------------------|--------|
+| *(unset)* | Platform defaults below |
+| `dx12` | Force DirectX 12 only (`d3d12`, `directx` aliases accepted) |
+| `vulkan` | Force Vulkan only (`vk` alias accepted) |
+| `metal` | Force Metal only (macOS) |
+
+**Platform defaults when unset:**
+
+| OS | Adapter backends |
+|----|------------------|
+| Windows | DX12 \| Vulkan |
+| macOS | Metal \| Vulkan |
+| Linux / other Unix | Vulkan |
+
+Invalid values are logged and ignored; defaults apply. Wireframe overlay (`F3`) requires `WgpuFeatures::POLYGON_MODE_LINE` (enabled in `native_wgpu_settings`).
+
+**Tests (no GPU):**
+
+```bash
+cargo test -p civ-bevy-ref --features bevy --lib native_backend
+```
+
+**Research:** native `wgpu::Device::as_hal` escape hatches for future DXR / mesh shaders — [`docs/research/wgpu-native-escape-hatches.md`](../../docs/research/wgpu-native-escape-hatches.md). Traceability: **FR-CIV-BEVY-026** / P-W1 kickoff **item 51**.
+
 ### Debug wireframe (`DebugRender`)
 
 Press **`F3`** in `civ-bevy-window` to toggle chunk wireframe rendering. State lives in
@@ -95,7 +124,7 @@ Press **`F3`** in `civ-bevy-window` to toggle chunk wireframe rendering. State l
 When enabled:
 
 - Bevy 0.18 [`WireframePlugin`](https://docs.rs/bevy/latest/bevy/pbr/wireframe/struct.WireframePlugin.html) draws native line wireframes on chunk meshes (DX12 / Vulkan / Metal; requires `WgpuFeatures::POLYGON_MODE_LINE`).
-- Renderer adapters are restricted to **native HAL backends** (DX12 + Vulkan on Windows) via [`native_backend`](src/native_backend.rs). Override with `CIV_BEVY_BACKEND=dx12|vulkan|metal`. Future DXR/mesh-shader work uses `wgpu::Device::as_hal` — see `docs/research/wgpu-native-escape-hatches.md`.
+- Native backend selection is documented above ([`CIV_BEVY_BACKEND`](#native-gpu-backends-civ_bevy_backend)); see also [`wgpu-native-escape-hatches.md`](../../docs/research/wgpu-native-escape-hatches.md).
 - Chunk fill uses unlit [`StandardMaterial`](https://docs.rs/bevy/latest/bevy/pbr/struct.StandardMaterial.html) at low alpha ([`DEBUG_WIREFRAME_OVERLAY_ALPHA`](src/lib.rs), default `0.22`) so solid faces stay visible under the lines.
 - Agent markers are unaffected.
 

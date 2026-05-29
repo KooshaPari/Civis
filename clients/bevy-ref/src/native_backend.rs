@@ -64,20 +64,63 @@ pub fn native_render_plugin() -> RenderPlugin {
 
 fn forced_backend_from_env() -> Option<Backends> {
     let raw = std::env::var(BACKEND_ENV).ok()?;
-    match raw.trim().to_ascii_lowercase().as_str() {
-        "dx12" | "d3d12" | "directx" => Some(Backends::DX12),
-        "vulkan" | "vk" => Some(Backends::VULKAN),
-        "metal" => Some(Backends::METAL),
-        _ => {
+    match parse_forced_backend_value(&raw) {
+        Some(backends) => Some(backends),
+        None => {
             bevy::log::warn!("ignoring {BACKEND_ENV}={raw:?} (expected dx12, vulkan, or metal)");
             None
         }
     }
 }
 
+/// Parse `CIV_BEVY_BACKEND` value (case-insensitive, trimmed). Returns `None` for unknown tokens.
+fn parse_forced_backend_value(raw: &str) -> Option<Backends> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "dx12" | "d3d12" | "directx" => Some(Backends::DX12),
+        "vulkan" | "vk" => Some(Backends::VULKAN),
+        "metal" => Some(Backends::METAL),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_forced_backend_value_accepts_dx12_aliases() {
+        for raw in ["dx12", "DX12", " d3d12 ", "DirectX"] {
+            assert_eq!(
+                parse_forced_backend_value(raw),
+                Some(Backends::DX12),
+                "raw={raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_forced_backend_value_accepts_vulkan_aliases() {
+        for raw in ["vulkan", "VULKAN", " vk ", "VK"] {
+            assert_eq!(
+                parse_forced_backend_value(raw),
+                Some(Backends::VULKAN),
+                "raw={raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_forced_backend_value_accepts_metal() {
+        assert_eq!(parse_forced_backend_value("metal"), Some(Backends::METAL));
+        assert_eq!(parse_forced_backend_value(" Metal "), Some(Backends::METAL));
+    }
+
+    #[test]
+    fn parse_forced_backend_value_rejects_gles_and_unknown() {
+        for raw in ["", "gles", "gl", "webgpu", "browser_webgpu", "opengl"] {
+            assert_eq!(parse_forced_backend_value(raw), None, "raw={raw:?}");
+        }
+    }
 
     #[test]
     fn native_backends_exclude_browser_webgpu_on_windows() {
@@ -89,5 +132,14 @@ mod tests {
             assert!(!b.contains(Backends::BROWSER_WEBGPU));
             assert!(!b.contains(Backends::GL));
         }
+    }
+
+    #[test]
+    fn native_wgpu_settings_use_native_only_backends() {
+        let settings = native_wgpu_settings();
+        assert_eq!(settings.backends, Some(native_only_backends()));
+        assert!(settings
+            .features
+            .contains(WgpuFeatures::POLYGON_MODE_LINE));
     }
 }

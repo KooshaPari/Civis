@@ -1,7 +1,7 @@
 # WGPU Native Escape Hatches
 
-**Status:** RESEARCH COMPLETE  
-**Date:** 2026-05-27  
+**Status:** RESEARCH COMPLETE
+**Date:** 2026-05-27
 **Scope:** Bevy + `wgpu` native backend access via `as_hal()` on DX12, Vulkan, and Metal
 
 ## Executive Summary
@@ -368,6 +368,16 @@ Typical pattern:
 5. the node signals completion with a fence or equivalent sync primitive
 
 If you need to sample native-rendered output in Bevy passes, you also need a clear texture/resource handoff path.
+
+## Civis Bevy reference client
+
+Civis wires native-only adapter selection in [`clients/bevy-ref/src/native_backend.rs`](../../clients/bevy-ref/src/native_backend.rs):
+
+- `CIV_BEVY_BACKEND` — optional override: `dx12`, `vulkan`, or `metal` (case-insensitive; GLES / WebGPU rejected)
+- `native_only_backends()` — Windows default **DX12 \| Vulkan**; macOS **Metal \| Vulkan**; Linux **Vulkan** only
+- `native_render_plugin()` — `RenderPlugin` with `WgpuFeatures::POLYGON_MODE_LINE` for chunk wireframe debug
+
+Operator docs: [`clients/bevy-ref/README.md`](../../clients/bevy-ref/README.md#native-gpu-backends-civ_bevy_backend). Traceability: **FR-CIV-BEVY-026** / P-W1 kickoff **item 51**.
 
 ## Bottom Line
 

@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "b824b936a352203ecac251012d60de37c2ea9e3a",
-  "created_at": "2026-05-29T05:15:14Z",
+  "git_sha": "7c99bd12c77b22d0f048b9a6072f54e8ec7242c7",
+  "created_at": "2026-05-29T05:20:36Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
     "rust": "rustc 1.95.0 (59807616e 2026-04-14)"
@@ -29,5 +29,5 @@
       "detail": "optional UE gate"
     }
   },
-  "manifest_hash": "39a1d962cefc06ed9e0da39a5f8390fc5be3e8c0bcabbc82f74a7aa585c79a93"
+  "manifest_hash": "9100afa2ad8d61aeefed634998b8c90473deb0e3f2c64c63b864a75354b936c5"
 }

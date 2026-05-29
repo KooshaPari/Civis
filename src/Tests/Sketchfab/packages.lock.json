@@ -21,12 +21,6 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
-      "MinVer": {
-        "type": "Direct",
-        "requested": "[7.*, )",
-        "resolved": "7.0.0",
-        "contentHash": "2lMTCQl5bGP4iv0JNkockPnyllC6eHLz+CoK2ICvalvHod+exXSxueu9hq+zNkU7bZBJf8wMfeRC/Edn8AGmEg=="
-      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.*, )",
@@ -488,8 +482,8 @@
       "dinoforge.bridge.client": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Protocol": "[0.26.0-dev, )",
-          "DINOForge.SDK": "[0.26.0-dev, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Newtonsoft.Json": "[13.*, )",
           "Serilog": "[4.*, )",
           "Serilog.Sinks.Console": "[6.*, )",
@@ -517,10 +511,10 @@
       "dinoforge.tools.cli": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.Bridge.Client": "[0.26.0-dev, )",
-          "DINOForge.Bridge.Protocol": "[0.26.0-dev, )",
-          "DINOForge.SDK": "[0.26.0-dev, )",
-          "DINOForge.Tools.Installer": "[0.26.0-dev, )",
+          "DINOForge.Bridge.Client": "[0.26.0, )",
+          "DINOForge.Bridge.Protocol": "[0.26.0, )",
+          "DINOForge.SDK": "[0.26.0, )",
+          "DINOForge.Tools.Installer": "[0.26.0, )",
           "Microsoft.Data.Sqlite": "[8.*, )",
           "Microsoft.Extensions.Configuration": "[8.*, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[8.*, )",
@@ -540,7 +534,7 @@
       "dinoforge.tools.installer": {
         "type": "Project",
         "dependencies": {
-          "DINOForge.SDK": "[0.26.0-dev, )",
+          "DINOForge.SDK": "[0.26.0, )",
           "Octokit": "[13.0.1, )"
         }
       }

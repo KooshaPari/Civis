@@ -276,8 +276,8 @@ namespace DINOForge.Tests
         }
 
         /// <summary>
-        /// SPEC-007 Feature 2: The list pane uses explicit RectTransform sizing (not
-        /// VerticalLayoutGroup/ScrollRect) so pack rows stay visible when layout rebuild is broken.
+        /// SPEC-007 Feature 2: The list pane pins width via LayoutElement and reserves header
+        /// space on the scroll viewport so pack rows stay visible under layout rebuild stress.
         /// </summary>
         [Fact]
         [Trait("UserStory", "US-F3.1")]

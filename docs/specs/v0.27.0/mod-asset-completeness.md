@@ -1,12 +1,29 @@
 # SW-008: Mod Asset Completeness (SW + Modern 100%)
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 8
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 3 — Assets
 **Story Points**: 13
 **Priority**: P1
+**File Scope**:
+  - `packs/warfare-starwars/assets/ui/portraits/`
+  - `packs/warfare-starwars/assets/ui/badges/`
+  - `packs/warfare-starwars/assets/ui/republic-emblem.png`
+  - `packs/warfare-starwars/assets/ui/cis-emblem.png`
+  - `packs/warfare-modern/assets/ui/portraits/`
+  - `packs/warfare-modern/assets/ui/badges/`
+  - `packs/warfare-modern/assets/ui/alliance-emblem.png`
+  - `packs/warfare-modern/assets/ui/enemy-emblem.png`
+  - `packs/warfare-starwars/units/`
+  - `packs/warfare-modern/units/`
+  - `src/Tools/PackCompiler/`
+**Depends On**: [SW-003, SW-007]
+**Requirements**: EPIC-027-FR-015, EPIC-027-FR-020, EPIC-027-NFR-006, EPIC-027-NFR-010, EPIC-027-NFR-011, EPIC-027-NFR-013, EPIC-027-NFR-019, EPIC-027-NFR-020, EPIC-027-NFR-021
 
 ---
 
@@ -117,6 +134,23 @@ remaining 20% is acceptable as "planned expansion" documented in the pack README
 - [ ] 0 missing-bundle errors in `dinoforge verify-mod` for both packs.
 - [ ] Unit definition count: SW ≥ 22/28, Modern ≥ 18/28.
 - [ ] `dotnet test` green.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-015 | CiOutput | `PackCompiler validate` exits 0 for both packs (0 dangling refs); unit counts meet thresholds | Implementing → Validated |
+| EPIC-027-FR-020 | ManualAttestation | `docs/proof/SW-008-pack-toggle-badge.png` (toggling pack updates active badge) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | Portraits + bundles load without error under BepInEx 5.4.x (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-010 | LintResult | Tampered-bundle test: pack skipped + warning logged (code review + test) | Validated → Shipped |
+| EPIC-027-NFR-011 | LintResult | `PackCompiler validate` rejects `../` or absolute path in asset refs (code review) | Validated → Shipped |
+| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no TypeLoadException after clean launch | Implementing → Validated |
+| EPIC-027-NFR-019 | CiOutput | `dinoforge verify-mod --pack warfare-starwars` exits 0 (0 stubs); same for modern | Implementing → Validated |
+| EPIC-027-NFR-020 | ManualAttestation | `docs/proof/judge-receipts/SW-008-no-vanilla-art.md` (full play session, no vanilla 2D art) | Implementing → Validated |
+| EPIC-027-NFR-021 | ManualAttestation | `docs/proof/SW-008-portraits-emblems.png` (every faction emblem + unit portrait visible) | Implementing → Validated |
+| SW-008 | ManualAttestation | In-game: every spawnable unit in both packs shows a mod portrait (`docs/proof/SW-008-portraits-starwars.png`, `SW-008-portraits-modern.png`) | Implementing → Validated |
+| SW-008 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-008 | CiOutput | GitHub Actions run URL (dotnet test green + PackCompiler validate) | Implementing → Validated |
 
 ## Related
 

@@ -34,13 +34,14 @@ namespace DINOForge.Tests.GameLaunch;
 /// </summary>
 public sealed class GameLaunchFixture : IAsyncLifetime
 {
-    private const string GameExecutableName = "Diplomacy is Not an Option.exe";
-    private const string GameProcessBaseName = "Diplomacy is Not an Option";
+    private const string GameExecutableName = GameLaunchProcessCleanup.GameProcessBaseName + ".exe";
 
-    private const int DefaultBootstrapTimeoutMs = 90_000;
+    // Cold starts often need ~80s for the named pipe; mod platform + pack load needs more headroom after connect.
+    private const int DefaultBootstrapTimeoutMs = 180_000;
     private const int PollIntervalMs = 500;
     private const int PerAttemptConnectTimeoutMs = 10_000;
     private const int PerAttemptWorldWaitMs = 15_000;
+    private const int PerAttemptModPlatformWaitMs = 30_000;
 
     private Process? _gameProcess;
     private bool _launchedGame;
@@ -114,6 +115,9 @@ public sealed class GameLaunchFixture : IAsyncLifetime
                 return;
             }
 
+            // Game Launch Protocol: avoid attaching to a zombie instance without a healthy bridge.
+            GameLaunchProcessCleanup.StopStrayGameProcesses();
+
             _gameProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = gameExePath,
@@ -156,7 +160,7 @@ public sealed class GameLaunchFixture : IAsyncLifetime
                 WaitResult worldResult = await Client
                     .WaitForWorldAsync(worldWaitMs, worldCts.Token)
                     .ConfigureAwait(true);
-                if (worldResult.Ready)
+                if (worldResult.Ready && await WaitForModPlatformReadyAsync(deadline).ConfigureAwait(true))
                 {
                     IsInitialized = true;
                     return;
@@ -224,12 +228,61 @@ public sealed class GameLaunchFixture : IAsyncLifetime
     {
         try
         {
-            return Process.GetProcessesByName(GameProcessBaseName).Length > 0;
+            return Process.GetProcessesByName(GameLaunchProcessCleanup.GameProcessBaseName).Length > 0;
         }
         catch
         {
             return false;
         }
+    }
+
+    private async Task<bool> WaitForModPlatformReadyAsync(DateTime deadline)
+    {
+        if (Client is null)
+        {
+            return false;
+        }
+
+        while (DateTime.UtcNow < deadline)
+        {
+            int remainingMs = (int)RemainingMs(deadline);
+            if (remainingMs <= 0)
+            {
+                break;
+            }
+
+            try
+            {
+                using CancellationTokenSource statusCts = new(
+                    TimeSpan.FromMilliseconds(Math.Min(PerAttemptModPlatformWaitMs, remainingMs)));
+                GameStatus status = await Client.StatusAsync(statusCts.Token).ConfigureAwait(true);
+                if (status.ModPlatformReady && status.LoadedPacks.Count > 0)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Platform still bootstrapping — keep polling until bootstrap deadline.
+            }
+
+            int delayMs = (int)Math.Min(PollIntervalMs, RemainingMs(deadline));
+            if (delayMs <= 0)
+            {
+                break;
+            }
+
+            try
+            {
+                await Task.Delay(delayMs).ConfigureAwait(false);
+            }
+            catch
+            {
+                break;
+            }
+        }
+
+        return false;
     }
 
     private static long RemainingMs(DateTime deadline) =>
@@ -241,6 +294,8 @@ public sealed class GameLaunchFixture : IAsyncLifetime
         {
             try { _gameProcess?.Kill(entireProcessTree: true); }
             catch { /* best-effort */ }
+
+            GameLaunchProcessCleanup.StopStrayGameProcesses();
         }
 
         _gameProcess?.Dispose();

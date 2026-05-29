@@ -74,6 +74,26 @@ namespace DINOForge.Runtime.UI
         private float _lastClickTimeUnscaled = -10f;
         private System.Collections.Generic.List<Button>? _allOptionsButtons;
 
+        // ── Native mods page (full-screen, settings-style) ──────────────────
+        private NativeModsPage? _nativeModsPage;
+
+        /// <summary>
+        /// Optional delegate that provides the current pack list for the native mods page.
+        /// Set by RuntimeDriver/Plugin after initialization.
+        /// </summary>
+        public Func<System.Collections.Generic.IReadOnlyList<PackDisplayInfo>>? PackDataProvider { get; set; }
+
+        /// <summary>
+        /// Optional delegate invoked when the user toggles a pack from the native mods page.
+        /// Parameters: (packId, isEnabled).
+        /// </summary>
+        public Action<string, bool>? OnNativePackToggled { get; set; }
+
+        /// <summary>
+        /// Optional delegate invoked when the user requests a pack reload from the native mods page.
+        /// </summary>
+        public Action? OnNativeReloadRequested { get; set; }
+
         // #882: Selectable-donor path — populated by FindSettingsButton when a suitable
         // MainMenuButton-style Selectable is found but has no UnityEngine.UI.Button sibling.
         // Consumed by TryInjectMenuButton as a fallback clone source.
@@ -279,6 +299,8 @@ namespace DINOForge.Runtime.UI
             _injectedButton = null;
             RepurposedModsButtonGoName = null;
             _rescanTimer = 0f;
+            // NativeModsPage lives inside the MainMenu canvas which is destroyed on scene change
+            _nativeModsPage = null;
             // Reset the guard so TryInjectMenuButton can run for the new scene.
             // The guard was set true during the LoadScene(1) call that triggered this scene change.
             _s_sceneTransitionGuard = false;
@@ -1230,13 +1252,11 @@ namespace DINOForge.Runtime.UI
 
         /// <summary>
         /// Handles MODS button click on the native menu (main menu / pause menu).
-        /// Toggles the DINOForge mod management panel (same as F10 hotkey).
+        /// Opens a full-screen native mods page inside the MainMenu canvas,
+        /// hiding the main menu content and showing the pack browser.
         ///
-        /// DESIGN NOTE: The MODS button opens the DFCanvas mod panel overlay, not a native
-        /// settings-style submenu. This is intentional — DINO has no native settings API to
-        /// integrate with, and the mod management panel is the appropriate UI for pack
-        /// enable/disable, load order, and dependencies. F10 and the MODS button use the
-        /// same Toggle() path for consistency.
+        /// Falls back to the IMGUI overlay toggle (F10-style) if the native page
+        /// cannot be shown (e.g. MainMenu canvas not found).
         /// </summary>
         private void OnModsButtonClicked()
         {
@@ -1249,12 +1269,6 @@ namespace DINOForge.Runtime.UI
             {
                 LogInfo($"[NativeMenuInjector::{_sessionId}] ═══ MODS BUTTON CLICKED #{clickId} at {System.DateTime.UtcNow:HH:mm:ss.fff} UTC ═══");
 
-                if (_menuHost == null)
-                {
-                    LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ⚠ menu host reference is NULL! Cannot toggle menu.");
-                    return;
-                }
-
                 float now = Time.unscaledTime;
                 if (now - _lastClickTimeUnscaled < ClickDebounceSeconds)
                 {
@@ -1263,15 +1277,166 @@ namespace DINOForge.Runtime.UI
                 }
                 _lastClickTimeUnscaled = now;
 
+                // If the native mods page is already visible, hide it (toggle behavior)
+                if (_nativeModsPage != null && _nativeModsPage.IsVisible)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} NativeModsPage already visible — hiding.");
+                    _nativeModsPage.Hide();
+                    return;
+                }
+
+                // Try to show the native full-screen mods page
+                if (TryShowNativeModsPage(clickId))
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeModsPage shown successfully");
+                    return;
+                }
+
+                // Fallback: toggle the IMGUI overlay
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} NativeModsPage unavailable, falling back to overlay toggle");
+                if (_menuHost == null)
+                {
+                    LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ⚠ menu host reference is NULL! Cannot toggle menu.");
+                    return;
+                }
+
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId}   menuHost.IsVisible BEFORE toggle: {_menuHost.IsVisible}");
                 _menuHost.Toggle();
                 LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId}   menuHost.IsVisible AFTER toggle: {_menuHost.IsVisible}");
-                LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ Mods menu TOGGLED successfully");
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ Mods menu TOGGLED (overlay fallback) successfully");
             }
             catch (Exception ex)
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ⚠ OnModsButtonClicked exception: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Attempts to show the NativeModsPage inside the MainMenu canvas.
+        /// Finds the MainMenu canvas, locates its primary content container,
+        /// creates or reuses the NativeModsPage component, populates it with
+        /// pack data, and shows it.
+        /// Returns false if the MainMenu canvas cannot be found.
+        /// </summary>
+        private bool TryShowNativeModsPage(long clickId)
+        {
+            try
+            {
+                // Find the MainMenu canvas (same approach as FindSettingsButton)
+                Canvas? mainMenuCanvas = null;
+                Canvas[] allCanvases = Resources.FindObjectsOfTypeAll<Canvas>();
+                foreach (Canvas c in allCanvases)
+                {
+                    if (c == null || !c.gameObject.activeInHierarchy) continue;
+                    if (c.name != null && c.name.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        mainMenuCanvas = c;
+                        break;
+                    }
+                }
+
+                // Fallback: use the injected button's parent canvas
+                if (mainMenuCanvas == null && _injectedButton != null)
+                {
+                    mainMenuCanvas = _injectedButton.GetComponentInParent<Canvas>();
+                }
+
+                if (mainMenuCanvas == null)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} Cannot find MainMenu canvas for native page");
+                    return false;
+                }
+
+                // Find the main content container to hide.
+                // Strategy: look for the first active child with a VerticalLayoutGroup or
+                // a child that contains the menu buttons (the injected button's grandparent).
+                GameObject? mainMenuContent = FindMainMenuContent(mainMenuCanvas);
+
+                // Create or reuse the NativeModsPage
+                if (_nativeModsPage == null)
+                {
+                    GameObject pageGo = new GameObject("DINOForge_NativeModsPage_Host");
+                    pageGo.transform.SetParent(mainMenuCanvas.transform, false);
+                    _nativeModsPage = pageGo.AddComponent<NativeModsPage>();
+                    if (_log != null) _nativeModsPage.SetLogger(_log);
+                    _nativeModsPage.OnBackPressed = () =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] NativeModsPage Back pressed");
+                    };
+                    _nativeModsPage.OnPackToggled = (packId, isEnabled) =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] NativeModsPage pack toggled: {packId} = {isEnabled}");
+                        OnNativePackToggled?.Invoke(packId, isEnabled);
+                    };
+                    _nativeModsPage.OnReloadRequested = () =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] NativeModsPage reload requested");
+                        OnNativeReloadRequested?.Invoke();
+                    };
+                }
+
+                // Populate pack data
+                if (PackDataProvider != null)
+                {
+                    System.Collections.Generic.IReadOnlyList<PackDisplayInfo> packs = PackDataProvider();
+                    _nativeModsPage.SetPacks(packs);
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} Loaded {packs.Count} packs into NativeModsPage");
+                }
+
+                _nativeModsPage.Show(mainMenuCanvas, mainMenuContent);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} TryShowNativeModsPage exception: {ex}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Finds the main menu's primary content container (the object to hide when
+        /// showing the mods page). Looks for the injected button's ancestor layout
+        /// group or falls back to the first active child with multiple children.
+        /// </summary>
+        private GameObject? FindMainMenuContent(Canvas canvas)
+        {
+            try
+            {
+                // Strategy 1: walk up from the injected button to find the layout group parent
+                if (_injectedButton != null)
+                {
+                    Transform? current = _injectedButton.transform.parent;
+                    while (current != null && current != canvas.transform)
+                    {
+                        // The content container is typically the child of the canvas root
+                        // that holds the button layout group
+                        if (current.parent == canvas.transform || current.parent?.parent == canvas.transform)
+                        {
+                            LogInfo($"[NativeMenuInjector] FindMainMenuContent: found via button ancestor '{current.name}'");
+                            return current.gameObject;
+                        }
+                        current = current.parent;
+                    }
+                }
+
+                // Strategy 2: first active child of canvas with multiple children
+                for (int i = 0; i < canvas.transform.childCount; i++)
+                {
+                    Transform child = canvas.transform.GetChild(i);
+                    if (child.gameObject.activeSelf && child.childCount > 0
+                        && child.name.IndexOf("DINOForge", StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        LogInfo($"[NativeMenuInjector] FindMainMenuContent: fallback to first active child '{child.name}'");
+                        return child.gameObject;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogWarning($"[NativeMenuInjector] FindMainMenuContent exception: {ex}");
+            }
+
+            return null;
         }
 
         /// <summary>

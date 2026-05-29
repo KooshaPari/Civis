@@ -329,7 +329,11 @@
   <!-- Deploy packs from repo to game directory -->
   <Target Name="DeployPacks" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and Exists('$(BepInExDir)') and '$(TargetFramework)' == 'netstandard2.0'">
     <ItemGroup>
-      <PackFiles Include="$(MSBuildThisFileDirectory)..\..\packs\**\*" Exclude="$(MSBuildThisFileDirectory)..\..\packs\test-*;$(MSBuildThisFileDirectory)..\..\packs\test-*\**\*" />
+      <PackFiles Include="$(MSBuildThisFileDirectory)..\..\packs\**\*"
+                  Exclude="$(MSBuildThisFileDirectory)..\..\packs\test-*;
+                           $(MSBuildThisFileDirectory)..\..\packs\test-*\**\*;
+                           $(MSBuildThisFileDirectory)..\..\packs\**\*.disabled\**\*;
+                           $(MSBuildThisFileDirectory)..\..\packs\**\*.disabled" />
     </ItemGroup>
     <MakeDir Directories="$(BepInExDir)\dinoforge_packs" Condition="!Exists('$(BepInExDir)\dinoforge_packs')" />
     <Copy SourceFiles="@(PackFiles)"

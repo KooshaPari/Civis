@@ -152,6 +152,12 @@ namespace DINOForge.SDK
 
             foreach (var dir in allDirs)
             {
+                string dirName = Path.GetFileName(dir);
+                if (dirName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 string manifestPath = Path.Combine(dir, "pack.yaml");
                 if (File.Exists(manifestPath))
                 {

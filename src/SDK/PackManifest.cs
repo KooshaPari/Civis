@@ -176,6 +176,12 @@ namespace DINOForge.SDK
         /// </summary>
         [YamlMember(Alias = "badges")]
         public List<string>? Badges { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>
+        /// UI theme for total_conversion packs. Applied to the main menu and loading screens.
+        /// </summary>
+        [YamlMember(Alias = "ui_theme")]
+        public PackUiTheme? UiTheme { get; set; }
     }
 
     /// <summary>
@@ -306,6 +312,34 @@ namespace DINOForge.SDK
         /// <summary>Paths to stat definition files.</summary>
         [YamlMember(Alias = "stats")]
         public List<string>? Stats { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+    }
+
+    /// <summary>
+    /// Visual theming for total_conversion packs. Controls main menu appearance,
+    /// button colors, and title overlay when the pack is active.
+    /// </summary>
+    public sealed class PackUiTheme
+    {
+        [YamlMember(Alias = "title")]
+        public string? Title { get; set; }
+
+        [YamlMember(Alias = "subtitle")]
+        public string? Subtitle { get; set; }
+
+        [YamlMember(Alias = "primary_color")]
+        public string PrimaryColor { get; set; } = "#4ECDC4";
+
+        [YamlMember(Alias = "secondary_color")]
+        public string SecondaryColor { get; set; } = "#2C3E50";
+
+        [YamlMember(Alias = "accent_color")]
+        public string AccentColor { get; set; } = "#E74C3C";
+
+        [YamlMember(Alias = "text_color")]
+        public string TextColor { get; set; } = "#FFFFFF";
+
+        [YamlMember(Alias = "background_tint")]
+        public string? BackgroundTint { get; set; }
     }
 
     /// <summary>

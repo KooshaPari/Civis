@@ -1,0 +1,21 @@
+---
+description: Never use git stash; use WIP branches pushed to remote immediately
+alwaysApply: true
+---
+
+# Git WIP policy (no stash)
+
+**NEVER run `git stash` (push, pop, apply, or list as a workflow).** Stashes are invisible, easy to lose, and block parallel work.
+
+When you need to park uncommitted work:
+
+1. Create a WIP branch from the current HEAD: `wip/<short-topic>-<YYYYMMDD>` (or `agent/wip-<task>`).
+2. Stage and commit everything meaningful (exclude `__pycache__`, `.serena/`, `.test-results/`, accidental lockfile-only noise unless intentional).
+3. **Push to `origin` immediately** (`git push -u origin HEAD`).
+4. Switch back to the target branch (`main` or feature branch) with a clean tree.
+
+When resuming: `git fetch`, `git checkout wip/...`, `git pull`.
+
+If multiple WIP topics exist, use separate WIP branches — do not stash to “save” between tasks.
+
+When old stashes exist in the repo, merge them onto WIP branches (apply + commit + push), then drop the stash entry.

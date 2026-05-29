@@ -11,14 +11,14 @@
     "studio":       "remotion studio src/index.ts"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.257",
-    "remotion": "4.0.257",
+    "@remotion/cli": "4.0.468",
+    "remotion": "4.0.467",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "typescript": "^5.4.0"
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3"
   }
 }

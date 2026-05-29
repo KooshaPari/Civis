@@ -1,12 +1,25 @@
 # SW-009: Blaster / Projectile Support
 
 **Status**: Proposed
+**AgilePlus WP State**: planned
+**Sequence**: 9
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
+**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 4 — Mechanics
 **Story Points**: 8
 **Priority**: P2
+**File Scope**:
+  - `src/SDK/Models/UnitDefinition.cs`
+  - `src/SDK/Assets/ProjectileSwapRegistry.cs`
+  - `src/Runtime/Bridge/ProjectileSwapSystem.cs`
+  - `schemas/unit.schema.json`
+  - `packs/warfare-starwars/assets/bundles/`
+  - `packs/warfare-modern/assets/bundles/`
+  - `src/Tests/ProjectileSwapRegistryTests.cs`
+**Depends On**: [SW-003]
+**Requirements**: EPIC-027-FR-016, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-013, EPIC-027-NFR-014
 
 ---
 
@@ -95,6 +108,20 @@ and a WARNING appears in the BepInEx log.
 - [ ] `ProjectileSwapRegistry` has unit tests.
 - [ ] Schema extension for `projectile_visual` validated by `PackCompiler`.
 - [ ] `dotnet test` green.
+
+## Evidence Requirements
+
+| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
+|----------------|---------------|-----------------------|-----------------|
+| EPIC-027-FR-016 | ManualAttestation | `docs/proof/judge-receipts/SW-009-projectiles.md` (themed projectiles visible during combat per mod) | Implementing → Validated |
+| EPIC-027-NFR-005 | CiOutput | CI build log (netstandard2.0 TFM check) | Implementing → Validated |
+| EPIC-027-NFR-006 | ManualAttestation | Bundles built with Unity 2021.3.45f1 load under BepInEx 5.4.x (log confirmation) | Implementing → Validated |
+| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no TypeLoadException after clean launch | Implementing → Validated |
+| EPIC-027-NFR-014 | TestResult | `docs/test-results/SW-009/ProjectileSwapRegistryTests.xml` (missing-bundle fallback test) | Implementing → Validated |
+| SW-009 | TestResult | `docs/test-results/SW-009/ProjectileSwapRegistryTests.xml` | Implementing → Validated |
+| SW-009 | CiOutput | `PackCompiler validate` exercises `projectile_visual` schema extension | Implementing → Validated |
+| SW-009 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
+| SW-009 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

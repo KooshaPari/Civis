@@ -81,6 +81,7 @@
 | FR-CIV-BEVY-002 | implemented | live attach scene sync (`live_scene`: voxel chunks + agent markers from `Frame3d`) |
 | FR-CIV-BEVY-014 | implemented | `live_stream` unit tests (colors, ground Y, voxel delta apply) |
 | FR-CIV-BEVY-021 | implemented | GitHub Actions `.github/workflows/civis-3d-live-smoke.yml` (headless `just civis-3d-live-smoke`) |
+| FR-CIV-BEVY-025 | implemented | `live_pick::` ray–AABB unit tests in `just civis-3d-live-smoke` (item 50) |
 | FR-CIV-BEVY-026 | implemented | `CIV_BEVY_BACKEND` native GPU selection + `native_backend` unit tests; README + `wgpu-native-escape-hatches.md` cross-link (item 51) |
 
 ## First PR slice (recommended)

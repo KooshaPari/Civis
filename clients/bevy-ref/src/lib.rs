@@ -59,6 +59,8 @@ pub mod native_renderer;
 pub mod post_fx;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
 #[cfg(feature = "bevy")]
 pub mod skybox;
 #[cfg(feature = "bevy")]

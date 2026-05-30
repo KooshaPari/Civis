@@ -76,6 +76,11 @@ fn main() {
     #[cfg(feature = "voxel")]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
 
+    // CC0 GLTF models: populate GameModels so sim_bridge swaps capsule/cuboid
+    // primitives for real Knight/house scenes (per-asset primitive fallback).
+    #[cfg(feature = "models")]
+    app.add_plugins(civ_bevy_ref::gltf_models::GltfModelsPlugin);
+
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
     }

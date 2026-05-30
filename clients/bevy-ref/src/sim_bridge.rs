@@ -17,6 +17,42 @@ const CIVILIAN_HALF_HEIGHT: f32 = 1.6 + 1.4; // capsule half-length + radius
 /// Half-height of the building cuboid (seats its base on terrain).
 const BUILDING_HALF_HEIGHT: f32 = 7.0;
 
+/// Uniform scale for the CC0 GLTF civilian (KayKit Knight) so it reads near the
+/// gameplay capsule's height.
+#[cfg(feature = "models")]
+const CIVILIAN_MODEL_SCALE: f32 = 3.0;
+/// Uniform scale for the CC0 GLTF building (KayKit hexagon home).
+#[cfg(feature = "models")]
+const BUILDING_MODEL_SCALE: f32 = 6.0;
+
+/// Faction tag for a model-backed civilian so a later material-tint pass can
+/// colour the GLTF scene per faction. Primitives bake the colour in directly.
+#[cfg(feature = "models")]
+#[derive(Component)]
+struct FactionTint(#[allow(dead_code)] u32);
+
+/// Resolve the loaded CC0 civilian scene to a spawnable `SceneRoot`, else `None`
+/// to fall back to the procedural capsule.
+#[cfg(feature = "models")]
+fn civilian_model_root(models: Option<&crate::gltf_models::GameModels>) -> Option<SceneRoot> {
+    use crate::gltf_models::{civilian_scene, ModelOrPrimitive};
+    match models.map(|m| civilian_scene(m, 0)) {
+        Some(ModelOrPrimitive::Model(root)) => Some(root),
+        _ => None,
+    }
+}
+
+/// Resolve the loaded CC0 building scene to a spawnable `SceneRoot`, else `None`
+/// to fall back to the procedural cuboid.
+#[cfg(feature = "models")]
+fn building_model_root(models: Option<&crate::gltf_models::GameModels>) -> Option<SceneRoot> {
+    use crate::gltf_models::{building_scene, ModelOrPrimitive};
+    match models.map(building_scene) {
+        Some(ModelOrPrimitive::Model(root)) => Some(root),
+        _ => None,
+    }
+}
+
 /// Live simulation state shared by the minimap, HUD, and spawn tools.
 #[derive(Resource)]
 pub struct SimState(pub Simulation);
@@ -262,6 +298,7 @@ fn sync_visible_gameplay(
     mut commands: Commands,
     sim: Res<SimState>,
     assets: Option<Res<GameplayAssets>>,
+    #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
     mut rendered: ResMut<RenderedEntities>,
     mut transforms: Query<&mut Transform>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -295,23 +332,48 @@ fn sync_visible_gameplay(
                 transform.translation = world_pos;
             }
         } else {
-            let color = faction_color(civilian.faction);
-            let material = materials.add(StandardMaterial {
-                base_color: color,
-                // Solid lit object, not a glowing pill: kill the emissive bloom.
-                emissive: LinearRgba::BLACK,
-                perceptual_roughness: 0.7,
-                metallic: 0.0,
-                ..default()
-            });
-            let entity = commands
-                .spawn((
-                    SimCivilianMarker,
-                    Mesh3d(assets.civilian_mesh.clone()),
-                    MeshMaterial3d(material),
-                    Transform::from_translation(world_pos),
-                ))
-                .id();
+            #[cfg(feature = "models")]
+            let scene_root = civilian_model_root(models.as_deref());
+            #[cfg(not(feature = "models"))]
+            let scene_root: Option<SceneRoot> = None;
+
+            let entity = if let Some(scene_root) = scene_root {
+                #[cfg(feature = "models")]
+                {
+                    commands
+                        .spawn((
+                            SimCivilianMarker,
+                            FactionTint(civilian.faction),
+                            scene_root,
+                            Transform::from_translation(world_pos - Vec3::Y * CIVILIAN_HALF_HEIGHT)
+                                .with_scale(Vec3::splat(CIVILIAN_MODEL_SCALE)),
+                        ))
+                        .id()
+                }
+                #[cfg(not(feature = "models"))]
+                {
+                    let _ = scene_root;
+                    unreachable!()
+                }
+            } else {
+                let color = faction_color(civilian.faction);
+                let material = materials.add(StandardMaterial {
+                    base_color: color,
+                    // Solid lit object, not a glowing pill: kill the emissive bloom.
+                    emissive: LinearRgba::BLACK,
+                    perceptual_roughness: 0.7,
+                    metallic: 0.0,
+                    ..default()
+                });
+                commands
+                    .spawn((
+                        SimCivilianMarker,
+                        Mesh3d(assets.civilian_mesh.clone()),
+                        MeshMaterial3d(material),
+                        Transform::from_translation(world_pos),
+                    ))
+                    .id()
+            };
             rendered.civilians.insert(civilian.id, entity);
         }
     }
@@ -339,23 +401,47 @@ fn sync_visible_gameplay(
                 transform.translation = world_pos;
             }
         } else {
-            let color = building_color(building.building_type);
-            let material = materials.add(StandardMaterial {
-                base_color: color,
-                // No additive/neon glow: read as a solid lit structure.
-                emissive: LinearRgba::BLACK,
-                perceptual_roughness: 0.7,
-                metallic: 0.0,
-                ..default()
-            });
-            let entity = commands
-                .spawn((
-                    SimBuildingMarker,
-                    Mesh3d(assets.building_mesh.clone()),
-                    MeshMaterial3d(material),
-                    Transform::from_translation(world_pos),
-                ))
-                .id();
+            #[cfg(feature = "models")]
+            let scene_root = building_model_root(models.as_deref());
+            #[cfg(not(feature = "models"))]
+            let scene_root: Option<SceneRoot> = None;
+
+            let entity = if let Some(scene_root) = scene_root {
+                #[cfg(feature = "models")]
+                {
+                    commands
+                        .spawn((
+                            SimBuildingMarker,
+                            scene_root,
+                            Transform::from_translation(world_pos - Vec3::Y * BUILDING_HALF_HEIGHT)
+                                .with_scale(Vec3::splat(BUILDING_MODEL_SCALE)),
+                        ))
+                        .id()
+                }
+                #[cfg(not(feature = "models"))]
+                {
+                    let _ = scene_root;
+                    unreachable!()
+                }
+            } else {
+                let color = building_color(building.building_type);
+                let material = materials.add(StandardMaterial {
+                    base_color: color,
+                    // No additive/neon glow: read as a solid lit structure.
+                    emissive: LinearRgba::BLACK,
+                    perceptual_roughness: 0.7,
+                    metallic: 0.0,
+                    ..default()
+                });
+                commands
+                    .spawn((
+                        SimBuildingMarker,
+                        Mesh3d(assets.building_mesh.clone()),
+                        MeshMaterial3d(material),
+                        Transform::from_translation(world_pos),
+                    ))
+                    .id()
+            };
             rendered.buildings.insert(id, entity);
         }
     }

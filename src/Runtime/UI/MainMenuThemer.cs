@@ -228,7 +228,9 @@ namespace DINOForge.Runtime
                     ButtonFrame = ExtractYamlValue(yaml, idx, "button_frame"),
                     ButtonFrameHover = ExtractYamlValue(yaml, idx, "button_frame_hover"),
                     Font = ExtractYamlValue(yaml, idx, "font"),
-                    FontFamily = ExtractYamlValue(yaml, idx, "font_family")
+                    FontFamily = ExtractYamlValue(yaml, idx, "font_family"),
+                    // #965 baked-TMP-font path: prebuilt TMP_FontAsset name inside the bundle.
+                    FontAssetName = ExtractYamlValue(yaml, idx, "font_asset_name")
                 };
             }
             catch (Exception ex)
@@ -288,16 +290,11 @@ namespace DINOForge.Runtime
                 int btnHits = RestyleSelectables(canvas, primary, secondary, textCol, accent);
                 int labelHits = RewriteLabels(canvas, textCol);
 
-                // FONT: runtime-create a TMP_FontAsset from the pack's shipped TTF and apply it
-                // to every TMP_Text on the menu canvas (reflection — no compile-time TMPro ref).
-                bool fontLoaded = false;
-                int fontHits = 0;
-                UnityEngine.Object? fontAsset = TryLoadFontAsset(theme, pack.Id);
-                if (fontAsset != null)
-                {
-                    fontLoaded = true;
-                    fontHits = ApplyFont(canvas, fontAsset);
-                }
+                // FONT (#965): load the prebuilt baked TMP_FontAsset from the pack bundle and apply
+                // it to every TMP_Text on the menu canvas (reflection — no compile-time TMPro ref).
+                // Replaces the old runtime CreateFontAsset path (returns null in DINO's shipped player).
+                int fontHits = ApplyFont(canvas, theme, pack);
+                bool fontLoaded = fontHits > 0;
 
                 bool takeover = bgSwapped || logoInjected || frameHits > 0;
                 _applied = true;
@@ -899,7 +896,8 @@ namespace DINOForge.Runtime
             return hits;
         }
 
-        // ── EPIC-027 / subpage FULL TAKEOVER ─────────────────────────────────────
+        // ──────────────────────────────────────────────────────────────────────────
+        // EPIC-027 / subpage FULL TAKEOVER
         //
         // The main-menu takeover above themes only the MainMenu canvas. Subpages
         // (Options + GAME/VIDEO/SOUND/CONTROLS/TWITCH tabs, game create/select, and the
@@ -1266,6 +1264,113 @@ namespace DINOForge.Runtime
             }
         }
 
+        // AssetBundle handles can only be loaded once per process; cache by path.
+        private static readonly Dictionary<string, UnityEngine.Object?> _fontCache =
+            new Dictionary<string, UnityEngine.Object?>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Loads the prebuilt TMP SDF font asset (baked offline; runtime
+        /// TMP_FontAsset.CreateFontAsset returns null in DINO) from the pack's
+        /// AssetBundle and applies it to every menu TMP_Text via reflection.
+        /// </summary>
+        private int ApplyFont(Canvas canvas, ThemeData theme, PackDisplayInfo pack)
+        {
+            if (string.IsNullOrEmpty(theme.Font)) return 0;
+
+            UnityEngine.Object? fontAsset = LoadPrebuiltFontAsset(pack.Id, theme.Font!, theme.FontAssetName);
+            if (fontAsset == null)
+            {
+                _log?.LogWarning($"[MainMenuThemer] Prebuilt font '{theme.Font}' not loaded; skipping font apply."); // pattern-96-ok: diagnostic
+                return 0;
+            }
+
+            // Resolve the shared material from the font asset (TMP_FontAsset.material).
+            UnityEngine.Object? sharedMat = fontAsset.GetType().GetProperty("material")?.GetValue(fontAsset) as UnityEngine.Object;
+
+            int hits = 0;
+            foreach (var c in canvas.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null) continue;
+                Type t = c.GetType();
+                if (!(t.FullName ?? "").StartsWith("TMPro.")) continue;
+
+                PropertyInfo? fontProp = t.GetProperty("font");
+                if (fontProp == null || !fontProp.CanWrite) continue;
+                // Only assign if the target property type is assignable from the asset.
+                if (!fontProp.PropertyType.IsInstanceOfType(fontAsset)) continue;
+
+                try
+                {
+                    fontProp.SetValue(c, fontAsset);
+                    if (sharedMat != null)
+                    {
+                        PropertyInfo? matProp = t.GetProperty("fontSharedMaterial");
+                        if (matProp != null && matProp.CanWrite && matProp.PropertyType.IsInstanceOfType(sharedMat))
+                            matProp.SetValue(c, sharedMat);
+                    }
+                    // Force a glyph/layout rebuild so the new atlas takes effect.
+                    t.GetMethod("SetAllDirty", Type.EmptyTypes)?.Invoke(c, null);
+                    hits++;
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning($"[MainMenuThemer] Font apply on '{c.name}' failed: {ex.Message}"); // pattern-96-ok: diagnostic
+                }
+            }
+
+            DebugLog.Write("MainMenuThemer", $"Prebuilt font applied to {hits} TMP_Text from bundle '{theme.Font}'");
+            return hits;
+        }
+
+        private UnityEngine.Object? LoadPrebuiltFontAsset(string packId, string relativeFontPath, string? fontAssetName)
+        {
+            try
+            {
+                string bundlePath = Path.Combine(_packsDirectory, packId, relativeFontPath.Replace('/', Path.DirectorySeparatorChar));
+                if (_fontCache.TryGetValue(bundlePath, out var cached))
+                    return cached;
+
+                if (!File.Exists(bundlePath))
+                {
+                    _log?.LogWarning($"[MainMenuThemer] Font bundle missing: {bundlePath}"); // pattern-96-ok: diagnostic
+                    _fontCache[bundlePath] = null;
+                    return null;
+                }
+
+                AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
+                if (bundle == null)
+                {
+                    _log?.LogWarning($"[MainMenuThemer] AssetBundle.LoadFromFile returned null for {bundlePath}"); // pattern-96-ok: diagnostic
+                    _fontCache[bundlePath] = null;
+                    return null;
+                }
+
+                // Find the TMP_FontAsset inside the bundle (by name if provided, else first match).
+                UnityEngine.Object? result = null;
+                foreach (var obj in bundle.LoadAllAssets())
+                {
+                    if (obj == null) continue;
+                    if (!(obj.GetType().FullName ?? "").StartsWith("TMPro.")) continue;
+                    if (!string.IsNullOrEmpty(fontAssetName) &&
+                        !string.Equals(obj.name, fontAssetName, StringComparison.Ordinal))
+                        continue;
+                    result = obj;
+                    break;
+                }
+
+                if (result == null)
+                    _log?.LogWarning($"[MainMenuThemer] No TMP font asset '{fontAssetName}' found in bundle {bundlePath}"); // pattern-96-ok: diagnostic
+
+                _fontCache[bundlePath] = result;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[MainMenuThemer] LoadPrebuiltFontAsset failed: {ex.Message}"); // pattern-96-ok: diagnostic
+                return null;
+            }
+        }
+
         private sealed class ThemeData
         {
             public string? Title;
@@ -1282,6 +1387,8 @@ namespace DINOForge.Runtime
             public string? ButtonFrameHover;
             public string? Font;
             public string? FontFamily;
+            // #965 baked-TMP-font path: prebuilt TMP_FontAsset name inside the bundle.
+            public string? FontAssetName;
         }
     }
 }

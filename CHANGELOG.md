@@ -194,6 +194,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GameBridgeServer.EnsureServerAlive` (background thread) **no longer calls `TryResurrect`** — it only restarts the dead pipe **server thread** (pipe-only work, no Unity ECalls) and calls `Plugin.MarkNeedsDeferredResurrection`, leaving the actual revive to the main-thread consumers.
   - The background `ResurrectionFallbackLoop` remains as a last-resort grace-windowed safety net (and still must not make Unity ECalls).
   - Need flags (`NeedsResurrection` / `NeedsDeferredResurrection` / `s_rootJustDestroyed`) are cleared only on confirmed success (`ResurrectionSucceeded`), and a revive landing on a menu scene runs `RunMainMenuInit` so MODS/F9/F10 come up post-resurrection.
+- **Prebuilt TMP SDF font for Star Wars main menu** — `TMP_FontAsset.CreateFontAsset()`
+  returns `null` at runtime inside DINO for OS-dynamic fonts (the Mono atlas-generator
+  path is unavailable in the shipped player). The SW menu font is now baked offline in
+  Unity 2021.3.45f1 (Option A): `unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs`
+  generates a static SDF atlas + glyph table and tags it for the version-locked
+  `sw_menu_font` AssetBundle. `scripts/game/bake-sw-menu-font.ps1` drives the bake +
+  bundle build + copy into the pack. `warfare-starwars/pack.yaml` `ui_theme.font` /
+  `font_asset_name` point at the prebuilt asset, and `MainMenuThemer` now LOADS the
+  prebuilt `TMP_FontAsset` from the bundle (reflection, no compile-time TMPro ref) and
+  applies `font` + `fontSharedMaterial` to every menu `TMP_Text` instead of calling
+  `CreateFontAsset` at runtime.
+
+- Stale `NativeModsPage.OnBackPressed` references (renamed field is `OnBackClicked`) in
+  `NativeMainMenuModMenu.cs` and `NativeMenuInjector.cs` that broke the netstandard2.0 build (#965).
 
 ## [0.26.0] - 2026-05-28
 

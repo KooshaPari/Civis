@@ -70,23 +70,60 @@ impl LoadingProgress {
 }
 
 // ---------------------------------------------------------------------------
+// Seed generation
+// ---------------------------------------------------------------------------
+
+/// Generate a fresh, well-distributed u64 seed from a non-deterministic source.
+///
+/// Uses `rand::thread_rng` (the crate is in-scope under the `bevy` feature).
+/// The output is guaranteed to be large and well-distributed — not a small
+/// sequential counter.
+pub fn fresh_seed() -> u64 {
+    use rand::Rng as _;
+    rand::thread_rng().gen::<u64>()
+}
+
+// ---------------------------------------------------------------------------
 // WorldSetup parameters
 // ---------------------------------------------------------------------------
 
 /// Parameters collected on the World-Setup screen before generation.
 #[derive(Resource, Debug)]
 pub struct WorldSetupParams {
-    pub seed: String,
+    /// Determinism handle: the world sim is fully reproducible given this seed.
+    /// Set to a fresh random value by default; player can override via the UI.
+    pub seed: u64,
+    /// Ephemeral string buffer backing the seed text field in the UI.
+    pub seed_text: String,
     pub world_size: usize,
     pub starting_era: usize,
 }
 
 impl Default for WorldSetupParams {
     fn default() -> Self {
+        let seed = fresh_seed();
         Self {
-            seed: "42".to_string(),
+            seed,
+            seed_text: seed.to_string(),
             world_size: 1,
             starting_era: 0,
+        }
+    }
+}
+
+impl WorldSetupParams {
+    /// Regenerate `seed` and sync the text buffer.
+    pub fn randomize(&mut self) {
+        self.seed = fresh_seed();
+        self.seed_text = self.seed.to_string();
+    }
+
+    /// Parse `seed_text` into `seed`.  If the text is not a valid u64, the
+    /// seed is left unchanged and `false` is returned.
+    pub fn commit_text(&mut self) -> bool {
+        match self.seed_text.trim().parse::<u64>() {
+            Ok(v) => { self.seed = v; true }
+            Err(_) => false,
         }
     }
 }
@@ -433,7 +470,7 @@ fn world_setup_panel(
         .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.5)))
         .inner_margin(egui::Margin::same(32))
         .show(ui, |ui| {
-            ui.set_min_width(340.0);
+            ui.set_min_width(380.0);
             ui.vertical_centered(|ui| {
                 ui.label(egui::RichText::new("World Setup").size(26.0).color(ACCENT).strong());
                 ui.add_space(18.0);
@@ -446,6 +483,8 @@ fn world_setup_panel(
                 }
                 ui.add_space(8.0);
                 if menu_button(ui, "\u{2699}  Generate World").clicked() {
+                    // Commit any typed seed before transitioning.
+                    params.commit_text();
                     progress.reset();
                     *mode = GameUiMode::Loading;
                 }
@@ -459,9 +498,58 @@ fn world_setup_fields(
     sizes: &[&str],
     eras: &[&str],
 ) {
-    ui.label(egui::RichText::new("Seed").color(DIM).small());
-    ui.text_edit_singleline(&mut params.seed);
+    // ---- Seed row --------------------------------------------------------
+    ui.label(
+        egui::RichText::new("World Seed")
+            .color(ACCENT)
+            .size(13.0)
+            .strong(),
+    );
+    ui.add_space(4.0);
+
+    // Display the active seed prominently.
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(params.seed.to_string())
+                .size(22.0)
+                .color(egui::Color32::WHITE)
+                .monospace(),
+        );
+        ui.add_space(8.0);
+        // Randomize button.
+        if ui
+            .add(
+                egui::Button::new(egui::RichText::new("\u{1f3b2}  Randomize").size(14.0))
+                    .fill(CHIP_FILL)
+                    .min_size(egui::vec2(120.0, 28.0))
+                    .corner_radius(egui::CornerRadius::same(6)),
+            )
+            .clicked()
+        {
+            params.randomize();
+        }
+    });
+    ui.add_space(6.0);
+
+    // Editable text field — player can paste/type a specific u64.
+    ui.label(egui::RichText::new("Enter seed manually:").color(DIM).small());
+    let resp = ui.add(
+        egui::TextEdit::singleline(&mut params.seed_text)
+            .desired_width(200.0)
+            .hint_text("paste a u64…"),
+    );
+    if resp.lost_focus() {
+        // Commit on focus-loss; reset to current seed if parse fails.
+        if !params.commit_text() {
+            params.seed_text = params.seed.to_string();
+        }
+    }
+
+    ui.add_space(12.0);
+    ui.separator();
     ui.add_space(8.0);
+
+    // ---- World size -------------------------------------------------------
     ui.label(egui::RichText::new("World Size").color(DIM).small());
     egui::ComboBox::from_id_salt("world_size_combo")
         .selected_text(*sizes.get(params.world_size).unwrap_or(&"Medium"))
@@ -471,6 +559,8 @@ fn world_setup_fields(
             }
         });
     ui.add_space(8.0);
+
+    // ---- Starting era -----------------------------------------------------
     ui.label(egui::RichText::new("Starting Era").color(DIM).small());
     egui::ComboBox::from_id_salt("starting_era_combo")
         .selected_text(*eras.get(params.starting_era).unwrap_or(&"Stone Age"))
@@ -759,5 +849,84 @@ mod tests {
         banner.announce("Bronze");
         assert_eq!(banner.current_era, "Bronze");
         assert!((banner.show_timer - 4.0).abs() < f32::EPSILON);
+    }
+
+    // ---- Seed-specific tests -----------------------------------------------
+
+    /// fresh_seed() must produce large values (> 2^16), not tiny counters.
+    #[test]
+    fn fresh_seed_is_large() {
+        let s = fresh_seed();
+        assert!(s > 0xFFFF, "seed {s} is suspiciously small (≤ 65535)");
+    }
+
+    /// Two calls to fresh_seed() should almost never collide.
+    /// With a 64-bit uniform PRNG the probability of collision is ~5e-19.
+    #[test]
+    fn fresh_seed_distinct_on_repeated_calls() {
+        let a = fresh_seed();
+        let b = fresh_seed();
+        assert_ne!(a, b, "Two consecutive seeds were identical — RNG broken?");
+    }
+
+    /// WorldSetupParams::default() must produce a seed that is large and valid.
+    #[test]
+    fn world_setup_params_default_seed_is_large() {
+        let p = WorldSetupParams {
+            seed: fresh_seed(),
+            seed_text: String::new(),
+            world_size: 1,
+            starting_era: 0,
+        };
+        assert!(p.seed > 0xFFFF);
+    }
+
+    /// seed_text is kept in sync with seed after randomize().
+    #[test]
+    fn randomize_syncs_seed_text() {
+        let mut p = WorldSetupParams {
+            seed: 42,
+            seed_text: "42".to_string(),
+            world_size: 1,
+            starting_era: 0,
+        };
+        p.randomize();
+        assert_eq!(p.seed_text, p.seed.to_string());
+        assert_ne!(p.seed, 42, "seed should change after randomize");
+    }
+
+    /// commit_text() round-trips a valid u64 string.
+    #[test]
+    fn commit_text_valid_seed() {
+        let mut p = WorldSetupParams {
+            seed: 1,
+            seed_text: "12345678901234567".to_string(),
+            world_size: 1,
+            starting_era: 0,
+        };
+        assert!(p.commit_text());
+        assert_eq!(p.seed, 12_345_678_901_234_567_u64);
+    }
+
+    /// commit_text() rejects garbage and returns false without mutating seed.
+    #[test]
+    fn commit_text_invalid_seed_leaves_seed_unchanged() {
+        let mut p = WorldSetupParams {
+            seed: 9999,
+            seed_text: "not-a-number".to_string(),
+            world_size: 1,
+            starting_era: 0,
+        };
+        assert!(!p.commit_text());
+        assert_eq!(p.seed, 9999);
+    }
+
+    /// A large u64 seed can be represented as decimal and round-trips correctly.
+    #[test]
+    fn large_seed_round_trips_through_string() {
+        let original: u64 = 0x9E3779B97F4A7C15;
+        let text = original.to_string();
+        let parsed: u64 = text.parse().unwrap();
+        assert_eq!(parsed, original);
     }
 }

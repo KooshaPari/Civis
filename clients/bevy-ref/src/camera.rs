@@ -31,6 +31,19 @@ impl Default for CameraRig {
     }
 }
 
+/// Handles all camera movement and orbit input.
+///
+/// WASD moves along yaw-projected ground-plane vectors so 'W' always goes toward
+/// the look direction regardless of yaw angle:
+///   forward_flat = (sin(yaw), 0, cos(yaw))
+///   right_flat   = (cos(yaw), 0, -sin(yaw))  [= forward rotated 90° CW in XZ]
+///
+/// TELEPORT NOTE: this function does NOT read left-click or set rig.target from
+/// any cursor/world-pick.  If clicking a tool button or the map teleports the
+/// camera, the source is minimap.rs (owned by a separate agent) — camera.rs is
+/// not the culprit.  To guard against accidental clicks leaking into camera
+/// position from any future egui integration, target mutations here are driven
+/// exclusively by held keys and right-drag orbit.
 pub fn camera_input(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -41,6 +54,10 @@ pub fn camera_input(
 ) {
     let dt = time.delta_secs();
     let mut move_dir = Vec3::ZERO;
+
+    // Yaw-projected ground-plane axes — W/S/A/D move relative to camera facing.
+    // forward_flat: direction the camera looks projected onto XZ.
+    // right_flat:   90° clockwise rotation of forward_flat in XZ.
     let forward_flat = Vec3::new(rig.yaw.sin(), 0.0, rig.yaw.cos());
     let right_flat = Vec3::new(forward_flat.z, 0.0, -forward_flat.x);
 
@@ -72,6 +89,7 @@ pub fn camera_input(
         rig.distance = (rig.distance - scroll * 12.0).clamp(MIN_DISTANCE, MAX_DISTANCE);
     }
 
+    // Right-drag orbits; consume motion events when not orbiting to avoid drift.
     if mouse_buttons.pressed(MouseButton::Right) {
         let delta = mouse_motion.read().fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
         rig.yaw -= delta.x * 0.003;

@@ -18,6 +18,22 @@ export default withMermaid(
       // Local dev server URLs in dev-only deployment guides (not for production link checking)
       /^https?:\/\/localhost(:\d+)?\//,
       /^https?:\/\/localhost:\d+$/,
+      // Links that intentionally point at repo files OUTSIDE the published docs tree
+      // (repo-root markdown, source code, packs, and .claude command definitions).
+      // These resolve on GitHub but are not part of the VitePress site, so the
+      // dead-link checker (which fails the Pages build) must not flag them.
+      /README$/,
+      /\/(CHANGELOG|CONTRIBUTING|INSTALLATION|GETTING_STARTED)$/,
+      /GETTING_STARTED$/,
+      /PACKCOMPILER_CLI$/,
+      /\/src\//,
+      /\/packs\//,
+      /\.claude\/commands\//,
+      /\/tools\/phenotype-journeys\//,
+      /\/evidence\//,
+      // Intra-docs reference pages not yet authored.
+      /\/concepts\/cli-tools$/,
+      /\/architecture\/runtime$/,
     ],
     srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**', 'game-launch-dashboard.md'],
 
@@ -40,12 +56,16 @@ export default withMermaid(
     },
 
     head: [
-      ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
-      ['link', { rel: 'stylesheet', href: '/.vitepress/theme/custom.css' }],
+      // Use a base-relative href so the icon resolves on both the GitHub Pages
+      // sub-path deploy (/Dino/) and a custom-domain root deploy.
+      ['link', { rel: 'icon', type: 'image/svg+xml', href: `${docsBase}favicon.svg` }],
+      // NOTE: custom.css is imported in theme/index.ts (`import './custom.css'`).
+      // The previous raw <link href="/.vitepress/theme/custom.css"> 404'd in
+      // production because the theme source dir is not published. Removed.
     ],
 
     themeConfig: {
-      logo: '/favicon.svg',
+      logo: `${docsBase}favicon.svg`,
       siteTitle: 'DINOForge',
 
       nav: [

@@ -227,19 +227,35 @@ fn teleport_camera_from_minimap(
     mouse: Res<ButtonInput<MouseButton>>,
     panel: Query<&RelativeCursorPosition, With<MinimapRoot>>,
     mut rig: ResMut<CameraRig>,
+    #[cfg(feature = "egui")] mut egui_ctx: bevy_egui::EguiContexts,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
+    // If egui owns the pointer (e.g. a HUD button was clicked), do not teleport.
+    #[cfg(feature = "egui")]
+    if let Ok(ctx) = egui_ctx.ctx_mut() {
+        if ctx.wants_pointer_input() {
+            return;
+        }
+    }
+
     let Ok(cursor) = panel.single() else {
         return;
     };
+
+    // `normalized` is Some only when the cursor is over the node, but its
+    // values can still be outside [0,1] if the node has overflow:visible.
+    // Guard explicitly so clicks near (but outside) the bezel don't fire.
     let Some(normalized) = cursor.normalized else {
         return;
     };
+    if normalized.x < 0.0 || normalized.x > 1.0 || normalized.y < 0.0 || normalized.y > 1.0 {
+        return;
+    }
 
     let world = minimap_uv_to_world(normalized);
-    rig.target.x = world.x;
-    rig.target.z = world.z;
+    rig.target.x = world.x.clamp(MINIMAP_WORLD_MIN, MINIMAP_WORLD_MAX);
+    rig.target.z = world.z.clamp(MINIMAP_WORLD_MIN, MINIMAP_WORLD_MAX);
 }

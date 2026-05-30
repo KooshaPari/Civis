@@ -27,6 +27,8 @@ pub use phenotype_voxel::{
     VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
+pub mod material;
+
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

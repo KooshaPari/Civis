@@ -445,3 +445,41 @@
     cruise_altitude: 20.0
     ascend_speed: 8.0
     descend_speed: 5.0
+- id: rep_laat_gunship
+  visual_asset: sw-rep-laat-gunship
+  display_name: LAAT/i Gunship
+  description: Low Altitude Assault Transport. Heavily armed Republic gunship bristling with
+    mass-driver cannons and missile launchers - the backbone of Republic aerial assault.
+  unit_class: AirstrikeProxy
+  faction_id: republic
+  tier: 3
+  weapon: laat_mass_drivers
+  vanilla_mapping: aerial_fighter
+  defense_tags:
+  - Mechanical
+  - Aerial
+  - Large
+  behavior_tags:
+  - Aerial
+  - SiegePriority
+  - AntiStructure
+  stats:
+    hp: 260.0
+    damage: 40.0
+    armor: 12.0
+    range: 22.0
+    speed: 9.0
+    accuracy: 0.75
+    fire_rate: 1.2
+    morale: 120.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 90
+      gold: 80
+      population: 3
+  aerial:
+    cruise_altitude: 16.0
+    ascend_speed: 6.0
+    descend_speed: 5.0

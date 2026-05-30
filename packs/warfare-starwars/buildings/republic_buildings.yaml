@@ -178,3 +178,19 @@
     damage_bonus: 1.4
 
   visual_asset: sw-skyshield-generator
+- id: rep_gunship_bay
+  display_name: Gunship Landing Platform
+  description: Republic aerial deployment platform. Builds and rearms LAAT/i gunships and V-19 Torrent starfighters, projecting air power across the battlefield.
+  building_type: barracks
+  health: 1600
+  cost:
+    food: 0
+    wood: 60
+    stone: 90
+    iron: 160
+    gold: 90
+    population: 0
+  production:
+    rep_laat_gunship: 1
+    rep_v19_torrent: 1
+  visual_asset: sw-rep-gunship-bay

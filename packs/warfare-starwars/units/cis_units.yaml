@@ -446,3 +446,41 @@
     cruise_altitude: 18.0
     ascend_speed: 10.0
     descend_speed: 6.0
+- id: cis_nantex_fighter
+  visual_asset: sw-nantex-fighter
+  display_name: Nantex-class Starfighter
+  description: Geonosian-built droid interceptor with a fixed forward laser cannon and tractor-beam
+    targeting. Blisteringly fast and built to run down Republic flyers.
+  unit_class: AirstrikeProxy
+  faction_id: cis
+  tier: 2
+  weapon: nantex_laser_cannon
+  vanilla_mapping: aerial_fighter
+  defense_tags:
+  - Mechanical
+  - Aerial
+  behavior_tags:
+  - Aerial
+  - AntiAir
+  - Flank
+  stats:
+    hp: 80.0
+    damage: 12.0
+    armor: 2.0
+    range: 16.0
+    speed: 20.0
+    accuracy: 0.7
+    fire_rate: 4.5
+    morale: 200.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 20
+      gold: 25
+      population: 1
+  aerial:
+    cruise_altitude: 26.0
+    ascend_speed: 13.0
+    descend_speed: 8.0
+    anti_air: true

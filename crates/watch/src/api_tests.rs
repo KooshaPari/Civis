@@ -24,6 +24,7 @@ use crate::app::{
     default_law_db, AppState, RemoteModRegistry, RemoteModRegistryEntry, Snapshot, TerrainCache,
     AUTOSAVE_RING_MAX, REMOTE_FETCH_TIMEOUT, REMOTE_MOD_ARCHIVE_NAME,
 };
+use crate::snapshot::make_snapshot;
 use crate::mods_api::{
     format_remote_mod_validation_error, persist_remote_mod_cache, read_remote_mod_meta,
     remote_mod_cache_dir, repo_root, resolve_remote_cache_id, scan_mod_catalog,
@@ -173,6 +174,32 @@ async fn get_snapshot_returns_null_before_first_tick() {
     assert_eq!(response.status(), StatusCode::OK);
     let json = body_json(response).await;
     assert!(json.is_null());
+}
+
+#[tokio::test]
+async fn make_snapshot_includes_life_sim_state_parity() {
+    let state = test_state();
+    {
+        let mut sim = state.sim.lock().await;
+        sim.tick();
+    }
+
+    let sim = state.sim.lock().await;
+    let snapshot = make_snapshot(
+        &sim,
+        &[],
+        &[],
+        &crate::app::TradeTickSummary::default(),
+        state.speed.load(std::sync::atomic::Ordering::Relaxed),
+        &state.laws,
+        state.target_era.load(std::sync::atomic::Ordering::Relaxed),
+    );
+
+    assert_eq!(snapshot.population, sim.state.population);
+    assert_eq!(snapshot.births_this_tick, sim.last_births().len() as u32);
+    assert_eq!(snapshot.deaths_this_tick, sim.last_deaths().len() as u32);
+    assert_eq!(snapshot.settlement_count, sim.settlement_count());
+    assert_eq!(snapshot.cluster_stocks, sim.cluster_stocks().clone());
 }
 
 #[tokio::test]

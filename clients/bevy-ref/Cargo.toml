@@ -20,6 +20,9 @@ civ-engine = { path = "../../crates/engine", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
+# RON persistence for the settings/options panel (src/settings_ui.rs). Pulled in
+# transitively by bevy already; pinned 0.8 to match the workspace lock.
+ron = "0.8"
 rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
 

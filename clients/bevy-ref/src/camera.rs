@@ -59,7 +59,7 @@ pub fn camera_input(
     // forward_flat: direction the camera looks projected onto XZ.
     // right_flat:   90° clockwise rotation of forward_flat in XZ.
     let forward_flat = Vec3::new(rig.yaw.sin(), 0.0, rig.yaw.cos());
-    let right_flat = Vec3::new(forward_flat.z, 0.0, -forward_flat.x);
+    let right_flat = Vec3::new(-forward_flat.z, 0.0, forward_flat.x); // negated: orbit cam looks +Z, so screen-right is -X-ish (fixes D-goes-left)
 
     if keys.pressed(KeyCode::KeyW) {
         move_dir += forward_flat;

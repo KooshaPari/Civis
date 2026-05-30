@@ -31,6 +31,12 @@ use bevy_egui::egui;
 
 /// A leaf tool inside a category flyout. Unit variants keep the taxonomy cheap
 /// to copy/compare and let the UI light the exact picked sub-tool.
+///
+/// Variants are deliberately undocumented individually: each is a self-evident
+/// god-game verb (`House`, `Meteor`, `Bless`, …) and its player-facing meaning
+/// is the canonical `label()`/`icon()`. Per-variant doc lines would only restate
+/// the name, so `missing_docs` is suppressed for the variant list here.
+#[allow(missing_docs)] // self-documenting verb variants; see label()/icon()
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SubTool {
     // Select / Inspect

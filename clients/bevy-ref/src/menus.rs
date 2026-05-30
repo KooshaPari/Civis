@@ -10,10 +10,101 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
+const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
+const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
 const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
+const CHIP_HOVER: egui::Color32 = egui::Color32::from_rgba_premultiplied(44, 54, 74, 245);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
+
+// ---------------------------------------------------------------------------
+// Rasterized menu art (embedded at compile time so the assets resolve
+// regardless of the runtime working directory). These are the real PNGs the
+// art pipeline produced under assets/ui/.
+// ---------------------------------------------------------------------------
+
+const LOGO_PNG: &[u8] = include_bytes!("../assets/ui/logo.png");
+const TITLE_BG_PNG: &[u8] = include_bytes!("../assets/ui/title-bg.png");
+const LOADING_BG_PNG: &[u8] = include_bytes!("../assets/ui/loading-bg.png");
+const SPINNER_PNG: &[u8] = include_bytes!("../assets/ui/loading-spinner.png");
+
+// ---------------------------------------------------------------------------
+// Menu texture cache — decode the embedded PNGs once into egui textures.
+// ---------------------------------------------------------------------------
+
+/// Lazily-populated handles for the embedded menu art. Each PNG is decoded to
+/// an `egui::ColorImage` and uploaded the first time a menu draw system runs.
+#[derive(Resource, Default)]
+pub struct MenuTextures {
+    pub logo: Option<egui::TextureHandle>,
+    pub title_bg: Option<egui::TextureHandle>,
+    pub loading_bg: Option<egui::TextureHandle>,
+    pub spinner: Option<egui::TextureHandle>,
+    loaded: bool,
+}
+
+impl MenuTextures {
+    /// Decode + upload all art on first call; cheap no-op afterwards.
+    fn ensure_loaded(&mut self, ctx: &egui::Context) {
+        if self.loaded {
+            return;
+        }
+        self.loaded = true;
+        self.logo = decode_texture(ctx, "menu_logo", LOGO_PNG);
+        self.title_bg = decode_texture(ctx, "menu_title_bg", TITLE_BG_PNG);
+        self.loading_bg = decode_texture(ctx, "menu_loading_bg", LOADING_BG_PNG);
+        self.spinner = decode_texture(ctx, "menu_spinner", SPINNER_PNG);
+    }
+}
+
+/// Decode PNG `bytes` into an egui texture via Bevy's bundled `image` decoder.
+///
+/// Returns `None` (with a loud `error!`) on decode failure so the menu falls
+/// back to its pure-code styling rather than panicking — per the project
+/// "fail clearly, never silently" stance, the failure is logged with the asset
+/// name and the cause.
+fn decode_texture(
+    ctx: &egui::Context,
+    name: &str,
+    bytes: &[u8],
+) -> Option<egui::TextureHandle> {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::image::{Image, ImageType};
+    use bevy::render::render_resource::TextureFormat;
+
+    let decoded = Image::from_buffer(
+        bytes,
+        ImageType::Extension("png"),
+        Default::default(),
+        true,
+        bevy::image::ImageSampler::Default,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    let img = match decoded {
+        Ok(i) => i,
+        Err(e) => {
+            error!("menu texture '{name}' failed to decode: {e}");
+            return None;
+        }
+    };
+    // Normalise to RGBA8 sRGB so the pixel layout is known.
+    let rgba = img
+        .convert(TextureFormat::Rgba8UnormSrgb)
+        .unwrap_or(img);
+    let size = rgba.texture_descriptor.size;
+    let (w, h) = (size.width as usize, size.height as usize);
+    let Some(data) = rgba.data else {
+        error!("menu texture '{name}' decoded with no pixel data");
+        return None;
+    };
+    if data.len() < w * h * 4 {
+        error!("menu texture '{name}' pixel buffer too small ({} bytes for {w}x{h})", data.len());
+        return None;
+    }
+    let color = egui::ColorImage::from_rgba_unmultiplied([w, h], &data[..w * h * 4]);
+    Some(ctx.load_texture(name, color, egui::TextureOptions::LINEAR))
+}
 
 /// The game's top-level UI / flow state.
 ///
@@ -202,6 +293,7 @@ impl Plugin for MenusPlugin {
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
             .init_resource::<SettingsState>()
+            .init_resource::<MenuTextures>()
             .add_systems(
                 Update,
                 (toggle_pause, tick_era_banner, tick_loading),
@@ -276,18 +368,33 @@ fn draw_main_menu(
     mut contexts: EguiContexts,
     mut mode: ResMut<GameUiMode>,
     mut progress: ResMut<LoadingProgress>,
+    mut textures: ResMut<MenuTextures>,
+    mut settings_open: ResMut<SettingsOpen>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::MainMenu {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
-    full_screen_backdrop(ctx);
+    textures.ensure_loaded(ctx);
+    image_backdrop(ctx, textures.title_bg.as_ref(), "main_menu_bg");
     egui::Area::new(egui::Id::new("main_menu_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            main_menu_panel(ui, &mut mode, &mut progress, &mut exit);
+            main_menu_panel(ui, &mut mode, &mut progress, &mut settings_open, textures.logo.as_ref(), &mut exit);
+        });
+    // Footer build/version line, bottom-centred.
+    egui::Area::new(egui::Id::new("main_menu_footer"))
+        .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -16.0))
+        .order(egui::Order::Foreground)
+        .interactable(false)
+        .show(ctx, |ui| {
+            ui.label(
+                egui::RichText::new("Civis · pre-alpha sandbox")
+                    .color(DIM.gamma_multiply(0.8))
+                    .size(11.0),
+            );
         });
 }
 
@@ -310,17 +417,27 @@ fn draw_world_setup(
         });
 }
 
-fn draw_loading_screen(mut contexts: EguiContexts, mode: Res<GameUiMode>, progress: Res<LoadingProgress>, time: Res<Time>) {
+fn draw_loading_screen(
+    mut contexts: EguiContexts,
+    mode: Res<GameUiMode>,
+    progress: Res<LoadingProgress>,
+    mut textures: ResMut<MenuTextures>,
+    time: Res<Time>,
+) {
     if *mode != GameUiMode::Loading {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
-    full_screen_backdrop(ctx);
+    textures.ensure_loaded(ctx);
+    image_backdrop(ctx, textures.loading_bg.as_ref(), "loading_bg");
+    let elapsed = time.elapsed_secs();
+    // Keep the spinner spinning while the screen is up.
+    ctx.request_repaint();
     egui::Area::new(egui::Id::new("loading_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            loading_panel(ui, &progress, time.elapsed_secs());
+            loading_panel(ui, &progress, elapsed, textures.logo.as_ref(), textures.spinner.as_ref());
         });
 }
 
@@ -380,6 +497,46 @@ fn full_screen_backdrop(ctx: &egui::Context) {
         });
 }
 
+/// Paint a full-screen background image (cover-fit), with a dark gradient scrim
+/// on top so foreground panels/text stay legible. Falls back to the flat
+/// [`full_screen_backdrop`] when the texture is absent.
+fn image_backdrop(ctx: &egui::Context, tex: Option<&egui::TextureHandle>, id: &str) {
+    let Some(tex) = tex else {
+        full_screen_backdrop(ctx);
+        return;
+    };
+    let screen = ctx.screen_rect();
+    egui::Area::new(egui::Id::new(id))
+        .fixed_pos(egui::pos2(0.0, 0.0))
+        .order(egui::Order::Background)
+        .show(ctx, |ui| {
+            let painter = ui.painter();
+            // Base fill in case the image has transparent regions / letterboxing.
+            painter.rect_filled(
+                screen,
+                egui::CornerRadius::ZERO,
+                egui::Color32::from_rgb(8, 10, 18),
+            );
+            // Cover-fit the image so it always fills the viewport.
+            let img = tex.size_vec2();
+            let scale = (screen.width() / img.x).max(screen.height() / img.y);
+            let drawn = img * scale;
+            let rect = egui::Rect::from_center_size(screen.center(), drawn);
+            painter.image(
+                tex.id(),
+                rect,
+                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                egui::Color32::WHITE,
+            );
+            // Vignette-ish darkening scrim for contrast behind the panel.
+            painter.rect_filled(
+                screen,
+                egui::CornerRadius::ZERO,
+                egui::Color32::from_rgba_premultiplied(6, 8, 14, 150),
+            );
+        });
+}
+
 fn dim_overlay(ctx: &egui::Context) {
     let screen = ctx.content_rect();
     egui::Area::new(egui::Id::new("pause_dim_overlay"))
@@ -398,6 +555,8 @@ fn main_menu_panel(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
     progress: &mut LoadingProgress,
+    settings_open: &mut SettingsOpen,
+    logo: Option<&egui::TextureHandle>,
     exit: &mut MessageWriter<AppExit>,
 ) {
     egui::Frame::NONE
@@ -405,44 +564,64 @@ fn main_menu_panel(
         .corner_radius(egui::CornerRadius::same(16))
         .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.5)))
         .inner_margin(egui::Margin::same(40))
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 12],
+            blur: 32,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(170),
+        })
         .show(ui, |ui| {
-            ui.set_min_width(320.0);
+            ui.set_min_width(340.0);
             ui.vertical_centered(|ui| {
-                ui.label(
-                    egui::RichText::new("CIVIS")
-                        .size(52.0)
-                        .color(ACCENT)
-                        .strong(),
-                );
+                menu_logo(ui, logo, 220.0);
                 ui.label(
                     egui::RichText::new("A civilisation sandbox")
                         .size(13.0)
                         .color(DIM),
                 );
-                ui.add_space(32.0);
-                main_menu_buttons(ui, mode, progress, exit);
+                ui.add_space(28.0);
+                main_menu_buttons(ui, mode, progress, settings_open, exit);
             });
         });
+}
+
+/// Render the logo texture if available, else fall back to the wordmark text.
+fn menu_logo(ui: &mut egui::Ui, logo: Option<&egui::TextureHandle>, max_width: f32) {
+    match logo {
+        Some(tex) => {
+            let size = tex.size_vec2();
+            let scale = (max_width / size.x).min(1.0);
+            ui.add(egui::Image::new((tex.id(), size * scale)));
+        }
+        None => {
+            ui.label(egui::RichText::new("CIVIS").size(52.0).color(ACCENT).strong());
+        }
+    }
 }
 
 fn main_menu_buttons(
     ui: &mut egui::Ui,
     mode: &mut GameUiMode,
     progress: &mut LoadingProgress,
+    settings_open: &mut SettingsOpen,
     exit: &mut MessageWriter<AppExit>,
 ) {
-    if menu_button(ui, "\u{1f30d}  New World").clicked() {
+    if primary_button(ui, "\u{1f30d}  New World").clicked() {
         *mode = GameUiMode::WorldSetup;
     }
-    ui.add_space(6.0);
+    ui.add_space(8.0);
     if menu_button(ui, "\u{1f4c2}  Load World").clicked() {
         progress.reset();
         *mode = GameUiMode::Loading;
     }
-    ui.add_space(6.0);
+    ui.add_space(8.0);
     if menu_button(ui, "\u{25b6}  Continue").clicked() {
         progress.reset();
         *mode = GameUiMode::Loading;
+    }
+    ui.add_space(8.0);
+    if menu_button(ui, "\u{2699}  Settings").clicked() {
+        settings_open.0 = !settings_open.0;
     }
     ui.add_space(14.0);
     ui.separator();
@@ -575,45 +754,147 @@ fn world_setup_fields(
 // Loading-screen panel
 // ---------------------------------------------------------------------------
 
-fn loading_panel(ui: &mut egui::Ui, progress: &LoadingProgress, elapsed: f32) {
-    // assets/ui/logo.png and loading-bg.png are referenced here; the art agent
-    // will drop them in later. For now we render a pure-code fallback that
-    // matches the glassmorphism theme. When the textures are loaded via
-    // bevy_egui's texture API they can replace the title label below.
+fn loading_panel(
+    ui: &mut egui::Ui,
+    progress: &LoadingProgress,
+    elapsed: f32,
+    logo: Option<&egui::TextureHandle>,
+    spinner: Option<&egui::TextureHandle>,
+) {
     let frac = progress.fraction.clamp(0.0, 1.0);
     egui::Frame::NONE
         .fill(PANEL_FILL)
         .corner_radius(egui::CornerRadius::same(16))
         .stroke(egui::Stroke::new(1.5, ACCENT.gamma_multiply(0.4)))
-        .inner_margin(egui::Margin::same(40))
+        .inner_margin(egui::Margin::same(44))
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 12],
+            blur: 32,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(170),
+        })
         .show(ui, |ui| {
-            ui.set_min_width(400.0);
+            ui.set_min_width(440.0);
             ui.vertical_centered(|ui| {
-                // Logo / title  (replace with egui::Image once logo.png exists)
-                ui.label(egui::RichText::new("CIVIS").size(48.0).color(ACCENT).strong());
-                ui.add_space(28.0);
+                menu_logo(ui, logo, 240.0);
+                ui.add_space(24.0);
 
-                // Progress bar — cyan fill
-                let bar = egui::ProgressBar::new(frac)
-                    .fill(ACCENT)
-                    .text(format!("{:.0}%", frac * 100.0))
-                    .desired_width(320.0);
-                ui.add(bar);
-                ui.add_space(10.0);
-
-                // Status label
-                ui.label(egui::RichText::new(&progress.label).color(DIM).size(13.0));
+                // Animated spinner above the bar.
+                loading_spinner(ui, spinner, elapsed);
                 ui.add_space(20.0);
 
-                // Rotating tip line
+                // AAA gradient progress bar.
+                gradient_progress_bar(ui, frac, 360.0);
+                ui.add_space(12.0);
+
+                // Status label.
+                ui.label(
+                    egui::RichText::new(&progress.label)
+                        .color(ACCENT_HI)
+                        .size(14.0)
+                        .strong(),
+                );
+                ui.add_space(22.0);
+
+                // Rotating tip line.
                 ui.label(
                     egui::RichText::new(tip_for_frame(elapsed))
-                        .color(DIM.gamma_multiply(0.7))
-                        .size(11.0)
+                        .color(DIM.gamma_multiply(0.85))
+                        .size(12.0)
                         .italics(),
                 );
             });
         });
+}
+
+/// A rotating spinner texture (falls back to an animated arc when absent).
+fn loading_spinner(ui: &mut egui::Ui, spinner: Option<&egui::TextureHandle>, elapsed: f32) {
+    const SIZE: f32 = 44.0;
+    let angle = (elapsed * 2.4) % std::f32::consts::TAU;
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(SIZE, SIZE), egui::Sense::hover());
+    match spinner {
+        Some(tex) => {
+            // Rotate the textured quad about its centre.
+            let painter = ui.painter();
+            let c = rect.center();
+            let h = SIZE / 2.0;
+            let (sin, cos) = angle.sin_cos();
+            let rot = |dx: f32, dy: f32| egui::pos2(c.x + dx * cos - dy * sin, c.y + dx * sin + dy * cos);
+            let pts = [rot(-h, -h), rot(h, -h), rot(h, h), rot(-h, h)];
+            let uv = [
+                egui::pos2(0.0, 0.0),
+                egui::pos2(1.0, 0.0),
+                egui::pos2(1.0, 1.0),
+                egui::pos2(0.0, 1.0),
+            ];
+            let mut mesh = egui::epaint::Mesh::with_texture(tex.id());
+            for i in 0..4 {
+                mesh.vertices.push(egui::epaint::Vertex {
+                    pos: pts[i],
+                    uv: uv[i],
+                    color: egui::Color32::WHITE,
+                });
+            }
+            mesh.indices.extend_from_slice(&[0, 1, 2, 0, 2, 3]);
+            painter.add(egui::Shape::mesh(mesh));
+        }
+        None => {
+            // Pure-code spinning arc fallback.
+            let painter = ui.painter();
+            let c = rect.center();
+            let r = SIZE / 2.0 - 3.0;
+            for i in 0..12 {
+                let a = angle + i as f32 * std::f32::consts::TAU / 12.0;
+                let alpha = (i as f32 / 12.0 * 220.0) as u8;
+                let p = egui::pos2(c.x + a.cos() * r, c.y + a.sin() * r);
+                painter.circle_filled(p, 2.4, ACCENT.gamma_multiply(alpha as f32 / 255.0));
+            }
+        }
+    }
+}
+
+/// A rounded, accent-gradient progress bar with a percentage overlay.
+fn gradient_progress_bar(ui: &mut egui::Ui, frac: f32, width: f32) {
+    const H: f32 = 22.0;
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, H), egui::Sense::hover());
+    let painter = ui.painter();
+    let radius = egui::CornerRadius::same((H / 2.0) as u8);
+    // Track.
+    painter.rect_filled(rect, radius, CHIP_FILL);
+    painter.rect_stroke(
+        rect,
+        radius,
+        egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.3)),
+        egui::StrokeKind::Inside,
+    );
+    // Fill (cyan→gold gradient approximated by a two-segment blend).
+    if frac > 0.001 {
+        let fill_w = (rect.width() * frac).max(H);
+        let fill = egui::Rect::from_min_size(rect.min, egui::vec2(fill_w, H));
+        let lerp = |a: egui::Color32, b: egui::Color32, t: f32| {
+            egui::Color32::from_rgb(
+                (a.r() as f32 + (b.r() as f32 - a.r() as f32) * t) as u8,
+                (a.g() as f32 + (b.g() as f32 - a.g() as f32) * t) as u8,
+                (a.b() as f32 + (b.b() as f32 - a.b() as f32) * t) as u8,
+            )
+        };
+        painter.rect_filled(fill, radius, lerp(ACCENT, GOLD, frac));
+        // Subtle top highlight.
+        let hi = egui::Rect::from_min_size(fill.min, egui::vec2(fill_w, H * 0.45));
+        painter.rect_filled(
+            hi,
+            radius,
+            egui::Color32::from_rgba_premultiplied(255, 255, 255, 28),
+        );
+    }
+    // Percentage text centred.
+    painter.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        format!("{:.0}%", frac * 100.0),
+        egui::FontId::proportional(13.0),
+        egui::Color32::from_rgb(8, 12, 20),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -755,12 +1036,49 @@ fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str
 // Shared button widget
 // ---------------------------------------------------------------------------
 
+/// Standard themed menu button: glass chip that lights cyan on hover.
 fn menu_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
-    let btn = egui::Button::new(egui::RichText::new(label).size(16.0))
-        .fill(CHIP_FILL)
-        .min_size(egui::vec2(220.0, 40.0))
-        .corner_radius(egui::CornerRadius::same(8));
-    ui.add(btn)
+    themed_button(ui, label, CHIP_FILL, DIM, ACCENT, false)
+}
+
+/// Emphasised primary call-to-action (filled accent tint, white text).
+fn primary_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
+    themed_button(ui, label, ACCENT.gamma_multiply(0.22), egui::Color32::WHITE, ACCENT, true)
+}
+
+fn themed_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    fill: egui::Color32,
+    _text: egui::Color32,
+    accent: egui::Color32,
+    primary: bool,
+) -> egui::Response {
+    let size = egui::vec2(240.0, 42.0);
+    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
+    let hovered = resp.hovered();
+    let painter = ui.painter();
+    let radius = egui::CornerRadius::same(9);
+
+    let bg = if hovered {
+        if primary { accent.gamma_multiply(0.34) } else { CHIP_HOVER }
+    } else {
+        fill
+    };
+    painter.rect_filled(rect, radius, bg);
+    let stroke_w = if hovered { 1.6 } else { 1.0 };
+    let stroke_c = if hovered { accent } else { accent.gamma_multiply(0.35) };
+    painter.rect_stroke(rect, radius, egui::Stroke::new(stroke_w, stroke_c), egui::StrokeKind::Inside);
+
+    let txt = if hovered { egui::Color32::WHITE } else if primary { egui::Color32::WHITE } else { egui::Color32::from_rgb(214, 224, 240) };
+    painter.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        label,
+        egui::FontId::proportional(16.0),
+        txt,
+    );
+    resp
 }
 
 // ---------------------------------------------------------------------------

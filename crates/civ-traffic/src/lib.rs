@@ -29,6 +29,8 @@ use std::collections::BTreeMap;
 use civ_voxel::WorldCoord;
 use serde::{Deserialize, Serialize};
 
+pub mod lane;
+
 /// Marker version of this crate's public schema (replay/save guard).
 pub const SCHEMA_VERSION: &str = "0.1.0";
 
@@ -58,6 +60,11 @@ pub enum RoadKind {
     /// Road spanning water (placed, never emerges).
     Bridge,
 }
+
+pub use lane::{
+    Lane, LaneClass, LaneConnection, LaneDirection, LaneGraph, Node, NodeKey, lanes_for,
+    route_lanes, speed_for_lane,
+};
 
 impl RoadKind {
     /// Movement-speed multiplier the life-sim pathing cost model reads. Higher

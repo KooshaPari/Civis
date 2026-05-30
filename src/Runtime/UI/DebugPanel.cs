@@ -35,6 +35,7 @@ namespace DINOForge.Runtime.UI
 
         // Content area for dynamic updates
         private RectTransform? _contentRoot;
+        private ScrollRect? _scrollRect;
         private float _refreshTimer;
         private bool _refreshQueued;
         private const float RefreshInterval = 0.5f;
@@ -127,6 +128,18 @@ namespace DINOForge.Runtime.UI
             if (_panelRt != null)
             {
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_panelRt);
+            }
+
+            // Fix (iter-149): DINO never runs MonoBehaviour.Update/LateUpdate, so the
+            // ScrollRect never repositions its content after it is built/resized while the
+            // panel is inactive — leaving the content scrolled out of the viewport (the
+            // panel body appeared empty/black). Pin the content back to the top now that the
+            // layout has been rebuilt with a known content size.
+            if (_scrollRect != null)
+            {
+                _scrollRect.verticalNormalizedPosition = 1f;
+                if (_contentRoot != null)
+                    _contentRoot.anchoredPosition = new Vector2(_contentRoot.anchoredPosition.x, 0f);
             }
 
             if (_autoRefreshCoroutine != null) StopCoroutine(_autoRefreshCoroutine);
@@ -250,6 +263,7 @@ namespace DINOForge.Runtime.UI
             scrollRt.offsetMin = Vector2.zero;
             scrollRt.offsetMax = new Vector2(0f, -(HeaderHeight + 1f));
 
+            _scrollRect = scrollRect;
             _contentRoot = content;
             RefreshContent();
         }

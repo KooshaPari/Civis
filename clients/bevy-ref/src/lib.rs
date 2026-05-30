@@ -26,6 +26,10 @@ pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tool_categories;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;

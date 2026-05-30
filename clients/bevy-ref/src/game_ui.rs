@@ -4,20 +4,26 @@
 //!
 //! This module keeps the HUD state isolated from the renderer binaries. The
 //! UI is compile-gated behind the `egui` feature so `standalone.rs` stays
-//! untouched. It renders an AAA-styled dark-glass shell modelled on the
-//! `CIV-0300` RTS UI/UX spec:
+//! untouched. It renders an AAA-styled dark-glass shell with a **category-based
+//! tool system** modelled on Cities Skylines (clean toolbar + flyout drawers),
+//! WorldBox (chunky icon palette + sub-tool drawers), Empire at War (command
+//! panels) and DINO:
 //!
 //! * **Top bar** — stat chips (tick / era / population / factions) + a global
 //!   resource strip, with a grouped speed/time control on the right.
-//! * **Bottom bar** — a god-game tool palette (Select, Inspect, Spawn life,
-//!   Spawn structure, Terraform, Material, Disaster, Diplomacy, Policy) with
-//!   icon+label buttons, active-lit state, and hover tooltips with hotkeys.
+//! * **Bottom bar** — a *category* toolbar (Select, Life, Structure, Infra,
+//!   Terraform, Material, Disaster, Diplomacy, Policy). Clicking a category
+//!   opens a **flyout drawer** of sub-tools above it; picking a sub-tool sets
+//!   the active tool. Active category + sub-tool are clearly lit; hover
+//!   tooltips show labels + hotkeys.
 //! * **Right inspector** — a selection card with name/kind, group, attributes
 //!   and a colour-coded health bar, plus an empty-state hint.
 //! * **Left panel** — a faction/group list with colour swatches + counts and a
 //!   reserved space above the minimap (drawn by `live_minimap.rs`).
 //! * **Bottom-right** — left clear for the event feed toasts (`event_feed.rs`).
-//! * A persistent help/hotkey hint line.
+//!
+//! The theme primitives live in [`crate::ui_theme`] and the tool taxonomy in
+//! [`crate::tool_categories`] so this file stays focused on layout + wiring.
 //!
 //! Two hard constraints are intentional and must be preserved:
 //! 1. Draw on [`EguiPrimaryContextPass`] — moving to `Update` panics in
@@ -29,7 +35,12 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
 use crate::menus::GameUiMode;
-use crate::spawn_tools::{ActiveTool, SelectedEntity, SpawnTool};
+use crate::spawn_tools::{ActiveTool, SelectedEntity};
+use crate::tool_categories::{ActiveSubTool, Category, SubTool, CATEGORIES};
+use crate::ui_theme::{
+    accent_frame, apply_theme, chip, compact, hairline, inner_glow, panel_frame, ACCENT, BORDER,
+    DIM, GOLD, GREEN, INSET_FILL, RADIUS, RADIUS_SM, RED, SURFACE, SURFACE_HI, TEXT,
+};
 
 // ---------------------------------------------------------------------------
 // Resources
@@ -172,34 +183,6 @@ impl GameSpeed {
 }
 
 // ---------------------------------------------------------------------------
-// Palette + type scale
-// ---------------------------------------------------------------------------
-
-/// Accent cyan used for active widgets and highlights.
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-/// Gold accent (#E8B84B) for secondary highlights.
-const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
-/// Friendly / positive green.
-const GREEN: egui::Color32 = egui::Color32::from_rgb(120, 220, 130);
-/// Warning / negative red.
-const RED: egui::Color32 = egui::Color32::from_rgb(230, 96, 96);
-/// Base glass panel fill (premultiplied for `const` construction; alpha ~232).
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(15, 18, 28, 232);
-/// Slightly lighter fill used for chips and inactive tool buttons.
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(29, 35, 50, 235);
-/// Deeper inset fill for nested cards / list rows.
-const INSET_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(22, 27, 40, 235);
-/// Dimmed label color for field names + secondary text.
-const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
-/// Border color for inactive widgets (subtle, low-contrast).
-const BORDER: egui::Color32 = egui::Color32::from_rgb(54, 62, 82);
-/// Faint hairline used for separators inside cards.
-const HAIRLINE: egui::Color32 = egui::Color32::from_rgb(40, 47, 64);
-
-/// Shared corner radius for the cohesive dark-glass look.
-const RADIUS: u8 = 9;
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
@@ -214,7 +197,8 @@ impl Plugin for GameUiPlugin {
             .init_resource::<FactionRoster>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
-            .add_systems(Update, handle_speed_shortcuts)
+            .init_resource::<ActiveSubTool>()
+            .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
             // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
             .add_systems(EguiPrimaryContextPass, draw_game_ui);
     }
@@ -236,9 +220,37 @@ fn handle_speed_shortcuts(keys: Res<ButtonInput<KeyCode>>, mut speed: ResMut<Gam
     }
 }
 
+/// Toggle a category flyout open when its hotkey letter is pressed.
+fn handle_category_hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sub: ResMut<ActiveSubTool>) {
+    for (idx, cat) in CATEGORIES.iter().enumerate() {
+        if let Some(code) = hotkey_to_code(cat.hotkey) {
+            if keys.just_pressed(code) {
+                sub.open_category = if sub.open_category == Some(idx) { None } else { Some(idx) };
+            }
+        }
+    }
+}
+
+/// Map a single-letter hotkey to its [`KeyCode`] (letters used by categories).
+fn hotkey_to_code(hotkey: &str) -> Option<KeyCode> {
+    match hotkey {
+        "Q" => Some(KeyCode::KeyQ),
+        "E" => Some(KeyCode::KeyE),
+        "R" => Some(KeyCode::KeyR),
+        "C" => Some(KeyCode::KeyC),
+        "T" => Some(KeyCode::KeyT),
+        "A" => Some(KeyCode::KeyA),
+        "X" => Some(KeyCode::KeyX),
+        "D" => Some(KeyCode::KeyD),
+        "F" => Some(KeyCode::KeyF),
+        _ => None,
+    }
+}
+
 /// Parameters bundle for the bottom-bar so the draw fn stays small.
 struct BottomBarCtx<'a> {
     active: &'a mut ActiveTool,
+    sub: &'a mut ActiveSubTool,
     speed: &'a mut GameSpeed,
 }
 
@@ -255,6 +267,7 @@ fn draw_game_ui(
     live_attach: Option<Res<crate::live_attach::LiveAttachState>>,
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
+    mut sub_tool: ResMut<ActiveSubTool>,
     ui_mode: Res<GameUiMode>,
 ) {
     // Hide HUD entirely when not in Playing mode (pause overlay, loading, etc.).
@@ -275,8 +288,12 @@ fn draw_game_ui(
     egui::TopBottomPanel::bottom("civis_game_bottom_bar")
         .frame(panel_frame(egui::Margin::symmetric(14, 10)))
         .show(ctx, |ui| {
-            let mut bottom = BottomBarCtx { active: &mut active_tool, speed: &mut speed };
-            tool_palette_ui(ui, &mut bottom);
+            let mut bottom = BottomBarCtx {
+                active: &mut active_tool,
+                sub: &mut sub_tool,
+                speed: &mut speed,
+            };
+            category_bar_ui(ui, &mut bottom);
             ui.add_space(4.0);
             help_hint_ui(ui);
         });
@@ -296,94 +313,8 @@ fn draw_game_ui(
 }
 
 // ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
-
-/// Apply the cohesive dark-glass theme + typography to the egui context.
-fn apply_theme(ctx: &egui::Context) {
-    let mut style = (*ctx.style()).clone();
-    let mut v = egui::Visuals::dark();
-    let r = egui::CornerRadius::same(RADIUS);
-
-    v.panel_fill = PANEL_FILL;
-    v.window_fill = PANEL_FILL;
-    v.window_corner_radius = r;
-    v.window_stroke = egui::Stroke::new(1.0, BORDER);
-    v.widgets.noninteractive.corner_radius = r;
-    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, HAIRLINE);
-    v.widgets.inactive.corner_radius = r;
-    v.widgets.inactive.bg_fill = CHIP_FILL;
-    v.widgets.inactive.weak_bg_fill = CHIP_FILL;
-    v.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, BORDER);
-    v.widgets.hovered.corner_radius = r;
-    v.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, ACCENT);
-    v.widgets.hovered.bg_fill = CHIP_FILL.gamma_multiply(1.3);
-    v.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.7));
-    v.widgets.active.corner_radius = r;
-    v.widgets.active.bg_stroke = egui::Stroke::new(1.5, ACCENT);
-    v.selection.bg_fill = ACCENT.gamma_multiply(0.35);
-    v.selection.stroke = egui::Stroke::new(1.0, ACCENT);
-    // Drop-shadow feel under floating windows / panels.
-    v.window_shadow = egui::epaint::Shadow {
-        offset: [0, 6],
-        blur: 18,
-        spread: 0,
-        color: egui::Color32::from_black_alpha(120),
-    };
-    style.visuals = v;
-    apply_type_scale(&mut style);
-    ctx.set_style(style);
-}
-
-/// Readable heading/body/small type scale + generous spacing.
-fn apply_type_scale(style: &mut egui::Style) {
-    use egui::{FontFamily::Proportional, FontId, TextStyle};
-    style.text_styles = [
-        (TextStyle::Heading, FontId::new(20.0, Proportional)),
-        (TextStyle::Body, FontId::new(14.5, Proportional)),
-        (TextStyle::Button, FontId::new(14.5, Proportional)),
-        (TextStyle::Small, FontId::new(11.0, Proportional)),
-        (TextStyle::Monospace, FontId::new(13.0, egui::FontFamily::Monospace)),
-    ]
-    .into();
-    style.spacing.item_spacing = egui::vec2(8.0, 7.0);
-    style.spacing.button_padding = egui::vec2(11.0, 6.0);
-    style.spacing.window_margin = egui::Margin::same(12);
-}
-
-/// Shared rounded glass frame for the HUD panels.
-fn panel_frame(margin: egui::Margin) -> egui::Frame {
-    egui::Frame::NONE
-        .fill(PANEL_FILL)
-        .inner_margin(margin)
-        .stroke(egui::Stroke::new(1.0, BORDER))
-        .corner_radius(egui::CornerRadius::same(RADIUS))
-}
-
-/// A faint hairline section separator used inside cards.
-fn hairline(ui: &mut egui::Ui) {
-    let rect = ui.available_rect_before_wrap();
-    let y = ui.cursor().top();
-    ui.painter().hline(rect.x_range(), y, egui::Stroke::new(1.0, HAIRLINE));
-    ui.add_space(6.0);
-}
-
-// ---------------------------------------------------------------------------
 // Top bar
 // ---------------------------------------------------------------------------
-
-/// A single rounded stat chip: `icon text` on a tinted pill.
-fn chip(ui: &mut egui::Ui, icon: &str, text: &str, color: egui::Color32) {
-    egui::Frame::NONE
-        .fill(CHIP_FILL)
-        .corner_radius(egui::CornerRadius::same(RADIUS))
-        .stroke(egui::Stroke::new(1.0, BORDER))
-        .inner_margin(egui::Margin::symmetric(10, 5))
-        .show(ui, |ui| {
-            ui.label(egui::RichText::new(icon).color(color));
-            ui.label(egui::RichText::new(text).color(color).strong());
-        });
-}
 
 /// A resource chip with a per-tick delta arrow (↑ green / ↓ red / → grey).
 fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: egui::Color32) {
@@ -396,12 +327,12 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
     };
     egui::Frame::NONE
         .fill(INSET_FILL)
-        .corner_radius(egui::CornerRadius::same(RADIUS))
+        .corner_radius(egui::CornerRadius::same(RADIUS_SM))
         .stroke(egui::Stroke::new(1.0, BORDER))
         .inner_margin(egui::Margin::symmetric(9, 5))
         .show(ui, |ui| {
             ui.label(egui::RichText::new(icon).color(color));
-            ui.label(egui::RichText::new(value).color(egui::Color32::WHITE).strong());
+            ui.label(egui::RichText::new(value).color(TEXT).strong());
             ui.label(egui::RichText::new(format!("{arrow}{:+.0}", delta)).color(dcol).small());
         });
 }
@@ -456,72 +387,39 @@ fn ws_status_ui(
     }
 }
 
-/// Format a large number compactly (`12.3K`, `4.5M`) for resource chips.
-fn compact(value: f64) -> String {
-    let v = value.abs();
-    if v >= 1.0e9 {
-        format!("{:.1}B", value / 1.0e9)
-    } else if v >= 1.0e6 {
-        format!("{:.1}M", value / 1.0e6)
-    } else if v >= 1.0e3 {
-        format!("{:.1}K", value / 1.0e3)
-    } else {
-        format!("{:.0}", value)
+// ---------------------------------------------------------------------------
+// Bottom category toolbar + flyout drawers
+// ---------------------------------------------------------------------------
+
+/// Bottom bar: a flyout drawer (when a category is open) above a centred
+/// category toolbar, plus a right-aligned segmented speed control.
+fn category_bar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
+    // Draw the open flyout first so it stacks above the toolbar row.
+    if let Some(idx) = ctx.sub.open_category {
+        if let Some(cat) = CATEGORIES.get(idx) {
+            flyout_drawer_ui(ui, cat, ctx);
+            ui.add_space(6.0);
+        }
     }
+    category_toolbar_ui(ui, ctx);
 }
 
-// ---------------------------------------------------------------------------
-// Bottom tool palette + speed control
-// ---------------------------------------------------------------------------
-
-/// Definition of a single tool palette button.
-struct ToolDef {
-    icon: &'static str,
-    label: &'static str,
-    hotkey: &'static str,
-    /// `Some` when the slot maps to a real `SpawnTool`; `None` = present-but-inert.
-    tool: Option<SpawnTool>,
-}
-
-/// The 9-slot god-game palette. Slots without a `SpawnTool` variant are present
-/// but inert (a no-op on click) until `spawn_tools.rs` grows the variant — kept
-/// visible so the palette reads as the full design and wiring is one-line later.
-const TOOLS: &[ToolDef] = &[
-    ToolDef { icon: "\u{1f446}", label: "Select",    hotkey: "Q", tool: Some(SpawnTool::Select) },
-    // Inspect reuses Select's pick behaviour for now (no Inspect variant yet).
-    ToolDef { icon: "\u{1f50d}", label: "Inspect",   hotkey: "W", tool: Some(SpawnTool::Select) },
-    ToolDef { icon: "\u{1f9cd}", label: "Life",      hotkey: "E", tool: Some(SpawnTool::SpawnCivilian) },
-    ToolDef { icon: "\u{1f3db}", label: "Structure", hotkey: "R", tool: Some(SpawnTool::SpawnBuilding) },
-    ToolDef { icon: "\u{26f0}",  label: "Terraform", hotkey: "T", tool: Some(SpawnTool::Terraform) },
-    // Material / Disaster / Diplomacy / Policy have no SpawnTool variant yet.
-    ToolDef { icon: "\u{1faa8}", label: "Material",  hotkey: "A", tool: None },
-    ToolDef { icon: "\u{1f4a5}", label: "Disaster",  hotkey: "S", tool: Some(SpawnTool::Destroy) },
-    ToolDef { icon: "\u{1f91d}", label: "Diplomacy", hotkey: "D", tool: None },
-    ToolDef { icon: "\u{1f4dc}", label: "Policy",    hotkey: "F", tool: None },
-];
-
-/// Bottom bar: centred tool palette (left) + segmented speed control (right).
-///
-/// NOTE: if rasterised PNG tool icons land under `assets/ui/tool-icons/*.png`
-/// they can be loaded as egui textures and swapped into `tool_button` in place
-/// of the emoji glyph. Today only SVG sources exist (Bevy can't load SVG), so
-/// the palette uses unicode glyph fallbacks.
-fn tool_palette_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
-    const BTN_W: f32 = 60.0;
+/// The centred row of top-level category buttons + speed control on the right.
+fn category_toolbar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
+    const BTN_W: f32 = 64.0;
     const GAP: f32 = 8.0;
     ui.horizontal(|ui| {
         let available = ui.available_width();
-        let palette_w = TOOLS.len() as f32 * BTN_W + (TOOLS.len() as f32 - 1.0) * GAP;
-        let right_w = 230.0;
-        let left_pad = ((available - palette_w - right_w) * 0.5).max(0.0);
+        let bar_w = CATEGORIES.len() as f32 * (BTN_W + GAP);
+        let right_w = 240.0;
+        let left_pad = ((available - bar_w - right_w) * 0.5).max(0.0);
         ui.add_space(left_pad);
-        for def in TOOLS {
-            let is_active = def.tool.map(|t| t == ctx.active.tool).unwrap_or(false);
-            if tool_button(ui, def, is_active).clicked() {
-                if let Some(tool) = def.tool {
-                    ctx.active.tool = tool; // Wire directly to ActiveTool.
-                }
-                // Inert slots (tool == None) are intentional no-ops for now.
+        let active_cat = ctx.sub.active_category();
+        for (idx, cat) in CATEGORIES.iter().enumerate() {
+            let is_open = ctx.sub.open_category == Some(idx);
+            let is_active = active_cat == Some(idx);
+            if category_button(ui, cat, is_active, is_open).clicked() {
+                ctx.sub.open_category = if is_open { None } else { Some(idx) };
             }
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -530,50 +428,118 @@ fn tool_palette_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
     });
 }
 
-/// Render one 60x58 tool button (glyph + label), accent-lit when active.
-fn tool_button(ui: &mut egui::Ui, def: &ToolDef, active: bool) -> egui::Response {
-    let size = egui::vec2(60.0, 58.0);
-    let (rect, mut resp) = ui.allocate_exact_size(size, egui::Sense::click());
-    let inert = def.tool.is_none();
-
-    let fill = if active {
-        ACCENT.gamma_multiply(0.30)
+/// Render one 64x60 category button (glyph + label), lit when active/open.
+fn category_button(ui: &mut egui::Ui, cat: &Category, active: bool, open: bool) -> egui::Response {
+    let size = egui::vec2(64.0, 60.0);
+    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
+    let lit = active || open;
+    let fill = if lit {
+        cat.accent.gamma_multiply(0.28)
     } else if resp.hovered() {
-        CHIP_FILL.gamma_multiply(1.4)
+        SURFACE_HI
     } else {
-        CHIP_FILL
+        SURFACE
     };
-    let stroke = if active {
-        egui::Stroke::new(2.0, ACCENT)
+    let stroke = if lit {
+        egui::Stroke::new(2.0, cat.accent)
     } else if resp.hovered() {
-        egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.6))
+        egui::Stroke::new(1.0, cat.accent.gamma_multiply(0.6))
     } else {
         egui::Stroke::new(1.0, BORDER)
     };
     let p = ui.painter();
     p.rect_filled(rect, RADIUS as f32, fill);
     p.rect_stroke(rect, RADIUS as f32, stroke, egui::StrokeKind::Inside);
+    if lit {
+        inner_glow(p, rect, cat.accent, RADIUS);
+    }
+    paint_icon_label(p, rect, cat.icon, cat.label, lit, cat.accent);
+    // A small caret marks that the slot opens a flyout drawer.
+    let caret = rect.center_top() + egui::vec2(0.0, 4.0);
+    let caret_col = if open { cat.accent } else { DIM.gamma_multiply(0.7) };
+    p.text(caret, egui::Align2::CENTER_TOP, "\u{25be}", egui::FontId::proportional(9.0), caret_col);
+    resp.on_hover_text(format!("{} \u{25b8}  [{}]", cat.label, cat.hotkey))
+}
 
-    let icon_color = if active {
-        ACCENT
-    } else if inert {
-        DIM.gamma_multiply(0.85)
+/// Paint a centred glyph + caption inside `rect` (shared by category/sub-tool).
+fn paint_icon_label(
+    p: &egui::Painter,
+    rect: egui::Rect,
+    icon: &str,
+    label: &str,
+    lit: bool,
+    accent: egui::Color32,
+) {
+    let icon_color = if lit { accent } else { TEXT };
+    let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.40);
+    p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(22.0), icon_color);
+    let label_color = if lit { accent } else { DIM };
+    let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
+    p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
+}
+
+/// The flyout drawer: a framed panel of sub-tool buttons for the open category.
+fn flyout_drawer_ui(ui: &mut egui::Ui, cat: &Category, ctx: &mut BottomBarCtx) {
+    accent_frame(egui::Margin::symmetric(12, 9), cat.accent).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new(format!("{}  {}", cat.icon, cat.label)).color(cat.accent).strong());
+            ui.label(egui::RichText::new(format!("\u{2022}  {} tools", cat.subtools.len())).color(DIM).small());
+        });
+        ui.add_space(4.0);
+        ui.horizontal_wrapped(|ui| {
+            for &st in cat.subtools {
+                let is_active = ctx.sub.current == st;
+                if subtool_button(ui, st, is_active, cat.accent).clicked() {
+                    select_subtool(ctx, st);
+                }
+            }
+        });
+    });
+}
+
+/// Pick a sub-tool: set the UI-side current tool + sync the backing SpawnTool.
+fn select_subtool(ctx: &mut BottomBarCtx, st: SubTool) {
+    ctx.sub.current = st;
+    if let Some(tool) = st.spawn_tool() {
+        ctx.active.tool = tool; // keep spawn_tools::ActiveTool in lockstep
+    }
+    // Sub-tools without a backing variant are intentional no-ops until the
+    // Infra Lead grows SpawnTool; the UI still lights them as the picked tool.
+}
+
+/// Render one 70x56 sub-tool button inside a flyout, lit when it is current.
+fn subtool_button(ui: &mut egui::Ui, st: SubTool, active: bool, accent: egui::Color32) -> egui::Response {
+    let size = egui::vec2(70.0, 56.0);
+    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
+    let inert = !st.is_active_capable();
+    let fill = if active {
+        accent.gamma_multiply(0.30)
+    } else if resp.hovered() {
+        SURFACE_HI
     } else {
-        egui::Color32::WHITE
+        SURFACE
     };
-    let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.36);
-    p.text(icon_at, egui::Align2::CENTER_CENTER, def.icon, egui::FontId::proportional(22.0), icon_color);
-    let label_color = if active { ACCENT } else { DIM };
-    let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.78);
-    p.text(label_at, egui::Align2::CENTER_CENTER, def.label, egui::FontId::proportional(10.5), label_color);
-
+    let stroke = if active {
+        egui::Stroke::new(2.0, accent)
+    } else if resp.hovered() {
+        egui::Stroke::new(1.0, accent.gamma_multiply(0.6))
+    } else {
+        egui::Stroke::new(1.0, BORDER)
+    };
+    let p = ui.painter();
+    p.rect_filled(rect, RADIUS_SM as f32, fill);
+    p.rect_stroke(rect, RADIUS_SM as f32, stroke, egui::StrokeKind::Inside);
+    if active {
+        inner_glow(p, rect, accent, RADIUS_SM);
+    }
+    let lit = active && !inert;
+    paint_icon_label(p, rect, st.icon(), st.label(), lit, accent);
     let tip = if inert {
-        format!("{} [{}] — coming soon", def.label, def.hotkey)
+        format!("{} — coming soon", st.label())
     } else {
-        format!("{} [{}]", def.label, def.hotkey)
+        st.label().to_string()
     };
-    resp = resp.on_hover_text(tip);
-    resp
+    resp.on_hover_text(tip)
 }
 
 /// Segmented speed control: pause / 1x / 2x / 5x / 10x wired to GameSpeed.
@@ -585,7 +551,7 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
         let mut text = egui::RichText::new(label).size(13.0);
         text = if active { text.color(ACCENT).strong() } else { text.color(DIM) };
         let btn = egui::Button::new(text)
-            .fill(if active { ACCENT.gamma_multiply(0.28) } else { CHIP_FILL })
+            .fill(if active { ACCENT.gamma_multiply(0.28) } else { SURFACE })
             .stroke(if active {
                 egui::Stroke::new(1.5, ACCENT)
             } else {
@@ -600,12 +566,12 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
     ui.label(egui::RichText::new("\u{23f5} Speed").color(DIM).small());
 }
 
-/// Persistent help / hotkey hint line under the palette.
+/// Persistent help / hotkey hint line under the toolbar.
 fn help_hint_ui(ui: &mut egui::Ui) {
     ui.vertical_centered(|ui| {
         ui.label(
             egui::RichText::new(
-                "Space pause  \u{2022}  1-4 speed  \u{2022}  Q-F tools  \u{2022}  L event log  \u{2022}  Esc menu",
+                "Space pause  \u{2022}  1-4 speed  \u{2022}  Q/E/R/C/T/A/X/D/F categories  \u{2022}  L event log  \u{2022}  Esc menu",
             )
             .color(DIM.gamma_multiply(0.85))
             .small(),
@@ -815,35 +781,6 @@ mod tests {
     }
 
     #[test]
-    fn compact_number_formatting() {
-        assert_eq!(compact(0.0), "0");
-        assert_eq!(compact(950.0), "950");
-        assert_eq!(compact(12_300.0), "12.3K");
-        assert_eq!(compact(4_500_000.0), "4.5M");
-        assert_eq!(compact(2_000_000_000.0), "2.0B");
-    }
-
-    #[test]
-    fn all_palette_tools_have_labels_and_hotkeys() {
-        assert_eq!(TOOLS.len(), 9);
-        for def in TOOLS {
-            assert!(!def.label.is_empty());
-            assert!(!def.hotkey.is_empty());
-            assert!(!def.icon.is_empty());
-        }
-    }
-
-    #[test]
-    fn palette_includes_core_active_tools() {
-        let mapped: Vec<SpawnTool> = TOOLS.iter().filter_map(|t| t.tool).collect();
-        assert!(mapped.contains(&SpawnTool::Select));
-        assert!(mapped.contains(&SpawnTool::SpawnCivilian));
-        assert!(mapped.contains(&SpawnTool::SpawnBuilding));
-        assert!(mapped.contains(&SpawnTool::Terraform));
-        assert!(mapped.contains(&SpawnTool::Destroy));
-    }
-
-    #[test]
     fn world_resources_default_is_zeroed() {
         let r = WorldResources::default();
         assert_eq!(r.food, 0.0);
@@ -853,5 +790,12 @@ mod tests {
     #[test]
     fn faction_roster_default_empty() {
         assert!(FactionRoster::default().factions.is_empty());
+    }
+
+    #[test]
+    fn every_category_hotkey_maps_to_a_keycode() {
+        for cat in CATEGORIES {
+            assert!(hotkey_to_code(cat.hotkey).is_some(), "{} hotkey unmapped", cat.label);
+        }
     }
 }

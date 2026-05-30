@@ -30,6 +30,7 @@ pub use phenotype_voxel::{
 pub mod boundary;
 pub mod fluid_ca;
 pub mod material;
+pub mod lod;
 pub mod worldgen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can

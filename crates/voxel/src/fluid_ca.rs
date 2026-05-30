@@ -4,8 +4,9 @@
 //! `VoxelWorld` internals and instead operates on a simple dense grid of
 //! `MaterialId` cells.
 
+use crate::boundary::Bounds3;
 use crate::material::{Phase, MaterialRegistry, AIR};
-use crate::MaterialId;
+use crate::{MaterialId, VoxelWorld, WorldCoord};
 
 /// Dense 3D grid for deterministic CA stepping.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -163,6 +164,84 @@ pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) {
 pub fn step_n(grid: &mut CaGrid, reg: MaterialRegistry, n: usize) {
     for tick in 0..n {
         step_with_parity(grid, reg, tick);
+    }
+}
+
+fn world_cell(bounds: Bounds3, voxel_span: i64, x: usize, y: usize, z: usize) -> WorldCoord {
+    WorldCoord {
+        x: i64::from(bounds.min[0] + x as i32) * voxel_span,
+        y: i64::from(bounds.min[1] + y as i32) * voxel_span,
+        z: i64::from(bounds.min[2] + z as i32) * voxel_span,
+    }
+}
+
+fn grid_from_world(
+    world: &VoxelWorld<MaterialId>,
+    bounds: Bounds3,
+    voxel_span: i64,
+) -> CaGrid {
+    let dims = [
+        (bounds.max[0] - bounds.min[0]) as usize,
+        (bounds.max[1] - bounds.min[1]) as usize,
+        (bounds.max[2] - bounds.min[2]) as usize,
+    ];
+    let mut grid = CaGrid::new(dims);
+    for z in 0..dims[2] {
+        for y in 0..dims[1] {
+            for x in 0..dims[0] {
+                grid.set(x, y, z, world.read(world_cell(bounds, voxel_span, x, y, z)));
+            }
+        }
+    }
+    grid
+}
+
+fn write_back_world(
+    world: &mut VoxelWorld<MaterialId>,
+    bounds: Bounds3,
+    voxel_span: i64,
+    before: &CaGrid,
+    after: &CaGrid,
+) -> usize {
+    let mut changed = 0;
+    for z in 0..before.dims[2] {
+        for y in 0..before.dims[1] {
+            for x in 0..before.dims[0] {
+                let prev = before.get(x, y, z);
+                let next = after.get(x, y, z);
+                if prev != next {
+                    world.write(world_cell(bounds, voxel_span, x, y, z), next);
+                    changed += 1;
+                }
+            }
+        }
+    }
+    changed
+}
+
+/// Runs one deterministic CA tick over a bounded voxel world region.
+pub fn step_world(
+    world: &mut VoxelWorld<MaterialId>,
+    voxel_span: i64,
+    bounds: Bounds3,
+    reg: MaterialRegistry,
+) -> usize {
+    let mut grid = grid_from_world(world, bounds, voxel_span);
+    let before = grid.clone();
+    step(&mut grid, reg);
+    write_back_world(world, bounds, voxel_span, &before, &grid)
+}
+
+/// Runs `n` deterministic CA ticks over a bounded voxel world region.
+pub fn settle_world(
+    world: &mut VoxelWorld<MaterialId>,
+    voxel_span: i64,
+    bounds: Bounds3,
+    reg: MaterialRegistry,
+    steps: usize,
+) {
+    for _ in 0..steps {
+        step_world(world, voxel_span, bounds, reg);
     }
 }
 

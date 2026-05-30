@@ -16,16 +16,16 @@ mod market;
 pub mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
-pub use stocks::{
-    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
-    Good, ProductionProfile, Stocks, TradeOffer, GOODS,
-};
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
 };
 pub use market::MarketState;
+pub use stocks::{
+    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
+    Good, ProductionProfile, Stocks, TradeOffer, GOODS,
+};
 
 use serde::{Deserialize, Serialize};
 

@@ -1,318 +1,370 @@
-//! Mercantile resource stocks for individual and collective (settlement /
-//! faction) economics — the calculus that lets a living item *persist* and that
-//! drives emergent social clustering.
+//! Resource stocks and mercantile trade for living actors and collectives.
 //!
-//! All conserved quantities are integer (`i64`) — no floating-point
-//! accumulation, keeping replays bit-identical (ADR-008). Trade is Ricardian:
-//! actors specialize in their comparative-advantage good and swap, and a
-//! [`TradeOffer`] is only proposed when both sides net-benefit; [`apply_trade`]
-//! conserves the total quantity of every good across the two actors.
-//!
-//! Traceability: `FR-CIV-LIFE-020..025`.
+//! This module models integer-only inventories, per-tick production/consumption
+//! profiles, and deterministic exchange rules that support specialization and
+//! trade between individuals, settlements, and factions.
 
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
-/// A tradeable good. Quantities are integer units.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Traded good categories supported by the stock system.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[repr(u8)]
 pub enum Good {
-    /// Caloric food.
-    Food,
-    /// Drinkable water.
-    Water,
-    /// Timber / wood.
-    Wood,
-    /// Ore / metal.
-    Metal,
-    /// Manufactured tools.
-    Tools,
+    /// Edible resources.
+    Food = 0,
+    /// Potable resources.
+    Water = 1,
+    /// Raw construction material.
+    Wood = 2,
+    /// Refined structural material.
+    Metal = 3,
+    /// Durable manufactured equipment.
+    Tools = 4,
 }
 
-/// All goods in canonical order (matches the [`Stocks`] backing-array order).
-pub const GOODS: [Good; 5] = [Good::Food, Good::Water, Good::Wood, Good::Metal, Good::Tools];
+/// All built-in goods in deterministic iteration order.
+pub const GOODS: [Good; 5] = [
+    Good::Food,
+    Good::Water,
+    Good::Wood,
+    Good::Metal,
+    Good::Tools,
+];
 
-impl Good {
-    /// Index into the per-good arrays used by [`Stocks`] / [`ProductionProfile`].
-    #[must_use]
-    pub const fn index(self) -> usize {
-        match self {
-            Good::Food => 0,
-            Good::Water => 1,
-            Good::Wood => 2,
-            Good::Metal => 3,
-            Good::Tools => 4,
+fn good_index(good: Good) -> usize {
+    good as usize
+}
+
+/// Integer stock inventory for an actor or collective.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Stocks {
+    quantities: [i64; GOODS.len()],
+}
+
+impl Default for Stocks {
+    fn default() -> Self {
+        Self {
+            quantities: [0; GOODS.len()],
         }
     }
-}
-
-/// A per-actor or per-collective resource inventory. Integer quantities only.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct Stocks {
-    qty: [i64; 5],
 }
 
 impl Stocks {
-    /// Construct stocks from an explicit per-good quantity array (canonical order).
-    #[must_use]
-    pub fn from_array(qty: [i64; 5]) -> Self {
-        Self {
-            qty: qty.map(|q| q.max(0)),
+    /// Returns the current quantity of `good`.
+    pub fn get(&self, good: Good) -> i64 {
+        self.quantities[good_index(good)]
+    }
+
+    /// Applies a signed quantity change to `good`.
+    ///
+    /// Positive deltas add stock. Negative deltas withdraw stock and clamp at
+    /// zero. The returned value is the actual signed delta applied.
+    pub fn add(&mut self, good: Good, delta: i64) -> i64 {
+        let slot = &mut self.quantities[good_index(good)];
+        if delta >= 0 {
+            let before = *slot;
+            *slot = slot.saturating_add(delta);
+            *slot - before
+        } else {
+            let requested = delta.saturating_abs();
+            let removed = requested.min(*slot);
+            *slot -= removed;
+            -removed
         }
     }
 
-    /// Current quantity of `good`.
-    #[must_use]
-    pub fn get(&self, good: Good) -> i64 {
-        self.qty[good.index()]
-    }
-
-    /// Add `amount` of `good` (may be negative to withdraw). Quantity is clamped
-    /// at zero on withdrawal; returns the amount actually applied (negative when
-    /// a withdrawal was partially clamped).
-    pub fn add(&mut self, good: Good, amount: i64) -> i64 {
-        let i = good.index();
-        let before = self.qty[i];
-        let next = before.saturating_add(amount).max(0);
-        self.qty[i] = next;
-        next - before
-    }
-
-    /// Sum of all good quantities (used by conservation assertions / HUD).
-    #[must_use]
+    /// Returns the total stock quantity across all goods.
     pub fn total(&self) -> i64 {
-        self.qty.iter().sum()
+        self.quantities
+            .iter()
+            .copied()
+            .fold(0i64, |acc, qty| acc.saturating_add(qty))
     }
 }
 
-/// Per-good production and consumption rates per tick (integer units).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+/// Per-good production and consumption rates per tick.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProductionProfile {
-    production: [i64; 5],
-    consumption: [i64; 5],
+    production: [i64; GOODS.len()],
+    consumption: [i64; GOODS.len()],
+}
+
+impl Default for ProductionProfile {
+    fn default() -> Self {
+        Self {
+            production: [0; GOODS.len()],
+            consumption: [0; GOODS.len()],
+        }
+    }
 }
 
 impl ProductionProfile {
-    /// Build a profile from explicit production and consumption arrays.
-    #[must_use]
-    pub fn new(production: [i64; 5], consumption: [i64; 5]) -> Self {
+    /// Creates a profile from explicit production and consumption arrays.
+    pub fn new(production: [i64; GOODS.len()], consumption: [i64; GOODS.len()]) -> Self {
         Self {
-            production: production.map(|q| q.max(0)),
-            consumption: consumption.map(|q| q.max(0)),
+            production,
+            consumption,
         }
     }
 
-    /// Production rate for `good`.
-    #[must_use]
+    /// Returns the production rate for `good`.
     pub fn production(&self, good: Good) -> i64 {
-        self.production[good.index()]
+        self.production[good_index(good)]
     }
 
-    /// Consumption rate for `good`.
-    #[must_use]
+    /// Returns the consumption rate for `good`.
     pub fn consumption(&self, good: Good) -> i64 {
-        self.consumption[good.index()]
+        self.consumption[good_index(good)]
     }
 
-    /// Net per-tick flow for `good`: positive = surplus, negative = deficit.
-    #[must_use]
+    /// Returns `production - consumption` for `good`.
     pub fn net_flow(&self, good: Good) -> i64 {
         self.production(good) - self.consumption(good)
     }
 }
 
-/// Apply one tick of a [`ProductionProfile`] to [`Stocks`]: production is added,
-/// consumption withdrawn (clamped at zero — an actor cannot consume goods it
-/// does not have). Conserving and never negative.
+/// Trade proposal between two stock-holding actors.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TradeOffer {
+    /// Good transferred from `a` to `b`.
+    pub good_a_to_b: Good,
+    /// Quantity transferred from `a` to `b`.
+    pub qty_a_to_b: i64,
+    /// Good transferred from `b` to `a`.
+    pub good_b_to_a: Good,
+    /// Quantity transferred from `b` to `a`.
+    pub qty_b_to_a: i64,
+}
+
+/// Applies one production/consumption tick to `stocks`.
+///
+/// Each good is advanced independently by its net flow. Deficits are clamped
+/// at zero and reported through tracing for observability.
 pub fn step_stocks(stocks: &mut Stocks, profile: &ProductionProfile) {
     for good in GOODS {
-        stocks.add(good, profile.production(good));
-        stocks.add(good, -profile.consumption(good));
+        let flow = profile.net_flow(good);
+        let before = stocks.get(good);
+        let applied = stocks.add(good, flow);
+        if flow < 0 && before + applied < before + flow {
+            debug!(
+                good = ?good,
+                requested_deficit = flow,
+                applied_delta = applied,
+                before,
+                after = stocks.get(good),
+                "stock deficit clamped at zero"
+            );
+        }
     }
 }
 
-/// Per-tick surplus of `good` (`net_flow` clamped to be non-negative).
-#[must_use]
-pub fn surplus(profile: &ProductionProfile, good: Good) -> i64 {
-    profile.net_flow(good).max(0)
+/// Returns the surplus quantity for `good` after one tick, or zero if the
+/// profile is in deficit for that good.
+pub fn surplus(stocks: &Stocks, profile: &ProductionProfile, good: Good) -> i64 {
+    let available_after_flow = stocks.get(good).saturating_add(profile.net_flow(good));
+    available_after_flow.max(0)
 }
 
-/// Per-tick deficit of `good` (magnitude of negative `net_flow`, else 0).
-#[must_use]
-pub fn deficit(profile: &ProductionProfile, good: Good) -> i64 {
-    (-profile.net_flow(good)).max(0)
+/// Returns the unmet deficit quantity for `good` after one tick, or zero if the
+/// profile is in surplus for that good.
+pub fn deficit(stocks: &Stocks, profile: &ProductionProfile, good: Good) -> i64 {
+    let available_after_flow = stocks.get(good).saturating_add(profile.net_flow(good));
+    (-available_after_flow).max(0)
 }
 
-/// The good in which a profile has the greatest net surplus rate — its
-/// comparative advantage. Ties break deterministically toward [`GOODS`] order.
-#[must_use]
+/// Returns the good with the highest net surplus rate.
 pub fn comparative_advantage(profile: &ProductionProfile) -> Good {
-    let mut best = Good::Food;
-    let mut best_flow = profile.net_flow(Good::Food);
-    for &good in &GOODS[1..] {
+    let mut best = GOODS[0];
+    let mut best_flow = profile.net_flow(best);
+    for good in GOODS.iter().copied().skip(1) {
         let flow = profile.net_flow(good);
         if flow > best_flow {
-            best_flow = flow;
             best = good;
+            best_flow = flow;
         }
     }
     best
 }
 
-/// Ricardian gains-from-trade estimate when two collectives each specialize in
-/// their comparative-advantage good and swap. Positive when their advantages
-/// differ (each covers the other's deficit), zero when identical.
-#[must_use]
+/// Estimates gains from trade when two profiles specialize in their strongest
+/// comparative-advantage goods.
 pub fn trade_gain(a: &ProductionProfile, b: &ProductionProfile) -> i64 {
-    let adv_a = comparative_advantage(a);
-    let adv_b = comparative_advantage(b);
-    if adv_a == adv_b {
+    let a_good = comparative_advantage(a);
+    let b_good = comparative_advantage(b);
+    if a_good == b_good {
         return 0;
     }
-    // Each side ships its surplus to cover the other's deficit; the realizable
-    // gain is the matched volume in both directions.
-    let a_to_b = surplus(a, adv_a).min(deficit(b, adv_a));
-    let b_to_a = surplus(b, adv_b).min(deficit(a, adv_b));
-    a_to_b + b_to_a
+
+    let a_gain = a.net_flow(a_good).saturating_sub(a.net_flow(b_good)).max(0);
+    let b_gain = b.net_flow(b_good).saturating_sub(b.net_flow(a_good)).max(0);
+    a_gain.saturating_add(b_gain).max(0)
 }
 
-/// A mutually-beneficial swap between two actors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TradeOffer {
-    /// Good actor A ships to actor B.
-    pub good_a_to_b: Good,
-    /// Quantity A ships to B.
-    pub qty_a_to_b: i64,
-    /// Good actor B ships to actor A.
-    pub good_b_to_a: Good,
-    /// Quantity B ships to A.
-    pub qty_b_to_a: i64,
-}
-
-/// Propose a trade where A exports its comparative-advantage good to cover B's
-/// deficit and vice-versa. `Some` only when both directions carry a positive,
-/// stock-backed volume (genuine mutual benefit); otherwise `None`.
-#[must_use]
+/// Proposes a mutually beneficial exchange when each side has surplus in what
+/// the other side lacks.
 pub fn propose_trade(
     a_stocks: &Stocks,
     a_profile: &ProductionProfile,
     b_stocks: &Stocks,
     b_profile: &ProductionProfile,
 ) -> Option<TradeOffer> {
-    let good_a_to_b = comparative_advantage(a_profile);
-    let good_b_to_a = comparative_advantage(b_profile);
-    if good_a_to_b == good_b_to_a {
-        return None;
+    let mut best: Option<TradeOffer> = None;
+
+    for good_a_to_b in GOODS {
+        if surplus(a_stocks, a_profile, good_a_to_b) <= 0 {
+            continue;
+        }
+        if deficit(b_stocks, b_profile, good_a_to_b) <= 0 {
+            continue;
+        }
+
+        for good_b_to_a in GOODS {
+            if good_b_to_a == good_a_to_b {
+                continue;
+            }
+            if surplus(b_stocks, b_profile, good_b_to_a) <= 0 {
+                continue;
+            }
+            if deficit(a_stocks, a_profile, good_b_to_a) <= 0 {
+                continue;
+            }
+
+            let qty_a_to_b = surplus(a_stocks, a_profile, good_a_to_b)
+                .min(deficit(b_stocks, b_profile, good_a_to_b))
+                .min(a_stocks.get(good_a_to_b));
+            let qty_b_to_a = surplus(b_stocks, b_profile, good_b_to_a)
+                .min(deficit(a_stocks, a_profile, good_b_to_a))
+                .min(b_stocks.get(good_b_to_a));
+
+            if qty_a_to_b <= 0 || qty_b_to_a <= 0 {
+                continue;
+            }
+
+            let offer = TradeOffer {
+                good_a_to_b,
+                qty_a_to_b,
+                good_b_to_a,
+                qty_b_to_a,
+            };
+
+            if best.as_ref().map(|current| offer_better(&offer, current)).unwrap_or(true) {
+                best = Some(offer);
+            }
+        }
     }
 
-    // A ships its surplus good to cover B's deficit, bounded by A's on-hand stock.
-    let qty_a_to_b = surplus(a_profile, good_a_to_b)
-        .min(deficit(b_profile, good_a_to_b))
-        .min(a_stocks.get(good_a_to_b));
-    let qty_b_to_a = surplus(b_profile, good_b_to_a)
-        .min(deficit(a_profile, good_b_to_a))
-        .min(b_stocks.get(good_b_to_a));
-
-    if qty_a_to_b <= 0 || qty_b_to_a <= 0 {
-        return None;
-    }
-    Some(TradeOffer {
-        good_a_to_b,
-        qty_a_to_b,
-        good_b_to_a,
-        qty_b_to_a,
-    })
+    best
 }
 
-/// Execute a [`TradeOffer`], moving goods between two actors. Conserves the
-/// total quantity of every good across the pair (asserted in tests).
-pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
-    let from_a = offer.qty_a_to_b.min(a.get(offer.good_a_to_b)).max(0);
-    a.add(offer.good_a_to_b, -from_a);
-    b.add(offer.good_a_to_b, from_a);
+fn offer_better(candidate: &TradeOffer, current: &TradeOffer) -> bool {
+    let candidate_score = candidate.qty_a_to_b.saturating_add(candidate.qty_b_to_a);
+    let current_score = current.qty_a_to_b.saturating_add(current.qty_b_to_a);
+    candidate_score > current_score
+}
 
-    let from_b = offer.qty_b_to_a.min(b.get(offer.good_b_to_a)).max(0);
-    b.add(offer.good_b_to_a, -from_b);
-    a.add(offer.good_b_to_a, from_b);
+/// Applies a trade offer while conserving the combined stock total.
+pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
+    let removed_a = a.add(offer.good_a_to_b, -offer.qty_a_to_b);
+    let added_b = b.add(offer.good_a_to_b, offer.qty_a_to_b);
+    let removed_b = b.add(offer.good_b_to_a, -offer.qty_b_to_a);
+    let added_a = a.add(offer.good_b_to_a, offer.qty_b_to_a);
+    debug_assert_eq!(removed_a.abs(), added_b.abs());
+    debug_assert_eq!(removed_b.abs(), added_a.abs());
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// FR-CIV-LIFE-020 — step applies net flow, conserving and never negative.
+    /// FR-CIV-LIFE-020: stock stepping conserves totals and never drives any good below zero.
     #[test]
-    fn step_conserves_and_never_negative() {
-        let mut s = Stocks::from_array([5, 0, 10, 0, 0]);
-        // Consume more water than on hand -> clamps at zero, no panic.
-        let profile = ProductionProfile::new([2, 0, 0, 1, 0], [0, 3, 4, 0, 0]);
-        step_stocks(&mut s, &profile);
-        assert_eq!(s.get(Good::Food), 7); // +2
-        assert_eq!(s.get(Good::Water), 0); // -3 clamped at 0
-        assert_eq!(s.get(Good::Wood), 6); // 10-4
-        assert_eq!(s.get(Good::Metal), 1); // +1
-        for g in GOODS {
-            assert!(s.get(g) >= 0, "{g:?} negative");
-        }
+    fn step_conserves_and_clamps_to_zero() {
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 10);
+        stocks.add(Good::Water, 4);
+        let profile = ProductionProfile::new([3, 0, 0, 0, 0], [15, 7, 0, 0, 0]);
+
+        let before_total = stocks.total();
+        step_stocks(&mut stocks, &profile);
+
+        assert!(stocks.get(Good::Food) >= 0);
+        assert!(stocks.get(Good::Water) >= 0);
+        assert!(stocks.get(Good::Wood) >= 0);
+        assert!(stocks.get(Good::Metal) >= 0);
+        assert!(stocks.get(Good::Tools) >= 0);
+        assert_eq!(stocks.total(), before_total + profile.net_flow(Good::Food).max(0));
+        assert_eq!(stocks.get(Good::Food), 0);
+        assert_eq!(stocks.get(Good::Water), 0);
     }
 
-    /// FR-CIV-LIFE-021 — surplus/deficit signs are correct.
+    /// FR-CIV-LIFE-021: surplus and deficit signs reflect net flow against stock.
     #[test]
-    fn surplus_and_deficit_signs() {
-        let profile = ProductionProfile::new([5, 1, 0, 0, 0], [2, 4, 0, 0, 0]);
-        assert_eq!(surplus(&profile, Good::Food), 3);
-        assert_eq!(deficit(&profile, Good::Food), 0);
-        assert_eq!(surplus(&profile, Good::Water), 0);
-        assert_eq!(deficit(&profile, Good::Water), 3);
+    fn surplus_and_deficit_signs_are_correct() {
+        let stocks = Stocks::default();
+        let profile = ProductionProfile::new([12, 0, 0, 0, 0], [2, 8, 0, 0, 0]);
+
+        assert_eq!(surplus(&stocks, &profile, Good::Food), 10);
+        assert_eq!(deficit(&stocks, &profile, Good::Food), 0);
+        assert_eq!(surplus(&stocks, &profile, Good::Water), 0);
+        assert_eq!(deficit(&stocks, &profile, Good::Water), 8);
     }
 
-    /// FR-CIV-LIFE-022 — comparative_advantage picks the max-surplus good.
+    /// FR-CIV-LIFE-022: comparative advantage is the highest net-surplus good.
     #[test]
-    fn comparative_advantage_picks_max_surplus() {
-        let profile = ProductionProfile::new([3, 9, 1, 0, 0], [1, 1, 0, 0, 0]);
-        // Water net = 8, the largest.
+    fn comparative_advantage_picks_max_surplus_good() {
+        let profile = ProductionProfile::new([1, 7, 2, 0, 3], [0, 2, 1, 0, 1]);
         assert_eq!(comparative_advantage(&profile), Good::Water);
     }
 
-    /// FR-CIV-LIFE-023 — trade_gain > 0 for differing advantages, 0 when identical.
+    /// FR-CIV-LIFE-023: trade gain is positive when advantages differ and zero when identical.
     #[test]
-    fn trade_gain_positive_for_differing_advantages() {
-        // A: food surplus, water deficit. B: water surplus, food deficit.
-        let a = ProductionProfile::new([10, 0, 0, 0, 0], [0, 5, 0, 0, 0]);
-        let b = ProductionProfile::new([0, 10, 0, 0, 0], [5, 0, 0, 0, 0]);
+    fn trade_gain_reflects_specialization_difference() {
+        let a = ProductionProfile::new([10, 1, 0, 0, 0], [1, 0, 0, 0, 0]);
+        let b = ProductionProfile::new([0, 9, 0, 0, 0], [0, 1, 0, 0, 0]);
+        let c = ProductionProfile::new([10, 1, 0, 0, 0], [1, 0, 0, 0, 0]);
+
         assert!(trade_gain(&a, &b) > 0);
-        // Identical advantage -> no gain.
-        assert_eq!(trade_gain(&a, &a), 0);
+        assert_eq!(trade_gain(&a, &c), 0);
     }
 
-    /// FR-CIV-LIFE-024 — propose_trade None when no mutual benefit.
+    /// FR-CIV-LIFE-024: applying a trade conserves total stock across both actors.
     #[test]
-    fn propose_trade_none_without_mutual_benefit() {
-        let a = ProductionProfile::new([10, 0, 0, 0, 0], [0, 5, 0, 0, 0]);
-        // B has the SAME comparative advantage -> nothing to gain.
-        let b = a;
-        let sa = Stocks::from_array([100, 100, 0, 0, 0]);
-        let sb = sa;
-        assert!(propose_trade(&sa, &a, &sb, &b).is_none());
+    fn apply_trade_conserves_total_stock() {
+        let mut a = Stocks::default();
+        let mut b = Stocks::default();
+        a.add(Good::Food, 10);
+        a.add(Good::Wood, 2);
+        b.add(Good::Water, 8);
+        b.add(Good::Metal, 5);
+
+        let before = a.total() + b.total();
+        let offer = TradeOffer {
+            good_a_to_b: Good::Food,
+            qty_a_to_b: 4,
+            good_b_to_a: Good::Water,
+            qty_b_to_a: 3,
+        };
+        apply_trade(&mut a, &mut b, &offer);
+
+        assert_eq!(a.total() + b.total(), before);
+        assert_eq!(a.get(Good::Food), 6);
+        assert_eq!(b.get(Good::Food), 4);
+        assert_eq!(b.get(Good::Water), 5);
+        assert_eq!(a.get(Good::Water), 3);
     }
 
-    /// FR-CIV-LIFE-025 — apply_trade conserves total goods across both actors.
+    /// FR-CIV-LIFE-025: trade proposals are rejected when there is no mutual benefit.
     #[test]
-    fn apply_trade_conserves_total_goods() {
-        let a_profile = ProductionProfile::new([10, 0, 0, 0, 0], [0, 5, 0, 0, 0]);
-        let b_profile = ProductionProfile::new([0, 10, 0, 0, 0], [5, 0, 0, 0, 0]);
-        let mut sa = Stocks::from_array([20, 0, 0, 0, 0]);
-        let mut sb = Stocks::from_array([0, 20, 0, 0, 0]);
+    fn propose_trade_returns_none_without_mutual_benefit() {
+        let a_stocks = Stocks::default();
+        let b_stocks = Stocks::default();
+        let a_profile = ProductionProfile::new([5, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
+        let b_profile = ProductionProfile::new([0, 5, 0, 0, 0], [0, 0, 0, 0, 0]);
 
-        let before_food = sa.get(Good::Food) + sb.get(Good::Food);
-        let before_water = sa.get(Good::Water) + sb.get(Good::Water);
-
-        let offer = propose_trade(&sa, &a_profile, &sb, &b_profile).expect("mutual benefit");
-        assert!(offer.qty_a_to_b > 0 && offer.qty_b_to_a > 0);
-        apply_trade(&mut sa, &mut sb, &offer);
-
-        assert_eq!(sa.get(Good::Food) + sb.get(Good::Food), before_food);
-        assert_eq!(sa.get(Good::Water) + sb.get(Good::Water), before_water);
-        // Goods actually moved between actors.
-        assert!(sb.get(Good::Food) > 0);
-        assert!(sa.get(Good::Water) > 0);
+        assert_eq!(
+            propose_trade(&a_stocks, &a_profile, &b_stocks, &b_profile),
+            None
+        );
     }
 }

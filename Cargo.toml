@@ -36,3 +36,24 @@ edition = "2021"
 authors = ["CivLab"]
 license = "MIT OR Apache-2.0"
 rust-version = "1.75"
+
+# --- Dev-loop profiles (see docs/development-guide/dev-loop.md) ---
+# These tune ONLY the dev profile; `release` is untouched, so release
+# determinism and optimization are unaffected.
+[profile.dev]
+# Our own crates: opt-level 0 = fastest possible compile (the code we edit).
+opt-level = 0
+# Lightweight line-table debuginfo only — full DWARF is the slowest part of a
+# dev link. `debug = 1` keeps backtraces/line numbers while shrinking link time.
+debug = 1
+# Split debuginfo out of the object files so the linker copies less. On Windows
+# MSVC this maps to a separate .pdb ("packed"); on *nix to "unpacked".
+split-debuginfo = "packed"
+
+[profile.dev.package."*"]
+# Third-party deps (bevy, wgpu, etc.) are compiled once and rarely change, so
+# optimizing them keeps the *running* sandbox fast without slowing our warm
+# rebuilds. opt-level 3 here is the standard Bevy fast-dev recommendation.
+opt-level = 3
+# Deps don't need debuginfo for our backtraces — dropping it speeds first build.
+debug = false

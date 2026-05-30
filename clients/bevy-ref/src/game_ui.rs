@@ -116,6 +116,37 @@ pub struct WorldResources {
     pub treasury: f64,
     /// Per-tick change in treasury.
     pub treasury_delta: f64,
+    /// Births recorded on the most recent tick.
+    pub births: u32,
+    /// Deaths recorded on the most recent tick.
+    pub deaths: u32,
+}
+
+impl WorldResources {
+    /// Replace the stored stocks with fresh values, deriving each `_delta`
+    /// from the difference against the previous values. Births/deaths are
+    /// per-tick counts straight from the sim snapshot.
+    #[allow(clippy::too_many_arguments)]
+    pub fn update_stocks(
+        &mut self,
+        food: f64,
+        materials: f64,
+        energy: f64,
+        treasury: f64,
+        births: u32,
+        deaths: u32,
+    ) {
+        self.food_delta = food - self.food;
+        self.materials_delta = materials - self.materials;
+        self.energy_delta = energy - self.energy;
+        self.treasury_delta = treasury - self.treasury;
+        self.food = food;
+        self.materials = materials;
+        self.energy = energy;
+        self.treasury = treasury;
+        self.births = births;
+        self.deaths = deaths;
+    }
 }
 
 /// A single faction/group row for the left panel list.
@@ -134,6 +165,33 @@ pub struct FactionInfo {
 pub struct FactionRoster {
     /// Ordered faction rows.
     pub factions: Vec<FactionInfo>,
+}
+
+impl FactionInfo {
+    /// Build a roster row for an emergent cluster from its stable id + size.
+    ///
+    /// The colour is derived deterministically from the cluster id so a given
+    /// settlement keeps the same swatch across ticks; the label reads
+    /// "Settlement N" (or "Unaffiliated" for the id-0 catch-all bucket).
+    pub fn from_cluster(cluster_id: u64, count: u64) -> Self {
+        let name = if cluster_id == 0 {
+            "Unaffiliated".to_string()
+        } else {
+            format!("Settlement {cluster_id}")
+        };
+        Self {
+            name,
+            count,
+            color: cluster_color(cluster_id),
+        }
+    }
+}
+
+/// Deterministic sRGB swatch for an emergent cluster id (golden-angle hue).
+fn cluster_color(cluster_id: u64) -> [u8; 3] {
+    let hue = (cluster_id.wrapping_mul(47) % 360) as f32;
+    let c = egui::ecolor::Hsva::new(hue / 360.0, 0.62, 0.82, 1.0).to_srgb();
+    [c[0], c[1], c[2]]
 }
 
 /// Display details for the selected entity, populated by spawn_tools on Select.

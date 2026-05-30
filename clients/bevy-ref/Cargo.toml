@@ -72,6 +72,16 @@ bevy = [
 ]
 egui = ["bevy", "dep:bevy_egui"]
 rapier = ["bevy", "dep:bevy_rapier3d"]
+# --- Dev-loop features (see docs/development-guide/dev-loop.md) ---
+# `dev`: turn on Bevy's filesystem asset watcher so SVG-derived PNGs, .glb meshes,
+# and shaders hot-reload live without restarting. Desktop-only; never enabled for
+# release/CI builds so it cannot affect determinism.
+dev = ["bevy", "bevy/file_watcher"]
+# `hot`: fastest iteration loop — links Bevy as a shared library so warm rebuilds
+# skip relinking the engine. Pair with `just dev-fast`. Dev-only; do NOT ship.
+# (dexterous_developer system-level HMR is NOT yet Bevy-0.18-ready, so this
+#  dynamic_linking + cargo-watch loop is the supported subsecond fallback.)
+hot = ["dev", "bevy/dynamic_linking"]
 # P-VM-3 — real volumetric voxel material rendering: cubic-meshed chunks from
 # civ-voxel (CubicMesher) coloured per-material, with the material CA stepped
 # each tick so water flows and powders pile. OFF by default so the heightmap +

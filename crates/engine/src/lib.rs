@@ -21,6 +21,7 @@ pub mod metrics;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
+pub mod save;
 pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;

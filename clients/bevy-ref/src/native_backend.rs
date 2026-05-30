@@ -62,6 +62,23 @@ pub fn native_render_plugin() -> RenderPlugin {
     }
 }
 
+/// Dev-loop [`AssetPlugin`] that hot-reloads assets when the `dev` feature is on.
+///
+/// With `--features dev` (or `hot`), Bevy's filesystem watcher is forced on so
+/// SVG-derived PNGs, `.glb` meshes, and WGSL shaders reload live without a
+/// restart. Without the feature this is a plain [`AssetPlugin::default`], so
+/// release/CI builds never watch the filesystem (no determinism impact).
+///
+/// Apply via `DefaultPlugins.set(dev_asset_plugin())`.
+#[must_use]
+pub fn dev_asset_plugin() -> bevy::asset::AssetPlugin {
+    bevy::asset::AssetPlugin {
+        // `cfg!` resolves at compile time: Some(true) only when `dev` is enabled.
+        watch_for_changes_override: cfg!(feature = "dev").then_some(true),
+        ..Default::default()
+    }
+}
+
 fn forced_backend_from_env() -> Option<Backends> {
     forced_backend_from_var(std::env::var(BACKEND_ENV).ok())
 }

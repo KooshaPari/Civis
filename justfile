@@ -168,6 +168,34 @@ dev:
 dev-stop:
     process-compose down
 
+# --- Fast Bevy dev loop (incremental + asset hot-reload + watch) ---
+# See docs/development-guide/dev-loop.md for measured compile-time deltas.
+# NOTE: `dev`/`dev-stop` above own the infra stack (process-compose); the fast
+# Bevy iteration loop lives under `run`/`run-voxel`/`dev-fast`/`dev-fast-voxel`.
+
+# One-shot launch of the standalone sandbox (incremental, no watcher).
+run:
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+
+# One-shot launch of the live voxel/windowed client.
+run-voxel:
+    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
+# Install the dev-loop watch tool (cargo-watch) if missing. Idempotent.
+dev-tools:
+    cargo watch --version > $null 2>&1; if ($LASTEXITCODE -ne 0) { cargo install cargo-watch --locked }
+
+# Fast dev loop: watch sources, rebuild incrementally, asset hot-reload on.
+# `hot` feature = dynamic_linking (engine linked as a shared lib) for subsecond
+# warm rebuilds. Edit a system -> save -> cargo-watch relinks only our crate.
+# Assets (PNG/.glb/WGSL) hot-reload live inside the running process (no rebuild).
+dev-fast: dev-tools
+    cargo watch -x "run -p civ-bevy-ref --features hot,egui --bin civ-standalone"
+
+# Same loop for the live windowed/voxel client.
+dev-fast-voxel: dev-tools
+    cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
+
 # Build the release civ-standalone binary, kill stale instances, launch with log capture, print PID.
 # Delegates to Tools/play.ps1 (Windows) or Tools/play.sh (Linux/macOS).
 play:

@@ -521,22 +521,76 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
 #[cfg(feature = "egui")]
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
+    speed: Res<crate::game_ui::GameSpeed>,
     mut snapshot: ResMut<crate::game_ui::GameUiSnapshot>,
+    mut resources: ResMut<crate::game_ui::WorldResources>,
+    mut roster: ResMut<crate::game_ui::FactionRoster>,
 ) {
     if !sim.is_changed() {
         return;
     }
+    let sim = &sim.0;
 
-    let population = sim.0.world.query::<&Civilian>().iter().count() as u64;
-    let factions = sim
-        .0
+    // Pull the authoritative per-tick snapshot for stocks + vital stats.
+    let snap = sim.snapshot();
+    let population = snap.population;
+
+    // Emergent clusters (settlements) drive both the faction count chip and the
+    // left-panel roster — these are NOT hardcoded factions.
+    let roster_rows = build_faction_roster(sim);
+    let faction_count = roster_rows.len() as u32;
+    roster.factions = roster_rows;
+
+    snapshot.set_sim_state(
+        snap.tick,
+        population,
+        faction_count,
+        snap.tick.to_string(),
+        speed.multiplier.max(1),
+    );
+
+    // World resource strip: global economy stocks + the pooled settlement
+    // commons as a stand-in treasury, plus births/deaths this tick.
+    let food = snap.resources.food.to_f64();
+    let materials = snap.resources.wood.to_f64() + snap.resources.metal.to_f64();
+    let energy = snap.resources.energy.to_f64();
+    let treasury: f64 = sim
+        .cluster_stocks()
+        .values()
+        .map(|stock| stock.total() as f64)
+        .sum();
+    resources.update_stocks(
+        food,
+        materials,
+        energy,
+        treasury,
+        snap.births_this_tick,
+        snap.deaths_this_tick,
+    );
+}
+
+/// Build the left-panel roster from emergent clusters.
+///
+/// Counts civilians per [`civ_agents::ClusterMember`] cluster id; civilians with
+/// no membership component are pooled under the id-0 "Unaffiliated" bucket so
+/// the panel always reflects the full live population. Rows are ordered by
+/// descending size so the largest settlements lead.
+#[cfg(feature = "egui")]
+fn build_faction_roster(sim: &Simulation) -> Vec<crate::game_ui::FactionInfo> {
+    use std::collections::BTreeMap;
+    let mut sizes: BTreeMap<u64, u64> = BTreeMap::new();
+    for (_, (_civilian, member)) in sim
         .world
-        .query::<&Civilian>()
+        .query::<(&Civilian, Option<&civ_agents::ClusterMember>)>()
         .iter()
-        .map(|(_, civilian)| civilian.faction)
-        .max()
-        .unwrap_or(0)
-        .saturating_add(1);
-    let tick = sim.0.state.tick;
-    snapshot.set_sim_state(tick, population, factions, tick.to_string(), 1);
+    {
+        let id = member.map(|m| m.cluster.0).unwrap_or(0);
+        *sizes.entry(id).or_insert(0) += 1;
+    }
+    let mut rows: Vec<_> = sizes
+        .into_iter()
+        .map(|(id, count)| crate::game_ui::FactionInfo::from_cluster(id, count))
+        .collect();
+    rows.sort_by(|a, b| b.count.cmp(&a.count).then(a.name.cmp(&b.name)));
+    rows
 }

@@ -42,6 +42,10 @@ pub struct MaterialDef {
     pub viscosity: u16,
     /// Angle of repose in degrees for powder materials.
     pub angle_of_repose: Option<u8>,
+    /// Relative temperature used for phase transitions and heat exchange.
+    pub temperature: i16,
+    /// Relative flammability on a 0-100 scale.
+    pub flammability: u8,
     /// RGBA render hint for engine adapters.
     pub color: [u8; 4],
 }
@@ -129,9 +133,67 @@ pub const STEAM: MaterialId = MaterialId(9);
 pub const ORE: MaterialId = MaterialId(10);
 /// Material id `11`.
 pub const BEDROCK: MaterialId = MaterialId(11);
+/// Material id `12`.
+pub const SALT_WATER: MaterialId = MaterialId(12);
+/// Material id `13`.
+pub const OIL: MaterialId = MaterialId(13);
+/// Material id `14`.
+pub const ACID: MaterialId = MaterialId(14);
+/// Material id `15`.
+pub const BLOOD: MaterialId = MaterialId(15);
+/// Material id `16`.
+pub const MUD: MaterialId = MaterialId(16);
+/// Material id `17`.
+pub const MOLTEN_METAL: MaterialId = MaterialId(17);
+/// Material id `18`.
+pub const CLAY: MaterialId = MaterialId(18);
+/// Material id `19`.
+pub const ASH: MaterialId = MaterialId(19);
+/// Material id `20`.
+pub const SNOW: MaterialId = MaterialId(20);
+/// Material id `21`.
+pub const GUNPOWDER: MaterialId = MaterialId(21);
+/// Material id `22`.
+pub const SALT: MaterialId = MaterialId(22);
+/// Material id `23`.
+pub const GRANITE: MaterialId = MaterialId(23);
+/// Material id `24`.
+pub const WOOD: MaterialId = MaterialId(24);
+/// Material id `25`.
+pub const COAL: MaterialId = MaterialId(25);
+/// Material id `26`.
+pub const GLASS: MaterialId = MaterialId(26);
+/// Material id `27`.
+pub const CRYSTAL: MaterialId = MaterialId(27);
+/// Material id `28`.
+pub const BRICK: MaterialId = MaterialId(28);
+/// Material id `29`.
+pub const BONE: MaterialId = MaterialId(29);
+/// Material id `30`.
+pub const SMOKE: MaterialId = MaterialId(30);
+/// Material id `31`.
+pub const METHANE: MaterialId = MaterialId(31);
+/// Material id `32`.
+pub const TOXIC_GAS: MaterialId = MaterialId(32);
+/// Material id `33`.
+pub const CO2: MaterialId = MaterialId(33);
+/// Material id `34`.
+pub const FIRE: MaterialId = MaterialId(34);
+/// Material id `35`.
+pub const EMBER: MaterialId = MaterialId(35);
+/// Material id `36`.
+pub const PLASMA: MaterialId = MaterialId(36);
+/// Material id `37`.
+pub const SPARK: MaterialId = MaterialId(37);
+/// Material id `38`.
+pub const PLANT: MaterialId = MaterialId(38);
+/// Material id `39`.
+pub const MOSS: MaterialId = MaterialId(39);
+/// Material id `40`.
+pub const MOLD: MaterialId = MaterialId(40);
 
 /// Standard material registry used by the CA and worldgen layers.
-pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
+pub const STANDARD_MATERIALS: [MaterialDef; 41] = [
     MaterialDef {
         id: AIR,
         name: "Air",
@@ -140,6 +202,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 12,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: 20,
+        flammability: 0,
         color: [0, 0, 0, 0],
     },
     MaterialDef {
@@ -150,6 +214,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 10,
         viscosity: 3,
         angle_of_repose: None,
+        temperature: 20,
+        flammability: 0,
         color: [54, 112, 204, 255],
     },
     MaterialDef {
@@ -160,6 +226,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 3,
         viscosity: 96,
         angle_of_repose: None,
+        temperature: 1_200,
+        flammability: 0,
         color: [245, 111, 24, 255],
     },
     MaterialDef {
@@ -170,6 +238,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 5,
         viscosity: 2,
         angle_of_repose: Some(34),
+        temperature: 20,
+        flammability: 0,
         color: [212, 194, 120, 255],
     },
     MaterialDef {
@@ -180,6 +250,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 4,
         viscosity: 3,
         angle_of_repose: Some(38),
+        temperature: 18,
+        flammability: 0,
         color: [112, 80, 48, 255],
     },
     MaterialDef {
@@ -190,6 +262,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 3,
         viscosity: 4,
         angle_of_repose: Some(28),
+        temperature: 18,
+        flammability: 0,
         color: [128, 126, 122, 255],
     },
     MaterialDef {
@@ -200,6 +274,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 0,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: 18,
+        flammability: 0,
         color: [108, 112, 116, 255],
     },
     MaterialDef {
@@ -210,6 +286,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 0,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: 18,
+        flammability: 0,
         color: [86, 64, 40, 255],
     },
     MaterialDef {
@@ -220,6 +298,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 0,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: -5,
+        flammability: 0,
         color: [176, 224, 255, 255],
     },
     MaterialDef {
@@ -230,6 +310,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 12,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: 95,
+        flammability: 0,
         color: [224, 240, 255, 180],
     },
     MaterialDef {
@@ -240,6 +322,8 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 0,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: 18,
+        flammability: 0,
         color: [176, 136, 72, 255],
     },
     MaterialDef {
@@ -250,8 +334,39 @@ pub const STANDARD_MATERIALS: [MaterialDef; 12] = [
         flow_rate: 0,
         viscosity: 0,
         angle_of_repose: None,
+        temperature: 18,
+        flammability: 0,
         color: [32, 32, 36, 255],
     },
+    MaterialDef { id: SALT_WATER, name: "SaltWater", phase: Phase::Liquid, density: 1_030, flow_rate: 10, viscosity: 3, angle_of_repose: None, temperature: 20, flammability: 0, color: [44, 100, 184, 255] },
+    MaterialDef { id: OIL, name: "Oil", phase: Phase::Liquid, density: 850, flow_rate: 8, viscosity: 12, angle_of_repose: None, temperature: 20, flammability: 82, color: [84, 64, 24, 255] },
+    MaterialDef { id: ACID, name: "Acid", phase: Phase::Liquid, density: 1_080, flow_rate: 9, viscosity: 4, angle_of_repose: None, temperature: 20, flammability: 0, color: [94, 204, 56, 255] },
+    MaterialDef { id: BLOOD, name: "Blood", phase: Phase::Liquid, density: 1_060, flow_rate: 9, viscosity: 5, angle_of_repose: None, temperature: 37, flammability: 0, color: [140, 14, 20, 255] },
+    MaterialDef { id: MUD, name: "Mud", phase: Phase::Liquid, density: 1_500, flow_rate: 4, viscosity: 18, angle_of_repose: None, temperature: 18, flammability: 0, color: [88, 68, 44, 255] },
+    MaterialDef { id: MOLTEN_METAL, name: "MoltenMetal", phase: Phase::Liquid, density: 6_900, flow_rate: 4, viscosity: 52, angle_of_repose: None, temperature: 1_450, flammability: 0, color: [196, 164, 84, 255] },
+    MaterialDef { id: CLAY, name: "Clay", phase: Phase::Powder, density: 1_650, flow_rate: 3, viscosity: 6, angle_of_repose: Some(36), temperature: 18, flammability: 0, color: [154, 112, 84, 255] },
+    MaterialDef { id: ASH, name: "Ash", phase: Phase::Powder, density: 420, flow_rate: 8, viscosity: 1, angle_of_repose: Some(24), temperature: 30, flammability: 0, color: [144, 140, 136, 255] },
+    MaterialDef { id: SNOW, name: "Snow", phase: Phase::Powder, density: 320, flow_rate: 7, viscosity: 1, angle_of_repose: Some(22), temperature: -8, flammability: 0, color: [242, 248, 255, 255] },
+    MaterialDef { id: GUNPOWDER, name: "Gunpowder", phase: Phase::Powder, density: 1_650, flow_rate: 5, viscosity: 2, angle_of_repose: Some(31), temperature: 20, flammability: 100, color: [58, 54, 50, 255] },
+    MaterialDef { id: SALT, name: "Salt", phase: Phase::Powder, density: 2_170, flow_rate: 4, viscosity: 1, angle_of_repose: Some(29), temperature: 20, flammability: 0, color: [232, 232, 224, 255] },
+    MaterialDef { id: GRANITE, name: "Granite", phase: Phase::Solid, density: 2_700, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 0, color: [116, 104, 108, 255] },
+    MaterialDef { id: WOOD, name: "Wood", phase: Phase::Solid, density: 650, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 92, color: [140, 100, 52, 255] },
+    MaterialDef { id: COAL, name: "Coal", phase: Phase::Solid, density: 1_350, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 78, color: [32, 32, 36, 255] },
+    MaterialDef { id: GLASS, name: "Glass", phase: Phase::Solid, density: 2_500, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 0, color: [180, 220, 232, 190] },
+    MaterialDef { id: CRYSTAL, name: "Crystal", phase: Phase::Solid, density: 2_800, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 0, color: [146, 200, 255, 210] },
+    MaterialDef { id: BRICK, name: "Brick", phase: Phase::Solid, density: 1_900, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 0, color: [162, 84, 64, 255] },
+    MaterialDef { id: BONE, name: "Bone", phase: Phase::Solid, density: 1_850, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 28, color: [226, 220, 198, 255] },
+    MaterialDef { id: SMOKE, name: "Smoke", phase: Phase::Gas, density: 2, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 90, flammability: 0, color: [92, 92, 92, 150] },
+    MaterialDef { id: METHANE, name: "Methane", phase: Phase::Gas, density: 1, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 20, flammability: 90, color: [184, 224, 184, 85] },
+    MaterialDef { id: TOXIC_GAS, name: "ToxicGas", phase: Phase::Gas, density: 2, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 20, flammability: 0, color: [116, 196, 56, 120] },
+    MaterialDef { id: CO2, name: "CO2", phase: Phase::Gas, density: 2, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 10, flammability: 0, color: [216, 224, 236, 120] },
+    MaterialDef { id: FIRE, name: "Fire", phase: Phase::Gas, density: 1, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 1_100, flammability: 0, color: [255, 146, 32, 220] },
+    MaterialDef { id: EMBER, name: "Ember", phase: Phase::Solid, density: 1_100, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 600, flammability: 0, color: [180, 86, 24, 255] },
+    MaterialDef { id: PLASMA, name: "Plasma", phase: Phase::Gas, density: 1, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 5_000, flammability: 0, color: [255, 70, 180, 220] },
+    MaterialDef { id: SPARK, name: "Spark", phase: Phase::Gas, density: 1, flow_rate: 12, viscosity: 0, angle_of_repose: None, temperature: 900, flammability: 0, color: [255, 240, 160, 220] },
+    MaterialDef { id: PLANT, name: "Plant", phase: Phase::Solid, density: 900, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 75, color: [64, 156, 72, 255] },
+    MaterialDef { id: MOSS, name: "Moss", phase: Phase::Solid, density: 520, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 16, flammability: 35, color: [72, 128, 64, 255] },
+    MaterialDef { id: MOLD, name: "Mold", phase: Phase::Solid, density: 500, flow_rate: 0, viscosity: 0, angle_of_repose: None, temperature: 18, flammability: 10, color: [92, 124, 76, 255] },
 ];
 
 #[cfg(test)]
@@ -266,6 +381,8 @@ mod tests {
         assert_eq!(registry.get(SAND).unwrap().phase, Phase::Powder);
         assert_eq!(registry.get(STONE).unwrap().phase, Phase::Solid);
         assert_eq!(registry.get(BEDROCK).unwrap().density, 9_999);
+        assert_eq!(registry.get(FIRE).unwrap().temperature, 1_100);
+        assert_eq!(registry.get(OIL).unwrap().flammability, 82);
     }
 
     #[test]
@@ -274,6 +391,6 @@ mod tests {
         let steam = registry.by_name("Steam").expect("steam");
         assert!(steam.is_gas());
         assert_eq!(steam.id, STEAM);
-        assert_eq!(registry.materials().len(), 12);
+        assert_eq!(registry.materials().len(), 41);
     }
 }

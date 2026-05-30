@@ -85,6 +85,15 @@ namespace DINOForge.Runtime.UI
         // ── Native mods page (full-screen, settings-style) ──────────────────
         private NativeModsPage? _nativeModsPage;
 
+        // ── Native-style compact QUICK panel (default MODS click) ────────────
+        private NativeQuickModPanel? _quickPanel;
+
+        /// <summary>
+        /// Directory containing &lt;packId&gt;/pack.yaml, used by the quick panel to read the
+        /// active total_conversion ui_theme. Set by RuntimeDriver after initialization.
+        /// </summary>
+        public string? PacksDirectory { get; set; }
+
         /// <summary>
         /// Optional delegate that provides the current pack list for the native mods page.
         /// Set by RuntimeDriver/Plugin after initialization.
@@ -309,6 +318,8 @@ namespace DINOForge.Runtime.UI
             _rescanTimer = 0f;
             // NativeModsPage lives inside the MainMenu canvas which is destroyed on scene change
             _nativeModsPage = null;
+            // Quick panel also lives inside the MainMenu canvas
+            _quickPanel = null;
             // Reset the guard so TryInjectMenuButton can run for the new scene.
             // The guard was set true during the LoadScene(1) call that triggered this scene change.
             _s_sceneTransitionGuard = false;
@@ -1285,7 +1296,7 @@ namespace DINOForge.Runtime.UI
                 }
                 _lastClickTimeUnscaled = now;
 
-                // If the native mods page is already visible, hide it (toggle behavior)
+                // If the full browser page is already visible, hide it (toggle behavior).
                 if (_nativeModsPage != null && _nativeModsPage.IsVisible)
                 {
                     LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} NativeModsPage already visible — hiding.");
@@ -1293,10 +1304,26 @@ namespace DINOForge.Runtime.UI
                     return;
                 }
 
-                // Try to show the native full-screen mods page
+                // If the quick panel is already visible, hide it (toggle behavior).
+                if (_quickPanel != null && _quickPanel.IsVisible)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} QuickPanel already visible — hiding.");
+                    _quickPanel.Hide();
+                    return;
+                }
+
+                // DEFAULT: show the compact NATIVE-STYLE quick panel. The full-screen
+                // browser is secondary, reached via the quick panel's "Browse all" button.
+                if (TryShowQuickPanel(clickId))
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeQuickModPanel shown successfully");
+                    return;
+                }
+
+                // Fallback chain: full-screen native page, then IMGUI overlay.
                 if (TryShowNativeModsPage(clickId))
                 {
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeModsPage shown successfully");
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeModsPage shown (quick panel unavailable)");
                     return;
                 }
 
@@ -1317,6 +1344,85 @@ namespace DINOForge.Runtime.UI
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ⚠ OnModsButtonClicked exception: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Attempts to show the compact, native-style QUICK panel inside the MainMenu
+        /// canvas. This is the DEFAULT MODS click action: a small panel that looks like a
+        /// DINO sub-menu (native-cloned button chrome, themed by the active total_conversion
+        /// ui_theme) with per-pack ON/OFF toggles and a "Browse all" button that opens the
+        /// full-screen <see cref="NativeModsPage"/> browser.
+        /// Returns false if the MainMenu canvas cannot be found.
+        /// </summary>
+        private bool TryShowQuickPanel(long clickId)
+        {
+            try
+            {
+                Canvas? mainMenuCanvas = FindActiveCanvasByName("MainMenu")
+                    ?? _injectedButton?.GetComponentInParent<Canvas>();
+                if (mainMenuCanvas == null)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} Cannot find MainMenu canvas for quick panel");
+                    return false;
+                }
+
+                // Resolve the active theme (SW gold default) from the loaded packs on disk.
+                System.Collections.Generic.IReadOnlyList<PackDisplayInfo> packs =
+                    PackDataProvider?.Invoke()
+                    ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
+                MenuThemeReader.MenuTheme theme = MenuThemeReader.Resolve(packs, PacksDirectory);
+
+                if (_quickPanel == null)
+                {
+                    GameObject host = new GameObject("DINOForge_QuickModPanelHost");
+                    host.transform.SetParent(mainMenuCanvas.transform, false);
+                    _quickPanel = host.AddComponent<NativeQuickModPanel>();
+                    if (_log != null) _quickPanel.SetLogger(_log);
+
+                    _quickPanel.OnPackToggled = (packId, isEnabled) =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] QuickPanel pack toggled: {packId} = {isEnabled}");
+                        OnNativePackToggled?.Invoke(packId, isEnabled);
+                    };
+                    _quickPanel.OnBrowseAllClicked = () =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] QuickPanel 'Browse all' — opening full browser");
+                        // Open the full-screen browser (deep management).
+                        if (!TryShowNativeModsPage(clickId) && _menuHost != null)
+                            _menuHost.Show();
+                    };
+                    _quickPanel.OnClosed = () =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] QuickPanel closed");
+                    };
+                }
+
+                // Use the injected Mods button (a clone of a native DINO menu button) as the
+                // native-chrome donor so the panel's rows/buttons match DINO's button style.
+                _quickPanel.Configure(_injectedButton, theme);
+                _quickPanel.SetPacks(packs);
+                _quickPanel.Show(mainMenuCanvas);
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} QuickPanel shown with {packs.Count} packs (donor={(_injectedButton != null ? _injectedButton.name : "none")})");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} TryShowQuickPanel exception: {ex}");
+                return false;
+            }
+        }
+
+        /// <summary>Finds the first active canvas whose name contains <paramref name="namePart"/>.</summary>
+        private static Canvas? FindActiveCanvasByName(string namePart)
+        {
+            Canvas[] all = Resources.FindObjectsOfTypeAll<Canvas>();
+            foreach (Canvas c in all)
+            {
+                if (c == null || !c.gameObject.activeInHierarchy) continue;
+                if (c.name != null && c.name.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
+                    return c;
+            }
+            return null;
         }
 
         /// <summary>

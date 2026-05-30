@@ -1690,6 +1690,19 @@ namespace DINOForge.Runtime
                 {
                     _nativeMenuInjector = gameObject.AddComponent<NativeMenuInjector>();
                     _nativeMenuInjector.SetLogger(_log);
+                    // Fix (iter-149): wire the pack-data provider so the native MODS page
+                    // (TryShowNativeModsPage) can populate its INSTALLED PACKS list. Without
+                    // this, PackDataProvider stays null → SetPacks() is never called → the
+                    // left pack list renders empty even though packs are loaded.
+                    _nativeMenuInjector.PackDataProvider = () =>
+                        _modPlatform?.GetLoadedPackDisplayInfos()
+                        ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
+                    // Quick panel reads the active total_conversion ui_theme from disk.
+                    _nativeMenuInjector.PacksDirectory = _modPlatform?.PacksDirectory;
+                    // Route quick-panel / native-page pack toggles + reloads through the same
+                    // queued path the UGUI menu uses (SetPackEnabled persists disabled_packs.json).
+                    _nativeMenuInjector.OnNativePackToggled = (packId, enabled) => RequestPackToggle(packId, enabled);
+                    _nativeMenuInjector.OnNativeReloadRequested = () => RequestPackReload("native mods menu reload");
                     TryWireNativeMenuInjectorHost();
                     // SPEC-002 F-07: main-thread re-scan hook for tests/tooling (not background thread — ADR-015).
                     NativeMenuInjector.OnScanNeeded = () =>
@@ -2898,6 +2911,12 @@ namespace DINOForge.Runtime
             // _menuHost == null.
             NativeMainMenuModMenu nativeHost = new NativeMainMenuModMenu();
             if (_log != null) nativeHost.SetLogger(_log);
+            // Fix (iter-149): give the native MODS screen a live pack source. ModPlatform.UpdateUI
+            // only pushes packs to the overlay host it owns, not to this contextual host, so the
+            // native page would otherwise list zero packs.
+            nativeHost.PackDataProvider = () =>
+                _modPlatform?.GetLoadedPackDisplayInfos()
+                ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
             ContextualModMenuHost contextualHost = new ContextualModMenuHost(
                 _dfCanvas.ModMenuPanel, nativeHost);
             _nativeMenuInjector.SetModMenuHost(contextualHost);

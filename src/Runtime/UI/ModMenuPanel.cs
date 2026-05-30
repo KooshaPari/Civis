@@ -75,6 +75,7 @@ namespace DINOForge.Runtime.UI
         private Text? _headerStatusText;
         private RectTransform? _listContent;
         private Text? _listCounterText; // "N of M packs"
+        private ScrollRect? _listScrollRect;
         private InputField? _searchInput;
         private Dropdown? _tierDropdown;
         private Dropdown? _stateDropdown;
@@ -665,7 +666,11 @@ namespace DINOForge.Runtime.UI
             paneLayout.childForceExpandWidth = true;
             paneLayout.childForceExpandHeight = false;
             paneLayout.childControlWidth = true;
-            paneLayout.childControlHeight = false;
+            // Fix (iter-149): must control child height so the pack-list scroll's
+            // LayoutElement.flexibleHeight=1 is honored. With childControlHeight=false the
+            // scroll got zero allocated height → the pack rows rendered off-viewport
+            // (list appeared empty even though "N of M" counter was correct).
+            paneLayout.childControlHeight = true;
             paneLayout.childAlignment = TextAnchor.UpperLeft;
             paneLayout.spacing = 0f;
             paneLayout.padding = new RectOffset(0, 0, 0, 0);
@@ -722,6 +727,7 @@ namespace DINOForge.Runtime.UI
             content.sizeDelta = new Vector2(ListWidth, content.sizeDelta.y);
 
             _listContent = content;
+            _listScrollRect = scrollRect;
             _log?.LogInfo($"[ModMenuPanel.BuildListPane] Scroll view initialized successfully.");
             _log?.LogInfo($"  scrollRt.rect.size={scrollRt.rect.size} (viewport visible area)");
             _log?.LogInfo($"  scrollRt.sizeDelta={scrollRt.sizeDelta}, anchorMin={scrollRt.anchorMin}, anchorMax={scrollRt.anchorMax}");
@@ -1207,6 +1213,13 @@ namespace DINOForge.Runtime.UI
             colorBarRt.offsetMax = new Vector2(0f, -4f);
             colorBarRt.sizeDelta = new Vector2(0f, 4f);
 
+            // Fix (iter-149): the AccentBar is absolutely positioned (top-stretch). The
+            // parent HorizontalLayoutGroup below would otherwise treat it as a flex child
+            // and stretch it into a large green bar overlapping the FILTERS label. Opt it
+            // out of layout so it stays a 4px accent line.
+            LayoutElement colorBarLe = colorBar.AddComponent<LayoutElement>();
+            colorBarLe.ignoreLayout = true;
+
             LayoutElement headerLe = headerBar.AddComponent<LayoutElement>();
             headerLe.preferredHeight = 28f;
 
@@ -1516,6 +1529,12 @@ namespace DINOForge.Runtime.UI
             _listContent.sizeDelta = new Vector2(_listContent.sizeDelta.x, calculatedHeight);
 
             UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_listContent);
+
+            // Fix (iter-149): DINO never runs ScrollRect.LateUpdate, so pin the freshly
+            // built list back to the top of the viewport (otherwise a stale clamp can leave
+            // the rows scrolled out of view).
+            if (_listScrollRect != null)
+                _listScrollRect.verticalNormalizedPosition = 1f;
         }
 
         private void BuildPackListItem(PackDisplayInfo pack, int index)

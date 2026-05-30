@@ -3,9 +3,10 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    cluster_by_colocation, count_civilians, path_step, pick_target, propagate_tools,
-    propagate_wardrobe, spawn_child_near, spawn_civilian_at, Civilian as AgentCivilian,
-    ClusterMember, CohortStats, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
+    choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
+    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
+    wander_anchor, Activity, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier,
+    Needs, PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
 use civ_economy::Stocks as ClusterStocks;
 use civ_needs::{
@@ -1469,28 +1470,62 @@ impl Simulation {
                 continue;
             }
 
-            // Utility-AI daily path: target the highest-pressure need's POI and
-            // step toward it; satisfy the served need when close enough.
+            // Utility-AI daily path: choose an activity first, then either seek a
+            // pressing need, idle, or wander locally when needs are comfortable
+            // or no POI is available.
             let pos = match self.world.get::<&Position3d>(entity) {
                 Ok(p) => *p,
+                Err(_) => continue,
+            };
+            let civ = match self.world.get::<&AgentCivilian>(entity) {
+                Ok(c) => *c,
                 Err(_) => continue,
             };
             let needs_snapshot = match self.world.get::<&LifeNeeds>(entity) {
                 Ok(n) => *n,
                 Err(_) => continue,
             };
-            if let Some(target) = pick_target(&needs_snapshot, &registry, &pos) {
-                let target_pos = target.pos;
-                let served = civ_agents::need_for_poi_kind(target.kind);
-                let next = path_step(&pos, &target_pos, move_speed);
-                if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
-                    *p = next;
+            let activity = choose_activity(&needs_snapshot, registry.iter().next().is_some());
+            match activity {
+                Activity::Idle => {}
+                Activity::SeekNeed => {
+                    if let Some(target) = pick_target(&needs_snapshot, &registry, &pos) {
+                        let target_pos = target.pos;
+                        let served = civ_agents::need_for_poi_kind(target.kind);
+                        let next = path_step(&pos, &target_pos, move_speed);
+                        if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
+                            *p = next;
+                        }
+                        let dx = (next.coord.x - target_pos.coord.x) as i128;
+                        let dz = (next.coord.z - target_pos.coord.z) as i128;
+                        if dx * dx + dz * dz <= satisfy_radius_sq {
+                            if let Ok(mut n) = self.world.get::<&mut LifeNeeds>(entity) {
+                                n.satisfy(served, 0.5);
+                            }
+                        }
+                    } else {
+                        let mut local_rng = ChaCha8Rng::seed_from_u64(
+                            self.state.tick ^ civ.id ^ 0x9e37_79b9_7f4a_7c15,
+                        );
+                        if local_rng.gen_bool(0.5) {
+                            let target_pos = wander_anchor(&pos, civ.id, self.state.tick);
+                            let next = path_step(&pos, &target_pos, move_speed);
+                            if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
+                                *p = next;
+                            }
+                        }
+                    }
                 }
-                let dx = (next.coord.x - target_pos.coord.x) as i128;
-                let dz = (next.coord.z - target_pos.coord.z) as i128;
-                if dx * dx + dz * dz <= satisfy_radius_sq {
-                    if let Ok(mut n) = self.world.get::<&mut LifeNeeds>(entity) {
-                        n.satisfy(served, 0.5);
+                Activity::Wander => {
+                    let mut local_rng = ChaCha8Rng::seed_from_u64(
+                        self.state.tick ^ civ.id ^ (pos.coord.x as u64).rotate_left(13) ^ (pos.coord.z as u64).rotate_left(29),
+                    );
+                    if local_rng.gen_bool(0.65) {
+                        let target_pos = wander_anchor(&pos, civ.id, self.state.tick);
+                        let next = path_step(&pos, &target_pos, move_speed);
+                        if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
+                            *p = next;
+                        }
                     }
                 }
             }

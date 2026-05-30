@@ -237,6 +237,68 @@ pub struct DailyGoal {
     pub kind: PoiKind,
 }
 
+/// Coarse activity state for civilian life simulation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Activity {
+    /// Stay put when needs are comfortable and no local motion is needed.
+    Idle,
+    /// Local deterministic wandering around a seed/home/current anchor.
+    Wander,
+    /// Purposeful trip to a POI that satisfies a pressing need.
+    SeekNeed,
+}
+
+/// Minimum pressure that makes a need worth actively seeking.
+pub const PRESSURE_THRESHOLD: f32 = 0.35;
+
+/// Comfort threshold above which the agent prefers idle/wander behavior.
+pub const COMFORT_THRESHOLD: f32 = 0.7;
+
+/// Local wander radius measured in fixed-point units.
+pub const WANDER_RADIUS: i64 = (0.06 * FIXED_SCALE as f32) as i64;
+
+/// Deterministically choose a coarse activity state from the current needs.
+#[must_use]
+pub fn choose_activity(needs: &LifeNeeds, has_poi: bool) -> Activity {
+    let pressure = [
+        NeedKind::Food,
+        NeedKind::Water,
+        NeedKind::Rest,
+        NeedKind::Safety,
+        NeedKind::Social,
+        NeedKind::Health,
+    ]
+    .into_iter()
+    .map(|kind| need_pressure(needs, kind))
+    .fold(0.0_f32, f32::max);
+
+    if pressure <= (1.0 - COMFORT_THRESHOLD) {
+        return Activity::Idle;
+    }
+    if pressure >= PRESSURE_THRESHOLD && has_poi {
+        Activity::SeekNeed
+    } else {
+        Activity::Wander
+    }
+}
+
+/// Build a deterministic local wander anchor from a seed and current position.
+#[must_use]
+pub fn wander_anchor(from: &Position3d, seed: u64, tick: u64) -> Position3d {
+    let mix = seed ^ tick.rotate_left(17) ^ (from.coord.x as u64).rotate_left(7) ^ (from.coord.z as u64);
+    let offset = |shift: u32| -> i64 {
+        let bits = ((mix >> shift) & 0x3f) as i64;
+        bits - 31
+    };
+    Position3d {
+        coord: WorldCoord {
+            x: from.coord.x + offset(0) * WANDER_RADIUS / 31,
+            y: from.coord.y,
+            z: from.coord.z + offset(6) * WANDER_RADIUS / 31,
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -345,5 +407,26 @@ mod tests {
         let needs = LifeNeeds::sated();
         let registry = PoiRegistry::default();
         assert!(pick_target(&needs, &registry, &pos(0, 0, 0)).is_none());
+    }
+
+    /// FR-CIV-LIFE-015 — satisfied needs prefer idle/wander over seek.
+    #[test]
+    fn satisfied_needs_do_not_seek() {
+        let needs = LifeNeeds::sated();
+        assert_eq!(choose_activity(&needs, false), Activity::Idle);
+        assert_eq!(choose_activity(&needs, true), Activity::Idle);
+    }
+
+    /// FR-CIV-LIFE-016 — wander anchors remain local and deterministic.
+    #[test]
+    fn wander_anchor_stays_local() {
+        let from = pos(100 * FIXED_SCALE, 0, -50 * FIXED_SCALE);
+        let a = wander_anchor(&from, 42, 7);
+        let b = wander_anchor(&from, 42, 7);
+        assert_eq!(a, b);
+        let dx = (a.coord.x - from.coord.x).abs();
+        let dz = (a.coord.z - from.coord.z).abs();
+        assert!(dx <= WANDER_RADIUS);
+        assert!(dz <= WANDER_RADIUS);
     }
 }

@@ -276,6 +276,21 @@ namespace DINOForge.Runtime
                 PersistentRoot.hideFlags = HideFlags.HideAndDontSave;
                 UnityEngine.Object.DontDestroyOnLoad(PersistentRoot);
                 Log.LogInfo("[Plugin] Persistent root GameObject created.");
+
+                // EPIC-027: create the themed loading screen as EARLY as possible so it is
+                // visible across the game's own InitialGameLoader asset-load window (before
+                // RuntimeDriver finishes pack loading). It is faded out on pack-load complete /
+                // world-ready / MainMenu. Created here (Awake, main thread) rather than waiting
+                // for RuntimeDriver.Initialize's coroutine.
+                try
+                {
+                    string lsPacksDir = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                    UI.LoadingScreenController.Create(PersistentRoot, lsPacksDir, Logger);
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning($"[Plugin] Early LoadingScreenController.Create failed (non-fatal): {ex.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -431,6 +446,15 @@ namespace DINOForge.Runtime
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded EnsureEventSystemAlive failed (non-fatal): {ex.Message}"); }
             try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
+
+            // EPIC-027: DINO loads MainMenu ADDITIVELY — activeSceneChanged stays silent for it, so
+            // the MainMenu fade-out must also fire from sceneLoaded (the missing main-thread hook).
+            try
+            {
+                if (scene.name == "MainMenu")
+                    UI.LoadingScreenController.Instance?.BeginFadeOut();
+            }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded LoadingScreen fade failed (non-fatal): {ex.Message}"); }
         }
 
         /// <summary>
@@ -555,6 +579,21 @@ namespace DINOForge.Runtime
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged EnsureEventSystemAlive failed (non-fatal): {ex.Message}"); }
             try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
+
+            // EPIC-027 loading-screen takeover: show during the game's own asset-load window
+            // (InitialGameLoader / first scene), hide once the MainMenu is active.
+            try
+            {
+                var ls = UI.LoadingScreenController.Instance;
+                if (ls != null)
+                {
+                    if (newScene.name == "InitialGameLoader" || string.IsNullOrEmpty(oldScene.name))
+                        ls.EnsureVisible();
+                    else if (newScene.name == "MainMenu")
+                        ls.BeginFadeOut();
+                }
+            }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged LoadingScreen toggle failed (non-fatal): {ex.Message}"); }
             // Revive already executed at the TOP of this handler (iter-149e reorder).
         }
 
@@ -1317,8 +1356,9 @@ namespace DINOForge.Runtime
         // UGUI system (preferred). Null if UGUI setup failed.
         internal DFCanvas? _dfCanvas;
 
-        // Loading overlay (shown during mod init, hidden when scene loads)
-        private ModLoadingOverlay? _loadingOverlay;
+        // EPIC-027: themed loading-screen takeover (shown during mod init / scene loads,
+        // faded out when the target scene + engine UI are ready).
+        private LoadingScreenController? _loadingScreen;
 
         // Active UI hosts.
         // _modMenuHost is always set to the active menu (UGUI when healthy, IMGUI fallback otherwise).
@@ -1761,22 +1801,33 @@ namespace DINOForge.Runtime
             DebugLog.Write("Plugin", $"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
 
-            // ── Step 6.5: Create loading overlay ────────────────────────────────────
-            // Show a skeleton UI during the ~30-45s mod initialization phase.
-            // This overlay is hidden when the MainMenu scene fully loads.
-            RunPhaseWithAbortGuard("ModLoadingOverlay.Create", () =>
+            // ── Step 6.5: Create themed loading screen (EPIC-027) ───────────────────
+            // Full-screen branded loading takeover during the ~30-45s mod-init phase.
+            // For an active total_conversion pack with a declared loading_screen, this
+            // paints the pack's themed background + logo + tips. Hidden when the
+            // MainMenu scene + engine UI are ready.
+            RunPhaseWithAbortGuard("LoadingScreenController.Create", () =>
             {
                 try
                 {
-                    _loadingOverlay = ModLoadingOverlay.Create(gameObject);
-                    if (_loadingOverlay != null)
+                    // Reuse the early instance created in Plugin.Awake if it is still alive;
+                    // only create a new one if it was never built or already faded out.
+                    _loadingScreen = LoadingScreenController.Instance;
+                    if (_loadingScreen == null)
                     {
-                        _log.LogInfo("[RuntimeDriver] ModLoadingOverlay created.");
+                        string packsDir = _modPlatform?.PacksDirectory
+                            ?? System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                        _loadingScreen = LoadingScreenController.Create(gameObject, packsDir, _log);
+                    }
+                    if (_loadingScreen != null)
+                    {
+                        _loadingScreen.EnsureVisible();
+                        _log.LogInfo("[RuntimeDriver] LoadingScreenController ready.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[RuntimeDriver] ModLoadingOverlay creation failed: {ex}");
+                    _log.LogWarning($"[RuntimeDriver] LoadingScreenController creation failed: {ex}");
                 }
             });
             yield return null;
@@ -2015,11 +2066,11 @@ namespace DINOForge.Runtime
                 WireUguiToModPlatform();
                 PushLoadedPacksToUgui("main-menu init");
 
-                // Hide loading overlay now that packs are loaded.
-                if (_loadingOverlay != null)
+                // Hide loading screen now that packs are loaded.
+                if (_loadingScreen != null)
                 {
-                    _loadingOverlay.Hide();
-                    _log.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (MainMenu-mode init complete).");
+                    _loadingScreen.BeginFadeOut();
+                    _log.LogInfo("[RuntimeDriver] LoadingScreenController faded out (MainMenu-mode init complete).");
                 }
 
                 // Apply total_conversion theme to main menu (best-effort; pump loop retries).
@@ -2238,11 +2289,11 @@ namespace DINOForge.Runtime
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
 
-                    // Hide the loading overlay now that world is ready and packs are loaded
-                    if (_loadingOverlay != null)
+                    // Hide the loading screen now that world is ready and packs are loaded
+                    if (_loadingScreen != null)
                     {
-                        _loadingOverlay.Hide();
-                        _log?.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (world ready).");
+                        _loadingScreen.BeginFadeOut();
+                        _log?.LogInfo("[RuntimeDriver] LoadingScreenController faded out (world ready).");
                     }
                 }
 

@@ -123,7 +123,51 @@
         "logo": { "type": "string", "description": "Pack-relative path to a PNG logo image that replaces the native main-menu title (e.g. 'assets/ui/menu_logo.png'). EPIC-027 visual takeover." },
         "background_image": { "type": "string", "description": "Pack-relative path to a full-bleed PNG that replaces the native main-menu background (e.g. 'assets/ui/menu_bg.png'). EPIC-027 visual takeover." },
         "button_frame": { "type": "string", "description": "Pack-relative path to a 9-slice PNG used as the normal-state frame sprite for native menu buttons (e.g. 'assets/ui/btn_normal.png'). EPIC-027 visual takeover." },
-        "button_frame_hover": { "type": "string", "description": "Pack-relative path to a 9-slice PNG used as the highlighted-state frame sprite for native menu buttons (e.g. 'assets/ui/btn_hover.png'). EPIC-027 visual takeover." }
+        "button_frame_hover": { "type": "string", "description": "Pack-relative path to a 9-slice PNG used as the highlighted-state frame sprite for native menu buttons (e.g. 'assets/ui/btn_hover.png'). EPIC-027 visual takeover." },
+        "loading_background": {
+          "type": "string",
+          "description": "EPIC-027 shorthand: path (relative to pack root) to a 1920x1080 PNG/JPEG loading-screen background. Equivalent to loading_screen.background. total_conversion packs only."
+        },
+        "loading_screen": {
+          "type": "object",
+          "description": "EPIC-027 themed loading-screen takeover. Shown by the Runtime LoadingScreenController during the InitialGameLoader->MainMenu asset-load window and on scene transitions. total_conversion packs only.",
+          "properties": {
+            "background": {
+              "type": "string",
+              "description": "Path (relative to pack root) to a 1920x1080 PNG/JPEG background image."
+            },
+            "logo": {
+              "type": "string",
+              "description": "Path (relative to pack root) to a max-512x256 transparent PNG logo."
+            },
+            "tips": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "description": "Rotating tip/lore strings shown during loading."
+            },
+            "tip_rotation_seconds": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 30,
+              "default": 6,
+              "description": "Seconds between tip rotations."
+            },
+            "accent_color": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "description": "Hex color for the progress bar and separator. Default: DINOForge cyan #33CCFF."
+            },
+            "overlay_opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.95,
+              "description": "Alpha of the background image overlay (0 = transparent, 1 = opaque)."
+            }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },

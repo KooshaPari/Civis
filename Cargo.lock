@@ -2893,6 +2893,7 @@ version = "0.1.0"
 dependencies = [
  "civ-diffusion",
  "civ-genetics",
+ "civ-needs",
  "civ-species",
  "civ-voxel",
  "hecs",
@@ -2971,6 +2972,7 @@ dependencies = [
  "civ-planet",
  "civ-save-db",
  "civ-tactics",
+ "civ-traffic",
  "civ-voxel",
  "hecs",
  "proptest",

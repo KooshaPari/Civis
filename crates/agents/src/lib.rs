@@ -21,6 +21,18 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod cluster;
+pub mod daily_path;
+
+pub use cluster::{
+    cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
+    ClusterMember, MembershipPayoff,
+};
+pub use daily_path::{
+    need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi, DailyGoal, Poi,
+    PoiKind, PoiRegistry,
+};
+
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};
 use civ_voxel::{MaterialId, WorldCoord};
 use hecs::World;

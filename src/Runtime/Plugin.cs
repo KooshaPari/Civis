@@ -165,13 +165,34 @@ namespace DINOForge.Runtime
             {
                 _harmony = new Harmony(PluginInfo.GUID);
                 Bridge.DestroyGuardPatch.Apply(_harmony);
-                Bridge.ResourcesUnloadGuardPatch.Apply(_harmony);
-                Bridge.AssetBundleUnloadGuardPatch.Apply(_harmony);
-                Bridge.AssetBundleLoadGuardPatch.Apply(_harmony);
-                Bridge.SceneUnloadGuardPatch.Apply(_harmony);
-                Bridge.WorldDisposeGuardPatch.Apply(_harmony);
+
+                // iter-149c: The iter-144 H7/H8/H9 DIAGNOSTIC probes (Resources.UnloadUnusedAssets,
+                // AssetBundle.Unload/LoadFromFile, SceneManager.UnloadSceneAsync, World.Dispose) are
+                // Harmony Prefix/Postfix patches on dispose/unload/teardown hot paths. Each prefix calls
+                // `new StackTrace()` + synchronous BepInEx logging INSIDE those native calls. During the
+                // InitialGameLoader->MainMenu transition, Unity.Entities.World.Dispose() tears down the
+                // 45K-entity Default World while Mono is in teardown; a synchronous StackTrace+log there
+                // contends the BepInEx log lock / blocks the managed plugin thread mid-dispose — exactly
+                // matching the observed wedge (BepInEx's own LogOutput.log freezes at the same instant,
+                // recurrence of the iter-144 mono_jit_cleanup gray-freeze). These probes are
+                // diagnostics ONLY (no load-bearing functionality) — gate them OFF to test whether the
+                // diagnostic probes are themselves causing the World.Dispose wedge. Files are kept intact
+                // so the probes can be re-enabled for future native diagnosis. DestroyGuardPatch
+                // (protects DINOForge_Root) and ModsButtonTextPatch (engine-UI label) stay ACTIVE.
+                const bool EnableDisposeProbes = false;
+#pragma warning disable CS0162 // unreachable code (intentional compile-time probe gate)
+                if (EnableDisposeProbes)
+                {
+                    Bridge.ResourcesUnloadGuardPatch.Apply(_harmony);
+                    Bridge.AssetBundleUnloadGuardPatch.Apply(_harmony);
+                    Bridge.AssetBundleLoadGuardPatch.Apply(_harmony);
+                    Bridge.SceneUnloadGuardPatch.Apply(_harmony);
+                    Bridge.WorldDisposeGuardPatch.Apply(_harmony);
+                }
+#pragma warning restore CS0162
+
                 UI.ModsButtonTextPatch.Apply(_harmony);
-                Log.LogInfo("Harmony initialized and patches applied.");
+                Log.LogInfo($"Harmony initialized and patches applied (disposeProbes={EnableDisposeProbes}).");
             }
             catch (Exception ex)
             {

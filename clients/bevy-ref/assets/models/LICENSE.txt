@@ -7,24 +7,57 @@ No attribution is legally required; provenance is retained for auditability
 
 Per-asset provenance
 --------------------
-  civilian.glb  KayKit Character Pack: Adventures — "Knight"
-                Kay Lousberg (https://kaylousberg.com) — CC0 1.0
-  building.glb  KayKit Medieval Hexagon Pack — "building_home_A"
-                Kay Lousberg — CC0 1.0  (gltf packed to glb via gltf-pipeline)
-  tree.glb      KayKit Medieval Hexagon Pack — "tree_single_A"
-                Kay Lousberg — CC0 1.0  (gltf packed to glb)
-  rock.glb      KayKit Medieval Hexagon Pack — "rock_single_A"
-                Kay Lousberg — CC0 1.0  (gltf packed to glb)
-  road.glb      KayKit Medieval Hexagon Pack — "hex_road_A"
-                Kay Lousberg — CC0 1.0  (gltf packed to glb)
-  cart.glb      Khronos glTF-Sample-Assets — "ToyCar"
-                Public / KhronosGroup — CC0 1.0
+  Canonical slots (loader-named):
+    civilian.glb  KayKit Character Pack: Adventures — "Knight" (human)
+                  Kay Lousberg (https://kaylousberg.com) — CC0 1.0
+    building.glb  KayKit Medieval Hexagon Pack — "building_home_A" (house)
+                  Kay Lousberg — CC0 1.0  (gltf packed to glb via gltf-pipeline)
+    tree.glb      KayKit Medieval Hexagon Pack — "tree_single_A"
+                  Kay Lousberg — CC0 1.0  (gltf packed to glb)
+    rock.glb      KayKit Medieval Hexagon Pack — "rock_single_A"
+                  Kay Lousberg — CC0 1.0  (gltf packed to glb)
+    road.glb      KayKit Medieval Hexagon Pack — "hex_road_A"
+                  Kay Lousberg — CC0 1.0  (gltf packed to glb)
+    cart.glb      Khronos glTF-Sample-Assets — "ToyCar" (vehicle)
+                  Public / KhronosGroup — CC0 1.0
+
+  Expanded buildings (KayKit Medieval Hexagon Pack — Kay Lousberg, CC0 1.0,
+  gltf packed to glb):
+    building_house_B.glb  "building_home_B" (house variant)
+    building_tower.glb    "building_tower_A" (tower)
+    building_church.glb   "building_church" (temple)
+    building_market.glb   "building_market" (market)
+    building_tavern.glb   "building_tavern" (inn / hut)
+    building_well.glb     "building_well" (small structure)
+
+  Expanded nature (KayKit Medieval Hexagon Pack — Kay Lousberg, CC0 1.0,
+  gltf packed to glb):
+    tree_b.glb            "tree_single_B"
+    tree_large.glb        "trees_A_large" (cluster)
+    rock_b.glb            "rock_single_B"
+    rock_c.glb            "rock_single_C"
+
+  Creatures — non-human life for emergent fauna
+  (KayKit Character Pack: Skeletons — Kay Lousberg, CC0 1.0):
+    creature_skeleton_minion.glb   "Skeleton_Minion"
+    creature_skeleton_warrior.glb  "Skeleton_Warrior"
+
+  Vehicles:
+    cart_wheelbarrow.glb  KayKit Medieval Hexagon Pack — "wheelbarrow"
+                          Kay Lousberg — CC0 1.0  (gltf packed to glb)
+    boat.glb              Quaternius Pirate Kit — "Boat" — Quaternius
+                          (https://quaternius.com) — CC0 1.0
+                          BEST-EFFORT: Quaternius distributes via zip, not raw
+                          GitHub, so the fetch script cannot auto-acquire it.
+                          Drop boat.glb here manually from the CC0 Pirate Kit.
 
 Source repositories (CC0 mirrors)
 ---------------------------------
   https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+  https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0
   https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
   https://github.com/KhronosGroup/glTF-Sample-Assets  (Models/ToyCar)
+  https://quaternius.com/packs/piratekit.html         (boat — manual)
 
 Full CC0 legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
 

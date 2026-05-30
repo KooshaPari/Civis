@@ -143,6 +143,15 @@ the branch) will retrigger `deploy.yml` and publish a working bundle to
 4. **Sweep remaining phenotype.space subdomains** (tokn, thegent, hexakit, etc.)
    for the same base-path 404 once the base fix pattern is decided.
 
+## Known Residual Risk (DINOForge)
+
+- **Flaky `.temp` media-import failure.** A custom-domain build run hit
+  `ERR_MODULE_NOT_FOUND` for `.vitepress/.temp/embeds/media/mods-quick-panel.mp4`
+  (the file *does* exist at `docs/embeds/media/mods-quick-panel.mp4`). This is a
+  VitePress `.temp` relative-path resolution race, intermittent, and pre-existing
+  — the standard `GITHUB_PAGES` build passes cleanly. If CI flakes on this,
+  rerun, or convert the markdown video embed to an absolute (base-relative) path.
+
 ## Method / Repro Commands
 
 ```powershell

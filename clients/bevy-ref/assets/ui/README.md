@@ -45,6 +45,9 @@ Bevy cannot load SVG directly; all files must be rasterised to PNG before use (s
 | `policy.svg` | Scroll with gear overlay |
 | `time-play.svg` | Clock face + play triangle |
 | `time-pause.svg` | Clock face + pause bars |
+| `measure.svg` | Diagonal ruler with tick marks + gold endpoint nodes — measure/ruler tool |
+| `camera-orbit.svg` | Orbit ellipses around a central pivot with a camera node — orbit camera tool |
+| `erase.svg` | Tilted eraser block with gold leading face + debris particles — erase/delete tool |
 
 #### `faction-crests/` — 128×128 viewBox, accent-color sigils, transparent bg
 
@@ -54,6 +57,8 @@ Bevy cannot load SVG directly; all files must be rasterised to PNG before use (s
 | `crest-blue.svg` | `#2980b9` (ocean blue) | Tide Glyph | Concentric rings, wave arcs, trident central mark |
 | `crest-green.svg` | `#27ae60` (forest green) | Root Sigil | Branching fractal tree with leaf nodes and roots |
 | `crest-gold.svg` | `#E8B84B` (gold) | Solar Compass | 8-point sun-wheel, compass needle diamond, hub |
+| `crest-cyan.svg` | `#50C8F0` (cyan) | Aether Lattice | Hexagonal crystal prism, inner lattice diamond, cardinal nodes |
+| `crest-violet.svg` | `#9b59b6` (violet) | Veil Sigil | Arcane eye over a crescent moon, upper rays, rotated-square ring |
 
 #### `material-icons/` — 48×48 viewBox, voxel material swatches
 
@@ -67,6 +72,7 @@ Bevy cannot load SVG directly; all files must be rasterised to PNG before use (s
 | `gas.svg` | Gas/steam | Three rising wispy plume strokes |
 | `ice.svg` | Solid (frozen) | Hexagonal snowflake crystal form |
 | `ore.svg` | Solid (mineral) | Rough chunk with cyan glowing vein + gold speckle |
+| `wood.svg` | Solid (organic) | Cut log end with concentric growth rings, off-center pith, radial crack |
 
 #### `hud/` — UI element SVGs, 9-slice friendly where noted
 

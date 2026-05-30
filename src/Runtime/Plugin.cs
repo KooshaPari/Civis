@@ -733,6 +733,13 @@ namespace DINOForge.Runtime
 #pragma warning restore DF0116
                     iterationCount++;
 
+                    // iter-149e: bump the engine heartbeat file from the FALLBACK thread too. This is
+                    // a separate file from the debug log, so if the heartbeat counter keeps advancing
+                    // with source "fallback" while the plugin LOG is frozen, the bg thread is ALIVE and
+                    // the freeze is purely a log-write contention — vs the counter freezing too, which
+                    // proves the bg thread itself is suspended/dead (the WinDbg dormant-plugin case).
+                    BumpEngineHeartbeat("fallback#" + iterationCount);
+
                     // Blocker 1 fix (iter-149b, 2026-05-29): DO NOT call EnsureServerAlive() here.
                     // EnsureServerAlive performs a pipe Stop()->Start() (NamedPipeServerStream dispose +
                     // fresh server thread) whenever BridgeServerThreadAlive=False — which is ALWAYS the

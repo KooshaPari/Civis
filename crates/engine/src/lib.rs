@@ -12,6 +12,7 @@
 //! - `io` - File I/O utilities
 
 pub mod engine;
+pub mod disasters;
 pub mod hash_chain;
 pub mod integrity;
 pub mod invariants;
@@ -32,6 +33,7 @@ pub use engine::{
     DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
     Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
 };
+pub use disasters::{trigger_disaster, DisasterKind};
 pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
     spawn_military_at, spawn_port_at, unit_type_label,

@@ -3,7 +3,11 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const isPagesBuild = process.env.GITHUB_ACTIONS === 'true' || process.env.GITHUB_PAGES === 'true'
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'Dino'
-const docsBase = isPagesBuild ? `/${repoName}/` : '/'
+// Custom-domain deploys (e.g. dino.phenotype.space) serve the site at root `/`,
+// so the GitHub Pages sub-path base (`/<repo>/`) would 404 every asset there.
+// The phenotype.space pipeline signals this via PHENOTYPE_CUSTOM_DOMAIN=true.
+const isCustomDomain = process.env.PHENOTYPE_CUSTOM_DOMAIN === 'true'
+const docsBase = isCustomDomain ? '/' : isPagesBuild ? `/${repoName}/` : '/'
 
 export default withMermaid(
   defineConfig({

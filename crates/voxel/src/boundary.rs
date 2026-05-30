@@ -1,125 +1,137 @@
-//! World-boundary helpers for bounded voxel simulations.
+//! Boundary helpers for finite voxel domains.
+//!
+//! The simulation code in this crate operates on bounded regions even though the
+//! underlying `VoxelWorld` storage is sparse. This module defines the finite box
+//! and provides helpers to seed and enforce solid edge cells.
 
-use crate::MaterialId;
+use crate::{MaterialId, VoxelWorld, WorldCoord};
 
-/// Dense-grid bounds for a voxel world.
+/// Inclusive-min, exclusive-max bounds in voxel coordinates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Bounds {
-    /// World dimensions in `[x, y, z]` order.
-    pub dims: [usize; 3],
+pub struct Bounds3 {
+    /// Minimum voxel coordinate included in the region.
+    pub min: [i32; 3],
+    /// Exclusive maximum voxel coordinate.
+    pub max: [i32; 3],
 }
 
-impl Bounds {
-    /// Returns the flattened index for an in-bounds coordinate.
+impl Bounds3 {
+    /// Construct bounds from an origin and size.
     #[must_use]
-    pub fn idx(self, x: usize, y: usize, z: usize) -> usize {
-        x + y * self.dims[0] + z * self.dims[0] * self.dims[1]
+    pub const fn from_origin_size(origin: [i32; 3], size: [i32; 3]) -> Self {
+        Self {
+            min: origin,
+            max: [origin[0] + size[0], origin[1] + size[1], origin[2] + size[2]],
+        }
     }
 
-    /// Returns `true` when the coordinate lies within the world dimensions.
+    /// Returns `true` when `cell` lies inside the bounded domain.
     #[must_use]
-    pub fn in_bounds(self, x: usize, y: usize, z: usize) -> bool {
-        x < self.dims[0] && y < self.dims[1] && z < self.dims[2]
+    pub const fn contains_cell(self, cell: [i32; 3]) -> bool {
+        cell[0] >= self.min[0]
+            && cell[0] < self.max[0]
+            && cell[1] >= self.min[1]
+            && cell[1] < self.max[1]
+            && cell[2] >= self.min[2]
+            && cell[2] < self.max[2]
     }
 
-    /// Returns `true` when the coordinate is on any outer face of the box.
+    /// Returns `true` when `cell` lies on any domain edge.
     #[must_use]
-    pub fn is_edge(self, x: usize, y: usize, z: usize) -> bool {
-        self.in_bounds(x, y, z)
-            && (x == 0
-                || y == 0
-                || z == 0
-                || x + 1 == self.dims[0]
-                || y + 1 == self.dims[1]
-                || z + 1 == self.dims[2])
+    pub const fn is_boundary_cell(self, cell: [i32; 3]) -> bool {
+        self.contains_cell(cell)
+            && (cell[0] == self.min[0]
+                || cell[0] == self.max[0] - 1
+                || cell[1] == self.min[1]
+                || cell[1] == self.max[1] - 1
+                || cell[2] == self.min[2]
+                || cell[2] == self.max[2] - 1)
+    }
+
+    /// Returns `true` when `cell` is on the floor plane.
+    #[must_use]
+    pub const fn is_floor_cell(self, cell: [i32; 3]) -> bool {
+        self.contains_cell(cell) && cell[1] == self.min[1]
     }
 }
 
-/// Sets all edge cells of a dense voxel grid to `wall`.
-pub fn seal_walls(cells: &mut [MaterialId], dims: [usize; 3], wall: MaterialId) {
-    let bounds = Bounds { dims };
-    for z in 0..dims[2] {
-        for y in 0..dims[1] {
-            for x in 0..dims[0] {
-                if bounds.is_edge(x, y, z) {
-                    cells[bounds.idx(x, y, z)] = wall;
+fn cell_to_world(voxel_span: i64, cell: [i32; 3]) -> WorldCoord {
+    WorldCoord {
+        x: i64::from(cell[0]) * voxel_span,
+        y: i64::from(cell[1]) * voxel_span,
+        z: i64::from(cell[2]) * voxel_span,
+    }
+}
+
+/// Returns `true` when the coordinate is inside the bounded domain.
+#[must_use]
+pub fn contains_world_coord(bounds: Bounds3, voxel_span: i64, coord: WorldCoord) -> bool {
+    if voxel_span == 0 {
+        return false;
+    }
+    let cell = [
+        coord.x.div_euclid(voxel_span) as i32,
+        coord.y.div_euclid(voxel_span) as i32,
+        coord.z.div_euclid(voxel_span) as i32,
+    ];
+    bounds.contains_cell(cell)
+}
+
+/// Seed the solid domain edges and floor with `wall_material`.
+pub fn seed_boundary_walls(
+    world: &mut VoxelWorld<MaterialId>,
+    voxel_span: i64,
+    bounds: Bounds3,
+    wall_material: MaterialId,
+) {
+    for x in bounds.min[0]..bounds.max[0] {
+        for y in bounds.min[1]..bounds.max[1] {
+            for z in bounds.min[2]..bounds.max[2] {
+                let cell = [x, y, z];
+                if bounds.is_boundary_cell(cell) || bounds.is_floor_cell(cell) {
+                    world.write(cell_to_world(voxel_span, cell), wall_material);
                 }
             }
         }
     }
 }
 
-/// Converts a signed coordinate into an in-bounds grid coordinate.
-#[must_use]
-pub fn clamp_coord(dims: [usize; 3], x: i64, y: i64, z: i64) -> Option<(usize, usize, usize)> {
-    let ux = usize::try_from(x).ok()?;
-    let uy = usize::try_from(y).ok()?;
-    let uz = usize::try_from(z).ok()?;
-    let bounds = Bounds { dims };
-    bounds.in_bounds(ux, uy, uz).then_some((ux, uy, uz))
-}
-
-/// Returns `true` when a neighbor lookup falls outside the world bounds.
-#[must_use]
-pub fn neighbor_is_wall(dims: [usize; 3], x: i64, y: i64, z: i64) -> bool {
-    clamp_coord(dims, x, y, z).is_none()
-}
-
-/// Verifies that every edge cell in the grid equals `wall`.
-#[must_use]
-pub fn assert_sealed(cells: &[MaterialId], dims: [usize; 3], wall: MaterialId) -> bool {
-    let bounds = Bounds { dims };
-    for z in 0..dims[2] {
-        for y in 0..dims[1] {
-            for x in 0..dims[0] {
-                if bounds.is_edge(x, y, z) && cells[bounds.idx(x, y, z)] != wall {
-                    return false;
-                }
-            }
-        }
-    }
-    true
+/// Re-enforce the boundary walls after a simulation step.
+pub fn enforce_boundary_walls(
+    world: &mut VoxelWorld<MaterialId>,
+    voxel_span: i64,
+    bounds: Bounds3,
+    wall_material: MaterialId,
+) {
+    seed_boundary_walls(world, voxel_span, bounds, wall_material);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::material::{AIR, BEDROCK};
+    use crate::material::{BEDROCK, WATER};
 
     #[test]
-    fn seal_then_assert() {
-        let dims = [4, 4, 4];
-        let mut cells = vec![AIR; dims[0] * dims[1] * dims[2]];
-        let interior_idx = Bounds { dims }.idx(1, 1, 1);
-        seal_walls(&mut cells, dims, BEDROCK);
-        assert!(assert_sealed(&cells, dims, BEDROCK));
-        assert_eq!(cells[interior_idx], AIR);
+    fn containment_and_edges_are_consistent() {
+        let bounds = Bounds3::from_origin_size([0, 0, 0], [8, 4, 8]);
+        assert!(bounds.contains_cell([0, 0, 0]));
+        assert!(bounds.contains_cell([7, 3, 7]));
+        assert!(!bounds.contains_cell([8, 3, 7]));
+        assert!(bounds.is_boundary_cell([0, 2, 4]));
+        assert!(bounds.is_floor_cell([3, 0, 3]));
+        assert!(!bounds.is_floor_cell([3, 1, 3]));
     }
 
     #[test]
-    fn out_of_bounds_is_wall() {
-        let dims = [4, 3, 2];
-        assert!(neighbor_is_wall(dims, -1, 1, 1));
-        assert!(neighbor_is_wall(dims, 4, 1, 1));
-        assert!(!neighbor_is_wall(dims, 1, 1, 1));
-    }
-
-    #[test]
-    fn clamp() {
-        let dims = [4, 3, 2];
-        assert_eq!(clamp_coord(dims, 1, 2, 1), Some((1, 2, 1)));
-        assert_eq!(clamp_coord(dims, -1, 0, 0), None);
-        assert_eq!(clamp_coord(dims, 4, 0, 0), None);
-    }
-
-    #[test]
-    fn edge_detection() {
-        let bounds = Bounds { dims: [4, 4, 4] };
-        assert!(bounds.is_edge(0, 1, 1));
-        assert!(bounds.is_edge(3, 1, 1));
-        assert!(bounds.is_edge(1, 0, 1));
-        assert!(bounds.is_edge(1, 3, 1));
-        assert!(bounds.is_edge(1, 1, 0));
-        assert!(!bounds.is_edge(1, 1, 1));
+    fn boundary_seeding_writes_floor_and_walls() {
+        let bounds = Bounds3::from_origin_size([0, 0, 0], [4, 4, 4]);
+        let mut world = VoxelWorld::new(1);
+        seed_boundary_walls(&mut world, 1, bounds, BEDROCK);
+        assert_eq!(world.read(cell_to_world(1, [0, 0, 0])), BEDROCK);
+        assert_eq!(world.read(cell_to_world(1, [3, 3, 3])), BEDROCK);
+        assert_eq!(world.read(cell_to_world(1, [1, 1, 1])), MaterialId(0));
+        assert!(contains_world_coord(bounds, 1, cell_to_world(1, [2, 2, 2])));
+        assert!(!contains_world_coord(bounds, 1, cell_to_world(1, [4, 2, 2])));
+        assert_ne!(world.read(cell_to_world(1, [1, 1, 1])), WATER);
     }
 }

@@ -180,6 +180,21 @@ See [Your First Mod](docs/guides/your-first-mod.md) for a 5-minute quickstart, o
 
 ## Demo
 
+### Model Preview Gallery
+
+> [!EMBED] HAVE — Star Wars pack model previews (#958)
+> Headless-rendered previews of the `warfare-starwars` pack's real 3D models. Full gallery: [`docs/screenshots/model-previews/`](docs/screenshots/model-previews/) (contact sheet + per-model hero shots; rendered via `unity-assetbundle-builder/Assets/Editor/RenderModelPreviews.cs`).
+
+![Star Wars model contact sheet](docs/screenshots/model-previews/contact-sheet-models.png)
+
+| Droideka | Clone Trooper (Phase 2) | AAT Walker | V-19 Torrent |
+|:---:|:---:|:---:|:---:|
+| ![Droideka](docs/screenshots/model-previews/cis_droideka.png) | ![Clone Trooper Phase 2](docs/screenshots/model-previews/sw_clone_trooper_phase2.png) | ![AAT Walker](docs/screenshots/model-previews/sw_aat_walker.png) | ![V-19 Torrent](docs/screenshots/model-previews/rep_v19_torrent.png) |
+| **Droid Starfighter** | **B1 Battle Droid** | **Probe Droid** | **ARF Trooper** |
+| ![Droid Starfighter](docs/screenshots/model-previews/sw_droid_starfighter.png) | ![B1 Battle Droid](docs/screenshots/model-previews/cis_b1_battle_droid.png) | ![Probe Droid](docs/screenshots/model-previews/cis_probe_droid.png) | ![ARF Trooper](docs/screenshots/model-previews/rep_arf_trooper.png) |
+
+### In-Game Mod Menu + Live Pack Swap
+
 > [!EMBED] STUB — in-game mod menu + live pack swap
 > A recording of the F10 mod menu, a live pack hot-reload, and an in-game asset swap belongs here. Pending rich-embed pipeline (#966). Source frames available under `docs/screenshots/`.
 

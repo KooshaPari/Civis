@@ -42,8 +42,9 @@ The broader `Dev/*` repos (phenotype-* family, BytePort, OmniRoute, etc.) were o
 | bare-cua (playcua) | Added license/rust/transport badges, **Mermaid** stdio sequence diagram, EMBED demo stub | `6eeae50` (docs/readme-audit-20260530) |
 | Civis | Added **Mermaid** multi-client architecture diagram + EMBED stub | `62fb8aa3` (ci/local-first-manifest-verify) |
 | DINOForge | Cross-repo audit doc + README Demo section with EMBED stub | `0bdd4938` (feat/unityexplorer-devtools-20260528) |
+| DINOForge | Committed #958 model-preview gallery (contact sheet + 9 real-model PNGs) + `RenderModelPreviews.cs`; README **Model Preview Gallery** EMBED stub → **HAVE** | (this commit) |
 
-All `> [!EMBED] STUB ...` boxes are placed where demo/media belongs so the #966 rich-embed pipeline can fill them.
+All `> [!EMBED] STUB ...` boxes are placed where demo/media belongs so the #966 rich-embed pipeline can fill them. The DINOForge **Model Preview Gallery** embed is now **HAVE** — backed by the committed `docs/screenshots/model-previews/` gallery (#958). The remaining DINOForge in-game mod-menu/live-swap embed stays STUB pending a recording.
 
 ## Documented follow-up (not done this pass)
 

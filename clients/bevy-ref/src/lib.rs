@@ -61,8 +61,6 @@ pub mod skybox;
 pub mod spawn_tools;
 #[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(feature = "voxel")]
-pub mod voxel_sim;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,

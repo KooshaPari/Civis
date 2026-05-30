@@ -1,0 +1,26 @@
+{
+  "name": "@phenotype/doc-embeds",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generic, cross-project rich-doc-embed pipeline: screenshots/recording + annotations.json -> annotated mp4 + gif for embedding in docs.",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "render": "node ./bin/render.mjs",
+    "render:mp4": "node ./bin/render.mjs --format mp4",
+    "render:gif": "node ./bin/render.mjs --format gif",
+    "build:example": "node ./bin/render.mjs --annotations ./examples/mods-quick-panel/annotations.json --format both"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.467",
+    "@remotion/gif": "4.0.467",
+    "remotion": "4.0.467",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.0"
+  }
+}

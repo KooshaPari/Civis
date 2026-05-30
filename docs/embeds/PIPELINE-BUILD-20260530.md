@@ -235,4 +235,5 @@ recording is also a verified journey (record once → verify + embed).
 - Embedded in doc: `docs/proof/iter146-ui-rendering-proof.md`
 - This report: `docs/embeds/PIPELINE-BUILD-20260530.md`
 
-Commit SHA: _recorded after commit below._
+Commit SHA: `edd9bef03d69d8f55fb9d7ef3dd3006a3d7cf8d1` (local, on
+`feat/unityexplorer-devtools-20260528`; not pushed).

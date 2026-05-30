@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Time/Clock resource icon -->
+  <defs>
+    <filter id="clockGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- clock face -->
+  <circle cx="16" cy="16" r="13" fill="#0d1628" stroke="#50C8F0" stroke-width="2" filter="url(#clockGlow)"/>
+  <!-- tick marks -->
+  <line x1="16" y1="5" x2="16" y2="8" stroke="#50C8F0" stroke-width="1.5" opacity="0.7"/>
+  <line x1="16" y1="24" x2="16" y2="27" stroke="#50C8F0" stroke-width="1.5" opacity="0.7"/>
+  <line x1="5" y1="16" x2="8" y2="16" stroke="#50C8F0" stroke-width="1.5" opacity="0.7"/>
+  <line x1="24" y1="16" x2="27" y2="16" stroke="#50C8F0" stroke-width="1.5" opacity="0.7"/>
+  <!-- minute hand -->
+  <line x1="16" y1="16" x2="16" y2="8" stroke="#50C8F0" stroke-width="2" stroke-linecap="round" filter="url(#clockGlow)"/>
+  <!-- hour hand -->
+  <line x1="16" y1="16" x2="22" y2="18" stroke="#E8B84B" stroke-width="2" stroke-linecap="round" filter="url(#clockGlow)"/>
+  <!-- center dot -->
+  <circle cx="16" cy="16" r="2" fill="#E8B84B"/>
+</svg>

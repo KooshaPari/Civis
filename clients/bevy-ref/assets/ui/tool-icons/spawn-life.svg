@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="cellGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#50C8F0" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#50C8F0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- ambient glow -->
+  <circle cx="32" cy="38" r="20" fill="url(#cellGlow)"/>
+  <!-- stem -->
+  <path d="M32,52 L32,28" stroke="#50C8F0" stroke-width="2.5" stroke-linecap="round" filter="url(#glow)"/>
+  <!-- left tendril -->
+  <path d="M32,38 Q20,30 18,20" stroke="#50C8F0" stroke-width="2" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <!-- right tendril -->
+  <path d="M32,34 Q44,26 46,16" stroke="#50C8F0" stroke-width="2" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <!-- sprouting cell/bud at top of stem -->
+  <ellipse cx="32" cy="24" rx="6" ry="7" fill="#0d1628" stroke="#50C8F0" stroke-width="2" filter="url(#glow)"/>
+  <!-- nucleus dot -->
+  <circle cx="32" cy="24" r="2.5" fill="#E8B84B" opacity="0.9"/>
+  <!-- small division line inside cell -->
+  <line x1="32" y1="19" x2="32" y2="29" stroke="#50C8F0" stroke-width="0.8" opacity="0.5"/>
+  <!-- root tendrils at base -->
+  <path d="M32,52 Q26,56 22,54" stroke="#50C8F0" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M32,52 Q38,56 42,54" stroke="#50C8F0" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+</svg>

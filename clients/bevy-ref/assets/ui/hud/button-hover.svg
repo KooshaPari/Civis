@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+  <!--
+    Button hover/active state. Same 9-slice guides as button.svg.
+    Brighter cyan border, gold accent, slightly lighter fill.
+  -->
+  <defs>
+    <linearGradient id="btnHoverBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e3060"/>
+      <stop offset="100%" stop-color="#0e1838"/>
+    </linearGradient>
+    <linearGradient id="btnHoverSheen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#50C8F0" stop-opacity="0.28"/>
+      <stop offset="70%" stop-color="#50C8F0" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="hoverGlow" x="-8%" y="-8%" width="116%" height="116%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="120" height="40" rx="6" ry="6" fill="url(#btnHoverBg)"/>
+  <rect x="0" y="0" width="120" height="22" rx="6" ry="6" fill="url(#btnHoverSheen)"/>
+  <!-- glowing border -->
+  <rect x="0.75" y="0.75" width="118.5" height="38.5" rx="5.5" ry="5.5"
+    fill="none" stroke="#50C8F0" stroke-width="2" filter="url(#hoverGlow)"/>
+  <!-- gold bottom accent bar -->
+  <line x1="20" y1="38" x2="100" y2="38" stroke="#E8B84B" stroke-width="1.5" opacity="0.6"/>
+  <!-- corner accent marks (brighter) -->
+  <line x1="4" y1="0" x2="14" y2="0" stroke="#50C8F0" stroke-width="2" opacity="0.8"/>
+  <line x1="106" y1="0" x2="116" y2="0" stroke="#50C8F0" stroke-width="2" opacity="0.8"/>
+  <line x1="4" y1="40" x2="14" y2="40" stroke="#50C8F0" stroke-width="2" opacity="0.8"/>
+  <line x1="106" y1="40" x2="116" y2="40" stroke="#50C8F0" stroke-width="2" opacity="0.8"/>
+</svg>

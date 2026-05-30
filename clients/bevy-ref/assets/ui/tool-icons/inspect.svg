@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="lensGrad" cx="40%" cy="38%" r="55%">
+      <stop offset="0%" stop-color="#1a3a5c" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0a1828" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <!-- magnifier lens ring -->
+  <circle cx="26" cy="26" r="17" fill="url(#lensGrad)" stroke="#50C8F0" stroke-width="3" filter="url(#glow)"/>
+  <!-- lens internal cross-hairs -->
+  <line x1="14" y1="26" x2="38" y2="26" stroke="#50C8F0" stroke-width="1" opacity="0.4"/>
+  <line x1="26" y1="14" x2="26" y2="38" stroke="#50C8F0" stroke-width="1" opacity="0.4"/>
+  <!-- lens glint -->
+  <circle cx="20" cy="20" r="3.5" fill="#50C8F0" opacity="0.25"/>
+  <!-- handle -->
+  <line x1="39" y1="39" x2="54" y2="54" stroke="#50C8F0" stroke-width="4" stroke-linecap="round" filter="url(#glow)"/>
+  <line x1="39" y1="39" x2="54" y2="54" stroke="#E8B84B" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+</svg>

@@ -22,11 +22,16 @@
 #![warn(missing_docs)]
 
 pub mod cluster;
+pub mod culture;
+pub mod diplomacy;
 pub mod daily_path;
 
 pub use cluster::{
     cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
     ClusterMember, MembershipPayoff,
+};
+pub use diplomacy::{
+    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,

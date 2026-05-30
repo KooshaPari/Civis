@@ -81,6 +81,48 @@ namespace DINOForge.Runtime
         /// <summary>Flag indicating PersistentRoot needs resurrection.</summary>
         internal static volatile bool NeedsResurrection;
 
+        // ── Engine-driven heartbeat (iter-149e, 2026-05-29) ───────────────────────────
+        // WinDbg MDMP (docs/sessions/engine-ui-windbg-mdmp-20260529.md) proved the wedge is a
+        // DORMANT-PLUGIN lifecycle bug, NOT a native deadlock: the engine main thread is in the
+        // normal Unity idle wait while the plugin's worker threads are gone. The old wedge
+        // classifier ("log mtime frozen + process alive + Responding") could not distinguish a
+        // benign-engine/dormant-plugin from a true native wedge. This heartbeat is incremented and
+        // flushed to BepInEx/dinoforge_heartbeat.txt from EVERY reliable main-thread tick
+        // (scene events + PlayerLoop). If the heartbeat keeps advancing while the plugin LOG is
+        // frozen, it is a dormant-plugin lifecycle bug (this class). If both are frozen, it is a
+        // native wedge (iter-144 class). Never misclassify again.
+        private static long _engineHeartbeat;
+        private static readonly object _engineHeartbeatLock = new object();
+        private const string EngineHeartbeatFileName = "dinoforge_heartbeat.txt";
+
+        /// <summary>
+        /// Increments the engine heartbeat and best-effort flushes it to
+        /// <c>BepInEx/dinoforge_heartbeat.txt</c>. Safe to call from any reliable main-thread tick
+        /// (scene events, PlayerLoop). Never throws (Pattern #104/#111).
+        /// </summary>
+        internal static void BumpEngineHeartbeat(string source)
+        {
+            try
+            {
+                long n;
+                lock (_engineHeartbeatLock)
+                {
+                    n = ++_engineHeartbeat;
+                }
+                // Throttle disk writes to ~once per N bumps to avoid I/O churn; callers gate cadence.
+                string root = BepInEx.Paths.BepInExRootPath;
+                if (string.IsNullOrEmpty(root)) return;
+                string path = Path.Combine(root, EngineHeartbeatFileName);
+                string body = n.ToString() + " " + DateTime.UtcNow.ToString("o") + " " + (source ?? "") + "\n";
+                File.WriteAllText(path, body, System.Text.Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                try { DebugLog.Write("Plugin", $"[Heartbeat] write failed (non-fatal): {ex.GetType().Name}: {ex.Message}"); }
+                catch { /* diagnostic only */ }
+            }
+        }
+
         /// <summary>Number of consecutive resurrection attempts since last successful resurrection.</summary>
         private static int _resurrectionAttempts;
 
@@ -347,15 +389,6 @@ namespace DINOForge.Runtime
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded: name='{scene.name}' buildIndex={scene.buildIndex} mode={mode} isLoaded={scene.isLoaded}");
-            EnsureEventSystemAlive();
-            try
-            {
-                Bridge.KeyInputSystem.RecreateInCurrentWorld();
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded RecreateInCurrentWorld failed: {ex.Message}");
-            }
 
             // Always remember the latest scene name so a fallback revive has a meaningful label.
             if (!string.IsNullOrEmpty(scene.name))
@@ -363,7 +396,17 @@ namespace DINOForge.Runtime
                 LastSceneNameForResurrection = scene.name;
             }
 
+            // iter-149e ROOT-CAUSE fix: REVIVE FIRST. Previously EnsureEventSystemAlive() (a heavy
+            // FindObjectsOfType ECall) + RecreateInCurrentWorld() ran BEFORE the revive; if either
+            // wedged or threw during the MainMenu additive asset load, the revive never executed and
+            // the plugin stayed dormant (the MDMP symptom). The revive is the load-bearing action —
+            // run it on the main thread first, then do the (now best-effort) EventSystem/world fixups.
             MainThreadReviveIfNeeded(scene.name, "sceneLoaded(main-thread)");
+
+            try { EnsureEventSystemAlive(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded EnsureEventSystemAlive failed (non-fatal): {ex.Message}"); }
+            try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
         }
 
         /// <summary>
@@ -375,12 +418,25 @@ namespace DINOForge.Runtime
         /// </summary>
         private static void MainThreadReviveIfNeeded(string sceneName, string trigger)
         {
+            // iter-149e: engine-driven heartbeat — this runs on the Unity main thread for EVERY
+            // scene event, so it is a reliable liveness pulse that survives plugin-log freezes.
+            BumpEngineHeartbeat(trigger);
+
             bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
             bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null;
             if (!needsRevive)
             {
                 return;
             }
+
+            // iter-149e ROOT-CAUSE fix: a NEW scene event is a fresh opportunity to revive. During
+            // InitialGameLoader (no Camera, no MainMenu) the create-root path can burn through
+            // MaxResurrectionAttempts (3) and PERMANENTLY halt (IsResurrectionCapExhausted latches
+            // true forever). When MainMenu later loads with a valid Camera, resurrection would stay
+            // capped-out and never fire — the dormant-plugin symptom. Reset the consecutive-attempt
+            // counter on each main-thread scene event so a loader-phase exhaustion never poisons the
+            // MainMenu revive. The cap still bounds churn WITHIN a single scene's tick window.
+            _resurrectionAttempts = 0;
 
             LastSceneNameForResurrection = string.IsNullOrEmpty(sceneName) ? LastSceneNameForResurrection : sceneName;
             NeedsDeferredResurrection = true;
@@ -457,26 +513,25 @@ namespace DINOForge.Runtime
         private static void OnActiveSceneChanged(Scene oldScene, Scene newScene)
         {
             DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged: old='{oldScene.name}' new='{newScene.name}'");
+
+            // iter-149e ROOT-CAUSE fix: REVIVE FIRST (mirrors OnSceneLoaded). The revive is the
+            // load-bearing action and must not be gated behind the heavy EventSystem/world fixups
+            // that can wedge during an asset load. activeSceneChanged fires on the Unity main thread.
+            if (!string.IsNullOrEmpty(newScene.name))
+            {
+                LastSceneNameForResurrection = newScene.name;
+            }
+            MainThreadReviveIfNeeded(newScene.name, "activeSceneChanged(main-thread)");
+
             // Iter-144 menu-unclickable fix: DINO's MainMenu scene EventSystem is destroyed on
             // scene transitions, leaving EventSystem.current = null even though our
             // DontDestroyOnLoad'd EventSystem (DFCanvas) still exists. Re-promote (or recreate)
             // on every scene change so NativeMenuInjector clicks route correctly.
-            EnsureEventSystemAlive();
-            try
-            {
-                Bridge.KeyInputSystem.RecreateInCurrentWorld();
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed: {ex.Message}");
-            }
-            // RuntimeDriver may have been destroyed when DINO destroyed our root. activeSceneChanged
-            // fires on the Unity MAIN THREAD after the new scene is active, so TryResurrect's Unity
-            // ECalls (Camera.main / AddComponent / Initialize coroutine) are safe here — unlike the
-            // ResurrectionFallback BACKGROUND thread, which only MARKS the need. Shared with
-            // sceneLoaded via MainThreadReviveIfNeeded (Blocker 2 fix). The Unity fake-null trap
-            // (ReferenceEquals + s_rootJustDestroyed) is handled inside that helper.
-            MainThreadReviveIfNeeded(newScene.name, "activeSceneChanged(main-thread)");
+            try { EnsureEventSystemAlive(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged EnsureEventSystemAlive failed (non-fatal): {ex.Message}"); }
+            try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
+            // Revive already executed at the TOP of this handler (iter-149e reorder).
         }
 
         /// <summary>
@@ -714,23 +769,20 @@ namespace DINOForge.Runtime
                     // (DINOForgePlayerLoopUpdate or a scene event) performs the actual revive on a
                     // thread where Unity ECalls are safe. We re-arm and keep heart-beating so the need
                     // never silently drops, and so the heartbeat proves the loop is no longer wedged.
-                    if (ResurrectionSucceeded())
-                    {
-                        // A main-thread consumer already revived the driver — clear + disarm.
-                        NeedsResurrection = false;
-                        NeedsDeferredResurrection = false;
-                        s_rootJustDestroyed = false;
-                        s_skipBundleUnload = false;
-                        ResetGraceDeadline();
-                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: driver already live (main-thread revive) — flags cleared.");
-                    }
-                    else
-                    {
-                        // Keep the need MARKED for the main-thread consumer; never revive on bg thread.
-                        NeedsDeferredResurrection = true;
-                        RearmGraceDeadline(GraceWindowMs);
-                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms elapsed — driver not live; MARKED NeedsDeferredResurrection for main-thread revive (no bg-thread Unity ECalls). scene='{LastSceneNameForResurrection ?? "fallback-unknown"}'.");
-                    }
+                    // iter-149e ROOT-CAUSE fix (WinDbg MDMP): the previous code called
+                    // ResurrectionSucceeded() HERE — which performs a Unity ECall
+                    // (PersistentRoot.GetComponent<RuntimeDriver>()) on THIS BACKGROUND THREAD.
+                    // During the InitialGameLoader->MainMenu asset load, Unity ECalls from a bg
+                    // thread wedge/tear the calling thread (memory: "Resources.* from a bg thread
+                    // DEADLOCKS during asset loading"; GetComponent is in the same ECall family).
+                    // The MDMP showed this fallback thread GONE post-OnDestroy with NO managed frame
+                    // and NO stop-flag ever set — i.e. it was torn inside the ECall, never reaching
+                    // heartbeat #12. The bg loop MUST do PURE managed work only: mark the need and
+                    // re-arm. The actual revive (and the GetComponent liveness probe) happens ONLY on
+                    // the Unity main thread via OnSceneLoaded/OnActiveSceneChanged -> MainThreadReviveIfNeeded.
+                    NeedsDeferredResurrection = true;
+                    RearmGraceDeadline(GraceWindowMs);
+                    DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms elapsed — MARKED NeedsDeferredResurrection for main-thread revive (NO bg-thread Unity ECalls — iter-149e). scene='{LastSceneNameForResurrection ?? "fallback-unknown"}'.");
                 }
                 catch (ThreadAbortException)
                 {
@@ -977,6 +1029,12 @@ namespace DINOForge.Runtime
             _playerLoopEventSystemTick++;
             if (_playerLoopEventSystemTick % 60 == 1)
             {
+                // iter-149e: heartbeat from the PlayerLoop too. The WinDbg MDMP showed NO Harmony/
+                // DINOForge frame on the idle main thread — i.e. this injected PlayerLoop callback
+                // may NOT actually tick under DINO's replaced PlayerLoop. If dinoforge_heartbeat.txt
+                // only ever advances with scene-event sources (never "playerloop"), that confirms
+                // the PlayerLoop revive path is dead and scene events are the sole reliable hook.
+                BumpEngineHeartbeat("playerloop");
                 EnsureEventSystemAlive();
                 try { SharedBridgeServer?.EnsureServerAlive(); }
                 catch (Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] EnsureServerAlive: {ex.Message}"); }

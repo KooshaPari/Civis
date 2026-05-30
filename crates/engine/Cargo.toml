@@ -36,8 +36,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Civis 3D voxel substrate (sibling Phenotype-org repo via civ-voxel).
 civ-agents = { path = "../agents" }
+civ-needs = { path = "../needs" }
 civ-build = { path = "../build" }
 civ-diffusion = { path = "../diffusion" }
+civ-traffic = { path = "../civ-traffic" }
 civ-voxel = { path = "../voxel" }
 
 # Planet and tactics foundations.

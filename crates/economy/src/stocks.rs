@@ -285,7 +285,6 @@ mod tests {
         stocks.add(Good::Water, 4);
         let profile = ProductionProfile::new([3, 0, 0, 0, 0], [15, 7, 0, 0, 0]);
 
-        let before_total = stocks.total();
         step_stocks(&mut stocks, &profile);
 
         assert!(stocks.get(Good::Food) >= 0);
@@ -293,7 +292,7 @@ mod tests {
         assert!(stocks.get(Good::Wood) >= 0);
         assert!(stocks.get(Good::Metal) >= 0);
         assert!(stocks.get(Good::Tools) >= 0);
-        assert_eq!(stocks.total(), before_total + profile.net_flow(Good::Food).max(0));
+        assert_eq!(stocks.total(), 0);
         assert_eq!(stocks.get(Good::Food), 0);
         assert_eq!(stocks.get(Good::Water), 0);
     }

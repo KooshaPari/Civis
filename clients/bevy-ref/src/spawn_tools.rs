@@ -47,6 +47,50 @@ pub enum SpawnTool {
     Terraform,
     /// Remove the entity nearest the clicked point.
     Destroy,
+    /// Drag-to-draw a surfaced road along a desire path (`RoadKind::Road`).
+    Road,
+    /// Drag-to-draw a foot trail (`RoadKind::Trail`).
+    Trail,
+    /// Drag-to-draw a high-throughput highway (`RoadKind::Highway`).
+    Highway,
+    /// Drag-to-draw a water-spanning bridge (`RoadKind::Bridge`).
+    Bridge,
+    /// Click-to-place a dwelling.
+    House,
+    /// Click-to-place an agricultural plot.
+    Farm,
+    /// Click-to-place a production workshop.
+    Workshop,
+    /// Click-to-place a trade market.
+    Market,
+    /// Click-to-place a defensive wall segment.
+    Wall,
+    /// Click-to-place a movement/trade vehicle.
+    Vehicle,
+}
+
+impl SpawnTool {
+    /// True for the drag-to-draw road family (`Road`/`Trail`/`Highway`/`Bridge`).
+    #[must_use]
+    pub fn is_road_draw(self) -> bool {
+        matches!(
+            self,
+            SpawnTool::Road | SpawnTool::Trail | SpawnTool::Highway | SpawnTool::Bridge
+        )
+    }
+
+    /// True for click-to-place structure tools that seat a cuboid on terrain.
+    #[must_use]
+    pub fn is_structure(self) -> bool {
+        matches!(
+            self,
+            SpawnTool::House
+                | SpawnTool::Farm
+                | SpawnTool::Workshop
+                | SpawnTool::Market
+                | SpawnTool::Wall
+        )
+    }
 }
 
 /// Currently active tool (mutated by the HUD tool palette, read here).
@@ -119,6 +163,33 @@ pub struct DestroyEntityRequest {
     pub position: Vec3,
 }
 
+/// Accumulator for the active drag-to-draw road stroke.
+#[derive(Resource, Debug, Default, Clone)]
+pub struct RoadDraft {
+    /// Terrain-surface points collected so far this stroke (world space).
+    pub points: Vec<Vec3>,
+    /// The road tool that started the stroke.
+    pub tool: Option<SpawnTool>,
+}
+
+/// Request to lay a connected road polyline (drag-to-draw release).
+#[derive(Message, Debug, Clone, PartialEq)]
+pub struct PlaceRoadRequest {
+    /// Ordered terrain points; consecutive pairs become undirected segments.
+    pub points: Vec<Vec3>,
+    /// Which road-family tool authored the stroke.
+    pub kind: SpawnTool,
+}
+
+/// Request to seat a structure or vehicle actor on the terrain at a click.
+#[derive(Message, Debug, Clone, Copy, PartialEq)]
+pub struct PlaceStructureRequest {
+    /// World-space click position (terrain-seated by the handler).
+    pub position: Vec3,
+    /// Which structure/vehicle tool authored the placement.
+    pub kind: SpawnTool,
+}
+
 /// Plugin that wires the tool state, ray hit test, and cursor marker together.
 pub struct SpawnToolsPlugin;
 
@@ -128,10 +199,13 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
             .init_resource::<PointerOverUi>()
+            .init_resource::<RoadDraft>()
             .add_message::<SpawnCivilianRequest>()
             .add_message::<SpawnBuildingRequest>()
             .add_message::<SelectEntityRequest>()
             .add_message::<DestroyEntityRequest>()
+            .add_message::<PlaceRoadRequest>()
+            .add_message::<PlaceStructureRequest>()
             .add_systems(Startup, spawn_cursor_marker);
 
         // The egui pointer gate runs first so the click systems see a current
@@ -144,7 +218,10 @@ impl Plugin for SpawnToolsPlugin {
             (
                 update_cursor_marker,
                 handle_spawn_tool_clicks,
+                accumulate_road_draft,
                 apply_spawn_requests,
+                apply_place_road_requests,
+                apply_place_structure_requests,
                 resolve_selection_and_destruction,
                 apply_cursor_marker_visuals,
             )
@@ -255,7 +332,12 @@ fn handle_spawn_tool_clicks(
     mut spawn_building: MessageWriter<SpawnBuildingRequest>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
+    mut place_structure: MessageWriter<PlaceStructureRequest>,
 ) {
+    // Road-family tools are drag-to-draw; handled by `accumulate_road_draft`.
+    if active.tool.is_road_draw() {
+        return;
+    }
     if !buttons.just_pressed(MouseButton::Left) {
         return;
     }
@@ -290,6 +372,69 @@ fn handle_spawn_tool_clicks(
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }
+        SpawnTool::House
+        | SpawnTool::Farm
+        | SpawnTool::Workshop
+        | SpawnTool::Market
+        | SpawnTool::Wall
+        | SpawnTool::Vehicle => {
+            place_structure.write(PlaceStructureRequest {
+                position,
+                kind: active.tool,
+            });
+        }
+        SpawnTool::Road | SpawnTool::Trail | SpawnTool::Highway | SpawnTool::Bridge => {
+            // Unreachable: filtered by the `is_road_draw` early-return above.
+        }
+    }
+}
+
+/// Drag-to-draw accumulator for the road family. While a road tool is active and
+/// the left button is held, append the current terrain hit (deduplicated). On
+/// release, emit a [`PlaceRoadRequest`] for the polyline and reset the draft.
+fn accumulate_road_draft(
+    buttons: Res<ButtonInput<MouseButton>>,
+    active: Res<ActiveTool>,
+    over_ui: Res<PointerOverUi>,
+    marker: Res<CursorMarker>,
+    mut draft: ResMut<RoadDraft>,
+    mut place_road: MessageWriter<PlaceRoadRequest>,
+) {
+    if !active.tool.is_road_draw() {
+        if !draft.points.is_empty() {
+            draft.points.clear();
+            draft.tool = None;
+        }
+        return;
+    }
+
+    if buttons.pressed(MouseButton::Left) && !over_ui.0 {
+        if draft.tool.is_none() {
+            draft.tool = Some(active.tool);
+        }
+        if let Some(p) = marker.position {
+            let keep = draft
+                .points
+                .last()
+                .is_none_or(|last| last.distance_squared(p) > 2.25);
+            if keep {
+                draft.points.push(p);
+            }
+        }
+    }
+
+    if buttons.just_released(MouseButton::Left) {
+        if draft.points.len() >= 2 {
+            let kind = draft.tool.unwrap_or(active.tool);
+            place_road.write(PlaceRoadRequest {
+                points: std::mem::take(&mut draft.points),
+                kind,
+            });
+            info!("[tools] road stroke released -> PlaceRoadRequest ({kind:?})");
+        } else {
+            draft.points.clear();
+        }
+        draft.tool = None;
     }
 }
 
@@ -309,6 +454,138 @@ fn apply_spawn_requests(
     for request in buildings.read() {
         spawn_building_entity(&mut commands, &mut meshes, &mut materials, request.position);
         info!("[tools] SPAWNED building at {:?}", request.position);
+    }
+}
+
+
+/// Shared data tag carried by every user-placed infra actor (road segment,
+/// structure, or vehicle). Records which [`SpawnTool`] authored it so the
+/// renderer / economy can treat user- and sim-placed infra identically while
+/// still being able to style or query by kind.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlacedInfra {
+    /// The tool that authored this actor.
+    pub kind: SpawnTool,
+}
+
+/// Thin road-segment cuboid height (world units) — a low seated slab.
+const ROAD_SEGMENT_THICKNESS: f32 = 0.6;
+
+/// Half-width (world units) of a road slab by tool.
+fn road_half_width(kind: SpawnTool) -> f32 {
+    match kind {
+        SpawnTool::Trail => 1.0,
+        SpawnTool::Road => 1.8,
+        SpawnTool::Highway => 3.0,
+        SpawnTool::Bridge => 2.2,
+        _ => 1.8,
+    }
+}
+
+/// Muted, non-neon surface colour per road tool.
+fn road_color(kind: SpawnTool) -> Color {
+    match kind {
+        SpawnTool::Trail => Color::srgb(0.45, 0.36, 0.24),
+        SpawnTool::Road => Color::srgb(0.32, 0.32, 0.34),
+        SpawnTool::Highway => Color::srgb(0.22, 0.22, 0.25),
+        SpawnTool::Bridge => Color::srgb(0.40, 0.30, 0.20),
+        _ => Color::srgb(0.32, 0.32, 0.34),
+    }
+}
+
+/// Lay a drawn road polyline as a chain of thin seated cuboids (primitive-mesh
+/// fallback until the Asset Lead's road meshes land). Each consecutive point
+/// pair becomes one oriented slab tagged [`PlacedInfra`].
+fn apply_place_road_requests(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut roads: MessageReader<PlaceRoadRequest>,
+) {
+    for request in roads.read() {
+        if request.points.len() < 2 {
+            continue;
+        }
+        let half_w = road_half_width(request.kind);
+        let color = road_color(request.kind);
+        let material = materials.add(StandardMaterial {
+            base_color: color,
+            emissive: LinearRgba::rgb(0.01, 0.01, 0.01),
+            perceptual_roughness: 0.95,
+            ..default()
+        });
+        let mut segments = 0_usize;
+        for pair in request.points.windows(2) {
+            let (a, b) = (pair[0], pair[1]);
+            let delta = b - a;
+            let len = delta.length();
+            if len < 1e-3 {
+                continue;
+            }
+            let mesh = meshes.add(Mesh::from(Cuboid::new(
+                len,
+                ROAD_SEGMENT_THICKNESS,
+                half_w * 2.0,
+            )));
+            let mid = (a + b) * 0.5;
+            let seated = seat_on_terrain(mid, ROAD_SEGMENT_THICKNESS * 0.5);
+            let yaw = (-delta.z).atan2(delta.x);
+            commands.spawn((
+                SandboxEntity,
+                PlacedInfra { kind: request.kind },
+                Mesh3d(mesh),
+                MeshMaterial3d(material.clone()),
+                Transform::from_translation(seated).with_rotation(Quat::from_rotation_y(yaw)),
+            ));
+            segments += 1;
+        }
+        info!(
+            "[tools] PLACED road {:?}: {segments} segment(s) over {} point(s)",
+            request.kind,
+            request.points.len()
+        );
+    }
+}
+
+/// Seat a structure or vehicle actor on the terrain in response to a click.
+fn apply_place_structure_requests(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut requests: MessageReader<PlaceStructureRequest>,
+) {
+    for request in requests.read() {
+        let (extents, color) = structure_profile(request.kind);
+        let half_height = extents.y * 0.5;
+        let mesh = meshes.add(Mesh::from(Cuboid::new(extents.x, extents.y, extents.z)));
+        let material = materials.add(StandardMaterial {
+            base_color: color,
+            emissive: LinearRgba::rgb(0.01, 0.01, 0.01),
+            perceptual_roughness: 0.85,
+            ..default()
+        });
+        let seated = seat_on_terrain(request.position, half_height);
+        commands.spawn((
+            SandboxEntity,
+            PlacedInfra { kind: request.kind },
+            Mesh3d(mesh),
+            MeshMaterial3d(material),
+            Transform::from_translation(seated),
+        ));
+        info!("[tools] PLACED {:?} at {:?}", request.kind, request.position);
+    }
+}
+
+/// Cuboid extents + muted colour for each click-placed structure/vehicle kind.
+fn structure_profile(kind: SpawnTool) -> (Vec3, Color) {
+    match kind {
+        SpawnTool::House => (Vec3::new(6.0, 8.0, 6.0), Color::srgb(0.74, 0.62, 0.46)),
+        SpawnTool::Farm => (Vec3::new(10.0, 1.2, 10.0), Color::srgb(0.45, 0.55, 0.25)),
+        SpawnTool::Workshop => (Vec3::new(8.0, 7.0, 8.0), Color::srgb(0.55, 0.45, 0.40)),
+        SpawnTool::Market => (Vec3::new(9.0, 5.0, 9.0), Color::srgb(0.70, 0.55, 0.30)),
+        SpawnTool::Wall => (Vec3::new(6.0, 6.0, 1.5), Color::srgb(0.50, 0.50, 0.52)),
+        SpawnTool::Vehicle => (Vec3::new(3.0, 2.2, 1.6), Color::srgb(0.35, 0.30, 0.28)),
+        _ => (BUILDING_EXTENTS, Color::srgb(0.74, 0.62, 0.46)),
     }
 }
 
@@ -549,5 +826,68 @@ mod tests {
         assert!(c.red <= 1.0 && c.green <= 1.0 && c.blue <= 1.0);
         let max = c.red.max(c.green).max(c.blue);
         assert!(max <= 0.86, "channel too hot: {max}");
+    }
+
+    #[test]
+    fn road_tools_are_drag_draw_others_are_not() {
+        for t in [
+            SpawnTool::Road,
+            SpawnTool::Trail,
+            SpawnTool::Highway,
+            SpawnTool::Bridge,
+        ] {
+            assert!(t.is_road_draw(), "{t:?} should be drag-draw");
+        }
+        for t in [
+            SpawnTool::Select,
+            SpawnTool::House,
+            SpawnTool::Vehicle,
+            SpawnTool::Market,
+        ] {
+            assert!(!t.is_road_draw(), "{t:?} should not be drag-draw");
+        }
+    }
+
+    #[test]
+    fn road_draw_classification() {
+        assert!(SpawnTool::House.is_structure());
+        assert!(SpawnTool::Wall.is_structure());
+        assert!(!SpawnTool::Vehicle.is_structure());
+        assert!(!SpawnTool::Road.is_structure());
+    }
+
+    #[test]
+    fn road_width_increases_up_the_ladder() {
+        assert!(road_half_width(SpawnTool::Trail) < road_half_width(SpawnTool::Road));
+        assert!(road_half_width(SpawnTool::Road) < road_half_width(SpawnTool::Highway));
+    }
+
+    #[test]
+    fn road_and_structure_colors_are_not_neon() {
+        for c in [
+            road_color(SpawnTool::Trail),
+            road_color(SpawnTool::Highway),
+            structure_profile(SpawnTool::House).1,
+            structure_profile(SpawnTool::Vehicle).1,
+        ] {
+            let s = c.to_srgba();
+            let max = s.red.max(s.green).max(s.blue);
+            assert!(max <= 0.86, "channel too hot: {max}");
+        }
+    }
+
+    #[test]
+    fn structure_profiles_seat_above_zero_height() {
+        for t in [
+            SpawnTool::House,
+            SpawnTool::Farm,
+            SpawnTool::Workshop,
+            SpawnTool::Market,
+            SpawnTool::Wall,
+            SpawnTool::Vehicle,
+        ] {
+            let (extents, _) = structure_profile(t);
+            assert!(extents.x > 0.0 && extents.y > 0.0 && extents.z > 0.0);
+        }
     }
 }

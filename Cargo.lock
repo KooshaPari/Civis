@@ -2969,6 +2969,7 @@ dependencies = [
  "civ-diffusion",
  "civ-economy",
  "civ-mod-host",
+ "civ-needs",
  "civ-planet",
  "civ-save-db",
  "civ-tactics",

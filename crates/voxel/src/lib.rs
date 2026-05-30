@@ -27,7 +27,10 @@ pub use phenotype_voxel::{
     VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
+pub mod boundary;
+pub mod fluid_ca;
 pub mod material;
+pub mod worldgen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.

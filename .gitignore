@@ -55,3 +55,5 @@ worktrees/
 vendor/phenodocs/node_modules/
 .vitepress/cache/
 target-ci/
+.worker_tasks/
+.worker_logs/

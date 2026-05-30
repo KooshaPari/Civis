@@ -49,6 +49,8 @@ pub mod live_ground;
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod map2d;
 #[cfg(feature = "bevy")]
 pub mod minimap;
 #[cfg(feature = "bevy")]

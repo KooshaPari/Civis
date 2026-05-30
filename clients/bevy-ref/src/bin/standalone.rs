@@ -72,6 +72,10 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin);
 
+    // 2D procedural/SVG alternate map view (M key + far-zoom auto-engage).
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
+
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     #[cfg(feature = "voxel")]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);

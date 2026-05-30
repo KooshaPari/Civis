@@ -1478,7 +1478,7 @@ impl Simulation {
                 Err(_) => continue,
             };
             let civ = match self.world.get::<&AgentCivilian>(entity) {
-                Ok(c) => *c,
+                Ok(c) => c.clone(),
                 Err(_) => continue,
             };
             let needs_snapshot = match self.world.get::<&LifeNeeds>(entity) {

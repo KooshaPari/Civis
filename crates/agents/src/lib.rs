@@ -29,8 +29,8 @@ pub use cluster::{
     ClusterMember, MembershipPayoff,
 };
 pub use daily_path::{
-    need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi, DailyGoal, Poi,
-    PoiKind, PoiRegistry,
+    choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
+    wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
 };
 
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};

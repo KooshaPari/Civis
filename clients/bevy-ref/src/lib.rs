@@ -34,6 +34,14 @@ pub mod info_views;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
+#[cfg(all(feature = "bevy", feature = "audio"))]
+pub mod audio;
+#[cfg(all(feature = "bevy", feature = "vfx"))]
+pub mod vfx;
+#[cfg(all(feature = "bevy", feature = "gi"))]
+pub mod lighting_gi;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;

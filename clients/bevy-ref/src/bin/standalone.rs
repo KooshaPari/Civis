@@ -82,6 +82,19 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::inspect::InspectPlugin);
 
+    // Event-feed / toast notifications.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::notifications::NotificationsPlugin);
+    // Ambient + SFX audio (feature-gated).
+    #[cfg(feature = "audio")]
+    app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
+    // GPU particle VFX for events (feature-gated).
+    #[cfg(feature = "vfx")]
+    app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
+    // Real-time RT global illumination via bevy_solari (feature-gated).
+    #[cfg(feature = "gi")]
+    app.add_plugins(civ_bevy_ref::lighting_gi::SolariGiPlugin);
+
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     #[cfg(feature = "voxel")]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);

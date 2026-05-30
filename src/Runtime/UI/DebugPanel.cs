@@ -263,6 +263,14 @@ namespace DINOForge.Runtime.UI
             scrollRt.offsetMin = Vector2.zero;
             scrollRt.offsetMax = new Vector2(0f, -(HeaderHeight + 1f));
 
+            // Fix (iter-149): the viewport Mask needs a graphic that actually renders to
+            // produce a valid stencil; a fully transparent (alpha 0) Image can mask out ALL
+            // children on some Unity/Mono builds, leaving the panel body blank. Give it a
+            // near-invisible alpha so the stencil is written but the fill stays unseen.
+            Image viewportImage = scrollRect.GetComponent<Image>();
+            if (viewportImage != null)
+                viewportImage.color = new Color(0f, 0f, 0f, 0.004f);
+
             _scrollRect = scrollRect;
             _contentRoot = content;
             RefreshContent();

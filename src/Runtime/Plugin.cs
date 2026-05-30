@@ -1697,6 +1697,12 @@ namespace DINOForge.Runtime
                     _nativeMenuInjector.PackDataProvider = () =>
                         _modPlatform?.GetLoadedPackDisplayInfos()
                         ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
+                    // Quick panel reads the active total_conversion ui_theme from disk.
+                    _nativeMenuInjector.PacksDirectory = _modPlatform?.PacksDirectory;
+                    // Route quick-panel / native-page pack toggles + reloads through the same
+                    // queued path the UGUI menu uses (SetPackEnabled persists disabled_packs.json).
+                    _nativeMenuInjector.OnNativePackToggled = (packId, enabled) => RequestPackToggle(packId, enabled);
+                    _nativeMenuInjector.OnNativeReloadRequested = () => RequestPackReload("native mods menu reload");
                     TryWireNativeMenuInjectorHost();
                     // SPEC-002 F-07: main-thread re-scan hook for tests/tooling (not background thread — ADR-015).
                     NativeMenuInjector.OnScanNeeded = () =>

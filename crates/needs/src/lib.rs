@@ -319,6 +319,7 @@ pub fn tick(
 mod tests {
     use super::*;
     use rand::SeedableRng;
+    use proptest::prelude::*;
 
     fn rng(seed: u64) -> ChaCha8Rng {
         ChaCha8Rng::seed_from_u64(seed)
@@ -362,6 +363,42 @@ mod tests {
         }
         for k in NEED_KINDS {
             assert!(needs.get(k) >= 0.0, "{k:?} went negative");
+        }
+    }
+
+    proptest! {
+        /// FR-CIV-LIFE-001 — decay keeps every need within the closed interval [0, 1].
+        #[test]
+        fn decay_preserves_need_bounds(
+            food in 0.0f32..=1.0,
+            water in 0.0f32..=1.0,
+            rest in 0.0f32..=1.0,
+            safety in 0.0f32..=1.0,
+            social in 0.0f32..=1.0,
+            health in 0.0f32..=1.0,
+            food_rate in 0.0f32..=2.0,
+            water_rate in 0.0f32..=2.0,
+            rest_rate in 0.0f32..=2.0,
+            safety_rate in 0.0f32..=2.0,
+            social_rate in 0.0f32..=2.0,
+            health_rate in 0.0f32..=2.0,
+        ) {
+            let mut needs = Needs { food, water, rest, safety, social, health };
+            let rates = DecayRates {
+                food: food_rate,
+                water: water_rate,
+                rest: rest_rate,
+                safety: safety_rate,
+                social: social_rate,
+                health: health_rate,
+            };
+
+            decay(&mut needs, &rates);
+
+            for kind in NEED_KINDS {
+                let v = needs.get(kind);
+                prop_assert!((0.0..=1.0).contains(&v), "{kind:?} out of bounds: {v}");
+            }
         }
     }
 
@@ -413,6 +450,139 @@ mod tests {
         }
         assert!(died, "agent with all needs at zero must eventually die");
         assert!(health.is_dead());
+    }
+
+    /// FR-CIV-LIFE-003 — deprivation damage is applied at the critical boundary.
+    #[test]
+    fn critical_boundary_triggers_damage() {
+        let mut needs = Needs {
+            food: 0.1,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let mut health = Health::default();
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
+        let params = HealthParams::default();
+        let mut r = rng(11);
+
+        let out = tick(&mut needs, &mut health, &rates, &params, &mut r);
+
+        assert_eq!(out.critical_count, 1);
+        assert_eq!(health.deprivation_streak, 1);
+        assert!(health.integrity < 1.0);
+    }
+
+    /// FR-CIV-LIFE-002 — sickness onset is governed by the streak threshold.
+    #[test]
+    fn sickness_onset_respects_threshold() {
+        let mut needs = Needs {
+            food: 0.0,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let mut health = Health::default();
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
+        let params = HealthParams {
+            critical: 0.1,
+            damage_per_critical: 0.0,
+            regen: 0.0,
+            sickness_onset_ticks: 3,
+            sickness_chance: 1.0,
+            sickness_damage: 0.0,
+        };
+        let mut r = rng(12);
+
+        let mut fell_sick_at = None;
+        for tick_index in 0..4 {
+            let out = tick(&mut needs, &mut health, &rates, &params, &mut r);
+            if out.fell_sick {
+                fell_sick_at = Some(tick_index);
+                break;
+            }
+        }
+
+        assert_eq!(fell_sick_at, Some(2));
+        assert!(health.sick);
+    }
+
+    /// FR-CIV-LIFE-002 — recovery clears sickness once integrity has rebuilt enough.
+    #[test]
+    fn sickness_recovery_requires_high_integrity() {
+        let mut needs = Needs::sated();
+        let mut health = Health {
+            integrity: 0.90,
+            sick: true,
+            deprivation_streak: 0,
+        };
+        let rates = DecayRates::default();
+        let params = HealthParams {
+            critical: 0.1,
+            damage_per_critical: 0.0,
+            regen: 0.06,
+            sickness_onset_ticks: 30,
+            sickness_chance: 0.0,
+            sickness_damage: 0.0,
+        };
+        let mut r = rng(13);
+
+        let out = tick(&mut needs, &mut health, &rates, &params, &mut r);
+
+        assert!(!out.fell_sick);
+        assert!(!health.sick);
+        assert!(health.integrity >= 0.95);
+        assert!(health.integrity <= 1.0);
+    }
+
+    proptest! {
+        /// FR-CIV-LIFE-001/002/003 — repeated ticks keep health bounded and never resurrect a dead agent.
+        #[test]
+        fn health_stays_bounded_and_dead_is_terminal(
+            seed in any::<u64>(),
+            ticks in 0u32..250,
+        ) {
+            let mut needs = Needs::sated();
+            let mut health = Health::default();
+            let mut r = rng(seed);
+            let rates = DecayRates::default();
+            let params = HealthParams::default();
+
+            for _ in 0..ticks {
+                let out = tick(&mut needs, &mut health, &rates, &params, &mut r);
+                prop_assert!((0.0..=1.0).contains(&health.integrity));
+                prop_assert!((0.0..=1.0).contains(&needs.health));
+                if out.died {
+                    prop_assert!(health.is_dead());
+                    let frozen = (needs, health);
+                    let mut frozen_needs = frozen.0;
+                    let mut frozen_health = frozen.1;
+                    let post = tick(&mut frozen_needs, &mut frozen_health, &rates, &params, &mut r);
+                    prop_assert!(!post.died);
+                    prop_assert_eq!(frozen_needs, needs);
+                    prop_assert_eq!(frozen_health, health);
+                    break;
+                }
+            }
+        }
     }
 
     /// FR-CIV-LIFE-003 — a fully-sated agent never dies.

@@ -276,6 +276,7 @@ pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     /// FR-CIV-LIFE-020: stock stepping conserves totals and never drives any good below zero.
     #[test]
@@ -365,5 +366,101 @@ mod tests {
             propose_trade(&a_stocks, &a_profile, &b_stocks, &b_profile),
             None
         );
+    }
+
+    proptest! {
+        /// FR-CIV-LIFE-024 — valid trades conserve the combined stock total.
+        #[test]
+        fn apply_trade_conserves_total_for_valid_offers(
+            a_food in 0i64..200,
+            a_water in 0i64..200,
+            a_wood in 0i64..200,
+            a_metal in 0i64..200,
+            a_tools in 0i64..200,
+            b_food in 0i64..200,
+            b_water in 0i64..200,
+            b_wood in 0i64..200,
+            b_metal in 0i64..200,
+            b_tools in 0i64..200,
+            qty_a_to_b in 0i64..200,
+            qty_b_to_a in 0i64..200,
+        ) {
+            let mut a = Stocks::default();
+            let mut b = Stocks::default();
+            for (good, qty) in [
+                (Good::Food, a_food),
+                (Good::Water, a_water),
+                (Good::Wood, a_wood),
+                (Good::Metal, a_metal),
+                (Good::Tools, a_tools),
+            ] {
+                a.add(good, qty);
+            }
+            for (good, qty) in [
+                (Good::Food, b_food),
+                (Good::Water, b_water),
+                (Good::Wood, b_wood),
+                (Good::Metal, b_metal),
+                (Good::Tools, b_tools),
+            ] {
+                b.add(good, qty);
+            }
+
+            let good_a_to_b = GOODS[(a_food as usize + b_water as usize) % GOODS.len()];
+            let mut good_b_to_a = GOODS[(a_wood as usize + b_tools as usize + 1) % GOODS.len()];
+            if good_b_to_a == good_a_to_b {
+                good_b_to_a = GOODS[(good_b_to_a as usize + 1) % GOODS.len()];
+            }
+
+            let offer = TradeOffer {
+                good_a_to_b,
+                qty_a_to_b: qty_a_to_b.min(a.get(good_a_to_b)).min(b.get(good_a_to_b).saturating_add(50)),
+                good_b_to_a,
+                qty_b_to_a: qty_b_to_a.min(b.get(good_b_to_a)).min(a.get(good_b_to_a).saturating_add(50)),
+            };
+
+            let before = a.total() + b.total();
+            apply_trade(&mut a, &mut b, &offer);
+
+            prop_assert_eq!(a.total() + b.total(), before);
+            for good in GOODS {
+                prop_assert!(a.get(good) >= 0);
+                prop_assert!(b.get(good) >= 0);
+            }
+        }
+
+        /// FR-CIV-LIFE-022 — comparative advantage must select a maximum net-flow good.
+        #[test]
+        fn comparative_advantage_is_global_maximum(
+            production in prop::array::uniform5(-100i64..100),
+            consumption in prop::array::uniform5(0i64..100),
+        ) {
+            let profile = ProductionProfile::new(production, consumption);
+            let chosen = comparative_advantage(&profile);
+            let chosen_flow = profile.net_flow(chosen);
+
+            for good in GOODS {
+                prop_assert!(chosen_flow >= profile.net_flow(good));
+            }
+        }
+
+        /// FR-CIV-LIFE-020 — arbitrary stock updates never make inventories negative.
+        #[test]
+        fn add_and_step_never_produce_negative_stock(
+            initial in prop::array::uniform5(0i64..500),
+            production in prop::array::uniform5(-100i64..100),
+            consumption in prop::array::uniform5(0i64..150),
+        ) {
+            let mut stocks = Stocks::default();
+            for (good, qty) in GOODS.into_iter().zip(initial) {
+                stocks.add(good, qty);
+            }
+            let profile = ProductionProfile::new(production, consumption);
+            step_stocks(&mut stocks, &profile);
+
+            for good in GOODS {
+                prop_assert!(stocks.get(good) >= 0);
+            }
+        }
     }
 }

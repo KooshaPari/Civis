@@ -315,7 +315,28 @@ namespace DINOForge.Runtime
             SceneManager.sceneLoaded += OnSceneLoaded;
             DebugLog.Write("Plugin", "[Plugin] activeSceneChanged + sceneLoaded watchers registered (iter-149b Blocker 2 fix).");
             StartResurrectionFallbackThread();
-            StartPipeKeepAliveThread();
+            // iter-149d BISECT (2026-05-29): PipeKeepAlive is the suspected NEW un-interruptible
+            // waiter behind the recurring gray-freeze. PipeKeepAliveLoop polls EnsureServerAlive()
+            // every 1s on a BACKGROUND thread; EnsureServerAlive does a pipe Stop()->Start() whenever
+            // the bridge server thread is dead — which is ALWAYS the case immediately after
+            // RuntimeDriver.OnDestroy calls RequestShutdown(). So during teardown OnDestroy disposes
+            // the pipe handle (iter-144 fix) to unwedge the accept thread, but PipeKeepAlive instantly
+            // re-creates a NamedPipeServerStream + re-arms BeginWaitForConnection — re-establishing
+            // exactly the kernel ConnectNamedPipe wait that RequestShutdown just tore down. That
+            // re-armed wait becomes the un-interruptible waiter that wedges mono_jit_cleanup during
+            // World.Dispose. Gated OFF to isolate. The pipe must stay DOWN through teardown and only
+            // be rebuilt by a clean main-thread resurrection (PlayerLoop/sceneLoaded path).
+            const bool EnablePipeKeepAlive = false;
+#pragma warning disable CS0162 // Unreachable code — intentional bisect gate (iter-149d).
+            if (EnablePipeKeepAlive)
+            {
+                StartPipeKeepAliveThread();
+            }
+            else
+            {
+                DebugLog.Write("Plugin", "[Plugin] PipeKeepAlive thread DISABLED (iter-149d bisect: suspected re-arm of ConnectNamedPipe wedge during World.Dispose).");
+            }
+#pragma warning restore CS0162
         }
 
         // Blocker 2 keystone fix (iter-149b): sceneLoaded fires for additive scene loads where

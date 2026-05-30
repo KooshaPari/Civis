@@ -72,6 +72,30 @@ namespace DINOForge.Runtime
         private static bool _resurrectionDump;
         private static string _resurrectionDumpPath = "";
 
+        /// <summary>
+        /// iter-149e: true once Plugin.Awake captured the resurrection parameters (_resurrectionLog /
+        /// _resurrectionConfig). Until then, a direct main-thread TryResurrect would NPE on those.
+        /// KeyInputSystem.OnCreate (a DINO-driven main-thread callback that fires when the MainMenu
+        /// ECS world is created — proven to fire post-teardown) checks this before reviving directly.
+        /// </summary>
+        internal static bool ResurrectionParamsReady => _resurrectionLog != null && _resurrectionConfig != null;
+
+        /// <summary>
+        /// iter-149e: main-thread revive entry usable by DINO-driven callbacks (KeyInputSystem.OnCreate,
+        /// PlayerLoop.SetPlayerLoop postfix) that fire after our own bg threads/scene events have gone
+        /// silent. Delegates to <see cref="MainThreadReviveIfNeeded"/>. Caller MUST be on the Unity
+        /// main thread (these callbacks are). Never throws (Pattern #104/#111).
+        /// </summary>
+        internal static void ReviveFromMainThreadCallback(string trigger)
+        {
+            try { MainThreadReviveIfNeeded(LastSceneNameForResurrection ?? "world-create", trigger); }
+            catch (Exception ex)
+            {
+                try { DebugLog.Write("Plugin", $"[Plugin] ReviveFromMainThreadCallback ({trigger}) threw: {ex.GetType().Name}: {ex.Message}"); }
+                catch { /* diagnostic only */ }
+            }
+        }
+
         /// <summary>Flag set by KeyInputSystem when F9 is pressed during ECS tick.</summary>
         internal static volatile bool PendingF9Toggle;
 
@@ -1176,6 +1200,21 @@ namespace DINOForge.Runtime
                 Bridge.PlayerLoopKeyInputInjection.InjectIntoCurrentPlayerLoop(
                     typeof(Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker),
                     DINOForgePlayerLoopUpdate));
+
+            // iter-149e DECISIVE fix (WinDbg MDMP + live repro): after RuntimeDriver.OnDestroy on the
+            // InitialGameLoader->MainMenu transition, ALL our managed activity halts — the
+            // ResurrectionFallback bg thread stops heart-beating (it armed the grace window then went
+            // silent), no MainMenu sceneLoaded/activeSceneChanged ever reaches our static handlers, and
+            // the injected PlayerLoop callback never ticks. The engine stays healthy (process alive,
+            // Responding=True, MainMenu rendered, engine heartbeat advances) — a DORMANT-PLUGIN bug,
+            // not a native wedge. The ONE callback DINO itself drives on the main thread post-teardown
+            // is THIS Harmony postfix on PlayerLoop.SetPlayerLoop — DINO calls SetPlayerLoop while
+            // bringing up MainMenu systems. So drive the revive directly from HERE, on the main thread,
+            // where TryResurrect's Unity ECalls (Camera.main / AddComponent / Initialize) are safe.
+            // This does not depend on a post-teardown scene event or on our suspended bg threads.
+            try { MainThreadReviveIfNeeded(LastSceneNameForResurrection ?? "playerloop-set", "playerloop-set(main-thread)"); }
+            catch (Exception ex) { try { DebugLog.Write("Plugin", $"[Plugin] OnPlayerLoopSet revive threw: {ex.GetType().Name}: {ex.Message}"); } catch { /* diagnostic only */ } }
+
             try
             {
                 bool markerPresent = Bridge.PlayerLoopKeyInputInjection.ContainsMarkerInUpdate(

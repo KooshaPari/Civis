@@ -6,9 +6,10 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::engine::Citizen;
 use crate::{
-    Building, Citizen, CombatDamagePulse, DiplomacyEvent, MilitaryUnit, Position, ReplayLog,
-    Simulation, WorldState,
+    Building, CombatDamagePulse, DiplomacyEvent, MilitaryUnit, Position, ReplayLog, Simulation,
+    WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use civ_needs::Health as LifeHealth;

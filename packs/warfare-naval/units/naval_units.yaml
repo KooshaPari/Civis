@@ -1,0 +1,57 @@
+# Naval Units for Vanilla DINO Factions
+# Minimal seed roster for the naval extension pack. Expand with additional
+# vessels (transports, capital ships, anti-air escorts) as the subsystem matures.
+
+- id: naval_scout_skiff
+  display_name: Scout Skiff
+  description: Light, fast reconnaissance vessel. Fragile but ideal for scouting coastlines.
+  unit_class: Recon
+  faction_id: lords_troops
+  tier: 1
+  vanilla_mapping: fast_vehicle
+  defense_tags: [Mechanical, Naval]
+  behavior_tags: [Naval, Recon]
+  stats:
+    hp: 60.0
+    damage: 6.0
+    armor: 1.0
+    range: 9.0
+    speed: 12.0
+    accuracy: 0.6
+    fire_rate: 1.2
+    morale: 60.0
+    cost:
+      food: 30
+      wood: 40
+      stone: 0
+      iron: 10
+      gold: 15
+      population: 1
+  weapon: light_peashooter
+
+- id: naval_war_galley
+  display_name: War Galley
+  description: Line warship with broadside armament. Workhorse of the fleet.
+  unit_class: MainBattleVehicle
+  faction_id: lords_troops
+  tier: 2
+  vanilla_mapping: main_battle_vehicle
+  defense_tags: [Mechanical, Naval, Large]
+  behavior_tags: [Naval]
+  stats:
+    hp: 220.0
+    damage: 28.0
+    armor: 6.0
+    range: 14.0
+    speed: 7.0
+    accuracy: 0.7
+    fire_rate: 0.8
+    morale: 80.0
+    cost:
+      food: 60
+      wood: 120
+      stone: 0
+      iron: 60
+      gold: 50
+      population: 3
+  weapon: light_peashooter

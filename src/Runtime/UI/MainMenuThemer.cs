@@ -546,28 +546,75 @@ namespace DINOForge.Runtime
                     _log?.LogWarning("[MainMenuThemer] TMPro.TMP_FontAsset type not found — cannot build TMP font"); // pattern-96-ok: diagnostic
                     return null;
                 }
-                MethodInfo? create = tmpFontAssetType
+                // Prefer the richest CreateFontAsset(Font, ...) overload so we can pass real
+                // atlas params — the bare CreateFontAsset(Font) path returns null for a font
+                // produced by CreateDynamicFontFromOSFont (no embedded sourceFontFile).
+                MethodInfo[] overloads = tmpFontAssetType
                     .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                    .FirstOrDefault(m => m.Name == "CreateFontAsset"
-                                         && m.GetParameters().Length >= 1
-                                         && m.GetParameters()[0].ParameterType == typeof(Font));
-                if (create == null)
+                    .Where(m => m.Name == "CreateFontAsset"
+                                && m.GetParameters().Length >= 1
+                                && m.GetParameters()[0].ParameterType == typeof(Font))
+                    .OrderByDescending(m => m.GetParameters().Length)
+                    .ToArray();
+                if (overloads.Length == 0)
                 {
                     _log?.LogWarning("[MainMenuThemer] TMP_FontAsset.CreateFontAsset(Font) overload not found"); // pattern-96-ok: diagnostic
                     return null;
                 }
 
-                // Supply defaults for any extra optional params (samplingPointSize, atlas dims, render mode, etc.).
-                ParameterInfo[] ps = create.GetParameters();
-                object?[] args = new object?[ps.Length];
-                args[0] = srcFont;
-                for (int i = 1; i < ps.Length; i++)
-                    args[i] = ps[i].HasDefaultValue ? ps[i].DefaultValue : (ps[i].ParameterType.IsValueType ? Activator.CreateInstance(ps[i].ParameterType) : null);
-
-                var fontAsset = create.Invoke(null, args) as UnityEngine.Object;
+                UnityEngine.Object? fontAsset = null;
+                foreach (MethodInfo create in overloads)
+                {
+                    ParameterInfo[] ps = create.GetParameters();
+                    object?[] args = new object?[ps.Length];
+                    args[0] = srcFont;
+                    for (int i = 1; i < ps.Length; i++)
+                    {
+                        ParameterInfo pi = ps[i];
+                        string pn = pi.Name ?? "";
+                        Type pt = pi.ParameterType;
+                        object? val;
+                        if (pt == typeof(int))
+                        {
+                            if (pn.IndexOf("samplingPointSize", StringComparison.OrdinalIgnoreCase) >= 0 || pn.IndexOf("pointSize", StringComparison.OrdinalIgnoreCase) >= 0) val = 90;
+                            else if (pn.IndexOf("padding", StringComparison.OrdinalIgnoreCase) >= 0) val = 9;
+                            else if (pn.IndexOf("Width", StringComparison.OrdinalIgnoreCase) >= 0 || pn.IndexOf("Height", StringComparison.OrdinalIgnoreCase) >= 0) val = 1024;
+                            else val = pi.HasDefaultValue ? pi.DefaultValue : 0;
+                        }
+                        else if (pt == typeof(bool))
+                        {
+                            val = pi.HasDefaultValue ? pi.DefaultValue : true; // enableMultiAtlasSupport
+                        }
+                        else if (pt.IsEnum)
+                        {
+                            // GlyphRenderMode → SDFAA (common value), AtlasPopulationMode → Dynamic.
+                            val = pi.HasDefaultValue ? pi.DefaultValue : EnumDefaultByName(pt, pn);
+                        }
+                        else
+                        {
+                            val = pi.HasDefaultValue ? pi.DefaultValue : (pt.IsValueType ? Activator.CreateInstance(pt) : null);
+                        }
+                        args[i] = val;
+                    }
+                    try
+                    {
+                        fontAsset = create.Invoke(null, args) as UnityEngine.Object;
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.LogWarning($"[MainMenuThemer] CreateFontAsset({ps.Length} args) threw: {ex.InnerException?.Message ?? ex.Message}"); // pattern-96-ok: diagnostic
+                        fontAsset = null;
+                    }
+                    if (fontAsset != null)
+                    {
+                        _log?.LogInfo($"[MainMenuThemer] CreateFontAsset succeeded via {ps.Length}-arg overload"); // pattern-96-ok: diagnostic
+                        break;
+                    }
+                    _log?.LogWarning($"[MainMenuThemer] CreateFontAsset({ps.Length} args) returned null — trying next overload"); // pattern-96-ok: diagnostic
+                }
                 if (fontAsset == null)
                 {
-                    _log?.LogWarning("[MainMenuThemer] CreateFontAsset returned null"); // pattern-96-ok: diagnostic
+                    _log?.LogWarning("[MainMenuThemer] CreateFontAsset returned null for all overloads"); // pattern-96-ok: diagnostic
                     return null;
                 }
                 UnityEngine.Object.DontDestroyOnLoad(fontAsset);
@@ -613,6 +660,21 @@ namespace DINOForge.Runtime
                 _log?.LogWarning($"[MainMenuThemer] ApplyFont failed: {ex.Message}"); // pattern-96-ok: diagnostic
             }
             return hits;
+        }
+
+        /// <summary>Best-effort enum default for TMP CreateFontAsset params: SDFAA for the
+        /// glyph render mode, Dynamic for the atlas population mode, else the first value.</summary>
+        private static object EnumDefaultByName(Type enumType, string paramName)
+        {
+            string[] names = Enum.GetNames(enumType);
+            string[] preferred = paramName.IndexOf("population", StringComparison.OrdinalIgnoreCase) >= 0
+                ? new[] { "Dynamic" }
+                : new[] { "SDFAA", "SDF", "SMOOTH_HINTED", "SMOOTH" };
+            foreach (string want in preferred)
+                foreach (string n in names)
+                    if (string.Equals(n, want, StringComparison.OrdinalIgnoreCase))
+                        return Enum.Parse(enumType, n);
+            return Enum.GetValues(enumType).GetValue(0)!;
         }
 
         private static Type? FindType(string fullName)

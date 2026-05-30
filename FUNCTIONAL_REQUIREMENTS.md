@@ -387,3 +387,41 @@
 - [ ] Replay verification uses fixed-point metrics exclusively
 **Traces to:** FR-REPLAY-002 (Bit-Identical Determinism Verification)
 **Code:** `crates/engine/src/lib.rs` — `Fixed` type
+
+## FR-CIV-LIFE: Emergent Agent Life-Sim
+
+### FR-CIV-LIFE-001: Needs Decay
+**Priority**: SHALL
+**Description**: Every living item SHALL carry a `civ_needs::Needs` satisfaction vector (food, water, rest, safety, social, health) that decays deterministically each tick at per-need rates; satisfying a need raises it, clamped to `[0,1]`.
+**Traces to:** FR-CORE-003 (Deterministic Transition Phase)
+**Code:** `crates/needs/src/lib.rs`
+
+### FR-CIV-LIFE-002: Sickness From Deprivation
+**Priority**: SHALL
+**Description**: Sustained unmet needs SHALL accumulate a deprivation streak that, past an onset threshold, triggers a seeded-RNG sickness roll; sickness accelerates health-integrity loss.
+**Traces to:** FR-CIV-LIFE-001
+**Code:** `crates/needs/src/lib.rs` — `tick`
+
+### FR-CIV-LIFE-003: Death From Unmet Needs
+**Priority**: SHALL
+**Description**: Health integrity SHALL fall to zero (death) under prolonged deprivation/sickness and regenerate when clear; a sated agent never dies, a fully-deprived agent always eventually dies.
+**Traces to:** FR-CIV-LIFE-002
+**Code:** `crates/needs/src/lib.rs`
+
+### FR-CIV-LIFE-010..014: Utility-AI Daily Path / POI
+**Priority**: SHALL
+**Description**: Agents SHALL select a daily target via utility scoring over needs against a `PoiRegistry`, choosing the POI serving the highest-pressure need (distance only a tiebreak) and greedily path-stepping toward it, so eat→rest→socialize routines emerge.
+**Traces to:** FR-CIV-LIFE-001
+**Code:** `crates/agents/src/daily_path.rs`
+
+### FR-CIV-LIFE-020..025: Mercantile Resource Stocks
+**Priority**: SHALL
+**Description**: Individual and collective (settlement/faction) resource stocks SHALL track integer-conserved goods with production/consumption, surplus/deficit, comparative advantage, and mutually-beneficial trade (conserving total goods across actors).
+**Traces to:** FR-ECON-001, FR-ECON-005
+**Code:** `crates/economy/src/stocks.rs`
+
+### FR-CIV-LIFE-030..035: Emergent Clusters (Join/Leave)
+**Priority**: SHALL
+**Description**: Collectives SHALL emerge as `ClusterId` membership from deterministic single-link co-location clustering; agents JOIN on net-positive `MembershipPayoff` and LEAVE when payoff drops below threshold — replacing hardcoded `faction: u32` over time.
+**Traces to:** FR-CIV-LIFE-020
+**Code:** `crates/agents/src/cluster.rs`

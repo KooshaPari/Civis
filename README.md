@@ -178,6 +178,11 @@ This creates `packs/my-balance-mod/` with a complete template. Then add YAML con
 
 See [Your First Mod](docs/guides/your-first-mod.md) for a 5-minute quickstart, or `packs/example-balance/` for a complete example.
 
+## Demo
+
+> [!EMBED] STUB — in-game mod menu + live pack swap
+> A recording of the F10 mod menu, a live pack hot-reload, and an in-game asset swap belongs here. Pending rich-embed pipeline (#966). Source frames available under `docs/screenshots/`.
+
 ## Architecture
 
 ```mermaid

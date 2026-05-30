@@ -44,6 +44,20 @@ ui_theme:
   accent_color: "#C0392B"
   text_color: "#FFE81F"
   background_tint: "#0A0A1A"
+  # EPIC-027 themed loading-screen takeover (total_conversion only).
+  # Paths are relative to the pack root; PNGs are rasterized from assets/svg/ui/.
+  loading_screen:
+    background: assets/loading/loading-bg.png
+    logo: assets/loading/loading-logo.png
+    accent_color: "#FFE81F"
+    overlay_opacity: 1.0
+    tip_rotation_seconds: 7
+    tips:
+      - "The Republic's clone army was grown on Kamino in just ten years."
+      - "Battle droids are cheap — Clone Troopers are worth every credit."
+      - "T-series tactical droids can override any droid unit on the field."
+      - "AT-TE walkers anchor a Republic line — flank them with speeders."
+      - "A Jedi General turns the tide: hero units rally nearby troops."
 
 loads:
   factions:

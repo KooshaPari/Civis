@@ -30,6 +30,10 @@ pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod info_views;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;

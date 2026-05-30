@@ -127,7 +127,13 @@ pub use plugin::*;
 #[cfg(feature = "egui")]
 mod plugin {
     use super::*;
-    use crate::game_ui::{InspectedDetails, SelectedEntityDetails};
+    use crate::game_ui::SelectedEntityDetails;
+
+    /// Inspector data the right HUD panel reads — newtype over the shared
+    /// `SelectedEntityDetails` (kept local to this module on the integration
+    /// branch; the perception worktree had carried it in game_ui).
+    #[derive(Resource, Default)]
+    pub struct InspectedDetails(pub SelectedEntityDetails);
     use crate::sim_bridge::SimState;
     use crate::spawn_tools::{CursorMarker, SelectEntityRequest};
     use crate::terrain::WORLD_SIZE;
@@ -229,7 +235,7 @@ mod plugin {
                 .map(|n| (n.food + n.shelter + n.safety + n.belonging) / 4.0)
                 .unwrap_or(0.0);
             let det = SelectedEntityDetails {
-                kind: InspectKind::Agent,
+                kind: "Civilian".to_string(),
                 name: format!("Civilian #{}", civ.id),
                 faction: format!("Faction {}", civ.faction),
                 health: format!("Needs pressure {:.0}%", pressure * 100.0),
@@ -265,7 +271,7 @@ mod plugin {
                 continue;
             }
             let det = SelectedEntityDetails {
-                kind: InspectKind::Structure,
+                kind: "Structure".to_string(),
                 name: s.kind.to_string(),
                 faction: "—".to_string(),
                 health: format!("Occupancy {}", s.occupancy),
@@ -282,7 +288,7 @@ mod plugin {
     fn cell_details(pos: Vec3) -> SelectedEntityDetails {
         let cell = CellReadout::sample(pos.x, pos.z);
         SelectedEntityDetails {
-            kind: InspectKind::Cell,
+            kind: "Cell".to_string(),
             name: format!("Cell ({:.0}, {:.0})", cell.world_x, cell.world_z),
             faction: "—".to_string(),
             health: if cell.submerged { "Submerged" } else { "Dry" }.to_string(),

@@ -76,6 +76,12 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
 
+    // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::info_views::InfoViewsPlugin);
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::inspect::InspectPlugin);
+
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
     #[cfg(feature = "voxel")]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);

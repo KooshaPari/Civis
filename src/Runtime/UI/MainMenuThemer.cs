@@ -38,10 +38,14 @@ namespace DINOForge.Runtime
             if (_applied) return true;
             if (packs == null || packs.Count == 0) return false;
 
+            // Only ENABLED total_conversion packs are eligible — when multiple TC packs are
+            // installed, the user's enable/disable choice in the F10 mod menu decides which
+            // one takes over the menu (no hardcoded pack id). Disabled packs are skipped.
             PackDisplayInfo? best = null;
             PackDisplayInfo? fallback = null;
             foreach (var p in packs)
             {
+                if (!p.IsEnabled) continue;
                 if (!string.Equals(p.Type, "total_conversion", StringComparison.OrdinalIgnoreCase)) continue;
                 string yamlPath = Path.Combine(_packsDirectory, p.Id, "pack.yaml");
                 if (File.Exists(yamlPath))
@@ -227,9 +231,13 @@ namespace DINOForge.Runtime
         // ── EPIC-027 visual takeover helpers ─────────────────────────────────────
 
         /// <summary>
-        /// Replaces the largest background <see cref="Image"/> sprite with the pack's
-        /// themed background PNG (full swap, not a tint). Returns false when no art is
-        /// supplied or the file is missing so the caller can fall back to tinting.
+        /// Replaces the menu background with the pack's themed PNG. DINO renders its menu
+        /// backdrop as a 3D camera scene (not a UGUI Image), so a sprite swap on an existing
+        /// Image is unreliable. Instead we INJECT a DINOForge-owned full-canvas Image as the
+        /// first sibling (drawn behind every interactive element but above the 3D scene),
+        /// which deterministically covers the vanilla backdrop. We also still swap any
+        /// existing large background Image's sprite as a belt-and-braces measure.
+        /// Returns false when no art is supplied so the caller can fall back to tinting.
         /// </summary>
         private bool TrySwapBackground(Canvas canvas, ThemeData theme, string packId)
         {
@@ -237,13 +245,34 @@ namespace DINOForge.Runtime
             Sprite? bgSprite = LoadSpriteFromPack(packId, theme.BackgroundImage!);
             if (bgSprite == null) return false;
 
-            Image? largest = FindLargestImage(canvas);
-            if (largest == null) return false;
+            // 1) Inject a full-canvas overlay (idempotent per scene).
+            var existing = canvas.transform.Find("DINOForge_ModBackground");
+            if (existing == null)
+            {
+                var bgGo = new GameObject("DINOForge_ModBackground", typeof(RectTransform));
+                bgGo.transform.SetParent(canvas.transform, false);
+                var bgImg = bgGo.AddComponent<Image>();
+                bgImg.sprite = bgSprite;
+                bgImg.type = Image.Type.Simple;
+                bgImg.preserveAspect = false;       // fill the whole canvas
+                bgImg.raycastTarget = false;        // never block button clicks (Pattern #235)
+                var rt = bgGo.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                rt.SetAsFirstSibling();             // behind buttons/logo, above 3D scene
+            }
 
-            largest.sprite = bgSprite;
-            largest.color = Color.white;           // remove any prior tint — let the art speak
-            largest.type = Image.Type.Simple;
-            largest.preserveAspect = false;        // stretch to fill the menu area
+            // 2) Belt-and-braces: also swap an existing large background Image if present.
+            Image? largest = FindLargestImage(canvas);
+            if (largest != null)
+            {
+                largest.sprite = bgSprite;
+                largest.color = Color.white;
+                largest.type = Image.Type.Simple;
+                largest.preserveAspect = false;
+            }
             return true;
         }
 
@@ -323,11 +352,16 @@ namespace DINOForge.Runtime
             return hits;
         }
 
-        /// <summary>Zeroes the alpha on the native title text once a logo sprite covers it.</summary>
+        /// <summary>
+        /// Zeroes the alpha on the native title text once a logo sprite covers it.
+        /// Scans the WHOLE scene (DINO's title may live on a different canvas than the
+        /// menu-button canvas), matching by the vanilla title text content.
+        /// </summary>
         private int HideTitle(Canvas canvas)
         {
             int hits = 0;
-            foreach (var c in canvas.GetComponentsInChildren<Component>(true))
+            // TMP text across the whole scene (reflection — no compile-time TMPro ref).
+            foreach (var c in UnityEngine.Object.FindObjectsOfType<Component>())
             {
                 if (c == null) continue;
                 if (!(c.GetType().FullName ?? "").StartsWith("TMPro.")) continue;
@@ -338,16 +372,34 @@ namespace DINOForge.Runtime
                 if (lower.Contains("diplomacy") || lower.Contains("not an option"))
                 {
                     c.GetType().GetProperty("color")?.SetValue(c, Color.clear);
+                    var go = (c as Component)?.gameObject;
+                    if (go != null) go.SetActive(false);     // also disable so it cannot re-show
                     hits++;
                 }
             }
-            foreach (var t in canvas.GetComponentsInChildren<Text>(true))
+            // Legacy UGUI Text across the whole scene.
+            foreach (var t in UnityEngine.Object.FindObjectsOfType<Text>())
             {
                 if (t == null || t.text == null) continue;
                 string lower = t.text.ToLowerInvariant();
                 if (lower.Contains("diplomacy") || lower.Contains("not an option"))
                 {
                     t.color = Color.clear;
+                    t.gameObject.SetActive(false);
+                    hits++;
+                }
+            }
+            // DINO may render the title as an Image (logo sprite) rather than text —
+            // hide any non-DINOForge Image whose GameObject name hints at a logo/title.
+            foreach (var img in canvas.GetComponentsInChildren<Image>(true))
+            {
+                if (img == null) continue;
+                string gn = img.gameObject.name;
+                if (gn.IndexOf("DINOForge", StringComparison.Ordinal) >= 0) continue;
+                if (gn.IndexOf("logo", StringComparison.OrdinalIgnoreCase) >= 0
+                    || gn.IndexOf("title", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    img.enabled = false;
                     hits++;
                 }
             }

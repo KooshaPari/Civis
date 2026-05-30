@@ -326,6 +326,25 @@
              Condition="'@(BadgePngFiles)' == ''" />
   </Target>
 
+  <!--
+    [#steam-relaunch] Provision steam_appid.txt beside the game exe on every deploy.
+
+    Without a steam_appid.txt containing the AppID (1272320) next to the exe, DINO
+    re-launches itself through Steam on startup and that Steam relaunch KILLS the
+    BepInEx-injected process — so no MODS button / F9 / F10 (live-verified iter-149).
+    Steam "Verify Integrity of Game Files" can delete this file, so DeployToGame
+    re-creates it idempotently on every deploy.
+
+    The file MUST be UTF-8 with NO BOM and NO trailing newline (exactly 7 bytes).
+    WriteLinesToFile would append a CRLF, so we use PowerShell's File.WriteAllText
+    (no-BOM UTF8 encoding) which writes the literal bytes with no terminator.
+  -->
+  <Target Name="DeploySteamAppId" AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <Exec Command="powershell -NoProfile -NonInteractive -Command &quot;[System.IO.File]::WriteAllText('$(GameInstallPath)\steam_appid.txt', '1272320', (New-Object System.Text.UTF8Encoding $false))&quot;" />
+    <Message Text="[DeploySteamAppId] Wrote steam_appid.txt (1272320) to $(GameInstallPath) — prevents DINO Steam self-relaunch from dropping BepInEx." Importance="high" />
+  </Target>
+
   <!-- Deploy packs from repo to game directory -->
   <Target Name="DeployPacks" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' and Exists('$(BepInExDir)') and '$(TargetFramework)' == 'netstandard2.0'">
     <ItemGroup>

@@ -81,6 +81,23 @@ BEPINEX_DIR = GAME_DIR / "BepInEx"
 DEBUG_LOG = BEPINEX_DIR / "dinoforge_debug.log"
 CATALOG_JSON = GAME_DIR / r"Diplomacy is Not an Option_Data\StreamingAssets\aa\catalog.json"
 
+# DINO AppID — steam_appid.txt beside the exe stops DINO from self-relaunching
+# through Steam (which kills the BepInEx-injected process: no MODS/F9/F10).
+DINO_STEAM_APPID = "1272320"
+
+
+def _ensure_steam_appid(game_dir: Path) -> None:
+    """Ensure steam_appid.txt (AppID, UTF-8 no BOM, no trailing newline) sits beside
+    the exe before launch. Steam 'Verify Integrity' can delete it; recreate if missing."""
+    appid_file = game_dir / "steam_appid.txt"
+    try:
+        if appid_file.read_bytes() == DINO_STEAM_APPID.encode("utf-8"):
+            return
+    except OSError:
+        pass
+    appid_file.write_bytes(DINO_STEAM_APPID.encode("utf-8"))
+
+
 GAME_CONTROL_PROJ = REPO_ROOT / "src/Tools/GameControlCli/GameControlCli.csproj"
 PACK_COMPILER_PROJ = REPO_ROOT / "src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj"
 ASSET_CLI_PROJ = REPO_ROOT / "src/Tools/Cli/DINOForge.Tools.Cli.csproj"
@@ -598,6 +615,7 @@ async def game_launch(ctx: Context, hidden: bool = False) -> dict:
     """
     if not GAME_EXE.exists():
         return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
+    _ensure_steam_appid(GAME_DIR)
     try:
         if hidden:
             # Try VDD first (dedicated DINOForge virtual display, not user's Parsec VDD)
@@ -631,6 +649,7 @@ async def game_launch_test(ctx: Context, hidden: bool = True) -> dict:
             f"or at the default location."
         )
         return {"success": False, "error": error_msg}
+    _ensure_steam_appid(Path(test_dir))
     try:
         if hidden:
             return await _launch_hidden(str(test_exe), "DINOForge_Agent_Test")

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Engine-UI injection race ("no Mods button / F9-F10 panels don't work")** — The MODS button and F9/F10 panels intermittently failed to load. Root cause: the only path that loaded packs and wired the mod menu was gated on an ECS World, but DINO has **no ECS World at the main menu** (worlds are created only when entering gameplay), so engine-UI setup was timing-dependent and often never ran. Additionally, native button injection required a `UnityEngine.UI.Button` while DINO's menu uses a custom `MainMenuButton : Selectable`. Fixes:
+  - `RuntimeDriver.RunMainMenuInit(reason)` — deterministic, idempotent main-menu init that loads packs (pure YAML, no ECS world), wires UGUI, pushes packs to the F10 panel, and attempts native injection. All failures are logged (no silent swallow — Pattern #104/#111).
+  - **Self-healing**: re-runs the menu-mode init on `SceneManager.activeSceneChanged`, plus a bounded per-frame retry (`MenuInitMaxRetryFrames`) that re-attempts MODS-button injection until it succeeds — closing the intermittent timing window.
+  - `NativeMenuInjector.IsModsButtonInjected` accessor drives the retry loop; the existing `Selectable`-donor injection path (custom `MainMenuButton`) is preserved.
+  - **Launch heartbeat**: a single `[DINOForge] ENGINE-UI READY: packs=<n> modsButton=<bool> f9=<bool> f10=<bool>` line is emitted in the BepInEx console so engine-UI state is confirmable at a glance.
+  - Fixed a pre-existing build break: two call sites referenced the renamed `NativeModsPage.OnBackPressed` (now `OnBackClicked`).
+  - Added `EngineUiSelfHealCharacterizationTests` (6 source-text invariant fixtures) pinning the anti-race guarantees.
+
 ## [0.26.0] - 2026-05-28
 
 ### Added — Major Features (35+ commits)

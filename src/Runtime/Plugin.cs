@@ -903,6 +903,20 @@ namespace DINOForge.Runtime
         private NativeMenuInjector? _nativeMenuInjector;
         private MainMenuThemer? _mainMenuThemer;
 
+        // ── Engine-UI self-healing (fix/engine-ui-injection-race) ────────────────
+        // RunMainMenuInit() is idempotent and re-runnable; these track its state so the
+        // main-thread pump can bounded-retry injection until the MODS button exists, and so
+        // the scene-change handler can re-run the menu-mode init when re-entering a menu scene.
+        // This kills the intermittent "no Mods button / no engine UI" race: a single missed
+        // timing window (ECS-world gate, late canvas, custom Selectable button) auto-recovers.
+        private bool _engineUiHeartbeatLogged;
+        private int _menuInitRetryFrames;
+        // Bounded retry budget — re-attempt MODS injection for up to N pump frames after the
+        // initial menu-mode init. At ~once-per-frame this covers several seconds of menu fade-in.
+        private const int MenuInitMaxRetryFrames = 600;
+        // Subscribed once; reset menu-mode init state when a menu scene becomes active again.
+        private bool _sceneChangeSubscribed;
+
         // _uguiReady: true once DFCanvas.Start() reports success via IsReady.
         // We check this each Update() because DFCanvas.Start() runs after Initialize().
         internal bool _uguiReady;
@@ -1334,43 +1348,16 @@ namespace DINOForge.Runtime
             DebugLog.Write("Plugin", $"[RuntimeDriver] Step 7 ENTERING MainMenu-mode PackLoad — _modPlatform={((_modPlatform != null) ? "present" : "NULL")}");
             RunPhaseWithAbortGuard("MainMenu-mode PackLoad", () =>
             {
-                if (_modPlatform != null)
-                {
-                    _log.LogInfo("[RuntimeDriver] MainMenu-mode pack-load: calling LoadPacks() (no ECS world required).");
-                    try
-                    {
-                        var result = _modPlatform.LoadPacks();
-                        _log.LogInfo($"[RuntimeDriver] MainMenu-mode pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
-                        WireUguiToModPlatform();
-                        PushLoadedPacksToUgui("main-menu init");
+                RunMainMenuInit("initialize");
 
-                        // Hide loading overlay now that packs are loaded
-                        if (_loadingOverlay != null)
-                        {
-                            _loadingOverlay.Hide();
-                            _log.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (MainMenu-mode pack-load complete).");
-                        }
-
-                        // Apply total_conversion theme to main menu
-                        try
-                        {
-                            _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
-                            var packInfos = _modPlatform.GetLoadedPackDisplayInfos();
-                            _mainMenuThemer.TryApplyTheme(packInfos);
-                        }
-                        catch (Exception themeEx)
-                        {
-                            _log.LogWarning($"[RuntimeDriver] MainMenuThemer failed: {themeEx.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.LogError($"[RuntimeDriver] MainMenu-mode pack-load FAILED: {ex}");
-                    }
-                }
-                else
+                // Subscribe to scene changes ONCE so re-entering a menu scene (e.g. returning
+                // from gameplay to the main menu) re-runs the idempotent menu-mode init. This is
+                // the self-healing path that recovers the engine UI after scene transitions.
+                if (!_sceneChangeSubscribed)
                 {
-                    _log.LogWarning("[RuntimeDriver] MainMenu-mode pack-load skipped — _modPlatform is null.");
+                    SceneManager.activeSceneChanged += OnRuntimeDriverSceneChanged;
+                    _sceneChangeSubscribed = true;
+                    _log.LogInfo("[RuntimeDriver] Subscribed activeSceneChanged for engine-UI self-heal.");
                 }
             });
 
@@ -1411,6 +1398,35 @@ namespace DINOForge.Runtime
             int _themeRetryCount = 0;
             while (!_destroyed)
             {
+                // ── Engine-UI self-healing bounded retry ─────────────────────────
+                // Re-attempt MODS-button injection until it succeeds or the retry budget
+                // is spent. The native menu canvas / custom Selectable buttons may not be
+                // present on the exact frame Step 7 ran, so a single missed window would
+                // otherwise leave "no Mods button" until the next scene change. Re-running
+                // each pump frame on the main thread closes that race deterministically.
+                if (_nativeMenuInjector != null
+                    && !_nativeMenuInjector.IsModsButtonInjected
+                    && _menuInitRetryFrames < MenuInitMaxRetryFrames)
+                {
+                    _menuInitRetryFrames++;
+                    if (_menuInitRetryFrames % 30 == 0) // ~twice/sec at 60fps; cheap canvas scan
+                    {
+                        try { _nativeMenuInjector.TryInjectMenuButton(); }
+                        catch (Exception injEx)
+                        {
+                            // Surface, don't swallow (Pattern #104/#111).
+                            _log?.LogWarning($"[RuntimeDriver] Engine-UI retry injection failed: {injEx.Message}");
+                        }
+                        // Emit the heartbeat once injection succeeds (or once the budget is
+                        // exhausted) so the log shows the final engine-UI state at a glance.
+                        if (_nativeMenuInjector.IsModsButtonInjected
+                            || _menuInitRetryFrames >= MenuInitMaxRetryFrames)
+                        {
+                            LogEngineUiHeartbeat("self-heal retry");
+                        }
+                    }
+                }
+
                 // Retry MainMenuThemer if canvas wasn't ready during Step 7
                 if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 30)
                 {
@@ -1524,6 +1540,130 @@ namespace DINOForge.Runtime
             {
                 _log?.LogWarning($"[RuntimeDriver] {phaseName} failed: {ex}");
             }
+        }
+
+        // ------------------------------------------------------------------ //
+        // Engine-UI MainMenu-mode init (deterministic, idempotent, self-healing)
+        // ------------------------------------------------------------------ //
+
+        /// <summary>
+        /// Loads packs, wires the UGUI mod menu, and attempts native MODS-button injection
+        /// WITHOUT requiring an ECS World. DINO only creates ECS worlds when entering gameplay,
+        /// so the ECS-gated <see cref="ProcessWorldReadyCoroutine"/> never runs at the main menu —
+        /// this is the only path that brings up the engine UI there.
+        ///
+        /// Idempotent: safe to call repeatedly. <see cref="ModPlatform.LoadPacks"/> is pure YAML
+        /// parsing, and <see cref="UI.NativeMenuInjector.TryInjectMenuButton"/> short-circuits when
+        /// the MODS button already exists. Every failure is logged (no silent swallow — Pattern
+        /// #104/#111) so the cause is visible in the BepInEx console.
+        /// </summary>
+        /// <param name="reason">Diagnostic tag for the log (e.g. "initialize", "scene-change").</param>
+        private void RunMainMenuInit(string reason)
+        {
+            if (_modPlatform == null)
+            {
+                _log.LogWarning($"[RuntimeDriver] MainMenu-mode init ({reason}) skipped — _modPlatform is null.");
+                return;
+            }
+
+            try
+            {
+                _log.LogInfo($"[RuntimeDriver] MainMenu-mode init ({reason}): calling LoadPacks() (no ECS world required).");
+                ContentLoadResult result = _modPlatform.LoadPacks();
+                _log.LogInfo($"[RuntimeDriver] MainMenu-mode init ({reason}) pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
+
+                WireUguiToModPlatform();
+                PushLoadedPacksToUgui("main-menu init");
+
+                // Hide loading overlay now that packs are loaded.
+                if (_loadingOverlay != null)
+                {
+                    _loadingOverlay.Hide();
+                    _log.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (MainMenu-mode init complete).");
+                }
+
+                // Apply total_conversion theme to main menu (best-effort; pump loop retries).
+                try
+                {
+                    _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
+                    IReadOnlyList<PackDisplayInfo> packInfos = _modPlatform.GetLoadedPackDisplayInfos();
+                    _mainMenuThemer.TryApplyTheme(packInfos);
+                }
+                catch (Exception themeEx)
+                {
+                    _log.LogWarning($"[RuntimeDriver] MainMenuThemer failed: {themeEx.Message}");
+                }
+
+                // Kick a native injection attempt immediately; the pump loop bounded-retry
+                // handles the case where the menu canvas is not ready on this exact frame.
+                if (_nativeMenuInjector != null)
+                {
+                    try { _nativeMenuInjector.TryInjectMenuButton(); }
+                    catch (Exception injEx)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] MainMenu-mode init ({reason}) injection attempt failed: {injEx.Message}");
+                    }
+                }
+
+                // Emit the single launch-time engine-UI heartbeat (idempotent: only once unless
+                // a scene change re-arms it). If injection is still pending the pump-loop retry
+                // re-emits with the final state.
+                LogEngineUiHeartbeat(reason);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError($"[RuntimeDriver] MainMenu-mode init ({reason}) FAILED: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Self-heal hook: when DINO transitions to a menu scene (no active gameplay ECS world),
+        /// re-arm the bounded retry and re-run the idempotent menu-mode init so the engine UI is
+        /// rebuilt after returning from gameplay. Never throws to Unity.
+        /// </summary>
+        private void OnRuntimeDriverSceneChanged(Scene previous, Scene next)
+        {
+            try
+            {
+                if (_destroyed) return;
+                _log.LogInfo($"[RuntimeDriver] activeSceneChanged: '{previous.name}' → '{next.name}' — re-arming engine-UI menu-mode init.");
+                // Re-arm: the scene swap destroyed the previous canvas + injected button, so allow
+                // a fresh injection attempt and a fresh heartbeat for the new scene.
+                _menuInitRetryFrames = 0;
+                _engineUiHeartbeatLogged = false;
+                RunMainMenuInit("scene-change");
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[RuntimeDriver] OnRuntimeDriverSceneChanged failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Emits a single unambiguous launch-time heartbeat summarising engine-UI readiness so the
+        /// user (and tooling) can confirm state at a glance from the BepInEx console / LogOutput.log.
+        /// Logged at most once per scene (re-armed on scene change).
+        /// </summary>
+        private void LogEngineUiHeartbeat(string reason)
+        {
+            if (_engineUiHeartbeatLogged) return;
+
+            int packs = 0;
+            try { packs = _modPlatform?.GetLoadedPackDisplayInfos().Count ?? 0; }
+            catch { /* safe-swallow: heartbeat is diagnostic-only and must not throw */ }
+
+            bool modsButton = _nativeMenuInjector != null && _nativeMenuInjector.IsModsButtonInjected;
+            bool f9 = _debugOverlay != null || _dfCanvas != null;       // F9 debug panel host present
+            bool f10 = _modMenuHost != null || _dfCanvas?.ModMenuPanel != null; // F10 mods panel host present
+
+            // Only mark the heartbeat as "logged" (final) once the MODS button is in OR we were
+            // called from the retry path; the first injectionless call may re-emit after retries.
+            if (modsButton || string.Equals(reason, "self-heal retry", StringComparison.Ordinal))
+            {
+                _engineUiHeartbeatLogged = true;
+            }
+
+            _log.LogInfo($"[DINOForge] ENGINE-UI READY: packs={packs} modsButton={modsButton} f9={f9} f10={f10} (via {reason})");
         }
 
         internal void RequestPackReload(string reason)
@@ -2370,6 +2510,16 @@ namespace DINOForge.Runtime
             s_isBeingDestroyed = true;
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
+
+            // Pair the activeSceneChanged subscription added in Step 7 (Pattern #105). This
+            // instance is being destroyed on the scene transition; the next RuntimeDriver
+            // resubscribes its own handler during its Initialize Step 7.
+            if (_sceneChangeSubscribed)
+            {
+                try { SceneManager.activeSceneChanged -= OnRuntimeDriverSceneChanged; }
+                catch { /* safe-swallow: unsubscribe is best-effort during teardown */ }
+                _sceneChangeSubscribed = false;
+            }
             // iter-145 #882 ROOT CAUSE: Removed _resurrectionFallbackStopEvent.Set() — that was killing
             // the fallback thread on every RuntimeDriver.OnDestroy (scene transition), preventing the
             // post-OnDestroy resurrection that's the whole point of the fallback. The "wake without

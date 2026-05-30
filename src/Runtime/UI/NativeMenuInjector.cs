@@ -47,6 +47,14 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         public static string? RepurposedModsButtonGoName { get; private set; }
 
+        /// <summary>
+        /// True once a "Mods" button has been injected into a native menu AND the injected
+        /// button GameObject is still alive (not destroyed by a scene unload). Read by
+        /// <see cref="RuntimeDriver"/>'s self-healing retry loop to decide whether another
+        /// injection attempt is needed (kills the intermittent "no Mods button" race).
+        /// </summary>
+        public bool IsModsButtonInjected => _injected && _injectedButton != null;
+
         // ------------------------------------------------------------------ //
         // Well-known canvas names to check (case-insensitive prefix/substring)
         // ------------------------------------------------------------------ //
@@ -1359,7 +1367,7 @@ namespace DINOForge.Runtime.UI
                     pageGo.transform.SetParent(mainMenuCanvas.transform, false);
                     _nativeModsPage = pageGo.AddComponent<NativeModsPage>();
                     if (_log != null) _nativeModsPage.SetLogger(_log);
-                    _nativeModsPage.OnBackPressed = () =>
+                    _nativeModsPage.OnBackClicked = () =>
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] NativeModsPage Back pressed");
                     };

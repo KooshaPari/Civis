@@ -19,6 +19,7 @@
 use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
 use bevy::prelude::*;
 
+use crate::minimap::MinimapCamera;
 use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
 
 /// Civilian capsule radius (world units).
@@ -199,7 +200,10 @@ fn spawn_cursor_marker(
 /// (hidden) whenever egui owns the pointer so the ring vanishes over the HUD.
 fn update_cursor_marker(
     windows: Query<&Window>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    // MUST exclude the minimap camera: with two `Camera3d` entities a plain
+    // `With<Camera3d>` query is ambiguous and `single()` returns `Err`, so the
+    // raycast silently produced `None` every frame and *all* map clicks no-oped.
+    cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
     over_ui: Res<PointerOverUi>,
     mut marker: ResMut<CursorMarker>,
 ) {
@@ -208,16 +212,30 @@ fn update_cursor_marker(
         marker.position = None;
         return;
     }
+    let had_hit = marker.position.is_some();
     let hit = cursor_terrain_hit(&windows, &cameras);
+    log_hit_transition(had_hit, hit.is_some());
     marker.position = hit;
     marker.visible = hit.is_some();
+}
+
+/// Emit a one-shot diagnostic when the terrain hit transitions present<->absent
+/// so stderr proves whether the raycast resolves (without spamming per frame).
+fn log_hit_transition(prev: bool, now: bool) {
+    if prev != now {
+        if now {
+            info!("[tools] cursor terrain hit ACQUIRED");
+        } else {
+            info!("[tools] cursor terrain hit LOST (no ray/terrain intersection)");
+        }
+    }
 }
 
 /// Resolve the cursor's terrain hit (world space), if the window, camera, and
 /// ray all produce a valid terrain intersection this frame.
 fn cursor_terrain_hit(
     windows: &Query<&Window>,
-    cameras: &Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
 ) -> Option<Vec3> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
@@ -238,12 +256,25 @@ fn handle_spawn_tool_clicks(
     mut select_entity: MessageWriter<SelectEntityRequest>,
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
 ) {
-    if over_ui.0 || !buttons.just_pressed(MouseButton::Left) {
+    if !buttons.just_pressed(MouseButton::Left) {
+        return;
+    }
+    // A left click happened — log every gate so stderr proves the path.
+    if over_ui.0 {
+        info!("[tools] left-click BLOCKED by egui (pointer over HUD)");
         return;
     }
     let Some(position) = marker.position else {
+        info!(
+            "[tools] left-click passed egui, tool={:?}, but NO terrain hit this frame",
+            active.tool
+        );
         return;
     };
+    info!(
+        "[tools] left-click ACTION tool={:?} at {:?}",
+        active.tool, position
+    );
 
     match active.tool {
         SpawnTool::Select => {
@@ -273,9 +304,11 @@ fn apply_spawn_requests(
 ) {
     for request in civilians.read() {
         spawn_civilian_entity(&mut commands, &mut meshes, &mut materials, request.position);
+        info!("[tools] SPAWNED civilian at {:?}", request.position);
     }
     for request in buildings.read() {
         spawn_building_entity(&mut commands, &mut meshes, &mut materials, request.position);
+        info!("[tools] SPAWNED building at {:?}", request.position);
     }
 }
 
@@ -356,6 +389,7 @@ fn resolve_selection_and_destruction(
 ) {
     for request in select_entity.read() {
         selected.0 = nearest_entity(request.position, &entities);
+        info!("[tools] SELECT -> {:?}", selected.0);
     }
 
     for request in destroy_entity.read() {
@@ -364,6 +398,9 @@ fn resolve_selection_and_destruction(
                 selected.0 = None;
             }
             commands.entity(entity).despawn();
+            info!("[tools] DESTROYED {:?}", entity);
+        } else {
+            info!("[tools] DESTROY request but no sandbox entity near hit");
         }
     }
 }

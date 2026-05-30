@@ -20,5 +20,12 @@ These, and essentially only these, are authored:
 ## Scale target
 - **~20 mi × 20 mi** real-world-equivalent maps (or the max realistic below that). Tractable via the **SVO + dense-leaf-chunk substrate + chunk streaming + LOD + frustum culling** already built: keep an active working set in memory, stream the rest from disk. At a coarse base voxel (e.g. 1–4 m) this is feasible; **disk space is the primary bound**, not compute, given aggressive chunking/LOD. Agent sim runs LOD-tiered (full near the camera/active areas, statistical far away).
 
+## Determinism is NOT a requirement (correction, 2026-05-29)
+Strict lockstep determinism — seeded-RNG-only, fixed-point everything, `thread_rng` forbidden, bit-identical replay — is **explicitly NOT a requirement** for Civis. It was inherited from the old CivLab replay-determinism ADR and **conflicts with the emergent-variety goal**: the point is a living world that produces *variety that makes sense*, not one that replays identically every run.
+- Agents/systems MAY use real randomness (`thread_rng`, OS entropy, floats) where it serves richer emergence. No need to fixed-point or seed-gate for reproducibility.
+- **Seeded worldgen stays useful** (so "New World, seed X" yields a recognizable starting world) — but that's a *best-effort convenience*, not a bit-identical invariant. Floats are fine.
+- Save/load persists actual state (snapshots), not a replay-from-seed log; an event log can exist for history/feed but need not guarantee bit-identical re-simulation.
+- Do NOT spend effort enforcing determinism, writing determinism tests, or rejecting non-deterministic crates/plugins on determinism grounds. Prefer the simpler/livelier implementation.
+
 ## Design rule for every contributor (human or agent)
 Before adding any "thing," ask: *can this emerge from Layer-0 rules instead of being hardcoded?* If yes, model the rule, not the outcome. Authored content is limited to physical law, material/energy constraints, and genomics primitives. See [[civis-voxel-fluid-vision]], [[hierarchical-agents]].

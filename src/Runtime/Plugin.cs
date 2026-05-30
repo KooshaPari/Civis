@@ -451,6 +451,17 @@ namespace DINOForge.Runtime
         // Mirrors _backgroundPollStopEvent pattern (#873).
         internal static readonly ManualResetEventSlim _resurrectionFallbackStopEvent = new(false);
 
+        // FailureMode B fix (iter-149, 2026-05-29): the grace deadline MUST persist across loop
+        // restarts. Previously `lastNeedsObservedUtc` was a LOCAL inside ResurrectionFallbackLoop;
+        // when the loop re-entered (a new thread start, or a fresh "loop entered" after the prior
+        // instance exited), the timer reset to MinValue and the 4000ms grace window NEVER elapsed,
+        // so TryResurrect was detected every cycle but never executed. Latching the deadline as a
+        // STATIC field means any loop iteration — even a brand-new one — honors the in-progress
+        // grace window set by a prior iteration. DateTime.MinValue = "not armed".
+        // Sentinel: DateTime.MinValue means no grace window is currently armed.
+        private static DateTime _graceDeadlineUtc = DateTime.MinValue;
+        private static readonly object _graceDeadlineLock = new();
+
         private static void StartResurrectionFallbackThread()
         {
             if (_resurrectionFallbackThread != null) return;
@@ -465,7 +476,6 @@ namespace DINOForge.Runtime
 
         private static void ResurrectionFallbackLoop()
         {
-            DateTime lastNeedsObservedUtc = DateTime.MinValue;
             long iterationCount = 0;
             const int PollIntervalMs = 500;
             const int GraceWindowMs = 4000; // 4s after NeedsResurrection observed, attempt direct revive
@@ -511,42 +521,60 @@ namespace DINOForge.Runtime
                     bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed;
                     if (!needsRevive)
                     {
-                        lastNeedsObservedUtc = DateTime.MinValue;
+                        // No need observed: disarm the (static) grace window so a future need starts fresh.
+                        ResetGraceDeadline();
                         continue;
                     }
-                    if (lastNeedsObservedUtc == DateTime.MinValue)
+
+                    // FailureMode B fix: latch the grace DEADLINE in a STATIC field so a loop restart
+                    // RESUMES the in-progress window instead of resetting it. Returns true only once
+                    // the latched deadline has elapsed; until then we keep polling.
+                    if (!IsGraceWindowElapsed(GraceWindowMs, out bool justArmed))
                     {
-                        lastNeedsObservedUtc = DateTime.UtcNow;
-                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: NeedsResurrection observed, starting grace timer.");
+                        if (justArmed)
+                        {
+                            DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: NeedsResurrection observed, grace deadline armed ({GraceWindowMs}ms).");
+                        }
                         continue;
                     }
-                    TimeSpan since = DateTime.UtcNow - lastNeedsObservedUtc;
-                    if (since.TotalMilliseconds < GraceWindowMs) continue;
-                    // Grace window exceeded with no scene-event resolution: attempt direct resurrect.
+
+                    // Grace window elapsed with no scene-event resolution: attempt direct resurrect.
                     if (_resurrectionLog == null || _resurrectionConfig == null)
                     {
-                        // Plugin.Awake never completed; can't resurrect. Reset timer to retry later.
-                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Will retry.");
-                        lastNeedsObservedUtc = DateTime.UtcNow;
+                        // Plugin.Awake never completed; can't resurrect. Re-arm to retry later.
+                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Re-arming.");
+                        RearmGraceDeadline(GraceWindowMs);
                         continue;
                     }
                     string sceneName = LastSceneNameForResurrection ?? "fallback-unknown";
-                    DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms exceeded — invoking TryResurrect (scene='{sceneName}').");
+                    DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms elapsed — invoking TryResurrect (scene='{sceneName}').");
                     try
                     {
                         TryResurrect(sceneName, "ResurrectionFallbackThread");
-                        // After attempt, clear flags so we don't spin; if revive failed, scene event/poller will re-set them.
-                        NeedsResurrection = false;
-                        NeedsDeferredResurrection = false;
-                        s_rootJustDestroyed = false;
-                        s_skipBundleUnload = false;
-                        DebugLog.Write("Plugin", "[Plugin] Resurrection complete via ResurrectionFallbackThread (flags cleared).");
-                        lastNeedsObservedUtc = DateTime.MinValue;
+                        // Only clear flags + disarm the window when the revive SUCCEEDED. If the driver
+                        // is now live, the next iteration's needsRevive will be false and stay disarmed.
+                        // If revive did NOT take (root still null / not initialized), KEEP the need set and
+                        // RE-ARM the deadline so we retry — do not silently drop the resurrection request.
+                        if (ResurrectionSucceeded())
+                        {
+                            NeedsResurrection = false;
+                            NeedsDeferredResurrection = false;
+                            s_rootJustDestroyed = false;
+                            s_skipBundleUnload = false;
+                            ResetGraceDeadline();
+                            DebugLog.Write("Plugin", "[Plugin] Resurrection complete via ResurrectionFallbackThread (driver live; flags cleared).");
+                        }
+                        else
+                        {
+                            // Do NOT clear NeedsResurrection until TryResurrect SUCCEEDS (per spec).
+                            RearmGraceDeadline(GraceWindowMs);
+                            DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: TryResurrect did not bring driver live yet — re-arming, need retained.");
+                        }
                     }
                     catch (Exception ex)
                     {
                         DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback TryResurrect threw: {ex.Message}");
-                        lastNeedsObservedUtc = DateTime.UtcNow; // back off, retry next grace window
+                        RearmGraceDeadline(GraceWindowMs); // back off, retry next grace window
                     }
                 }
                 catch (ThreadAbortException)
@@ -559,6 +587,65 @@ namespace DINOForge.Runtime
                 }
             }
             DebugLog.Write("Plugin", "[Plugin] Resurrection fallback thread exiting.");
+        }
+
+        /// <summary>
+        /// FailureMode B helper: returns true once the latched (static) grace deadline has elapsed.
+        /// If no deadline is armed, arms one (now + graceWindowMs) and returns false with
+        /// <paramref name="justArmed"/>=true. Survives loop restarts because the deadline is static.
+        /// </summary>
+        private static bool IsGraceWindowElapsed(int graceWindowMs, out bool justArmed)
+        {
+            justArmed = false;
+            lock (_graceDeadlineLock)
+            {
+                if (_graceDeadlineUtc == DateTime.MinValue)
+                {
+                    _graceDeadlineUtc = DateTime.UtcNow.AddMilliseconds(graceWindowMs);
+                    justArmed = true;
+                    return false;
+                }
+                return DateTime.UtcNow >= _graceDeadlineUtc;
+            }
+        }
+
+        /// <summary>Re-arms the static grace deadline to now + graceWindowMs (back-off after a failed/partial revive).</summary>
+        private static void RearmGraceDeadline(int graceWindowMs)
+        {
+            lock (_graceDeadlineLock)
+            {
+                _graceDeadlineUtc = DateTime.UtcNow.AddMilliseconds(graceWindowMs);
+            }
+        }
+
+        /// <summary>Disarms the static grace deadline (no resurrection currently needed, or revive succeeded).</summary>
+        private static void ResetGraceDeadline()
+        {
+            lock (_graceDeadlineLock)
+            {
+                _graceDeadlineUtc = DateTime.MinValue;
+            }
+        }
+
+        /// <summary>
+        /// FailureMode B helper: true only when the resurrection actually brought a live, initialized
+        /// RuntimeDriver online. Used to decide whether to clear NeedsResurrection (only on success)
+        /// versus retain the need + re-arm for another attempt. Never throws to the caller.
+        /// </summary>
+        private static bool ResurrectionSucceeded()
+        {
+            try
+            {
+                if (ReferenceEquals(PersistentRoot, null)) return false;
+                RuntimeDriver? driver = PersistentRoot!.GetComponent<RuntimeDriver>();
+                return driver != null && driver.IsInitialized;
+            }
+            catch (Exception ex)
+            {
+                // Pattern #104/#111: surface, do not silently swallow.
+                try { DebugLog.Write("Plugin", $"[Plugin] ResurrectionSucceeded check threw: {ex.GetType().Name}: {ex.Message}"); } catch { /* diagnostic only */ }
+                return false;
+            }
         }
 
         /// <summary>

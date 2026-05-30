@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Launch heartbeat**: a single `[DINOForge] ENGINE-UI READY: packs=<n> modsButton=<bool> f9=<bool> f10=<bool>` line is emitted in the BepInEx console so engine-UI state is confirmable at a glance.
   - Fixed a pre-existing build break: two call sites referenced the renamed `NativeModsPage.OnBackPressed` (now `OnBackClicked`).
   - Added `EngineUiSelfHealCharacterizationTests` (6 source-text invariant fixtures) pinning the anti-race guarantees.
+- **Resurrection-fallback grace window never completing (FailureMode B)** — On the `InitialGameLoader` scene the `RuntimeDriver` tears down and sets `NeedsResurrection`. The background `ResurrectionFallbackLoop` correctly *detected* the need every cycle ("starting grace timer") but the 4000ms grace window **never elapsed**, so `TryResurrect` was detected-but-never-executed and the driver stayed dormant (no MODS button / dead F9/F10). Root cause: the grace timer (`lastNeedsObservedUtc`) was a **local variable**; any loop re-entry reset it to `MinValue`, restarting the window before it could fire. Fixes (`src/Runtime/Plugin.cs`):
+  - Latched the grace **deadline** in a static field (`_graceDeadlineUtc`, lock-guarded) so a loop restart **resumes** the in-progress window instead of resetting it (`IsGraceWindowElapsed` / `RearmGraceDeadline` / `ResetGraceDeadline`).
+  - `NeedsResurrection` is now cleared **only when the revive actually brings a live, initialized `RuntimeDriver` online** (`ResurrectionSucceeded`); a partial/failed revive retains the need and re-arms the window for another attempt (no silent drop).
+  - The revive path lands on the active (menu) scene and `RuntimeDriver.Initialize` → `RunMainMenuInit` so MODS/F9/F10 come up post-resurrection.
+  - Added `ResurrectionGraceWindowTests` (4 characterization tests) pinning the deadline-persists-across-restart invariant.
 
 ## [0.26.0] - 2026-05-28
 

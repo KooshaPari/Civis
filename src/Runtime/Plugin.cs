@@ -314,8 +314,37 @@ namespace DINOForge.Runtime
             {
                 DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull} unityNull={PersistentRoot == null}");
                 LastSceneNameForResurrection = newScene.name;
+
+                // FailureMode B fix (iter-149, 2026-05-29): RESURRECT ON THE MAIN THREAD HERE.
+                // activeSceneChanged fires on the Unity main thread AFTER the new scene is active,
+                // so TryResurrect's Unity ECalls (Camera.main / AddComponent / Initialize coroutine)
+                // are safe — unlike the ResurrectionFallback BACKGROUND thread, where the same calls
+                // deadlock during the InitialGameLoader→MainMenu asset load. The bg fallback thread
+                // (grace-windowed) remains only as a last-resort safety net if no scene event arrives.
+                // We still set the deferred flag first so that if this direct attempt does not bring
+                // the driver fully live, the need is retained for the fallback path.
                 NeedsDeferredResurrection = true;
-                DebugLog.Write("Plugin", "[Plugin] Resurrection complete via activeSceneChanged (flagged for deferred TryResurrect)");
+                try
+                {
+                    TryResurrect(newScene.name, "activeSceneChanged(main-thread)");
+                    if (ResurrectionSucceeded())
+                    {
+                        NeedsResurrection = false;
+                        NeedsDeferredResurrection = false;
+                        s_rootJustDestroyed = false;
+                        s_skipBundleUnload = false;
+                        ResetGraceDeadline();
+                        DebugLog.Write("Plugin", "[Plugin] Resurrection complete via activeSceneChanged (main-thread; driver live).");
+                    }
+                    else
+                    {
+                        DebugLog.Write("Plugin", "[Plugin] activeSceneChanged main-thread TryResurrect did not bring driver live — retained for fallback path.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] activeSceneChanged main-thread TryResurrect threw: {ex.GetType().Name}: {ex.Message} — retained for fallback path.");
+                }
             }
         }
 
@@ -825,6 +854,18 @@ namespace DINOForge.Runtime
                 EnsureEventSystemAlive();
                 try { SharedBridgeServer?.EnsureServerAlive(); }
                 catch (Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] EnsureServerAlive: {ex.Message}"); }
+
+                // FailureMode B definitive fix (iter-149, 2026-05-29): MAIN-THREAD resurrection
+                // consumer. The PlayerLoop Update injection runs on the Unity MAIN THREAD every
+                // frame and SURVIVES RuntimeDriver teardown (it is static + Harmony-injected), so
+                // it is the correct place to perform resurrection — TryResurrect's Unity ECalls
+                // (Camera.main / AddComponent / Initialize) are main-thread-safe here, whereas the
+                // ResurrectionFallback BACKGROUND thread deadlocks on the same calls (and even on
+                // the Unity `==`/GetComponent ECalls) during the InitialGameLoader→MainMenu asset
+                // load — which is why its heartbeat went silent and the driver never revived.
+                // Throttled to once/sec (the %60 gate) so we don't thrash; idempotent + cap-guarded
+                // inside TryResurrect. Need flags are cleared only on confirmed success.
+                ConsumeResurrectionOnMainThread();
             }
 
             if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
@@ -853,6 +894,59 @@ namespace DINOForge.Runtime
 
             _prevF9 = f9Now;
             _prevF10 = f10Now;
+        }
+
+        /// <summary>
+        /// FailureMode B definitive fix (iter-149, 2026-05-29): MAIN-THREAD resurrection consumer.
+        /// Invoked from <see cref="DINOForgePlayerLoopUpdate"/> (throttled by the caller's %60 gate),
+        /// this runs on the Unity main thread and SURVIVES RuntimeDriver teardown (it is a static
+        /// method reached via the Harmony-injected PlayerLoop entry). Unlike the ResurrectionFallback
+        /// BACKGROUND thread — which deadlocks on Unity ECalls (Camera.main / AddComponent / Initialize
+        /// touching Resources/asset APIs) during the InitialGameLoader→MainMenu asset load — every call
+        /// made here is main-thread-safe.
+        ///
+        /// Idempotent and cap-guarded inside <see cref="TryResurrect"/>. Need flags are cleared only on
+        /// confirmed success (<see cref="ResurrectionSucceeded"/>). Never throws to Unity (Pattern #104/#111).
+        /// </summary>
+        private static void ConsumeResurrectionOnMainThread()
+        {
+            try
+            {
+                bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed;
+                if (!needsRevive)
+                {
+                    return;
+                }
+
+                // Cap gate: when PersistentRoot is gone, TryResurrect's create-root path is bounded by
+                // MaxResurrectionAttempts. Checking here too avoids logging churn once the cap is hit.
+                if (ReferenceEquals(PersistentRoot, null) && IsResurrectionCapExhausted())
+                {
+                    return;
+                }
+
+                string sceneName;
+                try { sceneName = LastSceneNameForResurrection ?? SceneManager.GetActiveScene().name; }
+                catch { sceneName = LastSceneNameForResurrection ?? "main-thread-unknown"; }
+
+                DebugLog.Write("Plugin", $"[Plugin] ConsumeResurrectionOnMainThread: revive needed (NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootJustDestroyed={s_rootJustDestroyed}) — invoking TryResurrect (scene='{sceneName}').");
+                TryResurrect(sceneName, "main-thread-playerloop");
+
+                if (ResurrectionSucceeded())
+                {
+                    NeedsResurrection = false;
+                    NeedsDeferredResurrection = false;
+                    s_rootJustDestroyed = false;
+                    s_skipBundleUnload = false;
+                    ResetGraceDeadline();
+                    DebugLog.Write("Plugin", "[Plugin] Resurrection complete via main-thread-playerloop (driver live; flags cleared).");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Pattern #104/#111: surface, never throw into the PlayerLoop.
+                try { DebugLog.Write("Plugin", $"[Plugin] ConsumeResurrectionOnMainThread threw: {ex.GetType().Name}: {ex.Message}"); } catch { /* diagnostic only */ }
+            }
         }
 
         private static void PatchPlayerLoopRejection()

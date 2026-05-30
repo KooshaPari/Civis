@@ -234,13 +234,24 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public void EnsureServerAlive()
         {
-            // If RuntimeDriver was destroyed (scene transition), resurrect it.
-            // This creates a new RuntimeDriver which re-registers KeyInputSystem
-            // in the current ECS world, ensuring DrainQueue and F9/F10 work.
+            // FailureMode B fix (iter-149, 2026-05-29): DO NOT call TryResurrect here.
+            // EnsureServerAlive runs on the ResurrectionFallback BACKGROUND thread every poll
+            // tick. Calling TryResurrect when PersistentRoot==null reaches Unity ECalls
+            // (Camera.main / AddComponent / RuntimeDriver.Initialize, which touch
+            // Resources/asset APIs) on a background thread DURING the InitialGameLoader→MainMenu
+            // asset load — that DEADLOCKS the fallback thread (memory: "Resources.* from a bg
+            // thread DEADLOCKS during asset loading"). The wedged thread stops emitting
+            // heartbeats and never reaches the grace-windowed revive, so the driver stays
+            // dormant and no engine UI (MODS/F9/F10) appears.
+            //
+            // Resurrection is OWNED by ResurrectionFallbackLoop's grace-windowed path, which
+            // exists precisely to defer the revive until the scene has settled. This method now
+            // only restarts a dead bridge SERVER THREAD (pipe-only work, no Unity ECalls), and
+            // marks the deferred-resurrection flag so the grace path picks it up safely.
             if (Plugin.PersistentRoot == null)
             {
-                DebugLog.Write("GameBridgeServer", "[GameBridgeServer] PersistentRoot is null — triggering resurrection...");
-                Plugin.TryResurrect("(Bridge supervisor)", "EnsureServerAlive");
+                DebugLog.Write("GameBridgeServer", "[GameBridgeServer] PersistentRoot is null — deferring resurrection to grace-windowed fallback path (no bg-thread Unity ECalls).");
+                Plugin.MarkNeedsDeferredResurrection("EnsureServerAlive");
             }
 
             if (_running && (_serverThread == null || !_serverThread.IsAlive))

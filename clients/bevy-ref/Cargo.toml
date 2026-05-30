@@ -66,6 +66,11 @@ bevy = [
 ]
 egui = ["bevy", "dep:bevy_egui"]
 rapier = ["bevy", "dep:bevy_rapier3d"]
+# P-VM-3 — real volumetric voxel material rendering: cubic-meshed chunks from
+# civ-voxel (CubicMesher) coloured per-material, with the material CA stepped
+# each tick so water flows and powders pile. OFF by default so the heightmap +
+# flat-water build stays the playable fallback. Enable: `--features voxel`.
+voxel = ["bevy"]
 # PART B — CC0 GLTF model loading (src/gltf_models.rs). OFF by default: when
 # disabled (or when assets/models/*.glb are absent) callers fall back to the
 # procedural primitives (capsule civilians / cuboid buildings / cone trees).

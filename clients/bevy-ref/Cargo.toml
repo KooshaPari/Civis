@@ -30,6 +30,12 @@ bevy_egui = { version = "0.39", optional = true }
 wgpu = { version = "27", optional = true }
 # Optional physics (not wired yet); keep out of default `bevy` feature to avoid wgpu version clashes.
 bevy_rapier3d = { version = "0.34", optional = true }
+# Audio (ambient soundscape + SFX), gated behind the `audio` feature.
+# Compat (checked 2026-05-30 via crates.io): bevy_kira_audio 0.25.x is the
+# release that targets Bevy 0.18 (0.26.x targets Bevy 0.19-rc), so it matches
+# our `bevy = "0.18"` pin. default-features off → only the `ogg` decoder is
+# pulled (CC0 clips ship as .ogg), avoiding extra codec deps. See src/audio.rs.
+bevy_kira_audio = { version = "0.25", optional = true, default-features = false, features = ["ogg"] }
 # PART A — bevy_atmosphere (real physically-based sky), gated behind the
 # `atmosphere` feature. NOTE (checked 2026-05-29 via crates.io): the latest
 # published bevy_atmosphere is 0.13.0 (2025-05-06) which depends on `bevy ^0.16`
@@ -79,7 +85,26 @@ models = ["bevy"]
 # bevy_atmosphere exists yet (see the commented dep above). When one ships,
 # uncomment its dep and change this to `atmosphere = ["bevy", "dep:bevy_atmosphere"]`.
 atmosphere = ["bevy"]
+# Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
+# (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
+audio = ["bevy", "dep:bevy_kira_audio"]
 solari = [
+    "bevy",
+    "bevy/bevy_solari",
+]
+# `gi` — real-time raytraced global illumination (Lumen-equivalent) via Bevy's
+# in-tree `bevy_solari` (ReSTIR DI + ReSTIR GI + world-space irradiance cache +
+# specular GI). See src/lighting_gi.rs (`SolariGiPlugin`). bevy_solari is a Bevy
+# crate enabled through the `bevy/bevy_solari` cargo feature — there is no
+# separate crates.io dep line to add; the feature below pulls it in.
+#
+# HARDWARE: requires a GPU + backend exposing ray-tracing acceleration
+# structures (DXR on DX12, or Vulkan VK_KHR_ray_tracing). SolariGiPlugin
+# degrades to a loud, explicit no-op (logged) when that is unavailable — see
+# the module docs. Verified against the Bevy 0.18 `solari` example API on
+# 2026-05-30 (SolariPlugins + SolariLighting + CameraMainTextureUsages
+# STORAGE_BINDING + Msaa::Off).
+gi = [
     "bevy",
     "bevy/bevy_solari",
 ]

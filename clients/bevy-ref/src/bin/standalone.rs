@@ -52,8 +52,15 @@ fn main() {
             Startup,
             (
                 setup_camera,
-                setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
-                spawn_decorations.run_if(in_sandbox_attach_mode),
+                // Heightmap terrain + decorations are the default-playable
+                // fallback. Under the `voxel` feature VoxelSimPlugin owns the
+                // world instead (see `heightmap_enabled`).
+                setup_sandbox_terrain
+                    .run_if(in_sandbox_attach_mode)
+                    .run_if(heightmap_enabled),
+                spawn_decorations
+                    .run_if(in_sandbox_attach_mode)
+                    .run_if(heightmap_enabled),
             )
                 .chain(),
         )
@@ -65,6 +72,10 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin);
 
+    // P-VM-3: real volumetric voxel material world (replaces the heightmap).
+    #[cfg(feature = "voxel")]
+    app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
+
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
     }
@@ -74,6 +85,12 @@ fn main() {
 
 fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
     *mode == AttachMode::Standalone
+}
+
+/// True when the heightmap terrain should spawn — i.e. the `voxel` feature is
+/// OFF. Under `voxel`, `VoxelSimPlugin` owns the world instead.
+fn heightmap_enabled() -> bool {
+    cfg!(not(feature = "voxel"))
 }
 
 fn setup_camera(mut commands: Commands) {

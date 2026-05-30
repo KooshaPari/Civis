@@ -16,15 +16,19 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::ui_theme;
+
 // ---------------------------------------------------------------------------
-// Palette (mirrors game_ui.rs / event_feed.rs dark-glassmorphism constants)
+// Palette — sourced from the shared `ui_theme` so the tech-tree overlay tracks
+// the cohesive dark-glass HUD language used across every panel.
 // ---------------------------------------------------------------------------
 
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 240);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-const LOCKED_DIM: egui::Color32 = egui::Color32::from_rgb(120, 128, 148);
-const TEXT_MAIN: egui::Color32 = egui::Color32::from_rgb(220, 225, 235);
+const PANEL_FILL: egui::Color32 = ui_theme::PANEL_FILL;
+const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
+const ACCENT: egui::Color32 = ui_theme::ACCENT;
+const LOCKED_DIM: egui::Color32 = ui_theme::DIM;
+const TEXT_MAIN: egui::Color32 = ui_theme::TEXT;
+const GOLD: egui::Color32 = ui_theme::GOLD;
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -83,16 +87,37 @@ pub struct TechNode {
 // ---------------------------------------------------------------------------
 
 /// Catalogue of tech nodes plus unlock progress.
+///
+/// Populated live from the simulation by [`sync_tech_tree_from_sim`], which
+/// reads the emergent era-diffusion state (the highest era any civilian has
+/// adopted in their `Wardrobe`/`Tools`, plus the current cohort adoption
+/// fraction). The seed catalogue is only a fallback before the first tick.
 #[derive(Resource)]
 pub struct TechTreeState {
     /// All known technology nodes.
     pub nodes: Vec<TechNode>,
+    /// Highest era index any civilian has reached (engine `era` units). Drives
+    /// which era columns are unlocked. `0` before the sim has ticked.
+    pub current_era: u16,
+    /// Live adoption fraction of the cohort at the leading era, in `0.0..=1.0`.
+    pub adoption_fraction: f32,
+    /// Civilians already at-or-above the leading era (live cohort sample).
+    pub at_leading_era: u32,
+    /// Total civilians considered in the diffusion cohort this tick.
+    pub cohort_total: u32,
+    /// Whether the panel has received at least one live sim sample.
+    pub live: bool,
 }
 
 impl Default for TechTreeState {
     fn default() -> Self {
         Self {
             nodes: default_tech_nodes(),
+            current_era: 0,
+            adoption_fraction: 0.0,
+            at_leading_era: 0,
+            cohort_total: 0,
+            live: false,
         }
     }
 }
@@ -118,6 +143,19 @@ impl TechTreeState {
             true
         } else {
             false
+        }
+    }
+
+    /// Reconcile node unlock flags against a live engine era index.
+    ///
+    /// An era column (and all its nodes) is considered unlocked once the
+    /// civilisation's leading era has reached that column's [`TechEra::order`].
+    /// This makes the tree reflect the emergent era-diffusion in the sim rather
+    /// than a hardcoded unlock list.
+    pub fn apply_era(&mut self, current_era: u16) {
+        self.current_era = current_era;
+        for node in &mut self.nodes {
+            node.unlocked = u16::from(node.era.order()) <= current_era;
         }
     }
 }
@@ -168,7 +206,7 @@ impl Plugin for TechTreeUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TechTreeState>()
             .init_resource::<TechTreeOpen>()
-            .add_systems(Update, toggle_tech_tree)
+            .add_systems(Update, (toggle_tech_tree, sync_tech_tree_from_sim))
             .add_systems(EguiPrimaryContextPass, draw_tech_tree);
     }
 }
@@ -182,6 +220,44 @@ pub fn toggle_tech_tree(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<TechTr
     if keys.just_pressed(KeyCode::KeyT) {
         open.0 = !open.0;
     }
+}
+
+/// Pull the live tech progression out of the running simulation.
+///
+/// Reads the emergent era-diffusion state every time the simulation changes:
+/// - the **leading era** is the highest `Wardrobe`/`Tools` era any civilian has
+///   adopted (the civilisation's research frontier),
+/// - the **cohort stats** (`last_cohort_stats`) give the live adoption fraction
+///   and how many civilians have reached that frontier this tick.
+///
+/// Era columns unlock as the frontier advances, so the panel shows real
+/// progress instead of the seed placeholder list.
+pub fn sync_tech_tree_from_sim(
+    sim: Res<crate::sim_bridge::SimState>,
+    mut state: ResMut<TechTreeState>,
+) {
+    if !sim.is_changed() {
+        return;
+    }
+    let sim = &sim.0;
+
+    // Research frontier = highest worn-tech era across the population.
+    let mut leading_era: u16 = 0;
+    for (_, wardrobe) in sim.world.query::<&civ_agents::Wardrobe>().iter() {
+        leading_era = leading_era.max(wardrobe.era);
+    }
+    for (_, tools) in sim.world.query::<&civ_agents::Tools>().iter() {
+        leading_era = leading_era.max(tools.era);
+    }
+
+    state.apply_era(leading_era);
+
+    if let Some(stats) = sim.last_cohort_stats() {
+        state.adoption_fraction = stats.current_fraction.clamp(0.0, 1.0);
+        state.at_leading_era = stats.currently_at_target;
+        state.cohort_total = stats.total_civilians;
+    }
+    state.live = true;
 }
 
 /// Draw the tech tree overlay window when [`TechTreeOpen`] is set.
@@ -226,17 +302,32 @@ pub fn draw_tech_tree(
 // UI helpers  (each ≤ 40 lines)
 // ---------------------------------------------------------------------------
 
-/// Render the unlock-progress header line + bar.
+/// Render the unlock-progress header line + bar plus live diffusion stats.
 fn draw_progress_header(ui: &mut egui::Ui, state: &TechTreeState) {
     let progress = state.progress();
+    let era_label = leading_era_label(state.current_era);
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(format!(
+                "{} / {} technologies unlocked",
+                state.unlocked_count(),
+                state.nodes.len()
+            ))
+            .color(TEXT_MAIN)
+            .size(14.0),
+        );
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let badge = if state.live { "● live" } else { "○ waiting" };
+            let badge_color = if state.live { ACCENT } else { LOCKED_DIM };
+            ui.label(egui::RichText::new(badge).color(badge_color).size(12.0));
+        });
+    });
+    ui.add_space(2.0);
     ui.label(
-        egui::RichText::new(format!(
-            "{} / {} technologies unlocked",
-            state.unlocked_count(),
-            state.nodes.len()
-        ))
-        .color(TEXT_MAIN)
-        .size(14.0),
+        egui::RichText::new(format!("Era frontier: {era_label}"))
+            .color(GOLD)
+            .strong()
+            .size(13.0),
     );
     ui.add_space(4.0);
     ui.add(
@@ -244,6 +335,29 @@ fn draw_progress_header(ui: &mut egui::Ui, state: &TechTreeState) {
             .desired_width(ui.available_width().min(280.0))
             .fill(ACCENT.gamma_multiply(0.8)),
     );
+    if state.cohort_total > 0 {
+        ui.add_space(3.0);
+        ui.label(
+            egui::RichText::new(format!(
+                "Adoption: {:.0}%  ({} / {} civilians at frontier)",
+                state.adoption_fraction * 100.0,
+                state.at_leading_era,
+                state.cohort_total
+            ))
+            .color(LOCKED_DIM)
+            .size(12.0),
+        );
+    }
+}
+
+/// Map a leading era index to the nearest named era column label.
+fn leading_era_label(era: u16) -> &'static str {
+    match era {
+        0 => TechEra::Ancient.label(),
+        1 => TechEra::Classical.label(),
+        2 => TechEra::Medieval.label(),
+        _ => TechEra::Industrial.label(),
+    }
 }
 
 /// Render the four era columns side by side.

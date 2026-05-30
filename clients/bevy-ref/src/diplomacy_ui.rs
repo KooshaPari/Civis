@@ -17,23 +17,25 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::ui_theme;
+
 // ---------------------------------------------------------------------------
-// Palette (mirrors game_ui.rs)
+// Palette — sourced from the shared `ui_theme` dark-glass language.
 // ---------------------------------------------------------------------------
 
-/// Dark glass panel fill — identical to `PANEL_FILL` in `game_ui.rs`.
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-/// Chip / cell tint — identical to `CHIP_FILL` in `game_ui.rs`.
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-/// Cyan accent — identical to `ACCENT` in `game_ui.rs`.
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-/// Dimmed label colour — identical to `DIM` in `game_ui.rs`.
-const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
+/// Dark glass panel fill.
+const PANEL_FILL: egui::Color32 = ui_theme::PANEL_FILL;
+/// Chip / cell tint.
+const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
+/// Cyan accent.
+const ACCENT: egui::Color32 = ui_theme::ACCENT;
+/// Dimmed label colour.
+const DIM: egui::Color32 = ui_theme::DIM;
 
 // Relation colour stops
-const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);
-const GOLD: egui::Color32 = egui::Color32::from_rgb(240, 200, 90);
-const RED: egui::Color32 = egui::Color32::from_rgb(220, 80, 80);
+const GREEN: egui::Color32 = ui_theme::GREEN;
+const GOLD: egui::Color32 = ui_theme::GOLD;
+const RED: egui::Color32 = ui_theme::RED;
 
 // ---------------------------------------------------------------------------
 // Data model
@@ -74,11 +76,21 @@ pub struct DiplomacyState {
     pub relations: Vec<Vec<i8>>,
     /// Whether the panel is currently visible.
     pub open: bool,
+    /// Whether at least one live sim sample has populated this state.
+    pub live: bool,
+    /// Tick of the most recently ingested diplomacy event (dedup guard).
+    last_event_tick: u64,
 }
 
 impl Default for DiplomacyState {
     fn default() -> Self {
-        Self { factions: Vec::new(), relations: Vec::new(), open: false }
+        Self {
+            factions: Vec::new(),
+            relations: Vec::new(),
+            open: false,
+            live: false,
+            last_event_tick: 0,
+        }
     }
 }
 
@@ -98,7 +110,34 @@ impl DiplomacyState {
             vec![-80, 20,   0,  10],  // Green → {Red, Blue, self, Yellow}
             vec![ 30,-55,  10,   0],  // Yellow→ {Red, Blue, Green, self}
         ];
-        Self { factions, relations, open: true }
+        Self { factions, relations, open: true, live: false, last_event_tick: 0 }
+    }
+
+    /// Ensure the relation matrix is square and sized to the faction count,
+    /// preserving existing accumulated stances. New cells default to neutral.
+    fn resize_matrix(&mut self) {
+        let n = self.factions.len();
+        self.relations.resize(n, Vec::new());
+        for row in &mut self.relations {
+            row.resize(n, 0);
+        }
+    }
+
+    /// Find a faction row index by its sim id.
+    fn index_of(&self, id: u32) -> Option<usize> {
+        self.factions.iter().position(|f| f.id == id)
+    }
+
+    /// Accumulate a single emergent diplomacy outcome into the symmetric
+    /// relation matrix. Trade agreements warm the relation, conflicts cool it;
+    /// values saturate within the `i8` stance range.
+    fn accumulate(&mut self, a: u32, b: u32, delta: i8) {
+        let (Some(i), Some(j)) = (self.index_of(a), self.index_of(b)) else {
+            return;
+        };
+        let bump = |v: i8| v.saturating_add(delta).clamp(-100, 100);
+        self.relations[i][j] = bump(self.relations[i][j]);
+        self.relations[j][i] = bump(self.relations[j][i]);
     }
 }
 
@@ -114,7 +153,7 @@ pub struct DiplomacyUiPlugin;
 impl Plugin for DiplomacyUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DiplomacyState>()
-            .add_systems(Update, toggle_diplomacy_panel)
+            .add_systems(Update, (toggle_diplomacy_panel, sync_diplomacy_from_sim))
             .add_systems(EguiPrimaryContextPass, draw_diplomacy_panel);
     }
 }
@@ -130,6 +169,81 @@ fn toggle_diplomacy_panel(
     if keys.just_pressed(KeyCode::KeyG) {
         state.open = !state.open;
     }
+}
+
+/// Faction-banner hue for a sim faction id (matches `sim_bridge::faction_color`).
+fn faction_banner(id: u32) -> [f32; 3] {
+    let hue = (id as f32 * 85.0) % 360.0;
+    let c = Color::hsla(hue, 0.6, 0.5, 1.0).to_srgba();
+    [c.red, c.green, c.blue]
+}
+
+/// Pull emergent inter-faction relations out of the running simulation.
+///
+/// The simulation exposes its factions (`sim.state.factions`) and a rolling
+/// list of emergent [`civ_engine::DiplomacyEvent`]s via `snapshot()`. This
+/// system rebuilds the faction roster (name + treasury-derived size + banner
+/// colour) and folds each new trade/conflict outcome into an accumulated,
+/// symmetric stance matrix. It degrades gracefully: with <2 factions the panel
+/// simply shows whatever roster exists and an empty grid.
+pub fn sync_diplomacy_from_sim(
+    sim: Res<crate::sim_bridge::SimState>,
+    mut state: ResMut<DiplomacyState>,
+) {
+    if !sim.is_changed() {
+        return;
+    }
+    let world_state = &sim.0.state;
+
+    // Rebuild the roster from the sim's faction registry (id-ordered for a
+    // stable matrix layout). Population stands in via treasury magnitude.
+    let mut ids: Vec<u32> = world_state.factions.keys().copied().collect();
+    ids.sort_unstable();
+    let factions: Vec<DipFaction> = ids
+        .iter()
+        .map(|&id| {
+            let name = world_state
+                .factions
+                .get(&id)
+                .cloned()
+                .unwrap_or_else(|| format!("Faction {id}"));
+            let treasury = world_state
+                .faction_treasury
+                .get(&id)
+                .map(|t| t.to_f64().max(0.0) as u32)
+                .unwrap_or(0);
+            DipFaction::new(id, name, faction_banner(id), treasury)
+        })
+        .collect();
+
+    let roster_changed = factions.len() != state.factions.len()
+        || factions
+            .iter()
+            .zip(state.factions.iter())
+            .any(|(a, b)| a.id != b.id);
+    state.factions = factions;
+    if roster_changed {
+        // Faction set changed — reset accumulated stances to a clean matrix.
+        state.relations.clear();
+    }
+    state.resize_matrix();
+
+    // Fold in any emergent diplomacy outcomes newer than the last we ingested.
+    let snap = sim.0.snapshot();
+    for ev in &snap.diplomacy_events {
+        if ev.tick <= state.last_event_tick {
+            continue;
+        }
+        let delta: i8 = match ev.kind {
+            civ_engine::DiplomacyKind::TradeAgreement => 18,
+            civ_engine::DiplomacyKind::Peace => 8,
+            civ_engine::DiplomacyKind::Conflict => -22,
+        };
+        state.accumulate(ev.faction_a, ev.faction_b, delta);
+        state.last_event_tick = state.last_event_tick.max(ev.tick);
+    }
+
+    state.live = true;
 }
 
 fn draw_diplomacy_panel(
@@ -156,6 +270,16 @@ fn draw_diplomacy_panel(
                 .corner_radius(egui::CornerRadius::same(10)),
         )
         .show(ctx, |ui| {
+            // Live-data status badge.
+            ui.horizontal(|ui| {
+                let (badge, color) = if state.live {
+                    ("● live — emergent inter-faction relations", ACCENT)
+                } else {
+                    ("○ waiting for simulation…", DIM)
+                };
+                ui.label(egui::RichText::new(badge).color(color).size(12.0));
+            });
+            ui.add_space(6.0);
             ui.horizontal(|ui| {
                 // Left column: faction list
                 ui.vertical(|ui| {

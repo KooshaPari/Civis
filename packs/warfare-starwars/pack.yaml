@@ -44,6 +44,13 @@ ui_theme:
   accent_color: "#C0392B"
   text_color: "#FFE81F"
   background_tint: "#0A0A1A"
+  # EPIC-027 visual takeover — pack-relative PNG art (rasterized from assets/svg/ via scripts/art/rasterize-menu-takeover.ps1)
+  logo: "assets/ui/menu_logo.png"
+  background_image: "assets/ui/menu_bg.png"
+  button_frame: "assets/ui/btn_normal.png"
+  button_frame_hover: "assets/ui/btn_hover.png"
+  # Star-Wars-style menu font — runtime TMP_FontAsset created from this TTF (Kenney Future Narrow, CC0).
+  font: "assets/ui/menu_font.ttf"
 
 loads:
   factions:

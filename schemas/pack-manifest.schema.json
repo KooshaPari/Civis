@@ -119,7 +119,11 @@
         "secondary_color": { "type": "string", "description": "Secondary color (hex)." },
         "accent_color": { "type": "string", "description": "Accent/highlight color (hex)." },
         "text_color": { "type": "string", "description": "Text color (hex)." },
-        "background_tint": { "type": "string", "description": "Background tint overlay color (hex)." }
+        "background_tint": { "type": "string", "description": "Background tint overlay color (hex)." },
+        "logo": { "type": "string", "description": "Pack-relative path to a PNG logo image that replaces the native main-menu title (e.g. 'assets/ui/menu_logo.png'). EPIC-027 visual takeover." },
+        "background_image": { "type": "string", "description": "Pack-relative path to a full-bleed PNG that replaces the native main-menu background (e.g. 'assets/ui/menu_bg.png'). EPIC-027 visual takeover." },
+        "button_frame": { "type": "string", "description": "Pack-relative path to a 9-slice PNG used as the normal-state frame sprite for native menu buttons (e.g. 'assets/ui/btn_normal.png'). EPIC-027 visual takeover." },
+        "button_frame_hover": { "type": "string", "description": "Pack-relative path to a 9-slice PNG used as the highlighted-state frame sprite for native menu buttons (e.g. 'assets/ui/btn_hover.png'). EPIC-027 visual takeover." }
       },
       "additionalProperties": false
     },

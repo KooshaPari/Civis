@@ -25,6 +25,20 @@ type: total_conversion
 depends_on: []
 conflicts_with: []
 
+ui_theme:
+  title: "WARFARE: MODERN"
+  subtitle: "Western Alliance vs Classic Enemy"
+  primary_color: "#F5A623"
+  secondary_color: "#1C2B3A"
+  accent_color: "#CC2929"
+  text_color: "#EDE8DC"
+  background_tint: "#141A18"
+  # EPIC-027 visual takeover — pack-relative PNG art (rasterized from assets/svg/ via scripts/art/rasterize-menu-takeover.ps1)
+  logo: "assets/ui/menu_logo.png"
+  background_image: "assets/ui/menu_bg.png"
+  button_frame: "assets/ui/btn_normal.png"
+  button_frame_hover: "assets/ui/btn_hover.png"
+
 loads:
   factions:
     - factions

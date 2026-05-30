@@ -49,6 +49,8 @@ ui_theme:
   background_image: "assets/ui/menu_bg.png"
   button_frame: "assets/ui/btn_normal.png"
   button_frame_hover: "assets/ui/btn_hover.png"
+  # Star-Wars-style menu font — runtime TMP_FontAsset created from this TTF (Kenney Future Narrow, CC0).
+  font: "assets/ui/menu_font.ttf"
 
 loads:
   factions:

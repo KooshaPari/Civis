@@ -23,6 +23,11 @@ namespace DINOForge.Runtime
         private readonly string _packsDirectory;
         private bool _applied;
 
+        // Runtime-created TMP_FontAsset (from the pack's shipped TTF) cached for the session.
+        // Created once via reflection (Runtime has no compile-time TMPro reference) and reused.
+        private static UnityEngine.Object? _cachedFontAsset;
+        private static string? _cachedFontKey;
+
         public bool IsApplied => _applied;
 
         public MainMenuThemer(ManualLogSource log, string packsDirectory)
@@ -89,7 +94,9 @@ namespace DINOForge.Runtime
                     Logo = ExtractYamlValue(yaml, idx, "logo"),
                     BackgroundImage = ExtractYamlValue(yaml, idx, "background_image"),
                     ButtonFrame = ExtractYamlValue(yaml, idx, "button_frame"),
-                    ButtonFrameHover = ExtractYamlValue(yaml, idx, "button_frame_hover")
+                    ButtonFrameHover = ExtractYamlValue(yaml, idx, "button_frame_hover"),
+                    Font = ExtractYamlValue(yaml, idx, "font"),
+                    FontFamily = ExtractYamlValue(yaml, idx, "font_family")
                 };
             }
             catch (Exception ex)
@@ -144,10 +151,21 @@ namespace DINOForge.Runtime
                 int btnHits = RestyleSelectables(canvas, primary, secondary, textCol, accent);
                 int labelHits = RewriteLabels(canvas, textCol);
 
+                // FONT: runtime-create a TMP_FontAsset from the pack's shipped TTF and apply it
+                // to every TMP_Text on the menu canvas (reflection — no compile-time TMPro ref).
+                bool fontLoaded = false;
+                int fontHits = 0;
+                UnityEngine.Object? fontAsset = TryLoadFontAsset(theme, pack.Id);
+                if (fontAsset != null)
+                {
+                    fontLoaded = true;
+                    fontHits = ApplyFont(canvas, fontAsset);
+                }
+
                 bool takeover = bgSwapped || logoInjected || frameHits > 0;
                 _applied = true;
-                _log?.LogInfo($"[MainMenuThemer] Theme '{theme.Title}' from '{pack.Id}': takeover={takeover} (bgSwap={bgSwapped} logo={logoInjected} frames={frameHits}) tint(bg={bgTintHits} title={titleHits} btn={btnHits} label={labelHits})");
-                DebugLog.Write("MainMenuThemer", $"{(takeover ? "TAKEOVER" : "Tint")} applied: '{theme.Title}' canvas='{canvas.name}' bgSwap={bgSwapped} logo={logoInjected} frames={frameHits}");
+                _log?.LogInfo($"[MainMenuThemer] TAKEOVER applied: '{theme.Title}' from '{pack.Id}': takeover={takeover} bgSwap={bgSwapped} logo={logoInjected} frames={frameHits} font={fontLoaded} (fontHits={fontHits} tint-bg={bgTintHits} title={titleHits} btn={btnHits} label={labelHits})");
+                DebugLog.Write("MainMenuThemer", $"{(takeover ? "TAKEOVER" : "Tint")} applied: '{theme.Title}' canvas='{canvas.name}' bgSwap={bgSwapped} logo={logoInjected} frames={frameHits} font={fontLoaded}");
                 return true;
             }
             catch (Exception ex)
@@ -435,9 +453,12 @@ namespace DINOForge.Runtime
                 string full = Path.Combine(Path.Combine(_packsDirectory, packId), relativePath.Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(full))
                 {
-                    _log?.LogWarning($"[MainMenuThemer] takeover art missing: {full}"); // pattern-96-ok: diagnostic
+                    // Always surface the ABSOLUTE path tried so a runtime path mismatch is
+                    // immediately visible in the live log (root-cause of the tint-only fallback).
+                    _log?.LogWarning($"[MainMenuThemer] takeover art MISSING — tried abs path: '{full}' (packsDir='{_packsDirectory}', packId='{packId}', rel='{relativePath}')"); // pattern-96-ok: diagnostic
                     return null;
                 }
+                _log?.LogInfo($"[MainMenuThemer] takeover art LOADED: '{full}'"); // pattern-96-ok: diagnostic
                 byte[] data = File.ReadAllBytes(full);
                 var tex = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: false)
                 {
@@ -471,6 +492,140 @@ namespace DINOForge.Runtime
                 _log?.LogWarning($"[MainMenuThemer] LoadSpriteFromPack failed '{relativePath}': {ex.Message}"); // pattern-96-ok: diagnostic
                 return null;
             }
+        }
+
+        // ── EPIC-027 font takeover ───────────────────────────────────────────────
+
+        [System.Runtime.InteropServices.DllImport("gdi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern int AddFontResourceEx(string lpFileName, uint fl, System.IntPtr pdv);
+
+        /// <summary>
+        /// Loads the pack's shipped TTF and produces a <c>TMP_FontAsset</c> via reflection
+        /// (Runtime has no compile-time TMPro reference). The TTF is registered with the OS
+        /// font subsystem (<c>AddFontResourceEx</c>, process-private) so Unity's
+        /// <c>Font.CreateDynamicFontFromOSFont</c> can rasterise it; the resulting dynamic
+        /// <see cref="Font"/> is wrapped with <c>TMP_FontAsset.CreateFontAsset(Font)</c>.
+        /// Result is cached per font path. Returns null (never throws) on any failure so the
+        /// reskin degrades to the native font.
+        /// </summary>
+        private UnityEngine.Object? TryLoadFontAsset(ThemeData theme, string packId)
+        {
+            if (string.IsNullOrEmpty(theme.Font)) return null;
+            try
+            {
+                string full = Path.Combine(Path.Combine(_packsDirectory, packId), theme.Font!.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(full))
+                {
+                    _log?.LogWarning($"[MainMenuThemer] font MISSING — tried abs path: '{full}' (packsDir='{_packsDirectory}', packId='{packId}', rel='{theme.Font}')"); // pattern-96-ok: diagnostic
+                    return null;
+                }
+
+                // Cache hit for the same file.
+                if (_cachedFontAsset != null && _cachedFontKey == full) return _cachedFontAsset;
+
+                string family = string.IsNullOrEmpty(theme.FontFamily) ? "Kenney Future Narrow" : theme.FontFamily!;
+
+                // Register the TTF with the (process-private) OS font table so
+                // CreateDynamicFontFromOSFont can find it by family name.
+                int added = 0;
+                try { added = AddFontResourceEx(full, 0x10 /*FR_PRIVATE*/, System.IntPtr.Zero); }
+                catch (Exception ex) { _log?.LogWarning($"[MainMenuThemer] AddFontResourceEx failed: {ex.Message}"); } // pattern-96-ok: diagnostic
+                _log?.LogInfo($"[MainMenuThemer] font registered: '{full}' family='{family}' addFontResult={added}"); // pattern-96-ok: diagnostic
+
+                Font? srcFont = Font.CreateDynamicFontFromOSFont(family, 48);
+                if (srcFont == null)
+                {
+                    _log?.LogWarning($"[MainMenuThemer] CreateDynamicFontFromOSFont returned null for family '{family}'"); // pattern-96-ok: diagnostic
+                    return null;
+                }
+
+                // TMP_FontAsset.CreateFontAsset(Font) via reflection — Unity.TextMeshPro.dll.
+                Type? tmpFontAssetType = FindType("TMPro.TMP_FontAsset");
+                if (tmpFontAssetType == null)
+                {
+                    _log?.LogWarning("[MainMenuThemer] TMPro.TMP_FontAsset type not found — cannot build TMP font"); // pattern-96-ok: diagnostic
+                    return null;
+                }
+                MethodInfo? create = tmpFontAssetType
+                    .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                    .FirstOrDefault(m => m.Name == "CreateFontAsset"
+                                         && m.GetParameters().Length >= 1
+                                         && m.GetParameters()[0].ParameterType == typeof(Font));
+                if (create == null)
+                {
+                    _log?.LogWarning("[MainMenuThemer] TMP_FontAsset.CreateFontAsset(Font) overload not found"); // pattern-96-ok: diagnostic
+                    return null;
+                }
+
+                // Supply defaults for any extra optional params (samplingPointSize, atlas dims, render mode, etc.).
+                ParameterInfo[] ps = create.GetParameters();
+                object?[] args = new object?[ps.Length];
+                args[0] = srcFont;
+                for (int i = 1; i < ps.Length; i++)
+                    args[i] = ps[i].HasDefaultValue ? ps[i].DefaultValue : (ps[i].ParameterType.IsValueType ? Activator.CreateInstance(ps[i].ParameterType) : null);
+
+                var fontAsset = create.Invoke(null, args) as UnityEngine.Object;
+                if (fontAsset == null)
+                {
+                    _log?.LogWarning("[MainMenuThemer] CreateFontAsset returned null"); // pattern-96-ok: diagnostic
+                    return null;
+                }
+                UnityEngine.Object.DontDestroyOnLoad(fontAsset);
+                _cachedFontAsset = fontAsset;
+                _cachedFontKey = full;
+                _log?.LogInfo($"[MainMenuThemer] TMP_FontAsset created from '{full}' family='{family}'"); // pattern-96-ok: diagnostic
+                return fontAsset;
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[MainMenuThemer] TryLoadFontAsset failed: {ex.Message}"); // pattern-96-ok: diagnostic
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Assigns the runtime <c>TMP_FontAsset</c> to every <c>TMP_Text</c> on the menu canvas
+        /// via the reflected <c>font</c> property (no compile-time TMPro reference). Skips
+        /// DINOForge-owned objects. Returns the number of labels re-fonted.
+        /// </summary>
+        private int ApplyFont(Canvas canvas, UnityEngine.Object fontAsset)
+        {
+            int hits = 0;
+            try
+            {
+                foreach (var c in canvas.GetComponentsInChildren<Component>(true))
+                {
+                    if (c == null) continue;
+                    if (!(c.GetType().FullName ?? "").StartsWith("TMPro.")) continue;
+                    var fontProp = c.GetType().GetProperty("font");
+                    if (fontProp == null || !fontProp.CanWrite) continue;
+                    if (!fontProp.PropertyType.IsInstanceOfType(fontAsset)) continue;
+                    try
+                    {
+                        fontProp.SetValue(c, fontAsset);
+                        hits++;
+                    }
+                    catch { /* safe-swallow: best-effort per-label font swap */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[MainMenuThemer] ApplyFont failed: {ex.Message}"); // pattern-96-ok: diagnostic
+            }
+            return hits;
+        }
+
+        private static Type? FindType(string fullName)
+        {
+            Type? t = Type.GetType(fullName);
+            if (t != null) return t;
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try { t = asm.GetType(fullName); }
+                catch { t = null; }
+                if (t != null) return t;
+            }
+            return null;
         }
 
         private int RestyleSelectables(Canvas canvas, Color primary, Color secondary, Color text, Color accent)
@@ -559,6 +714,8 @@ namespace DINOForge.Runtime
             public string? BackgroundImage;
             public string? ButtonFrame;
             public string? ButtonFrameHover;
+            public string? Font;
+            public string? FontFamily;
         }
     }
 }

@@ -282,8 +282,134 @@ namespace DINOForge.Runtime
         private static void StartResurrectionWatcher()
         {
             SceneManager.activeSceneChanged += OnActiveSceneChanged;
-            DebugLog.Write("Plugin", "[Plugin] activeSceneChanged watcher registered (iter-144 #546 fix).");
+            // Blocker 2 keystone fix (iter-149b, 2026-05-29): also subscribe to sceneLoaded.
+            // Live log evidence (dinoforge_debug.log, all relaunches) shows activeSceneChanged
+            // fires ONLY for '' and 'InitialGameLoader' — it NEVER fired for MainMenu. DINO loads
+            // MainMenu ADDITIVELY (LoadSceneMode.Additive) or via an async path that does NOT change
+            // the ACTIVE scene, so activeSceneChanged is silent for it while sceneLoaded DOES fire
+            // for additive loads. With both the bg fallback wedged (Blocker 1) and no MainMenu
+            // activeSceneChanged, resurrection never ran on a main thread. sceneLoaded is the missing
+            // main-thread hook for the MainMenu activation. Both events run on the Unity main thread,
+            // so resurrection (Unity ECalls) is safe in either handler.
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            DebugLog.Write("Plugin", "[Plugin] activeSceneChanged + sceneLoaded watchers registered (iter-149b Blocker 2 fix).");
             StartResurrectionFallbackThread();
+            StartPipeKeepAliveThread();
+        }
+
+        // Blocker 2 keystone fix (iter-149b): sceneLoaded fires for additive scene loads where
+        // activeSceneChanged stays silent (confirmed: MainMenu emitted NO activeSceneChanged).
+        // Runs on the Unity main thread, so it is a safe place to perform resurrection. We log the
+        // scene name + buildIndex + load mode on EVERY scene event so DINO's actual MainMenu emission
+        // is observable, then drive the same main-thread revive path as OnActiveSceneChanged.
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded: name='{scene.name}' buildIndex={scene.buildIndex} mode={mode} isLoaded={scene.isLoaded}");
+            EnsureEventSystemAlive();
+            try
+            {
+                Bridge.KeyInputSystem.RecreateInCurrentWorld();
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded RecreateInCurrentWorld failed: {ex.Message}");
+            }
+
+            // Always remember the latest scene name so a fallback revive has a meaningful label.
+            if (!string.IsNullOrEmpty(scene.name))
+            {
+                LastSceneNameForResurrection = scene.name;
+            }
+
+            MainThreadReviveIfNeeded(scene.name, "sceneLoaded(main-thread)");
+        }
+
+        /// <summary>
+        /// Blocker 2 fix (iter-149b): shared main-thread revive entry point used by BOTH
+        /// activeSceneChanged and sceneLoaded. Performs the actual resurrection on the Unity main
+        /// thread (where Camera.main / AddComponent / Initialize ECalls are safe), then clears the
+        /// need flags only on confirmed success. The bg fallback thread only MARKS the need; this is
+        /// where the revive actually executes. Never throws to the Unity caller (Pattern #104/#111).
+        /// </summary>
+        private static void MainThreadReviveIfNeeded(string sceneName, string trigger)
+        {
+            bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
+            bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null;
+            if (!needsRevive)
+            {
+                return;
+            }
+
+            LastSceneNameForResurrection = string.IsNullOrEmpty(sceneName) ? LastSceneNameForResurrection : sceneName;
+            NeedsDeferredResurrection = true;
+            DebugLog.Write("Plugin", $"[Plugin] MainThreadReviveIfNeeded ({trigger}): revive needed (NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull}) — invoking TryResurrect.");
+            try
+            {
+                TryResurrect(LastSceneNameForResurrection ?? sceneName ?? "main-thread-unknown", trigger);
+                if (ResurrectionSucceeded())
+                {
+                    NeedsResurrection = false;
+                    NeedsDeferredResurrection = false;
+                    s_rootJustDestroyed = false;
+                    s_skipBundleUnload = false;
+                    ResetGraceDeadline();
+                    DebugLog.Write("Plugin", $"[Plugin] Resurrection complete via {trigger} (driver live; flags cleared).");
+                }
+                else
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] {trigger} TryResurrect did not bring driver live — retained for next main-thread tick.");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] {trigger} TryResurrect threw: {ex.GetType().Name}: {ex.Message} — retained for next main-thread tick.");
+            }
+        }
+
+        // Blocker 1 fix (iter-149b): dedicated pipe-keepalive thread. Pipe Stop()/Start() may block
+        // (kernel-mode pipe teardown during asset loads) — running it here keeps that blocking work
+        // OFF the resurrection fallback thread, so resurrection heartbeats keep ticking regardless of
+        // pipe I/O latency. Polls every 1s; restart is idempotent (EnsureServerAlive no-ops when alive).
+        private static Thread? _pipeKeepAliveThread;
+        internal static readonly ManualResetEventSlim _pipeKeepAliveStopEvent = new(false);
+
+        private static void StartPipeKeepAliveThread()
+        {
+            if (_pipeKeepAliveThread != null) return;
+            _pipeKeepAliveThread = new Thread(PipeKeepAliveLoop)
+            {
+                Name = "DINOForge.PipeKeepAlive",
+                IsBackground = true,
+            };
+            _pipeKeepAliveThread.Start();
+            DebugLog.Write("Plugin", "[Plugin] Pipe-keepalive thread started (Blocker 1: pipe I/O off the resurrection heartbeat).");
+        }
+
+        private static void PipeKeepAliveLoop()
+        {
+            const int PipePollIntervalMs = 1000;
+            DebugLog.Write("Plugin", "[Plugin] PipeKeepAlive: loop entered.");
+            while (!_resurrectionFallbackStop)
+            {
+                try
+                {
+#pragma warning disable DF0116 // Intentional cooperative-stop blocking wait on the pipe-keepalive thread.
+                    if (_pipeKeepAliveStopEvent.Wait(PipePollIntervalMs)) break;
+#pragma warning restore DF0116
+                    // This MAY block on a dead-pipe Stop()->Start(); that is acceptable here because
+                    // it does not run on the resurrection heartbeat thread or the Unity main thread.
+                    SharedBridgeServer?.EnsureServerAlive();
+                }
+                catch (ThreadAbortException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] PipeKeepAlive EnsureServerAlive: {ex.Message}");
+                }
+            }
+            DebugLog.Write("Plugin", "[Plugin] PipeKeepAlive thread exiting.");
         }
 
         private static void OnActiveSceneChanged(Scene oldScene, Scene newScene)
@@ -302,50 +428,13 @@ namespace DINOForge.Runtime
             {
                 DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed: {ex.Message}");
             }
-            // RuntimeDriver may have been destroyed when DINO destroyed our root.
-            // Trigger resurrection here. IMPORTANT: we defer TryResurrect to the resurrection thread
-            // (or the new RuntimeDriver's BG poll thread) instead of calling directly, since a brand
-            // new RuntimeDriver may not have completed Initialize() yet at this exact tick.
-            // Iter-144 #543 fix: ReferenceEquals check + s_rootJustDestroyed avoids Unity fake-null
-            // trap (== null on a destroyed-but-not-nulled MonoBehaviour reports true via operator
-            // overload but the actual managed reference is still non-null).
-            bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
-            if (NeedsResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null)
-            {
-                DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull} unityNull={PersistentRoot == null}");
-                LastSceneNameForResurrection = newScene.name;
-
-                // FailureMode B fix (iter-149, 2026-05-29): RESURRECT ON THE MAIN THREAD HERE.
-                // activeSceneChanged fires on the Unity main thread AFTER the new scene is active,
-                // so TryResurrect's Unity ECalls (Camera.main / AddComponent / Initialize coroutine)
-                // are safe — unlike the ResurrectionFallback BACKGROUND thread, where the same calls
-                // deadlock during the InitialGameLoader→MainMenu asset load. The bg fallback thread
-                // (grace-windowed) remains only as a last-resort safety net if no scene event arrives.
-                // We still set the deferred flag first so that if this direct attempt does not bring
-                // the driver fully live, the need is retained for the fallback path.
-                NeedsDeferredResurrection = true;
-                try
-                {
-                    TryResurrect(newScene.name, "activeSceneChanged(main-thread)");
-                    if (ResurrectionSucceeded())
-                    {
-                        NeedsResurrection = false;
-                        NeedsDeferredResurrection = false;
-                        s_rootJustDestroyed = false;
-                        s_skipBundleUnload = false;
-                        ResetGraceDeadline();
-                        DebugLog.Write("Plugin", "[Plugin] Resurrection complete via activeSceneChanged (main-thread; driver live).");
-                    }
-                    else
-                    {
-                        DebugLog.Write("Plugin", "[Plugin] activeSceneChanged main-thread TryResurrect did not bring driver live — retained for fallback path.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    DebugLog.Write("Plugin", $"[Plugin] activeSceneChanged main-thread TryResurrect threw: {ex.GetType().Name}: {ex.Message} — retained for fallback path.");
-                }
-            }
+            // RuntimeDriver may have been destroyed when DINO destroyed our root. activeSceneChanged
+            // fires on the Unity MAIN THREAD after the new scene is active, so TryResurrect's Unity
+            // ECalls (Camera.main / AddComponent / Initialize coroutine) are safe here — unlike the
+            // ResurrectionFallback BACKGROUND thread, which only MARKS the need. Shared with
+            // sceneLoaded via MainThreadReviveIfNeeded (Blocker 2 fix). The Unity fake-null trap
+            // (ReferenceEquals + s_rootJustDestroyed) is handled inside that helper.
+            MainThreadReviveIfNeeded(newScene.name, "activeSceneChanged(main-thread)");
         }
 
         /// <summary>
@@ -523,17 +612,23 @@ namespace DINOForge.Runtime
 #pragma warning restore DF0116
                     iterationCount++;
 
-                    // GameLaunch attach-mode: KeyInputSystem may be absent from the ECS world while the
-                    // plugin and PersistentRoot survive scene transitions. Restart the bridge pipe when
-                    // its server thread died (BridgeServerThreadAlive=False after OnDestroy).
-                    try
-                    {
-                        SharedBridgeServer?.EnsureServerAlive();
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback EnsureServerAlive: {ex.Message}");
-                    }
+                    // Blocker 1 fix (iter-149b, 2026-05-29): DO NOT call EnsureServerAlive() here.
+                    // EnsureServerAlive performs a pipe Stop()->Start() (NamedPipeServerStream dispose +
+                    // fresh server thread) whenever BridgeServerThreadAlive=False — which is ALWAYS the
+                    // case right after RuntimeDriver.OnDestroy's RequestShutdown(). That pipe
+                    // teardown/recreate BLOCKS this background thread during the
+                    // InitialGameLoader->MainMenu asset-load window. Confirmed in dinoforge_debug.log:
+                    // heartbeats #4..#20 tick cleanly until OnDestroy, then heartbeat #24 NEVER appears
+                    // (the loop wedged on the pipe restart), so the grace-windowed revive is never
+                    // reached. The deadlock did not disappear when TryResurrect was removed from this
+                    // loop in 6be0f5e3 — it MOVED to the pipe restart on this same background thread.
+                    //
+                    // The fallback loop's PRIMARY job is the grace-windowed revive heartbeat; pipe I/O
+                    // must NEVER starve it. Pipe keepalive is now owned by:
+                    //   (a) DINOForgePlayerLoopUpdate (main thread, %60 gate) -> EnsureServerAlive(), and
+                    //   (b) a dedicated background pipe-keepalive thread (PipeKeepAliveLoop) which may
+                    //       block freely on Stop()/Start() without affecting resurrection heartbeats.
+                    // This loop now performs pure managed work only (flag checks + grace timer + MARK).
 
                     // Iter-144 #547 H5: emit periodic heartbeat to prove Mono runtime + this thread are alive.
                     // If the gray-freeze is a native deadlock at runtime level, heartbeats stop appearing
@@ -567,43 +662,32 @@ namespace DINOForge.Runtime
                         continue;
                     }
 
-                    // Grace window elapsed with no scene-event resolution: attempt direct resurrect.
-                    if (_resurrectionLog == null || _resurrectionConfig == null)
+                    // Blocker 2 fix (iter-149b, 2026-05-29): the grace window has elapsed without a
+                    // main-thread scene event resolving the revive. This BACKGROUND thread MUST NOT
+                    // call TryResurrect directly — TryResurrect reaches Unity ECalls (Camera.main /
+                    // AddComponent / RuntimeDriver.Initialize -> coroutine touching Resources/asset
+                    // APIs) which DEADLOCK on a bg thread during the InitialGameLoader->MainMenu asset
+                    // load (memory: "Resources.* from a bg thread DEADLOCKS during asset loading").
+                    // The bg path's ONLY job is to keep the need MARKED so a main-thread consumer
+                    // (DINOForgePlayerLoopUpdate or a scene event) performs the actual revive on a
+                    // thread where Unity ECalls are safe. We re-arm and keep heart-beating so the need
+                    // never silently drops, and so the heartbeat proves the loop is no longer wedged.
+                    if (ResurrectionSucceeded())
                     {
-                        // Plugin.Awake never completed; can't resurrect. Re-arm to retry later.
-                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Re-arming.");
+                        // A main-thread consumer already revived the driver — clear + disarm.
+                        NeedsResurrection = false;
+                        NeedsDeferredResurrection = false;
+                        s_rootJustDestroyed = false;
+                        s_skipBundleUnload = false;
+                        ResetGraceDeadline();
+                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: driver already live (main-thread revive) — flags cleared.");
+                    }
+                    else
+                    {
+                        // Keep the need MARKED for the main-thread consumer; never revive on bg thread.
+                        NeedsDeferredResurrection = true;
                         RearmGraceDeadline(GraceWindowMs);
-                        continue;
-                    }
-                    string sceneName = LastSceneNameForResurrection ?? "fallback-unknown";
-                    DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms elapsed — invoking TryResurrect (scene='{sceneName}').");
-                    try
-                    {
-                        TryResurrect(sceneName, "ResurrectionFallbackThread");
-                        // Only clear flags + disarm the window when the revive SUCCEEDED. If the driver
-                        // is now live, the next iteration's needsRevive will be false and stay disarmed.
-                        // If revive did NOT take (root still null / not initialized), KEEP the need set and
-                        // RE-ARM the deadline so we retry — do not silently drop the resurrection request.
-                        if (ResurrectionSucceeded())
-                        {
-                            NeedsResurrection = false;
-                            NeedsDeferredResurrection = false;
-                            s_rootJustDestroyed = false;
-                            s_skipBundleUnload = false;
-                            ResetGraceDeadline();
-                            DebugLog.Write("Plugin", "[Plugin] Resurrection complete via ResurrectionFallbackThread (driver live; flags cleared).");
-                        }
-                        else
-                        {
-                            // Do NOT clear NeedsResurrection until TryResurrect SUCCEEDS (per spec).
-                            RearmGraceDeadline(GraceWindowMs);
-                            DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: TryResurrect did not bring driver live yet — re-arming, need retained.");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback TryResurrect threw: {ex.Message}");
-                        RearmGraceDeadline(GraceWindowMs); // back off, retry next grace window
+                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms elapsed — driver not live; MARKED NeedsDeferredResurrection for main-thread revive (no bg-thread Unity ECalls). scene='{LastSceneNameForResurrection ?? "fallback-unknown"}'.");
                     }
                 }
                 catch (ThreadAbortException)
@@ -983,10 +1067,26 @@ namespace DINOForge.Runtime
 
         private static void OnPlayerLoopSet()
         {
+            // Blocker 2 diagnostic (iter-149b): log every PlayerLoop rebuild + whether re-injection
+            // re-added our DINOForgeUpdateMarker. If DINO rebuilds the loop entering MainMenu and our
+            // marker is dropped, this surfaces it. Even if re-injection fails, the sceneLoaded /
+            // activeSceneChanged main-thread revive path (Blocker 2) covers resurrection, so the
+            // engine UI no longer depends solely on the PlayerLoop marker surviving.
             Bridge.PlayerLoopKeyInputInjection.OnAfterSetPlayerLoop(() =>
                 Bridge.PlayerLoopKeyInputInjection.InjectIntoCurrentPlayerLoop(
                     typeof(Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker),
                     DINOForgePlayerLoopUpdate));
+            try
+            {
+                bool markerPresent = Bridge.PlayerLoopKeyInputInjection.ContainsMarkerInUpdate(
+                    UnityEngine.LowLevel.PlayerLoop.GetCurrentPlayerLoop(),
+                    typeof(Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker));
+                DebugLog.Write("Plugin", $"[Plugin] OnPlayerLoopSet postfix fired — DINOForgeUpdateMarker re-injected={markerPresent}.");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] OnPlayerLoopSet marker-check threw: {ex.Message}");
+            }
         }
 
         private static void LogInstallDiagnostics()
@@ -1844,7 +1944,11 @@ namespace DINOForge.Runtime
                 _engineUiHeartbeatLogged = true;
             }
 
-            _log.LogInfo($"[DINOForge] ENGINE-UI READY: packs={packs} modsButton={modsButton} f9={f9} f10={f10} (via {reason})");
+            string readyLine = $"[DINOForge] ENGINE-UI READY: packs={packs} modsButton={modsButton} f9={f9} f10={f10} (via {reason})";
+            _log.LogInfo(readyLine);
+            // iter-149b: also mirror to dinoforge_debug.log so live verification (which reads the
+            // DINOForge debug log, not BepInEx LogOutput.log) can confirm engine-UI readiness.
+            DebugLog.Write("Plugin", readyLine);
         }
 
         internal void RequestPackReload(string reason)

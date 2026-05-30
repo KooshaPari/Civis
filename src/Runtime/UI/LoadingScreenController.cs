@@ -81,7 +81,14 @@ namespace DINOForge.Runtime.UI
         private float _targetProgress;
         private float _shownProgress;
         private bool _fadingOut;
+        private bool _fadeRequested;
+        private float _elapsed;
         private ManualLogSource? _log;
+
+        // Minimum on-screen time before a fade-out actually starts, so the branded
+        // screen never just "flashes" when packs load quickly (UX) and is reliably
+        // observable. Pack loading often completes in <2s at the main menu.
+        private const float MinVisibleSeconds = 12f;
 
         /// <summary>Creates the themed loading screen on the given parent (DINOForge_Root).</summary>
         public static LoadingScreenController? Create(GameObject parent, string packsDir, ManualLogSource? log)
@@ -269,12 +276,23 @@ namespace DINOForge.Runtime.UI
             if (_progressLabel != null) _progressLabel.text = message;
         }
 
-        /// <summary>Fades the loading screen to alpha 0 over ~0.5s, then destroys it.</summary>
+        /// <summary>
+        /// Requests a fade-out. Honoured immediately once the screen has been visible for at
+        /// least <see cref="MinVisibleSeconds"/>; otherwise deferred (the AnimationLoop starts
+        /// the fade when the minimum is reached) so the branded screen never just flashes.
+        /// </summary>
         public void BeginFadeOut()
         {
             if (_fadingOut || this == null) return;
-            _fadingOut = true;
+            _fadeRequested = true;
             _targetProgress = 1f;
+            if (_elapsed >= MinVisibleSeconds) StartFadeNow();
+        }
+
+        private void StartFadeNow()
+        {
+            if (_fadingOut || this == null) return;
+            _fadingOut = true;
             if (isActiveAndEnabled) StartCoroutine(FadeOutRoutine());
         }
 
@@ -289,6 +307,14 @@ namespace DINOForge.Runtime.UI
             while (!_fadingOut)
             {
                 float dt = Time.unscaledDeltaTime;
+                _elapsed += dt;
+
+                // Honour a deferred fade-out request once the minimum visible time elapses.
+                if (_fadeRequested && _elapsed >= MinVisibleSeconds)
+                {
+                    StartFadeNow();
+                    break;
+                }
 
                 // Tip rotation
                 if (_tips.Length > 1)
@@ -464,24 +490,41 @@ namespace DINOForge.Runtime.UI
         /// <summary>Reads <c>key:</c> nested under the indented block introduced by <paramref name="blockKey"/>.</summary>
         private static string? ExtractScoped(string yaml, string blockKey, string key)
         {
-            int blockIdx = yaml.IndexOf("\n" + blockKey, StringComparison.Ordinal);
-            if (blockIdx < 0 && yaml.StartsWith(blockKey, StringComparison.Ordinal)) blockIdx = 0;
-            if (blockIdx < 0) return null;
+            // Find the block-introducing line (e.g. "loading_screen:" / "ui_theme:"),
+            // matching regardless of leading indentation. Record its indent so we can
+            // bound the nested region (a less-or-equal-indented line ends the block).
+            string blockName = blockKey.TrimEnd(':');
+            string[] lines = yaml.Split('\n');
+            int blockLine = -1, blockIndent = 0;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string l = lines[i];
+                string t = l.TrimStart();
+                if (t.TrimEnd('\r').TrimEnd() == blockName + ":")
+                {
+                    blockLine = i;
+                    blockIndent = l.Length - t.Length;
+                    break;
+                }
+            }
+            if (blockLine < 0) return null;
 
             string searchKey = key + ":";
-            int from = blockIdx;
-            int keyIdx = yaml.IndexOf(searchKey, from, StringComparison.Ordinal);
-            if (keyIdx < 0) return null;
+            for (int i = blockLine + 1; i < lines.Length; i++)
+            {
+                string l = lines[i];
+                if (l.Trim().Length == 0 || l.TrimStart().StartsWith("#")) continue;
+                int indent = l.Length - l.TrimStart().Length;
+                if (indent <= blockIndent) break; // dedented => block ended
 
-            // Ensure the key is indented (nested), not another top-level key after the block.
-            int lineStart = yaml.LastIndexOf('\n', keyIdx) + 1;
-            if (keyIdx == lineStart) return null; // not indented => top-level, wrong scope
-
-            int valStart = keyIdx + searchKey.Length;
-            int lineEnd = yaml.IndexOf('\n', valStart);
-            if (lineEnd < 0) lineEnd = yaml.Length;
-            string raw = yaml.Substring(valStart, lineEnd - valStart).Trim();
-            return string.IsNullOrEmpty(raw) ? null : Unquote(raw);
+                string t = l.TrimStart();
+                if (t.StartsWith(searchKey, StringComparison.Ordinal))
+                {
+                    string raw = t.Substring(searchKey.Length).TrimEnd('\r').Trim();
+                    return string.IsNullOrEmpty(raw) ? null : Unquote(raw);
+                }
+            }
+            return null;
         }
 
         /// <summary>Reads a YAML list of strings under <c>loading_screen: ... tips:</c>.</summary>

@@ -276,6 +276,21 @@ namespace DINOForge.Runtime
                 PersistentRoot.hideFlags = HideFlags.HideAndDontSave;
                 UnityEngine.Object.DontDestroyOnLoad(PersistentRoot);
                 Log.LogInfo("[Plugin] Persistent root GameObject created.");
+
+                // EPIC-027: create the themed loading screen as EARLY as possible so it is
+                // visible across the game's own InitialGameLoader asset-load window (before
+                // RuntimeDriver finishes pack loading). It is faded out on pack-load complete /
+                // world-ready / MainMenu. Created here (Awake, main thread) rather than waiting
+                // for RuntimeDriver.Initialize's coroutine.
+                try
+                {
+                    string lsPacksDir = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                    UI.LoadingScreenController.Create(PersistentRoot, lsPacksDir, Logger);
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning($"[Plugin] Early LoadingScreenController.Create failed (non-fatal): {ex.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -1782,12 +1797,19 @@ namespace DINOForge.Runtime
             {
                 try
                 {
-                    string packsDir = _modPlatform?.PacksDirectory
-                        ?? System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
-                    _loadingScreen = LoadingScreenController.Create(gameObject, packsDir, _log);
+                    // Reuse the early instance created in Plugin.Awake if it is still alive;
+                    // only create a new one if it was never built or already faded out.
+                    _loadingScreen = LoadingScreenController.Instance;
+                    if (_loadingScreen == null)
+                    {
+                        string packsDir = _modPlatform?.PacksDirectory
+                            ?? System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                        _loadingScreen = LoadingScreenController.Create(gameObject, packsDir, _log);
+                    }
                     if (_loadingScreen != null)
                     {
-                        _log.LogInfo("[RuntimeDriver] LoadingScreenController created.");
+                        _loadingScreen.EnsureVisible();
+                        _log.LogInfo("[RuntimeDriver] LoadingScreenController ready.");
                     }
                 }
                 catch (Exception ex)

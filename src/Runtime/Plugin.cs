@@ -1690,6 +1690,13 @@ namespace DINOForge.Runtime
                 {
                     _nativeMenuInjector = gameObject.AddComponent<NativeMenuInjector>();
                     _nativeMenuInjector.SetLogger(_log);
+                    // Fix (iter-149): wire the pack-data provider so the native MODS page
+                    // (TryShowNativeModsPage) can populate its INSTALLED PACKS list. Without
+                    // this, PackDataProvider stays null → SetPacks() is never called → the
+                    // left pack list renders empty even though packs are loaded.
+                    _nativeMenuInjector.PackDataProvider = () =>
+                        _modPlatform?.GetLoadedPackDisplayInfos()
+                        ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
                     TryWireNativeMenuInjectorHost();
                     // SPEC-002 F-07: main-thread re-scan hook for tests/tooling (not background thread — ADR-015).
                     NativeMenuInjector.OnScanNeeded = () =>

@@ -57,6 +57,13 @@ fn in_process_sim_active(mode: Res<AttachMode>) -> bool {
     !is_server_attach_mode(*mode)
 }
 
+/// Returns true only when the game is in the Playing state.
+/// Used as a run condition to gate all sim systems.
+#[cfg(feature = "egui")]
+fn is_playing(mode: Res<crate::menus::GameUiMode>) -> bool {
+    *mode == crate::menus::GameUiMode::Playing
+}
+
 /// Wires spawn-tool messages into the ECS simulation and optional HUD sync.
 #[derive(Default)]
 pub struct SimBridgePlugin;
@@ -69,33 +76,129 @@ impl Plugin for SimBridgePlugin {
             .insert_resource(SimTickTimer(Timer::from_seconds(
                 SIM_TICK_SECONDS,
                 TimerMode::Repeating,
-            )))
-            .add_systems(
-                Update,
-                (
-                    advance_simulation.run_if(in_process_sim_active),
-                    apply_spawn_civilian_requests.run_if(in_process_sim_active),
-                    apply_spawn_building_requests.run_if(in_process_sim_active),
-                ),
-            );
+            )));
+
+        // All sim systems are gated: in_process_sim_active AND (egui-gated) is_playing.
+        // Without egui the game has no menu system so we allow free running
+        // (same behaviour as before this patch).
         #[cfg(feature = "egui")]
         app.add_systems(
             Update,
-            sync_game_ui_snapshot.run_if(in_process_sim_active),
+            (
+                maybe_reinit_sim_on_new_world,
+                advance_simulation
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing),
+                apply_spawn_civilian_requests
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing),
+                apply_spawn_building_requests
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing),
+            ),
         );
+
+        #[cfg(not(feature = "egui"))]
+        app.add_systems(
+            Update,
+            (
+                advance_simulation.run_if(in_process_sim_active),
+                apply_spawn_civilian_requests.run_if(in_process_sim_active),
+                apply_spawn_building_requests.run_if(in_process_sim_active),
+            ),
+        );
+
+        #[cfg(feature = "egui")]
+        app.add_systems(
+            Update,
+            sync_game_ui_snapshot
+                .run_if(in_process_sim_active)
+                .run_if(is_playing),
+        );
+
+        // sync_visible_gameplay must also be gated: only render entities in Playing/Paused.
+        // In Paused we keep entities visible (frozen) but don't tick; in menus we despawn all.
+        #[cfg(feature = "egui")]
+        app.add_systems(
+            Update,
+            sync_visible_gameplay
+                .run_if(in_process_sim_active)
+                .run_if(is_playing_or_paused),
+        );
+
+        #[cfg(not(feature = "egui"))]
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
+}
+
+/// Run condition: allow entity sync while Playing or Paused (freeze-in-place).
+#[cfg(feature = "egui")]
+fn is_playing_or_paused(mode: Res<crate::menus::GameUiMode>) -> bool {
+    matches!(
+        *mode,
+        crate::menus::GameUiMode::Playing | crate::menus::GameUiMode::Paused
+    )
+}
+
+/// Watches for the transition into `Playing` and, when detected, reinitialises
+/// the simulation from `WorldSetupParams.seed` and clears all previously-rendered
+/// entities so a New World always starts clean.
+///
+/// Uses a `Local<Option<GameUiMode>>` to track the previous frame's mode so the
+/// reinit fires exactly once per MainMenu→Playing (or Loading→Playing) edge.
+#[cfg(feature = "egui")]
+fn maybe_reinit_sim_on_new_world(
+    mut commands: Commands,
+    mode: Res<crate::menus::GameUiMode>,
+    params: Res<crate::menus::WorldSetupParams>,
+    mut sim: ResMut<SimState>,
+    mut rendered: ResMut<RenderedEntities>,
+    mut prev_mode: Local<Option<crate::menus::GameUiMode>>,
+) {
+    let current = *mode;
+    let previous = *prev_mode;
+    *prev_mode = Some(current);
+
+    // Only act on the frame we transition INTO Playing from a non-Playing state.
+    let just_entered_playing = current == crate::menus::GameUiMode::Playing
+        && previous != Some(crate::menus::GameUiMode::Playing);
+
+    if !just_entered_playing {
+        return;
+    }
+
+    // `WorldSetupParams.seed` is already a parsed u64 (the menus agent keeps it
+    // in sync via `commit_text()`).  Use it directly; no string parsing needed.
+    let seed: u64 = params.seed;
+
+    info!(
+        "[sim_bridge] New World: reinitialising simulation with seed={}",
+        seed
+    );
+
+    // Despawn every previously-rendered civilian entity.
+    for (_, entity) in rendered.civilians.drain() {
+        commands.entity(entity).despawn();
+    }
+    // Despawn every previously-rendered building entity.
+    for (_, entity) in rendered.buildings.drain() {
+        commands.entity(entity).despawn();
+    }
+
+    // Replace the simulation with a fresh one seeded from WorldSetupParams.
+    sim.0 = Simulation::with_seed(seed);
 }
 
 fn advance_simulation(
     time: Res<Time>,
     mut timer: ResMut<SimTickTimer>,
     mut sim: ResMut<SimState>,
-    #[cfg(feature = "egui")] mode: Res<crate::menus::GameUiMode>,
     #[cfg(feature = "egui")] speed: Res<crate::game_ui::GameSpeed>,
 ) {
+    // Paused guard: the system is already excluded from Paused by run conditions,
+    // but keep the speed-multiplier zero-check for game-speed=0 edge case.
     #[cfg(feature = "egui")]
-    if *mode == crate::menus::GameUiMode::Paused || speed.multiplier == 0 {
+    if speed.multiplier == 0 {
         return;
     }
     timer.0.tick(time.delta());
@@ -153,6 +256,8 @@ fn init_gameplay_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>
 /// despawns entities whose sim id has disappeared. Civilians/buildings are
 /// seated on the procedural terrain surface and centred on the origin to match
 /// the centred terrain mesh.
+///
+/// Only runs in Playing (and Paused to keep entities visible but frozen).
 fn sync_visible_gameplay(
     mut commands: Commands,
     sim: Res<SimState>,

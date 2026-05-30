@@ -46,12 +46,31 @@ namespace DINOForge.Runtime
             // Only ENABLED total_conversion packs are eligible — when multiple TC packs are
             // installed, the user's enable/disable choice in the F10 mod menu decides which
             // one takes over the menu (no hardcoded pack id). Disabled packs are skipped.
+            //
+            // Deterministic active-conversion selection (fix: "Modern shows instead of Star Wars").
+            //
+            // NOTE: this list (ModPlatform.BuildPackDisplayInfos) enumerates every pack.yaml on disk,
+            // INCLUDING dirs renamed *.disabled, and marks them IsEnabled=false. We therefore filter
+            // to IsEnabled candidates so a DISABLED total_conversion can never be themed.
+            // Previously this picked the FIRST enabled-or-not total_conversion with a ui_theme: block
+            // in iteration order, which is the alphabetical Directory.GetDirectories order. With
+            // multiple total_conversions present (e.g. warfare-modern + warfare-starwars),
+            // "warfare-modern" sorted first and won — even when Star Wars was intended. The rule is
+            // now order-independent:
+            //   1. Restrict to ENABLED total_conversions (IsEnabled == true).
+            //   2. Among those WITH a ui_theme: block, pick the lexicographically-smallest pack Id
+            //      (stable, never iteration-order dependent).
+            //   3. If none declare ui_theme:, fall back to the lexicographically-smallest enabled
+            //      total_conversion so a title is still applied.
+            // When exactly one total_conversion is enabled (the post-cut steady state) this trivially
+            // selects it.
             PackDisplayInfo? best = null;
             PackDisplayInfo? fallback = null;
-            foreach (var p in packs)
+            foreach (var p in packs.OrderBy(p => p.Id, StringComparer.Ordinal))
             {
                 if (!p.IsEnabled) continue;
                 if (!string.Equals(p.Type, "total_conversion", StringComparison.OrdinalIgnoreCase)) continue;
+                if (fallback == null) fallback = p;
                 string yamlPath = Path.Combine(_packsDirectory, p.Id, "pack.yaml");
                 if (File.Exists(yamlPath))
                 {
@@ -62,10 +81,11 @@ namespace DINOForge.Runtime
                         break;
                     }
                 }
-                if (fallback == null) fallback = p;
             }
             best = best ?? fallback;
             if (best == null) return false;
+
+            _log?.LogInfo($"[MainMenuThemer] Active total_conversion selected: '{best.Id}' (deterministic).");
 
             var theme = ReadThemeFromDisk(best.Id) ?? new ThemeData { Title = best.Name };
             return ApplyToMainMenu(theme, best);

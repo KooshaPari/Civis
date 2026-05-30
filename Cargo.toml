@@ -2,6 +2,7 @@
 members = [
   "crates/engine",
   "crates/infra",
+  "crates/civ-traffic",
   "crates/server",
   "crates/voxel",
   "crates/build",
@@ -9,6 +10,7 @@ members = [
   "crates/economy",
   "crates/species",
   "crates/agents",
+  "crates/needs",
   "crates/diffusion",
   "crates/laws",
   "crates/research",

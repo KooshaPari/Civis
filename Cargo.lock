@@ -3048,6 +3048,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-needs"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "rand 0.8.6",
+ "rand_chacha 0.3.1",
+ "serde",
+]
+
+[[package]]
 name = "civ-planet"
 version = "0.1.0"
 dependencies = [
@@ -3145,6 +3155,17 @@ dependencies = [
  "rand_chacha 0.3.1",
  "serde",
  "tracing",
+]
+
+[[package]]
+name = "civ-traffic"
+version = "0.1.0"
+dependencies = [
+ "civ-voxel",
+ "rand 0.8.6",
+ "rand_chacha 0.3.1",
+ "ron 0.8.1",
+ "serde",
 ]
 
 [[package]]

@@ -9,7 +9,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
-use crate::terrain::{terrain_surface_y, WORLD_SIZE};
+use crate::terrain::{terrain_surface_y, WATER_LEVEL, WORLD_SIZE};
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 
 /// Half-height of the civilian capsule (used to seat its base on terrain).
@@ -193,8 +193,10 @@ fn sync_visible_gameplay(
             let color = faction_color(civilian.faction);
             let material = materials.add(StandardMaterial {
                 base_color: color,
-                emissive: color.into(),
-                perceptual_roughness: 0.55,
+                // Solid lit object, not a glowing pill: kill the emissive bloom.
+                emissive: LinearRgba::BLACK,
+                perceptual_roughness: 0.7,
+                metallic: 0.0,
                 ..default()
             });
             let entity = commands
@@ -235,7 +237,10 @@ fn sync_visible_gameplay(
             let color = building_color(building.building_type);
             let material = materials.add(StandardMaterial {
                 base_color: color,
-                perceptual_roughness: 0.9,
+                // No additive/neon glow: read as a solid lit structure.
+                emissive: LinearRgba::BLACK,
+                perceptual_roughness: 0.7,
+                metallic: 0.0,
                 ..default()
             });
             let entity = commands
@@ -273,21 +278,31 @@ fn sim_position_to_world(position: &civ_agents::Position3d) -> Vec3 {
     let nz = position.coord.z as f32 / scale;
     let mesh_x = nx * WORLD_SIZE;
     let mesh_z = nz * WORLD_SIZE;
-    let y = terrain_surface_y(mesh_x, mesh_z);
+    // Seat on the surface, but never below sea level (no underwater civilians).
+    let y = terrain_surface_y(mesh_x, mesh_z).max(WATER_LEVEL);
     Vec3::new(mesh_x - WORLD_SIZE * 0.5, y, mesh_z - WORLD_SIZE * 0.5)
 }
 
 /// Map an integer building grid tile to centred, terrain-seated world XZ.
+///
+/// `Building::position` is a centred grid coordinate in `[-64, 63]` (0,0 is
+/// map centre). We normalise it to `0..1` (matching `engine::grid_to_norm`),
+/// scale onto the mesh extent, then sample the surface. If that surface is
+/// below sea level the base is clamped to [`WATER_LEVEL`] so the building rests
+/// at the shoreline instead of being submerged or floating on the water plane.
 fn building_world_position(building: &Building) -> Vec3 {
-    let mesh_x = WORLD_SIZE * 0.5 + building.position.x as f32 * 14.0;
-    let mesh_z = WORLD_SIZE * 0.5 + building.position.y as f32 * 14.0;
-    let y = terrain_surface_y(mesh_x, mesh_z);
+    let nx = ((building.position.x + 64) as f32 / 127.0).clamp(0.0, 1.0);
+    let nz = ((building.position.y + 64) as f32 / 127.0).clamp(0.0, 1.0);
+    let mesh_x = nx * WORLD_SIZE;
+    let mesh_z = nz * WORLD_SIZE;
+    let y = terrain_surface_y(mesh_x, mesh_z).max(WATER_LEVEL);
     Vec3::new(mesh_x - WORLD_SIZE * 0.5, y, mesh_z - WORLD_SIZE * 0.5)
 }
 
 fn faction_color(faction: u32) -> Color {
     let hue = (faction as f32 * 85.0) % 360.0;
-    Color::hsla(hue, 0.75, 0.55, 1.0)
+    // Normal saturated faction colour (not over-bright) for a lit PBR body.
+    Color::hsla(hue, 0.6, 0.45, 1.0)
 }
 
 fn building_color(building_type: BuildingType) -> Color {

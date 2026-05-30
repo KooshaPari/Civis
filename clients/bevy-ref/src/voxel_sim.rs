@@ -13,6 +13,7 @@ use civ_voxel::material::{MaterialRegistry, Phase, AIR};
 use civ_voxel::worldgen;
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffer};
 
+use crate::camera::CameraRig;
 use crate::{bevy_render::mesh_buffer_to_bevy, should_render_chunk};
 
 const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
@@ -63,6 +64,7 @@ pub fn setup_voxel_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     cameras: Query<&Transform, With<Camera3d>>,
 ) {
@@ -74,6 +76,14 @@ pub fn setup_voxel_world(
     state.tick = 0;
     state.accumulator = 0.0;
     state.chunk_entities.clear();
+    reframe_camera_once(
+        &mut rig,
+        Vec3::new(
+            generated.dims[0] as f32 * 0.5,
+            generated.dims[1] as f32 * 0.5,
+            generated.dims[2] as f32 * 0.5,
+        ),
+    );
     let camera_eye = cameras.iter().next().map(|t| t.translation.to_array());
     state.chunk_entities = spawn_chunk_meshes(
         &mut commands,
@@ -134,6 +144,16 @@ fn slice_chunk(grid: &CaGrid, cx: usize, cy: usize, cz: usize) -> [MaterialId; C
         }
     }
     voxels
+}
+
+/// Frame the camera on the voxel volume by updating the orbit rig, not the
+/// raw transform. This keeps yaw/pitch/zoom recoverable after startup.
+fn reframe_camera_once(rig: &mut CameraRig, target: Vec3) {
+    let extent = target.length().max(1.0);
+    rig.target = target;
+    rig.yaw = -0.12;
+    rig.pitch = -0.72;
+    rig.distance = (extent * 2.5).clamp(20.0, 600.0);
 }
 
 /// Split a mesh buffer into per-material buffers, reindexing each triangle group.

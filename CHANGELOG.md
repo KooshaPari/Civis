@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Native-style MODS quick panel as the default click (redesigned MODS UX)** — Clicking the injected MODS button now opens a compact, NATIVE-STYLE quick panel (`src/Runtime/UI/NativeQuickModPanel.cs`) instead of a full-screen takeover. The panel reads like a DINO sub-menu rather than a separate overlay:
+  - **Native chrome by cloning.** Row/footer buttons are cloned from DINO's own menu button (the injected `DINOForge_ModsButton`, itself a clone of a native `MainMenuButton`) via `NativeUiHelper.CloneButton`, so they inherit DINO's frame, font, sprites and hover/press visuals. No synthetic full-screen canvas.
+  - **Themed per active total_conversion `ui_theme`.** New `src/Runtime/UI/MenuThemeReader.cs` reads the active total_conversion pack's `ui_theme` block from disk (mirroring `MainMenuThemer`'s YAML extraction) and resolves it to Unity colors; defaults to Star Wars gold `#FFE81F`. Live-verified: panel logged `theme primary=RGBA(1.000, 0.910, 0.122, 1.000)` (SW gold) and rendered gold title/accent/ON labels.
+  - **Per-pack ON/OFF toggles** wired through the injector's `OnNativePackToggled` → `RuntimeDriver.RequestPackToggle` → `ModPlatform.SetPackEnabled` (persists `disabled_packs.json`) — the same queued path the UGUI menu uses.
+  - **"Browse all" button** routes to the existing full-screen `NativeModsPage` browser for search/filter/details/deep management (live-verified: clicking it logged `NativeModsPage shown`). F10 still opens the full browser too.
+  - Reuses the iter-149f per-element fixes (RectMask2D scroll viewport, live `PackDataProvider`) — branch based off `58ef7834`.
+  - Wiring in `src/Runtime/Plugin.cs`: sets `NativeMenuInjector.PacksDirectory` + `OnNativePackToggled`/`OnNativeReloadRequested`. Click path: `NativeMenuInjector.OnModsButtonClicked` → `TryShowQuickPanel` (default) → falls back to `TryShowNativeModsPage`/overlay. Verified live at MainMenu with 17 packs loaded (screenshots `docs/screenshots/mods-native-panel-20260530.png`, `mods-browse-all-20260530.png`).
+
 ### Fixed
 - **Per-element engine-UI bugs after steam_appid fix (iter-149f)** — With the UI now loading, each element had an individual rendering bug. All verified fixed live at the MainMenu (before/after screenshots in `docs/screenshots/`):
   - **MODS page listed zero packs.** The native MODS button routes through `ContextualModMenuHost → NativeMainMenuModMenu`, whose pack cache is only filled by `SetPacks`. `ModPlatform.UpdateUI` pushes packs to the overlay host it owns, never to this contextual host, so the INSTALLED PACKS list stayed empty despite 11 loaded packs. Added a `PackDataProvider` to `NativeMainMenuModMenu` (wired to `ModPlatform.GetLoadedPackDisplayInfos` in `TryWireNativeMenuInjectorHost`) that pulls fresh packs in `Show()`; also wired the injector-level `PackDataProvider` for the secondary `TryShowNativeModsPage` path. The MODS page now lists all packs with name/version/type/ON-OFF status and a fully populated detail pane on selection.

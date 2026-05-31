@@ -51,10 +51,14 @@ namespace DINOForge.Runtime.Bridge
             string category = (def.BuildingType ?? string.Empty).Trim();
             string id = (def.Id ?? string.Empty).ToLowerInvariant();
 
-            // Naval heuristic: explicit naval category, or id/name hints.
+            // Naval heuristic: explicit naval category, or specific id/name hints.
+            // NOTE: deliberately NOT a bare "ship" substring — that would mis-match
+            // "gunship"/"airship" (which are aerial production buildings). Use specific
+            // naval terms only.
             if (Matches(category, "naval", "port", "dock", "harbor", "harbour", "shipyard")
-                || id.Contains("port") || id.Contains("dock") || id.Contains("ship")
-                || id.Contains("naval") || id.Contains("harbor") || id.Contains("harbour"))
+                || id.Contains("port") || id.Contains("dock") || id.Contains("shipyard")
+                || id.Contains("naval") || id.Contains("harbor") || id.Contains("harbour")
+                || id.Contains("warship") || id.Contains("seaport"))
                 return DefaultNavalAlias;
 
             // Defense heuristic.

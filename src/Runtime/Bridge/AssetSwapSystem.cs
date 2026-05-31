@@ -600,29 +600,41 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            // ---- SELECTIVE SWAP: match by mesh name ----
-            // Determine which vanilla mesh names this bundle should target.
+            // ---- SELECTIVE SWAP ----
+            // The PRIMARY (authoritative) targeting was already applied above: the EntityQuery
+            // was narrowed to the archetype component resolved from vanilla_mapping. The optional
+            // SECONDARY refinement below further filters by live mesh name when DINO's vanilla
+            // mesh names for this mapping are known (VanillaMappingToMeshSubstrings, keyed by the
+            // pack's vanilla_mapping value — NOT by bundle filename).
             string bundleFileName = Path.GetFileNameWithoutExtension(modBundlePath) ?? "";
             string[]? targetMeshSubstrings = null;
-            foreach (var kvp in BundleToVanillaMeshMap)
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && VanillaMappingToMeshSubstrings.TryGetValue(vanillaMapping!, out string[]? substrings)
+                && substrings != null
+                && substrings.Length > 0)
             {
-                if (bundleFileName.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    targetMeshSubstrings = kvp.Value;
-                    DebugLog.Write("AssetSwap",
-                        $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' matched mapping key '{kvp.Key}' " +
-                        $"→ targeting mesh substrings: [{string.Join(", ", kvp.Value)}]");
-                    break;
-                }
+                targetMeshSubstrings = substrings;
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' vanilla_mapping='{vanillaMapping}' " +
+                    $"→ refining by mesh substrings: [{string.Join(", ", substrings)}]");
             }
 
-            // If no mapping exists yet, we are in DIAGNOSTIC MODE — skip actual swaps.
-            if (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0)
+            // DIAGNOSTIC MODE only when there is NO targeting signal at all: no archetype filter
+            // (vanilla_mapping absent/unresolved) AND no mesh-name substrings. With either signal
+            // present we proceed — the archetype-narrowed query is authoritative; substrings are an
+            // optional refinement. A populated vanilla_mapping therefore exits DIAGNOSTIC MODE.
+            bool hasArchetypeFilter = !string.IsNullOrWhiteSpace(vanillaMapping)
+                && PackStatMappings.TryResolveMapping(vanillaMapping, out string? resolvedArchetype)
+                && !string.IsNullOrEmpty(resolvedArchetype)
+                && ResolveTypeByName(resolvedArchetype!) != null;
+
+            if (!hasArchetypeFilter && (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0))
             {
                 DebugLog.Write("AssetSwap",
-                    $"[DIAGNOSTIC MODE] No BundleToVanillaMeshMap entry for bundle '{bundleFileName}'. " +
-                    $"Skipping entity swap for {entities.Length} entities. " +
-                    $"Check dinoforge_debug.log for '[DIAGNOSTIC] Vanilla mesh name survey' to build the mapping.");
+                    $"[DIAGNOSTIC MODE] No targeting signal for bundle '{bundleFileName}' " +
+                    $"(vanilla_mapping='{vanillaMapping ?? "<null>"}' yielded neither an archetype filter " +
+                    $"nor mesh-name substrings). Skipping entity swap for {entities.Length} entities. " +
+                    $"Add a 'vanilla_mapping' to the pack visual_asset to exit DIAGNOSTIC MODE.");
                 entities.Dispose();
                 query.Dispose();
                 return false;
@@ -667,8 +679,10 @@ namespace DINOForge.Runtime.Bridge
                         em, new object[] { entity, renderMeshComponentType });
                     if (renderMesh == null) continue;
 
-                    // ---- Selective mesh-name check ----
-                    if (meshField != null)
+                    // ---- Selective mesh-name check (SECONDARY refinement only) ----
+                    // Skip when no substrings were resolved: the archetype-narrowed query is
+                    // authoritative and we swap every entity it returned.
+                    if (meshField != null && targetMeshSubstrings != null)
                     {
                         object? currentMeshObj = meshField.GetValue(renderMesh);
                         if (currentMeshObj is Mesh currentMesh && currentMesh != null)

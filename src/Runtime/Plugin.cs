@@ -1887,6 +1887,7 @@ namespace DINOForge.Runtime
 
             // Pump deferred work on the main thread until destruction.
             int _themeRetryCount = 0;
+            int _themeAuxFrame = 0;
             while (!_destroyed)
             {
                 // ── Engine-UI self-healing bounded retry ─────────────────────────
@@ -1932,6 +1933,21 @@ namespace DINOForge.Runtime
                         }
                         catch { /* safe-swallow: theme retry is best-effort */ }
                     }
+                }
+
+                // ── Subpage FULL TAKEOVER (Options + settings tabs + in-game panels) ──
+                // Subpages are separate canvases the user opens AFTER the main menu and
+                // re-opens repeatedly. ApplyToAuxiliaryMenus self-guards on the live canvas
+                // count so this per-frame call is cheap until a subpage actually opens.
+                if (_mainMenuThemer != null && _modPlatform != null && (_themeAuxFrame++ % 10) == 0)
+                {
+                    try
+                    {
+                        var auxPacks = _modPlatform.GetLoadedPackDisplayInfos();
+                        if (auxPacks.Count > 0)
+                            _mainMenuThemer.ApplyToAuxiliaryMenus(auxPacks);
+                    }
+                    catch { /* safe-swallow: aux takeover is best-effort */ }
                 }
 
                 // ── Step 8 deferred: push update-check results to UI once the Task completes ──

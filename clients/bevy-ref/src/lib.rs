@@ -32,6 +32,8 @@ pub mod material_brush_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod info_views;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod inspect;

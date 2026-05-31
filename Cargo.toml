@@ -14,6 +14,7 @@ members = [
   "crates/diffusion",
   "crates/laws",
   "crates/research",
+  "crates/ai",
   "crates/tactics",
   "crates/planet",
   "crates/protocol-3d",
@@ -22,6 +23,7 @@ members = [
   "crates/civis-cli",
   "crates/watch",
   "crates/save-db",
+  "crates/legends",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

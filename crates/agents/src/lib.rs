@@ -25,6 +25,8 @@ pub mod cluster;
 pub mod culture;
 pub mod diplomacy;
 pub mod daily_path;
+pub mod psyche;
+pub mod social;
 
 pub use cluster::{
     cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
@@ -36,6 +38,14 @@ pub use diplomacy::{
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
     wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
+};
+pub use psyche::{
+    belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
+    PSYCHE_DIM,
+};
+pub use social::{
+    apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,
+    SocialEvent, SocialGraph, Tie, MAX_TIES,
 };
 
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};

@@ -1,0 +1,32 @@
+[package]
+name = "civ-ai"
+description = "Generic AiProvider port + blake3 cache + AiEvent provenance + async worker pool (generalizes civ-research)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+blake3 = "1"
+tracing = "0.1"
+async-trait = "0.1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "macros"] }
+# Cloud / dev HTTP providers (feature-gated): reuses civ-research's FirepassKimiClient.
+civ-research = { path = "../research", optional = true, features = ["firepass-kimi"] }
+
+[features]
+default = []
+# Cloud heavy-reasoning fallback: wraps civ-research::FirepassKimiClient. Opt-in.
+cloud = ["dep:civ-research"]
+# Local in-process SLM (mistral.rs GGUF). Stub in P1 — full model loading is a later phase.
+local = []
+# Embedding provider (fastembed-rs / ort, MiniLM). Stub in P1.
+embed = []
+# Dev-only Ollama provider (OpenAI-compatible HTTP).
+dev = []
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "macros", "time"] }

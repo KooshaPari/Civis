@@ -111,6 +111,38 @@ impl Biome {
         }
     }
 
+    /// Per-biome surface PBR `(perceptual_roughness, reflectance, metallic)`
+    /// from `docs/design/lighting-biomes-art.md` §4.2. Replaces the old uniform
+    /// `0.95 / 0.18` block (the flat-RGB bug). Keeps a ≥0.40 roughness spread
+    /// across the set so shiny families (Snow `0.45`) read against the matte
+    /// ones (Forest `0.95`). Reflectance is the wet/dry knob; all ground is
+    /// dielectric (metallic `0.0`).
+    #[must_use]
+    pub const fn surface_pbr(self) -> (f32, f32, f32) {
+        match self {
+            Biome::SandBeach => (0.65, 0.42, 0.0), // wet shore
+            Biome::DirtGround => (0.90, 0.18, 0.0),
+            Biome::GrassField => (0.88, 0.25, 0.0),
+            Biome::ForestFloor => (0.95, 0.18, 0.0), // flattest / most matte
+            Biome::RockCliff => (0.78, 0.35, 0.0),
+            Biome::SnowPure => (0.45, 0.55, 0.0), // shiniest / brightest
+        }
+    }
+
+    /// Per-biome `base_color` tint (sRGB) from §4.2, multiplied over the albedo
+    /// texture. Near-white-warm so the texture dominates; tint nudges mood.
+    #[must_use]
+    pub const fn tint_srgb(self) -> [f32; 3] {
+        match self {
+            Biome::SandBeach => [0.788, 0.722, 0.478], // #C9B87A wet shore
+            Biome::DirtGround => [0.478, 0.369, 0.220], // #7A5E38 packed
+            Biome::GrassField => [0.290, 0.604, 0.239], // #4A9A3D
+            Biome::ForestFloor => [0.122, 0.341, 0.122], // #1F571F canopy floor
+            Biome::RockCliff => [0.424, 0.439, 0.455], // #6C7074
+            Biome::SnowPure => [0.941, 0.965, 1.000], // #F0F6FF
+        }
+    }
+
     /// Pick a biome from a normalised terrain height (`0.0..=1.0`) using the
     /// same band thresholds as [`crate::terrain::color_for_height`]. Returns
     /// `SandBeach` for underwater bands so callers can detect water separately
@@ -214,14 +246,15 @@ mod loader {
             let albedo: Handle<Image> = asset_server.load(&paths.albedo);
             let normal: Handle<Image> = asset_server.load(&paths.normal);
 
-            let [r, g, b] = biome.fallback_srgb();
+            let [r, g, b] = biome.tint_srgb();
+            let (roughness, reflectance, metallic) = biome.surface_pbr();
             materials.add(StandardMaterial {
                 base_color: Color::srgb(r, g, b),
                 base_color_texture: Some(albedo),
                 normal_map_texture: Some(normal),
-                perceptual_roughness: 0.95,
-                metallic: 0.0,
-                reflectance: 0.18,
+                perceptual_roughness: roughness,
+                metallic,
+                reflectance,
                 ..Default::default()
             })
         });

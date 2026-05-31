@@ -113,13 +113,13 @@ fn decode_texture(
 #[derive(Resource, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum GameUiMode {
     /// Title-screen main menu — world sim is not yet running.
-    #[default]
     MainMenu,
     /// World-setup form (seed, size, era, …) before generation.
     WorldSetup,
     /// Simulated/real asset-load progress before entering the world.
     Loading,
     /// Normal gameplay — world is visible, no overlay.
+    #[default]
     Playing,
     /// Pause overlay shown; in-process sim ticks halt.
     Paused,

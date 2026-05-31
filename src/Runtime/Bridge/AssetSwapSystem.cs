@@ -547,6 +547,20 @@ namespace DINOForge.Runtime.Bridge
 
             ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
 
+            // BUG A fix (#101): DINO's Unity 2021.3 EntityManager exposes the non-generic
+            // GetSharedComponentData in TWO overloads — (Entity, ComponentType) AND
+            // (Entity, int typeIndex). The FirstOrDefault lookup above can bind the Int32
+            // overload (it explicitly accepts either FullName). Invoking that overload with a
+            // boxed ComponentType throws at runtime: "Object of type 'Unity.Entities.ComponentType'
+            // cannot be converted to type 'System.Int32'" → result=False ("swapped 0/100" for
+            // ground units like sw-cis-magna-guard). Detect which overload was bound and pass the
+            // matching argument type: ComponentType.TypeIndex (an int) when the param wants Int32.
+            bool getSharedWantsTypeIndex =
+                getSharedNonGeneric.GetParameters()[1].ParameterType.FullName == "System.Int32";
+            object renderMeshSharedArg = getSharedWantsTypeIndex
+                ? (object)renderMeshComponentType.TypeIndex
+                : renderMeshComponentType;
+
             // ---- DIAGNOSTIC PASS: log unique vanilla mesh names (one-shot) ----
             // Uses generic GetSharedComponentData<RenderMesh>(Entity) via MakeGenericMethod
             // to avoid the Mono type-identity bug with non-generic overload parameter matching.
@@ -675,8 +689,11 @@ namespace DINOForge.Runtime.Bridge
                         continue;
 
                     // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
+                    // BUG A fix (#101): pass TypeIndex (int) when the bound overload is the
+                    // (Entity, int) one — passing a ComponentType there throws the Mono
+                    // "ComponentType cannot be converted to Int32" conversion error.
                     object? renderMesh = getSharedNonGeneric.Invoke(
-                        em, new object[] { entity, renderMeshComponentType });
+                        em, new object[] { entity, renderMeshSharedArg });
                     if (renderMesh == null) continue;
 
                     // ---- Selective mesh-name check (SECONDARY refinement only) ----

@@ -600,6 +600,9 @@ namespace DINOForge.Runtime.Bridge
                     return HandleInvokeMethod(parameters);
                 case "getMetrics":
                     return HandleGetMetrics();
+                case "navigateToGameplay":
+                case "navigate_to_gameplay":
+                    return HandleNavigateToGameplay(parameters);
                 default:
                     throw new InvalidOperationException($"Method not found: {method}");
             }
@@ -1375,6 +1378,46 @@ namespace DINOForge.Runtime.Bridge
             }
 
             return JToken.FromObject(ssResult);
+        }
+
+        /// <summary>
+        /// Drives the scripted main-menu → skirmish/gameplay UI sequence in-process via
+        /// <see cref="Capture.NavigationScripter"/>, capturing a verification frame at each step.
+        /// This composes the EventSystem pointer driver (#972) + reliable FrameCapture (#980) into
+        /// the missing multi-step flow that actually reaches the gameplay camera. Params:
+        /// { plan?: "skirmish" (default), screenshotDir?: string, finalShot?: string }.
+        /// </summary>
+        private JToken HandleNavigateToGameplay(JObject? parameters)
+        {
+            string planName = parameters?.Value<string>("plan") ?? "skirmish";
+            string screenshotDir = parameters?.Value<string>("screenshotDir")
+                ?? Path.Combine(BepInEx.Paths.BepInExRootPath, "screenshots", "nav");
+            string? finalShot = parameters?.Value<string>("finalShot");
+
+            Capture.NavigationScripter.Plan plan = Capture.NavigationScripter.SkirmishPlan();
+            plan.Name = planName;
+
+            // The scripter blocks on per-step waits/captures; allow a long ceiling for the
+            // gameplay-world load (DINO can take tens of seconds to spin up a level).
+            const int NavigationWaitTimeoutMs = 120000;
+            var navTask = MainThreadDispatcher.RunOnMainThread(() =>
+                Capture.NavigationScripter.Run(plan, screenshotDir, finalShot));
+
+            // sync-over-async-unavoidable: ECS/EventSystem-bound, main-thread-required
+            if (!navTask.Wait(NavigationWaitTimeoutMs))
+            {
+                DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleNavigateToGameplay timed out ({NavigationWaitTimeoutMs}ms)");
+                return JToken.FromObject(new NavigationResult
+                {
+                    Success = false,
+                    Plan = planName,
+                    Message = $"Navigation timed out after {NavigationWaitTimeoutMs}ms.",
+                    FinalState = "timeout",
+                });
+            }
+
+            // sync-over-async-unavoidable: ECS/EventSystem-bound, main-thread-required
+            return JToken.FromObject(navTask.Result);
         }
 
         private JToken HandleDumpState(JObject? parameters)

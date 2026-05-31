@@ -1369,6 +1369,8 @@ namespace DINOForge.Runtime
         private HudIndicator? _hudIndicator;
         private NativeMenuInjector? _nativeMenuInjector;
         private MainMenuThemer? _mainMenuThemer;
+        private UI.CanvasReskinner? _canvasReskinner;
+        private int _reskinRetryCount;
 
         // ── Engine-UI self-healing (fix/engine-ui-injection-race) ────────────────
         // RunMainMenuInit() is idempotent and re-runnable; these track its state so the
@@ -1934,6 +1936,23 @@ namespace DINOForge.Runtime
                     }
                 }
 
+                // Re-skin non-MainMenu pages on a steady cadence. Settings sub-tabs and the
+                // game create/select screens are instantiated lazily when the user navigates,
+                // so a one-shot apply misses them. The reskinner is idempotent (per-object
+                // marker) — repeated passes only touch newly-appeared elements.
+                if (_canvasReskinner != null && _modPlatform != null)
+                {
+                    _reskinRetryCount++;
+                    if (_reskinRetryCount % 15 == 0) // every ~15 frames
+                    {
+                        try
+                        {
+                            _canvasReskinner.ReskinAllPages(_modPlatform.GetLoadedPackDisplayInfos());
+                        }
+                        catch { /* safe-swallow: page reskin retry is best-effort */ }
+                    }
+                }
+
                 // ── Step 8 deferred: push update-check results to UI once the Task completes ──
                 if (!_updateCheckPushed && _updateCheckTask != null
                     && _updateCheckTask.IsCompleted && _dfCanvas?.ModMenuPanel != null)
@@ -2079,6 +2098,14 @@ namespace DINOForge.Runtime
                     _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
                     IReadOnlyList<PackDisplayInfo> packInfos = _modPlatform.GetLoadedPackDisplayInfos();
                     _mainMenuThemer.TryApplyTheme(packInfos);
+
+                    // Color-skin every non-MainMenu page (Settings + GAME/VIDEO/SOUND/CONTROLS/
+                    // TWITCH sub-tabs, game create/select) with the active total_conversion theme.
+                    // Sub-panels are created lazily on navigation, so the pump loop re-runs this.
+                    _canvasReskinner = new UI.CanvasReskinner(_log, _modPlatform.PacksDirectory);
+                    _canvasReskinner.Invalidate();
+                    _reskinRetryCount = 0;
+                    _canvasReskinner.ReskinAllPages(packInfos);
                 }
                 catch (Exception themeEx)
                 {

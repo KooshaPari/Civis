@@ -151,6 +151,18 @@
       <Private>false</Private>
     </Reference>
 
+    <!-- URP / SRP Core (DINO ships URP 12.x on Unity 2021.3) — for runtime Volume + -->
+    <!-- post-processing injection (GraphicsMode realistic-gfx feature). NEVER copy these -->
+    <!-- to the plugin output (Private=false); the game already loads them. -->
+    <Reference Include="Unity.RenderPipelines.Core.Runtime">
+      <HintPath>$(ManagedDir)\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.Universal.Runtime">
+      <HintPath>$(ManagedDir)\Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
     <!-- Game DLLs -->
     <!-- Publicize=true: AssemblyPublicizer makes internal game members directly callable, -->
     <!-- eliminating fragile reflection-based access in AssetSwapSystem and EntityQueries. -->

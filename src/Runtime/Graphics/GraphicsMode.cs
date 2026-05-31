@@ -53,6 +53,13 @@ namespace DINOForge.Runtime.Graphics
         private Volume? _volume;
         private VolumeProfile? _profile;
 
+        // ---- Phase-2 quality-settings snapshot (for reversible restore) ----
+        private bool _qualityCaptured;
+        private int _origShadowResolution;
+        private float _origShadowDistance;
+        private int _origShadowCascades;
+        private int _origAntiAliasing;
+
         /// <summary>
         /// The tier the user has configured (bound to BepInEx config by <see cref="Plugin"/>).
         /// Defaults to <see cref="GraphicsTier.Vanilla"/> so the feature is inert unless opted in.
@@ -98,8 +105,11 @@ namespace DINOForge.Runtime.Graphics
         {
             EnsureVolume();
             EnableCameraPostProcessing(true);
+            ApplyHighQualitySettings();
             ActiveTier = GraphicsTier.High;
-            DebugLog.Write(LogCategory, "High graphics tier active (URP post-process volume injected).");
+            // Phase 2: let the material upgrader (AssetSwap hook) honour the High tier.
+            GraphicsMaterialUpgrader.ActiveTier = GraphicsTier.High;
+            DebugLog.Write(LogCategory, "High graphics tier active (URP post-process volume + quality bumps + PBR material upgrade enabled).");
         }
 
         private void DisableHigh()
@@ -109,8 +119,64 @@ namespace DINOForge.Runtime.Graphics
                 _volume.enabled = false;
             }
             EnableCameraPostProcessing(false);
+            RestoreQualitySettings();
             ActiveTier = GraphicsTier.Vanilla;
-            DebugLog.Write(LogCategory, "Vanilla graphics tier active (DINOForge post-process disabled).");
+            // Phase 2: revert to passthrough so already-applied materials are not re-upgraded.
+            GraphicsMaterialUpgrader.ActiveTier = GraphicsTier.Vanilla;
+            DebugLog.Write(LogCategory, "Vanilla graphics tier active (DINOForge post-process + quality bumps + PBR upgrade disabled).");
+        }
+
+        /// <summary>
+        /// Phase-2 quality lift for the High tier: longer/higher-resolution shadows, more cascades,
+        /// and MSAA. Captures the vanilla values on first application so <see cref="RestoreQualitySettings"/>
+        /// can fully revert. All values are conservative — readable, not a benchmark filter.
+        /// QualitySettings are global Unity state; URP's UniversalRenderPipelineAsset reads many of
+        /// them, so bumping them lifts the active URP render path without us having to mutate the
+        /// pipeline asset directly (which DINO ships read-only). Best-effort and never throws.
+        /// </summary>
+        private void ApplyHighQualitySettings()
+        {
+            try
+            {
+                if (!_qualityCaptured)
+                {
+                    _origShadowResolution = (int)QualitySettings.shadowResolution;
+                    _origShadowDistance = QualitySettings.shadowDistance;
+                    _origShadowCascades = QualitySettings.shadowCascades;
+                    _origAntiAliasing = QualitySettings.antiAliasing;
+                    _qualityCaptured = true;
+                }
+
+                QualitySettings.shadowResolution = UnityEngine.ShadowResolution.VeryHigh;
+                QualitySettings.shadowDistance = Mathf.Max(_origShadowDistance, 150f);
+                QualitySettings.shadowCascades = 4;
+                QualitySettings.antiAliasing = 4; // 4x MSAA
+
+                DebugLog.Write(LogCategory,
+                    $"High quality settings applied (shadowRes=VeryHigh, dist={QualitySettings.shadowDistance}, cascades=4, MSAA=4x).");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write(LogCategory, $"ApplyHighQualitySettings failed (non-fatal): {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        /// <summary>Reverts QualitySettings captured by <see cref="ApplyHighQualitySettings"/>.</summary>
+        private void RestoreQualitySettings()
+        {
+            if (!_qualityCaptured) return;
+            try
+            {
+                QualitySettings.shadowResolution = (UnityEngine.ShadowResolution)_origShadowResolution;
+                QualitySettings.shadowDistance = _origShadowDistance;
+                QualitySettings.shadowCascades = _origShadowCascades;
+                QualitySettings.antiAliasing = _origAntiAliasing;
+                DebugLog.Write(LogCategory, "Quality settings restored to vanilla snapshot.");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write(LogCategory, $"RestoreQualitySettings failed (non-fatal): {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         /// <summary>

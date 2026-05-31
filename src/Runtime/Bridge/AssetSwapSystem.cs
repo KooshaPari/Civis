@@ -463,6 +463,14 @@ namespace DINOForge.Runtime.Bridge
                 return false;
             }
 
+            // GFX-mode Phase 2: when the High graphics tier is active, upgrade the swapped
+            // material to URP/Lit with PBR slots (driven by pack PBR metadata when present).
+            // Pure passthrough when tier is Vanilla or no upgrade is possible — never breaks the swap.
+            if (replacementMat != null)
+            {
+                replacementMat = DINOForge.Runtime.Graphics.GraphicsMaterialUpgrader.Upgrade(replacementMat, assetName);
+            }
+
             Type? renderMeshType = ResolveRenderMeshType();
             if (renderMeshType == null)
             {

@@ -1688,6 +1688,11 @@ namespace DINOForge.Runtime.UI
             target.sprite = source.sprite;
             target.type = source.type;
             target.color = source.color;
+            // #R1: carry the donor's material so a custom-shader native frame keeps its
+            // hover/press shading on the clone (was dropped → button read as non-reactive).
+            target.material = source.material;
+            target.pixelsPerUnitMultiplier = source.pixelsPerUnitMultiplier;
+            target.preserveAspect = source.preserveAspect;
         }
 
         private static string GetRelativePath(Transform node, Transform root)

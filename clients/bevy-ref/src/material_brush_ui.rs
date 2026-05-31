@@ -149,6 +149,36 @@ pub const BRUSH_RADIUS_MIN: f32 = 1.0;
 /// Maximum brush radius in voxels.
 pub const BRUSH_RADIUS_MAX: f32 = 16.0;
 
+/// Material-brush action mode (Replace / drop-from-sky / Erase).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MaterialPaintMode {
+    /// Overwrite voxels in the brush footprint with the selected material.
+    #[default]
+    Replace,
+    /// Spawn material in a column above the target; CA carries it down.
+    AdditiveDrop,
+    /// Clear voxels in the footprint (write air/empty).
+    Erase,
+}
+
+impl MaterialPaintMode {
+    /// All modes in UI order.
+    pub const ALL: [MaterialPaintMode; 3] = [
+        MaterialPaintMode::Replace,
+        MaterialPaintMode::AdditiveDrop,
+        MaterialPaintMode::Erase,
+    ];
+
+    /// Short label for the cluster combobox + radio rows.
+    pub fn label(self) -> &'static str {
+        match self {
+            MaterialPaintMode::Replace => "Replace",
+            MaterialPaintMode::AdditiveDrop => "Additive drop",
+            MaterialPaintMode::Erase => "Erase",
+        }
+    }
+}
+
 /// The active paint material plus the shared brush parameters.
 ///
 /// `size`/`strength` are the same conceptual surface the terraform + other
@@ -160,6 +190,8 @@ pub const BRUSH_RADIUS_MAX: f32 = 16.0;
 pub struct SelectedMaterial {
     /// The material id painted on click/drag.
     pub material: MaterialId,
+    /// Replace / additive-drop / erase verb for the next stamp.
+    pub mode: MaterialPaintMode,
     /// Brush radius in voxels (`BRUSH_RADIUS_MIN..=BRUSH_RADIUS_MAX`).
     pub size: f32,
     /// Per-voxel fill probability in `0.0..=1.0` (feather / density).
@@ -178,6 +210,7 @@ impl Default for SelectedMaterial {
             .unwrap_or(MaterialId(1));
         Self {
             material,
+            mode: MaterialPaintMode::Replace,
             size: 4.0,
             strength: 1.0,
         }
@@ -270,6 +303,113 @@ fn swatch_color(def: &MaterialDef) -> egui::Color32 {
     egui::Color32::from_rgba_unmultiplied(def.color[0], def.color[1], def.color[2], 255)
 }
 
+/// Lighten or darken an sRGB swatch channel-wise (clamped).
+fn swatch_tint(base: egui::Color32, mul: f32) -> egui::Color32 {
+    let ch = |v: u8| ((f32::from(v) * mul).round().clamp(0.0, 255.0)) as u8;
+    egui::Color32::from_rgba_unmultiplied(ch(base.r()), ch(base.g()), ch(base.b()), base.a())
+}
+
+/// Vertical gloss bands: lighter top → darker bottom over the base hue.
+fn paint_swatch_gloss(painter: &egui::Painter, rect: egui::Rect, base: egui::Color32, radius: f32) {
+    const BANDS: usize = 4;
+    painter.rect_filled(rect, radius, swatch_tint(base, 0.7));
+    let bh = rect.height() / BANDS as f32;
+    for i in 0..BANDS {
+        let t = i as f32 / (BANDS - 1) as f32;
+        let mul = 1.25 - t * 0.55;
+        let y0 = rect.min.y + bh * i as f32;
+        let y1 = if i + 1 == BANDS {
+            rect.max.y
+        } else {
+            y0 + bh + 1.0
+        };
+        let band = egui::Rect::from_min_max(egui::pos2(rect.min.x, y0), egui::pos2(rect.max.x, y1));
+        painter.rect_filled(band, 0.0, swatch_tint(base, mul));
+    }
+}
+
+/// 1px bevel: light top/left, dark bottom/right.
+fn paint_swatch_bevel(painter: &egui::Painter, rect: egui::Rect) {
+    let light = swatch_tint(egui::Color32::WHITE, 0.55);
+    let dark = swatch_tint(egui::Color32::BLACK, 0.45);
+    painter.line_segment([rect.left_top(), rect.right_top()], egui::Stroke::new(1.0, light));
+    painter.line_segment([rect.left_top(), rect.left_bottom()], egui::Stroke::new(1.0, light));
+    painter.line_segment([rect.left_bottom(), rect.right_bottom()], egui::Stroke::new(1.0, dark));
+    painter.line_segment([rect.right_top(), rect.right_bottom()], egui::Stroke::new(1.0, dark));
+}
+
+/// Cheap phase texture: liquid wave, powder stipple, solid relies on gloss alone.
+fn paint_swatch_phase_hint(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    phase: Phase,
+    seed: u32,
+) {
+    match phase {
+        Phase::Liquid => paint_liquid_wave(painter, rect),
+        Phase::Powder => paint_powder_stipple(painter, rect, seed),
+        Phase::Solid => paint_solid_sheen(painter, rect),
+        Phase::Gas => paint_gas_wisp(painter, rect, seed),
+        Phase::Empty => {}
+    }
+}
+
+fn paint_liquid_wave(painter: &egui::Painter, rect: egui::Rect) {
+    let y = rect.min.y + rect.height() * 0.32;
+    let w = rect.width();
+    let mut pts = Vec::with_capacity(9);
+    for i in 0..9 {
+        let t = i as f32 / 8.0;
+        let x = rect.min.x + w * t;
+        let wave = (t * std::f32::consts::TAU * 1.6).sin() * rect.height() * 0.06;
+        pts.push(egui::pos2(x, y + wave));
+    }
+    let stroke = egui::Stroke::new(1.2, swatch_tint(egui::Color32::WHITE, 0.75));
+    for w in pts.windows(2) {
+        painter.line_segment([w[0], w[1]], stroke);
+    }
+}
+
+fn paint_powder_stipple(painter: &egui::Painter, rect: egui::Rect, seed: u32) {
+    let mut h = seed.wrapping_mul(0x9E37_79B9);
+    let step = 5.0;
+    let mut y = rect.min.y + 2.0;
+    while y < rect.max.y - 2.0 {
+        let mut x = rect.min.x + 2.0;
+        while x < rect.max.x - 2.0 {
+            h ^= h << 13;
+            h ^= h >> 17;
+            h ^= h << 5;
+            if h & 3 == 0 {
+                let dot = egui::Rect::from_center_size(egui::pos2(x, y), egui::vec2(1.5, 1.5));
+                painter.rect_filled(dot, 0.0, swatch_tint(egui::Color32::BLACK, 0.35));
+            }
+            x += step;
+        }
+        y += step;
+    }
+}
+
+fn paint_solid_sheen(painter: &egui::Painter, rect: egui::Rect) {
+    let sheen = egui::Rect::from_min_max(
+        egui::pos2(rect.min.x + 3.0, rect.min.y + 4.0),
+        egui::pos2(rect.max.x - 6.0, rect.min.y + 7.0),
+    );
+    painter.rect_filled(sheen, 1.0, swatch_tint(egui::Color32::WHITE, 0.35));
+}
+
+fn paint_gas_wisp(painter: &egui::Painter, rect: egui::Rect, seed: u32) {
+    let mut h = seed;
+    for i in 0..3 {
+        h = h.wrapping_mul(0x85EB_CA6B).wrapping_add(i);
+        let t = (h & 0xFF) as f32 / 255.0;
+        let cx = egui::lerp(rect.min.x + 6.0..=rect.max.x - 6.0, t);
+        let cy = egui::lerp(rect.min.y + 8.0..=rect.max.y - 8.0, ((h >> 8) & 0xFF) as f32 / 255.0);
+        let blob = egui::Rect::from_center_size(egui::pos2(cx, cy), egui::vec2(6.0, 3.0));
+        painter.rect_filled(blob, 2.0, swatch_tint(egui::Color32::WHITE, 0.22));
+    }
+}
+
 /// Draw the scrollable, categorized material palette panel.
 fn material_palette_panel(
     mut contexts: bevy_egui::EguiContexts,
@@ -299,7 +439,7 @@ fn material_palette_panel(
         .show(ctx, |ui| {
             palette_header(ui, active_name, armed.0);
             ui.add_space(4.0);
-            brush_controls(ui, &mut selected);
+            brush_cluster_combo(ui, &mut selected);
             ui_theme::hairline(ui);
             egui::ScrollArea::vertical()
                 .max_height(360.0)
@@ -339,8 +479,29 @@ fn palette_header(ui: &mut egui::Ui, active_name: &str, armed: bool) {
     );
 }
 
+/// Brush cluster combobox: action mode + size/strength live inside the popover.
+fn brush_cluster_combo(ui: &mut egui::Ui, selected: &mut SelectedMaterial) {
+    let label = format!("{} · r{:.0}", selected.mode.label(), selected.size);
+    egui::ComboBox::from_id_salt("material_brush_cluster")
+        .width(220.0)
+        .selected_text(label)
+        .show_ui(ui, |ui| {
+            brush_action_mode_radios(ui, selected);
+            ui.add_space(4.0);
+            brush_size_strength_sliders(ui, selected);
+        });
+}
+
+/// Replace / additive-drop / erase radio row inside the cluster popover.
+fn brush_action_mode_radios(ui: &mut egui::Ui, selected: &mut SelectedMaterial) {
+    ui.label(egui::RichText::new("Action").small().strong().color(ui_theme::DIM));
+    for mode in MaterialPaintMode::ALL {
+        ui.radio_value(&mut selected.mode, mode, mode.label());
+    }
+}
+
 /// Shared brush size + strength sliders (the one-brush-model surface).
-fn brush_controls(ui: &mut egui::Ui, selected: &mut SelectedMaterial) {
+fn brush_size_strength_sliders(ui: &mut egui::Ui, selected: &mut SelectedMaterial) {
     let mut size = selected.size;
     ui.add(
         egui::Slider::new(&mut size, BRUSH_RADIUS_MIN..=BRUSH_RADIUS_MAX)
@@ -398,10 +559,13 @@ fn material_swatch(
     let is_selected = selected.material == def.id;
     let size = egui::vec2(40.0, 40.0);
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
-
-    let painter = ui.painter();
+    let inner = rect.shrink(2.0);
     let radius = ui_theme::RADIUS_SM as f32;
-    painter.rect_filled(rect.shrink(2.0), radius, swatch_color(def));
+    let base = swatch_color(def);
+    let painter = ui.painter();
+    paint_swatch_gloss(painter, inner, base, radius);
+    paint_swatch_phase_hint(painter, inner, def.phase, u32::from(def.id.0));
+    paint_swatch_bevel(painter, inner);
     let stroke = if is_selected {
         egui::Stroke::new(2.5, accent)
     } else if response.hovered() {
@@ -409,16 +573,10 @@ fn material_swatch(
     } else {
         egui::Stroke::new(1.0, ui_theme::BORDER)
     };
-    painter.rect_stroke(
-        rect.shrink(2.0),
-        radius,
-        stroke,
-        egui::StrokeKind::Inside,
-    );
+    painter.rect_stroke(inner, radius, stroke, egui::StrokeKind::Inside);
     if is_selected {
-        ui_theme::inner_glow(ui.painter(), rect.shrink(2.0), accent, ui_theme::RADIUS_SM);
+        ui_theme::inner_glow(painter, inner, accent, ui_theme::RADIUS_SM);
     }
-
     let response = response.on_hover_text(format!(
         "{}\nphase: {:?}  density: {}",
         def.name, def.phase, def.density

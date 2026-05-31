@@ -1,6 +1,6 @@
 //! Deterministic voxel world generation for Civis strata and hydrology.
 
-use crate::material::{AIR, BEDROCK, DIRT, GRAVEL, ORE, STONE, WATER};
+use crate::material::{AIR, BEDROCK, DIRT, ORE, PLANT, STONE, WATER};
 use crate::MaterialId;
 
 /// Dense voxel world returned by the generator.
@@ -17,11 +17,12 @@ pub struct GenWorld {
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
     let dz = dims[2].max(1);
-    let base = dims[1].saturating_mul(45) / 100;
+    let base = dims[1] as f64 * 0.56;
     let noise = fbm2(seed, x as f64 / dx as f64, z as f64 / dz as f64);
-    let span = (dims[1].saturating_sub(4)).max(1) as f64;
-    let height = base as f64 + noise * span * 0.22;
-    height.clamp(2.0, (dims[1].saturating_sub(2)).max(2) as f64) as usize
+    let amplitude = (dims[1] as f64 * 0.30).max(2.0);
+    let max_surface = (dims[1] as f64 * 0.85).max(2.0);
+    let min_surface = 2.0;
+    (base + noise * amplitude).clamp(min_surface, max_surface) as usize
 }
 
 /// Generates a deterministic world with strata, water fill, and ore pockets.
@@ -39,7 +40,7 @@ pub fn generate(dims: [usize; 3], seed: u64) -> GenWorld {
 
 fn carve_column(cells: &mut [MaterialId], dims: [usize; 3], seed: u64, sea: usize, x: usize, z: usize) {
     let surface = surface_height(dims, seed, x, z);
-    let soil = soil_depth(seed, x, z, dims[1]);
+    let soil = soil_depth(seed, x, z, dims[1]).min(2).max(1);
     let ore_seed = mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64);
     for y in 0..dims[1] {
         let idx = index(dims, x, y, z);
@@ -64,8 +65,11 @@ fn cell_material(
     if y < surface.saturating_sub(soil).max(1) {
         return stone_or_ore(seed, ore_seed, x, y, z);
     }
-    if y < surface {
-        return if (x ^ y ^ z) & 1 == 0 { DIRT } else { GRAVEL };
+    if y + 1 == surface {
+        return surface_cover(seed, x, z);
+    }
+    if soil >= 2 && y + 2 == surface {
+        return DIRT;
     }
     if y <= sea {
         return WATER;
@@ -99,8 +103,17 @@ fn soil_depth(seed: u64, x: usize, z: usize, height: usize) -> usize {
     2 + (v as usize % cap)
 }
 
-fn is_bedrock_shell(dims: [usize; 3], x: usize, y: usize, z: usize) -> bool {
-    y == 0 || x == 0 || z == 0 || x + 1 == dims[0] || z + 1 == dims[2]
+fn is_bedrock_shell(_dims: [usize; 3], _x: usize, y: usize, _z: usize) -> bool {
+    y == 0
+}
+
+fn surface_cover(seed: u64, x: usize, z: usize) -> MaterialId {
+    let v = hash2(seed ^ 0xabcd_ef01_2345_6789, x as u64, z as u64);
+    if v & 0b1111 < 0x0d {
+        PLANT
+    } else {
+        DIRT
+    }
 }
 
 fn index(dims: [usize; 3], x: usize, y: usize, z: usize) -> usize {
@@ -173,7 +186,7 @@ fn lerp(a: f64, b: f64, t: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::material::{MaterialRegistry, BEDROCK};
+    use crate::material::{MaterialRegistry, BEDROCK, PLANT};
 
     fn dims() -> [usize; 3] {
         [32, 48, 32]
@@ -210,7 +223,7 @@ mod tests {
                 saw_bedrock |= m == BEDROCK;
                 saw_stone |= m == STONE;
             } else if y < surface {
-                saw_soil |= m == DIRT || m == GRAVEL;
+                saw_soil |= m == DIRT || m == PLANT;
             } else if y > surface {
                 assert!(m == AIR || m == WATER);
             }
@@ -255,6 +268,47 @@ mod tests {
         let registry = MaterialRegistry::standard();
         for cell in w.cells {
             assert!(registry.get(cell).is_some(), "invalid id {}", cell.0);
+        }
+    }
+
+    #[test]
+    fn edges_are_not_full_height_bedrock() {
+        let w = generate(dims(), 41);
+        for z in 0..w.dims[2] {
+            for y in (1..w.dims[1]).rev() {
+                let m0 = w.cells[index(w.dims, 0, y, z)];
+                if m0 == AIR {
+                    continue;
+                }
+                assert_ne!(m0, BEDROCK);
+                break;
+            }
+            for y in (1..w.dims[1]).rev() {
+                let m1 = w.cells[index(w.dims, w.dims[0] - 1, y, z)];
+                if m1 == AIR {
+                    continue;
+                }
+                assert_ne!(m1, BEDROCK);
+                break;
+            }
+        }
+        for x in 0..w.dims[0] {
+            for y in (1..w.dims[1]).rev() {
+                let m0 = w.cells[index(w.dims, x, y, 0)];
+                if m0 == AIR {
+                    continue;
+                }
+                assert_ne!(m0, BEDROCK);
+                break;
+            }
+            for y in (1..w.dims[1]).rev() {
+                let m1 = w.cells[index(w.dims, x, y, w.dims[2] - 1)];
+                if m1 == AIR {
+                    continue;
+                }
+                assert_ne!(m1, BEDROCK);
+                break;
+            }
         }
     }
 }

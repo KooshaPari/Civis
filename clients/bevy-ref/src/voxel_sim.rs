@@ -27,7 +27,10 @@ const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 const CA_TICK_HZ: f32 = 12.0;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
-const WORLD_DIMS: [usize; 3] = [64, 48, 64];
+// Playable default world size for the local Bevy sandbox.
+// Larger worlds are on the roadmap via a streaming SVO path; 128² is a
+// practical default for dense preview worlds in current tooling.
+const WORLD_DIMS: [usize; 3] = [128, 64, 128];
 
 /// Tracks whether the live voxel world has been generated for the current
 /// session. Set `true` after a build; reset to `false` to force regeneration

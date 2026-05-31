@@ -221,7 +221,10 @@ impl Plugin for MaterialBrushPlugin {
             .add_systems(Update, sync_paint_armed_from_tool)
             // egui draw MUST run on EguiPrimaryContextPass — on Update the egui
             // context has no fonts yet and panics ("No fonts available").
-            .add_systems(bevy_egui::EguiPrimaryContextPass, material_palette_panel);
+            .add_systems(
+                bevy_egui::EguiPrimaryContextPass,
+                material_palette_panel.run_if(crate::menus::in_game),
+            );
 
         // The actual world paint only exists when the voxel sim is compiled in.
         #[cfg(feature = "voxel")]

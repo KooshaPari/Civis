@@ -79,12 +79,34 @@ impl Plugin for MinimapPlugin {
         .add_systems(
             Update,
             (
+                sync_minimap_visibility,
                 sync_minimap_dots,
                 sync_minimap_viewport,
                 sync_overlay_tint,
                 teleport_camera_from_minimap,
             ),
         );
+    }
+}
+
+/// Hide the minimap UI whenever the world is not in-game (main menu / setup /
+/// loading) so the title screen renders clean. The minimap is Bevy UI (not
+/// egui), so it is gated by toggling [`Visibility`] on [`MinimapRoot`] rather
+/// than a `run_if` on a draw system.
+fn sync_minimap_visibility(
+    mode: Res<crate::menus::GameUiMode>,
+    mut root: Query<&mut Visibility, With<MinimapRoot>>,
+) {
+    use crate::menus::GameUiMode;
+    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    for mut vis in &mut root {
+        if *vis != want {
+            *vis = want;
+        }
     }
 }
 

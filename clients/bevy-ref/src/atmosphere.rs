@@ -209,10 +209,24 @@ pub fn update_lighting(
         // (§1.2 / §3); smoothstep keeps the transition filmic, not linear-harsh.
         sun_light.illuminance = lerp(200.0, 32_000.0, smoothstep(0.0, 0.25, daylight));
     }
-    // Ambient floor brightness rides the cycle: 40 lx night → 120 lx day (§1.2).
-    ambient.brightness = lerp(40.0, 120.0, daylight);
+    // Ambient (sky-dome fill) rides the cycle. The key is the warm overhead sun;
+    // ambient fills the faces the sun rakes at a grazing angle (vertical walls,
+    // shaded sides) so they read instead of crushing to black. A near-black navy
+    // @120 lx was far too weak a fill against a straight-down noon sun — every
+    // vertical voxel face went black. Lift the daytime fill and warm/neutralize
+    // the color so shaded faces stay legible while still cooler than the key.
+    ambient.brightness = lerp(120.0, 1_400.0, daylight);
+    ambient.color = lerp_color(
+        Color::srgb(0.07, 0.10, 0.18), // cool navy night fill
+        Color::srgb(0.55, 0.62, 0.74), // bright cool-neutral day sky fill
+        daylight,
+    );
     if let Ok(mut sun_transform) = sun_transform_query.single_mut() {
-        *sun_transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir));
+        // `sun_dir` points FROM the ground TO the sun (up at noon). A directional
+        // light's forward (-Z) is the direction photons travel, which must point
+        // DOWN toward the terrain. Aim the light along `-sun_dir`, otherwise the
+        // sun shines up into the sky and every top face renders unlit/black.
+        *sun_transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, -sun_dir));
     }
 
     if let Ok((mut moon_light, mut moon_transform, mut moon_visibility)) = moon_query.single_mut() {
@@ -221,7 +235,10 @@ pub fn update_lighting(
         // Moonlight locked to #3A4D80 (cool) for palette coherence (§3).
         moon_light.color = Color::srgb(0.227, 0.302, 0.502).into();
         moon_light.illuminance = if is_night { 500.0 } else { 0.0 };
-        *moon_transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, moon_dir));
+        // Same convention as the sun: `moon_dir` points up at the moon, so aim
+        // the light's forward along `-moon_dir` to shine down on the terrain.
+        *moon_transform =
+            Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, -moon_dir));
     }
 
     if let Ok(mut stars_visibility) = star_query.single_mut() {

@@ -20,10 +20,20 @@ use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffe
 use crate::camera::CameraRig;
 use crate::{bevy_render::mesh_buffer_to_bevy, should_render_chunk};
 
+/// Fallback seed used only when no `WorldSetupParams` resource is available
+/// (i.e. the `egui` menu feature is compiled out). With menus present, the
+/// per-world randomized seed from `WorldSetupParams` is always used instead.
 const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 const CA_TICK_HZ: f32 = 12.0;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
+const WORLD_DIMS: [usize; 3] = [64, 48, 64];
+
+/// Tracks whether the live voxel world has been generated for the current
+/// session. Set `true` after a build; reset to `false` to force regeneration
+/// of a genuinely new world (e.g. on returning to the menu / "New World").
+#[derive(Resource, Default)]
+pub struct WorldBuilt(pub bool);
 
 /// Voxel simulation plugin for the Bevy reference client.
 pub struct VoxelSimPlugin;
@@ -31,9 +41,76 @@ pub struct VoxelSimPlugin;
 impl Plugin for VoxelSimPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VoxelSimState::default())
-            .add_systems(Startup, setup_voxel_world)
+            .insert_resource(WorldBuilt::default())
             .add_systems(Update, step_and_remesh);
+
+        // With the menu/egui feature, worldgen is deferred until the user
+        // commits World Setup → Loading (or autostart jumps to Playing). This
+        // means the world is built from the player's per-world randomized seed
+        // and is NOT rendered behind the World Setup popup.
+        #[cfg(feature = "egui")]
+        app.add_systems(Update, build_world_on_play);
+
+        // Without menus there is no WorldSetupParams; fall back to building one
+        // world at Startup using the constant seed.
+        #[cfg(not(feature = "egui"))]
+        app.add_systems(Startup, setup_voxel_world_startup);
     }
+}
+
+/// When menus are absent, build a single world at Startup from the fallback seed.
+#[cfg(not(feature = "egui"))]
+pub fn setup_voxel_world_startup(
+    commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
+    rig: ResMut<CameraRig>,
+    state: ResMut<VoxelSimState>,
+    mut built: ResMut<WorldBuilt>,
+    cameras: Query<&Transform, With<Camera3d>>,
+) {
+    build_voxel_world(commands, meshes, materials, rig, state, cameras, SEED);
+    built.0 = true;
+}
+
+/// Generate (or regenerate) the world once the game enters Loading/Playing,
+/// using the player's per-world seed. Despawns any prior world first so a new
+/// world is a genuine replacement, never an overlay. Resets `WorldBuilt` when
+/// the player returns to a menu so the next world regenerates fresh.
+#[cfg(feature = "egui")]
+pub fn build_world_on_play(
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
+    rig: ResMut<CameraRig>,
+    mut state: ResMut<VoxelSimState>,
+    mut built: ResMut<WorldBuilt>,
+    mode: Res<crate::menus::GameUiMode>,
+    params: Res<crate::menus::WorldSetupParams>,
+    cameras: Query<&Transform, With<Camera3d>>,
+) {
+    use crate::menus::GameUiMode;
+    // Reset so a fresh world is generated next time the player commits setup.
+    if matches!(*mode, GameUiMode::MainMenu | GameUiMode::WorldSetup) {
+        if built.0 {
+            for entity in state.chunk_entities.drain(..) {
+                commands.entity(entity).despawn();
+            }
+            built.0 = false;
+        }
+        return;
+    }
+    // Build exactly once per world when entering Loading/Playing.
+    if built.0 {
+        return;
+    }
+    // Despawn any stale world entities before regenerating.
+    for entity in state.chunk_entities.drain(..) {
+        commands.entity(entity).despawn();
+    }
+    let seed = params.seed;
+    build_voxel_world(commands, meshes, materials, rig, state, cameras, seed);
+    built.0 = true;
 }
 
 /// Live voxel simulation state for the standalone renderer.
@@ -63,16 +140,18 @@ impl Default for VoxelSimState {
     }
 }
 
-/// Build the initial voxel world, then mesh and spawn all visible chunks.
-pub fn setup_voxel_world(
+/// Build the voxel world from `seed`, then mesh and spawn all visible chunks.
+pub fn build_voxel_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     cameras: Query<&Transform, With<Camera3d>>,
+    seed: u64,
 ) {
-    let generated = worldgen::generate([64, 48, 64], SEED);
+    info!("[voxel] generating world from seed={seed:#018x}");
+    let generated = worldgen::generate(WORLD_DIMS, seed);
     state.grid = CaGrid {
         dims: generated.dims,
         cells: generated.cells,
@@ -296,6 +375,12 @@ fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
         perceptual_roughness: 0.9,
         metallic: 0.0,
         reflectance: 0.5,
+        // Voxel hull faces at chunk boundaries can present with a normal/winding
+        // that leaves them facing away from the lit hemisphere, rendering pure
+        // black. Light both sides so every visible face reads regardless of the
+        // emitted normal orientation. `cull_mode = None` keeps back faces drawn.
+        double_sided: true,
+        cull_mode: None,
         ..default()
     };
 

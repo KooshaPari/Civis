@@ -336,7 +336,11 @@ pub const STANDARD_MATERIALS: [MaterialDef; 41] = [
         angle_of_repose: None,
         temperature: 18,
         flammability: 0,
-        color: [32, 32, 36, 255],
+        // Exposed bedrock cliff faces dominate the visible hull. At [32,32,36]
+        // they crushed to near-black even under a noon sun + ambient fill,
+        // reading as an unlit slab. Lift to a legible dark slate-grey so the
+        // cliffs show form/shading instead of a black silhouette.
+        color: [86, 88, 96, 255],
     },
     MaterialDef { id: SALT_WATER, name: "SaltWater", phase: Phase::Liquid, density: 1_030, flow_rate: 10, viscosity: 3, angle_of_repose: None, temperature: 20, flammability: 0, color: [44, 100, 184, 255] },
     MaterialDef { id: OIL, name: "Oil", phase: Phase::Liquid, density: 850, flow_rate: 8, viscosity: 12, angle_of_repose: None, temperature: 20, flammability: 82, color: [84, 64, 24, 255] },

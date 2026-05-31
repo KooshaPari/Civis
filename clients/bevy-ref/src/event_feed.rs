@@ -160,7 +160,10 @@ impl Plugin for EventFeedPlugin {
         app.init_resource::<EventFeed>()
             .init_resource::<EventLogOpen>()
             .add_systems(Update, age_events)
-            .add_systems(EguiPrimaryContextPass, draw_event_feed);
+            .add_systems(
+                EguiPrimaryContextPass,
+                draw_event_feed.run_if(crate::menus::in_game),
+            );
     }
 }
 

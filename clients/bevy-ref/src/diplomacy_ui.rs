@@ -154,7 +154,10 @@ impl Plugin for DiplomacyUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DiplomacyState>()
             .add_systems(Update, (toggle_diplomacy_panel, sync_diplomacy_from_sim))
-            .add_systems(EguiPrimaryContextPass, draw_diplomacy_panel);
+            .add_systems(
+                EguiPrimaryContextPass,
+                draw_diplomacy_panel.run_if(crate::menus::in_game),
+            );
     }
 }
 

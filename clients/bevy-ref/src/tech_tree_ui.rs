@@ -207,7 +207,10 @@ impl Plugin for TechTreeUiPlugin {
         app.init_resource::<TechTreeState>()
             .init_resource::<TechTreeOpen>()
             .add_systems(Update, (toggle_tech_tree, sync_tech_tree_from_sim))
-            .add_systems(EguiPrimaryContextPass, draw_tech_tree);
+            .add_systems(
+                EguiPrimaryContextPass,
+                draw_tech_tree.run_if(crate::menus::in_game),
+            );
     }
 }
 

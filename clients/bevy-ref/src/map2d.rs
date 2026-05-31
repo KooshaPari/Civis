@@ -91,7 +91,10 @@ impl Plugin for Map2dPlugin {
         app.init_resource::<MapView>()
             .init_resource::<MapBasemap>()
             .add_systems(Update, (toggle_map_hotkey, auto_engage_from_zoom, tick_fade))
-            .add_systems(EguiPrimaryContextPass, (draw_map_view, draw_map_hint));
+            .add_systems(
+                EguiPrimaryContextPass,
+                (draw_map_view, draw_map_hint).run_if(crate::menus::in_game),
+            );
     }
 }
 

@@ -137,6 +137,16 @@ impl GameUiMode {
     }
 }
 
+/// Run-condition: `true` only while the world is actually being played
+/// ([`GameUiMode::Playing`] or [`GameUiMode::Paused`]).
+///
+/// Shared by every gameplay HUD/overlay plugin via `.run_if(in_game)` so the
+/// main menu, world-setup form, and loading screen render clean (menu card +
+/// backdrop only) without each panel re-implementing the mode guard.
+pub fn in_game(mode: Res<GameUiMode>) -> bool {
+    matches!(*mode, GameUiMode::Playing | GameUiMode::Paused)
+}
+
 // ---------------------------------------------------------------------------
 // Loading progress resource
 // ---------------------------------------------------------------------------

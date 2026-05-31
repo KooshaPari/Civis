@@ -172,7 +172,10 @@ mod plugin {
                 .init_resource::<InspectedDetails>()
                 .add_systems(Update, (update_hover_readout, classify_inspection))
                 // egui draw MUST run on EguiPrimaryContextPass (no fonts on Update).
-                .add_systems(bevy_egui::EguiPrimaryContextPass, draw_hover_tooltip);
+                .add_systems(
+                    bevy_egui::EguiPrimaryContextPass,
+                    draw_hover_tooltip.run_if(crate::menus::in_game),
+                );
         }
     }
 

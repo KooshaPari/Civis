@@ -163,6 +163,18 @@ fn main() {
         app.add_plugins(LiveAttachPlugin);
     }
 
+    // Headless "boot into gameplay" hook: when CIVIS_AUTOSTART=1 is set, drive
+    // the app straight into the live world instead of the main menu. Worldgen is
+    // deferred until the game enters Loading/Playing
+    // (`voxel_sim::build_world_on_play`, keyed off the per-world randomized
+    // `WorldSetupParams.seed`); forcing `Playing` triggers that exact path so a
+    // headless screenshot captures a freshly generated world, not the title card.
+    if std::env::var("CIVIS_AUTOSTART").as_deref() == Ok("1") {
+        app.add_systems(Startup, |mut mode: ResMut<civ_bevy_ref::menus::GameUiMode>| {
+            *mode = civ_bevy_ref::menus::GameUiMode::Playing;
+        });
+    }
+
     // Headless verification hook: when CIVIS_AUTOSHOT=<path> is set, capture one
     // screenshot after a short warm-up (so chunk meshes / GLTF scenes are loaded
     // and the camera has framed the world) and then exit. This lets a debug

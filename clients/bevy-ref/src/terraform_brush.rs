@@ -357,7 +357,10 @@ impl Plugin for TerraformBrushPlugin {
             .add_systems(Update, emit_terraform_edits);
 
         #[cfg(feature = "egui")]
-        app.add_systems(bevy_egui::EguiPrimaryContextPass, draw_brush_panel);
+        app.add_systems(
+            bevy_egui::EguiPrimaryContextPass,
+            draw_brush_panel.run_if(crate::menus::in_game),
+        );
     }
 }
 

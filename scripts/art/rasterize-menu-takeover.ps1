@@ -48,9 +48,16 @@ function Invoke-Raster($tool, $svg, $png, $w, $h) {
 $packs = @{
     'warfare-starwars' = @{
         'menu_logo.png'  = @('logo-title.svg', 1600, 600)
-        'menu_bg.png'    = @('ui/loading-republic.svg', 1920, 1080)
+        # BUG A: the MAIN-MENU wallpaper must NOT use a loading-screen SVG (loading-republic.svg
+        # bakes a static progress bar / "LOADING MODULE" caption into the image). Render from the
+        # dedicated clean menu-bg.svg instead. The loading screen has its own art under assets/loading/.
+        'menu_bg.png'    = @('menu-bg.svg', 1920, 1080)
         'btn_normal.png' = @('ui/button-normal.svg', 256, 96)
         'btn_hover.png'  = @('ui/button-hover.svg', 256, 96)
+        # BUG B: loading-screen background must be CLEAN (no baked static progress bar).
+        # Output lands in assets/loading/ (see $loadingSlots handling below). Live progress is
+        # composited at runtime by LoadingScreenController.
+        '../loading/loading-bg.png' = @('ui/loading-bg-clean.svg', 1920, 1080)
     }
     'warfare-modern'   = @{
         'menu_logo.png'  = @('logo-title.svg', 1600, 500)
@@ -73,7 +80,10 @@ foreach ($p in $targets) {
         $spec = $packs[$p][$out]
         $svg  = Join-Path $svgDir $spec[0]
         if (-not (Test-Path -LiteralPath $svg)) { Write-Warning "  skip (missing svg): $svg"; continue }
-        Invoke-Raster $tool $svg (Join-Path $uiDir $out) $spec[1] $spec[2]
+        $outPath = Join-Path $uiDir $out
+        $outDir  = Split-Path -Parent $outPath
+        if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
+        Invoke-Raster $tool $svg $outPath $spec[1] $spec[2]
     }
 }
 Write-Host "[rasterize-menu-takeover] Done."

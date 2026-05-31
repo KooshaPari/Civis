@@ -431,14 +431,10 @@ mod plugin {
 
     impl Plugin for InfoViewsPlugin {
         fn build(&self, app: &mut App) {
-            app.init_resource::<InfoViewRegistry>().add_systems(
-                Update,
-                (
-                    cycle_overlay_hotkey,
-                    draw_info_view_panel,
-                    render_active_overlay,
-                ),
-            );
+            app.init_resource::<InfoViewRegistry>()
+                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay))
+                // egui draw MUST run on EguiPrimaryContextPass (no fonts on Update).
+                .add_systems(bevy_egui::EguiPrimaryContextPass, draw_info_view_panel);
         }
     }
 

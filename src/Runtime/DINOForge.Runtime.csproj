@@ -200,6 +200,7 @@
     <Compile Include="Bridge\VanillaArchetypeMapper.cs" />
     <Compile Include="Bridge\UnitSpawnRequest.cs" />
     <Compile Include="Bridge\PackStatMappings.cs" />
+    <Compile Include="Bridge\BlasterBoltConfig.cs" />
     <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
     <Compile Include="Bridge\SessionHmac.cs" />
   </ItemGroup>

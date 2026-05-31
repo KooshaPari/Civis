@@ -195,7 +195,7 @@ fn auto_screenshot(
     if shot.taken {
         // Give the capture a couple frames to flush to disk, then quit.
         shot.timer.tick(time.delta());
-        if shot.timer.finished() {
+        if shot.timer.is_finished() {
             exit.write(AppExit::Success);
         }
         return;

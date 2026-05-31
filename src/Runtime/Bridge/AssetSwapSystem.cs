@@ -144,7 +144,11 @@ namespace DINOForge.Runtime.Bridge
                 { "tower",           new[] { "Tower", "tower", "Turret", "turret", "Watchtower", "watchtower" } },
                 { "wall",            new[] { "Wall", "wall", "Gate", "gate", "Palisade", "palisade", "Rampart", "rampart" } },
                 { "research",        new[] { "Research", "research", "Lab", "lab", "Library", "library", "University", "university", "Academy", "academy" } },
-                { "building",        new[] { "Building", "building" } },
+                // Generic building archetype (#101 building fix). Pack structures default to the
+                // "building" mapping when they omit vanilla_mapping; these substrings cover DINO's
+                // common building mesh-name tokens so the swap can refine within the BuildingBase
+                // archetype query (and so it never falls into DIAGNOSTIC MODE for lack of a signal).
+                { "building",        new[] { "Building", "building", "House", "house", "Tower", "tower", "Barrack", "barrack", "Wall", "wall", "Gate", "gate", "Keep", "keep", "Castle", "castle", "Hall", "hall", "Factory", "factory", "Mill", "mill", "Mine", "mine", "Storage", "storage", "Depot", "depot", "Center", "center", "Centre", "centre", "Bay", "bay", "Lab", "lab", "Generator", "generator", "Foundry", "foundry", "Camp", "camp", "Tent", "tent", "Hut", "hut" } },
             };
 
         /// <summary>
@@ -155,6 +159,15 @@ namespace DINOForge.Runtime.Bridge
         /// here instead.
         /// </summary>
         private const string AerialArchetypeTypeName = "DINOForge.Runtime.Aviation.AerialUnitComponent";
+
+        /// <summary>
+        /// Vanilla DINO component every building entity carries. Used as the archetype filter for
+        /// the generic <c>building</c> swap mapping (#101 building fix) so pack structures (e.g.
+        /// sw-cis-command-center, sw-rep-vehicle-bay) reskin onto live building entities instead of
+        /// falling into DIAGNOSTIC MODE and rendering as native royal/undead buildings. Resolved in
+        /// the swap path only (NOT in PackStatMappings) so building stat injection is unaffected.
+        /// </summary>
+        private const string BuildingArchetypeTypeName = "Components.BuildingBase";
 
         /// <summary>
         /// Resolves a pack <c>vanilla_mapping</c> to the ECS component-type name the asset swap
@@ -170,6 +183,12 @@ namespace DINOForge.Runtime.Bridge
                 && string.Equals(vanillaMapping, "aerial_fighter", StringComparison.OrdinalIgnoreCase))
             {
                 archetypeTypeName = AerialArchetypeTypeName;
+                return true;
+            }
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && string.Equals(vanillaMapping, "building", StringComparison.OrdinalIgnoreCase))
+            {
+                archetypeTypeName = BuildingArchetypeTypeName;
                 return true;
             }
             return PackStatMappings.TryResolveMapping(vanillaMapping, out archetypeTypeName);

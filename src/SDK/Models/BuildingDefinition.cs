@@ -43,6 +43,18 @@ namespace DINOForge.SDK.Models
         [YamlMember(Alias = "build_alias")]
         public string? BuildAlias { get; set; }
 
+        /// <summary>
+        /// Optional <c>vanilla_mapping</c> targeting signal for the live mesh swap
+        /// (<c>AssetSwapSystem</c>). Mirrors <see cref="UnitDefinition.VanillaMapping"/>: it
+        /// names the vanilla DINO archetype family whose entities this pack building's
+        /// <see cref="VisualAsset"/> should reskin. When omitted, the runtime defaults to the
+        /// generic <c>building</c> mapping (→ <c>Components.BuildingBase</c>) so a building with
+        /// a <c>visual_asset</c> still gets an archetype-narrowed swap instead of falling into
+        /// DIAGNOSTIC MODE (i.e. structures stop rendering as native royal/undead buildings).
+        /// </summary>
+        [YamlMember(Alias = "vanilla_mapping")]
+        public string? VanillaMapping { get; set; }
+
         /// <summary>Resource cost to construct this building.</summary>
         [YamlMember(Alias = "cost")]
         public ResourceCost Cost { get; set; } = new ResourceCost();
@@ -66,24 +78,6 @@ namespace DINOForge.SDK.Models
         /// </summary>
         [YamlMember(Alias = "visual_asset")]
         public string? VisualAsset { get; set; }
-
-        /// <summary>
-        /// Pack <c>vanilla_mapping</c> value (e.g. <c>command</c>, <c>barracks</c>, <c>resource</c>,
-        /// <c>wall</c>, <c>tower</c>) identifying which vanilla DINO building archetype the
-        /// runtime <c>AssetSwapSystem</c> should target when swapping the building's live
-        /// RenderMesh. This is the building-side analogue of <see cref="UnitDefinition.VanillaMapping"/>.
-        ///
-        /// Gap A (#975): prior to this field, <c>ContentLoader.RegisterAssetSwaps</c> registered
-        /// building swaps WITHOUT a <c>vanilla_mapping</c>, so every building swap ran in the
-        /// system's "no targeting signal" DIAGNOSTIC MODE and was skipped. Carrying this value
-        /// through to <see cref="DINOForge.SDK.Assets.AssetSwapRequest.VanillaMapping"/> lets the
-        /// swap narrow to the building archetype (or, when the archetype type cannot be resolved,
-        /// fall back to mesh-name substring filtering keyed by the same mapping value).
-        /// When omitted the building swap targets all <c>Components.BuildingBase</c> entities via
-        /// the default <c>building</c> mapping (see <c>PackStatMappings</c>).
-        /// </summary>
-        [YamlMember(Alias = "vanilla_mapping")]
-        public string? VanillaMapping { get; set; }
 
         /// <summary>
         /// Defense tags controlling how this building interacts with combat systems.

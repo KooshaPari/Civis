@@ -1,5 +1,5 @@
-use civ_voxel::material::MaterialDef;
-use civ_voxel::{MaterialId, Phase};
+use civ_voxel::material::{MaterialDef, Phase};
+use civ_voxel::MaterialId;
 use serde::{Deserialize, Serialize};
 
 /// Mod-authored material definition, anchored to the Civis voxel taxonomy.
@@ -44,6 +44,8 @@ impl CustomMaterial {
             viscosity: spec.viscosity,
             angle_of_repose: spec.angle_of_repose,
             color: spec.color,
+            temperature: 20,
+            flammability: 0,
         }
     }
 }

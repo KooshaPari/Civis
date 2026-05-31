@@ -47,6 +47,39 @@ namespace DINOForge.Runtime.Bridge
                 // VanillaMappingToMeshSubstrings (BUG B fix #101). Do NOT assume null here means
                 // "no swap target".
                 { "aerial_fighter",  null },
+
+                // ----------------------------------------------------------------------
+                // #975 Phase 1 — full-world conversion: cims (citizens/workers) + buildings.
+                //
+                // CIMS: DINO's roaming non-combatant population ("cims") render with bomj_*
+                // meshes and carry a worker/citizen component. The exact ECS type name is not
+                // yet confirmed from an entity dump (candidate: Components.Worker). We register
+                // the candidate here so the AssetSwapSystem can attempt an archetype-narrowed
+                // query; when the type does not resolve in DINO's assemblies the swap gracefully
+                // falls back to the bomj/worker mesh-name substrings in
+                // AssetSwapSystem.VanillaMappingToMeshSubstrings (so cims still exit DIAGNOSTIC
+                // MODE via the secondary mesh-name filter). Verify the type name in-game and
+                // tighten this entry once an entity dump confirms it.
+                { "cims",            "Components.Worker" },   // candidate — verify via entity dump
+                { "worker",          "Components.Worker" },   // alias for cims
+                { "citizen",         "Components.Worker" },   // alias for cims
+
+                // BUILDINGS: every DINO building carries the Components.BuildingBase zero-size
+                // marker (confirmed via entity crosswalk). Buildings register with a
+                // vanilla_mapping resolved from building.vanilla_mapping → building_type →
+                // "building" (see ContentLoader.RegisterAssetSwaps, Gap A). All building-type
+                // values map to BuildingBase; mesh-name substrings (AssetSwapSystem) provide the
+                // optional secondary refinement so distinct building meshes can be swapped
+                // selectively as their vanilla mesh names become known.
+                { "building",        "Components.BuildingBase" },
+                { "command",         "Components.BuildingBase" },
+                { "barracks",        "Components.BuildingBase" },
+                { "resource",        "Components.BuildingBase" },
+                { "economy",         "Components.BuildingBase" },
+                { "defense",         "Components.BuildingBase" },
+                { "tower",           "Components.BuildingBase" },
+                { "wall",            "Components.BuildingBase" },
+                { "research",        "Components.BuildingBase" },
             };
 
         /// <summary>

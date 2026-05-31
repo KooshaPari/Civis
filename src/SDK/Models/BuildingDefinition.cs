@@ -68,6 +68,24 @@ namespace DINOForge.SDK.Models
         public string? VisualAsset { get; set; }
 
         /// <summary>
+        /// Pack <c>vanilla_mapping</c> value (e.g. <c>command</c>, <c>barracks</c>, <c>resource</c>,
+        /// <c>wall</c>, <c>tower</c>) identifying which vanilla DINO building archetype the
+        /// runtime <c>AssetSwapSystem</c> should target when swapping the building's live
+        /// RenderMesh. This is the building-side analogue of <see cref="UnitDefinition.VanillaMapping"/>.
+        ///
+        /// Gap A (#975): prior to this field, <c>ContentLoader.RegisterAssetSwaps</c> registered
+        /// building swaps WITHOUT a <c>vanilla_mapping</c>, so every building swap ran in the
+        /// system's "no targeting signal" DIAGNOSTIC MODE and was skipped. Carrying this value
+        /// through to <see cref="DINOForge.SDK.Assets.AssetSwapRequest.VanillaMapping"/> lets the
+        /// swap narrow to the building archetype (or, when the archetype type cannot be resolved,
+        /// fall back to mesh-name substring filtering keyed by the same mapping value).
+        /// When omitted the building swap targets all <c>Components.BuildingBase</c> entities via
+        /// the default <c>building</c> mapping (see <c>PackStatMappings</c>).
+        /// </summary>
+        [YamlMember(Alias = "vanilla_mapping")]
+        public string? VanillaMapping { get; set; }
+
+        /// <summary>
         /// Defense tags controlling how this building interacts with combat systems.
         /// Supported values: AntiAir, Fortified, Shielded.
         /// A building with "AntiAir" will have <c>AntiAirComponent</c>

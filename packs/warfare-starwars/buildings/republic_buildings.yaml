@@ -4,6 +4,8 @@
   display_name: Republic Command Center
   description: Central operations hub coordinating all Republic forces in the sector.
   building_type: command
+  # #975 Phase 1 — CASTLE swap: vanilla DINO castle/command building → SW command center.
+  vanilla_mapping: command
   health: 2200
   cost:
     food: 0

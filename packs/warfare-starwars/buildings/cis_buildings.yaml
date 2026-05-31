@@ -4,6 +4,8 @@
   display_name: Tactical Droid Center
   description: Separatist command center housing the tactical droid coordinator.
   building_type: command
+  # #975 Phase 1 — CASTLE swap: vanilla DINO castle/command building → SW command center.
+  vanilla_mapping: command
   health: 1400
   cost:
     food: 0

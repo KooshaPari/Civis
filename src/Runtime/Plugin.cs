@@ -1943,6 +1943,7 @@ namespace DINOForge.Runtime
 
             // Pump deferred work on the main thread until destruction.
             int _themeRetryCount = 0;
+            int _auxSkinFrames = 0;
             while (!_destroyed)
             {
                 // ── Engine-UI self-healing bounded retry ─────────────────────────
@@ -1993,7 +1994,7 @@ namespace DINOForge.Runtime
                 // Re-skin non-MainMenu pages on a steady cadence. Settings sub-tabs and the
                 // game create/select screens are instantiated lazily when the user navigates,
                 // so a one-shot apply misses them. The reskinner is idempotent (per-object
-                // marker) — repeated passes only touch newly-appeared elements.
+                // marker) — repeated passes only touch newly-appeared elements. (#970b)
                 if (_canvasReskinner != null && _modPlatform != null)
                 {
                     _reskinRetryCount++;
@@ -2004,6 +2005,21 @@ namespace DINOForge.Runtime
                             _canvasReskinner.ReskinAllPages(_modPlatform.GetLoadedPackDisplayInfos());
                         }
                         catch { /* safe-swallow: page reskin retry is best-effort */ }
+                    }
+                }
+
+                // ── #3 (#970a): 100% page skinning — re-skin auxiliary menu canvases (Options/Settings
+                //    + GAME/VIDEO/SOUND/CONTROLS/TWITCH subpages, create/select screens) as they
+                //    open. Cheap (each canvas themed once, tracked by id); only active once a
+                //    conversion theme has been resolved by the MainMenu pass. Complements the
+                //    CanvasReskinner pump above (theme-snapshot vs pack-display reskin). ──
+                if (_mainMenuThemer != null && _mainMenuThemer.IsApplied)
+                {
+                    _auxSkinFrames++;
+                    if (_auxSkinFrames % 15 == 0) // ~4x/sec at 60fps
+                    {
+                        try { _mainMenuThemer.ApplyToAuxiliaryMenus(); }
+                        catch { /* safe-swallow: aux skin is best-effort */ }
                     }
                 }
 

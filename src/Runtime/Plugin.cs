@@ -506,6 +506,7 @@ namespace DINOForge.Runtime
             {
                 if (scene.name == "MainMenu")
                     UI.LoadingScreenController.Instance?.BeginFadeOut();
+                TryApplyEnvironmentThemeForScene(scene.name, "sceneLoaded(main-thread)");
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded LoadingScreen fade failed (non-fatal): {ex.Message}"); }
         }
@@ -562,6 +563,31 @@ namespace DINOForge.Runtime
             catch (Exception ex)
             {
                 DebugLog.Write("Plugin", $"[Plugin] {trigger} TryResurrect threw: {ex.GetType().Name}: {ex.Message} — retained for next main-thread tick.");
+            }
+        }
+
+        private static void TryApplyEnvironmentThemeForScene(string sceneName, string source)
+        {
+            if (!Graphics.EnvironmentThemeSwap.IsGameplayScene(sceneName))
+                return;
+
+            try
+            {
+                if (PersistentRoot == null)
+                    return;
+
+                RuntimeDriver? driver = PersistentRoot.GetComponent<RuntimeDriver>();
+                if (driver == null)
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] EnvironmentThemeSwap skipped ({source}): no RuntimeDriver on PersistentRoot.");
+                    return;
+                }
+
+                driver.TryApplyEnvironmentTheme(sceneName, source);
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] EnvironmentThemeSwap failed ({source}): {ex.Message}");
             }
         }
 
@@ -644,6 +670,7 @@ namespace DINOForge.Runtime
                         ls.EnsureVisible();
                     else if (newScene.name == "MainMenu")
                         ls.BeginFadeOut();
+                    TryApplyEnvironmentThemeForScene(newScene.name, "activeSceneChanged(main-thread)");
                 }
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged LoadingScreen toggle failed (non-fatal): {ex.Message}"); }
@@ -1423,6 +1450,7 @@ namespace DINOForge.Runtime
         private HudIndicator? _hudIndicator;
         private NativeMenuInjector? _nativeMenuInjector;
         private MainMenuThemer? _mainMenuThemer;
+        private Graphics.EnvironmentThemeSwap? _environmentThemeSwap;
         private UI.CanvasReskinner? _canvasReskinner;
         private int _reskinRetryCount;
 
@@ -2228,6 +2256,31 @@ namespace DINOForge.Runtime
             }
         }
 
+        public void TryApplyEnvironmentTheme(string sceneName, string source)
+        {
+            if (!Graphics.EnvironmentThemeSwap.IsGameplayScene(sceneName))
+                return;
+
+            if (_modPlatform == null)
+            {
+                _log.LogWarning($"[RuntimeDriver] EnvironmentThemeSwap skipped ({source}): ModPlatform is null.");
+                return;
+            }
+
+            try
+            {
+                _environmentThemeSwap ??= new Graphics.EnvironmentThemeSwap(_log);
+                if (_environmentThemeSwap.TryApplyForScene(sceneName))
+                {
+                    _log.LogInfo($"[RuntimeDriver] EnvironmentThemeSwap applied for '{sceneName}' ({source}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[RuntimeDriver] EnvironmentThemeSwap failed ({source}): {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// Emits a single unambiguous launch-time heartbeat summarising engine-UI readiness so the
         /// user (and tooling) can confirm state at a glance from the BepInEx console / LogOutput.log.
@@ -2393,6 +2446,9 @@ namespace DINOForge.Runtime
                         _loadingScreen.BeginFadeOut();
                         _log?.LogInfo("[RuntimeDriver] LoadingScreenController faded out (world ready).");
                     }
+
+                    string activeSceneName = SceneManager.GetActiveScene().name;
+                    TryApplyEnvironmentTheme(activeSceneName, "process-world-ready");
                 }
 
                 yield return null;

@@ -258,3 +258,70 @@ mod tests {
         }
     }
 }
+
+// --- Streaming heightfield generator (FR-CIV-VOXEL-021) ---------------------
+//
+// Coexists with the dense `GenWorld`/`generate` path above. The dense path backs
+// the non-streaming `voxel_sim`; `HeightFieldGen` below drives the chunk-streaming
+// layer (`crate::stream::StreamingWorld`). Regenerated chunks are bit-identical for
+// a fixed `(seed, coord)` so streaming and reloads stay deterministic.
+
+use crate::stream::{WorldGen, CHUNK_EDGE, CHUNK_EDGE_I32};
+use phenotype_voxel::{Chunk, ChunkCoord};
+
+const CHUNK_VOXELS: usize = CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE;
+
+/// Height-field generator with deterministic hash noise.
+pub struct HeightFieldGen {
+    /// World seed threaded into the hash.
+    pub seed: u64,
+    /// Base voxel size in metres.
+    pub base_voxel_m: f32,
+    /// Sea level in metres.
+    pub sea_level_m: f32,
+}
+
+fn hf_mix64(mut x: u64) -> u64 {
+    x ^= x >> 30;
+    x = x.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    x ^= x >> 27;
+    x = x.wrapping_mul(0x94d0_49bb_1331_11eb);
+    x ^ (x >> 31)
+}
+
+fn hf_hash2(seed: u64, x: i32, z: i32) -> u32 {
+    let x = x as u64;
+    let z = z as u64;
+    hf_mix64(seed ^ x.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ z.wrapping_mul(0xbf58_476d_1ce4_e5b9))
+        as u32
+}
+
+fn hf_height_voxels(seed: u64, world_x: i32, world_z: i32, sea_level_voxels: i32) -> i32 {
+    let coarse = (hf_hash2(seed, world_x >> 2, world_z >> 2) & 0xff) as i32 - 128;
+    let fine = (hf_hash2(seed ^ 0xA5A5_A5A5_A5A5_A5A5, world_x, world_z) & 0x1f) as i32 - 16;
+    sea_level_voxels + coarse / 2 + fine / 4
+}
+
+impl WorldGen for HeightFieldGen {
+    fn generate(&self, coord: ChunkCoord) -> Chunk<MaterialId> {
+        let sea_level_voxels = (self.sea_level_m / self.base_voxel_m).round() as i32;
+        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
+        for lz in 0..CHUNK_EDGE {
+            for ly in 0..CHUNK_EDGE {
+                for lx in 0..CHUNK_EDGE {
+                    let world_x = coord.cx * CHUNK_EDGE_I32 + lx as i32;
+                    let world_y = coord.cy * CHUNK_EDGE_I32 + ly as i32;
+                    let world_z = coord.cz * CHUNK_EDGE_I32 + lz as i32;
+                    let height = hf_height_voxels(self.seed, world_x, world_z, sea_level_voxels);
+                    let idx = lx + ly * CHUNK_EDGE + lz * CHUNK_EDGE * CHUNK_EDGE;
+                    voxels[idx] = if world_y <= height {
+                        MaterialId(1)
+                    } else {
+                        MaterialId(0)
+                    };
+                }
+            }
+        }
+        Chunk { voxels }
+    }
+}

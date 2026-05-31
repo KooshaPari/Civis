@@ -89,6 +89,10 @@ pub mod terraform_brush;
 pub mod terrain;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
+/// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
+/// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
+#[cfg(feature = "voxel_stream")]
+pub mod voxel_stream;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,

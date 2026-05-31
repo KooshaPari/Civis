@@ -90,6 +90,10 @@ hot = ["dev", "bevy/dynamic_linking"]
 # each tick so water flows and powders pile. OFF by default so the heightmap +
 # flat-water build stays the playable fallback. Enable: `--features voxel`.
 voxel = ["bevy"]
+# Camera-driven chunk streaming of the large voxel world (civ-voxel StreamingWorld
+# + HeightFieldGen). Coexists with the dense `voxel` sandbox rather than replacing
+# it. OFF by default. Enable: `--features voxel_stream` (implies `voxel`).
+voxel_stream = ["voxel"]
 # PART B — CC0 GLTF model loading (src/gltf_models.rs). OFF by default: when
 # disabled (or when assets/models/*.glb are absent) callers fall back to the
 # procedural primitives (capsule civilians / cuboid buildings / cone trees).

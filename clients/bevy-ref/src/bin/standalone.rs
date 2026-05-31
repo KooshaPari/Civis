@@ -108,8 +108,14 @@ fn main() {
     app.add_plugins(civ_bevy_ref::lighting_gi::SolariGiPlugin);
 
     // P-VM-3: real volumetric voxel material world (replaces the heightmap).
-    #[cfg(feature = "voxel")]
+    // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
+    // sandbox owns the world instead of the bounded dense `VoxelSimPlugin`.
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
+
+    // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
+    #[cfg(feature = "voxel_stream")]
+    app.add_plugins(civ_bevy_ref::voxel_stream::VoxelStreamPlugin);
 
     // CC0 GLTF models: populate GameModels so sim_bridge swaps capsule/cuboid
     // primitives for real Knight/house scenes (per-asset primitive fallback).

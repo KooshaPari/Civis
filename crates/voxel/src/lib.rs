@@ -32,7 +32,13 @@ pub mod fluid_ca;
 pub mod material;
 pub mod lod;
 pub mod reactions;
+pub mod stream;
 pub mod worldgen;
+
+pub use stream::{
+    ChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE, CHUNK_EDGE_I32,
+};
+pub use worldgen::HeightFieldGen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.

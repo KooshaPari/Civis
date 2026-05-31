@@ -43,15 +43,17 @@ New-Item -ItemType Directory -Force -Path (Split-Path $dstTtf) | Out-Null
 Copy-Item $srcTtf $dstTtf -Force
 Write-Host "[bake] copied menu_font.ttf into Unity project"
 
+# NOTE: do NOT pass -noUpm — TextMeshPro (com.unity.textmeshpro) is a UPM registry
+# package; -noUpm skips resolution so `using TMPro;` fails to compile (#965 bake bug).
 Write-Host "[bake] running BakeTmpFontAsset.BakeHeadless ..."
-& $Unity -batchmode -nographics -noUpm -quit `
+& $Unity -batchmode -nographics -quit `
     -projectPath $proj `
     -executeMethod BakeTmpFontAsset.BakeHeadless `
     -logFile $logBake
 if ($LASTEXITCODE -ne 0) { throw "Bake failed (exit $LASTEXITCODE). See $logBake" }
 
 Write-Host "[bake] running BuildAssetBundles.BuildHeadless ..."
-& $Unity -batchmode -nographics -noUpm -quit `
+& $Unity -batchmode -nographics -quit `
     -projectPath $proj `
     -executeMethod BuildAssetBundles.BuildHeadless `
     -logFile $logBundle

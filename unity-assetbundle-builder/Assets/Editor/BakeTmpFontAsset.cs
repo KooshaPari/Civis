@@ -3,6 +3,7 @@ using System.IO;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 
 /// <summary>
 /// Offline TMP SDF font-asset baker (Option A — Unity 2021.3.45f1 batchmode).
@@ -49,6 +50,12 @@ public static class BakeTmpFontAsset
         {
             Debug.Log("[BakeTmpFontAsset] Starting TMP SDF font bake...");
 
+            // CreateFontAsset needs the TMP SDF shader ("TextMeshPro/Distance Field"),
+            // which ships in TMP Essential Resources. A fresh project does not have them,
+            // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+            // headlessly before baking. (#965 batchmode bake fix.)
+            ImportTmpEssentialsIfMissing();
+
             if (!File.Exists(FontTtfPath))
             {
                 Debug.LogError($"[BakeTmpFontAsset] Missing source font at {FontTtfPath}. " +
@@ -67,12 +74,19 @@ public static class BakeTmpFontAsset
                 return;
             }
 
+            // The native FontEngine is NOT auto-initialized in -batchmode; without this,
+            // CreateFontAsset throws ArgumentNullException (the font engine handle is null).
+            // (#965 batchmode bake fix.)
+            FontEngineError initErr = FontEngine.InitializeFontEngine();
+            if (initErr != FontEngineError.Success)
+                Debug.LogWarning($"[BakeTmpFontAsset] FontEngine.InitializeFontEngine returned {initErr}");
+
             // Editor-side CreateFontAsset DOES work (unlike the DINO runtime).
             TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
                 sourceFont,
                 SamplingPointSize,
                 AtlasPadding,
-                UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
+                GlyphRenderMode.SDFAA,
                 AtlasWidth,
                 AtlasHeight,
                 AtlasPopulationMode.Static,
@@ -86,6 +100,12 @@ public static class BakeTmpFontAsset
             }
 
             fontAsset.name = "SW_MenuFont SDF";
+
+            // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+            // baked atlas renders correctly inside DINO even if the default was missing.
+            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
+                fontAsset.material.shader = sdf;
 
             // Pre-bake the printable ASCII range into the static atlas so no
             // runtime glyph generation is required inside DINO.

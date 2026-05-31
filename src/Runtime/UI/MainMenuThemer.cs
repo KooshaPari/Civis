@@ -946,7 +946,11 @@ namespace DINOForge.Runtime
                 Sprite? frameHover = string.IsNullOrEmpty(theme.ButtonFrameHover)
                     ? frameNormal
                     : (LoadSpriteFromPack(pack.Id, theme.ButtonFrameHover!) ?? frameNormal);
-                UnityEngine.Object? fontAsset = TryLoadFontAsset(theme, pack.Id);
+                // #965: load the PREBUILT baked TMP_FontAsset from the pack bundle (runtime
+                // CreateFontAsset returns null in DINO). Same path the main-menu takeover uses.
+                UnityEngine.Object? fontAsset = string.IsNullOrEmpty(theme.Font)
+                    ? null
+                    : LoadPrebuiltFontAsset(pack.Id, theme.Font!, theme.FontAssetName);
 
                 int surfaces = 0;
                 foreach (Canvas c in canvases)

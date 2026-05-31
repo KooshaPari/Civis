@@ -260,4 +260,3 @@ Ranked by **visual-bar-raised ÷ effort**. Each row names the file/system to cha
 > "done" on telemetry alone. After each, capture a screenshot and read the pixels — the world
 > must *look* rich, with lava that glows, water that reads wet, and warm-key/cool-shadow
 > separation, before the gap is closed.
-</content>

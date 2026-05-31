@@ -226,5 +226,3 @@ Aggressive agent-effort estimate: P1 ≈ 3–5 parallel subagents / ~15–20 min
 - Small Language Model leaderboard (≤10B; Q4 8GB-RAM viability): https://awesomeagents.ai/leaderboards/small-language-model-leaderboard/
 - Best open-source SLMs 2026 (Phi/SmolLM3/Qwen2.5/Llama-3.2/Gemma-2 comparisons): https://www.bentoml.com/blog/the-best-open-source-small-language-models
 - Model cards (HF): `Qwen/Qwen2.5-0.5B-Instruct`, `Qwen/Qwen2.5-1.5B-Instruct`, `meta-llama/Llama-3.2-1B-Instruct`, `meta-llama/Llama-3.2-3B-Instruct`, `google/gemma-2-2b-it`, `HuggingFaceTB/SmolLM3-3B`, `sentence-transformers/all-MiniLM-L6-v2`.
-</content>
-</invoke>

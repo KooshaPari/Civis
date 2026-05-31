@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import container from 'markdown-it-container'
 
 export default defineConfig({
   title: 'Civ',
@@ -13,6 +14,19 @@ export default defineConfig({
     theme: {
       light: 'github-light',
       dark: 'github-dark',
+    },
+    // Star-Wars holo callout: `::: holo` → projection-styled block (see theme).
+    config(md) {
+      md.use(container, 'holo', {
+        render(tokens: { nesting: number; info: string }[], idx: number) {
+          const token = tokens[idx]
+          if (token.nesting === 1) {
+            const title = token.info.trim().slice('holo'.length).trim() || 'HOLO'
+            return `<div class="custom-block holo"><p class="custom-block-title">${title}</p>\n`
+          }
+          return '</div>\n'
+        },
+      })
     },
   },
   themeConfig: {

@@ -50,6 +50,13 @@ namespace DINOForge.Runtime.Bridge
         private FieldInfo? _materialField;
         private MethodInfo? _getSharedNonGeneric;
         private MethodInfo? _setSharedGeneric;
+        // BUG A fix (#101): DINO's Unity 2021.3 EntityManager has both
+        // GetSharedComponentData(Entity, ComponentType) and (Entity, int typeIndex)
+        // non-generic overloads. When the Int32 overload is bound, invoking it with a boxed
+        // ComponentType throws "ComponentType cannot be converted to Int32" — the cause of
+        // ~22k '[BlasterBolt] Recolour failed on projectile' log spam. Track which arg the
+        // bound overload wants so we can pass ComponentType.TypeIndex (int) instead.
+        private bool _getSharedWantsTypeIndex;
         private bool _reflectionResolved;
         private bool _reflectionOk;
 
@@ -172,7 +179,11 @@ namespace DINOForge.Runtime.Bridge
             if (!em.HasComponent(entity, renderMeshComponentType))
                 return false;
 
-            object? renderMesh = _getSharedNonGeneric!.Invoke(em, new object[] { entity, renderMeshComponentType });
+            // BUG A fix (#101): pass TypeIndex (int) when the bound overload is (Entity, int).
+            object sharedArg = _getSharedWantsTypeIndex
+                ? (object)renderMeshComponentType.TypeIndex
+                : renderMeshComponentType;
+            object? renderMesh = _getSharedNonGeneric!.Invoke(em, new object[] { entity, sharedArg });
             if (renderMesh == null)
                 return false;
 
@@ -289,6 +300,10 @@ namespace DINOForge.Runtime.Bridge
                     && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity"
                     && (m.GetParameters()[1].ParameterType.FullName == "Unity.Entities.ComponentType"
                         || m.GetParameters()[1].ParameterType.FullName == "System.Int32"));
+
+            // BUG A fix (#101): record whether the bound overload takes an int TypeIndex.
+            _getSharedWantsTypeIndex = _getSharedNonGeneric != null
+                && _getSharedNonGeneric.GetParameters()[1].ParameterType.FullName == "System.Int32";
 
             MethodInfo? setSharedDef = typeof(EntityManager).GetMethods(
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)

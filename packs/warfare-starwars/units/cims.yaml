@@ -1,0 +1,71 @@
+# CIMS — civilian/worker population (#975 Phase 1, full-world conversion).
+#
+# DINO's roaming non-combatant population ("cims") render with bomj_* meshes. These
+# definitions reskin them into Star Wars worker units. They are modelled as units with
+# `vanilla_mapping: cims` so the existing ContentLoader.RegisterAssetSwaps unit path wires
+# their swap (Gap B) — no separate registry/schema is required. The runtime AssetSwapSystem
+# resolves `cims` → Components.Worker (candidate archetype) and, when that type does not
+# resolve, falls back to the bomj/worker mesh-name substrings.
+#
+# These are non-combat reskins: minimal stats, no weapon. Bundles are real (verified
+# non-stub) procedural/art models from the existing pack bundle set.
+
+- id: rep_clone_worker
+  visual_asset: sw-rep-clone-engineer
+  display_name: Clone Engineer
+  description: Republic support clone tasked with construction, repair, and logistics.
+  unit_class: SupportEngineer
+  faction_id: republic
+  tier: 1
+  vanilla_mapping: cims
+  defense_tags:
+  - Unarmored
+  - Biological
+  behavior_tags:
+  - HoldLine
+  stats:
+    hp: 60.0
+    damage: 0.0
+    armor: 0.0
+    range: 0.0
+    speed: 4.0
+    accuracy: 0.5
+    fire_rate: 1.0
+    morale: 60.0
+    cost:
+      food: 20
+      wood: 0
+      stone: 0
+      iron: 0
+      gold: 0
+      population: 1
+
+- id: cis_worker_droid
+  visual_asset: sw-cis-droid-pilot
+  display_name: Pilot Droid
+  description: Separatist labor/pilot droid handling construction and resource hauling.
+  unit_class: SupportEngineer
+  faction_id: cis
+  tier: 1
+  vanilla_mapping: cims
+  defense_tags:
+  - Unarmored
+  - Mechanical
+  behavior_tags:
+  - HoldLine
+  stats:
+    hp: 45.0
+    damage: 0.0
+    armor: 0.0
+    range: 0.0
+    speed: 4.5
+    accuracy: 0.5
+    fire_rate: 1.0
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 0
+      population: 1

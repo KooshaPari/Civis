@@ -116,6 +116,29 @@ namespace DINOForge.Runtime.Bridge
                 // Mounted / mechanised archetypes.
                 { "cavalry",         new[] { "Cavalry", "cavalry", "Rider", "rider", "Horse", "horse", "Mount", "mount" } },
                 { "siege",           new[] { "Siege", "siege", "Catapult", "catapult", "Trebuchet", "trebuchet", "Ram", "ram", "Cannon", "cannon" } },
+
+                // #975 Phase 1 — CIMS (citizens/workers). DINO's roaming population renders with
+                // bomj_* meshes (бомж = vagrant). When the Components.Worker archetype filter does
+                // not resolve, these substrings let the swap proceed via the secondary mesh-name
+                // filter so cims still exit DIAGNOSTIC MODE.
+                { "cims",            new[] { "bomj", "Bomj", "cim", "Cim", "Citizen", "citizen", "Worker", "worker", "Peon", "peon", "Villager", "villager" } },
+                { "worker",          new[] { "bomj", "Bomj", "Worker", "worker", "Peon", "peon", "Villager", "villager" } },
+                { "citizen",         new[] { "bomj", "Bomj", "Citizen", "citizen", "cim", "Cim" } },
+
+                // #975 Phase 1 — BUILDINGS. Vanilla DINO building mesh-name substrings, keyed by
+                // building-type vanilla_mapping. The archetype filter (Components.BuildingBase) is
+                // authoritative; these substrings are the optional secondary refinement that lets
+                // distinct building meshes be swapped selectively. Empty/unknown DINO mesh names
+                // fall back to archetype-only targeting.
+                { "command",         new[] { "Castle", "castle", "Keep", "keep", "Command", "command", "TownHall", "townhall", "Hall", "hall" } },
+                { "barracks",        new[] { "Barrack", "barrack", "Baraks", "baraks", "Stable", "stable", "Train", "train" } },
+                { "resource",        new[] { "Farm", "farm", "Mine", "mine", "Mill", "mill", "Lumber", "lumber", "Quarry", "quarry", "Storage", "storage", "Warehouse", "warehouse" } },
+                { "economy",         new[] { "Farm", "farm", "Mine", "mine", "Mill", "mill", "Market", "market", "House", "house", "Storage", "storage" } },
+                { "defense",         new[] { "Tower", "tower", "Wall", "wall", "Gate", "gate", "Turret", "turret", "Fort", "fort" } },
+                { "tower",           new[] { "Tower", "tower", "Turret", "turret", "Watchtower", "watchtower" } },
+                { "wall",            new[] { "Wall", "wall", "Gate", "gate", "Palisade", "palisade", "Rampart", "rampart" } },
+                { "research",        new[] { "Research", "research", "Lab", "lab", "Library", "library", "University", "university", "Academy", "academy" } },
+                { "building",        new[] { "Building", "building" } },
             };
 
         private static volatile bool _resetPending;

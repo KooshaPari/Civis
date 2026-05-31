@@ -158,7 +158,17 @@ namespace DINOForge.Runtime.Bridge
         /// for STAT injection (AerialSpawnSystem owns behaviour), so the swap resolves the archetype
         /// here instead.
         /// </summary>
-        private const string AerialArchetypeTypeName = "DINOForge.Runtime.Aviation.AerialUnitComponent";
+        /// <para>
+        /// #986 (2026-05-31): the original value <c>DINOForge.Runtime.Aviation.AerialUnitComponent</c>
+        /// resolved to 0 live entities (live entity dump, build 1BDC999C) — DINO never tags any
+        /// entity with our custom aviation component, and DINO has no native flying units. The
+        /// RenderMesh + AerialUnitComponent query therefore returned 0 → "0 succeeded" for every
+        /// aerial bundle. DINO's renderable combat archetypes that carry RenderMesh directly are
+        /// MeleeUnit/RangeUnit/CavalryUnit/SiegeUnit. We reskin SW aircraft onto
+        /// <c>Components.SiegeUnit</c> (live count 162, RenderMesh on the same entity) — distinct
+        /// from the melee/range archetypes used by infantry to reduce visual collision.
+        /// </para>
+        private const string AerialArchetypeTypeName = "Components.SiegeUnit";
 
         /// <summary>
         /// Vanilla DINO component every building entity carries. Used as the archetype filter for
@@ -246,6 +256,75 @@ namespace DINOForge.Runtime.Bridge
             }
             if (bestCount < 0) bestCount = 0;
             return best;
+        }
+
+        /// <summary>
+        /// #986: For parent archetypes that do not carry RenderMesh on themselves (DINO buildings:
+        /// Components.BuildingBase has LinkedEntityGroup but RenderMesh lives on a child entity),
+        /// query the archetype alone, then walk each match's LinkedEntityGroup buffer and collect
+        /// the child entities that DO carry the RenderMesh shared component. Returns a NativeArray
+        /// (caller owns disposal). Empty/uncreated array means no child meshes were found.
+        /// </summary>
+        private NativeArray<Entity> CollectRenderMeshChildren(
+            EntityManager em, Type archetypeType, Type renderMeshType,
+            string assetName, string? vanillaMapping)
+        {
+            ComponentType renderMeshCt = ComponentType.ReadOnly(renderMeshType);
+            EntityQuery archetypeQuery = em.CreateEntityQuery(
+                new EntityQueryDesc
+                {
+                    All = new[] { ComponentType.ReadOnly(archetypeType) },
+                    Options = EntityQueryOptions.IncludePrefab,
+                });
+            NativeArray<Entity> parents = archetypeQuery.ToEntityArray(Allocator.Temp);
+
+            var collected = new List<Entity>();
+            var seen = new HashSet<int>();
+            try
+            {
+                for (int i = 0; i < parents.Length; i++)
+                {
+                    Entity parent = parents[i];
+                    // Walk LinkedEntityGroup (a DynamicBuffer<LinkedEntityGroup> of Entity-wrappers).
+                    if (!em.HasComponent<LinkedEntityGroup>(parent))
+                    {
+                        // No child group — if the parent itself somehow has RenderMesh, take it.
+                        if (em.HasComponent(parent, renderMeshCt) && seen.Add(parent.Index))
+                            collected.Add(parent);
+                        continue;
+                    }
+
+                    DynamicBuffer<LinkedEntityGroup> group = em.GetBuffer<LinkedEntityGroup>(parent);
+                    for (int j = 0; j < group.Length; j++)
+                    {
+                        Entity child = group[j].Value;
+                        if (child == parent) continue;
+                        if (!em.Exists(child)) continue;
+                        if (!em.HasComponent(child, renderMeshCt)) continue;
+                        if (seen.Add(child.Index))
+                            collected.Add(child);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("AssetSwap",
+                    $"CollectRenderMeshChildren: walk failed for archetype '{archetypeType.FullName}' " +
+                    $"(asset='{assetName}', vanilla_mapping='{vanillaMapping ?? "<null>"}'): {ex.Message}");
+            }
+            finally
+            {
+                parents.Dispose();
+                archetypeQuery.Dispose();
+            }
+
+            if (collected.Count == 0)
+                return default;
+
+            var result = new NativeArray<Entity>(collected.Count, Allocator.Temp);
+            for (int i = 0; i < collected.Count; i++)
+                result[i] = collected[i];
+            return result;
         }
 
         /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
@@ -510,6 +589,11 @@ namespace DINOForge.Runtime.Bridge
             // When the mapping is absent or unrecognised we fall back to RenderMesh-only query,
             // which at minimum avoids modifying non-unit geometry in cases like buildings.
             ComponentType[] queryComponents;
+            // #986: When the archetype carries RenderMesh on a CHILD entity (DINO buildings:
+            // Components.BuildingBase has LinkedEntityGroup + Unity.Transforms.Child but NO
+            // RenderMesh on the parent), the RenderMesh+archetype query returns 0. We capture
+            // the resolved archetype type so we can re-query archetype-only and walk children.
+            Type? resolvedArchetypeType = null;
             if (!string.IsNullOrWhiteSpace(vanillaMapping)
                 && TryResolveSwapArchetype(vanillaMapping, out string? archetypeTypeName)
                 && !string.IsNullOrEmpty(archetypeTypeName))
@@ -517,6 +601,7 @@ namespace DINOForge.Runtime.Bridge
                 Type? archetypeType = ResolveTypeByName(archetypeTypeName!);
                 if (archetypeType != null)
                 {
+                    resolvedArchetypeType = archetypeType;
                     queryComponents = new[]
                     {
                         ComponentType.ReadOnly(renderMeshType),
@@ -542,6 +627,34 @@ namespace DINOForge.Runtime.Bridge
             EntityQuery query = em.CreateEntityQuery(
                 new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
+
+            // #986: child-entity RenderMesh fallback. DINO buildings carry the archetype marker
+            // (Components.BuildingBase) on a PARENT entity whose RenderMesh lives on a CHILD
+            // entity referenced via LinkedEntityGroup. The RenderMesh+archetype query above
+            // therefore returns 0. When that happens (and we resolved a parent archetype), query
+            // archetype-only and collect the RenderMesh-bearing children. This is what makes
+            // buildings (and any other parent-rendered DINO entity) swap instead of "0 succeeded".
+            if (entities.Length == 0 && resolvedArchetypeType != null)
+            {
+                NativeArray<Entity> childMatches = CollectRenderMeshChildren(
+                    em, resolvedArchetypeType, renderMeshType, assetName, vanillaMapping);
+                if (childMatches.IsCreated && childMatches.Length > 0)
+                {
+                    entities.Dispose();
+                    query.Dispose();
+                    entities = childMatches;
+                    // No EntityQuery to dispose for the child path; use a no-op query handle.
+                    query = em.CreateEntityQuery(ComponentType.ReadOnly(renderMeshType));
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: parent archetype '{resolvedArchetypeType.FullName}' " +
+                        $"carries no RenderMesh; resolved {entities.Length} RenderMesh child entities " +
+                        $"via LinkedEntityGroup for asset='{assetName}'.");
+                }
+                else
+                {
+                    if (childMatches.IsCreated) childMatches.Dispose();
+                }
+            }
 
             // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
             // fires before gameplay-scene entity population completes (observed ~9s gap

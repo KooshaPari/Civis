@@ -51,18 +51,15 @@ namespace DINOForge.Runtime.Bridge
                 // ----------------------------------------------------------------------
                 // #975 Phase 1 — full-world conversion: cims (citizens/workers) + buildings.
                 //
-                // CIMS: DINO's roaming non-combatant population ("cims") render with bomj_*
-                // meshes and carry a worker/citizen component. The exact ECS type name is not
-                // yet confirmed from an entity dump (candidate: Components.Worker). We register
-                // the candidate here so the AssetSwapSystem can attempt an archetype-narrowed
-                // query; when the type does not resolve in DINO's assemblies the swap gracefully
-                // falls back to the bomj/worker mesh-name substrings in
-                // AssetSwapSystem.VanillaMappingToMeshSubstrings (so cims still exit DIAGNOSTIC
-                // MODE via the secondary mesh-name filter). Verify the type name in-game and
-                // tighten this entry once an entity dump confirms it.
-                { "cims",            "Components.Worker" },   // candidate — verify via entity dump
-                { "worker",          "Components.Worker" },   // alias for cims
-                { "citizen",         "Components.Worker" },   // alias for cims
+                // CIMS: DINO's roaming non-combatant population ("cims"). CONFIRMED via live
+                // entity dump (#986, build 1BDC999C, 2026-05-31): the renderable cim entity
+                // carries Components.Citizen and RenderMesh ON THE SAME ENTITY (count=58 in a
+                // live skirmish). The previous guess Components.Worker matched only 2 entities
+                // (worker singletons), so the RenderMesh+Worker query returned 0 → "0 succeeded".
+                // Components.Citizen is the correct archetype.
+                { "cims",            "Components.Citizen" },
+                { "worker",          "Components.Citizen" },   // alias for cims
+                { "citizen",         "Components.Citizen" },   // alias for cims
 
                 // BUILDINGS: every DINO building carries the Components.BuildingBase zero-size
                 // marker (confirmed via entity crosswalk). Buildings register with a

@@ -490,7 +490,13 @@ public static class Program
             await client.ConnectAsync().ConfigureAwait(false);
             var result = await client.QueryEntitiesAsync(componentType).ConfigureAwait(false);
 
-            AnsiConsole.MarkupLine("[green]✓[/] Query complete");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                componentType,
+                count = result.Count,
+                sampled = result.Entities.Count,
+                entities = result.Entities.Select(e => new { index = e.Index, components = e.Components }),
+            }, GameControlCliJsonOptions.Indented));
 
             client.Disconnect();
             return 0;

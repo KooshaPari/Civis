@@ -334,6 +334,17 @@ namespace DINOForge.Runtime
                 _log.LogWarning($"[ModPlatform] WaveInjector failed: {ex}");
             }
 
+            // Register the projectile mesh swapper.
+            try
+            {
+                world.GetOrCreateSystem<ProjectileMeshSwapSystem>();
+                _log.LogInfo("[ModPlatform] ProjectileMeshSwapSystem registered.");
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[ModPlatform] ProjectileMeshSwapSystem failed: {ex}");
+            }
+
             // Register the FactionSystem
             try
             {

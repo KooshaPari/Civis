@@ -217,7 +217,6 @@ namespace DINOForge.Runtime.UI
         }
 
         private int _screenshotCheckFrames;
-        private string? _pendingScreenshotPath;
         private System.DateTime _screenshotRequestedAtUtc = System.DateTime.MinValue;
 
         private void CheckScreenshotRequest()
@@ -228,34 +227,29 @@ namespace DINOForge.Runtime.UI
                 string reqFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
                 string doneFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_done.txt");
 
-                if (_pendingScreenshotPath != null)
-                {
-                    // Wait for Unity to actually write the file before signaling done
-                    var fi = new System.IO.FileInfo(_pendingScreenshotPath);
-                    fi.Refresh();
-                    if (fi.Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _screenshotRequestedAtUtc)
-                    {
-                        System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath, Encoding.UTF8);
-                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] done (verified {fi.Length} bytes): {_pendingScreenshotPath}");
-                        _pendingScreenshotPath = null;
-                    }
-                    else
-                    {
-                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] pending, file not ready: {_pendingScreenshotPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff})");
-                    }
-                }
-                else if (System.IO.File.Exists(reqFile))
+                if (System.IO.File.Exists(reqFile))
                 {
                     string path = System.IO.File.ReadAllText(reqFile, Encoding.UTF8).Trim();
                     System.IO.File.Delete(reqFile);
                     if (string.IsNullOrEmpty(path))
                         path = System.IO.Path.Combine(bepRoot, "screenshot.png");
-                    // Delete stale file so we can detect when Unity writes the new one
-                    try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); } catch { /* safe-swallow: stale screenshot file removal is best-effort */ }
                     _screenshotRequestedAtUtc = System.DateTime.UtcNow;
                     DebugLog.Write("NativeMenuInjector", $"[Screenshot] requested (Update/main thread) at {_screenshotRequestedAtUtc:HH:mm:ss.fff}: {path}");
-                    ScreenCapture.CaptureScreenshot(path);
-                    _pendingScreenshotPath = path;
+
+                    // #972 fix: synchronous FrameCapture (RenderTexture readback) writes the PNG
+                    // immediately on this main-thread tick — no async ScreenCapture flush dependency,
+                    // so no pending-poll loop is needed. Works in menu + in-game + loading.
+                    DINOForge.Runtime.Bridge.FrameCapture.Result fc =
+                        DINOForge.Runtime.Bridge.FrameCapture.Capture(path);
+                    if (fc.Success)
+                    {
+                        System.IO.File.WriteAllText(doneFile, path, Encoding.UTF8);
+                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] done ({fc.Bytes} bytes, {fc.Method}): {path}");
+                    }
+                    else
+                    {
+                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] FrameCapture failed: {fc.Error} ({path})");
+                    }
                 }
             }
             catch { /* safe-swallow: Update polling loop must never throw from main thread (screenshot/scene-init best-effort) */ }
@@ -1780,8 +1774,9 @@ namespace DINOForge.Runtime.UI
                 try
                 {
                     DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: capturing now: {_pendingAutoCheckpointPath}");
-                    ScreenCapture.CaptureScreenshot(_pendingAutoCheckpointPath);
-                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: CaptureScreenshot called: {_pendingAutoCheckpointPath}");
+                    DINOForge.Runtime.Bridge.FrameCapture.Result fc =
+                        DINOForge.Runtime.Bridge.FrameCapture.Capture(_pendingAutoCheckpointPath);
+                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: FrameCapture {(fc.Success ? "OK" : "FAIL")} ({fc.Bytes}B {fc.Method}): {_pendingAutoCheckpointPath}");
                 }
                 catch (Exception ex)
                 {

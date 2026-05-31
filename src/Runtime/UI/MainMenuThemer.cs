@@ -55,10 +55,20 @@ namespace DINOForge.Runtime
             _packsDirectory = packsDirectory ?? string.Empty;
         }
 
+        // Aux/subpage takeover (#974) caches the resolved theme + pack id so the per-frame
+        // re-application pump (subpages open AFTER the main menu and re-open repeatedly,
+        // e.g. settings tabs) is cheap. Reset on scene change.
+        private ThemeData? _auxTheme;
+        private PackDisplayInfo? _auxPack;
+        private int _auxLastCanvasCount = -1;
+
         public void OnSceneChanged()
         {
             _applied = false;
             _themedAuxCanvases.Clear();
+            _auxTheme = null;
+            _auxPack = null;
+            _auxLastCanvasCount = -1;
         }
 
         /// <summary>
@@ -887,6 +897,373 @@ namespace DINOForge.Runtime
                 }
             }
             return hits;
+        }
+
+        // ── EPIC-027 / subpage FULL TAKEOVER ─────────────────────────────────────
+        //
+        // The main-menu takeover above themes only the MainMenu canvas. Subpages
+        // (Options + GAME/VIDEO/SOUND/CONTROLS/TWITCH tabs, game create/select, and the
+        // in-game HUD/build/pause panels) are SEPARATE canvases that the user reaches by
+        // clicking buttons — they open AFTER the main menu and re-open repeatedly. The
+        // previous aux path only recolored TMP text gold, leaving panels, frames and
+        // native controls (sliders, ◄►selectors, tab rails) vanilla.
+        //
+        // ApplyToAuxiliaryMenus performs the SAME full takeover the main menu got, but
+        // generalized per-surface and driven each pump frame (idempotent via
+        // DINOForge-owned marker objects + sentinel components):
+        //   1. PANEL/BACKGROUND — inject a themed full-rect background Image behind each
+        //      subpage panel (overlay; DINO panels may have no UGUI bg of their own).
+        //   2. 9-SLICE FRAMES   — apply the pack's btn_normal/btn_hover art to every
+        //      button + a menu_bg-derived frame to large panel containers.
+        //   3. NATIVE CONTROLS  — restyle sliders (fill+handle gold), ◄► selector arrow
+        //      buttons (frame + gold tint), and tab rails (active/inactive coloring).
+        //   4. FONT             — apply the themed TMP font to every subpage label.
+        // All steps degrade gracefully (missing art ⇒ tint/color fallback, never throws).
+        public bool ApplyToAuxiliaryMenus(IReadOnlyList<PackDisplayInfo> packs)
+        {
+            try
+            {
+                if (_auxTheme == null || _auxPack == null)
+                {
+                    if (!ResolveAuxTheme(packs)) return false;
+                }
+                ThemeData theme = _auxTheme!;
+                PackDisplayInfo pack = _auxPack!;
+
+                Canvas[] canvases = UnityEngine.Object.FindObjectsOfType<Canvas>();
+                // Cheap guard: only do the (slightly heavier) scan when the live canvas
+                // set changes — opening/closing a subpage adds/removes a canvas.
+                if (canvases.Length == _auxLastCanvasCount) return true;
+                _auxLastCanvasCount = canvases.Length;
+
+                ColorUtility.TryParseHtmlString(theme.PrimaryColor, out Color primary);
+                ColorUtility.TryParseHtmlString(theme.SecondaryColor, out Color secondary);
+                ColorUtility.TryParseHtmlString(theme.TextColor, out Color textCol);
+                ColorUtility.TryParseHtmlString(theme.AccentColor ?? "#C0392B", out Color accent);
+                Color bgTint = new Color(0.04f, 0.04f, 0.10f, 1f);
+                if (theme.BackgroundTint != null) ColorUtility.TryParseHtmlString(theme.BackgroundTint, out bgTint);
+
+                Sprite? bgSprite = string.IsNullOrEmpty(theme.BackgroundImage) ? null : LoadSpriteFromPack(pack.Id, theme.BackgroundImage!);
+                Sprite? frameNormal = string.IsNullOrEmpty(theme.ButtonFrame) ? null : LoadSpriteFromPack(pack.Id, theme.ButtonFrame!);
+                Sprite? frameHover = string.IsNullOrEmpty(theme.ButtonFrameHover)
+                    ? frameNormal
+                    : (LoadSpriteFromPack(pack.Id, theme.ButtonFrameHover!) ?? frameNormal);
+                UnityEngine.Object? fontAsset = TryLoadFontAsset(theme, pack.Id);
+
+                int surfaces = 0;
+                foreach (Canvas c in canvases)
+                {
+                    if (c == null || !c.gameObject.activeInHierarchy) continue;
+                    string cn = c.name;
+                    // Skip the main menu canvas (themed separately) and our own overlays.
+                    if (cn.IndexOf("PrimeCanvas", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (cn.IndexOf("DINOForge", StringComparison.Ordinal) >= 0) continue;
+                    if (cn.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (!IsAuxSurface(c)) continue;
+
+                    ApplyTakeoverToSurface(c, theme, bgSprite, frameNormal, frameHover, fontAsset,
+                        primary, secondary, textCol, accent, bgTint);
+                    surfaces++;
+                }
+
+                if (surfaces > 0)
+                {
+                    _log?.LogInfo($"[MainMenuThemer] AUX TAKEOVER applied to {surfaces} subpage canvas(es) from '{pack.Id}' (bg={bgSprite != null} frame={frameNormal != null} font={fontAsset != null})"); // pattern-96-ok: diagnostic
+                    DebugLog.Write("MainMenuThemer", $"AUX TAKEOVER: {surfaces} subpage canvas(es) bg={bgSprite != null} frame={frameNormal != null} font={fontAsset != null}");
+                }
+                return surfaces > 0;
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[MainMenuThemer] ApplyToAuxiliaryMenus failed: {ex.Message}"); // pattern-96-ok: diagnostic
+                return false;
+            }
+        }
+
+        private bool ResolveAuxTheme(IReadOnlyList<PackDisplayInfo> packs)
+        {
+            if (packs == null || packs.Count == 0) return false;
+            PackDisplayInfo? best = null;
+            PackDisplayInfo? fallback = null;
+            foreach (var p in packs.OrderBy(p => p.Id, StringComparer.Ordinal))
+            {
+                if (!p.IsEnabled) continue;
+                if (!string.Equals(p.Type, "total_conversion", StringComparison.OrdinalIgnoreCase)) continue;
+                if (fallback == null) fallback = p;
+                string yamlPath = Path.Combine(_packsDirectory, p.Id, "pack.yaml");
+                if (File.Exists(yamlPath) && File.ReadAllText(yamlPath, System.Text.Encoding.UTF8).IndexOf("ui_theme:", StringComparison.Ordinal) >= 0)
+                {
+                    best = p;
+                    break;
+                }
+            }
+            best = best ?? fallback;
+            if (best == null) return false;
+            _auxPack = best;
+            _auxTheme = ReadThemeFromDisk(best.Id) ?? new ThemeData { Title = best.Name };
+            return true;
+        }
+
+        /// <summary>
+        /// Heuristic: is this canvas a themeable subpage (Options/settings tab, game
+        /// create/select, in-game HUD/build/pause) rather than a transient/system canvas?
+        /// We theme any active non-main-menu canvas that carries menu-like content:
+        /// a Selectable (button/slider/etc.) or recognizable settings/HUD text. This keeps
+        /// the rule ID-free (no hardcoded canvas names) per agent governance.
+        /// </summary>
+        private static bool IsAuxSurface(Canvas canvas)
+        {
+            // Must have at least one interactive control or a sizable panel image to be worth theming.
+            if (canvas.GetComponentInChildren<Selectable>(false) != null) return true;
+            foreach (var img in canvas.GetComponentsInChildren<Image>(false))
+            {
+                if (img == null) continue;
+                var rt = img.GetComponent<RectTransform>();
+                if (rt != null && rt.rect.width * rt.rect.height > 40000f) return true; // ~200x200+
+            }
+            return false;
+        }
+
+        /// <summary>Full per-surface takeover: bg overlay + panel/button frames + native
+        /// control restyle + font. Idempotent via DINOForge marker objects.</summary>
+        private void ApplyTakeoverToSurface(
+            Canvas canvas, ThemeData theme,
+            Sprite? bgSprite, Sprite? frameNormal, Sprite? frameHover, UnityEngine.Object? fontAsset,
+            Color primary, Color secondary, Color textCol, Color accent, Color bgTint)
+        {
+            // 1) PANEL/BACKGROUND — inject a full-canvas themed backdrop (idempotent).
+            InjectSurfaceBackground(canvas, bgSprite, bgTint);
+
+            // 2) 9-SLICE FRAMES on buttons + panel containers.
+            ApplyFramesToSurface(canvas, frameNormal, frameHover, primary, secondary, accent, textCol);
+
+            // 3) NATIVE CONTROLS — sliders, ◄► selectors, tab rails.
+            RestyleNativeControls(canvas, frameNormal, frameHover, primary, secondary, accent, textCol);
+
+            // 4) FONT.
+            if (fontAsset != null) ApplyFont(canvas, fontAsset);
+
+            // Recolor remaining labels to themed text color (does not override frame text).
+            RecolorLabels(canvas, textCol);
+        }
+
+        private void InjectSurfaceBackground(Canvas canvas, Sprite? bgSprite, Color bgTint)
+        {
+            // Anchor the backdrop to the largest panel root so it covers the subpage but
+            // not the whole screen if the panel is windowed; fall back to the canvas.
+            Transform parent = canvas.transform;
+            Image? largestPanel = FindLargestImage(canvas);
+            if (largestPanel != null && largestPanel.transform.parent != null)
+                parent = largestPanel.transform;
+
+            var existing = parent.Find("DINOForge_AuxBackground");
+            Image bgImg;
+            if (existing == null)
+            {
+                var bgGo = new GameObject("DINOForge_AuxBackground", typeof(RectTransform));
+                bgGo.transform.SetParent(parent, false);
+                bgImg = bgGo.AddComponent<Image>();
+                bgImg.raycastTarget = false;            // never block control input (Pattern #235)
+                var rt = bgGo.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                rt.SetAsFirstSibling();                 // behind controls
+            }
+            else
+            {
+                bgImg = existing.GetComponent<Image>();
+                if (bgImg == null) return;
+            }
+            if (bgSprite != null)
+            {
+                bgImg.sprite = bgSprite;
+                bgImg.type = Image.Type.Simple;
+                bgImg.preserveAspect = false;
+                bgImg.color = new Color(1f, 1f, 1f, 0.97f);
+            }
+            else
+            {
+                // No art: solid dark SW panel tint.
+                bgImg.color = new Color(bgTint.r, bgTint.g, bgTint.b, 0.92f);
+            }
+        }
+
+        private void ApplyFramesToSurface(Canvas canvas, Sprite? normal, Sprite? hover,
+            Color primary, Color secondary, Color accent, Color textCol)
+        {
+            foreach (var sel in canvas.GetComponentsInChildren<Selectable>(false))
+            {
+                if (sel == null) continue;
+                string n = sel.gameObject.name;
+                if (n.Contains("DINOForge")) continue;
+                // Sliders/scrollbars/toggles/dropdowns are handled by RestyleNativeControls.
+                if (sel is Slider || sel is Scrollbar || sel is Toggle || sel is Dropdown || sel is InputField) continue;
+
+                Image? frame = sel.targetGraphic as Image ?? sel.GetComponent<Image>();
+                if (frame != null)
+                {
+                    try
+                    {
+                        if (normal != null)
+                        {
+                            frame.sprite = normal;
+                            frame.type = Image.Type.Sliced;
+                            frame.color = Color.white;
+                            var ss = sel.spriteState;
+                            ss.highlightedSprite = hover;
+                            ss.pressedSprite = hover;
+                            ss.selectedSprite = hover;
+                            sel.spriteState = ss;
+                            sel.transition = Selectable.Transition.SpriteSwap;
+                        }
+                        else
+                        {
+                            // No art: drive color transition gold-on-dark.
+                            var colors = sel.colors;
+                            colors.normalColor = new Color(secondary.r, secondary.g, secondary.b, 0.9f);
+                            colors.highlightedColor = new Color(primary.r, primary.g, primary.b, 0.85f);
+                            colors.pressedColor = new Color(accent.r, accent.g, accent.b, 1f);
+                            colors.selectedColor = new Color(primary.r, primary.g, primary.b, 0.7f);
+                            sel.colors = colors;
+                        }
+                    }
+                    catch { /* safe-swallow: best-effort frame swap */ }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Restyles DINO's native controls — sliders (fill+handle gold), ◄►selector arrow
+        /// buttons (gold-tinted frames), tab rails (active gold / inactive dim). Driven by
+        /// component type + GameObject-name hints, never hardcoded IDs.
+        /// </summary>
+        private void RestyleNativeControls(Canvas canvas, Sprite? frame, Sprite? frameHover,
+            Color primary, Color secondary, Color accent, Color textCol)
+        {
+            // ── Sliders: fill → gold, handle → gold frame, background → dim. ──
+            foreach (var slider in canvas.GetComponentsInChildren<Slider>(false))
+            {
+                if (slider == null || slider.gameObject.name.Contains("DINOForge")) continue;
+                try
+                {
+                    if (slider.fillRect != null)
+                    {
+                        var fill = slider.fillRect.GetComponent<Image>();
+                        if (fill != null) fill.color = primary;
+                    }
+                    if (slider.handleRect != null)
+                    {
+                        var handle = slider.handleRect.GetComponent<Image>();
+                        if (handle != null)
+                        {
+                            if (frame != null) { handle.sprite = frame; handle.type = Image.Type.Sliced; handle.color = Color.white; }
+                            else handle.color = primary;
+                        }
+                    }
+                    // Slider background track → dim secondary.
+                    foreach (var img in slider.GetComponentsInChildren<Image>(true))
+                    {
+                        if (img == null) continue;
+                        bool isFill = slider.fillRect != null && img.transform.IsChildOf(slider.fillRect);
+                        bool isHandle = slider.handleRect != null && img.transform.IsChildOf(slider.handleRect);
+                        if (!isFill && !isHandle)
+                            img.color = new Color(secondary.r, secondary.g, secondary.b, 0.85f);
+                    }
+                }
+                catch { /* safe-swallow */ }
+            }
+
+            // ── ◄► selector arrow buttons + tab-rail buttons. ──
+            // Heuristic: small square buttons with arrow glyphs ("<",">","◄","►") are
+            // selectors; buttons grouped on a horizontal rail are tabs. We tint both with
+            // the themed frame and set gold text; active/selected state via SpriteSwap.
+            foreach (var btn in canvas.GetComponentsInChildren<Button>(false))
+            {
+                if (btn == null) continue;
+                string gn = btn.gameObject.name;
+                if (gn.Contains("DINOForge")) continue;
+                string label = GetButtonLabel(btn);
+                bool isArrow = label == "<" || label == ">" || label == "◄" || label == "►"
+                               || gn.IndexOf("arrow", StringComparison.OrdinalIgnoreCase) >= 0
+                               || gn.IndexOf("prev", StringComparison.OrdinalIgnoreCase) >= 0
+                               || gn.IndexOf("next", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool isTab = gn.IndexOf("tab", StringComparison.OrdinalIgnoreCase) >= 0
+                             || gn.IndexOf("category", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (!isArrow && !isTab) continue;
+                try
+                {
+                    Image? img = btn.targetGraphic as Image ?? btn.GetComponent<Image>();
+                    if (img != null)
+                    {
+                        if (frame != null) { img.sprite = frame; img.type = Image.Type.Sliced; img.color = Color.white; }
+                        else img.color = new Color(secondary.r, secondary.g, secondary.b, 0.9f);
+                        var ss = btn.spriteState;
+                        ss.highlightedSprite = frameHover;
+                        ss.selectedSprite = frameHover;
+                        btn.spriteState = ss;
+                        if (frame != null) btn.transition = Selectable.Transition.SpriteSwap;
+                    }
+                    SetSelectableTextColor(btn, primary);
+                }
+                catch { /* safe-swallow */ }
+            }
+
+            // ── Toggles (e.g. fullscreen checkbox) → gold checkmark. ──
+            foreach (var toggle in canvas.GetComponentsInChildren<Toggle>(false))
+            {
+                if (toggle == null || toggle.gameObject.name.Contains("DINOForge")) continue;
+                try
+                {
+                    if (toggle.graphic is Image check) check.color = primary;
+                    if (toggle.targetGraphic is Image box) box.color = new Color(secondary.r, secondary.g, secondary.b, 0.9f);
+                }
+                catch { /* safe-swallow */ }
+            }
+        }
+
+        private static string GetButtonLabel(Button btn)
+        {
+            foreach (var t in btn.GetComponentsInChildren<Text>(true))
+                if (t != null && !string.IsNullOrEmpty(t.text)) return t.text.Trim();
+            foreach (var c in btn.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null || !(c.GetType().FullName ?? "").StartsWith("TMPro.")) continue;
+                string? s = c.GetType().GetProperty("text")?.GetValue(c) as string;
+                if (!string.IsNullOrEmpty(s)) return s!.Trim();
+            }
+            return string.Empty;
+        }
+
+        private static void SetSelectableTextColor(Selectable sel, Color color)
+        {
+            foreach (var t in sel.GetComponentsInChildren<Text>(true))
+                if (t != null) t.color = color;
+            foreach (var c in sel.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null || !(c.GetType().FullName ?? "").StartsWith("TMPro.")) continue;
+                c.GetType().GetProperty("color")?.SetValue(c, color);
+            }
+        }
+
+        /// <summary>Recolors every TMP/UGUI label on the surface to the themed text color,
+        /// skipping DINOForge-owned objects.</summary>
+        private void RecolorLabels(Canvas canvas, Color textCol)
+        {
+            foreach (var c in canvas.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null) continue;
+                if (c.gameObject.name.Contains("DINOForge")) continue;
+                if (!(c.GetType().FullName ?? "").StartsWith("TMPro.")) continue;
+                try { c.GetType().GetProperty("color")?.SetValue(c, textCol); }
+                catch { /* safe-swallow: best-effort per-label recolor */ }
+            }
+            foreach (var t in canvas.GetComponentsInChildren<Text>(true))
+            {
+                if (t == null || t.gameObject.name.Contains("DINOForge")) continue;
+                t.color = textCol;
+            }
         }
 
         private sealed class ThemeData

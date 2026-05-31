@@ -1943,7 +1943,7 @@ namespace DINOForge.Runtime
 
             // Pump deferred work on the main thread until destruction.
             int _themeRetryCount = 0;
-            int _auxSkinFrames = 0;
+            int _themeAuxFrame = 0;
             while (!_destroyed)
             {
                 // ── Engine-UI self-healing bounded retry ─────────────────────────
@@ -2008,19 +2008,20 @@ namespace DINOForge.Runtime
                     }
                 }
 
-                // ── #3 (#970a): 100% page skinning — re-skin auxiliary menu canvases (Options/Settings
-                //    + GAME/VIDEO/SOUND/CONTROLS/TWITCH subpages, create/select screens) as they
-                //    open. Cheap (each canvas themed once, tracked by id); only active once a
-                //    conversion theme has been resolved by the MainMenu pass. Complements the
-                //    CanvasReskinner pump above (theme-snapshot vs pack-display reskin). ──
-                if (_mainMenuThemer != null && _mainMenuThemer.IsApplied)
+                // ── Subpage FULL TAKEOVER (#974): Options + settings tabs + in-game panels ──
+                // Subpages are separate canvases the user opens AFTER the main menu and
+                // re-opens repeatedly. The packs-overload performs the SAME full takeover the
+                // main menu got (supersedes the #970a color-only aux-skin); it self-guards on
+                // the live canvas count so this per-frame call is cheap until a subpage opens.
+                if (_mainMenuThemer != null && _modPlatform != null && (_themeAuxFrame++ % 10) == 0)
                 {
-                    _auxSkinFrames++;
-                    if (_auxSkinFrames % 15 == 0) // ~4x/sec at 60fps
+                    try
                     {
-                        try { _mainMenuThemer.ApplyToAuxiliaryMenus(); }
-                        catch { /* safe-swallow: aux skin is best-effort */ }
+                        var auxPacks = _modPlatform.GetLoadedPackDisplayInfos();
+                        if (auxPacks.Count > 0)
+                            _mainMenuThemer.ApplyToAuxiliaryMenus(auxPacks);
                     }
+                    catch { /* safe-swallow: aux takeover is best-effort */ }
                 }
 
                 // ── Step 8 deferred: push update-check results to UI once the Task completes ──

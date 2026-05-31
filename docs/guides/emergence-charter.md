@@ -29,3 +29,7 @@ Strict lockstep determinism — seeded-RNG-only, fixed-point everything, `thread
 
 ## Design rule for every contributor (human or agent)
 Before adding any "thing," ask: *can this emerge from Layer-0 rules instead of being hardcoded?* If yes, model the rule, not the outcome. Authored content is limited to physical law, material/energy constraints, and genomics primitives. See [[civis-voxel-fluid-vision]], [[hierarchical-agents]].
+
+## Scope boundary (2026-05-31)
+- **Multiplayer / co-op / spectator is OUT OF SCOPE for v1.** Civis is single-player. The WebSocket layer is client↔server transport for one player, NOT multiplayer netcode; with determinism dropped, true MP would need state-sync/rollback — explicitly deferred. Do not build co-op features.
+- **Actor rigging + animation + "rich aspects" are IN scope** — skeletal/glTF animation on agents & creatures (idle/walk/work/combat driven by emergent activity), richer agent representation, lifelike world feel.

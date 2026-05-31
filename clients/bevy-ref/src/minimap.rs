@@ -182,12 +182,12 @@ fn setup_minimap(
                 width: Val::Px(MINIMAP_SIZE),
                 height: Val::Px(MINIMAP_SIZE),
                 border: UiRect::all(Val::Px(2.0)),
+                border_radius: BorderRadius::all(Val::Px(6.0)),
                 overflow: Overflow::clip(),
                 ..default()
             },
             BackgroundColor(THEME_PANEL),
             BorderColor::all(THEME_BORDER),
-            BorderRadius::all(Val::Px(6.0)),
             Interaction::default(),
             RelativeCursorPosition::default(),
             FocusPolicy::Pass,

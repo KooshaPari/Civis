@@ -85,6 +85,18 @@ fn main() {
     // Event-feed / toast notifications.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::notifications::NotificationsPlugin);
+
+    // Terrain sculpting brush (raise/lower/flatten); bevy-only, no egui needed.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::terraform_brush::TerraformBrushPlugin);
+
+    // Material brush palette + voxel paint (Powder-Toy-style); bevy+egui.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
+
+    // Settings / options panel (RON-persisted); bevy+egui.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);
     // Ambient + SFX audio (feature-gated).
     #[cfg(feature = "audio")]
     app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);

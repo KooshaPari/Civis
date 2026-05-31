@@ -67,6 +67,10 @@ pub enum SpawnTool {
     Wall,
     /// Click-to-place a movement/trade vehicle.
     Vehicle,
+    /// Paint the selected material into the voxel grid (drag-to-paint). The
+    /// actual paint is performed by `material_brush_ui::paint_into_voxel_grid`,
+    /// gated on `MaterialPaintArmed`; this variant is what arms it.
+    PaintMaterial,
 }
 
 impl SpawnTool {
@@ -369,6 +373,10 @@ fn handle_spawn_tool_clicks(
             spawn_building.write(SpawnBuildingRequest { position });
         }
         SpawnTool::Terraform => {}
+        SpawnTool::PaintMaterial => {
+            // Painting is handled by the material brush's own per-frame system
+            // (gated on `MaterialPaintArmed`); nothing to dispatch on click here.
+        }
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }

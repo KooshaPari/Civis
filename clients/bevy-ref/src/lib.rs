@@ -28,6 +28,8 @@ pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod info_views;
@@ -45,6 +47,8 @@ pub mod lighting_gi;
 pub mod menus;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod settings_ui;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
@@ -79,6 +83,8 @@ pub mod gltf_models;
 pub mod skybox;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
+#[cfg(feature = "bevy")]
+pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
 #[cfg(feature = "voxel")]

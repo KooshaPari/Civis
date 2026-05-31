@@ -218,11 +218,25 @@ impl Plugin for MaterialBrushPlugin {
         app.init_resource::<SelectedMaterial>()
             .init_resource::<MaterialPaintArmed>()
             .init_resource::<MaterialPaletteOpen>()
-            .add_systems(Update, material_palette_panel);
+            .add_systems(Update, (sync_paint_armed_from_tool, material_palette_panel));
 
         // The actual world paint only exists when the voxel sim is compiled in.
         #[cfg(feature = "voxel")]
         app.add_systems(Update, paint_into_voxel_grid);
+    }
+}
+
+/// Arm the material brush exactly while `SpawnTool::PaintMaterial` is the active
+/// tool, so selecting the Material tool flips on `MaterialPaintArmed` and any
+/// other tool flips it off. Keeps the paint gate in sync with the HUD palette
+/// without the paint system needing to know about the tool enum.
+fn sync_paint_armed_from_tool(
+    active: Res<crate::spawn_tools::ActiveTool>,
+    mut armed: ResMut<MaterialPaintArmed>,
+) {
+    let want = active.tool == crate::spawn_tools::SpawnTool::PaintMaterial;
+    if armed.0 != want {
+        armed.0 = want;
     }
 }
 

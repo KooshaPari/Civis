@@ -30,13 +30,115 @@ namespace DINOForge.Runtime
 
         public bool IsApplied => _applied;
 
+        // #3 page-skinning: cache the resolved theme + parsed colors so the auxiliary-canvas
+        // pass (Options/Settings/subpages + create/select screens) can re-skin those canvases
+        // each time one of them becomes active, without re-reading YAML.
+        private ThemeData? _cachedTheme;
+        private Color _cPrimary, _cSecondary, _cText, _cAccent, _cBgTint;
+        private bool _cHasBgTint;
+        // Instance IDs of auxiliary canvases already themed this session (avoid re-walking).
+        private readonly HashSet<int> _themedAuxCanvases = new HashSet<int>();
+
+        // Auxiliary (non-MainMenu) menu canvases that DINO shows for settings + create/select.
+        // These are separate canvases from "MainMenu" and were previously left unskinned-native.
+        private static readonly string[] AuxMenuCanvasNames =
+        {
+            "Options", "Settings", "Video", "Sound", "Audio", "Controls", "Twitch", "Game",
+            "ProfilesList", "SpecialMissions", "SandBox", "Sandbox", "EndlessMissions",
+            "Endless", "Saves", "Conditions", "Map", "ArmyPanel", "CustomMaps", "Campaign",
+            "Tutorial", "Enter", "ConfirmWindow", "AnalyticsConsent", "Credits"
+        };
+
         public MainMenuThemer(ManualLogSource log, string packsDirectory)
         {
             _log = log;
             _packsDirectory = packsDirectory ?? string.Empty;
         }
 
-        public void OnSceneChanged() => _applied = false;
+        public void OnSceneChanged()
+        {
+            _applied = false;
+            _themedAuxCanvases.Clear();
+        }
+
+        /// <summary>
+        /// #3 — 100% page skinning. Re-skins every currently-active auxiliary menu canvas
+        /// (Options/Settings + GAME/VIDEO/SOUND/CONTROLS/TWITCH subpages, and the game
+        /// create/select screens) with the active conversion's color layer. These are separate
+        /// canvases from "MainMenu" that open later (e.g. when the player clicks Options), so this
+        /// runs every pump frame; each canvas is themed once (tracked by instance ID) and skipped
+        /// thereafter. No-op until <see cref="TryApplyTheme"/> has resolved a theme.
+        /// Returns the number of canvases newly skinned this call.
+        /// </summary>
+        public int ApplyToAuxiliaryMenus()
+        {
+            if (_cachedTheme == null) return 0;
+            int skinned = 0;
+            try
+            {
+                var canvases = UnityEngine.Object.FindObjectsOfType<Canvas>();
+                foreach (var c in canvases)
+                {
+                    if (c == null || !c.gameObject.activeInHierarchy) continue;
+                    string name = c.name ?? string.Empty;
+                    // Skip the main menu (handled by TryApplyTheme), PrimeCanvas, and DINOForge's
+                    // own canvases (already self-styled).
+                    if (name.IndexOf("PrimeCanvas", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("DINOForge", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("DFCanvas", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (name.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                    bool isMenuCanvas = false;
+                    foreach (string n in AuxMenuCanvasNames)
+                    {
+                        if (name.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0) { isMenuCanvas = true; break; }
+                    }
+                    if (!isMenuCanvas) continue;
+
+                    int id = c.GetInstanceID();
+                    if (_themedAuxCanvases.Contains(id)) continue;
+                    _themedAuxCanvases.Add(id);
+
+                    int btn = RestyleSelectables(c, _cPrimary, _cSecondary, _cText, _cAccent);
+                    int lbl = RewriteLabels(c, _cText);
+                    int bg = _cHasBgTint ? TintBackground(c, _cBgTint) : 0;
+                    int txt = RecolorText(c, _cText);
+                    int font = 0;
+                    if (_cachedFontAsset != null) font = ApplyFont(c, _cachedFontAsset);
+                    skinned++;
+                    _log?.LogInfo($"[MainMenuThemer] AUX-SKIN canvas='{name}' btn={btn} label={lbl} bgTint={bg} text={txt} font={font}");
+                    DebugLog.Write("MainMenuThemer", $"AUX-SKIN '{name}' btn={btn} label={lbl} bg={bg} text={txt}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[MainMenuThemer] ApplyToAuxiliaryMenus failed: {ex.Message}"); // pattern-96-ok: diagnostic
+            }
+            return skinned;
+        }
+
+        /// <summary>
+        /// Recolors all legacy Text + TMP_Text on a canvas to the theme text color (skinning the
+        /// settings sliders/selectors/tab labels that RewriteLabels leaves untouched).
+        /// </summary>
+        private int RecolorText(Canvas canvas, Color textCol)
+        {
+            int hits = 0;
+            foreach (var t in canvas.GetComponentsInChildren<Text>(true))
+            {
+                if (t == null) continue;
+                if (t.gameObject.name.IndexOf("DINOForge", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                try { t.color = textCol; hits++; } catch { /* best-effort */ }
+            }
+            foreach (var c in canvas.GetComponentsInChildren<Component>(true))
+            {
+                if (c == null) continue;
+                if (!(c.GetType().FullName ?? "").StartsWith("TMPro.", StringComparison.Ordinal)) continue;
+                try { c.GetType().GetProperty("color")?.SetValue(c, textCol); hits++; }
+                catch { /* best-effort: TMPro reflection */ }
+            }
+            return hits;
+        }
 
         public bool TryApplyTheme(IReadOnlyList<PackDisplayInfo> packs)
         {
@@ -152,6 +254,11 @@ namespace DINOForge.Runtime
                 ColorUtility.TryParseHtmlString(theme.AccentColor ?? "#C0392B", out Color accent);
                 Color bgTint = Color.black;
                 bool hasBgTint = theme.BackgroundTint != null && ColorUtility.TryParseHtmlString(theme.BackgroundTint, out bgTint);
+
+                // #3: cache resolved theme + colors for the auxiliary-canvas skinning pass.
+                _cachedTheme = theme;
+                _cPrimary = primary; _cSecondary = secondary; _cText = textCol; _cAccent = accent;
+                _cBgTint = bgTint; _cHasBgTint = hasBgTint;
 
                 // ── EPIC-027 VISUAL TAKEOVER ────────────────────────────────────
                 // When the pack ships PNG art, perform a real reskin (full sprite

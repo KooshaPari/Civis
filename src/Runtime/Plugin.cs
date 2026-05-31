@@ -1887,6 +1887,7 @@ namespace DINOForge.Runtime
 
             // Pump deferred work on the main thread until destruction.
             int _themeRetryCount = 0;
+            int _auxSkinFrames = 0;
             while (!_destroyed)
             {
                 // ── Engine-UI self-healing bounded retry ─────────────────────────
@@ -1931,6 +1932,20 @@ namespace DINOForge.Runtime
                                 _mainMenuThemer.TryApplyTheme(packInfos);
                         }
                         catch { /* safe-swallow: theme retry is best-effort */ }
+                    }
+                }
+
+                // ── #3: 100% page skinning — re-skin auxiliary menu canvases (Options/Settings
+                //    + GAME/VIDEO/SOUND/CONTROLS/TWITCH subpages, create/select screens) as they
+                //    open. Cheap (each canvas themed once, tracked by id); only active once a
+                //    conversion theme has been resolved by the MainMenu pass. ──
+                if (_mainMenuThemer != null && _mainMenuThemer.IsApplied)
+                {
+                    _auxSkinFrames++;
+                    if (_auxSkinFrames % 15 == 0) // ~4x/sec at 60fps
+                    {
+                        try { _mainMenuThemer.ApplyToAuxiliaryMenus(); }
+                        catch { /* safe-swallow: aux skin is best-effort */ }
                     }
                 }
 

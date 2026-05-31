@@ -1637,6 +1637,14 @@ namespace DINOForge.Runtime.UI
             }
 
             target.targetGraphic = resolvedTargetGraphic;
+            if (target.targetGraphic is Image tgImg) tgImg.raycastTarget = true;
+
+            // #1 fix: copying source.transition above can re-apply Transition.None (DINO defers
+            // hover/press to its custom MainMenuButton script). Guarantee the injected button
+            // still renders interaction state by forcing a visible ColorTint transition when the
+            // copied transition was None. No-op when the donor had a real ColorTint/SpriteSwap.
+            NativeUiHelper.EnsureVisibleTransition(target);
+            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Visual transition after sync: {target.transition} (targetGraphic={(target.targetGraphic != null ? target.targetGraphic.name : "NULL")})");
 
             Text? sourceText = source.GetComponentInChildren<Text>(includeInactive: true);
             Text? targetText = target.GetComponentInChildren<Text>(includeInactive: true);

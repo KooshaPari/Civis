@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Crystal: faceted gem. Palette: holo-cyan #7FE9FF facets. -->
+  <g fill="none" stroke="#7FE9FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="24,5 36,18 30,42 18,42 12,18"/>
+    <line x1="12" y1="18" x2="36" y2="18"/>
+    <line x1="24" y1="5" x2="24" y2="42"/>
+    <line x1="18" y1="42" x2="24" y2="18"/>
+    <line x1="30" y1="42" x2="24" y2="18"/>
+  </g>
+</svg>

@@ -4,6 +4,17 @@ import container from 'markdown-it-container'
 export default defineConfig({
   title: 'Civ',
   description: 'Planning closure, technical specs, and governance docs',
+  // Civis branding — app mark in the new "Console Holo" design language
+  // (graphite plate + electric-green voxel-world glyph + holo-cyan apex).
+  // Sources: docs/.vitepress/public/favicon.svg (+ .ico/.png fallbacks).
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16.png' }],
+    ['link', { rel: 'alternate icon', href: '/favicon.ico' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
+    ['meta', { name: 'theme-color', content: '#0F131A' }],
+  ],
   ignoreDeadLinks: true,
   cleanUrls: true,
   appearance: true,

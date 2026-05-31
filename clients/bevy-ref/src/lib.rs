@@ -81,6 +81,8 @@ pub mod post_fx;
 pub mod sim_bridge;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod skybox;
 #[cfg(feature = "bevy")]
@@ -89,6 +91,8 @@ pub mod spawn_tools;
 pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
+#[cfg(feature = "bevy")]
+pub mod window_icon;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 /// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).

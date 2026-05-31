@@ -30,6 +30,14 @@ rand_chacha = { version = "0.3", optional = true }
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
 bevy = { version = "0.18", optional = true }
 bevy_egui = { version = "0.39", optional = true }
+# Decode the embedded window-icon PNG (src/window_icon.rs) into RGBA for winit.
+# Pinned to the version already in the workspace lock (pulled by bevy). default
+# features off → only the PNG decoder is compiled. Behind the `bevy` feature.
+image = { version = "0.25", optional = true, default-features = false, features = ["png"] }
+# winit::window::Icon for the window-icon wiring (src/window_icon.rs). bevy_winit
+# re-exports only selected winit items (not `Icon`), so we depend on the same
+# winit version already in the workspace lock (0.30, pulled by bevy_winit).
+winit = { version = "0.30", optional = true, default-features = false }
 wgpu = { version = "27", optional = true }
 # Optional physics (not wired yet); keep out of default `bevy` feature to avoid wgpu version clashes.
 bevy_rapier3d = { version = "0.34", optional = true }
@@ -55,6 +63,12 @@ futures-util = { version = "0.3", optional = true }
 serde_json = { version = "1", optional = true }
 civ-protocol-3d = { path = "../../crates/protocol-3d", optional = true }
 
+# Embeds the .exe icon (assets/icon/civis.ico) on Windows release builds via the
+# `exe-icon` feature + build.rs. winresource is a small, Windows-only resource
+# compiler wrapper; on non-Windows targets it is a no-op build-dep.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
 [dev-dependencies]
 civ-protocol-3d = { path = "../../crates/protocol-3d" }
 serde_json = "1"
@@ -72,8 +86,13 @@ bevy = [
     "dep:civ-engine",
     "dep:rand",
     "dep:rand_chacha",
+    "dep:image",
+    "dep:winit",
 ]
 egui = ["bevy", "dep:bevy_egui"]
+# Embed the multi-size civis.ico onto the Windows .exe (build.rs). Off by default
+# so the standard/CI build needs no Windows resource compiler. Release only.
+exe-icon = []
 rapier = ["bevy", "dep:bevy_rapier3d"]
 # --- Dev-loop features (see docs/development-guide/dev-loop.md) ---
 # `dev`: turn on Bevy's filesystem asset watcher so SVG-derived PNGs, .glb meshes,

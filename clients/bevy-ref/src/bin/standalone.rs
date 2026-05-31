@@ -2,6 +2,7 @@
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
     camera::{camera_input, update_camera, CameraRig},
@@ -65,6 +66,9 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
+        // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
+        // embedded icon on the primary winit window at startup.
+        .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::skybox::SkyboxPlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
@@ -150,11 +154,60 @@ fn main() {
     #[cfg(feature = "models")]
     app.add_plugins(civ_bevy_ref::gltf_models::GltfModelsPlugin);
 
+    // Actor rigging: drive glTF skeletal animation from emergent motion so
+    // agents idle / walk / run + face their heading instead of sliding statically.
+    #[cfg(feature = "models")]
+    app.add_plugins(civ_bevy_ref::animation::ActorAnimationPlugin);
+
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);
     }
 
+    // Headless verification hook: when CIVIS_AUTOSHOT=<path> is set, capture one
+    // screenshot after a short warm-up (so chunk meshes / GLTF scenes are loaded
+    // and the camera has framed the world) and then exit. This lets a debug
+    // worker confirm voxel terrain visibility by pixels without manual F9.
+    if let Ok(path) = std::env::var("CIVIS_AUTOSHOT") {
+        app.insert_resource(AutoShot {
+            path,
+            timer: Timer::from_seconds(4.0, TimerMode::Once),
+            taken: false,
+        })
+        .add_systems(Update, auto_screenshot);
+    }
+
     app.run();
+}
+
+#[derive(Resource)]
+struct AutoShot {
+    path: String,
+    timer: Timer,
+    taken: bool,
+}
+
+fn auto_screenshot(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut shot: ResMut<AutoShot>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if shot.taken {
+        // Give the capture a couple frames to flush to disk, then quit.
+        shot.timer.tick(time.delta());
+        if shot.timer.finished() {
+            exit.write(AppExit::Success);
+        }
+        return;
+    }
+    if shot.timer.tick(time.delta()).just_finished() {
+        let path = shot.path.clone();
+        commands
+            .spawn(Screenshot::primary_window())
+            .observe(save_to_disk(path));
+        shot.taken = true;
+        shot.timer = Timer::from_seconds(1.5, TimerMode::Once);
+    }
 }
 
 fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {

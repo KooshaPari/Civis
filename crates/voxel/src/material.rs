@@ -216,7 +216,7 @@ pub const STANDARD_MATERIALS: [MaterialDef; 41] = [
         angle_of_repose: None,
         temperature: 20,
         flammability: 0,
-        color: [54, 112, 204, 255],
+        color: [40, 96, 168, 220],
     },
     MaterialDef {
         id: LAVA,
@@ -228,7 +228,7 @@ pub const STANDARD_MATERIALS: [MaterialDef; 41] = [
         angle_of_repose: None,
         temperature: 1_200,
         flammability: 0,
-        color: [245, 111, 24, 255],
+        color: [230, 92, 18, 255],
     },
     MaterialDef {
         id: SAND,
@@ -276,7 +276,7 @@ pub const STANDARD_MATERIALS: [MaterialDef; 41] = [
         angle_of_repose: None,
         temperature: 18,
         flammability: 0,
-        color: [108, 112, 116, 255],
+        color: [104, 106, 110, 255],
     },
     MaterialDef {
         id: PACKED_DIRT,

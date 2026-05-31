@@ -9,7 +9,11 @@ use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::prelude::*;
 
 use civ_voxel::fluid_ca::{step, CaGrid};
-use civ_voxel::material::{MaterialRegistry, Phase, AIR};
+use civ_voxel::material::{
+    MaterialDef, MaterialRegistry, Phase, AIR, ASH, BLOOD, BONE, CLAY, COAL, CRYSTAL, DIRT, EMBER,
+    FIRE, GLASS, GRANITE, GRAVEL, ICE, LAVA, MOLTEN_METAL, MUD, OIL, ORE, PLASMA, SALT, SALT_WATER,
+    SAND, SNOW, SPARK, STONE, WATER,
+};
 use civ_voxel::worldgen;
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffer};
 
@@ -209,22 +213,12 @@ fn spawn_chunk_meshes(
                     let Some(def) = registry.get(material_id) else {
                         continue;
                     };
-                    let mut material = StandardMaterial {
-                        base_color: Color::srgba(
-                            f32::from(def.color[0]) / 255.0,
-                            f32::from(def.color[1]) / 255.0,
-                            f32::from(def.color[2]) / 255.0,
-                            f32::from(def.color[3]) / 255.0,
-                        ),
-                        ..default()
-                    };
-                    material.alpha_mode = match def.phase {
-                        Phase::Liquid | Phase::Gas => AlphaMode::Blend,
-                        Phase::Powder | Phase::Solid | Phase::Empty => AlphaMode::Opaque,
-                    };
+                    let material = pbr_material_for(material_id, def);
+                    let mut bevy_mesh = mesh_buffer_to_bevy(&submesh);
+                    apply_voxel_jitter(&mut bevy_mesh, &submesh, material_id);
                     let entity = commands
                         .spawn((
-                            Mesh3d(meshes.add(mesh_buffer_to_bevy(&submesh))),
+                            Mesh3d(meshes.add(bevy_mesh)),
                             MeshMaterial3d(materials.add(material)),
                             Transform::from_xyz(
                                 chunk_origin[0] as f32,
@@ -239,4 +233,223 @@ fn spawn_chunk_meshes(
         }
     }
     spawned
+}
+
+/// Linearized base color from a material's sRGB hint.
+fn base_color(def: &MaterialDef) -> Color {
+    Color::srgba(
+        f32::from(def.color[0]) / 255.0,
+        f32::from(def.color[1]) / 255.0,
+        f32::from(def.color[2]) / 255.0,
+        f32::from(def.color[3]) / 255.0,
+    )
+}
+
+/// Build a perceptually-tuned [`StandardMaterial`] for a voxel material family.
+///
+/// Instead of a flat RGB base color, each family gets characteristic PBR
+/// parameters: matte powders, glossy/translucent liquids, glowing hot
+/// materials, refractive crystal/glass, and metallic ores. This is what makes
+/// stone read as stone and lava read as molten rather than as paint chips.
+#[must_use]
+fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
+    let mut mat = StandardMaterial {
+        base_color: base_color(def),
+        perceptual_roughness: 0.9,
+        metallic: 0.0,
+        reflectance: 0.5,
+        ..default()
+    };
+
+    // Emissive families: glow proportional to heat. Color biased warm for
+    // combustion, magenta for plasma, yellow-white for sparks.
+    let emissive = |r: f32, g: f32, b: f32, strength: f32| {
+        LinearRgba::new(r * strength, g * strength, b * strength, 1.0)
+    };
+
+    match id {
+        // --- Liquids: smooth, specular, partly transparent. ---
+        WATER | SALT_WATER => {
+            mat.perceptual_roughness = 0.08;
+            mat.reflectance = 0.55;
+            mat.base_color = mat.base_color.with_alpha(0.62);
+            mat.alpha_mode = AlphaMode::Blend;
+            mat.specular_transmission = 0.25;
+            mat.ior = 1.33;
+        }
+        OIL => {
+            mat.perceptual_roughness = 0.12;
+            mat.reflectance = 0.45;
+            mat.base_color = mat.base_color.with_alpha(0.9);
+            mat.alpha_mode = AlphaMode::Blend;
+        }
+        BLOOD => {
+            mat.perceptual_roughness = 0.18;
+            mat.reflectance = 0.45;
+        }
+        MUD => {
+            mat.perceptual_roughness = 0.85;
+            mat.reflectance = 0.25;
+        }
+        // --- Molten / hot: glow. ---
+        LAVA => {
+            mat.perceptual_roughness = 0.55;
+            mat.emissive = emissive(1.0, 0.32, 0.06, 6.0);
+        }
+        MOLTEN_METAL => {
+            mat.perceptual_roughness = 0.4;
+            mat.metallic = 0.7;
+            mat.emissive = emissive(1.0, 0.7, 0.3, 3.0);
+        }
+        FIRE => {
+            mat.perceptual_roughness = 1.0;
+            mat.base_color = mat.base_color.with_alpha(0.7);
+            mat.alpha_mode = AlphaMode::Add;
+            mat.emissive = emissive(1.0, 0.45, 0.12, 9.0);
+        }
+        EMBER => {
+            mat.perceptual_roughness = 0.8;
+            mat.emissive = emissive(1.0, 0.3, 0.07, 4.0);
+        }
+        SPARK => {
+            mat.alpha_mode = AlphaMode::Add;
+            mat.emissive = emissive(1.0, 0.92, 0.55, 10.0);
+        }
+        PLASMA => {
+            mat.base_color = mat.base_color.with_alpha(0.6);
+            mat.alpha_mode = AlphaMode::Add;
+            mat.emissive = emissive(1.0, 0.25, 0.75, 12.0);
+        }
+        // --- Translucent solids: ice, glass, crystal refract light. ---
+        ICE => {
+            mat.perceptual_roughness = 0.1;
+            mat.reflectance = 0.6;
+            mat.base_color = mat.base_color.with_alpha(0.7);
+            mat.alpha_mode = AlphaMode::Blend;
+            mat.specular_transmission = 0.35;
+            mat.ior = 1.31;
+        }
+        GLASS => {
+            mat.perceptual_roughness = 0.03;
+            mat.reflectance = 0.6;
+            mat.base_color = mat.base_color.with_alpha(0.35);
+            mat.alpha_mode = AlphaMode::Blend;
+            mat.specular_transmission = 0.85;
+            mat.ior = 1.5;
+        }
+        CRYSTAL => {
+            mat.perceptual_roughness = 0.05;
+            mat.reflectance = 0.65;
+            mat.base_color = mat.base_color.with_alpha(0.55);
+            mat.alpha_mode = AlphaMode::Blend;
+            mat.specular_transmission = 0.6;
+            mat.ior = 1.6;
+            mat.emissive = emissive(0.3, 0.6, 1.0, 0.4);
+        }
+        // --- Metallic / ore. ---
+        ORE => {
+            mat.perceptual_roughness = 0.55;
+            mat.metallic = 0.65;
+            mat.reflectance = 0.55;
+        }
+        // --- Hard rock: low-ish roughness, slight reflectance. ---
+        STONE | GRANITE => {
+            mat.perceptual_roughness = 0.82;
+            mat.reflectance = 0.35;
+        }
+        // --- Powders & soils: very matte, no specular. ---
+        SAND | DIRT | GRAVEL | CLAY | SALT => {
+            mat.perceptual_roughness = 0.97;
+            mat.reflectance = 0.18;
+        }
+        ASH | COAL => {
+            mat.perceptual_roughness = 1.0;
+            mat.reflectance = 0.08;
+        }
+        SNOW => {
+            mat.perceptual_roughness = 0.85;
+            mat.reflectance = 0.5;
+        }
+        BONE => {
+            mat.perceptual_roughness = 0.7;
+            mat.reflectance = 0.3;
+        }
+        _ => {
+            // Phase-based fallback for anything not explicitly tuned.
+            match def.phase {
+                Phase::Liquid => {
+                    mat.perceptual_roughness = 0.2;
+                    mat.base_color = mat.base_color.with_alpha(0.7);
+                    mat.alpha_mode = AlphaMode::Blend;
+                }
+                Phase::Gas => {
+                    mat.perceptual_roughness = 1.0;
+                    mat.base_color = mat.base_color.with_alpha(0.45);
+                    mat.alpha_mode = AlphaMode::Blend;
+                }
+                Phase::Powder => {
+                    mat.perceptual_roughness = 0.95;
+                    mat.reflectance = 0.2;
+                }
+                Phase::Solid | Phase::Empty => {
+                    mat.perceptual_roughness = 0.8;
+                }
+            }
+        }
+    }
+
+    // Gas alpha already encodes translucency via the palette; honor it.
+    if matches!(def.phase, Phase::Gas) && mat.alpha_mode == AlphaMode::Opaque {
+        mat.base_color = base_color(def);
+        mat.alpha_mode = AlphaMode::Blend;
+    }
+
+    mat
+}
+
+/// Per-voxel hue/value jitter written as vertex colors so a flat material face
+/// breaks up into natural variation (a stone wall stops looking like one grey
+/// quad). Emissive/transparent families are skipped to avoid flickering glow.
+fn apply_voxel_jitter(mesh: &mut Mesh, buf: &MeshBuffer, id: MaterialId) {
+    // Hot/transparent materials should stay uniform; jitter only opaque solids,
+    // powders and dense liquids.
+    if matches!(id, FIRE | SPARK | PLASMA | LAVA | EMBER | GLASS | CRYSTAL) {
+        return;
+    }
+    let mut colors: Vec<[f32; 4]> = Vec::with_capacity(buf.vertices.len());
+    for v in &buf.vertices {
+        // Quantize to the voxel cell so all verts of a face share one tint.
+        let cell = [
+            v.position[0].floor() as i64,
+            v.position[1].floor() as i64,
+            v.position[2].floor() as i64,
+        ];
+        let h = hash3(cell[0], cell[1], cell[2]);
+        // Map hash to [-1, 1] then to a small multiplicative value jitter and a
+        // tiny hue shift via per-channel offsets.
+        let n = ((h & 0xFFFF) as f32 / 65535.0) * 2.0 - 1.0;
+        let n2 = (((h >> 16) & 0xFFFF) as f32 / 65535.0) * 2.0 - 1.0;
+        let value = 1.0 + n * 0.14; // +/-14% brightness
+        let warm = n2 * 0.05; // subtle warm/cool tilt
+        colors.push([
+            (value + warm).clamp(0.6, 1.4),
+            value.clamp(0.6, 1.4),
+            (value - warm).clamp(0.6, 1.4),
+            1.0,
+        ]);
+    }
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+}
+
+/// Cheap integer hash (splitmix-style) for stable per-cell jitter.
+#[must_use]
+fn hash3(x: i64, y: i64, z: i64) -> u64 {
+    let mut h = (x as u64)
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
+        ^ (z as u64).wrapping_mul(0x1656_67B1_9E37_79F9);
+    h ^= h >> 33;
+    h = h.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
+    h ^= h >> 33;
+    h
 }

@@ -1037,6 +1037,43 @@ async def game_ui_automation(ctx: Context, action: str, target: str | None = Non
 
 
 @mcp.tool()
+async def game_ui_pointer(
+    ctx: Context,
+    event: str,
+    target: str | None = None,
+    x: float | None = None,
+    y: float | None = None,
+    pipe_name: str | None = None,
+) -> dict:
+    """
+    Drive DINO's Unity EventSystem pointer lifecycle IN-PROCESS (hover/press/click),
+    bypassing OS input which DINO's EventSystem does not receive.
+
+    This is the in-process path that actually paints hover/press visuals and fires
+    onClick — synthetic OS input (SetCursorPos/SendInput/game_input) is NOT delivered
+    to DINO's EventSystem. Use this to pixel-verify interactive UI.
+
+    Args:
+        event: Pointer event — 'enter'|'exit'|'down'|'up'|'click'|'hover'|'press'.
+               'hover' = enter only (leaves cursor hovering); 'press' = full
+               enter->down->up->click lifecycle.
+        target: Selector for the target UI node (e.g. 'label=MODS', 'name=ModsButton').
+                Either target OR x+y must be supplied.
+        x: Optional screen X coordinate (resolves target via GraphicRaycaster).
+        y: Optional screen Y coordinate.
+        pipe_name: Optional named pipe name for multi-instance support.
+    """
+    args = ["ui-pointer", event]
+    if target:
+        args.append(target)
+    if x is not None:
+        args.append(f"x={x}")
+    if y is not None:
+        args.append(f"y={y}")
+    return _run_game_cli(*args, pipe_name=pipe_name)
+
+
+@mcp.tool()
 async def game_analyze_screen(
     ctx: Context,
     screenshot_path: str | None = None,

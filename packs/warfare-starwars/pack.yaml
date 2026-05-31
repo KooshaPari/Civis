@@ -73,6 +73,8 @@ loads:
     - units
   weapons:
     - weapons
+  projectiles:
+    - projectiles
   buildings:
     - buildings
   doctrines:

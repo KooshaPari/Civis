@@ -484,6 +484,21 @@ namespace DINOForge.Runtime
                 }
             }
 
+            // Configure blaster-bolt projectile recolour from pack projectile definitions.
+            // ProjectileMeshSwapSystem reads BlasterBoltConfig to recolour vanilla projectiles
+            // (arrows/bolts) into faction-coloured energy bolts (CIS red / Republic blue).
+            if (_registryManager != null)
+            {
+                try
+                {
+                    ApplyBlasterBoltConfig();
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[ModPlatform] BlasterBoltConfig apply failed: {ex}");
+                }
+            }
+
             // Re-enqueue global YAML stat overrides now that the catalog is populated
             if (_registryManager != null && _contentLoader != null)
             {
@@ -510,6 +525,44 @@ namespace DINOForge.Runtime
                     _log.LogWarning($"[ModPlatform] YAML stat override re-apply failed: {ex}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Populates <see cref="Bridge.BlasterBoltConfig"/> from the loaded pack's projectile
+        /// definitions so the runtime <see cref="Bridge.ProjectileMeshSwapSystem"/> recolours
+        /// vanilla projectiles into faction-coloured blaster bolts. Pack-driven and declarative:
+        /// each projectile YAML may set <c>faction</c> + <c>bolt_color</c> to override the
+        /// compiled default colours (CIS red / Republic blue). No hardcoded content IDs.
+        /// </summary>
+        private void ApplyBlasterBoltConfig()
+        {
+            if (_registryManager == null)
+                return;
+
+            // Start from a clean slate so a hot-reload re-derives colours from the current packs.
+            Bridge.BlasterBoltConfig.ResetToDefaults();
+
+            int applied = 0;
+            foreach (DINOForge.SDK.Registry.RegistryEntry<DINOForge.SDK.Models.ProjectileDefinition> entry
+                     in _registryManager.Projectiles.All.Values)
+            {
+                DINOForge.SDK.Models.ProjectileDefinition proj = entry.Data;
+                if (string.IsNullOrWhiteSpace(proj.BoltColor))
+                    continue;
+
+                Bridge.BlasterBoltConfig.BoltFaction faction = Bridge.BlasterBoltConfig.FactionFromId(proj.Faction);
+                if (Bridge.BlasterBoltConfig.SetFactionColorHex(faction, proj.BoltColor))
+                {
+                    applied++;
+                    _log.LogInfo($"[ModPlatform] BlasterBolt: {faction} bolt colour <- '{proj.BoltColor}' (projectile '{proj.Id}').");
+                }
+                else
+                {
+                    _log.LogWarning($"[ModPlatform] BlasterBolt: invalid bolt_color '{proj.BoltColor}' on projectile '{proj.Id}' — keeping default.");
+                }
+            }
+
+            _log.LogInfo($"[ModPlatform] BlasterBoltConfig: {applied} faction colour override(s) applied; recolour enabled={Bridge.BlasterBoltConfig.Enabled}.");
         }
 
         /// <summary>

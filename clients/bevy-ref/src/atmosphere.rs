@@ -98,15 +98,12 @@ pub fn setup_atmosphere(
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, PI / 4.0, -PI / 8.0, 0.0)),
     ));
 
-    commands.spawn((
-        Mesh3d(meshes.add(Mesh::from(bevy::math::primitives::Sphere { radius: 2.0 }))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.9, 0.05, 0.05),
-            ..default()
-        })),
-        Transform::from_xyz(128.0, 20.0, 128.0),
-    ));
+    // (Removed a stray red debug sphere that floated at world-centre.)
 
+    // Flat water plane is the HEIGHTMAP fallback only — under the `voxel`
+    // feature the volumetric voxel world owns hydrology, so the plane would
+    // be a stray flat "billboard" over the real water. Gate it out.
+    #[cfg(not(feature = "voxel"))]
     commands.spawn((
         WaterSurface,
         Mesh3d(meshes.add(Mesh::from(bevy::math::primitives::Plane3d::default().mesh().size(256.0, 256.0)))),

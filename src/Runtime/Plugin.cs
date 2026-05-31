@@ -46,6 +46,8 @@ namespace DINOForge.Runtime
         private Harmony? _harmony;
 
         internal static ConfigEntry<bool>? _showOverlayOnStart;
+        internal static ConfigEntry<string>? _graphicsTier;
+        internal static Graphics.GraphicsMode? _graphicsMode;
         internal static ConfigEntry<bool>? _enableHotReload;
         internal static ConfigEntry<int>? _hmrDebounceMs;
 
@@ -207,6 +209,15 @@ namespace DINOForge.Runtime
                 new ConfigDescription("Logging verbosity for DINOForge runtime",
                     new AcceptableValueList<string>("Debug", "Info", "Warning", "Error")));
 
+            // Realistic-GFX mode (Tier-B Phase-1 PoC). OFF by default. When "High", DINOForge injects a
+            // URP post-processing Volume (ACES tonemap + bloom + color grading + vignette) onto the
+            // active camera for a more cinematic, less TABS-flat look. See Graphics/GraphicsMode.cs and
+            // docs/sessions/realistic-gfx-mode-rnd-20260530.md.
+            ConfigEntry<string> graphicsTier = Config.Bind("Graphics", "Tier", "Vanilla",
+                new ConfigDescription("Visual fidelity tier: Vanilla (no change) or High (cinematic post-processing).",
+                    new AcceptableValueList<string>("Vanilla", "High")));
+            _graphicsTier = graphicsTier;
+
             _showOverlayOnStart = showOverlayOnStart;
             _enableHotReload = enableHotReload;
             _hmrDebounceMs = hmrDebounceMs;
@@ -320,6 +331,26 @@ namespace DINOForge.Runtime
             catch (Exception ex)
             {
                 Log.LogError($"[Plugin] RuntimeDriver setup failed: {ex}");
+            }
+
+            // Realistic-GFX mode (Tier-B Phase-1 PoC). Attach the GraphicsMode component to the
+            // persistent root, seed it from config, and re-apply on every scene change (Camera.main is
+            // not available until a gameplay/menu scene loads, and DINO's PlayerLoop means we can't rely
+            // on Update()). Inert unless Graphics.Tier == "High".
+            try
+            {
+                Graphics.GraphicsMode gfx = PersistentRoot.AddComponent<Graphics.GraphicsMode>();
+                gfx.ConfiguredTier = string.Equals(_graphicsTier?.Value, "High", StringComparison.OrdinalIgnoreCase)
+                    ? Graphics.GraphicsTier.High
+                    : Graphics.GraphicsTier.Vanilla;
+                _graphicsMode = gfx;
+                SceneManager.activeSceneChanged += (_, __) => _graphicsMode?.Apply();
+                gfx.Apply();
+                Log.LogInfo($"[Plugin] GraphicsMode attached (tier={gfx.ConfiguredTier}).");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] GraphicsMode setup failed (non-fatal): {ex.Message}");
             }
 
             // Capture state for static resurrection callback (kept for emergency use)

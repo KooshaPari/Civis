@@ -3,7 +3,11 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const isPagesBuild = process.env.GITHUB_ACTIONS === 'true' || process.env.GITHUB_PAGES === 'true'
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'Dino'
-const docsBase = isPagesBuild ? `/${repoName}/` : '/'
+// Custom-domain deploys (e.g. dino.phenotype.space) serve the site at root `/`,
+// so the GitHub Pages sub-path base (`/<repo>/`) would 404 every asset there.
+// The phenotype.space pipeline signals this via PHENOTYPE_CUSTOM_DOMAIN=true.
+const isCustomDomain = process.env.PHENOTYPE_CUSTOM_DOMAIN === 'true'
+const docsBase = isCustomDomain ? '/' : isPagesBuild ? `/${repoName}/` : '/'
 
 export default withMermaid(
   defineConfig({
@@ -18,6 +22,22 @@ export default withMermaid(
       // Local dev server URLs in dev-only deployment guides (not for production link checking)
       /^https?:\/\/localhost(:\d+)?\//,
       /^https?:\/\/localhost:\d+$/,
+      // Links that intentionally point at repo files OUTSIDE the published docs tree
+      // (repo-root markdown, source code, packs, and .claude command definitions).
+      // These resolve on GitHub but are not part of the VitePress site, so the
+      // dead-link checker (which fails the Pages build) must not flag them.
+      /README$/,
+      /\/(CHANGELOG|CONTRIBUTING|INSTALLATION|GETTING_STARTED)$/,
+      /GETTING_STARTED$/,
+      /PACKCOMPILER_CLI$/,
+      /\/src\//,
+      /\/packs\//,
+      /\.claude\/commands\//,
+      /\/tools\/phenotype-journeys\//,
+      /\/evidence\//,
+      // Intra-docs reference pages not yet authored.
+      /\/concepts\/cli-tools$/,
+      /\/architecture\/runtime$/,
     ],
     srcExclude: ['**/archive/**', '**/research/**', '**/sessions/**', '**/worklog/**', 'game-launch-dashboard.md'],
 
@@ -40,12 +60,16 @@ export default withMermaid(
     },
 
     head: [
-      ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
-      ['link', { rel: 'stylesheet', href: '/.vitepress/theme/custom.css' }],
+      // Use a base-relative href so the icon resolves on both the GitHub Pages
+      // sub-path deploy (/Dino/) and a custom-domain root deploy.
+      ['link', { rel: 'icon', type: 'image/svg+xml', href: `${docsBase}favicon.svg` }],
+      // NOTE: custom.css is imported in theme/index.ts (`import './custom.css'`).
+      // The previous raw <link href="/.vitepress/theme/custom.css"> 404'd in
+      // production because the theme source dir is not published. Removed.
     ],
 
     themeConfig: {
-      logo: '/favicon.svg',
+      logo: `${docsBase}favicon.svg`,
       siteTitle: 'DINOForge',
 
       nav: [

@@ -1,0 +1,50 @@
+{
+  "id": "mods-quick-panel",
+  "title": "DINOForge — MODS Quick Panel",
+  "subtitle": "Native menu injection (iter-146/149)",
+  "accent": "#34d399",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "scenes": [
+    {
+      "src": "assets/01-mods-button.png",
+      "holdSec": 3.5,
+      "zoom": [1.0, 1.06],
+      "callouts": [
+        {
+          "text": "MODS button injected",
+          "subText": "Added to the native main menu — no game restart",
+          "atSec": 0.4,
+          "anchor": "top-right"
+        }
+      ],
+      "cursors": [
+        { "x": 840, "y": 525, "atSec": 1.2, "kind": "ripple" }
+      ]
+    },
+    {
+      "src": "assets/02-mods-panel.png",
+      "holdSec": 4.0,
+      "callouts": [
+        {
+          "text": "Quick panel opens",
+          "subText": "Loaded packs listed + toggles — F10 also opens it",
+          "atSec": 0.4,
+          "anchor": "top-left"
+        }
+      ],
+      "highlights": [
+        {
+          "x": 760,
+          "y": 380,
+          "width": 1040,
+          "height": 680,
+          "label": "DINOForge mod panel",
+          "atSec": 0.7,
+          "style": "pulse"
+        }
+      ]
+    }
+  ]
+}

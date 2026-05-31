@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DINOForge Warfare-Modern | role-heavy.svg | 64x64 monochrome glyph -->
+<!-- Heavy infantry: broad armored silhouette with heavy weapon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Armored helmet (wider, with visor line) -->
+  <path d="M23,12 Q23,5 32,5 Q41,5 41,12 L41,17 L23,17 Z" fill="#EDE8DC"/>
+  <!-- Visor slit -->
+  <rect x="25" y="13" width="14" height="2" fill="#1C2B3A"/>
+  <!-- Heavy torso / body armor -->
+  <rect x="21" y="17" width="22" height="17" rx="1" fill="#EDE8DC"/>
+  <!-- Shoulder plates -->
+  <rect x="16" y="17" width="7" height="8" rx="2" fill="#EDE8DC"/>
+  <rect x="41" y="17" width="7" height="8" rx="2" fill="#EDE8DC"/>
+  <!-- Arms (thick) -->
+  <rect x="16" y="25" width="7" height="9" rx="2" fill="#EDE8DC"/>
+  <rect x="41" y="25" width="7" height="9" rx="2" fill="#EDE8DC"/>
+  <!-- Legs (armored, wide) -->
+  <rect x="22" y="34" width="8" height="14" rx="2" fill="#EDE8DC"/>
+  <rect x="34" y="34" width="8" height="14" rx="2" fill="#EDE8DC"/>
+  <!-- Heavy weapon (rocket launcher / LMG barrel extending from right arm) -->
+  <rect x="48" y="24" width="14" height="5" rx="1" fill="#EDE8DC"/>
+  <!-- Muzzle flash indicator (small triangle) -->
+  <polygon points="62,21 62,34 64,27" fill="#EDE8DC"/>
+</svg>

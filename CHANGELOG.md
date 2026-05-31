@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-05-28
+
+### Added — Major Features (35+ commits)
+
+#### CLI & Workflow Commands
+- **`dinoforge build/deploy/relaunch/smoke`** — Single-command mod workflows matching WorldSphereMod wsm3d pattern (commit 1d33275a)
+- **`dinoforge build --clean`** — Aggressive obj/bin cleanup preventing Pattern #233 stale-cache bugs (commit b742246f)
+- **`dinoforge pack diff <a> <b>`** — Visual side-by-side diffing of two pack configurations (commit 1f20a275)
+- **`dinoforge pack thunderstore <pack>`** — Thunderstore marketplace packaging for mod distribution (commit 9a114011)
+- **`dinoforge dev-tools install`** — Bundles UnityExplorer for runtime ECS inspection without external download (commit 0cf468b4)
+- **`dinoforge new`** — Scaffold mod packs from built-in template (carried from 0.25.0-dev)
+- **System.CommandLine 2.x API migration** — RegistryCommand updated for latest CLI SDK (commit f957d01f, issue #926)
+
+#### UI & User Experience (10+ commits)
+- **F10 Mod Browser Search/Filter/Sort** — Live character-count badge, zebra row striping, colored section bars (commits 9d59d631, 8de6a5cb)
+- **Rich Detail Pane** — Mod gallery, clickable dependency links, tags cloud, license badge, full description (commit 427323a2)
+- **Loading Skeleton Overlay** — Visual feedback during pack initialization (commit 941d0d44)
+- **Conflict Resolution UI** — Show Diff modal for competing pack versions (commit 6dd47121)
+- **Keyboard Navigation** — Arrow keys, Enter/Esc, Tab, Slash for search focus, Ctrl+R refresh (commit d8c03f5e)
+- **Per-Pack Settings Panel** — Runtime configuration UI for booleans, sliders, enums, text fields (commit f1783888)
+- **NativeModsPage** — Full-screen native menu cloning DINO Options canvas for immersive browsing (commit 1d33275a)
+- **UI Polish** — Zebra rows, gradient backgrounds, colored section bars (commit 8de6a5cb)
+
+#### Packs & Content System
+- **Pack Classification Taxonomy** — Tier badges (engine_extension, content, total_conversion, baseline) (commit 652bfe9e, issue #902)
+- **Pack Signing/Verification** — ed25519 key system for trusted distribution (commits 4fd2d3d6, ae912208)
+- **Thunderstore Profile Save/Load/Export** — Mod profile persistence (commit 313834bd, issue #918)
+- **PatchOperations** — RimWorld-style cross-mod YAML patching without duplication (commit 9a114011)
+- **`ui_theme` Schema** — Total-conversion visual identity (colors, fonts, assets)
+- **Pack Manifest Enhancements** — CODEOWNERS file + PR/issue templates (commit 6efbff44)
+
+#### Performance & Observability (5+ commits)
+- **Telemetry Infrastructure** — In-memory MetricsCollector with F10 telemetry tab, CLI dump, RPC export, snapshot capture (commit 320d3245)
+- **BenchmarkDotNet Suite** — Nightly performance workflow for automated regression detection (commit 77d95f6f)
+- **Auto-Generated Stats Dashboard** — Mod popularity, compatibility matrix, archetype distribution visualization (commit 87e1619f)
+- **F9 Debug Panel Enhancements** — FPS counter, GC heap display, archetype counts, 500ms auto-refresh (carried from 0.25.0-dev)
+- **Game Telemetry Instrumentation** — Hot paths, F10 tab, CLI, RPC, snapshot persistence (commit 320d3245)
+
+#### Build & Developer Tools
+- **BepInEx.AssemblyPublicizer Integration** — Direct ECS/game-assembly access for runtime inspection (commit 880af1f3)
+- **UnityExplorer Dev Tool** — Bundled optional tool for mod inspection without external download (commit 0cf468b4)
+- **Per-Project Build Verification** — CI gate for cross-project compilation (commit b892e78a)
+
+#### Localization & i18n
+- **Localization Infrastructure** — i18n base structure with en-US locale + placeholders for community translation (commit 10149d9e)
+
+#### MCP & Game Integration (2+ commits)
+- **`game_log_stream` Tool** — Real-time game log streaming for agent observability (commit e2e1e480)
+- **`game_log_search` Tool** — Searchable game log queries for diagnostics (commit e2e1e480)
+
+#### Documentation
+- **Static Mod Store Website** — Pack cards with filters for community browsing (commit 7b8352ed)
+- **"Your First Mod" Tutorial** — 5-minute quickstart guide (commit b2d220ae)
+- **example-hello-world Pack** — Complete template for new modders (commit b2d220ae)
+
+#### PackCompiler Enhancements
+- **Schema-Aware Validation** — Suggestions and auto-fix support in PackCompiler (commit eca5f97f)
+
 ### Fixed
 - **Star Wars live mesh-swap exits DIAGNOSTIC MODE (#964).** `AssetSwapSystem.TrySwapRenderMeshFromBundle` previously referenced a non-existent `BundleToVanillaMeshMap` and tried to match optional mesh-name substrings by *bundle filename*, so every Star Wars bundle fell into DIAGNOSTIC MODE and no entity swap ran. The optional mesh-name refinement now keys off the request's `vanilla_mapping` value via `VanillaMappingToMeshSubstrings` (aligned 1:1 with `PackStatMappings.VanillaMappingToComponentType`). DIAGNOSTIC MODE is now entered only when there is **no** targeting signal at all — neither a resolved archetype filter nor mesh-name substrings — so a populated `vanilla_mapping` (already present on all 30 SW units; aerial intentionally skipped) lets the archetype-narrowed swap proceed. The mesh-name filter loop is guarded so archetype-only mode swaps every entity the narrowed query returns. Mesh/material lookup remains robust via `ResolveReplacementAssets` (exact-name → prefab renderer → `LoadAllAssets<Mesh>/<Material>` fallback — never the bundle key). Key audit: all 30 SW unit `visual_asset` keys resolve in `addressables.yaml`; 14 reference real (>40KB) bundles. Runtime builds netstandard2.0 exit 0; all 31 AssetSwap tests pass.
 - **Reliable in-process frame capture in all game states (menu + in-game + loading) — #972.** The screenshot RPC previously called `UnityEngine.ScreenCapture.CaptureScreenshot(path)`, which is **asynchronous**: it only queues a deferred end-of-frame capture and Unity writes the PNG on a later frame. The bridge handler returned `Success=true` the moment the request was queued, without ever confirming a file landed on disk, and DINO's custom PlayerLoop never reliably flushed that deferred capture during active gameplay — so the handler reported "saved" while no PNG existed (it happened to work at the main menu where the stock present path still ran). New `src/Runtime/Bridge/FrameCapture.cs` replaces it with a synchronous, blocking capture: a coroutine on a DontDestroyOnLoad host yields `WaitForEndOfFrame`, calls `ScreenCapture.CaptureScreenshotIntoRenderTexture` (which composites **all cameras + Screen-Space-Overlay UI** into a RenderTexture — exactly what is on screen), `ReadPixels` it back, vertically flips, `EncodeToPNG`, and `File.WriteAllBytes`. A `ManualResetEventSlim` blocks the calling bridge thread until the file is fully written, so `ScreenshotResult.Success`/`Path` now reflect a real on-disk PNG. Wired into `GameBridgeServer.HandleScreenshot` and the `NativeMenuInjector` file-trigger + auto-checkpoint paths; MCP `game_screenshot` Tier 2 (GameControlCli → named pipe) inherits the fix automatically. Added `MainThreadDispatcher.IsMainThread` so callers already on the main thread skip re-marshalling. Verified live against a loaded world (49,152 entities): non-black 2560×1440 PNGs captured (`docs/screenshots/capture-fix-menu-20260530.png`, `docs/screenshots/capture-fix-ingame-20260530.png`). Unblocks the session recorder (#979) and all autonomous vision-verify.

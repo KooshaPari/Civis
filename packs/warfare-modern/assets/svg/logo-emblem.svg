@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IRONLINE — Compact Crosshair-Ring Emblem
+  DINOForge Warfare-Modern pack · identity asset
+
+  ORIGINAL ART DISCLAIMER
+  ========================
+  All geometry in this file is wholly original and hand-authored for the
+  DINOForge project. No insignia, coat-of-arms, national emblem, trademarked
+  symbol, or copyrighted graphic has been reproduced or derived herein.
+  The crosshair-ring form is a generic open military-grammar motif (concentric
+  circles + cardinal ticks) with no affiliation to any real-world organisation,
+  nation, or armed force.
+
+  Palette: Western Alliance (identity-modern.md §2.1)
+    Olive Drab  #4A5240  — background fill
+    NATO Navy   #1C2B3A  — ring body
+    Hi-Vis Amber #F5A623 — spokes / ticks
+    Buff White  #EDE8DC  — arc text
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512"
+     width="512" height="512"
+     preserveAspectRatio="xMidYMid meet"
+     role="img"
+     aria-label="IRONLINE crosshair-ring emblem">
+
+  <defs>
+    <!-- Radial gradient: olive-drab centre to dark-navy edge -->
+    <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#4A5240"/>
+      <stop offset="100%" stop-color="#2E3528"/>
+    </radialGradient>
+
+    <!-- Clip to outer octagon kill-zone shape -->
+    <clipPath id="octo-clip">
+      <!-- Regular octagon inscribed in 512×512, vertices at r=252 -->
+      <polygon id="outer-octo"
+               points="
+                 256,4
+                 430,82
+                 508,256
+                 430,430
+                 256,508
+                 82,430
+                 4,256
+                 82,82
+               "/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Octagonal background ── -->
+  <polygon id="bg-plate"
+           points="
+             256,4
+             430,82
+             508,256
+             430,430
+             256,508
+             82,430
+             4,256
+             82,82
+           "
+           fill="url(#bg-grad)"
+           stroke="#2E3528" stroke-width="3"/>
+
+  <!-- ── Outer ring (NATO Navy) ── -->
+  <!-- Outer radius 220, inner radius 190 → ring band 30px -->
+  <circle id="ring-outer" cx="256" cy="256" r="220"
+          fill="none" stroke="#1C2B3A" stroke-width="30"/>
+
+  <!-- ── 8 spoke / tick marks (Hi-Vis Amber) ── -->
+  <!-- Each tick: a line from r=190 inward to r=144 along each spoke angle -->
+  <!-- 8 spokes at 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315° -->
+  <!-- Cardinal ticks are longer (r=190→130); diagonal ticks shorter (r=185→150) -->
+
+  <!-- 0° (top) — cardinal -->
+  <line id="spoke-n"  x1="256" y1="66"  x2="256" y2="126"
+        stroke="#F5A623" stroke-width="8" stroke-linecap="square"/>
+  <!-- 90° (right) — cardinal -->
+  <line id="spoke-e"  x1="386" y1="256" x2="446" y2="256"
+        stroke="#F5A623" stroke-width="8" stroke-linecap="square"/>
+  <!-- 180° (bottom) — cardinal -->
+  <line id="spoke-s"  x1="256" y1="386" x2="256" y2="446"
+        stroke="#F5A623" stroke-width="8" stroke-linecap="square"/>
+  <!-- 270° (left) — cardinal -->
+  <line id="spoke-w"  x1="66"  y1="256" x2="126" y2="256"
+        stroke="#F5A623" stroke-width="8" stroke-linecap="square"/>
+
+  <!-- 45° (NE) — diagonal, shorter -->
+  <line id="spoke-ne"
+        x1="348" y1="164" x2="320" y2="192"
+        stroke="#F5A623" stroke-width="5" stroke-linecap="square"/>
+  <!-- 135° (SE) — diagonal -->
+  <line id="spoke-se"
+        x1="348" y1="348" x2="320" y2="320"
+        stroke="#F5A623" stroke-width="5" stroke-linecap="square"/>
+  <!-- 225° (SW) — diagonal -->
+  <line id="spoke-sw"
+        x1="164" y1="348" x2="192" y2="320"
+        stroke="#F5A623" stroke-width="5" stroke-linecap="square"/>
+  <!-- 315° (NW) — diagonal -->
+  <line id="spoke-nw"
+        x1="164" y1="164" x2="192" y2="192"
+        stroke="#F5A623" stroke-width="5" stroke-linecap="square"/>
+
+  <!-- ── Inner thin ring (NATO Navy outline) ── -->
+  <circle id="ring-inner" cx="256" cy="256" r="144"
+          fill="none" stroke="#1C2B3A" stroke-width="4"/>
+
+  <!-- ── Centre dot (Hi-Vis Amber) ── -->
+  <circle id="center-dot" cx="256" cy="256" r="18"
+          fill="#F5A623"/>
+
+  <!-- ── Inner kill-zone ring cutout indicator (Navy ring, thinner) ── -->
+  <circle id="ring-mid" cx="256" cy="256" r="100"
+          fill="none" stroke="#1C2B3A" stroke-width="2" stroke-dasharray="12 8"/>
+
+  <!-- ── Arc text: top arc "ALLIANCE" ── -->
+  <defs>
+    <path id="top-arc-path"
+          d="M 80,256 A 176,176 0 0,1 432,256"
+          fill="none"/>
+    <path id="bot-arc-path"
+          d="M 80,256 A 176,176 0 0,0 432,256"
+          fill="none"/>
+  </defs>
+  <text font-family="'Share Tech Mono', 'Courier New', monospace"
+        font-size="22" font-weight="400" letter-spacing="8"
+        fill="#EDE8DC" text-anchor="middle">
+    <textPath href="#top-arc-path" startOffset="50%">ALLIANCE</textPath>
+  </text>
+  <text font-family="'Share Tech Mono', 'Courier New', monospace"
+        font-size="20" font-weight="400" letter-spacing="6"
+        fill="#EDE8DC" text-anchor="middle">
+    <textPath href="#bot-arc-path" startOffset="50%">THEATER 1</textPath>
+  </text>
+
+</svg>

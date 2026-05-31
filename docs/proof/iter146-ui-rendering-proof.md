@@ -2,6 +2,25 @@
 
 **Date**: 2026-05-24
 
+## Animated Walkthrough (annotated)
+
+Rendered by the generic doc-embeds pipeline (`tools/doc-embeds/`) from the
+captured screenshots + `tools/doc-embeds/examples/mods-quick-panel/annotations.json`.
+
+<video src="../embeds/media/mods-quick-panel.mp4" controls loop muted width="720" poster="../screenshots/iter146_mods_button_verified.png"></video>
+
+GIF fallback (for renderers without `<video>`):
+
+![MODS Quick Panel — annotated walkthrough](../embeds/media/mods-quick-panel.gif)
+
+Reproduce:
+
+```bash
+cd tools/doc-embeds
+npm install
+node ./bin/render.mjs --annotations ./examples/mods-quick-panel/annotations.json --format both
+```
+
 ## Screenshot Evidence
 ![MODS Button Verified](../screenshots/iter146_mods_button_verified.png)
 

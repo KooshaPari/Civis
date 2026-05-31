@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DINOForge Warfare-Modern | button-normal.svg | 256x96 angular military button (default state) -->
+<!-- State: Default | Fill: #1C2B3A | Border: #4A5240 1px | Text: #EDE8DC Oswald SemiBold 14pt -->
+<!-- 9-slice insets: left=20, top=16, right=20, bottom=16
+     Corner chamfers (12px TL + BR) are the non-stretchable regions.
+     Stretch zone: x=20..236, y=16..80 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 96" width="256" height="96">
+
+  <!-- === BUTTON BODY (chamfered TL + BR 12px) === -->
+  <polygon
+    points="12,0 256,0 256,96 0,96 0,12"
+    fill="#1C2B3A"/>
+
+  <!-- Bottom-right chamfer override -->
+  <polygon
+    points="12,0 256,0 256,84 244,96 0,96 0,12"
+    fill="#1C2B3A"/>
+
+  <!-- === OUTER BORDER: 1px #4A5240 === -->
+  <polygon
+    points="12,0.5 255.5,0.5 255.5,83.5 243.5,95.5 0.5,95.5 0.5,12"
+    fill="none"
+    stroke="#4A5240"
+    stroke-width="1"/>
+
+  <!-- === CHAMFER EDGE LINES === -->
+  <line x1="0" y1="12" x2="12" y2="0" stroke="#2E3528" stroke-width="1"/>
+  <line x1="256" y1="84" x2="244" y2="96" stroke="#2E3528" stroke-width="1"/>
+
+  <!-- === INNER HIGHLIGHT (top edge 1px lighter for depth) === -->
+  <line x1="13" y1="1" x2="254" y2="1" stroke="#243347" stroke-width="1"/>
+
+  <!-- === LEFT FACTION ACCENT BAR: 3px #4A5240 (default — no hover yet) === -->
+  <rect x="0" y="14" width="3" height="82" fill="#4A5240" fill-opacity="0.6"/>
+
+  <!-- === BUTTON LABEL PLACEHOLDER === -->
+  <!-- COMMAND text (game replaces with actual label) -->
+  <text x="132" y="54" font-family="Oswald, sans-serif" font-size="14" font-weight="600"
+    fill="#EDE8DC" text-anchor="middle" letter-spacing="3">COMMAND LABEL</text>
+
+  <!-- === CORNER TICK MARKS === -->
+  <polyline points="16,6 16,14 24,14" fill="none" stroke="#2E3528" stroke-width="0.8"/>
+  <polyline points="240,6 240,14 232,14" fill="none" stroke="#2E3528" stroke-width="0.8"/>
+  <polyline points="16,90 16,82 24,82" fill="none" stroke="#2E3528" stroke-width="0.8"/>
+  <!-- BR chamfer prevents symmetric bracket; use offset -->
+  <polyline points="236,90 236,84 244,84" fill="none" stroke="#2E3528" stroke-width="0.8"/>
+
+  <!-- === BOTTOM EDGE SHADOW LINE === -->
+  <line x1="1" y1="94" x2="242" y2="94" stroke="#0D1720" stroke-width="1.5"/>
+
+</svg>

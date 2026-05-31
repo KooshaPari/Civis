@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DINOForge Warfare-Modern | ammo-counter-frame.svg | 384x96 resource-bar frame in ammo-counter style -->
+<!-- Palette: #1C2B3A fill, #2E3528 outer frame, #F5A623 left accent, #A0A08A label, #EDE8DC numeral, #39D353 bar-full -->
+<!-- 9-slice insets: left=10, top=10, right=10, bottom=10
+     The left accent strip (0..2) and chamfer corners (6px TL + BR) define the non-stretchable corners.
+     Stretch zone: x=10..374, y=10..86 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 96" width="384" height="96">
+
+  <!-- === OUTER FRAME BODY (chamfered 6px TL + BR per ammo-counter spec) === -->
+  <polygon
+    points="6,0 384,0 384,96 0,96 0,6"
+    fill="#1C2318"
+    fill-opacity="0.95"/>
+
+  <!-- === OUTER BORDER: 1px #2E3528 === -->
+  <polygon
+    points="6,0.5 383.5,0.5 383.5,95.5 0.5,95.5 0.5,6"
+    fill="none"
+    stroke="#2E3528"
+    stroke-width="1"/>
+
+  <!-- Bottom-right chamfer -->
+  <polygon
+    points="6,0.5 383.5,0.5 383.5,89.5 377.5,95.5 0.5,95.5 0.5,6"
+    fill="none"
+    stroke="#2E3528"
+    stroke-width="1"/>
+
+  <!-- === LEFT ACCENT STRIP: 2px #F5A623 === -->
+  <line x1="1" y1="8" x2="1" y2="96" stroke="#F5A623" stroke-width="2"/>
+
+  <!-- === TL CHAMFER EDGE LINE === -->
+  <line x1="0" y1="6" x2="6" y2="0" stroke="#2E3528" stroke-width="1"/>
+  <!-- === BR CHAMFER EDGE LINE === -->
+  <line x1="384" y1="90" x2="378" y2="96" stroke="#2E3528" stroke-width="1"/>
+
+  <!-- === INNER CHROME (double-border effect) === -->
+  <polygon
+    points="8,2 382,2 382,87 376,93 2,93 2,8"
+    fill="none"
+    stroke="#2E3528"
+    stroke-width="0.5"
+    stroke-opacity="0.4"/>
+
+  <!-- === TOP LABEL ZONE: resource name placeholder === -->
+  <!-- Label area background (very subtle tint) -->
+  <rect x="4" y="4" width="376" height="18" fill="#1C2B3A" fill-opacity="0.5"/>
+  <!-- Label text (placeholder — game will replace with actual resource name) -->
+  <text x="192" y="17" font-family="Oswald, sans-serif" font-size="10" font-weight="700"
+    fill="#A0A08A" text-anchor="middle" letter-spacing="3">SUPPLY</text>
+
+  <!-- === MAIN NUMERAL AREA === -->
+  <!-- Large numeral placeholder (game renders actual value here) -->
+  <text x="50" y="65" font-family="Share Tech Mono, monospace" font-size="36" font-weight="400"
+    fill="#EDE8DC" text-anchor="middle" letter-spacing="-1">000</text>
+
+  <!-- === SECONDARY INFO (right side: sub-label or max value) === -->
+  <text x="340" y="44" font-family="Share Tech Mono, monospace" font-size="11"
+    fill="#A0A08A" text-anchor="middle" letter-spacing="1">/999</text>
+
+  <!-- === BOTTOM RULE: 2px progress bar === -->
+  <!-- Bar track -->
+  <rect x="4" y="83" width="376" height="4" rx="2" fill="#2E3528"/>
+  <!-- Bar fill placeholder at ~70% (green — game animates this) -->
+  <rect x="4" y="83" width="263" height="4" rx="2" fill="#39D353"/>
+
+  <!-- === VERTICAL DIVIDER (separates numeral from secondary area) === -->
+  <line x1="90" y1="26" x2="90" y2="80" stroke="#2E3528" stroke-width="1"/>
+
+  <!-- === ICON SLOT (right side, 48x48 centered in right zone) === -->
+  <!-- Placeholder frame for resource icon -->
+  <rect x="300" y="24" width="48" height="48" fill="none" stroke="#2E3528" stroke-width="1" stroke-dasharray="3,2" stroke-opacity="0.5"/>
+  <!-- Crosshair dot placeholder for icon center -->
+  <line x1="320" y1="48" x2="328" y2="48" stroke="#4A5240" stroke-width="0.8" stroke-opacity="0.5"/>
+  <line x1="324" y1="44" x2="324" y2="52" stroke="#4A5240" stroke-width="0.8" stroke-opacity="0.5"/>
+
+  <!-- === CORNER TICK ACCENTS === -->
+  <polyline points="4,4 4,10 10,10" fill="none" stroke="#4A5240" stroke-width="0.8"/>
+  <polyline points="374,4 374,10 368,10" fill="none" stroke="#4A5240" stroke-width="0.8"/>
+
+</svg>

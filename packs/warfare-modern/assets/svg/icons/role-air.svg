@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DINOForge Warfare-Modern | role-air.svg | 64x64 monochrome glyph -->
+<!-- Attack helicopter top-down / side silhouette with rotor blades -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Main rotor blades (2 blades, crossing perpendicular, centered at top) -->
+  <ellipse cx="32" cy="14" rx="26" ry="3" fill="#EDE8DC"/>
+  <ellipse cx="32" cy="14" rx="3" ry="14" fill="#EDE8DC"/>
+  <!-- Rotor hub -->
+  <circle cx="32" cy="14" r="3.5" fill="#EDE8DC"/>
+  <!-- Fuselage (elongated teardrop, nose left) -->
+  <path d="M8,30 Q6,34 8,38 Q16,44 32,42 Q48,40 56,36 Q60,34 56,30 Q48,26 32,28 Q16,26 8,30 Z" fill="#EDE8DC"/>
+  <!-- Cockpit canopy (glazed, slightly darker) -->
+  <ellipse cx="16" cy="34" rx="9" ry="5" fill="#1C2B3A"/>
+  <!-- Tail boom -->
+  <rect x="48" y="32" width="14" height="4" rx="2" fill="#EDE8DC"/>
+  <!-- Tail rotor (small, vertical, at tail end) -->
+  <ellipse cx="62" cy="32" rx="2" ry="7" fill="#EDE8DC"/>
+  <!-- Stub wings with pylons -->
+  <rect x="26" y="40" width="12" height="3" rx="1" fill="#EDE8DC"/>
+  <!-- Pylon / missile left -->
+  <rect x="22" y="42" width="6" height="2" rx="1" fill="#EDE8DC"/>
+  <!-- Pylon / missile right -->
+  <rect x="36" y="42" width="6" height="2" rx="1" fill="#EDE8DC"/>
+  <!-- Landing skids -->
+  <rect x="12" y="46" width="16" height="2" rx="1" fill="#EDE8DC"/>
+  <rect x="36" y="46" width="16" height="2" rx="1" fill="#EDE8DC"/>
+  <line x1="18" y1="43" x2="18" y2="47" stroke="#EDE8DC" stroke-width="1.5"/>
+  <line x1="46" y1="43" x2="46" y2="47" stroke="#EDE8DC" stroke-width="1.5"/>
+</svg>

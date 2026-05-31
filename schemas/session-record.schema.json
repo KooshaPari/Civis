@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/session-record.schema.json",
+  "title": "DINOForge Session Record (Journey Timeline)",
+  "description": "timeline.json produced by SessionRecorder (#971). Replayable in-process (#972) and embeddable in journeys (#966).",
+  "type": "object",
+  "required": ["version", "sessionId", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "sessionId": { "type": "string", "pattern": "^session-" },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/event" }
+    }
+  },
+  "definitions": {
+    "event": {
+      "type": "object",
+      "required": ["t", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "t": { "type": "integer", "minimum": 0, "description": "Milliseconds since session start." },
+        "type": {
+          "type": "string",
+          "enum": ["pointer.move", "pointer.down", "pointer.up", "key.down", "key.up", "key.char"]
+        },
+        "x": { "type": "number", "description": "Screen px, bottom-left origin." },
+        "y": { "type": "number", "description": "Screen px, bottom-left origin." },
+        "button": { "type": "integer", "enum": [0, 1], "description": "0=left, 1=right." },
+        "target": { "type": "string", "description": "Top EventSystem.RaycastAll hit transform path." },
+        "selected": { "type": "string", "description": "EventSystem.current.currentSelectedGameObject path." },
+        "key": { "type": "string", "description": "KeyCode name or typed character." },
+        "scene": { "type": "string", "description": "Active scene name." },
+        "frame": { "type": "string", "pattern": "^frames/", "description": "Relative PNG path captured with this event." }
+      }
+    }
+  }
+}

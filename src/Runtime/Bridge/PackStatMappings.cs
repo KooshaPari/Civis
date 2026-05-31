@@ -41,7 +41,11 @@ namespace DINOForge.Runtime.Bridge
                 { "cavalry",         "Components.CavalryUnit" },
                 { "siege",           "Components.SiegeUnit" },
 
-                // Intentionally skipped: AerialSpawnSystem handles aerial entities
+                // Intentionally null for stat injection: PackStatInjector skips aerial_fighter
+                // (AerialSpawnSystem owns aerial behaviour). NOTE: the visual mesh swap targets
+                // aerial units separately — see AssetSwapSystem.ResolveAerialArchetypeTypeName /
+                // VanillaMappingToMeshSubstrings (BUG B fix #101). Do NOT assume null here means
+                // "no swap target".
                 { "aerial_fighter",  null },
             };
 

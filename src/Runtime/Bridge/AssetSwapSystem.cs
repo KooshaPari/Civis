@@ -116,7 +116,41 @@ namespace DINOForge.Runtime.Bridge
                 // Mounted / mechanised archetypes.
                 { "cavalry",         new[] { "Cavalry", "cavalry", "Rider", "rider", "Horse", "horse", "Mount", "mount" } },
                 { "siege",           new[] { "Siege", "siege", "Catapult", "catapult", "Trebuchet", "trebuchet", "Ram", "ram", "Cannon", "cannon" } },
+
+                // Aerial archetype (BUG B fix #101). Provides a mesh-name fallback so the swap
+                // proceeds for sw-tri-fighter / sw-nantex-fighter even before AerialSpawnSystem
+                // has tagged the entity with AerialUnitComponent. Covers DINO's airstrike/flyer
+                // mesh names plus generic aerial tokens.
+                { "aerial_fighter",  new[] { "Aerial", "aerial", "Air", "Flying", "flying", "Flyer", "flyer", "Bird", "bird", "Bomber", "bomber", "Airstrike", "airstrike", "Plane", "plane", "Fighter", "fighter" } },
             };
+
+        /// <summary>
+        /// Component type name that aerial units (vanilla_mapping='aerial_fighter') are tagged
+        /// with by DINOForge's AerialSpawnSystem. Used as the archetype filter for the visual
+        /// mesh swap (BUG B fix #101). PackStatMappings deliberately maps aerial_fighter to null
+        /// for STAT injection (AerialSpawnSystem owns behaviour), so the swap resolves the archetype
+        /// here instead.
+        /// </summary>
+        private const string AerialArchetypeTypeName = "DINOForge.Runtime.Aviation.AerialUnitComponent";
+
+        /// <summary>
+        /// Resolves a pack <c>vanilla_mapping</c> to the ECS component-type name the asset swap
+        /// should narrow its EntityQuery to. Wraps <see cref="PackStatMappings.TryResolveMapping"/>
+        /// but supplies the aerial archetype for <c>aerial_fighter</c> (which PackStatMappings
+        /// intentionally leaves null for stat injection). Returns false only when the mapping is
+        /// blank/unknown; a known mapping with a null component type still returns true with a null
+        /// out value.
+        /// </summary>
+        private static bool TryResolveSwapArchetype(string? vanillaMapping, out string? archetypeTypeName)
+        {
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && string.Equals(vanillaMapping, "aerial_fighter", StringComparison.OrdinalIgnoreCase))
+            {
+                archetypeTypeName = AerialArchetypeTypeName;
+                return true;
+            }
+            return PackStatMappings.TryResolveMapping(vanillaMapping, out archetypeTypeName);
+        }
 
         private static volatile bool _resetPending;
         // Iter-144: dump EntityManager shared-component methods once on reflection failure
@@ -427,7 +461,7 @@ namespace DINOForge.Runtime.Bridge
             // which at minimum avoids modifying non-unit geometry in cases like buildings.
             ComponentType[] queryComponents;
             if (!string.IsNullOrWhiteSpace(vanillaMapping)
-                && PackStatMappings.TryResolveMapping(vanillaMapping, out string? archetypeTypeName)
+                && TryResolveSwapArchetype(vanillaMapping, out string? archetypeTypeName)
                 && !string.IsNullOrEmpty(archetypeTypeName))
             {
                 Type? archetypeType = ResolveTypeByName(archetypeTypeName!);
@@ -638,7 +672,7 @@ namespace DINOForge.Runtime.Bridge
             // present we proceed — the archetype-narrowed query is authoritative; substrings are an
             // optional refinement. A populated vanilla_mapping therefore exits DIAGNOSTIC MODE.
             bool hasArchetypeFilter = !string.IsNullOrWhiteSpace(vanillaMapping)
-                && PackStatMappings.TryResolveMapping(vanillaMapping, out string? resolvedArchetype)
+                && TryResolveSwapArchetype(vanillaMapping, out string? resolvedArchetype)
                 && !string.IsNullOrEmpty(resolvedArchetype)
                 && ResolveTypeByName(resolvedArchetype!) != null;
 

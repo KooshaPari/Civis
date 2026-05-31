@@ -490,6 +490,19 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<UiActionResult>("clickUi", new { selector }, ct);
 
     /// <summary>
+    /// Drives Unity's EventSystem pointer lifecycle in-process (hover/press/click), bypassing
+    /// OS input which DINO's EventSystem does not receive. Supply either a <paramref name="target"/>
+    /// selector or screen coordinates (<paramref name="x"/>, <paramref name="y"/>).
+    /// </summary>
+    /// <param name="target">Selector for the target UI node (or null when using coordinates).</param>
+    /// <param name="ev">Pointer event: enter|exit|down|up|click|hover|press.</param>
+    /// <param name="x">Optional screen X coordinate (used when <paramref name="target"/> is null).</param>
+    /// <param name="y">Optional screen Y coordinate.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<UiActionResult> UiPointerAsync(string? target, string ev, float? x = null, float? y = null, CancellationToken ct = default) =>
+        SendRequestAsync<UiActionResult>("uiPointer", new { target, @event = ev, x, y }, ct);
+
+    /// <summary>
     /// Waits for a live Unity UI selector to reach the requested state.
     /// </summary>
     public Task<UiWaitResult> WaitForUiAsync(string selector, string? state = null, int? timeoutMs = null, CancellationToken ct = default) =>

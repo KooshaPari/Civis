@@ -549,6 +549,9 @@ namespace DINOForge.Runtime.Bridge
                     return HandleQueryUi(parameters);
                 case "clickUi":
                     return HandleClickUi(parameters);
+                case "uiPointer":
+                case "ui_pointer":
+                    return HandleUiPointer(parameters);
                 case "waitForUi":
                     return HandleWaitForUi(parameters);
                 case "expectUi":
@@ -902,6 +905,60 @@ namespace DINOForge.Runtime.Bridge
 
             UiActionTrace.Record("click", selector, clickResult, clickResult.MatchedNode);
             return JToken.FromObject(clickResult);
+        }
+
+        /// <summary>
+        /// Drives Unity's EventSystem pointer lifecycle in-process (hover/press/click), bypassing
+        /// OS input which DINO's EventSystem does not receive. Params:
+        /// { target?: selector, x?, y?: screen coords, event: enter|exit|down|up|click|hover|press }.
+        /// Either <c>target</c> (selector) or <c>x</c>+<c>y</c> (screen coords) must be supplied.
+        /// </summary>
+        private JToken HandleUiPointer(JObject? parameters)
+        {
+            string evt = parameters?.Value<string>("event") ?? "click";
+            string? target = parameters?.Value<string>("target");
+            float? x = parameters?.Value<float?>("x");
+            float? y = parameters?.Value<float?>("y");
+
+            System.Threading.Tasks.Task<UiActionResult> task;
+            string selectorLabel;
+            if (!string.IsNullOrWhiteSpace(target))
+            {
+                selectorLabel = target!;
+                task = MainThreadDispatcher.RunOnMainThread(() => UI.EventSystemDriver.Drive(target!, evt));
+            }
+            else if (x.HasValue && y.HasValue)
+            {
+                selectorLabel = $"({x.Value},{y.Value})";
+                task = MainThreadDispatcher.RunOnMainThread(() => UI.EventSystemDriver.DriveAt(x.Value, y.Value, evt));
+            }
+            else
+            {
+                var bad = new UiActionResult
+                {
+                    Success = false,
+                    Selector = string.Empty,
+                    Message = "uiPointer requires either 'target' (selector) or 'x'+'y' (screen coords).",
+                    ActionabilityReason = "missing-target",
+                };
+                UiActionTrace.Record("pointer", string.Empty, bad);
+                return JToken.FromObject(bad);
+            }
+
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            bool completed = task.Wait(MainThreadWaitTimeoutMs); // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            UiActionResult result = completed
+                ? task.Result // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                : new UiActionResult
+                {
+                    Success = false,
+                    Selector = selectorLabel,
+                    Message = "Timed out while driving EventSystem pointer.",
+                    ActionabilityReason = "timeout",
+                };
+
+            UiActionTrace.Record($"pointer:{evt}", selectorLabel, result, result.MatchedNode);
+            return JToken.FromObject(result);
         }
 
         private JToken HandleWaitForUi(JObject? parameters)

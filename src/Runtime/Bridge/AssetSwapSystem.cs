@@ -940,6 +940,18 @@ namespace DINOForge.Runtime.Bridge
                     bool changed = false;
                     if (replacementMesh != null && meshField != null)
                     {
+                        object? currentMeshObj = meshField.GetValue(renderMesh);
+                        if (currentMeshObj is Mesh currentMesh
+                            && !IsSkinnedMeshCompatible(currentMesh, replacementMesh, out string? skinReason))
+                        {
+                            if (_reportedFailures.Add($"skinning:{assetName}"))
+                            {
+                                DebugLog.Write("AssetSwap",
+                                    $"TrySwapRenderMeshFromBundle: skipping entity {entity.Index} — {skinReason}");
+                            }
+                            continue;
+                        }
+
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
@@ -984,6 +996,37 @@ namespace DINOForge.Runtime.Bridge
         }
 
         // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// #991 / #973: DINO infantry uses skinned <see cref="Mesh"/> assets (bindposes + bone weights)
+        /// driven by procedural animation. Swapping a static mesh onto those entities freezes the pose.
+        /// </summary>
+        private static bool IsSkinnedMeshCompatible(Mesh current, Mesh replacement, out string? reason)
+        {
+            reason = null;
+            int currentBindposes = current.bindposes?.Length ?? 0;
+            int replacementBindposes = replacement.bindposes?.Length ?? 0;
+            bool currentSkinned = currentBindposes > 0;
+            bool replacementSkinned = replacementBindposes > 0;
+
+            if (currentSkinned && !replacementSkinned)
+            {
+                reason =
+                    $"vanilla mesh '{current.name}' has {currentBindposes} bindpose(s) but replacement " +
+                    $"'{replacement.name}' is static (0 bindposes) — swap would freeze procedural animation (#973)";
+                return false;
+            }
+
+            if (currentSkinned && replacementSkinned && currentBindposes != replacementBindposes)
+            {
+                reason =
+                    $"bindpose count mismatch for '{replacement.name}': vanilla={currentBindposes} " +
+                    $"replacement={replacementBindposes} — retarget to DINO reference skeleton before swap";
+                return false;
+            }
+
+            return true;
+        }
 
         private static Type? _renderMeshType;
         private static bool _renderMeshResolved;

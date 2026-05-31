@@ -422,8 +422,9 @@ async def game_screenshot(ctx: Context, output_path: str | None = None, pipe_nam
       1. WGC (Windows.Graphics.Capture, via bare-cua-native) — foreground-independent,
          survives hung Unity / DXGI exclusive fullscreen / non-focused windows.
          5s timeout; falls through silently on failure.
-      2. GameControlCli "screenshot" — named pipe → Unity ScreenCapture.CaptureScreenshot
-         (GPU backbuffer). Highest-fidelity path but BLOCKS when the game hangs.
+      2. GameControlCli "screenshot" — named pipe → in-process FrameCapture
+         (synchronous camera RenderTexture readback; #972). Highest-fidelity path,
+         works in menu + in-game + loading, but BLOCKS when the game hangs.
       3. (Future) Last-resort PrintWindow / GDI via HiddenDesktopBackend.
 
     The returned dict includes a `backend` field ("wgc" | "game_control_cli")

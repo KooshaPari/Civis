@@ -1325,27 +1325,30 @@ namespace DINOForge.Runtime.Bridge
             {
                 try
                 {
-                    string? dir = Path.GetDirectoryName(path);
-                    if (dir != null && !Directory.Exists(dir))
-                        Directory.CreateDirectory(dir);
-
-                    UnityEngine.ScreenCapture.CaptureScreenshot(path);
+                    // #972 fix: use FrameCapture (synchronous RenderTexture readback) instead of
+                    // the asynchronous UnityEngine.ScreenCapture.CaptureScreenshot. The legacy call
+                    // only QUEUED a deferred end-of-frame capture and returned Success=true before
+                    // any file was written; DINO's custom PlayerLoop never reliably flushed that
+                    // capture during active gameplay, so "saved" was reported with no PNG on disk.
+                    // FrameCapture renders the active camera into a temp RT, reads it back, encodes
+                    // PNG, and File.WriteAllBytes — the file exists before this returns, in ALL states.
+                    FrameCapture.Result fc = FrameCapture.Capture(path);
+                    if (!fc.Success)
+                    {
+                        DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleScreenshot FrameCapture failed for '{path}': {fc.Error}");
+                    }
 
                     return new ScreenshotResult
                     {
-                        Success = true,
+                        Success = fc.Success,
                         Path = path,
-                        Width = Screen.width,
-                        Height = Screen.height
+                        Width = fc.Width,
+                        Height = fc.Height
                     };
                 }
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): structured logging instead of catch-swallow-default.
-                    // Surface the failure path via WriteDebug (full Exception.ToString() per Pattern #96).
-                    // ScreenshotResult.Success=false is preserved as the wire signal; the DTO is shared
-                    // with Bridge.Protocol so we don't add a new field here, but the runtime log
-                    // captures the exception type, message, and stack for diagnosis.
                     DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleScreenshot failed for '{path}' ({ex.GetType().Name}): {ex}");
                     return new ScreenshotResult
                     {

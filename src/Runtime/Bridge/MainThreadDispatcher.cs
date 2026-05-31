@@ -38,6 +38,20 @@ namespace DINOForge.Runtime.Bridge
         public static bool IsPumpAlive => _pumpIsAlive;
 
         /// <summary>
+        /// Managed thread id of the Unity main thread, captured the first time the queue is
+        /// drained (which always happens on the main thread). 0 until first observed.
+        /// </summary>
+        private static volatile int _mainThreadId;
+
+        /// <summary>
+        /// True when the caller is executing on the Unity main thread. Used by callers (e.g.
+        /// <see cref="FrameCapture"/>) to avoid re-marshalling work already on the main thread.
+        /// Returns false until the main thread has been observed at least once.
+        /// </summary>
+        public static bool IsMainThread =>
+            _mainThreadId != 0 && Thread.CurrentThread.ManagedThreadId == _mainThreadId;
+
+        /// <summary>
         /// Called by the main-thread pump owner (KeyInputSystem.OnUpdate) on every tick
         /// to declare the pump is healthy. Cheap volatile write.
         /// </summary>
@@ -58,8 +72,11 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public static void DrainQueue()
         {
-            // Drains imply we're being ticked on the main thread — re-arm the alive flag.
+            // Drains imply we're being ticked on the main thread — re-arm the alive flag
+            // and record the main thread id (used by IsMainThread).
             _pumpIsAlive = true;
+            if (_mainThreadId == 0)
+                _mainThreadId = Thread.CurrentThread.ManagedThreadId;
 
             int processed = 0;
             while (_queue.TryDequeue(out Action? action))

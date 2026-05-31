@@ -144,6 +144,30 @@ namespace DINOForge.Runtime.UI
                 target.colors = donor.colors;
                 target.spriteState = donor.spriteState;
                 target.animationTriggers = donor.animationTriggers;
+
+                // #R1: carry the donor's background Image (sprite + material + type) onto the
+                // clone's matching graphic so normal/hover/press render like a real native item.
+                // Without this the clone keeps a flat default Image and "acts like the cursor is
+                // never over it". Resolve the clone's targetGraphic from the donor's graphic so
+                // ColorTint/SpriteSwap transitions have a real graphic to drive.
+                Image? donorImg = donor.targetGraphic as Image;
+                if (donorImg != null)
+                {
+                    Image? targetImg = target.targetGraphic as Image
+                                       ?? target.GetComponent<Image>()
+                                       ?? target.GetComponentInChildren<Image>(true);
+                    if (targetImg != null)
+                    {
+                        targetImg.sprite = donorImg.sprite;
+                        targetImg.material = donorImg.material;
+                        targetImg.type = donorImg.type;
+                        targetImg.color = donorImg.color;
+                        targetImg.pixelsPerUnitMultiplier = donorImg.pixelsPerUnitMultiplier;
+                        targetImg.preserveAspect = donorImg.preserveAspect;
+                        targetImg.raycastTarget = true; // must receive pointer events for hover/press
+                        target.targetGraphic = targetImg;
+                    }
+                }
             }
             catch { /* safe-swallow: visual-state copy is best-effort; missing/destroyed donor is non-fatal */ }
         }

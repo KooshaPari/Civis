@@ -82,13 +82,28 @@ namespace DINOForge.Runtime.UI
         private float _shownProgress;
         private bool _fadingOut;
         private bool _fadeRequested;
+        private bool _animating;
         private float _elapsed;
         private ManualLogSource? _log;
 
-        // Minimum on-screen time before a fade-out actually starts, so the branded
-        // screen never just "flashes" when packs load quickly (UX) and is reliably
-        // observable. Pack loading often completes in <2s at the main menu.
-        private const float MinVisibleSeconds = 12f;
+        // EPIC-027 BUG B: when no real pack/scene progress has been reported yet we run an
+        // INDETERMINATE animation — the bar creeps forward continuously (never frozen, so it
+        // never reads as a "fake static skeleton") but asymptotically approaches, and never
+        // reaches, a ceiling below 100%. Real progress (SetPackProgress) overrides it; the
+        // bar only fills to 100% when BeginFadeOut() confirms the load is actually done.
+        private bool _hasRealProgress;
+        private float _indeterminate;            // 0..1 eased ramp driving the indeterminate cap
+        private float _shimmerPhase;             // moving highlight so the bar always looks alive
+        private Image? _progressShimmer;
+        private const float IndeterminateCeiling = 0.92f; // never auto-fill past this without a real signal
+
+        // Minimum on-screen time before a fade-out actually starts, so the branded screen never
+        // just "flashes" when packs load quickly (UX) and is reliably observable. Kept short: the
+        // load is covered for its WHOLE duration because BeginFadeOut() is only called once the
+        // MainMenu scene + engine UI are actually ready (see Plugin.OnSceneLoaded / RunMainMenuInit).
+        // The old 12s value made the branded screen linger ~20s as a static image after a fast
+        // pack-load — that was the reported "fake static skeleton" symptom (BUG B).
+        private const float MinVisibleSeconds = 1.5f;
 
         /// <summary>Creates the themed loading screen on the given parent (DINOForge_Root).</summary>
         public static LoadingScreenController? Create(GameObject parent, string packsDir, ManualLogSource? log)
@@ -212,6 +227,19 @@ namespace DINOForge.Runtime.UI
             _progressFill.color = theme.Accent;
             SetFillAmount(0f);
 
+            // Moving highlight that travels along the track so the bar always reads as LIVE
+            // (alive even while indeterminate). Sits on top of the track, clamped to the track width.
+            var shimmerGo = new GameObject("ProgressShimmer");
+            shimmerGo.transform.SetParent(track.transform, false);
+            RectTransform shimRt = shimmerGo.AddComponent<RectTransform>();
+            shimRt.anchorMin = new Vector2(0f, 0f);
+            shimRt.anchorMax = new Vector2(0f, 1f);
+            shimRt.pivot = new Vector2(0.5f, 0.5f);
+            shimRt.sizeDelta = new Vector2(90f, 0f);
+            _progressShimmer = shimmerGo.AddComponent<Image>();
+            _progressShimmer.color = new Color(1f, 1f, 1f, 0.22f);
+            _progressShimmer.raycastTarget = false;
+
             _progressLabel = CreateText(card.transform, "ProgressLabel", "Initializing…", arial, 15, FontStyle.Normal,
                 new Color(0.78f, 0.78f, 0.78f, 1f), 28f);
 
@@ -257,15 +285,27 @@ namespace DINOForge.Runtime.UI
         public void EnsureVisible()
         {
             if (this == null || _canvasGroup == null) return;
+            // A new load window has begun (e.g. InitialGameLoader re-entered): clear any pending
+            // fade and resume the indeterminate animation so we cover this load fully with a LIVE
+            // overlay — preventing the native DINO loader from flashing through (BUG B).
             _fadingOut = false;
+            _fadeRequested = false;
+            _hasRealProgress = false;
             _canvasGroup.alpha = 1f;
             if (_canvas != null) _canvas.enabled = true;
+            // If the animation loop had exited (a fade had started but not yet completed),
+            // restart it so the bar/shimmer resume animating for the new load window.
+            if (!_animating && isActiveAndEnabled) StartCoroutine(AnimationLoop());
         }
 
         /// <summary>Updates the progress bar + label as packs are enumerated.</summary>
         public void SetPackProgress(int current, int total, string packName)
         {
-            _targetProgress = total > 0 ? Mathf.Clamp01((float)current / total) : 0f;
+            if (total > 0)
+            {
+                _hasRealProgress = true;
+                _targetProgress = Mathf.Clamp01((float)current / total);
+            }
             if (_progressLabel != null)
                 _progressLabel.text = total > 0 ? $"Loading pack {current} / {total}: {packName}" : packName;
         }
@@ -303,6 +343,7 @@ namespace DINOForge.Runtime.UI
 
         private IEnumerator AnimationLoop()
         {
+            _animating = true;
             var wait = new WaitForEndOfFrame();
             while (!_fadingOut)
             {
@@ -333,12 +374,38 @@ namespace DINOForge.Runtime.UI
                 if (_spinner != null)
                     _spinner.rectTransform.localRotation = Quaternion.Euler(0f, 0f, _spinnerAngle);
 
-                // Smooth progress
-                _shownProgress = Mathf.MoveTowards(_shownProgress, _targetProgress, dt * 0.6f);
+                // Progress target: real pack/scene progress when reported, otherwise an
+                // INDETERMINATE ramp that eases toward (but never reaches) IndeterminateCeiling.
+                // This keeps the bar perpetually moving during the real load instead of sitting
+                // frozen as a static skeleton (BUG B). A pending fade (load done) snaps to 100%.
+                float target;
+                if (_fadeRequested)
+                {
+                    target = 1f;
+                }
+                else if (_hasRealProgress)
+                {
+                    target = _targetProgress;
+                }
+                else
+                {
+                    // Exponential ease-out toward the ceiling; slows as it approaches.
+                    _indeterminate = Mathf.Lerp(_indeterminate, 1f, 1f - Mathf.Exp(-dt * 0.55f));
+                    target = _indeterminate * IndeterminateCeiling;
+                }
+
+                // Smooth shown progress toward the target (faster when snapping to 100% on done).
+                float rate = _fadeRequested ? 2.0f : 0.6f;
+                _shownProgress = Mathf.MoveTowards(_shownProgress, target, dt * rate);
                 SetFillAmount(_shownProgress);
+
+                // Travelling highlight along the filled portion — always-alive cue.
+                _shimmerPhase = (_shimmerPhase + dt * 0.9f) % 1f;
+                UpdateShimmer(_shownProgress, _shimmerPhase);
 
                 yield return wait;
             }
+            _animating = false;
         }
 
         private IEnumerator FadeOutRoutine()
@@ -624,6 +691,19 @@ namespace DINOForge.Runtime.UI
             rt.anchorMax = new Vector2(Mathf.Clamp01(amount), 1f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>Slides the highlight across the filled portion of the bar so it always looks live.</summary>
+        private void UpdateShimmer(float fillAmount, float phase)
+        {
+            if (_progressShimmer == null) return;
+            RectTransform parent = _progressShimmer.rectTransform.parent as RectTransform;
+            float trackWidth = parent != null ? parent.rect.width : 640f;
+            float filledWidth = Mathf.Max(0f, trackWidth * Mathf.Clamp01(fillAmount));
+            // Hide the highlight when there is essentially no fill yet.
+            _progressShimmer.enabled = filledWidth > 12f;
+            RectTransform rt = _progressShimmer.rectTransform;
+            rt.anchoredPosition = new Vector2(Mathf.Lerp(0f, filledWidth, phase), 0f);
         }
 
         /// <summary>Builds a simple radial spinner texture (arc of dots) tinted with the accent color.</summary>

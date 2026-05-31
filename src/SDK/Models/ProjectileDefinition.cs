@@ -45,6 +45,20 @@ namespace DINOForge.SDK.Models
         public string? ImpactEffect { get; set; }
 
         /// <summary>
+        /// Optional firing faction id (e.g. "republic", "cis"). Drives the in-flight
+        /// blaster-bolt emission colour assigned by the runtime projectile recolour system.
+        /// </summary>
+        [YamlMember(Alias = "faction")]
+        public string? Faction { get; set; }
+
+        /// <summary>
+        /// Optional hex colour (e.g. "#3399FF") for the glowing energy bolt. When present it
+        /// overrides the runtime default colour for this projectile's <see cref="Faction"/>.
+        /// </summary>
+        [YamlMember(Alias = "bolt_color")]
+        public string? BoltColor { get; set; }
+
+        /// <summary>
         /// Validates that the projectile definition is semantically valid.
         /// </summary>
         public ValidationResult Validate()

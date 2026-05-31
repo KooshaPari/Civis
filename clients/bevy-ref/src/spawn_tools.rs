@@ -21,6 +21,8 @@ use bevy::prelude::*;
 
 use crate::minimap::MinimapCamera;
 use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
+use crate::voxel_sim::VoxelSimState;
+use civ_voxel::material::AIR;
 
 /// Civilian capsule radius (world units).
 const CIVILIAN_RADIUS: f32 = 1.4;
@@ -287,6 +289,10 @@ fn update_cursor_marker(
     cameras: Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
     over_ui: Res<PointerOverUi>,
     mut marker: ResMut<CursorMarker>,
+    // Present only when `VoxelSimPlugin` is active (the `voxel` feature). When
+    // it is, clicks must raycast the VISIBLE voxel surface, not the analytic
+    // heightmap (which is no longer rendered under `voxel`).
+    voxel: Option<Res<VoxelSimState>>,
 ) {
     if over_ui.0 {
         marker.visible = false;
@@ -294,7 +300,7 @@ fn update_cursor_marker(
         return;
     }
     let had_hit = marker.position.is_some();
-    let hit = cursor_terrain_hit(&windows, &cameras);
+    let hit = cursor_terrain_hit(&windows, &cameras, voxel.as_deref());
     log_hit_transition(had_hit, hit.is_some());
     marker.position = hit;
     marker.visible = hit.is_some();
@@ -317,12 +323,56 @@ fn log_hit_transition(prev: bool, now: bool) {
 fn cursor_terrain_hit(
     windows: &Query<&Window>,
     cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
+    voxel: Option<&VoxelSimState>,
 ) -> Option<Vec3> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
     let (camera, camera_transform) = cameras.single().ok()?;
     let ray = camera.viewport_to_world(camera_transform, cursor).ok()?;
+    // Under the voxel feature the chunk meshes are the visible world, so the
+    // click must hit a real voxel cell. Fall back to the heightmap analytic
+    // surface only when no voxel grid is loaded (heightmap sandbox build).
+    if let Some(state) = voxel {
+        if !state.grid.cells.is_empty() {
+            return raycast_to_voxel(&state.grid, ray.origin, ray.direction.as_vec3());
+        }
+    }
     raycast_to_terrain(ray.origin, ray.direction.as_vec3())
+}
+
+/// March a ray through the dense voxel grid (world-space == grid coords; chunk
+/// meshes are spawned at raw cell offsets with no centring) and return the
+/// surface point of the first non-air cell hit, or `None` if the ray misses.
+fn raycast_to_voxel(grid: &civ_voxel::fluid_ca::CaGrid, origin: Vec3, direction: Vec3) -> Option<Vec3> {
+    let dir = direction.normalize_or_zero();
+    if dir == Vec3::ZERO {
+        return None;
+    }
+    let dims = grid.dims;
+    let max_axis = dims[0].max(dims[1]).max(dims[2]) as f32;
+    let max_distance = max_axis * 4.0 + 64.0;
+    // Fine fixed-step DDA: 0.25-cell steps keep thin surfaces from being
+    // skipped while staying cheap for a single click-frame query.
+    let step = 0.25_f32;
+    let mut t = 0.0_f32;
+    while t <= max_distance {
+        let p = origin + dir * t;
+        let (x, y, z) = (p.x.floor(), p.y.floor(), p.z.floor());
+        if x >= 0.0
+            && y >= 0.0
+            && z >= 0.0
+            && (x as usize) < dims[0]
+            && (y as usize) < dims[1]
+            && (z as usize) < dims[2]
+            && grid.get(x as usize, y as usize, z as usize) != AIR
+        {
+            // Return the entry point on the cell (where the ray first touched
+            // solid) so spawned actors seat on the surface, not inside it.
+            return Some(p);
+        }
+        t += step;
+    }
+    None
 }
 
 /// Translate a left-click (when not over the HUD) into the active tool's

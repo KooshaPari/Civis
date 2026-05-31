@@ -24,9 +24,18 @@ const ICON_PNG: &[u8] = include_bytes!("../assets/icon/icon-64.png");
 /// rather than silently ignored, but it is non-fatal — the app still runs with
 /// the platform default icon.
 fn set_window_icon(
-    windows: NonSend<WinitWindows>,
+    // `WinitWindows` is a non-send resource that only exists once winit has
+    // created the windowing backend. On some startup orderings (and in headless
+    // runs) it is absent on the first Startup tick; a bare `NonSend` param then
+    // FAILS PARAMETER VALIDATION and the default Bevy error handler panics the
+    // whole app (crashing before the world renders). Take it as `Option` and
+    // no-op when missing, per Bevy's own guidance for this exact error.
+    windows: Option<NonSend<WinitWindows>>,
     primary: Query<Entity, With<PrimaryWindow>>,
 ) {
+    let Some(windows) = windows else {
+        return;
+    };
     let Ok(primary_entity) = primary.single() else {
         return;
     };

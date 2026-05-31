@@ -80,21 +80,59 @@ pub fn setup_voxel_world(
     state.tick = 0;
     state.accumulator = 0.0;
     state.chunk_entities.clear();
-    reframe_camera_once(
-        &mut rig,
-        Vec3::new(
-            generated.dims[0] as f32 * 0.5,
-            generated.dims[1] as f32 * 0.5,
-            generated.dims[2] as f32 * 0.5,
-        ),
+
+    // --- Diagnostic: world dims + non-air cell census so we can prove the
+    // generator actually filled solid material (an empty grid = invisible). ---
+    let dims = state.grid.dims;
+    let total_cells = dims[0] * dims[1] * dims[2];
+    let mut non_air = 0usize;
+    let mut max_solid_y = 0usize;
+    for z in 0..dims[2] {
+        for y in 0..dims[1] {
+            for x in 0..dims[0] {
+                if state.grid.get(x, y, z) != AIR {
+                    non_air += 1;
+                    if y > max_solid_y {
+                        max_solid_y = y;
+                    }
+                }
+            }
+        }
+    }
+    info!(
+        "[voxel] world dims={:?} total_cells={} non_air={} ({:.1}%) max_solid_y={} AABB=(0,0,0)..({},{},{})",
+        dims,
+        total_cells,
+        non_air,
+        100.0 * non_air as f32 / total_cells.max(1) as f32,
+        max_solid_y,
+        dims[0],
+        dims[1],
+        dims[2],
+    );
+
+    let target = Vec3::new(
+        generated.dims[0] as f32 * 0.5,
+        generated.dims[1] as f32 * 0.5,
+        generated.dims[2] as f32 * 0.5,
+    );
+    reframe_camera_once(&mut rig, target);
+    info!(
+        "[voxel] camera reframed target={:?} yaw={:.2} pitch={:.2} distance={:.1}",
+        rig.target, rig.yaw, rig.pitch, rig.distance
     );
     let camera_eye = cameras.iter().next().map(|t| t.translation.to_array());
+    info!("[voxel] camera_eye at spawn time = {:?}", camera_eye);
     state.chunk_entities = spawn_chunk_meshes(
         &mut commands,
         &mut meshes,
         &mut materials,
         &state.grid,
         camera_eye,
+    );
+    info!(
+        "[voxel] spawned {} chunk-submesh entities",
+        state.chunk_entities.len()
     );
 }
 

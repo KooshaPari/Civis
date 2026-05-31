@@ -15,6 +15,34 @@ use civ_bevy_ref::{
 };
 
 fn main() {
+    // Persist any panic to `civ-panic.log` in the working dir so a crash is
+    // captured even when launched from a shortcut with no console (per the
+    // "fail loudly, never silently" stance). Chains to the default hook.
+    {
+        let default_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let loc = info
+                .location()
+                .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+                .unwrap_or_else(|| "<unknown>".to_string());
+            let msg = info
+                .payload()
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| info.payload().downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "<non-string panic>".to_string());
+            use std::io::Write as _;
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("civ-panic.log")
+            {
+                let _ = f.write_all(format!("PANIC at {loc}: {msg}\n").as_bytes());
+            }
+            default_hook(info);
+        }));
+    }
+
     let attach_mode = resolve_attach_mode_from_env();
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),

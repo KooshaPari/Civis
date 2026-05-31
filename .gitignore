@@ -57,3 +57,4 @@ vendor/phenodocs/node_modules/
 target-ci/
 .worker_tasks/
 .worker_logs/
+/dist/

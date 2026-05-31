@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Star Wars live mesh-swap exits DIAGNOSTIC MODE (#964).** `AssetSwapSystem.TrySwapRenderMeshFromBundle` previously referenced a non-existent `BundleToVanillaMeshMap` and tried to match optional mesh-name substrings by *bundle filename*, so every Star Wars bundle fell into DIAGNOSTIC MODE and no entity swap ran. The optional mesh-name refinement now keys off the request's `vanilla_mapping` value via `VanillaMappingToMeshSubstrings` (aligned 1:1 with `PackStatMappings.VanillaMappingToComponentType`). DIAGNOSTIC MODE is now entered only when there is **no** targeting signal at all — neither a resolved archetype filter nor mesh-name substrings — so a populated `vanilla_mapping` (already present on all 30 SW units; aerial intentionally skipped) lets the archetype-narrowed swap proceed. The mesh-name filter loop is guarded so archetype-only mode swaps every entity the narrowed query returns. Mesh/material lookup remains robust via `ResolveReplacementAssets` (exact-name → prefab renderer → `LoadAllAssets<Mesh>/<Material>` fallback — never the bundle key). Key audit: all 30 SW unit `visual_asset` keys resolve in `addressables.yaml`; 14 reference real (>40KB) bundles. Runtime builds netstandard2.0 exit 0; all 31 AssetSwap tests pass.
+
 ### Added
 - **Functional aerial content — airports + airplanes (declarative, pack-based).** Added the core aerial gameplay feature on top of the existing Aviation ECS systems (`AerialMovementSystem` / `AerialTargetingSystem` / `AerialSpawnSystem`, driven by `AerialUnitComponent`).
   - **Generic airports (`packs/warfare-aerial/buildings/airfield_buildings.yaml`)** — new `airport` (produces Fighter + Interceptor planes), `hangar` (produces Bomber planes, repair bay), and `landing_pad` (produces Interceptors + integrated `AntiAir` defense). Each declares a `production:` block linking it to its airplane units.

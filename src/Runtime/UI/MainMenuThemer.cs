@@ -22,6 +22,7 @@ namespace DINOForge.Runtime
         private readonly ManualLogSource _log;
         private readonly string _packsDirectory;
         private bool _applied;
+        private ThemeData? _activeTheme;
 
         public bool IsApplied => _applied;
 
@@ -59,7 +60,24 @@ namespace DINOForge.Runtime
             if (best == null) return false;
 
             var theme = ReadThemeFromDisk(best.Id) ?? new ThemeData { Title = best.Name };
+            _activeTheme = theme;
             return ApplyToMainMenu(theme, best);
+        }
+
+        public bool TryGetActiveTheme(out ThemeSnapshot theme)
+        {
+            ThemeData? active = _activeTheme;
+            if (active == null)
+            {
+                theme = default;
+                return false;
+            }
+
+            theme = new ThemeSnapshot(
+                active.Title ?? string.Empty,
+                active.PrimaryColor,
+                active.TextColor);
+            return true;
         }
 
         private ThemeData? ReadThemeFromDisk(string packId)
@@ -286,6 +304,20 @@ namespace DINOForge.Runtime
             public string? AccentColor = "#C0392B";
             public string TextColor = "#FFE81F";
             public string? BackgroundTint;
+        }
+
+        internal readonly struct ThemeSnapshot
+        {
+            public ThemeSnapshot(string title, string primaryColor, string textColor)
+            {
+                Title = title;
+                PrimaryColor = primaryColor;
+                TextColor = textColor;
+            }
+
+            public string Title { get; }
+            public string PrimaryColor { get; }
+            public string TextColor { get; }
         }
     }
 }

@@ -1356,7 +1356,12 @@ namespace DINOForge.Runtime
                         {
                             _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
                             var packInfos = _modPlatform.GetLoadedPackDisplayInfos();
-                            _mainMenuThemer.TryApplyTheme(packInfos);
+                            if (_mainMenuThemer.TryApplyTheme(packInfos) && _mainMenuThemer.TryGetActiveTheme(out MainMenuThemer.ThemeSnapshot theme))
+                            {
+                                Color primary = Color.white;
+                                ColorUtility.TryParseHtmlString(theme.PrimaryColor, out primary);
+                                _dfCanvas?.SetIndicatorTheme(theme.Title, primary);
+                            }
                         }
                         catch (Exception themeEx)
                         {
@@ -1420,8 +1425,12 @@ namespace DINOForge.Runtime
                         try
                         {
                             var packInfos = _modPlatform.GetLoadedPackDisplayInfos();
-                            if (packInfos.Count > 0)
-                                _mainMenuThemer.TryApplyTheme(packInfos);
+                            if (packInfos.Count > 0 && _mainMenuThemer.TryApplyTheme(packInfos) && _mainMenuThemer.TryGetActiveTheme(out MainMenuThemer.ThemeSnapshot theme))
+                            {
+                                Color primary = Color.white;
+                                ColorUtility.TryParseHtmlString(theme.PrimaryColor, out primary);
+                                _dfCanvas?.SetIndicatorTheme(theme.Title, primary);
+                            }
                         }
                         catch { /* safe-swallow: theme retry is best-effort */ }
                     }

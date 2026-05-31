@@ -322,6 +322,17 @@ namespace DINOForge.Runtime
                 _log.LogError($"[ModPlatform] Failed to register PackUnitSpawner: {ex}");
             }
 
+            // Register the BuildMenuInjectionSystem (aliases pack buildings into the live build menu)
+            try
+            {
+                world.GetOrCreateSystem<BuildMenuInjectionSystem>();
+                _log.LogInfo("[ModPlatform] BuildMenuInjectionSystem registered.");
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[ModPlatform] BuildMenuInjectionSystem failed: {ex}");
+            }
+
             // Register the WaveInjector
             try
             {
@@ -741,6 +752,18 @@ namespace DINOForge.Runtime
             catch (Exception ex)
             {
                 _log.LogError($"[ModPlatform] Failed to initialize AerialSpawnSystem: {ex}");
+            }
+
+            // Initialize BuildMenuInjector so pack buildings get aliased into DINO's live
+            // build menu (BuildMenuInjectionSystem runs the actual injection at world-ready).
+            try
+            {
+                DINOForge.Runtime.Bridge.BuildMenuInjector.Initialize(_registryManager);
+                _log.LogInfo("[ModPlatform] BuildMenuInjector initialized with building registry.");
+            }
+            catch (Exception ex)
+            {
+                _log.LogError($"[ModPlatform] Failed to initialize BuildMenuInjector: {ex}");
             }
 
             // Apply stat overrides from loaded units

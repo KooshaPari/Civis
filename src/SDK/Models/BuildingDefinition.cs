@@ -29,6 +29,20 @@ namespace DINOForge.SDK.Models
         [YamlMember(Alias = "building_type")]
         public string? BuildingType { get; set; }
 
+        /// <summary>
+        /// Optional vanilla DINO <c>BuildingType</c> enum name this pack building aliases
+        /// into the live build menu (e.g. "Stables", "Tower", "Port"). DINO's
+        /// <c>BuildingType</c> enum is a closed compiled set — a genuinely new building
+        /// type cannot be added to the native build menu at runtime, so pack buildings ride
+        /// on an existing buildable slot, then get reskinned (mesh-swap) and re-targeted
+        /// (UnitsShop production) by the runtime. When omitted, the runtime
+        /// <c>BuildMenuInjector</c> auto-maps by <see cref="BuildingType"/>
+        /// (Production→Stables, Defense→Tower, naval→Port). See
+        /// docs/sessions/dino-build-catalog-20260530.md.
+        /// </summary>
+        [YamlMember(Alias = "build_alias")]
+        public string? BuildAlias { get; set; }
+
         /// <summary>Resource cost to construct this building.</summary>
         [YamlMember(Alias = "cost")]
         public ResourceCost Cost { get; set; } = new ResourceCost();

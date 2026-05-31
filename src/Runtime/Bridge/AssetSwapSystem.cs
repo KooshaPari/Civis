@@ -76,22 +76,46 @@ namespace DINOForge.Runtime.Bridge
         private const int MaxSwapsPerBundle = 500;
 
         /// <summary>
-        /// Maps mod bundle name prefixes to vanilla mesh name substrings for selective matching.
-        /// Key = substring found in the bundle filename (case-insensitive).
-        /// Value = list of vanilla mesh name substrings that should be replaced.
-        /// When a bundle's filename contains the key, only entities whose current mesh name
-        /// contains one of the value substrings will be swapped.
+        /// Declarative map from a pack <c>vanilla_mapping</c> value to the vanilla DINO mesh-name
+        /// substrings it should replace. This is the real "bundle → vanilla mesh" mapping that exits
+        /// DIAGNOSTIC MODE: the source of truth is the pack's <c>vanilla_mapping</c> field on every
+        /// unit/building definition (carried through to <see cref="AssetSwapRequest.VanillaMapping"/>),
+        /// NOT a hardcoded bundle-filename table.
         ///
-        /// This mapping is populated after the first diagnostic dump reveals vanilla mesh names.
-        /// Until the mapping is known, the system runs in DIAGNOSTIC MODE (logs mesh names, skips swap).
+        /// Targeting works in two layers:
+        ///   1. PRIMARY (authoritative): the ECS entity query is already narrowed to the archetype
+        ///      component resolved from <c>vanilla_mapping</c> (e.g. militia → Components.MeleeUnit)
+        ///      via <see cref="PackStatMappings.TryResolveMapping"/>. This is what actually scopes
+        ///      the swap to the correct vanilla units.
+        ///   2. SECONDARY (optional refinement): the substrings below let the swap further filter by
+        ///      the live mesh name when DINO's vanilla mesh names are known. When a mapping has no
+        ///      substrings (or the value is empty) the swap relies on the archetype filter alone and
+        ///      still proceeds (no longer DIAGNOSTIC MODE).
+        ///
+        /// Keyed by <c>vanilla_mapping</c> so it stays declarative and pack-driven: adding a new
+        /// mapping value only requires a single entry here, and packs reference it by name.
         /// </summary>
-        private static readonly Dictionary<string, string[]> BundleToVanillaMeshMap =
+        private static readonly Dictionary<string, string[]> VanillaMappingToMeshSubstrings =
             new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                // Populated after diagnostic run identifies vanilla mesh names.
-                // Examples (to be filled in after reading the diagnostic log):
-                // { "clone-trooper",  new[] { "Swordsman", "soldier", "melee" } },
-                // { "clone-barracks", new[] { "Barracks", "barracks" } },
+                // Melee / infantry archetypes (mapped to Components.MeleeUnit).
+                { "militia",         new[] { "Militia", "militia", "Peasant", "peasant" } },
+                { "line_infantry",   new[] { "Swordsman", "swordsman", "Soldier", "soldier", "Infantry", "infantry" } },
+                { "heavy_infantry",  new[] { "Heavy", "heavy", "Armored", "armored" } },
+                { "elite",           new[] { "Elite", "elite", "Knight", "knight", "Veteran", "veteran" } },
+                { "hero",            new[] { "Hero", "hero", "Champion", "champion", "Lord", "lord" } },
+                { "wall_defender",   new[] { "Wall", "wall", "Guard", "guard", "Defender", "defender" } },
+                { "support",         new[] { "Support", "support", "Healer", "healer", "Medic", "medic", "Priest", "priest" } },
+                { "special",         new[] { "Special", "special", "Mage", "mage" } },
+
+                // Ranged archetypes (mapped to Components.RangeUnit).
+                { "ranged_infantry", new[] { "Archer", "archer", "Ranged", "ranged", "Crossbow", "crossbow", "Gun", "gun" } },
+                { "skirmisher",      new[] { "Skirmisher", "skirmisher", "Slinger", "slinger", "Scout", "scout" } },
+                { "scout",           new[] { "Scout", "scout", "Recon", "recon" } },
+
+                // Mounted / mechanised archetypes.
+                { "cavalry",         new[] { "Cavalry", "cavalry", "Rider", "rider", "Horse", "horse", "Mount", "mount" } },
+                { "siege",           new[] { "Siege", "siege", "Catapult", "catapult", "Trebuchet", "trebuchet", "Ram", "ram", "Cannon", "cannon" } },
             };
 
         private static volatile bool _resetPending;
@@ -366,46 +390,19 @@ namespace DINOForge.Runtime.Bridge
             AssetBundle? bundle = LoadBundle(modBundlePath);
             if (bundle == null) return false;
 
-            Mesh? replacementMesh = bundle.LoadAsset<Mesh>(assetName);
-            Material? replacementMat = bundle.LoadAsset<Material>(assetName);
-
-            // Bundles built from Unity prefabs store a GameObject hierarchy, not a bare Mesh/Material.
-            // Fall back to loading the prefab and extracting its mesh and material.
-            // Prefer SkinnedMeshRenderer (animated characters) so mesh+material always come from
-            // the same component — avoids mismatches when both SMR and static MF/MR exist.
-            if (replacementMesh == null && replacementMat == null)
-            {
-                GameObject? prefab = bundle.LoadAsset<GameObject>(assetName);
-                if (prefab != null)
-                {
-                    SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>();
-                    if (smr != null && smr.sharedMesh != null)
-                    {
-                        replacementMesh = smr.sharedMesh;
-                        if (smr.sharedMaterials.Length > 0)
-                            replacementMat = smr.sharedMaterials[0];
-                    }
-                    else
-                    {
-                        // Static mesh fallback — extract from the same object to stay consistent.
-                        MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>();
-                        if (mf != null)
-                            replacementMesh = mf.sharedMesh;
-
-                        MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>();
-                        if (mr != null && mr.sharedMaterials.Length > 0)
-                            replacementMat = mr.sharedMaterials[0];
-                    }
-
-                    if (replacementMesh != null || replacementMat != null)
-                        DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: extracted from prefab '{assetName}'");
-                }
-            }
+            // #101 fix (Bug B): the mesh/material/prefab inside the bundle is named after the
+            // source FBX/prefab (e.g. "sw-cis-commando-droid"), NOT after the bundle key / asset
+            // address (e.g. "sw-bx-commando-droid"). Looking up by request.AssetName therefore
+            // returns null for most bundles. Resolve the replacement robustly by loading ALL assets
+            // of each type and taking the first viable one, instead of trusting the key string.
+            (Mesh? replacementMesh, Material? replacementMat) = ResolveReplacementAssets(bundle, assetName);
 
             if (replacementMesh == null && replacementMat == null)
             {
                 DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: no Mesh/Material named '{assetName}' in bundle");
+                    $"TrySwapRenderMeshFromBundle: no usable Mesh/Material/prefab found in bundle " +
+                    $"'{Path.GetFileName(modBundlePath)}' (requested asset='{assetName}'). " +
+                    "Bundle may be a stub or contain no renderable geometry.");
                 return false;
             }
 
@@ -603,29 +600,41 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            // ---- SELECTIVE SWAP: match by mesh name ----
-            // Determine which vanilla mesh names this bundle should target.
+            // ---- SELECTIVE SWAP ----
+            // The PRIMARY (authoritative) targeting was already applied above: the EntityQuery
+            // was narrowed to the archetype component resolved from vanilla_mapping. The optional
+            // SECONDARY refinement below further filters by live mesh name when DINO's vanilla
+            // mesh names for this mapping are known (VanillaMappingToMeshSubstrings, keyed by the
+            // pack's vanilla_mapping value — NOT by bundle filename).
             string bundleFileName = Path.GetFileNameWithoutExtension(modBundlePath) ?? "";
             string[]? targetMeshSubstrings = null;
-            foreach (var kvp in BundleToVanillaMeshMap)
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && VanillaMappingToMeshSubstrings.TryGetValue(vanillaMapping!, out string[]? substrings)
+                && substrings != null
+                && substrings.Length > 0)
             {
-                if (bundleFileName.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    targetMeshSubstrings = kvp.Value;
-                    DebugLog.Write("AssetSwap",
-                        $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' matched mapping key '{kvp.Key}' " +
-                        $"→ targeting mesh substrings: [{string.Join(", ", kvp.Value)}]");
-                    break;
-                }
+                targetMeshSubstrings = substrings;
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' vanilla_mapping='{vanillaMapping}' " +
+                    $"→ refining by mesh substrings: [{string.Join(", ", substrings)}]");
             }
 
-            // If no mapping exists yet, we are in DIAGNOSTIC MODE — skip actual swaps.
-            if (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0)
+            // DIAGNOSTIC MODE only when there is NO targeting signal at all: no archetype filter
+            // (vanilla_mapping absent/unresolved) AND no mesh-name substrings. With either signal
+            // present we proceed — the archetype-narrowed query is authoritative; substrings are an
+            // optional refinement. A populated vanilla_mapping therefore exits DIAGNOSTIC MODE.
+            bool hasArchetypeFilter = !string.IsNullOrWhiteSpace(vanillaMapping)
+                && PackStatMappings.TryResolveMapping(vanillaMapping, out string? resolvedArchetype)
+                && !string.IsNullOrEmpty(resolvedArchetype)
+                && ResolveTypeByName(resolvedArchetype!) != null;
+
+            if (!hasArchetypeFilter && (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0))
             {
                 DebugLog.Write("AssetSwap",
-                    $"[DIAGNOSTIC MODE] No BundleToVanillaMeshMap entry for bundle '{bundleFileName}'. " +
-                    $"Skipping entity swap for {entities.Length} entities. " +
-                    $"Check dinoforge_debug.log for '[DIAGNOSTIC] Vanilla mesh name survey' to build the mapping.");
+                    $"[DIAGNOSTIC MODE] No targeting signal for bundle '{bundleFileName}' " +
+                    $"(vanilla_mapping='{vanillaMapping ?? "<null>"}' yielded neither an archetype filter " +
+                    $"nor mesh-name substrings). Skipping entity swap for {entities.Length} entities. " +
+                    $"Add a 'vanilla_mapping' to the pack visual_asset to exit DIAGNOSTIC MODE.");
                 entities.Dispose();
                 query.Dispose();
                 return false;
@@ -670,8 +679,10 @@ namespace DINOForge.Runtime.Bridge
                         em, new object[] { entity, renderMeshComponentType });
                     if (renderMesh == null) continue;
 
-                    // ---- Selective mesh-name check ----
-                    if (meshField != null)
+                    // ---- Selective mesh-name check (SECONDARY refinement only) ----
+                    // Skip when no substrings were resolved: the archetype-narrowed query is
+                    // authoritative and we swap every entity it returned.
+                    if (meshField != null && targetMeshSubstrings != null)
                     {
                         object? currentMeshObj = meshField.GetValue(renderMesh);
                         if (currentMeshObj is Mesh currentMesh && currentMesh != null)
@@ -918,6 +929,78 @@ namespace DINOForge.Runtime.Bridge
             return Path.IsPathRooted(path)
                 ? path
                 : Path.Combine(BepInEx.Paths.PluginPath, path);
+        }
+
+        /// <summary>
+        /// Robustly resolves a replacement (Mesh, Material) pair from a mod bundle without relying
+        /// on the asset being named after the bundle key (#101 Bug B). Resolution order:
+        ///   1. Try the requested name as a bare Mesh / Material (fast path for purpose-built bundles).
+        ///   2. Load the first GameObject prefab and extract mesh+material from its renderer
+        ///      (SkinnedMeshRenderer preferred, then MeshFilter/MeshRenderer) — the common case for
+        ///      bundles built from prefabs, where the prefab is named after the FBX.
+        ///   3. Fall back to the first bare Mesh / Material asset in the bundle.
+        /// Mesh and material are always sourced from the same renderer where possible to avoid
+        /// mesh/material mismatches.
+        /// </summary>
+        private static (Mesh? mesh, Material? material) ResolveReplacementAssets(AssetBundle bundle, string requestedName)
+        {
+            // 1. Fast path: exact-name bare assets.
+            Mesh? mesh = bundle.LoadAsset<Mesh>(requestedName);
+            Material? material = bundle.LoadAsset<Material>(requestedName);
+            if (mesh != null || material != null)
+            {
+                DebugLog.Write("AssetSwap", $"ResolveReplacementAssets: resolved bare asset by name '{requestedName}'");
+                return (mesh, material);
+            }
+
+            // 2. Prefab path: extract from the first GameObject's renderer.
+            GameObject[] prefabs = bundle.LoadAllAssets<GameObject>();
+            foreach (GameObject prefab in prefabs)
+            {
+                if (prefab == null) continue;
+
+                SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                if (smr != null && smr.sharedMesh != null)
+                {
+                    mesh = smr.sharedMesh;
+                    if (smr.sharedMaterials != null && smr.sharedMaterials.Length > 0)
+                        material = smr.sharedMaterials[0];
+                }
+                else
+                {
+                    MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>(true);
+                    if (mf != null && mf.sharedMesh != null)
+                        mesh = mf.sharedMesh;
+
+                    MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>(true);
+                    if (mr != null && mr.sharedMaterials != null && mr.sharedMaterials.Length > 0)
+                        material = mr.sharedMaterials[0];
+                }
+
+                if (mesh != null || material != null)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"ResolveReplacementAssets: extracted mesh='{mesh?.name ?? "<null>"}' " +
+                        $"material='{material?.name ?? "<null>"}' from prefab '{prefab.name}'");
+                    return (mesh, material);
+                }
+            }
+
+            // 3. Fall back to the first bare Mesh / Material asset in the bundle.
+            Mesh[] meshes = bundle.LoadAllAssets<Mesh>();
+            if (meshes.Length > 0) mesh = meshes[0];
+
+            Material[] materials = bundle.LoadAllAssets<Material>();
+            if (materials.Length > 0) material = materials[0];
+
+            if (mesh != null || material != null)
+            {
+                DebugLog.Write("AssetSwap",
+                    $"ResolveReplacementAssets: fell back to first bare mesh='{mesh?.name ?? "<null>"}' " +
+                    $"material='{material?.name ?? "<null>"}' in bundle");
+            }
+
+            return (mesh, material);
         }
 
         /// <summary>

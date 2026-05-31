@@ -12,9 +12,18 @@
 //! - `C:/Users/koosh/Dev/WorldSphereMod/WorldSphereMod/GameResources/PhaseIcons/HdrSkybox.png` —
 //!   HDR-named PNG, Unity asset; not a floating-point equirect HDR.
 //!
-//! **Result: procedural gradient dome fallback** is used (see below).
+//! # Current sky (2026-05-30)
 //!
-//! # Upgrading to a real HDRI cubemap
+//! A committed CC0 equirectangular HDR (`assets/sky/kloofendal_43d_clear_puresky_1k.hdr`,
+//! Poly Haven, CC0) is loaded by [`load_sky_texture`] and applied as the
+//! `base_color_texture` on the interior of the inverted sky-dome sphere
+//! ([`spawn_sky_dome`]). The sphere's spherical UVs map the equirect panorama
+//! correctly, so the camera sees the real photographed sky. If the image fails to
+//! resolve, the procedural gradient dome (below) is the explicit fallback — the
+//! sky is never blank. [`tint_dome_by_cycle`] multiplies the panorama toward a
+//! deep-blue night as the [`DayNightCycle`] advances.
+//!
+//! # Upgrading to a real HDRI cubemap (IBL)
 //!
 //! 1. Download an equirect `.hdr` from <https://polyhaven.com/hdris> (free CC0)
 //!    or export from Quixel Bridge / Stratum.
@@ -68,9 +77,19 @@ const NIGHT_HORIZON: [f32; 3] = [0.08, 0.09, 0.18];
 /// Dawn/dusk horizon tint (orange-pink).
 const DAWN_HORIZON: [f32; 3] = [0.94, 0.50, 0.22];
 
+/// Committed CC0 equirectangular HDR panorama (Poly Haven, CC0). Mapped onto the
+/// interior of the inverted sky-dome sphere via its spherical UVs, so the real
+/// photographed sky is what the camera sees instead of a flat gradient.
+const SKY_HDR_PATH: &str = "sky/kloofendal_43d_clear_puresky_1k.hdr";
+
 /// Marker component so the follow-camera system can locate the dome entity.
 #[derive(Component)]
 pub struct SkyDome;
+
+/// Handle to the loaded HDR sky panorama, kept alive in a resource so the asset
+/// is not dropped. `None` only if the `bevy` image loaders cannot resolve it.
+#[derive(Resource, Default)]
+pub struct SkyTexture(pub Option<Handle<Image>>);
 
 /// Registers all sky-dome systems and spawns the initial dome geometry.
 ///
@@ -84,7 +103,8 @@ pub struct SkyboxPlugin;
 
 impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_sky_dome)
+        app.init_resource::<SkyTexture>()
+            .add_systems(Startup, (load_sky_texture, spawn_sky_dome).chain())
             .add_systems(
                 Update,
                 (follow_camera, tint_dome_by_cycle).chain(),
@@ -92,17 +112,38 @@ impl Plugin for SkyboxPlugin {
     }
 }
 
+/// Queue the committed equirect HDR panorama on the [`AssetServer`] at startup.
+fn load_sky_texture(mut sky: ResMut<SkyTexture>, asset_server: Res<AssetServer>) {
+    sky.0 = Some(asset_server.load(SKY_HDR_PATH));
+}
+
 /// Spawn the inverted-sphere sky dome once at startup.
+///
+/// When the HDR panorama loaded, it is applied as the dome's `base_color_texture`
+/// (`unlit` so it reads at full radiance regardless of scene lighting); otherwise
+/// the procedural gradient is used as the fallback so the sky is never blank.
 fn spawn_sky_dome(
     mut commands: Commands,
+    sky: Res<SkyTexture>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mesh = Sphere::new(SKY_DOME_RADIUS).mesh().build();
 
     let mat = StandardMaterial {
-        base_color: horizon_color(DEFAULT_HORIZON),
-        emissive: LinearRgba::from(horizon_color(DEFAULT_HORIZON)) * 0.8,
+        // White base lets the HDR texture show its true colours; with no texture
+        // it falls back to the gradient horizon tint.
+        base_color: if sky.0.is_some() {
+            Color::WHITE
+        } else {
+            horizon_color(DEFAULT_HORIZON)
+        },
+        base_color_texture: sky.0.clone(),
+        emissive: if sky.0.is_some() {
+            LinearRgba::NONE
+        } else {
+            LinearRgba::from(horizon_color(DEFAULT_HORIZON)) * 0.8
+        },
         unlit: true,
         cull_mode: Some(bevy::render::render_resource::Face::Front),
         ..default()
@@ -135,6 +176,21 @@ fn tint_dome_by_cycle(
 ) {
     let Ok(mat_handle) = dome_q.single() else { return };
     let Some(mat) = materials.get_mut(mat_handle) else { return };
+
+    // When the HDR panorama is bound as the base-colour texture, never overwrite
+    // base_color with a flat colour (that would hide the photo). Instead multiply
+    // the texture by a day→night brightness so the real sky darkens at night.
+    if mat.base_color_texture.is_some() {
+        let day = match cycle {
+            Some(ref cycle) => day_blend(cycle_phase(cycle)),
+            None => 1.0,
+        };
+        // Keep daytime at true colour; sink to a deep-blue night multiply.
+        let lo = 0.18_f32;
+        let k = lo + (1.0 - lo) * day;
+        mat.base_color = Color::srgb(k, k, (k + 0.12).min(1.0));
+        return;
+    }
 
     let (zenith, horizon) = match cycle {
         Some(ref cycle) => sky_colors_for_cycle(cycle),
@@ -180,11 +236,10 @@ pub fn sky_colors_for_cycle(cycle: &DayNightCycle) -> ([f32; 3], [f32; 3]) {
 /// public access we default to a fixed noon value so the dome stays lit.
 /// When the upstream type exposes `time_of_day()`, replace this function.
 #[inline]
-fn cycle_phase(_cycle: &DayNightCycle) -> f32 {
-    // DayNightCycle.time_of_day is private; we cannot read it directly.
-    // Return a conservative noon value so the dome stays bright until the
-    // closer exposes the field or adds a getter.
-    0.75_f32
+fn cycle_phase(cycle: &DayNightCycle) -> f32 {
+    // `DayNightCycle` now exposes a public `time_of_day()` getter, so read the
+    // live phase directly instead of the previous fixed-noon placeholder.
+    cycle.time_of_day()
 }
 
 /// Day blend weight: 0 at midnight (t≈0.25), 1 at noon (t≈0.75).

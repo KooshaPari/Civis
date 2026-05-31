@@ -247,6 +247,31 @@ impl GameSpeed {
 /// Plugin that renders the gameplay HUD and binds keyboard speed shortcuts.
 pub struct GameUiPlugin;
 
+/// Rasterized PNG tool-icon textures registered with egui, keyed by the
+/// category [`Category::icon_key`] stem. Empty until [`load_tool_icons`] has run;
+/// missing keys fall back to the unicode glyph in [`paint_icon_label`].
+#[derive(Resource, Default)]
+pub struct ToolIcons {
+    /// Bevy image handles (kept alive so the textures are not unloaded).
+    handles: Vec<Handle<Image>>,
+    /// Map of icon-key → egui texture id, populated once images are loaded.
+    ids: std::collections::HashMap<&'static str, egui::TextureId>,
+    /// True once registration with egui has completed.
+    registered: bool,
+}
+
+/// Icon-key → asset path under the crate `assets/` root.
+const TOOL_ICON_PATHS: &[(&str, &str)] = &[
+    ("select", "ui/tool-icons/select.png"),
+    ("spawn-life", "ui/tool-icons/spawn-life.png"),
+    ("spawn-structure", "ui/tool-icons/spawn-structure.png"),
+    ("terraform", "ui/tool-icons/terraform.png"),
+    ("spawn-material", "ui/tool-icons/spawn-material.png"),
+    ("disaster", "ui/tool-icons/disaster.png"),
+    ("diplomacy", "ui/tool-icons/diplomacy.png"),
+    ("policy", "ui/tool-icons/policy.png"),
+];
+
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
@@ -256,10 +281,54 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
             .init_resource::<ActiveSubTool>()
+            .init_resource::<ToolIcons>()
+            .add_systems(Startup, queue_tool_icon_handles)
             .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
             // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
-            .add_systems(EguiPrimaryContextPass, draw_game_ui);
+            // `load_tool_icons` registers the PNGs as egui textures and must run
+            // before `draw_game_ui` consumes them.
+            .add_systems(
+                EguiPrimaryContextPass,
+                (load_tool_icons, draw_game_ui).chain(),
+            );
     }
+}
+
+/// Startup: queue each tool-icon PNG on the [`AssetServer`].
+fn queue_tool_icon_handles(mut icons: ResMut<ToolIcons>, asset_server: Res<AssetServer>) {
+    icons.handles = TOOL_ICON_PATHS
+        .iter()
+        .map(|(_, path)| asset_server.load::<Image>(*path))
+        .collect();
+}
+
+/// Register the loaded tool-icon images with egui (once), storing the resulting
+/// [`egui::TextureId`]s in [`ToolIcons`]. No-op after the first successful pass.
+fn load_tool_icons(
+    mut contexts: EguiContexts,
+    mut icons: ResMut<ToolIcons>,
+    asset_server: Res<AssetServer>,
+) {
+    if icons.registered {
+        return;
+    }
+    // Only register once every image has finished loading, so add_image gets a
+    // valid GPU texture rather than a placeholder.
+    let all_loaded = icons
+        .handles
+        .iter()
+        .all(|h| asset_server.is_loaded_with_dependencies(h));
+    if icons.handles.is_empty() || !all_loaded {
+        return;
+    }
+    let handles = icons.handles.clone();
+    for ((key, _), handle) in TOOL_ICON_PATHS.iter().zip(handles) {
+        // egui keeps a strong handle; our `ToolIcons.handles` also retains one so
+        // the image is never unloaded for the lifetime of the app.
+        let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle));
+        icons.ids.insert(key, id);
+    }
+    icons.registered = true;
 }
 
 fn handle_speed_shortcuts(keys: Res<ButtonInput<KeyCode>>, mut speed: ResMut<GameSpeed>) {
@@ -310,6 +379,7 @@ struct BottomBarCtx<'a> {
     active: &'a mut ActiveTool,
     sub: &'a mut ActiveSubTool,
     speed: &'a mut GameSpeed,
+    icons: &'a std::collections::HashMap<&'static str, egui::TextureId>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -327,6 +397,7 @@ fn draw_game_ui(
     mut active_tool: ResMut<ActiveTool>,
     mut sub_tool: ResMut<ActiveSubTool>,
     ui_mode: Res<GameUiMode>,
+    tool_icons: Res<ToolIcons>,
 ) {
     // Hide HUD entirely when not in Playing mode (pause overlay, loading, etc.).
     if *ui_mode != GameUiMode::Playing {
@@ -350,6 +421,7 @@ fn draw_game_ui(
                 active: &mut active_tool,
                 sub: &mut sub_tool,
                 speed: &mut speed,
+                icons: &tool_icons.ids,
             };
             category_bar_ui(ui, &mut bottom);
             ui.add_space(4.0);
@@ -476,7 +548,8 @@ fn category_toolbar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
         for (idx, cat) in CATEGORIES.iter().enumerate() {
             let is_open = ctx.sub.open_category == Some(idx);
             let is_active = active_cat == Some(idx);
-            if category_button(ui, cat, is_active, is_open).clicked() {
+            let icon_tex = cat.icon_key().and_then(|k| ctx.icons.get(k).copied());
+            if category_button(ui, cat, is_active, is_open, icon_tex).clicked() {
                 ctx.sub.open_category = if is_open { None } else { Some(idx) };
             }
         }
@@ -486,8 +559,14 @@ fn category_toolbar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
     });
 }
 
-/// Render one 64x60 category button (glyph + label), lit when active/open.
-fn category_button(ui: &mut egui::Ui, cat: &Category, active: bool, open: bool) -> egui::Response {
+/// Render one 64x60 category button (PNG icon or glyph + label), lit when active/open.
+fn category_button(
+    ui: &mut egui::Ui,
+    cat: &Category,
+    active: bool,
+    open: bool,
+    icon_tex: Option<egui::TextureId>,
+) -> egui::Response {
     let size = egui::vec2(64.0, 60.0);
     let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
     let lit = active || open;
@@ -511,7 +590,7 @@ fn category_button(ui: &mut egui::Ui, cat: &Category, active: bool, open: bool) 
     if lit {
         inner_glow(p, rect, cat.accent, RADIUS);
     }
-    paint_icon_label(p, rect, cat.icon, cat.label, lit, cat.accent);
+    paint_icon_label(p, rect, cat.icon, cat.label, lit, cat.accent, icon_tex);
     // A small caret marks that the slot opens a flyout drawer.
     let caret = rect.center_top() + egui::vec2(0.0, 4.0);
     let caret_col = if open { cat.accent } else { DIM.gamma_multiply(0.7) };
@@ -519,7 +598,10 @@ fn category_button(ui: &mut egui::Ui, cat: &Category, active: bool, open: bool) 
     resp.on_hover_text(format!("{} \u{25b8}  [{}]", cat.label, cat.hotkey))
 }
 
-/// Paint a centred glyph + caption inside `rect` (shared by category/sub-tool).
+/// Paint a centred icon + caption inside `rect` (shared by category/sub-tool).
+///
+/// When `icon_tex` is `Some`, the rasterized PNG tool-icon is drawn; otherwise it
+/// falls back to the unicode `icon` glyph so the toolbar is never empty.
 fn paint_icon_label(
     p: &egui::Painter,
     rect: egui::Rect,
@@ -527,10 +609,24 @@ fn paint_icon_label(
     label: &str,
     lit: bool,
     accent: egui::Color32,
+    icon_tex: Option<egui::TextureId>,
 ) {
     let icon_color = if lit { accent } else { TEXT };
     let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.40);
-    p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(22.0), icon_color);
+    if let Some(tex) = icon_tex {
+        // Draw the PNG centred on the icon anchor; tint white when lit for a
+        // subtle highlight, otherwise near-full opacity for an inert look.
+        let side = 26.0_f32;
+        let img_rect = egui::Rect::from_center_size(icon_at, egui::vec2(side, side));
+        let tint = if lit {
+            egui::Color32::WHITE
+        } else {
+            egui::Color32::from_white_alpha(220)
+        };
+        p.image(tex, img_rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), tint);
+    } else {
+        p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(22.0), icon_color);
+    }
     let label_color = if lit { accent } else { DIM };
     let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
     p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
@@ -591,7 +687,8 @@ fn subtool_button(ui: &mut egui::Ui, st: SubTool, active: bool, accent: egui::Co
         inner_glow(p, rect, accent, RADIUS_SM);
     }
     let lit = active && !inert;
-    paint_icon_label(p, rect, st.icon(), st.label(), lit, accent);
+    // Sub-tools keep the unicode glyph (no per-sub-tool PNG set yet) — pass None.
+    paint_icon_label(p, rect, st.icon(), st.label(), lit, accent, None);
     let tip = if inert {
         format!("{} — coming soon", st.label())
     } else {

@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn empty_state_progress_is_zero() {
-        let state = TechTreeState { nodes: Vec::new() };
+        let state = TechTreeState { nodes: Vec::new(), ..TechTreeState::default() };
         assert_eq!(state.progress(), 0.0);
         assert_eq!(state.unlocked_count(), 0);
     }

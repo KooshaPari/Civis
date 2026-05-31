@@ -23,6 +23,15 @@ impl DayNightCycle {
     pub fn set_from_is_day(&mut self, is_day: bool) {
         self.time_of_day = if is_day { 0.75 } else { 0.25 };
     }
+
+    /// Normalised time-of-day phase in `0.0..1.0` (noon ≈ 0.75, midnight ≈ 0.25).
+    ///
+    /// Exposed so presentation layers (e.g. the HDR sky dome in [`crate::skybox`])
+    /// can darken/brighten with the cycle instead of guessing a fixed phase.
+    #[must_use]
+    pub fn time_of_day(&self) -> f32 {
+        self.time_of_day
+    }
 }
 
 #[derive(Component)]

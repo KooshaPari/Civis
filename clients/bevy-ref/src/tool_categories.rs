@@ -235,6 +235,26 @@ pub struct Category {
     pub subtools: &'static [SubTool],
 }
 
+impl Category {
+    /// Filename stem (under `assets/ui/tool-icons/`) of the rasterized PNG icon
+    /// for this category, or `None` when no dedicated PNG exists (the unicode
+    /// glyph in [`Self::icon`] is then used as the fallback).
+    #[must_use]
+    pub fn icon_key(&self) -> Option<&'static str> {
+        Some(match self.label {
+            "Select" => "select",
+            "Life" => "spawn-life",
+            "Structure" => "spawn-structure",
+            "Terraform" => "terraform",
+            "Material" => "spawn-material",
+            "Disaster" => "disaster",
+            "Diplomacy" => "diplomacy",
+            "Policy" => "policy",
+            _ => return None, // e.g. "Infra" — no committed PNG; keep the glyph.
+        })
+    }
+}
+
 use SubTool::*;
 
 /// The full category taxonomy. Order = left-to-right toolbar order.

@@ -44,6 +44,13 @@ public static class BakeTmpFontAsset
     private const int AtlasWidth = 1024;
     private const int AtlasHeight = 1024;
 
+    private static void ImportTmpEssentials()
+    {
+        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
+        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
+        AssetDatabase.Refresh();
+    }
+
     public static void BakeHeadless()
     {
         try
@@ -54,7 +61,15 @@ public static class BakeTmpFontAsset
             // which ships in TMP Essential Resources. A fresh project does not have them,
             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
             // headlessly before baking. (#965 batchmode bake fix.)
-            ImportTmpEssentialsIfMissing();
+            ImportTmpEssentials();
+
+            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+            if (sdf == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
+                EditorApplication.Exit(6);
+                return;
+            }
 
             if (!File.Exists(FontTtfPath))
             {
@@ -103,8 +118,7 @@ public static class BakeTmpFontAsset
 
             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
             // baked atlas renders correctly inside DINO even if the default was missing.
-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
+            if (fontAsset.material != null && fontAsset.material.shader != sdf)
                 fontAsset.material.shader = sdf;
 
             // Pre-bake the printable ASCII range into the static atlas so no

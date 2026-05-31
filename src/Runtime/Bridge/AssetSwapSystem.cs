@@ -64,6 +64,17 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private readonly HashSet<string> _reportedFailures = new HashSet<string>(StringComparer.Ordinal);
 
+        /// <summary>
+        /// #992: Bundles (keyed by mod bundle path) that have PERMANENTLY failed to yield a usable
+        /// swap — stub bundles (the 13 #986 90-byte stubs), bundles with no renderable mesh, or
+        /// hard load errors. These can never succeed, yet AssetSwapRegistry keeps them pending and
+        /// the swap retries them EVERY frame, re-loading the bundle each pass → the per-frame
+        /// 'another AssetBundle with the same files is already loaded' flood. Once a bundle is in
+        /// this set we skip it entirely (logged once, then silent), stopping the flood for all stub
+        /// bundles while leaving working swaps (units/cims/buildings) untouched.
+        /// </summary>
+        private readonly HashSet<string> _permanentlyFailedBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         private int _frameCount;
 
         /// <summary>Whether the one-shot vanilla mesh diagnostic dump has been emitted.</summary>
@@ -369,6 +380,9 @@ namespace DINOForge.Runtime.Bridge
                 _resetPending = false;
                 _frameCount = 0;
                 _reportedFailures.Clear();
+                // #992: clear the negative-result cache on reset so a hot-reload that ships fixed
+                // (non-stub) bundles gets a fresh chance to swap.
+                _permanentlyFailedBundles.Clear();
                 DebugLog.Write("AssetSwap", "AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
             }
 
@@ -476,6 +490,16 @@ namespace DINOForge.Runtime.Bridge
                 return false;
             }
 
+            // #992 negative-result cache: a bundle that has permanently failed (stub / no usable
+            // mesh / load error) must NOT be re-loaded and retried every frame — that re-load is
+            // the source of the 'already loaded' flood. Skip silently (the permanent-failure was
+            // logged once when first detected). Returning false keeps the entity-swap contract
+            // unchanged for the registry; the bundle is never touched again.
+            if (_permanentlyFailedBundles.Contains(modBundleFullPath))
+            {
+                return false;
+            }
+
             // Phase 1 (optional): Patch the vanilla bundle on disk.
             // This only works when the AssetAddress matches a real Addressables catalog key.
             // Mod packs typically use bundle filenames as AssetAddress, so catalog lookup
@@ -543,7 +567,19 @@ namespace DINOForge.Runtime.Bridge
             string modBundlePath, string assetName, string? vanillaMapping, EntityManager em)
         {
             AssetBundle? bundle = LoadBundle(modBundlePath);
-            if (bundle == null) return false;
+            if (bundle == null)
+            {
+                // #992: bundle failed to load and could not be recovered from the already-loaded
+                // set — a hard load error that will recur every frame. Mark permanently failed so
+                // we stop re-attempting LoadFromFile (the flood source). Log once.
+                if (_permanentlyFailedBundles.Add(modBundlePath))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: bundle '{Path.GetFileName(modBundlePath)}' " +
+                        "failed to load and could not be recovered — marking permanently failed (#992).");
+                }
+                return false;
+            }
 
             // #101 fix (Bug B): the mesh/material/prefab inside the bundle is named after the
             // source FBX/prefab (e.g. "sw-cis-commando-droid"), NOT after the bundle key / asset
@@ -554,10 +590,16 @@ namespace DINOForge.Runtime.Bridge
 
             if (replacementMesh == null && replacementMat == null)
             {
+                // #992: a bundle with no usable Mesh/Material (the 13 #986 90-byte stubs) can NEVER
+                // yield a swap. Mark it permanently failed so ApplySwap skips it on every later
+                // frame instead of re-loading it — this is the primary stop for the per-frame
+                // 'already loaded' flood. Log once.
+                _permanentlyFailedBundles.Add(modBundlePath);
                 DebugLog.Write("AssetSwap",
                     $"TrySwapRenderMeshFromBundle: no usable Mesh/Material/prefab found in bundle " +
                     $"'{Path.GetFileName(modBundlePath)}' (requested asset='{assetName}'). " +
-                    "Bundle may be a stub or contain no renderable geometry.");
+                    "Bundle may be a stub or contain no renderable geometry. " +
+                    "Marking permanently failed — will skip on subsequent frames (#992).");
                 return false;
             }
 
@@ -1302,9 +1344,58 @@ namespace DINOForge.Runtime.Bridge
             }
             catch (Exception ex)
             {
+                // #992 flood fix: AssetBundle.LoadFromFile THROWS (and Unity logs an error every
+                // call) when "another AssetBundle with the same files is already loaded". This
+                // happens when our LRU evicted+Unloaded a bundle but Unity still considers the
+                // underlying file loaded (Unload lag / scene-transition skip), or when the same
+                // physical bundle was reached via a different cache key. Recover by reusing the
+                // already-loaded handle instead of re-loading — and re-cache it so subsequent
+                // passes hit the cache and never call LoadFromFile again.
+                if (ex.Message.IndexOf("already loaded", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    AssetBundle? existing = FindLoadedBundleByPath(fullPath);
+                    if (existing != null)
+                    {
+                        _loadedBundles.Set(path, existing);
+                        if (_reportedFailures.Add($"reuse:{path}"))
+                            DebugLog.Write("AssetSwap", $"LoadBundle: reused already-loaded bundle for '{fullPath}' (recovered from 'already loaded')");
+                        return existing;
+                    }
+                }
                 DebugLog.Write("AssetSwap", $"LoadBundle: failed '{fullPath}': {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// #992: Locates an AssetBundle Unity already has loaded that corresponds to
+        /// <paramref name="fullPath"/>. Unity does not expose the source path on a loaded bundle,
+        /// so match by bundle name (file name without extension) against
+        /// <see cref="AssetBundle.GetAllLoadedAssetBundles"/>. Returns null if none match.
+        /// </summary>
+        private static AssetBundle? FindLoadedBundleByPath(string fullPath)
+        {
+            string wantName = Path.GetFileNameWithoutExtension(fullPath) ?? "";
+            try
+            {
+                foreach (AssetBundle loaded in AssetBundle.GetAllLoadedAssetBundles())
+                {
+                    if (loaded == null) continue;
+                    string loadedName = loaded.name ?? "";
+                    if (string.Equals(loadedName, wantName, StringComparison.OrdinalIgnoreCase)
+                        || (loadedName.Length > 0
+                            && (loadedName.IndexOf(wantName, StringComparison.OrdinalIgnoreCase) >= 0
+                                || wantName.IndexOf(loadedName, StringComparison.OrdinalIgnoreCase) >= 0)))
+                    {
+                        return loaded;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("AssetSwap", $"FindLoadedBundleByPath: enumeration failed: {ex.Message}");
+            }
+            return null;
         }
 
         /// <inheritdoc/>

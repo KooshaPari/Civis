@@ -211,6 +211,16 @@ namespace DINOForge.Runtime
             _enableHotReload = enableHotReload;
             _hmrDebounceMs = hmrDebounceMs;
 
+            // Session recorder (#971): record a REAL user playthrough (pointer + key + EventSystem
+            // widget + screen frames) for in-process replay (#972) and journey embeds (#966).
+            ConfigEntry<bool> recorderEnabled = Config.Bind("SessionRecorder", "Enabled", true,
+                "Enable the F11 session recorder (records real user input + frames for replay/vision-verify)");
+            ConfigEntry<int> recorderFrameMs = Config.Bind("SessionRecorder", "FrameIntervalMs", 500,
+                new ConfigDescription("Periodic screen-frame cadence while recording (ms)",
+                    new AcceptableValueRange<int>(100, 5000)));
+            ConfigEntry<bool> recorderPerEvent = Config.Bind("SessionRecorder", "CaptureFramePerEvent", true,
+                "Also capture a screen frame on every pointer down/up event");
+
             // Detect game and log version compatibility info
             try
             {
@@ -344,6 +354,18 @@ namespace DINOForge.Runtime
                 {
                     Log.LogWarning($"[Plugin] StartKeyPollThread failed: {ex}");
                 }
+            }
+
+            // Session recorder (#971): F11 toggles recording of the real user playthrough.
+            // Uses its own PlayerLoop sampler + Win32 F11 bg thread (independent of F9/F10).
+            try
+            {
+                Capture.SessionRecorder.Configure(recorderEnabled.Value, recorderFrameMs.Value, recorderPerEvent.Value);
+                Capture.SessionRecorder.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] SessionRecorder init failed: {ex}");
             }
 
             DebugLog.Write("Plugin", "Awake completed");
@@ -1321,6 +1343,7 @@ namespace DINOForge.Runtime
             try { _harmony?.UnpatchSelf(); } catch (Exception ex) { DebugLog.Write("Plugin", $"OnDestroy Harmony.UnpatchSelf failed: {ex.Message}"); }
             // P0 fix: stop the Win32 F9/F10 polling thread on plugin teardown.
             try { Bridge.KeyInputSystem.StopKeyPollThread(); } catch (Exception ex) { DebugLog.Write("Plugin", $"OnDestroy StopKeyPollThread failed: {ex.Message}"); }
+            try { Capture.SessionRecorder.Shutdown(); } catch (Exception ex) { DebugLog.Write("Plugin", $"OnDestroy SessionRecorder.Shutdown failed: {ex.Message}"); }
             // Iter-144 #547 H5 gray-freeze fix: do NOT unsubscribe activeSceneChanged here.
             // The handler is a static method on the Plugin class; the static delegate survives
             // BepInEx Plugin instance destruction. Previously we unsubscribed here, breaking

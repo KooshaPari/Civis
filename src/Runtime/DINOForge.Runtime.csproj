@@ -27,6 +27,8 @@
 
   <!-- Exclude UGUI-dependent UI files when the game is not installed (no UnityEngine.UIModule.dll) -->
   <ItemGroup Condition="'$(GameInstalled)' != 'true'">
+    <!-- SessionRecorder reads UnityEngine.EventSystems (UI module), only referenced when GameInstalled. -->
+    <Compile Remove="Capture\SessionRecorder.cs" />
     <Compile Remove="UI\DebugPanel.cs" />
     <Compile Remove="UI\DFCanvas.cs" />
     <Compile Remove="UI\DinoForgeStyle.cs" />

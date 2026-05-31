@@ -726,6 +726,19 @@ namespace DINOForge.Runtime.Bridge
                 && !string.IsNullOrEmpty(resolvedArchetype)
                 && ResolveTypeByName(resolvedArchetype!) != null;
 
+            // CRITICAL ("units look native") fix: when an archetype filter IS present it is the
+            // authoritative targeting — the EntityQuery is already narrowed to the right unit class.
+            // The mesh-name substrings were hand-guessed (e.g. "Swordsman") and do NOT match DINO's
+            // real mesh vocabulary (e.g. "swordsmen", "royal_sword_2", "bomj_*", "harpy_*",
+            // "undead_*"), so applying them as a *reject* filter dropped 100% of entities
+            // ("swapped 0/100 … skipped 100 non-matching meshes") and every unit stayed native.
+            // Substrings are therefore ONLY used as a fallback targeting signal when there is no
+            // archetype filter; with an archetype filter we swap every entity the query returned.
+            if (hasArchetypeFilter)
+            {
+                targetMeshSubstrings = null;
+            }
+
             if (!hasArchetypeFilter && (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0))
             {
                 DebugLog.Write("AssetSwap",

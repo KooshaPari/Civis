@@ -9,6 +9,9 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
+#[cfg(feature = "voxel")]
+use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
+#[cfg(not(feature = "voxel"))]
 use crate::terrain::{terrain_surface_y, WATER_LEVEL, WORLD_SIZE};
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 
@@ -20,9 +23,15 @@ const BUILDING_HALF_HEIGHT: f32 = 7.0;
 /// Uniform scale for the CC0 GLTF civilian (KayKit Knight) so it reads near the
 /// gameplay capsule's height.
 #[cfg(feature = "models")]
+#[cfg(feature = "voxel")]
+const CIVILIAN_MODEL_SCALE: f32 = 1.7;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
 const CIVILIAN_MODEL_SCALE: f32 = 3.0;
 /// Uniform scale for the CC0 GLTF building (KayKit hexagon home).
 #[cfg(feature = "models")]
+#[cfg(feature = "voxel")]
+const BUILDING_MODEL_SCALE: f32 = 0.65;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
 const BUILDING_MODEL_SCALE: f32 = 6.0;
 
 /// Faction tag for a model-backed civilian so a later material-tint pass can
@@ -243,6 +252,7 @@ fn advance_simulation(
     }
 }
 
+#[cfg(not(feature = "voxel"))]
 fn world_to_norm(position: Vec3) -> (f32, f32) {
     let wx = position.x + WORLD_SIZE * 0.5;
     let wz = position.z + WORLD_SIZE * 0.5;
@@ -252,12 +262,38 @@ fn world_to_norm(position: Vec3) -> (f32, f32) {
     )
 }
 
+#[cfg(feature = "voxel")]
+fn world_to_norm(position: Vec3, voxel: Option<&VoxelSimState>) -> (f32, f32) {
+    let (Some(voxel),) = (voxel,) else {
+        return (0.5, 0.5);
+    };
+    let dims = voxel.grid.dims;
+    if dims[0] == 0 || dims[2] == 0 {
+        return (0.5, 0.5);
+    }
+    (
+        (position.x / dims[0] as f32).clamp(0.0, 1.0),
+        (position.z / dims[2] as f32).clamp(0.0, 1.0),
+    )
+}
+
 fn apply_spawn_civilian_requests(
     mut sim: ResMut<SimState>,
     mut requests: MessageReader<SpawnCivilianRequest>,
+    #[cfg(feature = "voxel")]
+    voxel_state: Option<Res<VoxelSimState>>,
 ) {
     for request in requests.read() {
-        let (nx, ny) = world_to_norm(request.position);
+        let (nx, ny) = {
+            #[cfg(not(feature = "voxel"))]
+            {
+                world_to_norm(request.position)
+            }
+            #[cfg(feature = "voxel")]
+            {
+                world_to_norm(request.position, voxel_state.as_deref())
+            }
+        };
         let id = next_civilian_id(&sim.0);
         let seed = id.wrapping_add(nx.to_bits() as u64 ^ ny.to_bits() as u64);
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
@@ -268,9 +304,20 @@ fn apply_spawn_civilian_requests(
 fn apply_spawn_building_requests(
     mut sim: ResMut<SimState>,
     mut requests: MessageReader<SpawnBuildingRequest>,
+    #[cfg(feature = "voxel")]
+    voxel_state: Option<Res<VoxelSimState>>,
 ) {
     for request in requests.read() {
-        let (nx, ny) = world_to_norm(request.position);
+        let (nx, ny) = {
+            #[cfg(not(feature = "voxel"))]
+            {
+                world_to_norm(request.position)
+            }
+            #[cfg(feature = "voxel")]
+            {
+                world_to_norm(request.position, voxel_state.as_deref())
+            }
+        };
         spawn_airport_at(&mut sim.0.world, nx, ny);
     }
 }
@@ -298,6 +345,8 @@ fn sync_visible_gameplay(
     mut commands: Commands,
     sim: Res<SimState>,
     assets: Option<Res<GameplayAssets>>,
+    #[cfg(feature = "voxel")]
+    voxel_state: Option<Res<VoxelSimState>>,
     #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
     mut rendered: ResMut<RenderedEntities>,
     mut transforms: Query<&mut Transform>,
@@ -322,7 +371,16 @@ fn sync_visible_gameplay(
     {
         civ_count += 1;
         seen_civilians.push(civilian.id);
-        let world_pos = sim_position_to_world(position) + Vec3::Y * CIVILIAN_HALF_HEIGHT;
+        let world_pos = {
+            #[cfg(not(feature = "voxel"))]
+            {
+                sim_position_to_world(position, None) + Vec3::Y * CIVILIAN_HALF_HEIGHT
+            }
+            #[cfg(feature = "voxel")]
+            {
+                sim_position_to_world(position, voxel_state.as_deref()) + Vec3::Y * CIVILIAN_HALF_HEIGHT
+            }
+        };
         if first_world_pos.is_none() {
             first_world_pos = Some(world_pos);
         }
@@ -394,7 +452,16 @@ fn sync_visible_gameplay(
         let id = building_idx;
         building_idx += 1;
         seen_buildings.push(id);
-        let world_pos = building_world_position(building) + Vec3::Y * BUILDING_HALF_HEIGHT;
+        let world_pos = {
+            #[cfg(not(feature = "voxel"))]
+            {
+                building_world_position(building, None) + Vec3::Y * BUILDING_HALF_HEIGHT
+            }
+            #[cfg(feature = "voxel")]
+            {
+                building_world_position(building, voxel_state.as_deref()) + Vec3::Y * BUILDING_HALF_HEIGHT
+            }
+        };
 
         if let Some(&entity) = rendered.buildings.get(&id) {
             if let Ok(mut transform) = transforms.get_mut(entity) {
@@ -463,7 +530,11 @@ fn sync_visible_gameplay(
 }
 
 /// Map a normalised sim agent coordinate to centred, terrain-seated world XZ.
-fn sim_position_to_world(position: &civ_agents::Position3d) -> Vec3 {
+#[cfg(not(feature = "voxel"))]
+fn sim_position_to_world(
+    position: &civ_agents::Position3d,
+    _voxel: Option<&VoxelSimState>,
+) -> Vec3 {
     let scale = civ_voxel::FIXED_SCALE as f32;
     let nx = position.coord.x as f32 / scale;
     let nz = position.coord.z as f32 / scale;
@@ -474,6 +545,27 @@ fn sim_position_to_world(position: &civ_agents::Position3d) -> Vec3 {
     Vec3::new(mesh_x - WORLD_SIZE * 0.5, y, mesh_z - WORLD_SIZE * 0.5)
 }
 
+#[cfg(feature = "voxel")]
+fn sim_position_to_world(position: &civ_agents::Position3d, voxel: Option<&VoxelSimState>) -> Vec3 {
+    // Mapping choice A: use voxel grid dims as the single world extent.
+    // Sim-normalized [0,1] maps directly to [0,dims] so 0.5 lands at center and
+    // corners at 0 and 1 match voxel box corners.
+    let (Some(voxel),) = (voxel,) else {
+        return Vec3::ZERO;
+    };
+    let scale = civ_voxel::FIXED_SCALE as f32;
+    let dims = voxel.grid.dims;
+    if dims[0] == 0 || dims[2] == 0 {
+        return Vec3::ZERO;
+    }
+    let nx = (position.coord.x as f32 / scale).clamp(0.0, 1.0);
+    let nz = (position.coord.z as f32 / scale).clamp(0.0, 1.0);
+    let mesh_x = nx * dims[0] as f32;
+    let mesh_z = nz * dims[2] as f32;
+    let y = voxel_surface_y(&voxel.grid, mesh_x, mesh_z);
+    Vec3::new(mesh_x, y, mesh_z)
+}
+
 /// Map an integer building grid tile to centred, terrain-seated world XZ.
 ///
 /// `Building::position` is a centred grid coordinate in `[-64, 63]` (0,0 is
@@ -481,13 +573,32 @@ fn sim_position_to_world(position: &civ_agents::Position3d) -> Vec3 {
 /// scale onto the mesh extent, then sample the surface. If that surface is
 /// below sea level the base is clamped to [`WATER_LEVEL`] so the building rests
 /// at the shoreline instead of being submerged or floating on the water plane.
-fn building_world_position(building: &Building) -> Vec3 {
+#[cfg(not(feature = "voxel"))]
+fn building_world_position(building: &Building, _voxel: Option<&VoxelSimState>) -> Vec3 {
     let nx = ((building.position.x + 64) as f32 / 127.0).clamp(0.0, 1.0);
     let nz = ((building.position.y + 64) as f32 / 127.0).clamp(0.0, 1.0);
     let mesh_x = nx * WORLD_SIZE;
     let mesh_z = nz * WORLD_SIZE;
     let y = terrain_surface_y(mesh_x, mesh_z).max(WATER_LEVEL);
     Vec3::new(mesh_x - WORLD_SIZE * 0.5, y, mesh_z - WORLD_SIZE * 0.5)
+}
+#[cfg(feature = "voxel")]
+fn building_world_position(building: &Building, voxel: Option<&VoxelSimState>) -> Vec3 {
+    let (Some(voxel),) = (voxel,) else {
+        return Vec3::ZERO;
+    };
+    let dims = voxel.grid.dims;
+    if dims[0] == 0 || dims[2] == 0 {
+        return Vec3::ZERO;
+    }
+    let x_span = (dims[0] as f32 - 1.0).max(1.0);
+    let z_span = (dims[2] as f32 - 1.0).max(1.0);
+    let nx = ((building.position.x as f32 + x_span * 0.5) / x_span).clamp(0.0, 1.0);
+    let nz = ((building.position.y as f32 + z_span * 0.5) / z_span).clamp(0.0, 1.0);
+    let mesh_x = nx * dims[0] as f32;
+    let mesh_z = nz * dims[2] as f32;
+    let y = voxel_surface_y(&voxel.grid, mesh_x, mesh_z);
+    Vec3::new(mesh_x, y, mesh_z)
 }
 
 fn faction_color(faction: u32) -> Color {

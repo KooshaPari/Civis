@@ -27,10 +27,11 @@ const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 const CA_TICK_HZ: f32 = 12.0;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
-// Playable default world size for the local Bevy sandbox.
-// Larger worlds are on the roadmap via a streaming SVO path; 128² is a
-// practical default for dense preview worlds in current tooling.
-const WORLD_DIMS: [usize; 3] = [128, 64, 128];
+// MVP playable surface: 0.5 mi² (~256³ @ ~2.8m/voxel), single resident region,
+// no streaming yet. Y=128 gives hill + cave headroom. True uncapped HW-bounded
+// streaming (LOD rings + horizon-fade + sim-LOD) is a later phase.
+// Fallback to [192, 96, 192] if 256³ gen/mesh lags on first build.
+const WORLD_DIMS: [usize; 3] = [256, 128, 256];
 
 /// Tracks whether the live voxel world has been generated for the current
 /// session. Set `true` after a build; reset to `false` to force regeneration
@@ -141,6 +142,22 @@ impl Default for VoxelSimState {
             chunk_entities: Vec::new(),
         }
     }
+}
+
+/// Return the top of the first non-AIR voxel at `(x, z)` in world-space.
+/// Used by Bevy sim bridge placement so actor/building spawns match voxel terrain.
+#[must_use]
+pub fn voxel_surface_y(grid: &CaGrid, x: f32, z: f32) -> f32 {
+    let max_x = (grid.dims[0].max(1) - 1) as f32;
+    let max_z = (grid.dims[2].max(1) - 1) as f32;
+    let xi = x.clamp(0.0, max_x).floor() as usize;
+    let zi = z.clamp(0.0, max_z).floor() as usize;
+    for yi in (0..grid.dims[1]).rev() {
+        if grid.get(xi, yi, zi) != AIR {
+            return yi as f32 + 1.0;
+        }
+    }
+    0.0
 }
 
 /// Build the voxel world from `seed`, then mesh and spawn all visible chunks.

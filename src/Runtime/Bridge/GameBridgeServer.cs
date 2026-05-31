@@ -1842,59 +1842,30 @@ namespace DINOForge.Runtime.Bridge
         {
             string saveName = parameters?.Value<string>("saveName") ?? "";
 
-            // Trigger the game's own world-loading system by creating the
-            // BeginGameWorldLoadingSingleton ECS entity, which SceneLoadingSystem listens for.
-            var result = MainThreadDispatcher.RunOnMainThread(() =>
+            // GATED OFF (regression fix, reconcile3 2026-05-31):
+            // Previously this RPC created a bare `Components.SingletonComponents.BeginGameWorldLoadingSingleton`
+            // ECS entity with EMPTY/unpopulated fields to programmatically trigger world-load. DINO's native
+            // Systems.GameWorldLoaderSystem.OnUpdate then calls GetSingleton<that type>() expecting its managed
+            // component (save path / map id / load params) populated, gets null/empty, and throws a
+            // NullReferenceException EVERY FRAME in InitializationSystemGroup — flooding the log and breaking
+            // world-load. The bare-entity creation MUST NOT happen. This is an experimental nav-scripter trigger,
+            // NOT core functionality; the nav/record-session paths do not depend on it. Normal menu-driven
+            // world-load (player clicking through the menu) populates the singleton correctly and is unaffected.
+            //
+            // To re-enable programmatic world-load, populate ALL required fields of the singleton with valid
+            // values BEFORE creating the entity (see Option B in the regression ticket). Until then this is a
+            // no-op so we never corrupt DINO's native loader.
+            DebugLog.Write("GameBridgeServer",
+                $"[GameBridgeServer] startGame RPC is GATED OFF (no-op) to avoid corrupting native GameWorldLoaderSystem; " +
+                $"saveName='{saveName}'. Load a world through the in-game menu instead.");
+
+            return JToken.FromObject(new
             {
-                try
-                {
-                    World? world = GetActiveWorld();
-                    if (world == null || !world.IsCreated)
-                        return new { success = false, message = "No ECS world" };
-
-                    // Resolve BeginGameWorldLoadingSingleton type dynamically
-                    Type? singletonType = null;
-                    foreach (System.Reflection.Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        singletonType = asm.GetType("Components.SingletonComponents.BeginGameWorldLoadingSingleton");
-                        if (singletonType != null) break;
-                    }
-
-                    if (singletonType == null)
-                        return new { success = false, message = "BeginGameWorldLoadingSingleton type not found" };
-
-                    // Dump the singleton's fields for diagnostics
-                    FieldInfo[] fields = singletonType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    string fieldList = string.Join(", ", System.Array.ConvertAll(fields, f => $"{f.FieldType.Name} {f.Name}"));
-                    DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] BeginGameWorldLoadingSingleton fields: [{fieldList}]");
-
-                    ComponentType ct = ComponentType.ReadWrite(singletonType);
-                    Entity e = world.EntityManager.CreateEntity(ct);
-                    DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] Created BeginGameWorldLoadingSingleton entity {e.Index}");
-
-                    // If the singleton has a NameToLoad field, try to set it via reflection
-                    // (ECS components are structs so we use SetComponentData via reflection)
-                    if (!string.IsNullOrEmpty(saveName))
-                    {
-                        FieldInfo? nameField = singletonType.GetField("NameToLoad",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] NameToLoad field: {(nameField == null ? "not found" : nameField.FieldType.Name)}");
-                    }
-
-                    return new { success = true, message = $"Created singleton entity {e.Index}, fields=[{fieldList}]" };
-                }
-                catch (Exception ex)
-                {
-                    DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleStartGame failed: {ex.Message}");
-                    return new { success = false, message = ex.Message };
-                }
+                success = false,
+                disabled = true,
+                message = "startGame RPC is disabled: programmatic BeginGameWorldLoadingSingleton creation broke "
+                          + "DINO's native GameWorldLoaderSystem (NRE/frame). Use the in-game menu to load a world."
             });
-
-            // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(MainThreadWaitTimeoutMs);
-            if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
-            // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            return JToken.FromObject(result.Result);
         }
 
         private JToken HandleDismissLoadScreen()

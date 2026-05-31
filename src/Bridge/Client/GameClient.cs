@@ -460,6 +460,19 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<ComponentMapResult>("getComponentMap", sdkPath != null ? new { sdkPath } : null, ct);
 
     /// <summary>
+    /// Drives the scripted main-menu → skirmish/gameplay UI sequence in-process and returns a
+    /// per-step trace (which selector resolved, wait condition satisfied, screenshot path). This
+    /// is the autonomous "reach gameplay" routine: it fires real EventSystem pointer clicks and
+    /// waits for next-screen / world-ready conditions between steps.
+    /// </summary>
+    /// <param name="plan">Plan name (default "skirmish").</param>
+    /// <param name="screenshotDir">Directory for per-step PNGs (server default when null).</param>
+    /// <param name="finalShot">Optional path for the final gameplay-camera capture.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<NavigationResult> NavigateToGameplayAsync(string? plan = null, string? screenshotDir = null, string? finalShot = null, CancellationToken ct = default) =>
+        SendRequestAsync<NavigationResult>("navigateToGameplay", new { plan, screenshotDir, finalShot }, ct);
+
+    /// <summary>
     /// Invokes an arbitrary bridge method and returns the raw JSON result.
     /// Useful for debugging or calling methods not yet wrapped.
     /// </summary>

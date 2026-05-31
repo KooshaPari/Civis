@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Autonomous Navigation
+- **NavigationScripter + `navigateToGameplay` RPC / `game_navigate_to_gameplay` MCP tool** — Scripts the full main-menu → skirmish UI sequence (PLAY/SANDBOX/SKIRMISH → optional map/scenario select → START) in-process, composing the EventSystem pointer driver (#972) and reliable FrameCapture (#980). Each step resolves an ordered candidate-selector list (tolerant of DINO label variance), fires a real EventSystem pointer click, waits for a next-screen / world-ready condition (no fixed sleeps), and captures a verification PNG; a final gameplay-camera frame is captured on success. Exposes a Bridge RPC, `GameClient.NavigateToGameplayAsync`, the `navigate-to-gameplay` GameControlCli verb, and the `game_navigate_to_gameplay` MCP tool — closing the gap that let RPCs load a world but never fire the menu→level transition, so verify-agents can now autonomously reach + capture in-game states. Flow map: `docs/sessions/nav-scripter-flow-map-20260530.md`.
+
 ### Added — Major Features (35+ commits)
 
 #### CLI & Workflow Commands

@@ -1038,6 +1038,46 @@ async def game_ui_automation(ctx: Context, action: str, target: str | None = Non
 
 
 @mcp.tool()
+async def game_navigate_to_gameplay(
+    ctx: Context,
+    plan: str = "skirmish",
+    screenshot_dir: str | None = None,
+    final_shot: str | None = None,
+    pipe_name: str | None = None,
+) -> dict:
+    """
+    Autonomously drive DINO from the main menu INTO an active gameplay/skirmish state.
+
+    This scripts the full multi-step native UI sequence (PLAY/SANDBOX/SKIRMISH → optional
+    map/scenario select → START) in-process via the EventSystem pointer driver (#972), waiting
+    for next-screen / world-ready conditions between steps (no fixed sleeps), and captures a
+    reliable FrameCapture PNG (#980) at every step plus a final gameplay-camera frame.
+
+    Each step resolves its target from an ordered list of candidate selectors and clicks the
+    first actionable match, so it tolerates DINO's label variance across builds. The returned
+    `steps` trace shows exactly where a flow stalled (blockedAtStep).
+
+    Use this once to reach gameplay, then game_screenshot / game_query_entities to verify
+    in-game state (swaps/buildings/blasters visible).
+
+    Args:
+        plan: Navigation plan name (default "skirmish").
+        screenshot_dir: Directory for per-step PNGs (server default BepInEx/screenshots/nav when omitted).
+        final_shot: Optional path for the final gameplay-camera capture PNG.
+        pipe_name: Optional named pipe name for multi-instance support.
+
+    Returns:
+        {success, message, plan, finalState, entityCount, worldName, blockedAtStep, steps[]}
+    """
+    args = ["navigate-to-gameplay", plan]
+    if screenshot_dir:
+        args.append(f"screenshotDir={screenshot_dir}")
+    if final_shot:
+        args.append(f"finalShot={final_shot}")
+    return _run_game_cli(*args, pipe_name=pipe_name)
+
+
+@mcp.tool()
 async def game_ui_pointer(
     ctx: Context,
     event: str,

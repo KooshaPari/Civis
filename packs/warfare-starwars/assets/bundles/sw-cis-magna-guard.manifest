@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1639922766
+CRC: 805996498
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 6d3c4dc7f6b1af15cfb9468d5d6e985a
+    Hash: 5776d513497c8b045981fac90495580c
   TypeTreeHash:
     serializedVersion: 2
-    Hash: e2a11be68d6287ac10b047eee7e3b6d6
+    Hash: 81fc4833398717ae320ec5bd08c661f4
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 6d3c4dc7f6b1af15cfb9468d5d6e985a
+    Hash: 5776d513497c8b045981fac90495580c
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,11 +26,9 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 136
-  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/CIS/sw-cis-magna-guard-primary.mat
 - Assets/Prefabs/CIS/sw-cis-magna-guard.prefab
+- Assets/Materials/CIS/sw-cis-magna-guard-primary.mat
 - Assets/Materials/CIS/sw-cis-magna-guard.mat
 Dependencies: []

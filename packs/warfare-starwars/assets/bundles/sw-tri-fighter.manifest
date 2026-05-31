@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2380717474
+CRC: 1022068138
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 1f05048c3acc3fda6366fdae01a425b6
+    Hash: d051c3d143f8f8d2f05ff852d6f31f1d
   TypeTreeHash:
     serializedVersion: 2
     Hash: 81fc4833398717ae320ec5bd08c661f4
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 1f05048c3acc3fda6366fdae01a425b6
+    Hash: d051c3d143f8f8d2f05ff852d6f31f1d
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -28,7 +28,6 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Prefabs/Republic/sw-rep-laat-gunship.prefab
-- Assets/Materials/Republic/sw-rep-laat-gunship.mat
-- Assets/Materials/Republic/sw-rep-laat-gunship-primary.mat
+- Assets/Prefabs/CIS/sw-tri-fighter.prefab
+- Assets/Materials/CIS/sw-tri-fighter.mat
 Dependencies: []

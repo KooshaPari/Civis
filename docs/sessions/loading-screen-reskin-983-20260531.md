@@ -19,6 +19,7 @@
 - I found **no runtime reference** in the above files to a native Unity `MonoBehaviour`/`GameObject` controlling DINO’s own loading bar/progress UI.
 - `LoadingScreenController` does **not** query a native loading component or scene object by type/name; it injects its own overlay.
 - `MainMenuThemer` and `NativeMenuInjector` only target main-menu and mod-button flows.
+- Result: the loading-screen reskin is an overlay takeover, not a native-widget retheme. The overlay is the reachable fix path from `src/Runtime`.
 
 ## Native symbol still needed (if native loading UI should be directly themed)
 - A project-accessible native loader symbol is needed (type + hierarchy handle), e.g.:
@@ -27,5 +28,5 @@
 - Without that symbol, direct native-style progress bar override must remain a forked overlay pass.
 
 ## Additional findings
-- MODS active/select state is still unstyled in the native menu path (active/highlighted state visuals remain using native/default state colors on injected MODS UI in the current implementation).
+- MODS active/select state remains unstyled in the native menu path. Hover/normal styling is present, but the active/selected state visuals still fall back to native/default colors on the injected MODS UI.
 - Native symbols for load progress and mods active/select are not surfaced together in one reachable symbol chain.

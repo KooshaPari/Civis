@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -10,23 +11,39 @@ using UnityEngine;
 /// </summary>
 public static class VerifyBundleMesh
 {
-    private static readonly string[] Keys =
-    {
-        "sw-cis-spider-droid", "sw-rep-clone-commander", "sw-rep-at-te-walker",
-        "sw-cis-droideka", "sw-rep-clone-pilot" // last is a known primitive control
-    };
-
     public static void Run()
     {
         try
         {
-            foreach (string key in Keys)
+            const string bundleDir = "AssetBundles";
+            if (!Directory.Exists(bundleDir))
             {
-                string path = System.IO.Path.Combine("AssetBundles", key);
-                if (!System.IO.File.Exists(path)) { Debug.Log($"[VERIFY] {key}: MISSING"); continue; }
+                Debug.Log($"[VERIFY] missing output directory: {bundleDir}");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            string reportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-bundle-verify-report.log");
+            if (File.Exists(reportPath))
+                File.Delete(reportPath);
+            AppendLine(reportPath, $"Bundle verification (AssetBundles/*) on {DateTime.UtcNow:O}");
+
+            foreach (string path in Directory.GetFiles(bundleDir))
+            {
+                if (Path.HasExtension(path))
+                    continue;
+
+                string key = Path.GetFileName(path);
                 var ab = AssetBundle.LoadFromFile(path);
-                if (ab == null) { Debug.Log($"[VERIFY] {key}: load failed"); continue; }
+                if (ab == null)
+                {
+                    AppendLine(reportPath, $"[VERIFY] {key}: load failed");
+                    Debug.Log($"[VERIFY] {key}: load failed");
+                    continue;
+                }
+
                 int maxVerts = 0; int meshCount = 0;
+                var shaderSet = new System.Collections.Generic.HashSet<string>();
                 foreach (var go in ab.LoadAllAssets<GameObject>())
                 {
                     foreach (var mf in go.GetComponentsInChildren<MeshFilter>(true))
@@ -37,8 +54,18 @@ public static class VerifyBundleMesh
                             maxVerts = Mathf.Max(maxVerts, mf.sharedMesh.vertexCount);
                         }
                     }
+
+                    foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+                    {
+                        if (r.sharedMaterial != null && r.sharedMaterial.shader != null)
+                            shaderSet.Add(r.sharedMaterial.shader.name);
+                    }
                 }
-                Debug.Log($"[VERIFY] {key}: meshes={meshCount} maxVerts={maxVerts}");
+
+                string shaderReport = string.Join(",", shaderSet.OrderBy(x => x));
+                string line = $"[VERIFY] {key}: meshes={meshCount} maxVerts={maxVerts} shaders={shaderReport}";
+                AppendLine(reportPath, line);
+                Debug.Log(line);
                 ab.Unload(true);
             }
             EditorApplication.Exit(0);
@@ -48,5 +75,10 @@ public static class VerifyBundleMesh
             Debug.LogError($"[VerifyBundleMesh] {ex}");
             EditorApplication.Exit(1);
         }
+    }
+
+    private static void AppendLine(string path, string line)
+    {
+        File.AppendAllText(path, line + Environment.NewLine);
     }
 }

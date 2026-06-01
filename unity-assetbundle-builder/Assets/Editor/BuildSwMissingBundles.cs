@@ -77,8 +77,7 @@ public static class BuildSwMissingBundles
                 // behind (the old `continue` here was the silent-skip bug: it errored,
                 // skipped, and rebundled the old Standard-shader prefab → native render).
                 GameObject go;
-                string[] guids = AssetDatabase.FindAssets($"{def.Fbx} t:Model", new[] { "Assets/Models" });
-                string modelPath = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : null;
+                string modelPath = EnsureUsableModelAsset(def.Fbx);
                 GameObject modelPrefab = modelPath != null ? AssetDatabase.LoadAssetAtPath<GameObject>(modelPath) : null;
                 if (modelPrefab != null)
                 {
@@ -167,6 +166,61 @@ public static class BuildSwMissingBundles
         if (shader == null)
             throw new InvalidOperationException("No URP shader available.");
         return shader;
+    }
+
+    private static string? EnsureUsableModelAsset(string modelName)
+    {
+        foreach (string existing in AssetDatabase.FindAssets($"{modelName} t:Model", new[] { "Assets/Models" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(existing);
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".fbx" || ext == ".glb" || ext == ".gltf")
+                return path;
+        }
+
+        string source = ResolveRawModelSource(modelName);
+        if (source == null)
+            return null;
+
+        string glbTarget = $"Assets/Models/{modelName}.glb";
+        string fullTarget = Path.Combine(Application.dataPath, "Models", $"{modelName}.glb");
+        Directory.CreateDirectory(Path.Combine(Application.dataPath, "Models"));
+        File.Copy(source, fullTarget, true);
+        AssetDatabase.ImportAsset(glbTarget, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        return glbTarget;
+    }
+
+    private static string? ResolveRawModelSource(string modelName)
+    {
+        string rawRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "packs", "warfare-starwars", "assets", "raw"));
+        if (!Directory.Exists(rawRoot))
+            return null;
+
+        string normalized = modelName.ToLowerInvariant();
+        string? bestMatch = null;
+        foreach (var dir in Directory.GetDirectories(rawRoot))
+        {
+            string dirName = Path.GetFileName(dir).ToLowerInvariant();
+            if (!dirName.Contains(normalized))
+                continue;
+
+            string candidate = Path.Combine(dir, "model.glb");
+            if (!File.Exists(candidate))
+                continue;
+
+            if (bestMatch == null)
+            {
+                bestMatch = candidate;
+                continue;
+            }
+
+            bool bestIsLego = bestMatch!.Contains("_lego", StringComparison.OrdinalIgnoreCase);
+            bool candidateIsLego = dirName.Contains("_lego", StringComparison.OrdinalIgnoreCase);
+            if (bestIsLego && !candidateIsLego)
+                bestMatch = candidate;
+        }
+
+        return bestMatch;
     }
 
     private static void LogShader(string source, Material material)

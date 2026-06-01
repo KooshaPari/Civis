@@ -53,17 +53,19 @@ public static class BuildSwBuildingBundles
         {
             EnsureDirs();
             int ok = 0;
-            foreach (var def in Defs)
-            {
-                string faction = def.Faction;
-                string matPath = $"Assets/Materials/{faction}/{def.Key}.mat";
-                string meshPath = $"Assets/Meshes/{def.Key}.asset";
-                string prefabPath = $"Assets/Prefabs/{faction}/{def.Key}.prefab";
+        foreach (var def in Defs)
+        {
+            string faction = def.Faction;
+            string matPath = $"Assets/Materials/{faction}/{def.Key}.mat";
+            string meshPath = $"Assets/Meshes/{def.Key}.asset";
+            string prefabPath = $"Assets/Prefabs/{faction}/{def.Key}.prefab";
 
-                // Material
-                var mat = new Material(Shader.Find("Standard"))
-                { color = faction == "CIS" ? CisGrey : RepublicWhite };
-                AssetDatabase.CreateAsset(mat, matPath);
+            // Material
+            Shader shader = GetUrpShader();
+            var tint = faction == "CIS" ? CisGrey : RepublicWhite;
+            var mat = new Material(shader);
+            mat.SetColor("_BaseColor", tint);
+            AssetDatabase.CreateAsset(mat, matPath);
 
                 // Mesh (procedural, baked to asset so it persists in the bundle)
                 Mesh mesh = BuildMesh(def.Arch);
@@ -256,4 +258,54 @@ public static class BuildSwBuildingBundles
                 AssetDatabase.CreateFolder(parent, Path.GetFileName(d));
             }
     }
+
+    private static Shader GetUrpShader()
+    {
+        string[] preferred =
+        {
+            "Universal Render Pipeline/Lit",
+            "Universal Render Pipeline/Simple Lit",
+            "Universal Render Pipeline/Particles/Lit",
+            "Universal Render Pipeline/Particles/Unlit"
+        };
+
+        foreach (var preferredName in preferred)
+        {
+            Shader shader = Shader.Find(preferredName);
+            if (shader != null)
+            {
+                Debug.Log($"[SwBuildings] Using shader {preferredName}");
+                return shader;
+            }
+        }
+
+        var urpShaders = UnityEngine.Resources.FindObjectsOfTypeAll<Shader>();
+        foreach (var s in urpShaders)
+        {
+            if (s == null)
+                continue;
+
+            string name = s.name;
+            if (name.Contains("Universal Render Pipeline", StringComparison.Ordinal) ||
+                name.Contains("Universal RP", StringComparison.Ordinal) ||
+                name.Contains("URP", StringComparison.Ordinal))
+            {
+                Debug.LogWarning($"[SwBuildings] Preferred URP shaders unavailable. Using closest URP-like shader: {name}");
+                return s;
+            }
+        }
+
+        Shader fallback = Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+        if (fallback != null)
+        {
+            Debug.LogWarning($"[SwBuildings] No URP shader family found in project. Falling back to non-URP shader: {fallback.name}");
+            return fallback;
+        }
+
+        throw new InvalidOperationException("No suitable shader found for bundle build.");
+    }
 }
+
+
+
+

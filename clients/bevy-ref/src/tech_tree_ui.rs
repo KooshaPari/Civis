@@ -276,19 +276,14 @@ pub fn draw_tech_tree(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+    ui_theme::apply_theme(ctx);
 
     let mut window_open = open.0;
     egui::Window::new("⚛ Tech Tree")
         .open(&mut window_open)
         .resizable(true)
         .default_size([640.0, 460.0])
-        .frame(
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
-                .corner_radius(egui::CornerRadius::same(10))
-                .inner_margin(egui::Margin::same(14)),
-        )
+        .frame(ui_theme::frame_e1(egui::Margin::same(14)))
         .show(ctx, |ui| {
             draw_progress_header(ui, &state);
             ui.add_space(8.0);
@@ -297,6 +292,7 @@ pub fn draw_tech_tree(
                 .show(ui, |ui| {
                     draw_era_columns(ui, &state);
                 });
+            ui_theme::panel_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS, false, false);
         });
     open.0 = window_open;
 }

@@ -34,13 +34,13 @@ const TERRAIN_TEX_SIZE: u32 = 128;
 // not usable on Bevy UI nodes, so we re-express the same sRGB values here.
 // ---------------------------------------------------------------------------
 
-/// Glass panel fill (matches `ui_theme::DECK_GLASS`).
-const THEME_PANEL: Color = Color::srgba(0.078, 0.102, 0.141, 0.68);
-/// Inactive inner hairline (matches `ui_theme::DECK_BORDER`).
+/// Glass panel fill (`ui_theme::DECK_GLASS` — `#1a1e24` @ ~68%).
+const THEME_PANEL: Color = Color::srgba(0.102, 0.118, 0.141, 0.68);
+/// Inner hairline (`ui_theme::KC_DIVIDER` @ ~55%).
 #[allow(dead_code)]
-const THEME_BORDER: Color = Color::srgba(1.0, 1.0, 1.0, 0.11);
-/// Holo-cyan rim + viewport accent (matches `ui_theme::HOLO_CYAN`).
-const THEME_HOLO: Color = Color::srgb(0.357, 0.890, 1.0);
+const THEME_BORDER: Color = Color::srgba(0.122, 0.137, 0.161, 0.55);
+/// Teal holo rim (`ui_theme::KC_ACCENT` `#7ebab5`).
+const THEME_HOLO: Color = Color::srgb(0.494, 0.729, 0.710);
 
 #[derive(Resource, Clone)]
 struct MinimapRenderTarget {

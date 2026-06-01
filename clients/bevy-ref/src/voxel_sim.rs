@@ -3,7 +3,7 @@
 //! Feature-gated behind `voxel` so the heightmap sandbox remains the default
 //! when the feature is off.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::prelude::*;
@@ -24,14 +24,18 @@ use crate::{bevy_render::mesh_buffer_to_bevy, should_render_chunk};
 /// (i.e. the `egui` menu feature is compiled out). With menus present, the
 /// per-world randomized seed from `WorldSetupParams` is always used instead.
 const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
-const CA_TICK_HZ: f32 = 12.0;
+// CA tick rate. At 256³ each step is a full-grid multi-pass sweep + full
+// remesh, so 12 Hz froze the frame loop. 2 Hz is the throttle until
+// dirty-chunk stepping + incremental remesh land (see FR-CIV-CA dirty-chunk TODO).
+const CA_TICK_HZ: f32 = 2.0;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
-// MVP playable surface: 0.5 mi² (~256³ @ ~2.8m/voxel), single resident region,
-// no streaming yet. Y=128 gives hill + cave headroom. True uncapped HW-bounded
-// streaming (LOD rings + horizon-fade + sim-LOD) is a later phase.
-// Fallback to [192, 96, 192] if 256³ gen/mesh lags on first build.
-const WORLD_DIMS: [usize; 3] = [256, 128, 256];
+// Playable MVP surface. 256³ = 4096 chunks meshed SYNCHRONOUSLY on load = a
+// multi-minute main-thread freeze (no async/streamed mesh yet). 96³ = 216
+// chunks loads in ~1-2s and is a genuine ~0.2mi² sandbox. Scale back to 256³
+// once worldgen + initial mesh stream over frames (FR-CIV-SCALE async-load
+// TODO) + dirty-chunk CA lands.
+const WORLD_DIMS: [usize; 3] = [96, 64, 96];
 
 /// Tracks whether the live voxel world has been generated for the current
 /// session. Set `true` after a build; reset to `false` to force regeneration
@@ -97,7 +101,7 @@ pub fn build_world_on_play(
     // Reset so a fresh world is generated next time the player commits setup.
     if matches!(*mode, GameUiMode::MainMenu | GameUiMode::WorldSetup) {
         if built.0 {
-            for entity in state.chunk_entities.drain(..) {
+            for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
                 commands.entity(entity).despawn();
             }
             built.0 = false;
@@ -109,7 +113,7 @@ pub fn build_world_on_play(
         return;
     }
     // Despawn any stale world entities before regenerating.
-    for entity in state.chunk_entities.drain(..) {
+    for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
         commands.entity(entity).despawn();
     }
     let seed = params.seed;
@@ -127,7 +131,7 @@ pub struct VoxelSimState {
     /// Fixed-step accumulator in seconds.
     pub accumulator: f32,
     /// Currently spawned chunk mesh entities.
-    pub chunk_entities: Vec<Entity>,
+    pub chunk_entities: HashMap<ChunkId, Vec<Entity>>,
 }
 
 impl Default for VoxelSimState {
@@ -138,10 +142,11 @@ impl Default for VoxelSimState {
                 cells: Vec::new(),
                 temperatures: Vec::new(),
                 saturation: Vec::new(),
+                dirty_chunks: HashSet::new(),
             },
             tick: 0,
             accumulator: 0.0,
-            chunk_entities: Vec::new(),
+            chunk_entities: HashMap::new(),
         }
     }
 }
@@ -180,7 +185,9 @@ pub fn build_voxel_world(
         cells: generated.cells,
         temperatures: vec![20; cell_count],
         saturation: vec![0; cell_count],
+        dirty_chunks: HashSet::new(),
     };
+    state.grid.mark_mobile_chunks(MaterialRegistry::standard());
     state.tick = 0;
     state.accumulator = 0.0;
     state.chunk_entities.clear();
@@ -232,6 +239,7 @@ pub fn build_voxel_world(
         &mut meshes,
         &mut materials,
         &state.grid,
+        None,
         camera_eye,
     );
     info!(
@@ -250,29 +258,64 @@ pub fn step_and_remesh(
     mut state: ResMut<VoxelSimState>,
 ) {
     state.accumulator += time.delta_secs();
-    let mut stepped = false;
     let step_dt = 1.0 / CA_TICK_HZ;
-    while state.accumulator >= step_dt {
-        step(&mut state.grid, MaterialRegistry::standard());
-        state.tick = state.tick.wrapping_add(1);
-        state.accumulator -= step_dt;
-        stepped = true;
-    }
-    if !stepped {
+    if state.accumulator < step_dt {
         return;
     }
-
-    for entity in state.chunk_entities.drain(..) {
-        commands.entity(entity).despawn();
+    // Single step per frame (never catch-up-spiral: at 256³ each step is a
+    // full-grid multi-pass sweep, so running N steps in one frame freezes).
+    // Clamp the accumulator so a long stall doesn't queue a backlog.
+    state.accumulator = (state.accumulator - step_dt).min(step_dt);
+    let changed = step(&mut state.grid, MaterialRegistry::standard());
+    if !changed {
+        return;
+    }
+    state.tick = state.tick.wrapping_add(1);
+    let chunk_counts = [
+        state.grid.dims[0].div_ceil(CHUNK_EDGE),
+        state.grid.dims[1].div_ceil(CHUNK_EDGE),
+        state.grid.dims[2].div_ceil(CHUNK_EDGE),
+    ];
+    let changed_chunks: HashSet<ChunkId> = state
+        .grid
+        .dirty_chunks()
+        .into_iter()
+        .map(|chunk| {
+            let cx = chunk % chunk_counts[0];
+            let rem = chunk - cx;
+            let cy = rem / chunk_counts[0] % chunk_counts[1];
+            let cz = rem / (chunk_counts[0] * chunk_counts[1]);
+            ChunkId(((cx as u64) << 40) | ((cy as u64) << 16) | (cz as u64))
+        })
+        .collect();
+    if changed_chunks.is_empty() {
+        return;
+    }
+    let stale: Vec<ChunkId> = changed_chunks
+        .iter()
+        .filter(|chunk| state.chunk_entities.contains_key(chunk))
+        .cloned()
+        .collect();
+    for chunk_id in stale {
+        let Some(entities) = state.chunk_entities.remove(&chunk_id) else {
+            continue;
+        };
+        for entity in entities {
+            commands.entity(entity).despawn();
+        }
     }
     let camera_eye = cameras.iter().next().map(|t| t.translation.to_array());
-    state.chunk_entities = spawn_chunk_meshes(
+    let rebuilt = spawn_chunk_meshes(
         &mut commands,
         &mut meshes,
         &mut materials,
         &state.grid,
+        Some(&changed_chunks),
         camera_eye,
     );
+    for (id, entities) in rebuilt {
+        state.chunk_entities.insert(id, entities);
+    }
 }
 
 /// Slice a 16³ chunk from the dense grid, filling out-of-bounds cells with air.
@@ -327,20 +370,26 @@ fn spawn_chunk_meshes(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     grid: &CaGrid,
+    filter: Option<&HashSet<ChunkId>>,
     camera_eye: Option<[f32; 3]>,
-) -> Vec<Entity> {
+) -> HashMap<ChunkId, Vec<Entity>> {
     let chunk_counts = [
         grid.dims[0].div_ceil(CHUNK_EDGE),
         grid.dims[1].div_ceil(CHUNK_EDGE),
         grid.dims[2].div_ceil(CHUNK_EDGE),
     ];
     let registry = MaterialRegistry::standard();
-    let mut spawned = Vec::new();
+    let mut spawned: HashMap<ChunkId, Vec<Entity>> = HashMap::new();
     for cz in 0..chunk_counts[2] {
         for cy in 0..chunk_counts[1] {
             for cx in 0..chunk_counts[0] {
                 let chunk_origin = [cx * CHUNK_EDGE, cy * CHUNK_EDGE, cz * CHUNK_EDGE];
                 let chunk_id = ChunkId(((cx as u64) << 40) | ((cy as u64) << 16) | (cz as u64));
+                if let Some(filters) = filter {
+                    if !filters.contains(&chunk_id) {
+                        continue;
+                    }
+                }
                 if let Some(eye) = camera_eye {
                     if !should_render_chunk(chunk_id, eye, RENDER_MAX_DIST) {
                         continue;
@@ -369,7 +418,7 @@ fn spawn_chunk_meshes(
                             ),
                         ))
                         .id();
-                    spawned.push(entity);
+                    spawned.entry(chunk_id).or_default().push(entity);
                 }
             }
         }

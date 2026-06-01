@@ -422,6 +422,7 @@ pub use plugin::*;
 mod plugin {
     use super::*;
     use crate::sim_bridge::SimState;
+    use crate::ui_theme::{apply_theme, frame_e1, panel_finish, TEXT, TEXT_LOW, RADIUS};
     use bevy_egui::{egui, EguiContexts};
     use civ_agents::{Civilian, Needs};
 
@@ -454,12 +455,14 @@ mod plugin {
         let Ok(ctx) = contexts.ctx_mut() else {
             return;
         };
+        apply_theme(ctx);
 
         egui::Window::new("Info Views")
             .anchor(egui::Align2::LEFT_TOP, [12.0, 64.0])
             .resizable(false)
+            .frame(frame_e1(egui::Margin::same(10)))
             .show(ctx, |ui| {
-                ui.label("Overlay (Tab to cycle):");
+                ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
                 ui.horizontal_wrapped(|ui| {
                     let off = ui.selectable_label(!registry.is_active(), "Off");
                     if off.clicked() {
@@ -479,9 +482,14 @@ mod plugin {
 
                 if let Some(overlay) = registry.active_overlay() {
                     ui.separator();
-                    ui.strong(format!("Legend — {}", overlay.name));
+                    ui.label(
+                        egui::RichText::new(format!("Legend — {}", overlay.name))
+                            .heading()
+                            .color(TEXT),
+                    );
                     draw_legend(ui, overlay);
                 }
+                panel_finish(ui.painter(), ui.min_rect(), RADIUS, false, false);
             });
     }
 
@@ -504,7 +512,7 @@ mod plugin {
                         (c[2] * 255.0) as u8,
                     ),
                 );
-                ui.label(stop.label);
+                ui.label(egui::RichText::new(stop.label).color(TEXT_LOW).small());
             });
         }
     }

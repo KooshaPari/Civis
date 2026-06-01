@@ -9,6 +9,7 @@ use crate::material::{
     Phase, MaterialRegistry, AIR, ICE, LAVA, MOLTEN_METAL, MUD, SALT_WATER, SNOW, SAND, STEAM, WATER,
 };
 use crate::{MaterialId, VoxelWorld, WorldCoord};
+use std::collections::HashSet;
 use std::convert::TryFrom;
 
 const DIRS: [(isize, isize, isize, BoundaryFace); 6] = [
@@ -31,6 +32,8 @@ pub struct CaGrid {
     pub temperatures: Vec<i16>,
     /// Per-cell liquid saturation (0-255).
     pub saturation: Vec<u8>,
+    /// Chunks queued for the next CA pass.
+    pub dirty_chunks: HashSet<usize>,
 }
 
 impl CaGrid {
@@ -43,6 +46,7 @@ impl CaGrid {
             cells: vec![AIR; len],
             temperatures: vec![0; len],
             saturation: vec![0; len],
+            dirty_chunks: HashSet::new(),
         }
     }
 
@@ -79,6 +83,52 @@ impl CaGrid {
     /// Writes a cell when coordinates are in bounds.
     pub fn set(&mut self, x: usize, y: usize, z: usize, value: MaterialId) {
         self.set_with_temp(x, y, z, value, self.get_temp(x, y, z));
+    }
+
+    pub fn dirty_chunks(&self) -> Vec<usize> {
+        let mut chunks: Vec<_> = self.dirty_chunks.iter().copied().collect();
+        chunks.sort_unstable();
+        chunks
+    }
+
+    pub fn mark_dirty_cell(&mut self, x: usize, y: usize, z: usize) {
+        let cx = x / 16;
+        let cy = y / 16;
+        let cz = z / 16;
+        let counts = self.chunk_counts();
+        if counts[0] > 0 && counts[1] > 0 && counts[2] > 0 {
+            self.dirty_chunks.insert(cx + cy * counts[0] + cz * counts[0] * counts[1]);
+        }
+    }
+
+    pub fn mark_mobile_chunks(&mut self, reg: MaterialRegistry) {
+        self.dirty_chunks.clear();
+        let counts = self.chunk_counts();
+        for z in 0..self.dims[2] {
+            for y in 0..self.dims[1] {
+                for x in 0..self.dims[0] {
+                    let id = self.get(x, y, z);
+                    if phase_of(reg, id) == Phase::Liquid
+                        || phase_of(reg, id) == Phase::Powder
+                        || phase_of(reg, id) == Phase::Gas
+                    {
+                        self.dirty_chunks.insert(
+                            (x / 16)
+                                + (y / 16) * counts[0]
+                                + (z / 16) * counts[0] * counts[1],
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn chunk_counts(&self) -> [usize; 3] {
+        [
+            self.dims[0].div_ceil(16),
+            self.dims[1].div_ceil(16),
+            self.dims[2].div_ceil(16),
+        ]
     }
 }
 
@@ -562,7 +612,11 @@ fn step_with_parity(
     boundary: BoundaryConfig,
     sea_level: i32,
     tick: usize,
-) {
+) -> bool {
+    if grid.dirty_chunks.is_empty() {
+        return false;
+    }
+    let before = grid.clone();
     let dims = grid.dims;
     for y in 0..dims[1] {
         for z in 0..dims[2] {
@@ -590,6 +644,37 @@ fn step_with_parity(
         }
     }
     run_rule_passes(grid, reg, &boundary, sea_level, tick);
+
+    let changed = before.cells != grid.cells
+        || before.temperatures != grid.temperatures
+        || before.saturation != grid.saturation;
+    if changed {
+        let counts = before.chunk_counts();
+        let mut next = HashSet::new();
+        for chunk in before.dirty_chunks.iter().copied() {
+            let cx = chunk % counts[0];
+            let rem = chunk - cx;
+            let cy = rem / counts[0] % counts[1];
+            let cz = rem / (counts[0] * counts[1]);
+            for dz in 0..3usize {
+                for dy in 0..3usize {
+                    for dx in 0..3usize {
+                        let nx = cx + dx.saturating_sub(1);
+                        let ny = cy + dy.saturating_sub(1);
+                        let nz = cz + dz.saturating_sub(1);
+                        if nx >= counts[0] || ny >= counts[1] || nz >= counts[2] {
+                            continue;
+                        }
+                        next.insert(nx + ny * counts[0] + nz * counts[0] * counts[1]);
+                    }
+                }
+            }
+        }
+        grid.dirty_chunks = next;
+    } else {
+        grid.dirty_chunks.clear();
+    }
+    changed
 }
 
 fn world_cell(bounds: Bounds3, voxel_span: i64, x: usize, y: usize, z: usize) -> WorldCoord {
@@ -620,6 +705,7 @@ fn grid_from_world(
             }
         }
     }
+    grid.mark_mobile_chunks(reg);
     grid
 }
 
@@ -647,8 +733,8 @@ fn write_back_world(
 }
 
 /// Runs one deterministic CA tick over a grid.
-pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) {
-    step_with_config(grid, reg, BoundaryConfig::closed(), 0);
+pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> bool {
+    step_with_config(grid, reg, BoundaryConfig::closed(), 0)
 }
 
 /// Runs one CA tick with boundary/sea-level control.
@@ -657,8 +743,11 @@ pub fn step_with_config(
     reg: MaterialRegistry,
     boundary: BoundaryConfig,
     sea_level: i32,
-) {
-    step_with_parity(grid, reg, 0, boundary, sea_level, 0);
+) -> bool {
+    if grid.dirty_chunks.is_empty() {
+        return false;
+    }
+    step_with_parity(grid, reg, 0, boundary, sea_level, 0)
 }
 
 /// Runs `n` CA ticks.
@@ -674,8 +763,12 @@ pub fn step_n_with_config(
     boundary: BoundaryConfig,
     sea_level: i32,
 ) {
+    let mut changed = false;
     for tick in 0..n {
-        step_with_parity(grid, reg, tick, boundary, sea_level, tick);
+        changed = step_with_parity(grid, reg, tick, boundary, sea_level, tick);
+        if !changed {
+            break;
+        }
     }
 }
 
@@ -735,6 +828,7 @@ mod tests {
     fn water_falls() {
         let mut g = CaGrid::new([1, 2, 1]);
         g.set_with_temp(0, 1, 0, WATER, 20);
+        g.mark_dirty_cell(0, 1, 0);
         step(&mut g, reg());
         assert_eq!(g.get(0, 0, 0), WATER);
         assert_eq!(g.get(0, 1, 0), AIR);
@@ -747,6 +841,7 @@ mod tests {
             g.set(x, 0, 0, STONE);
         }
         g.set(2, 3, 0, WATER);
+        g.mark_dirty_cell(2, 3, 0);
         step_n(&mut g, reg(), 10);
         assert!(count(&g, WATER) <= 1);
         if count(&g, WATER) == 1 {
@@ -761,6 +856,7 @@ mod tests {
             g.set(x, 0, 0, STONE);
         }
         g.set(3, 4, 0, SAND);
+        g.mark_dirty_cell(3, 4, 0);
         step_n(&mut g, reg(), 20);
         assert_eq!(count(&g, SAND), 1);
         assert!(g.get(3, 1, 0) == SAND || g.get(2, 1, 0) == SAND || g.get(4, 1, 0) == SAND);
@@ -770,6 +866,7 @@ mod tests {
     fn gas_rises() {
         let mut g = CaGrid::new([1, 3, 1]);
         g.set(0, 0, 0, STEAM);
+        g.mark_dirty_cell(0, 0, 0);
         step(&mut g, reg());
         assert_eq!(g.get(0, 0, 0), AIR);
         assert!(g.get(0, 1, 0) == STEAM || g.get(0, 2, 0) == STEAM);
@@ -781,6 +878,7 @@ mod tests {
         g.set(0, 0, 0, SAND);
         g.set(1, 0, 0, SAND);
         g.set(1, 1, 0, WATER);
+        g.mark_dirty_cell(1, 1, 0);
         step_n(&mut g, reg(), 2);
         assert!(g.saturation.iter().any(|&s| s > 0));
     }
@@ -790,6 +888,8 @@ mod tests {
         let mut g = CaGrid::new([2, 1, 1]);
         g.set_with_temp(0, 0, 0, WATER, 200);
         g.set_with_temp(1, 0, 0, WATER, 0);
+        g.mark_dirty_cell(0, 0, 0);
+        g.mark_dirty_cell(1, 0, 0);
         step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
         assert_ne!(g.get_temp(0, 0, 0), 200);
         assert_ne!(g.get_temp(1, 0, 0), 0);
@@ -799,6 +899,7 @@ mod tests {
     fn ice_melts_above_melting_point() {
         let mut g = CaGrid::new([1, 1, 1]);
         g.set_with_temp(0, 0, 0, ICE, 20);
+        g.mark_dirty_cell(0, 0, 0);
         step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
         assert_eq!(g.get(0, 0, 0), WATER);
     }
@@ -807,6 +908,7 @@ mod tests {
     fn water_evaporates_to_steam_when_hot() {
         let mut g = CaGrid::new([1, 1, 1]);
         g.set_with_temp(0, 0, 0, WATER, 200);
+        g.mark_dirty_cell(0, 0, 0);
         step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
         assert!(g.get(0, 0, 0) == WATER || g.get(0, 0, 0) == AIR || g.get(0, 0, 0) == STEAM);
     }
@@ -815,6 +917,7 @@ mod tests {
     fn vacuum_boundary_deletes_fluid() {
         let mut g = CaGrid::new([2, 2, 2]);
         g.set(0, 1, 1, WATER);
+        g.mark_dirty_cell(0, 1, 1);
         step_n_with_config(
             &mut g,
             reg(),
@@ -856,6 +959,32 @@ mod tests {
             0,
         );
         assert!(g.get(0, 0, 0) == WATER || g.get(0, 1, 0) == WATER || g.get(0, 1, 1) == WATER);
+    }
+
+    #[test]
+    fn static_world_step_no_change() {
+        let mut g = CaGrid::new([8, 8, 8]);
+        for x in 0..8 {
+            for y in 0..8 {
+                for z in 0..8 {
+                    g.set(x, y, z, BEDROCK);
+                }
+            }
+        }
+        g.mark_mobile_chunks(reg());
+        assert!(!step(&mut g, reg()));
+        assert!(g.dirty_chunks().is_empty());
+    }
+
+    #[test]
+    fn dropped_water_marks_dirty_and_flows() {
+        let mut g = CaGrid::new([4, 4, 1]);
+        g.set(1, 3, 0, WATER);
+        g.mark_dirty_cell(1, 3, 0);
+        assert!(step(&mut g, reg()));
+        assert_eq!(g.get(1, 2, 0), WATER);
+        assert_eq!(g.get(1, 3, 0), AIR);
+        assert!(!g.dirty_chunks().is_empty());
     }
 
     #[test]

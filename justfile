@@ -242,3 +242,8 @@ bench:
 
 # Rust gate without cargo-deny (when deny is not installed locally).
 rust-verify: lint test
+
+# Register/refresh Civis in %APPDATA%/.../Start Menu/Programs/Phenotype Apps/.
+# Call after packaging dist/Civis.exe (native launchType in phenotype-tooling apps.json).
+register-startmenu:
+    pwsh -NoProfile -File C:/Users/koosh/Dev/phenotype-tooling/Tools/Register-StartMenuApps.ps1 -App Civis

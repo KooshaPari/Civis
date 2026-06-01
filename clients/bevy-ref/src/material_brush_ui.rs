@@ -423,6 +423,7 @@ fn material_palette_panel(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+    ui_theme::apply_theme(ctx);
 
     let registry = MaterialRegistry::standard();
     let shelves = build_shelves(registry);
@@ -438,6 +439,13 @@ fn material_palette_panel(
         .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-12.0, 0.0))
         .show(ctx, |ui| {
             palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
+            ui_theme::panel_finish(
+                ui.painter(),
+                ui.min_rect(),
+                ui_theme::RADIUS,
+                false,
+                true,
+            );
         });
 }
 

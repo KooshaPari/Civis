@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -86,12 +88,68 @@ public static class BuildAll
         ("sw-vulture-nest",        "CIS",      CisDark,      PrimitiveType.Cube),
     };
 
+    // bundle-key → glb basename in Assets/Models (or resolvable from packs/.../raw/*/model.glb).
+    // Only keys that HAVE a real glb source are listed; everything else keeps the
+    // procedural primitive fallback. This upgrades BuildAll-exclusive keys (the ones
+    // GenerateStarWarsPrefabsFromModels does NOT define) from capsule → real mesh.
+    private static readonly Dictionary<string, string> ModelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        // ── Republic units ──
+        { "sw-rep-clone-trooper",  "sw_clone_trooper_phase2" },
+        { "sw-rep-clone-heavy",    "rep_clone_heavy" },
+        { "sw-rep-clone-sniper",   "rep_clone_sniper" },
+        { "sw-rep-at-te-walker",   "sw_at_te_walker" },
+        { "sw-rep-clone-medic",    "rep_clone_medic" },
+        { "sw-rep-arc-trooper",    "sw_arc_trooper" },
+        { "sw-clone-militia",      "rep_clone_militia" },
+        { "sw-barc-speeder",       "rep_barc_speeder" },
+        { "sw-arf-trooper",        "rep_arf_trooper" },
+        { "sw-jedi-knight",        "rep_jedi_knight" },
+        { "sw-clone-wall-guard",   "rep_clone_wall_guard" },
+        { "sw-clone-commando",     "rep_clone_commando" },
+        { "sw-v19-torrent-unit",   "rep_v19_torrent" },
+        // ── Republic buildings ──
+        { "sw-rep-clone-facility", "rep_clone_barracks" },
+        { "sw-weapons-factory",    "rep_weapons_factory" },
+        { "sw-rep-vehicle-bay",    "rep_vehicle_bay" },
+        { "sw-guard-tower",        "rep_guard_tower" },
+        { "sw-rep-shield-generator","rep_shield_generator" },
+        { "sw-rep-research-lab",   "rep_research_lab" },
+        { "sw-rep-command-center", "rep_command_center" },
+        { "sw-rep-supply-depot",   "rep_supply_station" },
+        // ── CIS units ──
+        { "sw-cis-b1-battle-droid","cis_b1_battle_droid" },
+        { "sw-b1-squad",           "cis_b1_squad" },
+        { "sw-cis-b2-super-droid", "sw_b2_super_droid" },
+        { "sw-cis-sniper-droid",   "cis_sniper_droid" },
+        { "sw-cis-stap",           "cis_stap_speeder" },
+        { "sw-aat-walker",         "sw_aat_walker" },
+        { "sw-medical-droid",      "cis_medical_droid" },
+        { "sw-probe-droid",        "cis_probe_droid" },
+        { "sw-cis-commando-droid", "cis_bx_commando_droid" },
+        { "sw-general-grievous",   "sw_general_grievous" },
+        { "sw-cis-droideka",       "sw_droideka" },
+        { "sw-cis-spider-droid",   "cis_dwarf_spider_droid" },
+        { "sw-cis-magna-guard",    "cis_magnaguard" },
+        { "sw-tri-fighter",        "cis_tri_fighter" },
+        // ── CIS buildings ──
+        { "sw-cis-droid-factory",  "cis_droid_factory" },
+        { "sw-assembly-line",      "cis_assembly_line" },
+        { "sw-heavy-foundry",      "cis_heavy_foundry" },
+        { "sw-cis-aa-tower",       "cis_sentry_turret" },
+        { "sw-cis-shield-generator","cis_ray_shield" },
+        { "sw-mining-facility",    "cis_mining_facility" },
+        { "sw-tech-union-lab",     "cis_tech_union_lab" },
+    };
+
     public static void Run()
     {
         try
         {
             Debug.Log("[BuildAll] Generating prefabs...");
             EnsureFolders();
+            AssetDatabase.ImportAsset("Assets/Models", ImportAssetOptions.ImportRecursive);
+            AssetDatabase.Refresh();
             int created = 0;
             foreach (var def in Defs)
             {
@@ -157,12 +215,21 @@ public static class BuildAll
         }
     }
 
-    /// <returns>true if created, false if skipped.</returns>
+    /// <returns>true if created/upgraded, false if skipped.</returns>
     private static bool CreatePrefab(string key, string folder, Color color, PrimitiveType shape)
     {
         string prefabPath = $"Assets/Prefabs/{folder}/{key}.prefab";
-        if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
+
+        // Resolve a real glb mesh source for this key, if one is mapped + available.
+        string modelPath = null;
+        if (ModelMap.TryGetValue(key, out string modelName))
+            modelPath = EnsureUsableModelAsset(modelName);
+
+        bool exists = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null;
+        if (exists && modelPath == null)
         {
+            // No real mesh to upgrade to — leave the (possibly real-mesh) prefab
+            // produced by an earlier builder untouched.
             Debug.Log($"  [skip] {key}");
             return false;
         }
@@ -181,17 +248,96 @@ public static class BuildAll
             UpgradeToUrp(mat, color);
         }
 
-        GameObject go = GameObject.CreatePrimitive(shape);
-        go.name = key;
-        go.GetComponent<Renderer>().sharedMaterial = mat;
+        GameObject go = null;
+        if (modelPath != null)
+        {
+            var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            if (modelPrefab != null)
+            {
+                go = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
+                go.name = key;
+                int verts = go.GetComponentsInChildren<MeshFilter>()
+                    .Where(mf => mf.sharedMesh != null)
+                    .Sum(mf => mf.sharedMesh.vertexCount);
+                Debug.Log($"  [mesh] {key} <- {modelPath} (vertexCount={verts})");
+            }
+            else
+            {
+                Debug.LogWarning($"  [warn] {key}: glb {modelPath} loaded null GameObject; falling back to primitive");
+            }
+        }
+
+        if (go == null)
+        {
+            go = GameObject.CreatePrimitive(shape);
+            go.name = key;
+            Debug.Log($"  [prim] {key} (no mesh source)");
+        }
+
+        foreach (var r in go.GetComponentsInChildren<Renderer>())
+            r.sharedMaterial = mat;
+
+        if (exists)
+            AssetDatabase.DeleteAsset(prefabPath);
         PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
         GameObject.DestroyImmediate(go);
 
         var pi = AssetImporter.GetAtPath(prefabPath);
         if (pi != null) pi.assetBundleName = key;
 
-        Debug.Log($"  [ok] {key}");
         return true;
+    }
+
+    private static string EnsureUsableModelAsset(string modelName)
+    {
+        if (string.IsNullOrWhiteSpace(modelName))
+            return null;
+
+        foreach (string guid in AssetDatabase.FindAssets($"{modelName} t:Model", new[] { "Assets/Models" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            // Exact basename match only — avoid "rep_clone_sniper" matching "..._sketchfab_001".
+            if (!string.Equals(Path.GetFileNameWithoutExtension(path), modelName, StringComparison.OrdinalIgnoreCase))
+                continue;
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".fbx" || ext == ".glb" || ext == ".gltf")
+                return path;
+        }
+
+        string source = ResolveRawModelSource(modelName);
+        if (source == null)
+            return null;
+
+        string glbTarget = $"Assets/Models/{modelName}.glb";
+        string fullTarget = Path.Combine(Application.dataPath, "Models", $"{modelName}.glb");
+        Directory.CreateDirectory(Path.GetDirectoryName(fullTarget)!);
+        File.Copy(source, fullTarget, true);
+        AssetDatabase.ImportAsset(glbTarget, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        return glbTarget;
+    }
+
+    private static string ResolveRawModelSource(string modelName)
+    {
+        string rawRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "packs", "warfare-starwars", "assets", "raw"));
+        if (!Directory.Exists(rawRoot))
+            return null;
+
+        string normalized = modelName.ToLowerInvariant();
+        string bestMatch = null;
+        foreach (var dir in Directory.GetDirectories(rawRoot))
+        {
+            string dirName = Path.GetFileName(dir).ToLowerInvariant();
+            if (!dirName.StartsWith(normalized))
+                continue;
+            string candidate = Path.Combine(dir, "model.glb");
+            if (!File.Exists(candidate))
+                continue;
+            bool bestIsLego = bestMatch != null && bestMatch.Contains("_lego");
+            bool candidateIsLego = dirName.Contains("_lego");
+            if (bestMatch == null || (bestIsLego && !candidateIsLego))
+                bestMatch = candidate;
+        }
+        return bestMatch;
     }
 
     /// <summary>

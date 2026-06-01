@@ -136,6 +136,8 @@ impl Default for VoxelSimState {
             grid: CaGrid {
                 dims: [0, 0, 0],
                 cells: Vec::new(),
+                temperatures: Vec::new(),
+                saturation: Vec::new(),
             },
             tick: 0,
             accumulator: 0.0,
@@ -172,9 +174,12 @@ pub fn build_voxel_world(
 ) {
     info!("[voxel] generating world from seed={seed:#018x}");
     let generated = worldgen::generate(WORLD_DIMS, seed);
+    let cell_count = generated.cells.len();
     state.grid = CaGrid {
         dims: generated.dims,
         cells: generated.cells,
+        temperatures: vec![20; cell_count],
+        saturation: vec![0; cell_count],
     };
     state.tick = 0;
     state.accumulator = 0.0;

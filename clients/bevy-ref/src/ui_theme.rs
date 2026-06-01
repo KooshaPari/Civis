@@ -287,7 +287,7 @@ pub fn apply_type_scale(style: &mut egui::Style) {
 pub fn deck_shadow() -> egui::epaint::Shadow {
     egui::epaint::Shadow {
         offset: [0, 4],
-        blur: DECK_BLUR_PX as i32,
+        blur: DECK_BLUR_PX as u8,
         spread: 0,
         color: egui::Color32::from_black_alpha(100),
     }

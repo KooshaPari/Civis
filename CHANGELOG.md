@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — SW unit/CIM bundles now use URP Lit shader
+- Updated the unit-side Star Wars asset-bundle builders in `unity-assetbundle-builder/Assets/Editor/` to force `Universal Render Pipeline/Lit` with `Universal Render Pipeline/Simple Lit` fallback, set `_BaseColor`, and append per-material shader entries to `sw-shader-report.log` for verification.
+- Rebuilt the unit bundles headless with `BuildSwMissingBundles.Build`, verified `sw-b1-squad` and `sw-cis-aat` log `shader=Universal Render Pipeline/Lit`, and copied the rebuilt unit and building bundles into `packs/warfare-starwars/assets/bundles/`.
+
 ### Fixed — SW UNIT bundles now carry real URP Lit materials (0 unit swaps → fixed)
 - **Root cause (silent prefab-gen failure):** SW *unit* bundles rendered native in-game because their prefab materials referenced Unity's **built-in default/error shader** (`m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000}`), which DINO's Hybrid Renderer V2 shader-guard rejects → 0 unit swaps. Three competing Editor builders existed; the dedicated unit builder `BuildSwMissingBundles.Build` resolved its source meshes via `AssetDatabase.FindAssets("<fbx> t:Model", "Assets/Models")`, but **`Assets/Models/` is empty** (no glTF importer in the project; the 44 `.glb` live under `packs/warfare-starwars/assets/raw/`). Every def hit `MISSING FBX → continue`, so the prefab was never regenerated and the build re-bundled the stale built-in-shader prefab (`Shaders 0.0 kb` symptom). Likewise `BuildAll.Run` only upgraded a material **inside** its `[skip] existing-prefab` guard, so all 75 pre-existing primitive prefabs kept their non-URP materials.
 - **Fix (file+line):**

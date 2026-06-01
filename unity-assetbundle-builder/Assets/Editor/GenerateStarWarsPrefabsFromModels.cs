@@ -101,10 +101,16 @@ public static class GenerateStarWarsPrefabsFromModels
                 // Create material if missing
                 if (AssetDatabase.LoadAssetAtPath<Material>(matPath) == null)
                 {
-                    var mat = new Material(Shader.Find("Standard")) { color = def.Primary };
+                    var mat = CreateUrpMaterial(def.Primary);
                     AssetDatabase.CreateAsset(mat, matPath);
                     var mi = AssetImporter.GetAtPath(matPath);
                     if (mi != null) mi.assetBundleName = def.Key;
+                }
+                else
+                {
+                    var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                    if (existing != null)
+                        UpgradeToUrp(existing, def.Primary);
                 }
 
                 // Delete existing prefab to force regeneration (clears stale primitives)
@@ -187,5 +193,40 @@ public static class GenerateStarWarsPrefabsFromModels
                 AssetDatabase.CreateFolder(parent, child);
             }
         }
+    }
+
+    private static Material CreateUrpMaterial(Color tint)
+    {
+        Shader shader = GetUrpShader();
+        var mat = new Material(shader);
+        mat.SetColor("_BaseColor", tint);
+        LogShader("GenerateStarWarsPrefabsFromModels", mat);
+        return mat;
+    }
+
+    private static void UpgradeToUrp(Material material, Color tint)
+    {
+        Shader shader = GetUrpShader();
+        material.shader = shader;
+        material.SetColor("_BaseColor", tint);
+        EditorUtility.SetDirty(material);
+        LogShader("GenerateStarWarsPrefabsFromModels", material);
+    }
+
+    private static Shader GetUrpShader()
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        if (shader == null)
+            throw new InvalidOperationException("No URP shader available.");
+        return shader;
+    }
+
+    private static void LogShader(string source, Material material)
+    {
+        string shaderName = material.shader != null ? material.shader.name : "<null>";
+        Debug.Log($"[{source}] material {material.name} shader={shaderName}");
+        string shaderReportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-shader-report.log");
+        File.AppendAllText(shaderReportPath, $"material {material.name} shader={shaderName}{Environment.NewLine}");
     }
 }

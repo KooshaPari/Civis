@@ -1,22 +1,35 @@
 ManifestFileVersion: 0
-CRC: 1071468500
+CRC: 2611722696
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 994d322650c171ebfc8bb1cf94bcfcda
+    Hash: 91fa486965fefb4d622017be4738d990
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 1397ad235555a4f37791d5b3ff19e7a7
+    Hash: e2a11be68d6287ac10b047eee7e3b6d6
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 994d322650c171ebfc8bb1cf94bcfcda
+    Hash: 91fa486965fefb4d622017be4738d990
 HashAppended: 0
 ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
 - Class: 21
   Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
 - Class: 48
+  Script: {instanceID: 0}
+- Class: 136
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Materials/CIS/sw-b1-squad.mat
+- Assets/Prefabs/CIS/sw-b1-squad.prefab
 Dependencies: []

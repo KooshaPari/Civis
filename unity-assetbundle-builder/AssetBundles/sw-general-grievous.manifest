@@ -1,22 +1,35 @@
 ManifestFileVersion: 0
-CRC: 2172824213
+CRC: 2044209900
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 6cafca5ea2902e3b456bf5d8f27ae7ce
+    Hash: 851da018e39009c989e9e78f134819a1
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 1397ad235555a4f37791d5b3ff19e7a7
+    Hash: e2a11be68d6287ac10b047eee7e3b6d6
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 6cafca5ea2902e3b456bf5d8f27ae7ce
+    Hash: 851da018e39009c989e9e78f134819a1
 HashAppended: 0
 ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
 - Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 136
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Prefabs/CIS/sw-general-grievous.prefab
 - Assets/Materials/CIS/sw-general-grievous.mat
 Dependencies: []

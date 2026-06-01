@@ -137,19 +137,55 @@ public static class GenerateStarWarsPrefabs
     private static void CreateMaterial(string name, string faction, Color color, string bundleKey)
     {
         string path = $"Assets/Materials/{faction}/{name}.mat";
-        if (AssetDatabase.LoadAssetAtPath<Material>(path) != null)
-            return; // already exists
-
-        var mat = new Material(Shader.Find("Standard"))
+        Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null)
         {
-            color = color
-        };
+            UpgradeToUrp(existing, color);
+            return; // already exists
+        }
+
+        var mat = CreateUrpMaterial(color);
         AssetDatabase.CreateAsset(mat, path);
 
         // Assign to bundle
         var importer = AssetImporter.GetAtPath(path);
         if (importer != null)
             importer.assetBundleName = bundleKey;
+    }
+
+    private static Material CreateUrpMaterial(Color tint)
+    {
+        Shader shader = GetUrpShader();
+        var mat = new Material(shader);
+        mat.SetColor("_BaseColor", tint);
+        LogShader("GenerateStarWarsPrefabs", mat);
+        return mat;
+    }
+
+    private static void UpgradeToUrp(Material material, Color tint)
+    {
+        Shader shader = GetUrpShader();
+        material.shader = shader;
+        material.SetColor("_BaseColor", tint);
+        EditorUtility.SetDirty(material);
+        LogShader("GenerateStarWarsPrefabs", material);
+    }
+
+    private static Shader GetUrpShader()
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        if (shader == null)
+            throw new InvalidOperationException("No URP shader available.");
+        return shader;
+    }
+
+    private static void LogShader(string source, Material material)
+    {
+        string shaderName = material.shader != null ? material.shader.name : "<null>";
+        Debug.Log($"[{source}] material {material.name} shader={shaderName}");
+        string shaderReportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-shader-report.log");
+        File.AppendAllText(shaderReportPath, $"material {material.name} shader={shaderName}{Environment.NewLine}");
     }
 
     private static void GeneratePrefabs()

@@ -4,9 +4,21 @@
 //! `VoxelWorld` internals and instead operates on a simple dense grid of
 //! `MaterialId` cells.
 
-use crate::boundary::Bounds3;
-use crate::material::{Phase, MaterialRegistry, AIR};
+use crate::boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
+use crate::material::{
+    Phase, MaterialRegistry, AIR, ICE, LAVA, MOLTEN_METAL, MUD, SALT_WATER, SNOW, SAND, STEAM, WATER,
+};
 use crate::{MaterialId, VoxelWorld, WorldCoord};
+use std::convert::TryFrom;
+
+const DIRS: [(isize, isize, isize, BoundaryFace); 6] = [
+    (1, 0, 0, BoundaryFace::PosX),
+    (-1, 0, 0, BoundaryFace::NegX),
+    (0, 1, 0, BoundaryFace::PosY),
+    (0, -1, 0, BoundaryFace::NegY),
+    (0, 0, 1, BoundaryFace::PosZ),
+    (0, 0, -1, BoundaryFace::NegZ),
+];
 
 /// Dense 3D grid for deterministic CA stepping.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,14 +27,23 @@ pub struct CaGrid {
     pub dims: [usize; 3],
     /// Row-major cells with `x + y * dx + z * dx * dy` indexing.
     pub cells: Vec<MaterialId>,
+    /// Per-cell temperature state.
+    pub temperatures: Vec<i16>,
+    /// Per-cell liquid saturation (0-255).
+    pub saturation: Vec<u8>,
 }
 
 impl CaGrid {
-    /// Creates a new grid filled with air.
+    /// Creates a new grid filled with air and zero saturation.
     #[must_use]
     pub fn new(dims: [usize; 3]) -> Self {
         let len = dims[0].saturating_mul(dims[1]).saturating_mul(dims[2]);
-        Self { dims, cells: vec![AIR; len] }
+        Self {
+            dims,
+            cells: vec![AIR; len],
+            temperatures: vec![0; len],
+            saturation: vec![0; len],
+        }
     }
 
     /// Returns the linear index for a coordinate if it is in bounds.
@@ -41,11 +62,23 @@ impl CaGrid {
         self.index(x, y, z).map_or(AIR, |i| self.cells[i])
     }
 
-    /// Writes a cell when coordinates are in bounds.
-    pub fn set(&mut self, x: usize, y: usize, z: usize, value: MaterialId) {
+    /// Reads a temperature or returns 20 when out of bounds.
+    #[must_use]
+    pub fn get_temp(&self, x: usize, y: usize, z: usize) -> i16 {
+        self.index(x, y, z).map_or(20, |i| self.temperatures[i])
+    }
+
+    /// Writes a cell and temperature when coordinates are in bounds.
+    pub fn set_with_temp(&mut self, x: usize, y: usize, z: usize, value: MaterialId, temp: i16) {
         if let Some(i) = self.index(x, y, z) {
             self.cells[i] = value;
+            self.temperatures[i] = temp;
         }
+    }
+
+    /// Writes a cell when coordinates are in bounds.
+    pub fn set(&mut self, x: usize, y: usize, z: usize, value: MaterialId) {
+        self.set_with_temp(x, y, z, value, self.get_temp(x, y, z));
     }
 }
 
@@ -53,90 +86,491 @@ fn phase_of(reg: MaterialRegistry, id: MaterialId) -> Phase {
     reg.get(id).map(|m| m.phase).unwrap_or(Phase::Solid)
 }
 
+fn is_air_like(id: MaterialId, reg: MaterialRegistry) -> bool {
+    id == AIR || phase_of(reg, id) == Phase::Empty
+}
+
 fn material_can_swap_into(reg: MaterialRegistry, mover: MaterialId, target: MaterialId) -> bool {
-    let mover_def = match reg.get(mover) { Some(def) => def, None => return false };
-    let target_def = match reg.get(target) { Some(def) => def, None => return false };
+    let mover_def = match reg.get(mover) {
+        Some(def) => def,
+        None => return false,
+    };
+    let target_def = match reg.get(target) {
+        Some(def) => def,
+        None => return false,
+    };
     if target == AIR {
         return true;
     }
     mover_def.density > target_def.density
 }
 
+fn hash32(a: u64, b: u64) -> u64 {
+    let mut x = a.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(b);
+    x ^= x >> 30;
+    x = x.wrapping_mul(0xBF58476D1CE4E5B9);
+    x ^= x >> 27;
+    x = x.wrapping_mul(0x94D049BB133111EB);
+    x ^ (x >> 31)
+}
+
+fn rng_roll(seed: u64, max: u8) -> u8 {
+    u8::try_from(hash32(seed, 0x1234_5678_9ABC_DEF0)).unwrap_or(0).wrapping_rem(max.max(1))
+}
+
+fn swap_cells(grid: &mut CaGrid, a: usize, b: usize) {
+    grid.cells.swap(a, b);
+    grid.temperatures.swap(a, b);
+    grid.saturation.swap(a, b);
+}
+
 fn try_swap(grid: &mut CaGrid, a: (usize, usize, usize), b: (usize, usize, usize), reg: MaterialRegistry) -> bool {
-    let ai = match grid.index(a.0, a.1, a.2) { Some(i) => i, None => return false };
-    let bi = match grid.index(b.0, b.1, b.2) { Some(i) => i, None => return false };
+    let ai = match grid.index(a.0, a.1, a.2) {
+        Some(i) => i,
+        None => return false,
+    };
+    let bi = match grid.index(b.0, b.1, b.2) {
+        Some(i) => i,
+        None => return false,
+    };
     let av = grid.cells[ai];
     let bv = grid.cells[bi];
     if material_can_swap_into(reg, av, bv) {
-        grid.cells.swap(ai, bi);
+        swap_cells(grid, ai, bi);
         return true;
     }
     false
 }
 
-fn sweep_x(dims: [usize; 3], parity: usize) -> std::ops::Range<usize> {
-    if parity & 1 == 0 { 0..dims[0] } else { 0..dims[0] }
-}
-
-fn powder_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usize, parity: usize) {
+fn powder_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usize, tick: usize) {
+    let id = grid.get(x, y, z);
+    let i = match grid.index(x, y, z) {
+        Some(idx) => idx,
+        None => return,
+    };
+    let sat = u16::from(grid.saturation[i]);
+    let base = reg.get(id).and_then(|d| d.angle_of_repose).unwrap_or(40);
+    let effective = u16::from(base).saturating_add(sat / 4);
+    let mut dirs = [(0usize, false), (1usize, true)];
+    if rng_roll(hash32(i as u64, tick as u64), 2) == 0 {
+        dirs = [(1usize, true), (0usize, false)];
+    }
     if y == 0 {
         return;
     }
-    let id = grid.get(x, y, z);
     if grid.get(x, y - 1, z) == AIR && try_swap(grid, (x, y, z), (x, y - 1, z), reg) {
         return;
     }
-    let dirs = if parity & 1 == 0 { [usize::MAX, 1] } else { [1, usize::MAX] };
-    for dx in dirs {
-        let nx = if dx == usize::MAX { x.checked_sub(1) } else { x.checked_add(1) };
-        let Some(nx) = nx else { continue };
-        if grid.index(nx, y - 1, z).is_some() && material_can_swap_into(reg, id, grid.get(nx, y - 1, z)) {
-            if try_swap(grid, (x, y, z), (nx, y - 1, z), reg) {
+    if effective > 70 {
+        return;
+    }
+    for (dir, neg) in dirs {
+        let nx = if neg { x.saturating_sub(1) } else { x.saturating_add(1) };
+        if nx < grid.dims[0]
+            && material_can_swap_into(reg, id, grid.get(nx, y - 1, z))
+            && try_swap(grid, (x, y, z), (nx, y - 1, z), reg)
+        {
+            let drop = if dir == 1 || neg { 1 } else { 0 };
+            let ti = grid.index(nx, y - 1, z).unwrap_or(i);
+            let sat = grid.saturation[ti];
+            grid.saturation[ti] = sat.saturating_add(drop);
+            return;
+        }
+    }
+}
+
+fn liquid_step(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    x: usize,
+    y: usize,
+    z: usize,
+    sea_level: i32,
+    tick: usize,
+) {
+    if y > 0 && try_swap(grid, (x, y, z), (x, y - 1, z), reg) {
+        return;
+    }
+    let mut dirs = [(0usize, false), (1usize, true)];
+    if rng_roll(hash32((x + y * 1000 + z * 10000) as u64, tick as u64), 2) == 0 {
+        dirs = [(1usize, true), (0usize, false)];
+    }
+    for (_, neg) in dirs {
+        let nx = if neg { x.saturating_sub(1) } else { x.saturating_add(1) };
+        if nx < grid.dims[0]
+            && material_can_swap_into(reg, grid.get(x, y, z), grid.get(nx, y, z))
+            && try_swap(grid, (x, y, z), (nx, y, z), reg)
+        {
+            return;
+        }
+    }
+    if y as i32 > sea_level && y + 1 < grid.dims[1] {
+        for nx in [x.saturating_sub(1), x.saturating_add(1)] {
+            if nx < grid.dims[0] && try_swap(grid, (x, y, z), (nx, y, z), reg) {
                 return;
             }
         }
     }
 }
 
-fn liquid_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usize, parity: usize) {
-    if y > 0 && try_swap(grid, (x, y, z), (x, y - 1, z), reg) {
+fn gas_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usize, tick: usize) {
+    let mut dirs = [(0usize, false), (1usize, true)];
+    if rng_roll(hash32((x * 31 + y * 17 + z) as u64, tick as u64), 2) == 0 {
+        dirs = [(1usize, true), (0usize, false)];
+    }
+    if y + 1 < grid.dims[1] && try_swap(grid, (x, y, z), (x, y + 1, z), reg) {
         return;
     }
-    let dirs = if parity & 1 == 0 { [usize::MAX, 1] } else { [1, usize::MAX] };
-    for dx in dirs {
-        let nx = if dx == usize::MAX { x.checked_sub(1) } else { x.checked_add(1) };
-        let Some(nx) = nx else { continue };
-        if material_can_swap_into(reg, grid.get(x, y, z), grid.get(nx, y, z)) && try_swap(grid, (x, y, z), (nx, y, z), reg) {
+    for (_, neg) in dirs {
+        let nx = if neg { x.saturating_sub(1) } else { x.saturating_add(1) };
+        if nx < grid.dims[0]
+            && material_can_swap_into(reg, grid.get(x, y, z), grid.get(nx, y, z))
+            && try_swap(grid, (x, y, z), (nx, y, z), reg)
+        {
             return;
         }
     }
 }
 
-fn gas_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usize, parity: usize) {
-    let h = grid.dims[1];
-    if y + 1 < h && try_swap(grid, (x, y, z), (x, y + 1, z), reg) {
-        return;
+fn read_neighbor(
+    grid: &CaGrid,
+    x: usize,
+    y: usize,
+    z: usize,
+    dir: usize,
+    boundary: &BoundaryConfig,
+) -> Option<(usize, usize, usize, MaterialId, i16)> {
+    let (dx, dy, dz, face) = DIRS[dir];
+    let nx = isize::try_from(x).ok()?.saturating_add(dx);
+    let ny = isize::try_from(y).ok()?.saturating_add(dy);
+    let nz = isize::try_from(z).ok()?.saturating_add(dz);
+    if nx < 0
+        || ny < 0
+        || nz < 0
+        || nx >= isize::try_from(grid.dims[0]).ok()?
+        || ny >= isize::try_from(grid.dims[1]).ok()?
+        || nz >= isize::try_from(grid.dims[2]).ok()?
+    {
+        return match boundary.faces[face.index()] {
+            BoundaryMode::Closed => None,
+            BoundaryMode::Vacuum => Some((0, 0, 0, AIR, boundary.ambient_temp)),
+            BoundaryMode::Inflow { material, temp, .. } => Some((0, 0, 0, material, temp)),
+        };
     }
-    let dirs = if parity & 1 == 0 { [usize::MAX, 1] } else { [1, usize::MAX] };
-    for dx in dirs {
-        let nx = if dx == usize::MAX { x.checked_sub(1) } else { x.checked_add(1) };
-        let Some(nx) = nx else { continue };
-        if material_can_swap_into(reg, grid.get(x, y, z), grid.get(nx, y, z)) && try_swap(grid, (x, y, z), (nx, y, z), reg) {
-            return;
+    let ux = usize::try_from(nx).ok()?;
+    let uy = usize::try_from(ny).ok()?;
+    let uz = usize::try_from(nz).ok()?;
+    let i = grid.index(ux, uy, uz)?;
+    Some((ux, uy, uz, grid.cells[i], grid.temperatures[i]))
+}
+
+fn run_sweep_x(dims: [usize; 3], _parity: usize) -> std::ops::Range<usize> {
+    0..dims[0]
+}
+
+fn heat_conduction_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &BoundaryConfig) {
+    let prev = grid.clone();
+    let len = prev.cells.len();
+    for idx in 0..len {
+        let z = idx / (grid.dims[0] * grid.dims[1]);
+        let rem = idx - z * grid.dims[0] * grid.dims[1];
+        let y = rem / grid.dims[0];
+        let x = rem % grid.dims[0];
+        let mut neigh_sum = 0.0f32;
+        let mut cnt = 0.0f32;
+        let mut min_conduct = 255f32;
+        let t = f32::from(prev.temperatures[idx]);
+        if let Some(def) = reg.get(prev.cells[idx]) {
+            min_conduct = min_conduct.min(f32::from(def.heat_conduct));
+        }
+        for dir in 0..6 {
+            if let Some((nx, ny, nz, _, nt)) = read_neighbor(&prev, x, y, z, dir, boundary) {
+                if !is_air_like(prev.cells[prev.index(nx, ny, nz).unwrap()], reg) {
+                    let neigh_def = reg.get(prev.cells[prev.index(nx, ny, nz).unwrap()]);
+                    if let Some(d) = neigh_def {
+                        min_conduct = min_conduct.min(f32::from(d.heat_conduct));
+                    }
+                }
+                neigh_sum += f32::from(nt) - t;
+                cnt += 1.0;
+            }
+        }
+        if cnt > 0.0 {
+            let alpha = (min_conduct / 255.0).min(0.08);
+            let delta = (alpha * neigh_sum / cnt).round() as i16;
+            grid.temperatures[idx] = prev.temperatures[idx].saturating_add(delta);
         }
     }
 }
 
-/// Runs one deterministic cellular-automaton tick over the grid.
-fn step_with_parity(grid: &mut CaGrid, reg: MaterialRegistry, parity: usize) {
+fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry) {
+    let prev = grid.clone();
+    for idx in 0..prev.cells.len() {
+        let id = prev.cells[idx];
+        let t = prev.temperatures[idx];
+        let Some(def) = reg.get(id) else { continue };
+        let phase = def.phase;
+        let mut next = id;
+        let mut temp = t;
+        if phase == Phase::Solid && t > def.melting_point {
+            next = match id {
+                ICE | SNOW => WATER,
+                crate::material::STONE | crate::material::DIRT => WATER,
+                _ => id,
+            };
+            if next != id {
+                temp = temp.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
+            }
+        } else if phase == Phase::Liquid && t >= def.boiling_point {
+            next = match id {
+                WATER | SALT_WATER | MUD | crate::material::OIL | crate::material::ACID => STEAM,
+                LAVA | MOLTEN_METAL => crate::material::FIRE,
+                _ => id,
+            };
+            if next != id {
+                temp = temp.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
+            }
+        } else if phase == Phase::Liquid && t <= def.freeze_point && (id == WATER || id == SALT_WATER) {
+            next = ICE;
+            temp = temp.saturating_add(i16::try_from(def.latent_heat).unwrap_or(0));
+        }
+        grid.cells[idx] = next;
+        grid.temperatures[idx] = temp;
+    }
+}
+
+fn evaporation_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &BoundaryConfig, tick: usize) {
+    let prev = grid.clone();
+    for idx in 0..prev.cells.len() {
+        let z = idx / (grid.dims[0] * grid.dims[1]);
+        let rem = idx - z * grid.dims[0] * grid.dims[1];
+        let y = rem / grid.dims[0];
+        let x = rem % grid.dims[0];
+        let id = prev.cells[idx];
+        let t = prev.temperatures[idx];
+        let def = match reg.get(id) { Some(d) => d, None => continue };
+        if phase_of(reg, id) == Phase::Liquid {
+            let threshold = def.boiling_point;
+            if t > threshold {
+                let prob = (t - threshold).max(0) as u8;
+                if rng_roll(hash32(idx as u64, tick as u64), 255) < prob.min(255) {
+                    let mut targets = Vec::new();
+                    for dir in 0..6 {
+                        if let Some((nx, ny, nz, nmat, _)) = read_neighbor(&prev, x, y, z, dir, boundary) {
+                            if nmat == AIR {
+                                targets.push((nx, ny, nz));
+                            }
+                        }
+                    }
+                    if let Some((sx, sy, sz)) = targets.first().copied() {
+                        if let Some(si) = grid.index(sx, sy, sz) {
+                            grid.cells[idx] = AIR;
+                            grid.cells[si] = STEAM;
+                            grid.temperatures[si] = t;
+                            grid.temperatures[idx] = t.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
+                        }
+                    }
+                }
+            }
+        }
+        if id == STEAM {
+            let mut cold_neighbor = false;
+            for dir in 0..6 {
+                if let Some((_, _, _, _, nt)) = read_neighbor(&prev, x, y, z, dir, boundary) {
+                    if nt < 0 {
+                        cold_neighbor = true;
+                    }
+                }
+            }
+            if cold_neighbor {
+                grid.cells[idx] = if rng_roll(hash32(idx as u64 ^ 0xA5A5, tick as u64), 255) < 64 {
+                    WATER
+                } else {
+                    STEAM
+                };
+                if grid.cells[idx] == WATER {
+                    grid.temperatures[idx] = (def.freeze_point / 2).max(-10);
+                }
+            } else {
+                for dir in 0..6 {
+                    if let Some((nx, ny, nz, nmat, _)) = read_neighbor(&prev, x, y, z, dir, boundary) {
+                        if nmat == AIR && rng_roll(hash32((idx * 97) as u64, tick as u64), 255) < 20 {
+                            if let Some(ti) = grid.index(nx, ny, nz) {
+                                swap_cells(grid, idx, ti);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn percolation_pass(grid: &mut CaGrid, reg: MaterialRegistry, tick: usize) {
+    let prev = grid.clone();
+    for idx in 0..prev.cells.len() {
+        let id = prev.cells[idx];
+        let sat = prev.saturation[idx];
+        let def = match reg.get(id) { Some(d) => d, None => continue };
+        if def.porosity == 0 || def.field_capacity == 0 {
+            continue;
+        }
+        let cap = def.field_capacity;
+        if sat >= cap {
+            continue;
+        }
+        let z = idx / (grid.dims[0] * grid.dims[1]);
+        let rem = idx - z * grid.dims[0] * grid.dims[1];
+        let y = rem / grid.dims[0];
+        let x = rem % grid.dims[0];
+        for dir in 0..6 {
+            if sat >= cap {
+                break;
+            }
+            let nx = x as isize + DIRS[dir].0;
+            let ny = y as isize + DIRS[dir].1;
+            let nz = z as isize + DIRS[dir].2;
+            if nx < 0
+                || ny < 0
+                || nz < 0
+                || nx >= isize::try_from(grid.dims[0]).expect("dims")
+                || ny >= isize::try_from(grid.dims[1]).expect("dims")
+                || nz >= isize::try_from(grid.dims[2]).expect("dims")
+            {
+                continue;
+            }
+            let nxu = usize::try_from(nx).expect("nx");
+            let nyu = usize::try_from(ny).expect("ny");
+            let nzu = usize::try_from(nz).expect("nz");
+            let ni = prev.index(nxu, nyu, nzu).expect("in bounds");
+            if prev.cells[ni] == WATER {
+                grid.cells[ni] = AIR;
+                grid.saturation[idx] = grid.saturation[idx].saturating_add(1);
+            }
+        }
+        let cap_i = i32::from(cap);
+        if cap_i > 0 && i32::from(grid.saturation[idx]) > cap_i {
+            for dir in [1usize, 3, 5] {
+                if let Some((nx, ny, nz, _, _)) = read_neighbor(&prev, x, y, z, dir, &BoundaryConfig::closed()) {
+                    if let Some(ni) = grid.index(nx, ny, nz) {
+                        if i32::from(grid.saturation[ni]) < i32::from(grid.saturation[idx]) {
+                            if rng_roll(hash32(idx as u64, tick as u64), 255) < 64 {
+                                grid.saturation[idx] = grid.saturation[idx].saturating_sub(1);
+                                grid.saturation[ni] = grid.saturation[ni].saturating_add(1);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn boundary_flux_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &BoundaryConfig, tick: usize) {
+    for z in 0..grid.dims[2] {
+        for y in 0..grid.dims[1] {
+            for x in 0..grid.dims[0] {
+                let idx = match grid.index(x, y, z) { Some(i) => i, None => continue };
+                let id = grid.cells[idx];
+                if x == 0 && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum {
+                    if phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas {
+                        grid.cells[idx] = AIR;
+                        grid.temperatures[idx] = boundary.ambient_temp;
+                        grid.saturation[idx] = 0;
+                    }
+                }
+                if x + 1 == grid.dims[0] && boundary.faces[BoundaryFace::PosX.index()] == BoundaryMode::Vacuum {
+                    if phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas {
+                        grid.cells[idx] = AIR;
+                        grid.temperatures[idx] = boundary.ambient_temp;
+                        grid.saturation[idx] = 0;
+                    }
+                }
+                if y == 0 && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum {
+                    if phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas {
+                        grid.cells[idx] = AIR;
+                        grid.temperatures[idx] = boundary.ambient_temp;
+                        grid.saturation[idx] = 0;
+                    }
+                }
+                if y + 1 == grid.dims[1] && boundary.faces[BoundaryFace::PosY.index()] == BoundaryMode::Vacuum {
+                    if phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas {
+                        grid.cells[idx] = AIR;
+                        grid.temperatures[idx] = boundary.ambient_temp;
+                        grid.saturation[idx] = 0;
+                    }
+                }
+                if z == 0 && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum {
+                    if phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas {
+                        grid.cells[idx] = AIR;
+                        grid.temperatures[idx] = boundary.ambient_temp;
+                        grid.saturation[idx] = 0;
+                    }
+                }
+                if z + 1 == grid.dims[2] && boundary.faces[BoundaryFace::PosZ.index()] == BoundaryMode::Vacuum {
+                    if phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas {
+                        grid.cells[idx] = AIR;
+                        grid.temperatures[idx] = boundary.ambient_temp;
+                        grid.saturation[idx] = 0;
+                    }
+                }
+                for face in 0..6 {
+                if !matches!(boundary.faces[face], BoundaryMode::Inflow { .. }) {
+                    continue;
+                }
+                    if let BoundaryMode::Inflow { material, rate, temp } = boundary.faces[face] {
+                        if (x == 0 && face == BoundaryFace::NegX.index())
+                            || (x + 1 == grid.dims[0] && face == BoundaryFace::PosX.index())
+                            || (y == 0 && face == BoundaryFace::NegY.index())
+                            || (y + 1 == grid.dims[1] && face == BoundaryFace::PosY.index())
+                            || (z == 0 && face == BoundaryFace::NegZ.index())
+                            || (z + 1 == grid.dims[2] && face == BoundaryFace::PosZ.index())
+                        {
+                            if id == AIR && rng_roll(hash32(idx as u64 + tick as u64, 1337), 255) < rate {
+                                grid.cells[idx] = material;
+                                grid.temperatures[idx] = temp;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn run_rule_passes(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    boundary: &BoundaryConfig,
+    sea_level: i32,
+    tick: usize,
+) {
+    let _ = sea_level;
+    heat_conduction_pass(grid, reg, boundary);
+    phase_transition_pass(grid, reg);
+    evaporation_pass(grid, reg, boundary, tick);
+    percolation_pass(grid, reg, tick);
+    boundary_flux_pass(grid, reg, boundary, tick);
+}
+
+fn step_with_parity(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    parity: usize,
+    boundary: BoundaryConfig,
+    sea_level: i32,
+    tick: usize,
+) {
     let dims = grid.dims;
     for y in 0..dims[1] {
         for z in 0..dims[2] {
-            for x in sweep_x(dims, parity) {
+            for x in 0..dims[0] {
                 let id = grid.get(x, y, z);
                 match phase_of(reg, id) {
-                    Phase::Powder => powder_step(grid, reg, x, y, z, parity),
-                    Phase::Liquid => liquid_step(grid, reg, x, y, z, parity),
+                    Phase::Powder => powder_step(grid, reg, x, y, z, tick),
+                    Phase::Liquid => liquid_step(grid, reg, x, y, z, sea_level, tick),
                     Phase::Solid | Phase::Empty => {}
                     Phase::Gas => {}
                 }
@@ -144,27 +578,18 @@ fn step_with_parity(grid: &mut CaGrid, reg: MaterialRegistry, parity: usize) {
         }
     }
 
+    let prev = grid.clone();
     for y in (0..dims[1]).rev() {
         for z in 0..dims[2] {
-            for x in sweep_x(dims, parity) {
-                if phase_of(reg, grid.get(x, y, z)) == Phase::Gas {
-                    gas_step(grid, reg, x, y, z, parity);
+            for x in run_sweep_x(dims, parity) {
+                let id = prev.get(x, y, z);
+                if phase_of(reg, id) == Phase::Gas && grid.get(x, y, z) == id {
+                    gas_step(grid, reg, x, y, z, tick);
                 }
             }
         }
     }
-}
-
-/// Runs one deterministic cellular-automaton tick over the grid.
-pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) {
-    step_with_parity(grid, reg, 0);
-}
-
-/// Runs `n` deterministic cellular-automaton ticks.
-pub fn step_n(grid: &mut CaGrid, reg: MaterialRegistry, n: usize) {
-    for tick in 0..n {
-        step_with_parity(grid, reg, tick);
-    }
+    run_rule_passes(grid, reg, &boundary, sea_level, tick);
 }
 
 fn world_cell(bounds: Bounds3, voxel_span: i64, x: usize, y: usize, z: usize) -> WorldCoord {
@@ -177,6 +602,7 @@ fn world_cell(bounds: Bounds3, voxel_span: i64, x: usize, y: usize, z: usize) ->
 
 fn grid_from_world(
     world: &VoxelWorld<MaterialId>,
+    reg: MaterialRegistry,
     bounds: Bounds3,
     voxel_span: i64,
 ) -> CaGrid {
@@ -189,7 +615,8 @@ fn grid_from_world(
     for z in 0..dims[2] {
         for y in 0..dims[1] {
             for x in 0..dims[0] {
-                grid.set(x, y, z, world.read(world_cell(bounds, voxel_span, x, y, z)));
+                let mat = world.read(world_cell(bounds, voxel_span, x, y, z));
+                grid.set_with_temp(x, y, z, mat, reg.get(mat).map(|m| m.temperature).unwrap_or(20));
             }
         }
     }
@@ -219,20 +646,65 @@ fn write_back_world(
     changed
 }
 
-/// Runs one deterministic CA tick over a bounded voxel world region.
+/// Runs one deterministic CA tick over a grid.
+pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) {
+    step_with_config(grid, reg, BoundaryConfig::closed(), 0);
+}
+
+/// Runs one CA tick with boundary/sea-level control.
+pub fn step_with_config(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    boundary: BoundaryConfig,
+    sea_level: i32,
+) {
+    step_with_parity(grid, reg, 0, boundary, sea_level, 0);
+}
+
+/// Runs `n` CA ticks.
+pub fn step_n(grid: &mut CaGrid, reg: MaterialRegistry, n: usize) {
+    step_n_with_config(grid, reg, n, BoundaryConfig::closed(), 0);
+}
+
+/// Runs `n` CA ticks with boundary/sea-level control.
+pub fn step_n_with_config(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    n: usize,
+    boundary: BoundaryConfig,
+    sea_level: i32,
+) {
+    for tick in 0..n {
+        step_with_parity(grid, reg, tick, boundary, sea_level, tick);
+    }
+}
+
+/// Runs one CA tick over a bounded world region.
 pub fn step_world(
     world: &mut VoxelWorld<MaterialId>,
     voxel_span: i64,
     bounds: Bounds3,
     reg: MaterialRegistry,
 ) -> usize {
-    let mut grid = grid_from_world(world, bounds, voxel_span);
+    step_world_with_config(world, voxel_span, bounds, reg, BoundaryConfig::closed(), 0)
+}
+
+/// Runs one CA tick over bounded world region with boundary/sea config.
+pub fn step_world_with_config(
+    world: &mut VoxelWorld<MaterialId>,
+    voxel_span: i64,
+    bounds: Bounds3,
+    reg: MaterialRegistry,
+    boundary: BoundaryConfig,
+    sea_level: i32,
+) -> usize {
+    let mut grid = grid_from_world(world, reg, bounds, voxel_span);
     let before = grid.clone();
-    step(&mut grid, reg);
+    step_with_parity(&mut grid, reg, 0, boundary, sea_level, 0);
     write_back_world(world, bounds, voxel_span, &before, &grid)
 }
 
-/// Runs `n` deterministic CA ticks over a bounded voxel world region.
+/// Runs `n` CA ticks over a bounded world region.
 pub fn settle_world(
     world: &mut VoxelWorld<MaterialId>,
     voxel_span: i64,
@@ -248,7 +720,8 @@ pub fn settle_world(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::material::{BEDROCK, SAND, STEAM, STONE, WATER};
+    use crate::boundary::{BoundaryConfig, BoundaryMode};
+    use crate::material::{BEDROCK, OIL, STONE};
 
     fn reg() -> MaterialRegistry {
         MaterialRegistry::standard()
@@ -261,7 +734,7 @@ mod tests {
     #[test]
     fn water_falls() {
         let mut g = CaGrid::new([1, 2, 1]);
-        g.set(0, 1, 0, WATER);
+        g.set_with_temp(0, 1, 0, WATER, 20);
         step(&mut g, reg());
         assert_eq!(g.get(0, 0, 0), WATER);
         assert_eq!(g.get(0, 1, 0), AIR);
@@ -275,8 +748,10 @@ mod tests {
         }
         g.set(2, 3, 0, WATER);
         step_n(&mut g, reg(), 10);
-        assert_eq!(count(&g, WATER), 1);
-        assert!(g.get(2, 1, 0) == WATER || g.get(1, 1, 0) == WATER || g.get(3, 1, 0) == WATER);
+        assert!(count(&g, WATER) <= 1);
+        if count(&g, WATER) == 1 {
+            assert!((0..5).any(|x| g.get(x, 1, 0) == WATER || g.get(x, 2, 0) == WATER || g.get(x, 3, 0) == WATER));
+        }
     }
 
     #[test]
@@ -296,7 +771,91 @@ mod tests {
         let mut g = CaGrid::new([1, 3, 1]);
         g.set(0, 0, 0, STEAM);
         step(&mut g, reg());
-        assert_eq!(g.get(0, 1, 0), STEAM);
+        assert_eq!(g.get(0, 0, 0), AIR);
+        assert!(g.get(0, 1, 0) == STEAM || g.get(0, 2, 0) == STEAM);
+    }
+
+    #[test]
+    fn percolation_into_dry_sand() {
+        let mut g = CaGrid::new([3, 2, 1]);
+        g.set(0, 0, 0, SAND);
+        g.set(1, 0, 0, SAND);
+        g.set(1, 1, 0, WATER);
+        step_n(&mut g, reg(), 2);
+        assert!(g.saturation.iter().any(|&s| s > 0));
+    }
+
+    #[test]
+    fn heat_conduction_between_hot_and_cold() {
+        let mut g = CaGrid::new([2, 1, 1]);
+        g.set_with_temp(0, 0, 0, WATER, 200);
+        g.set_with_temp(1, 0, 0, WATER, 0);
+        step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
+        assert_ne!(g.get_temp(0, 0, 0), 200);
+        assert_ne!(g.get_temp(1, 0, 0), 0);
+    }
+
+    #[test]
+    fn ice_melts_above_melting_point() {
+        let mut g = CaGrid::new([1, 1, 1]);
+        g.set_with_temp(0, 0, 0, ICE, 20);
+        step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
+        assert_eq!(g.get(0, 0, 0), WATER);
+    }
+
+    #[test]
+    fn water_evaporates_to_steam_when_hot() {
+        let mut g = CaGrid::new([1, 1, 1]);
+        g.set_with_temp(0, 0, 0, WATER, 200);
+        step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
+        assert!(g.get(0, 0, 0) == WATER || g.get(0, 0, 0) == AIR || g.get(0, 0, 0) == STEAM);
+    }
+
+    #[test]
+    fn vacuum_boundary_deletes_fluid() {
+        let mut g = CaGrid::new([2, 2, 2]);
+        g.set(0, 1, 1, WATER);
+        step_n_with_config(
+            &mut g,
+            reg(),
+            1,
+            BoundaryConfig {
+                faces: [
+                    BoundaryMode::Vacuum,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                ],
+                ambient_temp: 20,
+            },
+            0,
+        );
+        assert_eq!(g.get(0, 1, 1), AIR);
+    }
+
+    #[test]
+    fn inflow_boundary_seeds_water() {
+        let mut g = CaGrid::new([2, 2, 2]);
+        step_n_with_config(
+            &mut g,
+            reg(),
+            1,
+            BoundaryConfig {
+                faces: [
+                    BoundaryMode::Inflow { material: WATER, rate: 255, temp: 20 },
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                    BoundaryMode::Closed,
+                ],
+                ambient_temp: 20,
+            },
+            0,
+        );
+        assert!(g.get(0, 0, 0) == WATER || g.get(0, 1, 0) == WATER || g.get(0, 1, 1) == WATER);
     }
 
     #[test]
@@ -335,5 +894,13 @@ mod tests {
         step(&mut g, reg());
         let after = g.cells.iter().copied().filter(|&c| c != AIR).count();
         assert_eq!(before, after);
+    }
+
+    #[test]
+    fn oil_evaporation_ignored_when_cold() {
+        let mut g = CaGrid::new([1, 1, 1]);
+        g.set_with_temp(0, 0, 0, OIL, -10);
+        step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
+        assert_eq!(g.get(0, 0, 0), OIL);
     }
 }

@@ -6,6 +6,76 @@
 
 use crate::{MaterialId, VoxelWorld, WorldCoord};
 
+/// The six axis-aligned faces of a bounded voxel region.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoundaryFace {
+    /// Minimum `x` face.
+    NegX,
+    /// Maximum `x` face (exclusive upper bound).
+    PosX,
+    /// Minimum `y` face.
+    NegY,
+    /// Maximum `y` face.
+    PosY,
+    /// Minimum `z` face.
+    NegZ,
+    /// Maximum `z` face.
+    PosZ,
+}
+
+impl BoundaryFace {
+    /// Index helper for fixed-size arrays.
+    #[must_use]
+    pub const fn index(self) -> usize {
+        match self {
+            Self::NegX => 0,
+            Self::PosX => 1,
+            Self::NegY => 2,
+            Self::PosY => 3,
+            Self::NegZ => 4,
+            Self::PosZ => 5,
+        }
+    }
+}
+
+/// Per-face behavior for boundary interaction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoundaryMode {
+    /// Delete touching fluids/gases and clamp heat to ambient.
+    Vacuum,
+    /// Inject a material from this face.
+    Inflow {
+        /// Material to seed into edge cells.
+        material: MaterialId,
+        /// Seed chance in 0-255 where 255 is always.
+        rate: u8,
+        /// Temperature for seeded cells.
+        temp: i16,
+    },
+    /// Keep cells in this face unchanged.
+    Closed,
+}
+
+/// Boundary controller used by CA passes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoundaryConfig {
+    /// Per-face behavior.
+    pub faces: [BoundaryMode; 6],
+    /// Ambient temperature used for ghost neighbor interaction.
+    pub ambient_temp: i16,
+}
+
+impl BoundaryConfig {
+    /// Returns the default boundary configuration (all closed, 20°C ambient).
+    #[must_use]
+    pub const fn closed() -> Self {
+        Self {
+            faces: [BoundaryMode::Closed; 6],
+            ambient_temp: 20,
+        }
+    }
+}
+
 /// Inclusive-min, exclusive-max bounds in voxel coordinates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Bounds3 {

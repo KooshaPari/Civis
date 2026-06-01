@@ -91,7 +91,8 @@ public static class Program
             "toggle-ui" => await HandleToggleUiCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
             "scan-scene" => await HandleScanSceneCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
             "invoke-method" => await HandleInvokeMethodCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
-            "ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
+            "dump-ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
             "ui-pointer" => await HandleUiPointerCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
             "navigate-to-gameplay" => await HandleNavigateToGameplayCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
             "demo" => await HandleDemoCommand().ConfigureAwait(false),
@@ -211,7 +212,8 @@ public static class Program
         AnsiConsole.MarkupLine("  toggle-ui <target>    - Toggle DINOForge UI: modmenu (F10) or debug (F9)");
         AnsiConsole.MarkupLine("  scan-scene <filter>   - Dump active MonoBehaviours + their void() methods");
         AnsiConsole.MarkupLine("  invoke-method <target> <method> - Call a void() method on matching MB");
-        AnsiConsole.MarkupLine("  ui-tree <selector>    - Snapshot the live Unity UI hierarchy (Playwright-style DOM)");
+        AnsiConsole.MarkupLine("  ui-tree [selector] [includeCursor=true|false] - Snapshot the live Unity UI hierarchy (Playwright-style DOM)");
+        AnsiConsole.MarkupLine("  dump-ui-tree [selector] [includeCursor=true|false] - Alias for ui-tree with full visual metadata");
         AnsiConsole.MarkupLine("  demo             - Full end-to-end demo: menu → mods → F9/F10 → save → gameplay");
         AnsiConsole.MarkupLine("  --help, -h       - Show this help");
         AnsiConsole.MarkupLine("");
@@ -734,19 +736,63 @@ public static class Program
         }
     }
 
-    private static async Task<int> HandleUiTreeCommand(string? selector)
+    private static async Task<int> HandleUiTreeCommand(string[] args)
     {
+        string? selector = null;
+        bool includeCursor = true;
+
+        foreach (string arg in args)
+        {
+            if (arg is null)
+                continue;
+
+            if (arg.StartsWith("includeCursor=", StringComparison.OrdinalIgnoreCase))
+            {
+                if (bool.TryParse(arg.Substring("includeCursor=".Length), out bool parsed))
+                    includeCursor = parsed;
+                continue;
+            }
+
+            if (arg.StartsWith("--include-cursor=", StringComparison.OrdinalIgnoreCase))
+            {
+                if (bool.TryParse(arg.Substring("--include-cursor=".Length), out bool parsed))
+                    includeCursor = parsed;
+                continue;
+            }
+
+            if (arg.Equals("--no-cursor", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("--no-include-cursor", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("--include-cursor=false", StringComparison.OrdinalIgnoreCase))
+            {
+                includeCursor = false;
+                continue;
+            }
+
+            if (selector == null)
+                selector = arg;
+        }
+
         using var client = new GameClient(CreateClientOptions());
         try
         {
             await client.ConnectAsync().ConfigureAwait(false);
-            AnsiConsole.MarkupLine($"[cyan]Capturing UI tree{(selector != null ? $" (selector: {selector})" : "")}...[/]");
-            UiTreeResult result = await client.GetUiTreeAsync(selector).ConfigureAwait(false);
+            if (!JsonOutput)
+                AnsiConsole.MarkupLine($"[cyan]Capturing UI tree{(selector != null ? $" (selector: {selector})" : "")} (includeCursor={includeCursor})[/]");
+            UiTreeResult result = await client.GetUiTreeAsync(selector, includeCursor).ConfigureAwait(false);
             if (!result.Success)
             {
-                AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(result.Message)}");
+                if (JsonOutput)
+                    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { success = false, error = result.Message }, GameControlCliJsonOptions.Indented));
+                else
+                    AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(result.Message)}");
                 client.Disconnect();
                 return 1;
+            }
+            if (JsonOutput)
+            {
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(result, GameControlCliJsonOptions.Indented));
+                client.Disconnect();
+                return 0;
             }
             AnsiConsole.MarkupLine($"[green]✓[/] {result.NodeCount} nodes  ({result.GeneratedAtUtc})");
             PrintUiNode(result.Root, 0);

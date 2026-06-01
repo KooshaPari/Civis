@@ -538,9 +538,28 @@ async def game_ui_tree(ctx: Context, selector: str | None = None, pipe_name: str
         selector: Optional CSS-like selector to filter results.
         pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
     """
+    return await game_dump_ui_tree(ctx, selector=selector, pipe_name=pipe_name)
+
+
+@mcp.tool()
+async def game_dump_ui_tree(
+    ctx: Context,
+    selector: str | None = None,
+    include_cursor: bool = True,
+    pipe_name: str | None = None,
+) -> dict:
+    """
+    Dump a full runtime UI census snapshot with visual metadata and themed/native flags.
+
+    Args:
+        selector: Optional selector string to filter results.
+        include_cursor: Whether to include hardware cursor metadata.
+        pipe_name: Optional named pipe name for multi-instance support (defaults to "dinoforge-game-bridge").
+    """
     args = ["ui-tree"]
     if selector:
         args.append(selector)
+    args.append(f"includeCursor={str(include_cursor).lower()}")
     return _run_game_cli(*args, pipe_name=pipe_name)
 
 

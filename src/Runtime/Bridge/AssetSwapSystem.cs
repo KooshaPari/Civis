@@ -883,10 +883,16 @@ namespace DINOForge.Runtime.Bridge
             // (vanilla_mapping absent/unresolved) AND no mesh-name substrings. With either signal
             // present we proceed — the archetype-narrowed query is authoritative; substrings are an
             // optional refinement. A populated vanilla_mapping therefore exits DIAGNOSTIC MODE.
-            bool hasArchetypeFilter = !string.IsNullOrWhiteSpace(vanillaMapping)
-                && TryResolveSwapArchetype(vanillaMapping, out string? resolvedArchetype)
-                && !string.IsNullOrEmpty(resolvedArchetype)
-                && ResolveTypeByName(resolvedArchetype!) != null;
+            // #986 FINAL FIX: use the ACTUAL query-narrowing result (resolvedArchetypeType),
+            // NOT a separate re-resolution. The earlier code re-ran TryResolveSwapArchetype +
+            // ResolveTypeByName here, which could (and did, live) disagree with the resolution
+            // the EntityQuery actually used above — the query logged "filtering by
+            // 'Components.MeleeUnit'" (resolvedArchetypeType != null, 193 entities matched) yet
+            // this re-resolution returned false, leaving the hand-guessed mesh substrings active
+            // as a reject filter that dropped all 193 matched entities ("swapped 0/100"). The
+            // query already narrowed the entities to the right archetype, so trust that single
+            // source of truth: if the query was archetype-narrowed, treat the filter as present.
+            bool hasArchetypeFilter = resolvedArchetypeType != null;
 
             // CRITICAL ("units look native") fix: when an archetype filter IS present it is the
             // authoritative targeting — the EntityQuery is already narrowed to the right unit class.

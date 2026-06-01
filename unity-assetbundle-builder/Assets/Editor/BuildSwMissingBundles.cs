@@ -58,9 +58,16 @@ public static class BuildSwMissingBundles
 
                 if (AssetDatabase.LoadAssetAtPath<Material>(matPath) == null)
                 {
-                    var m = new Material(Shader.Find("Standard"))
-                    { color = def.Faction == "CIS" ? CisGrey : RepublicWhite };
+                    var m = CreateUrpMaterial(def.Faction == "CIS" ? CisGrey : RepublicWhite);
                     AssetDatabase.CreateAsset(m, matPath);
+                }
+                else
+                {
+                    var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                    if (existing != null && (existing.shader == null || !existing.shader.name.StartsWith("Universal Render Pipeline/")))
+                    {
+                        CreateUrpMaterialForExisting(existing, def.Faction == "CIS" ? CisGrey : RepublicWhite);
+                    }
                 }
 
                 string[] guids = AssetDatabase.FindAssets($"{def.Fbx} t:Model", new[] { "Assets/Models" });
@@ -122,5 +129,23 @@ public static class BuildSwMissingBundles
                 string parent = Path.GetDirectoryName(d)!.Replace('\\', '/');
                 AssetDatabase.CreateFolder(parent, Path.GetFileName(d));
             }
+    }
+
+    private static Material CreateUrpMaterial(Color tint)
+    {
+        var shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        var mat = new Material(shader);
+        mat.SetColor("_BaseColor", tint);
+        return mat;
+    }
+
+    private static void CreateUrpMaterialForExisting(Material material, Color tint)
+    {
+        var shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        material.shader = shader;
+        material.SetColor("_BaseColor", tint);
+        EditorUtility.SetDirty(material);
     }
 }

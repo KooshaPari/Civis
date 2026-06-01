@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3567018423
+CRC: 3117678650
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 47f911080644125a782820ad6714c1d1
+    Hash: 0ea66807d8b01ce95b1dd09dd1dd39d3
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 47f911080644125a782820ad6714c1d1
+    Hash: 0ea66807d8b01ce95b1dd09dd1dd39d3
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,7 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Materials/CIS/sw-processing-plant.mat
 - Assets/Prefabs/CIS/sw-processing-plant.prefab
 Dependencies: []

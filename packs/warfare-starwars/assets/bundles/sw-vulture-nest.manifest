@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1066704869
+CRC: 927335030
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 0028eaef23b656e13256dc2255acc3f2
+    Hash: 6e94a672aa7a39de531df5e45bb3da59
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 0028eaef23b656e13256dc2255acc3f2
+    Hash: 6e94a672aa7a39de531df5e45bb3da59
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,7 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Materials/CIS/sw-vulture-nest.mat
 - Assets/Prefabs/CIS/sw-vulture-nest.prefab
 Dependencies: []

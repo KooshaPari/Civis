@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3769579180
+CRC: 1169689345
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 98bb01db051a967714b949efc9015db0
+    Hash: a628b3c5d2e4b472e18cb17288711c9e
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: 0b3e1c8af11aa690d1e0c74b108ebba5
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 98bb01db051a967714b949efc9015db0
+    Hash: a628b3c5d2e4b472e18cb17288711c9e
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -18,17 +18,11 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 21
   Script: {instanceID: 0}
-- Class: 23
-  Script: {instanceID: 0}
-- Class: 33
-  Script: {instanceID: 0}
-- Class: 43
-  Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/CIS/sw-cis-b2-super-droid-primary.mat
 - Assets/Prefabs/CIS/sw-cis-b2-super-droid.prefab
+- Assets/Materials/CIS/sw-cis-b2-super-droid-primary.mat
 - Assets/Materials/CIS/sw-cis-b2-super-droid.mat
 Dependencies: []

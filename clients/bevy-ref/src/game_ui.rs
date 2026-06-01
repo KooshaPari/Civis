@@ -34,12 +34,15 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
+use crate::holo_minimap::HoloMinimapPlugin;
 use crate::menus::GameUiMode;
 use crate::spawn_tools::{ActiveTool, SelectedEntity};
 use crate::tool_categories::{ActiveSubTool, Category, SubTool, CATEGORIES};
 use crate::ui_theme::{
-    accent_frame, apply_theme, chip, compact, hairline, inner_glow, panel_frame, ACCENT, BORDER,
-    DIM, GOLD, GREEN, INSET_FILL, RADIUS, RADIUS_SM, RED, SURFACE, SURFACE_HI, TEXT,
+    accent_frame, apply_theme, compact, deck_chip, deck_rim_frame, hairline, inner_glow, top_sheen,
+    DECK_AMBER, DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT, DECK_TEXT_MID, GOLD, GREEN, RED,
+    INSET_FILL, RADIUS, RADIUS_BTN, RADIUS_SM, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, BORDER, DIM,
+    TEXT,
 };
 
 // ---------------------------------------------------------------------------
@@ -275,6 +278,7 @@ const TOOL_ICON_PATHS: &[(&str, &str)] = &[
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin::default())
+            .add_plugins(HoloMinimapPlugin)
             .init_resource::<GameUiSnapshot>()
             .init_resource::<WorldResources>()
             .init_resource::<FactionRoster>()
@@ -409,13 +413,14 @@ fn draw_game_ui(
     apply_theme(ctx);
 
     egui::TopBottomPanel::top("civis_game_top_bar")
-        .frame(panel_frame(egui::Margin::symmetric(14, 8)))
+        .frame(deck_rim_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8)))
         .show(ctx, |ui| {
             top_bar_ui(ui, &snapshot, &resources, &attach_mode, live_attach.as_deref());
+            top_sheen(ui.painter(), ui.min_rect());
         });
 
     egui::TopBottomPanel::bottom("civis_game_bottom_bar")
-        .frame(panel_frame(egui::Margin::symmetric(14, 10)))
+        .frame(deck_rim_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_MD as i8)))
         .show(ctx, |ui| {
             let mut bottom = BottomBarCtx {
                 active: &mut active_tool,
@@ -424,21 +429,22 @@ fn draw_game_ui(
                 icons: &tool_icons.ids,
             };
             category_bar_ui(ui, &mut bottom);
-            ui.add_space(4.0);
+            ui.add_space(SPACE_XS);
             help_hint_ui(ui);
+            top_sheen(ui.painter(), ui.min_rect());
         });
 
     egui::SidePanel::left("civis_game_left_panel")
         .resizable(false)
         .exact_width(214.0)
-        .frame(panel_frame(egui::Margin::same(12)))
+        .frame(deck_rim_frame(egui::Margin::same(SPACE_MD as i8)))
         .show(ctx, |ui| faction_panel_ui(ui, &roster));
 
     // selected.0 is the Option<Entity> from spawn_tools::SelectedEntity.
     egui::SidePanel::right("civis_game_selected_panel")
         .resizable(true)
         .default_width(276.0)
-        .frame(panel_frame(egui::Margin::same(14)))
+        .frame(deck_rim_frame(egui::Margin::same(SPACE_LG as i8)))
         .show(ctx, |ui| inspector_ui(ui, selected.0.is_some(), &details));
 }
 
@@ -446,24 +452,29 @@ fn draw_game_ui(
 // Top bar
 // ---------------------------------------------------------------------------
 
-/// A resource chip with a per-tick delta arrow (↑ green / ↓ red / → grey).
+/// A resource chip with a per-tick delta arrow (↑ success / ↓ red / → dim).
 fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: egui::Color32) {
     let (arrow, dcol) = if delta > 0.0 {
-        ("\u{2191}", GREEN)
+        ("\u{2191}", DECK_SUCCESS)
     } else if delta < 0.0 {
         ("\u{2193}", RED)
     } else {
-        ("\u{2192}", DIM)
+        ("\u{2192}", DECK_TEXT_MID)
     };
     egui::Frame::NONE
-        .fill(INSET_FILL)
-        .corner_radius(egui::CornerRadius::same(RADIUS_SM))
-        .stroke(egui::Stroke::new(1.0, BORDER))
-        .inner_margin(egui::Margin::symmetric(9, 5))
+        .fill(DECK_GLASS.gamma_multiply(0.85))
+        .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
+        .stroke(egui::Stroke::new(1.0, DECK_BORDER))
+        .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
         .show(ui, |ui| {
             ui.label(egui::RichText::new(icon).color(color));
-            ui.label(egui::RichText::new(value).color(TEXT).strong());
-            ui.label(egui::RichText::new(format!("{arrow}{:+.0}", delta)).color(dcol).small());
+            ui.label(egui::RichText::new(value).monospace().color(DECK_TEXT).strong());
+            ui.label(
+                egui::RichText::new(format!("{arrow}{:+.0}", delta))
+                    .color(dcol)
+                    .small()
+                    .monospace(),
+            );
         });
 }
 
@@ -476,22 +487,45 @@ fn top_bar_ui(
     live_attach: Option<&crate::live_attach::LiveAttachState>,
 ) {
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new("CIVIS").color(ACCENT).strong().size(17.0));
-        ui.add_space(4.0);
-        chip(ui, "\u{23f1}", &format!("Tick {}", snapshot.tick), ACCENT);
-        chip(ui, "\u{1f30d}", &format!("Era {}", snapshot.era), GOLD);
-        chip(ui, "\u{1f465}", &format!("{}", snapshot.population), GREEN);
-        chip(ui, "\u{1f6a9}", &format!("{}", snapshot.factions), GOLD);
+        ui.label(
+            egui::RichText::new("CIVIS")
+                .color(DECK_AMBER)
+                .strong()
+                .size(17.0),
+        );
+        ui.add_space(SPACE_XS);
+        deck_chip(ui, "tick", &snapshot.tick.to_string(), DECK_AMBER);
+        deck_chip(ui, "era", &snapshot.era, DECK_AMBER);
+        deck_chip(ui, "pop", &snapshot.population.to_string(), DECK_SUCCESS);
+        deck_chip(ui, "factions", &snapshot.factions.to_string(), DECK_AMBER);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ws_status_ui(ui, snapshot, attach_mode, live_attach);
         });
     });
-    ui.add_space(6.0);
+    ui.add_space(SPACE_SM);
     ui.horizontal(|ui| {
-        resource_chip(ui, "\u{1f33e}", &compact(resources.food), resources.food_delta, GOLD);
-        resource_chip(ui, "\u{2699}", &compact(resources.materials), resources.materials_delta, DIM);
-        resource_chip(ui, "\u{26a1}", &compact(resources.energy), resources.energy_delta, ACCENT);
-        resource_chip(ui, "\u{1f4b0}", &compact(resources.treasury), resources.treasury_delta, GOLD);
+        resource_chip(ui, "\u{1f33e}", &compact(resources.food), resources.food_delta, DECK_AMBER);
+        resource_chip(
+            ui,
+            "\u{2699}",
+            &compact(resources.materials),
+            resources.materials_delta,
+            DECK_TEXT_MID,
+        );
+        resource_chip(
+            ui,
+            "\u{26a1}",
+            &compact(resources.energy),
+            resources.energy_delta,
+            DECK_SUCCESS,
+        );
+        resource_chip(
+            ui,
+            "\u{1f4b0}",
+            &compact(resources.treasury),
+            resources.treasury_delta,
+            DECK_AMBER,
+        );
     });
 }
 
@@ -507,13 +541,13 @@ fn ws_status_ui(
     }
     let connected = live_attach.map(|s| s.connected).unwrap_or(false);
     let (dot, text, color) = if connected {
-        ("\u{1f7e2}", "WS Live", GREEN)
+        ("\u{1f7e2}", "WS Live", DECK_SUCCESS)
     } else {
-        ("\u{1f7e1}", "WS \u{2026}", GOLD)
+        ("\u{1f7e1}", "WS \u{2026}", DECK_AMBER)
     };
-    chip(ui, dot, text, color);
+    deck_chip(ui, dot, text, color);
     if let Some(overlay) = &snapshot.live_hud_overlay {
-        ui.label(egui::RichText::new(overlay).color(DIM).small());
+        ui.label(egui::RichText::new(overlay).color(DECK_TEXT_MID).small().monospace());
     }
 }
 
@@ -571,29 +605,30 @@ fn category_button(
     let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
     let lit = active || open;
     let fill = if lit {
-        cat.accent.gamma_multiply(0.28)
+        DECK_AMBER.gamma_multiply(0.22)
     } else if resp.hovered() {
-        SURFACE_HI
+        DECK_GLASS.gamma_multiply(1.05)
     } else {
-        SURFACE
+        DECK_GLASS.gamma_multiply(0.92)
     };
     let stroke = if lit {
-        egui::Stroke::new(2.0, cat.accent)
+        egui::Stroke::new(1.5, DECK_AMBER)
     } else if resp.hovered() {
-        egui::Stroke::new(1.0, cat.accent.gamma_multiply(0.6))
+        egui::Stroke::new(1.0, DECK_AMBER.gamma_multiply(0.55))
     } else {
-        egui::Stroke::new(1.0, BORDER)
+        egui::Stroke::new(1.0, DECK_BORDER)
     };
     let p = ui.painter();
-    p.rect_filled(rect, RADIUS as f32, fill);
-    p.rect_stroke(rect, RADIUS as f32, stroke, egui::StrokeKind::Inside);
+    p.rect_filled(rect, RADIUS_BTN as f32, fill);
+    p.rect_stroke(rect, RADIUS_BTN as f32, stroke, egui::StrokeKind::Inside);
     if lit {
-        inner_glow(p, rect, cat.accent, RADIUS);
+        inner_glow(p, rect, DECK_AMBER, RADIUS_BTN);
     }
-    paint_icon_label(p, rect, cat.icon, cat.label, lit, cat.accent, icon_tex);
+    let accent = if lit { DECK_AMBER } else { cat.accent };
+    paint_icon_label(p, rect, cat.icon, cat.label, lit, accent, icon_tex);
     // A small caret marks that the slot opens a flyout drawer.
     let caret = rect.center_top() + egui::vec2(0.0, 4.0);
-    let caret_col = if open { cat.accent } else { DIM.gamma_multiply(0.7) };
+    let caret_col = if open { DECK_AMBER } else { DECK_TEXT_MID.gamma_multiply(0.7) };
     p.text(caret, egui::Align2::CENTER_TOP, "\u{25be}", egui::FontId::proportional(9.0), caret_col);
     resp.on_hover_text(format!("{} \u{25b8}  [{}]", cat.label, cat.hotkey))
 }
@@ -611,7 +646,7 @@ fn paint_icon_label(
     accent: egui::Color32,
     icon_tex: Option<egui::TextureId>,
 ) {
-    let icon_color = if lit { accent } else { TEXT };
+    let icon_color = if lit { accent } else { DECK_TEXT };
     let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.40);
     if let Some(tex) = icon_tex {
         // Draw the PNG centred on the icon anchor; tint white when lit for a
@@ -627,7 +662,7 @@ fn paint_icon_label(
     } else {
         p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(22.0), icon_color);
     }
-    let label_color = if lit { accent } else { DIM };
+    let label_color = if lit { accent } else { DECK_TEXT_MID };
     let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
     p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
 }
@@ -667,18 +702,18 @@ fn subtool_button(ui: &mut egui::Ui, st: SubTool, active: bool, accent: egui::Co
     let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
     let inert = !st.is_active_capable();
     let fill = if active {
-        accent.gamma_multiply(0.30)
+        accent.gamma_multiply(0.24)
     } else if resp.hovered() {
-        SURFACE_HI
+        DECK_GLASS.gamma_multiply(1.05)
     } else {
-        SURFACE
+        DECK_GLASS.gamma_multiply(0.9)
     };
     let stroke = if active {
-        egui::Stroke::new(2.0, accent)
+        egui::Stroke::new(1.5, accent)
     } else if resp.hovered() {
-        egui::Stroke::new(1.0, accent.gamma_multiply(0.6))
+        egui::Stroke::new(1.0, DECK_AMBER.gamma_multiply(0.5))
     } else {
-        egui::Stroke::new(1.0, BORDER)
+        egui::Stroke::new(1.0, DECK_BORDER)
     };
     let p = ui.painter();
     p.rect_filled(rect, RADIUS_SM as f32, fill);
@@ -703,22 +738,30 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
     let steps = [(4u32, "10x"), (3, "5x"), (2, "2x"), (1, "1x"), (0, "\u{23f8}")];
     for (mult, label) in steps {
         let active = speed.multiplier == mult;
-        let mut text = egui::RichText::new(label).size(13.0);
-        text = if active { text.color(ACCENT).strong() } else { text.color(DIM) };
+        let mut text = egui::RichText::new(label).size(13.0).monospace();
+        text = if active {
+            text.color(DECK_AMBER).strong()
+        } else {
+            text.color(DECK_TEXT_MID)
+        };
         let btn = egui::Button::new(text)
-            .fill(if active { ACCENT.gamma_multiply(0.28) } else { SURFACE })
-            .stroke(if active {
-                egui::Stroke::new(1.5, ACCENT)
+            .fill(if active {
+                DECK_AMBER.gamma_multiply(0.22)
             } else {
-                egui::Stroke::new(1.0, BORDER)
+                DECK_GLASS.gamma_multiply(0.9)
             })
-            .corner_radius(egui::CornerRadius::same(6))
+            .stroke(if active {
+                egui::Stroke::new(1.5, DECK_AMBER)
+            } else {
+                egui::Stroke::new(1.0, DECK_BORDER)
+            })
+            .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
             .min_size(egui::vec2(40.0, 34.0));
         if ui.add(btn).clicked() {
             speed.multiplier = mult;
         }
     }
-    ui.label(egui::RichText::new("\u{23f5} Speed").color(DIM).small());
+    ui.label(egui::RichText::new("\u{23f5} Speed").color(DECK_TEXT_MID).small());
 }
 
 /// Persistent help / hotkey hint line under the toolbar.
@@ -728,7 +771,7 @@ fn help_hint_ui(ui: &mut egui::Ui) {
             egui::RichText::new(
                 "Space pause  \u{2022}  1-4 speed  \u{2022}  Q/E/R/C/T/A/X/D/F categories  \u{2022}  L event log  \u{2022}  Esc menu",
             )
-            .color(DIM.gamma_multiply(0.85))
+            .color(DECK_TEXT_MID.gamma_multiply(0.85))
             .small(),
         );
     });
@@ -741,13 +784,17 @@ fn help_hint_ui(ui: &mut egui::Ui) {
 /// Left panel: faction/group roster with colour swatches + counts, then a
 /// reserved minimap area (the minimap itself is drawn by `live_minimap.rs`).
 fn faction_panel_ui(ui: &mut egui::Ui, roster: &FactionRoster) {
-    ui.label(egui::RichText::new("\u{1f6a9} Factions").color(ACCENT).heading());
+    ui.label(egui::RichText::new("\u{1f6a9} Factions").color(DECK_AMBER).heading());
     ui.add_space(4.0);
     hairline(ui);
 
     if roster.factions.is_empty() {
-        ui.label(egui::RichText::new("No factions yet.").color(DIM).small());
-        ui.label(egui::RichText::new("Spawn life to seed groups.").color(DIM.gamma_multiply(0.8)).small());
+        ui.label(egui::RichText::new("No factions yet.").color(DECK_TEXT_MID).small());
+        ui.label(
+            egui::RichText::new("Spawn life to seed groups.")
+                .color(DECK_TEXT_MID.gamma_multiply(0.8))
+                .small(),
+        );
     } else {
         egui::ScrollArea::vertical()
             .max_height(ui.available_height() - 150.0)
@@ -761,7 +808,7 @@ fn faction_panel_ui(ui: &mut egui::Ui, roster: &FactionRoster) {
     // Reserve space above the minimap so live_minimap.rs has a clear anchor.
     ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
         ui.add_space(140.0); // minimap footprint owned by live_minimap.rs
-        ui.label(egui::RichText::new("MINIMAP").color(DIM.gamma_multiply(0.7)).small());
+        ui.label(egui::RichText::new("MINIMAP").color(DECK_TEXT_MID.gamma_multiply(0.7)).small());
     });
 }
 
@@ -792,7 +839,7 @@ fn faction_row(ui: &mut egui::Ui, faction: &FactionInfo) {
 
 /// Right-side selection inspector card with empty-state fallback.
 fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntityDetails) {
-    ui.label(egui::RichText::new("\u{25a4} Inspector").color(ACCENT).heading());
+    ui.label(egui::RichText::new("\u{25a4} Inspector").color(DECK_AMBER).heading());
     ui.add_space(4.0);
     hairline(ui);
 

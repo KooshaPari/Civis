@@ -16,7 +16,8 @@ use crate::AttachMode;
 
 /// Minimap side length in UI pixels.
 pub const MINIMAP_SIZE: f32 = 200.0;
-const MINIMAP_INSET: f32 = 8.0;
+/// Minimap inset from the viewport edge (px).
+pub const MINIMAP_INSET: f32 = 8.0;
 const MINIMAP_WORLD_MIN: f32 = 0.0;
 const MINIMAP_WORLD_MAX: f32 = 256.0;
 const MINIMAP_CIVILIAN_DOT: f32 = 4.0;
@@ -33,12 +34,13 @@ const TERRAIN_TEX_SIZE: u32 = 128;
 // not usable on Bevy UI nodes, so we re-express the same sRGB values here.
 // ---------------------------------------------------------------------------
 
-/// Glass panel fill (matches `ui_theme::PANEL_FILL`).
-const THEME_PANEL: Color = Color::srgba(0.063, 0.078, 0.118, 0.96);
-/// Inactive border (matches `ui_theme::BORDER`).
-const THEME_BORDER: Color = Color::srgba(0.227, 0.263, 0.353, 0.85);
-/// Primary cyan accent (matches `ui_theme::ACCENT`).
-const THEME_ACCENT: Color = Color::srgb(0.337, 0.800, 0.949);
+/// Glass panel fill (matches `ui_theme::DECK_GLASS`).
+const THEME_PANEL: Color = Color::srgba(0.078, 0.102, 0.141, 0.68);
+/// Inactive inner hairline (matches `ui_theme::DECK_BORDER`).
+#[allow(dead_code)]
+const THEME_BORDER: Color = Color::srgba(1.0, 1.0, 1.0, 0.11);
+/// Holo-cyan rim + viewport accent (matches `ui_theme::HOLO_CYAN`).
+const THEME_HOLO: Color = Color::srgb(0.357, 0.890, 1.0);
 
 #[derive(Resource, Clone)]
 struct MinimapRenderTarget {
@@ -203,13 +205,13 @@ fn setup_minimap(
                 bottom: Val::Px(MINIMAP_INSET),
                 width: Val::Px(MINIMAP_SIZE),
                 height: Val::Px(MINIMAP_SIZE),
-                border: UiRect::all(Val::Px(2.0)),
-                border_radius: BorderRadius::all(Val::Px(6.0)),
+                border: UiRect::all(Val::Px(1.5)),
+                border_radius: BorderRadius::all(Val::Px(12.0)),
                 overflow: Overflow::clip(),
                 ..default()
             },
             BackgroundColor(THEME_PANEL),
-            BorderColor::all(THEME_BORDER),
+            BorderColor::all(THEME_HOLO),
             Interaction::default(),
             RelativeCursorPosition::default(),
             FocusPolicy::Pass,
@@ -266,7 +268,7 @@ fn setup_minimap(
                     ..default()
                 },
                 BackgroundColor(Color::NONE),
-                BorderColor::all(THEME_ACCENT),
+                BorderColor::all(THEME_HOLO),
                 MinimapViewport,
                 FocusPolicy::Pass,
             ));

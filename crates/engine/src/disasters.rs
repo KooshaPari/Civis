@@ -8,6 +8,9 @@ use civ_agents::Position3d;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::material::{AIR, GRAVEL, ICE, LAVA, STEAM, STONE, WATER};
 use civ_voxel::WorldCoord;
+
+#[cfg(test)]
+use civ_voxel::MaterialId;
 use hecs::Entity;
 use serde::{Deserialize, Serialize};
 

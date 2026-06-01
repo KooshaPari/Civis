@@ -91,9 +91,12 @@ pub const AMBER_HI: egui::Color32 = egui::Color32::from_rgb(255, 227, 160);
 
 // --- 1.5 Hologram cyan family — the PROJECTION tier ONLY -------------------
 
-/// Holo line work, wireframe, primary projected text (`#7FE9FF`).
-pub const HOLO_CORE: egui::Color32 = egui::Color32::from_rgb(127, 233, 255);
-/// Holo glow / bloom color, scanline tint (`#2FBFE6`).
+/// Holo line work, wireframe, primary projected text (`#5BE3FF`).
+/// Reserved for true-3D projected layers (minimap / world / inspect).
+pub const HOLO_CYAN: egui::Color32 = egui::Color32::from_rgb(91, 227, 255);
+/// Legacy alias → [`HOLO_CYAN`].
+pub const HOLO_CORE: egui::Color32 = HOLO_CYAN;
+/// Holo glow / bloom color, scanline tint (desaturated [`HOLO_CYAN`]).
 pub const HOLO_GLOW: egui::Color32 = egui::Color32::from_rgb(47, 191, 230);
 /// Holo panel translucent fill — very low alpha (`#0E3A4A`).
 pub const HOLO_DEEP: egui::Color32 = egui::Color32::from_rgb(14, 58, 74);
@@ -112,6 +115,38 @@ pub const WARN: egui::Color32 = AMBER;
 pub const DANGER: egui::Color32 = egui::Color32::from_rgb(240, 85, 107);
 /// Disaster / magic / arcane category (`#9B7BF0`).
 pub const MANA: egui::Color32 = egui::Color32::from_rgb(155, 123, 240);
+
+// --- 1.7 Holocron command-deck tokens (holohud slice) ----------------------
+
+/// Command-deck void / viewport letterbox (`#0B0E14`).
+pub const DECK_BG: egui::Color32 = egui::Color32::from_rgb(11, 14, 20);
+/// Frosted glass panel fill (`#141A24` @ ~68% alpha).
+pub const DECK_GLASS: egui::Color32 = egui::Color32::from_rgba_premultiplied(20, 26, 36, 175);
+/// Hairline glass border (`#FFFFFF` @ ~11% alpha).
+pub const DECK_BORDER: egui::Color32 = egui::Color32::from_rgba_premultiplied(255, 255, 255, 28);
+/// Primary chrome accent — warm amber (`#FFB347`).
+pub const DECK_AMBER: egui::Color32 = egui::Color32::from_rgb(255, 179, 71);
+/// Restrained neon success (`#7CF5C4`).
+pub const DECK_SUCCESS: egui::Color32 = egui::Color32::from_rgb(124, 245, 196);
+/// Primary body text (`#E6EBF2`).
+pub const DECK_TEXT: egui::Color32 = egui::Color32::from_rgb(230, 235, 242);
+/// Secondary / label text (`#8A94A6`).
+pub const DECK_TEXT_MID: egui::Color32 = egui::Color32::from_rgb(138, 148, 166);
+
+/// Spacing scale (px): 4 / 8 / 12 / 16 / 24 / 32.
+pub const SPACE_XS: f32 = 4.0;
+pub const SPACE_SM: f32 = 8.0;
+pub const SPACE_MD: f32 = 12.0;
+pub const SPACE_LG: f32 = 16.0;
+pub const SPACE_XL: f32 = 24.0;
+pub const SPACE_XXL: f32 = 32.0;
+
+/// Panel corner radius (10–14px band).
+pub const RADIUS_PANEL: u8 = 12;
+/// Button / chip corner radius.
+pub const RADIUS_BTN: u8 = 8;
+/// Documented backdrop-blur intent (egui has no real blur; shadow + scrim sell depth).
+pub const DECK_BLUR_PX: f32 = 20.0;
 
 // --- Corner radii -----------------------------------------------------------
 
@@ -247,6 +282,52 @@ pub fn apply_type_scale(style: &mut egui::Style) {
 // ===========================================================================
 // 2. Shadows + glass frames (E0 / E1 / E2)
 // ===========================================================================
+
+/// Command-deck rim shadow: soft outer lift (`0,4 / 20 / 0 / 100`).
+pub fn deck_shadow() -> egui::epaint::Shadow {
+    egui::epaint::Shadow {
+        offset: [0, 4],
+        blur: DECK_BLUR_PX as i32,
+        spread: 0,
+        color: egui::Color32::from_black_alpha(100),
+    }
+}
+
+/// **Holocron deck rim** — top bar + bottom toolbar glass chrome.
+pub fn deck_rim_frame(margin: egui::Margin) -> egui::Frame {
+    egui::Frame::NONE
+        .fill(DECK_GLASS)
+        .inner_margin(margin)
+        .stroke(egui::Stroke::new(1.0, DECK_BORDER))
+        .corner_radius(egui::CornerRadius::same(RADIUS_PANEL))
+        .shadow(deck_shadow())
+}
+
+/// Deck stat chip: glass inset well + mono value with a thin accent tick.
+pub fn deck_chip(ui: &mut egui::Ui, label: &str, value: &str, accent: egui::Color32) {
+    egui::Frame::NONE
+        .fill(DECK_BG.gamma_multiply(0.55))
+        .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
+        .stroke(egui::Stroke::new(1.0, DECK_BORDER))
+        .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(label.to_uppercase()).color(DECK_TEXT_MID).small());
+                ui.label(
+                    egui::RichText::new(value)
+                        .monospace()
+                        .color(DECK_TEXT)
+                        .strong(),
+                );
+            });
+            let r = ui.min_rect();
+            ui.painter().hline(
+                r.x_range(),
+                r.top() + 1.0,
+                egui::Stroke::new(1.5, accent.gamma_multiply(0.85)),
+            );
+        });
+}
 
 /// E0 docked shadow (top bar, toolbar): `0,3 / 10 / 0 / 90`.
 pub fn panel_shadow() -> egui::epaint::Shadow {
@@ -538,5 +619,17 @@ mod tests {
         assert_eq!(INSET_FILL, GRAPHITE_800);
         assert_eq!(TEXT, TEXT_HI);
         assert_eq!(BG_DEEP, INK_0);
+    }
+
+    /// Holocron deck tokens match the holohud slice spec.
+    #[test]
+    fn deck_tokens_match_holohud_spec() {
+        assert_eq!(HOLO_CORE, HOLO_CYAN);
+        assert_eq!(HOLO_CYAN, egui::Color32::from_rgb(91, 227, 255));
+        assert_eq!(DECK_AMBER, egui::Color32::from_rgb(255, 179, 71));
+        assert_eq!(DECK_SUCCESS, egui::Color32::from_rgb(124, 245, 196));
+        assert_eq!(DECK_BG, egui::Color32::from_rgb(11, 14, 20));
+        assert!((10..=14).contains(&RADIUS_PANEL));
+        assert_eq!(RADIUS_BTN, 8);
     }
 }

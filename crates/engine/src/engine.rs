@@ -61,7 +61,10 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "compact",
     "buildings",
     "diffusion",
+    "disasters",
     "life",
+    // MOAT emergence (FR-CIV-LEGENDS-*, FR-CIV-PSYCHE-*, FR-CIV-GENETICS-*, FR-CIV-AI-*)
+    "emergence",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -435,6 +438,8 @@ pub struct Simulation {
     /// Deaths attributed to unmet-need sickness on the most recent life phase
     /// (FR-CIV-LIFE-003); surfaced for the HUD.
     last_life_deaths: u32,
+    /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
+    pub(crate) emergence: crate::emergence::EmergenceState,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -666,6 +671,7 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            emergence: Self::default_emergence_state(42),
         }
     }
 
@@ -728,6 +734,7 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            emergence: Self::default_emergence_state(seed),
         }
     }
 
@@ -1091,6 +1098,7 @@ impl Simulation {
         self.phase_diffusion();
         self.phase_disasters();
         self.phase_life();
+        self.phase_emergence();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -2159,7 +2167,9 @@ mod tests {
                 "compact",
                 "buildings",
                 "diffusion",
+                "disasters",
                 "life",
+                "emergence",
             ]
         );
     }

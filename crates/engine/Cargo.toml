@@ -54,6 +54,12 @@ civ-economy = { path = "../economy" }
 civ-mod-host = { path = "../mod-host" }
 civ-save-db = { path = "../save-db" }
 
+# MOAT emergence (legends, psyche, culture, genetics, civ-ai) — FR-CIV-LEGENDS-*,
+# FR-CIV-PSYCHE-*, FR-CIV-SPECIES-*, FR-CIV-GENETICS-*, FR-CIV-AI-*.
+civ-legends = { path = "../legends" }
+civ-genetics = { path = "../genetics" }
+civ-species = { path = "../species" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.4"

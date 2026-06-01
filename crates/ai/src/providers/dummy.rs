@@ -26,6 +26,12 @@ impl DummyAiProvider {
         format!("dummy-generation-{h:016x}")
     }
 
+    /// Synchronous generate for the sim hot path (engine tick, tests).
+    #[must_use]
+    pub fn generate_sync(&self, req: &GenRequest) -> GenOutput {
+        GenOutput::fresh(Self::derived_text(req))
+    }
+
     /// Deterministic 8-dim unit-ish vector per text (fixed seed by content).
     fn derived_vector(text: &str) -> Vec<f32> {
         let h = Self::hash_input(text, &[]);

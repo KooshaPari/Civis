@@ -28,12 +28,54 @@
 //!     });
 //! ```
 
-#![allow(dead_code)] // Phase 1 scaffold — consumers land in a follow-up PR.
+#![allow(dead_code)] // Biome consumer on terrain lands in a follow-up PR.
+
+#[cfg(feature = "bevy")]
+use bevy::prelude::*;
 
 #[cfg(feature = "pbr-textures")]
 use bevy::pbr::StandardMaterial;
-#[cfg(feature = "pbr-textures")]
-use bevy::prelude::*;
+
+/// Load CC0 ground textures with correct color spaces for Bevy PBR.
+///
+/// Drop full ORM packs from ambientCG / Poly Haven into `assets/textures/<slug>/`:
+/// `metallic_roughness.jpg` (linear, G=roughness B=metallic per glTF), `occlusion.jpg`
+/// (linear, R=AO), `height.jpg` (linear, parallax / depth). Wire via
+/// [`BiomeAssetPaths::phase2_paths`] when present.
+#[cfg(feature = "bevy")]
+pub mod texture_load {
+    use super::Biome;
+    use bevy::asset::Handle;
+    use bevy::image::ImageLoaderSettings;
+    use bevy::prelude::*;
+
+    /// sRGB albedo / base-color maps.
+    #[must_use]
+    pub fn load_albedo(asset_server: &AssetServer, path: &str) -> Handle<Image> {
+        asset_server.load_with_settings(path, |s: &mut ImageLoaderSettings| {
+            s.is_srgb = true;
+        })
+    }
+
+    /// Linear data maps: normal, metallic-roughness, occlusion, height.
+    #[must_use]
+    pub fn load_linear_map(asset_server: &AssetServer, path: &str) -> Handle<Image> {
+        asset_server.load_with_settings(path, |s: &mut ImageLoaderSettings| {
+            s.is_srgb = false;
+        })
+    }
+
+    /// Albedo + normal paths for a [`Biome`] slug under `assets/textures/`.
+    #[must_use]
+    pub fn biome_albedo_path(biome: Biome) -> String {
+        format!("textures/{}/albedo.jpg", biome.slug())
+    }
+
+    #[must_use]
+    pub fn biome_normal_path(biome: Biome) -> String {
+        format!("textures/{}/normal.jpg", biome.slug())
+    }
+}
 
 /// Number of biome materials managed by the Phase-1 loader.
 pub const BIOME_COUNT: usize = 6;
@@ -169,29 +211,35 @@ impl Biome {
 mod loader {
     use super::*;
 
+    use super::texture_load;
+
     /// Asset paths for a single biome's PBR map set, relative to the `assets/`
-    /// root. Phase 1 ships `albedo` + `normal`; `orm` is opt-in for Phase 2.
+    /// root. Phase 1 ships `albedo` + `normal`; Phase 2 adds split ORM maps.
     #[derive(Debug, Clone)]
     pub struct BiomeAssetPaths {
-        /// `assets/textures/<slug>/albedo.ktx2`
         pub albedo: String,
-        /// `assets/textures/<slug>/normal.ktx2`
         pub normal: String,
-        /// `assets/textures/<slug>/orm.ktx2` (Occlusion / Roughness / Metallic)
+        /// Packed ORM (legacy slot); prefer split maps below.
         pub orm: String,
+        /// glTF-style metallic-roughness (G=roughness, B=metallic), linear.
+        pub metallic_roughness: String,
+        /// Separate occlusion (R=AO), linear — not the same binding as MR.
+        pub occlusion: String,
+        /// Height / parallax depth, linear.
+        pub height: String,
     }
 
     impl BiomeAssetPaths {
         #[must_use]
         pub fn for_biome(biome: Biome) -> Self {
             let slug = biome.slug();
-            // Phase 1 ships .jpg downloads from Poly Haven / ambientCG (CC0).
-            // Phase 2 will pack to .ktx2 for VRAM savings — keep the orm slot
-            // pointing at the future packed file.
             Self {
-                albedo: format!("textures/{slug}/albedo.jpg"),
-                normal: format!("textures/{slug}/normal.jpg"),
+                albedo: texture_load::biome_albedo_path(biome),
+                normal: texture_load::biome_normal_path(biome),
                 orm: format!("textures/{slug}/orm.ktx2"),
+                metallic_roughness: format!("textures/{slug}/metallic_roughness.jpg"),
+                occlusion: format!("textures/{slug}/occlusion.jpg"),
+                height: format!("textures/{slug}/height.jpg"),
             }
         }
     }
@@ -230,36 +278,64 @@ mod loader {
     /// Startup system: build a `StandardMaterial` per biome and register it
     /// under the [`BiomeMaterials`] resource.
     ///
-    /// Phase 1: `base_color_texture` + `normal_map_texture` only.
-    /// Phase 2: also wire `metallic_roughness_texture` + `occlusion_texture`
-    /// (from the packed ORM image) — see `docs/guides/pbr-materials-plan.md`.
+    /// Phase 1: `base_color_texture` + `normal_map_texture` + per-biome PBR constants.
+    /// Phase 2: drop `metallic_roughness.jpg`, `occlusion.jpg`, `height.jpg` per slug
+    /// (ambientCG / Poly Haven CC0) — helpers wire them when files exist.
     pub fn load_biome_materials(
         mut commands: Commands,
         asset_server: Res<AssetServer>,
         mut materials: ResMut<Assets<StandardMaterial>>,
     ) {
-        // SAFETY: array-init via fold preserves ordering since Biome::ALL is
-        // already in canonical index order.
-        let handles: [Handle<StandardMaterial>; BIOME_COUNT] = std::array::from_fn(|i| {
-            let biome = Biome::ALL[i];
-            let paths = BiomeAssetPaths::for_biome(biome);
-            let albedo: Handle<Image> = asset_server.load(&paths.albedo);
-            let normal: Handle<Image> = asset_server.load(&paths.normal);
-
-            let [r, g, b] = biome.tint_srgb();
-            let (roughness, reflectance, metallic) = biome.surface_pbr();
-            materials.add(StandardMaterial {
-                base_color: Color::srgb(r, g, b),
-                base_color_texture: Some(albedo),
-                normal_map_texture: Some(normal),
-                perceptual_roughness: roughness,
-                metallic,
-                reflectance,
-                ..Default::default()
-            })
-        });
+        let handles: [Handle<StandardMaterial>; BIOME_COUNT] =
+            std::array::from_fn(|i| materials.add(build_biome_material(&asset_server, Biome::ALL[i])));
 
         commands.insert_resource(BiomeMaterials { handles });
+    }
+
+    fn build_biome_material(asset_server: &AssetServer, biome: Biome) -> StandardMaterial {
+        let paths = BiomeAssetPaths::for_biome(biome);
+        let albedo = texture_load::load_albedo(asset_server, &paths.albedo);
+        let normal = texture_load::load_linear_map(asset_server, &paths.normal);
+        let [r, g, b] = biome.tint_srgb();
+        let (roughness, reflectance, metallic) = biome.surface_pbr();
+        let mut mat = StandardMaterial {
+            base_color: Color::srgb(r, g, b),
+            base_color_texture: Some(albedo),
+            normal_map_texture: Some(normal),
+            perceptual_roughness: roughness,
+            metallic,
+            reflectance,
+            ..Default::default()
+        };
+        wire_phase2_maps_if_present(asset_server, &paths, &mut mat);
+        mat
+    }
+
+    /// Phase 2: when CC0 ORM packs land, wire split MR / AO / height (all linear).
+    fn wire_phase2_maps_if_present(
+        asset_server: &AssetServer,
+        paths: &BiomeAssetPaths,
+        mat: &mut StandardMaterial,
+    ) {
+        if map_exists_on_disk(&paths.metallic_roughness) {
+            mat.metallic_roughness_texture =
+                Some(texture_load::load_linear_map(asset_server, &paths.metallic_roughness));
+        }
+        if map_exists_on_disk(&paths.occlusion) {
+            mat.occlusion_texture =
+                Some(texture_load::load_linear_map(asset_server, &paths.occlusion));
+        }
+        if map_exists_on_disk(&paths.height) {
+            mat.depth_map = Some(texture_load::load_linear_map(asset_server, &paths.height));
+            mat.parallax_mapping_method = bevy::pbr::ParallaxMappingMethod::Occlusion;
+            mat.parallax_depth_scale = 0.02;
+        }
+    }
+
+    fn map_exists_on_disk(asset_relative: &str) -> bool {
+        ["assets", "clients/bevy-ref/assets"]
+            .into_iter()
+            .any(|root| std::path::Path::new(root).join(asset_relative).is_file())
     }
 }
 

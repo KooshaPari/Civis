@@ -109,6 +109,8 @@ hot = ["dev", "bevy/dynamic_linking"]
 # each tick so water flows and powders pile. OFF by default so the heightmap +
 # flat-water build stays the playable fallback. Enable: `--features voxel`.
 voxel = ["bevy"]
+# CC0 ground PBR textures (albedo + normal; ORM slots ready for ambientCG/Poly Haven).
+pbr-textures = ["bevy"]
 # Camera-driven chunk streaming of the large voxel world (civ-voxel StreamingWorld
 # + HeightFieldGen). Coexists with the dense `voxel` sandbox rather than replacing
 # it. OFF by default. Enable: `--features voxel_stream` (implies `voxel`).

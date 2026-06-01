@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::prelude::*;
 
+use crate::voxel_triplanar::{VoxelPbrBank, VoxelTriplanarMaterial, VoxelTriplanarPlugin};
+
 use civ_voxel::fluid_ca::{step, CaGrid};
 use civ_voxel::material::{
     MaterialDef, MaterialRegistry, Phase, AIR, ASH, BLOOD, BONE, CLAY, COAL, CRYSTAL, DIRT, EMBER,
@@ -44,7 +46,8 @@ pub struct VoxelSimPlugin;
 
 impl Plugin for VoxelSimPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(VoxelSimState::default())
+        app.add_plugins(VoxelTriplanarPlugin)
+            .insert_resource(VoxelSimState::default())
             .insert_resource(WorldBuilt::default())
             .add_systems(Update, step_and_remesh);
 
@@ -68,12 +71,24 @@ pub fn setup_voxel_world_startup(
     commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<StandardMaterial>>,
+    tri_materials: ResMut<Assets<VoxelTriplanarMaterial>>,
+    pbr_bank: ResMut<VoxelPbrBank>,
     rig: ResMut<CameraRig>,
     state: ResMut<VoxelSimState>,
     mut built: ResMut<WorldBuilt>,
     cameras: Query<&Transform, With<Camera3d>>,
 ) {
-    build_voxel_world(commands, meshes, materials, rig, state, cameras, SEED);
+    build_voxel_world(
+        commands,
+        meshes,
+        materials,
+        tri_materials,
+        pbr_bank,
+        rig,
+        state,
+        cameras,
+        SEED,
+    );
     built.0 = true;
 }
 
@@ -86,6 +101,8 @@ pub fn build_world_on_play(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<StandardMaterial>>,
+    tri_materials: ResMut<Assets<VoxelTriplanarMaterial>>,
+    mut pbr_bank: ResMut<VoxelPbrBank>,
     rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     mut built: ResMut<WorldBuilt>,
@@ -112,8 +129,19 @@ pub fn build_world_on_play(
     for entity in state.chunk_entities.drain(..) {
         commands.entity(entity).despawn();
     }
+    pbr_bank.clear_cache();
     let seed = params.seed;
-    build_voxel_world(commands, meshes, materials, rig, state, cameras, seed);
+    build_voxel_world(
+        commands,
+        meshes,
+        materials,
+        tri_materials,
+        pbr_bank,
+        rig,
+        state,
+        cameras,
+        seed,
+    );
     built.0 = true;
 }
 
@@ -165,6 +193,8 @@ pub fn build_voxel_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut tri_materials: ResMut<Assets<VoxelTriplanarMaterial>>,
+    mut pbr_bank: ResMut<VoxelPbrBank>,
     mut rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     cameras: Query<&Transform, With<Camera3d>>,
@@ -226,6 +256,8 @@ pub fn build_voxel_world(
         &mut commands,
         &mut meshes,
         &mut materials,
+        &mut tri_materials,
+        &mut pbr_bank,
         &state.grid,
         camera_eye,
     );
@@ -241,6 +273,8 @@ pub fn step_and_remesh(
     time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut tri_materials: ResMut<Assets<VoxelTriplanarMaterial>>,
+    mut pbr_bank: ResMut<VoxelPbrBank>,
     cameras: Query<&Transform, With<Camera3d>>,
     mut state: ResMut<VoxelSimState>,
 ) {
@@ -265,6 +299,8 @@ pub fn step_and_remesh(
         &mut commands,
         &mut meshes,
         &mut materials,
+        &mut tri_materials,
+        &mut pbr_bank,
         &state.grid,
         camera_eye,
     );
@@ -321,6 +357,8 @@ fn spawn_chunk_meshes(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    tri_materials: &mut Assets<VoxelTriplanarMaterial>,
+    pbr_bank: &mut VoxelPbrBank,
     grid: &CaGrid,
     camera_eye: Option<[f32; 3]>,
 ) -> Vec<Entity> {
@@ -350,20 +388,24 @@ fn spawn_chunk_meshes(
                     let Some(def) = registry.get(material_id) else {
                         continue;
                     };
-                    let material = pbr_material_for(material_id, def);
                     let mut bevy_mesh = mesh_buffer_to_bevy(&submesh);
                     apply_voxel_jitter(&mut bevy_mesh, &submesh, material_id);
-                    let entity = commands
-                        .spawn((
-                            Mesh3d(meshes.add(bevy_mesh)),
-                            MeshMaterial3d(materials.add(material)),
-                            Transform::from_xyz(
-                                chunk_origin[0] as f32,
-                                chunk_origin[1] as f32,
-                                chunk_origin[2] as f32,
-                            ),
-                        ))
-                        .id();
+                    let origin = Transform::from_xyz(
+                        chunk_origin[0] as f32,
+                        chunk_origin[1] as f32,
+                        chunk_origin[2] as f32,
+                    );
+                    let mesh_h = meshes.add(bevy_mesh);
+                    let entity = if let Some(tri) = pbr_bank.material_for(material_id, tri_materials) {
+                        commands
+                            .spawn((Mesh3d(mesh_h), MeshMaterial3d(tri), origin))
+                            .id()
+                    } else {
+                        let mat = pbr_material_for(material_id, def);
+                        commands
+                            .spawn((Mesh3d(mesh_h), MeshMaterial3d(materials.add(mat)), origin))
+                            .id()
+                    };
                     spawned.push(entity);
                 }
             }

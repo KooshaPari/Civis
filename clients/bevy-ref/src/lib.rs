@@ -92,9 +92,13 @@ pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
 #[cfg(feature = "bevy")]
+pub mod materials;
+#[cfg(feature = "bevy")]
 pub mod window_icon;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
+#[cfg(feature = "voxel")]
+pub mod voxel_triplanar;
 /// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
 /// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
 #[cfg(feature = "voxel_stream")]

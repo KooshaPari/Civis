@@ -38,7 +38,15 @@ pub(crate) async fn spawn_civilian_handler(
     let mut sim = state.sim.lock().await;
     let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
     let mut rng = sim.rng_mut().clone();
-    let _ = spawn_civilian_at(&mut sim.world, id, req.faction, req.x, req.y, &mut rng);
+    let _ = spawn_civilian_at(
+        &mut sim.world,
+        id,
+        req.faction,
+        req.x,
+        req.y,
+        civ_agents::ActorVisualKind::Humanoid,
+        &mut rng,
+    );
     *sim.rng_mut() = rng;
     Json(ControlOk {
         ok: true,
@@ -55,7 +63,15 @@ pub(crate) async fn spawn_entity_handler(
         "civilian" => {
             let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
             let mut rng = sim.rng_mut().clone();
-            let _ = spawn_civilian_at(&mut sim.world, id, req.faction, req.x, req.y, &mut rng);
+            let _ = spawn_civilian_at(
+        &mut sim.world,
+        id,
+        req.faction,
+        req.x,
+        req.y,
+        civ_agents::ActorVisualKind::Humanoid,
+        &mut rng,
+    );
             *sim.rng_mut() = rng;
         }
         "vehicle" => {

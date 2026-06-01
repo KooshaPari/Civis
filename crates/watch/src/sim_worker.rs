@@ -102,7 +102,15 @@ pub(crate) fn seed_civilians(sim: &mut Simulation, terrain: &Terrain) {
         if terrain.is_walkable(x, y) {
             let id = 10_000 + spawned;
             let mut rng = sim.rng_mut().clone();
-            let _ = spawn_civilian_at(&mut sim.world, id, (spawned % 4) as u32, x, y, &mut rng);
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                id,
+                (spawned % 4) as u32,
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             spawned += 1;
         }

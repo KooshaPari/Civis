@@ -58,6 +58,19 @@ use serde::{Deserialize, Serialize};
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
+/// Which CC0 glTF rig the Bevy client should render for this agent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ActorVisualKind {
+    /// Humanoid civilian (KayKit Knight / capsule fallback).
+    Humanoid,
+    /// Non-combat herd / fauna (skeleton minion rig).
+    Herd,
+}
+
+/// Marks the visual model variant chosen at spawn (herd tool vs organism).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ActorVisual(pub ActorVisualKind);
+
 /// Civilian identity component.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Civilian {
@@ -322,6 +335,7 @@ pub fn spawn_civilian_at(
     faction: u32,
     x: f32,
     y: f32,
+    visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
@@ -334,7 +348,7 @@ pub fn spawn_civilian_at(
         y: 0,
         z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
     };
-    spawn_civilian(
+    let entity = spawn_civilian(
         world,
         Civilian {
             id,
@@ -343,7 +357,9 @@ pub fn spawn_civilian_at(
         },
         Position3d { coord },
         CivilianBundle::newborn_default(velocity),
-    )
+    );
+    let _ = world.insert_one(entity, ActorVisual(visual));
+    entity
 }
 
 /// Spawn a deterministic batch of civilians with sequential IDs.

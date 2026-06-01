@@ -174,7 +174,15 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
-            spawn_civilian_at(world, next_civilian_id, faction as u32, norm_x, norm_y, rng);
+            spawn_civilian_at(
+                world,
+                next_civilian_id,
+                faction as u32,
+                norm_x,
+                norm_y,
+                civ_agents::ActorVisualKind::Humanoid,
+                rng,
+            );
             next_civilian_id += 1;
         }
     }

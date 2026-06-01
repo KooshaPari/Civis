@@ -18,6 +18,7 @@
 
 use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
 use bevy::prelude::*;
+use civ_agents::ActorVisualKind;
 
 use crate::minimap::MinimapCamera;
 use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
@@ -146,6 +147,8 @@ pub struct SandboxEntity;
 pub struct SpawnCivilianRequest {
     /// World-space click position (terrain-seated).
     pub position: Vec3,
+    /// Which glTF rig the sim + renderer should use (herd tool vs organism).
+    pub model_kind: ActorVisualKind,
 }
 
 /// Request to spawn a building at the clicked point.
@@ -382,6 +385,7 @@ fn handle_spawn_tool_clicks(
     active: Res<ActiveTool>,
     over_ui: Res<PointerOverUi>,
     marker: Res<CursorMarker>,
+    #[cfg(feature = "egui")] sub: Res<crate::tool_categories::ActiveSubTool>,
     mut spawn_civilian: MessageWriter<SpawnCivilianRequest>,
     mut spawn_building: MessageWriter<SpawnBuildingRequest>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
@@ -417,7 +421,14 @@ fn handle_spawn_tool_clicks(
             select_entity.write(SelectEntityRequest { position });
         }
         SpawnTool::SpawnCivilian => {
-            spawn_civilian.write(SpawnCivilianRequest { position });
+            #[cfg(feature = "egui")]
+            let model_kind = match sub.current {
+                crate::tool_categories::SubTool::SpawnHerd => ActorVisualKind::Herd,
+                _ => ActorVisualKind::Humanoid,
+            };
+            #[cfg(not(feature = "egui"))]
+            let model_kind = ActorVisualKind::Humanoid;
+            spawn_civilian.write(SpawnCivilianRequest { position, model_kind });
         }
         SpawnTool::SpawnBuilding => {
             spawn_building.write(SpawnBuildingRequest { position });

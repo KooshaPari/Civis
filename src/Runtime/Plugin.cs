@@ -480,7 +480,8 @@ namespace DINOForge.Runtime
         // is observable, then drive the same main-thread revive path as OnActiveSceneChanged.
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded: name='{scene.name}' buildIndex={scene.buildIndex} mode={mode} isLoaded={scene.isLoaded}");
+                DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded: name='{scene.name}' buildIndex={scene.buildIndex} mode={mode} isLoaded={scene.isLoaded}");
+                TcCursorApplicator.ApplyForScene(scene.name, "sceneLoaded(main-thread)");
 
             // Always remember the latest scene name so a fallback revive has a meaningful label.
             if (!string.IsNullOrEmpty(scene.name))
@@ -507,6 +508,7 @@ namespace DINOForge.Runtime
                 if (scene.name == "MainMenu")
                     UI.LoadingScreenController.Instance?.BeginFadeOut();
                 TryApplyEnvironmentThemeForScene(scene.name, "sceneLoaded(main-thread)");
+                TcCursorApplicator.ApplyForScene(scene.name, "sceneLoaded(main-thread)");
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded LoadingScreen fade failed (non-fatal): {ex.Message}"); }
         }
@@ -672,6 +674,7 @@ namespace DINOForge.Runtime
                         ls.BeginFadeOut();
                     TryApplyEnvironmentThemeForScene(newScene.name, "activeSceneChanged(main-thread)");
                 }
+                TcCursorApplicator.ApplyForScene(newScene.name, "activeSceneChanged(main-thread)");
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged LoadingScreen toggle failed (non-fatal): {ex.Message}"); }
             // Revive already executed at the TOP of this handler (iter-149e reorder).
@@ -1974,6 +1977,15 @@ namespace DINOForge.Runtime
             int _themeAuxFrame = 0;
             while (!_destroyed)
             {
+                try
+                {
+                    TcCursorApplicator.UpdateFromInput(SceneManager.GetActiveScene().name);
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] TcCursorApplicator.UpdateFromInput failed: {ex.Message}");
+                }
+
                 // ── Engine-UI self-healing bounded retry ─────────────────────────
                 // Re-attempt MODS-button injection until it succeeds or the retry budget
                 // is spent. The native menu canvas / custom Selectable buttons may not be
@@ -2249,6 +2261,7 @@ namespace DINOForge.Runtime
                 _menuInitRetryFrames = 0;
                 _engineUiHeartbeatLogged = false;
                 RunMainMenuInit("scene-change");
+                TcCursorApplicator.ApplyForScene(next.name, "RuntimeDriver.SceneChanged");
             }
             catch (Exception ex)
             {

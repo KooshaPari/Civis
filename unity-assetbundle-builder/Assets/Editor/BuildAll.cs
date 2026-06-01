@@ -161,9 +161,9 @@ public static class BuildAll
 
         string matPath = $"Assets/Materials/{folder}/{key}.mat";
         var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-        if (mat == null)
+        if (mat == null || mat.shader == null || !mat.shader.name.StartsWith("Universal Render Pipeline/"))
         {
-            mat = new Material(Shader.Find("Standard")) { color = color };
+            mat = CreateUrpMaterial(color);
             AssetDatabase.CreateAsset(mat, matPath);
             var mi = AssetImporter.GetAtPath(matPath);
             if (mi != null) mi.assetBundleName = key;
@@ -180,5 +180,14 @@ public static class BuildAll
 
         Debug.Log($"  [ok] {key}");
         return true;
+    }
+
+    private static Material CreateUrpMaterial(Color tint)
+    {
+        var shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        var mat = new Material(shader);
+        mat.SetColor("_BaseColor", tint);
+        return mat;
     }
 }

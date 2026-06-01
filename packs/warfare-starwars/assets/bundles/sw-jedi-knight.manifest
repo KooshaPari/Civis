@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3553193774
+CRC: 3453722783
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 06d6d92cfe1b217e4c4a844e9a477b3b
+    Hash: 66e5a0d0dbcf2403c14fb85c658fcbf3
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: e2a11be68d6287ac10b047eee7e3b6d6
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 06d6d92cfe1b217e4c4a844e9a477b3b
+    Hash: 66e5a0d0dbcf2403c14fb85c658fcbf3
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,8 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 136
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/Republic/sw-jedi-knight.mat
 - Assets/Prefabs/Republic/sw-jedi-knight.prefab
+- Assets/Materials/Republic/sw-jedi-knight.mat
 Dependencies: []

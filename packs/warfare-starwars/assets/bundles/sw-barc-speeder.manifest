@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3926385430
+CRC: 1535943819
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 20dccc3909c9dc280f8ac3c1507c25db
+    Hash: be200c15c3d4e9c80ade30fd4747833f
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 20dccc3909c9dc280f8ac3c1507c25db
+    Hash: be200c15c3d4e9c80ade30fd4747833f
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,8 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/Republic/sw-barc-speeder.mat
 - Assets/Prefabs/Republic/sw-barc-speeder.prefab
+- Assets/Materials/Republic/sw-barc-speeder.mat
 Dependencies: []

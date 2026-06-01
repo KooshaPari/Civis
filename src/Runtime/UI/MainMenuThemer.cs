@@ -946,6 +946,9 @@ namespace DINOForge.Runtime
                 Sprite? frameHover = string.IsNullOrEmpty(theme.ButtonFrameHover)
                     ? frameNormal
                     : (LoadSpriteFromPack(pack.Id, theme.ButtonFrameHover!) ?? frameNormal);
+                Sprite? buildHelmetIcon = LoadSpriteFromPack(pack.Id, "assets/ui/icon_build_helmet.png");
+                Sprite? buildDroidIcon = LoadSpriteFromPack(pack.Id, "assets/ui/icon_droid_head.png");
+                Sprite? buildGunshipIcon = LoadSpriteFromPack(pack.Id, "assets/ui/icon_gunship.png");
                 UnityEngine.Object? fontAsset = TryLoadFontAsset(theme, pack.Id);
 
                 int surfaces = 0;
@@ -959,15 +962,17 @@ namespace DINOForge.Runtime
                     if (cn.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0) continue;
                     if (!IsAuxSurface(c)) continue;
 
-                    ApplyTakeoverToSurface(c, theme, bgSprite, frameNormal, frameHover, fontAsset,
-                        primary, secondary, textCol, accent, bgTint);
+                    ApplyTakeoverToSurface(c, theme,
+                        bgSprite, frameNormal, frameHover,
+                        buildHelmetIcon, buildDroidIcon, buildGunshipIcon,
+                        fontAsset, primary, secondary, textCol, accent, bgTint);
                     surfaces++;
                 }
 
                 if (surfaces > 0)
                 {
-                    _log?.LogInfo($"[MainMenuThemer] AUX TAKEOVER applied to {surfaces} subpage canvas(es) from '{pack.Id}' (bg={bgSprite != null} frame={frameNormal != null} font={fontAsset != null})"); // pattern-96-ok: diagnostic
-                    DebugLog.Write("MainMenuThemer", $"AUX TAKEOVER: {surfaces} subpage canvas(es) bg={bgSprite != null} frame={frameNormal != null} font={fontAsset != null}");
+                    _log?.LogInfo($"[MainMenuThemer] AUX TAKEOVER applied to {surfaces} subpage canvas(es) from '{pack.Id}' (bg={bgSprite != null} frame={frameNormal != null} icons={buildHelmetIcon != null || buildDroidIcon != null || buildGunshipIcon != null} font={fontAsset != null})"); // pattern-96-ok: diagnostic
+                    DebugLog.Write("MainMenuThemer", $"AUX TAKEOVER: {surfaces} subpage canvas(es) bg={bgSprite != null} frame={frameNormal != null} icons={buildHelmetIcon != null || buildDroidIcon != null || buildGunshipIcon != null} font={fontAsset != null}");
                 }
                 return surfaces > 0;
             }
@@ -1026,7 +1031,9 @@ namespace DINOForge.Runtime
         /// control restyle + font. Idempotent via DINOForge marker objects.</summary>
         private void ApplyTakeoverToSurface(
             Canvas canvas, ThemeData theme,
-            Sprite? bgSprite, Sprite? frameNormal, Sprite? frameHover, UnityEngine.Object? fontAsset,
+            Sprite? bgSprite, Sprite? frameNormal, Sprite? frameHover,
+            Sprite? buildHelmetIcon, Sprite? buildDroidIcon, Sprite? buildGunshipIcon,
+            UnityEngine.Object? fontAsset,
             Color primary, Color secondary, Color textCol, Color accent, Color bgTint)
         {
             // 1) PANEL/BACKGROUND — inject a full-canvas themed backdrop (idempotent).
@@ -1037,6 +1044,9 @@ namespace DINOForge.Runtime
 
             // 3) NATIVE CONTROLS — sliders, ◄► selectors, tab rails.
             RestyleNativeControls(canvas, frameNormal, frameHover, primary, secondary, accent, textCol);
+
+            // 3b) BUILD/PANEL ICONS — swap icon-sized child Images on build buttons.
+            ReplaceBuildPanelIcons(canvas, buildHelmetIcon, buildDroidIcon, buildGunshipIcon);
 
             // 4) FONT.
             if (fontAsset != null) ApplyFont(canvas, fontAsset);
@@ -1219,6 +1229,71 @@ namespace DINOForge.Runtime
                 }
                 catch { /* safe-swallow */ }
             }
+        }
+
+        /// <summary>
+        /// Restyles build-panel/HUD button icon images by mapping recognized button labels
+        /// and container names to SW-themed icon sprites. We only write when a mapped sprite
+        /// was loaded; if a match has no available art, the native icon is left untouched to
+        /// avoid blank-box regressions.
+        /// </summary>
+        private void ReplaceBuildPanelIcons(Canvas canvas, Sprite? helmetIcon, Sprite? droidIcon, Sprite? gunshipIcon)
+        {
+            if (helmetIcon == null && droidIcon == null && gunshipIcon == null) return;
+
+            foreach (var btn in canvas.GetComponentsInChildren<Button>(false))
+            {
+                if (btn == null) continue;
+                string bname = btn.gameObject.name;
+                if (bname.IndexOf("DINOForge", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                // Consider non-frame child images that look like unit/building icons.
+                foreach (var img in btn.GetComponentsInChildren<Image>(true))
+                {
+                    if (img == null) continue;
+                    if (img.sprite == null) continue;
+                    if (ReferenceEquals(img, btn.targetGraphic as Image)) continue;
+                    if (img.gameObject.name.IndexOf("DINOForge", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    if (!IsLikelyIconImage(img, btn)) continue;
+
+                    Sprite? chosen = PickBuildPanelIconSprite(btn, bname, helmetIcon, droidIcon, gunshipIcon);
+                    if (chosen == null) continue;
+                    img.sprite = chosen;
+                    img.color = Color.white;
+                    img.preserveAspect = true;
+                    img.raycastTarget = false;
+                }
+            }
+        }
+
+        private static bool IsLikelyIconImage(Image img, Button button)
+        {
+            if (img.rectTransform == null || button == null) return false;
+            float iconArea = img.rectTransform.rect.width * img.rectTransform.rect.height;
+            if (iconArea <= 16f || iconArea >= 16384f) return false;
+
+            var buttonRt = button.GetComponent<RectTransform>();
+            if (buttonRt == null) return true;
+            float btnArea = buttonRt.rect.width * buttonRt.rect.height;
+            if (btnArea <= 0f) return true;
+            return iconArea < btnArea * 0.70f;
+        }
+
+        private static Sprite? PickBuildPanelIconSprite(Button button, string buttonName, Sprite? helmetIcon, Sprite? droidIcon, Sprite? gunshipIcon)
+        {
+            string nameHint = buttonName + " " + GetButtonLabel(button) + " " + button.gameObject.name;
+            if (string.IsNullOrWhiteSpace(nameHint)) return null;
+            string key = nameHint.ToLowerInvariant();
+
+            if ((key.IndexOf("build", StringComparison.Ordinal) >= 0 || key.IndexOf("factory", StringComparison.Ordinal) >= 0) && gunshipIcon != null)
+                return gunshipIcon;
+            if ((key.IndexOf("unit", StringComparison.Ordinal) >= 0 || key.IndexOf("trooper", StringComparison.Ordinal) >= 0 || key.IndexOf("clone", StringComparison.Ordinal) >= 0 || key.IndexOf("soldier", StringComparison.Ordinal) >= 0) && helmetIcon != null)
+                return helmetIcon;
+            if ((key.IndexOf("droid", StringComparison.Ordinal) >= 0 || key.IndexOf("drone", StringComparison.Ordinal) >= 0 || key.IndexOf("probe", StringComparison.Ordinal) >= 0) && droidIcon != null)
+                return droidIcon;
+            if ((key.IndexOf("air", StringComparison.Ordinal) >= 0 || key.IndexOf("aircraft", StringComparison.Ordinal) >= 0 || key.IndexOf("ship", StringComparison.Ordinal) >= 0 || key.IndexOf("fighter", StringComparison.Ordinal) >= 0) && gunshipIcon != null)
+                return gunshipIcon;
+            return null;
         }
 
         private static string GetButtonLabel(Button btn)

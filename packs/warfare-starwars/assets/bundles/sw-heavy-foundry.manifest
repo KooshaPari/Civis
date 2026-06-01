@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3749487548
+CRC: 3817251169
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 9c384508c74ed792f3367bb1017b1694
+    Hash: 8aad8a8bb5ffc10c09fe7ed3ccce6d01
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 9c384508c74ed792f3367bb1017b1694
+    Hash: 8aad8a8bb5ffc10c09fe7ed3ccce6d01
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,7 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Materials/CIS/sw-heavy-foundry.mat
 - Assets/Prefabs/CIS/sw-heavy-foundry.prefab
 Dependencies: []

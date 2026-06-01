@@ -95,6 +95,14 @@ public static class BuildAll
             int created = 0;
             foreach (var def in Defs)
             {
+                // ALWAYS upgrade the material to URP — even when the prefab already
+                // exists. The old code only touched the material inside CreatePrefab,
+                // so pre-existing prefabs kept their built-in 'Standard' shader
+                // material (HRV2 rejects it → 0 unit swaps, native render). The
+                // prefab references the material by GUID, so upgrading the .mat
+                // in-place is sufficient to fix the bundled shader.
+                EnsureUrpMaterial(def.Key, def.Folder, def.Color);
+
                 if (CreatePrefab(def.Key, def.Folder, def.Color, def.Shape))
                     created++;
             }
@@ -161,12 +169,16 @@ public static class BuildAll
 
         string matPath = $"Assets/Materials/{folder}/{key}.mat";
         var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-        if (mat == null || mat.shader == null || !mat.shader.name.StartsWith("Universal Render Pipeline/"))
+        if (mat == null)
         {
             mat = CreateUrpMaterial(color);
             AssetDatabase.CreateAsset(mat, matPath);
             var mi = AssetImporter.GetAtPath(matPath);
             if (mi != null) mi.assetBundleName = key;
+        }
+        else
+        {
+            UpgradeToUrp(mat, color);
         }
 
         GameObject go = GameObject.CreatePrimitive(shape);
@@ -182,12 +194,60 @@ public static class BuildAll
         return true;
     }
 
+    /// <summary>
+    /// Guarantees the material for <paramref name="key"/> exists and uses a URP shader,
+    /// regardless of whether the prefab already exists. Creates it if missing, upgrades
+    /// it in-place (preserving GUID, so existing prefab references stay valid) otherwise.
+    /// </summary>
+    private static void EnsureUrpMaterial(string key, string folder, Color color)
+    {
+        string matPath = $"Assets/Materials/{folder}/{key}.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+        if (mat == null)
+        {
+            mat = CreateUrpMaterial(color);
+            AssetDatabase.CreateAsset(mat, matPath);
+            var mi = AssetImporter.GetAtPath(matPath);
+            if (mi != null) mi.assetBundleName = key;
+        }
+        else
+        {
+            UpgradeToUrp(mat, color);
+        }
+    }
+
     private static Material CreateUrpMaterial(Color tint)
     {
-        var shader = Shader.Find("Universal Render Pipeline/Lit")
-            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
-        var mat = new Material(shader);
+        Shader shader = GetUrpShader();
+        Material mat = new Material(shader);
         mat.SetColor("_BaseColor", tint);
+        LogShader("BuildAll", mat);
         return mat;
+    }
+
+    private static void UpgradeToUrp(Material material, Color tint)
+    {
+        Shader shader = GetUrpShader();
+        material.shader = shader;
+        material.SetColor("_BaseColor", tint);
+        EditorUtility.SetDirty(material);
+        LogShader("BuildAll", material);
+    }
+
+    private static Shader GetUrpShader()
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        if (shader == null)
+            throw new InvalidOperationException("No URP shader available.");
+        return shader;
+    }
+
+    private static void LogShader(string source, Material material)
+    {
+        string shaderName = material.shader != null ? material.shader.name : "<null>";
+        Debug.Log($"[{source}] material {material.name} shader={shaderName}");
+        string shaderReportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-shader-report.log");
+        File.AppendAllText(shaderReportPath, $"material {material.name} shader={shaderName}{Environment.NewLine}");
     }
 }

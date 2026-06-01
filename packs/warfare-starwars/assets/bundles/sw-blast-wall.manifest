@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1549502658
+CRC: 2878946303
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 0340f043b3a844af47fab960f38470bf
+    Hash: 9b50fcf291f3d1dd5f9c9b42c02c61ed
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 0340f043b3a844af47fab960f38470bf
+    Hash: 9b50fcf291f3d1dd5f9c9b42c02c61ed
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,7 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Prefabs/Republic/sw-blast-wall.prefab
+- Assets/Materials/Republic/sw-blast-wall.mat
 Dependencies: []

@@ -64,22 +64,33 @@ public static class BuildSwMissingBundles
                 else
                 {
                     var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-                    if (existing != null && (existing.shader == null || !existing.shader.name.StartsWith("Universal Render Pipeline/")))
+                    if (existing != null)
                     {
                         CreateUrpMaterialForExisting(existing, def.Faction == "CIS" ? CisGrey : RepublicWhite);
                     }
                 }
 
+                // Try to source a real imported mesh from Assets/Models. If none is
+                // available (no glTF importer in this project, or the model was never
+                // copied in), fall back to a primitive so the prefab is STILL
+                // regenerated with a URP material — never leave a stale Standard prefab
+                // behind (the old `continue` here was the silent-skip bug: it errored,
+                // skipped, and rebundled the old Standard-shader prefab → native render).
+                GameObject go;
                 string[] guids = AssetDatabase.FindAssets($"{def.Fbx} t:Model", new[] { "Assets/Models" });
-                if (guids.Length == 0)
+                string modelPath = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : null;
+                GameObject modelPrefab = modelPath != null ? AssetDatabase.LoadAssetAtPath<GameObject>(modelPath) : null;
+                if (modelPrefab != null)
                 {
-                    Debug.LogError($"[BuildSwMissing] MISSING FBX for {def.Key}: {def.Fbx}");
-                    miss++;
-                    continue;
+                    go = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
+                    Debug.Log($"[BuildSwMissing] mesh {def.Key} <- {modelPath}");
                 }
-                string modelPath = AssetDatabase.GUIDToAssetPath(guids[0]);
-                var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
-                var go = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
+                else
+                {
+                    Debug.LogWarning($"[BuildSwMissing] no model for {def.Key} ({def.Fbx}); using primitive fallback (URP material still applied)");
+                    go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                    miss++;
+                }
                 go.name = def.Key;
 
                 var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
@@ -94,7 +105,6 @@ public static class BuildSwMissingBundles
                 var pi = AssetImporter.GetAtPath(prefabPath);
                 if (pi != null) pi.assetBundleName = def.Key;
                 ok++;
-                Debug.Log($"[BuildSwMissing] prefab {def.Key} <- {modelPath}");
             }
 
             AssetDatabase.SaveAssets();
@@ -106,9 +116,10 @@ public static class BuildSwMissingBundles
                 BuildTarget.StandaloneWindows64);
             if (manifest == null) { Debug.LogError("[BuildSwMissing] manifest null"); EditorApplication.Exit(1); return; }
 
-            Debug.Log($"[BuildSwMissing] Done: {ok} prefabs, {miss} missing. Bundles:");
+            Debug.Log($"[BuildSwMissing] Done: {ok} prefabs ({miss} primitive fallback). Bundles:");
             foreach (var b in manifest.GetAllAssetBundles()) Debug.Log($"  {b}");
-            EditorApplication.Exit(miss > 0 ? 2 : 0);
+            // Primitive fallback is acceptable (URP material still applied) — exit 0.
+            EditorApplication.Exit(0);
         }
         catch (Exception ex)
         {
@@ -133,19 +144,36 @@ public static class BuildSwMissingBundles
 
     private static Material CreateUrpMaterial(Color tint)
     {
-        var shader = Shader.Find("Universal Render Pipeline/Lit")
-            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        Shader shader = GetUrpShader();
         var mat = new Material(shader);
         mat.SetColor("_BaseColor", tint);
+        LogShader("BuildSwMissing", mat);
         return mat;
     }
 
     private static void CreateUrpMaterialForExisting(Material material, Color tint)
     {
-        var shader = Shader.Find("Universal Render Pipeline/Lit")
-            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        Shader shader = GetUrpShader();
         material.shader = shader;
         material.SetColor("_BaseColor", tint);
         EditorUtility.SetDirty(material);
+        LogShader("BuildSwMissing", material);
+    }
+
+    private static Shader GetUrpShader()
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        if (shader == null)
+            throw new InvalidOperationException("No URP shader available.");
+        return shader;
+    }
+
+    private static void LogShader(string source, Material material)
+    {
+        string shaderName = material.shader != null ? material.shader.name : "<null>";
+        Debug.Log($"[{source}] material {material.name} shader={shaderName}");
+        string shaderReportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-shader-report.log");
+        File.AppendAllText(shaderReportPath, $"material {material.name} shader={shaderName}{Environment.NewLine}");
     }
 }

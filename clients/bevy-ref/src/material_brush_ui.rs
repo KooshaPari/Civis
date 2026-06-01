@@ -437,21 +437,32 @@ fn material_palette_panel(
         .default_width(248.0)
         .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-12.0, 0.0))
         .show(ctx, |ui| {
-            palette_header(ui, active_name, armed.0);
-            ui.add_space(4.0);
-            brush_cluster_combo(ui, &mut selected);
-            ui_theme::hairline(ui);
-            egui::ScrollArea::vertical()
-                .max_height(360.0)
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    for (family, mats) in &shelves {
-                        if mats.is_empty() {
-                            continue;
-                        }
-                        family_section(ui, *family, mats, &mut selected);
-                    }
-                });
+            palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
+        });
+}
+
+/// Window interior: header, cluster combobox, and family swatch shelves.
+fn palette_panel_body(
+    ui: &mut egui::Ui,
+    active_name: &str,
+    armed: bool,
+    shelves: &[(MaterialFamily, Vec<&'static MaterialDef>)],
+    selected: &mut SelectedMaterial,
+) {
+    palette_header(ui, active_name, armed);
+    ui.add_space(4.0);
+    brush_cluster_combo(ui, selected);
+    ui_theme::hairline(ui);
+    egui::ScrollArea::vertical()
+        .max_height(360.0)
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
+            for (family, mats) in shelves {
+                if mats.is_empty() {
+                    continue;
+                }
+                family_section(ui, *family, mats, selected);
+            }
         });
 }
 

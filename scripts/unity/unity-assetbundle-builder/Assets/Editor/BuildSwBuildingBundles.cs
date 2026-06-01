@@ -66,6 +66,9 @@ public static class BuildSwBuildingBundles
             var mat = new Material(shader);
             mat.SetColor("_BaseColor", tint);
             AssetDatabase.CreateAsset(mat, matPath);
+            Debug.Log($"[SwBuildings] material {def.Key} shader={shader.name}");
+            string shaderReportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-shader-report.log");
+            File.AppendAllText(shaderReportPath, $"material {def.Key} shader={shader.name}{Environment.NewLine}");
 
                 // Mesh (procedural, baked to asset so it persists in the bundle)
                 Mesh mesh = BuildMesh(def.Arch);

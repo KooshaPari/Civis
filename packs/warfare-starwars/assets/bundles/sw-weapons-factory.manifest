@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3600356507
+CRC: 230253603
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: f141226bb68533739cca049252b42a25
+    Hash: a30d806ec2b491e110c4c09c33a737a8
   TypeTreeHash:
     serializedVersion: 2
-    Hash: a3954d9da6324b836c32a89fa85d00a9
+    Hash: 81fc4833398717ae320ec5bd08c661f4
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: f141226bb68533739cca049252b42a25
+    Hash: a30d806ec2b491e110c4c09c33a737a8
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,10 +26,7 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 65
-  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Prefabs/Republic/sw-weapons-factory.prefab
-- Assets/Materials/Republic/sw-weapons-factory.mat
 Dependencies: []

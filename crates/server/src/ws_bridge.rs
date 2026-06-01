@@ -503,8 +503,15 @@ async fn apply_dispatch_effect(
         } => {
             let mut sim = state.sim.lock().await;
             let mut rng = sim.rng_mut().clone();
-            let entity =
-                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, faction, x, y, &mut rng);
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                faction,
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }
@@ -530,6 +537,7 @@ async fn apply_dispatch_effect(
                         faction,
                         x,
                         y,
+                        civ_agents::ActorVisualKind::Humanoid,
                         &mut rng,
                     );
                     *sim.rng_mut() = rng;

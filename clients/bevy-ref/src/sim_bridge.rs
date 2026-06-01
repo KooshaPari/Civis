@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use civ_agents::{spawn_civilian_at, Civilian};
+use civ_agents::{spawn_civilian_at, ActorVisual, ActorVisualKind, Civilian};
 use civ_engine::{spawn::spawn_airport_at, Building, BuildingType, Simulation};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -21,6 +21,9 @@ const BUILDING_HALF_HEIGHT: f32 = 7.0;
 /// gameplay capsule's height.
 #[cfg(feature = "models")]
 const CIVILIAN_MODEL_SCALE: f32 = 3.0;
+/// Scale for herd / fauna rigs (skeleton minion).
+#[cfg(feature = "models")]
+const HERD_MODEL_SCALE: f32 = 2.4;
 /// Uniform scale for the CC0 GLTF building (KayKit hexagon home).
 #[cfg(feature = "models")]
 const BUILDING_MODEL_SCALE: f32 = 6.0;
@@ -31,14 +34,25 @@ const BUILDING_MODEL_SCALE: f32 = 6.0;
 #[derive(Component)]
 struct FactionTint(#[allow(dead_code)] u32);
 
-/// Resolve the loaded CC0 civilian scene to a spawnable `SceneRoot`, else `None`
-/// to fall back to the procedural capsule.
+/// Resolve the loaded CC0 actor scene for `kind`, else `None` (capsule fallback).
 #[cfg(feature = "models")]
-fn civilian_model_root(models: Option<&crate::gltf_models::GameModels>) -> Option<SceneRoot> {
-    use crate::gltf_models::{civilian_scene, ModelOrPrimitive};
-    match models.map(|m| civilian_scene(m, 0)) {
+fn actor_model_root(
+    models: Option<&crate::gltf_models::GameModels>,
+    kind: ActorVisualKind,
+    faction: u32,
+) -> Option<SceneRoot> {
+    use crate::gltf_models::{actor_scene, ModelOrPrimitive};
+    match models.map(|m| actor_scene(m, kind, faction)) {
         Some(ModelOrPrimitive::Model(root)) => Some(root),
         _ => None,
+    }
+}
+
+#[cfg(feature = "models")]
+fn model_scale_for(kind: ActorVisualKind) -> f32 {
+    match kind {
+        ActorVisualKind::Humanoid => CIVILIAN_MODEL_SCALE,
+        ActorVisualKind::Herd => HERD_MODEL_SCALE,
     }
 }
 
@@ -261,7 +275,15 @@ fn apply_spawn_civilian_requests(
         let id = next_civilian_id(&sim.0);
         let seed = id.wrapping_add(nx.to_bits() as u64 ^ ny.to_bits() as u64);
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
-        spawn_civilian_at(&mut sim.0.world, id, 0, nx, ny, &mut rng);
+        spawn_civilian_at(
+            &mut sim.0.world,
+            id,
+            0,
+            nx,
+            ny,
+            request.model_kind,
+            &mut rng,
+        );
     }
 }
 
@@ -314,12 +336,13 @@ fn sync_visible_gameplay(
     let mut first_world_pos: Option<Vec3> = None;
     let mut seen_civilians: Vec<u64> = Vec::new();
 
-    for (_, (civilian, position)) in sim
+    for (_, (civilian, position, visual)) in sim
         .0
         .world
-        .query::<(&Civilian, &civ_agents::Position3d)>()
+        .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
+        let visual_kind = visual.map(|v| v.0).unwrap_or(ActorVisualKind::Humanoid);
         civ_count += 1;
         seen_civilians.push(civilian.id);
         let world_pos = sim_position_to_world(position) + Vec3::Y * CIVILIAN_HALF_HEIGHT;
@@ -333,7 +356,7 @@ fn sync_visible_gameplay(
             }
         } else {
             #[cfg(feature = "models")]
-            let scene_root = civilian_model_root(models.as_deref());
+            let scene_root = actor_model_root(models.as_deref(), visual_kind, civilian.faction);
             #[cfg(not(feature = "models"))]
             let scene_root: Option<SceneRoot> = None;
 
@@ -346,7 +369,7 @@ fn sync_visible_gameplay(
                             FactionTint(civilian.faction),
                             scene_root,
                             Transform::from_translation(world_pos - Vec3::Y * CIVILIAN_HALF_HEIGHT)
-                                .with_scale(Vec3::splat(CIVILIAN_MODEL_SCALE)),
+                                .with_scale(Vec3::splat(model_scale_for(visual_kind))),
                         ))
                         .id()
                 }

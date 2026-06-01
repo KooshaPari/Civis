@@ -51,14 +51,17 @@
 //!    "sim_bridge integration point" section on [`civilian_scene`].
 
 use bevy::prelude::*;
+use civ_agents::ActorVisualKind;
 
 /// Relative asset paths (under the crate `assets/` root) for each CC0 model.
 ///
 /// Kept as constants so the fetch-cc0-models script and the loader agree on the
 /// exact filenames.
 pub mod asset_paths {
-    /// Civilian / agent model.
+    /// Civilian / agent model (KayKit Knight — humanoid).
     pub const CIVILIAN: &str = "models/civilian.glb";
+    /// Herd / fauna model (KayKit skeleton minion — unarmed creature).
+    pub const HERD: &str = "models/creature_skeleton_minion.glb";
     /// Tree / vegetation decoration model.
     pub const TREE: &str = "models/tree.glb";
     /// Generic building model.
@@ -82,6 +85,8 @@ pub mod asset_paths {
 pub struct GameModels {
     /// Civilian / agent scene (replaces the capsule).
     pub civilian: Option<Handle<Scene>>,
+    /// Herd / fauna scene (non-human, no sword).
+    pub herd: Option<Handle<Scene>>,
     /// Tree / vegetation scene (replaces the cone decoration).
     pub tree: Option<Handle<Scene>>,
     /// Building scene (replaces the cuboid).
@@ -92,7 +97,10 @@ impl GameModels {
     /// True when every model slot has a requested handle.
     #[must_use]
     pub fn all_present(&self) -> bool {
-        self.civilian.is_some() && self.tree.is_some() && self.building.is_some()
+        self.civilian.is_some()
+            && self.herd.is_some()
+            && self.tree.is_some()
+            && self.building.is_some()
     }
 }
 
@@ -139,6 +147,7 @@ impl Plugin for GltfModelsPlugin {
 /// Kenney CC0 packs.
 pub fn load_game_models(mut models: ResMut<GameModels>, asset_server: Res<AssetServer>) {
     models.civilian = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::CIVILIAN)));
+    models.herd = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::HERD)));
     models.tree = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::TREE)));
     models.building =
         Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING)));
@@ -170,6 +179,21 @@ pub fn load_game_models(mut models: ResMut<GameModels>, asset_server: Res<AssetS
 #[must_use]
 pub fn civilian_scene(models: &GameModels, _faction: u32) -> ModelOrPrimitive {
     scene_or_primitive(&models.civilian)
+}
+
+/// Herd / fauna scene (skeleton minion). See [`civilian_scene`] for usage.
+#[must_use]
+pub fn herd_scene(models: &GameModels) -> ModelOrPrimitive {
+    scene_or_primitive(&models.herd)
+}
+
+/// Pick the actor scene for a sim agent's visual kind.
+#[must_use]
+pub fn actor_scene(models: &GameModels, kind: ActorVisualKind, faction: u32) -> ModelOrPrimitive {
+    match kind {
+        ActorVisualKind::Humanoid => civilian_scene(models, faction),
+        ActorVisualKind::Herd => herd_scene(models),
+    }
 }
 
 /// sim_bridge integration point — building. See [`civilian_scene`] for the

@@ -257,7 +257,15 @@ mod tests {
 
         let mut sim = Simulation::with_seed(9);
         let mut rng = sim.rng_mut().clone();
-        let _ = spawn_civilian_at(&mut sim.world, 42_007, 1, 0.4, 0.6, &mut rng);
+        let _ = spawn_civilian_at(
+            &mut sim.world,
+            42_007,
+            1,
+            0.4,
+            0.6,
+            civ_agents::ActorVisualKind::Humanoid,
+            &mut rng,
+        );
         *sim.rng_mut() = rng;
         crate::engine::attach_citizen_to_agents(&mut sim.world);
         let pins = civ_pins(&sim);

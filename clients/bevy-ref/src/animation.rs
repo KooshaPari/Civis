@@ -14,7 +14,8 @@
 //!
 //! 1. When a GLTF `SceneRoot` finishes loading, Bevy inserts an
 //!    [`AnimationPlayer`] somewhere inside the spawned scene hierarchy.
-//! 2. [`attach_actor_animation`] reacts to each *newly added* `AnimationPlayer`,
+//! 2. [`attach_actor_animation`] binds each `AnimationPlayer` under a `SceneRoot`
+//!    (retries until the parent glTF asset is loaded),
 //!    walks up to the `SceneRoot` ancestor, matches that scene handle back to
 //!    the owning glTF document, builds an [`AnimationGraph`] from that document's
 //!    *named* clips, and attaches [`AnimationGraphHandle`] +
@@ -149,7 +150,15 @@ pub struct ActorAnimationPlugin;
 
 impl Plugin for ActorAnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (attach_actor_animation, drive_actor_animation).chain());
+        app.add_systems(
+            Update,
+            (
+                attach_actor_animation,
+                kick_start_actor_idle,
+                drive_actor_animation,
+            )
+                .chain(),
+        );
     }
 }
 
@@ -183,13 +192,12 @@ fn scene_root_ancestor(
     found
 }
 
-/// React to each newly-added [`AnimationPlayer`]: locate its owning glTF, build
-/// an [`AnimationGraph`] from that document's named clips, and attach the graph,
-/// transitions, and [`ActorAnim`] state.
+/// Bind each scene [`AnimationPlayer`] that lacks [`ActorAnim`] once its glTF
+/// document is loaded (retries every frame until the asset is ready).
 #[allow(clippy::too_many_arguments)]
 fn attach_actor_animation(
     mut commands: Commands,
-    players: Query<Entity, Added<AnimationPlayer>>,
+    players: Query<Entity, (With<AnimationPlayer>, Without<ActorAnim>)>,
     parents: Query<&ChildOf>,
     scene_roots: Query<&SceneRoot>,
     gltfs: Res<Assets<Gltf>>,
@@ -210,10 +218,7 @@ fn attach_actor_animation(
             .map(|(_, g)| g)
             .find(|g| g.scenes.iter().any(|s| s.id() == scene_id))
         else {
-            // glTF asset not resolvable yet (or scene came from elsewhere).
-            // Skip this frame; `Added` won't re-fire, so we re-detect via the
-            // `ActorAnim`-absent guard below on a later spawn instead. To be
-            // safe against missing the window, only attach when resolvable.
+            // glTF not in `Assets<Gltf>` yet (async scene load). Retry next frame.
             continue;
         };
 
@@ -240,7 +245,6 @@ fn attach_actor_animation(
         if !nodes.any() {
             // Static fallback: rig has no locomotion clips. Tag so we don't
             // reconsider, but do not attach a graph/transitions.
-            let _ = ActorAnim::STATIC;
             commands.entity(player_entity).insert(ActorAnim {
                 nodes,
                 current: Gait::Idle,
@@ -270,6 +274,22 @@ fn attach_actor_animation(
 /// Pick the first present node from a priority list of clip names.
 fn pick(named: &HashMap<&str, AnimationNodeIndex>, names: &[&str]) -> Option<AnimationNodeIndex> {
     names.iter().find_map(|n| named.get(*n).copied())
+}
+
+/// Start the idle clip the same frame we attach graph + [`ActorAnim`].
+fn kick_start_actor_idle(
+    mut actors: Query<(&ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions), Added<ActorAnim>>,
+) {
+    for (anim, mut player, mut transitions) in &mut actors {
+        if anim.is_static {
+            continue;
+        }
+        if let Some(node) = anim.nodes.node_for(Gait::Idle) {
+            transitions
+                .play(&mut player, node, Duration::ZERO)
+                .set_repeat(RepeatAnimation::Forever);
+        }
+    }
 }
 
 /// Every frame: estimate each actor's speed from its root-transform delta, pick

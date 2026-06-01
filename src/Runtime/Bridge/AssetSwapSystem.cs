@@ -75,6 +75,12 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private readonly HashSet<string> _permanentlyFailedBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Tracks bundles for which a non-URP/legacy material swap was already skipped.
+        /// This prevents repeated logs while the same bundle is retried across frames.
+        /// </summary>
+        private static readonly HashSet<string> _reportedNonUrpMaterialBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         private int _frameCount;
 
         /// <summary>Whether the one-shot vanilla mesh diagnostic dump has been emitted.</summary>
@@ -610,6 +616,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 replacementMat = DINOForge.Runtime.Graphics.GraphicsMaterialUpgrader.Upgrade(replacementMat, assetName);
             }
+            bool materialCompatible = replacementMat != null && IsUrpCompatibleMaterial(replacementMat, modBundlePath);
 
             Type? renderMeshType = ResolveRenderMeshType();
             if (renderMeshType == null)
@@ -997,7 +1004,7 @@ namespace DINOForge.Runtime.Bridge
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
-                    if (replacementMat != null && materialField != null)
+                    if (replacementMat != null && materialCompatible && materialField != null)
                     {
                         object? currentMat = materialField.GetValue(renderMesh);
                         if (currentMat == null)
@@ -1068,6 +1075,83 @@ namespace DINOForge.Runtime.Bridge
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Returns true only when the material is safe for Hybrid Renderer V2/URP execution.
+        /// Legacy built-in shaders such as "Standard"/"Legacy"/"Diffuse" are rejected.
+        /// </summary>
+        private static bool IsUrpCompatibleMaterial(Material material, string bundlePath)
+        {
+            if (material == null)
+                return false;
+
+            Shader? shader = material.shader;
+            if (shader == null)
+            {
+                LogNonUrpMaterialSkip(bundlePath, "<null>");
+                return false;
+            }
+
+            string shaderName = shader.name ?? string.Empty;
+            if (shaderName.StartsWith("Universal Render Pipeline/", StringComparison.Ordinal))
+                return true;
+
+            if (HasSrpBatcherSupport(shader))
+                return true;
+
+            LogNonUrpMaterialSkip(bundlePath, shaderName);
+            return false;
+        }
+
+        private static bool HasSrpBatcherSupport(Shader shader)
+        {
+            try
+            {
+                MethodInfo? findPassTagValue = typeof(Shader).GetMethod(
+                    "FindPassTagValue",
+                    BindingFlags.Public | BindingFlags.Instance,
+                    null,
+                    new[] { typeof(int), typeof(string) },
+                    null);
+
+                if (findPassTagValue == null)
+                    return false;
+
+                for (int pass = 0; pass < 32; pass++)
+                {
+                    object? tagValue = findPassTagValue.Invoke(shader, new object[] { pass, "SRPBatcher" });
+                    try
+                    {
+                        if (tagValue != null && Convert.ToInt32(tagValue) != 0)
+                            return true;
+                    }
+                    catch
+                    {
+                        // Some Unity versions may expose FindPassTagValue with a non-convertible return type.
+                    }
+                }
+            }
+            catch
+            {
+                // If FindPassTagValue probing fails, fallback to shader-name check.
+            }
+
+            return false;
+        }
+
+        private static void LogNonUrpMaterialSkip(string bundlePath, string shaderName)
+        {
+            string bundleName = Path.GetFileName(bundlePath);
+            if (string.IsNullOrWhiteSpace(bundleName))
+                bundleName = bundlePath;
+
+            if (!_reportedNonUrpMaterialBundles.Add(bundleName))
+                return;
+
+            DebugLog.Write(
+                "AssetSwap",
+                $"[AssetSwap] skipped material swap for {bundleName}: shader {shaderName} not HRV2-compatible");
         }
 
         private static Type? _renderMeshType;

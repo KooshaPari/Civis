@@ -12,17 +12,51 @@ pub struct GenWorld {
     pub cells: Vec<MaterialId>,
 }
 
+/// Spatial frequency of the terrain noise, in noise-cells across the world.
+/// The previous generator sampled fbm over the [0,1] domain, so the lowest octave
+/// spanned the WHOLE map as a single broad dome -> a flat-looking plateau. Sampling
+/// over [0, TERRAIN_FREQ] puts several hills/valleys across the map so the (proven)
+/// smooth mesher has real relief to round.
+const TERRAIN_FREQ: f64 = 5.0;
+
 /// Returns the deterministic surface height for a world column.
+///
+/// Relief = a base sea-adjacent level plus multi-octave fbm, with the land
+/// elevation above sea level scaled by a smooth radial falloff so the terrain
+/// slopes DOWN into the sea at the world boundary instead of dropping as a
+/// vertical cliff wall.
 #[must_use]
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
     let dz = dims[2].max(1);
-    let base = dims[1] as f64 * 0.56;
-    let noise = fbm2(seed, x as f64 / dx as f64, z as f64 / dz as f64);
-    let amplitude = (dims[1] as f64 * 0.30).max(2.0);
-    let max_surface = (dims[1] as f64 * 0.85).max(2.0);
-    let min_surface = 2.0;
-    (base + noise * amplitude).clamp(min_surface, max_surface) as usize
+    let sea = dims[1] as f64 * 0.40;
+    // Land sits a little above sea; hills rise from there.
+    let base = dims[1] as f64 * 0.50;
+    let u = x as f64 / dx as f64;
+    let v = z as f64 / dz as f64;
+    let noise = fbm2(seed, u * TERRAIN_FREQ, v * TERRAIN_FREQ);
+    // Bias noise to [0,1]-ish positive relief so hills rise more than they pit.
+    let relief = (noise * 0.5 + 0.5).clamp(0.0, 1.0);
+    let amplitude = (dims[1] as f64 * 0.38).max(2.0);
+    let land = base + relief * amplitude;
+    // Radial falloff (1 at centre -> 0 at edges) so coastlines slope into the sea.
+    let falloff = edge_falloff(u, v);
+    let height = sea + (land - sea) * falloff;
+    let max_surface = (dims[1] as f64 * 0.92).max(2.0);
+    height.clamp(2.0, max_surface) as usize
+}
+
+/// Smooth radial falloff in `[0, 1]`: ~1 across the interior, easing to 0 at the
+/// world edge so elevation above sea level tapers to a sloped coastline.
+fn edge_falloff(u: f64, v: f64) -> f64 {
+    // Distance from centre in normalized [-1, 1] space, taken on the dominant axis
+    // so square worlds taper evenly on all four sides.
+    let du = (u - 0.5).abs() * 2.0;
+    let dv = (v - 0.5).abs() * 2.0;
+    let edge = du.max(dv).clamp(0.0, 1.0);
+    // Flat interior until ~0.7 out, then smooth taper to 0 at the boundary.
+    let t = ((edge - 0.7) / 0.3).clamp(0.0, 1.0);
+    1.0 - smoothstep(t)
 }
 
 /// Generates a deterministic world with strata, water fill, and ore pockets.

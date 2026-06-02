@@ -234,7 +234,11 @@ pub fn build_voxel_world(
     seed: u64,
 ) {
     info!("[voxel] generating world from seed={seed:#018x}");
+    // Phase timing (task #4 perf): localize where the ~33s world-load stall lives
+    // — worldgen vs grid/CA init vs meshing — instead of guessing.
+    let t_start = std::time::Instant::now();
     let generated = worldgen::generate(WORLD_DIMS, seed);
+    let t_worldgen = t_start.elapsed();
     let cell_count = generated.cells.len();
     state.grid = CaGrid {
         dims: generated.dims,
@@ -243,7 +247,9 @@ pub fn build_voxel_world(
         saturation: vec![0; cell_count],
         dirty_chunks: HashSet::new(),
     };
+    let t_grid_init = std::time::Instant::now();
     state.grid.mark_mobile_chunks(MaterialRegistry::standard());
+    let t_mark_mobile = t_grid_init.elapsed();
     state.tick = 0;
     state.accumulator = 0.0;
     state.chunk_entities.clear();
@@ -290,6 +296,7 @@ pub fn build_voxel_world(
     );
     let camera_eye = cameras.iter().next().map(|t| t.translation.to_array());
     info!("[voxel] camera_eye at spawn time = {:?}", camera_eye);
+    let t_mesh = std::time::Instant::now();
     state.chunk_entities = spawn_chunk_meshes(
         &mut commands,
         &mut meshes,
@@ -298,9 +305,20 @@ pub fn build_voxel_world(
         None,
         None,
     );
+    let t_mesh_elapsed = t_mesh.elapsed();
     info!(
         "[voxel] spawned {} chunk-submesh entities",
         state.chunk_entities.len()
+    );
+    // Phase breakdown so the world-load stall is localized (worldgen vs grid
+    // mark-mobile vs mesh), not guessed. No CA step runs inside build_voxel_world
+    // itself — the CA only steps in `step_and_remesh` (Update) post-load — so this
+    // log also confirms whether the stall is the synchronous mesh of all chunks.
+    info!(
+        "[voxel][perf] worldgen={:.2}s mark_mobile={:.2}s mesh={:.2}s (total build_voxel_world)",
+        t_worldgen.as_secs_f32(),
+        t_mark_mobile.as_secs_f32(),
+        t_mesh_elapsed.as_secs_f32(),
     );
     log_mesher_diagnostic(&state.grid);
 }

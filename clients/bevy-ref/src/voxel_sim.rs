@@ -16,7 +16,9 @@ use civ_voxel::material::{
 };
 use civ_voxel::worldgen;
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffer};
-use crate::voxel_smooth_mesher::{build_smooth_meshes, resolved_mesher_mode, TerrainMesherMode};
+use crate::voxel_smooth_mesher::{
+    build_smooth_meshes, resolved_mesher_mode, TerrainMesherMode, SMOOTH_MESH_PADDED_EDGE,
+};
 
 use crate::camera::CameraRig;
 use crate::{bevy_render::mesh_buffer_to_bevy, chunk_distance_from_camera, should_render_chunk};
@@ -393,8 +395,13 @@ fn slice_chunk_with_apron(
     cx: usize,
     cy: usize,
     cz: usize,
-) -> [MaterialId; (CHUNK_EDGE + 2) * (CHUNK_EDGE + 2) * (CHUNK_EDGE + 2)] {
-    const PADDED_EDGE: usize = CHUNK_EDGE + 2;
+) -> [MaterialId; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] {
+    // Padded chunk for the smooth mesher: a 2-voxel apron of neighbour-chunk
+    // voxels on every side so the 5x5x5 blur + Surface Nets round across chunk
+    // seams. PADDED_EDGE + APRON are kept in sync with the mesher via
+    // `SMOOTH_MESH_PADDED_EDGE`; APRON is half the padding on each side.
+    const PADDED_EDGE: usize = SMOOTH_MESH_PADDED_EDGE;
+    const APRON: isize = ((PADDED_EDGE - CHUNK_EDGE) / 2) as isize;
     let origin_x = cx * CHUNK_EDGE;
     let origin_y = cy * CHUNK_EDGE;
     let origin_z = cz * CHUNK_EDGE;
@@ -402,9 +409,9 @@ fn slice_chunk_with_apron(
     for z in 0..PADDED_EDGE {
         for y in 0..PADDED_EDGE {
             for x in 0..PADDED_EDGE {
-                let gx_i = isize::try_from(origin_x + x).unwrap_or(isize::MAX) - 1;
-                let gy_i = isize::try_from(origin_y + y).unwrap_or(isize::MAX) - 1;
-                let gz_i = isize::try_from(origin_z + z).unwrap_or(isize::MAX) - 1;
+                let gx_i = isize::try_from(origin_x + x).unwrap_or(isize::MAX) - APRON;
+                let gy_i = isize::try_from(origin_y + y).unwrap_or(isize::MAX) - APRON;
+                let gz_i = isize::try_from(origin_z + z).unwrap_or(isize::MAX) - APRON;
                 let gx = isize::try_from(grid.dims[0]).unwrap_or(isize::MAX);
                 let gy = isize::try_from(grid.dims[1]).unwrap_or(isize::MAX);
                 let gz_max = isize::try_from(grid.dims[2]).unwrap_or(isize::MAX);
@@ -512,7 +519,10 @@ fn chunk_saturation_with_apron(
     if grid.saturation.is_empty() {
         return None;
     }
-    const PADDED_EDGE: usize = CHUNK_EDGE + 2;
+    // Saturation apron MUST match the voxel apron edge/offset (SMOOTH_MESH_PADDED_EDGE,
+    // 2-voxel apron) so per-cell saturation aligns with the blurred occupancy samples.
+    const PADDED_EDGE: usize = SMOOTH_MESH_PADDED_EDGE;
+    const APRON: isize = ((PADDED_EDGE - CHUNK_EDGE) / 2) as isize;
     let origin_x = cx * CHUNK_EDGE;
     let origin_y = cy * CHUNK_EDGE;
     let origin_z = cz * CHUNK_EDGE;
@@ -520,9 +530,9 @@ fn chunk_saturation_with_apron(
     for z in 0..PADDED_EDGE {
         for y in 0..PADDED_EDGE {
             for x in 0..PADDED_EDGE {
-                let gx_i = isize::try_from(origin_x + x).unwrap_or(isize::MAX) - 1;
-                let gy_i = isize::try_from(origin_y + y).unwrap_or(isize::MAX) - 1;
-                let gz_i = isize::try_from(origin_z + z).unwrap_or(isize::MAX) - 1;
+                let gx_i = isize::try_from(origin_x + x).unwrap_or(isize::MAX) - APRON;
+                let gy_i = isize::try_from(origin_y + y).unwrap_or(isize::MAX) - APRON;
+                let gz_i = isize::try_from(origin_z + z).unwrap_or(isize::MAX) - APRON;
                 let gx = isize::try_from(grid.dims[0]).unwrap_or(isize::MAX);
                 let gy = isize::try_from(grid.dims[1]).unwrap_or(isize::MAX);
                 let gz_max = isize::try_from(grid.dims[2]).unwrap_or(isize::MAX);

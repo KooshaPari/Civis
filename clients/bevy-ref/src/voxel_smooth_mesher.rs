@@ -15,8 +15,16 @@ use civ_voxel::{
 use civ_voxel::material::MaterialRegistry;
 
 const CHUNK_EDGE: usize = 16;
-const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2;
+/// Apron ring (in voxels) carried around each chunk so the blur and Surface Nets
+/// can see neighbour-chunk voxels and round across seams. A 2-voxel apron is what
+/// a 5x5x5 (`BLUR_RADIUS = 2`) blur needs; with only 1 the outer blur ring falls
+/// out of bounds and chunk faces step. Kept in sync with the apron built by
+/// `voxel_sim::slice_chunk_with_apron` via `SMOOTH_MESH_PADDED_EDGE`.
+const APRON: usize = 2;
+const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2 * APRON;
 pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
+/// Blur half-width. 2 -> a 5x5x5 Gaussian neighbourhood (needs `APRON >= 2`).
+const BLUR_RADIUS: isize = 2;
 const SOLID_CENTER_BIAS: f32 = 0.08;
 // Iso-surface tuning. The surface is the shared `solid_occ` contour at `ISO_LEVEL`.
 // `ISO_LEVEL` near 0.5 keeps the surface gently rounded; a low value over-favors
@@ -120,7 +128,11 @@ fn build_surface_nets(
     let mut vertices = Vec::with_capacity(positions.len());
     for (position, normal) in positions.iter().zip(normals.iter()) {
         let normal = normalize_or_unit_up(*normal);
-        let position = [position[0] - 1.0, position[1] - 1.0, position[2] - 1.0];
+        let position = [
+            position[0] - APRON as f32,
+            position[1] - APRON as f32,
+            position[2] - APRON as f32,
+        ];
         let uv = [
             (position[0].clamp(0.0, CHUNK_EDGE as f32 - 1.0)) / CHUNK_EDGE as f32,
             (position[2].clamp(0.0, CHUNK_EDGE as f32 - 1.0)) / CHUNK_EDGE as f32,
@@ -224,9 +236,9 @@ fn sample_blurred_occupancy(
     let mut material_occ = 0.0f32;
     let mut sat_acc = 0.0f32;
     let mut weight_sum = 0.0f32;
-    for dz in -1isize..=1 {
-            for dy in -1isize..=1 {
-            for dx in -1isize..=1 {
+    for dz in -BLUR_RADIUS..=BLUR_RADIUS {
+        for dy in -BLUR_RADIUS..=BLUR_RADIUS {
+            for dx in -BLUR_RADIUS..=BLUR_RADIUS {
                 let sx = x as isize + dx;
                 let sy = y as isize + dy;
                 let sz = z as isize + dz;
@@ -238,7 +250,7 @@ fn sample_blurred_occupancy(
                     || sy >= CHUNK_EDGE_PADDED as isize
                     || sz >= CHUNK_EDGE_PADDED as isize);
                 if !in_bounds {
-                    // Out-of-world is air, but still keep full 3x3x3 sample
+                    // Out-of-world is air, but still keep full kernel sample
                     // weight for boundary consistency across chunk seams.
                     weight_sum += w;
                     continue;
@@ -269,7 +281,12 @@ fn sample_blurred_occupancy(
 
 #[inline]
 fn weight_for_offset(dx: isize, dy: isize, dz: isize) -> f32 {
-    1.0 / (1.0 + (dx * dx + dy * dy + dz * dz) as f32)
+    // Gaussian falloff over the (radius-2) neighbourhood. A wide-but-decaying kernel
+    // rounds the field for smoothness while still giving thin spans + chunk seams
+    // enough neighbour support to stay solid; sigma ~1.1 keeps the 5x5x5 from
+    // washing the surface out.
+    let d2 = (dx * dx + dy * dy + dz * dz) as f32;
+    (-d2 / (2.0 * 1.1 * 1.1)).exp()
 }
 
 #[cfg(test)]

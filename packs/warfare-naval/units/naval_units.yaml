@@ -55,3 +55,138 @@
       gold: 50
       population: 3
   weapon: light_peashooter
+
+- id: naval_corvette
+  display_name: Republic Corvettes
+  description: Fast missile corvette supporting coastal control and convoy escort tasks.
+  unit_class: LightVehicle
+  faction_id: republic
+  tier: 2
+  vanilla_mapping: fast_vehicle
+  defense_tags: [Mechanical, Naval]
+  behavior_tags: [Naval]
+  stats:
+    hp: 180.0
+    damage: 22.0
+    armor: 7.0
+    range: 16.0
+    speed: 9.0
+    accuracy: 0.72
+    fire_rate: 1.1
+    morale: 80.0
+    cost:
+      food: 20
+      wood: 90
+      stone: 0
+      iron: 70
+      gold: 55
+      population: 2
+  weapon: light_peashooter
+
+- id: naval_destroyer
+  display_name: Republic Destroyer
+  description: Heavily armed naval line ship balancing speed and anti-armor strikes.
+  unit_class: MainBattleVehicle
+  faction_id: republic
+  tier: 3
+  vanilla_mapping: main_battle_vehicle
+  defense_tags: [Mechanical, Naval, Large]
+  behavior_tags: [Naval]
+  stats:
+    hp: 360.0
+    damage: 42.0
+    armor: 14.0
+    range: 24.0
+    speed: 6.0
+    accuracy: 0.8
+    fire_rate: 0.65
+    morale: 110.0
+    cost:
+      food: 40
+      wood: 180
+      stone: 0
+      iron: 130
+      gold: 120
+      population: 4
+  weapon: heavy_cannon
+
+- id: cis_naval_starfish
+  display_name: CIS Stealth Cutter
+  description: Low-profile interceptor craft for hit-and-run engagements near shorelines.
+  unit_class: LightVehicle
+  faction_id: confederacy-of-independent-systems
+  tier: 1
+  vanilla_mapping: light_vehicle
+  defense_tags: [Mechanical, Naval]
+  behavior_tags: [Naval]
+  stats:
+    hp: 95.0
+    damage: 14.0
+    armor: 4.0
+    range: 14.0
+    speed: 13.0
+    accuracy: 0.68
+    fire_rate: 1.4
+    morale: 70.0
+    cost:
+      food: 18
+      wood: 55
+      stone: 0
+      iron: 45
+      gold: 32
+      population: 1
+  weapon: light_cannon
+
+- id: cis_naval_frigate
+  display_name: CIS Battle Frigate
+  description: Broadside frigate used for suppressive fire and defensive fleet screens.
+  unit_class: MainBattleVehicle
+  faction_id: confederacy-of-independent-systems
+  tier: 2
+  vanilla_mapping: main_battle_vehicle
+  defense_tags: [Mechanical, Naval, Large]
+  behavior_tags: [Naval]
+  stats:
+    hp: 280.0
+    damage: 32.0
+    armor: 8.0
+    range: 18.0
+    speed: 7.0
+    accuracy: 0.7
+    fire_rate: 0.9
+    morale: 95.0
+    cost:
+      food: 35
+      wood: 140
+      stone: 0
+      iron: 85
+      gold: 75
+      population: 3
+  weapon: heavy_cannon
+
+- id: cis_naval_battleship
+  display_name: CIS War Dreadnought
+  description: Massive CIS flagship mounting dual heavy decks for ship-to-ship dominance.
+  unit_class: MainBattleVehicle
+  faction_id: confederacy-of-independent-systems
+  tier: 3
+  vanilla_mapping: heavy_vehicle
+  defense_tags: [Mechanical, Naval, Large]
+  behavior_tags: [Naval]
+  stats:
+    hp: 520.0
+    damage: 62.0
+    armor: 20.0
+    range: 26.0
+    speed: 4.0
+    accuracy: 0.78
+    fire_rate: 0.45
+    morale: 130.0
+    cost:
+      food: 80
+      wood: 260
+      stone: 0
+      iron: 210
+      gold: 200
+      population: 6
+  weapon: siege_cannon

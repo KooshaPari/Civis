@@ -515,7 +515,7 @@ pub fn gloss_sheen(painter: &egui::Painter, rect: egui::Rect) {
     }
     let gloss = egui::Rect::from_min_max(rect.min, egui::pos2(rect.right(), rect.top() + h));
     let mut mesh = egui::Mesh::default();
-    let c_top = egui::Color32::from_white_alpha(90);
+    let c_top = egui::Color32::from_white_alpha(110);
     let c_bot = egui::Color32::TRANSPARENT;
     let i = mesh.vertices.len() as u32;
     mesh.colored_vertex(gloss.left_top(), c_top);
@@ -646,11 +646,12 @@ pub fn motion_rect(
     out
 }
 
-/// Frosted-glass panel fill: translucent enough to read as glass over the 3D
-/// scene, lighter than the opaque graphite panels so layered depth shows.
-pub const GLASS_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(34, 40, 48, 150);
+/// Frosted-glass panel fill: translucent enough that the 3D scene clearly
+/// reads through the panel (true Mica/Liquid-Glass), lighter than the opaque
+/// graphite panels so layered depth shows. Alpha kept low on purpose.
+pub const GLASS_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(38, 46, 56, 118);
 /// Thin light top border that gives glass its lifted "wet" edge.
-pub const GLASS_EDGE: egui::Color32 = egui::Color32::from_rgba_premultiplied(150, 168, 184, 90);
+pub const GLASS_EDGE: egui::Color32 = egui::Color32::from_rgba_premultiplied(162, 182, 198, 110);
 
 /// Frosted Liquid Glass frame for decks, sidebars, and pill shells.
 ///
@@ -673,20 +674,16 @@ pub fn liquid_glass_frame(margin: egui::Margin, radius: u8) -> egui::Frame {
 pub fn liquid_glass_finish(painter: &egui::Painter, rect: egui::Rect, radius: u8) {
     gloss_sheen(painter, rect);
     soft_inner_glow(painter, rect, KC_ACCENT, radius);
-    // Thin light inner highlight (the lifted glass edge).
+    // Thin light inner highlight (the lifted glass edge) + a darker lower bevel.
     painter.rect_stroke(
         rect.shrink(1.0),
         radius as f32,
-        egui::Stroke::new(1.0, egui::Color32::from_white_alpha(28)),
+        egui::Stroke::new(1.2, egui::Color32::from_white_alpha(38)),
         egui::StrokeKind::Inside,
     );
-    // Subtle colored rim (teal, not white) so the panel glows like a holo blade.
-    painter.rect_stroke(
-        rect,
-        radius as f32,
-        egui::Stroke::new(1.0, KC_ACCENT.gamma_multiply(0.30)),
-        egui::StrokeKind::Outside,
-    );
+    // Colored TEAL rim glow (2-pass, not white) so the panel reads as a lit holo
+    // blade — the holocron "colored-glow-not-white" rule.
+    rim_glow(painter, rect, KC_ACCENT, radius);
 }
 
 /// Draw a block-style Liquid Glass pill (fill + rim + sheen + optional accent bloom).

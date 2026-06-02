@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::prelude::*;
+use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task};
 
 use civ_voxel::fluid_ca::{step, CaGrid};
 use civ_voxel::material::{
@@ -106,7 +107,7 @@ impl Plugin for VoxelSimPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VoxelSimState::default())
             .insert_resource(WorldBuilt::default())
-            .add_systems(Update, step_and_remesh);
+            .add_systems(Update, (step_and_remesh, apply_chunk_mesh_tasks));
 
         // With the menu/egui feature, worldgen is deferred until the user
         // commits World Setup → Loading (or autostart jumps to Playing). This
@@ -152,14 +153,13 @@ pub fn build_world_on_play(
     mode: Res<crate::menus::GameUiMode>,
     params: Res<crate::menus::WorldSetupParams>,
     cameras: Query<&Transform, With<Camera3d>>,
+    pending: Query<Entity, With<ComputingChunkMesh>>,
 ) {
     use crate::menus::GameUiMode;
     // Reset so a fresh world is generated next time the player commits setup.
     if matches!(*mode, GameUiMode::MainMenu | GameUiMode::WorldSetup) {
         if built.0 {
-            for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
-                commands.entity(entity).despawn();
-            }
+            despawn_world_and_pending(&mut commands, &mut state, &pending);
             built.0 = false;
         }
         return;
@@ -168,13 +168,28 @@ pub fn build_world_on_play(
     if built.0 {
         return;
     }
-    // Despawn any stale world entities before regenerating.
-    for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
-        commands.entity(entity).despawn();
-    }
+    // Despawn any stale world entities AND in-flight mesh tasks before regenerating,
+    // so a task computed for the OLD world can't apply onto the new one.
+    despawn_world_and_pending(&mut commands, &mut state, &pending);
     let seed = params.seed;
     build_voxel_world(commands, meshes, materials, rig, state, cameras, seed);
     built.0 = true;
+}
+
+/// Despawn the current world's chunk entities AND any in-flight off-thread mesh
+/// tasks, so a rebuild starts clean and no stale task applies onto the new world.
+#[cfg(feature = "egui")]
+fn despawn_world_and_pending(
+    commands: &mut Commands,
+    state: &mut VoxelSimState,
+    pending: &Query<Entity, With<ComputingChunkMesh>>,
+) {
+    for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
+        commands.entity(entity).despawn();
+    }
+    for carrier in pending.iter() {
+        commands.entity(carrier).despawn();
+    }
 }
 
 /// Live voxel simulation state for the standalone renderer.
@@ -226,8 +241,11 @@ pub fn voxel_surface_y(grid: &CaGrid, x: f32, z: f32) -> f32 {
 /// Build the voxel world from `seed`, then mesh and spawn all visible chunks.
 pub fn build_voxel_world(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    // Meshes/materials are no longer added here: the initial build dispatches
+    // off-thread mesh tasks and `apply_chunk_mesh_tasks` adds the assets as each
+    // completes. Kept in the signature so the system param set is unchanged.
+    _meshes: ResMut<Assets<Mesh>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
     mut rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     cameras: Query<&Transform, With<Camera3d>>,
@@ -296,29 +314,20 @@ pub fn build_voxel_world(
     );
     let camera_eye = cameras.iter().next().map(|t| t.translation.to_array());
     info!("[voxel] camera_eye at spawn time = {:?}", camera_eye);
-    let t_mesh = std::time::Instant::now();
-    state.chunk_entities = spawn_chunk_meshes(
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &state.grid,
-        None,
-        None,
-    );
-    let t_mesh_elapsed = t_mesh.elapsed();
+    // Dispatch the per-chunk mesh COMPUTE onto the async task pool. The expensive
+    // mesher runs off the main thread; `apply_chunk_mesh_tasks` (Update) spawns the
+    // Bevy entities as each task completes, so build_voxel_world returns immediately
+    // and the world streams in without blocking render/the autoshot.
+    let t_dispatch = std::time::Instant::now();
+    dispatch_chunk_mesh_tasks(&mut commands, &state.grid, None);
+    let t_dispatch_elapsed = t_dispatch.elapsed();
+    // Phase breakdown. The mesh COMPUTE is now off-thread, so this dispatch time is
+    // the main-thread cost (cheap slicing only) — expected <<1s, no load hitch.
     info!(
-        "[voxel] spawned {} chunk-submesh entities",
-        state.chunk_entities.len()
-    );
-    // Phase breakdown so the world-load stall is localized (worldgen vs grid
-    // mark-mobile vs mesh), not guessed. No CA step runs inside build_voxel_world
-    // itself — the CA only steps in `step_and_remesh` (Update) post-load — so this
-    // log also confirms whether the stall is the synchronous mesh of all chunks.
-    info!(
-        "[voxel][perf] worldgen={:.2}s mark_mobile={:.2}s mesh={:.2}s (total build_voxel_world)",
+        "[voxel][perf] worldgen={:.2}s mark_mobile={:.2}s mesh_dispatch={:.2}s (off-thread compute)",
         t_worldgen.as_secs_f32(),
         t_mark_mobile.as_secs_f32(),
-        t_mesh_elapsed.as_secs_f32(),
+        t_dispatch_elapsed.as_secs_f32(),
     );
     log_mesher_diagnostic(&state.grid);
 }
@@ -508,8 +517,10 @@ fn reframe_camera_once(rig: &mut CameraRig, target: Vec3) {
     let extent = target.length().max(1.0);
     rig.target = target;
     rig.yaw = -0.12;
-    rig.pitch = -0.72;
-    rig.distance = (extent * 2.5).clamp(20.0, 600.0);
+    // render-mgr camera fix (A): steeper top-down pitch + closer framing (~1/3 of
+    // the world) so actors read at a usable scale instead of a distant whole-world view.
+    rig.pitch = -0.85;
+    rig.distance = (extent * 1.1).clamp(60.0, 600.0);
 }
 
 /// Split a mesh buffer into per-material buffers, reindexing each triangle group.
@@ -693,42 +704,206 @@ fn spawn_chunk_meshes(
                 if mesh_buffers.is_empty() {
                     continue;
                 }
-                for submesh in mesh_buffers {
-                    let material_id = match submesh.vertices.first() {
-                        Some(v) => v.material,
-                        None => continue,
-                    };
-                    let Some(def) = registry.get(material_id) else {
-                        continue;
-                    };
-                    let material = pbr_material_for(material_id, def);
-                    let mut bevy_mesh = mesh_buffer_to_bevy(&submesh);
-                    // Per-cube jitter quantizes tint to the integer voxel cell, which
-                    // paints a CUBE GRID onto the mesh. That reads cubic even on a
-                    // smooth Surface Nets surface, so apply it ONLY to cubic meshes;
-                    // smooth meshes use flat material-base colour so the molded
-                    // geometry shows through. (World-space gradient tint can return
-                    // for smooth meshes once the geometry is confirmed molded.)
-                    if !use_smooth {
-                        apply_voxel_jitter(&mut bevy_mesh, &submesh, material_id);
-                    }
-                    let entity = commands
-                        .spawn((
-                            Mesh3d(meshes.add(bevy_mesh)),
-                            MeshMaterial3d(materials.add(material)),
-                            Transform::from_xyz(
-                                chunk_origin[0] as f32,
-                                chunk_origin[1] as f32,
-                                chunk_origin[2] as f32,
-                            ),
-                        ))
-                        .id();
-                    spawned.entry(chunk_id).or_default().push(entity);
-                }
+                let entities = spawn_chunk_buffers(
+                    commands,
+                    meshes,
+                    materials,
+                    &registry,
+                    &mesh_buffers,
+                    chunk_origin,
+                    use_smooth,
+                );
+                spawned.entry(chunk_id).or_default().extend(entities);
             }
         }
     }
     spawned
+}
+
+/// Main-thread spawn of a chunk's per-material mesh buffers into Bevy entities.
+/// Shared by the synchronous remesh path and the async apply system so the
+/// asset-add + jitter + transform logic lives in one place.
+fn spawn_chunk_buffers(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    registry: &MaterialRegistry,
+    mesh_buffers: &[MeshBuffer],
+    chunk_origin: [usize; 3],
+    use_smooth: bool,
+) -> Vec<Entity> {
+    let mut entities = Vec::new();
+    for submesh in mesh_buffers {
+        let Some(material_id) = submesh.vertices.first().map(|v| v.material) else {
+            continue;
+        };
+        let Some(def) = registry.get(material_id) else {
+            continue;
+        };
+        let material = pbr_material_for(material_id, def);
+        let mut bevy_mesh = mesh_buffer_to_bevy(submesh);
+        // Per-cube jitter quantizes tint to the integer voxel cell, painting a CUBE
+        // GRID onto the mesh — that reads cubic even on a smooth Surface Nets
+        // surface, so apply it ONLY to cubic meshes; smooth meshes keep flat
+        // material-base colour so the molded geometry shows through.
+        if !use_smooth {
+            apply_voxel_jitter(&mut bevy_mesh, submesh, material_id);
+        }
+        let entity = commands
+            .spawn((
+                Mesh3d(meshes.add(bevy_mesh)),
+                MeshMaterial3d(materials.add(material)),
+                Transform::from_xyz(
+                    chunk_origin[0] as f32,
+                    chunk_origin[1] as f32,
+                    chunk_origin[2] as f32,
+                ),
+            ))
+            .id();
+        entities.push(entity);
+    }
+    entities
+}
+
+/// Owned, `Send` inputs for one chunk's off-thread mesh compute.
+struct ChunkMeshInput {
+    chunk_id: ChunkId,
+    origin: [usize; 3],
+    use_smooth: bool,
+    voxels: [MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE],
+    padded: [MaterialId; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE],
+    saturation: Option<Vec<u8>>,
+}
+
+/// Result of an off-thread chunk mesh compute, applied on the main thread.
+struct ChunkMeshJob {
+    chunk_id: ChunkId,
+    origin: [usize; 3],
+    use_smooth: bool,
+    buffers: Vec<MeshBuffer>,
+}
+
+/// In-flight off-thread chunk mesh task, carried on a throwaway entity until the
+/// apply system drains it.
+#[derive(Component)]
+struct ComputingChunkMesh(Task<ChunkMeshJob>);
+
+/// Pure mesh compute over OWNED data — runs off the main thread (no Bevy types).
+/// Mirrors the synchronous mesher branch in `spawn_chunk_meshes` exactly, including
+/// the empty-mesh cubic fallback + the smooth/cubic counters, so results are
+/// byte-for-byte identical to the sync path (zero visual change).
+fn compute_chunk_mesh(input: ChunkMeshInput) -> ChunkMeshJob {
+    let registry = MaterialRegistry::standard();
+    let view = ChunkView {
+        id: input.chunk_id,
+        voxels: &input.voxels,
+    };
+    let mut buffers: Vec<MeshBuffer> = if input.use_smooth {
+        build_smooth_meshes(&input.voxels, &input.padded, input.saturation.as_deref(), &registry)
+    } else {
+        record_cubic_chunk();
+        mesh_cubic_split(view)
+    };
+    if input.use_smooth && buffers.is_empty() && input.voxels.iter().any(|v| *v != AIR) {
+        // Smooth path produced nothing for a non-empty chunk -> cubic safety fallback.
+        record_cubic_chunk();
+        buffers = mesh_cubic_split(view);
+    }
+    ChunkMeshJob {
+        chunk_id: input.chunk_id,
+        origin: input.origin,
+        use_smooth: input.use_smooth,
+        buffers,
+    }
+}
+
+/// Cubic-mesh a chunk view and split it into per-material buffers (shared helper).
+fn mesh_cubic_split(view: ChunkView<'_, MaterialId>) -> Vec<MeshBuffer> {
+    match CubicMesher::mesh_cubic(view, LodLevel(0)) {
+        Ok(mesh_buffer) => split_by_material(&mesh_buffer)
+            .into_iter()
+            .map(|(_, submesh)| submesh)
+            .collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Build the owned per-chunk input on the main thread (cheap O(chunk) slicing).
+fn chunk_mesh_input(
+    grid: &CaGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+    camera_eye: Option<[f32; 3]>,
+) -> ChunkMeshInput {
+    let chunk_id = ChunkId(((cx as u64) << 40) | ((cy as u64) << 16) | (cz as u64));
+    let use_smooth = should_use_smooth_mesh(chunk_id, camera_eye, resolved_mesher_mode());
+    let saturation = if use_smooth {
+        chunk_saturation_with_apron(grid, cx, cy, cz)
+    } else {
+        None
+    };
+    ChunkMeshInput {
+        chunk_id,
+        origin: [cx * CHUNK_EDGE, cy * CHUNK_EDGE, cz * CHUNK_EDGE],
+        use_smooth,
+        voxels: slice_chunk(grid, cx, cy, cz),
+        padded: slice_chunk_with_apron(grid, cx, cy, cz),
+        saturation,
+    }
+}
+
+/// Dispatch every chunk's mesh compute onto the async task pool. The main thread
+/// only does cheap slicing here; the expensive mesher runs off-thread and the
+/// `apply_chunk_mesh_tasks` system spawns the Bevy entities as each completes, so
+/// `build_voxel_world` returns immediately and the world streams in without a hitch.
+fn dispatch_chunk_mesh_tasks(commands: &mut Commands, grid: &CaGrid, camera_eye: Option<[f32; 3]>) {
+    let pool = AsyncComputeTaskPool::get();
+    let counts = [
+        grid.dims[0].div_ceil(CHUNK_EDGE),
+        grid.dims[1].div_ceil(CHUNK_EDGE),
+        grid.dims[2].div_ceil(CHUNK_EDGE),
+    ];
+    for cz in 0..counts[2] {
+        for cy in 0..counts[1] {
+            for cx in 0..counts[0] {
+                let input = chunk_mesh_input(grid, cx, cy, cz, camera_eye);
+                let task = pool.spawn(async move { compute_chunk_mesh(input) });
+                commands.spawn(ComputingChunkMesh(task));
+            }
+        }
+    }
+}
+
+/// Drain completed off-thread chunk mesh tasks and spawn their Bevy entities on the
+/// main thread, recording them in `VoxelSimState.chunk_entities`.
+pub fn apply_chunk_mesh_tasks(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut state: ResMut<VoxelSimState>,
+    mut tasks: Query<(Entity, &mut ComputingChunkMesh)>,
+) {
+    let registry = MaterialRegistry::standard();
+    for (carrier, mut task) in &mut tasks {
+        let Some(job) = block_on(future::poll_once(&mut task.0)) else {
+            continue;
+        };
+        commands.entity(carrier).despawn();
+        if job.buffers.is_empty() {
+            continue;
+        }
+        let entities = spawn_chunk_buffers(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &registry,
+            &job.buffers,
+            job.origin,
+            job.use_smooth,
+        );
+        state.chunk_entities.entry(job.chunk_id).or_default().extend(entities);
+    }
 }
 
 /// Linearized base color from a material's sRGB hint.

@@ -17,8 +17,8 @@
 //!   across the hysteresis band.
 //!
 //! ## Rendering approach — hybrid (procedural raster base + vector overlay)
-//! The terrain basemap is rasterised **once** from the deterministic
-//! [`crate::terrain`] height field into an egui texture: per-pixel biome palette
+//! The terrain basemap is rasterised **once** from the live voxel grid into an
+//! egui texture: per-pixel biome palette
 //! by elevation/water, Lambertian hillshade from a finite-difference normal, a
 //! subtle ordered-dither so flat bands don't posterise, and soft coastline
 //! darkening. Live entities are drawn on top with the egui painter (anti-aliased
@@ -34,10 +34,12 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_agents::Civilian;
 use civ_engine::{Building, BuildingType};
+use civ_voxel::fluid_ca::CaGrid;
+use civ_voxel::material::{MaterialDef, MaterialRegistry, AIR, WATER};
 
 use crate::camera::CameraRig;
 use crate::sim_bridge::SimState;
-use crate::terrain::{terrain_height, HEIGHT_SCALE, WATER_LEVEL, WORLD_SIZE};
+use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
 use crate::AttachMode;
 
 /// Basemap raster resolution per side (crisp, sub-tile detail — not 8-bit).
@@ -80,6 +82,7 @@ impl Default for MapView {
 #[derive(Resource, Default)]
 struct MapBasemap {
     handle: Option<egui::TextureHandle>,
+    last_seed: Option<u64>,
 }
 
 /// Plugin: registers the 2D alternate map view (key + far-zoom toggle).
@@ -179,29 +182,80 @@ const BAYER4: [[f32; 4]; 4] = [
     [15.0, 7.0, 13.0, 5.0],
 ];
 
-/// Rasterise the deterministic terrain field into a crisp shaded-relief image.
-fn build_basemap_image() -> egui::ColorImage {
+/// Sample the live voxel column at grid coords `(gx, gz)`: returns the surface
+/// height (top of the highest non-AIR voxel) and that voxel's [`MaterialId`].
+///
+/// Coordinates are floored into the grid and clamped in-bounds. An all-AIR
+/// column yields `(0.0, None)` so callers treat it as open water / void.
+fn sample_top_material(grid: &CaGrid, gx: f32, gz: f32) -> Option<civ_voxel::MaterialId> {
+    let max_x = grid.dims[0].saturating_sub(1);
+    let max_z = grid.dims[2].saturating_sub(1);
+    let xi = (gx.max(0.0).floor() as usize).min(max_x);
+    let zi = (gz.max(0.0).floor() as usize).min(max_z);
+    for yi in (0..grid.dims[1]).rev() {
+        let mat = grid.get(xi, yi, zi);
+        if mat != AIR {
+            return Some(mat);
+        }
+    }
+    None
+}
+
+/// Rasterise the live voxel world into a crisp shaded-relief image. The base
+/// colour of each pixel is the top surface voxel's material colour (the same
+/// palette the 3D view uses); height drives the hillshade. Sampled across the
+/// full grid extent so the map matches the active per-seed world.
+fn build_basemap_image(grid: &CaGrid) -> egui::ColorImage {
     let mut pixels = vec![egui::Color32::BLACK; MAP_TEX * MAP_TEX];
-    let cell = WORLD_SIZE / (MAP_TEX as f32 - 1.0);
+    let registry = MaterialRegistry::standard();
+    let cell_x = (grid.dims[0].saturating_sub(1)) as f32 / (MAP_TEX as f32 - 1.0);
+    let cell_z = (grid.dims[2].saturating_sub(1)) as f32 / (MAP_TEX as f32 - 1.0);
+    let scale = 2.0 * cell_x.max(cell_z);
     // Light from the north-west, slightly elevated.
     let light = Vec3::new(-0.55, 0.72, -0.42).normalize();
 
     for py in 0..MAP_TEX {
         for px in 0..MAP_TEX {
-            let wx = px as f32 * cell;
-            let wz = py as f32 * cell;
-            let h = terrain_height(wx, wz);
+            let gx = px as f32 * (grid.dims[0].max(1) as f32 - 1.0) / (MAP_TEX as f32 - 1.0);
+            let gz = py as f32 * (grid.dims[2].max(1) as f32 - 1.0) / (MAP_TEX as f32 - 1.0);
+            let h = crate::voxel_sim::voxel_surface_y(grid, gx, gz);
+            let top_material = sample_top_material(grid, gx, gz);
+            let mut base = top_material
+                .and_then(|id| registry.get(id))
+                .map(|def: &MaterialDef| {
+                    [
+                        f32::from(def.color[0]) / 255.0,
+                        f32::from(def.color[1]) / 255.0,
+                        f32::from(def.color[2]) / 255.0,
+                    ]
+                })
+                .unwrap_or([0.04, 0.08, 0.20]);
 
             // Finite-difference normal for hillshade (sample neighbours).
-            let hx = terrain_height((wx + cell).min(WORLD_SIZE), wz)
-                - terrain_height((wx - cell).max(0.0), wz);
-            let hz = terrain_height(wx, (wz + cell).min(WORLD_SIZE))
-                - terrain_height(wx, (wz - cell).max(0.0));
-            let n = Vec3::new(-hx, 2.0 * cell, -hz).normalize();
+            let hx = crate::voxel_sim::voxel_surface_y(
+                grid,
+                (gx + cell_x).min((grid.dims[0].max(1) - 1) as f32),
+                gz,
+            )
+                - crate::voxel_sim::voxel_surface_y(
+                    grid,
+                    (gx - cell_x).max(0.0),
+                    gz,
+                );
+            let hz = crate::voxel_sim::voxel_surface_y(
+                grid,
+                gx,
+                (gz + cell_z).min((grid.dims[2].max(1) - 1) as f32),
+            )
+                - crate::voxel_sim::voxel_surface_y(
+                    grid,
+                    gx,
+                    (gz - cell_z).max(0.0),
+                );
+            let n = Vec3::new(-hx, scale, -hz).normalize();
             let lambert = n.dot(light).clamp(0.0, 1.0);
 
-            let mut base = map_palette(h);
-            let is_water = h < WATER_LEVEL;
+            let is_water = top_material.is_none() || top_material == Some(WATER) || top_material == Some(AIR);
             // Hillshade only the land; water gets a gentle flat sheen.
             let shade = if is_water {
                 0.92 + 0.08 * lambert
@@ -210,8 +264,8 @@ fn build_basemap_image() -> egui::ColorImage {
             };
 
             // Soft coastline darkening: emphasise the shore edge.
-            if !is_water && h < WATER_LEVEL + 2.5 {
-                let t = (h - WATER_LEVEL) / 2.5;
+            if !is_water && h < 3.0 {
+                let t = (h - WATER_LEVEL).max(0.0) / 2.5;
                 let edge = 0.7 + 0.3 * t;
                 base = [base[0] * edge, base[1] * edge, base[2] * edge];
             }
@@ -323,8 +377,10 @@ fn draw_map_view(
     mut contexts: EguiContexts,
     mut view: ResMut<MapView>,
     mut basemap: ResMut<MapBasemap>,
+    voxel_state: Option<Res<crate::voxel_sim::VoxelSimState>>,
     attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
+    params: Res<crate::menus::WorldSetupParams>,
 ) {
     if view.fade <= 0.01 {
         return;
@@ -333,12 +389,21 @@ fn draw_map_view(
         return;
     };
 
+    if basemap.last_seed != Some(params.seed) {
+        basemap.handle = None;
+    }
     // Lazily rasterise the basemap on first display.
     if basemap.handle.is_none() {
-        let image = build_basemap_image();
-        basemap.handle = Some(ctx.load_texture("map2d_basemap", image, egui::TextureOptions::LINEAR));
+        if let Some(voxel_state) = voxel_state.as_ref() {
+            let image = build_basemap_image(&voxel_state.grid);
+            basemap.handle = Some(
+                ctx.load_texture("map2d_basemap", image, egui::TextureOptions::LINEAR),
+            );
+            basemap.last_seed = Some(params.seed);
+        } else {
+            basemap.last_seed = None;
+        }
     }
-    let tex = basemap.handle.as_ref().unwrap();
     let fade = view.fade;
 
     egui::Area::new(egui::Id::new("map2d_root"))
@@ -361,12 +426,19 @@ fn draw_map_view(
             let map_rect = egui::Rect::from_center_size(centre, egui::vec2(side, side));
 
             let tint = egui::Color32::from_white_alpha((fade * 255.0) as u8);
-            painter.image(
-                tex.id(),
-                map_rect,
-                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-                tint,
-            );
+            if let Some(tex) = basemap.handle.as_ref() {
+                painter.image(
+                    tex.id(),
+                    map_rect,
+                    egui::Rect::from_min_max(
+                        egui::pos2(0.0, 0.0),
+                        egui::pos2(1.0, 1.0),
+                    ),
+                    tint,
+                );
+            } else {
+                painter.rect_filled(map_rect, 0.0, egui::Color32::from_rgb(8, 12, 20));
+            }
             // Crisp framing border.
             painter.rect_stroke(
                 map_rect,
@@ -497,7 +569,19 @@ mod tests {
 
     #[test]
     fn basemap_image_is_full_resolution() {
-        let img = build_basemap_image();
+        // Build a tiny voxel world with a height gradient so the relief shading
+        // produces pixel variety (column height grows with x).
+        let dims = [16, 12, 16];
+        let mut grid = CaGrid::new(dims);
+        for z in 0..dims[2] {
+            for x in 0..dims[0] {
+                let h = (1 + x % (dims[1] - 1)).min(dims[1] - 1);
+                for y in 0..h {
+                    grid.set(x, y, z, WATER);
+                }
+            }
+        }
+        let img = build_basemap_image(&grid);
         assert_eq!(img.size, [MAP_TEX, MAP_TEX]);
         assert_eq!(img.pixels.len(), MAP_TEX * MAP_TEX);
         // Not a flat fill: relief + palette must produce variety.

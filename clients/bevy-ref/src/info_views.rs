@@ -422,8 +422,8 @@ pub use plugin::*;
 mod plugin {
     use super::*;
     use crate::sim_bridge::SimState;
-    use crate::ui_theme::{apply_theme, liquid_glass_finish, liquid_glass_frame, TEXT, TEXT_LOW, RADIUS_PANEL};
-    use bevy_egui::{egui, EguiContexts};
+    use crate::ui_theme::{TEXT, TEXT_LOW};
+    use bevy_egui::egui;
     use civ_agents::{Civilian, Needs};
 
     /// Plugin: registers the overlay registry, the `Tab` cycle hotkey, the
@@ -432,13 +432,11 @@ mod plugin {
 
     impl Plugin for InfoViewsPlugin {
         fn build(&self, app: &mut App) {
+            // The overlay PICKER UI now lives in the left HUD cluster's
+            // "Info Views" tab (see `info_view_tab_body`); this plugin keeps the
+            // registry, the `Tab` cycle hotkey, and the terrain recolor pass.
             app.init_resource::<InfoViewRegistry>()
-                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay))
-                // egui draw MUST run on EguiPrimaryContextPass (no fonts on Update).
-                .add_systems(
-                    bevy_egui::EguiPrimaryContextPass,
-                    draw_info_view_panel.run_if(crate::menus::in_game),
-                );
+                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay));
         }
     }
 
@@ -451,46 +449,32 @@ mod plugin {
         }
     }
 
-    fn draw_info_view_panel(mut contexts: EguiContexts, mut registry: ResMut<InfoViewRegistry>) {
-        let Ok(ctx) = contexts.ctx_mut() else {
-            return;
-        };
-        apply_theme(ctx);
 
-        egui::Window::new("Info Views")
-            .anchor(egui::Align2::LEFT_TOP, [12.0, 64.0])
-            .resizable(false)
-            .frame(liquid_glass_frame(egui::Margin::same(12), RADIUS_PANEL))
-            .show(ctx, |ui| {
-                ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
-                ui.horizontal_wrapped(|ui| {
-                    let off = ui.selectable_label(!registry.is_active(), "Off");
-                    if off.clicked() {
-                        registry.deactivate();
-                    }
-                    let count = registry.overlays.len();
-                    for i in 0..count {
-                        let (name, desc, selected) = {
-                            let o = &registry.overlays[i];
-                            (o.name, o.description, registry.active == Some(i))
-                        };
-                        if ui.selectable_label(selected, name).on_hover_text(desc).clicked() {
-                            registry.active = Some(i);
-                        }
-                    }
-                });
-
-                if let Some(overlay) = registry.active_overlay() {
-                    ui.separator();
-                    ui.label(
-                        egui::RichText::new(format!("Legend — {}", overlay.name))
-                            .heading()
-                            .color(TEXT),
-                    );
-                    draw_legend(ui, overlay);
+    /// Draw the Info Views overlay picker + legend as a tab body (no window
+    /// chrome). Used by the left HUD cluster's "Info Views" tab so the overlay
+    /// suite lives inside the unified left panel instead of a separate window.
+    pub fn info_view_tab_body(ui: &mut egui::Ui, registry: &mut InfoViewRegistry) {
+        ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
+        ui.horizontal_wrapped(|ui| {
+            if ui.selectable_label(!registry.is_active(), "Off").clicked() {
+                registry.deactivate();
+            }
+            let count = registry.overlays.len();
+            for i in 0..count {
+                let (name, desc, selected) = {
+                    let o = &registry.overlays[i];
+                    (o.name, o.description, registry.active == Some(i))
+                };
+                if ui.selectable_label(selected, name).on_hover_text(desc).clicked() {
+                    registry.active = Some(i);
                 }
-                liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
-            });
+            }
+        });
+        if let Some(overlay) = registry.active_overlay() {
+            ui.separator();
+            ui.label(egui::RichText::new(format!("Legend — {}", overlay.name)).heading().color(TEXT));
+            draw_legend(ui, overlay);
+        }
     }
 
     fn draw_legend(ui: &mut egui::Ui, overlay: &InfoOverlay) {

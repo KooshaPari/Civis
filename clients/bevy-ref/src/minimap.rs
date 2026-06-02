@@ -14,8 +14,9 @@ use crate::sim_bridge::SimState;
 use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
 use crate::AttachMode;
 
-/// Minimap side length in UI pixels.
-pub const MINIMAP_SIZE: f32 = 200.0;
+/// Minimap side length in UI pixels. Enlarged 1.8x (was 200) so the right-side
+/// holocron map reads as a prominent command-deck element, per user request.
+pub const MINIMAP_SIZE: f32 = 360.0;
 /// Minimap inset from the viewport edge (px).
 pub const MINIMAP_INSET: f32 = 8.0;
 const MINIMAP_WORLD_MIN: f32 = 0.0;

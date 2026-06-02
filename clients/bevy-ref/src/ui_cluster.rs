@@ -87,6 +87,11 @@ pub fn category_pill(
     let paint_rect = motion_rect(rect, lit, resp.hovered(), time, ui.id().value());
     let p = ui.painter();
     liquid_glass_pill(p, paint_rect, RADIUS_BTN, lit, resp.hovered());
+    // Animated specular sweep on lit/hovered pills — the "wet glass" highlight
+    // sliding across the blade (holocron specular-sweep). Painted under the icon.
+    if lit || resp.hovered() {
+        crate::ui_theme::specular_sweep(p, paint_rect, time, RADIUS_BTN);
+    }
     let accent = if lit { DECK_ACCENT } else { cat.accent };
     paint_cluster_icon_label(p, paint_rect, cat.icon, cat.label, lit, accent, icon_tex);
     // Caret hints the pill expands a larger items rect upward.
@@ -107,7 +112,7 @@ pub fn items_rect(
 ) -> Option<SubTool> {
     let mut picked = None;
     let frame = crate::ui_theme::liquid_glass_frame(egui::Margin::symmetric(GAP as i8, GAP as i8), RADIUS_SM);
-    frame.show(ui, |ui| {
+    let inner = frame.show(ui, |ui| {
         ui.set_width(expanded_items_width());
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new(format!("{}  {}", cat.icon, cat.label)).color(cat.accent).strong());
@@ -133,6 +138,8 @@ pub fn items_rect(
                 });
             });
     });
+    // Frost the larger items rect so it matches the pills below it.
+    crate::ui_theme::liquid_glass_finish(ui.painter(), inner.response.rect, RADIUS_SM);
     picked
 }
 

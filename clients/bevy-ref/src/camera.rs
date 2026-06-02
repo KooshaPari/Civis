@@ -2,7 +2,9 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 
 /// Minimum / maximum orbit stand-off distance for mouse-wheel zoom.
-const MIN_DISTANCE: f32 = 20.0;
+/// Min is low enough to dolly down onto a single actor/building (actors stand
+/// ~14 units tall in the 96-unit world); max still frames the whole map.
+const MIN_DISTANCE: f32 = 12.0;
 const MAX_DISTANCE: f32 = 600.0;
 
 #[derive(Resource, Clone, Copy)]
@@ -86,7 +88,7 @@ pub fn camera_input(
     // Mouse-wheel zoom adjusts the orbit stand-off distance.
     let scroll: f32 = mouse_wheel.read().map(|ev| ev.y).sum();
     if scroll != 0.0 {
-        rig.distance = (rig.distance - scroll * 12.0).clamp(MIN_DISTANCE, MAX_DISTANCE);
+        rig.distance = (rig.distance - scroll * 10.0).clamp(MIN_DISTANCE, MAX_DISTANCE);
     }
 
     // Right-drag orbits; consume motion events when not orbiting to avoid drift.

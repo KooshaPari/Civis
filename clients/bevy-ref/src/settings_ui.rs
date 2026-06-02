@@ -581,8 +581,18 @@ pub struct SettingsPlugin;
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameSettings::load())
+            .add_systems(Startup, open_settings_for_autoshot)
             .add_systems(Update, toggle_settings_panel)
             .add_systems(EguiPrimaryContextPass, draw_settings_panel);
+    }
+}
+
+/// Verification hook: when `CIVIS_SETTINGS_OPEN=1` is set, open the settings
+/// Window at startup so a headless autoshot can frame the tabbed/granular page
+/// (it is otherwise behind the `O` key and invisible in captures).
+fn open_settings_for_autoshot(mut settings: ResMut<GameSettings>) {
+    if std::env::var("CIVIS_SETTINGS_OPEN").as_deref() == Ok("1") {
+        settings.open = true;
     }
 }
 

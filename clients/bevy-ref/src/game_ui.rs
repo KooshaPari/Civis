@@ -214,6 +214,27 @@ pub struct SelectedEntityDetails {
     pub position: String,
 }
 
+/// Which tab of the unified left HUD cluster is showing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeftTab {
+    /// Selection inspector card.
+    Inspector,
+    /// Faction / group roster.
+    Factions,
+    /// Info Views overlay picker + legend.
+    InfoViews,
+}
+
+/// Active tab of the left HUD cluster (persisted across frames).
+#[derive(Resource, Debug, Clone, Copy)]
+pub struct LeftClusterTab(pub LeftTab);
+
+impl Default for LeftClusterTab {
+    fn default() -> Self {
+        Self(LeftTab::Inspector)
+    }
+}
+
 /// Tick speed resource used by the HUD controls.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameSpeed {
@@ -286,6 +307,10 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
             .init_resource::<ActiveSubTool>()
+            .init_resource::<LeftClusterTab>()
+            // Info Views tab reads this; init defensively (idempotent) so the
+            // HUD never panics if GameUiPlugin runs without InfoViewsPlugin.
+            .init_resource::<crate::info_views::InfoViewRegistry>()
             .init_resource::<ToolIcons>()
             .add_systems(Startup, queue_tool_icon_handles)
             .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
@@ -401,6 +426,8 @@ fn draw_game_ui(
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
     mut sub_tool: ResMut<ActiveSubTool>,
+    mut left_tab: ResMut<LeftClusterTab>,
+    mut info_views: ResMut<crate::info_views::InfoViewRegistry>,
     ui_mode: Res<GameUiMode>,
     tool_icons: Res<ToolIcons>,
 ) {
@@ -416,8 +443,15 @@ fn draw_game_ui(
     // ---- Top cluster: CENTERED readout (floating, not a full-width bar) ----
     top_center_cluster(ctx, &snapshot, &resources, &attach_mode, live_attach.as_deref());
 
-    // ---- Left sidebar: ONE vertical column merging Factions + Inspector ----
-    left_sidebar_cluster(ctx, &roster, selected.0.is_some(), &details);
+    // ---- Left cluster: ONE tabbed column (Inspector / Factions / Info Views) ----
+    left_sidebar_cluster(
+        ctx,
+        &mut left_tab.0,
+        &roster,
+        selected.0.is_some(),
+        &details,
+        &mut info_views,
+    );
 
     // ---- Bottom: narrow, short, floating cluster of expanding block-pills ----
     let mut bottom = BottomBarCtx {
@@ -454,24 +488,52 @@ fn top_center_cluster(
 /// anchor stays reserved at the bottom for `live_minimap.rs`).
 fn left_sidebar_cluster(
     ctx: &egui::Context,
+    tab: &mut LeftTab,
     roster: &FactionRoster,
     has_selection: bool,
     details: &SelectedEntityDetails,
+    info_views: &mut crate::info_views::InfoViewRegistry,
 ) {
     egui::SidePanel::left("civis_game_left_sidebar")
         .resizable(false)
-        .exact_width(244.0)
+        .exact_width(252.0)
         .frame(liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL))
         .show(ctx, |ui| {
-            // Colored teal rim + lifted inner highlight on the sidebar's own rect
-            // BEFORE content, so the glass edge reads without glossing over text.
+            // Teal rim + lifted inner highlight on the cluster's own rect BEFORE
+            // content, so the glass edge reads without glossing over text.
             let full = ui.max_rect();
             sidebar_glass_edge(ui.painter(), full);
-            inspector_ui(ui, has_selection, details);
-            ui.add_space(SPACE_MD);
+            left_tab_strip(ui, tab);
+            ui.add_space(SPACE_SM);
             hairline(ui);
-            faction_panel_ui(ui, roster);
+            match tab {
+                LeftTab::Inspector => inspector_ui(ui, has_selection, details),
+                LeftTab::Factions => faction_panel_ui(ui, roster),
+                LeftTab::InfoViews => crate::info_views::info_view_tab_body(ui, info_views),
+            }
         });
+}
+
+/// The Inspector / Factions / Info Views tab strip atop the left cluster.
+fn left_tab_strip(ui: &mut egui::Ui, tab: &mut LeftTab) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+        for (variant, label) in [
+            (LeftTab::Inspector, "\u{25a4} Inspect"),
+            (LeftTab::Factions, "\u{1f6a9} Factions"),
+            (LeftTab::InfoViews, "\u{1f5fa} Views"),
+        ] {
+            let selected = *tab == variant;
+            let text = if selected {
+                egui::RichText::new(label).color(DECK_ACCENT).strong()
+            } else {
+                egui::RichText::new(label).color(DECK_TEXT_MID)
+            };
+            if ui.selectable_label(selected, text).clicked() {
+                *tab = variant;
+            }
+        }
+    });
 }
 
 /// Lifted glass edge for a text-dense panel: a thin light inner highlight + a
@@ -689,13 +751,12 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
 // Left faction / group panel
 // ---------------------------------------------------------------------------
 
-/// Left panel: faction/group roster with colour swatches + counts, then a
-/// reserved minimap area (the minimap itself is drawn by `live_minimap.rs`).
+/// Factions tab body: faction/group roster with colour swatches + counts.
+///
+/// The bottom-left minimap reservation was removed — the holocron map on the
+/// right is the single map, so the roster uses the full column height. No
+/// heading: the left-cluster tab strip already labels it.
 fn faction_panel_ui(ui: &mut egui::Ui, roster: &FactionRoster) {
-    ui.label(egui::RichText::new("\u{1f6a9} Factions").color(DECK_ACCENT).heading());
-    ui.add_space(4.0);
-    hairline(ui);
-
     if roster.factions.is_empty() {
         ui.label(egui::RichText::new("No factions yet.").color(DECK_TEXT_MID).small());
         ui.label(
@@ -704,20 +765,12 @@ fn faction_panel_ui(ui: &mut egui::Ui, roster: &FactionRoster) {
                 .small(),
         );
     } else {
-        egui::ScrollArea::vertical()
-            .max_height(ui.available_height() - 150.0)
-            .show(ui, |ui| {
-                for faction in &roster.factions {
-                    faction_row(ui, faction);
-                }
-            });
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for faction in &roster.factions {
+                faction_row(ui, faction);
+            }
+        });
     }
-
-    // Reserve space above the minimap so live_minimap.rs has a clear anchor.
-    ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-        ui.add_space(140.0); // minimap footprint owned by live_minimap.rs
-        ui.label(egui::RichText::new("MINIMAP").color(DECK_TEXT_MID.gamma_multiply(0.7)).small());
-    });
 }
 
 /// One faction row: colour swatch, name, and right-aligned member count.
@@ -747,12 +800,9 @@ fn faction_row(ui: &mut egui::Ui, faction: &FactionInfo) {
 // Right inspector card
 // ---------------------------------------------------------------------------
 
-/// Right-side selection inspector card with empty-state fallback.
+/// Inspector tab body: selection card with empty-state fallback. (No heading —
+/// the left-cluster tab strip already labels it.)
 fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntityDetails) {
-    ui.label(egui::RichText::new("\u{25a4} Inspector").color(DECK_ACCENT).heading());
-    ui.add_space(4.0);
-    hairline(ui);
-
     if !has_selection {
         inspector_empty_state(ui);
         return;

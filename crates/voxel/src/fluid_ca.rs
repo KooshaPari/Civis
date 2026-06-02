@@ -131,6 +131,48 @@ impl CaGrid {
             self.dims[2].div_ceil(16),
         ]
     }
+
+    /// Cell indices belonging to the currently dirty chunks, expanded by a
+    /// one-cell halo so a rule pass can read neighbours across chunk borders and
+    /// still settle correctly while only WRITING owned cells.
+    ///
+    /// This is the dirty-chunk scoping that keeps the per-tick rule passes from
+    /// sweeping the whole grid (the full-grid `0..cells.len()` scan was a
+    /// freeze-class cost on a 256³ world — only the touched neighbourhood needs
+    /// stepping). Returns a deduplicated, in-bounds index list.
+    pub fn dirty_cell_indices(&self) -> Vec<usize> {
+        let counts = self.chunk_counts();
+        if counts[0] == 0 || counts[1] == 0 || counts[2] == 0 {
+            return Vec::new();
+        }
+        let mut seen = vec![false; self.cells.len()];
+        let mut out = Vec::new();
+        for &chunk in &self.dirty_chunks {
+            let cx = chunk % counts[0];
+            let cy = (chunk / counts[0]) % counts[1];
+            let cz = chunk / (counts[0] * counts[1]);
+            // Chunk cell span + a 1-cell halo, clamped to grid bounds.
+            let x0 = (cx * 16).saturating_sub(1);
+            let y0 = (cy * 16).saturating_sub(1);
+            let z0 = (cz * 16).saturating_sub(1);
+            let x1 = ((cx + 1) * 16 + 1).min(self.dims[0]);
+            let y1 = ((cy + 1) * 16 + 1).min(self.dims[1]);
+            let z1 = ((cz + 1) * 16 + 1).min(self.dims[2]);
+            for z in z0..z1 {
+                for y in y0..y1 {
+                    for x in x0..x1 {
+                        if let Some(i) = self.index(x, y, z) {
+                            if !seen[i] {
+                                seen[i] = true;
+                                out.push(i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
 }
 
 fn phase_of(reg: MaterialRegistry, id: MaterialId) -> Phase {
@@ -319,10 +361,14 @@ fn run_sweep_x(dims: [usize; 3], _parity: usize) -> std::ops::Range<usize> {
     0..dims[0]
 }
 
-fn heat_conduction_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &BoundaryConfig) {
+fn heat_conduction_pass(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    boundary: &BoundaryConfig,
+    cells: &[usize],
+) {
     let prev = grid.clone();
-    let len = prev.cells.len();
-    for idx in 0..len {
+    for &idx in cells {
         let z = idx / (grid.dims[0] * grid.dims[1]);
         let rem = idx - z * grid.dims[0] * grid.dims[1];
         let y = rem / grid.dims[0];
@@ -354,9 +400,9 @@ fn heat_conduction_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &Bou
     }
 }
 
-fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry) {
+fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usize]) {
     let prev = grid.clone();
-    for idx in 0..prev.cells.len() {
+    for &idx in cells {
         let id = prev.cells[idx];
         let t = prev.temperatures[idx];
         let Some(def) = reg.get(id) else { continue };
@@ -390,9 +436,15 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry) {
     }
 }
 
-fn evaporation_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &BoundaryConfig, tick: usize) {
+fn evaporation_pass(
+    grid: &mut CaGrid,
+    reg: MaterialRegistry,
+    boundary: &BoundaryConfig,
+    tick: usize,
+    cells: &[usize],
+) {
     let prev = grid.clone();
-    for idx in 0..prev.cells.len() {
+    for &idx in cells {
         let z = idx / (grid.dims[0] * grid.dims[1]);
         let rem = idx - z * grid.dims[0] * grid.dims[1];
         let y = rem / grid.dims[0];
@@ -458,9 +510,9 @@ fn evaporation_pass(grid: &mut CaGrid, reg: MaterialRegistry, boundary: &Boundar
     }
 }
 
-fn percolation_pass(grid: &mut CaGrid, reg: MaterialRegistry, tick: usize) {
+fn percolation_pass(grid: &mut CaGrid, reg: MaterialRegistry, tick: usize, cells: &[usize]) {
     let prev = grid.clone();
-    for idx in 0..prev.cells.len() {
+    for &idx in cells {
         let id = prev.cells[idx];
         let sat = prev.saturation[idx];
         let def = match reg.get(id) { Some(d) => d, None => continue };
@@ -598,12 +650,33 @@ fn run_rule_passes(
     sea_level: i32,
     tick: usize,
 ) {
-    let _ = sea_level;
-    heat_conduction_pass(grid, reg, boundary);
-    phase_transition_pass(grid, reg);
-    evaporation_pass(grid, reg, boundary, tick);
-    percolation_pass(grid, reg, tick);
+    let _ = sea_level; // GAP2 sealine auto-fill deferred to its own wave (#12).
+    // Scope every rule pass to the dirty-chunk neighbourhood (+halo) so a tick
+    // never sweeps the whole grid — the prior full-grid scan was a freeze-class
+    // cost on 256³. boundary_flux_pass only touches the six faces, so it stays
+    // face-scoped on its own.
+    let cells = grid.dirty_cell_indices();
+    if cells.is_empty() {
+        boundary_flux_pass(grid, reg, boundary, tick);
+        return;
+    }
+    heat_conduction_pass(grid, reg, boundary, &cells);
+    phase_transition_pass(grid, reg, &cells);
+    evaporation_pass(grid, reg, boundary, tick, &cells);
+    percolation_pass(grid, reg, tick, &cells);
     boundary_flux_pass(grid, reg, boundary, tick);
+}
+
+/// True when the chunk owning cell `(x,y,z)` is in the active (dirty) set, so
+/// the mobile-material sweeps can skip clean chunks. Chunk-granularity test
+/// matching `mark_dirty_cell`'s indexing.
+fn chunk_is_active(active: &std::collections::HashSet<usize>, grid: &CaGrid, x: usize, y: usize, z: usize) -> bool {
+    let counts = grid.chunk_counts();
+    if counts[0] == 0 || counts[1] == 0 || counts[2] == 0 {
+        return false;
+    }
+    let chunk = (x / 16) + (y / 16) * counts[0] + (z / 16) * counts[0] * counts[1];
+    active.contains(&chunk)
 }
 
 fn step_with_parity(
@@ -619,9 +692,16 @@ fn step_with_parity(
     }
     let before = grid.clone();
     let dims = grid.dims;
+    // Snapshot the dirty-chunk set so the mobile-material sweeps skip cells in
+    // clean chunks — this keeps the per-tick cost proportional to active matter,
+    // not the whole 256³ grid (the unbounded triple-loop was the freeze).
+    let active = before.dirty_chunks.clone();
     for y in 0..dims[1] {
         for z in 0..dims[2] {
             for x in 0..dims[0] {
+                if !chunk_is_active(&active, &before, x, y, z) {
+                    continue;
+                }
                 let id = grid.get(x, y, z);
                 match phase_of(reg, id) {
                     Phase::Powder => powder_step(grid, reg, x, y, z, tick),
@@ -637,6 +717,9 @@ fn step_with_parity(
     for y in (0..dims[1]).rev() {
         for z in 0..dims[2] {
             for x in run_sweep_x(dims, parity) {
+                if !chunk_is_active(&active, &before, x, y, z) {
+                    continue;
+                }
                 let id = prev.get(x, y, z);
                 if phase_of(reg, id) == Phase::Gas && grid.get(x, y, z) == id {
                     gas_step(grid, reg, x, y, z, tick);
@@ -878,10 +961,74 @@ mod tests {
         let mut g = CaGrid::new([3, 2, 1]);
         g.set(0, 0, 0, SAND);
         g.set(1, 0, 0, SAND);
-        g.set(1, 1, 0, WATER);
-        g.mark_dirty_cell(1, 1, 0);
+        // Warm water (temp 20) so it stays liquid; at the grid default temp 0 it
+        // would freeze (freeze_point=0) before percolating.
+        g.set_with_temp(1, 1, 0, WATER, 20);
         step_n(&mut g, reg(), 2);
         assert!(g.saturation.iter().any(|&s| s > 0));
+    }
+
+    #[test]
+    fn steam_condenses_near_cold() {
+        // The evaporation_pass condense branch: STEAM beside a sub-zero cell can
+        // turn back to WATER (the water cycle closing). Run enough ticks that the
+        // 64/255 condense roll fires at least once.
+        let mut g = CaGrid::new([2, 1, 1]);
+        g.set_with_temp(0, 0, 0, STEAM, 120);
+        g.set_with_temp(1, 0, 0, ICE, -40); // cold neighbour drives condensation
+        g.mark_dirty_cell(0, 0, 0);
+        g.mark_dirty_cell(1, 0, 0);
+        let mut condensed = false;
+        for _ in 0..64 {
+            step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
+            if count(&g, WATER) > 0 {
+                condensed = true;
+                break;
+            }
+            // Re-arm: steam may have drifted; keep the cells dirty so it steps.
+            g.mark_dirty_cell(0, 0, 0);
+            g.mark_dirty_cell(1, 0, 0);
+        }
+        assert!(condensed, "steam beside a cold cell never condensed to water");
+    }
+
+    #[test]
+    fn rule_passes_scope_to_dirty_chunks_only() {
+        // Perf regression guard for GAP1: a single painted cell in one chunk
+        // must not cause cells in a far, untouched chunk to be stepped. We seed
+        // hot water far away (which WOULD evaporate if swept) but leave its
+        // chunk clean; only the near chunk is dirty. The far hot water must be
+        // untouched because the rule passes are scoped to dirty chunks.
+        let mut g = CaGrid::new([48, 16, 16]); // 3 chunks along x
+        // Far chunk (x≈40): hot water that would evaporate under a full sweep.
+        g.set_with_temp(40, 8, 8, WATER, 250);
+        // Near chunk (x≈4): a dropped sand grain.
+        g.set(4, 8, 8, SAND);
+        // `set`/`set_with_temp` auto-mark their chunk dirty, so clear and then
+        // dirty ONLY the near chunk — the far chunk must be clean for the guard.
+        g.dirty_chunks.clear();
+        g.mark_dirty_cell(4, 8, 8);
+        // Sanity: the far cell's chunk is NOT in the dirty set.
+        let touched = g.dirty_cell_indices();
+        let far_idx = g.index(40, 8, 8).unwrap();
+        assert!(!touched.contains(&far_idx), "far chunk must be out of scope");
+        step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
+        assert_eq!(g.get(40, 8, 8), WATER, "far untouched chunk was stepped (full-grid sweep regressed)");
+    }
+
+    #[test]
+    fn liquid_does_not_rise_above_sea_level() {
+        // liquid_step gates upward spread at sea_level: with sea_level=1, water
+        // in a sealed column must never occupy a cell above y=1. Water is placed
+        // at a warm temp (20) so it stays liquid — at the grid's default temp 0
+        // it would freeze (freeze_point=0) and mask the sea-level behaviour.
+        let mut g = CaGrid::new([1, 5, 1]);
+        g.set_with_temp(0, 0, 0, WATER, 20);
+        g.set_with_temp(0, 1, 0, WATER, 20);
+        step_n_with_config(&mut g, reg(), 20, BoundaryConfig::closed(), 1);
+        for y in 2..5 {
+            assert_ne!(g.get(0, y, 0), WATER, "water rose above sea_level at y={y}");
+        }
     }
 
     #[test]
@@ -942,6 +1089,10 @@ mod tests {
     #[test]
     fn inflow_boundary_seeds_water() {
         let mut g = CaGrid::new([2, 2, 2]);
+        // The CA step early-returns on a fully-clean grid; mark a boundary cell
+        // dirty so the inflow face actually runs and seeds (an inflow boundary
+        // implies an active sim region).
+        g.mark_dirty_cell(0, 0, 0);
         step_n_with_config(
             &mut g,
             reg(),
@@ -980,8 +1131,9 @@ mod tests {
     #[test]
     fn dropped_water_marks_dirty_and_flows() {
         let mut g = CaGrid::new([4, 4, 1]);
-        g.set(1, 3, 0, WATER);
-        g.mark_dirty_cell(1, 3, 0);
+        // Warm water (temp 20) so it stays liquid as it falls; the grid default
+        // temp 0 equals water's freeze_point and would freeze it to ICE.
+        g.set_with_temp(1, 3, 0, WATER, 20);
         assert!(step(&mut g, reg()));
         assert_eq!(g.get(1, 2, 0), WATER);
         assert_eq!(g.get(1, 3, 0), AIR);

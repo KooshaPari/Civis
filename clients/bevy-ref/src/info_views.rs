@@ -422,7 +422,7 @@ pub use plugin::*;
 mod plugin {
     use super::*;
     use crate::sim_bridge::SimState;
-    use crate::ui_theme::{apply_theme, frame_e1, panel_finish, TEXT, TEXT_LOW, RADIUS};
+    use crate::ui_theme::{apply_theme, liquid_glass_finish, liquid_glass_frame, TEXT, TEXT_LOW, RADIUS_PANEL};
     use bevy_egui::{egui, EguiContexts};
     use civ_agents::{Civilian, Needs};
 
@@ -460,7 +460,7 @@ mod plugin {
         egui::Window::new("Info Views")
             .anchor(egui::Align2::LEFT_TOP, [12.0, 64.0])
             .resizable(false)
-            .frame(frame_e1(egui::Margin::same(10)))
+            .frame(liquid_glass_frame(egui::Margin::same(12), RADIUS_PANEL))
             .show(ctx, |ui| {
                 ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
                 ui.horizontal_wrapped(|ui| {
@@ -489,7 +489,7 @@ mod plugin {
                     );
                     draw_legend(ui, overlay);
                 }
-                panel_finish(ui.painter(), ui.min_rect(), RADIUS, false, false);
+                liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
             });
     }
 

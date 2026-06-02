@@ -39,7 +39,8 @@ use crate::menus::GameUiMode;
 use crate::spawn_tools::{ActiveTool, SelectedEntity};
 use crate::tool_categories::{ActiveSubTool, SubTool, CATEGORIES};
 use crate::ui_theme::{
-    apply_theme, compact, deck_chip, hairline, liquid_glass_frame, panel_finish, DECK_ACCENT,
+    apply_theme, compact, deck_chip, hairline, liquid_glass_finish, liquid_glass_frame, panel_finish,
+    DECK_ACCENT,
     DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT, DECK_TEXT_MID, GOLD, GREEN, RED, INSET_FILL,
     RADIUS_BTN, RADIUS_PANEL, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, BORDER, DIM, TEXT,
 };
@@ -443,7 +444,7 @@ fn top_center_cluster(
             liquid_glass_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8), RADIUS_PANEL)
                 .show(ui, |ui| {
                     top_bar_ui(ui, snapshot, resources, attach_mode, live_attach);
-                    panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
+                    liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
                 });
         });
 }
@@ -462,11 +463,32 @@ fn left_sidebar_cluster(
         .exact_width(244.0)
         .frame(liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL))
         .show(ctx, |ui| {
+            // Colored teal rim + lifted inner highlight on the sidebar's own rect
+            // BEFORE content, so the glass edge reads without glossing over text.
+            let full = ui.max_rect();
+            sidebar_glass_edge(ui.painter(), full);
             inspector_ui(ui, has_selection, details);
             ui.add_space(SPACE_MD);
             hairline(ui);
             faction_panel_ui(ui, roster);
         });
+}
+
+/// Lifted glass edge for a text-dense panel: a thin light inner highlight + a
+/// soft teal rim, without the gloss sheen (which would dim text drawn on top).
+fn sidebar_glass_edge(painter: &egui::Painter, rect: egui::Rect) {
+    painter.rect_stroke(
+        rect.shrink(1.0),
+        RADIUS_PANEL as f32,
+        egui::Stroke::new(1.0, egui::Color32::from_white_alpha(26)),
+        egui::StrokeKind::Inside,
+    );
+    painter.rect_stroke(
+        rect,
+        RADIUS_PANEL as f32,
+        egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.30)),
+        egui::StrokeKind::Outside,
+    );
 }
 
 /// Bottom cluster: a narrow (< full-width), short floating row of expanding
@@ -490,7 +512,7 @@ fn bottom_cluster(ctx: &egui::Context, bottom: &mut BottomBarCtx) {
             liquid_glass_frame(egui::Margin::symmetric(SPACE_MD as i8, SPACE_SM as i8), RADIUS_PANEL)
                 .show(ui, |ui| {
                     category_pill_row(ui, bottom);
-                    panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
+                    liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
                 });
         });
 }

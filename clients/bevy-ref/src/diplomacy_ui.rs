@@ -23,8 +23,6 @@ use crate::ui_theme;
 // Palette — sourced from the shared `ui_theme` dark-glass language.
 // ---------------------------------------------------------------------------
 
-/// Dark glass panel fill.
-const PANEL_FILL: egui::Color32 = ui_theme::PANEL_FILL;
 /// Chip / cell tint.
 const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
 /// Cyan accent.
@@ -266,12 +264,7 @@ fn draw_diplomacy_panel(
         .default_size(egui::vec2(520.0, 380.0))
         .resizable(true)
         .collapsible(false)
-        .frame(
-            egui::Frame::NONE
-                .fill(PANEL_FILL)
-                .inner_margin(egui::Margin::same(14))
-                .corner_radius(egui::CornerRadius::same(10)),
-        )
+        .frame(ui_theme::liquid_glass_frame(egui::Margin::same(14), ui_theme::RADIUS_PANEL))
         .show(ctx, |ui| {
             // Live-data status badge.
             ui.horizontal(|ui| {
@@ -317,6 +310,7 @@ fn draw_diplomacy_panel(
                     relation_grid_ui(ui, &state.factions, &state.relations);
                 });
             });
+            ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);
         });
 
     // Sync close button back to state.

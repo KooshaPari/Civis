@@ -646,14 +646,47 @@ pub fn motion_rect(
     out
 }
 
+/// Frosted-glass panel fill: translucent enough to read as glass over the 3D
+/// scene, lighter than the opaque graphite panels so layered depth shows.
+pub const GLASS_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(34, 40, 48, 150);
+/// Thin light top border that gives glass its lifted "wet" edge.
+pub const GLASS_EDGE: egui::Color32 = egui::Color32::from_rgba_premultiplied(150, 168, 184, 90);
+
 /// Frosted Liquid Glass frame for decks, sidebars, and pill shells.
+///
+/// Use [`liquid_glass_finish`] *after* drawing the panel content (it paints the
+/// gloss sheen, soft inner glow, and colored teal rim that make the panel read
+/// as frosted glass rather than a flat fill).
 pub fn liquid_glass_frame(margin: egui::Margin, radius: u8) -> egui::Frame {
     egui::Frame::NONE
-        .fill(DECK_GLASS)
+        .fill(GLASS_FILL)
         .inner_margin(margin)
-        .stroke(egui::Stroke::new(1.0, DECK_BORDER))
+        .stroke(egui::Stroke::new(1.0, GLASS_EDGE))
         .corner_radius(egui::CornerRadius::same(radius))
-        .shadow(deck_shadow())
+        .shadow(floating_shadow())
+}
+
+/// Bake the dimensional frosted-glass read onto a panel rect drawn with
+/// [`liquid_glass_frame`]: top gloss sheen, layered soft inner glow, a thin
+/// light inner highlight, and a subtle colored teal rim. Call once with the
+/// panel's `ui.min_rect()` after the content is laid out.
+pub fn liquid_glass_finish(painter: &egui::Painter, rect: egui::Rect, radius: u8) {
+    gloss_sheen(painter, rect);
+    soft_inner_glow(painter, rect, KC_ACCENT, radius);
+    // Thin light inner highlight (the lifted glass edge).
+    painter.rect_stroke(
+        rect.shrink(1.0),
+        radius as f32,
+        egui::Stroke::new(1.0, egui::Color32::from_white_alpha(28)),
+        egui::StrokeKind::Inside,
+    );
+    // Subtle colored rim (teal, not white) so the panel glows like a holo blade.
+    painter.rect_stroke(
+        rect,
+        radius as f32,
+        egui::Stroke::new(1.0, KC_ACCENT.gamma_multiply(0.30)),
+        egui::StrokeKind::Outside,
+    );
 }
 
 /// Draw a block-style Liquid Glass pill (fill + rim + sheen + optional accent bloom).
@@ -665,17 +698,17 @@ pub fn liquid_glass_pill(
     hovered: bool,
 ) {
     let fill = if lit {
-        DECK_GLASS.gamma_multiply(1.16)
+        GLASS_FILL.gamma_multiply(1.22)
     } else if hovered {
-        DECK_GLASS.gamma_multiply(1.08)
+        GLASS_FILL.gamma_multiply(1.12)
     } else {
-        DECK_GLASS
+        GLASS_FILL
     };
     painter.rect_filled(rect, radius as f32, fill);
     painter.rect_stroke(
         rect,
         radius as f32,
-        egui::Stroke::new(1.0, if lit { KC_ACCENT } else { DECK_BORDER }),
+        egui::Stroke::new(1.0, if lit { KC_ACCENT } else { GLASS_EDGE }),
         egui::StrokeKind::Outside,
     );
     gloss_sheen(painter, rect);

@@ -75,9 +75,12 @@ fn model_scale_for(kind: ActorVisualKind) -> f32 {
 /// Resolve the loaded CC0 building scene to a spawnable `SceneRoot`, else `None`
 /// to fall back to the procedural cuboid.
 #[cfg(feature = "models")]
-fn building_model_root(models: Option<&crate::gltf_models::GameModels>) -> Option<SceneRoot> {
-    use crate::gltf_models::{building_scene, ModelOrPrimitive};
-    match models.map(building_scene) {
+fn building_model_root(
+    models: Option<&crate::gltf_models::GameModels>,
+    building_type: BuildingType,
+) -> Option<SceneRoot> {
+    use crate::gltf_models::{building_scene_for, ModelOrPrimitive};
+    match models.map(|m| building_scene_for(m, building_type)) {
         Some(ModelOrPrimitive::Model(root)) => Some(root),
         _ => None,
     }
@@ -499,7 +502,7 @@ fn sync_visible_gameplay(
             }
         } else {
             #[cfg(feature = "models")]
-            let scene_root = building_model_root(models.as_deref());
+            let scene_root = building_model_root(models.as_deref(), building.building_type);
             #[cfg(not(feature = "models"))]
             let scene_root: Option<SceneRoot> = None;
 

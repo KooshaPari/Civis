@@ -18,8 +18,20 @@ const CHUNK_EDGE: usize = 16;
 const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2;
 pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
 const SOLID_CENTER_BIAS: f32 = 0.08;
-const ISO_LEVEL: f32 = 0.38;
-const ISO_SPAN: f32 = 2.0;
+// Iso-surface tuning. The surface is the shared `solid_occ` contour at `ISO_LEVEL`.
+// `ISO_LEVEL` near 0.5 keeps the surface gently rounded; a low value over-favors
+// solid and re-hardens the field back to near-binary/cubic. `ISO_SPAN` is the
+// gradient steepness across the boundary: a gentle span (~1.0) keeps the extracted
+// surface SMOOTH — a steep span snaps Surface Nets vertices to the grid and reads
+// cubic/stepped. Watertightness comes from the SHARED `solid_occ` field, not from a
+// hard iso bias. The blur stays 3x3x3 to match the 1-voxel chunk apron.
+const ISO_LEVEL: f32 = 0.47;
+const ISO_SPAN: f32 = 1.0;
+// Slope-aware softening: on steep transitions (near-vertical faces, where the local
+// `solid_occ` is mid-range rather than saturated) the span eases toward
+// `ISO_SPAN_STEEP` so those faces round instead of stepping. Saturated interior /
+// pure-air keep the base `ISO_SPAN`.
+const ISO_SPAN_STEEP: f32 = 0.8;
 
 static SMOOTH_CHUNKS: AtomicU64 = AtomicU64::new(0);
 static CUBIC_CHUNKS: AtomicU64 = AtomicU64::new(0);
@@ -156,10 +168,25 @@ fn build_material_density(
         if material_occ <= 0.0 {
             return 1.0;
         }
-        let density = (ISO_LEVEL - solid_occ) * ISO_SPAN * sharpness;
+        let span = slope_aware_span(solid_occ);
+        let density = (ISO_LEVEL - solid_occ) * span * sharpness;
         let saturation_soften = 1.0 - sat * 0.25;
         (density * saturation_soften).clamp(-1.0, 1.0)
     }
+}
+
+/// Span used to scale the signed distance, eased on steep transitions.
+///
+/// Cells whose blurred `solid_occ` sits near `ISO_LEVEL` are the surface-defining
+/// (slope/boundary) cells — exactly where a steep span snaps Surface Nets vertices
+/// to the grid and reads stepped. Near the iso contour the span eases toward
+/// `ISO_SPAN_STEEP` so those faces round; well inside solid or air it keeps the
+/// base `ISO_SPAN`. `t` is 1.0 at the contour and falls to 0.0 by half a band away.
+#[inline]
+fn slope_aware_span(solid_occ: f32) -> f32 {
+    const BAND: f32 = 0.5;
+    let t = (1.0 - (solid_occ - ISO_LEVEL).abs() / BAND).clamp(0.0, 1.0);
+    ISO_SPAN + (ISO_SPAN_STEEP - ISO_SPAN) * t
 }
 
 fn surface_softness(def: &MaterialDef) -> f32 {

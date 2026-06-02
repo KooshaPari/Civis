@@ -433,19 +433,13 @@ fn material_palette_panel(
         .unwrap_or("—");
 
     egui::Window::new("Material Brush")
-        .frame(ui_theme::accent_frame(egui::Margin::same(10), ui_theme::ACCENT))
+        .frame(ui_theme::liquid_glass_frame(egui::Margin::same(12), ui_theme::RADIUS_PANEL))
         .resizable(false)
         .default_width(248.0)
         .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-12.0, 0.0))
         .show(ctx, |ui| {
             palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
-            ui_theme::panel_finish(
-                ui.painter(),
-                ui.min_rect(),
-                ui_theme::RADIUS,
-                false,
-                true,
-            );
+            ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);
         });
 }
 
@@ -809,6 +803,25 @@ mod tests {
         stamp_sphere(&mut grid, Vec3::new(8.0, cy as f32, 8.0), 3.0, 1.0, MaterialPaintMode::AdditiveDrop, mat, 0);
         // Additive drop fills a column ABOVE the centre so the CA carries it down.
         assert_eq!(grid.get(8, cy + 4, 8), mat, "additive must seed material above centre");
+    }
+
+    #[cfg(feature = "voxel")]
+    #[test]
+    fn paint_marks_chunk_dirty_so_it_remeshes() {
+        use civ_voxel::fluid_ca::CaGrid;
+        // The core "brush did nothing visible" bug: a paint that mutates cells
+        // but never marks its chunk dirty is never re-meshed. Every brush mode
+        // must leave the touched chunk in dirty_chunks so step_and_remesh
+        // rebuilds it.
+        for mode in MaterialPaintMode::ALL {
+            let mut grid = CaGrid::new([16, 16, 16]);
+            assert!(grid.dirty_chunks().is_empty(), "grid starts clean");
+            stamp_sphere(&mut grid, Vec3::new(8.0, 8.0, 8.0), 3.0, 1.0, mode, MaterialId(6), 0);
+            assert!(
+                !grid.dirty_chunks().is_empty(),
+                "{mode:?} paint must mark a chunk dirty so it remeshes (was the invisible-paint bug)"
+            );
+        }
     }
 
     #[cfg(feature = "voxel")]

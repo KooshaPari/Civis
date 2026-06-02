@@ -1,0 +1,9 @@
+{
+  "source": "C:\\Users\\koosh\\Dino\\.claude\\worktrees\\rigclone\\packs\\warfare-starwars\\assets\\raw\\sw_clone_trooper_phase2_sketchfab_001\\model.glb",
+  "output": "C:\\Users\\koosh\\Dino\\.claude\\worktrees\\rigclone\\packs\\warfare-starwars\\assets\\working\\sw_clone_trooper_phase2_sketchfab_001\\rigged_21bone.glb",
+  "armature_bones": 21,
+  "vertex_groups": 21,
+  "triangles_lod0": 1999,
+  "expected_bindposes": 21,
+  "ok": true
+}

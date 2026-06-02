@@ -2391,6 +2391,7 @@ namespace DINOForge.Runtime
             {
                 _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
                 _registeredWorldInstance = ecsWorld;
+                TryApplyEnvironmentTheme(SceneManager.GetActiveScene().name, "ProcessWorldReadyCoroutine");
 
                 if (_dumpOnStartup)
                 {

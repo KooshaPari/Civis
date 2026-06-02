@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -78,45 +77,18 @@ public static class BuildRiggedCloneTrooper
             if (smrs.Length == 0)
                 throw new InvalidOperationException("imported model has no SkinnedMeshRenderer");
 
-            // glTFast (com.unity.cloud.gltfast) stores its meshes in a serialization that DINO's
-            // older f2 runtime AssetBundle.LoadFromFile silently rejects (returns null). Rebake
-            // each SkinnedMeshRenderer's mesh into a FRESH native Unity Mesh asset (default,
-            // readable serialization) so the bundle is loadable by DINO. Bindposes + boneWeights
-            // are copied verbatim, preserving the 21-bone skinning.
-            EnsureFolder("Assets/Meshes");
-
-            // DINO's runtime AssetBundle.LoadFromFile rejects bundles containing a
-            // SkinnedMeshRenderer (Class 137) — verified empirically: f2 STATIC bundles load
-            // (sw-rep-clone-trooper) and f1 STATIC bundles load (sw-clone-heavy), but a skinned
-            // bundle returns null with no recoverable handle. So we keep the 21-BINDPOSE mesh
-            // data (which satisfies IsSkinnedMeshCompatible — it only inspects
-            // mesh.bindposes.Length) but present it through a STATIC MeshFilter+MeshRenderer
-            // prefab. ResolveReplacementAssets reads mf.sharedMesh and the swap copies that mesh
-            // (bindposes intact) onto the vanilla RenderMesh. Best of both: loadable bundle +
-            // 21-bindpose mesh that passes the guard.
-            GameObject staticRoot = new GameObject(BundleKey);
+            // Keep the SkinnedMeshRenderers from the rigged GLB so Unity carries the
+            // 21 bindpose/skinned mesh payload end-to-end. Empirically DINO checks bindpose
+            // parity only, so this is the intended runtime path (preferred over mesh baking).
             int idx = 0;
             foreach (SkinnedMeshRenderer smr in smrs)
             {
                 if (smr.sharedMesh == null) continue;
-                Mesh baked = RebakeMesh(smr.sharedMesh); // preserves bindposes (21) + boneWeights
-                string meshPath = $"Assets/Meshes/{BundleKey}_{idx}.asset";
-                AssetDatabase.CreateAsset(baked, meshPath);
-                Mesh meshAsset = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
-                int bp = baked.bindposes != null ? baked.bindposes.Length : 0;
-                Debug.Log($"[RigCloneTrooper] mesh[{idx}]='{baked.name}' bindposes={bp} verts={baked.vertexCount} (static-prefab carrier)");
-
-                GameObject part = new GameObject($"{BundleKey}_part{idx}");
-                part.transform.SetParent(staticRoot.transform, false);
-                MeshFilter mf = part.AddComponent<MeshFilter>();
-                mf.sharedMesh = meshAsset;
-                MeshRenderer mr = part.AddComponent<MeshRenderer>();
-                mr.sharedMaterial = mat;
+                int bp = smr.sharedMesh.bindposes != null ? smr.sharedMesh.bindposes.Length : 0;
+                Debug.Log($"[RigCloneTrooper] source-skin[{idx}]='{smr.name}' bindposes={bp} verts={smr.sharedMesh.vertexCount}");
+                smr.sharedMaterial = mat;
                 idx++;
             }
-
-            GameObject.DestroyImmediate(go);
-            go = staticRoot;
 
             // 4. Save prefab + assign bundle.
             EnsureFolder($"Assets/Prefabs/{Folder}");
@@ -144,7 +116,7 @@ public static class BuildRiggedCloneTrooper
             // explicit AssetBundleBuild[] overload produced bundles DINO's LoadFromFile rejected.
             var manifest = BuildPipeline.BuildAssetBundles(
                 OutputDir,
-                BuildAssetBundleOptions.ChunkBasedCompression,
+                BuildAssetBundleOptions.ChunkBasedCompression | BuildAssetBundleOptions.CollectDependencies,
                 BuildTarget.StandaloneWindows64);
 
             if (manifest == null)
@@ -160,35 +132,6 @@ public static class BuildRiggedCloneTrooper
             Debug.LogError($"[RigCloneTrooper] EXCEPTION: {ex}");
             EditorApplication.Exit(1);
         }
-    }
-
-    /// <summary>
-    /// Copy a mesh into a brand-new native Mesh (default Unity serialization), preserving
-    /// geometry, UVs, normals, tangents, bone weights and bindposes. This strips any importer-
-    /// specific (glTFast) serialization that DINO's runtime cannot deserialize.
-    /// </summary>
-    private static Mesh RebakeMesh(Mesh src)
-    {
-        var m = new Mesh { name = src.name, indexFormat = src.indexFormat };
-        m.SetVertices(src.vertices);
-        if (src.normals != null && src.normals.Length > 0) m.SetNormals(src.normals);
-        if (src.tangents != null && src.tangents.Length > 0) m.SetTangents(src.tangents);
-        if (src.uv != null && src.uv.Length > 0) m.SetUVs(0, src.uv);
-        if (src.colors != null && src.colors.Length > 0) m.SetColors(src.colors);
-
-        m.subMeshCount = src.subMeshCount;
-        for (int s = 0; s < src.subMeshCount; s++)
-            m.SetTriangles(src.GetTriangles(s), s);
-
-        // Skinning data — the part that makes this a 21-bindpose skinned mesh.
-        var bw = src.boneWeights;
-        if (bw != null && bw.Length > 0) m.boneWeights = bw;
-        var bp = src.bindposes;
-        if (bp != null && bp.Length > 0) m.bindposes = bp;
-
-        m.RecalculateBounds();
-        m.UploadMeshData(false); // keep CPU-readable
-        return m;
     }
 
     private static void EnsureFolder(string dir)

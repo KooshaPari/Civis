@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 601168950
+CRC: 1111770746
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 283826baca452cfbdcc60c57535b8fcf
+    Hash: 909b54258aee74bd1fefbf99d88ab2a2
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: 894816d889322a927dc9204a2d561235
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 283826baca452cfbdcc60c57535b8fcf
+    Hash: 909b54258aee74bd1fefbf99d88ab2a2
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -18,16 +18,17 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 21
   Script: {instanceID: 0}
-- Class: 23
-  Script: {instanceID: 0}
-- Class: 33
-  Script: {instanceID: 0}
 - Class: 43
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 137
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Meshes/sw-clone-trooper-republic_2.asset
+- Assets/Meshes/sw-clone-trooper-republic_0.asset
 - Assets/Materials/Republic/sw-clone-trooper-republic.mat
+- Assets/Meshes/sw-clone-trooper-republic_1.asset
 - Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
 Dependencies: []

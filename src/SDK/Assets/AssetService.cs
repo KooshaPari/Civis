@@ -20,6 +20,9 @@ namespace DINOForge.SDK.Assets
     [ExcludeFromCodeCoverage] // Requires AssetsTools.NET native runtime ΓÇö integration tests only
     public class AssetService : IDisposable
     {
+        private static readonly Dictionary<string, string> _runtimeCatalogEntries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly object _runtimeCatalogSync = new object();
+
         /// <summary>Expected Unity version for DINO (2021.3.45f2).</summary>
         public const string ExpectedUnityVersion = "2021.3";
 
@@ -133,6 +136,8 @@ namespace DINOForge.SDK.Assets
         /// <returns>Dictionary mapping asset keys to bundle file paths.</returns>
         public IReadOnlyDictionary<string, string> ReadCatalog()
         {
+            Dictionary<string, string> catalogMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
             string catalogPath = Path.Combine(
                 _gameDir,
                 "Diplomacy is Not an Option_Data",
@@ -142,11 +147,86 @@ namespace DINOForge.SDK.Assets
 
             if (!File.Exists(catalogPath))
             {
-                return new Dictionary<string, string>(StringComparer.Ordinal);
+                MergeRuntimeCatalogEntries(catalogMap);
+                return catalogMap;
             }
 
-            AddressablesCatalog catalog = AddressablesCatalog.Load(catalogPath);
-            return catalog.KeyToBundleMap;
+            try
+            {
+                AddressablesCatalog catalog = AddressablesCatalog.Load(catalogPath);
+                foreach (KeyValuePair<string, string> kvp in catalog.KeyToBundleMap)
+                {
+                    catalogMap[kvp.Key] = kvp.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogWarning($"ReadCatalog: failed to load catalog '{catalogPath}': {ex.Message}");
+            }
+
+            MergeRuntimeCatalogEntries(catalogMap);
+            return catalogMap;
+        }
+
+        /// <summary>
+        /// Registers a runtime-only addressable key-to-path mapping used only by AssetSwapSystem.
+        /// This allows SW pack keys (e.g. sw-clone-barracks) to resolve in patch lookups
+        /// even when not present in DINO's packaged Addressables catalog.
+        /// </summary>
+        /// <param name="assetKey">Addressables-like asset key from pack content.</param>
+        /// <param name="bundlePath">Bundle path to associate with the key.</param>
+        public static void RegisterRuntimeCatalogEntry(string assetKey, string bundlePath)
+        {
+            if (string.IsNullOrWhiteSpace(assetKey) || string.IsNullOrWhiteSpace(bundlePath))
+                return;
+
+            lock (_runtimeCatalogSync)
+            {
+                _runtimeCatalogEntries[assetKey] = bundlePath;
+            }
+        }
+
+        /// <summary>
+        /// Adds an arbitrary mapping set to the runtime override catalog.
+        /// </summary>
+        /// <param name="entries">Dictionary entries to register.</param>
+        public static void RegisterRuntimeCatalogEntries(IReadOnlyDictionary<string, string>? entries)
+        {
+            if (entries == null || entries.Count == 0)
+                return;
+
+            lock (_runtimeCatalogSync)
+            {
+                foreach (KeyValuePair<string, string> kvp in entries)
+                {
+                    if (!string.IsNullOrWhiteSpace(kvp.Key) && !string.IsNullOrWhiteSpace(kvp.Value))
+                    {
+                        _runtimeCatalogEntries[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears all runtime catalog overrides.
+        /// </summary>
+        internal static void ClearRuntimeCatalogEntries()
+        {
+            lock (_runtimeCatalogSync)
+            {
+                _runtimeCatalogEntries.Clear();
+            }
+        }
+
+        private static void MergeRuntimeCatalogEntries(Dictionary<string, string> catalogMap)
+        {
+            lock (_runtimeCatalogSync)
+            {
+                foreach (KeyValuePair<string, string> kvp in _runtimeCatalogEntries)
+                {
+                    catalogMap[kvp.Key] = kvp.Value;
+                }
+            }
         }
 
         /// <summary>

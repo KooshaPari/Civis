@@ -117,6 +117,7 @@ namespace DINOForge.SDK
         /// <returns>Result indicating success or failure with errors.</returns>
         public ContentLoadResult LoadPack(string packDirectory)
         {
+            Assets.AssetService.ClearRuntimeCatalogEntries();
             return LoadPackInternal(packDirectory, skipDependencyCheck: false);
         }
 
@@ -213,6 +214,7 @@ namespace DINOForge.SDK
         /// <returns>Aggregate result of loading all packs.</returns>
         public ContentLoadResult LoadPacks(string packsRootDirectory)
         {
+            Assets.AssetService.ClearRuntimeCatalogEntries();
             if (!Directory.Exists(packsRootDirectory))
             {
                 List<string> pathErrors = new List<string> { $"Packs directory not found: {packsRootDirectory}" };
@@ -628,6 +630,7 @@ namespace DINOForge.SDK
                     bundlePath,
                     unit.VisualAsset!,
                     unit.VanillaMapping));
+                Assets.AssetService.RegisterRuntimeCatalogEntry(unit.VisualAsset!, bundlePath);
             }
 
             foreach (DINOForge.SDK.Registry.RegistryEntry<Models.BuildingDefinition> entry in _registryManager.Buildings.All.Values)
@@ -658,6 +661,7 @@ namespace DINOForge.SDK
                     bundlePath,
                     building.VisualAsset!,
                     buildingMapping));
+                Assets.AssetService.RegisterRuntimeCatalogEntry(building.VisualAsset!, bundlePath);
             }
         }
     }

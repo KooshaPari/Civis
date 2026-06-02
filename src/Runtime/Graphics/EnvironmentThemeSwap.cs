@@ -8,9 +8,10 @@ namespace DINOForge.Runtime.Graphics
 {
     /// <summary>
     /// Applies a skybox + GI refresh for gameplay scenes based on the active planet.
-    /// The loader first prefers already-cached materials; if none exist, it creates
-    /// procedural solid-color placeholders so gameplay still gets SW-themed atmosphere
-    /// even before dedicated skybox asset bundles land.
+    /// The loader first prefers bundled skybox materials (for future SW bundle support);
+    /// if no SW bundle exists, it creates procedural solid-color placeholders so gameplay
+    /// still gets a readable SW atmosphere until real bundles land.
+    /// TODO: Replace fallback placeholders with loaded SW skybox bundles (tatooine/naboo/umbara/coruscant).
     /// </summary>
     internal sealed class EnvironmentThemeSwap
     {
@@ -29,6 +30,14 @@ namespace DINOForge.Runtime.Graphics
             ["naboo"] = "naboo",
             ["umbara"] = "umbara",
             ["coruscant"] = "coruscant"
+        };
+
+        private static readonly Dictionary<string, string[]> PlanetSkyboxBundleKeys = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["tatooine"] = new[] { "skybox_tatooine", "tatooine_skybox", "sw_tatooine_skybox", "Environment/skybox_tatooine" },
+            ["naboo"] = new[] { "skybox_naboo", "naboo_skybox", "sw_naboo_skybox", "Environment/skybox_naboo" },
+            ["umbara"] = new[] { "skybox_umbara", "umbara_skybox", "sw_umbara_skybox", "Environment/skybox_umbara" },
+            ["coruscant"] = new[] { "skybox_coruscant", "coruscant_skybox", "sw_coruscant_skybox", "Environment/skybox_coruscant" }
         };
 
         private static readonly Dictionary<string, Color> PlanetSkyColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
@@ -69,7 +78,8 @@ namespace DINOForge.Runtime.Graphics
 
             try
             {
-                Material? skybox = GetOrCreateSkyboxMaterial(planet);
+                bool usedPlaceholder;
+                Material? skybox = GetOrCreateSkyboxMaterial(planet, out usedPlaceholder);
                 if (skybox == null)
                 {
                     _log.LogWarning($"[EnvironmentThemeSwap] No usable URP-compatible skybox material for '{planet}' scene '{sceneName}'.");
@@ -80,7 +90,8 @@ namespace DINOForge.Runtime.Graphics
                 {
                     RenderSettings.skybox = skybox;
                     DynamicGI.UpdateEnvironment();
-                    _log.LogInfo($"[EnvironmentThemeSwap] Applied skybox '{skybox.name}' for scene '{sceneName}' (planet '{planet}').");
+                    string source = usedPlaceholder ? "placeholder" : "bundled";
+                    _log.LogInfo($"[EnvironmentThemeSwap] Applied {source} skybox '{skybox.name}' for scene '{sceneName}' (planet '{planet}').");
                 }
                 else
                 {
@@ -101,8 +112,15 @@ namespace DINOForge.Runtime.Graphics
             if (string.IsNullOrWhiteSpace(sceneName))
                 return false;
 
-            return !sceneName.Equals("MainMenu", StringComparison.OrdinalIgnoreCase) &&
-                   !sceneName.Equals("InitialGameLoader", StringComparison.OrdinalIgnoreCase);
+            string lowered = sceneName.ToLowerInvariant();
+            if (lowered.Equals("mainmenu", StringComparison.OrdinalIgnoreCase) ||
+                lowered.Equals("initialgameload", StringComparison.OrdinalIgnoreCase) ||
+                lowered.Contains("menu"))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static string? ResolvePlanet(string sceneName)
@@ -117,14 +135,24 @@ namespace DINOForge.Runtime.Graphics
             return null;
         }
 
-        private Material? GetOrCreateSkyboxMaterial(string planet)
+        private Material? GetOrCreateSkyboxMaterial(string planet, out bool usedPlaceholder)
         {
+            usedPlaceholder = false;
             if (_cache.TryGetValue(planet, out Material? cached))
+            {
                 return cached;
+            }
 
             if (!PlanetSkyColors.TryGetValue(planet, out Color tint))
                 tint = Color.black;
 
+            if (TryLoadBundledSkyboxMaterial(planet, out Material? bundledMaterial))
+            {
+                _cache[planet] = bundledMaterial;
+                return bundledMaterial;
+            }
+
+            usedPlaceholder = true;
             Shader? skyboxShader = null;
             for (int i = 0; i < CandidateSkyboxShaders.Length; i++)
             {
@@ -149,6 +177,31 @@ namespace DINOForge.Runtime.Graphics
             return material;
         }
 
+        private bool TryLoadBundledSkyboxMaterial(string planet, out Material? material)
+        {
+            material = null;
+
+            if (!PlanetSkyboxBundleKeys.TryGetValue(planet, out string[]? bundleKeys))
+            {
+                _log.LogDebug($"[EnvironmentThemeSwap] No skybox bundle key map for planet '{planet}'.");
+                return false;
+            }
+
+            for (int i = 0; i < bundleKeys.Length; i++)
+            {
+                string candidatePath = bundleKeys[i];
+                material = Resources.Load<Material>(candidatePath);
+                if (material != null)
+                {
+                    _log.LogInfo($"[EnvironmentThemeSwap] Loaded bundled skybox material '{material.name}' using Resources key '{candidatePath}' for planet '{planet}'.");
+                    return true;
+                }
+            }
+
+            _log.LogDebug($"[EnvironmentThemeSwap] No SW skybox bundle material found for planet '{planet}' from keys: {string.Join(", ", bundleKeys)}. Using procedural placeholder.");
+            return false;
+        }
+
         private static void ApplyColorTint(Material material, Color tint)
         {
             if (material.HasProperty("_Tint"))
@@ -164,5 +217,3 @@ namespace DINOForge.Runtime.Graphics
         }
     }
 }
-
-

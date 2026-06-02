@@ -106,7 +106,9 @@ fn main() {
 
     // 2D procedural/SVG alternate map view (M key + far-zoom auto-engage).
     #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
+    if std::env::var("CIVIS_AUTOSHOT").is_err() {
+        app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
+    }
 
     // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
     #[cfg(feature = "egui")]
@@ -180,9 +182,14 @@ fn main() {
     // and the camera has framed the world) and then exit. This lets a debug
     // worker confirm voxel terrain visibility by pixels without manual F9.
     if let Ok(path) = std::env::var("CIVIS_AUTOSHOT") {
+        let warmup_seconds = std::env::var("CIVIS_AUTOSHOT_WARMUP")
+            .ok()
+            .and_then(|value| value.parse::<f32>().ok())
+            .filter(|value| value.is_finite() && *value > 0.0)
+            .unwrap_or(4.0);
         app.insert_resource(AutoShot {
             path,
-            timer: Timer::from_seconds(4.0, TimerMode::Once),
+            timer: Timer::from_seconds(warmup_seconds, TimerMode::Once),
             taken: false,
         })
         .add_systems(Update, auto_screenshot);

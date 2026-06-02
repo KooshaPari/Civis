@@ -14,6 +14,8 @@ use civ_voxel::{
 use civ_voxel::material::MaterialRegistry;
 
 const CHUNK_EDGE: usize = 16;
+const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2;
+pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
 
 use surface_nets::surface_net;
 
@@ -50,6 +52,7 @@ pub fn resolved_mesher_mode() -> TerrainMesherMode {
 /// Build smooth per-material buffers.
 pub fn build_smooth_meshes(
     voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE],
+    padded_voxels: &[MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
     saturation: Option<&[u8]>,
     registry: &MaterialRegistry,
 ) -> Vec<MeshBuffer> {
@@ -59,7 +62,13 @@ pub fn build_smooth_meshes(
         .into_iter()
         .filter_map(|material_id| {
             let def = registry.get(material_id)?;
-            let density = build_material_density(*voxels, saturation.map(<[u8]>::to_vec), material_id, *def);
+            let density = build_material_density(
+                *voxels,
+                *padded_voxels,
+                saturation.map(<[u8]>::to_vec),
+                material_id,
+                *def,
+            );
             Some(build_surface_nets(material_id, density))
         })
         .collect()
@@ -79,14 +88,19 @@ fn build_surface_nets(
     material_id: MaterialId,
     density: impl Fn(usize, usize, usize) -> f32 + 'static,
 ) -> MeshBuffer {
-    let (positions, normals, indices) = surface_net(CHUNK_EDGE, &density, true);
+    let (positions, normals, indices) = surface_net(CHUNK_EDGE_PADDED, &density, true);
     let mut vertices = Vec::with_capacity(positions.len());
     for (position, normal) in positions.iter().zip(normals.iter()) {
         let normal = normalize_or_unit_up(*normal);
+        let position = [position[0] - 1.0, position[1] - 1.0, position[2] - 1.0];
+        let uv = [
+            (position[0].clamp(0.0, CHUNK_EDGE as f32 - 1.0)) / CHUNK_EDGE as f32,
+            (position[2].clamp(0.0, CHUNK_EDGE as f32 - 1.0)) / CHUNK_EDGE as f32,
+        ];
         vertices.push(MeshVertex {
-            position: *position,
+            position,
             normal,
-            uv: [position[0] / CHUNK_EDGE as f32, position[2] / CHUNK_EDGE as f32],
+            uv,
             material: material_id,
         });
     }
@@ -98,7 +112,8 @@ fn build_surface_nets(
 }
 
 fn build_material_density(
-    voxels: [MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE],
+    _voxels: [MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE],
+    padded_voxels: [MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
     saturation: Option<Vec<u8>>,
     material: MaterialId,
     def: MaterialDef,
@@ -115,9 +130,9 @@ fn build_material_density(
         let mut occupancy = 0.0f32;
         let mut sat_acc = 0.0f32;
         let mut sample_count = 0.0f32;
-        let base_x = x.saturating_sub(1);
-        let base_y = y.saturating_sub(1);
-        let base_z = z.saturating_sub(1);
+        let base_x = x;
+        let base_y = y;
+        let base_z = z;
         let mut max_occ = 0.0f32;
         for dz in 0..2usize {
             for dy in 0..2usize {
@@ -125,15 +140,17 @@ fn build_material_density(
                     let sx = base_x + dx;
                     let sy = base_y + dy;
                     let sz = base_z + dz;
-                    if sx >= CHUNK_EDGE || sy >= CHUNK_EDGE || sz >= CHUNK_EDGE {
+                    if sx >= CHUNK_EDGE_PADDED || sy >= CHUNK_EDGE_PADDED || sz >= CHUNK_EDGE_PADDED {
                         continue;
                     }
-                    let idx = sx + sy * CHUNK_EDGE + sz * CHUNK_EDGE * CHUNK_EDGE;
-                    let match_target = f32::from((voxels[idx] == material) as u8);
+                    let padded_idx = sx
+                        + sy * CHUNK_EDGE_PADDED
+                        + sz * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
+                    let match_target = f32::from((padded_voxels[padded_idx] == material) as u8);
                     occupancy += match_target;
                     let sat = saturation
                         .as_ref()
-                        .and_then(|arr| arr.get(idx))
+                        .and_then(|arr| arr.get(padded_idx))
                         .copied()
                         .unwrap_or(default_sat);
                     sat_acc += f32::from(sat) / 255.0;
@@ -188,9 +205,11 @@ mod tests {
     #[test]
     fn smooth_mesher_handles_single_cube() {
         let mut chunk = [MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut padded = [AIR; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED];
+        padded[1 + 1 * CHUNK_EDGE_PADDED + 1 * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(1);
         chunk[0] = MaterialId(1);
         let registry = MaterialRegistry::standard();
-        let bufs = build_smooth_meshes(&chunk, None, &registry);
+        let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
         assert!(!bufs.is_empty());
         assert!(bufs.iter().all(|buf| !buf.vertices.is_empty()));
     }

@@ -337,6 +337,48 @@ fn slice_chunk(grid: &CaGrid, cx: usize, cy: usize, cz: usize) -> [MaterialId; C
     voxels
 }
 
+fn slice_chunk_with_apron(
+    grid: &CaGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+) -> [MaterialId; (CHUNK_EDGE + 2) * (CHUNK_EDGE + 2) * (CHUNK_EDGE + 2)] {
+    const PADDED_EDGE: usize = CHUNK_EDGE + 2;
+    let origin_x = cx * CHUNK_EDGE;
+    let origin_y = cy * CHUNK_EDGE;
+    let origin_z = cz * CHUNK_EDGE;
+    let mut voxels = [AIR; PADDED_EDGE * PADDED_EDGE * PADDED_EDGE];
+    for z in 0..PADDED_EDGE {
+        for y in 0..PADDED_EDGE {
+            for x in 0..PADDED_EDGE {
+                let gx_i = isize::try_from(origin_x + x).unwrap_or(isize::MAX) - 1;
+                let gy_i = isize::try_from(origin_y + y).unwrap_or(isize::MAX) - 1;
+                let gz_i = isize::try_from(origin_z + z).unwrap_or(isize::MAX) - 1;
+                let gx = isize::try_from(grid.dims[0]).unwrap_or(isize::MAX);
+                let gy = isize::try_from(grid.dims[1]).unwrap_or(isize::MAX);
+                let gz_max = isize::try_from(grid.dims[2]).unwrap_or(isize::MAX);
+                let idx = x + y * PADDED_EDGE + z * PADDED_EDGE * PADDED_EDGE;
+                voxels[idx] = if gx_i < 0
+                    || gy_i < 0
+                    || gz_i < 0
+                    || gx_i >= gx
+                    || gy_i >= gy
+                    || gz_i >= gz_max
+                {
+                    AIR
+                } else {
+                    grid.get(
+                        usize::try_from(gx_i).unwrap_or_default(),
+                        usize::try_from(gy_i).unwrap_or_default(),
+                        usize::try_from(gz_i).unwrap_or_default(),
+                    )
+                };
+            }
+        }
+    }
+    voxels
+}
+
 /// Frame the camera on the voxel volume by updating the orbit rig, not the
 /// raw transform. This keeps yaw/pitch/zoom recoverable after startup.
 fn reframe_camera_once(rig: &mut CameraRig, target: Vec3) {
@@ -414,6 +456,50 @@ fn chunk_saturation(
     Some(saturation)
 }
 
+fn chunk_saturation_with_apron(
+    grid: &CaGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+) -> Option<Vec<u8>> {
+    if grid.saturation.is_empty() {
+        return None;
+    }
+    const PADDED_EDGE: usize = CHUNK_EDGE + 2;
+    let origin_x = cx * CHUNK_EDGE;
+    let origin_y = cy * CHUNK_EDGE;
+    let origin_z = cz * CHUNK_EDGE;
+    let mut saturation = Vec::with_capacity(PADDED_EDGE * PADDED_EDGE * PADDED_EDGE);
+    for z in 0..PADDED_EDGE {
+        for y in 0..PADDED_EDGE {
+            for x in 0..PADDED_EDGE {
+                let gx_i = isize::try_from(origin_x + x).unwrap_or(isize::MAX) - 1;
+                let gy_i = isize::try_from(origin_y + y).unwrap_or(isize::MAX) - 1;
+                let gz_i = isize::try_from(origin_z + z).unwrap_or(isize::MAX) - 1;
+                let gx = isize::try_from(grid.dims[0]).unwrap_or(isize::MAX);
+                let gy = isize::try_from(grid.dims[1]).unwrap_or(isize::MAX);
+                let gz_max = isize::try_from(grid.dims[2]).unwrap_or(isize::MAX);
+                if gx_i < 0
+                    || gy_i < 0
+                    || gz_i < 0
+                    || gx_i >= gx
+                    || gy_i >= gy
+                    || gz_i >= gz_max
+                {
+                    saturation.push(0);
+                    continue;
+                }
+                let gx = usize::try_from(gx_i).unwrap_or_default();
+                let gy = usize::try_from(gy_i).unwrap_or_default();
+                let gz = usize::try_from(gz_i).unwrap_or_default();
+                let idx = gx + gy * grid.dims[0] + gz * grid.dims[0] * grid.dims[1];
+                saturation.push(grid.saturation[idx]);
+            }
+        }
+    }
+    Some(saturation)
+}
+
 /// Mesh one chunk, split it by material, and spawn world-offset Bevy entities.
 fn spawn_chunk_meshes(
     commands: &mut Commands,
@@ -446,6 +532,7 @@ fn spawn_chunk_meshes(
                     }
                 }
                 let voxels = slice_chunk(grid, cx, cy, cz);
+                let padded_voxels = slice_chunk_with_apron(grid, cx, cy, cz);
                 let view = ChunkView {
                     id: chunk_id,
                     voxels: &voxels,
@@ -453,8 +540,8 @@ fn spawn_chunk_meshes(
                 let mode = resolved_mesher_mode();
                 let use_smooth = should_use_smooth_mesh(chunk_id, camera_eye, mode);
                 let mut mesh_buffers: Vec<MeshBuffer> = if use_smooth {
-                    let saturation = chunk_saturation(grid, cx, cy, cz);
-                    build_smooth_meshes(&voxels, saturation.as_deref(), &registry)
+                    let saturation = chunk_saturation_with_apron(grid, cx, cy, cz);
+                    build_smooth_meshes(&voxels, &padded_voxels, saturation.as_deref(), &registry)
                 } else {
                     match CubicMesher::mesh_cubic(view, LodLevel(0)) {
                         Ok(mesh_buffer) => split_by_material(&mesh_buffer)

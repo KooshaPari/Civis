@@ -9,13 +9,18 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
-const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-const CHIP_HOVER: egui::Color32 = egui::Color32::from_rgba_premultiplied(44, 54, 74, 245);
-const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
+// Menu/loading/pause chrome pulls the shared Keycap Palette so the title and
+// overlay surfaces match the in-game HUD (teal accent, midnight surfaces) rather
+// than the legacy cyan/blue-grey. Tokens live in [`crate::ui_theme`].
+use crate::ui_theme;
+
+const ACCENT: egui::Color32 = ui_theme::KC_ACCENT;
+const ACCENT_HI: egui::Color32 = ui_theme::KC_ACCENT_HOVER;
+const GOLD: egui::Color32 = ui_theme::AMBER;
+const PANEL_FILL: egui::Color32 = ui_theme::GRAPHITE_900;
+const CHIP_FILL: egui::Color32 = ui_theme::GRAPHITE_700;
+const CHIP_HOVER: egui::Color32 = ui_theme::GRAPHITE_600;
+const DIM: egui::Color32 = ui_theme::TEXT_MID;
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
 
 // ---------------------------------------------------------------------------
@@ -386,6 +391,7 @@ fn draw_main_menu(
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
+    ui_theme::apply_theme(ctx);
     textures.ensure_loaded(ctx);
     image_backdrop(ctx, textures.title_bg.as_ref(), "main_menu_bg");
     egui::Area::new(egui::Id::new("main_menu_area"))
@@ -418,6 +424,7 @@ fn draw_world_setup(
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
+    ui_theme::apply_theme(ctx);
     full_screen_backdrop(ctx);
     egui::Area::new(egui::Id::new("world_setup_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -438,6 +445,7 @@ fn draw_loading_screen(
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
+    ui_theme::apply_theme(ctx);
     textures.ensure_loaded(ctx);
     image_backdrop(ctx, textures.loading_bg.as_ref(), "loading_bg");
     let elapsed = time.elapsed_secs();
@@ -461,6 +469,7 @@ fn draw_pause_menu(
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
+    ui_theme::apply_theme(ctx);
     dim_overlay(ctx);
     egui::Area::new(egui::Id::new("pause_panel_area"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -498,7 +507,7 @@ fn draw_settings_window(
 /// Full-screen near-opaque dark backdrop used behind menus and loading screen.
 fn full_screen_backdrop(ctx: &egui::Context) {
     let screen = ctx.screen_rect();
-    let bg = egui::Color32::from_rgba_premultiplied(8, 10, 18, 245);
+    let bg = ui_theme::KC_BG.gamma_multiply(0.96);
     egui::Area::new(egui::Id::new("menu_backdrop"))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
@@ -525,7 +534,7 @@ fn image_backdrop(ctx: &egui::Context, tex: Option<&egui::TextureHandle>, id: &s
             painter.rect_filled(
                 screen,
                 egui::CornerRadius::ZERO,
-                egui::Color32::from_rgb(8, 10, 18),
+                ui_theme::KC_BG,
             );
             // Cover-fit the image so it always fills the viewport.
             let img = tex.size_vec2();
@@ -542,7 +551,7 @@ fn image_backdrop(ctx: &egui::Context, tex: Option<&egui::TextureHandle>, id: &s
             painter.rect_filled(
                 screen,
                 egui::CornerRadius::ZERO,
-                egui::Color32::from_rgba_premultiplied(6, 8, 14, 150),
+                ui_theme::KC_BG.gamma_multiply(0.59),
             );
         });
 }
@@ -903,7 +912,7 @@ fn gradient_progress_bar(ui: &mut egui::Ui, frac: f32, width: f32) {
         egui::Align2::CENTER_CENTER,
         format!("{:.0}%", frac * 100.0),
         egui::FontId::proportional(13.0),
-        egui::Color32::from_rgb(8, 12, 20),
+        ui_theme::KC_BG,
     );
 }
 
@@ -981,7 +990,7 @@ fn era_banner(ui: &mut egui::Ui, banner: &EraBanner) {
         1.0
     }
     .clamp(0.0, 1.0);
-    let panel_fill = egui::Color32::from_rgba_unmultiplied(17, 20, 31, (220.0 * alpha) as u8);
+    let panel_fill = ui_theme::KC_BG_ELV.gamma_multiply(0.86 * alpha);
     let text_color = egui::Color32::from_rgba_unmultiplied(
         ACCENT.r(), ACCENT.g(), ACCENT.b(), (255.0 * alpha) as u8,
     );

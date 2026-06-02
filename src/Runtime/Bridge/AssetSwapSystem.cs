@@ -558,6 +558,12 @@ namespace DINOForge.Runtime.Bridge
             bool entitySwapResult = TrySwapRenderMeshFromBundle(
                 modBundleFullPath, request.AssetName, request.VanillaMapping, bestEm);
             DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
+            if (!patchResult && !entitySwapResult)
+            {
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {request.AssetAddress}: both patch and entity-swap failed; " +
+                    $"diskPatched={patchResult}, entitySwap={entitySwapResult}, vanillaMapping='{request.VanillaMapping ?? "<null>"}'");
+            }
 
             return patchResult || entitySwapResult;
         }
@@ -572,6 +578,7 @@ namespace DINOForge.Runtime.Bridge
         private bool TrySwapRenderMeshFromBundle(
             string modBundlePath, string assetName, string? vanillaMapping, EntityManager em)
         {
+            string requestBundleFileName = Path.GetFileName(modBundlePath);
             AssetBundle? bundle = LoadBundle(modBundlePath);
             if (bundle == null)
             {
@@ -581,7 +588,7 @@ namespace DINOForge.Runtime.Bridge
                 if (_permanentlyFailedBundles.Add(modBundlePath))
                 {
                     DebugLog.Write("AssetSwap",
-                        $"TrySwapRenderMeshFromBundle: bundle '{Path.GetFileName(modBundlePath)}' " +
+                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: LoadBundle returned null for '{modBundlePath}'. " +
                         "failed to load and could not be recovered — marking permanently failed (#992).");
                 }
                 return false;
@@ -602,8 +609,8 @@ namespace DINOForge.Runtime.Bridge
                 // 'already loaded' flood. Log once.
                 _permanentlyFailedBundles.Add(modBundlePath);
                 DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: no usable Mesh/Material/prefab found in bundle " +
-                    $"'{Path.GetFileName(modBundlePath)}' (requested asset='{assetName}'). " +
+                    $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: no usable Mesh/Material/prefab found in bundle " +
+                    $"'{requestBundleFileName}' (requested asset='{assetName}'). " +
                     "Bundle may be a stub or contain no renderable geometry. " +
                     "Marking permanently failed — will skip on subsequent frames (#992).");
                 return false;
@@ -621,7 +628,7 @@ namespace DINOForge.Runtime.Bridge
             Type? renderMeshType = ResolveRenderMeshType();
             if (renderMeshType == null)
             {
-                DebugLog.Write("AssetSwap", "TrySwapRenderMeshFromBundle: Unity.Rendering.RenderMesh type not found");
+                DebugLog.Write("AssetSwap", $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: Unity.Rendering.RenderMesh type not found");
                 return false;
             }
 
@@ -630,7 +637,7 @@ namespace DINOForge.Runtime.Bridge
             // apply. Bail out gracefully until HRV2 mesh-swap is implemented (separate task).
             if (IsHrv2Type(_renderMeshVariantName))
             {
-                DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: HRV2 mesh-swap not yet implemented (variant='{_renderMeshVariantName}') — falling back to no-op for entity swap. Bundle-disk patch (if successful) still applies.");
+                DebugLog.Write("AssetSwap", $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: HRV2 mesh-swap not yet implemented (variant='{_renderMeshVariantName}') — falling back to no-op for entity swap. Bundle-disk patch (if successful) still applies.");
                 return false;
             }
 
@@ -663,7 +670,7 @@ namespace DINOForge.Runtime.Bridge
                 else
                 {
                     DebugLog.Write("AssetSwap",
-                        $"TrySwapRenderMeshFromBundle: archetype type '{archetypeTypeName}' not " +
+                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: archetype type '{archetypeTypeName}' not " +
                         $"found in assemblies; falling back to RenderMesh-only query");
                     queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
                 }
@@ -702,6 +709,9 @@ namespace DINOForge.Runtime.Bridge
                 else
                 {
                     if (childMatches.IsCreated) childMatches.Dispose();
+                    DebugLog.Write("AssetSwap",
+                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: archetype '{resolvedArchetypeType.FullName}' " +
+                        $"resolved for vanilla_mapping='{vanillaMapping ?? "<null>"}' but no RenderMesh children were found.");
                 }
             }
 
@@ -716,7 +726,7 @@ namespace DINOForge.Runtime.Bridge
                 if (_reportedFailures.Add($"empty-query:{assetName}"))
                 {
                     DebugLog.Write("AssetSwap",
-                        $"TrySwapRenderMeshFromBundle: entity query returned 0 results for asset='{assetName}' " +
+                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: entity query returned 0 results for asset='{assetName}' " +
                         $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — entities not yet populated, will retry next frame.");
                 }
                 entities.Dispose();
@@ -763,7 +773,7 @@ namespace DINOForge.Runtime.Bridge
                 if (_reflectionFailCount == 1 || (_reflectionFailCount % ReflectionFailLogEvery) == 0)
                 {
                     DebugLog.Write("AssetSwap",
-                        $"WARN: TrySwapRenderMeshFromBundle: reflection lookup failed (#{_reflectionFailCount}) " +
+                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: reflection lookup failed (#{_reflectionFailCount}) " +
                         $"(getSharedNonGeneric={getSharedNonGeneric != null}, setSharedGeneric={setSharedGeneric != null}).");
                 }
                 if (!_dumpedEmMethods)
@@ -866,7 +876,7 @@ namespace DINOForge.Runtime.Bridge
             // SECONDARY refinement below further filters by live mesh name when DINO's vanilla
             // mesh names for this mapping are known (VanillaMappingToMeshSubstrings, keyed by the
             // pack's vanilla_mapping value — NOT by bundle filename).
-            string bundleFileName = Path.GetFileNameWithoutExtension(modBundlePath) ?? "";
+            // preserve historical log key for lower-risk diagnostics
             string[]? targetMeshSubstrings = null;
             if (!string.IsNullOrWhiteSpace(vanillaMapping)
                 && VanillaMappingToMeshSubstrings.TryGetValue(vanillaMapping!, out string[]? substrings)
@@ -875,7 +885,7 @@ namespace DINOForge.Runtime.Bridge
             {
                 targetMeshSubstrings = substrings;
                 DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' vanilla_mapping='{vanillaMapping}' " +
+                    $"TrySwapRenderMeshFromBundle: bundle '{requestBundleFileName}' vanilla_mapping='{vanillaMapping}' " +
                     $"→ refining by mesh substrings: [{string.Join(", ", substrings)}]");
             }
 
@@ -910,7 +920,7 @@ namespace DINOForge.Runtime.Bridge
             if (!hasArchetypeFilter && (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0))
             {
                 DebugLog.Write("AssetSwap",
-                    $"[DIAGNOSTIC MODE] No targeting signal for bundle '{bundleFileName}' " +
+                    $"[DIAGNOSTIC MODE] No targeting signal for bundle '{requestBundleFileName}' " +
                     $"(vanilla_mapping='{vanillaMapping ?? "<null>"}' yielded neither an archetype filter " +
                     $"nor mesh-name substrings). Skipping entity swap for {entities.Length} entities. " +
                     $"Add a 'vanilla_mapping' to the pack visual_asset to exit DIAGNOSTIC MODE.");
@@ -1346,6 +1356,17 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private static (Mesh? mesh, Material? material) ResolveReplacementAssets(AssetBundle bundle, string requestedName)
         {
+            string[] allAssetNames;
+            try
+            {
+                allAssetNames = bundle.GetAllAssetNames();
+            }
+            catch (Exception ex)
+            {
+                allAssetNames = Array.Empty<string>();
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {requestedName}: bundle.GetAllAssetNames() failed: {ex.Message}");
+            }
             // 1. Fast path: exact-name bare assets.
             Mesh? mesh = bundle.LoadAsset<Mesh>(requestedName);
             Material? material = bundle.LoadAsset<Material>(requestedName);
@@ -1401,6 +1422,12 @@ namespace DINOForge.Runtime.Bridge
                     $"ResolveReplacementAssets: fell back to first bare mesh='{mesh?.name ?? "<null>"}' " +
                     $"material='{material?.name ?? "<null>"}' in bundle");
             }
+            else
+            {
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {requestedName}: ResolveReplacementAssets returned null mesh/material. " +
+                    $"bundle assets: [{string.Join(", ", allAssetNames)}]");
+            }
 
             return (mesh, material);
         }
@@ -1410,6 +1437,13 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private AssetBundle? LoadBundle(string path)
         {
+            if (_permanentlyFailedBundles.Contains(path))
+            {
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: request skipped because this bundle is permanently failed.");
+                return null;
+            }
+
             AssetBundle? cached = _loadedBundles.Get(path);
             if (cached != null)
                 return cached;
@@ -1418,7 +1452,8 @@ namespace DINOForge.Runtime.Bridge
 
             if (!File.Exists(fullPath))
             {
-                DebugLog.Write("AssetSwap", $"LoadBundle: file not found: {fullPath}");
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: LoadBundle file not found: {fullPath}");
                 return null;
             }
 
@@ -1450,6 +1485,9 @@ namespace DINOForge.Runtime.Bridge
                     return stillLoaded;
                 }
 
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: LoadFromFile returned null and no recoverable loaded bundle existed for '{fullPath}'.");
+
                 return null;
             }
             catch (Exception ex)
@@ -1472,7 +1510,8 @@ namespace DINOForge.Runtime.Bridge
                         return existing;
                     }
                 }
-                DebugLog.Write("AssetSwap", $"LoadBundle: failed '{fullPath}': {ex.Message}");
+                DebugLog.Write("AssetSwap",
+                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: LoadBundle failed '{fullPath}': {ex.Message}");
                 return null;
             }
         }

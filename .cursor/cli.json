@@ -1,7 +1,8 @@
 {
   "permissions": {
-    "allow": ["Shell(**)"],
+    "allow": [
+      "Shell(**)"
+    ],
     "deny": []
-  },
-  "approvalMode": "unrestricted"
+  }
 }

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Instrument AssetSwap building swap diagnostics (#103x)
+- **Symptom:** Building swaps were failing with only `AssetSwapSystem: giving up on ... after 200 failures` and no earlier reason, so the exact cause was hidden.
+- **Fix:** Added explicit `"[AssetSwap] RESOLVE-FAIL ..."` logs at every early-return/catch/null-check in the bundle resolve/load/swap path in `src/Runtime/Bridge/AssetSwapSystem.cs` so every failure now records the concrete reason: `LoadBundle` misses, null bundles, permanent-failure skips, `ResolveReplacementAssets` misses (including full `bundle.GetAllAssetNames()` output), unresolved `RenderMesh` type/HRV2 path, reflection failures, child-child entity misses, and zero-entity query retries.
+- **Result:** Instrumentation-only runtime path; patch still builds and deploys via `netstandard2.0` Runtime build.
+
 ### Fixed — AssetSwap: `hasArchetypeFilter` re-resolution disagreed with the query's own narrowing (#986 final)
 - **Symptom:** Swaps logged `swapped 0/100 entities (total matching=193, skipped 0 non-matching meshes)` even though the EntityQuery had successfully narrowed to the right archetype (`filtering by 'Components.MeleeUnit' for vanilla_mapping='line_infantry'`). The hand-guessed mesh-name substrings (`Soldier`/`Infantry`/...) stayed active as a reject filter.
 - **Root cause (the mismatch):** `TrySwapRenderMeshFromBundle` resolved the archetype ONCE up front (setting `resolvedArchetypeType` and building the narrowed query, ~L646-661), then computed `hasArchetypeFilter` from a SEPARATE second resolution (`TryResolveSwapArchetype(...) && ResolveTypeByName(...) != null`, ~L886-889). The two resolutions could disagree (live: query path TRUE, re-resolution FALSE), so the `if (hasArchetypeFilter) targetMeshSubstrings = null;` guard never fired and the substring reject-filter dropped matched entities.

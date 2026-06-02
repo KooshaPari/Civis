@@ -39,3 +39,5 @@ conflicts_with: []
 loads:
   units:
     - units/naval_units.yaml
+  buildings:
+    - buildings/naval_buildings.yaml

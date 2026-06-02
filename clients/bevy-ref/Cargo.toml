@@ -25,6 +25,7 @@ serde = { version = "1", features = ["derive"] }
 ron = "0.8"
 rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
+surface-nets = "0.1"
 
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.

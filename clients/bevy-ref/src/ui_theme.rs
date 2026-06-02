@@ -15,6 +15,7 @@
 
 use bevy_egui::egui;
 use egui::{FontData, FontFamily, FontId, TextStyle};
+use bevy::log::warn;
 
 // ===========================================================================
 // Keycap Palette — locked sRGB (dark mode primary)
@@ -184,20 +185,27 @@ fn font_installed_id() -> egui::Id {
     egui::Id::new("kc_fonts_installed")
 }
 
+fn bricolage_loaded_id() -> egui::Id {
+    egui::Id::new("kc_bricolage_loaded")
+}
+
 /// Safe display FontId: uses the Bricolage display family ONLY if it is bound
 /// in this context's fonts, otherwise falls back to Proportional. Referencing
 /// an unbound `FontFamily::Name` panics egui ("not bound to any fonts"), so all
 /// display-font use sites MUST go through this helper.
 #[must_use]
 pub fn display_font(ctx: &egui::Context, size: f32) -> FontId {
-    let bound = ctx.fonts(|f| {
-        // `families()` lists every registered family; Name("bricolage") is only
-        // present when wire_font_families bound it to a loaded font.
+    let bricolage_family_bound = ctx.fonts(|f| {
         f.families()
             .iter()
             .any(|fam| *fam == FontFamily::Name("bricolage".into()))
     });
-    if bound {
+
+    let bricolage_loaded = ctx
+        .data(|d| d.get_temp::<bool>(bricolage_loaded_id()))
+        .unwrap_or(false);
+
+    if bricolage_family_bound && bricolage_loaded {
         FontId::new(size, FontFamily::Name("bricolage".into()))
     } else {
         FontId::new(size, FontFamily::Proportional)
@@ -211,13 +219,15 @@ pub fn install_keycap_fonts(ctx: &egui::Context) {
         return;
     }
     let mut fonts = egui::FontDefinitions::default();
-    if !try_load_font_files(&mut fonts) {
-        // TODO(keycap-fonts): ship variable fonts in-repo if GitHub fetch fails in CI.
-        ctx.data_mut(|d| d.insert_temp(flag, true));
-        return;
+    let any_loaded = try_load_font_files(&mut fonts);
+    if any_loaded {
+        let bricolage_bound = wire_font_families(&mut fonts);
+        ctx.set_fonts(fonts);
+        ctx.data_mut(|d| d.insert_temp(bricolage_loaded_id(), bricolage_bound));
+    } else {
+        ctx.data_mut(|d| d.insert_temp(bricolage_loaded_id(), false));
+        warn!("No Bevy HUD fonts loaded from {:?}", font_assets_dir());
     }
-    wire_font_families(&mut fonts);
-    ctx.set_fonts(fonts);
     ctx.data_mut(|d| d.insert_temp(flag, true));
 }
 
@@ -232,11 +242,16 @@ fn try_load_font_files(fonts: &mut egui::FontDefinitions) -> bool {
     let mut ok = false;
     for (name, file) in entries {
         let path = base.join(file);
-        if let Ok(bytes) = std::fs::read(&path) {
-            fonts
-                .font_data
-                .insert(name.into(), std::sync::Arc::new(FontData::from_owned(bytes)));
-            ok = true;
+        match std::fs::read(&path) {
+            Ok(bytes) => {
+                fonts
+                    .font_data
+                    .insert(name.into(), std::sync::Arc::new(FontData::from_owned(bytes)));
+                ok = true;
+            }
+            Err(err) => {
+                warn!("Failed to load HUD font {}: {}", file, err);
+            }
         }
     }
     ok
@@ -246,12 +261,11 @@ fn font_assets_dir() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/fonts")
 }
 
-fn wire_font_families(fonts: &mut egui::FontDefinitions) {
+fn wire_font_families(fonts: &mut egui::FontDefinitions) -> bool {
     // CRITICAL: only bind a family to a font key that was actually loaded into
     // `font_data`. Binding FontFamily::Name to a missing key panics egui on the
     // first text render ("not bound to any fonts"). A custom Name family with
-    // no valid font ALSO panics if referenced, so we always fall back to a
-    // loaded key (or skip the family entirely).
+    // no valid font ALSO panics if referenced.
     let has = |k: &str| fonts.font_data.contains_key(k);
 
     if has("montserrat") {
@@ -268,40 +282,27 @@ fn wire_font_families(fonts: &mut egui::FontDefinitions) {
             .or_default()
             .insert(0, "jetbrains".into());
     }
-    // Bricolage display family — fall back to montserrat (or the default
-    // proportional stack) so the Name family is NEVER bound to nothing.
-    let bricolage_stack: Vec<String> = if has("bricolage") {
-        vec!["bricolage".into()]
-    } else if has("montserrat") {
-        vec!["montserrat".into()]
-    } else {
-        fonts
-            .families
-            .get(&FontFamily::Proportional)
-            .cloned()
-            .unwrap_or_default()
-    };
-    if !bricolage_stack.is_empty() {
-        fonts
-            .families
-            .insert(FontFamily::Name("bricolage".into()), bricolage_stack);
+
+    let mut bricolage_bound = false;
+    if has("bricolage") {
+        fonts.families.insert(
+            FontFamily::Name("bricolage".into()),
+            vec!["bricolage".into()],
+        );
+        bricolage_bound = true;
     }
-    let bold_stack: Vec<String> = if has("montserrat-bold") {
-        vec!["montserrat-bold".into(), "montserrat".into()]
-    } else if has("montserrat") {
-        vec!["montserrat".into()]
-    } else {
-        fonts
-            .families
-            .get(&FontFamily::Proportional)
-            .cloned()
-            .unwrap_or_default()
-    };
-    if !bold_stack.is_empty() {
+
+    if has("montserrat-bold") {
+        let mut bold_stack: Vec<String> = vec!["montserrat-bold".into()];
+        if has("montserrat") {
+            bold_stack.push("montserrat".into());
+        }
         fonts
             .families
             .insert(FontFamily::Name("montserrat-bold".into()), bold_stack);
     }
+
+    bricolage_bound
 }
 
 /// Apply Keycap chrome theme + typography to the egui context.
@@ -350,7 +351,7 @@ fn apply_widget_visuals(v: &mut egui::Visuals, r: egui::CornerRadius) {
 }
 
 pub fn apply_type_scale(style: &mut egui::Style) {
-    use FontFamily::{Monospace, Name, Proportional};
+    use FontFamily::{Monospace, Proportional};
     // Headings use Proportional (Montserrat once loaded) — NOT a custom Name
     // family. Referencing `FontFamily::Name("bricolage")` in a TextStyle panics
     // egui if the family is not bound yet at render time (font load is async /

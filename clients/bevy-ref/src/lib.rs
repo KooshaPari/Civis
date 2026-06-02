@@ -97,6 +97,8 @@ pub mod terrain;
 pub mod window_icon;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
+#[cfg(feature = "voxel")]
+pub mod voxel_smooth_mesher;
 /// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
 /// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
 #[cfg(feature = "voxel_stream")]

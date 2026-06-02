@@ -16,9 +16,10 @@ use civ_voxel::material::{
 };
 use civ_voxel::worldgen;
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffer};
+use crate::voxel_smooth_mesher::{build_smooth_meshes, resolved_mesher_mode, TerrainMesherMode};
 
 use crate::camera::CameraRig;
-use crate::{bevy_render::mesh_buffer_to_bevy, should_render_chunk};
+use crate::{bevy_render::mesh_buffer_to_bevy, chunk_distance_from_camera, should_render_chunk};
 
 /// Fallback seed used only when no `WorldSetupParams` resource is available
 /// (i.e. the `egui` menu feature is compiled out). With menus present, the
@@ -30,6 +31,7 @@ const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 const CA_TICK_HZ: f32 = 2.0;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
+const SMOOTH_CUBIC_FALLBACK_DIST: f32 = 120.0;
 // Playable MVP surface. 256³ = 4096 chunks meshed SYNCHRONOUSLY on load = a
 // multi-minute main-thread freeze (no async/streamed mesh yet). 96³ = 216
 // chunks loads in ~1-2s and is a genuine ~0.2mi² sandbox. Scale back to 256³
@@ -240,7 +242,7 @@ pub fn build_voxel_world(
         &mut materials,
         &state.grid,
         None,
-        camera_eye,
+        None,
     );
     info!(
         "[voxel] spawned {} chunk-submesh entities",
@@ -364,6 +366,54 @@ fn split_by_material(buf: &MeshBuffer) -> Vec<(MaterialId, MeshBuffer)> {
     groups.into_iter().collect()
 }
 
+fn should_use_smooth_mesh(
+    chunk_id: ChunkId,
+    camera_eye: Option<[f32; 3]>,
+    mode: TerrainMesherMode,
+) -> bool {
+    match mode {
+        TerrainMesherMode::Cubic => false,
+        TerrainMesherMode::Smooth => {
+            let Some(eye) = camera_eye else {
+                return true;
+            };
+            chunk_distance_from_camera(chunk_id, eye, CHUNK_EDGE as f32) <= smooth_far_distance()
+        }
+    }
+}
+
+fn smooth_far_distance() -> f32 {
+    SMOOTH_CUBIC_FALLBACK_DIST
+}
+
+fn chunk_saturation(
+    grid: &CaGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+) -> Option<Vec<u8>> {
+    if grid.saturation.is_empty() {
+        return None;
+    }
+    let mut saturation = Vec::with_capacity(CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE);
+    for z in 0..CHUNK_EDGE {
+        for y in 0..CHUNK_EDGE {
+            for x in 0..CHUNK_EDGE {
+                let gx = cx * CHUNK_EDGE + x;
+                let gy = cy * CHUNK_EDGE + y;
+                let gz = cz * CHUNK_EDGE + z;
+                if gx >= grid.dims[0] || gy >= grid.dims[1] || gz >= grid.dims[2] {
+                    saturation.push(0);
+                    continue;
+                }
+                let idx = gx + gy * grid.dims[0] + gz * grid.dims[0] * grid.dims[1];
+                saturation.push(grid.saturation[idx]);
+            }
+        }
+    }
+    Some(saturation)
+}
+
 /// Mesh one chunk, split it by material, and spawn world-offset Bevy entities.
 fn spawn_chunk_meshes(
     commands: &mut Commands,
@@ -396,11 +446,44 @@ fn spawn_chunk_meshes(
                     }
                 }
                 let voxels = slice_chunk(grid, cx, cy, cz);
-                let view = ChunkView { id: chunk_id, voxels: &voxels };
-                let Ok(mesh_buffer) = CubicMesher::mesh_cubic(view, LodLevel(0)) else {
-                    continue;
+                let view = ChunkView {
+                    id: chunk_id,
+                    voxels: &voxels,
                 };
-                for (material_id, submesh) in split_by_material(&mesh_buffer) {
+                let mode = resolved_mesher_mode();
+                let use_smooth = should_use_smooth_mesh(chunk_id, camera_eye, mode);
+                let mut mesh_buffers: Vec<MeshBuffer> = if use_smooth {
+                    let saturation = chunk_saturation(grid, cx, cy, cz);
+                    build_smooth_meshes(&voxels, saturation.as_deref(), &registry)
+                } else {
+                    match CubicMesher::mesh_cubic(view, LodLevel(0)) {
+                        Ok(mesh_buffer) => split_by_material(&mesh_buffer)
+                            .into_iter()
+                            .map(|(_, submesh)| submesh)
+                            .collect(),
+                        Err(_) => Vec::new(),
+                    }
+                };
+                if use_smooth && mesh_buffers.is_empty() && voxels.iter().any(|v| *v != AIR) {
+                    match CubicMesher::mesh_cubic(view, LodLevel(0)) {
+                        Ok(mesh_buffer) => {
+                            mesh_buffers.extend(
+                                split_by_material(&mesh_buffer)
+                                    .into_iter()
+                                    .map(|(_, submesh)| submesh),
+                            );
+                        }
+                        Err(_) => {}
+                    }
+                }
+                if mesh_buffers.is_empty() {
+                    continue;
+                }
+                for submesh in mesh_buffers {
+                    let material_id = match submesh.vertices.first() {
+                        Some(v) => v.material,
+                        None => continue,
+                    };
                     let Some(def) = registry.get(material_id) else {
                         continue;
                     };

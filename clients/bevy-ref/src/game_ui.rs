@@ -431,8 +431,11 @@ fn draw_game_ui(
     ui_mode: Res<GameUiMode>,
     tool_icons: Res<ToolIcons>,
 ) {
-    // Hide HUD entirely when not in Playing mode (pause overlay, loading, etc.).
-    if *ui_mode != GameUiMode::Playing {
+    // Show the HUD while Playing OR Paused (frozen-but-visible) — matches the
+    // `menus::in_game` gate the brush/map panels use, so the left cluster, top
+    // and bottom clusters don't vanish when the others stay up (e.g. Paused, or
+    // the autoshot warm-up frame). Only menus/loading hide it entirely.
+    if !matches!(*ui_mode, GameUiMode::Playing | GameUiMode::Paused) {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {

@@ -93,7 +93,15 @@ impl Plugin for Map2dPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MapView>()
             .init_resource::<MapBasemap>()
-            .add_systems(Update, (toggle_map_hotkey, auto_engage_from_zoom, tick_fade))
+            .add_systems(
+                Update,
+                (
+                    open_map_for_autoshot,
+                    toggle_map_hotkey,
+                    auto_engage_from_zoom,
+                    tick_fade,
+                ),
+            )
             .add_systems(
                 EguiPrimaryContextPass,
                 (draw_map_view, draw_map_hint).run_if(crate::menus::in_game),
@@ -115,6 +123,23 @@ fn toggle_map_hotkey(keys: Res<ButtonInput<KeyCode>>, mut view: ResMut<MapView>)
             view.pan = egui::Vec2::ZERO;
             view.zoom = 1.0;
         }
+    }
+}
+
+/// Verification hook: when `CIVIS_MAP_OPEN=1` is set, hold the 2D map view open
+/// so a headless autoshot can frame the live-grid basemap (otherwise behind the
+/// `M` key / far-zoom auto-engage and invisible in captures).
+///
+/// Runs every frame and pins `manual_override` so `auto_engage_from_zoom` can't
+/// disengage it at the (now closer) default camera distance during warm-up. The
+/// env var is read once via a `Local` cache.
+fn open_map_for_autoshot(mut view: ResMut<MapView>, mut enabled: Local<Option<bool>>) {
+    let on = *enabled.get_or_insert_with(|| {
+        std::env::var("CIVIS_MAP_OPEN").as_deref() == Ok("1")
+    });
+    if on {
+        view.active = true;
+        view.manual_override = true;
     }
 }
 

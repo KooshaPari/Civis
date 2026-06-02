@@ -17,7 +17,8 @@ use civ_voxel::material::{
 use civ_voxel::worldgen;
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffer};
 use crate::voxel_smooth_mesher::{
-    build_smooth_meshes, resolved_mesher_mode, TerrainMesherMode, SMOOTH_MESH_PADDED_EDGE,
+    build_smooth_meshes, mesher_chunk_stats, record_cubic_chunk, resolved_mesher_mode,
+    TerrainMesherMode, SMOOTH_MESH_PADDED_EDGE,
 };
 
 use crate::camera::CameraRig;
@@ -301,6 +302,52 @@ pub fn build_voxel_world(
         "[voxel] spawned {} chunk-submesh entities",
         state.chunk_entities.len()
     );
+    log_mesher_diagnostic(&state.grid);
+}
+
+/// Runtime diagnostic for task #4 (is the smooth mesher actually shaping terrain?).
+///
+/// Logs the smooth-vs-cubic chunk split and, for one representative solid chunk,
+/// re-meshes it and reports how many vertices sit OFF the integer voxel grid.
+/// A high off-grid fraction = Surface Nets is interpolating (smooth); near-zero =
+/// vertices are snapping to the grid (cubic look), which would explain a blocky
+/// silhouette even when the smooth path runs.
+fn log_mesher_diagnostic(grid: &CaGrid) {
+    let (smooth, cubic) = mesher_chunk_stats();
+    info!("[voxel][diag] mesher chunks: smooth={smooth} cubic={cubic}");
+    let counts = [
+        grid.dims[0].div_ceil(CHUNK_EDGE),
+        grid.dims[1].div_ceil(CHUNK_EDGE),
+        grid.dims[2].div_ceil(CHUNK_EDGE),
+    ];
+    let registry = MaterialRegistry::standard();
+    for cz in 0..counts[2] {
+        for cy in 0..counts[1] {
+            for cx in 0..counts[0] {
+                let voxels = slice_chunk(grid, cx, cy, cz);
+                if !voxels.iter().any(|v| *v != AIR) {
+                    continue;
+                }
+                let padded = slice_chunk_with_apron(grid, cx, cy, cz);
+                let sat = chunk_saturation_with_apron(grid, cx, cy, cz);
+                let bufs = build_smooth_meshes(&voxels, &padded, sat.as_deref(), &registry);
+                let verts: usize = bufs.iter().map(|b| b.vertices.len()).sum();
+                let off_grid = bufs
+                    .iter()
+                    .flat_map(|b| b.vertices.iter())
+                    .filter(|v| {
+                        v.position.iter().any(|c| (c - c.round()).abs() > 0.01)
+                    })
+                    .count();
+                let pct = if verts > 0 { off_grid * 100 / verts } else { 0 };
+                info!(
+                    "[voxel][diag] sample chunk ({cx},{cy},{cz}): {verts} verts, {off_grid} off-grid ({pct}% interpolated -> {})",
+                    if pct > 25 { "SMOOTH" } else { "CUBIC-like/snapping" }
+                );
+                return;
+            }
+        }
+    }
 }
 
 /// Step the CA at a fixed rate and remesh all chunks after any tick occurs.
@@ -600,6 +647,7 @@ fn spawn_chunk_meshes(
                     let saturation = chunk_saturation_with_apron(grid, cx, cy, cz);
                     build_smooth_meshes(&voxels, &padded_voxels, saturation.as_deref(), &registry)
                 } else {
+                    record_cubic_chunk();
                     match CubicMesher::mesh_cubic(view, LodLevel(0)) {
                         Ok(mesh_buffer) => split_by_material(&mesh_buffer)
                             .into_iter()
@@ -609,6 +657,10 @@ fn spawn_chunk_meshes(
                     }
                 };
                 if use_smooth && mesh_buffers.is_empty() && voxels.iter().any(|v| *v != AIR) {
+                    // Smooth path produced no geometry for a non-empty chunk -> the
+                    // empty-mesh safety fallback runs cubic. Counted so the diagnostic
+                    // surfaces silent fallbacks (a likely "looks cubic" culprit).
+                    record_cubic_chunk();
                     match CubicMesher::mesh_cubic(view, LodLevel(0)) {
                         Ok(mesh_buffer) => {
                             mesh_buffers.extend(
@@ -633,7 +685,15 @@ fn spawn_chunk_meshes(
                     };
                     let material = pbr_material_for(material_id, def);
                     let mut bevy_mesh = mesh_buffer_to_bevy(&submesh);
-                    apply_voxel_jitter(&mut bevy_mesh, &submesh, material_id);
+                    // Per-cube jitter quantizes tint to the integer voxel cell, which
+                    // paints a CUBE GRID onto the mesh. That reads cubic even on a
+                    // smooth Surface Nets surface, so apply it ONLY to cubic meshes;
+                    // smooth meshes use flat material-base colour so the molded
+                    // geometry shows through. (World-space gradient tint can return
+                    // for smooth meshes once the geometry is confirmed molded.)
+                    if !use_smooth {
+                        apply_voxel_jitter(&mut bevy_mesh, &submesh, material_id);
+                    }
                     let entity = commands
                         .spawn((
                             Mesh3d(meshes.add(bevy_mesh)),

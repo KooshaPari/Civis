@@ -110,6 +110,13 @@ pub fn mesher_chunk_stats() -> (u64, u64) {
     )
 }
 
+/// Record that a chunk took the legacy cubic path (the smooth path self-records
+/// in `build_smooth_meshes`). Lets `mesher_chunk_stats` report a true smooth-vs-cubic
+/// split so a runtime diagnostic can tell whether terrain is actually meshing smooth.
+pub fn record_cubic_chunk() {
+    CUBIC_CHUNKS.fetch_add(1, Ordering::Relaxed);
+}
+
 fn unique_materials(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]) -> Vec<MaterialId> {
     let mut unique = HashSet::new();
     for &id in voxels.iter() {

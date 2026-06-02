@@ -22,18 +22,25 @@ const BUILDING_HALF_HEIGHT: f32 = 7.0;
 
 /// Uniform scale for the CC0 GLTF civilian (KayKit Knight) so it reads near the
 /// gameplay capsule's height.
+// Voxel world is [0, dims] world-space with 1 voxel = 1 world unit and terrain
+// ~256 units tall. A ~1.8m glb at scale 1.7 reads as ~3 units = sub-pixel /
+// invisible when the camera frames the whole world. Scale actors up so they
+// read clearly against the voxel terrain (sub-pixel mesh-scale bug).
 #[cfg(feature = "models")]
 #[cfg(feature = "voxel")]
-const CIVILIAN_MODEL_SCALE: f32 = 1.7;
+const CIVILIAN_MODEL_SCALE: f32 = 8.0;
 #[cfg(all(feature = "models", not(feature = "voxel")))]
 const CIVILIAN_MODEL_SCALE: f32 = 3.0;
 /// Scale for herd / fauna rigs (skeleton minion).
 #[cfg(feature = "models")]
+#[cfg(feature = "voxel")]
+const HERD_MODEL_SCALE: f32 = 10.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
 const HERD_MODEL_SCALE: f32 = 2.4;
 /// Uniform scale for the CC0 GLTF building (KayKit hexagon home).
 #[cfg(feature = "models")]
 #[cfg(feature = "voxel")]
-const BUILDING_MODEL_SCALE: f32 = 0.65;
+const BUILDING_MODEL_SCALE: f32 = 4.0;
 #[cfg(all(feature = "models", not(feature = "voxel")))]
 const BUILDING_MODEL_SCALE: f32 = 6.0;
 

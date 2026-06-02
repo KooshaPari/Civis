@@ -21,6 +21,7 @@ pub mod graph;
 pub mod ids;
 pub mod model;
 pub mod query;
+pub mod rumor;
 pub mod worker;
 
 pub use config::LegendsConfig;
@@ -34,6 +35,9 @@ pub use model::{
     Role, Tag,
 };
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga};
+pub use rumor::{
+    render, retell, witness, HistorianMind, Rumor, RumorMill,
+};
 pub use worker::LegendsWorker;
 
 impl SagaGraph {

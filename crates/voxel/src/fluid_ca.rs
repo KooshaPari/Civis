@@ -77,6 +77,7 @@ impl CaGrid {
         if let Some(i) = self.index(x, y, z) {
             self.cells[i] = value;
             self.temperatures[i] = temp;
+            self.mark_dirty_cell(x, y, z);
         }
     }
 

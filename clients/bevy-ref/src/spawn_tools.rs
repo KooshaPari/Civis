@@ -19,6 +19,8 @@
 use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
 use bevy::prelude::*;
 use civ_agents::ActorVisualKind;
+#[cfg(feature = "models")]
+use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
 
 use crate::minimap::MinimapCamera;
 use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
@@ -31,6 +33,20 @@ const CIVILIAN_RADIUS: f32 = 1.4;
 const CIVILIAN_BODY: f32 = 3.2;
 /// Half the total civilian height, used to seat the base on the terrain.
 const CIVILIAN_HALF_HEIGHT: f32 = CIVILIAN_BODY * 0.5 + CIVILIAN_RADIUS;
+// Match sim_bridge: voxel world is ~256 units tall, so a ~1.8m glb must be
+// scaled up to read against the terrain (sub-pixel mesh-scale bug).
+#[cfg(all(feature = "models", feature = "voxel"))]
+const CIVILIAN_MODEL_SCALE: f32 = 8.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const CIVILIAN_MODEL_SCALE: f32 = 1.7;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const HERD_MODEL_SCALE: f32 = 10.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const HERD_MODEL_SCALE: f32 = 2.4;
+#[cfg(all(feature = "models", feature = "voxel"))]
+const BUILDING_MODEL_SCALE: f32 = 4.0;
+#[cfg(all(feature = "models", not(feature = "voxel")))]
+const BUILDING_MODEL_SCALE: f32 = 6.0;
 /// Building cuboid full extents (x, y, z).
 const BUILDING_EXTENTS: Vec3 = Vec3::new(7.0, 12.0, 7.0);
 /// Half the building height, used to seat the base on the terrain.
@@ -513,16 +529,82 @@ fn apply_spawn_requests(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
     mut civilians: MessageReader<SpawnCivilianRequest>,
     mut buildings: MessageReader<SpawnBuildingRequest>,
 ) {
     for request in civilians.read() {
+        #[cfg(feature = "models")]
+        {
+            let mut spawned = false;
+            if let Some(models) = models
+                .as_ref()
+                .and_then(|models| model_root_for_spawn(models, request.model_kind))
+            {
+                let seated = seat_on_terrain(request.position, CIVILIAN_HALF_HEIGHT);
+                commands.spawn((
+                    SandboxEntity,
+                    models,
+                    Transform::from_translation(seated)
+                        .with_scale(Vec3::splat(model_scale_for_kind(request.model_kind))),
+                ));
+                spawned = true;
+            }
+            if !spawned {
+                spawn_civilian_entity(&mut commands, &mut meshes, &mut materials, request.position);
+            }
+        }
+        #[cfg(not(feature = "models"))]
         spawn_civilian_entity(&mut commands, &mut meshes, &mut materials, request.position);
         info!("[tools] SPAWNED civilian at {:?}", request.position);
     }
     for request in buildings.read() {
+        #[cfg(feature = "models")]
+        {
+            let mut spawned = false;
+            if let Some(models) = models.as_ref().and_then(|models| building_root_for_spawn(models)) {
+                let seated = seat_on_terrain(request.position, BUILDING_HALF_HEIGHT);
+                commands.spawn((
+                    SandboxEntity,
+                    models,
+                    Transform::from_translation(seated).with_scale(Vec3::splat(BUILDING_MODEL_SCALE)),
+                ));
+                spawned = true;
+            }
+            if !spawned {
+                spawn_building_entity(&mut commands, &mut meshes, &mut materials, request.position);
+            }
+        }
+        #[cfg(not(feature = "models"))]
         spawn_building_entity(&mut commands, &mut meshes, &mut materials, request.position);
         info!("[tools] SPAWNED building at {:?}", request.position);
+    }
+}
+
+#[cfg(feature = "models")]
+fn model_scale_for_kind(kind: ActorVisualKind) -> f32 {
+    match kind {
+        ActorVisualKind::Humanoid => CIVILIAN_MODEL_SCALE,
+        ActorVisualKind::Herd => HERD_MODEL_SCALE,
+    }
+}
+
+#[cfg(feature = "models")]
+fn model_root_for_spawn(
+    models: &crate::gltf_models::GameModels,
+    kind: ActorVisualKind,
+) -> Option<SceneRoot> {
+    match actor_scene(models, kind, 0) {
+        ModelOrPrimitive::Model(root) => Some(root),
+        ModelOrPrimitive::Primitive => None,
+    }
+}
+
+#[cfg(feature = "models")]
+fn building_root_for_spawn(models: &crate::gltf_models::GameModels) -> Option<SceneRoot> {
+    match building_scene(models) {
+        ModelOrPrimitive::Model(root) => Some(root),
+        ModelOrPrimitive::Primitive => None,
     }
 }
 

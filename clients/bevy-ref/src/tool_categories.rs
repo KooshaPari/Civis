@@ -247,10 +247,11 @@ impl Category {
             "Structure" => "spawn-structure",
             "Terraform" => "terraform",
             "Material" => "spawn-material",
+            "Infra" => "infra",
             "Disaster" => "disaster",
             "Diplomacy" => "diplomacy",
             "Policy" => "policy",
-            _ => return None, // e.g. "Infra" — no committed PNG; keep the glyph.
+            _ => return None,
         })
     }
 }

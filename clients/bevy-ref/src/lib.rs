@@ -32,6 +32,8 @@ pub mod material_brush_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_cluster;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod holo_minimap;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;

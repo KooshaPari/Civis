@@ -646,6 +646,122 @@ pub fn motion_rect(
     out
 }
 
+/// Frosted Liquid Glass frame for decks, sidebars, and pill shells.
+pub fn liquid_glass_frame(margin: egui::Margin, radius: u8) -> egui::Frame {
+    egui::Frame::NONE
+        .fill(DECK_GLASS)
+        .inner_margin(margin)
+        .stroke(egui::Stroke::new(1.0, DECK_BORDER))
+        .corner_radius(egui::CornerRadius::same(radius))
+        .shadow(deck_shadow())
+}
+
+/// Draw a block-style Liquid Glass pill (fill + rim + sheen + optional accent bloom).
+pub fn liquid_glass_pill(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    radius: u8,
+    lit: bool,
+    hovered: bool,
+) {
+    let fill = if lit {
+        DECK_GLASS.gamma_multiply(1.16)
+    } else if hovered {
+        DECK_GLASS.gamma_multiply(1.08)
+    } else {
+        DECK_GLASS
+    };
+    painter.rect_filled(rect, radius as f32, fill);
+    painter.rect_stroke(
+        rect,
+        radius as f32,
+        egui::Stroke::new(1.0, if lit { KC_ACCENT } else { DECK_BORDER }),
+        egui::StrokeKind::Outside,
+    );
+    gloss_sheen(painter, rect);
+    let inner = rect.shrink(1.5);
+    painter.rect_stroke(
+        inner,
+        radius as f32,
+        egui::Stroke::new(1.5, egui::Color32::from_white_alpha(26)),
+        egui::StrokeKind::Inside,
+    );
+    if lit {
+        rim_glow(painter, rect, KC_ACCENT, radius);
+        inner_glow(painter, rect, KC_ACCENT, radius);
+    }
+}
+
+/// Subtle multi-pass inner glow inset for depth in glass panels and pills.
+pub fn soft_inner_glow(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, radius: u8) {
+    for (i, alpha) in [(1.0_f32, 0.18_f32), (2.7, 0.12), (4.6, 0.08)] {
+        painter.rect_stroke(
+            rect.shrink(i),
+            radius as f32 * 0.9,
+            egui::Stroke::new(1.0, color.gamma_multiply(alpha)),
+            egui::StrokeKind::Inside,
+        );
+    }
+}
+
+/// Draw a low-cost diagonal specular sweep across `rect` driven by `time`.
+pub fn specular_sweep(painter: &egui::Painter, rect: egui::Rect, time: f64, radius: u8) {
+    let mut mesh = egui::Mesh::default();
+    let speed = 0.28_f64;
+    let band = (rect.width() * 0.28).max(20.0);
+    let phase = (time as f32 * speed as f32).fract();
+    let drift = rect.width() + rect.height() + band * 1.2;
+    let x = rect.left() - band * 0.6 + phase * drift;
+    let y = rect.top() + rect.height() * 0.28;
+    let up = egui::vec2(rect.height() * 0.08, -rect.height() * 0.08);
+    let p0 = egui::pos2(x, y) + up;
+    let p1 = egui::pos2(x + band, y) + up;
+    let p2 = egui::pos2(p1.x + rect.height() * 0.12, p1.y + rect.height());
+    let p3 = egui::pos2(p0.x + rect.height() * 0.12, p0.y + rect.height());
+    let i = mesh.vertices.len() as u32;
+    mesh.colored_vertex(p0, egui::Color32::from_white_alpha(0));
+    mesh.colored_vertex(p1, egui::Color32::from_white_alpha(60));
+    mesh.colored_vertex(p2, egui::Color32::from_white_alpha(0));
+    mesh.colored_vertex(p3, egui::Color32::from_white_alpha(0));
+    mesh.add_triangle(i, i + 1, i + 2);
+    mesh.add_triangle(i, i + 2, i + 3);
+    painter.add(egui::Shape::mesh(mesh));
+    painter.rect_stroke(rect, radius as f32, egui::Stroke::new(1.0, DECK_BORDER), egui::StrokeKind::Inside);
+    panel_finish(painter, rect, radius, false, false);
+}
+
+/// Paint a centred icon (PNG when `icon_tex` is `Some`, else the unicode glyph)
+/// above a small caption inside `rect`. Shared by the cluster pills + tiles so
+/// category and sub-tool blocks render identically.
+pub fn paint_cluster_icon_label(
+    p: &egui::Painter,
+    rect: egui::Rect,
+    icon: &str,
+    label: &str,
+    lit: bool,
+    accent: egui::Color32,
+    icon_tex: Option<egui::TextureId>,
+) {
+    let icon_color = if lit { accent } else { DECK_TEXT };
+    let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.38);
+    if let Some(tex) = icon_tex {
+        let side = (rect.height() * 0.42).clamp(18.0, 28.0);
+        let img_rect = egui::Rect::from_center_size(icon_at, egui::vec2(side, side));
+        let tint = if lit { egui::Color32::WHITE } else { egui::Color32::from_white_alpha(220) };
+        p.image(
+            tex,
+            img_rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            tint,
+        );
+    } else {
+        p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(20.0), icon_color);
+    }
+    let label_color = if lit { accent } else { DECK_TEXT_MID };
+    let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
+    p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

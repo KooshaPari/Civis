@@ -37,12 +37,11 @@ use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 use crate::holo_minimap::HoloMinimapPlugin;
 use crate::menus::GameUiMode;
 use crate::spawn_tools::{ActiveTool, SelectedEntity};
-use crate::tool_categories::{ActiveSubTool, Category, SubTool, CATEGORIES};
+use crate::tool_categories::{ActiveSubTool, SubTool, CATEGORIES};
 use crate::ui_theme::{
-    accent_frame, apply_theme, compact, deck_chip, deck_rim_frame, hairline, motion_rect,
-    panel_finish, ACCENT, DECK_ACCENT, DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT,
-    DECK_TEXT_MID, GOLD, GREEN, RED, INSET_FILL, RADIUS, RADIUS_BTN, RADIUS_PANEL, RADIUS_SM,
-    SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, BORDER, DIM, TEXT,
+    apply_theme, compact, deck_chip, hairline, liquid_glass_frame, panel_finish, DECK_ACCENT,
+    DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT, DECK_TEXT_MID, GOLD, GREEN, RED, INSET_FILL,
+    RADIUS_BTN, RADIUS_PANEL, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, BORDER, DIM, TEXT,
 };
 
 // ---------------------------------------------------------------------------
@@ -268,6 +267,7 @@ const TOOL_ICON_PATHS: &[(&str, &str)] = &[
     ("select", "ui/tool-icons/select.png"),
     ("spawn-life", "ui/tool-icons/spawn-life.png"),
     ("spawn-structure", "ui/tool-icons/spawn-structure.png"),
+    ("infra", "ui/tool-icons/infra.png"),
     ("terraform", "ui/tool-icons/terraform.png"),
     ("spawn-material", "ui/tool-icons/spawn-material.png"),
     ("disaster", "ui/tool-icons/disaster.png"),
@@ -412,40 +412,106 @@ fn draw_game_ui(
     };
     apply_theme(ctx);
 
-    egui::TopBottomPanel::top("civis_game_top_bar")
-        .frame(deck_rim_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8)))
-        .show(ctx, |ui| {
-            top_bar_ui(ui, &snapshot, &resources, &attach_mode, live_attach.as_deref());
-            panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
-        });
+    // ---- Top cluster: CENTERED readout (floating, not a full-width bar) ----
+    top_center_cluster(ctx, &snapshot, &resources, &attach_mode, live_attach.as_deref());
 
-    egui::TopBottomPanel::bottom("civis_game_bottom_bar")
-        .frame(deck_rim_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_MD as i8)))
-        .show(ctx, |ui| {
-            let mut bottom = BottomBarCtx {
-                active: &mut active_tool,
-                sub: &mut sub_tool,
-                speed: &mut speed,
-                icons: &tool_icons.ids,
-            };
-            category_bar_ui(ui, &mut bottom);
-            ui.add_space(SPACE_XS);
-            help_hint_ui(ui);
-            panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
-        });
+    // ---- Left sidebar: ONE vertical column merging Factions + Inspector ----
+    left_sidebar_cluster(ctx, &roster, selected.0.is_some(), &details);
 
-    egui::SidePanel::left("civis_game_left_panel")
+    // ---- Bottom: narrow, short, floating cluster of expanding block-pills ----
+    let mut bottom = BottomBarCtx {
+        active: &mut active_tool,
+        sub: &mut sub_tool,
+        speed: &mut speed,
+        icons: &tool_icons.ids,
+    };
+    bottom_cluster(ctx, &mut bottom);
+}
+
+/// Top-center HUD readout: a single centered floating glass cluster of stat
+/// chips + the resource strip (no longer a flush full-width top bar).
+fn top_center_cluster(
+    ctx: &egui::Context,
+    snapshot: &GameUiSnapshot,
+    resources: &WorldResources,
+    attach_mode: &crate::AttachMode,
+    live_attach: Option<&crate::live_attach::LiveAttachState>,
+) {
+    egui::Area::new(egui::Id::new("civis_top_center"))
+        .anchor(egui::Align2::CENTER_TOP, [0.0, 10.0])
+        .show(ctx, |ui| {
+            liquid_glass_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8), RADIUS_PANEL)
+                .show(ui, |ui| {
+                    top_bar_ui(ui, snapshot, resources, attach_mode, live_attach);
+                    panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
+                });
+        });
+}
+
+/// Left sidebar: a single left-edge vertical column that merges the faction
+/// roster and the selection inspector into one frosted cluster (the minimap
+/// anchor stays reserved at the bottom for `live_minimap.rs`).
+fn left_sidebar_cluster(
+    ctx: &egui::Context,
+    roster: &FactionRoster,
+    has_selection: bool,
+    details: &SelectedEntityDetails,
+) {
+    egui::SidePanel::left("civis_game_left_sidebar")
         .resizable(false)
-        .exact_width(214.0)
-        .frame(deck_rim_frame(egui::Margin::same(SPACE_MD as i8)))
-        .show(ctx, |ui| faction_panel_ui(ui, &roster));
+        .exact_width(244.0)
+        .frame(liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL))
+        .show(ctx, |ui| {
+            inspector_ui(ui, has_selection, details);
+            ui.add_space(SPACE_MD);
+            hairline(ui);
+            faction_panel_ui(ui, roster);
+        });
+}
 
-    // selected.0 is the Option<Entity> from spawn_tools::SelectedEntity.
-    egui::SidePanel::right("civis_game_selected_panel")
-        .resizable(true)
-        .default_width(276.0)
-        .frame(deck_rim_frame(egui::Margin::same(SPACE_LG as i8)))
-        .show(ctx, |ui| inspector_ui(ui, selected.0.is_some(), &details));
+/// Bottom cluster: a narrow (< full-width), short floating row of expanding
+/// category block-pills + the speed control, wrapped in a frosted glass shell
+/// with padding + margin (not a flush full-width bar).
+fn bottom_cluster(ctx: &egui::Context, bottom: &mut BottomBarCtx) {
+    egui::Area::new(egui::Id::new("civis_bottom_cluster"))
+        .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -12.0])
+        .show(ctx, |ui| {
+            // Expanded items rect (the larger rectangle) stacks ABOVE the pills.
+            if let Some(idx) = bottom.sub.open_category {
+                if let Some(cat) = CATEGORIES.get(idx) {
+                    ui.vertical_centered(|ui| {
+                        if let Some(picked) = crate::ui_cluster::items_rect(ui, cat, bottom.sub.current) {
+                            select_subtool(bottom, picked);
+                        }
+                    });
+                    ui.add_space(6.0);
+                }
+            }
+            liquid_glass_frame(egui::Margin::symmetric(SPACE_MD as i8, SPACE_SM as i8), RADIUS_PANEL)
+                .show(ui, |ui| {
+                    category_pill_row(ui, bottom);
+                    panel_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL, false, false);
+                });
+        });
+}
+
+/// One horizontal row of small category block-pills + the speed control. Each
+/// pill is the always-visible small rect; clicking toggles its items rect.
+fn category_pill_row(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+        let active_cat = ctx.sub.active_category();
+        for (idx, cat) in CATEGORIES.iter().enumerate() {
+            let is_open = ctx.sub.open_category == Some(idx);
+            let is_active = active_cat == Some(idx);
+            let icon_tex = cat.icon_key().and_then(|k| ctx.icons.get(k).copied());
+            if crate::ui_cluster::category_pill(ui, cat, is_open, is_active, icon_tex).clicked() {
+                ctx.sub.open_category = if is_open { None } else { Some(idx) };
+            }
+        }
+        ui.add_space(SPACE_MD);
+        speed_control_ui(ui, ctx.speed);
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -552,139 +618,8 @@ fn ws_status_ui(
 }
 
 // ---------------------------------------------------------------------------
-// Bottom category toolbar + flyout drawers
+// Bottom cluster helpers (sub-tool selection + speed control)
 // ---------------------------------------------------------------------------
-
-/// Bottom bar: a flyout drawer (when a category is open) above a centred
-/// category toolbar, plus a right-aligned segmented speed control.
-fn category_bar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
-    // Draw the open flyout first so it stacks above the toolbar row.
-    if let Some(idx) = ctx.sub.open_category {
-        if let Some(cat) = CATEGORIES.get(idx) {
-            flyout_drawer_ui(ui, cat, ctx);
-            ui.add_space(6.0);
-        }
-    }
-    category_toolbar_ui(ui, ctx);
-}
-
-/// The centred row of top-level category buttons + speed control on the right.
-fn category_toolbar_ui(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
-    const BTN_W: f32 = 64.0;
-    const GAP: f32 = 8.0;
-    ui.horizontal(|ui| {
-        let available = ui.available_width();
-        let bar_w = CATEGORIES.len() as f32 * (BTN_W + GAP);
-        let right_w = 240.0;
-        let left_pad = ((available - bar_w - right_w) * 0.5).max(0.0);
-        ui.add_space(left_pad);
-        let active_cat = ctx.sub.active_category();
-        for (idx, cat) in CATEGORIES.iter().enumerate() {
-            let is_open = ctx.sub.open_category == Some(idx);
-            let is_active = active_cat == Some(idx);
-            let icon_tex = cat.icon_key().and_then(|k| ctx.icons.get(k).copied());
-            if category_button(ui, cat, is_active, is_open, icon_tex).clicked() {
-                ctx.sub.open_category = if is_open { None } else { Some(idx) };
-            }
-        }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            speed_control_ui(ui, ctx.speed);
-        });
-    });
-}
-
-/// Render one 64x60 category button (PNG icon or glyph + label), lit when active/open.
-fn category_button(
-    ui: &mut egui::Ui,
-    cat: &Category,
-    active: bool,
-    open: bool,
-    icon_tex: Option<egui::TextureId>,
-) -> egui::Response {
-    let size = egui::vec2(64.0, 60.0);
-    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
-    let lit = active || open;
-    let time = ui.input(|i| i.time);
-    let paint_rect = motion_rect(rect, lit, resp.hovered(), time, ui.id().value());
-    let fill = if lit {
-        DECK_ACCENT.gamma_multiply(0.22)
-    } else if resp.hovered() {
-        DECK_GLASS.gamma_multiply(1.05)
-    } else {
-        DECK_GLASS.gamma_multiply(0.92)
-    };
-    let stroke = if lit {
-        egui::Stroke::new(1.5, DECK_ACCENT)
-    } else if resp.hovered() {
-        egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.55))
-    } else {
-        egui::Stroke::new(1.0, DECK_BORDER)
-    };
-    let p = ui.painter();
-    p.rect_filled(paint_rect, RADIUS_BTN as f32, fill);
-    p.rect_stroke(paint_rect, RADIUS_BTN as f32, stroke, egui::StrokeKind::Inside);
-    panel_finish(p, paint_rect, RADIUS_BTN, resp.is_pointer_button_down_on(), lit);
-    let accent = if lit { DECK_ACCENT } else { cat.accent };
-    paint_icon_label(p, paint_rect, cat.icon, cat.label, lit, accent, icon_tex);
-    // A small caret marks that the slot opens a flyout drawer.
-    let caret = paint_rect.center_top() + egui::vec2(0.0, 4.0);
-    let caret_col = if open { DECK_ACCENT } else { DECK_TEXT_MID.gamma_multiply(0.7) };
-    p.text(caret, egui::Align2::CENTER_TOP, "\u{25be}", egui::FontId::proportional(9.0), caret_col);
-    resp.on_hover_text(format!("{} \u{25b8}  [{}]", cat.label, cat.hotkey))
-}
-
-/// Paint a centred icon + caption inside `rect` (shared by category/sub-tool).
-///
-/// When `icon_tex` is `Some`, the rasterized PNG tool-icon is drawn; otherwise it
-/// falls back to the unicode `icon` glyph so the toolbar is never empty.
-fn paint_icon_label(
-    p: &egui::Painter,
-    rect: egui::Rect,
-    icon: &str,
-    label: &str,
-    lit: bool,
-    accent: egui::Color32,
-    icon_tex: Option<egui::TextureId>,
-) {
-    let icon_color = if lit { accent } else { DECK_TEXT };
-    let icon_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.40);
-    if let Some(tex) = icon_tex {
-        // Draw the PNG centred on the icon anchor; tint white when lit for a
-        // subtle highlight, otherwise near-full opacity for an inert look.
-        let side = 26.0_f32;
-        let img_rect = egui::Rect::from_center_size(icon_at, egui::vec2(side, side));
-        let tint = if lit {
-            egui::Color32::WHITE
-        } else {
-            egui::Color32::from_white_alpha(220)
-        };
-        p.image(tex, img_rect, egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), tint);
-    } else {
-        p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(22.0), icon_color);
-    }
-    let label_color = if lit { accent } else { DECK_TEXT_MID };
-    let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
-    p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
-}
-
-/// The flyout drawer: a framed panel of sub-tool buttons for the open category.
-fn flyout_drawer_ui(ui: &mut egui::Ui, cat: &Category, ctx: &mut BottomBarCtx) {
-    accent_frame(egui::Margin::symmetric(12, 9), cat.accent).show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(format!("{}  {}", cat.icon, cat.label)).color(cat.accent).strong());
-            ui.label(egui::RichText::new(format!("\u{2022}  {} tools", cat.subtools.len())).color(DIM).small());
-        });
-        ui.add_space(4.0);
-        ui.horizontal_wrapped(|ui| {
-            for &st in cat.subtools {
-                let is_active = ctx.sub.current == st;
-                if subtool_button(ui, st, is_active, cat.accent).clicked() {
-                    select_subtool(ctx, st);
-                }
-            }
-        });
-    });
-}
 
 /// Pick a sub-tool: set the UI-side current tool + sync the backing SpawnTool.
 fn select_subtool(ctx: &mut BottomBarCtx, st: SubTool) {
@@ -696,45 +631,11 @@ fn select_subtool(ctx: &mut BottomBarCtx, st: SubTool) {
     // Infra Lead grows SpawnTool; the UI still lights them as the picked tool.
 }
 
-/// Render one 70x56 sub-tool button inside a flyout, lit when it is current.
-fn subtool_button(ui: &mut egui::Ui, st: SubTool, active: bool, accent: egui::Color32) -> egui::Response {
-    let size = egui::vec2(70.0, 56.0);
-    let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
-    let inert = !st.is_active_capable();
-    let time = ui.input(|i| i.time);
-    let paint_rect = motion_rect(rect, active, resp.hovered(), time, ui.id().value());
-    let fill = if active {
-        accent.gamma_multiply(0.24)
-    } else if resp.hovered() {
-        DECK_GLASS.gamma_multiply(1.05)
-    } else {
-        DECK_GLASS.gamma_multiply(0.9)
-    };
-    let stroke = if active {
-        egui::Stroke::new(1.5, accent)
-    } else if resp.hovered() {
-        egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.5))
-    } else {
-        egui::Stroke::new(1.0, DECK_BORDER)
-    };
-    let p = ui.painter();
-    p.rect_filled(paint_rect, RADIUS_SM as f32, fill);
-    p.rect_stroke(paint_rect, RADIUS_SM as f32, stroke, egui::StrokeKind::Inside);
-    panel_finish(p, paint_rect, RADIUS_SM, resp.is_pointer_button_down_on(), active);
-    let lit = active && !inert;
-    paint_icon_label(p, paint_rect, st.icon(), st.label(), lit, accent, None);
-    let tip = if inert {
-        format!("{} — coming soon", st.label())
-    } else {
-        st.label().to_string()
-    };
-    resp.on_hover_text(tip)
-}
-
 /// Segmented speed control: pause / 1x / 2x / 5x / 10x wired to GameSpeed.
 fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
-    // Reversed because the parent layout is right_to_left.
-    let steps = [(4u32, "10x"), (3, "5x"), (2, "2x"), (1, "1x"), (0, "\u{23f8}")];
+    ui.label(egui::RichText::new("\u{23f5} Speed").color(DECK_TEXT_MID).small());
+    // Left-to-right order inside the bottom cluster row.
+    let steps = [(0u32, "\u{23f8}"), (1, "1x"), (2, "2x"), (3, "5x"), (4, "10x")];
     for (mult, label) in steps {
         let active = speed.multiplier == mult;
         let mut text = egui::RichText::new(label).size(13.0).monospace();
@@ -760,20 +661,6 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
             speed.multiplier = mult;
         }
     }
-    ui.label(egui::RichText::new("\u{23f5} Speed").color(DECK_TEXT_MID).small());
-}
-
-/// Persistent help / hotkey hint line under the toolbar.
-fn help_hint_ui(ui: &mut egui::Ui) {
-    ui.vertical_centered(|ui| {
-        ui.label(
-            egui::RichText::new(
-                "Space pause  \u{2022}  1-4 speed  \u{2022}  Q/E/R/C/T/A/X/D/F categories  \u{2022}  L event log  \u{2022}  Esc menu",
-            )
-            .color(DECK_TEXT_MID.gamma_multiply(0.85))
-            .small(),
-        );
-    });
 }
 
 // ---------------------------------------------------------------------------

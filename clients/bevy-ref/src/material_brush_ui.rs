@@ -39,7 +39,7 @@
 use bevy::prelude::*;
 
 use bevy_egui::egui;
-use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase};
+use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, AIR};
 use civ_voxel::MaterialId;
 
 use crate::ui_theme;
@@ -634,6 +634,7 @@ fn paint_into_voxel_grid(
         centre,
         selected.clamped_size(),
         selected.strength,
+        selected.mode,
         selected.material,
         salt,
     );
@@ -651,6 +652,7 @@ fn stamp_sphere(
     centre: Vec3,
     radius: f32,
     strength: f32,
+    mode: MaterialPaintMode,
     material: MaterialId,
     salt: u64,
 ) {
@@ -661,21 +663,33 @@ fn stamp_sphere(
     let cz = centre.z.round() as i64;
     let ri = r.ceil() as i64;
     let strength = strength.clamp(0.0, 1.0);
+    let add_mode = matches!(mode, MaterialPaintMode::AdditiveDrop);
     for dz in -ri..=ri {
-        for dy in -ri..=ri {
-            for dx in -ri..=ri {
-                let dist2 = (dx * dx + dy * dy + dz * dz) as f32;
-                if dist2 > r2 {
-                    continue;
-                }
-                let (x, y, z) = (cx + dx, cy + dy, cz + dz);
-                if x < 0 || y < 0 || z < 0 {
-                    continue;
-                }
+        for dx in -ri..=ri {
+            let xz2 = dx * dx + dz * dz;
+            if xz2 > ri * ri {
+                continue;
+            }
+            let x = cx + dx;
+            let z = cz + dz;
+            let max_y = if add_mode { cy + 2 * ri } else { cy + ri };
+            let min_y = if add_mode { cy } else { cy - ri };
+            for y in min_y..=max_y {
                 if strength < 1.0 && voxel_dither(x, y, z, salt) >= strength {
                     continue;
                 }
-                grid.set(x as usize, y as usize, z as usize, material);
+                if x < 0 || y < 0 || z < 0 {
+                    continue;
+                }
+                if !add_mode {
+                    let dy = y - cy;
+                    let dist2 = (dx * dx + dy * dy + dz * dz) as f32;
+                    if dist2 > r2 {
+                        continue;
+                    }
+                }
+                let write_mat = if mode == MaterialPaintMode::Erase { AIR } else { material };
+                grid.set(x as usize, y as usize, z as usize, write_mat);
             }
         }
     }

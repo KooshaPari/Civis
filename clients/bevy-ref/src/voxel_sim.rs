@@ -32,6 +32,57 @@ const CA_TICK_HZ: f32 = 2.0;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
 const SMOOTH_CUBIC_FALLBACK_DIST: f32 = 120.0;
+
+fn smooth_far_distance() -> f32 {
+    let configured = std::env::var("CIVIS_SMOOTH_FAR_DIST")
+        .ok()
+        .and_then(|value| value.parse::<f32>().ok())
+        .filter(|v| v.is_finite())
+        .unwrap_or(SMOOTH_CUBIC_FALLBACK_DIST);
+
+    configured.max(RENDER_MAX_DIST)
+}
+
+#[cfg(test)]
+mod smooth_mesh_distance_tests {
+    use super::smooth_far_distance;
+    use super::RENDER_MAX_DIST;
+
+    #[test]
+    fn smooth_far_distance_defaults_to_render_max_when_env_unset_or_invalid() {
+        let prev = std::env::var_os("CIVIS_SMOOTH_FAR_DIST");
+        std::env::remove_var("CIVIS_SMOOTH_FAR_DIST");
+
+        let resolved = smooth_far_distance();
+        assert!(resolved >= RENDER_MAX_DIST);
+
+        std::env::set_var("CIVIS_SMOOTH_FAR_DIST", "not_a_number");
+        let resolved_invalid = smooth_far_distance();
+        assert!(resolved_invalid >= RENDER_MAX_DIST);
+
+        match prev {
+            Some(value) => std::env::set_var("CIVIS_SMOOTH_FAR_DIST", value),
+            None => std::env::remove_var("CIVIS_SMOOTH_FAR_DIST"),
+        }
+    }
+
+    #[test]
+    fn smooth_far_distance_reads_env_and_respects_mandated_minimum() {
+        let prev = std::env::var_os("CIVIS_SMOOTH_FAR_DIST");
+
+        std::env::set_var("CIVIS_SMOOTH_FAR_DIST", "256");
+        assert_eq!(smooth_far_distance(), 256.0);
+
+        std::env::set_var("CIVIS_SMOOTH_FAR_DIST", "40");
+        assert!(smooth_far_distance() >= RENDER_MAX_DIST);
+
+        match prev {
+            Some(value) => std::env::set_var("CIVIS_SMOOTH_FAR_DIST", value),
+            None => std::env::remove_var("CIVIS_SMOOTH_FAR_DIST"),
+        }
+    }
+}
+
 // Playable MVP surface. 256³ = 4096 chunks meshed SYNCHRONOUSLY on load = a
 // multi-minute main-thread freeze (no async/streamed mesh yet). 96³ = 216
 // chunks loads in ~1-2s and is a genuine ~0.2mi² sandbox. Scale back to 256³
@@ -422,10 +473,6 @@ fn should_use_smooth_mesh(
             chunk_distance_from_camera(chunk_id, eye, CHUNK_EDGE as f32) <= smooth_far_distance()
         }
     }
-}
-
-fn smooth_far_distance() -> f32 {
-    SMOOTH_CUBIC_FALLBACK_DIST
 }
 
 fn chunk_saturation(

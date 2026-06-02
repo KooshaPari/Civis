@@ -66,6 +66,18 @@ pub mod asset_paths {
     pub const TREE: &str = "models/tree.glb";
     /// Generic building model.
     pub const BUILDING: &str = "models/building.glb";
+    /// Farm/house-specific building model variant.
+    pub const BUILDING_HOUSE_B: &str = "models/building_house_B.glb";
+    /// Marketplace building model variant.
+    pub const BUILDING_MARKET: &str = "models/building_market.glb";
+    /// Temple/church building model variant.
+    pub const BUILDING_CHURCH: &str = "models/building_church.glb";
+    /// Tavern/barracks/tower building model variant.
+    pub const BUILDING_TAVERN: &str = "models/building_tavern.glb";
+    /// Vertical tower-style building variant.
+    pub const BUILDING_TOWER: &str = "models/building_tower.glb";
+    /// Well/mineshaft stand-in building variant.
+    pub const BUILDING_WELL: &str = "models/building_well.glb";
 }
 
 /// Loaded CC0 GLTF scene handles, populated at [`Startup`] by
@@ -91,6 +103,18 @@ pub struct GameModels {
     pub tree: Option<Handle<Scene>>,
     /// Building scene (replaces the cuboid).
     pub building: Option<Handle<Scene>>,
+    /// House-specific replacement scene.
+    pub building_house_b: Option<Handle<Scene>>,
+    /// Market replacement scene.
+    pub building_market: Option<Handle<Scene>>,
+    /// Church/temple replacement scene.
+    pub building_church: Option<Handle<Scene>>,
+    /// Tavern replacement scene.
+    pub building_tavern: Option<Handle<Scene>>,
+    /// Tower/barracks/city-center replacement scene.
+    pub building_tower: Option<Handle<Scene>>,
+    /// Well/mine replacement scene.
+    pub building_well: Option<Handle<Scene>>,
 }
 
 impl GameModels {
@@ -98,9 +122,15 @@ impl GameModels {
     #[must_use]
     pub fn all_present(&self) -> bool {
         self.civilian.is_some()
-            && self.herd.is_some()
-            && self.tree.is_some()
-            && self.building.is_some()
+        && self.herd.is_some()
+        && self.tree.is_some()
+        && self.building.is_some()
+        && self.building_house_b.is_some()
+        && self.building_market.is_some()
+        && self.building_church.is_some()
+        && self.building_tavern.is_some()
+        && self.building_tower.is_some()
+        && self.building_well.is_some()
     }
 }
 
@@ -151,6 +181,18 @@ pub fn load_game_models(mut models: ResMut<GameModels>, asset_server: Res<AssetS
     models.tree = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::TREE)));
     models.building =
         Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING)));
+    models.building_house_b =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_HOUSE_B)));
+    models.building_market =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_MARKET)));
+    models.building_church =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_CHURCH)));
+    models.building_tavern =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_TAVERN)));
+    models.building_tower =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_TOWER)));
+    models.building_well =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::BUILDING_WELL)));
 }
 
 /// sim_bridge integration point — civilian.
@@ -201,6 +243,25 @@ pub fn actor_scene(models: &GameModels, kind: ActorVisualKind, faction: u32) -> 
 #[must_use]
 pub fn building_scene(models: &GameModels) -> ModelOrPrimitive {
     scene_or_primitive(&models.building)
+}
+
+#[must_use]
+pub fn building_scene_for(
+    models: &GameModels,
+    building_type: civ_engine::BuildingType,
+) -> ModelOrPrimitive {
+    let handle = match building_type {
+        civ_engine::BuildingType::Farm | civ_engine::BuildingType::House => {
+            &models.building_house_b
+        }
+        civ_engine::BuildingType::Market => &models.building_market,
+        civ_engine::BuildingType::Temple => &models.building_church,
+        civ_engine::BuildingType::Barracks => &models.building_tower,
+        civ_engine::BuildingType::Mine => &models.building_well,
+        civ_engine::BuildingType::CityCenter => &models.building_tower,
+        _ => &models.building,
+    };
+    scene_or_primitive(handle)
 }
 
 /// decorations integration point — tree. See [`civilian_scene`] for the

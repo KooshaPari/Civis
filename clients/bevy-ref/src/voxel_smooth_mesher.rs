@@ -6,6 +6,7 @@
 //! density callback so material/physics signals can eventually drive softness.
 
 use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use civ_voxel::{
     material::{MaterialDef, Phase, AIR},
@@ -16,6 +17,9 @@ use civ_voxel::material::MaterialRegistry;
 const CHUNK_EDGE: usize = 16;
 const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2;
 pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
+
+static SMOOTH_CHUNKS: AtomicU64 = AtomicU64::new(0);
+static CUBIC_CHUNKS: AtomicU64 = AtomicU64::new(0);
 
 use surface_nets::surface_net;
 
@@ -56,6 +60,7 @@ pub fn build_smooth_meshes(
     saturation: Option<&[u8]>,
     registry: &MaterialRegistry,
 ) -> Vec<MeshBuffer> {
+    SMOOTH_CHUNKS.fetch_add(1, Ordering::Relaxed);
     let mut materials = unique_materials(voxels);
     materials.sort_unstable_by_key(|id| id.0);
     materials
@@ -72,6 +77,14 @@ pub fn build_smooth_meshes(
             Some(build_surface_nets(material_id, density))
         })
         .collect()
+}
+
+#[must_use]
+pub fn mesher_chunk_stats() -> (u64, u64) {
+    (
+        SMOOTH_CHUNKS.load(Ordering::Relaxed),
+        CUBIC_CHUNKS.load(Ordering::Relaxed),
+    )
 }
 
 fn unique_materials(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]) -> Vec<MaterialId> {
@@ -125,48 +138,21 @@ fn build_material_density(
         Phase::Solid => 1.0,
         Phase::Empty => 0.75,
     };
+    let sharpness = (softness * phase_boost).clamp(0.25, 1.0);
     let default_sat = 0u8;
     move |x, y, z| {
-        let mut occupancy = 0.0f32;
-        let mut sat_acc = 0.0f32;
-        let mut sample_count = 0.0f32;
-        let base_x = x;
-        let base_y = y;
-        let base_z = z;
-        let mut max_occ = 0.0f32;
-        for dz in 0..2usize {
-            for dy in 0..2usize {
-                for dx in 0..2usize {
-                    let sx = base_x + dx;
-                    let sy = base_y + dy;
-                    let sz = base_z + dz;
-                    if sx >= CHUNK_EDGE_PADDED || sy >= CHUNK_EDGE_PADDED || sz >= CHUNK_EDGE_PADDED {
-                        continue;
-                    }
-                    let padded_idx = sx
-                        + sy * CHUNK_EDGE_PADDED
-                        + sz * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
-                    let match_target = f32::from((padded_voxels[padded_idx] == material) as u8);
-                    occupancy += match_target;
-                    let sat = saturation
-                        .as_ref()
-                        .and_then(|arr| arr.get(padded_idx))
-                        .copied()
-                        .unwrap_or(default_sat);
-                    sat_acc += f32::from(sat) / 255.0;
-                    sample_count += 1.0;
-                    max_occ = max_occ.max(match_target);
-                }
-            }
-        }
-        let occ = if sample_count > 0.0 { occupancy / sample_count } else { 0.0 };
-        let sat = if sample_count > 0.0 { sat_acc / sample_count } else { 0.0 };
-        let density = 1.0 - 2.0 * occ;
+        let (occ, sat) = sample_blurred_occupancy(
+            &padded_voxels,
+            saturation.as_deref(),
+            default_sat,
+            material,
+            x,
+            y,
+            z,
+        );
+        let density = (0.5 - occ) * 2.0 * sharpness;
         let saturation_soften = 1.0 - sat * 0.25;
-        let edge_softness = 1.0 - (max_occ * 0.2);
-        let normalized = (density * softness * saturation_soften * phase_boost * edge_softness)
-            .clamp(-1.0, 1.0);
-        if max_occ == 0.0 { 1.0 } else if max_occ == 1.0 { normalized } else { normalized * 0.85 }
+        (density * saturation_soften).clamp(-1.0, 1.0)
     }
 }
 
@@ -192,6 +178,58 @@ fn normalize_or_unit_up(mut normal: [f32; 3]) -> [f32; 3] {
     normal
 }
 
+fn sample_blurred_occupancy(
+    padded_voxels: &[MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
+    saturation: Option<&[u8]>,
+    default_sat: u8,
+    material: MaterialId,
+    x: usize,
+    y: usize,
+    z: usize,
+) -> (f32, f32) {
+    let mut occ = 0.0f32;
+    let mut sat_acc = 0.0f32;
+    let mut weight_sum = 0.0f32;
+    for dz in -1isize..=1 {
+        for dy in -1isize..=1 {
+            for dx in -1isize..=1 {
+                let sx = x as isize + dx;
+                let sy = y as isize + dy;
+                let sz = z as isize + dz;
+                if sx < 0
+                    || sy < 0
+                    || sz < 0
+                    || sx >= CHUNK_EDGE_PADDED as isize
+                    || sy >= CHUNK_EDGE_PADDED as isize
+                    || sz >= CHUNK_EDGE_PADDED as isize
+                {
+                    continue;
+                }
+                let sx = sx as usize;
+                let sy = sy as usize;
+                let sz = sz as usize;
+                let idx = sx + sy * CHUNK_EDGE_PADDED + sz * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
+                let w = weight_for_offset(dx, dy, dz);
+                let is_match = (padded_voxels[idx] == material) as u8;
+                occ += f32::from(is_match) * w;
+                let sat = saturation
+                    .and_then(|arr| arr.get(idx))
+                    .copied()
+                    .unwrap_or(default_sat);
+                sat_acc += f32::from(sat) / 255.0 * w;
+                weight_sum += w;
+            }
+        }
+    }
+    let inv = if weight_sum > 0.0 { 1.0 / weight_sum } else { 0.0 };
+    (occ * inv, sat_acc * inv)
+}
+
+#[inline]
+fn weight_for_offset(dx: isize, dy: isize, dz: isize) -> f32 {
+    1.0 / (1.0 + (dx * dx + dy * dy + dz * dz) as f32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +250,39 @@ mod tests {
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
         assert!(!bufs.is_empty());
         assert!(bufs.iter().all(|buf| !buf.vertices.is_empty()));
+    }
+
+    #[test]
+    fn density_field_varies_across_half_filled_boundary() {
+        let mut chunk = [MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut padded = [AIR; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED];
+        for z in 0..CHUNK_EDGE_PADDED {
+            for y in 0..CHUNK_EDGE_PADDED {
+                for x in 0..CHUNK_EDGE_PADDED {
+                    if x <= 8 {
+                        padded[x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] =
+                            MaterialId(1);
+                    }
+                }
+            }
+        }
+        chunk[0] = MaterialId(1);
+        let registry = MaterialRegistry::standard();
+        let def = registry.get(MaterialId(1)).expect("material exists");
+        let density = build_material_density(
+            &chunk,
+            &padded,
+            None,
+            MaterialId(1),
+            *def,
+        );
+        let air = density(13, 10, 10);
+        let solid = density(4, 10, 10);
+        let boundary = density(8, 10, 10);
+        assert!(air > 0.8);
+        assert!(solid < -0.8);
+        assert!(boundary < 0.0);
+        assert!(boundary > solid);
+        assert!(boundary < air);
     }
 }

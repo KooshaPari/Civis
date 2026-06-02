@@ -1429,8 +1429,28 @@ namespace DINOForge.Runtime.Bridge
                 {
                     _loadedBundles.Set(path, bundle);
                     DebugLog.Write("AssetSwap", $"LoadBundle: loaded '{fullPath}'");
+                    return bundle;
                 }
-                return bundle;
+
+                // #992 (null-return variant): when the LRU evicted+Unloaded a bundle but Unity's
+                // Unload has not yet completed (Unload lag), a fresh LoadFromFile of the SAME file
+                // returns NULL (not the documented 'already loaded' throw). With ~50 SW bundles and
+                // a 10-slot LRU this silently fails ~48/50 swaps. Recover by reusing the handle
+                // Unity still has loaded, keyed by bundle name. This is the load-bearing fix that
+                // lets a freshly built bundle (e.g. the rigged sw-clone-trooper-republic) actually
+                // swap instead of being marked permanently failed (#991).
+                AssetBundle? stillLoaded = FindLoadedBundleByPath(fullPath);
+                if (stillLoaded != null)
+                {
+                    _loadedBundles.Set(path, stillLoaded);
+                    if (_reportedFailures.Add($"reuse-null:{path}"))
+                        DebugLog.Write("AssetSwap",
+                            $"LoadBundle: LoadFromFile returned null but Unity still has '{Path.GetFileName(fullPath)}' " +
+                            "loaded — reusing existing handle (Unload-lag recovery, #992/#991).");
+                    return stillLoaded;
+                }
+
+                return null;
             }
             catch (Exception ex)
             {

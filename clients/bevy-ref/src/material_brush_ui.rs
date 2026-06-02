@@ -777,7 +777,7 @@ mod tests {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([16, 16, 16]);
         let mat = MaterialId(6);
-        stamp_sphere(&mut grid, Vec3::new(8.0, 8.0, 8.0), 3.0, 1.0, mat, 0);
+        stamp_sphere(&mut grid, Vec3::new(8.0, 8.0, 8.0), 3.0, 1.0, MaterialPaintMode::Replace, mat, 0);
         // Centre painted.
         assert_eq!(grid.get(8, 8, 8), mat);
         // A cell well inside the radius painted.
@@ -788,11 +788,36 @@ mod tests {
 
     #[cfg(feature = "voxel")]
     #[test]
+    fn stamp_sphere_erase_writes_air() {
+        use civ_voxel::fluid_ca::CaGrid;
+        let mut grid = CaGrid::new([16, 16, 16]);
+        let mat = MaterialId(6);
+        // Lay solid material first, then erase the same footprint.
+        stamp_sphere(&mut grid, Vec3::new(8.0, 8.0, 8.0), 3.0, 1.0, MaterialPaintMode::Replace, mat, 0);
+        assert_eq!(grid.get(8, 8, 8), mat);
+        stamp_sphere(&mut grid, Vec3::new(8.0, 8.0, 8.0), 3.0, 1.0, MaterialPaintMode::Erase, mat, 0);
+        assert_eq!(grid.get(8, 8, 8), AIR, "erase must clear the centre to air");
+    }
+
+    #[cfg(feature = "voxel")]
+    #[test]
+    fn stamp_sphere_additive_drops_column_above_centre() {
+        use civ_voxel::fluid_ca::CaGrid;
+        let mut grid = CaGrid::new([16, 32, 16]);
+        let mat = MaterialId(1);
+        let cy = 8usize;
+        stamp_sphere(&mut grid, Vec3::new(8.0, cy as f32, 8.0), 3.0, 1.0, MaterialPaintMode::AdditiveDrop, mat, 0);
+        // Additive drop fills a column ABOVE the centre so the CA carries it down.
+        assert_eq!(grid.get(8, cy + 4, 8), mat, "additive must seed material above centre");
+    }
+
+    #[cfg(feature = "voxel")]
+    #[test]
     fn stamp_sphere_strength_feathers() {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([32, 32, 32]);
         let mat = MaterialId(3);
-        stamp_sphere(&mut grid, Vec3::new(16.0, 16.0, 16.0), 8.0, 0.3, mat, 7);
+        stamp_sphere(&mut grid, Vec3::new(16.0, 16.0, 16.0), 8.0, 0.3, MaterialPaintMode::Replace, mat, 7);
         let painted = grid.cells.iter().filter(|&&c| c == mat).count();
         // Sparse brush paints some but far from all voxels in the footprint.
         assert!(painted > 0, "feathered brush painted nothing");
@@ -806,7 +831,7 @@ mod tests {
         use civ_voxel::fluid_ca::CaGrid;
         let mut grid = CaGrid::new([8, 8, 8]);
         // Centre near the origin corner so part of the brush is out of bounds.
-        stamp_sphere(&mut grid, Vec3::new(0.0, 0.0, 0.0), 4.0, 1.0, MaterialId(1), 0);
+        stamp_sphere(&mut grid, Vec3::new(0.0, 0.0, 0.0), 4.0, 1.0, MaterialPaintMode::Replace, MaterialId(1), 0);
         // Did not panic; origin cell painted.
         assert_eq!(grid.get(0, 0, 0), MaterialId(1));
     }

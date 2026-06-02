@@ -177,6 +177,20 @@ fn main() {
         });
     }
 
+    // Headless brush-mutation proof: when CIVIS_PAINT_DEMO=1, stamp a bright
+    // lava blob into the live voxel grid after the world has generated. This
+    // exercises the exact paint path the fix repairs — grid.set marks the chunk
+    // dirty, step_and_remesh re-meshes it — so the autoshot screenshot shows a
+    // painted blob on the terrain, proving the mutation→remesh→render chain.
+    #[cfg(feature = "voxel")]
+    if std::env::var("CIVIS_PAINT_DEMO").as_deref() == Ok("1") {
+        app.insert_resource(PaintDemo {
+            timer: Timer::from_seconds(6.0, TimerMode::Once),
+            done: false,
+        })
+        .add_systems(Update, paint_demo_blob);
+    }
+
     // Headless verification hook: when CIVIS_AUTOSHOT=<path> is set, capture one
     // screenshot after a short warm-up (so chunk meshes / GLTF scenes are loaded
     // and the camera has framed the world) and then exit. This lets a debug
@@ -196,6 +210,68 @@ fn main() {
     }
 
     app.run();
+}
+
+/// Headless brush-mutation demo state (see `CIVIS_PAINT_DEMO`).
+#[cfg(feature = "voxel")]
+#[derive(Resource)]
+struct PaintDemo {
+    timer: Timer,
+    done: bool,
+}
+
+/// After warm-up, stamp a bright blob into the live grid centred over the world
+/// so the next screenshot proves the paint→dirty→remesh→render path works.
+#[cfg(feature = "voxel")]
+fn paint_demo_blob(
+    time: Res<Time>,
+    mut demo: ResMut<PaintDemo>,
+    mut sim: ResMut<civ_bevy_ref::voxel_sim::VoxelSimState>,
+) {
+    use civ_voxel::material::MaterialRegistry;
+    if demo.done || !demo.timer.tick(time.delta()).just_finished() {
+        return;
+    }
+    if sim.grid.cells.is_empty() {
+        demo.timer = Timer::from_seconds(0.5, TimerMode::Once);
+        return;
+    }
+    let dims = sim.grid.dims;
+    let mat = MaterialRegistry::standard()
+        .by_name("Lava")
+        .map_or(civ_voxel::MaterialId(6), |m| m.id);
+    // Sit the blob on the surface near the world centre.
+    let (cx, cz) = (dims[0] / 2, dims[2] / 2);
+    let cy = surface_demo(&sim.grid, cx, cz);
+    let r = 10i64;
+    for dz in -r..=r {
+        for dy in -r..=r {
+            for dx in -r..=r {
+                if dx * dx + dy * dy + dz * dz > r * r {
+                    continue;
+                }
+                let (x, y, z) = (cx as i64 + dx, cy as i64 + dy, cz as i64 + dz);
+                if x < 0 || y < 0 || z < 0 {
+                    continue;
+                }
+                sim.grid.set(x as usize, y as usize, z as usize, mat);
+            }
+        }
+    }
+    info!("[paint-demo] stamped lava blob r={r} at ({cx},{cy},{cz})");
+    demo.done = true;
+}
+
+/// Surface scan for the paint demo (lowest air resting on solid).
+#[cfg(feature = "voxel")]
+fn surface_demo(grid: &civ_voxel::fluid_ca::CaGrid, x: usize, z: usize) -> usize {
+    use civ_voxel::material::AIR;
+    for y in (0..grid.dims[1]).rev() {
+        if grid.get(x, y, z) != AIR {
+            return (y + 4).min(grid.dims[1] - 1);
+        }
+    }
+    grid.dims[1] / 2
 }
 
 #[derive(Resource)]

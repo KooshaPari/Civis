@@ -380,6 +380,7 @@ fn draw_main_menu(
     mut progress: ResMut<LoadingProgress>,
     mut textures: ResMut<MenuTextures>,
     mut settings_open: ResMut<SettingsOpen>,
+    mut params: ResMut<WorldSetupParams>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if *mode != GameUiMode::MainMenu {
@@ -392,7 +393,7 @@ fn draw_main_menu(
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
-            main_menu_panel(ui, &mut mode, &mut progress, &mut settings_open, textures.logo.as_ref(), &mut exit);
+            main_menu_panel(ui, &mut mode, &mut progress, &mut settings_open, &mut params, textures.logo.as_ref(), &mut exit);
         });
     // Footer build/version line, bottom-centred.
     egui::Area::new(egui::Id::new("main_menu_footer"))
@@ -566,6 +567,7 @@ fn main_menu_panel(
     mode: &mut GameUiMode,
     progress: &mut LoadingProgress,
     settings_open: &mut SettingsOpen,
+    params: &mut WorldSetupParams,
     logo: Option<&egui::TextureHandle>,
     exit: &mut MessageWriter<AppExit>,
 ) {
@@ -590,7 +592,7 @@ fn main_menu_panel(
                         .color(DIM),
                 );
                 ui.add_space(28.0);
-                main_menu_buttons(ui, mode, progress, settings_open, exit);
+                main_menu_buttons(ui, mode, progress, settings_open, params, exit);
             });
         });
 }
@@ -614,9 +616,15 @@ fn main_menu_buttons(
     mode: &mut GameUiMode,
     progress: &mut LoadingProgress,
     settings_open: &mut SettingsOpen,
+    params: &mut WorldSetupParams,
     exit: &mut MessageWriter<AppExit>,
 ) {
     if primary_button(ui, "\u{1f30d}  New World").clicked() {
+        // Draw a fresh seed for each New World so worlds differ by default; the
+        // player can still override via the Randomize die or manual seed entry
+        // on the World-Setup screen. (Without this, every play reused the one
+        // seed drawn at WorldSetupParams::default() — same map every time.)
+        params.randomize();
         *mode = GameUiMode::WorldSetup;
     }
     ui.add_space(8.0);
@@ -1195,6 +1203,23 @@ mod tests {
         let a = fresh_seed();
         let b = fresh_seed();
         assert_ne!(a, b, "Two consecutive seeds were identical — RNG broken?");
+    }
+
+    /// The "New World" transition must draw a fresh seed so two consecutive
+    /// New Worlds differ by default (the regression this fixes: every New World
+    /// reused the one seed from WorldSetupParams::default()).
+    #[test]
+    fn new_world_transition_randomizes_seed() {
+        let mut p = WorldSetupParams {
+            seed: 1234,
+            seed_text: "1234".to_string(),
+            world_size: 1,
+            starting_era: 0,
+        };
+        // Mirror the New World button body: randomize() runs on the transition.
+        p.randomize();
+        assert_ne!(p.seed, 1234, "New World must draw a fresh seed");
+        assert_eq!(p.seed_text, p.seed.to_string(), "seed text stays in sync");
     }
 
     /// WorldSetupParams::default() must produce a seed that is large and valid.

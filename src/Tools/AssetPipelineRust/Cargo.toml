@@ -16,7 +16,7 @@ ndarray = "0.17"  # Array operations (SIMD-compatible)
 # assimp removed: requires C++ build tools and CMake. Will be wrapped in future via AssetPipeline DLL
 
 [dev-dependencies]
-criterion = "0.5"  # Benchmarking
+criterion = "0.8"  # Benchmarking
 tempfile = "3"  # Test fixtures
 
 [lib]

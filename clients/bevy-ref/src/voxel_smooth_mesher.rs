@@ -14,7 +14,8 @@ use civ_voxel::{
 };
 use civ_voxel::material::MaterialRegistry;
 
-const CHUNK_EDGE: usize = 16;
+// Must match voxel_sim::CHUNK_EDGE — both must be updated together.
+const CHUNK_EDGE: usize = 32;
 /// Apron ring (in voxels) carried around each chunk so the blur and Surface Nets
 /// can see neighbour-chunk voxels and round across seams. A 2-voxel apron is what
 /// a 5x5x5 (`BLUR_RADIUS = 2`) blur needs; with only 1 the outer blur ring falls

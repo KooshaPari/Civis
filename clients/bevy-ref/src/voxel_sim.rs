@@ -35,7 +35,7 @@ const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 // Reduced to 0.25 Hz (1 step per 4s) while CA perf is being optimised.
 // The full-grid dirty-chunk sweep is still expensive with large water coastlines.
 const CA_TICK_HZ: f32 = 0.25;
-const CHUNK_EDGE: usize = 16;
+const CHUNK_EDGE: usize = 32;
 const RENDER_MAX_DIST: f32 = 160.0;
 const SMOOTH_CUBIC_FALLBACK_DIST: f32 = 120.0;
 

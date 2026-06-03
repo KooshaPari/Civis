@@ -575,4 +575,33 @@ mod tests {
             "expected mostly interpolated verts (smooth), got {pct:.2} off-grid ({off_grid}/{verts}) — field may be grid-snapping (cubic)"
         );
     }
+
+    /// Solid chunk must produce geometry near the chunk boundary face.
+    /// Regression: with APRON=3 the density field extends far enough into neighbour
+    /// context that seam faces get vertices, reducing visible gaps between chunks.
+    #[test]
+    fn seam_chunk_produces_boundary_vertices() {
+        let chunk = [MaterialId(1); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut padded = [AIR; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE];
+        for z in 0..CHUNK_EDGE {
+            for y in 0..CHUNK_EDGE {
+                for x in 0..CHUNK_EDGE {
+                    let px = x + APRON;
+                    let py = y + APRON;
+                    let pz = z + APRON;
+                    padded[px + py * SMOOTH_MESH_PADDED_EDGE + pz * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] = MaterialId(1);
+                }
+            }
+        }
+        let registry = MaterialRegistry::standard();
+        let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
+        assert!(!bufs.is_empty(), "solid chunk produced no mesh buffers");
+        let vertex_count: usize = bufs.iter().map(|b| b.vertices.len()).sum();
+        println!("[seam_test] vertex_count={vertex_count}");
+        assert!(vertex_count > 0, "solid chunk produced 0 vertices");
+        assert!(
+            bufs.iter().any(|b| b.vertices.iter().any(|v| v.position[0] >= 10.0)),
+            "no vertex near chunk boundary (x>=10) — seam gap likely (vertex_count={vertex_count})"
+        );
+    }
 }

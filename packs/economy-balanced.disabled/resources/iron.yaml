@@ -1,9 +1,0 @@
-id: iron
-name: Iron
-description: |
-  Metal ore for weapons, armor, and advanced machinery. Mined from ore deposits.
-  Essential for military unit production. No decay.
-production_rate: 0.4
-storage_capacity: 1000.0
-decay_rate: 0.0
-is_tradeable_default: true

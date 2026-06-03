@@ -10,7 +10,7 @@ permissions:
 jobs:
   release-drafter:
     # SHA-pinned per #805; flat workflows path (subdirs not supported for reusable workflows)
-    uses: KooshaPari/phenoShared/.github/workflows/reusable-release-drafter.yml@136def14b63e59da150eae1dc525677746098dd0
+    uses: KooshaPari/phenoShared/.github/workflows/reusable-release-drafter.yml@438e2e71e448c9f1f47f184d3ca4acbb28928677
     with:
       config-name: release-drafter.yml
     secrets: inherit

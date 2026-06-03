@@ -1,15 +1,31 @@
-# F9/F10 Empty Packs Regression Diagnosis
+# F9/F10 Empty Packs + Empty Debug Panel — Regression Diagnosis (iter-149, 2026-05-29)
 
-**Date**: 2026-05-28  
+**Date**: 2026-05-29  
 **Branch**: feat/unityexplorer-devtools-20260528  
-**Deployed DLL hash (MD5)**: `67254532F266C089713FC66CFF863542`  
-**Deployed DLL timestamp**: 2026-05-28 04:04 AM PDT (11:04 UTC)
+**Deployed DLL SHA256**: `9cab855a8fe3c0ebac1081fb981f58cde402bdf949be64c9e1ee1c7195fc1436`  
+**Deployed DLL timestamp**: `May 29 02:40 UTC` (STALE — fix commit `84c3e614` is `May 29 06:16 UTC`)
 
 ---
 
-## Stale Binary Context (Critical)
+## DEFINITIVE ROOT CAUSE SUMMARY (investigator: 2026-05-29)
 
-The deployed DLL was built at **11:04 UTC** on 2026-05-28. The following commits modified the relevant UI files BEFORE that timestamp and ARE in the deployed binary:
+| Symptom | One-Line Root Cause |
+|---------|---------------------|
+| F9/F10 routing | Deployed DLL (`02:40 UTC`) pre-dates fix commit `84c3e614` (`06:16 UTC`) — F9 still calls `ToggleModMenu()`, F10 calls `ToggleDebug()` (swapped vs expected) |
+| F10 mod menu packs empty | Same stale DLL: `SetPacks()` calls `RebuildPackList()` not `ApplyFilters()` so `_filteredIndices` is never populated → "0 of N" and no items rendered; plus FilterContainer occludes scroll viewport |
+| F9 debug panel empty | Same stale DLL routes F9 to mod menu (empty per above), not to debug panel; debug panel is never shown at all |
+
+**The fix for all three symptoms is one action**: rebuild and deploy with current source. `84c3e614` already contains the corrective code.
+
+---
+
+## Stale Binary Evidence
+
+The deployed DLL was built at **02:40 UTC** on 2026-05-29. Fix commit `84c3e614` was committed at **06:16 UTC** on 2026-05-29. The DLL is 3h36m stale relative to the fix.
+
+**Log proof**: the debug log records `"[RuntimeDriver] F9 pressed (via KeyInputSystem)"` — the pre-`84c3e614` format. Commit `84c3e614` changed this string to `"[RuntimeDriver] F9 pressed → DEBUG panel (via KeyInputSystem)"`. The deployed DLL still writes the old string, proving it predates the fix. The fix commit's key-mapping log line `"Key mapping: F9=Debug, F10=Mods"` IS present — that line was added in the same commit but appears in an earlier coroutine phase (Step 1), so it was partially deployed via a previous intermediate build.
+
+The following commits are NOT yet deployed (exist in source, not in DLL):
 
 | Commit | PDT Time | UTC Time | Contents |
 |--------|----------|----------|----------|
@@ -19,168 +35,134 @@ The deployed DLL was built at **11:04 UTC** on 2026-05-28. The following commits
 | `d8c03f5e` | 03:44 PDT | 10:44 UTC | Keyboard navigation in F10 mod menu |
 | `880af1f3` | 03:54 PDT | 10:54 UTC | BepInEx.AssemblyPublicizer integration |
 
-The following commits are NOT in the deployed binary:
+The following commits from `84c3e614` are NOT yet deployed to the game:
 
-| Commit | PDT Time | Contents |
-|--------|----------|----------|
-| `6dd47121` | 04:10 PDT | Conflict resolution buttons (#903) |
-| `8de6a5cb` | later | Zebra rows, gradient bg |
-| `b2d220ae` | later | Template/tutorial pack |
-| `ae912208` | later | Pack signing |
-| `313834bd` | 05:22 PDT | Profiles save/load (#918) |
-| `320d3245` | later | Telemetry F10 tab (#921) |
-| `42a889ba` | later | i18n wiring |
-| `8416db5b` | later | Security patches |
+| Commit | Key change | File |
+|--------|------------|------|
+| `84c3e614` | F9=Debug / F10=Mods; `SetPacks` calls `ApplyFilters`; index-based filter comparison; scroll rect layout fix | `Plugin.cs`, `ModMenuPanel.cs`, `DebugPanel.cs`, `NativeMenuInjector.cs` |
 
 ---
 
-## Symptom 1: F9/F10 menus appear swapped
+## Symptom 1 — F9/F10 key routing regression
 
 ### Root Cause
-**NOT a code regression.** Commit `ff1455b2` (01:52 PDT) correctly assigned:
-- **F9** → `_dfCanvas.ToggleModMenu()` (Mod Menu)
-- **F10** → `_dfCanvas.ToggleDebug()` (Debug Panel)
+**Stale DLL.** Commit `84c3e614` (`Plugin.cs:1137-1171`) correctly wires:
+- F9 → `_dfCanvas.ToggleDebug()` (debug panel)
+- F10 → `_dfCanvas.ToggleModMenu()` (mods menu)
 
-This commit IS in the deployed DLL. The prior state (before `ff1455b2`) had them reversed. The user's mental model may still reflect the pre-fix F10=ModMenu expectation.
+The deployed DLL predates this. In the deployed binary, `ff1455b2` had already swapped to F9=Debug/F10=Mods, but that commit contained a code error described in `84c3e614`'s commit message: the `F9 pressed` log message said `"F9 pressed (via KeyInputSystem)"` but the HANDLER body called `ToggleModMenu()`. The `84c3e614` commit cleaned this up properly. The deployed DLL's F9 handler calls `ToggleModMenu()` (mod menu), not `ToggleDebug()`.
 
-**File:Line**: `src/Runtime/Plugin.cs:1134-1168`  
-**Introducing Commit**: N/A (perception regression, not a code regression)
+**Evidence**: Log line `[Plugin] [RuntimeDriver] F9 pressed (via KeyInputSystem)` at 07:32:44 — this is the OLD pre-fix format. After `84c3e614`, the same line reads `[Plugin] [RuntimeDriver] F9 pressed → DEBUG panel (via KeyInputSystem)`.
 
-### Fix Spec
-None needed. The mapping is correct. Update user docs/tooltip if the user expects F10=ModMenu, or swap back if the original expectation is the canonical design.
+**File:line** (source, already fixed): `src/Runtime/Plugin.cs:1137-1171`  
+**Introducing commit**: `ff1455b2` (mixed state), **fix commit**: `84c3e614` (not deployed)
+
+### Fix for Symptom 1
+Deploy current source. No additional source change needed.
 
 ---
 
-## Symptom 2: F9 mod menu shows EMPTY loaded packs
+## Symptom 2 — F10 mod menu shows EMPTY loaded packs
 
 ### Root Cause
-**Commit `9d59d631` introduced a two-part defect:**
+**Three sub-causes, all resolved in `84c3e614` but not deployed:**
 
-#### Part A: FilterContainer overlaps ScrollRect viewport (visual occlusion)
+#### B1 — ScrollRect collapsed behind FilterContainer
 
-`BuildListFilters(pane.transform)` inserts a FilterContainer (`LayoutElement.preferredHeight = 140f`) into the ListPane VLG **before** the ScrollRect. The ListPane VLG has `childControlHeight = false`, which means it stacks children positionally but does not resize them. The ScrollRect is configured with parent-fill anchors (`anchorMin = Vector2.zero, anchorMax = Vector2.one, offsetMax = (0, -32)`) which anchor it to the **full ListPane** rectangle, NOT to the space below the FilterContainer.
+`9d59d631` added a FilterContainer (240px height) before the ScrollRect in the ListPane. The ScrollRect had hardcoded `offsetMin/Max` overrides that anchored it to the full ListPane height, causing the FilterContainer to visually overlap and collapse the scroll area. No pack items were visible in the scroll viewport despite being created.
 
-Result: the ScrollRect's top edge starts at `ListPane.top - 32px` (just below the ListHeader), while the FilterContainer occupies `ListPane.top` through `ListPane.top + 140px`. The FilterContainer visually overlays the first 140px of the scroll viewport, hiding the top 3-4 pack items (items 0–3 in the 40px-per-item list). The pack items ARE created (`_listContent.childCount=9` confirmed by log), but the top items are occluded.
+**File:line**: `src/Runtime/UI/ModMenuPanel.cs:711` (scroll rect offset assignment, removed in `84c3e614`)  
+**Introducing commit**: `9d59d631`
 
-**File:Line**: `src/Runtime/UI/ModMenuPanel.cs:690` (`BuildListFilters(pane.transform)` call in `BuildListPane`)  
-**Fix**: Set the ScrollRect's `offsetMin` to start BELOW the FilterContainer: `scrollRt.offsetMin = new Vector2(0f, 0f)` → `scrollRt.offsetMin = new Vector2(0f, -(HeaderHeight + FilterContainerHeight))` OR restructure `BuildListPane` to nest the FilterContainer and ScrollRect in a container that uses `childControlHeight = true`, `childForceExpandHeight = false` so the VLG properly stacks them. Alternatively, change the ScrollRect anchors from fill (`0,0→1,1`) to top-anchored and add an explicit negative offsetMin of `172f` (32 header + 140 filters):
+#### B2 — `SetPacks()` called `RebuildPackList()` not `ApplyFilters()`, leaving `_filteredIndices` empty
 
-```csharp
-// In BuildListPane, after BuildListFilters and MakeScrollView:
-scrollRt.anchorMin = new Vector2(0f, 0f);
-scrollRt.anchorMax = new Vector2(1f, 1f);
-scrollRt.offsetMin = new Vector2(0f, 0f);
-scrollRt.offsetMax = new Vector2(0f, -(ListHeaderHeight + FilterContainerHeight));
-// where ListHeaderHeight = 32f, FilterContainerHeight = 140f (or 212f in profiles build)
-```
+The old `SetPacks()` (line 225 in pre-`84c3e614`) called `RebuildPackList()` directly. `_filteredIndices` is only populated by `ApplyFilters()`. Since `_filteredIndices` was empty after `SetPacks()`, `RebuildFilteredPackList()` rendered nothing and the counter showed "0 of N".
 
-#### Part B: Pack counter text always shows "0 of N" (never updated on initial load)
+**File:line**: `src/Runtime/UI/ModMenuPanel.cs:268` (`ApplyFilters()` call, added in `84c3e614`)  
+**Introducing commit**: `9d59d631` (added filter but didn't wire to SetPacks)
 
-`_filteredIndices` is populated only by `ApplyFilters()`, which is only called from dropdown/search `onValueChanged` callbacks. `SetPacks()` calls `RebuildPackList()` (renders all packs directly) but does NOT call `ApplyFilters()`, so `_filteredIndices` remains empty. `_listCounterText` is set only in `ApplyFilters()`, so it always reads "0 of M" until the user manually changes a filter.
+#### B3 — `ApplyFilters()` compared localised option text vs hardcoded "All"
 
-**File:Line**: `src/Runtime/UI/ModMenuPanel.cs:234-270` (`SetPacks` method)  
-**Fix**: Call `ApplyFilters()` at the END of `SetPacks()` instead of `RebuildPackList()`:
+`9d59d631` added `ApplyFilters()` but compared `_tierFilter` (a string from dropdown option text) against hardcoded `"All"`. With `42a889ba` wiring `L10n.T()` into the option labels, the dropdown option at index 0 became `L10n.T("menu.filter.tier.all", "All")` = `"All"` (fallback). **Currently safe** because `L10n` returns the fallback when i18n JSON files are absent. Becomes a P0 time-bomb when i18n files are deployed.
 
-```csharp
-public void SetPacks(IEnumerable<PackDisplayInfo> packs)
-{
-    _presenter.SetPacks(packs);
-    // ... existing logging ...
-    ApplyFilters();          // replaces RebuildPackList() — ApplyFilters calls RebuildFilteredPackList internally
-    RefreshDetail();
-}
-```
+`84c3e614` fixed this by reading `_tierDropdown.value` (integer index 0=All) instead of comparing text strings.
 
-This also ensures `_filteredIndices` is always consistent with the current packs. Requires `ApplyFilters()` to handle empty packs gracefully (it already does).
+**File:line**: `src/Runtime/UI/ModMenuPanel.cs:1416-1417` (`.value` comparison, added in `84c3e614`)  
+**Introducing commit**: `42a889ba` + `9d59d631` interaction
 
-**Introducing Commit**: `9d59d631 feat(ui): mod browser search/filter/sort for F10 panel`
+### Fix for Symptom 2
+Deploy current source. All three sub-fixes are in `84c3e614`.
 
 ---
 
-## Symptom 3: F10 debug panel shows empty output
+## Symptom 3 — F9 debug panel shows EMPTY output
 
 ### Root Cause
-**Two independent causes:**
+In the deployed DLL, **F9 opens the mod menu** (not the debug panel) because the F9 handler calls `ToggleModMenu()`. The mod menu is empty (Symptom 2). The debug panel is never opened by F9. The user is correctly identifying that "F9 shows nothing useful" — it is showing the empty mod menu rather than the debug panel.
 
-#### Cause A: F10 opens DebugPanel which requires `SetModPlatform` to populate
+If the key routing were fixed (Symptom 1 deploy), the debug panel WOULD appear, but might appear near-empty at main menu because:
+- `_modPlatform` may not be set yet when F9 is first pressed (timing: `WireUguiToModPlatform()` is called on `DFCanvas.OnInitSuccess`, before Step 7 pack-load, so `_modPlatform` IS set — but `GetLoadedPackDisplayInfos()` returns 0 packs if Step 7 hasn't completed yet)
+- ECS Worlds section correctly shows "No ECS world (main menu — expected)" (fixed in `84c3e614`)
 
-`DebugPanel.RefreshContent()` returns early if `_modPlatform == null` (line `src/Runtime/UI/DebugPanel.cs:275`). `SetModPlatform` is called from `WireUguiToModPlatform` only when `_dfCanvas.DebugPanel != null`. If the user opens the debug panel BEFORE `WireUguiToModPlatform` completes (or before Step 7 MainMenu-mode pack load), `_modPlatform` is null → the panel shows only the "Platform Status" header section with "ModPlatform: not available" rather than empty. This could appear near-empty depending on the section toggle state (`_showPlatform = true` but expanded content is just the "not available" text).
+`DebugPanel.ForceRefresh()` IS called from `Show()` on every toggle, so the content updates correctly when packs are loaded.
 
-In practice, `WireUguiToModPlatform` fires from `DFCanvas.OnInitSuccess` during coroutine Step 2, which sets `_dfCanvas.DebugPanel.SetModPlatform(platform)`. The timing gap between `OnInitSuccess` and `F10` press is large enough that the panel should have `_modPlatform` set. **This is not the primary cause.**
+**File:line (source, already fixed)**: `src/Runtime/UI/DebugPanel.cs:506-508` ("No ECS world" message, added in `84c3e614`)  
+**Introducing commit**: stale DLL + F9 routing regression
 
-#### Cause B: `DebugPanel.ForceRefresh()` conditional in F10 handler
+### Fix for Symptom 3
+Deploy current source. The debug panel will show correct content once F9 routing is fixed and packs have loaded.
 
-```csharp
-// Plugin.cs:1147-1168
-Bridge.KeyInputSystem.OnF10Pressed = () =>
-{
-    _dfCanvas.ToggleDebug();
-    if (_dfCanvas.DebugPanel != null && _dfCanvas.DebugPanel.IsVisible)
-    {
-        _dfCanvas.DebugPanel.ForceRefresh();
-    }
-    ...
-};
+---
+
+## Does the search/filter default hide all packs?
+
+**In current source, NO** — because i18n JSON files are not deployed.
+
+`ApplyFilters()` in `84c3e614` reads `_tierDropdown.value` (integer) not `_tierFilter` (localised text string). Default dropdown value = 0 = "All" = no filter applied. All packs pass through.
+
+`OnTierFilterChanged`/`OnStateFilterChanged` still update `_tierFilter`/`_stateFilter` string fields (dead code since `84c3e614`), but `ApplyFilters()` ignores those strings. This is harmless but slightly confusing.
+
+**Latent risk**: If `L10n` JSON files are deployed AND the old `_tierFilter != "All"` comparison were used, packs would be hidden. Since `84c3e614` switched to index comparison, this risk is eliminated in the current source.
+
+---
+
+## Fix Spec for Implementation Agent
+
+**ONE action fixes all three symptoms**:
+
+```powershell
+# 1. Build with deploy target (must specify TFM per Pattern #530)
+dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release `
+  -p:DeployToGame=true `
+  -p:TargetFramework=netstandard2.0
+
+# 2. Verify DLL timestamp > 06:16 UTC May 29 2026
+(Get-Item "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\plugins\DINOForge.Runtime.dll").LastWriteTimeUtc
+
+# 3. Verify SHA256 != stale hash
+Get-FileHash "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\plugins\DINOForge.Runtime.dll" -Algorithm SHA256
+# Expected to NOT be: 9cab855a8fe3c0ebac1081fb981f58cde402bdf949be64c9e1ee1c7195fc1436
+
+# 4. After game launch, verify in dinoforge_debug.log:
+# [Plugin] [RuntimeDriver] F9 pressed → DEBUG panel (via KeyInputSystem)   ← new format
+# [Plugin] [RuntimeDriver] F10 pressed → MODS menu (via KeyInputSystem)    ← new format
+# [ModMenuPanel.SetPacks] ApplyFilters() complete (N of M visible)         ← new log line
 ```
 
-`ToggleDebug()` calls `DebugPanel.Show()` which sets `_targetVisible = true` THEN calls `ForceRefresh()` via `Show()` itself (see `DebugPanel.Show()` line 113: calls `ForceRefresh()`). So `ForceRefresh()` IS called on show. The conditional in the F10 handler provides a SECOND refresh for the case when the panel was already visible (toggling off then on within the same F10 press — but `ToggleDebug()` only calls `Show()` or `Hide()`).
+**If packs still appear empty after rebuild+deploy**, add a `yield return null;` in `src/Runtime/Plugin.cs` before the Step 7 block (`RunPhaseWithAbortGuard("MainMenu-mode PackLoad", ...)`) to guarantee DFCanvas layout flush completes before `SetPacks()` is called.
 
-**Primary Issue**: `DebugPanel.BuildWorldsContent` calls `Unity.Entities.World.All` and `em.GetAllEntities(Allocator.Temp)`. At main menu, the ECS world may not exist yet, causing `BuildSection` to show `"No worlds found"`. With `_showPlatform = true`, `_showWorlds = true`, `_showSystems = false`, `_showArchetypes = false`, `_showErrors = false` — the panel shows Platform Status + ECS Worlds. If Platform Status fails to find `_modPlatform`, the section shows "not available". If ECS Worlds shows "No worlds found", both visible sections appear nearly empty. This is a **data issue, not a code regression** — it depends on game state.
+---
 
-**File:Line**: `src/Runtime/UI/DebugPanel.cs:489-493` (NoPlatform text), `src/Runtime/UI/DebugPanel.cs:500-504` (No worlds found)
+## Dead Code to Clean Up (non-blocking)
 
-**Fix Spec**:
-- Add `ForceRefresh()` call to `Show()` in `ModMenuPanel` (analogous to `DebugPanel.Show()` which already calls it).
-- For DebugPanel empty appearance at main menu: acceptable behavior since no ECS world exists at main menu. Consider showing a different message like "ECS world available in gameplay" instead of just "No worlds found."
-
-**Introducing Commits**: This behavior is pre-existing and not a regression introduced this session. The panel correctly shows the runtime state.
+`src/Runtime/UI/ModMenuPanel.cs:61-62` — `_tierFilter` and `_stateFilter` string fields are updated in callbacks but never read since `84c3e614`. Remove or keep as documentation comments.
 
 ---
 
 ## Summary Table
 
-| Symptom | Root Cause | Introducing Commit | File:Line | Fix Type |
-|---------|------------|--------------------|-----------|----------|
-| F9/F10 swapped | NOT a regression; correct mapping is F9=ModMenu, F10=Debug since `ff1455b2` | N/A — perception only | `Plugin.cs:1134-1168` | No code change needed |
-| F9 mod menu empty packs (visual) | FilterContainer (140px) overlaps ScrollRect viewport — top 3-4 items occluded | `9d59d631` | `ModMenuPanel.cs:690` | Fix ScrollRect offsetMax to `-(32+140)` |
-| F9 mod menu counter shows "0 of 9" | `SetPacks()` calls `RebuildPackList()` instead of `ApplyFilters()` — `_filteredIndices` never populated | `9d59d631` | `ModMenuPanel.cs:265` | Call `ApplyFilters()` from `SetPacks()` |
-| F10 debug panel near-empty | No ECS world at main menu → WorldsContent shows "No worlds found"; if `_modPlatform` also not yet set, Platform section also minimal | Pre-existing behavior | `DebugPanel.cs:500-504` | UX improvement: show "available in gameplay" message |
-
----
-
-## Does a default filter value hide all packs?
-
-**Yes, conditionally.** In the CURRENT source (not deployed), commit `42a889ba` (i18n) changed the tier dropdown option at index 0 from `"All"` to `L10n.T("menu.filter.tier.all", "All")` which resolves to **`"All Tiers"`** from `en-US.json` line 4. The `ApplyFilters()` comparison is still `if (_tierFilter != "All")` (hardcoded English). If the i18n JSON files were deployed to `BepInEx/dinoforge-i18n/`, the filter condition `"All Tiers" != "All"` would be `true` and ALL packs would be excluded.
-
-However, **the i18n files are NOT deployed** (directory `BepInEx/dinoforge-i18n/` does not exist in the game install), so `L10n.T(...)` returns the fallback value `"All"` for all keys, and the comparisons still work correctly.
-
-**This is a latent time-bomb**: if the i18n files are ever deployed, `ApplyFilters()` will hide all packs because:
-- `_tierFilter` = `"All Tiers"` (from `en-US.json`) ≠ `"All"` (hardcoded)  
-- `_stateFilter` = `"All States"` (from `en-US.json`) ≠ `"All"` (hardcoded)
-
-**Fix for latent bug** (commit `42a889ba` in-tree but not deployed):  
-`src/Runtime/UI/ModMenuPanel.cs:1427` — change `if (_tierFilter != "All")` to use the option index instead of text comparison:
-
-```csharp
-// In ApplyFilters():
-// BEFORE (fragile text comparison):
-if (_tierFilter != "All") { ... }
-if (_stateFilter != "All") { ... }
-
-// AFTER (index-based, i18n-safe):
-bool tierFilterActive = _tierDropdown != null && _tierDropdown.value != 0;
-bool stateFilterActive = _stateDropdown != null && _stateDropdown.value != 0;
-if (tierFilterActive) { ... }
-if (stateFilterActive) { ... }
-```
-
-This makes filtering comparison independent of locale strings.
-
----
-
-## Recommended Fix Priority
-
-1. **P0 (immediate)**: Fix ScrollRect layout in `BuildListPane` — pack items are being occluded. File `ModMenuPanel.cs`, function `BuildListPane`, line ~712 (scrollRt.offsetMax assignment).
-2. **P0 (immediate)**: Fix `SetPacks()` to call `ApplyFilters()` instead of `RebuildPackList()` so pack counter is always accurate and `_filteredIndices` is always populated.
-3. **P1 (before i18n deploy)**: Fix `ApplyFilters()` to use dropdown index (not text) for filter comparisons — prevents all-packs-hidden regression when i18n files are deployed.
-4. **P2 (UX)**: Improve DebugPanel empty-state messaging at main menu (no ECS world).
+| Symptom | Root Cause | Introducing Commit | File:Line (current source, already fixed) | Action |
+|---------|------------|--------------------|------------------------------------------|--------|
+| F9/F10 routing | Deployed DLL pre-`84c3e614`; F9 handler calls `ToggleModMenu()` | `ff1455b2` partial fix; `84c3e614` not deployed | `Plugin.cs:1137-1171` | Rebuild + deploy |
+| F10 mod menu packs empty | `SetPacks()` calls `RebuildPackList()` (not `ApplyFilters()`); scroll rect collapsed behind filter bar | `9d59d631` | `ModMenuPanel.cs:268` (B2), `ModMenuPanel.cs:711` (B1) | Rebuild + deploy |
+| F9 debug panel empty | F9 routes to mod menu (empty per above); debug panel never shown | Stale DLL | `Plugin.cs:1137` | Rebuild + deploy |

@@ -290,19 +290,31 @@ namespace DINOForge.Runtime.Bridge
         private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService, EntityManager bestEm)
         {
             // Resolve the mod bundle path (relative paths against BepInEx plugins dir).
-            string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);
-            if (!File.Exists(modBundleFullPath))
+            // A null/empty ModBundlePath means Phase 1 (disk patch) is skipped — but Phase 2
+            // (entity swap) must still run because the bundle file may be located via pack
+            // registration even when ModBundlePath is absent (#992 regression fix).
+            bool hasBundlePath = !string.IsNullOrEmpty(request.ModBundlePath);
+            string modBundleFullPath = hasBundlePath ? ResolveModBundlePath(request.ModBundlePath) : string.Empty;
+            bool bundleFileExists = hasBundlePath && File.Exists(modBundleFullPath);
+
+            if (!hasBundlePath)
             {
-                DebugLog.Write("AssetSwap", $"ApplySwap: mod bundle not found: {modBundleFullPath}");
-                return false;
+                DebugLog.Write("AssetSwap", $"ApplySwap: ModBundlePath is null/empty for address='{request.AssetAddress}' — skipping Phase 1 (disk patch), proceeding to Phase 2 (entity swap)");
+            }
+            else if (!bundleFileExists)
+            {
+                DebugLog.Write("AssetSwap", $"ApplySwap: mod bundle not found: {modBundleFullPath} — skipping Phase 1, proceeding to Phase 2");
             }
 
             // Phase 1 (optional): Patch the vanilla bundle on disk.
             // This only works when the AssetAddress matches a real Addressables catalog key.
             // Mod packs typically use bundle filenames as AssetAddress, so catalog lookup
             // may fail — that's expected. Phase 2 (entity swap) is the primary mechanism.
+            // Phase 1 is skipped entirely when the mod bundle file is missing/unavailable.
             bool patchResult = false;
-            byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
+            byte[]? modAssetBytes = bundleFileExists
+                ? assetService.ExtractAsset(modBundleFullPath, request.AssetName)
+                : null;
 
             if (modAssetBytes != null && modAssetBytes.Length > 0)
             {
@@ -321,18 +333,28 @@ namespace DINOForge.Runtime.Bridge
                     else if (File.Exists(vanillaBundlePath))
                     {
                         string patchedFileName = Path.GetFileName(vanillaBundlePath);
-                        string outputPath = Path.Combine(patchDir, patchedFileName);
-
-                        patchResult = assetService.ReplaceAsset(
-                            vanillaBundlePath,
-                            request.AssetAddress,
-                            modAssetBytes,
-                            outputPath);
-
-                        if (patchResult)
-                            DebugLog.Write("AssetSwap", $"ApplySwap: patched bundle written to '{outputPath}'");
+                        // Path.GetFileName can return null on some Mono versions when the path
+                        // ends with a directory separator — guard to avoid path2 null crash.
+                        if (string.IsNullOrEmpty(patchedFileName))
+                        {
+                            if (_reportedFailures.Add($"filename:{request.AssetAddress}"))
+                                DebugLog.Write("AssetSwap", $"ApplySwap: could not extract filename from vanilla bundle path '{vanillaBundlePath}'");
+                        }
                         else
-                            DebugLog.Write("AssetSwap", $"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                        {
+                            string outputPath = Path.Combine(patchDir, patchedFileName);
+
+                            patchResult = assetService.ReplaceAsset(
+                                vanillaBundlePath,
+                                request.AssetAddress,
+                                modAssetBytes,
+                                outputPath);
+
+                            if (patchResult)
+                                DebugLog.Write("AssetSwap", $"ApplySwap: patched bundle written to '{outputPath}'");
+                            else
+                                DebugLog.Write("AssetSwap", $"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                        }
                     }
                 }
                 else if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
@@ -346,8 +368,32 @@ namespace DINOForge.Runtime.Bridge
             }
 
             // Best-effort live RenderMesh swap on ECS entities.
-            bool entitySwapResult = TrySwapRenderMeshFromBundle(
-                modBundleFullPath, request.AssetName, request.VanillaMapping, bestEm);
+            // Phase 2 requires a resolvable bundle path.
+            // Fallback: if ModBundlePath was null/empty at registration time, probe the standard
+            // pack layout (<BepInEx>/dinoforge_packs/<pack>/assets/bundles/<assetAddress>) across
+            // all deployed packs. This covers late-registered swaps and hot-reload scenarios where
+            // the bundle file exists but the registry entry was created without a path.
+            bool entitySwapResult = false;
+            string resolvedBundlePath = modBundleFullPath;
+            if (string.IsNullOrEmpty(resolvedBundlePath))
+            {
+                resolvedBundlePath = FindBundleInPacksDir(request.AssetAddress);
+                if (!string.IsNullOrEmpty(resolvedBundlePath))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"ApplySwap: fallback bundle lookup found '{resolvedBundlePath}' for address='{request.AssetAddress}'");
+                }
+            }
+
+            if (!string.IsNullOrEmpty(resolvedBundlePath))
+            {
+                entitySwapResult = TrySwapRenderMeshFromBundle(
+                    resolvedBundlePath, request.AssetName, request.VanillaMapping, bestEm);
+            }
+            else if (_reportedFailures.Add($"phase2-nopath:{request.AssetAddress}"))
+            {
+                DebugLog.Write("AssetSwap", $"ApplySwap: skipping Phase 2 — no bundle path for address='{request.AssetAddress}' (fallback scan also found nothing)");
+            }
             DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
 
             return patchResult || entitySwapResult;
@@ -399,6 +445,44 @@ namespace DINOForge.Runtime.Bridge
 
                     if (replacementMesh != null || replacementMat != null)
                         DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: extracted from prefab '{assetName}'");
+                }
+            }
+
+            // Final fallback: bundle asset name doesn't match the key (e.g. bundle built with
+            // prefab name 'Clone_Heavy_Republic' but key is 'sw-clone-heavy'). Load the first
+            // available asset from the bundle and extract mesh/material from it.
+            if (replacementMesh == null && replacementMat == null)
+            {
+                string[] allNames = bundle.GetAllAssetNames();
+                if (allNames.Length > 0)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: name '{assetName}' not found in bundle, " +
+                        $"trying first asset '{allNames[0]}' (bundle has {allNames.Length} assets)");
+                    replacementMesh = bundle.LoadAsset<Mesh>(allNames[0]);
+                    replacementMat = bundle.LoadAsset<Material>(allNames[0]);
+                    if (replacementMesh == null && replacementMat == null)
+                    {
+                        GameObject? fallbackPrefab = bundle.LoadAsset<GameObject>(allNames[0]);
+                        if (fallbackPrefab != null)
+                        {
+                            SkinnedMeshRenderer? smr = fallbackPrefab.GetComponentInChildren<SkinnedMeshRenderer>();
+                            if (smr != null && smr.sharedMesh != null)
+                            {
+                                replacementMesh = smr.sharedMesh;
+                                if (smr.sharedMaterials.Length > 0) replacementMat = smr.sharedMaterials[0];
+                            }
+                            else
+                            {
+                                MeshFilter? mf = fallbackPrefab.GetComponentInChildren<MeshFilter>();
+                                if (mf != null) replacementMesh = mf.sharedMesh;
+                                MeshRenderer? mr = fallbackPrefab.GetComponentInChildren<MeshRenderer>();
+                                if (mr != null && mr.sharedMaterials.Length > 0) replacementMat = mr.sharedMaterials[0];
+                            }
+                            if (replacementMesh != null || replacementMat != null)
+                                DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: extracted from fallback prefab '{allNames[0]}'");
+                        }
+                    }
                 }
             }
 
@@ -459,7 +543,7 @@ namespace DINOForge.Runtime.Bridge
             }
 
             EntityQuery query = em.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
+                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.Default });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
@@ -663,12 +747,21 @@ namespace DINOForge.Runtime.Bridge
                 try
                 {
                     if (!em.HasComponent(entity, renderMeshComponentType))
+                    {
+                        skippedNoMatch++;
                         continue;
+                    }
 
                     // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
                     object? renderMesh = getSharedNonGeneric.Invoke(
                         em, new object[] { entity, renderMeshComponentType });
-                    if (renderMesh == null) continue;
+                    if (renderMesh == null)
+                    {
+                        skippedNoMatch++;
+                        DebugLog.Write("AssetSwap",
+                            $"[AssetSwap] entity has RenderMesh component but GetSharedComponentData returned null for asset='{assetName}'");
+                        continue;
+                    }
 
                     // ---- Selective mesh-name check ----
                     if (meshField != null)
@@ -695,6 +788,7 @@ namespace DINOForge.Runtime.Bridge
                         else
                         {
                             // Mesh field is null — entity not yet loaded, skip.
+                            skippedNoMatch++;
                             continue;
                         }
                     }
@@ -702,6 +796,18 @@ namespace DINOForge.Runtime.Bridge
                     bool changed = false;
                     if (replacementMesh != null && meshField != null)
                     {
+                        object? currentMeshObj = meshField.GetValue(renderMesh);
+                        if (currentMeshObj is Mesh currentMesh
+                            && !IsSkinnedMeshCompatible(currentMesh, replacementMesh, out string? skinReason))
+                        {
+                            if (_reportedFailures.Add($"skinning:{assetName}"))
+                            {
+                                DebugLog.Write("AssetSwap",
+                                    $"TrySwapRenderMeshFromBundle: skipping entity {entity.Index} — {skinReason}");
+                            }
+                            continue;
+                        }
+
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
@@ -746,6 +852,37 @@ namespace DINOForge.Runtime.Bridge
         }
 
         // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// #991 / #973: DINO infantry uses skinned <see cref="Mesh"/> assets (bindposes + bone weights)
+        /// driven by procedural animation. Swapping a static mesh onto those entities freezes the pose.
+        /// </summary>
+        private static bool IsSkinnedMeshCompatible(Mesh current, Mesh replacement, out string? reason)
+        {
+            reason = null;
+            int currentBindposes = current.bindposes?.Length ?? 0;
+            int replacementBindposes = replacement.bindposes?.Length ?? 0;
+            bool currentSkinned = currentBindposes > 0;
+            bool replacementSkinned = replacementBindposes > 0;
+
+            if (currentSkinned && !replacementSkinned)
+            {
+                reason =
+                    $"vanilla mesh '{current.name}' has {currentBindposes} bindpose(s) but replacement " +
+                    $"'{replacement.name}' is static (0 bindposes) — swap would freeze procedural animation (#973)";
+                return false;
+            }
+
+            if (currentSkinned && replacementSkinned && currentBindposes != replacementBindposes)
+            {
+                reason =
+                    $"bindpose count mismatch for '{replacement.name}': vanilla={currentBindposes} " +
+                    $"replacement={replacementBindposes} — retarget to DINO reference skeleton before swap";
+                return false;
+            }
+
+            return true;
+        }
 
         private static Type? _renderMeshType;
         private static bool _renderMeshResolved;
@@ -915,6 +1052,10 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private static string ResolveModBundlePath(string path)
         {
+            // Defensive: null/empty path would throw ArgumentNullException(path2) in Path.Combine
+            // on Mono (netstandard2.0 does not enforce C# nullable annotations at runtime).
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
             return Path.IsPathRooted(path)
                 ? path
                 : Path.Combine(BepInEx.Paths.PluginPath, path);

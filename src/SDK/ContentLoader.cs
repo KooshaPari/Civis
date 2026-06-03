@@ -640,10 +640,21 @@ namespace DINOForge.SDK
                 if (!File.Exists(bundlePath))
                     continue;
 
+                // Buildings must carry a vanilla_mapping targeting signal just like units.
+                // When omitted, fall back to the building_type field or the generic "building"
+                // mapping (→ Components.BuildingBase) so the runtime swap exits DIAGNOSTIC MODE.
+                // Passing null here caused AssetSwapSystem to skip Phase 2 for all SW buildings.
+                string buildingMapping = !string.IsNullOrWhiteSpace(building.VanillaMapping)
+                    ? building.VanillaMapping!
+                    : !string.IsNullOrWhiteSpace(building.BuildingType)
+                        ? building.BuildingType!
+                        : "building";
+
                 Assets.AssetSwapRegistry.Register(new Assets.AssetSwapRequest(
                     building.VisualAsset!,
                     bundlePath,
-                    building.VisualAsset!));
+                    building.VisualAsset!,
+                    buildingMapping));
             }
         }
     }

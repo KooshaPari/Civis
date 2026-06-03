@@ -1,0 +1,3221 @@
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: C:\Users\koosh\Dino\.claude\worktrees\swfont
+model: gpt-5.4-mini
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: low
+reasoning summaries: none
+session id: 019e8056-b06b-7d42-a201-6d338f10d6b6
+--------
+user
+Fix DINOForge #965 font bake — ISOLATED root cause: BakeTmpFontAsset.BakeHeadless throws ArgumentNullException at line 96 (TMP_FontAsset.CreateFontAsset) because the TMP 'TextMeshPro/Distance Field' SDF shader + TMP Essentials native resources are NOT imported in -batchmode (Unity normally imports them via an interactive 'Import TMP Essentials' dialog on first TMP use, which never fires headless). Branch fix/sw-tmp-font-20260531. NO push/stash/--no-verify; git add only specific files. FIX: edit unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs so that BEFORE CreateFontAsset it programmatically imports TMP Essentials. Use TMPro's editor API: call TMPro.TMP_PackageResourceImporter.ImportProjectResources() (defined in Library/PackageCache/com.unity.textmeshpro@3.0.6/Scripts/Editor/TMP_PackageUtilities.cs — read it to confirm exact namespace/method/signature; it may be an instance method on TMP_PackageResourceImporter or a static in TMP_PackageResourceImporterWindow). Also call AssetDatabase.Refresh() after, and ensure the Distance Field shader (Shader.Find("TextMeshPro/Distance Field")) is non-null before CreateFontAsset (force-load TMP Essentials GUID if needed). Then RUN the bake headless ONCE: kill any running Unity first (Get-Process Unity | Stop-Process -Force), clear Temp/UnityLockfile, then & 'C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe' -batchmode -nographics -quit -projectPath <builder abs> -executeMethod BakeTmpFontAsset.BakeHeadless -logFile <abs log>. Verify the sw_menu_font bundle is produced >200 bytes (UnityFS 2021.3.45f1). If TMP Essentials import STILL fails headless, document that clearly + STOP (we'll do a headful Editor pass). Commit the script fix + bundle if produced. Report: did essentials import work headless? bundle size? font applies YES/NO/needs-headful.
+codex
+I’m checking the existing builder code and the TMP editor utility signature first, then I’ll patch the bake path and run one headless bake to verify whether the bundle is produced.
+web search: 
+web search: site:github.com Unity TextMeshPro TMP_PackageResourceImporter ImportProjectResources 3.0.6
+codex
+I’ve confirmed this is the TMP essentials import path Unity normally hides behind the interactive dialog. Next I’m reading the builder and the package utility implementation so the fix matches the exact API in this Unity version.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "BakeHeadless|TMP_PackageResourceImporter|ImportProjectResources|Distance Field|CreateFontAsset" unity-assetbundle-builder/Assets/Editor -S' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Editor\\TMP_PackageUtilities.cs' | Select-Object -First 240" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ exited 1 in 1758ms:
+Get-Content: 
+Line |
+   2 |  Get-Content 'C:\Users\koosh\Dino\.claude\worktrees\swfont\Library\Pac …
+     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path 'C:\Users\koosh\Dino\.claude\worktrees\swfont\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_PackageUtilities.cs' because it does not exist.
+
+ succeeded in 2129ms:
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:11:/// Why: TMP_FontAsset.CreateFontAsset() returns null at RUNTIME inside DINO for
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:14:/// where CreateFontAsset() works — sidesteps the runtime failure entirely.
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:18:///   2. TMP_FontAsset.CreateFontAsset(font) -> generates SDF atlas + glyph table.
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:29:///     -executeMethod BakeTmpFontAsset.BakeHeadless \
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:53:        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:58:    public static void BakeHeadless()
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:64:            // CreateFontAsset needs the TMP SDF shader ("TextMeshPro/Distance Field"),
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:66:            // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:89:            // CreateFontAsset throws ArgumentNullException (the font engine handle is null).
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:95:            // Editor-side CreateFontAsset DOES work (unlike the DINO runtime).
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:96:            TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:108:                Debug.LogError("[BakeTmpFontAsset] CreateFontAsset returned null in editor — unexpected.");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:117:            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+
+codex
+The builder file is present; the cached package path isn’t in this worktree, so I’m locating the actual TMP package source and reading the editor utility there before I patch.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\Editor\\BakeTmpFontAsset.cs'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg -n \"class TMP_PackageResourceImporter|ImportProjectResources\\(|TMP_PackageUtilities\" 'C:\\Users\\koosh\\Dino' -g 'TMP_PackageUtilities.cs' -g '*.cs'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 2485ms:
+using System;
+using System.IO;
+using TMPro;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
+
+/// <summary>
+/// Offline TMP SDF font-asset baker (Option A — Unity 2021.3.45f1 batchmode).
+///
+/// Why: TMP_FontAsset.CreateFontAsset() returns null at RUNTIME inside DINO for
+/// OS-dynamic fonts (the Mono TMP atlas-generator path is unavailable in the
+/// shipped player). Baking the SDF atlas + glyph table offline in the Editor —
+/// where CreateFontAsset() works — sidesteps the runtime failure entirely.
+///
+/// Pipeline:
+///   1. Import menu_font.ttf as a Unity Font (TrueType).
+///   2. TMP_FontAsset.CreateFontAsset(font) -> generates SDF atlas + glyph table.
+///   3. Pre-populate the ASCII printable range so the menu glyphs are baked into
+///      a STATIC atlas (no runtime atlas growth needed).
+///   4. Persist the .asset (+ material + atlas texture) and tag it for the
+///      'sw_menu_font' AssetBundle. BuildAssetBundles then emits the bundle,
+///      version-locked to 2021.3.45f1 so DINO can load it.
+///
+/// Invoke (batchmode):
+///   "C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe" \
+///     -batchmode -nographics -noUpm -quit \
+///     -projectPath "<repo>\unity-assetbundle-builder" \
+///     -executeMethod BakeTmpFontAsset.BakeHeadless \
+///     -logFile "<repo>\docs\sessions\tmp-font-bake.log"
+///
+/// The source ttf is expected at Assets/Fonts/menu_font.ttf (copy it in before
+/// running — see scripts/game/bake-sw-menu-font.ps1).
+/// </summary>
+public static class BakeTmpFontAsset
+{
+    private const string FontTtfPath = "Assets/Fonts/menu_font.ttf";
+    private const string OutputAssetPath = "Assets/Fonts/SW_MenuFont SDF.asset";
+    private const string BundleName = "sw_menu_font";
+
+    // Sampling point size for the SDF atlas. 90px gives crisp menu-scale glyphs.
+    private const int SamplingPointSize = 90;
+    private const int AtlasPadding = 9;
+    private const int AtlasWidth = 1024;
+    private const int AtlasHeight = 1024;
+
+    private static void ImportTmpEssentialsIfMissing()
+    {
+        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+        // runtime/editor types needed for baking in this project. The helper remains as a
+        // defensive hook so headless runs do not fail if the project later needs explicit
+        // essential-resource import handling.
+        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+        if (sdf == null)
+            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
+    }
+
+    public static void BakeHeadless()
+    {
+        try
+        {
+            Debug.Log("[BakeTmpFontAsset] Starting TMP SDF font bake...");
+
+            // CreateFontAsset needs the TMP SDF shader ("TextMeshPro/Distance Field"),
+            // which ships in TMP Essential Resources. A fresh project does not have them,
+            // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+            // headlessly before baking. (#965 batchmode bake fix.)
+            ImportTmpEssentialsIfMissing();
+
+            if (!File.Exists(FontTtfPath))
+            {
+                Debug.LogError($"[BakeTmpFontAsset] Missing source font at {FontTtfPath}. " +
+                               "Copy packs/warfare-starwars/assets/ui/menu_font.ttf there first.");
+                EditorApplication.Exit(2);
+                return;
+            }
+
+            // Ensure the ttf is imported as a usable Font.
+            AssetDatabase.ImportAsset(FontTtfPath, ImportAssetOptions.ForceUpdate);
+            Font sourceFont = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
+            if (sourceFont == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] Failed to load source ttf as Font.");
+                EditorApplication.Exit(3);
+                return;
+            }
+
+            // The native FontEngine is NOT auto-initialized in -batchmode; without this,
+            // CreateFontAsset throws ArgumentNullException (the font engine handle is null).
+            // (#965 batchmode bake fix.)
+            FontEngineError initErr = FontEngine.InitializeFontEngine();
+            if (initErr != FontEngineError.Success)
+                Debug.LogWarning($"[BakeTmpFontAsset] FontEngine.InitializeFontEngine returned {initErr}");
+
+            // Editor-side CreateFontAsset DOES work (unlike the DINO runtime).
+            TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
+                sourceFont,
+                SamplingPointSize,
+                AtlasPadding,
+                GlyphRenderMode.SDFAA,
+                AtlasWidth,
+                AtlasHeight,
+                AtlasPopulationMode.Static,
+                enableMultiAtlasSupport: true);
+
+            if (fontAsset == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] CreateFontAsset returned null in editor — unexpected.");
+                EditorApplication.Exit(4);
+                return;
+            }
+
+            fontAsset.name = "SW_MenuFont SDF";
+
+            // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+            // baked atlas renders correctly inside DINO even if the default was missing.
+            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
+                fontAsset.material.shader = sdf;
+
+            // Pre-bake the printable ASCII range into the static atlas so no
+            // runtime glyph generation is required inside DINO.
+            const string chars =
+                " !\"#$%&'()*+,-./0123456789:;<=>?@" +
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
+                "abcdefghijklmnopqrstuvwxyz{|}~";
+            fontAsset.TryAddCharacters(chars, out string missing);
+            if (!string.IsNullOrEmpty(missing))
+                Debug.LogWarning($"[BakeTmpFontAsset] Glyphs not present in font: '{missing}'");
+
+            // Persist the font asset, its atlas texture and material as sub-assets.
+            string dir = Path.GetDirectoryName(OutputAssetPath);
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            AssetDatabase.CreateAsset(fontAsset, OutputAssetPath);
+
+            // Atlas texture + material must be embedded so the bundle is self-contained.
+            if (fontAsset.atlasTextures != null)
+            {
+                foreach (Texture2D tex in fontAsset.atlasTextures)
+                {
+                    if (tex != null && !AssetDatabase.Contains(tex))
+                        AssetDatabase.AddObjectToAsset(tex, fontAsset);
+                }
+            }
+            if (fontAsset.material != null && !AssetDatabase.Contains(fontAsset.material))
+                AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
+
+            EditorUtility.SetDirty(fontAsset);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(OutputAssetPath, ImportAssetOptions.ForceUpdate);
+
+            // Tag the .asset for the AssetBundle so BuildAssetBundles emits it.
+            AssetImporter importer = AssetImporter.GetAtPath(OutputAssetPath);
+            if (importer != null)
+            {
+                importer.assetBundleName = BundleName;
+                importer.SaveAndReimport();
+            }
+            else
+            {
+                Debug.LogError("[BakeTmpFontAsset] Could not get AssetImporter to tag bundle.");
+                EditorApplication.Exit(5);
+                return;
+            }
+
+            Debug.Log($"[BakeTmpFontAsset] Baked '{OutputAssetPath}', tagged bundle '{BundleName}'. " +
+                      "Now run BuildAssetBundles.BuildHeadless to emit the bundle.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BakeTmpFontAsset] Exception: {ex}");
+            EditorApplication.Exit(1);
+        }
+    }
+}
+
+ exited 1 in 7292ms:
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino' -Recurse -Filter 'TMP_PackageUtilities.cs' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino' -Recurse -Filter 'TMP_PackageResourceImporter*.cs' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+codex
+I have the target script open. The remaining lookup is just to pin the exact TMP editor call in this Unity package cache so I can avoid guessing the API shape.
+2026-05-31T23:21:40.843953Z ERROR codex_core::tools::router: error=failed to parse function arguments: missing field `cell_id` at line 1 column 61
+ succeeded in 30882ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_PackageUtilities.cs
+C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\.del--246448-kHOFbdlz7pJf\Editor\TMP\TMP_PackageUtilities.cs
+
+ succeeded in 30930ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_PackageResourceImporter.cs
+C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\.del--246448-kHOFbdlz7pJf\Runtime\TMP\TMP_PackageResourceImporter.cs
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Runtime\\TMP_PackageResourceImporter.cs' | Select-Object -First 220" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Editor\\TMP_PackageUtilities.cs' | Select-Object -First 260" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 7936ms:
+#if UNITY_EDITOR
+
+using System;
+using System.IO;
+using UnityEngine;
+using UnityEditor;
+
+
+namespace TMPro
+{
+    [System.Serializable]
+    public class TMP_PackageResourceImporter
+    {
+        bool m_EssentialResourcesImported;
+        bool m_ExamplesAndExtrasResourcesImported;
+        internal bool m_IsImportingExamples;
+
+        public TMP_PackageResourceImporter() { }
+
+        public void OnDestroy()
+        {
+        }
+
+        public void OnGUI()
+        {
+            // Check if the resources state has changed.
+            m_EssentialResourcesImported = File.Exists("Assets/TextMesh Pro/Resources/TMP Settings.asset");
+            m_ExamplesAndExtrasResourcesImported = Directory.Exists("Assets/TextMesh Pro/Examples & Extras");
+
+            GUILayout.BeginVertical();
+            {
+                // Display options to import Essential resources
+                GUILayout.BeginVertical(EditorStyles.helpBox);
+                {
+                    GUILayout.Label("TMP Essentials", EditorStyles.boldLabel);
+                    GUILayout.Label("This appears to be the first time you access TextMesh Pro, as such we need to add resources to your project that are essential for using TextMesh Pro. These new resources will be placed at the root of your project in the \"TextMesh Pro\" folder.", new GUIStyle(EditorStyles.label) { wordWrap = true } );
+                    GUILayout.Space(5f);
+
+                    GUI.enabled = !m_EssentialResourcesImported;
+                    if (GUILayout.Button("Import TMP Essentials"))
+                    {
+                        AssetDatabase.importPackageCompleted += ImportCallback;
+
+                        string packageFullPath = GetPackageFullPath();
+                        AssetDatabase.ImportPackage(packageFullPath + "/Package Resources/TMP Essential Resources.unitypackage", false);
+                    }
+                    GUILayout.Space(5f);
+                    GUI.enabled = true;
+                }
+                GUILayout.EndVertical();
+
+                // Display options to import Examples & Extras
+                GUILayout.BeginVertical(EditorStyles.helpBox);
+                {
+                    GUILayout.Label("TMP Examples & Extras", EditorStyles.boldLabel);
+                    GUILayout.Label("The Examples & Extras package contains addition resources and examples that will make discovering and learning about TextMesh Pro's powerful features easier. These additional resources will be placed in the same folder as the TMP essential resources.", new GUIStyle(EditorStyles.label) { wordWrap = true });
+                    GUILayout.Space(5f);
+
+                    GUI.enabled = m_EssentialResourcesImported && !m_ExamplesAndExtrasResourcesImported;
+                    if (GUILayout.Button("Import TMP Examples & Extras"))
+                    {
+                        // Set flag to get around importing scripts as per of this package which results in an assembly reload which in turn prevents / clears any callbacks.
+                        m_IsImportingExamples = true;
+
+                        // Disable AssetDatabase refresh until examples have been imported.
+                        //AssetDatabase.DisallowAutoRefresh();
+
+                        string packageFullPath = GetPackageFullPath();
+                        AssetDatabase.ImportPackage(packageFullPath + "/Package Resources/TMP Examples & Extras.unitypackage", false);
+                    }
+                    GUILayout.Space(5f);
+                    GUI.enabled = true;
+                }
+                GUILayout.EndVertical();
+            }
+            GUILayout.EndVertical();
+            GUILayout.Space(5f);
+        }
+
+        internal void RegisterResourceImportCallback()
+        {
+            AssetDatabase.importPackageCompleted += ImportCallback;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="packageName"></param>
+        void ImportCallback(string packageName)
+        {
+            if (packageName == "TMP Essential Resources")
+            {
+                m_EssentialResourcesImported = true;
+                TMPro_EventManager.ON_RESOURCES_LOADED();
+
+                #if UNITY_2018_3_OR_NEWER
+                SettingsService.NotifySettingsProviderChanged();
+                #endif
+            }
+            else if (packageName == "TMP Examples & Extras")
+            {
+                m_ExamplesAndExtrasResourcesImported = true;
+                m_IsImportingExamples = false;
+                //AssetDatabase.AllowAutoRefresh();
+            }
+
+            Debug.Log("[" + packageName + "] have been imported.");
+
+            AssetDatabase.importPackageCompleted -= ImportCallback;
+        }
+
+        static string GetPackageFullPath()
+        {
+            // Check for potential UPM package
+            string packagePath = Path.GetFullPath("Packages/com.unity.textmeshpro");
+            if (Directory.Exists(packagePath))
+            {
+                return packagePath;
+            }
+
+            packagePath = Path.GetFullPath("Assets/..");
+            if (Directory.Exists(packagePath))
+            {
+                // Search default location for development package
+                if (Directory.Exists(packagePath + "/Assets/Packages/com.unity.TextMeshPro/Editor Resources"))
+                {
+                    return packagePath + "/Assets/Packages/com.unity.TextMeshPro";
+                }
+
+                // Search for default location of normal TextMesh Pro AssetStore package
+                if (Directory.Exists(packagePath + "/Assets/TextMesh Pro/Editor Resources"))
+                {
+                    return packagePath + "/Assets/TextMesh Pro";
+                }
+
+                // Search for potential alternative locations in the user project
+                string[] matchingPaths = Directory.GetDirectories(packagePath, "TextMesh Pro", SearchOption.AllDirectories);
+                string path = ValidateLocation(matchingPaths, packagePath);
+                if (path != null) return packagePath + path;
+            }
+
+            return null;
+        }
+
+        static string ValidateLocation(string[] paths, string projectPath)
+        {
+            for (int i = 0; i < paths.Length; i++)
+            {
+                // Check if the Editor Resources folder exists.
+                if (Directory.Exists(paths[i] + "/Editor Resources"))
+                {
+                    string folderPath = paths[i].Replace(projectPath, "");
+                    folderPath = folderPath.TrimStart('\\', '/');
+                    return folderPath;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Imports the specified TMP resources.
+        /// </summary>
+        /// <param name="importEssentials">Should import the TMP Essential Resources.</param>
+        /// <param name="importExamples">Should import the TMP Examples & Extras.</param>
+        /// <param name="interactive">If interactive is true, an import package dialog will be opened, else all assets in the package will be imported into the current project silently.</param>
+        public static void ImportResources(bool importEssentials, bool importExamples, bool interactive)
+        {
+            string packageFullPath = GetPackageFullPath();
+
+            if (importEssentials)
+                AssetDatabase.ImportPackage(packageFullPath + "/Package Resources/TMP Essential Resources.unitypackage", interactive);
+
+            if (importExamples)
+                AssetDatabase.ImportPackage(packageFullPath + "/Package Resources/TMP Examples & Extras.unitypackage", interactive);
+        }
+    }
+
+    public class TMP_PackageResourceImporterWindow : EditorWindow
+    {
+        [SerializeField]
+        TMP_PackageResourceImporter m_ResourceImporter;
+
+        static TMP_PackageResourceImporterWindow m_ImporterWindow;
+
+        public static void ShowPackageImporterWindow()
+        {
+            if (m_ImporterWindow == null)
+            {
+                m_ImporterWindow = GetWindow<TMP_PackageResourceImporterWindow>();
+                m_ImporterWindow.titleContent = new GUIContent("TMP Importer");
+                m_ImporterWindow.Focus();
+            }
+        }
+
+        void OnEnable()
+        {
+            // Set Editor Window Size
+            SetEditorWindowSize();
+
+            if (m_ResourceImporter == null)
+                m_ResourceImporter = new TMP_PackageResourceImporter();
+
+            if (m_ResourceImporter.m_IsImportingExamples)
+                m_ResourceImporter.RegisterResourceImportCallback();
+        }
+
+        void OnDestroy()
+        {
+            m_ResourceImporter.OnDestroy();
+        }
+
+        void OnGUI()
+        {
+            m_ResourceImporter.OnGUI();
+        }
+
+        void OnInspectorUpdate()
+        {
+            Repaint();
+
+ succeeded in 8025ms:
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEditor;
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
+using TMPro.EditorUtilities;
+
+
+namespace TMPro
+{
+    // Suppressing warnings related to the use of private structures which are confusing the compiler as these data structures are used by .json files.
+    #pragma warning disable 0649
+
+    /// <summary>
+    /// Data structure containing the target and replacement fileIDs and GUIDs which will require remapping from previous version of TextMesh Pro to the new TextMesh Pro UPM package.
+    /// </summary>
+    [System.Serializable]
+    struct AssetConversionRecord
+    {
+        public string referencedResource;
+        public string target;
+        public string replacement;
+    }
+
+
+    /// <summary>
+    /// Data structure containing a list of target and replacement fileID and GUID requiring remapping from previous versions of TextMesh Pro to the new TextMesh Pro UPM package.
+    /// This data structure is populated with the data contained in the PackageConversionData.json file included in the package.
+    /// </summary>
+    [System.Serializable]
+    class AssetConversionData
+    {
+        public List<AssetConversionRecord> assetRecords;
+    }
+
+    internal class TMP_ProjectTextSpacingConversionTool : EditorWindow
+    {
+        // Create Text Spacing Conversion Tool window
+        [MenuItem("Window/TextMeshPro/Project Text Spacing Conversion Tool", false, 2110)]
+        static void ShowConverterWindow()
+        {
+            var window = GetWindow<TMP_ProjectTextSpacingConversionTool>();
+            window.titleContent = new GUIContent("Conversion Tool");
+            window.Focus();
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        struct AssetModificationRecord
+        {
+            public string assetFilePath;
+            public string assetDataFile;
+        }
+
+        struct AssetFileRecord
+        {
+            public string assetFilePath;
+
+            public AssetFileRecord(string filePath, string metaFilePath)
+            {
+                this.assetFilePath = filePath;
+            }
+        }
+
+        private static string m_ProjectPath;
+        [SerializeField] private string m_ProjectFolderToScan;
+        private static bool m_IsAlreadyScanningProject;
+        private static bool m_CancelScanProcess;
+        private static string k_ProjectScanReportDefaultText = "<color=#FFFF80><b>" +
+                                                               "                                                                                                             Character           Word                Line                Paragraph\n" +
+                                                               "Project Scan Results                                                                                         Spacing             Spacing             Spacing             Spacing</b></color>\n" +
+                                                               "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
+
+        [SerializeField] private GUIStyle m_OutputWindowStyle;
+        [SerializeField] private Font m_OutputWindowMonospacedFont;
+        private static string k_ProjectScanLabelPrefix = "Scanning: ";
+        private static string m_ProjectScanResults = string.Empty;
+        private static Vector2 m_ProjectScanResultScrollPosition;
+        private static float m_ProgressPercentage = 0;
+
+        private static int m_ScanningTotalFiles;
+        private static int m_ScanningCurrentFileIndex;
+        private static string m_ScanningCurrentFileName;
+
+        private static string k_TextMeshProScriptID = "m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}";
+        private static string k_TextMeshProUGUIScriptID = "m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}";
+        //private static string k_FontAssetScriptID = "m_Script: {fileID: 11500000, guid: 71c1514a6bd24e1e882cebbe1904ce04, type: 3}";
+
+        private static string k_FontAssetProperty = "m_fontAsset: ";
+        private static string k_FontSizeProperty = "m_fontSize: ";
+        private static string k_LineSpacingProperty = "m_lineSpacing: ";
+        private static string k_CharacterSpacingProperty = "m_characterSpacing: ";
+        private static string k_WordSpacingProperty = "m_wordSpacing: ";
+        private static string k_ParagraphSpacingProperty = "m_paragraphSpacing: ";
+
+        private static AssetConversionData m_ConversionData;
+
+        private static readonly List<AssetModificationRecord> m_ModifiedAssetList = new List<AssetModificationRecord>();
+
+        void OnEnable()
+        {
+            // Set Editor Window Size
+            SetEditorWindowSize();
+
+            m_ProjectScanResults = k_ProjectScanReportDefaultText;
+
+            // Define new style with monospaced font (if we have not already done so).
+            if (m_OutputWindowStyle == null || m_OutputWindowMonospacedFont == null)
+            {
+                if (m_OutputWindowMonospacedFont == null)
+                    m_OutputWindowMonospacedFont = Font.CreateDynamicFontFromOSFont("Courier New", 13);
+
+                if (m_OutputWindowStyle == null)
+                {
+                    m_OutputWindowStyle = new GUIStyle() {font = m_OutputWindowMonospacedFont, richText = true};
+                    m_OutputWindowStyle.normal.textColor = new Color(0.95f, 0.95f, 0.95f, 1f);
+                }
+                else
+                {
+                    m_OutputWindowStyle.font = m_OutputWindowMonospacedFont;
+                }
+            }
+        }
+
+        void OnGUI()
+        {
+            // Define new style with monospaced font (if we have not already done so).
+            if (m_OutputWindowStyle == null || m_OutputWindowMonospacedFont == null)
+            {
+                if (m_OutputWindowMonospacedFont == null)
+                    m_OutputWindowMonospacedFont = Font.CreateDynamicFontFromOSFont("Courier New", 13);
+
+                if (m_OutputWindowStyle == null)
+                {
+                    m_OutputWindowStyle = new GUIStyle() {font = m_OutputWindowMonospacedFont, richText = true};
+                    m_OutputWindowStyle.normal.textColor = new Color(0.95f, 0.95f, 0.95f, 1f);
+                }
+                else
+                {
+                    m_OutputWindowStyle.font = m_OutputWindowMonospacedFont;
+                }
+            }
+
+            GUILayout.BeginVertical();
+            {
+                // Scan project files and resources
+                GUILayout.BeginVertical(EditorStyles.helpBox);
+                {
+                    GUILayout.Label("Scan Project Files", EditorStyles.boldLabel);
+                    GUILayout.Label("Press the <i>Scan Project Files</i> button to begin scanning your project for Scenes and Prefabs containing text objects whose line spacing values might need to be converted to the new (em) line spacing values.", TMP_UIStyleManager.label);
+                    GUILayout.Space(10f);
+                    GUILayout.Label("Project folder to be scanned. Example \"Assets/TextMesh Pro\"");
+                    m_ProjectFolderToScan = EditorGUILayout.TextField("Folder Path:      Assets/", m_ProjectFolderToScan);
+                    GUILayout.Space(5f);
+
+                    GUI.enabled = m_IsAlreadyScanningProject == false ? true : false;
+                    if (GUILayout.Button("Scan Project Files"))
+                    {
+                        m_CancelScanProcess = false;
+
+                        // Make sure Asset Serialization mode is set to ForceText and Version Control mode to Visible Meta Files.
+                        if (CheckProjectSerializationAndSourceControlModes() == true)
+                        {
+                            m_ProjectPath = Path.GetFullPath("Assets/..");
+                            TMP_EditorCoroutine.StartCoroutine(ScanProjectFiles());
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog("Project Settings Change Required", "In menu options \"Edit - Project Settings - Editor\", please change Asset Serialization Mode to ForceText and Source Control Mode to Visible Meta Files.", "OK", string.Empty);
+                        }
+                    }
+                    GUI.enabled = true;
+
+                    // Display progress bar
+                    Rect rect = GUILayoutUtility.GetRect(0f, 20f, GUILayout.ExpandWidth(true));
+                    EditorGUI.ProgressBar(rect, m_ProgressPercentage, "Scan Progress (" + m_ScanningCurrentFileIndex + "/" + m_ScanningTotalFiles + ")");
+
+                    // Display cancel button and name of file currently being scanned.
+                    if (m_IsAlreadyScanningProject)
+                    {
+                        Rect cancelRect = new Rect(rect.width - 20, rect.y + 2, 20, 16);
+                        if (GUI.Button(cancelRect, "X"))
+                        {
+                            m_CancelScanProcess = true;
+                        }
+                        GUILayout.Label(k_ProjectScanLabelPrefix + m_ScanningCurrentFileName, TMP_UIStyleManager.label);
+                    }
+                    else
+                        GUILayout.Label(string.Empty);
+
+                    GUILayout.Space(5);
+
+                    // Creation Feedback
+                    GUILayout.BeginVertical(TMP_UIStyleManager.textAreaBoxWindow, GUILayout.ExpandHeight(true));
+                    {
+                        m_ProjectScanResultScrollPosition = EditorGUILayout.BeginScrollView(m_ProjectScanResultScrollPosition, GUILayout.ExpandHeight(true));
+                        GUILayout.Label(m_ProjectScanResults, m_OutputWindowStyle);
+                        EditorGUILayout.EndScrollView();
+                    }
+                    GUILayout.EndVertical();
+                    GUILayout.Space(5f);
+                }
+                GUILayout.EndVertical();
+
+                // Scan project files and resources
+                GUILayout.BeginVertical(EditorStyles.helpBox);
+                {
+                    GUILayout.Label("Save Modified Project Files", EditorStyles.boldLabel);
+                    GUILayout.Label("Pressing the <i>Save Modified Project Files</i> button will update the files in the <i>Project Scan Results</i> listed above. <color=#FFFF80>Please make sure that you have created a backup of your project first</color> as these file modifications are permanent and cannot be undone.", TMP_UIStyleManager.label);
+                    GUILayout.Space(5f);
+
+                    GUI.enabled = m_IsAlreadyScanningProject == false && m_ModifiedAssetList.Count > 0 ? true : false;
+                    if (GUILayout.Button("Save Modified Project Files"))
+                    {
+                        UpdateProjectFiles();
+                    }
+                    GUILayout.Space(10f);
+                }
+                GUILayout.EndVertical();
+
+            }
+            GUILayout.EndVertical();
+            GUILayout.Space(5f);
+        }
+
+        void OnInspectorUpdate()
+        {
+            Repaint();
+        }
+
+
+        /// <summary>
+        /// Limits the minimum size of the editor window.
+        /// </summary>
+        void SetEditorWindowSize()
+        {
+            EditorWindow editorWindow = this;
+
+            Vector2 currentWindowSize = editorWindow.minSize;
+
+            editorWindow.minSize = new Vector2(Mathf.Max(1024, currentWindowSize.x), Mathf.Max(420, currentWindowSize.y));
+        }
+
+        private IEnumerator ScanProjectFiles()
+        {
+            m_IsAlreadyScanningProject = true;
+            string packageFullPath = EditorUtilities.TMP_EditorUtility.packageFullPath;
+
+            // List containing assets that have been modified.
+            m_ProjectScanResults = k_ProjectScanReportDefaultText;
+            m_ModifiedAssetList.Clear();
+            m_ProgressPercentage = 0;
+
+            // Get list of GUIDs for assets that might contain references to previous GUIDs that require updating.
+
+codex
+I confirmed the package exposes `TMPro.TMP_PackageResourceImporter.ImportResources(bool importEssentials, bool importExamples, bool interactive)` in this Unity 3.0.6 cache, not `ImportProjectResources`. I’m patching the baker to import essentials, refresh, and hard-fail if the SDF shader still isn’t available before `CreateFontAsset`.
+apply patch
+patch: completed
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+codex
+The code change is in place. I’m moving straight to the headless bake now: stop Unity, clear the lockfile, run the editor once, and inspect whether the bundle materialized and the log shows a successful TMP essentials import.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Process Unity -ErrorAction SilentlyContinue | Stop-Process -Force' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Remove-Item -LiteralPath 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Temp\\UnityLockfile' -Force -ErrorAction SilentlyContinue" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ exited 1 in 1201ms:
+ exited 1 in 1247ms:
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "& 'C:\\Program Files\\Unity\\Hub\\Editor\\2021.3.45f1\\Editor\\Unity.exe' -batchmode -nographics -quit -projectPath 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder' -executeMethod BakeTmpFontAsset.BakeHeadless -logFile 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\tmp-font-bake.log'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 1310ms:
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\tmp-font-bake.log' -Tail 200" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -LiteralPath 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\AssetBundles' -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1011ms:
+[Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Connection attempt to the License Client on channel: "LicenseClient-koosh" failed because channel doesn't exist; code: "0x80000002"
+[Licensing::Module] Successfully launched the LicensingClient (PId: 5220)
+[Licensing::IpcConnector] Successfully connected to the License Client on channel: "LicenseClient-koosh" at "2026-05-31T23:22:34.7454937Z"
+[Licensing::Client] Error: Code 10 while verifying Licensing Client signature (process Id: 5220, path: "C:/Program Files/Unity/Hub/Editor/2021.3.45f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] Error: LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.15.4+eee609c
+  Session Id:              0423e2d75bcf4987bc1cdecb7e9ea1f3
+  Correlation Id:          f73b9838e73f1997eae9a15e875cc069
+  External correlation Id: 37847753498268490
+  Machine Id:              1URxonWXDqhd4gyhtwvDtzxLEKo=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-koosh" (connect: 3.11s, validation: 0.22s, handshake: 0.25s)
+[Licensing::IpcConnector] Successfully connected to the License Notification on channel: "LicenseClient-koosh-notifications" at "2026-05-31T23:22:35.2269842Z"
+[Licensing::Module] Connected to LicensingClient (PId: 5220, launch time: 0.02, total connection time: 3.59s)
+Entitlement-based licensing initiated
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Error: Code 500 while processing request (status: Unable to update licenses. Errors: No ULF license found.,Token not found in cache)
+[Licensing::Client] Error: Code 500 while updating license in client (status: Unable to update licenses. Errors: No ULF license found.,Token not found in cache)
+Built from '2021.3/staging' branch; Version is '2021.3.45f1 (0da89fac8e79) revision 895135'; Using compiler version '192829333'; Build Type 'Release'
+OS: 'Windows 11  (10.0.28020) 64bit Professional' Language: 'en' Physical Memory: 65437 MB
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Serial number assigned to: "6577137-UnityPersXXXX"
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1, IsPro: 0
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Server::Start -- Port 61866 was selected
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe
+-batchmode
+-nographics
+-quit
+-projectPath
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder
+-executeMethod
+BakeTmpFontAsset.BakeHeadless
+-logFile
+C:\Users\koosh\Dino\.claude\worktrees\swfont\tmp-font-bake.log
+Successfully changed project path to: C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder
+C:/Users/koosh/Dino/.claude/worktrees/swfont/unity-assetbundle-builder
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [75996] Host "[IP] 192.168.1.159 [Port] 55496 [Flags] 2 [Guid] 3730896407 [EditorId] 3730896407 [Version] 1048832 [Id] WindowsEditor(7,kooshapari-desk) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined multi-casting on [225.0.0.222:54997]...
+
+Player connection [75996] Host "[IP] 192.168.1.159 [Port] 55496 [Flags] 2 [Guid] 3730896407 [EditorId] 3730896407 [Version] 1048832 [Id] WindowsEditor(7,kooshapari-desk) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined alternative multi-casting on [225.0.0.222:34997]...
+
+[Physics::Module] Initialized MultithreadedJobDispatcher with {0} workers.
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 1119ms:
+
+FullName                                                                                                              L
+                                                                                                                      e
+                                                                                                                      n
+                                                                                                                      g
+                                                                                                                      t
+                                                                                                                      h
+--------                                                                                                              -
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\AssetBundles                      7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\AssetBundles.manifest             8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-aat-walker                     2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-aat-walker.manifest            7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-arf-trooper                    8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-arf-trooper.manifest           3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-assembly-line                  7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-assembly-line.manifest         9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-b1-squad                       2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-b1-squad.manifest              5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-barc-speeder                   1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-barc-speeder.manifest          3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-blast-wall                     0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-blast-wall.manifest            2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-aa-tower                   1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-aa-tower.manifest          1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-b1-battle-droid            2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-b1-battle-droid.manifest   3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-b2-super-droid             7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-b2-super-droid.manifest    0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-command-center             4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-command-center.manifest    7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-commando-droid             1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-commando-droid.manifest    0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-control-ship               1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-control-ship.manifest      2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-droid-factory              9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-droid-factory.manifest     5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-droid-pilot                2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-droid-pilot.manifest       0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-droideka                   8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-droideka.manifest          2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-grapple-droid              3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-grapple-droid.manifest     6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-hangar-bay                 0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-hangar-bay.manifest        4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-hmp-droid-gunship          8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-hmp-droid-gunship.manifest 6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-ion-cannon                 3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-ion-cannon.manifest        6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-magna-guard                4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-magna-guard.manifest       0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-nantex-fighter             2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-nantex-fighter.manifest    8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-octuptarra                 2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-octuptarra.manifest        7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-repair-bay                 8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-repair-bay.manifest        4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-rocket-droid               8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-rocket-droid.manifest      2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-sensor-array               8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-sensor-array.manifest      3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-shield-generator           3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-shield-generator.manifest  5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-sniper-droid               4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-sniper-droid.manifest      3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-spider-droid               0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-spider-droid.manifest      3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-stap                       1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-stap.manifest              9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-supply-depot               2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-supply-depot.manifest      1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-trade-fed-core             4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-cis-trade-fed-core.manifest    8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-clone-commando                 9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-clone-commando.manifest        5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-clone-militia                  2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-clone-militia.manifest         4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-clone-wall-guard               6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-clone-wall-guard.manifest      8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-durasteel-barrier              7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-durasteel-barrier.manifest     3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-general-grievous               6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-general-grievous.manifest      3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-guard-tower                    9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-guard-tower.manifest           2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-heavy-foundry                  2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-heavy-foundry.manifest         0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-jedi-knight                    1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-jedi-knight.manifest           2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-medical-droid                  8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-medical-droid.manifest         0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-mining-facility                7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-mining-facility.manifest       1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-probe-droid                    8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-probe-droid.manifest           8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-processing-plant               4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-processing-plant.manifest      3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-arc-trooper                4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-arc-trooper.manifest       6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-at-rt-walker               7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-at-rt-walker.manifest      7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-at-te-walker               5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-at-te-walker.manifest      9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-commander            4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-commander.manifest   8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-engineer             7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-engineer.manifest    4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-facility             5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-facility.manifest    3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-heavy                8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-heavy.manifest       6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-jet                  0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-jet.manifest         9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-medic                7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-medic.manifest       6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-mortar               1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-mortar.manifest      8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-pilot                9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-pilot.manifest       5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-sniper               4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-sniper.manifest      9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-trooper              2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-clone-trooper.manifest     2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-command-center             9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-command-center.manifest    3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-gunship-bay                8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-gunship-bay.manifest       4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-ion-cannon                 7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-ion-cannon.manifest        2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-jedi-fighter               8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-jedi-fighter.manifest      8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-laat-gunship               6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-laat-gunship.manifest      7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-med-center                 5
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-med-center.manifest        1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-research-lab               6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-research-lab.manifest      7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-senate-outpost             4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-senate-outpost.manifest    3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-shield-generator           3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-shield-generator.manifest  0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-supply-depot               1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-supply-depot.manifest      7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-turbolaser-tower           4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-turbolaser-tower.manifest  0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-vehicle-bay                2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-rep-vehicle-bay.manifest       4
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-skyshield-generator            6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-skyshield-generator.manifest   0
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-tech-union-lab                 9
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-tech-union-lab.manifest        1
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-tibanna-refinery               2
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-tibanna-refinery.manifest      7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-tri-fighter                    6
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-tri-fighter.manifest           7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-v19-torrent-unit               7
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-v19-torrent-unit.manifest      8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-vulture-nest                   8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-vulture-nest.manifest          8
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-weapons-factory                3
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\AssetBundles\sw-weapons-factory.manifest       6
+
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Select-String -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\tmp-font-bake.log' -Pattern 'BakeTmpFontAsset|TMP Essential|Distance Field|ArgumentNullException|Exception|Exit' | Select-Object -Last 50 | ForEach-Object { "'$_.Line }' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -LiteralPath 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\AssetBundles' -Filter 'sw_menu_font*' -ErrorAction SilentlyContinue | Select-Object FullName,Length | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 5098ms:
+BakeTmpFontAsset.BakeHeadless
+Start importing Assets/Editor/BakeTmpFontAsset.cs using Guid(0b088718c3e96e74d8937483a0d5aaa5) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'dfdd2ab02368e57be28b83dba8cde7da') in 0.043804 seconds 
+
+ succeeded in 7718ms:
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+codex
+The editor launched and reimported the script, but I’m not seeing the bake completion or a `sw_menu_font` bundle yet. I’m checking whether the method actually executed versus the editor exiting during script reload or import.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -LiteralPath 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\Fonts' -ErrorAction SilentlyContinue | Select-Object FullName,Length | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Select-String -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\tmp-font-bake.log' -Pattern '\\[BakeTmpFontAsset\\]' | ForEach-Object { "'$_.Line }' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 13909ms:
+[BakeTmpFontAsset] Starting TMP SDF font bake...
+[BakeTmpFontAsset] Importing TMP Essential Resources...
+[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 14196ms:
+
+FullName                                                                                               Length
+--------                                                                                               ------
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Fonts\menu_font.ttf       34180
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Fonts\menu_font.ttf.meta    485
+
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets' -Recurse -Filter '*Distance*' -ErrorAction SilentlyContinue | Select-Object FullName | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg -n \"Distance Field\" 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -g '*.shader' -g '*.meta' -g '*.json'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1229ms:
+ succeeded in 2223ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal Editor.shader:6:Shader "Hidden/TMP/Internal/Editor/Distance Field SSD" {
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -Recurse -Filter '*.shader.meta' | Select-String -Pattern 'Distance Field|GUID' -Context 0,2" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -Recurse -Filter '*.shader' | Select-Object FullName | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 890ms:
+
+FullName
+--------
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+
+
+ succeeded in 970ms:
+
+> unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal 
+Editor.shader.meta:2:guid: 9c442dc870b456e48b615cd8add0e9ef
+  unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal 
+Editor.shader.meta:3:ShaderImporter:
+  unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal 
+Editor.shader.meta:4:  externalObjects: {}
+
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+codex
+The essentials import succeeded only partially: the font resources copied in, but `Shader.Find("TextMeshPro/Distance Field")` still comes back null. I’m tracing the package’s shader asset path/GUID next so I can explicitly load the shader asset before `CreateFontAsset`.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -Recurse -Filter '*.mat.meta' | Select-String -Pattern 'TextMeshPro/Distance Field|shader:' -Context 0,2" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -Recurse -Filter '*.shader' | Select-Object -ExpandProperty FullName" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1483ms:
+ succeeded in 1904ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal Editor.shader
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg -n \"Shader \\\"TextMeshPro/Distance Field\\\"|TextMeshPro/Distance Field\" 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -g '*'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg -n \"TMP Essentials|TMP Settings.asset|Distance Field\" 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -g '*.cs' -g '*.shader' -g '*.mat' -g '*.meta'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ exited 1 in 1670ms:
+rg: regex parse error:
+    (?:Shader \)
+    ^
+error: unclosed group
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 3646ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal Editor.shader:6:Shader "Hidden/TMP/Internal/Editor/Distance Field SSD" {
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMPro_FontAssetCreatorWindow.cs:1588:                Shader default_Shader = Shader.Find("TextMeshPro/Distance Field");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMPro_FontAssetCreatorWindow.cs:1691:            //File.WriteAllBytes("Assets/Textures/Debug Distance Field.png", pngData);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_FontAssetEditor.cs:79:                    Shader shader = Shader.Find("Hidden/TMP/Internal/Editor/Distance Field SSD");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_PackageUtilities.cs:1083:            // Check if the TMP Settings asset is already present in the project.
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_PackageUtilities.cs:1091:                // Copy existing TMP Settings asset to a byte[]
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_ResourcesLoader.cs:45:            //    //Shader s0 = Shader.Find("TextMeshPro/Mobile/Distance Field");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_FontAsset_CreationMenu.cs:232:            Shader default_Shader = Shader.Find("TextMeshPro/Distance Field");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_MaterialManager.cs:48:                Debug.LogWarning("Selected Shader does not support Stencil Masking. Please select the Distance Field or Mobile Distance Field Shader.");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_PackageResourceImporter.cs:27:            m_EssentialResourcesImported = File.Exists("Assets/TextMesh Pro/Resources/TMP Settings.asset");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_PackageResourceImporter.cs:35:                    GUILayout.Label("TMP Essentials", EditorStyles.boldLabel);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_PackageResourceImporter.cs:40:                    if (GUILayout.Button("Import TMP Essentials"))
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_ShaderUtilities.cs:114:                    k_ShaderRef_MobileSDF = Shader.Find("TextMeshPro/Mobile/Distance Field");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_ShaderUtilities.cs:229:                    k_ShaderRef_MobileSDF = Shader.Find("TextMeshPro/Mobile/Distance Field");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_ShaderUtilities.cs:359:            // Check if we are using a non Distance Field Shader
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Editor\\TMPro_FontAssetCreatorWindow.cs' | Select-Object -First 1800 | Select-Object -Last 120" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Editor\\TMP_ResourcesLoader.cs' | Select-Object -First 220" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1499ms:
+                    int spread = m_Padding + 1;
+                    material_references[i].SetFloat(ShaderUtilities.ID_GradientScale, spread);
+
+                    material_references[i].SetFloat(ShaderUtilities.ID_WeightNormal, fontAsset.normalStyle);
+                    material_references[i].SetFloat(ShaderUtilities.ID_WeightBold, fontAsset.boldStyle);
+                }
+            }
+
+            // Saving File for Debug
+            //var pngData = destination_Atlas.EncodeToPNG();
+            //File.WriteAllBytes("Assets/Textures/Debug Distance Field.png", pngData);
+
+            // Set texture to non readable
+            FontEngineEditorUtilities.SetAtlasTextureIsReadable(fontAsset.atlasTexture, false);
+
+            // Add list of GlyphRects to font asset.
+            fontAsset.freeGlyphRects = m_FreeGlyphRects;
+            fontAsset.usedGlyphRects = m_UsedGlyphRects;
+
+            // Save Font Asset creation settings
+            m_SelectedFontAsset = fontAsset;
+            m_LegacyFontAsset = null;
+            fontAsset.creationSettings = SaveFontCreationSettings();
+
+            AssetDatabase.SaveAssets();
+
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(fontAsset));  // Re-import font asset to get the new updated version.
+
+            fontAsset.ReadFontAssetDefinition();
+
+            AssetDatabase.Refresh();
+
+            m_FontAtlasTexture = null;
+
+            // NEED TO GENERATE AN EVENT TO FORCE A REDRAW OF ANY TEXTMESHPRO INSTANCES THAT MIGHT BE USING THIS FONT ASSET
+            TMPro_EventManager.ON_FONT_PROPERTY_CHANGED(true, fontAsset);
+        }
+
+
+        /// <summary>
+        /// Internal method to save the Font Asset Creation Settings
+        /// </summary>
+        /// <returns></returns>
+        FontAssetCreationSettings SaveFontCreationSettings()
+        {
+            FontAssetCreationSettings settings = new FontAssetCreationSettings();
+
+            //settings.sourceFontFileName = m_SourceFontFile.name;
+            settings.sourceFontFileGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(m_SourceFontFile));
+            settings.pointSizeSamplingMode = m_PointSizeSamplingMode;
+            settings.pointSize = m_PointSize;
+            settings.padding = m_Padding;
+            settings.packingMode = (int)m_PackingMode;
+            settings.atlasWidth = m_AtlasWidth;
+            settings.atlasHeight = m_AtlasHeight;
+            settings.characterSetSelectionMode = m_CharacterSetSelectionMode;
+            settings.characterSequence = m_CharacterSequence;
+            settings.referencedFontAssetGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(m_ReferencedFontAsset));
+            settings.referencedTextAssetGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(m_CharactersFromFile));
+            //settings.fontStyle = (int)m_FontStyle;
+            //settings.fontStyleModifier = m_FontStyleValue;
+            settings.renderMode = (int)m_GlyphRenderMode;
+            settings.includeFontFeatures = m_IncludeFontFeatures;
+
+            return settings;
+        }
+
+
+        /// <summary>
+        /// Internal method to load the Font Asset Creation Settings
+        /// </summary>
+        /// <param name="settings"></param>
+        void LoadFontCreationSettings(FontAssetCreationSettings settings)
+        {
+            m_SourceFontFile = AssetDatabase.LoadAssetAtPath<Font>(AssetDatabase.GUIDToAssetPath(settings.sourceFontFileGUID));
+            m_PointSizeSamplingMode  = settings.pointSizeSamplingMode;
+            m_PointSize = settings.pointSize;
+            m_Padding = settings.padding;
+            m_PackingMode = (FontPackingModes)settings.packingMode;
+            m_AtlasWidth = settings.atlasWidth;
+            m_AtlasHeight = settings.atlasHeight;
+            m_CharacterSetSelectionMode = settings.characterSetSelectionMode;
+            m_CharacterSequence = settings.characterSequence;
+            m_ReferencedFontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetDatabase.GUIDToAssetPath(settings.referencedFontAssetGUID));
+            m_CharactersFromFile = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath(settings.referencedTextAssetGUID));
+            //m_FontStyle = (FaceStyles)settings.fontStyle;
+            //m_FontStyleValue = settings.fontStyleModifier;
+            m_GlyphRenderMode = (GlyphRenderMode)settings.renderMode;
+            m_IncludeFontFeatures = settings.includeFontFeatures;
+        }
+
+
+        /// <summary>
+        /// Save the latest font asset creation settings to EditorPrefs.
+        /// </summary>
+        /// <param name="settings"></param>
+        void SaveCreationSettingsToEditorPrefs(FontAssetCreationSettings settings)
+        {
+            // Create new list if one does not already exist
+            if (m_FontAssetCreationSettingsContainer == null)
+            {
+                m_FontAssetCreationSettingsContainer = new FontAssetCreationSettingsContainer();
+                m_FontAssetCreationSettingsContainer.fontAssetCreationSettings = new List<FontAssetCreationSettings>();
+            }
+
+            // Add new creation settings to the list
+            m_FontAssetCreationSettingsContainer.fontAssetCreationSettings.Add(settings);
+
+            // Since list should only contain the most 4 recent settings, we remove the first element if list exceeds 4 elements.
+            if (m_FontAssetCreationSettingsContainer.fontAssetCreationSettings.Count > 4)
+                m_FontAssetCreationSettingsContainer.fontAssetCreationSettings.RemoveAt(0);
+
+            m_FontAssetCreationSettingsCurrentIndex = m_FontAssetCreationSettingsContainer.fontAssetCreationSettings.Count - 1;
+
+            // Serialize list to JSON
+            string serializedSettings = JsonUtility.ToJson(m_FontAssetCreationSettingsContainer, true);
+
+            EditorPrefs.SetString(k_FontAssetCreationSettingsContainerKey, serializedSettings);
+        }
+
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 4904ms:
+using UnityEditor;
+using UnityEngine;
+using System.Collections;
+
+namespace TMPro.EditorUtilities
+{
+
+    //[InitializeOnLoad]
+    class TMP_ResourcesLoader
+    {
+
+        /// <summary>
+        /// Function to pre-load the TMP Resources
+        /// </summary>
+        public static void LoadTextMeshProResources()
+        {
+            //TMP_Settings.LoadDefaultSettings();
+            //TMP_StyleSheet.LoadDefaultStyleSheet();
+        }
+
+
+        static TMP_ResourcesLoader()
+        {
+            //Debug.Log("Loading TMP Resources...");
+
+            // Get current targetted platform
+
+
+            //string Settings = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone);
+            //TMPro.TMP_Settings.LoadDefaultSettings();
+            //TMPro.TMP_StyleSheet.LoadDefaultStyleSheet();
+        }
+
+
+
+        //[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        //static void OnBeforeSceneLoaded()
+        //{
+            //Debug.Log("Before scene is loaded.");
+
+            //    //TMPro.TMP_Settings.LoadDefaultSettings();
+            //    //TMPro.TMP_StyleSheet.LoadDefaultStyleSheet();
+
+            //    //ShaderVariantCollection collection = new ShaderVariantCollection();
+            //    //Shader s0 = Shader.Find("TextMeshPro/Mobile/Distance Field");
+            //    //ShaderVariantCollection.ShaderVariant tmp_Variant = new ShaderVariantCollection.ShaderVariant(s0, UnityEngine.Rendering.PassType.Normal, string.Empty);
+
+            //    //collection.Add(tmp_Variant);
+            //    //collection.WarmUp();
+        //}
+
+    }
+
+    //static class TMP_ProjectSettings
+    //{
+    //    [InitializeOnLoadMethod]
+    //    static void SetProjectDefineSymbols()
+    //    {
+    //        string currentBuildSettings = PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+
+    //        //Check for and inject TMP_INSTALLED
+    //        if (!currentBuildSettings.Contains("TMP_PRESENT"))
+    //        {
+    //            PlayerSettings.SetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup, currentBuildSettings + ";TMP_PRESENT");
+    //        }
+    //    }
+    //}
+}
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\TextMesh Pro' -Recurse -Filter '*.shader' -ErrorAction SilentlyContinue | Select-Object FullName | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\TextMesh Pro' -Recurse -ErrorAction SilentlyContinue | Select-String -Pattern 'TextMeshPro/Distance Field' -List | Select-Object -ExpandProperty Path -Unique" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1219ms:
+ succeeded in 1272ms:
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Test-Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\TextMesh Pro'; if ("'$?) { Get-ChildItem '"'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\TextMesh Pro' -Force | Select-Object FullName,Length | Format-Table -AutoSize }" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ exited 1 in 2525ms:
+False
+Get-ChildItem: 
+Line |
+   2 |  … ; if ($?) { Get-ChildItem 'C:\Users\koosh\Dino\.claude\worktrees\swfo …
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path 'C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\TextMesh Pro' because it does not exist.
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Editor\\TMPro_FontAssetCreatorWindow.cs' | Select-Object -Index (1570..1615)" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg -n \"LoadDefaultSettings|defaultFontAsset|defaultFontAsset\" 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts' -g '*.cs'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1350ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_Private.cs:127:            LoadDefaultSettings();
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_Private.cs:484:                if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_Private.cs:485:                    m_fontAsset =TMP_Settings.defaultFontAsset;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_Private.cs:1176:                        if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_Private.cs:1177:                            character = TMP_FontAssetUtilities.GetCharacterFromFontAsset((uint)unicode, TMP_Settings.defaultFontAsset, true, m_FontStyleInternal, m_FontWeightInternal, out isUsingAlternativeTypeface);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_UGUI_Private.cs:118:            LoadDefaultSettings();
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_UGUI_Private.cs:275:            LoadDefaultSettings();
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_UGUI_Private.cs:531:                if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_UGUI_Private.cs:532:                    m_fontAsset = TMP_Settings.defaultFontAsset;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_UGUI_Private.cs:1250:                        if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMPro_UGUI_Private.cs:1251:                            character = TMP_FontAssetUtilities.GetCharacterFromFontAsset((uint)unicode, TMP_Settings.defaultFontAsset, true, m_FontStyleInternal, m_FontWeightInternal, out isUsingAlternativeTypeface);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_FontAsset.cs:959:                if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_FontAsset.cs:961:                    TMP_FontAsset fallback = TMP_Settings.defaultFontAsset;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_FontAsset.cs:1154:                    if (isMissingCharacter && TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_FontAsset.cs:1156:                        TMP_FontAsset fallback = TMP_Settings.defaultFontAsset;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_ResourcesLoader.cs:17:            //TMP_Settings.LoadDefaultSettings();
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_ResourcesLoader.cs:30:            //TMPro.TMP_Settings.LoadDefaultSettings();
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_ResourcesLoader.cs:41:            //    //TMPro.TMP_Settings.LoadDefaultSettings();
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:126:        public static TMP_FontAsset defaultFontAsset
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:128:            get { return instance.m_defaultFontAsset; }
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:131:        private TMP_FontAsset m_defaultFontAsset;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:136:        public static string defaultFontAssetPath
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:138:            get { return instance.m_defaultFontAssetPath; }
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:141:        private string m_defaultFontAssetPath;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:411:        public static TMP_Settings LoadDefaultSettings()
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Settings.cs:445:            return TMP_Settings.instance.m_defaultFontAsset;
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:15:            public static readonly GUIContent defaultFontAssetLabel = new GUIContent("Default Font Asset", "The Font Asset that will be assigned by default to newly created text objects when no Font Asset is specified.");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:16:            public static readonly GUIContent defaultFontAssetPathLabel = new GUIContent("Path:        Resources/", "The relative path to a Resources folder where the Font Assets and Material Presets are located.\nExample \"Fonts & Materials/\"");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:116:            m_PropFontAsset = serializedObject.FindProperty("m_defaultFontAsset");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:117:            m_PropDefaultFontAssetPath = serializedObject.FindProperty("m_defaultFontAssetPath");
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:185:            GUILayout.Label(Styles.defaultFontAssetLabel, EditorStyles.boldLabel);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:187:            EditorGUILayout.PropertyField(m_PropFontAsset, Styles.defaultFontAssetLabel);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SettingsEditor.cs:188:            EditorGUILayout.PropertyField(m_PropDefaultFontAssetPath, Styles.defaultFontAssetPathLabel);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:5946:        protected void LoadDefaultSettings()
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:6035:                if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:6036:                    character = TMP_FontAssetUtilities.GetCharacterFromFontAsset(0x2026, TMP_Settings.defaultFontAsset, true, m_FontStyleInternal, m_FontWeightInternal, out isUsingAlternativeTypeface);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:6069:                if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:6070:                    m_Underline.character = TMP_FontAssetUtilities.GetCharacterFromFontAsset(0x5F, TMP_Settings.defaultFontAsset, true, m_FontStyleInternal, m_FontWeightInternal, out isUsingAlternativeTypeface, out tempFontAsset);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:6210:            if (TMP_Settings.defaultFontAsset != null)
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:6211:                character = TMP_FontAssetUtilities.GetCharacterFromFontAsset(unicode, TMP_Settings.defaultFontAsset, true, fontStyle, fontWeight, out isUsingAlternativeTypeface);
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:7482:                                tempFont = Resources.Load<TMP_FontAsset>(TMP_Settings.defaultFontAssetPath + new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:7515:                                tempMaterial = Resources.Load<Material>(TMP_Settings.defaultFontAssetPath + new string(m_htmlTag, m_xmlAttribute[1].valueStartIndex, m_xmlAttribute[1].valueLength));
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_Text.cs:7581:                            tempMaterial = Resources.Load<Material>(TMP_Settings.defaultFontAssetPath + new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 1443ms:
+                // Sort glyph and character tables.
+                fontAsset.SortAllTables();
+
+                // Get and Add Kerning Pairs to Font Asset
+                if (m_IncludeFontFeatures)
+                    fontAsset.fontFeatureTable = GetKerningTable();
+
+                // Add Font Atlas as Sub-Asset
+                fontAsset.atlasTextures = new Texture2D[] { m_FontAtlasTexture };
+                m_FontAtlasTexture.name = tex_FileName + " Atlas";
+                fontAsset.atlasWidth = m_AtlasWidth;
+                fontAsset.atlasHeight = m_AtlasHeight;
+                fontAsset.atlasPadding = m_Padding;
+
+                AssetDatabase.AddObjectToAsset(m_FontAtlasTexture, fontAsset);
+
+                // Create new Material and Add it as Sub-Asset
+                Shader default_Shader = Shader.Find("TextMeshPro/Distance Field");
+                Material tmp_material = new Material(default_Shader);
+
+                tmp_material.name = tex_FileName + " Material";
+                tmp_material.SetTexture(ShaderUtilities.ID_MainTex, m_FontAtlasTexture);
+                tmp_material.SetFloat(ShaderUtilities.ID_TextureWidth, m_FontAtlasTexture.width);
+                tmp_material.SetFloat(ShaderUtilities.ID_TextureHeight, m_FontAtlasTexture.height);
+
+                int spread = m_Padding + 1;
+                tmp_material.SetFloat(ShaderUtilities.ID_GradientScale, spread); // Spread = Padding for Brute Force SDF.
+
+                tmp_material.SetFloat(ShaderUtilities.ID_WeightNormal, fontAsset.normalStyle);
+                tmp_material.SetFloat(ShaderUtilities.ID_WeightBold, fontAsset.boldStyle);
+
+                fontAsset.material = tmp_material;
+
+                AssetDatabase.AddObjectToAsset(tmp_material, fontAsset);
+            }
+            else
+            {
+                // Find all Materials referencing this font atlas.
+                Material[] material_references = TMP_EditorUtility.FindMaterialReferences(fontAsset);
+
+                // Set version number of font asset
+                fontAsset.version = "1.1.0";
+
+                // Special handling to remove legacy font asset data
+                if (fontAsset.m_glyphInfoList != null && fontAsset.m_glyphInfoList.Count > 0)
+                    fontAsset.m_glyphInfoList = null;
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -Recurse -Force | Where-Object { "'$_.Name -like '"'TMP_SDF*' -or "'$_.Name -like '"'*Distance Field*' } | Select-Object FullName,Name | Format-Table -AutoSize" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 844ms:
+
+FullName
+--------                                                                                                               
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.…
+
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6' -Recurse -Force | Where-Object { "'$_.Name -like '"'TMP_SDF*' -or "'$_.Name -like '"'*Distance Field*' } | ForEach-Object { "'$_.FullName }' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1272ms:
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal Editor.shader
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF Internal Editor.shader.meta
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF_SSD.cginc
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Editor Resources\Shaders\TMP_SDF_SSD.cginc.meta
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SDFShaderGUI.cs
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Editor\TMP_SDFShaderGUI.cs.meta
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+codex
+The current headless run reproduces the failure exactly: essentials import returns, but the shader is still absent and the bake exits before asset creation. I’m doing one last source check on TMP’s default-settings loader to make sure I’m not missing a low-cost API that would recover the shader headless; otherwise I’ll leave the fix scoped and report the bake as needing a headful Editor pass.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont' diff -- unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Library\\PackageCache\\com.unity.textmeshpro@3.0.6\\Scripts\\Runtime\\TMP_Settings.cs' | Select-Object -Index (380..470)" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 3398ms:
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 35c201ff..6511b243 100644
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,6 +44,13 @@ public static class BakeTmpFontAsset
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
++    private static void ImportTmpEssentials()
++    {
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
++    }
++
+     public static void BakeHeadless()
+     {
+         try
+@@ -54,7 +61,15 @@ public static class BakeTmpFontAsset
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -103,8 +118,7 @@ public static class BakeTmpFontAsset
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 3494ms:
+        /// <summary>
+        /// Get a singleton instance of the settings class.
+        /// </summary>
+        public static TMP_Settings instance
+        {
+            get
+            {
+                if (TMP_Settings.s_Instance == null)
+                {
+                    TMP_Settings.s_Instance = Resources.Load<TMP_Settings>("TMP Settings");
+
+                    #if UNITY_EDITOR
+                    // Make sure TextMesh Pro UPM packages resources have been added to the user project
+                    if (TMP_Settings.s_Instance == null)
+                    {
+                        // Open TMP Resources Importer
+                        TMP_PackageResourceImporterWindow.ShowPackageImporterWindow();
+                    }
+                    #endif
+                }
+
+                return TMP_Settings.s_Instance;
+            }
+        }
+
+
+        /// <summary>
+        /// Static Function to load the TMP Settings file.
+        /// </summary>
+        /// <returns></returns>
+        public static TMP_Settings LoadDefaultSettings()
+        {
+            if (s_Instance == null)
+            {
+                // Load settings from TMP_Settings file
+                TMP_Settings settings = Resources.Load<TMP_Settings>("TMP Settings");
+                if (settings != null)
+                    s_Instance = settings;
+            }
+
+            return s_Instance;
+        }
+
+
+        /// <summary>
+        /// Returns the Sprite Asset defined in the TMP Settings file.
+        /// </summary>
+        /// <returns></returns>
+        public static TMP_Settings GetSettings()
+        {
+            if (TMP_Settings.instance == null) return null;
+
+            return TMP_Settings.instance;
+        }
+
+
+        /// <summary>
+        /// Returns the Font Asset defined in the TMP Settings file.
+        /// </summary>
+        /// <returns></returns>
+        public static TMP_FontAsset GetFontAsset()
+        {
+            if (TMP_Settings.instance == null) return null;
+
+            return TMP_Settings.instance.m_defaultFontAsset;
+        }
+
+
+        /// <summary>
+        /// Returns the Sprite Asset defined in the TMP Settings file.
+        /// </summary>
+        /// <returns></returns>
+        public static TMP_SpriteAsset GetSpriteAsset()
+        {
+            if (TMP_Settings.instance == null) return null;
+
+            return TMP_Settings.instance.m_defaultSpriteAsset;
+        }
+
+
+        /// <summary>
+        /// Returns the Style Sheet defined in the TMP Settings file.
+        /// </summary>
+        /// <returns></returns>
+        public static TMP_StyleSheet GetStyleSheet()
+        {
+            if (TMP_Settings.instance == null) return null;
+
+            return TMP_Settings.instance.m_defaultStyleSheet;
+        }
+
+
+codex
+`TMP_Settings.LoadDefaultSettings()` only pulls `Resources/TMP Settings` and does not import package resources, so it doesn’t change the failure mode here. I’m stopping at the isolated fix plus verification evidence: essentials import attempted headless, shader stayed null, and no bundle was emitted.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -LiteralPath 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\AssetBundles' -Filter 'sw_menu_font*' -ErrorAction SilentlyContinue | ForEach-Object { \""'$($_.FullName) $($_.Length)" }' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont' status --short" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 810ms:
+ succeeded in 902ms:
+ M .cursor/cli.json
+ M src/Analyzers/packages.lock.json
+ M src/Bridge/Protocol/packages.lock.json
+ M src/Runtime/packages.lock.json
+ M src/SDK/packages.lock.json
+ M unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+ D unity-assetbundle-builder/Assets/Models/cis_b1_battle_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_bx_commando_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_droideka.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_probe_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_sniper_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_arf_trooper.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_engineer.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_heavy.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_medic.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_militia.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_sharpshooter.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_aat_walker.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_clone_trooper_phase2.fbx.meta
+?? docs/sessions/tmp-font-bake-direct.log
+?? docs/sessions/tmp-font-bake.log
+?? tmp-font-bake.log
+?? unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/BuildSwMissingBundles.cs.meta
+?? unity-assetbundle-builder/Assets/Fonts.meta
+?? unity-assetbundle-builder/Assets/Fonts/
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+codex
+I’m committing only the script change, leaving the unrelated worktree noise untouched. The bundle is not part of the commit because headless bake did not generate it.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont' add -- 'unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs' && git -C 'C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont' commit -m 'fix(tmp-font): import essentials before headless bake' -m 'Owned by: runtime-specialist'" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+ succeeded in 52066ms:
+╭───────────────────────────────────╮
+│ lefthook v2.1.4  hook: pre-commit │
+╰───────────────────────────────────╯
+│  check-json (skip) no matching staged files
+│  check-yaml (skip) no matching staged files
+┃  check-merge-conflicts ❯ 
+
+check-merge-conflicts: 1 files clean
+
+┃  format-check ❯ 
+
+
+                                      
+  ────────────────────────────────────
+summary: (done in 35.02 seconds)      
+✓ check-merge-conflicts (1.69 seconds)
+✓ format-check (34.56 seconds)
+[fix/sw-tmp-font-20260531 deaf6dfd] fix(tmp-font): import essentials before headless bake
+ 1 file changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+codex
+Implemented the isolated script fix in [`unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs`](/C:/Users/koosh/Dino/.claude/worktrees/swfont/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs) and committed it as `deaf6dfd` (`fix(tmp-font): import essentials before headless bake`).
+
+What changed:
+- Calls `TMPro.TMP_PackageResourceImporter.ImportResources(true, false, false)` before `CreateFontAsset`
+- Runs `AssetDatabase.Refresh()` immediately after
+- Hard-fails if `Shader.Find("TextMeshPro/Distance Field")` is still null before baking
+- Reuses the resolved shader when assigning the baked material
+
+Headless verification:
+- TMP essentials import: attempted, but not sufficient headless
+- `Shader.Find("TextMeshPro/Distance Field")`: still null after import
+- `sw_menu_font` bundle: not produced
+- Font applies: `needs-headful`
+
+I did not add the bundle or any unrelated worktree changes. The bake now fails early with a clear diagnostic instead of throwing at `TMP_FontAsset.CreateFontAsset`, but this still needs a headful Editor pass to complete the TMP resource import path.
+diff --git a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+index 468c6b2391b0017fcca0e5961f85d51f97b8fc9b..6511b2433d2d74a7dfc35e34781b03f9ea13ef0d
+--- a/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
++++ b/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs
+@@ -44,15 +44,11 @@
+     private const int AtlasWidth = 1024;
+     private const int AtlasHeight = 1024;
+ 
+-    private static void ImportTmpEssentialsIfMissing()
++    private static void ImportTmpEssentials()
+     {
+-        // Unity 2021.3 with the com.unity.textmeshpro package already exposes the TMP
+-        // runtime/editor types needed for baking in this project. The helper remains as a
+-        // defensive hook so headless runs do not fail if the project later needs explicit
+-        // essential-resource import handling.
+-        Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-        if (sdf == null)
+-            Debug.LogWarning("[BakeTmpFontAsset] TMP SDF shader not currently loaded; continuing anyway.");
++        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
++        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
++        AssetDatabase.Refresh();
+     }
+ 
+     public static void BakeHeadless()
+@@ -65,7 +61,15 @@
+             // which ships in TMP Essential Resources. A fresh project does not have them,
+             // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+             // headlessly before baking. (#965 batchmode bake fix.)
+-            ImportTmpEssentialsIfMissing();
++            ImportTmpEssentials();
++
++            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
++            if (sdf == null)
++            {
++                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
++                EditorApplication.Exit(6);
++                return;
++            }
+ 
+             if (!File.Exists(FontTtfPath))
+             {
+@@ -114,8 +118,7 @@
+ 
+             // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+             // baked atlas renders correctly inside DINO even if the default was missing.
+-            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+-            if (sdf != null && fontAsset.material != null && fontAsset.material.shader != sdf)
++            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                 fontAsset.material.shader = sdf;
+ 
+             // Pre-bake the printable ASCII range into the static atlas so no
+
+tokens used
+72,646
+Implemented the isolated script fix in [`unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs`](/C:/Users/koosh/Dino/.claude/worktrees/swfont/unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs) and committed it as `deaf6dfd` (`fix(tmp-font): import essentials before headless bake`).
+
+What changed:
+- Calls `TMPro.TMP_PackageResourceImporter.ImportResources(true, false, false)` before `CreateFontAsset`
+- Runs `AssetDatabase.Refresh()` immediately after
+- Hard-fails if `Shader.Find("TextMeshPro/Distance Field")` is still null before baking
+- Reuses the resolved shader when assigning the baked material
+
+Headless verification:
+- TMP essentials import: attempted, but not sufficient headless
+- `Shader.Find("TextMeshPro/Distance Field")`: still null after import
+- `sw_menu_font` bundle: not produced
+- Font applies: `needs-headful`
+
+I did not add the bundle or any unrelated worktree changes. The bake now fails early with a clear diagnostic instead of throwing at `TMP_FontAsset.CreateFontAsset`, but this still needs a headful Editor pass to complete the TMP resource import path.

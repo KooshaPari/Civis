@@ -1,0 +1,78 @@
+# Minimal HUD elements for core gameplay visibility
+hud_elements:
+  - id: player-health-bar
+    type: health_bar
+    position: top_left
+    width: 300
+    height: 30
+    visible_in:
+      - gameplay
+      - pause
+    color_overrides:
+      background: "#1A1A1A"
+      bar: "#00FF00"
+      border: "#FFFFFF"
+    opacity: 0.95
+    description: "Main player health bar, shows current/max HP."
+
+  - id: resource-counter
+    type: resource_counter
+    position: top_right
+    width: 250
+    height: 40
+    visible_in:
+      - gameplay
+      - pause
+    color_overrides:
+      wood: "#8B4513"
+      stone: "#808080"
+      gold: "#FFD700"
+      food: "#90EE90"
+    opacity: 0.9
+    description: "Resource counter showing wood, stone, gold, food."
+
+  - id: minimap
+    type: minimap
+    position: bottom_right
+    width: 200
+    height: 200
+    visible_in:
+      - gameplay
+    color_overrides:
+      background: "#0D0D0D"
+      fog: "#333333"
+      player: "#00FF00"
+      enemy: "#FF0000"
+      neutral: "#999999"
+    opacity: 0.85
+    description: "Strategic minimap of the current battlefield."
+
+  - id: unit-portrait
+    type: unit_portrait
+    position: bottom_left
+    width: 150
+    height: 150
+    visible_in:
+      - gameplay
+    color_overrides:
+      background: "#1A1A1A"
+      frame: "#FF6B00"
+      health: "#00FF00"
+    opacity: 0.9
+    description: "Portrait of the currently selected unit."
+
+  - id: alert-banner
+    type: alert_banner
+    position: center
+    width: 400
+    height: 60
+    visible_in:
+      - gameplay
+      - pause
+    color_overrides:
+      background: "#2A2A2A"
+      warning: "#FFAA00"
+      critical: "#FF0000"
+      success: "#00FF00"
+    opacity: 0.95
+    description: "Alert banner for important notifications."

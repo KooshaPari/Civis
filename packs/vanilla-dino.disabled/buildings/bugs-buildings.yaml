@@ -1,0 +1,35 @@
+# Bugs - Vanilla DINO Buildings
+
+- id: vanilla_bugs_nest
+  display_name: Bug Nest
+  description: Insectoid breeding chamber. Produces swarm units.
+  faction_id: bugs
+  building_type: military
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Bug_Nest"
+  cost:
+    wood: 60
+    stone: 40
+    gold: 5
+  upkeep_per_turn: 1
+  production_slots: 3
+  units_produced:
+    - vanilla_bugs_larva
+    - vanilla_bugs_bug
+    - vanilla_bugs_runner
+    - vanilla_bugs_poisonous
+
+- id: vanilla_bugs_hive
+  display_name: Bug Hive
+  description: Central hive structure. Heart of the swarm with rare unit production.
+  faction_id: bugs
+  building_type: special
+  wiki_reference: "https://dino.fandom.com/wiki/Buildings#Bug_Hive"
+  cost:
+    wood: 100
+    stone: 80
+    gold: 40
+  upkeep_per_turn: 4
+  production_slots: 1
+  units_produced:
+    - vanilla_bugs_gargantua
+    - vanilla_bugs_queen

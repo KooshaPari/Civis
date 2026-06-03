@@ -23,10 +23,24 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialMovementSystem : SystemBase
     {
+        private static bool _isRuntimeEnabled = false;
+        private static bool _disabledWarningLogged;
+
         public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("AerialMovement", "AerialMovementSystem.OnCreate");
+
+            if (!_isRuntimeEnabled)
+            {
+                if (!_disabledWarningLogged)
+                {
+                    DebugLog.Write("AerialMovement", "AerialMovementSystem disabled (feature gate OFF). Restore runtime enablement when DOTS codegen path is stable.");
+                    _disabledWarningLogged = true;
+                }
+
+                Enabled = false;
+            }
         }
 
         public override void OnUpdate()

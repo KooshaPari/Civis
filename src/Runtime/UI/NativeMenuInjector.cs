@@ -1359,7 +1359,7 @@ namespace DINOForge.Runtime.UI
                     pageGo.transform.SetParent(mainMenuCanvas.transform, false);
                     _nativeModsPage = pageGo.AddComponent<NativeModsPage>();
                     if (_log != null) _nativeModsPage.SetLogger(_log);
-                    _nativeModsPage.OnBackPressed = () =>
+                    _nativeModsPage.OnBackClicked = () =>
                     {
                         LogInfo($"[NativeMenuInjector::{_sessionId}] NativeModsPage Back pressed");
                     };

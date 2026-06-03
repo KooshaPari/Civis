@@ -1,0 +1,311 @@
+# Rebels - Vanilla DINO Units (13 units total)
+# Tier 1: Basic Militia
+- id: vanilla_rebel_pitchfork
+  display_name: Pitchfork
+  description: Basic peasant militia with farming tools. Cheap and expendable, weak individually but strong in numbers.
+  unit_class: MilitiaLight
+  faction_id: rebels
+  tier: 1
+  vanilla_dino_name: Pitchfork
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Pitchfork"
+  stats:
+    hp: 35.0
+    damage: 5.0
+    armor: 0.5
+    range: 0.0
+    speed: 5.0
+    accuracy: 0.5
+    fire_rate: 0.8
+    morale: 70.0
+    cost:
+      food: 10
+      wood: 0
+      stone: 0
+      iron: 2
+      gold: 1
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine, MoralePressure]
+  weapon: melee_pitchfork
+
+- id: vanilla_rebel_flag_carrier
+  display_name: Flag Carrier
+  description: Peasant leader carrying the rebel banner. Boosts morale of nearby allies.
+  unit_class: CoreLineInfantry
+  faction_id: rebels
+  tier: 1
+  vanilla_dino_name: Flag Carrier
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Flag_Carrier"
+  stats:
+    hp: 40.0
+    damage: 4.0
+    armor: 1.0
+    range: 0.0
+    speed: 5.0
+    accuracy: 0.5
+    fire_rate: 0.8
+    morale: 90.0
+    cost:
+      food: 25
+      wood: 0
+      stone: 0
+      iron: 3
+      gold: 2
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [HoldLine, MoralePressure]
+  weapon: melee_sword
+
+- id: vanilla_rebel_shield
+  display_name: Shield
+  description: Peasant with improvised shield and club. Protects nearby units from ranged fire.
+  unit_class: HeavyInfantry
+  faction_id: rebels
+  tier: 1
+  vanilla_dino_name: Shield
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Shield"
+  stats:
+    hp: 45.0
+    damage: 3.0
+    armor: 2.0
+    range: 0.0
+    speed: 4.5
+    accuracy: 0.4
+    fire_rate: 0.6
+    morale: 75.0
+    cost:
+      food: 20
+      wood: 5
+      stone: 0
+      iron: 4
+      gold: 1
+      population: 1
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [HoldLine]
+  weapon: melee_club
+
+# Tier 2: Specialized Rebels
+- id: vanilla_rebel_scythe
+  display_name: Scythe
+  description: Militia wielding large farming scythes. Effective against massed troops and low armor targets.
+  unit_class: AntiArmor
+  faction_id: rebels
+  tier: 2
+  vanilla_dino_name: Scythe
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Scythe"
+  stats:
+    hp: 42.0
+    damage: 7.0
+    armor: 0.8
+    range: 0.0
+    speed: 4.8
+    accuracy: 0.6
+    fire_rate: 0.9
+    morale: 72.0
+    cost:
+      food: 18
+      wood: 0
+      stone: 0
+      iron: 4
+      gold: 2
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [Charge, AntiMass]
+  weapon: melee_scythe
+
+- id: vanilla_rebel_wildling
+  display_name: Wildling
+  description: Seasoned rebel with dagger and cunning. Fast and evasive.
+  unit_class: FastVehicle
+  faction_id: rebels
+  tier: 2
+  vanilla_dino_name: Wildling
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Wildling"
+  stats:
+    hp: 38.0
+    damage: 6.0
+    armor: 0.5
+    range: 0.0
+    speed: 7.5
+    accuracy: 0.7
+    fire_rate: 1.1
+    morale: 78.0
+    cost:
+      food: 22
+      wood: 0
+      stone: 0
+      iron: 2
+      gold: 3
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [AdvanceFire, Kite]
+  weapon: melee_dagger
+
+- id: vanilla_rebel_halberd
+  display_name: Halberd
+  description: Veteran rebel with halberd and armor. Pike specialist against cavalry.
+  unit_class: AntiArmor
+  faction_id: rebels
+  tier: 2
+  vanilla_dino_name: Halberd
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Halberd"
+  stats:
+    hp: 48.0
+    damage: 8.0
+    armor: 1.5
+    range: 0.0
+    speed: 4.8
+    accuracy: 0.65
+    fire_rate: 0.9
+    morale: 80.0
+    cost:
+      food: 28
+      wood: 0
+      stone: 0
+      iron: 6
+      gold: 3
+      population: 1
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [HoldLine, AntiArmor]
+  weapon: melee_pike
+
+- id: vanilla_rebel_spitter
+  description: Rebel archer with improvised crossbow.
+  display_name: Spitter
+  unit_class: CoreLineInfantry
+  faction_id: rebels
+  tier: 2
+  vanilla_dino_name: Spitter
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Spitter"
+  stats:
+    hp: 36.0
+    damage: 6.0
+    armor: 0.5
+    range: 16.0
+    speed: 5.0
+    accuracy: 0.7
+    fire_rate: 1.3
+    morale: 70.0
+    cost:
+      food: 20
+      wood: 8
+      stone: 0
+      iron: 2
+      gold: 2
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [AdvanceFire, Kite]
+  weapon: ranged_crossbow
+
+# Tier 3: Elite Rebels
+- id: vanilla_rebel_hulk
+  display_name: Hulk
+  description: Massive rebel warrior with crude club. Slow but devastating damage and morale impact.
+  unit_class: WalkerHeavy
+  faction_id: rebels
+  tier: 3
+  vanilla_dino_name: Hulk
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Hulk"
+  stats:
+    hp: 100.0
+    damage: 14.0
+    armor: 2.0
+    range: 0.0
+    speed: 3.0
+    accuracy: 0.5
+    fire_rate: 0.6
+    morale: 85.0
+    cost:
+      food: 60
+      wood: 0
+      stone: 0
+      iron: 30
+      gold: 15
+      population: 3
+  defense_tags: [HeavyArmor, Biological]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_club
+
+- id: vanilla_rebel_leader
+  display_name: Rebel Leader
+  description: Experienced rebel commander on horseback. Inspires allies and leads charges.
+  unit_class: ShockMelee
+  faction_id: rebels
+  tier: 3
+  vanilla_dino_name: Rebel Leader
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Rebel_Leader"
+  stats:
+    hp: 65.0
+    damage: 11.0
+    armor: 1.5
+    range: 0.0
+    speed: 8.0
+    accuracy: 0.7
+    fire_rate: 1.0
+    morale: 100.0
+    cost:
+      food: 50
+      wood: 0
+      stone: 0
+      iron: 12
+      gold: 12
+      population: 2
+  defense_tags: [LightArmor, Biological]
+  behavior_tags: [Charge, SiegePriority]
+  weapon: melee_sword
+
+- id: vanilla_rebel_catapult_makeshift
+  display_name: Makeshift Catapult
+  description: Crude siege engine built by rebels. Unreliable but devastating when it works.
+  unit_class: Artillery
+  faction_id: rebels
+  tier: 3
+  vanilla_dino_name: Makeshift Catapult
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Makeshift_Catapult"
+  stats:
+    hp: 50.0
+    damage: 15.0
+    armor: 1.0
+    range: 20.0
+    speed: 1.5
+    accuracy: 0.4
+    fire_rate: 0.4
+    morale: 60.0
+    cost:
+      food: 0
+      wood: 60
+      stone: 30
+      iron: 15
+      gold: 10
+      population: 2
+  defense_tags: [Mechanical]
+  behavior_tags: [SiegePriority, AntiMass]
+  weapon: ranged_catapult
+
+- id: vanilla_rebel_firebomb_launcher
+  display_name: Firebomb Launcher
+  description: Rebel with incendiary bombs. Area damage and morale reduction.
+  unit_class: Artillery
+  faction_id: rebels
+  tier: 3
+  vanilla_dino_name: Firebomb Launcher
+  wiki_reference: "https://dino.fandom.com/wiki/Units#Firebomb_Launcher"
+  stats:
+    hp: 45.0
+    damage: 12.0
+    armor: 0.5
+    range: 18.0
+    speed: 4.0
+    accuracy: 0.5
+    fire_rate: 0.5
+    morale: 70.0
+    cost:
+      food: 0
+      wood: 40
+      stone: 20
+      iron: 10
+      gold: 8
+      population: 1
+  defense_tags: [Unarmored, Biological]
+  behavior_tags: [SiegePriority, AntiMass]
+  weapon: ranged_firebomb

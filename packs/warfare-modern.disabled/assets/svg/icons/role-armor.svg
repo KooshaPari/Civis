@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DINOForge Warfare-Modern | role-armor.svg | 64x64 monochrome glyph -->
+<!-- Tank side-view silhouette, one track visible, turret + long barrel -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Hull body -->
+  <rect x="6" y="32" width="52" height="18" rx="2" fill="#EDE8DC"/>
+  <!-- Hull top slope (angled glacis) -->
+  <polygon points="6,32 14,24 50,24 58,32" fill="#EDE8DC"/>
+  <!-- Turret (sits on hull top, slightly right of center) -->
+  <rect x="22" y="18" width="24" height="10" rx="2" fill="#EDE8DC"/>
+  <!-- Turret hatch detail -->
+  <rect x="30" y="16" width="8" height="4" rx="1" fill="#EDE8DC"/>
+  <!-- Main gun barrel (long, horizontal, extending right) -->
+  <rect x="42" y="20" width="22" height="4" rx="1" fill="#EDE8DC"/>
+  <!-- Muzzle brake -->
+  <rect x="62" y="18" width="2" height="8" rx="1" fill="#EDE8DC"/>
+  <!-- Track (bottom, rounded ends) -->
+  <rect x="5" y="44" width="54" height="8" rx="4" fill="#EDE8DC"/>
+  <!-- Road wheels (6 circles on track) -->
+  <circle cx="12" cy="48" r="4" fill="#1C2B3A"/>
+  <circle cx="12" cy="48" r="2" fill="#EDE8DC"/>
+  <circle cx="22" cy="48" r="4" fill="#1C2B3A"/>
+  <circle cx="22" cy="48" r="2" fill="#EDE8DC"/>
+  <circle cx="32" cy="48" r="4" fill="#1C2B3A"/>
+  <circle cx="32" cy="48" r="2" fill="#EDE8DC"/>
+  <circle cx="42" cy="48" r="4" fill="#1C2B3A"/>
+  <circle cx="42" cy="48" r="2" fill="#EDE8DC"/>
+  <circle cx="52" cy="48" r="4" fill="#1C2B3A"/>
+  <circle cx="52" cy="48" r="2" fill="#EDE8DC"/>
+  <!-- Exhaust port (rear top) -->
+  <rect x="6" y="28" width="4" height="6" fill="#EDE8DC"/>
+</svg>

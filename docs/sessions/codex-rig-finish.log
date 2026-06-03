@@ -1,0 +1,2042 @@
+Reading additional input from stdin...
+OpenAI Codex v0.136.0
+--------
+workdir: C:\Users\koosh\Dino\.claude\worktrees\rigclone
+model: gpt-5.3-codex-spark
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: low
+reasoning summaries: none
+session id: 019e87bb-9bf3-77f0-a1fb-b0d2d5c9776c
+--------
+user
+Finish #991 clone-trooper rigged-unit swap. Branch feat/rig-clone-trooper-20260601. NO push/stash/--no-verify; git add specific files; PID-safe Unity (only DINO exe + 2021.3.45f2 builder, NEVER blanket Stop-Process Unity — WorldBox 60f1 may run); bundles 2021.3.45f2 ONLY. STATE (committed dfa7866d): clone-trooper rigged to 21 bones (rig_validation.json ok:true, bindpose compat SOLVED). Remaining: rebuilt sw-clone-trooper-republic bundle → AssetBundle.LoadFromFile returns NULL in-game. FIX: rebuild the rigged_21bone.glb into a proper f2 SkinnedMeshRenderer-prefab AssetBundle keyed sw-clone-trooper-republic (verify UnityFS 2021.3.45f2 header, >1KB, mesh has 21 bindposes). Deploy (DeployToGame f2). LIVE-verify PID-safe (relaunch DINO + load-scene Sandbox): grep dinoforge_debug.log — sw-clone-trooper-republic MUST show swapped N>0 (not LoadFromFile null, not skipping-bindpose). Screenshot the clone unit. CHANGELOG. Report: bundle loads? swapped N>0? animates? screenshot. Verify by swap COUNT+screenshot, not result=True.
+codex
+Got it — I’ll finish the swap-blocking bundle work on `feat/rig-clone-trooper-20260601`, focusing only on restoring the `sw-clone-trooper-republic` bundle so it loads in-game and yields a successful rig swap, then update `CHANGELOG.md` and report the requested runtime verification points.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "clone-trooper|rigged_21bone|sw-clone-trooper-republic|rig_validation" C:/Users/koosh/.codex/memories/MEMORY.md' in C:\Users\koosh\Dino\.claude\worktrees\rigclone
+ exited 1 in 9753ms:
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'git -C C:/Users/koosh/Dino/.claude/worktrees/rigclone status --short' in C:\Users\koosh\Dino\.claude\worktrees\rigclone
+ succeeded in 1830ms:
+ M unity-assetbundle-builder/AssetBundles/AssetBundles
+ M unity-assetbundle-builder/AssetBundles/AssetBundles.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-cis-b1-battle-droid
+ M unity-assetbundle-builder/AssetBundles/sw-cis-b1-battle-droid.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-cis-b2-super-droid
+ M unity-assetbundle-builder/AssetBundles/sw-cis-b2-super-droid.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-cis-commando-droid
+ M unity-assetbundle-builder/AssetBundles/sw-cis-commando-droid.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-cis-droideka
+ M unity-assetbundle-builder/AssetBundles/sw-cis-droideka.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-cis-sniper-droid
+ M unity-assetbundle-builder/AssetBundles/sw-cis-sniper-droid.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-cis-spider-droid
+ M unity-assetbundle-builder/AssetBundles/sw-cis-spider-droid.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-clone-trooper-republic
+ M unity-assetbundle-builder/AssetBundles/sw-clone-trooper-republic.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-arc-trooper
+ M unity-assetbundle-builder/AssetBundles/sw-rep-arc-trooper.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-at-te-walker
+ M unity-assetbundle-builder/AssetBundles/sw-rep-at-te-walker.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-commander
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-commander.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-engineer
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-engineer.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-heavy
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-heavy.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-medic
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-medic.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-sniper
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-sniper.manifest
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-trooper
+ M unity-assetbundle-builder/AssetBundles/sw-rep-clone-trooper.manifest
+ M unity-assetbundle-builder/ProjectSettings/GraphicsSettings.asset
+?? unity-assetbundle-builder/sw-bundle-verify-report.log
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "sw-clone-trooper-republic|clone-trooper-republic|clone-trooper" C:/Users/koosh/Dino/.claude/worktrees/rigclone' in C:\Users\koosh\Dino\.claude\worktrees\rigclone
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "LoadAsset|swapped|LoadFromFile|assetBundleName|skinned" C:/Users/koosh/Dino/.claude/worktrees/rigclone/src/Runtime/Bridge/AssetSwapSystem.cs' in C:\Users\koosh\Dino\.claude\worktrees\rigclone
+ succeeded in 4959ms:
+154:                // distinct building meshes be swapped selectively. Empty/unknown DINO mesh names
+580:                // we stop re-attempting LoadFromFile (the flood source). Log once.
+612:            // GFX-mode Phase 2: when the High graphics tier is active, upgrade the swapped
+801:            // cannot be converted to type 'System.Int32'" → result=False ("swapped 0/100" for
+892:            // as a reject filter that dropped all 193 matched entities ("swapped 0/100"). The
+902:            // ("swapped 0/100 … skipped 100 non-matching meshes") and every unit stayed native.
+1045:                $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{swapBudget} entities (total matching={entities.Length}, " +
+1056:        /// #991 / #973: DINO infantry uses skinned <see cref="Mesh"/> assets (bindposes + bone weights)
+1350:            Mesh? mesh = bundle.LoadAsset<Mesh>(requestedName);
+1351:            Material? material = bundle.LoadAsset<Material>(requestedName);
+1427:                AssetBundle bundle = AssetBundle.LoadFromFile(fullPath);
+1436:                // Unload has not yet completed (Unload lag), a fresh LoadFromFile of the SAME file
+1448:                            $"LoadBundle: LoadFromFile returned null but Unity still has '{Path.GetFileName(fullPath)}' " +
+1457:                // #992 flood fix: AssetBundle.LoadFromFile THROWS (and Unity logs an error every
+1463:                // passes hit the cache and never call LoadFromFile again.
+1517:            // transition so swapped sprites continue resolving until the new RuntimeDriver +
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Path C:/Users/koosh/Dino/.claude/worktrees/rigclone/src/Runtime/Bridge/AssetSwapSystem.cs' in C:\Users\koosh\Dino\.claude\worktrees\rigclone
+ succeeded in 17409ms:
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Telemetry;
+using DINOForge.SDK.Assets;
+// #613 dedup: was alias to DINOForge.Runtime.Assets.AssetService (retired); now points to SDK canonical impl.
+using RuntimeAssetService = DINOForge.SDK.Assets.AssetService;
+using Unity.Collections;
+using Unity.Entities;
+using UnityEngine;
+
+namespace DINOForge.Runtime.Bridge
+{
+    /// <summary>
+    /// ECS System that applies pending asset swaps registered via <see cref="AssetSwapRegistry"/>.
+    ///
+    /// Lifecycle:
+    ///   1. Mod pack loaders call <see cref="AssetSwapRegistry.Register"/> (SDK layer, any thread).
+    ///   2. This system waits <see cref="MinFrameDelay"/> frames for the game world to fully load.
+    ///   3. On each update cycle after the delay, pending swaps are drained from
+    ///      <see cref="AssetSwapRegistry"/>, patched bundles are written to
+    ///      <c>BepInEx/dinoforge_patched_bundles/</c> via <see cref="AssetService.ReplaceAsset"/>,
+    ///      and <see cref="AssetSwapRegistry.MarkApplied"/> is called on success.
+    ///   4. The system also applies RenderMesh visual swaps for ECS entities matching
+    ///      the source asset address - bridging the bundle write path to live entities.
+    ///
+    /// Thread safety:
+    ///   - <see cref="AssetSwapRegistry"/> is thread-safe; this system only reads from the
+    ///     main Unity thread (ECS SystemBase guarantee).
+    ///
+    /// Architecture notes:
+    ///   - DINO uses Unity's Hybrid Renderer V2 (or similar) for ECS rendering.
+    ///   - Visual data is stored in RenderMesh shared components.
+    ///   - Asset replacement works by (a) patching the vanilla bundle file with the mod's bytes
+    ///     and (b) swapping Mesh/Material references on matched entities so the live game sees
+    ///     the new assets without a scene reload.
+    ///
+    /// Manual testing:
+    ///   1. Build a test AssetBundle with a replacement mesh/material.
+    ///   2. Register a swap via <see cref="AssetSwapRegistry.Register"/>.
+    ///   3. Load game and verify visual change on target entities.
+    ///   4. Check <c>BepInEx/dinoforge_debug.log</c> for swap results.
+    ///
+    /// Entity dump analysis confirms DINO uses Unity.Rendering.RenderMesh shared
+    /// components (Hybrid Renderer V1 style). Static environment archetypes show
+    /// RenderMesh + BuiltinMaterialPropertyColor + RenderBounds + PerInstanceCullingTag.
+    /// The swap targets the RenderMesh shared component to replace mesh/material refs.
+    /// </summary>
+    [UpdateInGroup(typeof(PresentationSystemGroup))]
+    public class AssetSwapSystem : SystemBase
+    {
+        /// <summary>
+        /// Cache of loaded AssetBundles (LRU with max 10 bundles, auto-unload on eviction).
+        /// </summary>
+        private readonly AssetBundleCache _loadedBundles = new AssetBundleCache(maxSize: 10);
+
+        /// <summary>
+        /// Tracks asset addresses that have already had their first failure logged.
+        /// Subsequent failures for the same address are logged at Debug level to reduce noise.
+        /// </summary>
+        private readonly HashSet<string> _reportedFailures = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// #992: Bundles (keyed by mod bundle path) that have PERMANENTLY failed to yield a usable
+        /// swap — stub bundles (the 13 #986 90-byte stubs), bundles with no renderable mesh, or
+        /// hard load errors. These can never succeed, yet AssetSwapRegistry keeps them pending and
+        /// the swap retries them EVERY frame, re-loading the bundle each pass → the per-frame
+        /// 'another AssetBundle with the same files is already loaded' flood. Once a bundle is in
+        /// this set we skip it entirely (logged once, then silent), stopping the flood for all stub
+        /// bundles while leaving working swaps (units/cims/buildings) untouched.
+        /// </summary>
+        private readonly HashSet<string> _permanentlyFailedBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Tracks bundles for which a non-URP/legacy material swap was already skipped.
+        /// This prevents repeated logs while the same bundle is retried across frames.
+        /// </summary>
+        private static readonly HashSet<string> _reportedNonUrpMaterialBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private int _frameCount;
+
+        /// <summary>Whether the one-shot vanilla mesh diagnostic dump has been emitted.</summary>
+        private bool _vanillaMeshDumpDone;
+
+        /// <summary>
+        /// Maximum number of entities to swap per bundle invocation.
+        /// Safety cap to prevent replacing the entire world with one mesh.
+        /// </summary>
+        private const int MaxSwapsPerBundle = 500;
+
+        /// <summary>
+        /// Declarative map from a pack <c>vanilla_mapping</c> value to the vanilla DINO mesh-name
+        /// substrings it should replace. This is the real "bundle → vanilla mesh" mapping that exits
+        /// DIAGNOSTIC MODE: the source of truth is the pack's <c>vanilla_mapping</c> field on every
+        /// unit/building definition (carried through to <see cref="AssetSwapRequest.VanillaMapping"/>),
+        /// NOT a hardcoded bundle-filename table.
+        ///
+        /// Targeting works in two layers:
+        ///   1. PRIMARY (authoritative): the ECS entity query is already narrowed to the archetype
+        ///      component resolved from <c>vanilla_mapping</c> (e.g. militia → Components.MeleeUnit)
+        ///      via <see cref="PackStatMappings.TryResolveMapping"/>. This is what actually scopes
+        ///      the swap to the correct vanilla units.
+        ///   2. SECONDARY (optional refinement): the substrings below let the swap further filter by
+        ///      the live mesh name when DINO's vanilla mesh names are known. When a mapping has no
+        ///      substrings (or the value is empty) the swap relies on the archetype filter alone and
+        ///      still proceeds (no longer DIAGNOSTIC MODE).
+        ///
+        /// Keyed by <c>vanilla_mapping</c> so it stays declarative and pack-driven: adding a new
+        /// mapping value only requires a single entry here, and packs reference it by name.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> VanillaMappingToMeshSubstrings =
+            new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Melee / infantry archetypes (mapped to Components.MeleeUnit).
+                { "militia",         new[] { "Militia", "militia", "Peasant", "peasant" } },
+                { "line_infantry",   new[] { "Swordsman", "swordsman", "Soldier", "soldier", "Infantry", "infantry" } },
+                { "heavy_infantry",  new[] { "Heavy", "heavy", "Armored", "armored" } },
+                { "elite",           new[] { "Elite", "elite", "Knight", "knight", "Veteran", "veteran" } },
+                { "hero",            new[] { "Hero", "hero", "Champion", "champion", "Lord", "lord" } },
+                { "wall_defender",   new[] { "Wall", "wall", "Guard", "guard", "Defender", "defender" } },
+                { "support",         new[] { "Support", "support", "Healer", "healer", "Medic", "medic", "Priest", "priest" } },
+                { "special",         new[] { "Special", "special", "Mage", "mage" } },
+
+                // Ranged archetypes (mapped to Components.RangeUnit).
+                { "ranged_infantry", new[] { "Archer", "archer", "Ranged", "ranged", "Crossbow", "crossbow", "Gun", "gun" } },
+                { "skirmisher",      new[] { "Skirmisher", "skirmisher", "Slinger", "slinger", "Scout", "scout" } },
+                { "scout",           new[] { "Scout", "scout", "Recon", "recon" } },
+
+                // Mounted / mechanised archetypes.
+                { "cavalry",         new[] { "Cavalry", "cavalry", "Rider", "rider", "Horse", "horse", "Mount", "mount" } },
+                { "siege",           new[] { "Siege", "siege", "Catapult", "catapult", "Trebuchet", "trebuchet", "Ram", "ram", "Cannon", "cannon" } },
+
+                // Aerial archetype (BUG B fix #101). Provides a mesh-name fallback so the swap
+                // proceeds for sw-tri-fighter / sw-nantex-fighter even before AerialSpawnSystem
+                // has tagged the entity with AerialUnitComponent. Covers DINO's airstrike/flyer
+                // mesh names plus generic aerial tokens.
+                { "aerial_fighter",  new[] { "Aerial", "aerial", "Air", "Flying", "flying", "Flyer", "flyer", "Bird", "bird", "Bomber", "bomber", "Airstrike", "airstrike", "Plane", "plane", "Fighter", "fighter" } },
+
+                // #975 Phase 1 — CIMS (citizens/workers). DINO's roaming population renders with
+                // bomj_* meshes (бомж = vagrant). When the Components.Worker archetype filter does
+                // not resolve, these substrings let the swap proceed via the secondary mesh-name
+                // filter so cims still exit DIAGNOSTIC MODE.
+                { "cims",            new[] { "bomj", "Bomj", "cim", "Cim", "Citizen", "citizen", "Worker", "worker", "Peon", "peon", "Villager", "villager" } },
+                { "worker",          new[] { "bomj", "Bomj", "Worker", "worker", "Peon", "peon", "Villager", "villager" } },
+                { "citizen",         new[] { "bomj", "Bomj", "Citizen", "citizen", "cim", "Cim" } },
+
+                // #975 Phase 1 — BUILDINGS. Vanilla DINO building mesh-name substrings, keyed by
+                // building-type vanilla_mapping. The archetype filter (Components.BuildingBase) is
+                // authoritative; these substrings are the optional secondary refinement that lets
+                // distinct building meshes be swapped selectively. Empty/unknown DINO mesh names
+                // fall back to archetype-only targeting.
+                { "command",         new[] { "Castle", "castle", "Keep", "keep", "Command", "command", "TownHall", "townhall", "Hall", "hall" } },
+                { "barracks",        new[] { "Barrack", "barrack", "Baraks", "baraks", "Stable", "stable", "Train", "train" } },
+                { "resource",        new[] { "Farm", "farm", "Mine", "mine", "Mill", "mill", "Lumber", "lumber", "Quarry", "quarry", "Storage", "storage", "Warehouse", "warehouse" } },
+                { "economy",         new[] { "Farm", "farm", "Mine", "mine", "Mill", "mill", "Market", "market", "House", "house", "Storage", "storage" } },
+                { "defense",         new[] { "Tower", "tower", "Wall", "wall", "Gate", "gate", "Turret", "turret", "Fort", "fort" } },
+                { "tower",           new[] { "Tower", "tower", "Turret", "turret", "Watchtower", "watchtower" } },
+                { "wall",            new[] { "Wall", "wall", "Gate", "gate", "Palisade", "palisade", "Rampart", "rampart" } },
+                { "research",        new[] { "Research", "research", "Lab", "lab", "Library", "library", "University", "university", "Academy", "academy" } },
+                // Generic building archetype (#101 building fix). Pack structures default to the
+                // "building" mapping when they omit vanilla_mapping; these substrings cover DINO's
+                // common building mesh-name tokens so the swap can refine within the BuildingBase
+                // archetype query (and so it never falls into DIAGNOSTIC MODE for lack of a signal).
+                { "building",        new[] { "Building", "building", "House", "house", "Tower", "tower", "Barrack", "barrack", "Wall", "wall", "Gate", "gate", "Keep", "keep", "Castle", "castle", "Hall", "hall", "Factory", "factory", "Mill", "mill", "Mine", "mine", "Storage", "storage", "Depot", "depot", "Center", "center", "Centre", "centre", "Bay", "bay", "Lab", "lab", "Generator", "generator", "Foundry", "foundry", "Camp", "camp", "Tent", "tent", "Hut", "hut" } },
+            };
+
+        /// <summary>
+        /// Component type name that aerial units (vanilla_mapping='aerial_fighter') are tagged
+        /// with by DINOForge's AerialSpawnSystem. Used as the archetype filter for the visual
+        /// mesh swap (BUG B fix #101). PackStatMappings deliberately maps aerial_fighter to null
+        /// for STAT injection (AerialSpawnSystem owns behaviour), so the swap resolves the archetype
+        /// here instead.
+        /// </summary>
+        /// <para>
+        /// #986 (2026-05-31): the original value <c>DINOForge.Runtime.Aviation.AerialUnitComponent</c>
+        /// resolved to 0 live entities (live entity dump, build 1BDC999C) — DINO never tags any
+        /// entity with our custom aviation component, and DINO has no native flying units. The
+        /// RenderMesh + AerialUnitComponent query therefore returned 0 → "0 succeeded" for every
+        /// aerial bundle. DINO's renderable combat archetypes that carry RenderMesh directly are
+        /// MeleeUnit/RangeUnit/CavalryUnit/SiegeUnit. We reskin SW aircraft onto
+        /// <c>Components.SiegeUnit</c> (live count 162, RenderMesh on the same entity) — distinct
+        /// from the melee/range archetypes used by infantry to reduce visual collision.
+        /// </para>
+        private const string AerialArchetypeTypeName = "Components.SiegeUnit";
+
+        /// <summary>
+        /// Vanilla DINO component every building entity carries. Used as the archetype filter for
+        /// the generic <c>building</c> swap mapping (#101 building fix) so pack structures (e.g.
+        /// sw-cis-command-center, sw-rep-vehicle-bay) reskin onto live building entities instead of
+        /// falling into DIAGNOSTIC MODE and rendering as native royal/undead buildings. Resolved in
+        /// the swap path only (NOT in PackStatMappings) so building stat injection is unaffected.
+        /// </summary>
+        private const string BuildingArchetypeTypeName = "Components.BuildingBase";
+
+        /// <summary>
+        /// Resolves a pack <c>vanilla_mapping</c> to the ECS component-type name the asset swap
+        /// should narrow its EntityQuery to. Wraps <see cref="PackStatMappings.TryResolveMapping"/>
+        /// but supplies the aerial archetype for <c>aerial_fighter</c> (which PackStatMappings
+        /// intentionally leaves null for stat injection). Returns false only when the mapping is
+        /// blank/unknown; a known mapping with a null component type still returns true with a null
+        /// out value.
+        /// </summary>
+        private static bool TryResolveSwapArchetype(string? vanillaMapping, out string? archetypeTypeName)
+        {
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && string.Equals(vanillaMapping, "aerial_fighter", StringComparison.OrdinalIgnoreCase))
+            {
+                archetypeTypeName = AerialArchetypeTypeName;
+                return true;
+            }
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && string.Equals(vanillaMapping, "building", StringComparison.OrdinalIgnoreCase))
+            {
+                archetypeTypeName = BuildingArchetypeTypeName;
+                return true;
+            }
+            return PackStatMappings.TryResolveMapping(vanillaMapping, out archetypeTypeName);
+        }
+
+        private static volatile bool _resetPending;
+        // Iter-144: dump EntityManager shared-component methods once on reflection failure
+        // so we can diagnose Pattern #101 against DINO's actual Unity 2021.3 EntityManager surface.
+        private static bool _dumpedEmMethods;
+
+        // Iter-146 #881: throttle reflection-failure logs (Pattern #232 — was firing every retry).
+        // Counter is per-instance; ScheduleReset() clears _dumpedEmMethods but this counter
+        // continues across resets to keep the periodic-warn cadence stable.
+        private int _reflectionFailCount;
+        private const int ReflectionFailLogEvery = 50;
+
+        // Iter-148 #912: track which world we selected so we log the switch only once.
+        private string _loggedWorldSelection = "";
+
+        /// <summary>
+        /// Iter-148 #912: AssetSwapSystem may run in a World that has only prefab templates
+        /// (Default World ~25 entities) while gameplay entities live in a separate World.
+        /// Scan all worlds and return the EntityManager from the one with the most entities.
+        /// </summary>
+        private EntityManager FindBestEntityManager(out int bestCount, out string bestName)
+        {
+            EntityManager best = EntityManager;
+            bestCount = -1;
+            bestName = World.Name;
+            try
+            {
+                foreach (World w in World.All)
+                {
+                    if (w == null || !w.IsCreated) continue;
+                    int c;
+                    try
+                    {
+                        c = w.EntityManager.UniversalQuery.CalculateEntityCount();
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    if (c > bestCount)
+                    {
+                        bestCount = c;
+                        best = w.EntityManager;
+                        bestName = w.Name;
+                    }
+                }
+            }
+            catch
+            {
+                // World.All access failed — keep our own EntityManager as fallback
+            }
+            if (bestCount < 0) bestCount = 0;
+            return best;
+        }
+
+        /// <summary>
+        /// #986: For parent archetypes that do not carry RenderMesh on themselves (DINO buildings:
+        /// Components.BuildingBase has LinkedEntityGroup but RenderMesh lives on a child entity),
+        /// query the archetype alone, then walk each match's LinkedEntityGroup buffer and collect
+        /// the child entities that DO carry the RenderMesh shared component. Returns a NativeArray
+        /// (caller owns disposal). Empty/uncreated array means no child meshes were found.
+        /// </summary>
+        private NativeArray<Entity> CollectRenderMeshChildren(
+            EntityManager em, Type archetypeType, Type renderMeshType,
+            string assetName, string? vanillaMapping)
+        {
+            ComponentType renderMeshCt = ComponentType.ReadOnly(renderMeshType);
+            EntityQuery archetypeQuery = em.CreateEntityQuery(
+                new EntityQueryDesc
+                {
+                    All = new[] { ComponentType.ReadOnly(archetypeType) },
+                    Options = EntityQueryOptions.IncludePrefab,
+                });
+            NativeArray<Entity> parents = archetypeQuery.ToEntityArray(Allocator.Temp);
+
+            var collected = new List<Entity>();
+            var seen = new HashSet<int>();
+            try
+            {
+                for (int i = 0; i < parents.Length; i++)
+                {
+                    Entity parent = parents[i];
+                    // Walk LinkedEntityGroup (a DynamicBuffer<LinkedEntityGroup> of Entity-wrappers).
+                    if (!em.HasComponent<LinkedEntityGroup>(parent))
+                    {
+                        // No child group — if the parent itself somehow has RenderMesh, take it.
+                        if (em.HasComponent(parent, renderMeshCt) && seen.Add(parent.Index))
+                            collected.Add(parent);
+                        continue;
+                    }
+
+                    DynamicBuffer<LinkedEntityGroup> group = em.GetBuffer<LinkedEntityGroup>(parent);
+                    for (int j = 0; j < group.Length; j++)
+                    {
+                        Entity child = group[j].Value;
+                        if (child == parent) continue;
+                        if (!em.Exists(child)) continue;
+                        if (!em.HasComponent(child, renderMeshCt)) continue;
+                        if (seen.Add(child.Index))
+                            collected.Add(child);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("AssetSwap",
+                    $"CollectRenderMeshChildren: walk failed for archetype '{archetypeType.FullName}' " +
+                    $"(asset='{assetName}', vanilla_mapping='{vanillaMapping ?? "<null>"}'): {ex.Message}");
+            }
+            finally
+            {
+                parents.Dispose();
+                archetypeQuery.Dispose();
+            }
+
+            if (collected.Count == 0)
+                return default;
+
+            var result = new NativeArray<Entity>(collected.Count, Allocator.Temp);
+            for (int i = 0; i < collected.Count; i++)
+                result[i] = collected[i];
+            return result;
+        }
+
+        /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
+        public static void ScheduleReset()
+        {
+            _resetPending = true;
+            // #608 P2: reset diagnostic dump latch so retries re-dump EntityManager methods
+            // (HRV1↔HRV2 transitions, Unity-version upgrades, or scene-reload-induced surface
+            // changes all benefit from a fresh dump on the next failure).
+            _dumpedEmMethods = false;
+            // Also clear the RenderMesh type cache so a different DOTS variant
+            // (HRV1 RenderMesh → HRV2 RenderMeshUnmanaged / MaterialMeshInfo) is re-resolved
+            // after a scene transition or hot-reload.
+            _renderMeshResolved = false;
+            _renderMeshType = null;
+            _renderMeshVariantLogged = false;
+        }
+
+        /// <summary>
+        /// Minimum frames to wait before applying swaps.
+        /// Must wait for entities to be fully initialized with render data.
+        /// </summary>
+        private const int MinFrameDelay = 600; // ~10 seconds at 60 fps
+
+        /// <summary>
+        /// Subdirectory under BepInEx root where patched bundles are written.
+        /// </summary>
+        private const string PatchedBundlesDir = "dinoforge_patched_bundles";
+
+        /// <inheritdoc/>
+        public override void OnCreate()
+        {
+            base.OnCreate();
+            DebugLog.Write("AssetSwap", "AssetSwapSystem.OnCreate");
+        }
+
+        /// <inheritdoc/>
+        public override void OnUpdate()
+        {
+            if (_resetPending)
+            {
+                _resetPending = false;
+                _frameCount = 0;
+                _reportedFailures.Clear();
+                // #992: clear the negative-result cache on reset so a hot-reload that ships fixed
+                // (non-stub) bundles gets a fresh chance to swap.
+                _permanentlyFailedBundles.Clear();
+                DebugLog.Write("AssetSwap", "AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
+            }
+
+            _frameCount++;
+
+            // #920: Telemetry — count every OnUpdate invocation.
+            try { MetricsCollector.Instance.IncrementCounter("asset_swap.update_calls"); } catch { /* best-effort */ }
+
+            if (_frameCount < MinFrameDelay)
+                return;
+
+            IReadOnlyList<AssetSwapRequest> pending = AssetSwapRegistry.GetPending();
+            if (pending.Count == 0)
+                return;
+
+            // Gate at OnUpdate level: skip the entire swap pass until the world is populated.
+            // Iter-148 #912: AssetSwapSystem may run in Default World which only has prefab
+            // templates (~25 entities). The actual gameplay world has 49K+ entities. Find
+            // the world with the most entities (likely the gameplay world) and use its EM.
+            EntityManager bestEm = FindBestEntityManager(out int bestCount, out string bestName);
+
+            // #920: Telemetry — record current best world entity count.
+            try { MetricsCollector.Instance.RecordValue("asset_swap.world_entity_count", bestCount); } catch { /* best-effort */ }
+            if (bestCount < 1000)
+            {
+                if (_frameCount % 60 == 0)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"AssetSwapSystem: waiting for entities (best world='{bestName}' count={bestCount}, need>=1000, frame={_frameCount})");
+                }
+                return;
+            }
+
+            if (_loggedWorldSelection != bestName)
+            {
+                _loggedWorldSelection = bestName;
+                DebugLog.Write("AssetSwap",
+                    $"AssetSwapSystem: using world '{bestName}' with {bestCount} entities (was running in '{World.Name}')");
+            }
+
+            DebugLog.Write("AssetSwap", $"AssetSwapSystem: processing {pending.Count} pending swap(s)");
+
+            string patchDir = Path.Combine(BepInEx.Paths.BepInExRootPath, PatchedBundlesDir);
+            RuntimeAssetService assetService = new RuntimeAssetService(BepInEx.Paths.GameRootPath);
+
+            int succeeded = 0;
+            int failed = 0;
+
+            foreach (AssetSwapRequest request in pending)
+            {
+                try
+                {
+                    bool result = ApplySwap(request, patchDir, assetService, bestEm);
+                    if (result)
+                    {
+                        AssetSwapRegistry.MarkApplied(request.AssetAddress);
+                        succeeded++;
+                        DebugLog.Write("AssetSwap", $"AssetSwapSystem: swap applied — address='{request.AssetAddress}' " +
+                                   $"asset='{request.AssetName}'");
+                    }
+                    else
+                    {
+                        AssetSwapRegistry.MarkFailed(request.AssetAddress);
+                        failed++;
+                        int newCount = request.FailCount;
+                        if (newCount >= AssetSwapRegistry.MaxRetries)
+                        {
+                            DebugLog.Write("AssetSwap", $"AssetSwapSystem: giving up on '{request.AssetAddress}' " +
+                                       $"after {newCount} failures");
+                        }
+                        else if (_reportedFailures.Add(request.AssetAddress))
+                        {
+                            DebugLog.Write("AssetSwap", $"AssetSwapSystem: swap failed — address='{request.AssetAddress}' " +
+                                       $"(attempt {newCount}/{AssetSwapRegistry.MaxRetries})");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AssetSwapRegistry.MarkFailed(request.AssetAddress);
+                    failed++;
+                    if (_reportedFailures.Add(request.AssetAddress))
+                    {
+                        DebugLog.Write("AssetSwap", $"AssetSwapSystem: swap exception for '{request.AssetAddress}': {ex.Message}");
+                    }
+                }
+            }
+
+            assetService.Dispose();
+            DebugLog.Write("AssetSwap", $"AssetSwapSystem: batch complete — {succeeded} succeeded, {failed} failed");
+        }
+
+        /// <summary>
+        /// Applies a single asset swap: patches the vanilla bundle on disk and,
+        /// if the mod bundle contains a Unity Mesh or Material, attempts a live
+        /// RenderMesh swap on matched ECS entities.
+        /// </summary>
+        private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService, EntityManager bestEm)
+        {
+            // Resolve the mod bundle path (relative paths against BepInEx plugins dir).
+            string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);
+            if (!File.Exists(modBundleFullPath))
+            {
+                DebugLog.Write("AssetSwap", $"ApplySwap: mod bundle not found: {modBundleFullPath}");
+                return false;
+            }
+
+            // #992 negative-result cache: a bundle that has permanently failed (stub / no usable
+            // mesh / load error) must NOT be re-loaded and retried every frame — that re-load is
+            // the source of the 'already loaded' flood. Skip silently (the permanent-failure was
+            // logged once when first detected). Returning false keeps the entity-swap contract
+            // unchanged for the registry; the bundle is never touched again.
+            if (_permanentlyFailedBundles.Contains(modBundleFullPath))
+            {
+                return false;
+            }
+
+            // Phase 1 (optional): Patch the vanilla bundle on disk.
+            // This only works when the AssetAddress matches a real Addressables catalog key.
+            // Mod packs typically use bundle filenames as AssetAddress, so catalog lookup
+            // may fail — that's expected. Phase 2 (entity swap) is the primary mechanism.
+            bool patchResult = false;
+            byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
+
+            if (modAssetBytes != null && modAssetBytes.Length > 0)
+            {
+                IReadOnlyDictionary<string, string> catalog = assetService.ReadCatalog();
+                if (catalog.TryGetValue(request.AssetAddress, out string? vanillaBundleRelPath)
+                    && !string.IsNullOrEmpty(vanillaBundleRelPath))
+                {
+                    string vanillaBundlePath = AddressablesCatalog.ResolveBundlePath(
+                        vanillaBundleRelPath, BepInEx.Paths.GameRootPath);
+
+                    if (string.IsNullOrEmpty(vanillaBundlePath))
+                    {
+                        if (_reportedFailures.Add($"resolve:{request.AssetAddress}"))
+                            DebugLog.Write("AssetSwap", $"ApplySwap: unable to resolve vanilla bundle path for '{request.AssetAddress}'");
+                    }
+                    else if (File.Exists(vanillaBundlePath))
+                    {
+                        string patchedFileName = Path.GetFileName(vanillaBundlePath);
+                        string outputPath = Path.Combine(patchDir, patchedFileName);
+
+                        patchResult = assetService.ReplaceAsset(
+                            vanillaBundlePath,
+                            request.AssetAddress,
+                            modAssetBytes,
+                            outputPath);
+
+                        if (patchResult)
+                            DebugLog.Write("AssetSwap", $"ApplySwap: patched bundle written to '{outputPath}'");
+                        else
+                            DebugLog.Write("AssetSwap", $"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                    }
+                }
+                else if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
+                {
+                    DebugLog.Write("AssetSwap", $"ApplySwap: address '{request.AssetAddress}' not in catalog — skipping disk patch, using entity swap only");
+                }
+            }
+            else if (_reportedFailures.Add($"extract:{request.AssetAddress}"))
+            {
+                DebugLog.Write("AssetSwap", $"ApplySwap: could not extract '{request.AssetName}' from '{modBundleFullPath}' — using entity swap only");
+            }
+
+            // Best-effort live RenderMesh swap on ECS entities.
+            bool entitySwapResult = TrySwapRenderMeshFromBundle(
+                modBundleFullPath, request.AssetName, request.VanillaMapping, bestEm);
+            DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
+
+            return patchResult || entitySwapResult;
+        }
+
+        /// <summary>
+        /// Attempts to load a Mesh or Material from the mod bundle and apply it to ECS entities
+        /// carrying a RenderMesh shared component.
+        /// When <paramref name="vanillaMapping"/> is provided the entity query is narrowed to only
+        /// entities that also carry the corresponding unit-archetype component (e.g.
+        /// <c>Components.MeleeUnit</c>), preventing the replacement from touching unrelated geometry.
+        /// </summary>
+        private bool TrySwapRenderMeshFromBundle(
+            string modBundlePath, string assetName, string? vanillaMapping, EntityManager em)
+        {
+            AssetBundle? bundle = LoadBundle(modBundlePath);
+            if (bundle == null)
+            {
+                // #992: bundle failed to load and could not be recovered from the already-loaded
+                // set — a hard load error that will recur every frame. Mark permanently failed so
+                // we stop re-attempting LoadFromFile (the flood source). Log once.
+                if (_permanentlyFailedBundles.Add(modBundlePath))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: bundle '{Path.GetFileName(modBundlePath)}' " +
+                        "failed to load and could not be recovered — marking permanently failed (#992).");
+                }
+                return false;
+            }
+
+            // #101 fix (Bug B): the mesh/material/prefab inside the bundle is named after the
+            // source FBX/prefab (e.g. "sw-cis-commando-droid"), NOT after the bundle key / asset
+            // address (e.g. "sw-bx-commando-droid"). Looking up by request.AssetName therefore
+            // returns null for most bundles. Resolve the replacement robustly by loading ALL assets
+            // of each type and taking the first viable one, instead of trusting the key string.
+            (Mesh? replacementMesh, Material? replacementMat) = ResolveReplacementAssets(bundle, assetName);
+
+            if (replacementMesh == null && replacementMat == null)
+            {
+                // #992: a bundle with no usable Mesh/Material (the 13 #986 90-byte stubs) can NEVER
+                // yield a swap. Mark it permanently failed so ApplySwap skips it on every later
+                // frame instead of re-loading it — this is the primary stop for the per-frame
+                // 'already loaded' flood. Log once.
+                _permanentlyFailedBundles.Add(modBundlePath);
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: no usable Mesh/Material/prefab found in bundle " +
+                    $"'{Path.GetFileName(modBundlePath)}' (requested asset='{assetName}'). " +
+                    "Bundle may be a stub or contain no renderable geometry. " +
+                    "Marking permanently failed — will skip on subsequent frames (#992).");
+                return false;
+            }
+
+            // GFX-mode Phase 2: when the High graphics tier is active, upgrade the swapped
+            // material to URP/Lit with PBR slots (driven by pack PBR metadata when present).
+            // Pure passthrough when tier is Vanilla or no upgrade is possible — never breaks the swap.
+            if (replacementMat != null)
+            {
+                replacementMat = DINOForge.Runtime.Graphics.GraphicsMaterialUpgrader.Upgrade(replacementMat, assetName);
+            }
+            bool materialCompatible = replacementMat != null && IsUrpCompatibleMaterial(replacementMat, modBundlePath);
+
+            Type? renderMeshType = ResolveRenderMeshType();
+            if (renderMeshType == null)
+            {
+                DebugLog.Write("AssetSwap", "TrySwapRenderMeshFromBundle: Unity.Rendering.RenderMesh type not found");
+                return false;
+            }
+
+            // #608 P2: HRV2 (RenderMeshUnmanaged / MaterialMeshInfo) uses blittable structs
+            // with readonly mesh/material data — the legacy FieldInfo.SetValue path doesn't
+            // apply. Bail out gracefully until HRV2 mesh-swap is implemented (separate task).
+            if (IsHrv2Type(_renderMeshVariantName))
+            {
+                DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: HRV2 mesh-swap not yet implemented (variant='{_renderMeshVariantName}') — falling back to no-op for entity swap. Bundle-disk patch (if successful) still applies.");
+                return false;
+            }
+
+            // Resolve vanilla_mapping → ECS component type for targeted entity filtering.
+            // When the mapping is absent or unrecognised we fall back to RenderMesh-only query,
+            // which at minimum avoids modifying non-unit geometry in cases like buildings.
+            ComponentType[] queryComponents;
+            // #986: When the archetype carries RenderMesh on a CHILD entity (DINO buildings:
+            // Components.BuildingBase has LinkedEntityGroup + Unity.Transforms.Child but NO
+            // RenderMesh on the parent), the RenderMesh+archetype query returns 0. We capture
+            // the resolved archetype type so we can re-query archetype-only and walk children.
+            Type? resolvedArchetypeType = null;
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && TryResolveSwapArchetype(vanillaMapping, out string? archetypeTypeName)
+                && !string.IsNullOrEmpty(archetypeTypeName))
+            {
+                Type? archetypeType = ResolveTypeByName(archetypeTypeName!);
+                if (archetypeType != null)
+                {
+                    resolvedArchetypeType = archetypeType;
+                    queryComponents = new[]
+                    {
+                        ComponentType.ReadOnly(renderMeshType),
+                        ComponentType.ReadOnly(archetypeType),
+                    };
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: filtering by '{archetypeTypeName}' " +
+                        $"for vanilla_mapping='{vanillaMapping}'");
+                }
+                else
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: archetype type '{archetypeTypeName}' not " +
+                        $"found in assemblies; falling back to RenderMesh-only query");
+                    queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
+                }
+            }
+            else
+            {
+                queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
+            }
+
+            EntityQuery query = em.CreateEntityQuery(
+                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
+            NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
+
+            // #986: child-entity RenderMesh fallback. DINO buildings carry the archetype marker
+            // (Components.BuildingBase) on a PARENT entity whose RenderMesh lives on a CHILD
+            // entity referenced via LinkedEntityGroup. The RenderMesh+archetype query above
+            // therefore returns 0. When that happens (and we resolved a parent archetype), query
+            // archetype-only and collect the RenderMesh-bearing children. This is what makes
+            // buildings (and any other parent-rendered DINO entity) swap instead of "0 succeeded".
+            if (entities.Length == 0 && resolvedArchetypeType != null)
+            {
+                NativeArray<Entity> childMatches = CollectRenderMeshChildren(
+                    em, resolvedArchetypeType, renderMeshType, assetName, vanillaMapping);
+                if (childMatches.IsCreated && childMatches.Length > 0)
+                {
+                    entities.Dispose();
+                    query.Dispose();
+                    entities = childMatches;
+                    // No EntityQuery to dispose for the child path; use a no-op query handle.
+                    query = em.CreateEntityQuery(ComponentType.ReadOnly(renderMeshType));
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: parent archetype '{resolvedArchetypeType.FullName}' " +
+                        $"carries no RenderMesh; resolved {entities.Length} RenderMesh child entities " +
+                        $"via LinkedEntityGroup for asset='{assetName}'.");
+                }
+                else
+                {
+                    if (childMatches.IsCreated) childMatches.Dispose();
+                }
+            }
+
+            // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
+            // fires before gameplay-scene entity population completes (observed ~9s gap
+            // between AssetSwapSystem first OnUpdate at frame 600 and entities arriving
+            // around frame 1000+). Returning false (not true) causes AssetSwapRegistry
+            // to MarkFailed, which keeps the request in the pending queue for the next
+            // OnUpdate retry. MaxRetries=200 gives a wide retry window past warmup.
+            if (entities.Length == 0)
+            {
+                if (_reportedFailures.Add($"empty-query:{assetName}"))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: entity query returned 0 results for asset='{assetName}' " +
+                        $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — entities not yet populated, will retry next frame.");
+                }
+                entities.Dispose();
+                query.Dispose();
+                return false;
+            }
+
+            // Use the non-generic GetSharedComponentData(Entity, ComponentType) overload.
+            // The generic GetSharedComponentData<T>(Entity) throws "Ambiguous match found"
+            // for entities that have multiple instances of T (e.g. a unit with shadow+main mesh).
+            // Iter-144 fix: GetMethod(name, types[]) returns null at runtime against DINO's
+            // Unity 2021.3 EntityManager (overload-resolution mismatch). Mirror the arity-filter
+            // pattern used below for SetSharedComponentData: enumerate methods, filter on name,
+            // non-generic, arity=2, first param Entity, second param ComponentType.
+            // Mono 4.x type-identity bug: typeof(Entity) != param.ParameterType across assembly
+            // boundaries. Use FullName string comparison instead of reference equality.
+            MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethods(
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .FirstOrDefault(m =>
+                    m.Name == "GetSharedComponentData"
+                    && !m.IsGenericMethodDefinition
+                    && m.GetParameters().Length == 2
+                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity"
+                    && (m.GetParameters()[1].ParameterType.FullName == "Unity.Entities.ComponentType"
+                        || m.GetParameters()[1].ParameterType.FullName == "System.Int32"));
+            // #101: SetSharedComponentData<T> has multiple overloads (Entity, EntityQuery,
+            // NativeArray<Entity>), so plain GetMethod("SetSharedComponentData") throws
+            // AmbiguousMatchException. GetMethod(name, types[]) also can't disambiguate
+            // open generics (parameter type is T, not a concrete Type). Filter by arity +
+            // first-parameter Entity to pin the (Entity, T) overload.
+            MethodInfo? setSharedGeneric = typeof(EntityManager).GetMethods(
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .FirstOrDefault(m =>
+                    m.Name == "SetSharedComponentData"
+                    && m.IsGenericMethodDefinition
+                    && m.GetParameters().Length == 2
+                    && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
+
+            if (getSharedNonGeneric == null || setSharedGeneric == null)
+            {
+                // Iter-146 #881: throttle ungated log — was firing every retry (Pattern #232).
+                // Emit a single LogWarning every Nth failure to preserve actionable signal.
+                _reflectionFailCount++;
+                if (_reflectionFailCount == 1 || (_reflectionFailCount % ReflectionFailLogEvery) == 0)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"WARN: TrySwapRenderMeshFromBundle: reflection lookup failed (#{_reflectionFailCount}) " +
+                        $"(getSharedNonGeneric={getSharedNonGeneric != null}, setSharedGeneric={setSharedGeneric != null}).");
+                }
+                if (!_dumpedEmMethods)
+                {
+                    _dumpedEmMethods = true;
+                    DebugLog.Write("AssetSwap",
+                        "[AssetSwap] EntityManager methods dump (one-shot until ScheduleReset). Triggered by reflection-lookup failure...");
+                    var allMethods = typeof(EntityManager).GetMethods(
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                    foreach (var m in allMethods)
+                    {
+                        if (m.Name == "GetSharedComponentData" || m.Name == "SetSharedComponentData")
+                        {
+                            var ps = string.Join(", ", m.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
+                            DebugLog.Write("AssetSwap", $"  EM.{m.Name}(<{ps}>) generic={m.IsGenericMethodDefinition} retType={m.ReturnType.Name}");
+                        }
+                    }
+                }
+                entities.Dispose();
+                query.Dispose();
+                return false;
+            }
+
+            MethodInfo genericSet = setSharedGeneric.MakeGenericMethod(renderMeshType);
+            FieldInfo? meshField = renderMeshType.GetField("mesh");
+            FieldInfo? materialField = renderMeshType.GetField("material");
+
+            ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
+
+            // BUG A fix (#101): DINO's Unity 2021.3 EntityManager exposes the non-generic
+            // GetSharedComponentData in TWO overloads — (Entity, ComponentType) AND
+            // (Entity, int typeIndex). The FirstOrDefault lookup above can bind the Int32
+            // overload (it explicitly accepts either FullName). Invoking that overload with a
+            // boxed ComponentType throws at runtime: "Object of type 'Unity.Entities.ComponentType'
+            // cannot be converted to type 'System.Int32'" → result=False ("swapped 0/100" for
+            // ground units like sw-cis-magna-guard). Detect which overload was bound and pass the
+            // matching argument type: ComponentType.TypeIndex (an int) when the param wants Int32.
+            bool getSharedWantsTypeIndex =
+                getSharedNonGeneric.GetParameters()[1].ParameterType.FullName == "System.Int32";
+            object renderMeshSharedArg = getSharedWantsTypeIndex
+                ? (object)renderMeshComponentType.TypeIndex
+                : renderMeshComponentType;
+
+            // ---- DIAGNOSTIC PASS: log unique vanilla mesh names (one-shot) ----
+            // Uses generic GetSharedComponentData<RenderMesh>(Entity) via MakeGenericMethod
+            // to avoid the Mono type-identity bug with non-generic overload parameter matching.
+            if (!_vanillaMeshDumpDone && meshField != null && setSharedGeneric != null)
+            {
+                _vanillaMeshDumpDone = true;
+                var uniqueMeshNames = new Dictionary<string, int>(StringComparer.Ordinal);
+                int scanned = 0;
+                int errors = 0;
+
+                // Find the generic GetSharedComponentData<T>(Entity) for reading
+                MethodInfo? genericGet = typeof(EntityManager).GetMethods(
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .FirstOrDefault(m =>
+                        m.Name == "GetSharedComponentData"
+                        && m.IsGenericMethodDefinition
+                        && m.GetParameters().Length == 1
+                        && m.GetParameters()[0].ParameterType.FullName == "Unity.Entities.Entity");
+
+                MethodInfo? boundGet = genericGet?.MakeGenericMethod(renderMeshType);
+
+                if (boundGet != null)
+                {
+                    for (int i = 0; i < entities.Length && uniqueMeshNames.Count < 100; i++)
+                    {
+                        try
+                        {
+                            object? rm = boundGet.Invoke(EntityManager, new object[] { entities[i] });
+                            if (rm == null) continue;
+                            scanned++;
+                            object? meshObj = meshField.GetValue(rm);
+                            if (meshObj is Mesh diagMesh && diagMesh != null)
+                            {
+                                string meshName = diagMesh.name ?? "(null)";
+                                if (uniqueMeshNames.ContainsKey(meshName))
+                                    uniqueMeshNames[meshName]++;
+                                else
+                                    uniqueMeshNames[meshName] = 1;
+                            }
+                        }
+                        catch { errors++; if (errors > 10) break; }
+                    }
+                }
+
+                DebugLog.Write("AssetSwap",
+                    $"[DIAGNOSTIC] Vanilla mesh name survey: scanned {scanned}/{entities.Length} entities, " +
+                    $"found {uniqueMeshNames.Count} unique mesh names (errors={errors}, genericGet={boundGet != null}):");
+                foreach (var kvp in uniqueMeshNames.OrderByDescending(x => x.Value))
+                {
+                    DebugLog.Write("AssetSwap", $"  mesh=\"{kvp.Key}\"  count={kvp.Value}");
+                }
+            }
+
+            // ---- SELECTIVE SWAP ----
+            // The PRIMARY (authoritative) targeting was already applied above: the EntityQuery
+            // was narrowed to the archetype component resolved from vanilla_mapping. The optional
+            // SECONDARY refinement below further filters by live mesh name when DINO's vanilla
+            // mesh names for this mapping are known (VanillaMappingToMeshSubstrings, keyed by the
+            // pack's vanilla_mapping value — NOT by bundle filename).
+            string bundleFileName = Path.GetFileNameWithoutExtension(modBundlePath) ?? "";
+            string[]? targetMeshSubstrings = null;
+            if (!string.IsNullOrWhiteSpace(vanillaMapping)
+                && VanillaMappingToMeshSubstrings.TryGetValue(vanillaMapping!, out string[]? substrings)
+                && substrings != null
+                && substrings.Length > 0)
+            {
+                targetMeshSubstrings = substrings;
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' vanilla_mapping='{vanillaMapping}' " +
+                    $"→ refining by mesh substrings: [{string.Join(", ", substrings)}]");
+            }
+
+            // DIAGNOSTIC MODE only when there is NO targeting signal at all: no archetype filter
+            // (vanilla_mapping absent/unresolved) AND no mesh-name substrings. With either signal
+            // present we proceed — the archetype-narrowed query is authoritative; substrings are an
+            // optional refinement. A populated vanilla_mapping therefore exits DIAGNOSTIC MODE.
+            // #986 FINAL FIX: use the ACTUAL query-narrowing result (resolvedArchetypeType),
+            // NOT a separate re-resolution. The earlier code re-ran TryResolveSwapArchetype +
+            // ResolveTypeByName here, which could (and did, live) disagree with the resolution
+            // the EntityQuery actually used above — the query logged "filtering by
+            // 'Components.MeleeUnit'" (resolvedArchetypeType != null, 193 entities matched) yet
+            // this re-resolution returned false, leaving the hand-guessed mesh substrings active
+            // as a reject filter that dropped all 193 matched entities ("swapped 0/100"). The
+            // query already narrowed the entities to the right archetype, so trust that single
+            // source of truth: if the query was archetype-narrowed, treat the filter as present.
+            bool hasArchetypeFilter = resolvedArchetypeType != null;
+
+            // CRITICAL ("units look native") fix: when an archetype filter IS present it is the
+            // authoritative targeting — the EntityQuery is already narrowed to the right unit class.
+            // The mesh-name substrings were hand-guessed (e.g. "Swordsman") and do NOT match DINO's
+            // real mesh vocabulary (e.g. "swordsmen", "royal_sword_2", "bomj_*", "harpy_*",
+            // "undead_*"), so applying them as a *reject* filter dropped 100% of entities
+            // ("swapped 0/100 … skipped 100 non-matching meshes") and every unit stayed native.
+            // Substrings are therefore ONLY used as a fallback targeting signal when there is no
+            // archetype filter; with an archetype filter we swap every entity the query returned.
+            if (hasArchetypeFilter)
+            {
+                targetMeshSubstrings = null;
+            }
+
+            if (!hasArchetypeFilter && (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0))
+            {
+                DebugLog.Write("AssetSwap",
+                    $"[DIAGNOSTIC MODE] No targeting signal for bundle '{bundleFileName}' " +
+                    $"(vanilla_mapping='{vanillaMapping ?? "<null>"}' yielded neither an archetype filter " +
+                    $"nor mesh-name substrings). Skipping entity swap for {entities.Length} entities. " +
+                    $"Add a 'vanilla_mapping' to the pack visual_asset to exit DIAGNOSTIC MODE.");
+                entities.Dispose();
+                query.Dispose();
+                return false;
+            }
+
+            int swapCount = 0;
+
+            // Iter-148 safety cap: bundle-to-archetype swaps can match tens of thousands of
+            // entities (observed 25,713 RenderMesh entities matching a single bundle). Applying
+            // the same replacement mesh+material to every match makes every unit look identical
+            // — the "everything looks the same" disaster. Cap at 100 entities per swap call
+            // until proper per-unit selective targeting lands. Logged once per bundle so the
+            // operator knows the cap was hit and additional matches were skipped.
+            const int MaxEntitiesPerSwap = 100;
+            int swapBudget = Math.Min(entities.Length, MaxEntitiesPerSwap);
+            if (entities.Length > MaxEntitiesPerSwap && _reportedFailures.Add($"cap:{assetName}"))
+            {
+                DebugLog.Write("AssetSwap",
+                    $"TrySwapRenderMeshFromBundle: capping swap at {MaxEntitiesPerSwap}/{entities.Length} entities for asset='{assetName}' " +
+                    $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — prevents 'everything looks the same' disaster. " +
+                    "Selective targeting is a separate concern; tracked as follow-up.");
+            }
+
+            int skippedNoMatch = 0;
+            for (int i = 0; i < swapBudget; i++)
+            {
+                if (swapCount >= MaxSwapsPerBundle)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: hit MaxSwapsPerBundle cap ({MaxSwapsPerBundle}), stopping.");
+                    break;
+                }
+
+                Entity entity = entities[i];
+                try
+                {
+                    if (!em.HasComponent(entity, renderMeshComponentType))
+                        continue;
+
+                    // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
+                    // BUG A fix (#101): pass TypeIndex (int) when the bound overload is the
+                    // (Entity, int) one — passing a ComponentType there throws the Mono
+                    // "ComponentType cannot be converted to Int32" conversion error.
+                    object? renderMesh = getSharedNonGeneric.Invoke(
+                        em, new object[] { entity, renderMeshSharedArg });
+                    if (renderMesh == null) continue;
+
+                    // ---- Selective mesh-name check (SECONDARY refinement only) ----
+                    // Skip when no substrings were resolved: the archetype-narrowed query is
+                    // authoritative and we swap every entity it returned.
+                    if (meshField != null && targetMeshSubstrings != null)
+                    {
+                        object? currentMeshObj = meshField.GetValue(renderMesh);
+                        if (currentMeshObj is Mesh currentMesh && currentMesh != null)
+                        {
+                            string currentName = currentMesh.name ?? "";
+                            bool nameMatches = false;
+                            for (int s = 0; s < targetMeshSubstrings.Length; s++)
+                            {
+                                if (currentName.IndexOf(targetMeshSubstrings[s], StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    nameMatches = true;
+                                    break;
+                                }
+                            }
+                            if (!nameMatches)
+                            {
+                                skippedNoMatch++;
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            // Mesh field is null — entity not yet loaded, skip.
+                            continue;
+                        }
+                    }
+
+                    bool changed = false;
+                    if (replacementMesh != null && meshField != null)
+                    {
+                        object? currentMeshObj = meshField.GetValue(renderMesh);
+                        if (currentMeshObj is Mesh currentMesh
+                            && !IsSkinnedMeshCompatible(currentMesh, replacementMesh, out string? skinReason))
+                        {
+                            if (_reportedFailures.Add($"skinning:{assetName}"))
+                            {
+                                DebugLog.Write("AssetSwap",
+                                    $"TrySwapRenderMeshFromBundle: skipping entity {entity.Index} — {skinReason}");
+                            }
+                            continue;
+                        }
+
+                        meshField.SetValue(renderMesh, replacementMesh);
+                        changed = true;
+                    }
+                    if (replacementMat != null && materialCompatible && materialField != null)
+                    {
+                        object? currentMat = materialField.GetValue(renderMesh);
+                        if (currentMat == null)
+                            continue;
+                        materialField.SetValue(renderMesh, replacementMat);
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        genericSet.Invoke(em, new object[] { entity, renderMesh });
+                        swapCount++;
+                    }
+                }
+                catch (TargetInvocationException ex) when (
+                    ex.InnerException?.Message.Contains("Ambiguous match found") == true)
+                {
+                    // Entity has multiple RenderMesh instances (shadow + main mesh).
+                    // Skip — unit swaps only need one mesh visible anyway.
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: entity {entity.Index} has multiple " +
+                        $"RenderMesh instances — skipping (ambiguous match)");
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: failed on entity {entity.Index}: {ex.Message}");
+                }
+            }
+
+            DebugLog.Write("AssetSwap",
+                $"TrySwapRenderMeshFromBundle: swapped {swapCount}/{swapBudget} entities (total matching={entities.Length}, " +
+                $"skipped {skippedNoMatch} non-matching meshes, cap={MaxEntitiesPerSwap})");
+            entities.Dispose();
+            query.Dispose();
+
+            return swapCount > 0;
+        }
+
+        // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// #991 / #973: DINO infantry uses skinned <see cref="Mesh"/> assets (bindposes + bone weights)
+        /// driven by procedural animation. Swapping a static mesh onto those entities freezes the pose.
+        /// </summary>
+        private static bool IsSkinnedMeshCompatible(Mesh current, Mesh replacement, out string? reason)
+        {
+            reason = null;
+            int currentBindposes = current.bindposes?.Length ?? 0;
+            int replacementBindposes = replacement.bindposes?.Length ?? 0;
+            bool currentSkinned = currentBindposes > 0;
+            bool replacementSkinned = replacementBindposes > 0;
+
+            if (currentSkinned && !replacementSkinned)
+            {
+                reason =
+                    $"vanilla mesh '{current.name}' has {currentBindposes} bindpose(s) but replacement " +
+                    $"'{replacement.name}' is static (0 bindposes) — swap would freeze procedural animation (#973)";
+                return false;
+            }
+
+            if (currentSkinned && replacementSkinned && currentBindposes != replacementBindposes)
+            {
+                reason =
+                    $"bindpose count mismatch for '{replacement.name}': vanilla={currentBindposes} " +
+                    $"replacement={replacementBindposes} — retarget to DINO reference skeleton before swap";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns true only when the material is safe for Hybrid Renderer V2/URP execution.
+        /// Legacy built-in shaders such as "Standard"/"Legacy"/"Diffuse" are rejected.
+        /// </summary>
+        private static bool IsUrpCompatibleMaterial(Material material, string bundlePath)
+        {
+            if (material == null)
+                return false;
+
+            Shader? shader = material.shader;
+            if (shader == null)
+            {
+                LogNonUrpMaterialSkip(bundlePath, "<null>");
+                return false;
+            }
+
+            string shaderName = shader.name ?? string.Empty;
+            if (shaderName.StartsWith("Universal Render Pipeline/", StringComparison.Ordinal))
+                return true;
+
+            if (HasSrpBatcherSupport(shader))
+                return true;
+
+            LogNonUrpMaterialSkip(bundlePath, shaderName);
+            return false;
+        }
+
+        private static bool HasSrpBatcherSupport(Shader shader)
+        {
+            try
+            {
+                MethodInfo? findPassTagValue = typeof(Shader).GetMethod(
+                    "FindPassTagValue",
+                    BindingFlags.Public | BindingFlags.Instance,
+                    null,
+                    new[] { typeof(int), typeof(string) },
+                    null);
+
+                if (findPassTagValue == null)
+                    return false;
+
+                for (int pass = 0; pass < 32; pass++)
+                {
+                    object? tagValue = findPassTagValue.Invoke(shader, new object[] { pass, "SRPBatcher" });
+                    try
+                    {
+                        if (tagValue != null && Convert.ToInt32(tagValue) != 0)
+                            return true;
+                    }
+                    catch
+                    {
+                        // Some Unity versions may expose FindPassTagValue with a non-convertible return type.
+                    }
+                }
+            }
+            catch
+            {
+                // If FindPassTagValue probing fails, fallback to shader-name check.
+            }
+
+            return false;
+        }
+
+        private static void LogNonUrpMaterialSkip(string bundlePath, string shaderName)
+        {
+            string bundleName = Path.GetFileName(bundlePath);
+            if (string.IsNullOrWhiteSpace(bundleName))
+                bundleName = bundlePath;
+
+            if (!_reportedNonUrpMaterialBundles.Add(bundleName))
+                return;
+
+            DebugLog.Write(
+                "AssetSwap",
+                $"[AssetSwap] skipped material swap for {bundleName}: shader {shaderName} not HRV2-compatible");
+        }
+
+        private static Type? _renderMeshType;
+        private static bool _renderMeshResolved;
+        // #608 P2: tracks which HRV variant was resolved so callers (mesh-swap path) can
+        // bail out gracefully on HRV2 (MaterialMeshInfo/RenderMeshUnmanaged) where the
+        // public-mutable-field path doesn't apply.
+        private static string? _renderMeshVariantName;
+        private static bool _renderMeshVariantLogged;
+        private static bool _unityRenderingVersionLogged;
+
+        /// <summary>
+        /// HRV2 type names (RenderMeshUnmanaged, MaterialMeshInfo). When the resolved
+        /// RenderMesh type matches one of these, the legacy FieldInfo.SetValue("mesh"/"material")
+        /// swap path is NOT supported and must be skipped (see TrySwapRenderMeshFromBundle).
+        /// </summary>
+        private static readonly string[] Hrv2TypeNames =
+        {
+            "Unity.Rendering.RenderMeshUnmanaged",
+            "Unity.Rendering.MaterialMeshInfo",
+        };
+
+        /// <summary>
+        /// Resolves the Unity.Rendering RenderMesh shared-component type from loaded assemblies.
+        /// Tries HRV1 ("Unity.Rendering.RenderMesh") first, then falls back to HRV2 variants
+        /// ("RenderMeshUnmanaged", "MaterialMeshInfo") so newer DOTS installations are detected
+        /// (#608 P2). Caller is responsible for checking <see cref="IsHrv2Type"/> before
+        /// attempting field mutation — HRV2 has readonly properties / blittable structs and
+        /// requires a different swap strategy (not yet implemented).
+        /// </summary>
+        private static Type? ResolveRenderMeshType()
+        {
+            if (_renderMeshResolved) return _renderMeshType;
+            _renderMeshResolved = true;
+
+            LogUnityRenderingVersionOnce();
+
+            // Try HRV1 first (DINO 2021.3 baseline), then HRV2 variants.
+            string[] candidates =
+            {
+                "Unity.Rendering.RenderMesh",
+                "Unity.Rendering.RenderMeshUnmanaged",
+                "Unity.Rendering.MaterialMeshInfo",
+            };
+
+            foreach (string typeName in candidates)
+            {
+                foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    try
+                    {
+                        Type? t = asm.GetType(typeName, throwOnError: false);
+                        if (t != null)
+                        {
+                            _renderMeshType = t;
+                            _renderMeshVariantName = typeName;
+                            if (!_renderMeshVariantLogged)
+                            {
+                                _renderMeshVariantLogged = true;
+                                DebugLog.Write("AssetSwap", $"ResolveRenderMeshType: resolved '{typeName}' from assembly '{asm.GetName().Name}' v{asm.GetName().Version}");
+                                if (IsHrv2Type(typeName))
+                                {
+                                    DebugLog.Write("AssetSwap", $"ResolveRenderMeshType: HRV2 variant detected ('{typeName}') — HRV2 mesh-swap not yet implemented, falling back to no-op for entity swaps. Bundle-disk patching (Phase 1) remains functional.");
+                                }
+                            }
+                            return _renderMeshType;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        /* safe-swallow: type resolution failure is expected when assembly does not contain Unity.Rendering */
+                        System.Diagnostics.Debug.WriteLine($"RenderMesh type lookup for '{typeName}' in {asm.GetName().Name} failed: {ex.Message}");
+                    }
+                }
+            }
+
+            DebugLog.Write("AssetSwap", "ResolveRenderMeshType: no HRV1 or HRV2 RenderMesh type found in any loaded assembly. Entity mesh-swap disabled.");
+            return null;
+        }
+
+        /// <summary>Returns true if the resolved type is an HRV2 variant (no mutable mesh/material fields).</summary>
+        private static bool IsHrv2Type(string? typeName)
+        {
+            if (string.IsNullOrEmpty(typeName)) return false;
+            for (int i = 0; i < Hrv2TypeNames.Length; i++)
+            {
+                if (Hrv2TypeNames[i] == typeName) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Logs the Unity.Rendering assembly version once at first init. Helps future agents
+        /// diagnose Unity-version-dependent reflection bugs (#608 P2). Scans both the currently
+        /// loaded assemblies and the executing assembly's referenced assemblies so we capture
+        /// the version regardless of whether Unity.Rendering has been JIT-loaded yet.
+        /// </summary>
+        private static void LogUnityRenderingVersionOnce()
+        {
+            if (_unityRenderingVersionLogged) return;
+            _unityRenderingVersionLogged = true;
+
+            try
+            {
+                // Pass 1: loaded assemblies (most reliable — actual runtime version).
+                foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    AssemblyName name = asm.GetName();
+                    if (name.Name == "Unity.Rendering" || name.Name == "Unity.Rendering.Hybrid")
+                    {
+                        DebugLog.Write("AssetSwap", $"Unity.Rendering assembly: name='{name.Name}' version={name.Version} (loaded)");
+                        return;
+                    }
+                }
+
+                // Pass 2: referenced (but not yet loaded) assemblies from this DLL.
+                foreach (AssemblyName refName in Assembly.GetExecutingAssembly().GetReferencedAssemblies())
+                {
+                    if (refName.Name == "Unity.Rendering" || refName.Name == "Unity.Rendering.Hybrid")
+                    {
+                        DebugLog.Write("AssetSwap", $"Unity.Rendering assembly: name='{refName.Name}' version={refName.Version} (referenced, not yet loaded)");
+                        return;
+                    }
+                }
+
+                DebugLog.Write("AssetSwap", "Unity.Rendering assembly: NOT FOUND in loaded or referenced assemblies. RenderMesh resolution will fail.");
+            }
+            catch (Exception ex)
+            {
+                /* safe-swallow: diagnostic logging must never throw */
+                System.Diagnostics.Debug.WriteLine($"LogUnityRenderingVersionOnce failed: {ex.Message}");
+            }
+        }
+
+        private static readonly Dictionary<string, Type?> _resolvedTypeCache =
+            new Dictionary<string, Type?>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Resolves a fully-qualified type name (e.g. "Components.MeleeUnit") from any loaded assembly.
+        /// Results are cached to avoid repeated assembly scans.
+        /// </summary>
+        private static Type? ResolveTypeByName(string typeName)
+        {
+            if (_resolvedTypeCache.TryGetValue(typeName, out Type? cached))
+                return cached;
+
+            Type? found = null;
+            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    found = asm.GetType(typeName, throwOnError: false);
+                    if (found != null) break;
+                }
+                catch (Exception ex)
+                {
+                    /* safe-swallow: type resolution failure is expected when assembly does not contain the target type */
+                    System.Diagnostics.Debug.WriteLine($"Type '{typeName}' lookup in {asm.GetName().Name} failed: {ex.Message}");
+                }
+            }
+
+            _resolvedTypeCache[typeName] = found;
+            return found;
+        }
+
+        /// <summary>
+        /// Resolves a mod bundle path. Relative paths are joined against the BepInEx plugins dir.
+        /// </summary>
+        private static string ResolveModBundlePath(string path)
+        {
+            return Path.IsPathRooted(path)
+                ? path
+                : Path.Combine(BepInEx.Paths.PluginPath, path);
+        }
+
+        /// <summary>
+        /// Robustly resolves a replacement (Mesh, Material) pair from a mod bundle without relying
+        /// on the asset being named after the bundle key (#101 Bug B). Resolution order:
+        ///   1. Try the requested name as a bare Mesh / Material (fast path for purpose-built bundles).
+        ///   2. Load the first GameObject prefab and extract mesh+material from its renderer
+        ///      (SkinnedMeshRenderer preferred, then MeshFilter/MeshRenderer) — the common case for
+        ///      bundles built from prefabs, where the prefab is named after the FBX.
+        ///   3. Fall back to the first bare Mesh / Material asset in the bundle.
+        /// Mesh and material are always sourced from the same renderer where possible to avoid
+        /// mesh/material mismatches.
+        /// </summary>
+        private static (Mesh? mesh, Material? material) ResolveReplacementAssets(AssetBundle bundle, string requestedName)
+        {
+            // 1. Fast path: exact-name bare assets.
+            Mesh? mesh = bundle.LoadAsset<Mesh>(requestedName);
+            Material? material = bundle.LoadAsset<Material>(requestedName);
+            if (mesh != null || material != null)
+            {
+                DebugLog.Write("AssetSwap", $"ResolveReplacementAssets: resolved bare asset by name '{requestedName}'");
+                return (mesh, material);
+            }
+
+            // 2. Prefab path: extract from the first GameObject's renderer.
+            GameObject[] prefabs = bundle.LoadAllAssets<GameObject>();
+            foreach (GameObject prefab in prefabs)
+            {
+                if (prefab == null) continue;
+
+                SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                if (smr != null && smr.sharedMesh != null)
+                {
+                    mesh = smr.sharedMesh;
+                    if (smr.sharedMaterials != null && smr.sharedMaterials.Length > 0)
+                        material = smr.sharedMaterials[0];
+                }
+                else
+                {
+                    MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>(true);
+                    if (mf != null && mf.sharedMesh != null)
+                        mesh = mf.sharedMesh;
+
+                    MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>(true);
+                    if (mr != null && mr.sharedMaterials != null && mr.sharedMaterials.Length > 0)
+                        material = mr.sharedMaterials[0];
+                }
+
+                if (mesh != null || material != null)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"ResolveReplacementAssets: extracted mesh='{mesh?.name ?? "<null>"}' " +
+                        $"material='{material?.name ?? "<null>"}' from prefab '{prefab.name}'");
+                    return (mesh, material);
+                }
+            }
+
+            // 3. Fall back to the first bare Mesh / Material asset in the bundle.
+            Mesh[] meshes = bundle.LoadAllAssets<Mesh>();
+            if (meshes.Length > 0) mesh = meshes[0];
+
+            Material[] materials = bundle.LoadAllAssets<Material>();
+            if (materials.Length > 0) material = materials[0];
+
+            if (mesh != null || material != null)
+            {
+                DebugLog.Write("AssetSwap",
+                    $"ResolveReplacementAssets: fell back to first bare mesh='{mesh?.name ?? "<null>"}' " +
+                    $"material='{material?.name ?? "<null>"}' in bundle");
+            }
+
+            return (mesh, material);
+        }
+
+        /// <summary>
+        /// Loads an AssetBundle from disk, caching the result (LRU with auto-eviction).
+        /// </summary>
+        private AssetBundle? LoadBundle(string path)
+        {
+            AssetBundle? cached = _loadedBundles.Get(path);
+            if (cached != null)
+                return cached;
+
+            string fullPath = ResolveModBundlePath(path);
+
+            if (!File.Exists(fullPath))
+            {
+                DebugLog.Write("AssetSwap", $"LoadBundle: file not found: {fullPath}");
+                return null;
+            }
+
+            try
+            {
+                AssetBundle bundle = AssetBundle.LoadFromFile(fullPath);
+                if (bundle != null)
+                {
+                    _loadedBundles.Set(path, bundle);
+                    DebugLog.Write("AssetSwap", $"LoadBundle: loaded '{fullPath}'");
+                    return bundle;
+                }
+
+                // #992 (null-return variant): when the LRU evicted+Unloaded a bundle but Unity's
+                // Unload has not yet completed (Unload lag), a fresh LoadFromFile of the SAME file
+                // returns NULL (not the documented 'already loaded' throw). With ~50 SW bundles and
+                // a 10-slot LRU this silently fails ~48/50 swaps. Recover by reusing the handle
+                // Unity still has loaded, keyed by bundle name. This is the load-bearing fix that
+                // lets a freshly built bundle (e.g. the rigged sw-clone-trooper-republic) actually
+                // swap instead of being marked permanently failed (#991).
+                AssetBundle? stillLoaded = FindLoadedBundleByPath(fullPath);
+                if (stillLoaded != null)
+                {
+                    _loadedBundles.Set(path, stillLoaded);
+                    if (_reportedFailures.Add($"reuse-null:{path}"))
+                        DebugLog.Write("AssetSwap",
+                            $"LoadBundle: LoadFromFile returned null but Unity still has '{Path.GetFileName(fullPath)}' " +
+                            "loaded — reusing existing handle (Unload-lag recovery, #992/#991).");
+                    return stillLoaded;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                // #992 flood fix: AssetBundle.LoadFromFile THROWS (and Unity logs an error every
+                // call) when "another AssetBundle with the same files is already loaded". This
+                // happens when our LRU evicted+Unloaded a bundle but Unity still considers the
+                // underlying file loaded (Unload lag / scene-transition skip), or when the same
+                // physical bundle was reached via a different cache key. Recover by reusing the
+                // already-loaded handle instead of re-loading — and re-cache it so subsequent
+                // passes hit the cache and never call LoadFromFile again.
+                if (ex.Message.IndexOf("already loaded", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    AssetBundle? existing = FindLoadedBundleByPath(fullPath);
+                    if (existing != null)
+                    {
+                        _loadedBundles.Set(path, existing);
+                        if (_reportedFailures.Add($"reuse:{path}"))
+                            DebugLog.Write("AssetSwap", $"LoadBundle: reused already-loaded bundle for '{fullPath}' (recovered from 'already loaded')");
+                        return existing;
+                    }
+                }
+                DebugLog.Write("AssetSwap", $"LoadBundle: failed '{fullPath}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// #992: Locates an AssetBundle Unity already has loaded that corresponds to
+        /// <paramref name="fullPath"/>. Unity does not expose the source path on a loaded bundle,
+        /// so match by bundle name (file name without extension) against
+        /// <see cref="AssetBundle.GetAllLoadedAssetBundles"/>. Returns null if none match.
+        /// </summary>
+        private static AssetBundle? FindLoadedBundleByPath(string fullPath)
+        {
+            string wantName = Path.GetFileNameWithoutExtension(fullPath) ?? "";
+            try
+            {
+                foreach (AssetBundle loaded in AssetBundle.GetAllLoadedAssetBundles())
+                {
+                    if (loaded == null) continue;
+                    string loadedName = loaded.name ?? "";
+                    if (string.Equals(loadedName, wantName, StringComparison.OrdinalIgnoreCase)
+                        || (loadedName.Length > 0
+                            && (loadedName.IndexOf(wantName, StringComparison.OrdinalIgnoreCase) >= 0
+                                || wantName.IndexOf(loadedName, StringComparison.OrdinalIgnoreCase) >= 0)))
+                    {
+                        return loaded;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("AssetSwap", $"FindLoadedBundleByPath: enumeration failed: {ex.Message}");
+            }
+            return null;
+        }
+
+        /// <inheritdoc/>
+        public override void OnDestroy()
+        {
+            // Iter-144 #543 fix: skip bundle unload when RuntimeDriver is being destroyed as part
+            // of a scene transition (NeedsResurrection / s_skipBundleUnload). AssetBundle.Unload(false)
+            // mid-swap orphans chicken-sprite placeholders — bundles must survive the scene
+            // transition so swapped sprites continue resolving until the new RuntimeDriver +
+            // AssetSwapSystem rehydrate the cache.
+            //
+            // Iter-144 #547 H6 gray-freeze fix: bundle Dispose() walks LRU cache and calls
+            // AssetBundle.Unload(false) on each entry. Unity's AssetBundle.Unload can stall
+            // when called during scene-transition asset-loading collisions (the new scene's
+            // pack-load may have loaded bundles while we're tearing down). Wrap in try and
+            // bound the disposal so OnDestroy can return to Unity even if a Unload wedges.
+            // Iter-144 #543: AssetSwapSystem.OnDestroy is ONLY invoked when DINO is tearing down
+            // the ECS World — which in DINO always happens during scene transitions, NOT during
+            // normal gameplay. Bundles MUST survive these transitions to keep chicken-sprite swaps
+            // resolved while the new RuntimeDriver + AssetSwapSystem reconstruct the cache. The
+            // flag-OR check (NeedsResurrection / s_skipBundleUnload) was unreliable because ECS
+            // system OnDestroy fires BEFORE the MonoBehaviour OnDestroy that sets those flags
+            // (observed in-log: AssetSwap@14.0004327Z, RuntimeDriver@14.1274287Z = 127ms gap).
+            // We also proactively set the companion flag so any other system observing it
+            // (e.g. defensive bundle-unload guards elsewhere) behaves consistently.
+            Plugin.s_skipBundleUnload = true;
+            Plugin.NeedsResurrection = true;
+            DebugLog.Write("AssetSwap", $"[AssetSwapSystem] OnDestroy SKIPPED bundle unload — bundles preserved across scene transition (NeedsResurrection={Plugin.NeedsResurrection} s_skipBundleUnload={Plugin.s_skipBundleUnload}). Companion flags set for downstream observers.");
+
+            try
+            {
+                base.OnDestroy();
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("AssetSwap", $"AssetSwapSystem.OnDestroy - base.OnDestroy threw {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+    }
+}
+
+ succeeded in 141028ms:
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\CHANGELOG.md:114:  - **Merge-gap re-verification (2026-05-31, branch `reconcile3/converge-20260531`):** reconcile-3 had cherry-picked an *earlier* #981 commit instead of the real fix, so the deployed build (`900797F0`) still logged `swapped 0/100 … skipped 100 non-matching meshes`. Re-cherry-picked `f1f5f1e5`+`dd52c960`+`8a690a1e` and redeployed (DLL `1BDC999C`). Live log on the redeploy: **132 `result=True` ground-unit swaps, 132 positive `swapped N/M` events (90×100/100, plus 76/76, 64/64, 35/35, 31/31, 18/18, 15/15), ZERO `swapped 0/` and ZERO `skipped 100 non-matching` lines.** Distinct units swapped: sw-clone-trooper-republic, sw-jedi-knight, sw-general-grievous, sw-cis-droideka, sw-b1-battle-droid, sw-at-te-walker, etc. Buildings + aerial still log `result=False` at main menu (no building/aircraft entities spawned there) — separate known gap.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\CHANGELOG.md:2907:- Legacy `clone-trooper.yaml` removed (superseded by `republic_units.yaml`)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\clone_trooper_model_analysis.json:23:      "url": "https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\clone_trooper_model_analysis.json:50:      "url": "https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\clone_trooper_model_analysis.json:77:      "url": "https://sketchfab.com/3d-models/bf2-clone-trooper-phase-1-f6a661e242184bcda25dd5bb98f7653d",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\clone_trooper_model_analysis.json:108:      "url": "https://sketchfab.com/3d-models/star-wars-clone-trooper-ponds-cd67276d757e449481fe870532a19f98",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\clone_trooper_model_analysis.json:114:      "title": "Star-wars-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\clone_trooper_model_analysis.json:119:      "url": "https://sketchfab.com/3d-models/star-wars-clone-trooper-ffa17aef7a134d5eaa3a142a25bd422b",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\asset-pipeline-governance.md:90:- Example: `sw-rep-clone-trooper` for file `packs/warfare-starwars/assets/bundles/sw-rep-clone-trooper`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\asset-pipeline-governance.md:91:- The asset name **inside** the bundle is the Unity prefab name (e.g. `sw-rep-clone-trooper.prefab`)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\asset-pipeline-design.md:106:│      │     addressable: sw-clone-trooper-republic           │
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\asset-pipeline-design.md:258:    // sw-clone-trooper-republic, etc.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\asset-pipeline-design.md:437:      addressable: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:56:    sw-rep-clone-trooper.bundle  (12.3 MB)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:62:    sw-rep-clone-trooper.prefab.json
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:99:  sw-rep-clone-trooper:
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:100:    url: bundles/sw-rep-clone-trooper.bundle
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:129:  sw-rep-clone-trooper-prefab:
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:130:    url: prefabs/sw-rep-clone-trooper.prefab.json
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:134:    depends_on: [sw-rep-clone-trooper]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:146:    D -->|First unit spawn:<br/>sw-rep-clone-trooper| E["Request asset<br/>from AssetBundleProvider"]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:255:      sw-rep-clone-trooper.bundle  ← 12.3 MB
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\architecture\asset-cdn-lazy-load.md:285:[INFO] Evicted: sw-rep-clone-trooper.bundle (12.3 MB, last used 5 days ago)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\chatgpt-star-wars-asset-sources.md:47:*   Clone Trooper Phase 1, CC-BY, rigged mention and 33.2k tris. Good source if you plan to restyle/reduce. [Sketchfab](https://sketchfab.com/3d-models/clone-trooper-phase1-shiny-updated-aae018747b054186bd48e460b0ad1192?utm_source=chatgpt.com)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\chatgpt-star-wars-asset-sources.md:48:*   Clone Trooper Phase 2 / 332nd, CC-BY. [Sketchfab](https://sketchfab.com/3d-models/clone-trooper-phase2-332nd-49e56ac8273341c4a359cb4f8b0afa15?utm_source=chatgpt.com)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\chatgpt-star-wars-asset-sources.md:116:*   Republic infantry: Clone Trooper Phase 1 / 2 from Sketchfab. [Sketchfab+1](https://sketchfab.com/3d-models/clone-trooper-phase1-shiny-updated-aae018747b054186bd48e460b0ad1192?utm_source=chatgpt.com)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\clone-trooper-discovery.md:20:**URL**: https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\clone-trooper-discovery.md:37:**URL**: https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\clone-trooper-discovery.md:55:**URL**: https://sketchfab.com/3d-models/bf2-clone-trooper-phase-1-f6a661e242184bcda25dd5bb98f7653d
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\clone-trooper-discovery.md:75:### Similar to Rank 1: Star-wars-clone-trooper (Score: 0.90)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\design\identity-starwars.md:208:- `portrait-clone-trooper.png`, `portrait-arc-trooper.png`, `portrait-jedi.png` — **256×256** (Republic).
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\design\ingame-asset-takeover-spec.md:190:    // unit portraits: <prefix><unit_id>.png — e.g. "ui/portraits/" → "ui/portraits/clone-trooper.png"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\download_clone_trooper.js:33:    await page.goto('https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9', {
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\download_clone_trooper.js:142:          source_url: 'https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9',
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\guide\mcp-bridge.md:582:    output_name="sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\download_clone_trooper_v2.js:28:    await page.goto('https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9', {
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\download_clone_trooper_v2.js:147:      source_url: 'https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9',
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\download_clone_trooper_v3.mjs:30:    await page.goto('https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9', {
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\download_clone_trooper_v3.mjs:116:      source_url: 'https://sketchfab.com/3d-models/star-wars-clone-trooper-9b0d260e63174ac8873cb56919cc76f9',
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\llms-full.txt:208:      clone-trooper.yaml
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\unified-asset-system.md:187:        addressable_key: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\unity-quick-start.md:91:  Clone_Trooper_Republic.prefab → "sw-clone-trooper-republic"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\unity-quick-start.md:111:  visual_asset: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\v0-7-0-implementation-tracker.md:62:- [ ] Add to Addressables: `sw-clone-trooper-republic`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\v0-7-0-v0-8-0-implementation-plan.md:69:  - Add to Addressables: `sw-clone-trooper-republic`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\v0-7-0-v0-8-0-implementation-plan.md:151:  - Add to Addressables: `sw-clone-trooper-phase2-alt`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\units\republic_units.yaml:32:  visual_asset: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\TEST_STRATEGY.md:347:    unit.Visuals.ModelPath.Should().Contain("clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\asset_pipeline.yaml:43:        addressable_key: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\asset_pipeline.yaml:287:          source_url: "https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\asset_pipeline.yaml:313:          source_url: "https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\asset_pipeline.yaml:339:          source_url: "https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\asset_pipeline.yaml:417:          source_url: "https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week4-final.md:136:  - m_Address: sw-clone-trooper-republic_lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week4-final.md:137:  - m_Address: sw-clone-trooper-republic_lod1
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week4-final.md:138:  - m_Address: sw-clone-trooper-republic_lod2
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week4-final.md:139:  - m_Address: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week4-final.md:145:[sw-clone-trooper-republic]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:80:[asset/clone-trooper-001]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:81:  asset_id: clone-trooper-001
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:84:  lod0_path: Prefabs/clone-trooper-001.lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:85:  lod1_path: Prefabs/clone-trooper-001.lod1
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:86:  lod2_path: Prefabs/clone-trooper-001.lod2
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:106:  m_Name: clone-trooper-001
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:108:  - m_Address: asset/clone-trooper-001_lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:109:  - m_Address: asset/clone-trooper-001_lod1
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:110:  - m_Address: asset/clone-trooper-001_lod2
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:111:  - m_Address: asset/clone-trooper-001  # Main reference
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:127:// - Locates asset ID entry (- id: clone-trooper-001)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:206:#   ✓ clone-trooper-001: Imported
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:214:#   ✓ clone-trooper-001: LOD0=1000, LOD1=600, LOD2=300 (530ms)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:218:#   ✓ clone-trooper-001: prefab generated
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\archive\week3-complete.md:220:#   ✓ clone-trooper-001_group.yaml
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\worklog\sketchfab-api-setup.md:249:GET /api/v3/search?query=clone-trooper HTTP/1.1
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\TRUTH_TABLE.md:3128:- But at runtime, `bundle.LoadAsset&lt;Mesh&gt;("sw-clone-trooper")` returns null because the bundle internally contains a mesh named `CloneTrooperMesh` (or the FBX asset name), not the `visual_asset` YAML key.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\credits.md:36:   - Source: https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\credits.md:40:   - Source: https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\credits.md:44:   - Source: https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\credits.md:56:   - Source: https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\phase-2a-infantry-sourcing.md:17:**Sketchfab URL**: https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\phase-2a-infantry-sourcing.md:28:**Sketchfab URL**: https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\phase-2a-infantry-sourcing.md:39:**Sketchfab URL**: https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\phase-2a-infantry-sourcing.md:72:**Sketchfab URL**: https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\technical-spec.md:531:modPlatform.ApplyStatOverride("rep-clone-trooper", "health", 27f);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\technical-spec.md:827:│   │   ├── sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\technical-spec.md:923:| `UnitRegistry` | string | "rep-clone-trooper" |
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\technical-spec.md:946:var cloneTrooper = _unitRegistry.Get("rep-clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-fix-vanilla-gameplay-bridge.md:70:| **G8: Phase 1 disk patch address mismatch** | LOW | Mod packs use bundle filenames as `AssetAddress` (e.g. `sw-clone-trooper-republic`), but the Addressables catalog uses Unity-internal keys. Catalog lookup fails silently (line 238: "address not in catalog -- skipping disk patch"). This is expected per comments but means Phase 1 never succeeds for pack bundles. |
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:592:    registry.Register("clone-trooper", unit1, RegistrySource.Pack, "pack-a", 100);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:593:    registry.Register("clone-trooper", unit2, RegistrySource.Pack, "pack-b", 100);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:597:    entries[0].EntryId.Should().Be("clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:606:    registry.Register("clone-trooper", unit1, RegistrySource.Pack, "pack-a", 100);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:607:    registry.Register("clone-trooper", unit2, RegistrySource.Pack, "pack-b", 200);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:618:    registry.Register("clone-trooper", unit1, RegistrySource.Pack, "pack-a", 100);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\SPEC-008-mod-conflict-detection-engine.md:619:    registry.Register("clone-trooper", unit2, RegistrySource.Pack, "pack-a", 100);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\unit-schema.md:25:id: clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\unit-schema.md:375:- **Example**: `sw-clone-trooper-lod0`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\unit-schema.md:391:  model_override: sw-clone-trooper-lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\unit-schema.md:449:- **Example**: `sw-clone-trooper-lod0`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\unit-schema.md:452:visual_asset: sw-clone-trooper-lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\asset-pipeline.md:308:- **Example**: `sw-clone-trooper-lod0`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\asset-pipeline.md:405:        addressable_key: sw-clone-trooper-lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\asset-pipeline.md:522:  - key: sw-clone-trooper-lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\asset-pipeline.md:534:var trooper = await assetService.LoadAssetAsync("sw-clone-trooper-lod0");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\reference\asset-pipeline.md:552:visual_asset: sw-clone-trooper-lod0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\specs\v0.27.0\real-asset-bundles.md:80:| N-02 | Bundle filename convention: `<pack-id>-<unit-id>` (e.g. `sw-rep-clone-trooper`). |
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\PackCompiler\Tests\DirectAssetPipelineValidationTests.cs:56:                AssetId = "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\qa\assetswap-real-bundles-spec.md:69:The bundle filename is the `assetBundleName` value (e.g. `sw-rep-clone-trooper`). The asset name inside the bundle is the `GameObject.name` (also set to the bundle key, e.g. `sw-rep-clone-trooper`).
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\qa\assetswap-real-bundles-spec.md:199:| `sw-rep-clone-trooper` / `sw-clone-trooper-republic` | 1.18 MB | `sw_clone_trooper_phase2.fbx` |
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\bundle_build_report_2026-03-25.md:25:- Republic Units (8): sw-clone-trooper-republic, sw-clone-heavy, sw-clone-medic, etc.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\bundle_build_report_2026-03-25.md:111:- Example: YAML `visual_asset: sw-clone-trooper-republic` → file `sw-clone-trooper-republic`
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\PHASE_2A_SOURCING_INDEX.txt:13:   ├─ URL: https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\PHASE_2A_SOURCING_INDEX.txt:26:   ├─ URL: https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\PHASE_2A_SOURCING_INDEX.txt:39:   ├─ URL: https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\research\PHASE_2A_SOURCING_INDEX.txt:78:   ├─ URL: https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\scripts\download_models_web.py:39:        "sketchfab_url": "https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\scripts\download_models_web.py:68:        "sketchfab_url": "https://sketchfab.com/3d-models/phase-2-clone-trooper-0f022ffbbf2342f992f413f7935e221c",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\sw-bundle-verify-report.log:36:[VERIFY] sw-clone-trooper-republic: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\sw-bundle-verify-report.log:59:[VERIFY] sw-rep-clone-trooper: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\PackCompiler\Models\AssetConfig.cs:102:        /// <summary>Unique asset identifier (e.g., "sw-rep-clone-trooper").</summary>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\daily\2026-04-24\2026-04-24-asset-swap-truth-audit.md:39:4. ✅ Calls `bundle.LoadAsset<Mesh>("sw-clone-trooper")` (the `visual_asset` key).
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\daily\2026-04-24\2026-04-24-asset-swap-truth-audit.md:40:5. ❌ Returns null — the bundle contains a mesh named `CloneTrooperMesh` (or whatever the FBX asset name was), not `sw-clone-trooper`.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\UNITY_IMPORT_GUIDE.md:162:  Clone_Trooper_Republic.prefab → "sw-clone-trooper-republic"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\UNITY_IMPORT_GUIDE.md:201:  visual_asset: sw-clone-trooper-republic  # Addressables address
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\UNITY_IMPORT_GUIDE.md:265:    - [ ] Add to Addressables (sw-clone-trooper-republic)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-rep-clone-trooper.prefab.meta:6:  assetBundleName: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-rep-clone-trooper.prefab:68:      value: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-clone-trooper-republic.prefab.meta:6:  assetBundleName: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-clone-trooper-republic.prefab:68:      value: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Meshes\sw-clone-trooper-republic_2.asset.meta:7:  assetBundleName: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Meshes\sw-clone-trooper-republic_2.asset:9:  m_Name: sw-clone-trooper-republic_2
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Meshes\sw-clone-trooper-republic_1.asset.meta:7:  assetBundleName: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Meshes\sw-clone-trooper-republic_1.asset:9:  m_Name: sw-clone-trooper-republic_1
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Meshes\sw-clone-trooper-republic_0.asset.meta:7:  assetBundleName: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Meshes\sw-clone-trooper-republic_0.asset:9:  m_Name: sw-clone-trooper-republic_0
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Runtime\Bridge\AssetSwapSystem.cs:1440:                // lets a freshly built bundle (e.g. the rigged sw-clone-trooper-republic) actually
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\dino-infantry-skeleton-20260601.md:4:**Branch:** `feat/rig-clone-trooper-20260601` (off `reconcile3/converge-20260531`)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\dino-infantry-skeleton-20260601.md:6:(`vanilla_mapping: line_infantry`) replaces, so the Star Wars clone-trooper mesh can be
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\dino-infantry-skeleton-20260601.md:40:clone-trooper bundle was being rejected against. Extraction confirms it exactly.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\dino-infantry-skeleton-20260601.md:78:| `dark_knight` | 21 | humanoid infantry ← **clone-trooper target** |
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\dino-infantry-skeleton-20260601.md:93:The clone-trooper replacement therefore must be rigged to **21 bindposes** and bundled as a
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\dino-infantry-skeleton-20260601.md:95:`sw-clone-trooper-republic`.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Runtime\RustAssetPipelineInterop.cs:75:        /// <param name="assetId">Unique asset identifier (e.g., "sw-rep-clone-trooper")</param>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\iter142\asset_swap_investigation_iter142.md:12:Key finding: The swap system *works* but the data path is broken. `TrySwapRenderMeshFromBundle` calls `bundle.LoadAsset<Mesh>(assetName)` where `assetName` comes from the `visual_asset` YAML field (e.g. `sw-clone-trooper`). However, the actual asset inside the bundle is named whatever the FBX importer called it (e.g. `CloneTrooperMesh`), creating a permanent mismatch.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\iter142\asset_swap_investigation_iter142.md:30:   - `unit.yaml` declares `visual_asset: sw-clone-trooper` (the desired registry key).
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Materials\Republic\sw-rep-clone-trooper.mat.meta:7:  assetBundleName: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Materials\Republic\sw-rep-clone-trooper.mat:10:  m_Name: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Materials\Republic\sw-rep-clone-trooper-primary.mat.meta:7:  assetBundleName: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Materials\Republic\sw-rep-clone-trooper-primary.mat:10:  m_Name: sw-rep-clone-trooper-primary
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Materials\Republic\sw-clone-trooper-republic.mat.meta:7:  assetBundleName: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Materials\Republic\sw-clone-trooper-republic.mat:23:  m_Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_log_analysis_tools.py:222:                "sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_log_analysis_tools.py:244:                "sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_log_analysis_tools.py:261:                    "key": "sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_log_analysis_tools.py:262:                    "bundle_path": "packs/warfare-starwars/assets/bundles/sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_asset_pack_tools.py:67:                "sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_asset_pack_tools.py:106:            "imported_assets": ["sw-rep-clone-trooper"],
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_asset_pack_tools.py:124:                "sw-rep-clone-trooper": {
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_asset_pack_tools.py:207:                "packs/warfare-starwars/assets/bundles/sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\test_asset_pack_tools.py:437:            "bundles_created": ["sw-rep-clone-trooper"]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\conftest.py:97:                "m_Hash": "sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\DinoforgeMcp\tests\conftest.py:98:                "m_Bundles": ["sw-rep-clone-trooper"]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\Cli\Assetctl\AssetctlPipeline.cs:1204:                ExternalId = "star-wars-clone-trooper-phase1-shiny-updated-aae018747b054186bd48e460b0ad1192",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tools\Cli\Assetctl\AssetctlPipeline.cs:1206:                SourceUrl = "https://sketchfab.com/3d-models/star-wars-clone-trooper-phase1-shiny-updated-aae018747b054186bd48e460b0ad1192",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\BuildAll.cs:34:        ("sw-rep-clone-trooper",  "Republic", RepublicWhite, PrimitiveType.Capsule),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\BuildAll.cs:98:        { "sw-rep-clone-trooper",  "sw_clone_trooper_phase2" },
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\GenerateStarWarsPrefabsFromModels.cs:27:        ("sw-rep-clone-trooper",   "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, "sw_clone_trooper_phase2"),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\GenerateStarWarsPrefabs.cs:29:        ("sw-rep-clone-trooper",      "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\BuildRiggedCloneTrooper.cs:7:/// #991: Build the ONE rigged clone-trooper bundle end-to-end as a SKINNED mesh (21 bindposes)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\BuildRiggedCloneTrooper.cs:11:/// Output bundle key == pack visual_asset == Addressable key == "sw-clone-trooper-republic".
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\Assets\Editor\BuildRiggedCloneTrooper.cs:20:    private const string BundleKey = "sw-clone-trooper-republic";
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\AssetBundles.manifest:12:      Name: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\AssetBundles.manifest:231:      Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\SKETCHFAB_MODELS.json:31:      "sketchfab_url": "https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\SKETCHFAB_MODELS.json:98:      "sketchfab_url": "https://sketchfab.com/3d-models/phase-2-clone-trooper-0f022ffbbf2342f992f413f7935e221c",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:4:**Branch:** `feat/rig-clone-trooper-20260601` (off `reconcile3/converge-20260531`)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:5:**Goal:** Make ONE SW unit (clone-trooper, `vanilla_mapping: line_infantry`) pass the skinned-mesh
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:12:rejects the freshly-built `sw-clone-trooper-republic` bundle (returns null) regardless of build
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:17:[AssetSwap] TrySwapRenderMeshFromBundle: bundle 'sw-clone-trooper-republic' failed to load and
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:19:[AssetSwap] AssetSwapSystem: swap failed — address='sw-clone-trooper-republic' (attempt 1/200)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:45:  (via glTFast `GltfImporter`), URP/Lit material, prefab keyed `sw-clone-trooper-republic`,
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:68:- The OLD primitive `sw-clone-trooper-republic` (Icosphere) bundle **loaded** historically.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:70:- `sw-rep-clone-trooper` (**f2**, static) **loads** (extracts its Icosphere).
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rig-clone-trooper-e2e-20260601.md:107:- `packs/warfare-starwars/assets/bundles/sw-clone-trooper-republic` — rebuilt skinned bundle
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:877:[RigCloneTrooper] mesh[0]='sw-clone-trooper-republic_0' bindposes=21 verts=172 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:889:[RigCloneTrooper] mesh[1]='sw-clone-trooper-republic_1' bindposes=21 verts=2256 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:901:[RigCloneTrooper] mesh[2]='sw-clone-trooper-republic_2' bindposes=21 verts=337 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:917:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '3ddae414a97ef29d12841d4422a3bf30') in 0.049704 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:923:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '801095120f76c6033f5644dd62eec71a') in 0.033996 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1425:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1441: 231.9 kb	 57.7% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1442: 38.2 kb	 9.5% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1443: 19.2 kb	 4.8% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1447: 1.5 kb	 0.4% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1448: 1.1 kb	 0.3% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-f1-build.log:1468:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=411568 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\raw\sw_clone_trooper_phase2_alt_sketchfab_001\asset_manifest.json:10:  "source": "https://sketchfab.com/3d-models/clone-trooper-phase-2-shiny-updated-ece97956b8134ca0b3fad3612573161d",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-clone-trooper-republic.manifest:29:- Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-clone-trooper-republic.manifest:30:- Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-clone-trooper-republic.manifest:31:- Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-clone-trooper-republic.manifest:32:- Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-clone-trooper-republic.manifest:33:- Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\raw\rep_clone_sharpshooter_sketchfab_001\metadata.json:9:    "url": "https://sketchfab.com/3d-models/clone-trooper-low-poly-a7fd12dc578d4c729e3930b79666c4ea",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\raw\rep_clone_medic_sketchfab_001\metadata.json:9:    "url": "https://sketchfab.com/3d-models/clone-trooper-kix-phase2-e7f2a1fbfdcd41f59ba03fe48ae39004",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\raw\rep_clone_heavy_sketchfab_001\metadata.json:9:    "url": "https://sketchfab.com/3d-models/ps1-low-poly-clone-trooper-f92a5b62741f4f8abe3537353eb36b18",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\raw\rep_clone_engineer_sketchfab_001\metadata.json:9:    "url": "https://sketchfab.com/3d-models/star-wars-phase-2-clone-trooper-1fd3c5dfd9864394b1cbaf780e1779bd",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:348:Start importing Assets/Materials/Republic/sw-clone-trooper-republic.mat using Guid(17e0dff1534636c47927c67e3169d88c) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'a1dd32b953f73fb4666c8ee4538b7d9c') in 0.003868 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:363:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '80525a2ded54e33e9499c095d2b37ef1') in 0.042319 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:369:Start importing Assets/Materials/Republic/sw-clone-trooper-republic.mat using Guid(17e0dff1534636c47927c67e3169d88c) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '62e8b97f64ade4e0c7d4bb46ed7dfe22') in 0.013179 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:375:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '8623829453ad7cfa8e9dd2742c19542c') in 0.024739 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:879:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:897: 4.3 kb	 0.9% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:900: 1.5 kb	 0.3% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build.log:920:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=180527 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:383:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'cbf7c039899df5e98cf1b05434fe778a') in 0.019974 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:389:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'ac186e320fcabc3908b93e52b40d0cf1') in 0.020320 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:617:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:634: 231.9 kb	 31.4% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:635: 38.2 kb	 5.2% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:636: 19.2 kb	 2.6% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:638: 4.3 kb	 0.6% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:641: 1.5 kb	 0.2% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild4.log:661:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=324717 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:351:Start importing Assets/Meshes/sw-clone-trooper-republic_0.asset using Guid(805309ae8f10baa49a3fe08931500f89) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'cd5f0f8200f752172044e4d59fbb9115') in 0.010925 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:355:[RigCloneTrooper] mesh[0]='sw-clone-trooper-republic_0' bindposes=21 verts=172 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:366:Start importing Assets/Meshes/sw-clone-trooper-republic_1.asset using Guid(1534521b5a965634dbabde65e932d90c) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'f15b206cf202aa6cbbf7b132fa759593') in 0.004251 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:370:[RigCloneTrooper] mesh[1]='sw-clone-trooper-republic_1' bindposes=21 verts=2256 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:381:Start importing Assets/Meshes/sw-clone-trooper-republic_2.asset using Guid(47c850b6c2cc4d845948af8fc4832854) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '6cd54940b7c57f4fbf9a358549c6e6a9') in 0.003939 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:385:[RigCloneTrooper] mesh[2]='sw-clone-trooper-republic_2' bindposes=21 verts=337 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:401:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'fba5ac811a78748a18c332f8ff82ebe0') in 0.033733 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:407:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'c7799a19e6ce8be5ea2695fb54af7dc3') in 0.028446 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:635:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:651: 231.9 kb	 57.7% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:652: 38.2 kb	 9.5% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:653: 19.2 kb	 4.8% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:657: 1.5 kb	 0.4% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:658: 1.1 kb	 0.3% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild3.log:678:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=171598 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:312:[RigCloneTrooper] mesh[0]='sw-clone-trooper-republic_0' bindposes=21 verts=172 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:324:[RigCloneTrooper] mesh[1]='sw-clone-trooper-republic_1' bindposes=21 verts=2256 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:336:[RigCloneTrooper] mesh[2]='sw-clone-trooper-republic_2' bindposes=21 verts=337 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:352:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'd36f478d4597b5d5ebac2fedce8ae515') in 0.032209 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:358:Start importing Assets/Meshes/sw-clone-trooper-republic_0.asset using Guid(805309ae8f10baa49a3fe08931500f89) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '3a9b5e0b54dc3e161f02bcf4b85ae883') in 0.010851 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:359:Start importing Assets/Meshes/sw-clone-trooper-republic_1.asset using Guid(1534521b5a965634dbabde65e932d90c) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '6f5a1b8a4f402764fee389eb2d0d9a93') in 0.003908 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:360:Start importing Assets/Meshes/sw-clone-trooper-republic_2.asset using Guid(47c850b6c2cc4d845948af8fc4832854) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '15f0ba3888a285ff0bad0a2f9ba71c5c') in 0.003474 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:361:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '1c6ec5e88defb2d830150ab381965d4e') in 0.019842 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:589:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:605: 231.9 kb	 57.7% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:606: 38.2 kb	 9.5% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:607: 19.2 kb	 4.8% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:611: 1.5 kb	 0.4% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:612: 1.1 kb	 0.3% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild2.log:632:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=171594 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:339:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '7f51083639f01793a6d5e1d1a8365010') in 0.033232 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:345:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '96fadb6902f8ab7b9772a290a518accd') in 0.018079 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:573:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:590: 231.9 kb	 31.4% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:591: 38.2 kb	 5.2% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:592: 19.2 kb	 2.6% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:594: 4.3 kb	 0.6% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:597: 1.5 kb	 0.2% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-rig-rebuild-final.log:617:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=324793 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:888:[RigCloneTrooper] mesh[0]='sw-clone-trooper-republic_0' bindposes=21 verts=172 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:900:[RigCloneTrooper] mesh[1]='sw-clone-trooper-republic_1' bindposes=21 verts=2256 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:912:[RigCloneTrooper] mesh[2]='sw-clone-trooper-republic_2' bindposes=21 verts=337 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:928:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'a70900a554efd5f3fe3a384c88aa82e1') in 0.048518 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:934:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'e36b927b30f570cc712f3a284e4536fa') in 0.025886 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3399:Bundle Name: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3416: 0.9 kb	 0.7% Assets/Materials/Republic/sw-rep-clone-trooper-primary.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3417: 0.9 kb	 0.7% Assets/Materials/Republic/sw-rep-clone-trooper.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3418: 0.1 kb	 0.1% Assets/Prefabs/Republic/sw-rep-clone-trooper.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3707:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3723: 231.9 kb	 57.7% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3724: 38.2 kb	 9.5% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3725: 19.2 kb	 4.8% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3729: 1.5 kb	 0.4% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3730: 1.1 kb	 0.3% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-manifestbuild.log:3750:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=171619 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:349:[RigCloneTrooper] mesh[0]='sw-clone-trooper-republic_0' bindposes=21 verts=172 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:361:[RigCloneTrooper] mesh[1]='sw-clone-trooper-republic_1' bindposes=21 verts=2256 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:373:[RigCloneTrooper] mesh[2]='sw-clone-trooper-republic_2' bindposes=21 verts=337 (static-prefab carrier)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:389:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '2925af85e6523bdc600ffa335216afcb') in 0.032729 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:395:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '33bfaff71b76386ef22dba8ba02eb442') in 0.021577 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:623:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:639: 231.9 kb	 57.7% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:640: 38.2 kb	 9.5% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:641: 19.2 kb	 4.8% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:645: 1.5 kb	 0.4% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:646: 1.1 kb	 0.3% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build4.log:666:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=411568 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:354:Start importing Assets/Meshes/sw-clone-trooper-republic_0.asset using Guid(805309ae8f10baa49a3fe08931500f89) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'cd5f0f8200f752172044e4d59fbb9115') in 0.023219 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:358:[RigCloneTrooper] rebaked mesh[0]='sw-clone-trooper-republic_0' bindposes=21 verts=172
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:369:Start importing Assets/Meshes/sw-clone-trooper-republic_1.asset using Guid(1534521b5a965634dbabde65e932d90c) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'f15b206cf202aa6cbbf7b132fa759593') in 0.073634 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:373:[RigCloneTrooper] rebaked mesh[1]='sw-clone-trooper-republic_1' bindposes=21 verts=2256
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:384:Start importing Assets/Meshes/sw-clone-trooper-republic_2.asset using Guid(47c850b6c2cc4d845948af8fc4832854) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '6cd54940b7c57f4fbf9a358549c6e6a9') in 0.005800 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:388:[RigCloneTrooper] rebaked mesh[2]='sw-clone-trooper-republic_2' bindposes=21 verts=337
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:404:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '57a0b4a9ca77a036eec290451a48e679') in 0.072231 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:446:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'ceb6404d8e351e27c148c8f3a12b6198') in 0.044367 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:674:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:690: 231.9 kb	 57.1% Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:691: 38.2 kb	 9.4% Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:692: 19.2 kb	 4.7% Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:694: 4.3 kb	 1.0% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:697: 1.5 kb	 0.4% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build3.log:717:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=416304 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build2.log:362:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '72a0b7d27be0ffd50c6ae1cb8dd924f1') in 0.037267 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build2.log:368:Start importing Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab using Guid(039ebffcd616608409b0e2428788f856) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '83aabf2f8feb84f7206cacdce8df3957') in 0.024006 seconds 
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build2.log:596:Bundle Name: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build2.log:614: 4.3 kb	 0.9% Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build2.log:617: 1.5 kb	 0.3% Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-unity-build2.log:637:[RigCloneTrooper] built bundle 'sw-clone-trooper-republic' size=460560 bytes
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix.log:598:The AssetBundle 'AssetBundles\sw-clone-trooper-republic' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix.log:605:[VERIFY] sw-clone-trooper-republic: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix.log:861:The AssetBundle 'AssetBundles\sw-rep-clone-trooper' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix.log:868:[VERIFY] sw-rep-clone-trooper: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix2.log:598:The AssetBundle 'AssetBundles\sw-clone-trooper-republic' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix2.log:605:[VERIFY] sw-clone-trooper-republic: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix2.log:861:The AssetBundle 'AssetBundles\sw-rep-clone-trooper' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-afterfix2.log:868:[VERIFY] sw-rep-clone-trooper: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ContentRegistrationServiceTests.cs:563:                    Units = new List<string> { "republic-clone-trooper" }
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\EndToEndUserJourneysTests.cs:292:    visual_asset: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\EndToEndUserJourneysTests.cs:296:        var bundlePath = Path.Combine(packDir, "assets", "bundles", "sw-rep-clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\SDK\Registry\Registry.cs:19:        // 'clone-trooper' is almost always a bug because the case-sensitive primary store
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\addressables.yaml:10:  - key: sw-clone-trooper-republic
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-final.log:598:The AssetBundle 'AssetBundles\sw-clone-trooper-republic' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-final.log:605:[VERIFY] sw-clone-trooper-republic: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-final.log:861:The AssetBundle 'AssetBundles\sw-rep-clone-trooper' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-final.log:868:[VERIFY] sw-rep-clone-trooper: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-headless.log:598:The AssetBundle 'AssetBundles\sw-clone-trooper-republic' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-headless.log:605:[VERIFY] sw-clone-trooper-republic: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-headless.log:861:The AssetBundle 'AssetBundles\sw-rep-clone-trooper' could not be loaded because it is not compatible with this newer version of the Unity runtime. Rebuild the AssetBundle to fix this error.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\sessions\rigclone-verify-headless.log:868:[VERIFY] sw-rep-clone-trooper: load failed
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\SDK\NativeInterop\RustAssetPipeline.cs:82:        /// <param name="assetId">Unique asset identifier (e.g., "sw-rep-clone-trooper")</param>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\SDK\Assets\AssetCdnCatalog.cs:152:        /// <param name="assetId">Asset identifier (e.g., "sw-rep-clone-trooper").</param>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-rep-clone-trooper.manifest:25:- Assets/Prefabs/Republic/sw-rep-clone-trooper.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-rep-clone-trooper.manifest:26:- Assets/Materials/Republic/sw-rep-clone-trooper-primary.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\unity-assetbundle-builder\AssetBundles\sw-rep-clone-trooper.manifest:27:- Assets/Materials/Republic/sw-rep-clone-trooper.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\PackCompilerCliTests.cs:355:      - clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\NativeInteropTests.cs:425:                AssetId = "sw-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\NativeInteropTests.cs:446:            deserialized!.AssetId.Should().Be("sw-clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ModelSnapshotTests.cs:74:            json.Should().Contain("\"clone-trooper\"");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ModelSnapshotTests.cs:290:                Id = "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ModelSnapshotTests.cs:325:                Production = new Dictionary<string, int> { { "clone-trooper", 2 } },
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ModelSnapshotTests.cs:360:                    CheapInfantry = "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ModelSerializationTests.cs:118:                    CheapInfantry = "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ModelSerializationTests.cs:132:            deserialized.Roster.CheapInfantry.Should().Be("clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:15:/// CloneTrooper.FBX but the YAML says visual_asset: sw-clone-trooper.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:23:    /// GIVEN the pack declares a unit with visual_asset: sw-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:25:    /// THEN the bundle must be loadable and contain a Mesh named sw-clone-trooper.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:28:    /// "TrySwapRenderMeshFromBundle: no Mesh/Material named 'sw-clone-trooper' in bundle"
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:34:        var bundle = new FakeAssetBundle("sw-clone-trooper", new[]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:36:            ("sw-clone-trooper", FakeAssetType.Mesh),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:37:            ("sw-clone-trooper_mat", FakeAssetType.Material),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:38:            ("sw-clone-trooper", FakeAssetType.Prefab),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:42:        bool meshFound = bundle.HasAssetNamed("sw-clone-trooper", FakeAssetType.Mesh);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:45:            because: "the asset bundle 'sw-clone-trooper' must be loadable");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:47:            because: "the bundle must contain a Mesh asset named 'sw-clone-trooper'. " +
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:48:                     "The current failure is: no Mesh/Material named sw-clone-trooper in bundle. " +
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:53:    /// GIVEN the pack declares a unit with visual_asset: sw-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:63:            // Using "clone-trooper" (not "rep-clone-trooper") so that
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:64:            // bundle name = sw-clone-trooper = visual_asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:65:            Id = "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:67:            VisualAsset = "sw-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:75:        swapSystem.LastBundleLoaded.Should().Be("sw-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:76:            because: "MeleeUnit entity with visual_asset=sw-clone-trooper " +
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:77:                     "must trigger bundle loading for 'sw-clone-trooper'");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:88:        var bundle = new FakeAssetBundle("sw-clone-trooper", new[]
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:91:            ("sw-clone-trooper_mat", FakeAssetType.Material),
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:95:        bool meshFound = bundle.HasAssetNamed("sw-clone-trooper", FakeAssetType.Mesh);
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:98:            because: "the bundle contains 'CloneTrooperMesh', not 'sw-clone-trooper'. " +
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:100:        bundle.LastDiagnostic.Should().Contain("sw-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:117:            "rep-clone-trooper", "rep-arc-trooper", "rep-heavy-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:159:    /// GIVEN a pack's asset_pipeline.yaml defines visual_asset: sw-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:161:    /// THEN the bundle filename must be sw-clone-trooper (no extension)
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:162:    /// AND the root asset name inside must be sw-clone-trooper.
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:167:        string visualAsset = "sw-clone-trooper";
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Integration\Tests\AssetSwapTests.cs:169:        expectedBundleFilename.Should().Be("sw-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\RegistryTests.cs:21:            registry.Register("clone-trooper", new TestItem("CT"), RegistrySource.Pack, "p1");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\RegistryTests.cs:35:            registry.Register("clone-trooper", new TestItem("A"), RegistrySource.Pack, "p1");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\RegistryTests.cs:36:            registry.Register("clone-trooper", new TestItem("B"), RegistrySource.Pack, "p2");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\RustAssetPipelineValidationTests.cs:54:                AssetId = "sw-rep-clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ScenarioDomainCoverageTests.cs:782:                { "unit_id", "clone-trooper" },
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\ScenarioDomainCoverageTests.cs:788:        action.Parameters["unit_id"].Should().Be("clone-trooper");
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-clone-trooper-republic.manifest:29:- Assets/Meshes/sw-clone-trooper-republic_2.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-clone-trooper-republic.manifest:30:- Assets/Meshes/sw-clone-trooper-republic_0.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-clone-trooper-republic.manifest:31:- Assets/Materials/Republic/sw-clone-trooper-republic.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-clone-trooper-republic.manifest:32:- Assets/Meshes/sw-clone-trooper-republic_1.asset
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-clone-trooper-republic.manifest:33:- Assets/Prefabs/Republic/sw-clone-trooper-republic.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\SdkPolyglotIntegrationTests.cs:65:- id: sw-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\SdkPolyglotIntegrationTests.cs:70:  visual_asset: sw-rep-clone-trooper
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\SdkPolyglotIntegrationTests.cs:93:        _registries.Units.Contains("sw-clone-trooper").Should().BeTrue();
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\SdkPolyglotIntegrationTests.cs:96:        var cloneTrooper = _registries.Units.Get("sw-clone-trooper")!;
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Snapshots\BuildingDefinition.json:16:    "clone-trooper": 2
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\TotalConversionTests.cs:34:                new() { Id = "galactic-republic", Replaces = "player", Name = "Galactic Republic", Archetype = "order", Units = new() { "clone-trooper", "arc-trooper" } },
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Snapshots\FactionDefinition.json:24:    "CheapInfantry": "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\Snapshots\UnitDefinition.json:2:  "Id": "clone-trooper",
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\src\Tests\WarfareStarwarsPackRegistryOfflineTests.cs:21:    private const string CloneTrooperVisualAsset = "sw-clone-trooper-republic";
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-rep-clone-trooper.manifest:29:- Assets/Prefabs/Republic/sw-rep-clone-trooper.prefab
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-rep-clone-trooper.manifest:30:- Assets/Materials/Republic/sw-rep-clone-trooper-primary.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\packs\warfare-starwars\assets\bundles\sw-rep-clone-trooper.manifest:31:- Assets/Materials/Republic/sw-rep-clone-trooper.mat
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_AssetDefinition.html:834:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_AssetMetadata.html:833:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_ImportedAsset.html:838:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_LODDefinition.html:833:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_MaterialData.html:833:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_MeshData.html:835:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_OptimizedAsset.html:836:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+C:/Users/koosh/Dino/.claude/worktrees/rigclone\docs\coverage-report\DINOForge.SDK_SkeletonData.html:833:<tr class="" title="Not coverable" data-coverage="{'AllTestMethods': {'VC': '', 'LVS': 'gray'}}"><td class="gray">&nbsp;</td><td class="leftmargin rightmargin right"></td><td class="rightmargin right"><a id="file0_line62"></a><code>62</code></td><td></td><td class="lightgray"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;///&nbsp;&lt;param&nbsp;name=&quot;assetId&quot;&gt;Unique&nbsp;asset&nbsp;identifier&nbsp;(e.g.,&nbsp;&quot;sw-rep-clone-trooper&quot;)&lt;/param&gt;</code></td></tr>
+

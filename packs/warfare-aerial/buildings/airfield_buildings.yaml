@@ -91,6 +91,59 @@
   production:
     aerial_roc_patrol: 1
 
+# ─────────────────────────────────────────────────────────────────────────────
+# AIRPORTS / HANGARS / LANDING PADS — mechanical aircraft infrastructure.
+# These produce the fixed-wing AIRPLANE units (fighter / bomber / interceptor).
+# They are the canonical "airport" buildings for the aerial feature.
+# ─────────────────────────────────────────────────────────────────────────────
+
+- id: airport
+  display_name: Airport
+  description: Primary aircraft production facility. Builds and rearms fixed-wing fighters and interceptors.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 300
+    stone: 150
+    iron: 120
+    gold: 100
+  health: 1400
+  production:
+    aerial_fighter_plane: 1
+    aerial_interceptor_plane: 1
+
+- id: hangar
+  display_name: Hangar
+  description: Heavy aircraft hangar. Houses and produces bomber aircraft; doubles as a repair bay.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 400
+    stone: 200
+    iron: 200
+    gold: 180
+  health: 1800
+  production:
+    aerial_bomber_plane: 1
+
+- id: landing_pad
+  display_name: Landing Pad
+  description: Forward landing pad with integrated point-defense. Produces interceptors and provides anti-air cover.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 200
+    stone: 120
+    iron: 90
+    gold: 70
+  health: 900
+  production:
+    aerial_interceptor_plane: 1
+  defense_tags: [AntiAir]
+  anti_air:
+    range: 30.0
+    damage_bonus: 1.5
+
 # Faction-specific buildings
 
 - id: thunder_cannon

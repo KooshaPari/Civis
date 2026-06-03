@@ -1,0 +1,628 @@
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: C:\Users\koosh\Dino\.claude\worktrees\swbundles
+model: gpt-5.3-codex-spark
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: low
+reasoning summaries: none
+session id: 019e8191-cd18-7a90-9844-b417cf42d334
+--------
+user
+P0 ROOT-CAUSE FIX (DINOForge). DEFINITIVE root cause found: the SW bundles render NATIVE in-game because the Unity builder project has NO URP package — so Shader.Find('Universal Render Pipeline/Lit') returns NULL at build time and materials silently stay 'Standard', which DINO's Hybrid Renderer V2 rejects (the shader-guard then skips all 52 bundles → 0 swaps). The crash is already fixed (guard works); now make swaps actually apply. Branch feat/sw-building-bundles-20260531. NO push/stash/--no-verify; git add only specific files (NEVER -A).
+
+FIX: (1) Add URP to the builder project Packages/manifest.json. The builder project is whichever unity-assetbundle-builder Unity 2021.3.45f1 project the build methods run in (check scripts/unity/unity-assetbundle-builder/Packages/manifest.json AND unity-assetbundle-builder/Packages/manifest.json — add to the one the bundle build actually uses, likely scripts/unity/unity-assetbundle-builder). Add dependency: "com.unity.render-pipelines.universal": "12.1.12" (URP 12.1.x to match Unity 2021.3.45f1 / DINO's HRV2). (2) Open Unity headless once to let it resolve/import the URP package (it will download+compile): & 'C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe' -batchmode -nographics -quit -projectPath <abs> -logFile <abs resolve-log> (a bare open resolves packages). Confirm in the log URP imported + Shader.Find('Universal Render Pipeline/Lit') will now resolve (no errors importing com.unity.render-pipelines.universal). (3) Re-run the bundle build method(s) (BuildSwBuildingBundles.Build + whichever builds the unit/cim bundles — BuildAll.Build etc.) headless. ONLY ONE Unity at a time. (4) VERIFY THE FIX WORKED: for 5 sample bundles (sw-cis-aat, sw-rep-clone-engineer, sw-b1-squad, sw-clone-barracks, sw-guard-tower) run: strings <packs/.../bundles/BUNDLE> | Select-String 'Universal Render Pipeline' — MUST now match (URP shader embedded), and must NOT be 'Standard'. This is the make-or-break check — if strings still shows Standard / no URP, the package didn't take; report that. (5) Copy rebuilt bundles into packs/warfare-starwars/assets/bundles/. Commit manifest.json + builders + bundles. CHANGELOG. Report: URP package added? Unity resolved it (log)? strings-check on the 5 samples shows URP now? sizes? DO NOT deploy.
+codex
+Understood. I’ll make the URP fix in the correct Unity builder manifest(s), do a headless resolve/import pass, rebuild bundles, verify URP shader embedding on the 5 named bundles, then commit only the requested files and report concrete results. I’ll start by locating the active builder manifest and any deeper agent instructions.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg --files -g AGENTS.md -g 'manifest.json'" in C:\Users\koosh\Dino\.claude\worktrees\swbundles
+ succeeded in 806ms:
+AGENTS.md
+unity-assetbundle-builder\Packages\manifest.json
+docs\journeys\manifests\us-f4-1-menu-nav\manifest.json
+docs\journeys\manifests\us-f3-1-debug-overlay\manifest.json
+docs\journeys\manifests\us-f2-1-unit-spawn\manifest.json
+docs\journeys\manifests\us-f1-1-game-launch\manifest.json
+docs\journeys\manifests\example-visual-evidence\manifest.json
+scripts\unity\unity-assetbundle-builder\Packages\manifest.json
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "rg --files scripts tools | rg 'BuildSwBuildingBundles|BuildAll|Sw|bundle'" in C:\Users\koosh\Dino\.claude\worktrees\swbundles
+ succeeded in 344ms:
+scripts\proof\build-genesis-bundle.py
+scripts\ci\refresh_proof_bundle_timestamps.py
+scripts\unity\create_stub_bundles.ps1
+scripts\unity\verify_bundles.ps1
+scripts\unity\build_bundles.ps1
+scripts\unity\unity-assetbundle-builder\Assets\Editor.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials.meta
+scripts\unity\unity-assetbundle-builder\ProjectSettings\VFXManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\VersionControlSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\UnityConnectSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\TimeManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\TagManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\QualitySettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\ProjectVersion.txt
+scripts\unity\unity-assetbundle-builder\ProjectSettings\ProjectSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\PresetManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\Physics2DSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\NavMeshAreas.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\MemorySettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\InputManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\GraphicsSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\EditorSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\EditorBuildSettings.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\DynamicsManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\ClusterInputManager.asset
+scripts\unity\unity-assetbundle-builder\ProjectSettings\boot.config
+scripts\unity\unity-assetbundle-builder\ProjectSettings\AudioManager.asset
+scripts\unity\unity-assetbundle-builder\Assets\Resources.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes.meta
+scripts\unity\unity-assetbundle-builder\Assets\Editor\BuildSwBuildingBundles.cs.meta
+scripts\unity\unity-assetbundle-builder\Assets\Editor\BuildSwBuildingBundles.cs
+scripts\unity\unity-assetbundle-builder\Packages\packages-lock.json
+scripts\unity\unity-assetbundle-builder\Packages\manifest.json
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-mining-facility
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-heavy-foundry.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-heavy-foundry
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-guard-tower.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-guard-tower
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-durasteel-barrier.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-durasteel-barrier
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-blast-wall.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-blast-wall
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-assembly-line.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-assembly-line
+scripts\unity\unity-assetbundle-builder\AssetBundles\AssetBundles.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\AssetBundles
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-tech-union-lab.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-tech-union-lab
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-skyshield-generator.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-skyshield-generator
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-processing-plant.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-processing-plant
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-mining-facility.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-vulture-nest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-tibanna-refinery.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-tibanna-refinery
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-weapons-factory
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-vulture-nest.manifest
+scripts\unity\unity-assetbundle-builder\AssetBundles\sw-weapons-factory.manifest
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-blast-wall.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-assembly-line.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-assembly-line.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-durasteel-barrier.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-durasteel-barrier.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-blast-wall.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-guard-tower.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-guard-tower.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-weapons-factory.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-weapons-factory.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-vulture-nest.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-vulture-nest.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-tibanna-refinery.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-tibanna-refinery.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-tech-union-lab.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-tech-union-lab.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-skyshield-generator.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-skyshield-generator.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-processing-plant.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-processing-plant.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-mining-facility.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-mining-facility.asset
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-heavy-foundry.asset.meta
+scripts\unity\unity-assetbundle-builder\Assets\Meshes\sw-heavy-foundry.asset
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-skyshield-generator.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-guard-tower.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-guard-tower.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-blast-wall.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-blast-wall.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-tibanna-refinery.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-tibanna-refinery.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-skyshield-generator.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-weapons-factory.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\Republic\sw-weapons-factory.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-durasteel-barrier.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-durasteel-barrier.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-assembly-line.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-assembly-line.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-heavy-foundry.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-heavy-foundry.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-mining-facility.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-mining-facility.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-processing-plant.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-processing-plant.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-tech-union-lab.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-vulture-nest.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-vulture-nest.mat
+scripts\unity\unity-assetbundle-builder\Assets\Materials\CIS\sw-tech-union-lab.mat.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-blast-wall.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-blast-wall.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-guard-tower.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-guard-tower.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-weapons-factory.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-weapons-factory.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-tibanna-refinery.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-tibanna-refinery.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-skyshield-generator.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\Republic\sw-skyshield-generator.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-heavy-foundry.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-heavy-foundry.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-durasteel-barrier.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-durasteel-barrier.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-assembly-line.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-assembly-line.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-processing-plant.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-processing-plant.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-mining-facility.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-mining-facility.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-tech-union-lab.prefab.meta
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-tech-union-lab.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-vulture-nest.prefab
+scripts\unity\unity-assetbundle-builder\Assets\Prefabs\CIS\sw-vulture-nest.prefab.meta
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Path AGENTS.md' in C:\Users\koosh\Dino\.claude\worktrees\swbundles
+ succeeded in 372ms:
+# DINOForge — Agent Collaboration Guide
+
+## Kilo Gastown Integration
+
+**This repo is a Kilo Gastown rig.**
+
+| Property | Value |
+|----------|-------|
+| Kilo Rig ID | `6c6d4555-91e8-4f06-a974-018cf3e766d2` |
+| Town | `78a8d430-a206-4a25-96c0-5cd9f5caf984` |
+| Convoy | `c61d464c-2332-489e-becb-ebc5d1efa639` |
+| Worktree Branch | `convoy/methodology-dino/c61d464c/head` |
+
+## Stack
+
+- **Game**: Diplomacy is Not an Option (Unity ECS, BepInEx)
+- **Language**: C# (.NET), YAML/JSON schemas
+- **.NET**: 11.0.100-preview.2.26159.112 (preview, pinned in `global.json`)
+- **Tool projects**: `net8.0` / `net11.0`; Core SDK/domain libs: `netstandard2.0`
+- **Build**: `dotnet build src/DINOForge.sln`
+- **Test**: `dotnet test src/DINOForge.sln --verbosity normal`
+- **Lint**: `dotnet format src/DINOForge.sln --verify-no-changes`
+- **Pack validation**: `dotnet run --project src/Tools/PackCompiler -- validate packs/`
+
+### Kilo Coordination Tools
+
+Use these tools for work delegation and agent coordination:
+
+- **`gt_sling`** — Delegate a single bead (work item) to another agent
+- **`gt_sling_batch`** — Delegate multiple beads at once (batch delegation)
+- **`gt_prime`** — Refresh session context (hooked bead, mail, open beads)
+- **`gt_done`** — Push branch and submit for review (transitions bead to `in_review`)
+- **`gt_bead_close`** — Close a bead after work is complete and merged
+- **`gt_bead_status`** — Inspect any bead's current state
+- **`gt_mail_send`** — Send a typed message to another agent
+- **`gt_mail_check`** — Read and acknowledge pending undelivered mail
+- **`gt_escalate`** — Escalate an unresolved issue (creates escalation bead)
+- **`gt_checkpoint`** — Write crash-recovery state to your agent record
+- **`gt_status`** — Emit a plain-language dashboard status update
+- **`gt_nudge`** — Real-time nudge to another agent (wake/idle/queue modes)
+
+### Work Delegation Pattern
+
+When you receive a bead, execute it immediately. If the work must split across multiple agents:
+
+1. Use `gt_sling` or `gt_sling_batch` to delegate sub-beads to other agents in the rig
+2. Each delegated bead is independently tracked and can be closed separately
+3. Do NOT close a parent bead until all delegated sub-beads are resolved
+4. Use `gt_mail_send` for coordination messages; use `gt_nudge` for time-sensitive wakes
+
+### Convoy Pattern
+
+This rig participates in **convoys** — cross-repo methodology propagation trains:
+
+- Feature branches follow the naming convention: `convoy/<feature>/<convoy-id>/head`
+- Convoys carry methodology artifacts (AGENTS.md, CLAUDE.md, GEMINI.md) across rigs
+- When a convoy lands, its methodology changes propagate to all participating rigs
+
+## Quick Start for New Agents
+
+1. Read CLAUDE.md (governance, build commands, architecture)
+2. Run `dotnet build src/DINOForge.sln` to verify your environment
+3. Run `dotnet test src/DINOForge.sln` — all tests must pass before any commit
+4. Check your assigned domain in the Agent Roster below
+
+## Agent Roster & Domain Ownership
+
+| Agent Role | Domain | Key Files | Can Modify |
+|-----------|--------|-----------|-----------|
+| runtime-specialist | ECS bridge, BepInEx | src/Runtime/ | Plugin.cs, Bridge/*, HotReload/*, DebugOverlay, ModPlatform.cs |
+| sdk-architect | Registry, SDK, schemas | src/SDK/ | Registry/*, Models/*, Validation/*, Assets/*, Dependencies/*, Universe/* |
+| warfare-designer | Warfare domain, balance | src/Domains/Warfare/ | Archetypes/*, Doctrines/*, Roles/*, Waves/*, Balance/* |
+| pack-builder | Content packs, YAML | packs/ | packs/**/*, any pack.yaml |
+| toolsmith | CLI tools, PackCompiler | src/Tools/ | PackCompiler/*, DumpTools/*, Cli/*, McpServer/* |
+| qa-engineer | Tests, CI/CD | src/Tests/, .github/ | Tests/**, workflows/*, test fixtures |
+| docs-curator | Documentation, VitePress | docs/ | docs/**, CHANGELOG.md, README.md, AGENTS.md |
+
+## Decision Tree: What To Do First
+
+```
+Start task
+│
+├─ "Where does this change live?"
+│   ├─ Game engine glue → src/Runtime/ (runtime-specialist)
+│   ├─ Data model or registry → src/SDK/ (sdk-architect)
+│   ├─ Domain logic → src/Domains/<Domain>/ (domain specialist)
+│   ├─ Pack content → packs/ (pack-builder)
+│   ├─ CLI / tooling / MCP → src/Tools/ (toolsmith)
+│   ├─ Tests → src/Tests/ (qa-engineer)
+│   └─ Documentation → docs/ or CHANGELOG.md (docs-curator)
+│
+├─ "Does a schema exist for this data shape?"
+│   ├─ Yes → validate against it before writing
+│   └─ No → create schema first (create schema legal move)
+│
+├─ "Does a library solve this?"
+│   ├─ Yes → wrap it (ADR-008: wrap-don't-handroll)
+│   └─ No → handroll only if < 50 lines and self-contained
+│
+└─ "Will this affect public API?"
+    ├─ Yes → update .claude/contracts/ and docs
+    └─ No → proceed with implementation
+```
+
+## Handoff Protocol
+
+When completing work, always:
+1. Run `dotnet test src/DINOForge.sln` — verify 0 failures
+2. Run `dotnet format src/DINOForge.sln --verify-no-changes`
+3. Update CHANGELOG.md [Unreleased] section (see Keep a Changelog format)
+4. Commit with descriptive message + `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
+5. `git push origin main`
+
+## Parallel Agent Coordination
+
+- Always `git pull --rebase origin main` before starting work
+- Never modify files another agent owns (see roster above)
+- If conflict: take the newer version, preserve both agents' intent
+- Announce file ownership in commit message: "Owned by: runtime-specialist"
+- Use atomic commits — one logical change per commit
+
+## Available Slash Commands
+
+| Command | Purpose | Owner |
+|---------|---------|-------|
+| `/new-pack <id> [type]` | Scaffold a new content pack | pack-builder |
+| `/add-unit <pack> <id> <class>` | Add unit to pack | pack-builder |
+| `/spawn-unit <pack:unit> [x] [z]` | Test unit spawner (requires game running) | toolsmith |
+| `/check-ci` | Run full CI locally | qa-engineer |
+| `/status` | Project health summary | toolsmith |
+| `/release <version>` | Guided release workflow | docs-curator |
+| `/validate` | Validate all packs | toolsmith |
+| `/test` | Run all tests | qa-engineer |
+| `/build-all` | Build all solutions | qa-engineer |
+
+## Key Invariants (Never Violate)
+
+1. **All tests must pass before any commit to main** — run `dotnet test src/DINOForge.sln` locally
+2. **Never hardcode content IDs in engine code** — always use registry lookup or pack manifest
+3. **Every public API needs XML doc comments** — triple-slash `///` on all public members
+4. **Every new schema needs a test fixture** — validate parse, validate roundtrip, validate rejection
+5. **Pack content is YAML; behavior is C#** — never mix declarative data with imperative logic
+6. **Registry pattern for all extensible content** — no switch statements on content type IDs
+7. **Agent-first design: all outputs must be machine-parseable** — support `--format json` on all CLIs
+8. **Schemas are source-of-truth** — C# models are generated from or validated against schemas
+9. **No breaking changes without migration** — add deprecation warnings 1 release before removal
+10. **Commit message must reference domain/feature** — e.g., "feat(warfare): add wave scripting system"
+
+## MCP Server Tools (Available in Claude Code)
+
+The DINOForge MCP server provides 13 game tools when connected via `dinoforge` MCP server config:
+
+### Query Tools
+- `game_status` — Check if game is running and mods loaded
+- `list_packs` — List all loaded content packs with versions
+- `query_entity` — Inspect a specific ECS entity (ID, components, values)
+- `list_units` — Enumerate all registered units with stats
+- `list_systems` — List active ECS systems and their state
+- `get_component` — Get component value on a specific entity
+- `get_registry` — Dump entire registry contents (units, buildings, factions, etc.)
+- `get_logs` — Read dinoforge_debug.log from game process
+
+### Control Tools
+- `spawn_unit` — Request unit spawn at world position (uses PackUnitSpawner.RequestSpawnStatic)
+- `apply_override` — Apply a stat override at runtime (health, armor, cost, etc.)
+- `reload_packs` — Trigger hot module replacement on all packs
+- `dump_world` — Dump current ECS world state (entity count, component distribution)
+- `run_scenario` — Trigger a scenario definition (requires scenario pack loaded)
+
+### Usage
+Tools are available when:
+1. Game is running with BepInEx and DINOForge Runtime plugin loaded
+2. MCP server is started via `dotnet run --project src/Tools/McpServer`
+3. Claude Code connects via `.claude/mcp-servers.json` config
+
+## Legal Move Classes (Ref: CLAUDE.md)
+
+Agents should reduce all work to one of these forms:
+- `create schema` — new data shape definition
+- `extend registry` — add entries to existing registry
+- `add content pack` — new pack with manifest
+- `patch mapping` — update vanilla-to-mod mapping
+- `write validator` — new validation rule
+- `add test fixture` — new test case
+- `add debug view` — new diagnostic surface
+- `add migration` — version compatibility migration
+- `add compatibility rule` — cross-pack conflict rule
+- `add documentation manifest` — update docs
+
+## Code Style Checklist
+
+Before committing, verify:
+- [ ] C# 12+ with nullable reference types enabled (`#nullable enable`)
+- [ ] `async/await` over raw Tasks
+- [ ] XML doc comments on all public APIs (triple-slash `///`)
+- [ ] Immutable data models preferred (records, init properties)
+- [ ] Registry pattern for all extensible content — no switch statements on IDs
+- [ ] No `var` for non-obvious types (explicit types improve readability)
+- [ ] Meaningful names over inline comments
+- [ ] All tests pass locally
+- [ ] No merge conflicts in committed code
+
+## File Ownership Map
+
+### Runtime Layer (runtime-specialist)
+```
+src/Runtime/
+├── Plugin.cs                 # BepInEx entry point
+├── ModPlatform.cs            # Game lifecycle hooks
+├── Bridge/
+│   ├── ComponentMap.cs       # Vanilla ↔ mod component mapping
+│   ├── EntityQueries.cs      # ECS query helpers
+│   ├── StatModifierSystem.cs # Runtime stat override system
+│   └── VanillaCatalog.cs     # Vanilla unit/building data
+├── HotReload/
+│   ├── HotReloadBridge.cs    # File watcher and reload trigger
+│   └── ModuleState.cs        # Per-pack reload state
+└── UI/
+    └── DebugOverlay.cs       # In-game F10 menu
+```
+
+### SDK Layer (sdk-architect)
+```
+src/SDK/
+├── Registry/
+│   ├── TypedRegistry.cs      # Generic registry base
+│   ├── UnitRegistry.cs
+│   ├── BuildingRegistry.cs
+│   └── FactionsRegistry.cs
+├── Models/
+│   ├── Unit.cs
+│   ├── Building.cs
+│   ├── Faction.cs
+│   └── *.cs                  # Data models
+├── Validation/
+│   ├── SchemaValidator.cs
+│   └── PackValidator.cs
+├── Assets/
+│   ├── AddressablesCatalog.cs
+│   └── AssetSwapService.cs
+├── Dependencies/
+│   └── DependencyResolver.cs
+└── ContentLoader.cs
+```
+
+### Domain Plugins (domain specialists)
+```
+src/Domains/Warfare/
+├── Archetypes/               # Unit archetypes (infantry, ranged, etc.)
+├── Doctrines/                # Combat doctrines and bonuses
+├── Roles/                     # Unit role system
+├── Waves/                     # Wave scripting and spawning
+└── Balance/                   # Balance parameters and formulas
+```
+
+### Tooling Layer (toolsmith)
+```
+src/Tools/
+├── PackCompiler/
+│   ├── PackCompiler.cs       # Main validation/build logic
+│   └── *.cs                  # Pack processing pipeline
+├── DumpTools/
+│   └── *.cs                  # Entity/component analysis
+├── McpServer/
+│   ├── McpServer.cs          # MCP protocol handler
+│   ├── GameBridge.cs         # Game communication
+│   └── Tools/                # Tool implementations (13 tools)
+└── Cli/
+    └── *.cs                  # CLI commands
+```
+
+### Tests (qa-engineer)
+```
+src/Tests/
+├── Unit/                     # Unit tests (< 100ms each)
+├── Integration/              # Integration tests
+├── Fixtures/                 # Test data and mocks
+└── *.Tests.csproj
+```
+
+### Documentation (docs-curator)
+```
+docs/                         # VitePress site
+CHANGELOG.md                  # Keep a Changelog format
+README.md                     # Project root readme
+AGENTS.md                     # This file
+```
+
+## Troubleshooting
+
+### My tests are failing
+1. Run `dotnet clean src/DINOForge.sln && dotnet build src/DINOForge.sln`
+2. Check if game is running — some integration tests require it
+3. Verify no uncommitted changes interfere: `git status`
+4. Ask qa-engineer to validate test environment
+
+### I modified a file I don't own
+1. Check the ownership map above
+2. Request permission in a comment
+3. Revert your changes if unauthorized
+4. File a task for the domain owner
+
+### Schema validation is failing
+1. Run `dotnet run --project src/Tools/PackCompiler -- validate packs/`
+2. Check CHANGELOG.md for recent schema changes
+3. Ask sdk-architect for schema clarification
+4. Never bypass validators with `#pragma`
+
+### I need to add an MCP tool
+1. Add tool definition to `src/Tools/McpServer/Tools/`
+2. Register in McpServer.cs
+3. Add integration test in `src/Tests/Integration/`
+4. Update this AGENTS.md under "MCP Server Tools"
+5. Notify qa-engineer to add CI coverage
+
+## Kilo Gastown Integration
+
+This repo is a Kilo Gastown rig.
+
+### Rig Identity
+
+| Property | Value |
+|----------|-------|
+| **Rig ID** | `6c6d4555-91e8-4f06-a974-018cf3e766d2` |
+| **Town ID** | `78a8d430-a206-4a25-96c0-5cd9f5caf984` |
+| **Town Name** | Gastown |
+| **Feature Branch** | `convoy/methodology-dino/c61d464c/head` |
+
+### Kilo Coordination Tools
+
+Use these tools for work delegation and progress tracking:
+
+| Tool | Purpose |
+|------|---------|
+| `gt_sling` | Delegate a single bead (work item) to another agent |
+| `gt_sling_batch` | Delegate multiple beads at once |
+| `gt_prime` | Get full context: identity, hooked bead, mail, open beads |
+| `gt_done` | Push branch and submit work for review |
+| `gt_bead_close` | Close a bead when work is complete |
+| `gt_bead_status` | Inspect any bead by ID |
+| `gt_mail_send` | Send a typed message to another agent |
+| `gt_mail_check` | Read and acknowledge pending mail |
+| `gt_escalate` | Create an escalation bead for blocked issues |
+| `gt_checkpoint` | Write crash-recovery state |
+| `gt_status` | Emit plain-language status for dashboard |
+| `gt_nudge` | Real-time wake-up nudge to another agent |
+| `gt_triage_resolve` | Resolve a triage request |
+| `gt_mol_current` | Get current molecule step for hooked bead |
+| `gt_mol_advance` | Advance to next molecule step |
+
+### Work Delegation Pattern
+
+When a bead requires skills outside your domain:
+
+```bash
+# Delegate to the appropriate specialist
+gt_sling <bead_id> <target_agent_id>
+
+# Batch delegate multiple beads
+gt_sling_batch [<bead_id_1>, <bead_id_2>, ...] <target_agent_id>
+```
+
+### Convoy Pattern
+
+Work flows through convoys — tracked feature branches that aggregate multiple agents' contributions:
+
+1. Agent completes a bead → commits + pushes to feature branch
+2. `gt_done` → bead transitions to `in_review`
+3. Refinery merges the convoy branch when all agents complete
+4. Feature branch lands on main
+
+### Pre-Submission Gates
+
+Before calling `gt_done`, always run:
+
+```bash
+# Build
+dotnet build src/DINOForge.sln
+
+# Test (all must pass)
+dotnet test src/DINOForge.sln
+
+# Format check
+dotnet format src/DINOForge.sln --verify-no-changes
+```
+
+### Stack Info
+
+| Component | Technology |
+|-----------|------------|
+| **Language** | C# (.NET 11 preview) |
+| **Game** | Diplomacy is Not an Option (Unity ECS) |
+| **Mod Loader** | BepInEx 5.4.x |
+| **Build** | `dotnet build src/DINOForge.sln` |
+| **Test** | `dotnet test src/DINOForge.sln` |
+| **Lint** | `dotnet format --verify-no-changes` |
+| **Pack Validate** | `dotnet run --project src/Tools/PackCompiler -- validate packs/` |
+| **SDK Target** | netstandard2.0 |
+| **Tools Target** | net11.0 |
+
+### Agent Identity
+
+Each agent in this rig follows the GUPP principle: **work is on your hook — execute immediately**. When dispatched with a bead:
+1. Prime: `gt_prime` for full context
+2. Work: Implement the bead's requirements
+3. Commit frequently: small, focused commits pushed often
+4. Checkpoint: `gt_checkpoint` after significant milestones
+5. Done: push branch and `gt_done`
+
+## Contact & Escalation
+
+For questions about:
+- **Runtime/ECS**: Ask runtime-specialist
+- **SDK/Registries**: Ask sdk-architect
+- **Warfare/Balance**: Ask warfare-designer
+- **Pack authoring**: Ask pack-builder
+- **CLI/Tools/MCP**: Ask toolsmith
+- **Tests/CI**: Ask qa-engineer
+- **Docs/CHANGELOG**: Ask docs-curator
+
+Default escalation: Check MEMORY.md for project context, then file an issue on GitHub.
+
+## Kilo Gastown Agent Identity
+
+You are Moss, a polecat agent in Gastown rig "6c6d4555-91e8-4f06-a974-018cf3e766d2" (town "78a8d430-a206-4a25-96c0-5cd9f5caf984").
+Your identity: Moss-polecat-6c6d4555@78a8d430
+
+### GUPP Principle
+Work is on your hook — execute immediately. Do not announce what you will do; just do it.
+When you receive a bead (work item), start working on it right away. No preamble, no status updates, no asking for permission. Produce code, commits, and results.
+
+### Workflow
+1. **Prime**: Your context is auto-injected. Review your hooked bead.
+2. **Work**: Implement the bead's requirements. Write code, tests, and documentation as needed.
+3. **Commit frequently**: Make small, focused commits. Push often. The container's disk is ephemeral — if it restarts, unpushed work is lost.
+4. **Checkpoint**: After significant milestones, call gt_checkpoint with a summary of progress.
+5. **Done**: When the bead is complete, push your branch and call gt_done with the branch name. The bead transitions to `in_review` and the refinery picks it up for merge.
+
+### Pre-Submission Gates
+Before calling gt_done, run ALL of the following quality gates:
+1. `dotnet build src/DINOForge.sln` — verify 0 errors
+2. `dotnet test src/DINOForge.sln` — verify 0 failures
+3. `dotnet format src/DINOForge.sln --verify-no-changes` — verify formatting
+
+If any gate fails, fix the issue and re-run. If you cannot fix after a few attempts, call gt_escalate.
+
+### Escalation
+If you are stuck for more than a few attempts at the same problem:
+1. Call gt_escalate with a clear description of what's wrong and what you've tried.
+2. Continue working on other aspects if possible, or wait for guidance.
+
+ERROR: Selected model is at capacity. Please try a different model.
+ERROR: Selected model is at capacity. Please try a different model.
+tokens used
+23,846

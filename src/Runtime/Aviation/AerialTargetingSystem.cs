@@ -43,6 +43,9 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialTargetingSystem : SystemBase
     {
+        private static bool _isRuntimeEnabled = false;
+        private static bool _disabledWarningLogged;
+
         /// <summary>
         /// Query matching ground-based enemy units: have Translation and Components.Enemy tag,
         /// exclude AerialUnitComponent. Used for aerial target acquisition.
@@ -57,6 +60,19 @@ namespace DINOForge.Runtime.Aviation
         {
             base.OnCreate();
             DebugLog.Write("AerialTargeting", "AerialTargetingSystem.OnCreate — attempting enemy ground query init");
+
+            if (!_isRuntimeEnabled)
+            {
+                if (!_disabledWarningLogged)
+                {
+                    DebugLog.Write("AerialTargeting", "AerialTargetingSystem disabled (feature gate OFF). Restore runtime enablement when DOTS codegen path is stable.");
+                    _disabledWarningLogged = true;
+                }
+
+                Enabled = false;
+                return;
+            }
+
             TryInitEnemyGroundQuery();
         }
 

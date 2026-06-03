@@ -1,0 +1,10 @@
+Invalid project config at C:\Users\koosh\Dino\.claude\worktrees\uiverify\.cursor\cli.json: schema validation failed. [
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "approvalMode"
+    ],
+    "path": [],
+    "message": "Unrecognized key(s) in object: 'approvalMode'"
+  }
+]

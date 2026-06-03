@@ -1,0 +1,142 @@
+# Main menu structure for DINOForge mod system
+menus:
+  - id: main-menu
+    title: DINOForge Mods
+    parent_menu_id: null
+    background_color: "#0D0D0D"
+    font_size: 16
+    description: "Root menu for DINOForge mod system."
+    items:
+      - id: packs-submenu
+        label: "Manage Packs"
+        action: navigate
+        target: packs-menu
+      - id: settings-submenu
+        label: "Settings"
+        action: navigate
+        target: settings-menu
+      - id: reload-all
+        label: "Reload All Packs"
+        action: command
+        target: reload_all_packs
+      - id: help
+        label: "Help"
+        action: navigate
+        target: help-menu
+      - id: close-menu
+        label: "Close Menu (F10)"
+        action: command
+        target: close_menu
+
+  - id: packs-menu
+    title: Manage Packs
+    parent_menu_id: main-menu
+    background_color: "#0D0D0D"
+    font_size: 14
+    description: "Submenu for enabling/disabling content packs."
+    items:
+      - id: packs-warfare
+        label: "Warfare Packs"
+        action: navigate
+        target: warfare-packs-menu
+      - id: packs-economy
+        label: "Economy Packs"
+        action: navigate
+        target: economy-packs-menu
+      - id: back-to-main
+        label: "Back to Main"
+        action: navigate
+        target: main-menu
+
+  - id: warfare-packs-menu
+    title: Warfare Packs
+    parent_menu_id: packs-menu
+    background_color: "#0D0D0D"
+    font_size: 14
+    description: "Submenu for warfare-related content packs."
+    items:
+      - id: toggle-modern
+        label: "Toggle Modern Warfare"
+        action: toggle
+        target: warfare-modern
+      - id: toggle-starwars
+        label: "Toggle Star Wars"
+        action: toggle
+        target: warfare-starwars
+      - id: back-to-packs
+        label: "Back to Packs"
+        action: navigate
+        target: packs-menu
+
+  - id: economy-packs-menu
+    title: Economy Packs
+    parent_menu_id: packs-menu
+    background_color: "#0D0D0D"
+    font_size: 14
+    description: "Submenu for economy-related content packs."
+    items:
+      - id: toggle-economy-balanced
+        label: "Toggle Balanced Economy"
+        action: toggle
+        target: economy-balanced
+      - id: back-to-packs
+        label: "Back to Packs"
+        action: navigate
+        target: packs-menu
+
+  - id: settings-menu
+    title: Settings
+    parent_menu_id: main-menu
+    background_color: "#0D0D0D"
+    font_size: 14
+    description: "Settings menu for UI customization."
+    items:
+      - id: themes-submenu
+        label: "Themes"
+        action: navigate
+        target: themes-menu
+      - id: back-to-main
+        label: "Back to Main"
+        action: navigate
+        target: main-menu
+
+  - id: themes-menu
+    title: Select Theme
+    parent_menu_id: settings-menu
+    background_color: "#0D0D0D"
+    font_size: 14
+    description: "Theme selection menu."
+    items:
+      - id: select-dark
+        label: "Dark Theme"
+        action: command
+        target: set_theme_dark
+      - id: select-light
+        label: "Light Theme"
+        action: command
+        target: set_theme_light
+      - id: back-to-settings
+        label: "Back to Settings"
+        action: navigate
+        target: settings-menu
+
+  - id: help-menu
+    title: Help & Info
+    parent_menu_id: main-menu
+    background_color: "#0D0D0D"
+    font_size: 14
+    description: "Help and information menu."
+    items:
+      - id: help-info
+        label: "F10 - Open Mod Menu"
+        action: separator
+      - id: help-info2
+        label: "F9 - Debug Overlay"
+        action: separator
+      - id: help-info3
+        label: "Reload Packs - Ctrl+R"
+        action: separator
+      - id: back-to-main
+        label: "Back to Main"
+        action: navigate
+        target: main-menu

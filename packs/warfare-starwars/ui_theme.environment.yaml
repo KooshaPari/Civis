@@ -1,0 +1,52 @@
+# Star Wars Clone Wars — per-planet environment themes (Phase-2 spike #975)
+# Loaded by EnvironmentThemeSwap when a gameplay map scene becomes active.
+# Skybox materials are pack bundle references until dedicated skybox assets ship.
+
+default_planet: coruscant
+
+planets:
+  tatooine:
+    display_name: "Tatooine — Twin Suns Desert"
+    skybox_material: "bundle:sw-env-tatooine-sky/skybox_tatooine"
+    ambient_mode: Flat
+    ambient_light: "#FFB86C"
+    fog_enabled: true
+    fog_mode: Exponential
+    fog_color: "#E8C88A"
+    fog_density: 0.012
+
+  naboo:
+    display_name: "Naboo — Lush Highlands"
+    skybox_material: "bundle:sw-env-naboo-sky/skybox_naboo"
+    ambient_mode: Trilight
+    ambient_light: "#8FD4A0"
+    fog_enabled: true
+    fog_mode: Exponential
+    fog_color: "#A8D8B8"
+    fog_density: 0.006
+
+  umbara:
+    display_name: "Umbara — Shadow World"
+    skybox_material: "bundle:sw-env-umbara-sky/skybox_umbara"
+    ambient_mode: Flat
+    ambient_light: "#3A2850"
+    fog_enabled: true
+    fog_mode: ExponentialSquared
+    fog_color: "#1A1028"
+    fog_density: 0.025
+
+  coruscant:
+    display_name: "Coruscant — City Planet"
+    skybox_material: "bundle:sw-env-coruscant-sky/skybox_coruscant"
+    ambient_mode: Flat
+    ambient_light: "#8899BB"
+    fog_enabled: true
+    fog_mode: Linear
+    fog_color: "#667799"
+    fog_density: 0.008
+
+  default:
+    display_name: "Generic Clone Wars Theatre"
+    ambient_mode: Skybox
+    ambient_light: "#8899AA"
+    fog_enabled: false

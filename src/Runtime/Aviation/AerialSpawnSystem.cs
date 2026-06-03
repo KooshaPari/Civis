@@ -39,6 +39,9 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialSpawnSystem : SystemBase
     {
+        private static bool _isRuntimeEnabled = false;
+        private static bool _disabledWarningLogged;
+
         /// <summary>
         /// When true, newly detected aerial units are teleported to CruiseAltitude instantly.
         /// When false, units start at Y=0 and ascend naturally (takeoff animation feel).
@@ -85,6 +88,17 @@ namespace DINOForge.Runtime.Aviation
         public override void OnCreate()
         {
             base.OnCreate();
+
+            if (!_isRuntimeEnabled)
+            {
+                if (!_disabledWarningLogged)
+                {
+                    DebugLog.Write("AerialSpawn", "AerialSpawnSystem disabled (feature gate OFF). Restore runtime enablement when DOTS codegen path is stable.");
+                    _disabledWarningLogged = true;
+                }
+
+                Enabled = false;
+            }
         }
 
         public override void OnUpdate()

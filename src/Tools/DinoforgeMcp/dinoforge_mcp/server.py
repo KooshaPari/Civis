@@ -1893,6 +1893,36 @@ async def health_check(request: Request):
     return JSONResponse({"status": "ok", "server": "dinoforge-mcp", "version": "0.13.0"})
 
 
+@mcp.custom_route("/game/navigate", methods=["POST"])
+async def game_navigate_route(request: Request):
+    """REST shim: POST /game/navigate  body: {"state":"gameplay"}"""
+    body = await request.json()
+    state = body.get("state", "gameplay")
+    result = _run_game_cli("status")
+    # Running may be nested in parsed JSON string inside 'raw'
+    running = result.get("Running") or ('"Running":true' in result.get("raw", ""))
+    if not running:
+        return JSONResponse({"success": False, "error": "Game not running"})
+    if state == "gameplay":
+        save_result = _run_game_cli("load-save", "AUTOSAVE_1")
+        _run_game_cli("dismiss")
+        return JSONResponse({"success": True, "loadResult": save_result})
+    return JSONResponse({"success": False, "error": f"Unsupported state: {state}"})
+
+
+@mcp.custom_route("/game/status", methods=["GET"])
+async def game_status_route(request: Request):
+    """REST shim: GET /game/status"""
+    return JSONResponse(_run_game_cli("status"))
+
+
+@mcp.custom_route("/game/screenshot", methods=["POST"])
+async def game_screenshot_route(request: Request):
+    """REST shim: POST /game/screenshot"""
+    result = _run_game_cli("screenshot")
+    return JSONResponse(result)
+
+
 # ===========================================================================
 # HMR (HOT MODULE RELOAD) ENDPOINT
 # ===========================================================================

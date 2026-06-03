@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DINOForge Warfare: Clone Wars — Holographic Boot Splash (Option C)
+  File: boot-splash.svg
+  ViewBox: 0 0 1920 1080
+
+  ORIGINAL FAN-ART — DINOForge project (github.com/KooshaPari/Dino)
+  Holographic boot composition: starfield gradient + split-crest emblem
+  rendered as a cyan-shifted hologram with scanline overlay and projection cone.
+  Not affiliated with or endorsed by Lucasfilm Ltd. or The Walt Disney Company.
+  Star Wars and related marks are trademarks of their respective owners.
+  All geometry is original; no copyrighted assets have been traced or reproduced.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1920 1080"
+     width="1920" height="1080"
+     preserveAspectRatio="xMidYMid meet">
+
+  <defs>
+    <!-- Deep space background: void black with subtle nebula bloom -->
+    <radialGradient id="spaceBg" cx="50%" cy="46%" r="62%">
+      <stop offset="0%"   stop-color="#0B1B3A" stop-opacity="1"/>
+      <stop offset="45%"  stop-color="#060A16" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="1"/>
+    </radialGradient>
+
+    <!-- Second nebula lobe — deep indigo upper-right -->
+    <radialGradient id="nebulaLobeR" cx="75%" cy="22%" r="35%">
+      <stop offset="0%"   stop-color="#1A2240" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Third nebula lobe — deep crimson lower-left (CIS ember tint) -->
+    <radialGradient id="nebulaLobeL" cx="22%" cy="78%" r="30%">
+      <stop offset="0%"   stop-color="#3E1E10" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Holographic projection cone: gold semi-transparent triangle from bottom center -->
+    <linearGradient id="projConeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FFE81F" stop-opacity="0.0"/>
+      <stop offset="60%"  stop-color="#FFE81F" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#FFE81F" stop-opacity="0.20"/>
+    </linearGradient>
+
+    <!-- Emblem holographic tint: cyan-shifted gold -->
+    <linearGradient id="holoGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#FFE81F"/>
+      <stop offset="40%"  stop-color="#A8E8FF"/>
+      <stop offset="100%" stop-color="#7FE0FF"/>
+    </linearGradient>
+
+    <!-- Holo scanline fill (1px cyan stripes every 4px) -->
+    <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="4" height="1" fill="#7FE0FF" opacity="0.15"/>
+    </pattern>
+
+    <!-- Chromatic aberration simulation: red channel offset right -->
+    <filter id="chromaAberr" x="-3%" y="-3%" width="106%" height="106%">
+      <feOffset dx="2" dy="0" result="rOffset"/>
+      <feFlood flood-color="#FF2222" flood-opacity="0.2" result="rFlood"/>
+      <feComposite in="rFlood" in2="rOffset" operator="in" result="rLayer"/>
+      <feOffset dx="-2" dy="0" in="SourceGraphic" result="bOffset"/>
+      <feFlood flood-color="#2222FF" flood-opacity="0.2" result="bFlood"/>
+      <feComposite in="bFlood" in2="bOffset" operator="in" result="bLayer"/>
+      <feMerge>
+        <feMergeNode in="rLayer"/>
+        <feMergeNode in="bLayer"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Hologram outer glow (cyan) -->
+    <filter id="holoGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feFlood flood-color="#7FE0FF" flood-opacity="0.3" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle vignette for depth -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%"   stop-color="#05060A" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0.55"/>
+    </radialGradient>
+
+    <!-- Title text gold perspective gradient -->
+    <linearGradient id="titleGold" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%"   stop-color="#FFE81F"/>
+      <stop offset="60%"  stop-color="#D4BF18"/>
+      <stop offset="100%" stop-color="#7A6E12"/>
+    </linearGradient>
+
+    <!-- Loading bar gradient -->
+    <linearGradient id="loadBarFill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#FFE81F"/>
+      <stop offset="100%" stop-color="#D4BF18"/>
+    </linearGradient>
+
+    <!-- Lower-third bar gradient -->
+    <linearGradient id="lowerThirdGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#10131A" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#05060A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Hyperspace streak pattern: radial lines from center -->
+    <!-- Each streak is a thin line from center (960,540) outward -->
+
+    <!-- Clip to full canvas -->
+    <clipPath id="fullClip">
+      <rect x="0" y="0" width="1920" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 0 — Deep space background
+  ═══════════════════════════════════════════════════════════════ -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#spaceBg)"/>
+  <!-- Nebula overlays -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#nebulaLobeR)"/>
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#nebulaLobeL)"/>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 1 — Starfield: multi-size dots, dense population
+  ═══════════════════════════════════════════════════════════════ -->
+  <g fill="#F5F7FA" clip-path="url(#fullClip)">
+    <!-- Far stars (tiny, low opacity) -->
+    <circle cx="95"   cy="38"  r="0.7" opacity="0.5"/>
+    <circle cx="212"  cy="82"  r="0.6" opacity="0.45"/>
+    <circle cx="345"  cy="21"  r="0.8" opacity="0.55"/>
+    <circle cx="478"  cy="67"  r="0.6" opacity="0.48"/>
+    <circle cx="612"  cy="15"  r="0.7" opacity="0.5"/>
+    <circle cx="738"  cy="55"  r="0.5" opacity="0.42"/>
+    <circle cx="870"  cy="33"  r="0.8" opacity="0.56"/>
+    <circle cx="1005" cy="72"  r="0.6" opacity="0.48"/>
+    <circle cx="1140" cy="18"  r="0.7" opacity="0.52"/>
+    <circle cx="1275" cy="58"  r="0.5" opacity="0.44"/>
+    <circle cx="1408" cy="28"  r="0.8" opacity="0.58"/>
+    <circle cx="1542" cy="78"  r="0.6" opacity="0.46"/>
+    <circle cx="1678" cy="12"  r="0.7" opacity="0.5"/>
+    <circle cx="1812" cy="52"  r="0.5" opacity="0.42"/>
+    <circle cx="55"   cy="145" r="0.7" opacity="0.48"/>
+    <circle cx="185"  cy="185" r="0.6" opacity="0.45"/>
+    <circle cx="312"  cy="125" r="0.8" opacity="0.55"/>
+    <circle cx="445"  cy="165" r="0.5" opacity="0.42"/>
+    <circle cx="572"  cy="108" r="0.7" opacity="0.5"/>
+    <circle cx="708"  cy="155" r="0.6" opacity="0.46"/>
+    <circle cx="842"  cy="132" r="0.8" opacity="0.57"/>
+    <circle cx="978"  cy="172" r="0.5" opacity="0.43"/>
+    <circle cx="1112" cy="115" r="0.7" opacity="0.51"/>
+    <circle cx="1248" cy="162" r="0.6" opacity="0.47"/>
+    <circle cx="1382" cy="138" r="0.8" opacity="0.56"/>
+    <circle cx="1518" cy="178" r="0.5" opacity="0.44"/>
+    <circle cx="1655" cy="122" r="0.7" opacity="0.5"/>
+    <circle cx="1790" cy="160" r="0.6" opacity="0.45"/>
+    <!-- Mid stars (medium, moderate opacity) -->
+    <circle cx="128"  cy="250" r="1.0" opacity="0.72"/>
+    <circle cx="265"  cy="290" r="0.9" opacity="0.68"/>
+    <circle cx="398"  cy="238" r="1.1" opacity="0.78"/>
+    <circle cx="532"  cy="275" r="0.8" opacity="0.65"/>
+    <circle cx="668"  cy="215" r="1.0" opacity="0.73"/>
+    <circle cx="802"  cy="255" r="0.9" opacity="0.7"/>
+    <circle cx="938"  cy="228" r="1.2" opacity="0.8"/>
+    <circle cx="1072" cy="268" r="0.8" opacity="0.65"/>
+    <circle cx="1208" cy="222" r="1.0" opacity="0.74"/>
+    <circle cx="1342" cy="258" r="0.9" opacity="0.69"/>
+    <circle cx="1478" cy="232" r="1.1" opacity="0.77"/>
+    <circle cx="1612" cy="270" r="0.8" opacity="0.64"/>
+    <circle cx="1748" cy="218" r="1.0" opacity="0.72"/>
+    <circle cx="1885" cy="260" r="0.9" opacity="0.68"/>
+    <circle cx="72"   cy="810" r="1.0" opacity="0.7"/>
+    <circle cx="208"  cy="855" r="0.9" opacity="0.66"/>
+    <circle cx="342"  cy="805" r="1.1" opacity="0.76"/>
+    <circle cx="478"  cy="848" r="0.8" opacity="0.63"/>
+    <circle cx="612"  cy="818" r="1.0" opacity="0.71"/>
+    <circle cx="748"  cy="858" r="0.9" opacity="0.68"/>
+    <circle cx="882"  cy="828" r="1.2" opacity="0.79"/>
+    <circle cx="1018" cy="865" r="0.8" opacity="0.64"/>
+    <circle cx="1152" cy="822" r="1.0" opacity="0.72"/>
+    <circle cx="1288" cy="862" r="0.9" opacity="0.67"/>
+    <circle cx="1422" cy="832" r="1.1" opacity="0.76"/>
+    <circle cx="1558" cy="870" r="0.8" opacity="0.63"/>
+    <circle cx="1692" cy="818" r="1.0" opacity="0.71"/>
+    <circle cx="1830" cy="858" r="0.9" opacity="0.67"/>
+    <!-- Bright hero stars -->
+    <circle cx="155"  cy="320" r="1.5" opacity="0.9"/>
+    <circle cx="488"  cy="178" r="1.4" opacity="0.88"/>
+    <circle cx="822"  cy="95"  r="1.6" opacity="0.92"/>
+    <circle cx="1155" cy="310" r="1.4" opacity="0.87"/>
+    <circle cx="1490" cy="142" r="1.5" opacity="0.9"/>
+    <circle cx="1825" cy="322" r="1.4" opacity="0.88"/>
+    <circle cx="295"  cy="885" r="1.5" opacity="0.9"/>
+    <circle cx="628"  cy="925" r="1.4" opacity="0.87"/>
+    <circle cx="962"  cy="898" r="1.6" opacity="0.92"/>
+    <circle cx="1295" cy="918" r="1.4" opacity="0.88"/>
+    <circle cx="1628" cy="878" r="1.5" opacity="0.9"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 2 — Hyperspace streaks (radial from center, faint)
+       Lines emanate from (960,540), representing jump-entry streaks.
+       Blue-tinted for neutral/title-screen version.
+  ═══════════════════════════════════════════════════════════════ -->
+  <g clip-path="url(#fullClip)" opacity="0.18">
+    <!-- Radial streak lines, each from near-center to edge -->
+    <!-- N, NNE, NE, ENE, E ... cardinal + intercardinal + 22.5° increments -->
+    <!-- Using thin lines with gradient stroke via linearGradient per streak -->
+    <line x1="960" y1="460" x2="960"  y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1190" y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1440" y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1680" y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1920" y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1920" y2="200"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1920" y2="440"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1920" y2="680"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1920" y2="920"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1920" y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1680" y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1440" y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="1200" y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="960"  y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="720"  y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="480"  y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="240"  y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="0"    y2="1080" stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="0"    y2="920"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="0"    y2="680"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="0"    y2="440"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="0"    y2="200"  stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="0"    y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="240"  y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="480"  y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+    <line x1="960" y1="460" x2="720"  y2="0"    stroke="#5FB3FF" stroke-width="0.7"/>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 3 — Holographic projection cone
+       Triangle from bottom center (960,1080) fanning up to emblem bounds.
+       Emblem sits centered at (960, 390), radius ~200.
+       Cone fans from (960,1080) to (760,190) and (1160,190).
+  ═══════════════════════════════════════════════════════════════ -->
+  <polygon points="960,1080 760,190 1160,190"
+           fill="url(#projConeGrad)"
+           opacity="0.65"/>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 4 — Central holographic emblem
+       Centered at (960, 390), ~380px diameter.
+       Rendered with holographic color shift and scanlines.
+  ═══════════════════════════════════════════════════════════════ -->
+  <g transform="translate(770, 200)" filter="url(#holoGlow)">
+    <!-- Scale: emblem is 512x512 original, display at 380x380 -->
+    <g transform="scale(0.742)" filter="url(#chromaAberr)">
+
+      <!-- Base circle -->
+      <circle cx="256" cy="256" r="248" fill="#05060A" opacity="0.82"/>
+
+      <!-- Republic half (upper-left) — holographic cyan-gold tint -->
+      <g opacity="0.88">
+        <!-- Field background: holo-blue -->
+        <radialGradient id="holoRepBg" cx="35%" cy="35%" r="70%">
+          <stop offset="0%"   stop-color="#0D2240"/>
+          <stop offset="100%" stop-color="#060E1A"/>
+        </radialGradient>
+        <!-- Republic upper half clip (approximated polygonal) -->
+        <clipPath id="holoRepClip">
+          <polygon points="22,22 490,22 490,78 420,90 390,50 350,95 310,60 275,100 240,68 200,108 165,75 130,115 95,82 60,450 22,490"/>
+        </clipPath>
+        <circle cx="256" cy="256" r="248" fill="url(#holoRepBg)" clip-path="url(#holoRepClip)"/>
+
+        <!-- Republic cog (upper-left, holographic gold) -->
+        <g transform="translate(175,170)" clip-path="url(#holoRepClip)">
+          <circle cx="80" cy="80" r="80" fill="none" stroke="#7FE0FF" stroke-width="26" opacity="0.4"/>
+          <circle cx="80" cy="80" r="52" fill="#060E1A" opacity="0.5"/>
+          <g fill="#FFE81F" opacity="0.55" transform="translate(80,80)">
+            <rect x="-7" y="-92" width="14" height="20" rx="3"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(30)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(60)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(90)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(120)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(150)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(180)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(210)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(240)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(270)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(300)"/>
+            <rect x="-7" y="-92" width="14" height="20" rx="3" transform="rotate(330)"/>
+          </g>
+          <!-- Clone helmet T-visor -->
+          <g transform="translate(80,80)">
+            <ellipse cx="0" cy="-12" rx="22" ry="20" fill="#7FE0FF" opacity="0.55"/>
+            <rect x="-16" y="-6" width="32" height="8" rx="1.5" fill="#05060A" opacity="0.88"/>
+            <rect x="-3"  y="-16" width="6" height="28" rx="1.5" fill="#05060A" opacity="0.82"/>
+          </g>
+        </g>
+      </g>
+
+      <!-- CIS half (lower-right) — holographic amber-rust tint -->
+      <g opacity="0.88">
+        <clipPath id="holoCisClip">
+          <polygon points="60,450 490,78 490,490 22,490"/>
+        </clipPath>
+        <radialGradient id="holoCisBg" cx="65%" cy="65%" r="65%">
+          <stop offset="0%"   stop-color="#2A0D05"/>
+          <stop offset="100%" stop-color="#0E0604"/>
+        </radialGradient>
+        <circle cx="256" cy="256" r="248" fill="url(#holoCisBg)" clip-path="url(#holoCisClip)"/>
+        <!-- Hex lattice (lower-right) -->
+        <g transform="translate(256,320)" clip-path="url(#holoCisClip)" opacity="0.6">
+          <polygon points="0,-70 60.6,-35 60.6,35 0,70 -60.6,35 -60.6,-35"
+                   fill="none" stroke="#D99A3C" stroke-width="5"/>
+          <polygon points="0,-38 32.9,-19 32.9,19 0,38 -32.9,19 -32.9,-19"
+                   fill="none" stroke="#9A6B2F" stroke-width="3.5"/>
+          <circle cx="0"     cy="0"   r="6"  fill="#D99A3C"/>
+          <circle cx="0"     cy="-26" r="4.5" fill="#9A6B2F"/>
+          <circle cx="22.5"  cy="-13" r="4.5" fill="#9A6B2F"/>
+          <circle cx="22.5"  cy="13"  r="4.5" fill="#9A6B2F"/>
+          <circle cx="0"     cy="26"  r="4.5" fill="#9A6B2F"/>
+          <circle cx="-22.5" cy="13"  r="4.5" fill="#9A6B2F"/>
+          <circle cx="-22.5" cy="-13" r="4.5" fill="#9A6B2F"/>
+        </g>
+        <!-- B1 droid head (lower-right) -->
+        <g transform="translate(340,175)" clip-path="url(#holoCisClip)" opacity="0.62">
+          <ellipse cx="0" cy="-18" rx="16" ry="22" fill="#D99A3C"/>
+          <rect x="-10" y="-24" width="20" height="8" rx="2" fill="#33302C"/>
+          <rect x="-8"  y="4"   width="16" height="12" rx="2" fill="#C8A87A"/>
+          <rect x="-4"  y="16"  width="8"  height="10" rx="1" fill="#9A6B2F"/>
+        </g>
+      </g>
+
+      <!-- Lightning seam — holographic bright gold -->
+      <polyline
+        points="430,52 390,90 350,62 310,100 272,72 238,110 200,82 162,120 124,92 88,140 58,442"
+        fill="none" stroke="#FFE81F" stroke-width="5"
+        stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+      <polyline
+        points="430,52 390,90 350,62 310,100 272,72 238,110 200,82 162,120 124,92 88,140 58,442"
+        fill="none" stroke="#FFFBE8" stroke-width="1.5"
+        stroke-linejoin="round" stroke-linecap="round" opacity="0.5"/>
+
+      <!-- Outer cog ring — holographic tint -->
+      <circle cx="256" cy="256" r="234"
+              fill="none" stroke="#7FE0FF" stroke-width="20" opacity="0.28"/>
+      <circle cx="256" cy="256" r="234"
+              fill="none" stroke="#FFE81F" stroke-width="8" opacity="0.45"/>
+      <!-- 12 gear teeth -->
+      <g fill="#FFE81F" opacity="0.65" transform="translate(256,256)">
+        <rect x="-11" y="-256" width="22" height="30" rx="4"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(30)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(60)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(90)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(120)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(150)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(180)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(210)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(240)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(270)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(300)"/>
+        <rect x="-11" y="-256" width="22" height="30" rx="4" transform="rotate(330)"/>
+      </g>
+
+      <!-- DF monogram center -->
+      <circle cx="256" cy="256" r="24" fill="#05060A" opacity="0.9"/>
+      <circle cx="256" cy="256" r="24" fill="none" stroke="#7FE0FF" stroke-width="2" opacity="0.7"/>
+      <text x="256" y="264"
+        font-family="Orbitron, 'Arial Black', sans-serif"
+        font-size="18" font-weight="900"
+        text-anchor="middle" fill="#7FE0FF" opacity="0.92">DF</text>
+
+      <!-- Scanline overlay on emblem -->
+      <circle cx="256" cy="256" r="248" fill="url(#scanlines)" opacity="0.6"/>
+
+    </g>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 5 — Holographic title text below emblem
+       "CLONE WARS" — holo-gold with chromatic fringe
+  ═══════════════════════════════════════════════════════════════ -->
+  <g filter="url(#holoGlow)">
+    <!-- Chromatic fringe: red offset -->
+    <text x="962" y="692"
+      font-family="Orbitron, 'Arial Black', Impact, sans-serif"
+      font-size="86" font-weight="900"
+      letter-spacing="4"
+      text-anchor="middle"
+      fill="#FF4444"
+      opacity="0.18">CLONE WARS</text>
+    <!-- Chromatic fringe: blue offset -->
+    <text x="958" y="692"
+      font-family="Orbitron, 'Arial Black', Impact, sans-serif"
+      font-size="86" font-weight="900"
+      letter-spacing="4"
+      text-anchor="middle"
+      fill="#4444FF"
+      opacity="0.18">CLONE WARS</text>
+    <!-- Main holographic text -->
+    <text x="960" y="692"
+      font-family="Orbitron, 'Arial Black', Impact, sans-serif"
+      font-size="86" font-weight="900"
+      letter-spacing="4"
+      text-anchor="middle"
+      fill="url(#titleGold)"
+      opacity="0.95">CLONE WARS</text>
+  </g>
+
+  <!-- Scanline overlay on title text region -->
+  <rect x="560" y="615" width="800" height="90"
+        fill="url(#scanlines)" opacity="0.45"/>
+
+  <!-- Subtitle -->
+  <text x="960" y="740"
+    font-family="'Saira Condensed', Saira, Orbitron, sans-serif"
+    font-size="26" font-weight="600"
+    letter-spacing="14"
+    text-anchor="middle"
+    fill="#7FE0FF"
+    opacity="0.65">GALACTIC CONFLICT</text>
+
+  <!-- "DINOFORGE PRESENTS" supertitle (above emblem area) -->
+  <text x="960" y="178"
+    font-family="Orbitron, 'Arial Black', sans-serif"
+    font-size="20" font-weight="700"
+    letter-spacing="12"
+    text-anchor="middle"
+    fill="#FFE81F"
+    opacity="0.55">DINOFORGE PRESENTS</text>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 6 — Vignette overlay (darkens edges for depth)
+       NOTE: The lower-third loading/progress caption bar from
+       boot-splash.svg is INTENTIONALLY OMITTED here. This is the
+       settled MAIN-MENU background — there is no load in progress,
+       so no baked-in progress bar / "LOADING MODULE" / tip text.
+       Live load progress is composited at runtime by
+       LoadingScreenController (see src/Runtime/UI/).
+  ═══════════════════════════════════════════════════════════════ -->
+  <rect x="0" y="0" width="1920" height="1080"
+        fill="url(#vignette)" opacity="0.7"/>
+
+  <!-- Trademark footnote (very small, bottom-center) -->
+  <text x="960" y="1060"
+    font-family="'Exo 2', Exo2, sans-serif"
+    font-size="11"
+    letter-spacing="1"
+    text-anchor="middle"
+    fill="#8B93A1"
+    opacity="0.52">Unofficial fan project. Not affiliated with or endorsed by Lucasfilm Ltd. or The Walt Disney Company. Star Wars™ are trademarks of their respective owners.</text>
+
+</svg>

@@ -1,0 +1,31 @@
+ManifestFileVersion: 0
+CRC: 1820232225
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: c2649111344df4f3e29e817e5c414049
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 894816d889322a927dc9204a2d561235
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: c2649111344df4f3e29e817e5c414049
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 137
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/Republic/sw-clone-militia.mat
+- Assets/Prefabs/Republic/sw-clone-militia.prefab
+Dependencies: []

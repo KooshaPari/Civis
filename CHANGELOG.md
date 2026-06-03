@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Added investigation/design doc for Task #988 (2026-05-31): `docs/sessions/enemy-preview-swap-design-20260531.md` documents that incoming-wave launch thumbnails are not rendered via `src/Runtime` UI code paths currently inspected, so `AssetSwap` mesh-path swaps (#986) are not applied on that surface.
+
+### Deferred
+- Task #988 follow-up planned: identify native "incoming enemies" preview UI symbol(s) and add runtime sprite/RT hook so mod asset overrides can apply to that launch-time surface.
+
 ## [0.26.0] - 2026-05-28
 
 ### Added — Major Features (35+ commits)

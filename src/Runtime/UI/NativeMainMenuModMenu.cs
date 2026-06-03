@@ -168,7 +168,7 @@ namespace DINOForge.Runtime.UI
             _modsPage = host.AddComponent<NativeModsPage>();
             if (_log != null) _modsPage.SetLogger(_log);
 
-            _modsPage.OnBackPressed = () => Hide();
+            _modsPage.OnBackClicked = () => Hide();
             _modsPage.OnReloadRequested = () => OnReloadRequested?.Invoke();
             _modsPage.OnPackToggled = (id, enabled) => OnPackToggled?.Invoke(id, enabled);
 

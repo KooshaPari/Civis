@@ -90,12 +90,18 @@ jobs:
               /^quality-manifest/i,
             ]);
 
-            // Third-party / legacy optional checks (never block when local-first label is set).
-            const optionalBypass = [
+            // Checks that should never block local PR merges regardless of labels.
+            const alwaysBypass = [
               /billing/i,
               /quota/i,
               /spending/i,
               /actions.*limit/i,
+              /^Kilo/i,
+              /^SonarCloud/i,
+            ];
+
+            // Additional third-party / legacy optional checks (never block when local-first label is set).
+            const localFirstBypass = [
               /^cargo-/i,
               /^Analyze \(rust\)$/i,
               /^quality-gate$/i,
@@ -128,7 +134,10 @@ jobs:
               if (!name || requiredOk.some((re) => re.test(name))) {
                 continue;
               }
-              if (billingException && optionalBypass.some((re) => re.test(name))) {
+              if (alwaysBypass.some((re) => re.test(name))) {
+                continue;
+              }
+              if (billingException && localFirstBypass.some((re) => re.test(name))) {
                 continue;
               }
               if (node.__typename === "CheckRun") {

@@ -92,6 +92,8 @@ pub mod skybox;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(feature = "bevy")]
+pub mod disaster_tools;
+#[cfg(feature = "bevy")]
 pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;

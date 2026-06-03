@@ -458,7 +458,8 @@ pub fn stance_label(stance: i8) -> &'static str {
         s if s > 50  => "Allied",
         s if s > 0   => "Friendly",
         0            => "Neutral",
-        s if s > -50 => "Tense",
+        // -50 is the last "Tense" stance; -51 and below is "At War".
+        s if s >= -50 => "Tense",
         _            => "At War",
     }
 }

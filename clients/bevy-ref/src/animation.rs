@@ -390,7 +390,9 @@ mod tests {
 
     #[test]
     fn jitter_is_in_range_and_deterministic() {
-        let e = Entity::from_raw(42);
+        // bevy 0.18 removed the infallible `Entity::from_raw`; use the checked
+        // u32 constructor (any valid index works — the test only needs stable bits).
+        let e = Entity::from_raw_u32(42).expect("valid raw entity index");
         let j = jitter_for(e);
         assert!((0.85..=1.15).contains(&j));
         assert_eq!(j, jitter_for(e)); // deterministic

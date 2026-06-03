@@ -738,3 +738,95 @@ fn build_faction_roster(sim: &Simulation) -> Vec<crate::game_ui::FactionInfo> {
     rows.sort_by(|a, b| b.count.cmp(&a.count).then(a.name.cmp(&b.name)));
     rows
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "models")]
+    #[test]
+    fn model_scale_matches_actor_kind() {
+        // Guards the sub-pixel actor-scale fix: humanoids and herd use their
+        // respective constants (and herd reads larger than a civilian).
+        assert_eq!(model_scale_for(ActorVisualKind::Humanoid), CIVILIAN_MODEL_SCALE);
+        assert_eq!(model_scale_for(ActorVisualKind::Herd), HERD_MODEL_SCALE);
+        assert!(HERD_MODEL_SCALE >= CIVILIAN_MODEL_SCALE);
+    }
+
+    #[test]
+    fn faction_color_is_deterministic_and_hue_varies() {
+        // Same faction -> same colour across calls; different factions differ.
+        assert_eq!(faction_color(0), faction_color(0));
+        assert_ne!(faction_color(0), faction_color(1));
+        assert_ne!(faction_color(1), faction_color(2));
+    }
+
+    #[test]
+    fn building_color_is_distinct_per_type() {
+        use std::collections::HashSet;
+        let types = [
+            BuildingType::Farm,
+            BuildingType::Mine,
+            BuildingType::Barracks,
+            BuildingType::Temple,
+            BuildingType::Market,
+            BuildingType::House,
+            BuildingType::CityCenter,
+        ];
+        // Encode each colour's sRGB bytes so distinct building types read as
+        // visually distinct swatches (no two share a colour).
+        let mut seen: HashSet<[u8; 3]> = HashSet::new();
+        for t in types {
+            let c = building_color(t).to_srgba();
+            let key = [
+                (c.red * 255.0) as u8,
+                (c.green * 255.0) as u8,
+                (c.blue * 255.0) as u8,
+            ];
+            assert!(seen.insert(key), "duplicate building colour for {t:?}");
+        }
+    }
+
+    #[cfg(feature = "voxel")]
+    #[test]
+    fn actor_seats_feet_on_voxel_surface() {
+        use civ_agents::Position3d;
+        use civ_voxel::fluid_ca::CaGrid;
+        use civ_voxel::material::DIRT;
+        use civ_voxel::WorldCoord;
+
+        // 8x8x8 world, solid DIRT floor 3 voxels tall under every column.
+        let dims = [8usize, 8, 8];
+        let mut grid = CaGrid::new(dims);
+        for z in 0..dims[2] {
+            for x in 0..dims[0] {
+                for y in 0..3 {
+                    grid.set(x, y, z, DIRT);
+                }
+            }
+        }
+        let mut voxel = VoxelSimState::default();
+        voxel.grid = grid;
+
+        // A civilian at normalised map centre (0.5, 0.5).
+        let scale = civ_voxel::FIXED_SCALE as f32;
+        let pos = Position3d {
+            coord: WorldCoord {
+                x: (0.5 * scale) as i64,
+                y: 0,
+                z: (0.5 * scale) as i64,
+            },
+        };
+        let world = sim_position_to_world(&pos, Some(&voxel));
+
+        // The mapped XZ must land inside the grid extent, and Y must equal the
+        // voxel surface so the model's feet rest on the terrain. A 3-tall floor
+        // (solid at y=0,1,2) has its surface at y=3.0 — voxel_surface_y returns
+        // `highest_solid_y + 1` (top face of voxel index 2).
+        let expected_y = voxel_surface_y(&voxel.grid, world.x, world.z);
+        assert!((world.y - expected_y).abs() < f32::EPSILON);
+        assert!((world.y - 3.0).abs() < f32::EPSILON, "surface should be 3.0, got {}", world.y);
+        assert!(world.x >= 0.0 && world.x <= dims[0] as f32);
+        assert!(world.z >= 0.0 && world.z <= dims[2] as f32);
+    }
+}

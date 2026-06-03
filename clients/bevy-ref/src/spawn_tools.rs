@@ -888,8 +888,14 @@ fn raycast_to_terrain(origin: Vec3, direction: Vec3) -> Option<Vec3> {
 }
 
 /// Signed distance of `point` above the terrain (positive = above surface).
+///
+/// Must be `point.y - surface` to match the documented convention and the hit
+/// test in [`raycast_to_terrain`] (`err <= 0 && prev_err > 0` = a downward ray
+/// crossing from above to below the surface). The previous `surface - point.y`
+/// inverted the sign, so a sky-down ray never registered a crossing and the
+/// cast always returned `None`.
 fn terrain_error(point: Vec3) -> f32 {
-    terrain_height(point.x + WORLD_SIZE * 0.5, point.z + WORLD_SIZE * 0.5) - point.y
+    point.y - terrain_height(point.x + WORLD_SIZE * 0.5, point.z + WORLD_SIZE * 0.5)
 }
 
 /// Bisect between an above-surface and below-surface sample to the crossing.

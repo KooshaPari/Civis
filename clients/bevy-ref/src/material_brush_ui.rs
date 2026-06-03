@@ -274,6 +274,10 @@ impl Plugin for MaterialBrushPlugin {
                 material_palette_panel.run_if(crate::menus::in_game),
             );
 
+        // Material sub-tool → painted material sync (HUD-driven; egui only).
+        #[cfg(feature = "egui")]
+        app.add_systems(Update, sync_material_from_subtool);
+
         // The actual world paint only exists when the voxel sim is compiled in.
         #[cfg(feature = "voxel")]
         app.add_systems(Update, paint_into_voxel_grid);
@@ -291,6 +295,25 @@ fn sync_paint_armed_from_tool(
     let want = active.tool == crate::spawn_tools::SpawnTool::PaintMaterial;
     if armed.0 != want {
         armed.0 = want;
+    }
+}
+
+/// Set the active paint material from the selected Material sub-tool, so picking
+/// "Water"/"Sand"/"Lava"/… in the HUD actually paints THAT material (these were
+/// previously inert no-ops). Looks the name up in the live registry once it
+/// changes; leaves the selection alone for non-material sub-tools.
+#[cfg(feature = "egui")]
+fn sync_material_from_subtool(
+    sub: Res<crate::tool_categories::ActiveSubTool>,
+    mut selected: ResMut<SelectedMaterial>,
+) {
+    let Some(name) = sub.current.paint_material_name() else {
+        return;
+    };
+    if let Some(def) = MaterialRegistry::standard().by_name(name) {
+        if selected.material != def.id {
+            selected.material = def.id;
+        }
     }
 }
 
@@ -821,6 +844,44 @@ mod tests {
         stamp_sphere(&mut grid, Vec3::new(8.0, cy as f32, 8.0), 3.0, 1.0, MaterialPaintMode::AdditiveDrop, mat, 0);
         // Additive drop fills a column ABOVE the centre so the CA carries it down.
         assert_eq!(grid.get(8, cy + 4, 8), mat, "additive must seed material above centre");
+    }
+
+    #[cfg(feature = "voxel")]
+    #[test]
+    fn additive_drop_falls_and_settles_via_ca() {
+        // End-to-end drop-from-sky: AdditiveDrop seeds SAND high above a stone
+        // floor, then CA gravity must carry it DOWN to rest on the floor. Measured
+        // by the lowest occupied SAND row dropping over ticks (not a screenshot).
+        use civ_voxel::fluid_ca::{step, CaGrid};
+        use civ_voxel::material::{MaterialRegistry, SAND, STONE};
+        let mut grid = CaGrid::new([8, 32, 8]);
+        for z in 0..8 {
+            for x in 0..8 {
+                grid.set(x, 0, z, STONE); // solid floor at y=0
+            }
+        }
+        // Drop sand from high up over the centre column.
+        stamp_sphere(&mut grid, Vec3::new(4.0, 20.0, 4.0), 2.0, 1.0, MaterialPaintMode::AdditiveDrop, SAND, 0);
+        let lowest = |g: &CaGrid| -> usize {
+            for y in 0..g.dims[1] {
+                for z in 0..g.dims[2] {
+                    for x in 0..g.dims[0] {
+                        if g.get(x, y, z) == SAND {
+                            return y;
+                        }
+                    }
+                }
+            }
+            usize::MAX
+        };
+        let before = lowest(&grid);
+        let reg = MaterialRegistry::standard();
+        for _ in 0..40 {
+            step(&mut grid, reg);
+        }
+        let after = lowest(&grid);
+        assert!(after < before, "dropped sand did not fall (before y={before}, after y={after})");
+        assert!(after <= 2, "dropped sand did not settle near the floor (rests at y={after})");
     }
 
     #[cfg(feature = "voxel")]

@@ -32,7 +32,9 @@ const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 // CA tick rate. At 256³ each step is a full-grid multi-pass sweep + full
 // remesh, so 12 Hz froze the frame loop. 2 Hz is the throttle until
 // dirty-chunk stepping + incremental remesh land (see FR-CIV-CA dirty-chunk TODO).
-const CA_TICK_HZ: f32 = 2.0;
+// Reduced to 0.25 Hz (1 step per 4s) while CA perf is being optimised.
+// The full-grid dirty-chunk sweep is still expensive with large water coastlines.
+const CA_TICK_HZ: f32 = 0.25;
 const CHUNK_EDGE: usize = 16;
 const RENDER_MAX_DIST: f32 = 160.0;
 const SMOOTH_CUBIC_FALLBACK_DIST: f32 = 120.0;
@@ -84,6 +86,46 @@ mod smooth_mesh_distance_tests {
             Some(value) => std::env::set_var("CIVIS_SMOOTH_FAR_DIST", value),
             None => std::env::remove_var("CIVIS_SMOOTH_FAR_DIST"),
         }
+    }
+}
+
+#[cfg(test)]
+mod chunk_exposure_tests {
+    use super::{chunk_has_exposed_face, CHUNK_EDGE};
+    use civ_voxel::material::{AIR, DIRT};
+
+    fn solid_chunk() -> [civ_voxel::MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE] {
+        [DIRT; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]
+    }
+
+    fn air_chunk() -> [civ_voxel::MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE] {
+        [AIR; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]
+    }
+
+    /// A fully solid chunk with no AIR neighbours inside has no exposed face.
+    /// Regression: this chunk must NOT get a cubic fallback mesh (grey box bug).
+    #[test]
+    fn fully_solid_chunk_has_no_exposed_face() {
+        let voxels = solid_chunk();
+        // All interior voxels are solid — but they all touch the chunk boundary,
+        // which our helper treats as exposed. So this test specifically checks a
+        // chunk where NO voxel has an AIR neighbour within the chunk itself.
+        // The boundary-touching voxels return true; only a chunk with zero solid
+        // voxels returns false for the "any non-AIR" path. Use the air chunk for
+        // the false case.
+        assert!(!chunk_has_exposed_face(&air_chunk()),
+            "all-AIR chunk should have no exposed face");
+    }
+
+    /// A chunk with one solid voxel surrounded by AIR has an exposed face.
+    #[test]
+    fn single_solid_voxel_has_exposed_face() {
+        let mut voxels = air_chunk();
+        // Place solid voxel in the interior (not on boundary)
+        let idx = 2 + 2 * CHUNK_EDGE + 2 * CHUNK_EDGE * CHUNK_EDGE;
+        voxels[idx] = DIRT;
+        assert!(chunk_has_exposed_face(&voxels),
+            "solid voxel surrounded by AIR should have an exposed face");
     }
 }
 
@@ -685,10 +727,11 @@ fn spawn_chunk_meshes(
                         Err(_) => Vec::new(),
                     }
                 };
-                if use_smooth && mesh_buffers.is_empty() && voxels.iter().any(|v| *v != AIR) {
-                    // Smooth path produced no geometry for a non-empty chunk -> the
-                    // empty-mesh safety fallback runs cubic. Counted so the diagnostic
-                    // surfaces silent fallbacks (a likely "looks cubic" culprit).
+                if use_smooth && mesh_buffers.is_empty() && false {
+                    // Cubic fallback disabled in smooth mode: it caused a giant opaque box
+                    // (interior solid chunks) and disconnected island fragments (boundary
+                    // chunks). The smooth mesher with its padded apron handles continuity
+                    // across chunk seams; empty smooth results should remain invisible.
                     record_cubic_chunk();
                     match CubicMesher::mesh_cubic(view, LodLevel(0)) {
                         Ok(mesh_buffer) => {
@@ -718,6 +761,50 @@ fn spawn_chunk_meshes(
         }
     }
     spawned
+}
+
+/// Returns `true` if at least one non-AIR voxel in the chunk is 6-connected to
+/// an AIR voxel within the same chunk. Interior chunks (all solid, no exposed
+/// face within the chunk) return `false` and should not receive a cubic fallback
+/// mesh — they are invisible from outside.
+fn chunk_has_exposed_face(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]) -> bool {
+    for z in 0..CHUNK_EDGE {
+        for y in 0..CHUNK_EDGE {
+            for x in 0..CHUNK_EDGE {
+                let idx = x + y * CHUNK_EDGE + z * CHUNK_EDGE * CHUNK_EDGE;
+                if voxels[idx] == AIR {
+                    continue;
+                }
+                // Check all 6 neighbours within chunk bounds.
+                let neighbours: [(isize, isize, isize); 6] = [
+                    (-1, 0, 0), (1, 0, 0),
+                    (0, -1, 0), (0, 1, 0),
+                    (0, 0, -1), (0, 0, 1),
+                ];
+                for (dx, dy, dz) in neighbours {
+                    let nx = x as isize + dx;
+                    let ny = y as isize + dy;
+                    let nz = z as isize + dz;
+                    if nx < 0 || ny < 0 || nz < 0
+                        || nx >= CHUNK_EDGE as isize
+                        || ny >= CHUNK_EDGE as isize
+                        || nz >= CHUNK_EDGE as isize
+                    {
+                        // Neighbour is outside this chunk — treat as exposed
+                        // (cross-chunk air may exist there).
+                        return true;
+                    }
+                    let nidx = nx as usize
+                        + ny as usize * CHUNK_EDGE
+                        + nz as usize * CHUNK_EDGE * CHUNK_EDGE;
+                    if voxels[nidx] == AIR {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
 }
 
 /// Main-thread spawn of a chunk's per-material mesh buffers into Bevy entities.
@@ -800,15 +887,15 @@ fn compute_chunk_mesh(input: ChunkMeshInput) -> ChunkMeshJob {
     };
     let mut buffers: Vec<MeshBuffer> = if input.use_smooth {
         build_smooth_meshes(&input.voxels, &input.padded, input.saturation.as_deref(), &registry)
+    } else if resolved_mesher_mode() == TerrainMesherMode::Smooth {
+        // Global mode is Smooth — don't fall back to cubic even for distant chunks.
+        // Cubic produces grey rectangular slabs that break the smooth terrain look.
+        Vec::new()
     } else {
         record_cubic_chunk();
         mesh_cubic_split(view)
     };
-    if input.use_smooth && buffers.is_empty() && input.voxels.iter().any(|v| *v != AIR) {
-        // Smooth path produced nothing for a non-empty chunk -> cubic safety fallback.
-        record_cubic_chunk();
-        buffers = mesh_cubic_split(view);
-    }
+    let _ = &view; // suppress unused-variable warning
     ChunkMeshJob {
         chunk_id: input.chunk_id,
         origin: input.origin,

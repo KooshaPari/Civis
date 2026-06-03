@@ -44,6 +44,17 @@ fn main() {
         }));
     }
 
+    // Build-identity banner: print on EVERY launch so it is provable which build
+    // is actually running (not trusting binary mtime). `CIVIS_GIT_HASH` /
+    // `CIVIS_BUILD_TIME` are injected at compile time by the build/deploy script
+    // when available; they fall back to "dev"/"unknown" for a plain `cargo run`.
+    eprintln!(
+        "[civis] build v{} git={} built={} feat=voxel,models,egui",
+        env!("CARGO_PKG_VERSION"),
+        option_env!("CIVIS_GIT_HASH").unwrap_or("dev"),
+        option_env!("CIVIS_BUILD_TIME").unwrap_or("unknown"),
+    );
+
     let attach_mode = resolve_attach_mode_from_env();
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
@@ -129,6 +140,11 @@ fn main() {
     // Terrain sculpting brush (raise/lower/flatten); bevy-only, no egui needed.
     #[cfg(feature = "bevy")]
     app.add_plugins(civ_bevy_ref::terraform_brush::TerraformBrushPlugin);
+
+    // God-game disaster actions (meteor/flood/quake/storm/wildfire) that mutate
+    // the voxel world; bevy-only, gated systems handle egui/voxel internally.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::disaster_tools::DisasterToolsPlugin);
 
     // Material brush palette + voxel paint (Powder-Toy-style); bevy+egui.
     #[cfg(feature = "egui")]

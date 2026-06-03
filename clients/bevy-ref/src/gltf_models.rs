@@ -340,4 +340,62 @@ mod tests {
         assert!(asset_paths::TREE.ends_with(".glb"));
         assert!(asset_paths::BUILDING.ends_with(".glb"));
     }
+
+    /// `GameModels` with exactly one slot populated (selected by `pick`), so a
+    /// router that chooses the right slot yields a `Model` and a router that
+    /// looks at any other slot yields `Primitive` — proving routing without an
+    /// asset server (all `Handle::default()`s compare equal, so we use slot
+    /// presence, not handle identity, to assert selection).
+    fn models_only(pick: impl FnOnce(&mut GameModels)) -> GameModels {
+        let mut m = GameModels::default();
+        pick(&mut m);
+        m
+    }
+
+    #[test]
+    fn actor_scene_routes_humanoid_to_civilian_slot() {
+        // Only the civilian slot is present: Humanoid resolves to a model,
+        // Herd (herd slot empty) falls back to a primitive.
+        let m = models_only(|m| m.civilian = Some(Handle::default()));
+        assert!(actor_scene(&m, ActorVisualKind::Humanoid, 0).has_model());
+        assert!(!actor_scene(&m, ActorVisualKind::Herd, 0).has_model());
+    }
+
+    #[test]
+    fn actor_scene_routes_herd_to_herd_slot() {
+        let m = models_only(|m| m.herd = Some(Handle::default()));
+        assert!(actor_scene(&m, ActorVisualKind::Herd, 0).has_model());
+        assert!(!actor_scene(&m, ActorVisualKind::Humanoid, 0).has_model());
+    }
+
+    #[test]
+    fn building_scene_for_routes_each_type_to_its_slot() {
+        use civ_engine::BuildingType;
+        // (type, slot-setter) — the type must resolve to a Model when ONLY its
+        // mapped slot is populated.
+        let cases: [(BuildingType, fn(&mut GameModels)); 7] = [
+            (BuildingType::Temple, |m| m.building_church = Some(Handle::default())),
+            (BuildingType::Market, |m| m.building_market = Some(Handle::default())),
+            (BuildingType::Barracks, |m| m.building_tower = Some(Handle::default())),
+            (BuildingType::CityCenter, |m| m.building_tower = Some(Handle::default())),
+            (BuildingType::Mine, |m| m.building_well = Some(Handle::default())),
+            (BuildingType::House, |m| m.building_house_b = Some(Handle::default())),
+            (BuildingType::Farm, |m| m.building_house_b = Some(Handle::default())),
+        ];
+        for (ty, set_slot) in cases {
+            let m = models_only(set_slot);
+            assert!(
+                building_scene_for(&m, ty).has_model(),
+                "{ty:?} should resolve to its populated model slot"
+            );
+        }
+    }
+
+    #[test]
+    fn building_scene_for_falls_back_to_primitive_when_slots_empty() {
+        use civ_engine::BuildingType;
+        let m = GameModels::default();
+        assert!(!building_scene_for(&m, BuildingType::Temple).has_model());
+        assert!(!building_scene_for(&m, BuildingType::Market).has_model());
+    }
 }

@@ -411,8 +411,8 @@ fn phase_transition_pass(grid: &mut CaGrid, reg: MaterialRegistry, cells: &[usiz
         let mut temp = t;
         if phase == Phase::Solid && t > def.melting_point {
             next = match id {
+                // Only ice/snow melt. Stone/dirt are terrain — must never dissolve.
                 ICE | SNOW => WATER,
-                crate::material::STONE | crate::material::DIRT => WATER,
                 _ => id,
             };
             if next != id {
@@ -1184,5 +1184,56 @@ mod tests {
         g.set_with_temp(0, 0, 0, OIL, -10);
         step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
         assert_eq!(g.get(0, 0, 0), OIL);
+    }
+
+    /// Terrain materials (STONE, DIRT, GRASS) must never dissolve into WATER
+    /// regardless of how many CA ticks run. Regression test for the bug where
+    /// STONE | DIRT => WATER in phase_transition_pass eroded terrain over time.
+    #[test]
+    fn terrain_materials_never_dissolve() {
+        use crate::material::{DIRT, PACKED_DIRT};
+        let mut g = CaGrid::new([4, 4, 4]);
+        for x in 0..4 {
+            for y in 0..4 {
+                for z in 0..4 {
+                    let mat = match (x + y + z) % 3 {
+                        0 => STONE,
+                        1 => DIRT,
+                        _ => PACKED_DIRT,
+                    };
+                    g.set_with_temp(x, y, z, mat, 20);
+                }
+            }
+        }
+        let stone_before = count(&g, STONE);
+        let dirt_before = count(&g, DIRT);
+        let packed_before = count(&g, PACKED_DIRT);
+
+        step_n_with_config(&mut g, reg(), 50, BoundaryConfig::closed(), 0);
+
+        assert_eq!(count(&g, STONE), stone_before, "STONE dissolved");
+        assert_eq!(count(&g, DIRT), dirt_before, "DIRT dissolved");
+        assert_eq!(count(&g, PACKED_DIRT), packed_before, "PACKED_DIRT dissolved");
+        assert_eq!(count(&g, WATER), 0, "unexpected WATER in solid terrain");
+    }
+
+    /// ICE must melt to a fluid (WATER or STEAM) — never stay as ICE or become terrain.
+    /// Uses a temperature just above melting but below boiling to target WATER.
+    #[test]
+    fn ice_melts_to_fluid_when_hot() {
+        use crate::material::ICE;
+        let registry = reg();
+        let ice_def = registry.get(ICE).unwrap();
+        // Temperature: above melting point but below boiling point of water
+        let temp = ice_def.melting_point + 1;
+        let mut g = CaGrid::new([1, 1, 1]);
+        g.set_with_temp(0, 0, 0, ICE, temp);
+        step_n_with_config(&mut g, reg(), 10, BoundaryConfig::closed(), 0);
+        let result = g.get(0, 0, 0);
+        assert!(
+            result == WATER || result == STEAM,
+            "ICE at temp={temp} should melt to WATER or STEAM, got {result:?}"
+        );
+        assert_ne!(result, ICE, "ICE should not remain frozen above melting point");
     }
 }

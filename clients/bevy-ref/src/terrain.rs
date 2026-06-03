@@ -192,8 +192,10 @@ fn continental_mask(nx: f32, nz: f32) -> f32 {
     let sx = nx + warp * ax;
     let sz = nz + warp * az;
     let c = fbm(sx * 3.0, sz * 3.0, 6, 2.0, 0.5, SEED ^ 0xC3);
-    // Sea-level threshold tuned for ~55-65% land before the edge taper.
-    let mut m = c - 0.46;
+    // Sea-level threshold. The fbm output sits lower than a flat 0.5 mean, so the
+    // old 0.46 cut left only ~27% land (measured); 0.36 restores a balanced
+    // land/ocean split in the [0.4, 0.8] target band.
+    let mut m = c - 0.36;
     // Gentle ocean taper in the outermost ~8% (clean border).
     let edge = edge_falloff(nx, nz);
     m -= (1.0 - edge) * 0.6;

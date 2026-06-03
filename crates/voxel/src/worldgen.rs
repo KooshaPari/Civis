@@ -30,18 +30,25 @@ pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize 
     let dx = dims[0].max(1);
     let dz = dims[2].max(1);
     let sea = dims[1] as f64 * 0.40;
-    // Land sits a little above sea; hills rise from there.
-    let base = dims[1] as f64 * 0.50;
+    // Base sits a touch BELOW sea level so that low-relief regions form genuine
+    // interior lakes/seas (water fills above the seabed up to sea level), while
+    // hills still rise well above it. Previously base (0.50H) was above sea and
+    // relief was all-positive, so the surface was ALWAYS >= sea and almost no
+    // water ever generated — the "lack of visible water" bug.
+    let base = dims[1] as f64 * 0.36;
     let u = x as f64 / dx as f64;
     let v = z as f64 / dz as f64;
     let noise = fbm2(seed, u * TERRAIN_FREQ, v * TERRAIN_FREQ);
-    // Bias noise to [0,1]-ish positive relief so hills rise more than they pit.
-    let relief = (noise * 0.5 + 0.5).clamp(0.0, 1.0);
-    let amplitude = (dims[1] as f64 * 0.38).max(2.0);
+    // Signed relief in ~[-1, 1]: valleys dip below base (and below sea -> water),
+    // hills rise above it, so coasts and basins emerge across the interior.
+    let relief = noise.clamp(-1.0, 1.0);
+    let amplitude = (dims[1] as f64 * 0.34).max(2.0);
     let land = base + relief * amplitude;
-    // Radial falloff (1 at centre -> 0 at edges) so coastlines slope into the sea.
+    // Radial falloff (1 at centre -> 0 at edges) drags elevation toward a sub-sea
+    // floor at the boundary so the world is ringed by ocean, not a cliff.
     let falloff = edge_falloff(u, v);
-    let height = sea + (land - sea) * falloff;
+    let edge_floor = dims[1] as f64 * 0.30; // below sea -> boundary ocean
+    let height = edge_floor + (land - edge_floor) * falloff;
     let max_surface = (dims[1] as f64 * 0.92).max(2.0);
     height.clamp(2.0, max_surface) as usize
 }
@@ -105,7 +112,10 @@ fn cell_material(
     if soil >= 2 && y + 2 == surface {
         return DIRT;
     }
-    if y <= sea {
+    // Only fill with water if this cell is above the terrain surface AND below sea
+    // level. Columns where surface >= sea get no water — prevents flat blue slabs
+    // floating over elevated terrain.
+    if y > surface && y <= sea {
         return WATER;
     }
     AIR
@@ -233,6 +243,76 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    /// #16 measurement: worldgen must EMIT a meaningful amount of WATER (the sloped
+    /// coastlines + sea fill). Locks in that water exists to be rendered, with a
+    /// printed count so the absolute number is visible in test output.
+    #[test]
+    /// Water must only appear in columns where terrain surface is below sea level.
+    /// Regression test for the flat-blue-slab bug where water filled all y<=sea
+    /// regardless of terrain height, producing water planes over elevated land.
+    #[test]
+    fn water_only_fills_depressions() {
+        let dims = [64usize, 32, 64];
+        let seed = 42u64;
+        let w = generate(dims, seed);
+        let sea = dims[1].saturating_mul(40) / 100;
+        let mut violations = 0usize;
+        for z in 0..dims[2] {
+            for x in 0..dims[0] {
+                let surface = surface_height(dims, seed, x, z);
+                if surface >= sea {
+                    // Column is above sea — must have no WATER cells at all
+                    for y in 0..dims[1] {
+                        if w.cells[index(dims, x, y, z)] == WATER {
+                            violations += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(violations, 0,
+            "found {violations} WATER cells in above-sea columns (flat-slab regression)");
+    }
+
+    #[test]
+    fn worldgen_emits_water() {
+        let w = generate([96, 64, 96], 7);
+        let water = w.cells.iter().filter(|c| **c == WATER).count();
+        let total = w.cells.len();
+        println!(
+            "[worldgen] WATER voxels = {water} / {total} ({:.1}%)",
+            100.0 * water as f64 / total as f64
+        );
+        assert!(water > 0, "worldgen emitted no WATER voxels");
+        // Sloped coasts + sea level should fill a non-trivial fraction.
+        assert!(
+            water > total / 1000,
+            "expected meaningful water coverage, got {water}/{total}"
+        );
+    }
+
+    /// surface_height relief invariant (#4 worldgen): the heightmap must VARY across
+    /// the map (rolling hills, not a flat plateau) and be deterministic per seed.
+    #[test]
+    fn surface_height_has_relief_and_is_deterministic() {
+        let d = [96, 64, 96];
+        let mut min_h = usize::MAX;
+        let mut max_h = 0usize;
+        for z in (0..d[2]).step_by(4) {
+            for x in (0..d[0]).step_by(4) {
+                let h = surface_height(d, 11, x, z);
+                min_h = min_h.min(h);
+                max_h = max_h.max(h);
+                // determinism: same (seed,x,z) -> same height.
+                assert_eq!(h, surface_height(d, 11, x, z));
+            }
+        }
+        println!("[worldgen] surface_height range = {min_h}..={max_h} (relief = {})", max_h - min_h);
+        assert!(max_h > min_h, "surface is flat — no relief (min={min_h} max={max_h})");
+        // Meaningful relief, not a 1-voxel ripple, relative to the 64-tall world.
+        assert!(max_h - min_h >= 6, "relief too small: {}", max_h - min_h);
+    }
+
     #[test]
     fn different_seed_differs() {
         let a = generate(dims(), 1);
@@ -284,6 +364,52 @@ mod tests {
             }
         }
         assert!(water_found);
+    }
+
+    /// Measured guard for the "lack of visible water" bug: water must be a
+    /// meaningful fraction of the world, not a 1-voxel edge sliver. Averaged over
+    /// several seeds so it does not hinge on one lucky map.
+    #[test]
+    fn water_is_a_meaningful_fraction_of_the_world() {
+        let mut total_water = 0usize;
+        let mut total_non_air = 0usize;
+        for seed in [1u64, 7, 19, 101, 4242] {
+            let w = generate(dims(), seed);
+            for &m in &w.cells {
+                if m != AIR {
+                    total_non_air += 1;
+                    if m == WATER {
+                        total_water += 1;
+                    }
+                }
+            }
+        }
+        let frac = total_water as f64 / total_non_air.max(1) as f64;
+        assert!(
+            frac > 0.05,
+            "water is only {:.1}% of solid cells — worldgen barely floods (lack-of-visible-water regression)",
+            frac * 100.0
+        );
+    }
+
+    /// Water must have an exposed surface (AIR directly above some water cell) so
+    /// it actually renders as a visible water plane, not a buried pocket.
+    #[test]
+    fn water_has_an_exposed_surface() {
+        let w = generate(dims(), 19);
+        let mut exposed = false;
+        for z in 0..w.dims[2] {
+            for y in 0..w.dims[1].saturating_sub(1) {
+                for x in 0..w.dims[0] {
+                    if w.cells[index(w.dims, x, y, z)] == WATER
+                        && w.cells[index(w.dims, x, y + 1, z)] == AIR
+                    {
+                        exposed = true;
+                    }
+                }
+            }
+        }
+        assert!(exposed, "no water cell has AIR above it — water is fully buried (invisible)");
     }
 
     #[test]

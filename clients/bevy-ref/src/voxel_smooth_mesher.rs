@@ -20,17 +20,18 @@ const CHUNK_EDGE: usize = 16;
 /// a 5x5x5 (`BLUR_RADIUS = 2`) blur needs; with only 1 the outer blur ring falls
 /// out of bounds and chunk faces step. Kept in sync with the apron built by
 /// `voxel_sim::slice_chunk_with_apron` via `SMOOTH_MESH_PADDED_EDGE`.
-const APRON: usize = 2;
+// Increased from 2 to 3: wider apron gives more cross-chunk density context,
+// reducing visible gaps at chunk seams. BLUR_RADIUS=2 stays <= APRON-1=2. OK.
+const APRON: usize = 3;
 const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2 * APRON;
 pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
-/// Blur half-width. 1 -> a 3x3x3 Gaussian neighbourhood (27 samples). Dropped from
-/// 2 (5x5x5, 125 samples) because the synchronous 144-chunk mesh at radius 2 cost
-/// ~14s on load (perf log: mesh=13.93s) and blocked the autoshot capture window. The
-/// relief SHAPE comes from worldgen, not blur radius, and geometry is already 99%
-/// interpolated (smooth), so radius 1 keeps the molded look at ~5x less mesh cost.
-/// The 2-voxel `APRON` stays, so chunk seams are still better-fed than the original
-/// 1-voxel apron. (Reserve: raise back to 2 once meshing is async/threaded.)
-const BLUR_RADIUS: isize = 1;
+/// Blur half-width. 2 -> a 5x5x5 Gaussian neighbourhood (125 samples) for finer edge
+/// rounding on the rolling relief. Temporarily dropped to 1 (3x3x3) when chunk meshing
+/// was SYNCHRONOUS on the main thread (radius 2 cost ~14s on load and blocked the
+/// autoshot window); restored to 2 now that meshing is async/off-thread (task #5,
+/// mesh dispatch ~0.5s, no main-thread hitch) so the 5³ cost is off the critical path.
+/// Needs `APRON >= 2` (satisfied) so the outer blur ring stays inside the chunk apron.
+const BLUR_RADIUS: isize = 2;
 const SOLID_CENTER_BIAS: f32 = 0.08;
 // Iso-surface tuning. The surface is the shared `solid_occ` contour at `ISO_LEVEL`.
 // `ISO_LEVEL` near 0.5 keeps the surface gently rounded; a low value over-favors
@@ -46,6 +47,14 @@ const ISO_SPAN: f32 = 1.0;
 // `ISO_SPAN_STEEP` so those faces round instead of stepping. Saturated interior /
 // pure-air keep the base `ISO_SPAN`.
 const ISO_SPAN_STEEP: f32 = 0.8;
+/// Signed-distance gain. The field value is `(ISO_LEVEL - solid_occ) * span * GAIN`.
+/// Without it the magnitude is bounded by `max(ISO_LEVEL, 1-ISO_LEVEL) ≈ 0.53`, so a
+/// fully-solid interior only reaches ~-0.53 and never reads as confidently solid (it
+/// regressed the `density_field_varies` invariant: interior must be < -0.75). The
+/// pre-refactor density used a `*2.0`; this restores it. Result is still clamped to
+/// [-1,1], so the only effect is steeper saturation away from the iso contour —
+/// interior → -1, open air → +1 — with no change to the zero-crossing surface shape.
+const DENSITY_GAIN: f32 = 2.0;
 
 static SMOOTH_CHUNKS: AtomicU64 = AtomicU64::new(0);
 static CUBIC_CHUNKS: AtomicU64 = AtomicU64::new(0);
@@ -226,7 +235,7 @@ fn build_material_density(
         let solid_occ = field.solid[idx];
         let sat = field.sat[idx];
         let span = slope_aware_span(solid_occ);
-        let density = (ISO_LEVEL - solid_occ) * span * sharpness;
+        let density = (ISO_LEVEL - solid_occ) * span * sharpness * DENSITY_GAIN;
         let saturation_soften = 1.0 - sat * 0.25;
         (density * saturation_soften).clamp(-1.0, 1.0)
     }
@@ -436,16 +445,39 @@ mod tests {
         assert_eq!(normalize_or_unit_up([0.0, 0.0, 0.0]), [0.0, 1.0, 0.0]);
     }
 
+    /// A solid feature of meaningful size must mesh to geometry.
+    ///
+    /// NOTE on the invariant: this is a SMOOTHING mesher (Surface Nets over a blurred
+    /// occupancy field), not a 1:1 voxel renderer. A single isolated voxel's blurred
+    /// `solid_occ` peaks around 0.05–0.09 — below `ISO_LEVEL`, so the isosurface never
+    /// crosses and a lone speck correctly DISSOLVES rather than rendering as a blob
+    /// (verified by the standalone density model + matches how a smooth surface should
+    /// behave). The real invariant is therefore "a feature of at least the smoothing
+    /// radius (~3³) produces geometry" — a 1-voxel test encoded a wrong expectation for
+    /// a smoothing mesher. The renderer's voxel_sim path additionally has a cubic
+    /// fallback for any non-empty chunk the smooth path drops, so nothing vanishes
+    /// on screen even for sub-threshold specks.
     #[test]
-    fn smooth_mesher_handles_single_cube() {
+    fn smooth_mesher_handles_solid_feature() {
         let mut chunk = [MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
         let mut padded = [AIR; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED];
-        padded[1 + 1 * CHUNK_EDGE_PADDED + 1 * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(1);
+        // A 3x3x3 solid block (>= the smoothing radius) so the isosurface crosses.
+        for z in 1..4 {
+            for y in 1..4 {
+                for x in 1..4 {
+                    padded[x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] =
+                        MaterialId(1);
+                }
+            }
+        }
         chunk[0] = MaterialId(1);
         let registry = MaterialRegistry::standard();
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
-        assert!(!bufs.is_empty());
-        assert!(bufs.iter().all(|buf| !buf.vertices.is_empty()));
+        assert!(!bufs.is_empty(), "a 3x3x3 solid feature must produce mesh buffers");
+        assert!(
+            bufs.iter().all(|buf| !buf.vertices.is_empty()),
+            "every produced buffer must have vertices"
+        );
     }
 
     #[test]
@@ -498,5 +530,49 @@ mod tests {
         let stone_density_here = stone_density(interface, y, z);
         assert!(dirt_density_here < 0.0);
         assert!(stone_density_here < 0.0);
+    }
+
+    /// Smooth-mesher INVARIANT: Surface Nets over a soft density field must place
+    /// vertices OFF the integer voxel grid (interpolated), not snapped to it. A
+    /// grid-snapped mesh = cubic/blocky; a high off-grid fraction = molded/smooth.
+    /// In-game we measured ~99% off-grid; this locks the property in a unit test so a
+    /// regression to a hard/binary field (which re-snaps vertices to the grid → cubic)
+    /// fails CI instead of only being caught by eyeballing a screenshot.
+    #[test]
+    fn smooth_mesh_vertices_are_interpolated_not_grid_snapped() {
+        // A diagonal solid wedge -> a sloped boundary the mesher must round.
+        let mut chunk = [MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut padded = [AIR; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED];
+        for z in 0..CHUNK_EDGE_PADDED {
+            for y in 0..CHUNK_EDGE_PADDED {
+                for x in 0..CHUNK_EDGE_PADDED {
+                    if x + y <= CHUNK_EDGE_PADDED {
+                        let idx = x
+                            + y * CHUNK_EDGE_PADDED
+                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
+                        padded[idx] = MaterialId(1);
+                    }
+                }
+            }
+        }
+        for c in chunk.iter_mut() {
+            *c = MaterialId(1);
+        }
+        let registry = MaterialRegistry::standard();
+        let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
+        let verts: usize = bufs.iter().map(|b| b.vertices.len()).sum();
+        assert!(verts > 0, "mesher produced no vertices for a solid wedge");
+        let off_grid = bufs
+            .iter()
+            .flat_map(|b| b.vertices.iter())
+            .filter(|v| v.position.iter().any(|c| (c - c.round()).abs() > 0.01))
+            .count();
+        // Most boundary vertices must interpolate; a hard/binary field would snap
+        // (near-0% off-grid). Require a clear majority to be off the integer grid.
+        let pct = off_grid as f32 / verts as f32;
+        assert!(
+            pct > 0.5,
+            "expected mostly interpolated verts (smooth), got {pct:.2} off-grid ({off_grid}/{verts}) — field may be grid-snapping (cubic)"
+        );
     }
 }

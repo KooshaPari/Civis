@@ -105,8 +105,14 @@ fn main() {
     app.add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin);
 
     // 2D procedural/SVG alternate map view (M key + far-zoom auto-engage).
+    // Normally suppressed under autoshot (the far-zoom auto-engage could flip the
+    // headless 3D capture into map mode), but MUST be present when we explicitly
+    // ask to capture the map via CIVIS_MAP_OPEN=1 — otherwise the plugin (and its
+    // draw_map_view system) never exists and the map can't open in the frame.
     #[cfg(feature = "egui")]
-    if std::env::var("CIVIS_AUTOSHOT").is_err() {
+    if std::env::var("CIVIS_AUTOSHOT").is_err()
+        || std::env::var("CIVIS_MAP_OPEN").as_deref() == Ok("1")
+    {
         app.add_plugins(civ_bevy_ref::map2d::Map2dPlugin);
     }
 

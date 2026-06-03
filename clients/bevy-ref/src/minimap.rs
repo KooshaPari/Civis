@@ -109,6 +109,7 @@ fn sync_minimap_visibility(
     for mut vis in &mut root {
         if *vis != want {
             *vis = want;
+            info!("[minimap] visibility -> {:?} (mode={:?})", want, *mode);
         }
     }
 }
@@ -198,7 +199,7 @@ fn setup_minimap(
 ) {
     let terrain_tex = build_terrain_texture(&mut images);
 
-    commands
+    let root = commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
@@ -273,7 +274,15 @@ fn setup_minimap(
                 MinimapViewport,
                 FocusPolicy::Pass,
             ));
-        });
+        })
+        .id();
+    // Diagnostic: prove the holocron minimap root node spawned at the expected
+    // size + anchor so a headless capture can confirm it exists (vs hidden /
+    // zero-size / behind the 3D).
+    info!(
+        "[minimap] spawned root={:?} size={}px inset={}px anchor=bottom-right",
+        root, MINIMAP_SIZE, MINIMAP_INSET
+    );
 }
 
 fn world_to_minimap_uv(position: Vec3) -> Vec2 {

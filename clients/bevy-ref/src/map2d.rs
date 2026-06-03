@@ -93,6 +93,10 @@ impl Plugin for Map2dPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MapView>()
             .init_resource::<MapBasemap>()
+            // Chained so the autoshot hook re-asserts `active` BEFORE
+            // auto_engage_from_zoom runs (which clears manual_override every
+            // frame at close camera distances). Unordered, auto-engage could win
+            // the race and the map would never open under CIVIS_MAP_OPEN.
             .add_systems(
                 Update,
                 (
@@ -100,7 +104,8 @@ impl Plugin for Map2dPlugin {
                     toggle_map_hotkey,
                     auto_engage_from_zoom,
                     tick_fade,
-                ),
+                )
+                    .chain(),
             )
             .add_systems(
                 EguiPrimaryContextPass,
@@ -140,6 +145,12 @@ fn open_map_for_autoshot(mut view: ResMut<MapView>, mut enabled: Local<Option<bo
     if on {
         view.active = true;
         view.manual_override = true;
+        // Diagnostic: prove the plugin is scheduled and the flags/fade ramp so a
+        // headless capture can confirm WHY the 2D map does or doesn't appear.
+        info!(
+            "[map] open_map_for_autoshot: active={} fade={:.3} override={}",
+            view.active, view.fade, view.manual_override
+        );
     }
 }
 

@@ -243,6 +243,21 @@ impl Default for MaterialPaletteOpen {
     }
 }
 
+/// Verification hook: when `CIVIS_BRUSH_CLOSED=1` is set, keep the Material
+/// Brush panel closed so a headless autoshot can frame the bottom-right holocron
+/// minimap (which the right-anchored brush Window would otherwise overlap).
+///
+/// Runs every frame (env read once via a `Local` cache) so the panel stays
+/// closed through the whole warm-up regardless of HUD toggles.
+fn close_brush_for_autoshot(mut open: ResMut<MaterialPaletteOpen>, mut enabled: Local<Option<bool>>) {
+    let on = *enabled.get_or_insert_with(|| {
+        std::env::var("CIVIS_BRUSH_CLOSED").as_deref() == Ok("1")
+    });
+    if on {
+        open.0 = false;
+    }
+}
+
 /// Material brush palette + voxel paint plugin.
 pub struct MaterialBrushPlugin;
 
@@ -251,7 +266,7 @@ impl Plugin for MaterialBrushPlugin {
         app.init_resource::<SelectedMaterial>()
             .init_resource::<MaterialPaintArmed>()
             .init_resource::<MaterialPaletteOpen>()
-            .add_systems(Update, sync_paint_armed_from_tool)
+            .add_systems(Update, (sync_paint_armed_from_tool, close_brush_for_autoshot))
             // egui draw MUST run on EguiPrimaryContextPass — on Update the egui
             // context has no fonts yet and panics ("No fonts available").
             .add_systems(
@@ -436,7 +451,10 @@ fn material_palette_panel(
         .frame(ui_theme::liquid_glass_frame(egui::Margin::same(12), ui_theme::RADIUS_PANEL))
         .resizable(false)
         .default_width(248.0)
-        .anchor(egui::Align2::RIGHT_CENTER, egui::vec2(-12.0, 0.0))
+        // Top-right (was RIGHT_CENTER): keeps the brush clear of the bottom-right
+        // holocron map (MINIMAP_SIZE=360) so the enlarged map is never occluded.
+        // The y-offset drops it below the top-center stat cluster.
+        .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 86.0))
         .show(ctx, |ui| {
             palette_panel_body(ui, active_name, armed.0, &shelves, &mut selected);
             ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);

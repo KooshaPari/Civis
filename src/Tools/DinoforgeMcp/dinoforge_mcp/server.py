@@ -1898,9 +1898,22 @@ async def game_navigate_route(request: Request):
     """REST shim: POST /game/navigate  body: {"state":"gameplay"}"""
     body = await request.json()
     state = body.get("state", "gameplay")
+    # Primary: check via pipe bridge
     result = _run_game_cli("status")
-    # Running may be nested in parsed JSON string inside 'raw'
     running = result.get("Running") or ('"Running":true' in result.get("raw", ""))
+    # Fallback: process-based check (pipe is unavailable on main menu)
+    if not running:
+        import subprocess as _sp
+        try:
+            ps_out = _sp.check_output(
+                ["powershell.exe", "-Command",
+                 "Get-Process -Name 'Diplomacy is Not an Option' -ErrorAction SilentlyContinue | "
+                 "Select-Object -First 1 -ExpandProperty Id"],
+                timeout=5, text=True
+            ).strip()
+            running = bool(ps_out and ps_out.isdigit())
+        except Exception:
+            pass
     if not running:
         return JSONResponse({"success": False, "error": "Game not running"})
     if state == "gameplay":

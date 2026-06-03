@@ -543,7 +543,7 @@ namespace DINOForge.Runtime.Bridge
             }
 
             EntityQuery query = em.CreateEntityQuery(
-                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.Default });
+                new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
             // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
@@ -574,6 +574,9 @@ namespace DINOForge.Runtime.Bridge
             // non-generic, arity=2, first param Entity, second param ComponentType.
             // Mono 4.x type-identity bug: typeof(Entity) != param.ParameterType across assembly
             // boundaries. Use FullName string comparison instead of reference equality.
+            // Unity 2021.3 EntityManager has GetSharedComponentData(Entity, int typeIndex)
+            // as the only non-generic 2-parameter overload — NOT (Entity, ComponentType).
+            // We must pass ComponentType.TypeIndex (int) as the argument.
             MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethods(
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(m =>
@@ -703,16 +706,19 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            // If no mapping exists yet, we are in DIAGNOSTIC MODE — skip actual swaps.
-            if (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0)
+            // If no mapping exists for this bundle, proceed with NO mesh-name filter.
+            // The vanillaMapping archetype component filter (EntityQuery) already scopes the
+            // candidate set to the right unit type — an additional mesh-name filter is only
+            // needed when one bundle must target a strict subset of that archetype.
+            // Logging here is intentional: surfaces which bundles are running unfiltered so
+            // an operator can later populate BundleToVanillaMeshMap for tighter targeting.
+            bool meshFilterActive = targetMeshSubstrings != null && targetMeshSubstrings.Length > 0;
+            if (!meshFilterActive)
             {
                 DebugLog.Write("AssetSwap",
-                    $"[DIAGNOSTIC MODE] No BundleToVanillaMeshMap entry for bundle '{bundleFileName}'. " +
-                    $"Skipping entity swap for {entities.Length} entities. " +
-                    $"Check dinoforge_debug.log for '[DIAGNOSTIC] Vanilla mesh name survey' to build the mapping.");
-                entities.Dispose();
-                query.Dispose();
-                return false;
+                    $"[SWAP] No BundleToVanillaMeshMap entry for bundle '{bundleFileName}'. " +
+                    $"Proceeding with no mesh-name filter — will swap all {entities.Length} entities " +
+                    $"matching vanillaMapping archetype. Add an entry to BundleToVanillaMeshMap for finer targeting.");
             }
 
             int swapCount = 0;
@@ -753,8 +759,13 @@ namespace DINOForge.Runtime.Bridge
                     }
 
                     // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
+                    // Unity 2021.3 EntityManager exposes (Entity, int typeIndex) not (Entity, ComponentType).
+                    // If the resolved overload takes int, pass TypeIndex; otherwise pass ComponentType directly.
+                    object getSharedArg = (getSharedNonGeneric.GetParameters()[1].ParameterType == typeof(int))
+                        ? (object)renderMeshComponentType.TypeIndex
+                        : (object)renderMeshComponentType;
                     object? renderMesh = getSharedNonGeneric.Invoke(
-                        em, new object[] { entity, renderMeshComponentType });
+                        em, new object[] { entity, getSharedArg });
                     if (renderMesh == null)
                     {
                         skippedNoMatch++;
@@ -763,15 +774,15 @@ namespace DINOForge.Runtime.Bridge
                         continue;
                     }
 
-                    // ---- Selective mesh-name check ----
-                    if (meshField != null)
+                    // ---- Selective mesh-name check (only when BundleToVanillaMeshMap has an entry) ----
+                    if (meshFilterActive && meshField != null)
                     {
                         object? currentMeshObj = meshField.GetValue(renderMesh);
                         if (currentMeshObj is Mesh currentMesh && currentMesh != null)
                         {
                             string currentName = currentMesh.name ?? "";
                             bool nameMatches = false;
-                            for (int s = 0; s < targetMeshSubstrings.Length; s++)
+                            for (int s = 0; s < targetMeshSubstrings!.Length; s++)
                             {
                                 if (currentName.IndexOf(targetMeshSubstrings[s], StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
@@ -1045,6 +1056,40 @@ namespace DINOForge.Runtime.Bridge
 
             _resolvedTypeCache[typeName] = found;
             return found;
+        }
+
+        /// <summary>
+        /// Fallback bundle discovery: scans all deployed packs under
+        /// <c>&lt;BepInEx&gt;/dinoforge_packs/</c> for a bundle file whose name matches
+        /// <paramref name="assetAddress"/> (the standard pack layout is
+        /// <c>&lt;packDir&gt;/assets/bundles/&lt;assetAddress&gt;</c>).
+        /// Returns the full path of the first match, or <see cref="string.Empty"/> if none found.
+        /// Called only when <c>ModBundlePath</c> is null/empty on the registered swap request.
+        /// </summary>
+        private static string FindBundleInPacksDir(string assetAddress)
+        {
+            if (string.IsNullOrEmpty(assetAddress))
+                return string.Empty;
+
+            try
+            {
+                string packsRoot = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                if (!Directory.Exists(packsRoot))
+                    return string.Empty;
+
+                foreach (string packDir in Directory.GetDirectories(packsRoot))
+                {
+                    string candidate = Path.Combine(packDir, "assets", "bundles", assetAddress);
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+            }
+            catch
+            {
+                // Best-effort: filesystem errors during scan are non-fatal.
+            }
+
+            return string.Empty;
         }
 
         /// <summary>

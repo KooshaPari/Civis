@@ -317,6 +317,18 @@ namespace DINOForge.Runtime
                 NeedsDeferredResurrection = true;
                 DebugLog.Write("Plugin", "[Plugin] Resurrection complete via activeSceneChanged (flagged for deferred TryResurrect)");
             }
+            // Re-arm the MainMenuThemer retry loop when the MainMenu scene becomes active.
+            // The canvas takes ~37s to appear, far beyond the original 30-frame window.
+            // Resetting here ensures the pump loop retries from frame 0 for each MainMenu entry.
+            if (newScene.name != null && newScene.name.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                RuntimeDriver? driver = PersistentRoot?.GetComponent<RuntimeDriver>();
+                if (driver != null)
+                {
+                    driver.RearmThemer();
+                }
+                DebugLog.Write("Plugin", "[Plugin] OnActiveSceneChanged: MainMenu detected — MainMenuThemer re-armed");
+            }
         }
 
         /// <summary>
@@ -910,6 +922,19 @@ namespace DINOForge.Runtime
         // had at least one frame to run its Start().
         internal bool _uguiChecked;
 
+        // Theme retry counter — promoted from local so RearmThemer() can reset it.
+        private int _themeRetryCount = 0;
+
+        /// <summary>
+        /// Resets the MainMenuThemer retry counter so the pump loop retries from frame 0.
+        /// Called on every MainMenu scene activation so the themer has a fresh window to apply.
+        /// </summary>
+        internal void RearmThemer()
+        {
+            _themeRetryCount = 0;
+            DebugLog.Write("Plugin", "[RuntimeDriver] RearmThemer: theme retry counter reset");
+        }
+
         /// <summary>
         /// Registers KeyInputSystem in the given ECS world if not already registered.
         /// Called every poll cycle to ensure the pump survives scene transitions.
@@ -1413,11 +1438,10 @@ namespace DINOForge.Runtime
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
 
             // Pump deferred work on the main thread until destruction.
-            int _themeRetryCount = 0;
             while (!_destroyed)
             {
                 // Retry MainMenuThemer if canvas wasn't ready during Step 7
-                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 30)
+                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 600)
                 {
                     _themeRetryCount++;
                     if (_themeRetryCount % 5 == 0) // every ~5 frames

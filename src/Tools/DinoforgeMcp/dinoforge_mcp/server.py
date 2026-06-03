@@ -157,7 +157,7 @@ def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True, pipe_
     if pipe_name:
         cmd.extend(["--pipe-name", pipe_name])
 
-    cmd.extend([*args, "--format=json"])
+    cmd.extend(["--format=json", *args])
 
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=REPO_ROOT)

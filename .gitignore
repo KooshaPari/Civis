@@ -144,3 +144,6 @@ push-wave*.log
 myeasylog.log
 # #560: Generated PR body templates — drafted before push, not commit content.
 .git-pr-body-*.md
+
+# Stray worktree artifact directories at repo root (agent worktree copy artifacts)
+UserskooshDino.*

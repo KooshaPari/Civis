@@ -653,10 +653,13 @@ namespace DINOForge.Runtime
                 var ls = UI.LoadingScreenController.Instance;
                 if (ls != null)
                 {
-                    if (newScene.name == "InitialGameLoader" || string.IsNullOrEmpty(oldScene.name))
-                        ls.EnsureVisible();
-                    else if (newScene.name == "MainMenu")
+                    // EPIC-027 fix: check MainMenu FIRST so a cold-start transition (oldScene=""→MainMenu)
+                    // triggers BeginFadeOut, not EnsureVisible. The old order hit the "empty oldScene"
+                    // branch first, calling EnsureVisible on the very transition where we need to fade out.
+                    if (newScene.name == "MainMenu")
                         ls.BeginFadeOut();
+                    else if (newScene.name == "InitialGameLoader" || string.IsNullOrEmpty(oldScene.name))
+                        ls.EnsureVisible();
                 }
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged LoadingScreen toggle failed (non-fatal): {ex.Message}"); }

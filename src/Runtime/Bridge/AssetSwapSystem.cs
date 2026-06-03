@@ -88,10 +88,42 @@ namespace DINOForge.Runtime.Bridge
         private static readonly Dictionary<string, string[]> BundleToVanillaMeshMap =
             new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                // Populated after diagnostic run identifies vanilla mesh names.
-                // Examples (to be filled in after reading the diagnostic log):
-                // { "clone-trooper",  new[] { "Swordsman", "soldier", "melee" } },
-                // { "clone-barracks", new[] { "Barracks", "barracks" } },
+                // Derived from DINO vanilla mesh survey (iter-153, 2026-06-03).
+                // Keys are substrings of bundle filenames; values are substrings of vanilla mesh names.
+                // Infantry / melee units (royal_sword_1=1686, royal_spear=657, royal_tough_guy=636 etc)
+                { "b1-battle-droid",      new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "b2-super-droid",       new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "bx-commando",          new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "commando-droid",       new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "clone-trooper",        new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "clone-heavy",          new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "clone-medic",          new[] { "royal_sword", "royal_spear", "royal_shortsword" } },
+                { "clone-militia",        new[] { "royal_sword", "royal_spear", "royal_shortsword" } },
+                { "clone-commander",      new[] { "royal_ban", "royal_horseman" } },
+                { "clone-engineer",       new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "clone-jet",            new[] { "royal_spear", "royal_horseman" } },
+                { "clone-mortar",         new[] { "royal_spear", "royal_tough" } },
+                { "clone-pilot",          new[] { "royal_horseman_spear", "royal_horseman_sword" } },
+                { "arc-trooper",          new[] { "royal_ban", "royal_horseman" } },
+                { "cis-droideka",         new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "cis-magna",            new[] { "royal_ban", "royal_horseman" } },
+                { "cis-spider",           new[] { "royal_tough_guy", "royal_horseman" } },
+                { "general-grievous",     new[] { "royal_ban", "royal_horseman" } },
+                { "jedi",                 new[] { "royal_ban", "royal_horseman" } },
+                { "sniper-droid",         new[] { "royal_spear", "royal_tough" } },
+                { "octuptarra",           new[] { "royal_tough_guy", "royal_horseman" } },
+                { "probe-droid",          new[] { "royal_spear", "royal_shortsword" } },
+                { "grapple-droid",        new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "rocket-droid",         new[] { "royal_spear", "royal_tough" } },
+                // Aerial units — matched by aerial archetype filter; no mesh substrings needed
+                // Building meshes — broad match; archetype filter handles selectivity
+                { "clone-barracks",       new[] { "b1_", "ruins_building", "soul_stone" } },
+                { "assembly-line",        new[] { "b1_", "ruins_building" } },
+                { "weapons-factory",      new[] { "b1_", "ruins_building" } },
+                { "guard-tower",          new[] { "b1_", "ruins_building" } },
+                { "command-center",       new[] { "b1_", "ruins_building" } },
+                { "hangar-bay",           new[] { "b1_", "ruins_building" } },
+                { "cis-aa-tower",         new[] { "b1_", "ruins_building" } },
             };
 
         private static volatile bool _resetPending;

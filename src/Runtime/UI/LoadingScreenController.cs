@@ -105,6 +105,11 @@ namespace DINOForge.Runtime.UI
         // pack-load — that was the reported "fake static skeleton" symptom (BUG B).
         private const float MinVisibleSeconds = 1.5f;
 
+        // Safety-net timeout: if no BeginFadeOut() call arrives within this many seconds, force
+        // a fade anyway. This prevents orphaned loading screens from blocking UI clicks if any
+        // caller path is missed (e.g. OnActiveSceneChanged race, _modPlatform null at RunMainMenuInit).
+        private const float MaxVisibleSeconds = 8f;
+
         /// <summary>Creates the themed loading screen on the given parent (DINOForge_Root).</summary>
         public static LoadingScreenController? Create(GameObject parent, string packsDir, ManualLogSource? log)
         {
@@ -353,6 +358,16 @@ namespace DINOForge.Runtime.UI
                 // Honour a deferred fade-out request once the minimum visible time elapses.
                 if (_fadeRequested && _elapsed >= MinVisibleSeconds)
                 {
+                    StartFadeNow();
+                    break;
+                }
+
+                // Safety-net: force fade after MaxVisibleSeconds even if BeginFadeOut was never called
+                // (guards against scene-event race or _modPlatform null path that skips the fade call).
+                if (_elapsed >= MaxVisibleSeconds)
+                {
+                    DebugLog.Write("LoadingScreen", $"[LoadingScreenController] Safety-net timeout ({MaxVisibleSeconds}s) — forcing fade.");
+                    _log?.LogWarning($"[LoadingScreenController] Safety-net timeout ({MaxVisibleSeconds}s) — forcing fade (BeginFadeOut was never called).");
                     StartFadeNow();
                     break;
                 }

@@ -291,7 +291,7 @@ namespace DINOForge.Runtime.Updates
                 JObject state = new JObject(
                     new JProperty("last_check", DateTime.UtcNow.ToString("O"))
                 );
-                File.WriteAllText(_stateFilePath, state.ToString(Formatting.None),
+                File.WriteAllText(_stateFilePath, JsonConvert.SerializeObject(state),
                     System.Text.Encoding.UTF8);
             }
             catch

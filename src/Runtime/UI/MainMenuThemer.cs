@@ -711,6 +711,71 @@ namespace DINOForge.Runtime
                 }
                 catch (Exception ex) { _log?.LogWarning($"[MainMenuThemer] Font(path) constructor failed: {ex.Message}"); } // pattern-96-ok: diagnostic
 
+                // Strategy 2b: write TTF bytes to a temp file and try Font(tempPath), which
+                // avoids the "no embedded sourceFontFile" problem that causes CreateFontAsset
+                // to return null for fonts loaded via CreateDynamicFontFromOSFont.
+                if (srcFont == null)
+                {
+                    srcFont = TryLoadTTFAsFont(full);
+                }
+
+                // Try CreateFontAsset(Font) for the font loaded via Strategy 2 or 2b before
+                // falling back to the OS font subsystem, since OS-font-based Font objects lack
+                // an embedded sourceFontFile and always cause CreateFontAsset to return null.
+                if (srcFont != null)
+                {
+                    Type? tmpTypeEarly2 = FindType("TMPro.TMP_FontAsset");
+                    if (tmpTypeEarly2 != null)
+                    {
+                        MethodInfo[] earlyOverloads = tmpTypeEarly2
+                            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                            .Where(m => m.Name == "CreateFontAsset"
+                                        && m.GetParameters().Length >= 1
+                                        && m.GetParameters()[0].ParameterType == typeof(Font))
+                            .OrderByDescending(m => m.GetParameters().Length)
+                            .ToArray();
+                        Font capturedFont = srcFont;
+                        foreach (MethodInfo create2 in earlyOverloads)
+                        {
+                            ParameterInfo[] ps2 = create2.GetParameters();
+                            object?[] args2 = new object?[ps2.Length];
+                            args2[0] = capturedFont;
+                            for (int i = 1; i < ps2.Length; i++)
+                            {
+                                ParameterInfo pi2 = ps2[i];
+                                string pn2 = pi2.Name ?? "";
+                                Type pt2 = pi2.ParameterType;
+                                object? val2;
+                                if (pt2 == typeof(int))
+                                {
+                                    if (pn2.IndexOf("samplingPointSize", StringComparison.OrdinalIgnoreCase) >= 0 || pn2.IndexOf("pointSize", StringComparison.OrdinalIgnoreCase) >= 0) val2 = 90;
+                                    else if (pn2.IndexOf("padding", StringComparison.OrdinalIgnoreCase) >= 0) val2 = 9;
+                                    else if (pn2.IndexOf("Width", StringComparison.OrdinalIgnoreCase) >= 0 || pn2.IndexOf("Height", StringComparison.OrdinalIgnoreCase) >= 0) val2 = 1024;
+                                    else val2 = pi2.HasDefaultValue ? pi2.DefaultValue : 0;
+                                }
+                                else if (pt2 == typeof(bool)) val2 = pi2.HasDefaultValue ? pi2.DefaultValue : true;
+                                else if (pt2.IsEnum) val2 = pi2.HasDefaultValue ? pi2.DefaultValue : EnumDefaultByName(pt2, pn2);
+                                else val2 = pi2.HasDefaultValue ? pi2.DefaultValue : (pt2.IsValueType ? Activator.CreateInstance(pt2) : null);
+                                args2[i] = val2;
+                            }
+                            UnityEngine.Object? earlyResult2 = null;
+                            try { earlyResult2 = create2.Invoke(null, args2) as UnityEngine.Object; }
+                            catch (Exception ex2) { _log?.LogWarning($"[MainMenuThemer] CreateFontAsset(Font path/temp, {ps2.Length} args) threw: {ex2.InnerException?.Message ?? ex2.Message}"); } // pattern-96-ok: diagnostic
+                            if (earlyResult2 != null)
+                            {
+                                _log?.LogInfo($"[MainMenuThemer] CreateFontAsset succeeded via Font(path/temp) {ps2.Length}-arg overload"); // pattern-96-ok: diagnostic
+                                UnityEngine.Object.DontDestroyOnLoad(earlyResult2);
+                                _cachedFontAsset = earlyResult2;
+                                _cachedFontKey = full;
+                                return earlyResult2;
+                            }
+                            _log?.LogWarning($"[MainMenuThemer] CreateFontAsset(Font path/temp, {ps2.Length} args) returned null"); // pattern-96-ok: diagnostic
+                        }
+                    }
+                    // Reset srcFont so Strategy 3 can still try OS registration.
+                    srcFont = null;
+                }
+
                 // Strategy 3 (last resort): AddFontResourceEx + CreateDynamicFontFromOSFont.
                 if (srcFont == null)
                 {
@@ -848,6 +913,37 @@ namespace DINOForge.Runtime
                 _log?.LogWarning($"[MainMenuThemer] ApplyFont failed: {ex.Message}"); // pattern-96-ok: diagnostic
             }
             return hits;
+        }
+
+        /// <summary>
+        /// Writes the TTF file to a system temp path and constructs a <see cref="Font"/> from
+        /// that path. Unity's <c>Font(string path)</c> constructor requires the file to exist
+        /// at a stable, extension-bearing path — some Unity builds reject the original pack
+        /// path because it lives inside a subdirectory structure that the Mono file resolver
+        /// treats as a resource bundle. Copying to %TEMP% ensures a plain on-disk path.
+        /// Returns null (never throws) on any failure.
+        /// </summary>
+        private Font? TryLoadTTFAsFont(string ttfPath)
+        {
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(ttfPath);
+                string tempPath = Path.Combine(
+                    Path.GetTempPath(),
+                    "DINOForge_" + Path.GetFileName(ttfPath));
+                File.WriteAllBytes(tempPath, bytes);
+                Font? font = null;
+                try { font = new Font(tempPath); }
+                catch (Exception ex) { _log?.LogWarning($"[MainMenuThemer] TryLoadTTFAsFont Font(tempPath) failed: {ex.Message}"); } // pattern-96-ok: diagnostic
+                if (font != null)
+                    _log?.LogInfo($"[MainMenuThemer] TryLoadTTFAsFont loaded '{ttfPath}' via temp '{tempPath}'"); // pattern-96-ok: diagnostic
+                return font;
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[MainMenuThemer] TryLoadTTFAsFont failed: {ex.Message}"); // pattern-96-ok: diagnostic
+                return null;
+            }
         }
 
         /// <summary>Best-effort enum default for TMP CreateFontAsset params: SDFAA for the
@@ -1331,16 +1427,14 @@ namespace DINOForge.Runtime
         {
             if (string.IsNullOrEmpty(theme.Font)) return 0;
 
-            UnityEngine.Object? fontAsset = LoadPrebuiltFontAsset(pack.Id, theme.Font!, theme.FontAssetName);
+            // Skip AssetBundle path for raw TTF/OTF — LoadFromFile returns null on non-bundle files.
+            string _fontExt = Path.GetExtension(theme.Font!).ToLowerInvariant();
+            bool _isTTF = _fontExt == ".ttf" || _fontExt == ".otf";
+            UnityEngine.Object? fontAsset = _isTTF ? null : LoadPrebuiltFontAsset(pack.Id, theme.Font!, theme.FontAssetName);
             if (fontAsset == null)
             {
-                // Fallback: if font path ends in .ttf or .otf, attempt OS-font-registration path.
-                string fontExt = Path.GetExtension(theme.Font!).ToLowerInvariant();
-                if (fontExt == ".ttf" || fontExt == ".otf")
-                {
-                    _log?.LogInfo($"[MainMenuThemer] Bundle load failed for '{theme.Font}'; trying TTF/OTF OS-font path."); // pattern-96-ok: diagnostic
+                if (_isTTF)
                     fontAsset = TryLoadFontAsset(theme, pack.Id);
-                }
                 if (fontAsset == null)
                 {
                     _log?.LogWarning($"[MainMenuThemer] Prebuilt font '{theme.Font}' not loaded; skipping font apply."); // pattern-96-ok: diagnostic

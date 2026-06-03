@@ -45,7 +45,11 @@ run_gate() {
 echo "==> civis quality manifest (local gates)"
 
 if command -v just >/dev/null 2>&1; then
-  run_gate civis_3d_verify just civis-3d-verify || true
+  if [ "${SKIP_CIVIS_3D_VERIFY:-0}" = "1" ] || [ "${SKIP_QUALITY_MANIFEST:-0}" = "1" ] || [ "${SKIP_QUALITY:-0}" = "1" ]; then
+    record "civis_3d_verify" "skip" "SKIP_CIVIS_3D_VERIFY/SKIP_QUALITY_MANIFEST set"
+  else
+    run_gate civis_3d_verify just civis-3d-verify || true
+  fi
 else
   run_gate rust_fmt cargo fmt --check || true
   run_gate rust_clippy cargo clippy --workspace --all-targets -- -D warnings || true

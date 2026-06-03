@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3065583221
+CRC: 944848254
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 59fbff4981536bf39aac14c629c60ce5
+    Hash: 1107f113d72fd2f75fb1047ef75f74d2
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: e2a11be68d6287ac10b047eee7e3b6d6
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 59fbff4981536bf39aac14c629c60ce5
+    Hash: 1107f113d72fd2f75fb1047ef75f74d2
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,9 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 136
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/CIS/sw-cis-commando-droid-primary.mat
-- Assets/Materials/CIS/sw-cis-commando-droid.mat
-- Assets/Prefabs/CIS/sw-cis-commando-droid.prefab
+- Assets/Prefabs/CIS/sw-bx-commando-droid.prefab
+- Assets/Materials/CIS/sw-bx-commando-droid.mat
 Dependencies: []

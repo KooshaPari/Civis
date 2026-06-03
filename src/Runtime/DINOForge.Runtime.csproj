@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
@@ -27,6 +27,8 @@
 
   <!-- Exclude UGUI-dependent UI files when the game is not installed (no UnityEngine.UIModule.dll) -->
   <ItemGroup Condition="'$(GameInstalled)' != 'true'">
+    <!-- SessionRecorder reads UnityEngine.EventSystems (UI module), only referenced when GameInstalled. -->
+    <Compile Remove="Capture\SessionRecorder.cs" />
     <Compile Remove="UI\DebugPanel.cs" />
     <Compile Remove="UI\DFCanvas.cs" />
     <Compile Remove="UI\DinoForgeStyle.cs" />
@@ -151,6 +153,18 @@
       <Private>false</Private>
     </Reference>
 
+    <!-- URP / SRP Core (DINO ships URP 12.x on Unity 2021.3) — for runtime Volume + -->
+    <!-- post-processing injection (GraphicsMode realistic-gfx feature). NEVER copy these -->
+    <!-- to the plugin output (Private=false); the game already loads them. -->
+    <Reference Include="Unity.RenderPipelines.Core.Runtime">
+      <HintPath>$(ManagedDir)\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.Universal.Runtime">
+      <HintPath>$(ManagedDir)\Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
     <!-- Game DLLs -->
     <!-- Publicize=true: AssemblyPublicizer makes internal game members directly callable, -->
     <!-- eliminating fragile reflection-based access in AssetSwapSystem and EntityQueries. -->
@@ -200,6 +214,7 @@
     <Compile Include="Bridge\VanillaArchetypeMapper.cs" />
     <Compile Include="Bridge\UnitSpawnRequest.cs" />
     <Compile Include="Bridge\PackStatMappings.cs" />
+    <Compile Include="Bridge\BlasterBoltConfig.cs" />
     <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
     <Compile Include="Bridge\SessionHmac.cs" />
   </ItemGroup>
@@ -324,6 +339,25 @@
     <Message Text="[DeployBadgeAssets] No badge PNGs found at assets/badges/ — run scripts/generate-badge-placeholders.ps1 first."
              Importance="normal"
              Condition="'@(BadgePngFiles)' == ''" />
+  </Target>
+
+  <!--
+    [#steam-relaunch] Provision steam_appid.txt beside the game exe on every deploy.
+
+    Without a steam_appid.txt containing the AppID (1272320) next to the exe, DINO
+    re-launches itself through Steam on startup and that Steam relaunch KILLS the
+    BepInEx-injected process — so no MODS button / F9 / F10 (live-verified iter-149).
+    Steam "Verify Integrity of Game Files" can delete this file, so DeployToGame
+    re-creates it idempotently on every deploy.
+
+    The file MUST be UTF-8 with NO BOM and NO trailing newline (exactly 7 bytes).
+    WriteLinesToFile would append a CRLF, so we use PowerShell's File.WriteAllText
+    (no-BOM UTF8 encoding) which writes the literal bytes with no terminator.
+  -->
+  <Target Name="DeploySteamAppId" AfterTargets="Build"
+          Condition="'$(GameInstalled)' == 'true' and '$(DeployToGame)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'">
+    <Exec Command="powershell -NoProfile -NonInteractive -Command &quot;[System.IO.File]::WriteAllText('$(GameInstallPath)\steam_appid.txt', '1272320', (New-Object System.Text.UTF8Encoding $false))&quot;" />
+    <Message Text="[DeploySteamAppId] Wrote steam_appid.txt (1272320) to $(GameInstallPath) — prevents DINO Steam self-relaunch from dropping BepInEx." Importance="high" />
   </Target>
 
   <!-- Deploy packs from repo to game directory -->

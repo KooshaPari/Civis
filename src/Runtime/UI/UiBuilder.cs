@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -224,19 +224,21 @@ namespace DINOForge.Runtime.UI
             string name,
             Vector2 size)
         {
-            // Viewport
-            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(Mask));
+            // Viewport.
+            // Fix (iter-149): use RectMask2D (rect-based clip) instead of the stencil Mask +
+            // transparent Image. A stencil Mask whose graphic is fully transparent can fail to
+            // write a stencil on the game's Mono/Unity build, masking out ALL scroll content —
+            // which left the F9 debug panel body and the F10 pack list blank. RectMask2D clips
+            // purely by rectangle and does not depend on a graphic alpha, so it always works.
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             go.transform.SetParent(parent, false);
 
             RectTransform rt = go.GetComponent<RectTransform>();
             rt.sizeDelta = size;
 
             Image bgImg = go.GetComponent<Image>();
-            bgImg.color = new Color(0f, 0f, 0f, 0f); // transparent, mask needs Image
+            bgImg.color = new Color(0f, 0f, 0f, 0f); // transparent — RectMask2D does the clipping
             bgImg.raycastTarget = true;
-
-            Mask mask = go.GetComponent<Mask>();
-            mask.showMaskGraphic = false;
 
             // Content container
             GameObject content = new GameObject("Content", typeof(RectTransform));

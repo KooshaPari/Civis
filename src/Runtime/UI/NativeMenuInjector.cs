@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Text;
 using BepInEx.Logging;
@@ -47,6 +47,14 @@ namespace DINOForge.Runtime.UI
         /// </summary>
         public static string? RepurposedModsButtonGoName { get; private set; }
 
+        /// <summary>
+        /// True once a "Mods" button has been injected into a native menu AND the injected
+        /// button GameObject is still alive (not destroyed by a scene unload). Read by
+        /// <see cref="RuntimeDriver"/>'s self-healing retry loop to decide whether another
+        /// injection attempt is needed (kills the intermittent "no Mods button" race).
+        /// </summary>
+        public bool IsModsButtonInjected => _injected && _injectedButton != null;
+
         // ------------------------------------------------------------------ //
         // Well-known canvas names to check (case-insensitive prefix/substring)
         // ------------------------------------------------------------------ //
@@ -76,6 +84,15 @@ namespace DINOForge.Runtime.UI
 
         // ── Native mods page (full-screen, settings-style) ──────────────────
         private NativeModsPage? _nativeModsPage;
+
+        // ── Native-style compact QUICK panel (default MODS click) ────────────
+        private NativeQuickModPanel? _quickPanel;
+
+        /// <summary>
+        /// Directory containing &lt;packId&gt;/pack.yaml, used by the quick panel to read the
+        /// active total_conversion ui_theme. Set by RuntimeDriver after initialization.
+        /// </summary>
+        public string? PacksDirectory { get; set; }
 
         /// <summary>
         /// Optional delegate that provides the current pack list for the native mods page.
@@ -200,7 +217,6 @@ namespace DINOForge.Runtime.UI
         }
 
         private int _screenshotCheckFrames;
-        private string? _pendingScreenshotPath;
         private System.DateTime _screenshotRequestedAtUtc = System.DateTime.MinValue;
 
         private void CheckScreenshotRequest()
@@ -211,34 +227,29 @@ namespace DINOForge.Runtime.UI
                 string reqFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_request.txt");
                 string doneFile = System.IO.Path.Combine(bepRoot, "dinoforge_screenshot_done.txt");
 
-                if (_pendingScreenshotPath != null)
-                {
-                    // Wait for Unity to actually write the file before signaling done
-                    var fi = new System.IO.FileInfo(_pendingScreenshotPath);
-                    fi.Refresh();
-                    if (fi.Exists && fi.Length > 1000 && fi.LastWriteTimeUtc > _screenshotRequestedAtUtc)
-                    {
-                        System.IO.File.WriteAllText(doneFile, _pendingScreenshotPath, Encoding.UTF8);
-                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] done (verified {fi.Length} bytes): {_pendingScreenshotPath}");
-                        _pendingScreenshotPath = null;
-                    }
-                    else
-                    {
-                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] pending, file not ready: {_pendingScreenshotPath} (exists={fi.Exists}, size={fi.Length}, written={fi.LastWriteTimeUtc:HH:mm:ss.fff})");
-                    }
-                }
-                else if (System.IO.File.Exists(reqFile))
+                if (System.IO.File.Exists(reqFile))
                 {
                     string path = System.IO.File.ReadAllText(reqFile, Encoding.UTF8).Trim();
                     System.IO.File.Delete(reqFile);
                     if (string.IsNullOrEmpty(path))
                         path = System.IO.Path.Combine(bepRoot, "screenshot.png");
-                    // Delete stale file so we can detect when Unity writes the new one
-                    try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); } catch { /* safe-swallow: stale screenshot file removal is best-effort */ }
                     _screenshotRequestedAtUtc = System.DateTime.UtcNow;
                     DebugLog.Write("NativeMenuInjector", $"[Screenshot] requested (Update/main thread) at {_screenshotRequestedAtUtc:HH:mm:ss.fff}: {path}");
-                    ScreenCapture.CaptureScreenshot(path);
-                    _pendingScreenshotPath = path;
+
+                    // #972 fix: synchronous FrameCapture (RenderTexture readback) writes the PNG
+                    // immediately on this main-thread tick — no async ScreenCapture flush dependency,
+                    // so no pending-poll loop is needed. Works in menu + in-game + loading.
+                    DINOForge.Runtime.Bridge.FrameCapture.Result fc =
+                        DINOForge.Runtime.Bridge.FrameCapture.Capture(path);
+                    if (fc.Success)
+                    {
+                        System.IO.File.WriteAllText(doneFile, path, Encoding.UTF8);
+                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] done ({fc.Bytes} bytes, {fc.Method}): {path}");
+                    }
+                    else
+                    {
+                        DebugLog.Write("NativeMenuInjector", $"[Screenshot] FrameCapture failed: {fc.Error} ({path})");
+                    }
                 }
             }
             catch { /* safe-swallow: Update polling loop must never throw from main thread (screenshot/scene-init best-effort) */ }
@@ -301,6 +312,8 @@ namespace DINOForge.Runtime.UI
             _rescanTimer = 0f;
             // NativeModsPage lives inside the MainMenu canvas which is destroyed on scene change
             _nativeModsPage = null;
+            // Quick panel also lives inside the MainMenu canvas
+            _quickPanel = null;
             // Reset the guard so TryInjectMenuButton can run for the new scene.
             // The guard was set true during the LoadScene(1) call that triggered this scene change.
             _s_sceneTransitionGuard = false;
@@ -440,6 +453,14 @@ namespace DINOForge.Runtime.UI
             catch (Exception ex)
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} TryInjectMenuButton EXCEPTION: {ex}");
+            }
+            finally
+            {
+                // Reset the guard so subsequent retry calls (Update timer, scene change, etc.)
+                // can proceed. The guard is set true at the top of this method to prevent
+                // re-entrant LoadScene calls; without this reset it permanently latches true
+                // after the first attempt, silently blocking all future injection retries.
+                _s_sceneTransitionGuard = false;
             }
         }
 
@@ -1277,7 +1298,7 @@ namespace DINOForge.Runtime.UI
                 }
                 _lastClickTimeUnscaled = now;
 
-                // If the native mods page is already visible, hide it (toggle behavior)
+                // If the full browser page is already visible, hide it (toggle behavior).
                 if (_nativeModsPage != null && _nativeModsPage.IsVisible)
                 {
                     LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} NativeModsPage already visible — hiding.");
@@ -1285,10 +1306,26 @@ namespace DINOForge.Runtime.UI
                     return;
                 }
 
-                // Try to show the native full-screen mods page
+                // If the quick panel is already visible, hide it (toggle behavior).
+                if (_quickPanel != null && _quickPanel.IsVisible)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} QuickPanel already visible — hiding.");
+                    _quickPanel.Hide();
+                    return;
+                }
+
+                // DEFAULT: show the compact NATIVE-STYLE quick panel. The full-screen
+                // browser is secondary, reached via the quick panel's "Browse all" button.
+                if (TryShowQuickPanel(clickId))
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeQuickModPanel shown successfully");
+                    return;
+                }
+
+                // Fallback chain: full-screen native page, then IMGUI overlay.
                 if (TryShowNativeModsPage(clickId))
                 {
-                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeModsPage shown successfully");
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ✓ NativeModsPage shown (quick panel unavailable)");
                     return;
                 }
 
@@ -1309,6 +1346,85 @@ namespace DINOForge.Runtime.UI
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} ⚠ OnModsButtonClicked exception: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Attempts to show the compact, native-style QUICK panel inside the MainMenu
+        /// canvas. This is the DEFAULT MODS click action: a small panel that looks like a
+        /// DINO sub-menu (native-cloned button chrome, themed by the active total_conversion
+        /// ui_theme) with per-pack ON/OFF toggles and a "Browse all" button that opens the
+        /// full-screen <see cref="NativeModsPage"/> browser.
+        /// Returns false if the MainMenu canvas cannot be found.
+        /// </summary>
+        private bool TryShowQuickPanel(long clickId)
+        {
+            try
+            {
+                Canvas? mainMenuCanvas = FindActiveCanvasByName("MainMenu")
+                    ?? _injectedButton?.GetComponentInParent<Canvas>();
+                if (mainMenuCanvas == null)
+                {
+                    LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} Cannot find MainMenu canvas for quick panel");
+                    return false;
+                }
+
+                // Resolve the active theme (SW gold default) from the loaded packs on disk.
+                System.Collections.Generic.IReadOnlyList<PackDisplayInfo> packs =
+                    PackDataProvider?.Invoke()
+                    ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
+                MenuThemeReader.MenuTheme theme = MenuThemeReader.Resolve(packs, PacksDirectory);
+
+                if (_quickPanel == null)
+                {
+                    GameObject host = new GameObject("DINOForge_QuickModPanelHost");
+                    host.transform.SetParent(mainMenuCanvas.transform, false);
+                    _quickPanel = host.AddComponent<NativeQuickModPanel>();
+                    if (_log != null) _quickPanel.SetLogger(_log);
+
+                    _quickPanel.OnPackToggled = (packId, isEnabled) =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] QuickPanel pack toggled: {packId} = {isEnabled}");
+                        OnNativePackToggled?.Invoke(packId, isEnabled);
+                    };
+                    _quickPanel.OnBrowseAllClicked = () =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] QuickPanel 'Browse all' — opening full browser");
+                        // Open the full-screen browser (deep management).
+                        if (!TryShowNativeModsPage(clickId) && _menuHost != null)
+                            _menuHost.Show();
+                    };
+                    _quickPanel.OnClosed = () =>
+                    {
+                        LogInfo($"[NativeMenuInjector::{_sessionId}] QuickPanel closed");
+                    };
+                }
+
+                // Use the injected Mods button (a clone of a native DINO menu button) as the
+                // native-chrome donor so the panel's rows/buttons match DINO's button style.
+                _quickPanel.Configure(_injectedButton, theme);
+                _quickPanel.SetPacks(packs);
+                _quickPanel.Show(mainMenuCanvas);
+                LogInfo($"[NativeMenuInjector::{_sessionId}] Click#{clickId} QuickPanel shown with {packs.Count} packs (donor={(_injectedButton != null ? _injectedButton.name : "none")})");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogWarning($"[NativeMenuInjector::{_sessionId}] Click#{clickId} TryShowQuickPanel exception: {ex}");
+                return false;
+            }
+        }
+
+        /// <summary>Finds the first active canvas whose name contains <paramref name="namePart"/>.</summary>
+        private static Canvas? FindActiveCanvasByName(string namePart)
+        {
+            Canvas[] all = Resources.FindObjectsOfTypeAll<Canvas>();
+            foreach (Canvas c in all)
+            {
+                if (c == null || !c.gameObject.activeInHierarchy) continue;
+                if (c.name != null && c.name.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
+                    return c;
+            }
+            return null;
         }
 
         /// <summary>
@@ -1523,6 +1639,14 @@ namespace DINOForge.Runtime.UI
             }
 
             target.targetGraphic = resolvedTargetGraphic;
+            if (target.targetGraphic is Image tgImg) tgImg.raycastTarget = true;
+
+            // #1 fix: copying source.transition above can re-apply Transition.None (DINO defers
+            // hover/press to its custom MainMenuButton script). Guarantee the injected button
+            // still renders interaction state by forcing a visible ColorTint transition when the
+            // copied transition was None. No-op when the donor had a real ColorTint/SpriteSwap.
+            NativeUiHelper.EnsureVisibleTransition(target);
+            LogInfo($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId}     Visual transition after sync: {target.transition} (targetGraphic={(target.targetGraphic != null ? target.targetGraphic.name : "NULL")})");
 
             Text? sourceText = source.GetComponentInChildren<Text>(includeInactive: true);
             Text? targetText = target.GetComponentInChildren<Text>(includeInactive: true);
@@ -1580,6 +1704,11 @@ namespace DINOForge.Runtime.UI
             target.sprite = source.sprite;
             target.type = source.type;
             target.color = source.color;
+            // #R1: carry the donor's material so a custom-shader native frame keeps its
+            // hover/press shading on the clone (was dropped → button read as non-reactive).
+            target.material = source.material;
+            target.pixelsPerUnitMultiplier = source.pixelsPerUnitMultiplier;
+            target.preserveAspect = source.preserveAspect;
         }
 
         private static string GetRelativePath(Transform node, Transform root)
@@ -1666,8 +1795,9 @@ namespace DINOForge.Runtime.UI
                 try
                 {
                     DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: capturing now: {_pendingAutoCheckpointPath}");
-                    ScreenCapture.CaptureScreenshot(_pendingAutoCheckpointPath);
-                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: CaptureScreenshot called: {_pendingAutoCheckpointPath}");
+                    DINOForge.Runtime.Bridge.FrameCapture.Result fc =
+                        DINOForge.Runtime.Bridge.FrameCapture.Capture(_pendingAutoCheckpointPath);
+                    DebugLog.Write("NativeMenuInjector", $"[Screenshot] Auto-checkpoint: FrameCapture {(fc.Success ? "OK" : "FAIL")} ({fc.Bytes}B {fc.Method}): {_pendingAutoCheckpointPath}");
                 }
                 catch (Exception ex)
                 {

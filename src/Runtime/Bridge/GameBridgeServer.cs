@@ -1243,7 +1243,9 @@ namespace DINOForge.Runtime.Bridge
         private JToken HandleScreenshot(JObject? parameters)
         {
             string path = parameters?.Value<string>("path") ?? "";
-            if (string.IsNullOrEmpty(path))
+            // Guard: if the path arg looks like a CLI flag (e.g. "--format=json" leaked from
+            // the MCP Python wrapper), discard it and fall back to the default path.
+            if (string.IsNullOrEmpty(path) || path.StartsWith("--", StringComparison.Ordinal))
             {
                 path = Path.Combine(
                     BepInEx.Paths.BepInExRootPath,

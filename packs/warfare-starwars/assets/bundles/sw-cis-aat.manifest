@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2831597846
+CRC: 3459540320
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 095700b26f33c311c99d4e4415ec84d4
+    Hash: 29e12302d83c5a0aa5c28bfb86090bdd
   TypeTreeHash:
     serializedVersion: 2
-    Hash: e2a11be68d6287ac10b047eee7e3b6d6
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 095700b26f33c311c99d4e4415ec84d4
+    Hash: 29e12302d83c5a0aa5c28bfb86090bdd
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,9 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 136
+- Class: 65
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Prefabs/CIS/sw-cis-aat.prefab
+- Assets/Materials/CIS/sw-cis-aat.mat
 Dependencies: []

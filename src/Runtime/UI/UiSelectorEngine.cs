@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -245,6 +245,32 @@ namespace DINOForge.Runtime.UI
                 MatchCount = matches.Count
             };
         }
+
+        /// <summary>
+        /// Resolves a selector to a single target Transform using the same grammar and
+        /// disambiguation rules as <see cref="Query"/>/<see cref="Click"/>. Returns null
+        /// (with <paramref name="matchCount"/> set) when nothing matches or disambiguation fails.
+        /// Used by <see cref="EventSystemDriver"/> to drive the full pointer lifecycle.
+        /// Must be called on the Unity main thread.
+        /// </summary>
+        public static Transform? ResolveTarget(string selector, out int matchCount)
+        {
+            var (matches, disambiguation) = FindMatches(selector);
+            matchCount = matches.Count;
+            if (matches.Count == 0)
+            {
+                return null;
+            }
+
+            var (index, useFirst, useLast) = disambiguation;
+            return SelectByDisambiguation(matches, index, useFirst, useLast);
+        }
+
+        /// <summary>Public actionability check for the pointer driver (main thread only).</summary>
+        public static bool IsTargetActionable(Transform target, out string reason) => IsActionable(target, out reason);
+
+        /// <summary>Builds a snapshot node for the supplied transform (main thread only).</summary>
+        public static UiNode SnapshotOf(Transform target) => UiTreeSnapshotBuilder.BuildNodeSnapshot(target, "root");
 
         private static (List<Transform> matches, (int? index, bool useFirst, bool useLast) disambiguation) FindMatches(string selector)
         {

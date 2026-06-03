@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1925398784
+CRC: 1508095352
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 2aa7a85f0ba4f7b2eb22fd95659dfda3
+    Hash: 797b0123905c9e2738f7c00f3aea3655
   TypeTreeHash:
     serializedVersion: 2
-    Hash: e2a11be68d6287ac10b047eee7e3b6d6
+    Hash: 34c66e1a55654dedabb7cdcd0f409d91
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 2aa7a85f0ba4f7b2eb22fd95659dfda3
+    Hash: 797b0123905c9e2738f7c00f3aea3655
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,9 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 136
+- Class: 135
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Materials/CIS/sw-droideka.mat
 - Assets/Prefabs/CIS/sw-droideka.prefab
 Dependencies: []

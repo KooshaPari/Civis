@@ -108,21 +108,28 @@ namespace DINOForge.Runtime.Aviation
             // --- 1. Aerial unit altitude initialisation ---
             if (SpawnAtAltitude)
             {
-                Entities
-                    .WithAll<AerialUnitComponent>()
-                    .WithAll<Translation>()
-                    .ForEach((Entity entity, ref AerialUnitComponent aerial, ref Translation translation) =>
+                // Manual EntityQuery loop — avoids Entities.ForEach DOTS codegen path
+                // which crashes in netstandard2.0 Mono even when the system is disabled
+                // (job types are registered at world-create time). Pattern #233.
+                EntityQueryDesc altDesc = new EntityQueryDesc
+                {
+                    All = new[] { ComponentType.ReadWrite<AerialUnitComponent>(), ComponentType.ReadWrite<Translation>() }
+                };
+                EntityQuery altQuery = EntityManager.CreateEntityQuery(altDesc);
+                using NativeArray<Entity> altEntities = altQuery.ToEntityArray(Allocator.Temp);
+                foreach (Entity entity in altEntities)
+                {
+                    AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                    Translation translation = EntityManager.GetComponentData<Translation>(entity);
+                    if (translation.Value.y < 1f && aerial.CruiseAltitude > 0f)
                     {
-                        if (translation.Value.y < 1f && aerial.CruiseAltitude > 0f)
-                        {
-                            translation.Value = new float3(
-                                translation.Value.x,
-                                aerial.CruiseAltitude,
-                                translation.Value.z);
-                        }
-                    })
-                    .WithoutBurst()
-                    .Run();
+                        translation.Value = new float3(
+                            translation.Value.x,
+                            aerial.CruiseAltitude,
+                            translation.Value.z);
+                        EntityManager.SetComponentData(entity, translation);
+                    }
+                }
             }
 
             // --- 2. Anti-air building sweep (runs once after world is populated) ---

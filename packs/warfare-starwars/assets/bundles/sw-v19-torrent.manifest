@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2103104452
+CRC: 529712639
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 833caf68dbdbf819b930bdbe987f9d9c
+    Hash: b9c2e443f4eb6ad6e42f1bd0a6fab2aa
   TypeTreeHash:
     serializedVersion: 2
-    Hash: e2a11be68d6287ac10b047eee7e3b6d6
+    Hash: 34c66e1a55654dedabb7cdcd0f409d91
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 833caf68dbdbf819b930bdbe987f9d9c
+    Hash: b9c2e443f4eb6ad6e42f1bd0a6fab2aa
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,9 +26,10 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 136
+- Class: 135
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Materials/Republic/sw-v19-torrent.mat
 - Assets/Prefabs/Republic/sw-v19-torrent.prefab
 Dependencies: []

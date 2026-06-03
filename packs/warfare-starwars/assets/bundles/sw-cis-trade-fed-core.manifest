@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 362554676
+CRC: 1983204003
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 59fa64c95bceccf1eac22e7988ee170d
+    Hash: b662fa6331c4deaaf812e12e135943cb
   TypeTreeHash:
     serializedVersion: 2
     Hash: 34c66e1a55654dedabb7cdcd0f409d91
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 59fa64c95bceccf1eac22e7988ee170d
+    Hash: b662fa6331c4deaaf812e12e135943cb
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -30,7 +30,7 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Prefabs/CIS/sw-cis-trade-fed-core.prefab
 - Assets/Materials/CIS/sw-cis-trade-fed-core-primary.mat
 - Assets/Materials/CIS/sw-cis-trade-fed-core.mat
+- Assets/Prefabs/CIS/sw-cis-trade-fed-core.prefab
 Dependencies: []

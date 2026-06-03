@@ -49,11 +49,12 @@ ui_theme:
   background_image: "assets/ui/menu_bg.png"
   button_frame: "assets/ui/btn_normal.png"
   button_frame_hover: "assets/ui/btn_hover.png"
-  # Prebuilt TMP SDF font AssetBundle (Unity 2021.3.45f1, version-locked). #965
-  # Runtime TMP_FontAsset.CreateFontAsset() returns null in DINO, so the SDF
-  # atlas is baked offline (scripts/game/bake-sw-menu-font.ps1) and shipped here.
-  # Value = bundle path relative to the pack root; font_asset_name = TMP_FontAsset name.
-  font: "assets/ui/sw_menu_font"
+  # Font path relative to pack root. Supports two modes:
+  # 1) Prebuilt TMP SDF AssetBundle (no extension or .bundle): baked offline via
+  #    scripts/game/bake-sw-menu-font.ps1; font_asset_name = TMP_FontAsset name inside bundle.
+  # 2) Raw TTF/OTF file: loaded via OS font registration + CreateDynamicFontFromOSFont. #965
+  font: "assets/ui/menu_font.ttf"
+  font_family: "Kenney Future Narrow"
   font_asset_name: "SW_MenuFont SDF"
   # EPIC-027 themed loading-screen takeover (total_conversion only).
   # Paths are relative to the pack root; PNGs are rasterized from assets/svg/ui/.

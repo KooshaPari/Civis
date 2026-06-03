@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 412824532
+CRC: 2086116411
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 3dcd0722ad13387e43dc9a048d697f9e
+    Hash: 9033ca578fd5ab11ed7969b5dba03115
   TypeTreeHash:
     serializedVersion: 2
     Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 3dcd0722ad13387e43dc9a048d697f9e
+    Hash: 9033ca578fd5ab11ed7969b5dba03115
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -30,6 +30,6 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Prefabs/CIS/sw-mining-facility.prefab
 - Assets/Materials/CIS/sw-mining-facility.mat
+- Assets/Prefabs/CIS/sw-mining-facility.prefab
 Dependencies: []

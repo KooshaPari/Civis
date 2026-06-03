@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +26,15 @@ namespace DINOForge.Runtime.UI
         private List<PackDisplayInfo> _cachedPacks = new List<PackDisplayInfo>();
         private string _cachedStatus = "";
         private int _cachedErrorCount;
+
+        /// <summary>
+        /// Optional live pack-data source. When set, <see cref="Show"/> pulls fresh pack
+        /// info from it if no packs have been pushed via <see cref="SetPacks"/> yet. This
+        /// covers the case where the native MODS button is wired through a contextual host
+        /// that ModPlatform.UpdateUI never targets — without it the INSTALLED PACKS list
+        /// renders empty even though packs are loaded.
+        /// </summary>
+        public Func<IReadOnlyList<PackDisplayInfo>>? PackDataProvider { get; set; }
 
         /// <summary>
         /// Whether the vanilla main-menu canvas can host the mod menu.
@@ -59,10 +68,20 @@ namespace DINOForge.Runtime.UI
 
             EnsureModsPage(canvas);
 
+            // Pull fresh pack data when nothing has been pushed via SetPacks (the contextual
+            // host path is not targeted by ModPlatform.UpdateUI, so _cachedPacks can be empty).
+            if (_cachedPacks.Count == 0 && PackDataProvider != null)
+            {
+                IReadOnlyList<PackDisplayInfo> live = PackDataProvider();
+                if (live != null && live.Count > 0)
+                    _cachedPacks = new List<PackDisplayInfo>(live);
+            }
+
             if (_modsPage != null)
             {
                 _modsPage.Show(canvas, _mainMenuContent);
                 _modsPage.SetPacks(new System.Collections.ObjectModel.ReadOnlyCollection<PackDisplayInfo>(_cachedPacks));
+                DebugLog.Write("NativeMainMenuModMenu", $"Show() populated NativeModsPage with {_cachedPacks.Count} packs");
             }
         }
 

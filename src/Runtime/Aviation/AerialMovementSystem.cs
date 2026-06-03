@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using DINOForge.Runtime.Diagnostics;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -47,38 +48,45 @@ namespace DINOForge.Runtime.Aviation
         {
             float deltaTime = (float)World.Time.DeltaTime;
 
-            // Process all entities with AerialUnitComponent + Translation
-            Entities
-                .WithAll<AerialUnitComponent>()
-                .WithAll<Translation>()
-                .ForEach((Entity entity, ref AerialUnitComponent aerial, ref Translation translation) =>
+            // Manual EntityQuery loop — avoids Entities.ForEach DOTS codegen path
+            // which crashes in netstandard2.0 Mono even when system is disabled
+            // (job types are registered at world-create time). Pattern #233.
+            EntityQueryDesc moveDesc = new EntityQueryDesc
+            {
+                All = new[] { ComponentType.ReadWrite<AerialUnitComponent>(), ComponentType.ReadWrite<Translation>() }
+            };
+            EntityQuery moveQuery = EntityManager.CreateEntityQuery(moveDesc);
+            using NativeArray<Entity> moveEntities = moveQuery.ToEntityArray(Allocator.Temp);
+            foreach (Entity entity in moveEntities)
+            {
+                AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                Translation translation = EntityManager.GetComponentData<Translation>(entity);
+
+                float targetY = aerial.IsAttacking ? 0f : aerial.CruiseAltitude;
+                float currentY = translation.Value.y;
+                float diff = targetY - currentY;
+
+                if (Math.Abs(diff) < 0.05f)
                 {
-                    float targetY = aerial.IsAttacking ? 0f : aerial.CruiseAltitude;
-                    float currentY = translation.Value.y;
-                    float diff = targetY - currentY;
+                    translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
+                    EntityManager.SetComponentData(entity, translation);
+                    continue;
+                }
 
-                    if (Math.Abs(diff) < 0.05f)
-                    {
-                        // Close enough — snap to target altitude
-                        translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
-                        return;
-                    }
+                float moveSpeed = diff > 0f ? aerial.AscendSpeed : aerial.DescendSpeed;
+                float step = moveSpeed * deltaTime;
 
-                    float moveSpeed = diff > 0f ? aerial.AscendSpeed : aerial.DescendSpeed;
-                    float step = moveSpeed * deltaTime;
-
-                    if (Math.Abs(diff) <= step)
-                    {
-                        translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
-                    }
-                    else
-                    {
-                        float newY = currentY + (diff > 0f ? step : -step);
-                        translation.Value = new float3(translation.Value.x, newY, translation.Value.z);
-                    }
-                })
-                .WithoutBurst()
-                .Run();
+                if (Math.Abs(diff) <= step)
+                {
+                    translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
+                }
+                else
+                {
+                    float newY = currentY + (diff > 0f ? step : -step);
+                    translation.Value = new float3(translation.Value.x, newY, translation.Value.z);
+                }
+                EntityManager.SetComponentData(entity, translation);
+            }
         }
 
     }

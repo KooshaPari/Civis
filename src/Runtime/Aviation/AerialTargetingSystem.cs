@@ -96,43 +96,45 @@ namespace DINOForge.Runtime.Aviation
 
             try
             {
-                NativeArray<Entity> enemyUnitsArray = enemyGroundUnits;
-                NativeArray<Translation> enemyTransArray = enemyGroundTranslations;
+                // Manual EntityQuery loop — avoids Entities.ForEach DOTS codegen path
+                // which crashes in netstandard2.0 Mono even when system is disabled
+                // (job types are registered at world-create time). Pattern #233.
+                EntityQueryDesc targetDesc = new EntityQueryDesc
+                {
+                    All = new[] { ComponentType.ReadWrite<AerialUnitComponent>(), ComponentType.ReadOnly<Translation>() }
+                };
+                EntityQuery aerialQuery = EntityManager.CreateEntityQuery(targetDesc);
+                using NativeArray<Entity> aerialEntities = aerialQuery.ToEntityArray(Allocator.Temp);
 
-                Entities
-                    .WithAll<AerialUnitComponent>()
-                    .WithAll<Translation>()
-                    .WithReadOnly(enemyUnitsArray)
-                    .WithReadOnly(enemyTransArray)
-                    .ForEach((ref AerialUnitComponent aerial, ref Translation translation) =>
+                float attackRange = 25f;
+                float attackRangeSq = attackRange * attackRange;
+
+                foreach (Entity entity in aerialEntities)
+                {
+                    AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                    Translation translation = EntityManager.GetComponentData<Translation>(entity);
+
+                    // Find nearest enemy ground target within range
+                    Entity targetEntity = Entity.Null;
+                    float nearestDistSq = float.MaxValue;
+
+                    for (int i = 0; i < enemyGroundUnits.Length; i++)
                     {
-                        // Default attack range of 25 units
-                        // (ideally this would come from the unit's weapon definition)
-                        float attackRange = 25f;
-                        float attackRangeSq = attackRange * attackRange;
+                        Translation targetTrans = enemyGroundTranslations[i];
+                        float3 delta = targetTrans.Value - translation.Value;
+                        float distSq = math.lengthsq(delta);
 
-                        // Find nearest enemy ground target within range
-                        Entity targetEntity = Entity.Null;
-                        float nearestDistSq = float.MaxValue;
-
-                        for (int i = 0; i < enemyUnitsArray.Length; i++)
+                        if (distSq < attackRangeSq && distSq < nearestDistSq)
                         {
-                            Translation targetTrans = enemyTransArray[i];
-                            float3 delta = targetTrans.Value - translation.Value;
-                            float distSq = math.lengthsq(delta);
-
-                            if (distSq < attackRangeSq && distSq < nearestDistSq)
-                            {
-                                nearestDistSq = distSq;
-                                targetEntity = enemyUnitsArray[i];
-                            }
+                            nearestDistSq = distSq;
+                            targetEntity = enemyGroundUnits[i];
                         }
+                    }
 
-                        // Engage or disengage target
-                        aerial.IsAttacking = (targetEntity != Entity.Null);
-                    })
-                    .WithoutBurst()
-                    .Run();
+                    // Engage or disengage target
+                    aerial.IsAttacking = (targetEntity != Entity.Null);
+                    EntityManager.SetComponentData(entity, aerial);
+                }
             }
             finally
             {

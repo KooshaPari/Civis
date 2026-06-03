@@ -822,13 +822,39 @@ namespace DINOForge.Runtime.Bridge
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
-                    if (replacementMat != null && materialField != null)
+                    if (materialField != null)
                     {
                         object? currentMat = materialField.GetValue(renderMesh);
-                        if (currentMat == null)
-                            continue;
-                        materialField.SetValue(renderMesh, replacementMat);
-                        changed = true;
+                        if (replacementMat != null)
+                        {
+                            if (currentMat == null)
+                            {
+                                // Vanilla entity has no current material — skip material SET but
+                                // keep the mesh swap already applied. Option C: log so we can
+                                // track which entities/bundles lack a compatible material slot.
+                                if (_reportedFailures.Add($"nomat:{assetName}:{entity.Index}"))
+                                {
+                                    DebugLog.Write("AssetSwap",
+                                        $"TrySwapRenderMeshFromBundle: entity {entity.Index} — " +
+                                        $"no current material slot for '{assetName}', keeping vanilla material (mesh swapped)");
+                                }
+                            }
+                            else
+                            {
+                                materialField.SetValue(renderMesh, replacementMat);
+                                changed = true;
+                            }
+                        }
+                        else if (replacementMesh != null && currentMat == null)
+                        {
+                            // No replacement material and no current material — log once per asset.
+                            if (_reportedFailures.Add($"nomatsrc:{assetName}"))
+                            {
+                                DebugLog.Write("AssetSwap",
+                                    $"TrySwapRenderMeshFromBundle: bundle '{assetName}' has no material; " +
+                                    $"mesh swapped with vanilla material retained");
+                            }
+                        }
                     }
 
                     if (changed)

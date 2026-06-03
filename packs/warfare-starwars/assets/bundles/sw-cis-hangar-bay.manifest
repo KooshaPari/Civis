@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 4080009293
+CRC: 2776931486
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: f66e8f3e25ad12b3d0402f97038513a7
+    Hash: 718a01c21cbc7c0dd58242b441579f12
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 81fc4833398717ae320ec5bd08c661f4
+    Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: f66e8f3e25ad12b3d0402f97038513a7
+    Hash: 718a01c21cbc7c0dd58242b441579f12
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,9 +26,11 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Prefabs/CIS/sw-cis-hangar-bay.prefab
 - Assets/Materials/CIS/sw-cis-hangar-bay-primary.mat
 - Assets/Materials/CIS/sw-cis-hangar-bay.mat
-- Assets/Prefabs/CIS/sw-cis-hangar-bay.prefab
 Dependencies: []

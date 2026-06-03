@@ -142,6 +142,9 @@ const WORLD_DIMS: [usize; 3] = [96, 64, 96];
 #[derive(Resource, Default)]
 pub struct WorldBuilt(pub bool);
 
+#[derive(Component)]
+pub struct WaterPlane;
+
 /// Voxel simulation plugin for the Bevy reference client.
 pub struct VoxelSimPlugin;
 
@@ -169,14 +172,14 @@ impl Plugin for VoxelSimPlugin {
 #[cfg(not(feature = "egui"))]
 pub fn setup_voxel_world_startup(
     commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     rig: ResMut<CameraRig>,
     state: ResMut<VoxelSimState>,
     mut built: ResMut<WorldBuilt>,
     cameras: Query<&Transform, With<Camera3d>>,
 ) {
-    build_voxel_world(commands, meshes, materials, rig, state, cameras, SEED);
+    build_voxel_world(commands, &mut meshes, &mut materials, rig, state, cameras, SEED);
     built.0 = true;
 }
 
@@ -187,8 +190,8 @@ pub fn setup_voxel_world_startup(
 #[cfg(feature = "egui")]
 pub fn build_world_on_play(
     mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     mut built: ResMut<WorldBuilt>,
@@ -196,12 +199,13 @@ pub fn build_world_on_play(
     params: Res<crate::menus::WorldSetupParams>,
     cameras: Query<&Transform, With<Camera3d>>,
     pending: Query<Entity, With<ComputingChunkMesh>>,
+    water_planes: Query<Entity, With<WaterPlane>>,
 ) {
     use crate::menus::GameUiMode;
     // Reset so a fresh world is generated next time the player commits setup.
     if matches!(*mode, GameUiMode::MainMenu | GameUiMode::WorldSetup) {
         if built.0 {
-            despawn_world_and_pending(&mut commands, &mut state, &pending);
+            despawn_world_and_pending(&mut commands, &mut state, &pending, &water_planes);
             built.0 = false;
         }
         return;
@@ -212,9 +216,9 @@ pub fn build_world_on_play(
     }
     // Despawn any stale world entities AND in-flight mesh tasks before regenerating,
     // so a task computed for the OLD world can't apply onto the new one.
-    despawn_world_and_pending(&mut commands, &mut state, &pending);
+    despawn_world_and_pending(&mut commands, &mut state, &pending, &water_planes);
     let seed = params.seed;
-    build_voxel_world(commands, meshes, materials, rig, state, cameras, seed);
+    build_voxel_world(commands, &mut meshes, &mut materials, rig, state, cameras, seed);
     built.0 = true;
 }
 
@@ -225,12 +229,16 @@ fn despawn_world_and_pending(
     commands: &mut Commands,
     state: &mut VoxelSimState,
     pending: &Query<Entity, With<ComputingChunkMesh>>,
+    water_planes: &Query<Entity, With<WaterPlane>>,
 ) {
     for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
         commands.entity(entity).despawn();
     }
     for carrier in pending.iter() {
         commands.entity(carrier).despawn();
+    }
+    for plane in water_planes.iter() {
+        commands.entity(plane).despawn();
     }
 }
 
@@ -283,11 +291,8 @@ pub fn voxel_surface_y(grid: &CaGrid, x: f32, z: f32) -> f32 {
 /// Build the voxel world from `seed`, then mesh and spawn all visible chunks.
 pub fn build_voxel_world(
     mut commands: Commands,
-    // Meshes/materials are no longer added here: the initial build dispatches
-    // off-thread mesh tasks and `apply_chunk_mesh_tasks` adds the assets as each
-    // completes. Kept in the signature so the system param set is unchanged.
-    _meshes: ResMut<Assets<Mesh>>,
-    _materials: ResMut<Assets<StandardMaterial>>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
     mut rig: ResMut<CameraRig>,
     mut state: ResMut<VoxelSimState>,
     cameras: Query<&Transform, With<Camera3d>>,
@@ -363,6 +368,7 @@ pub fn build_voxel_world(
     let t_dispatch = std::time::Instant::now();
     dispatch_chunk_mesh_tasks(&mut commands, &state.grid, None);
     let t_dispatch_elapsed = t_dispatch.elapsed();
+    spawn_water_plane(&mut commands, meshes, materials);
     // Phase breakdown. The mesh COMPUTE is now off-thread, so this dispatch time is
     // the main-thread cost (cheap slicing only) — expected <<1s, no load hitch.
     info!(
@@ -372,6 +378,30 @@ pub fn build_voxel_world(
         t_dispatch_elapsed.as_secs_f32(),
     );
     log_mesher_diagnostic(&state.grid);
+}
+
+fn spawn_water_plane(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+) {
+    let sea_level_y = WORLD_DIMS[1] as f32 * 0.40;
+    let plane_size_x = WORLD_DIMS[0] as f32;
+    let plane_size_z = WORLD_DIMS[2] as f32;
+    commands.spawn((
+        WaterPlane,
+        Mesh3d(meshes.add(Mesh::from(
+            bevy::math::primitives::Plane3d::default().mesh().size(plane_size_x, plane_size_z),
+        ))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(0.05, 0.35, 0.75, 0.65),
+            perceptual_roughness: 0.05,
+            metallic: 0.0,
+            alpha_mode: AlphaMode::Blend,
+            ..default()
+        })),
+        Transform::from_xyz(plane_size_x * 0.5, sea_level_y, plane_size_z * 0.5),
+    ));
 }
 
 /// Runtime diagnostic for task #4 (is the smooth mesher actually shaping terrain?).
@@ -707,6 +737,9 @@ fn spawn_chunk_meshes(
                     }
                 }
                 let voxels = slice_chunk(grid, cx, cy, cz);
+                if chunk_is_all_water(&voxels) {
+                    continue;
+                }
                 let padded_voxels = slice_chunk_with_apron(grid, cx, cy, cz);
                 let view = ChunkView {
                     id: chunk_id,
@@ -821,6 +854,9 @@ fn spawn_chunk_buffers(
 ) -> Vec<Entity> {
     let mut entities = Vec::new();
     for submesh in mesh_buffers {
+        if submesh.vertices.first().is_some_and(|vertex| vertex.material == WATER) {
+            continue;
+        }
         let Some(material_id) = submesh.vertices.first().map(|v| v.material) else {
             continue;
         };
@@ -880,6 +916,15 @@ struct ComputingChunkMesh(Task<ChunkMeshJob>);
 /// the empty-mesh cubic fallback + the smooth/cubic counters, so results are
 /// byte-for-byte identical to the sync path (zero visual change).
 fn compute_chunk_mesh(input: ChunkMeshInput) -> ChunkMeshJob {
+    if chunk_is_all_water(&input.voxels) {
+        return ChunkMeshJob {
+            chunk_id: input.chunk_id,
+            origin: input.origin,
+            use_smooth: input.use_smooth,
+            buffers: Vec::new(),
+        };
+    }
+
     let registry = MaterialRegistry::standard();
     let view = ChunkView {
         id: input.chunk_id,
@@ -954,12 +999,19 @@ fn dispatch_chunk_mesh_tasks(commands: &mut Commands, grid: &CaGrid, camera_eye:
     for cz in 0..counts[2] {
         for cy in 0..counts[1] {
             for cx in 0..counts[0] {
+                if chunk_is_all_water(&slice_chunk(grid, cx, cy, cz)) {
+                    continue;
+                }
                 let input = chunk_mesh_input(grid, cx, cy, cz, camera_eye);
                 let task = pool.spawn(async move { compute_chunk_mesh(input) });
                 commands.spawn(ComputingChunkMesh(task));
             }
         }
     }
+}
+
+fn chunk_is_all_water(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]) -> bool {
+    voxels.iter().all(|material| *material == AIR || *material == WATER)
 }
 
 /// Drain completed off-thread chunk mesh tasks and spawn their Bevy entities on the

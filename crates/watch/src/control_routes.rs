@@ -41,7 +41,7 @@ pub(crate) async fn spawn_civilian_handler(
     let _ = spawn_civilian_at(
         &mut sim.world,
         id,
-        req.faction,
+        civ_agents::Alignment::Faction(req.faction),
         req.x,
         req.y,
         civ_agents::ActorVisualKind::Humanoid,
@@ -65,7 +65,7 @@ pub(crate) async fn spawn_entity_handler(
         let _ = spawn_civilian_at(
             &mut sim.world,
             id,
-            req.faction,
+            civ_agents::Alignment::Faction(req.faction),
             req.x,
             req.y,
             kind,

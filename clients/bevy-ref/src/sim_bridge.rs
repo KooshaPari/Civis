@@ -367,7 +367,7 @@ fn apply_spawn_civilian_requests(
         spawn_civilian_at(
             &mut sim.0.world,
             id,
-            0,
+            civ_agents::Alignment::None,
             nx,
             ny,
             request.model_kind,

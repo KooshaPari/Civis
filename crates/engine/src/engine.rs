@@ -177,7 +177,7 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
             spawn_civilian_at(
                 world,
                 next_civilian_id,
-                faction as u32,
+                civ_agents::infer_alignment_for_spawn(world, norm_x, norm_y),
                 norm_x,
                 norm_y,
                 civ_agents::ActorVisualKind::Humanoid,
@@ -1666,7 +1666,15 @@ impl Simulation {
         }
 
         for (child_id, x, y) in births {
-            let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
+            let alignment = civ_agents::infer_alignment_for_spawn(&self.world, x, y);
+            let _ = spawn_child_near(
+                &mut self.world,
+                child_id,
+                alignment,
+                x,
+                y,
+                &mut self.rng,
+            );
             self.last_births.push(PopulationEvent {
                 tick: self.state.tick,
                 entity_id: child_id,

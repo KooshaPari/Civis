@@ -105,7 +105,7 @@ pub(crate) fn seed_civilians(sim: &mut Simulation, terrain: &Terrain) {
             let _ = spawn_civilian_at(
                 &mut sim.world,
                 id,
-                (spawned % 4) as u32,
+                civ_agents::Alignment::Faction((spawned % 4) as u32),
                 x,
                 y,
                 civ_agents::ActorVisualKind::Humanoid,

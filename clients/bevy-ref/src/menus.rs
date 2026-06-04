@@ -199,7 +199,6 @@ pub struct WorldSetupParams {
     /// Ephemeral string buffer backing the seed text field in the UI.
     pub seed_text: String,
     pub world_size: usize,
-    pub starting_factions: usize,
     pub water_level: i32,
     pub starting_era: usize,
 }
@@ -211,7 +210,6 @@ impl Default for WorldSetupParams {
             seed,
             seed_text: seed.to_string(),
             world_size: 1,
-            starting_factions: 4,
             water_level: 40,
             starting_era: 0,
         }
@@ -646,6 +644,7 @@ fn main_menu_buttons(
         // on the World-Setup screen. (Without this, every play reused the one
         // seed drawn at WorldSetupParams::default() — same map every time.)
         params.randomize();
+        progress.reset();
         *mode = GameUiMode::WorldSetup;
     }
     ui.add_space(8.0);
@@ -680,7 +679,7 @@ fn world_setup_panel(
     progress: &mut LoadingProgress,
     params: &mut WorldSetupParams,
 ) {
-    const SIZES: &[&str] = &["Small", "Medium", "Large"];
+    const SIZES: &[&str] = &["Small", "Medium", "Large", "Huge"];
     const ERAS: &[&str] = &["Stone Age", "Bronze Age", "Iron Age", "Industrial"];
     egui::Frame::NONE
         .fill(PANEL_FILL)
@@ -778,28 +777,11 @@ fn world_setup_fields(
         });
     ui.add_space(8.0);
 
-    // ---- Starting factions -----------------------------------------------
-    ui.label(egui::RichText::new("Starting Factions").color(DIM).small());
-    const FACTIONS: &[&str] = &["2", "3", "4", "5", "6", "7", "8"];
-    egui::ComboBox::from_id_salt("factions_combo")
-        .selected_text(
-            FACTIONS
-                .get(params.starting_factions.saturating_sub(2))
-                .copied()
-                .unwrap_or("4"),
-        )
-        .show_ui(ui, |ui| {
-            for (i, &label) in FACTIONS.iter().enumerate() {
-                ui.selectable_value(&mut params.starting_factions, i + 2, label);
-            }
-        });
-    ui.add_space(8.0);
-
     // ---- Water level ------------------------------------------------------
     ui.label(egui::RichText::new("Water Level").color(DIM).small());
     ui.add(egui::Slider::new(&mut params.water_level, 20..=80).suffix("%"));
     ui.add_space(8.0);
-    // TODO: wire world_size / starting_factions / water_level to voxel worldgen arguments once generation accepts them.
+    // TODO: wire world_size / water_level to voxel worldgen arguments once generation accepts them.
 
     // ---- Starting era -----------------------------------------------------
     ui.label(egui::RichText::new("Starting Era").color(DIM).small());
@@ -1293,7 +1275,6 @@ mod tests {
             seed: 1234,
             seed_text: "1234".to_string(),
             world_size: 1,
-            starting_factions: 2,
             water_level: 40,
             starting_era: 0,
         };
@@ -1310,7 +1291,6 @@ mod tests {
             seed: fresh_seed(),
             seed_text: String::new(),
             world_size: 1,
-            starting_factions: 2,
             water_level: 40,
             starting_era: 0,
         };
@@ -1324,7 +1304,6 @@ mod tests {
             seed: 42,
             seed_text: "42".to_string(),
             world_size: 1,
-            starting_factions: 2,
             water_level: 40,
             starting_era: 0,
         };
@@ -1340,7 +1319,6 @@ mod tests {
             seed: 1,
             seed_text: "12345678901234567".to_string(),
             world_size: 1,
-            starting_factions: 2,
             water_level: 40,
             starting_era: 0,
         };
@@ -1355,7 +1333,6 @@ mod tests {
             seed: 9999,
             seed_text: "not-a-number".to_string(),
             world_size: 1,
-            starting_factions: 2,
             water_level: 40,
             starting_era: 0,
         };

@@ -506,7 +506,7 @@ async fn apply_dispatch_effect(
             let entity = civ_agents::spawn_civilian_at(
                 &mut sim.world,
                 entity_seq,
-                faction,
+                civ_agents::Alignment::Faction(faction),
                 x,
                 y,
                 civ_agents::ActorVisualKind::Humanoid,
@@ -534,7 +534,7 @@ async fn apply_dispatch_effect(
                     let entity = civ_agents::spawn_civilian_at(
                         &mut sim.world,
                         entity_seq,
-                        faction,
+                        civ_agents::Alignment::Faction(faction),
                         x,
                         y,
                         civ_agents::ActorVisualKind::Humanoid,

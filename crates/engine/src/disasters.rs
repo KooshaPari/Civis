@@ -182,7 +182,7 @@ fn hit_agents(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_agents::{Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
+    use civ_agents::{Alignment, Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
     use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 
     fn seeded_sim() -> Simulation {
@@ -197,7 +197,7 @@ mod tests {
         let _ = sim.world.spawn((
             Civilian {
                 id: 9_999,
-                faction: 1,
+                alignment: Alignment::Faction(1),
                 age: 24,
             },
             pos,

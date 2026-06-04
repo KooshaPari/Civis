@@ -16,6 +16,8 @@
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
+pub mod materials;
+#[cfg(feature = "bevy")]
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
@@ -105,6 +107,8 @@ pub mod window_icon;
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
 pub mod voxel_smooth_mesher;
+#[cfg(feature = "voxel")]
+pub mod voxel_triplanar;
 /// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
 /// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
 #[cfg(feature = "voxel_stream")]

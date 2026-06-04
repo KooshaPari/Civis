@@ -402,6 +402,7 @@ fn handle_spawn_tool_clicks(
     over_ui: Res<PointerOverUi>,
     marker: Res<CursorMarker>,
     #[cfg(feature = "egui")] sub: Res<crate::tool_categories::ActiveSubTool>,
+    #[cfg(feature = "voxel")] mut brush: ResMut<crate::terraform_brush::BrushSettings>,
     mut spawn_civilian: MessageWriter<SpawnCivilianRequest>,
     mut spawn_building: MessageWriter<SpawnBuildingRequest>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
@@ -449,7 +450,19 @@ fn handle_spawn_tool_clicks(
         SpawnTool::SpawnBuilding => {
             spawn_building.write(SpawnBuildingRequest { position });
         }
-        SpawnTool::Terraform => {}
+        SpawnTool::Terraform => {
+            #[cfg(all(feature = "voxel", feature = "egui"))]
+            {
+                let op = match sub.current {
+                    crate::tool_categories::SubTool::Raise => crate::terraform_brush::BrushOp::Raise,
+                    crate::tool_categories::SubTool::Lower => crate::terraform_brush::BrushOp::Lower,
+                    crate::tool_categories::SubTool::Flatten => crate::terraform_brush::BrushOp::Flatten,
+                    crate::tool_categories::SubTool::PaintBiome => crate::terraform_brush::BrushOp::DropBiome,
+                    _ => brush.op,
+                };
+                brush.select_op(op);
+            }
+        }
         SpawnTool::PaintMaterial => {
             // Painting is handled by the material brush's own per-frame system
             // (gated on `MaterialPaintArmed`); nothing to dispatch on click here.

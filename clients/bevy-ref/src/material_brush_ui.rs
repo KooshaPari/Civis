@@ -698,6 +698,9 @@ fn stamp_sphere(
     let cz = centre.z.round() as i64;
     let ri = r.ceil() as i64;
     let strength = strength.clamp(0.0, 1.0);
+    let material_temp = MaterialRegistry::standard()
+        .get(material)
+        .map_or(20, |def| def.temperature);
     let add_mode = matches!(mode, MaterialPaintMode::AdditiveDrop);
     for dz in -ri..=ri {
         for dx in -ri..=ri {
@@ -724,7 +727,8 @@ fn stamp_sphere(
                     }
                 }
                 let write_mat = if mode == MaterialPaintMode::Erase { AIR } else { material };
-                grid.set(x as usize, y as usize, z as usize, write_mat);
+                let write_temp = if write_mat == AIR { 20 } else { material_temp };
+                grid.set_with_temp(x as usize, y as usize, z as usize, write_mat, write_temp);
             }
         }
     }

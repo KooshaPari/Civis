@@ -440,9 +440,10 @@ mod tests {
 
     #[test]
     fn inert_subtools_have_no_backing_variant_yet() {
-        // Material/Diplomacy/Policy await Infra Lead enum growth.
-        assert_eq!(SubTool::Water.spawn_tool(), None);
+        // Diplomacy/Policy still await infra enum growth; material brushes
+        // now map to `SpawnTool::PaintMaterial`.
         assert_eq!(SubTool::Alliance.spawn_tool(), None);
+        assert_eq!(SubTool::Tax.spawn_tool(), None);
         assert!(!SubTool::Tax.is_active_capable());
     }
 

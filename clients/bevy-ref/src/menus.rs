@@ -9,6 +9,8 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+use crate::game_ui::GameSpeed;
+
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const ACCENT_HI: egui::Color32 = egui::Color32::from_rgb(140, 224, 255);
 const GOLD: egui::Color32 = egui::Color32::from_rgb(232, 184, 75);
@@ -197,6 +199,8 @@ pub struct WorldSetupParams {
     /// Ephemeral string buffer backing the seed text field in the UI.
     pub seed_text: String,
     pub world_size: usize,
+    pub starting_factions: usize,
+    pub water_level: i32,
     pub starting_era: usize,
 }
 
@@ -207,6 +211,8 @@ impl Default for WorldSetupParams {
             seed,
             seed_text: seed.to_string(),
             world_size: 1,
+            starting_factions: 4,
+            water_level: 40,
             starting_era: 0,
         }
     }
@@ -262,12 +268,26 @@ pub struct SettingsState {
     /// 0 = Low … 3 = Ultra
     pub graphics_quality: usize,
     pub master_volume: f32,
+    pub music_volume: f32,
+    pub sfx_volume: f32,
+    pub camera_sensitivity: f32,
     pub sim_speed: u32,
+    pub vsync: bool,
+    pub fullscreen: bool,
 }
 
 impl Default for SettingsState {
     fn default() -> Self {
-        Self { graphics_quality: 2, master_volume: 0.8, sim_speed: 1 }
+        Self {
+            graphics_quality: 2,
+            master_volume: 0.8,
+            music_volume: 0.7,
+            sfx_volume: 0.8,
+            camera_sensitivity: 1.0,
+            sim_speed: 1,
+            vsync: true,
+            fullscreen: false,
+        }
     }
 }
 
@@ -484,12 +504,13 @@ fn draw_settings_window(
     mut contexts: EguiContexts,
     mut settings_open: ResMut<SettingsOpen>,
     mut state: ResMut<SettingsState>,
+    mut game_speed: Option<ResMut<GameSpeed>>,
 ) {
     if !settings_open.0 {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else { return };
-    settings_window(ctx, &mut settings_open, &mut state);
+    settings_window(ctx, &mut settings_open, &mut state, game_speed.as_deref_mut());
 }
 
 // ---------------------------------------------------------------------------
@@ -757,6 +778,29 @@ fn world_setup_fields(
         });
     ui.add_space(8.0);
 
+    // ---- Starting factions -----------------------------------------------
+    ui.label(egui::RichText::new("Starting Factions").color(DIM).small());
+    const FACTIONS: &[&str] = &["2", "3", "4", "5", "6", "7", "8"];
+    egui::ComboBox::from_id_salt("factions_combo")
+        .selected_text(
+            FACTIONS
+                .get(params.starting_factions.saturating_sub(2))
+                .copied()
+                .unwrap_or("4"),
+        )
+        .show_ui(ui, |ui| {
+            for (i, &label) in FACTIONS.iter().enumerate() {
+                ui.selectable_value(&mut params.starting_factions, i + 2, label);
+            }
+        });
+    ui.add_space(8.0);
+
+    // ---- Water level ------------------------------------------------------
+    ui.label(egui::RichText::new("Water Level").color(DIM).small());
+    ui.add(egui::Slider::new(&mut params.water_level, 20..=80).suffix("%"));
+    ui.add_space(8.0);
+    // TODO: wire world_size / starting_factions / water_level to voxel worldgen arguments once generation accepts them.
+
     // ---- Starting era -----------------------------------------------------
     ui.label(egui::RichText::new("Starting Era").color(DIM).small());
     egui::ComboBox::from_id_salt("starting_era_combo")
@@ -1016,6 +1060,7 @@ fn settings_window(
     ctx: &egui::Context,
     settings_open: &mut SettingsOpen,
     state: &mut SettingsState,
+    game_speed: Option<&mut GameSpeed>,
 ) {
     const QUALITIES: &[&str] = &["Low", "Medium", "High", "Ultra"];
     egui::Window::new(egui::RichText::new("\u{2699} Settings").color(ACCENT).strong())
@@ -1030,10 +1075,10 @@ fn settings_window(
                 .inner_margin(egui::Margin::same(18)),
         )
         .open(&mut settings_open.0)
-        .show(ctx, |ui| settings_rows(ui, state, QUALITIES));
+        .show(ctx, |ui| settings_rows(ui, state, game_speed, QUALITIES));
 }
 
-fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str]) {
+fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, game_speed: Option<&mut GameSpeed>, qualities: &[&str]) {
     ui.label(egui::RichText::new("Graphics Quality").color(DIM).small());
     egui::ComboBox::from_id_salt("graphics_quality_combo")
         .selected_text(*qualities.get(state.graphics_quality).unwrap_or(&"High"))
@@ -1046,8 +1091,42 @@ fn settings_rows(ui: &mut egui::Ui, state: &mut SettingsState, qualities: &[&str
     ui.label(egui::RichText::new("Master Volume").color(DIM).small());
     ui.add(egui::Slider::new(&mut state.master_volume, 0.0..=1.0).show_value(true));
     ui.add_space(8.0);
+    ui.label(egui::RichText::new("Music Volume").color(DIM).small());
+    ui.add(egui::Slider::new(&mut state.music_volume, 0.0..=1.0).show_value(true));
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("SFX Volume").color(DIM).small());
+    ui.add(egui::Slider::new(&mut state.sfx_volume, 0.0..=1.0).show_value(true));
+    ui.add_space(8.0);
     ui.label(egui::RichText::new("Sim Speed").color(DIM).small());
-    ui.add(egui::Slider::new(&mut state.sim_speed, 1..=10).text("x").show_value(true));
+    if let Some(speed) = game_speed {
+        if ui
+            .add(egui::Slider::new(&mut state.sim_speed, 1..=10).text("x").show_value(true))
+            .changed()
+        {
+            speed.multiplier = state.sim_speed;
+        }
+    } else {
+        ui.add(egui::Slider::new(&mut state.sim_speed, 1..=10).text("x").show_value(true));
+    }
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Camera Sensitivity").color(DIM).small());
+    ui.add(egui::Slider::new(&mut state.camera_sensitivity, 0.2..=4.0).show_value(true));
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Display").color(DIM).small());
+    // TODO: wire fullscreen setting to window/fullscreen resource when available.
+    ui.checkbox(&mut state.fullscreen, "Fullscreen");
+    ui.label(egui::RichText::new("VSync").color(DIM).small());
+    ui.checkbox(&mut state.vsync, "Vertical sync");
+    // TODO: wire vsync setting to window descriptor once window settings sink is added.
+    ui.add_space(12.0);
+    ui.separator();
+    ui.add_space(8.0);
+    ui.label(egui::RichText::new("Controls").color(DIM).small());
+    ui.indent("settings_controls", |ui| {
+        ui.label("Rotate Camera: Q / E");
+        ui.label("Move Up / Down: R / F");
+        ui.label("Move Horizontal: W / A / S / D");
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -1214,6 +1293,8 @@ mod tests {
             seed: 1234,
             seed_text: "1234".to_string(),
             world_size: 1,
+            starting_factions: 2,
+            water_level: 40,
             starting_era: 0,
         };
         // Mirror the New World button body: randomize() runs on the transition.
@@ -1229,6 +1310,8 @@ mod tests {
             seed: fresh_seed(),
             seed_text: String::new(),
             world_size: 1,
+            starting_factions: 2,
+            water_level: 40,
             starting_era: 0,
         };
         assert!(p.seed > 0xFFFF);
@@ -1241,6 +1324,8 @@ mod tests {
             seed: 42,
             seed_text: "42".to_string(),
             world_size: 1,
+            starting_factions: 2,
+            water_level: 40,
             starting_era: 0,
         };
         p.randomize();
@@ -1255,6 +1340,8 @@ mod tests {
             seed: 1,
             seed_text: "12345678901234567".to_string(),
             world_size: 1,
+            starting_factions: 2,
+            water_level: 40,
             starting_era: 0,
         };
         assert!(p.commit_text());
@@ -1268,6 +1355,8 @@ mod tests {
             seed: 9999,
             seed_text: "not-a-number".to_string(),
             world_size: 1,
+            starting_factions: 2,
+            water_level: 40,
             starting_era: 0,
         };
         assert!(!p.commit_text());

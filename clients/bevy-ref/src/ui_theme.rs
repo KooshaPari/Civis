@@ -110,10 +110,10 @@ pub const MANA: egui::Color32 = egui::Color32::from_rgb(155, 123, 240);
 // --- Holocron deck (Keycap midnight glass) ------------------------------------
 
 pub const DECK_BG: egui::Color32 = KC_BG;
-/// Frosted glass (`KC_BG_ELV` @ ~68% alpha).
-pub const DECK_GLASS: egui::Color32 = egui::Color32::from_rgba_premultiplied(26, 30, 36, 175);
-/// Hairline on glass (`KC_DIVIDER` @ ~55% alpha).
-pub const DECK_BORDER: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 35, 41, 140);
+/// Frosted glass (`KC_BG_ELV` @ ~86% alpha).
+pub const DECK_GLASS: egui::Color32 = egui::Color32::from_rgba_premultiplied(26, 30, 36, 220);
+/// Hairline on glass (`KC_DIVIDER` @ stronger contrast).
+pub const DECK_BORDER: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 35, 41, 195);
 /// Primary chrome accent — Keycap teal (was holocron amber).
 pub const DECK_ACCENT: egui::Color32 = KC_ACCENT;
 /// Back-compat alias → [`DECK_ACCENT`].
@@ -649,9 +649,9 @@ pub fn motion_rect(
 /// Frosted-glass panel fill: translucent enough that the 3D scene clearly
 /// reads through the panel (true Mica/Liquid-Glass), lighter than the opaque
 /// graphite panels so layered depth shows. Alpha kept low on purpose.
-pub const GLASS_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(38, 46, 56, 118);
-/// Thin light top border that gives glass its lifted "wet" edge.
-pub const GLASS_EDGE: egui::Color32 = egui::Color32::from_rgba_premultiplied(162, 182, 198, 110);
+pub const GLASS_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(22, 26, 32, 222);
+/// Thin, dark rim edge that reads as midnight glass.
+pub const GLASS_EDGE: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 35, 41, 180);
 
 /// Frosted Liquid Glass frame for decks, sidebars, and pill shells.
 ///
@@ -719,6 +719,26 @@ pub fn liquid_glass_pill(
     if lit {
         rim_glow(painter, rect, KC_ACCENT, radius);
         inner_glow(painter, rect, KC_ACCENT, radius);
+    }
+}
+
+pub fn panel_glass_fill(hovered: bool, pressed: bool) -> egui::Color32 {
+    if pressed {
+        DECK_GLASS.gamma_multiply(1.14)
+    } else if hovered {
+        DECK_GLASS.gamma_multiply(1.07)
+    } else {
+        DECK_GLASS
+    }
+}
+
+pub fn panel_edge_stroke(hovered: bool, focused: bool) -> egui::Stroke {
+    if focused {
+        egui::Stroke::new(1.2, DECK_ACCENT.gamma_multiply(0.72))
+    } else if hovered {
+        egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.44))
+    } else {
+        egui::Stroke::new(1.0, DECK_BORDER)
     }
 }
 

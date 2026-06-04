@@ -39,11 +39,34 @@ use crate::menus::GameUiMode;
 use crate::spawn_tools::{ActiveTool, SelectedEntity};
 use crate::tool_categories::{ActiveSubTool, SubTool, CATEGORIES};
 use crate::ui_theme::{
-    apply_theme, compact, deck_chip, hairline, liquid_glass_finish, liquid_glass_frame, panel_finish,
+    apply_theme,
+    compact,
+    deck_chip,
+    hairline,
+    liquid_glass_finish,
+    liquid_glass_frame,
+    panel_finish,
     DECK_ACCENT,
-    DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT, DECK_TEXT_MID, GOLD, GREEN, RED, INSET_FILL,
-    RADIUS_BTN, RADIUS_PANEL, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, BORDER, DIM, TEXT,
+    DECK_BORDER,
+    DECK_GLASS,
+    DECK_SUCCESS,
+    DECK_TEXT,
+    DECK_TEXT_MID,
+    GOLD,
+    GREEN,
+    RED,
+    INSET_FILL,
+    RADIUS_BTN,
+    RADIUS_PANEL,
+    SPACE_LG,
+    SPACE_MD,
+    SPACE_SM,
+    SPACE_XS,
+    BORDER,
+    DIM,
+    TEXT,
 };
+use crate::ui_theme::{panel_edge_stroke, panel_glass_fill};
 
 // ---------------------------------------------------------------------------
 // Resources
@@ -532,12 +555,37 @@ fn left_tab_strip(ui: &mut egui::Ui, tab: &mut LeftTab) {
             (LeftTab::InfoViews, "\u{1f5fa} Views"),
         ] {
             let selected = *tab == variant;
-            let text = if selected {
-                egui::RichText::new(label).color(DECK_ACCENT).strong()
-            } else {
-                egui::RichText::new(label).color(DECK_TEXT_MID)
-            };
-            if ui.selectable_label(selected, text).clicked() {
+            let is_hovering = false;
+            let text = egui::RichText::new(label).color(if selected { DECK_ACCENT } else { DECK_TEXT_MID });
+            let response = ui
+                .add(
+                    egui::Button::new(text)
+                        .fill(panel_glass_fill(is_hovering, false))
+                        .stroke(panel_edge_stroke(false, selected))
+                        .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
+                        .min_size(egui::vec2(102.0, 30.0)),
+                );
+            if response.hovered() {
+                ui.painter().rect_stroke(
+                    response.rect.shrink(0.8),
+                    RADIUS_BTN as f32,
+                    egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.45)),
+                    egui::StrokeKind::Inside,
+                );
+                ui.painter().rect_filled(
+                    response.rect,
+                    RADIUS_BTN as f32,
+                    panel_glass_fill(true, false).gamma_multiply(0.15),
+                );
+            }
+            if response.is_pointer_button_down_on() {
+                ui.painter().rect_filled(
+                    response.rect.shrink(1.0),
+                    RADIUS_BTN as f32,
+                    panel_glass_fill(false, true).gamma_multiply(0.12),
+                );
+            }
+            if response.clicked() {
                 *tab = variant;
             }
         }
@@ -597,7 +645,29 @@ fn category_pill_row(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
             let is_open = ctx.sub.open_category == Some(idx);
             let is_active = active_cat == Some(idx);
             let icon_tex = cat.icon_key().and_then(|k| ctx.icons.get(k).copied());
-            if crate::ui_cluster::category_pill(ui, cat, is_open, is_active, icon_tex).clicked() {
+            let resp = crate::ui_cluster::category_pill(ui, cat, is_open, is_active, icon_tex);
+            if resp.hovered() {
+                ui.painter().rect_stroke(
+                    resp.rect.shrink(0.7),
+                    RADIUS_BTN as f32,
+                    egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.65)),
+                    egui::StrokeKind::Inside,
+                );
+                ui.painter().rect_stroke(
+                    resp.rect,
+                    RADIUS_BTN as f32,
+                    egui::Stroke::new(1.1, DECK_ACCENT.gamma_multiply(0.24)),
+                    egui::StrokeKind::Outside,
+                );
+            }
+            if resp.is_pointer_button_down_on() {
+                ui.painter().rect_filled(
+                    resp.rect,
+                    RADIUS_BTN as f32,
+                    panel_glass_fill(false, true).gamma_multiply(0.12),
+                );
+            }
+            if resp.clicked() {
                 ctx.sub.open_category = if is_open { None } else { Some(idx) };
             }
         }
@@ -619,8 +689,9 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
     } else {
         ("\u{2192}", DECK_TEXT_MID)
     };
+    let fill = if value.is_empty() { DECK_GLASS } else { DECK_GLASS };
     egui::Frame::NONE
-        .fill(DECK_GLASS.gamma_multiply(0.85))
+        .fill(fill)
         .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
         .stroke(egui::Stroke::new(1.0, DECK_BORDER))
         .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
@@ -633,6 +704,7 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
                     .small()
                     .monospace(),
             );
+            panel_finish(ui.painter(), ui.min_rect(), RADIUS_BTN, false, false);
         });
 }
 
@@ -738,18 +810,34 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
         };
         let btn = egui::Button::new(text)
             .fill(if active {
-                DECK_ACCENT.gamma_multiply(0.22)
+                panel_glass_fill(false, false).gamma_multiply(1.12)
             } else {
-                DECK_GLASS.gamma_multiply(0.9)
+                panel_glass_fill(false, false)
             })
             .stroke(if active {
                 egui::Stroke::new(1.5, DECK_ACCENT)
             } else {
-                egui::Stroke::new(1.0, DECK_BORDER)
+                panel_edge_stroke(false, false)
             })
             .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
             .min_size(egui::vec2(40.0, 34.0));
-        if ui.add(btn).clicked() {
+        let resp = ui.add(btn);
+        if resp.hovered() {
+            ui.painter().rect_stroke(
+                resp.rect.shrink(0.9),
+                RADIUS_BTN as f32,
+                egui::Stroke::new(1.0, DECK_ACCENT.gamma_multiply(0.4)),
+                egui::StrokeKind::Inside,
+            );
+        }
+            if resp.is_pointer_button_down_on() {
+            ui.painter().rect_filled(
+                resp.rect,
+                RADIUS_BTN as f32,
+                panel_glass_fill(false, true).gamma_multiply(0.15),
+            );
+        }
+        if resp.clicked() {
             speed.multiplier = mult;
         }
     }

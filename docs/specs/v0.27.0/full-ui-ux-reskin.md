@@ -1,35 +1,12 @@
 # SW-006: Full UI/UX Reskin Engine
 
 **Status**: Proposed
-**AgilePlus WP State**: planned
-**Sequence**: 6
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
-**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 2 — Identity
 **Story Points**: 21
 **Priority**: P1
-**File Scope**:
-  - `schemas/ui_theme.schema.json`
-  - `src/SDK/Models/Theme/UiTheme.cs`
-  - `src/SDK/Models/Theme/ResolvedTheme.cs`
-  - `src/SDK/Models/Theme/ThemeResolver.cs`
-  - `src/SDK/Assets/IThemeAssetResolver.cs`
-  - `src/SDK/Assets/ThemeAssetResolver.cs`
-  - `src/SDK/Models/PackManifest.cs`
-  - `src/Runtime/UI/Theme/ThemeEngine.cs`
-  - `src/Runtime/UI/Theme/ISurfaceReskinner.cs`
-  - `src/Runtime/UI/Theme/CanvasWalker.cs`
-  - `src/Runtime/UI/Theme/MainMenuReskinner.cs`
-  - `src/Runtime/UI/MainMenuThemer.cs`
-  - `src/Runtime/ModPlatform.cs`
-  - `BepInEx/plugins/dinoforge-ui-assets/surface_detectors.json`
-  - `src/Tests/Mocks/FakeSurfaceReskinner.cs`
-  - `src/Tests/Mocks/FakeThemeAssetResolver.cs`
-  - `src/Tests/Theme/ThemeResolverTests.cs`
-**Depends On**: [SW-003]
-**Requirements**: EPIC-027-FR-011, EPIC-027-FR-012, EPIC-027-NFR-002, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-007, EPIC-027-NFR-008, EPIC-027-NFR-013, EPIC-027-NFR-015, EPIC-027-NFR-016
 
 ---
 
@@ -166,26 +143,6 @@ All phases target v0.27.0. Phase 7 (user overrides, BepInEx config) deferred to 
 - [ ] `FakeSurfaceReskinner` + `FakeThemeAssetResolver` in `src/Tests/Mocks/`.
 - [ ] External judge receipts for Phase 2 HUD (SW) and Phase 2 HUD (Modern).
 - [ ] `dotnet test` green; performance budget < 16 ms confirmed via F9 overlay.
-
-## Evidence Requirements
-
-| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
-|----------------|---------------|-----------------------|-----------------|
-| EPIC-027-FR-011 | ManualAttestation | `docs/proof/judge-receipts/SW-006-theme-phase2-sw.md` + `SW-006-theme-phase2-modern.md` (HUD shows faction palette per mod; Phase 1 screenshot diff confirms no regression vs `iter146_mods_button_verified.png`) | Implementing → Validated |
-| EPIC-027-FR-012 | SchemaValidation | `PackCompiler validate` rejects a malformed `ui_theme` manifest; valid theme passes with 0 errors | Implementing → Validated |
-| EPIC-027-NFR-002 | CiOutput | Profiler trace (or F9 overlay log) shows no per-frame canvas traversal; theme apply completes in ≤ 1 frame per surface | Implementing → Validated |
-| EPIC-027-NFR-005 | CiOutput | CI build log (Runtime csproj `netstandard2.0`; no direct TMPro/Addressables compile refs) | Implementing → Validated |
-| EPIC-027-NFR-006 | ManualAttestation | ThemeEngine Tick drives reskin; bundles built with 2021.3.45f2 load without silent failure under BepInEx 5.4.x | Implementing → Validated |
-| EPIC-027-NFR-007 | CodeReview | No Harmony patch targets DINO ECS/UI type in SW-006 scope (grep `[HarmonyPatch` in Theme/ files) | Implementing → Validated |
-| EPIC-027-NFR-008 | CodeReview | All injected GameObjects in ThemeEngine carry `DINOForge_` prefix (grep `new GameObject` in Theme/ namespace) | Implementing → Validated |
-| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no `TypeLoadException` after clean launch with ThemeEngine active | Implementing → Validated |
-| EPIC-027-NFR-015 | CodeReview | Every overlaid `Image` in ThemeEngine surfaces has `raycastTarget = false`; EventSystem guard present (Pattern #235) | Implementing → Validated |
-| EPIC-027-NFR-016 | ManualAttestation | Mods page hover/layout matches adjacent native buttons (verified against live `dinoforge ui-tree` dump) | Implementing → Validated |
-| SW-006 | TestResult | `docs/test-results/SW-006/ThemeResolverTests.xml` (merge associativity + last-writer-wins FsCheck properties; missing-sprite graceful-degrade) | Implementing → Validated |
-| SW-006 | ManualAttestation | `MainMenuThemer.cs` removed; `MainMenuReskinner` passes all old tests (test result + code review) | Implementing → Validated |
-| SW-006 | ManualAttestation | Performance budget: ThemeEngine applies full theme in < 16 ms measured via F9 overlay (log excerpt in proof doc) | Implementing → Validated |
-| SW-006 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
-| SW-006 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

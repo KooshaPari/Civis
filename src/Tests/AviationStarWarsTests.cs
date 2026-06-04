@@ -36,6 +36,8 @@ namespace DINOForge.Tests
         [Theory]
         [InlineData("rep_v19_torrent", "republic")]
         [InlineData("cis_tri_fighter", "cis")]
+        [InlineData("rep_laat_gunship", "republic")]
+        [InlineData("cis_nantex_fighter", "cis")]
         public void AerialUnit_ExistsInYaml(string unitId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
@@ -48,6 +50,8 @@ namespace DINOForge.Tests
         [Theory]
         [InlineData("rep_v19_torrent", "republic")]
         [InlineData("cis_tri_fighter", "cis")]
+        [InlineData("rep_laat_gunship", "republic")]
+        [InlineData("cis_nantex_fighter", "cis")]
         public void AerialUnit_HasAerialBehaviorTag(string unitId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
@@ -70,6 +74,8 @@ namespace DINOForge.Tests
         [Theory]
         [InlineData("rep_v19_torrent", "republic")]
         [InlineData("cis_tri_fighter", "cis")]
+        [InlineData("rep_laat_gunship", "republic")]
+        [InlineData("cis_nantex_fighter", "cis")]
         public void AerialUnit_HasAerialBlockWithCruiseAltitude(string unitId, string faction)
         {
             var yamlPath = faction == "republic" ? RepublicUnitsYamlPath : CISUnitsYamlPath;
@@ -392,6 +398,104 @@ namespace DINOForge.Tests
 
             triBlock.Should().Contain("type: aerial",
                 "The cis_tri_fighter model entry must have 'type: aerial' in the asset pipeline");
+        }
+
+        // ── Group 7: Aircraft Production Buildings (Airport / Hangar) ──────────
+
+        [Theory]
+        [InlineData("rep_gunship_bay", "republic")]
+        [InlineData("cis_droid_hangar", "cis")]
+        public void AircraftBuilding_ExistsInYaml(string buildingId, string faction)
+        {
+            var yamlPath = faction == "republic" ? RepublicBuildingsYamlPath : CISBuildingsYamlPath;
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
+
+            yaml.Should().Contain($"id: {buildingId}",
+                $"Aircraft production building '{buildingId}' must be defined in {faction} buildings YAML");
+        }
+
+        [Theory]
+        [InlineData("rep_gunship_bay", "republic", "rep_laat_gunship")]
+        [InlineData("rep_gunship_bay", "republic", "rep_v19_torrent")]
+        [InlineData("cis_droid_hangar", "cis", "cis_tri_fighter")]
+        [InlineData("cis_droid_hangar", "cis", "cis_nantex_fighter")]
+        public void AircraftBuilding_ProducesAerialUnit(string buildingId, string faction, string producedUnitId)
+        {
+            var yamlPath = faction == "republic" ? RepublicBuildingsYamlPath : CISBuildingsYamlPath;
+            var yaml = File.ReadAllText(yamlPath, Encoding.UTF8);
+
+            int idIndex = yaml.IndexOf($"id: {buildingId}");
+            idIndex.Should().BeGreaterThan(-1,
+                $"Building '{buildingId}' must exist before checking production");
+
+            int nextBuilding = yaml.IndexOf("\n- id:", idIndex + 1);
+            var buildingBlock = nextBuilding > -1
+                ? yaml.Substring(idIndex, nextBuilding - idIndex)
+                : yaml.Substring(idIndex);
+
+            buildingBlock.Should().Contain($"{producedUnitId}:",
+                $"Aircraft building '{buildingId}' must list '{producedUnitId}' in its production block " +
+                "so the airport produces the aerial unit");
+        }
+
+        // ── Group 8: Generic warfare-aerial Airport Buildings + Airplanes ─────
+
+        private string AerialBuildingsYamlPath => Path.Combine(RepoRoot, "packs/warfare-aerial/buildings/airfield_buildings.yaml");
+        private string AerialUnitsYamlPath => Path.Combine(RepoRoot, "packs/warfare-aerial/units/aerial_units.yaml");
+
+        [Theory]
+        [InlineData("airport")]
+        [InlineData("hangar")]
+        [InlineData("landing_pad")]
+        public void GenericAirport_ExistsInYaml(string buildingId)
+        {
+            var yaml = File.ReadAllText(AerialBuildingsYamlPath, Encoding.UTF8);
+            yaml.Should().Contain($"id: {buildingId}",
+                $"Generic airport building '{buildingId}' must be defined in warfare-aerial buildings YAML");
+        }
+
+        [Theory]
+        [InlineData("airport", "aerial_fighter_plane")]
+        [InlineData("airport", "aerial_interceptor_plane")]
+        [InlineData("hangar", "aerial_bomber_plane")]
+        [InlineData("landing_pad", "aerial_interceptor_plane")]
+        public void GenericAirport_ProducesAirplane(string buildingId, string producedUnitId)
+        {
+            var yaml = File.ReadAllText(AerialBuildingsYamlPath, Encoding.UTF8);
+
+            int idIndex = yaml.IndexOf($"id: {buildingId}");
+            idIndex.Should().BeGreaterThan(-1);
+
+            int nextBuilding = yaml.IndexOf("\n- id:", idIndex + 1);
+            var block = nextBuilding > -1
+                ? yaml.Substring(idIndex, nextBuilding - idIndex)
+                : yaml.Substring(idIndex);
+
+            block.Should().Contain($"{producedUnitId}:",
+                $"Airport building '{buildingId}' must produce '{producedUnitId}'");
+        }
+
+        [Theory]
+        [InlineData("aerial_fighter_plane")]
+        [InlineData("aerial_bomber_plane")]
+        [InlineData("aerial_interceptor_plane")]
+        public void GenericAirplane_HasAerialBlockAndTag(string unitId)
+        {
+            var yaml = File.ReadAllText(AerialUnitsYamlPath, Encoding.UTF8);
+
+            int idIndex = yaml.IndexOf($"id: {unitId}");
+            idIndex.Should().BeGreaterThan(-1,
+                $"Airplane unit '{unitId}' must be defined in warfare-aerial units YAML");
+
+            int nextUnit = yaml.IndexOf("\n- id:", idIndex + 1);
+            var block = nextUnit > -1
+                ? yaml.Substring(idIndex, nextUnit - idIndex)
+                : yaml.Substring(idIndex);
+
+            block.Should().Contain("Aerial",
+                $"Airplane '{unitId}' must carry the 'Aerial' behavior_tag so AerialUnitMapper attaches AerialUnitComponent");
+            block.Should().Contain("cruise_altitude:",
+                $"Airplane '{unitId}' must define a cruise_altitude so the Aviation systems fly it");
         }
     }
 }

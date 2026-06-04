@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 4069054968
+CRC: 2561140275
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: fcfd3db6b472b1bfd8b4f396e1e233d9
+    Hash: 51150f3751c62fa4db786d136009ccf5
   TypeTreeHash:
     serializedVersion: 2
     Hash: e2a11be68d6287ac10b047eee7e3b6d6
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: fcfd3db6b472b1bfd8b4f396e1e233d9
+    Hash: 51150f3751c62fa4db786d136009ccf5
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -30,6 +30,5 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/CIS/sw-cis-medical-droid.mat
 - Assets/Prefabs/CIS/sw-cis-medical-droid.prefab
 Dependencies: []

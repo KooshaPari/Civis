@@ -12,7 +12,7 @@ This document tracks the CI workflow improvements made to DINOForge in iteration
 
 **Implementation**:
 - Added `actions/cache@v4` step to all dotnet workflows
-- Cache key: <code v-pre>${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}</code>
+- Cache key: `${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}`
 - Each major job (SDK, Runtime, CLI, PackCompiler) has its own cache entry to avoid conflicts
 - All workflows now use `--locked-mode` in `dotnet restore` to enforce lock file usage
 

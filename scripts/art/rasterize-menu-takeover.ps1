@@ -61,8 +61,7 @@ $packs = @{
     }
     'warfare-modern'   = @{
         'menu_logo.png'  = @('logo-title.svg', 1600, 500)
-        # MODERN BUG FIX: keep main-menu wallpaper clean (no baked loading progress strip).
-        'menu_bg.png'    = @('menu-bg.svg', 1920, 1080)
+        'menu_bg.png'    = @('ui/loading-western.svg', 1920, 1080)
         'btn_normal.png' = @('ui/button-normal.svg', 256, 96)
         'btn_hover.png'  = @('ui/button-hover.svg', 256, 96)
     }

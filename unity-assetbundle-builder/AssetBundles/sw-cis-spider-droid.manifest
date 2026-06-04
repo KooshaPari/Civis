@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1483418483
+CRC: 499743780
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 4b1cdb21e3abf0de5c48a9574216ab64
+    Hash: 3ac1f033b766426bbcf1e6849d957e71
   TypeTreeHash:
     serializedVersion: 2
-    Hash: a3954d9da6324b836c32a89fa85d00a9
+    Hash: 81fc4833398717ae320ec5bd08c661f4
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 4b1cdb21e3abf0de5c48a9574216ab64
+    Hash: 3ac1f033b766426bbcf1e6849d957e71
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,11 +26,9 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 65
-  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
+- Assets/Prefabs/CIS/sw-cis-spider-droid.prefab
 - Assets/Materials/CIS/sw-cis-spider-droid.mat
 - Assets/Materials/CIS/sw-cis-spider-droid-primary.mat
-- Assets/Prefabs/CIS/sw-cis-spider-droid.prefab
 Dependencies: []

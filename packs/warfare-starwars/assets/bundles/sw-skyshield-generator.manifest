@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 3875997327
+CRC: 3240599515
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 71437e90ecb6ed7b2b5b00a7a9cd2a02
+    Hash: b12fa650e5e49dad73e2866b3d9a5011
   TypeTreeHash:
     serializedVersion: 2
     Hash: 34c66e1a55654dedabb7cdcd0f409d91
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 71437e90ecb6ed7b2b5b00a7a9cd2a02
+    Hash: b12fa650e5e49dad73e2866b3d9a5011
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -30,6 +30,6 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/Republic/sw-skyshield-generator.mat
 - Assets/Prefabs/Republic/sw-skyshield-generator.prefab
+- Assets/Materials/Republic/sw-skyshield-generator.mat
 Dependencies: []

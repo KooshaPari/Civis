@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2059410573
+CRC: 4281403848
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 958e6be9a2792bde8ff5ae62f27e4973
+    Hash: d927c7dfdf3be0cf466e01ffeec1a734
   TypeTreeHash:
     serializedVersion: 2
     Hash: e2a11be68d6287ac10b047eee7e3b6d6
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 958e6be9a2792bde8ff5ae62f27e4973
+    Hash: d927c7dfdf3be0cf466e01ffeec1a734
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -30,7 +30,7 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/CIS/sw-cis-sensor-array-primary.mat
 - Assets/Prefabs/CIS/sw-cis-sensor-array.prefab
+- Assets/Materials/CIS/sw-cis-sensor-array-primary.mat
 - Assets/Materials/CIS/sw-cis-sensor-array.mat
 Dependencies: []

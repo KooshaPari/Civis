@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 854012996
+CRC: 3910603052
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 53ed5ec97cce6e6122313563803787cb
+    Hash: 189e51e669ebf20f937372d53615fc9d
   TypeTreeHash:
     serializedVersion: 2
     Hash: 34c66e1a55654dedabb7cdcd0f409d91
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 53ed5ec97cce6e6122313563803787cb
+    Hash: 189e51e669ebf20f937372d53615fc9d
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -31,6 +31,6 @@ ClassTypes:
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Materials/CIS/sw-cis-nantex-fighter.mat
-- Assets/Prefabs/CIS/sw-cis-nantex-fighter.prefab
 - Assets/Materials/CIS/sw-cis-nantex-fighter-primary.mat
+- Assets/Prefabs/CIS/sw-cis-nantex-fighter.prefab
 Dependencies: []

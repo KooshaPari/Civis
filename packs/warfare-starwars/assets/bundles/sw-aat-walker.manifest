@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2523894170
+CRC: 2125257459
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 081644734ad863b2970a9aa1bb3d76b9
+    Hash: b98a1a061e81c08f52765c6d206f35d9
   TypeTreeHash:
     serializedVersion: 2
-    Hash: a3954d9da6324b836c32a89fa85d00a9
+    Hash: 81fc4833398717ae320ec5bd08c661f4
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 081644734ad863b2970a9aa1bb3d76b9
+    Hash: b98a1a061e81c08f52765c6d206f35d9
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,10 +26,8 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 65
-  Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/CIS/sw-aat-walker.mat
 - Assets/Prefabs/CIS/sw-aat-walker.prefab
+- Assets/Materials/CIS/sw-aat-walker.mat
 Dependencies: []

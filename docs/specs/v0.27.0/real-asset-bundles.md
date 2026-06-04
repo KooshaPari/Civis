@@ -1,25 +1,12 @@
 # SW-003: Real Asset Bundles (Kill #101 Stub-Bundle Regression)
 
 **Status**: Proposed
-**AgilePlus WP State**: planned
-**Sequence**: 3
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
-**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 1 — Foundation
 **Story Points**: 13
 **Priority**: P0 — Sprint blocker
-**File Scope**:
-  - `unity-assetbundle-builder/Assets/Editor/GenerateStarWarsPrefabs.cs`
-  - `unity-assetbundle-builder/Assets/Editor/GenerateStarWarsPrefabsFromModels.cs`
-  - `packs/warfare-starwars/assets/bundles/`
-  - `packs/warfare-modern/assets/bundles/`
-  - `scripts/ci/detect_stub_bundles.py`
-  - `docs/guide/asset-bundle-build.md`
-  - `src/Runtime/Bridge/AssetSwapSystem.cs`
-**Depends On**: []
-**Requirements**: EPIC-027-FR-007, EPIC-027-FR-008, EPIC-027-NFR-003, EPIC-027-NFR-006, EPIC-027-NFR-010, EPIC-027-NFR-011, EPIC-027-NFR-019
 
 ---
 
@@ -58,7 +45,7 @@ version) to be loadable by DINO's Mono CLR 4.0 runtime.
 **When** a Star Wars gameplay session is active and units are spawned,
 **Then** at least 24 of 36 matched entities display non-vanilla mesh
 (external judge screenshot confirms clone trooper or droid geometry, not vanilla DINO units).
-**And** `BepInEx/dinoforge_debug.log` shows `[AssetSwap] Phase2 swap: <entity_id> → sw-rep-<unit>`
+**And** `BepInEx/dinoforge_debug.log` shows `[AssetSwap] Phase2 swap: <entity_id> → sw-rep-<unit>` 
 for at least 24 entities.
 
 ### Scenario 3 — Modern Warfare key units have real bundles
@@ -125,21 +112,6 @@ Per CLAUDE.md "Asset Pipeline Governance":
 - [ ] CI stub-bundle detector added to `scripts/ci/detect_stub_bundles.py`.
 - [ ] TMP_FontAsset bundles for SW-005 present and loadable.
 - [ ] `dotnet test` green.
-
-## Evidence Requirements
-
-| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
-|----------------|---------------|-----------------------|-----------------|
-| EPIC-027-FR-007 | ManualAttestation | `docs/proof/judge-receipts/SW-003-real-bundles.md` (spawned units render mod mesh in-game; 0 stub bundles reported by `verify-mod`) | Implementing → Validated |
-| EPIC-027-FR-008 | CiOutput | `scripts/ci/detect_stub_bundles.py` exits non-zero when any bundle < 1 KB is present; exits 0 after fix | Implementing → Validated |
-| EPIC-027-NFR-003 | LogVerification | Pack-load duration < 10 s recorded in BepInEx launch log (`dinoforge_debug.log` timestamp diff) | Implementing → Validated |
-| EPIC-027-NFR-006 | ManualAttestation | Bundles built with Unity 2021.3.45f2 load without silent failure under BepInEx 5.4.x (log confirmation; version mismatch warning fires for wrong-version bundle) | Implementing → Validated |
-| EPIC-027-NFR-010 | LogVerification | Tampered/wrong-version bundle is skipped and warning logged; game continues (manual test with deliberate wrong-version bundle) | Implementing → Validated |
-| EPIC-027-NFR-011 | SchemaValidation | `PackCompiler validate` rejects a pack manifest referencing `../` or absolute asset paths | Implementing → Validated |
-| EPIC-027-NFR-019 | AssetGate | `scripts/ci/detect_stub_bundles.py` exits 0; bundle count == declared visual_asset count for both packs | Implementing → Validated |
-| SW-003 | VerifyModCli | `dinoforge verify-mod --pack warfare-starwars` exits 0, 0 stub-bundle errors; same for `warfare-modern` | Implementing → Validated |
-| SW-003 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
-| SW-003 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

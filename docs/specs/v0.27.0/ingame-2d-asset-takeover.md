@@ -1,29 +1,12 @@
 # SW-007: In-Game 2D Asset Takeover
 
 **Status**: Proposed
-**AgilePlus WP State**: planned
-**Sequence**: 7
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
-**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 3 — Assets
 **Story Points**: 13
 **Priority**: P1
-**File Scope**:
-  - `src/SDK/Assets/SpriteSwapRegistry.cs`
-  - `src/Runtime/Bridge/TcSpriteLoader.cs`
-  - `src/Runtime/UI/TcUiSpritePass.cs`
-  - `src/Runtime/UI/TcCursorApplicator.cs`
-  - `src/Runtime/Bridge/AddressablesSpritePatch.cs`
-  - `src/SDK/Models/TotalConversionManifest.cs`
-  - `schemas/total-conversion.schema.json`
-  - `docs/reference/dino-sprite-key-map.yaml`
-  - `docs/reference/dino-ui-atlas-spec.yaml`
-  - `src/Tests/SpriteSwapRegistryTests.cs`
-  - `src/Tests/TcSpriteLoaderTests.cs`
-**Depends On**: [SW-006-P1]
-**Requirements**: EPIC-027-FR-013, EPIC-027-FR-014, EPIC-027-NFR-002, EPIC-027-NFR-005, EPIC-027-NFR-006, EPIC-027-NFR-008, EPIC-027-NFR-011, EPIC-027-NFR-013, EPIC-027-NFR-014, EPIC-027-NFR-015, EPIC-027-NFR-020
 
 ---
 
@@ -128,26 +111,6 @@ prevents the original from being allocated.
 - [ ] `SpriteSwapRegistry`, `TcSpriteLoader`, `TcUiSpritePass`, `TcCursorApplicator`, `AddressablesSpritePatch` all have unit tests.
 - [ ] Sprite cache invalidation verified on HotReload signal.
 - [ ] `dotnet test` green.
-
-## Evidence Requirements
-
-| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
-|----------------|---------------|-----------------------|-----------------|
-| EPIC-027-FR-013 | ManualAttestation | `docs/proof/judge-receipts/SW-007-2d-takeover.md` (full play session: every spawnable unit shows mod portrait + faction emblems replaced in HUD, no vanilla DINO 2D art — screenshot per mod) | Implementing → Validated |
-| EPIC-027-FR-014 | TestResult | `docs/test-results/SW-007/SpriteSwapRegistryTests.xml` — Strategy B (sprite swap without key-discovery) confirmed; Strategy A (Addressables intercept) activated after key-discovery pass | Implementing → Validated |
-| EPIC-027-NFR-002 | CiOutput | Profiler log confirms no per-frame canvas walk from `TcUiSpritePass`; all sprite swaps applied in single frame budget at scene load | Implementing → Validated |
-| EPIC-027-NFR-005 | CiOutput | CI build log (Runtime `netstandard2.0`; Strategy A Harmony Prefix uses reflection-resolved type, no compile-time Addressables ref) | Implementing → Validated |
-| EPIC-027-NFR-006 | ManualAttestation | Sprite bundles (if any) built with Unity 2021.3.45f2 load under BepInEx 5.4.x; `Texture2D.LoadImage` for raw PNGs confirmed on main thread (log) | Implementing → Validated |
-| EPIC-027-NFR-008 | CodeReview | All injected cursor/overlay objects carry `DINOForge_` prefix; no unnamed injected objects (grep `new GameObject` in TcCursorApplicator + TcUiSpritePass) | Implementing → Validated |
-| EPIC-027-NFR-011 | SchemaValidation | `PackCompiler validate` rejects a manifest with `..` or absolute-path asset references in `asset_replacements.ui` | Implementing → Validated |
-| EPIC-027-NFR-013 | CiOutput | `LogOutput.log` grep: no `TypeLoadException` after clean launch with Strategy A Harmony Prefix active | Implementing → Validated |
-| EPIC-027-NFR-014 | TestResult | `docs/test-results/SW-007/TcSpriteLoaderTests.xml` — missing/failed sprite asset falls back to vanilla, warning logged, no crash | Implementing → Validated |
-| EPIC-027-NFR-015 | CodeReview | Overlay Image components in `TcUiSpritePass` have `raycastTarget = false`; EventSystem guard present before any GraphicRaycaster add | Implementing → Validated |
-| EPIC-027-NFR-020 | ManualAttestation | Full play session (cross-reference with FR-013 receipt): no native medieval 2D art visible with TC active (judge receipt per mod) | Implementing → Validated |
-| SW-007 | ManualAttestation | `dino-sprite-key-map.yaml` published in `docs/reference/`; Strategy A intercepts at least one Addressables key (log confirmation + receipt) | Implementing → Validated |
-| SW-007 | ManualAttestation | Sprite cache invalidation verified on HotReload signal (hot-reload + re-scan shows updated sprite, no crash) | Implementing → Validated |
-| SW-007 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
-| SW-007 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

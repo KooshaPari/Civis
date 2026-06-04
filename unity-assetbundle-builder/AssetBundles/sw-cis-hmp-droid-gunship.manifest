@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 4100019363
+CRC: 497600346
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: d173659fbf82eeeeacb3989036ef4f94
+    Hash: d4320472ab0914de4f92a4a754de1a9f
   TypeTreeHash:
     serializedVersion: 2
     Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: d173659fbf82eeeeacb3989036ef4f94
+    Hash: d4320472ab0914de4f92a4a754de1a9f
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -30,7 +30,7 @@ ClassTypes:
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Prefabs/CIS/sw-cis-hmp-droid-gunship.prefab
 - Assets/Materials/CIS/sw-cis-hmp-droid-gunship-primary.mat
+- Assets/Prefabs/CIS/sw-cis-hmp-droid-gunship.prefab
 - Assets/Materials/CIS/sw-cis-hmp-droid-gunship.mat
 Dependencies: []

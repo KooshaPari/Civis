@@ -1,22 +1,12 @@
 # SW-002: DINOForge Active Indicator
 
 **Status**: Proposed
-**AgilePlus WP State**: planned
-**Sequence**: 2
 **Date**: 2026-05-28
 **Author**: DINOForge Agents
 **Epic**: [EPIC-027 — True Full-Conversion Experience](../v0.27.0-full-conversion-epic.md)
-**AgilePlus Feature Slug**: epic-027-full-conversion
 **Sprint**: 1 — Foundation
 **Story Points**: 3
 **Priority**: P1
-**File Scope**:
-  - `src/Runtime/UI/WindowTitleService.cs`
-  - `src/Runtime/Plugin.cs`
-  - `src/Runtime/ModPlatform.cs`
-  - `src/Tests/WindowTitleServiceTests.cs`
-**Depends On**: []
-**Requirements**: EPIC-027-FR-005, EPIC-027-FR-006, EPIC-027-NFR-005, EPIC-027-NFR-018
 
 ---
 
@@ -95,18 +85,6 @@ signal), changing the active pack,
 - [ ] Vanilla DINO title (no DINOForge) unchanged when DINOForge is absent.
 - [ ] Screenshot of window title visible in taskbar deposited in `docs/proof/`.
 - [ ] `dotnet test` green — unit tests for `WindowTitleService.Format()`.
-
-## Evidence Requirements
-
-| Requirement ID | Evidence Type | Artifact Path Pattern | Transition Gate |
-|----------------|---------------|-----------------------|-----------------|
-| EPIC-027-FR-005 | WindowAttestation | `game_status` MCP tool or PowerShell `MainWindowTitle` read-back confirms title contains `\| DINOForge v0.27.0` after plugin Awake (proof artifact at `docs/proof/SW-002-title-check.txt`) | Implementing → Validated |
-| EPIC-027-FR-006 | WindowAttestation | With `warfare-starwars` active, window title includes the SW mod name; recorded in proof artifact | Implementing → Validated |
-| EPIC-027-NFR-005 | CiOutput | CI build log (Runtime csproj `netstandard2.0`; Win32 P/Invoke in WindowTitleService uses `DllImport("user32.dll")` only — no managed TMPro/Addressables deps) | Implementing → Validated |
-| EPIC-027-NFR-018 | CiOutput | New UI strings (if any surface labels) resolve through locale layer (i18n CI check) | Implementing → Validated |
-| SW-002 | TestResult | `docs/test-results/SW-002/WindowTitleServiceTests.xml` (Format() with pack present / absent; hot-reload update within 2s) | Implementing → Validated |
-| SW-002 | ReviewApproval | PR URL (auto-detected from WorkPackage.pr_url) | Validated → Shipped |
-| SW-002 | CiOutput | GitHub Actions run URL (dotnet test green) | Implementing → Validated |
 
 ## Related
 

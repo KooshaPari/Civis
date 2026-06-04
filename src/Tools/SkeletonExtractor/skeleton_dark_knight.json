@@ -1,0 +1,37 @@
+{
+  "bundle": "G:/SteamLibrary/steamapps/common/Diplomacy is Not an Option/Diplomacy is Not an Option_Data/StreamingAssets/aa/StandaloneWindows64/settings_assets_all.bundle",
+  "filter": "dark_knight",
+  "meshHits": 1,
+  "results": [
+    {
+      "mesh": "dark_knight",
+      "bindposeCount": 21,
+      "boneNameHashCount": 21,
+      "subMeshCount": 1,
+      "boneNameHashes": [
+        3297942148,
+        3750120588,
+        1385759235,
+        2615517091,
+        4186151569,
+        113222829,
+        2910317188,
+        1811059477,
+        254416586,
+        59549682,
+        1436622580,
+        4112853929,
+        4013327453,
+        603097146,
+        1647331369,
+        3657282905,
+        2098613160,
+        2589172191,
+        2554377818,
+        3127574138,
+        14941120
+      ],
+      "boneNames": []
+    }
+  ]
+}

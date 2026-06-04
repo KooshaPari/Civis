@@ -1,283 +1,229 @@
 ManifestFileVersion: 0
-CRC: 592335079
+CRC: 2427847682
 AssetBundleManifest:
   AssetBundleInfos:
     Info_0:
-      Name: sw-rep-supply-depot
-      Dependencies: {}
-    Info_1:
-      Name: sw-heavy-foundry
-      Dependencies: {}
-    Info_2:
-      Name: sw-vulture-nest
-      Dependencies: {}
-    Info_3:
-      Name: sw-rep-jedi-fighter
-      Dependencies: {}
-    Info_4:
-      Name: sw-rep-clone-sniper
-      Dependencies: {}
-    Info_5:
-      Name: sw-rep-senate-outpost
-      Dependencies: {}
-    Info_6:
-      Name: sw-rep-clone-medic
-      Dependencies: {}
-    Info_7:
-      Name: sw-cis-stap
-      Dependencies: {}
-    Info_8:
-      Name: sw-rep-clone-commander
-      Dependencies: {}
-    Info_9:
-      Name: sw-rep-at-te-walker
-      Dependencies: {}
-    Info_10:
-      Name: sw-rep-med-center
-      Dependencies: {}
-    Info_11:
-      Name: sw-b1-squad
-      Dependencies: {}
-    Info_12:
-      Name: sw-cis-aa-tower
-      Dependencies: {}
-    Info_13:
-      Name: sw-cis-hmp-droid-gunship
-      Dependencies: {}
-    Info_14:
-      Name: sw-rep-laat-gunship
-      Dependencies: {}
-    Info_15:
-      Name: sw-arf-trooper
-      Dependencies: {}
-    Info_16:
-      Name: sw-rep-command-center
-      Dependencies: {}
-    Info_17:
-      Name: sw-medical-droid
-      Dependencies: {}
-    Info_18:
-      Name: sw-barc-speeder
-      Dependencies: {}
-    Info_19:
-      Name: sw-rep-turbolaser-tower
-      Dependencies: {}
-    Info_20:
-      Name: sw-clone-commando
-      Dependencies: {}
-    Info_21:
-      Name: sw-mining-facility
-      Dependencies: {}
-    Info_22:
-      Name: sw-cis-control-ship
-      Dependencies: {}
-    Info_23:
-      Name: sw-rep-arc-trooper
-      Dependencies: {}
-    Info_24:
-      Name: sw-rep-at-rt-walker
-      Dependencies: {}
-    Info_25:
-      Name: sw-rep-clone-facility
-      Dependencies: {}
-    Info_26:
-      Name: sw-cis-ion-cannon
-      Dependencies: {}
-    Info_27:
       Name: sw-aat-walker
       Dependencies: {}
-    Info_28:
-      Name: sw-rep-vehicle-bay
+    Info_1:
+      Name: sw-cis-nantex-fighter
       Dependencies: {}
-    Info_29:
-      Name: sw-cis-b2-super-droid
+    Info_2:
+      Name: sw-clone-commando
       Dependencies: {}
-    Info_30:
-      Name: sw-cis-b1-battle-droid
+    Info_3:
+      Name: sw-rep-arc-trooper
       Dependencies: {}
-    Info_31:
-      Name: sw-cis-repair-bay
+    Info_4:
+      Name: sw-rep-clone-heavy
       Dependencies: {}
-    Info_32:
-      Name: sw-cis-sensor-array
-      Dependencies: {}
-    Info_33:
-      Name: sw-cis-droid-pilot
-      Dependencies: {}
-    Info_34:
-      Name: sw-cis-magna-guard
-      Dependencies: {}
-    Info_35:
-      Name: sw-cis-droid-factory
-      Dependencies: {}
-    Info_36:
-      Name: sw-cis-shield-generator
-      Dependencies: {}
-    Info_37:
-      Name: sw-rep-clone-engineer
-      Dependencies: {}
-    Info_38:
-      Name: sw-cis-sniper-droid
-      Dependencies: {}
-    Info_39:
-      Name: sw-rep-ion-cannon
-      Dependencies: {}
-    Info_40:
-      Name: sw-rep-gunship-bay
-      Dependencies: {}
-    Info_41:
+    Info_5:
       Name: sw-cis-droideka
       Dependencies: {}
-    Info_42:
-      Name: sw-probe-droid
+    Info_6:
+      Name: sw-rep-clone-engineer
       Dependencies: {}
-    Info_43:
-      Name: sw-cis-rocket-droid
+    Info_7:
+      Name: sw-rep-clone-jet
       Dependencies: {}
-    Info_44:
-      Name: sw-cis-command-center
+    Info_8:
+      Name: sw-cis-droid-pilot
       Dependencies: {}
-    Info_45:
+    Info_9:
+      Name: sw-rep-command-center
+      Dependencies: {}
+    Info_10:
+      Name: sw-rep-senate-outpost
+      Dependencies: {}
+    Info_11:
+      Name: sw-skyshield-generator
+      Dependencies: {}
+    Info_12:
+      Name: sw-cis-droid-factory
+      Dependencies: {}
+    Info_13:
+      Name: sw-rep-laat-gunship
+      Dependencies: {}
+    Info_14:
+      Name: sw-cis-sensor-array
+      Dependencies: {}
+    Info_15:
+      Name: sw-cis-repair-bay
+      Dependencies: {}
+    Info_16:
+      Name: sw-rep-gunship-bay
+      Dependencies: {}
+    Info_17:
       Name: sw-cis-hangar-bay
       Dependencies: {}
+    Info_18:
+      Name: sw-cis-rocket-droid
+      Dependencies: {}
+    Info_19:
+      Name: sw-cis-sniper-droid
+      Dependencies: {}
+    Info_20:
+      Name: sw-guard-tower
+      Dependencies: {}
+    Info_21:
+      Name: sw-rep-research-lab
+      Dependencies: {}
+    Info_22:
+      Name: sw-medical-droid
+      Dependencies: {}
+    Info_23:
+      Name: sw-cis-control-ship
+      Dependencies: {}
+    Info_24:
+      Name: sw-rep-turbolaser-tower
+      Dependencies: {}
+    Info_25:
+      Name: sw-assembly-line
+      Dependencies: {}
+    Info_26:
+      Name: sw-cis-supply-depot
+      Dependencies: {}
+    Info_27:
+      Name: sw-rep-clone-medic
+      Dependencies: {}
+    Info_28:
+      Name: sw-tech-union-lab
+      Dependencies: {}
+    Info_29:
+      Name: sw-cis-grapple-droid
+      Dependencies: {}
+    Info_30:
+      Name: sw-cis-command-center
+      Dependencies: {}
+    Info_31:
+      Name: sw-cis-magna-guard
+      Dependencies: {}
+    Info_32:
+      Name: sw-cis-trade-fed-core
+      Dependencies: {}
+    Info_33:
+      Name: sw-rep-jedi-fighter
+      Dependencies: {}
+    Info_34:
+      Name: sw-barc-speeder
+      Dependencies: {}
+    Info_35:
+      Name: sw-rep-clone-pilot
+      Dependencies: {}
+    Info_36:
+      Name: sw-rep-at-rt-walker
+      Dependencies: {}
+    Info_37:
+      Name: sw-cis-b1-battle-droid
+      Dependencies: {}
+    Info_38:
+      Name: sw-rep-shield-generator
+      Dependencies: {}
+    Info_39:
+      Name: sw-clone-militia
+      Dependencies: {}
+    Info_40:
+      Name: sw-general-grievous
+      Dependencies: {}
+    Info_41:
+      Name: sw-cis-commando-droid
+      Dependencies: {}
+    Info_42:
+      Name: sw-cis-stap
+      Dependencies: {}
+    Info_43:
+      Name: sw-rep-clone-facility
+      Dependencies: {}
+    Info_44:
+      Name: sw-tri-fighter
+      Dependencies: {}
+    Info_45:
+      Name: sw-cis-aa-tower
+      Dependencies: {}
     Info_46:
-      Name: sw-rep-clone-jet
+      Name: sw-cis-hmp-droid-gunship
       Dependencies: {}
     Info_47:
       Name: sw-rep-clone-trooper
       Dependencies: {}
     Info_48:
-      Name: sw-cis-nantex-fighter
+      Name: sw-rep-clone-commander
       Dependencies: {}
     Info_49:
-      Name: sw-rep-research-lab
+      Name: sw-rep-ion-cannon
       Dependencies: {}
     Info_50:
-      Name: sw-cis-spider-droid
+      Name: sw-cis-shield-generator
       Dependencies: {}
     Info_51:
-      Name: sw-tibanna-refinery
+      Name: sw-heavy-foundry
       Dependencies: {}
     Info_52:
-      Name: sw-clone-wall-guard
-      Dependencies: {}
-    Info_53:
-      Name: sw-guard-tower
-      Dependencies: {}
-    Info_54:
       Name: sw-durasteel-barrier
       Dependencies: {}
+    Info_53:
+      Name: sw-cis-ion-cannon
+      Dependencies: {}
+    Info_54:
+      Name: sw-b1-squad
+      Dependencies: {}
     Info_55:
-      Name: sw-cis-trade-fed-core
-      Dependencies: {}
-    Info_56:
-      Name: sw-rep-shield-generator
-      Dependencies: {}
-    Info_57:
-      Name: sw-processing-plant
-      Dependencies: {}
-    Info_58:
-      Name: sw-tri-fighter
-      Dependencies: {}
-    Info_59:
-      Name: sw-cis-octuptarra
-      Dependencies: {}
-    Info_60:
-      Name: sw-tech-union-lab
-      Dependencies: {}
-    Info_61:
-      Name: sw-rep-clone-mortar
-      Dependencies: {}
-    Info_62:
-      Name: sw-assembly-line
-      Dependencies: {}
-    Info_63:
-      Name: sw-skyshield-generator
-      Dependencies: {}
-    Info_64:
-      Name: sw-general-grievous
-      Dependencies: {}
-    Info_65:
-      Name: sw-cis-commando-droid
-      Dependencies: {}
-    Info_66:
-      Name: sw-cis-grapple-droid
-      Dependencies: {}
-    Info_67:
-      Name: sw-jedi-knight
-      Dependencies: {}
-    Info_68:
-      Name: sw-rep-clone-pilot
-      Dependencies: {}
-    Info_69:
-      Name: sw-rep-clone-heavy
-      Dependencies: {}
-    Info_70:
-      Name: sw-clone-militia
-      Dependencies: {}
-    Info_71:
-      Name: sw-weapons-factory
-      Dependencies: {}
-    Info_72:
       Name: sw-v19-torrent-unit
       Dependencies: {}
-    Info_73:
-      Name: sw-cis-supply-depot
+    Info_56:
+      Name: sw-tibanna-refinery
       Dependencies: {}
-    Info_74:
+    Info_57:
+      Name: sw-vulture-nest
+      Dependencies: {}
+    Info_58:
+      Name: sw-clone-wall-guard
+      Dependencies: {}
+    Info_59:
+      Name: sw-rep-at-te-walker
+      Dependencies: {}
+    Info_60:
+      Name: sw-rep-clone-mortar
+      Dependencies: {}
+    Info_61:
+      Name: sw-processing-plant
+      Dependencies: {}
+    Info_62:
+      Name: sw-rep-supply-depot
+      Dependencies: {}
+    Info_63:
+      Name: sw-rep-med-center
+      Dependencies: {}
+    Info_64:
       Name: sw-blast-wall
       Dependencies: {}
-    Info_75:
-      Name: sw-b1-battle-droid
+    Info_65:
+      Name: sw-cis-octuptarra
       Dependencies: {}
-    Info_76:
-      Name: sw-b2-super-droid
+    Info_66:
+      Name: sw-jedi-knight
       Dependencies: {}
-    Info_77:
-      Name: sw-bx-commando-droid
+    Info_67:
+      Name: sw-arf-trooper
       Dependencies: {}
-    Info_78:
-      Name: sw-cis-aat
+    Info_68:
+      Name: sw-rep-clone-sniper
       Dependencies: {}
-    Info_79:
-      Name: sw-cis-medical-droid
+    Info_69:
+      Name: sw-probe-droid
       Dependencies: {}
-    Info_80:
-      Name: sw-commando-droid
+    Info_70:
+      Name: sw-weapons-factory
       Dependencies: {}
-    Info_81:
-      Name: sw-droideka
+    Info_71:
+      Name: sw-cis-b2-super-droid
       Dependencies: {}
-    Info_82:
-      Name: sw-hmp-droid-gunship
+    Info_72:
+      Name: sw-mining-facility
       Dependencies: {}
-    Info_83:
-      Name: sw-nantex-fighter
+    Info_73:
+      Name: sw-rep-vehicle-bay
       Dependencies: {}
-    Info_84:
-      Name: sw-octuptarra
-      Dependencies: {}
-    Info_85:
-      Name: sw-sniper-droid
-      Dependencies: {}
-    Info_86:
-      Name: sw-trade-fed-core
-      Dependencies: {}
-    Info_87:
-      Name: sw-clone-heavy
-      Dependencies: {}
-    Info_88:
-      Name: sw-clone-medic
-      Dependencies: {}
-    Info_89:
-      Name: sw-v19-torrent
-      Dependencies: {}
-    Info_90:
-      Name: sw-clone-barracks
-      Dependencies: {}
-    Info_91:
-      Name: sw-hangar-bay
-      Dependencies: {}
-    Info_92:
-      Name: assets/ui/sw_menu_font_asset
+    Info_74:
+      Name: sw-cis-spider-droid
       Dependencies: {}

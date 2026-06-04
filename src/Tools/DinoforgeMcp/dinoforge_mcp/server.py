@@ -81,6 +81,23 @@ BEPINEX_DIR = GAME_DIR / "BepInEx"
 DEBUG_LOG = BEPINEX_DIR / "dinoforge_debug.log"
 CATALOG_JSON = GAME_DIR / r"Diplomacy is Not an Option_Data\StreamingAssets\aa\catalog.json"
 
+# DINO AppID — steam_appid.txt beside the exe stops DINO from self-relaunching
+# through Steam (which kills the BepInEx-injected process: no MODS/F9/F10).
+DINO_STEAM_APPID = "1272320"
+
+
+def _ensure_steam_appid(game_dir: Path) -> None:
+    """Ensure steam_appid.txt (AppID, UTF-8 no BOM, no trailing newline) sits beside
+    the exe before launch. Steam 'Verify Integrity' can delete it; recreate if missing."""
+    appid_file = game_dir / "steam_appid.txt"
+    try:
+        if appid_file.read_bytes() == DINO_STEAM_APPID.encode("utf-8"):
+            return
+    except OSError:
+        pass
+    appid_file.write_bytes(DINO_STEAM_APPID.encode("utf-8"))
+
+
 GAME_CONTROL_PROJ = REPO_ROOT / "src/Tools/GameControlCli/GameControlCli.csproj"
 PACK_COMPILER_PROJ = REPO_ROOT / "src/Tools/PackCompiler/DINOForge.Tools.PackCompiler.csproj"
 ASSET_CLI_PROJ = REPO_ROOT / "src/Tools/Cli/DINOForge.Tools.Cli.csproj"
@@ -405,8 +422,9 @@ async def game_screenshot(ctx: Context, output_path: str | None = None, pipe_nam
       1. WGC (Windows.Graphics.Capture, via bare-cua-native) — foreground-independent,
          survives hung Unity / DXGI exclusive fullscreen / non-focused windows.
          5s timeout; falls through silently on failure.
-      2. GameControlCli "screenshot" — named pipe → Unity ScreenCapture.CaptureScreenshot
-         (GPU backbuffer). Highest-fidelity path but BLOCKS when the game hangs.
+      2. GameControlCli "screenshot" — named pipe → in-process FrameCapture
+         (synchronous camera RenderTexture readback; #972). Highest-fidelity path,
+         works in menu + in-game + loading, but BLOCKS when the game hangs.
       3. (Future) Last-resort PrintWindow / GDI via HiddenDesktopBackend.
 
     The returned dict includes a `backend` field ("wgc" | "game_control_cli")
@@ -598,6 +616,7 @@ async def game_launch(ctx: Context, hidden: bool = False) -> dict:
     """
     if not GAME_EXE.exists():
         return {"success": False, "error": f"Game exe not found: {GAME_EXE}"}
+    _ensure_steam_appid(GAME_DIR)
     try:
         if hidden:
             # Try VDD first (dedicated DINOForge virtual display, not user's Parsec VDD)
@@ -631,6 +650,7 @@ async def game_launch_test(ctx: Context, hidden: bool = True) -> dict:
             f"or at the default location."
         )
         return {"success": False, "error": error_msg}
+    _ensure_steam_appid(Path(test_dir))
     try:
         if hidden:
             return await _launch_hidden(str(test_exe), "DINOForge_Agent_Test")
@@ -1014,6 +1034,83 @@ async def game_ui_automation(ctx: Context, action: str, target: str | None = Non
     args = ["ui-automation", action]
     if target:
         args.append(target)
+    return _run_game_cli(*args, pipe_name=pipe_name)
+
+
+@mcp.tool()
+async def game_navigate_to_gameplay(
+    ctx: Context,
+    plan: str = "skirmish",
+    screenshot_dir: str | None = None,
+    final_shot: str | None = None,
+    pipe_name: str | None = None,
+) -> dict:
+    """
+    Autonomously drive DINO from the main menu INTO an active gameplay/skirmish state.
+
+    This scripts the full multi-step native UI sequence (PLAY/SANDBOX/SKIRMISH → optional
+    map/scenario select → START) in-process via the EventSystem pointer driver (#972), waiting
+    for next-screen / world-ready conditions between steps (no fixed sleeps), and captures a
+    reliable FrameCapture PNG (#980) at every step plus a final gameplay-camera frame.
+
+    Each step resolves its target from an ordered list of candidate selectors and clicks the
+    first actionable match, so it tolerates DINO's label variance across builds. The returned
+    `steps` trace shows exactly where a flow stalled (blockedAtStep).
+
+    Use this once to reach gameplay, then game_screenshot / game_query_entities to verify
+    in-game state (swaps/buildings/blasters visible).
+
+    Args:
+        plan: Navigation plan name (default "skirmish").
+        screenshot_dir: Directory for per-step PNGs (server default BepInEx/screenshots/nav when omitted).
+        final_shot: Optional path for the final gameplay-camera capture PNG.
+        pipe_name: Optional named pipe name for multi-instance support.
+
+    Returns:
+        {success, message, plan, finalState, entityCount, worldName, blockedAtStep, steps[]}
+    """
+    args = ["navigate-to-gameplay", plan]
+    if screenshot_dir:
+        args.append(f"screenshotDir={screenshot_dir}")
+    if final_shot:
+        args.append(f"finalShot={final_shot}")
+    return _run_game_cli(*args, pipe_name=pipe_name)
+
+
+@mcp.tool()
+async def game_ui_pointer(
+    ctx: Context,
+    event: str,
+    target: str | None = None,
+    x: float | None = None,
+    y: float | None = None,
+    pipe_name: str | None = None,
+) -> dict:
+    """
+    Drive DINO's Unity EventSystem pointer lifecycle IN-PROCESS (hover/press/click),
+    bypassing OS input which DINO's EventSystem does not receive.
+
+    This is the in-process path that actually paints hover/press visuals and fires
+    onClick — synthetic OS input (SetCursorPos/SendInput/game_input) is NOT delivered
+    to DINO's EventSystem. Use this to pixel-verify interactive UI.
+
+    Args:
+        event: Pointer event — 'enter'|'exit'|'down'|'up'|'click'|'hover'|'press'.
+               'hover' = enter only (leaves cursor hovering); 'press' = full
+               enter->down->up->click lifecycle.
+        target: Selector for the target UI node (e.g. 'label=MODS', 'name=ModsButton').
+                Either target OR x+y must be supplied.
+        x: Optional screen X coordinate (resolves target via GraphicRaycaster).
+        y: Optional screen Y coordinate.
+        pipe_name: Optional named pipe name for multi-instance support.
+    """
+    args = ["ui-pointer", event]
+    if target:
+        args.append(target)
+    if x is not None:
+        args.append(f"x={x}")
+    if y is not None:
+        args.append(f"y={y}")
     return _run_game_cli(*args, pipe_name=pipe_name)
 
 

@@ -1,72 +1,82 @@
-# Enemy Incoming Wave Preview Swap — Investigation & Design (2026-05-31)
+# Enemy Incoming-Wave Preview Swap — 2026-05-31 (Task #988 Re-run)
 
-## 1) Render-path investigation results
+## Scope
 
-- I searched `C:\Users\koosh\Dino\src\Runtime` for: `preview`, `thumbnail`, `WavePreview`, `enemy`, `Portrait`, `RenderTexture`, and `PreviewRenderUtility`.
-- No class/method in runtime implements an `"incoming enemies"`/`"wave preview"` panel.
-- No native symbol match exists for `incoming` wave UI rendering or for an `Image`/`RawImage` path tied to enemy spawn previews.
+- Re-run on complete worktree (`feat/previews-20260531`), after prior incomplete checkout caused false "no symbol found" result.
+- Confirmed presence of `src/Runtime/Plugin.cs` and other runtime files (`~3300+` lines in runtime plugin).
+- Verified runtime render paths related to thumbnails/preview-like UI and wave logic.
 
-What I found:
+## Search and inspection performed
 
-1. `src/Runtime/Bridge/AssetSwapSystem.cs`
-   - This system swaps pending asset requests and tries ECS entity mesh replacement (`RenderMesh` path).
-   - It also patches vanilla bundles on disk when possible, but does not route through a dedicated "incoming wave UI thumbnail" surface.
-   - The in-code notes explicitly indicate mesh-swap behavior is entity-focused and that some render-mesh variants are explicitly not yet fully implemented.
-2. `src/Runtime/Bridge/WaveInjector.cs`
-   - Handles queueing and spawning of incoming-wave unit groups and delays.
-   - No preview/screenshot rendering behavior found.
-3. `src/Runtime/UI/ModMenuPanel.cs`
-   - Contains general mod-menu screenshot gallery support and uses `Image` sprites loaded from filesystem screenshots.
-   - This is a configuration-facing mod UI, not the launch-time "incoming enemies" preview.
-4. `src/Runtime/ModPlatform.cs`
-   - Registers wave-related systems and loads metadata (`Safe-swallow: UI preview only` appears in helper methods), but does not contain preview-thumbnails UI code for incoming enemy waves.
+- Search keys used in `src/Runtime` and related UI folders:  
+  `preview`, `thumbnail`, `portrait`, `WavePreview`, `RenderTexture`, `RenderTexture`, `PreviewRenderUtility`, `icon`, `Sprite`.
+- Direct file inspections:  
+  `src/Runtime/Bridge/WaveInjector.cs`,  
+  `src/Runtime/UI/ModMenuPanel.cs`,  
+  `src/Runtime/UI/MainMenuThemer.cs`,  
+  `src/Runtime/UI/NativeMenuInjector.cs`,  
+  broader `src/Runtime/UI` HUD files (`HudStrip`, `HudIndicator`, `NativeMainMenuModMenu`).
 
-## 2) Conclusion: why #986 does not affect this UI
+## Corrected render path findings
 
-Task #986 swap engine is scoped to live gameplay ECS assets (render mesh and related runtime registry paths).  
-The launch-time incoming enemy preview appears to be rendered in a separate native/UI path that is not represented by the current `src/Runtime` implementation.
+- `WaveInjector` is only ECS spawn control logic:
+  - `WaveInjector.QueueIncomingWave`
+  - `WaveInjector.SpawnWave`
+  - `WaveInjector.OnUpdate`  
+  It has no sprite/camera/preview/render-target usage and does not touch any menu preview surface.
 
-Therefore: **existing AssetSwap logic in `AssetSwapSystem` is expected to miss this thumbnail surface.**
+- `ModMenuPanel` contains a **pack screenshot gallery** and pack detail modal that uses:
+  - `LoadTextureAsync(...)` → `Texture2D.LoadImage(...)`
+  - `Image.sprite = ...`
+  - This is pack metadata/screenshot UI for the mod browser, not enemy-wave incoming preview.
 
-## 3) Surface classification (based on repo evidence)
+- `MainMenuThemer` performs **menu theme asset swapping** via runtime UI theme textures/sprites:
+  - `LoadSpriteFromPack(...)`
+  - `Image.sprite = ...`
+  - `SpriteState` / `Selectable` updates
+  - No wave-preview specific symbols.
 
-Because runtime code does not contain the target panel, we cannot conclusively classify from code whether the surface is:
-- a sprite-based `Image`, or
-- a preview `RenderTexture` rendered from a camera.
+- `NativeMenuInjector` only handles native menu entry integration and optional screenshot capture request plumbing:
+  - `TryReadScreenshotRequest()` + `FrameCapture.Capture(...)`
+  - Menu button/host injection helpers.
+  - No references to wave preview surfaces.
 
-Given current evidence:
-- There is no direct `Image` assignment tied to incoming-wave data in runtime.
-- There is also no camera/RT assignment path for wave-forecast UI in runtime.
+- Runtime-wide `rg` in `src/Runtime` found no symbols for:
+  - `IncomingEnemies`, `WavePreview`, `incoming wave`, `incoming_enemies`, `RenderTexture`-based live preview camera for wave thumbnails.
 
-So the surface is likely in native game UI code outside this repo/worktree.
+## Conclusion
 
-## 4) Concrete fix strategy
+- The incoming-enemy launcher preview is not produced by:
+  1) `WaveInjector` queue/spawn ECS logic, nor
+  2) mod menu/theming UI modules currently in this runtime tree.
+- Therefore the current mesh swap path (#986, ECS `RenderMesh` swap in `AssetSwapSystem`) cannot affect this preview by design.
 
-### Primary (smallest blast radius once target symbol is identified)
+## Why this is missed by #986 (`RenderMesh` swap)
 
-1. **Find native launch panel + target node**
-   - At runtime, discover the preview card container and the thumbnail `Image`/`RawImage` component(s) used by incoming-wave UI.
-2. **Add runtime hook: `EnemyWavePreviewSwapper`**
-   - Resolve preview nodes by type/name and bind by unit-id order from `WaveDefinition`/scenario wave data.
-   - Map preview image source to unit sprite assets when available.
-3. **Implement sprite source selection**
-   - Use unit `visuals.icon` first, then fallback to pack-level `icon`/`texture` map, then fallback to existing vanilla texture.
-4. **Fallback if no sprite path exists**
-   - Keep native behavior and emit structured warning log.
+- `AssetSwapSystem` (#986) swaps ECS render components (`Unity.Rendering.RenderMesh`) on world entities via archetype/component targeting.
+- Incoming-wave preview shown at game launch appears to be generated by a separate native UI path that is not represented by ECS entity render components in this repo.
+- Until that native path is discovered and patched, mesh swaps can only alter in-world entities, not this preview surface.
 
-### Alternate (if preview uses RT + prefab camera)
+## Concrete path for a safe runtime fix
 
-1. Resolve preview camera prefab/producer component used by incoming-wave UI.
-2. Ensure swapped mesh path is used for the preview world by:
-   - forcing the preview entity spawn from swapped bundle path, or
-   - injecting swapped prefab references into that preview renderer path.
-3. Keep `AssetSwapSystem` behavior unchanged for gameplay entities.
+- **A safe runtime-only implementation is not currently possible without a native symbol hook** in the game assembly side.
+- Required missing symbol(s) to land a fix:
+  - The runtime-resolved method/class that constructs the incoming-wave unit portrait widget (likely a `UnityEngine.UI.Image` or `UnityEngine.UI.RawImage` producer on the main menu canvas).
+  - Its image source binding (sprite vs rendertexture) so the hook can choose:
+    - sprite swap path (`image.sprite =` swapped unit portrait), or
+    - RT-camera path (`rawImage.texture =` or equivalent render target source).
+- Without that symbol, runtime can only continue to swap live world meshes and cannot target this separate preview surface.
 
-## 5) Follow-up / blocked items
+## Proposed implementation once symbol is known
 
-- No safe runtime implementation is possible yet without the concrete UI symbol path.
-- If native preview is sprite-based and sprites are missing for some mod units, follow-up work is needed to expose authoritative sprite assets in unit models:
-  - add pack-side preview sprites/icons in a documented field/contract,
-  - add resolver glue in runtime.
-- A runtime hook stub should be added once symbol/class location is known.
+- Detect and patch the exact preview render surface creation/update site.
+- If it binds a sprite:
+  - replace source sprite from `UnitDefinition.Icon` or resolved pack icon texture.
+- If it binds a render texture:
+  - intercept/update the source camera/prefab render target stage to use swapped unit prefab mesh.
+  - keep fallback to native preview source when no swap bundle is available.
 
+## Build gate
+
+- No runtime code changes were made in this re-run (investigation-only with corrected routing).
+- Because no source change landed, no `dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=netstandard2.0` execution was performed.

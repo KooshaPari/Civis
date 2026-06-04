@@ -197,7 +197,14 @@ fn scene_root_ancestor(
 #[allow(clippy::too_many_arguments)]
 fn attach_actor_animation(
     mut commands: Commands,
-    players: Query<Entity, (With<AnimationPlayer>, Without<ActorAnim>)>,
+    players: Query<
+        Entity,
+        (
+            With<AnimationPlayer>,
+            Without<ActorAnim>,
+            Without<AnimationGraphHandle>,
+        ),
+    >,
     parents: Query<&ChildOf>,
     scene_roots: Query<&SceneRoot>,
     gltfs: Res<Assets<Gltf>>,
@@ -256,8 +263,8 @@ fn attach_actor_animation(
             continue;
         }
 
-        commands
-            .entity(player_entity)
+        let mut entity = commands.entity(player_entity);
+        entity
             .insert(AnimationGraphHandle(graph_handle))
             .insert(AnimationTransitions::new())
             .insert(ActorAnim {

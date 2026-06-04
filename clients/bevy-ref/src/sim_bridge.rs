@@ -105,10 +105,14 @@ struct GameplayAssets {
 }
 
 #[derive(Component)]
-struct SimCivilianMarker;
+pub struct SimCivilianMarker;
 
 #[derive(Component)]
-struct SimBuildingMarker;
+pub struct SimBuildingMarker;
+
+// Public aliases for the scene-dump harness (machine-level verification).
+pub use SimCivilianMarker as SimCivilianMarkerPublic;
+pub use SimBuildingMarker as SimBuildingMarkerPublic;
 
 impl Default for SimState {
     fn default() -> Self {
@@ -662,6 +666,31 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
         .saturating_add(1)
 }
 
+fn tick_to_era_label(tick: u64) -> String {
+    let era = if tick < 100 {
+        "Prehistoric"
+    } else if tick < 500 {
+        "Stone Age"
+    } else if tick < 1500 {
+        "Bronze Age"
+    } else if tick < 3000 {
+        "Iron Age"
+    } else if tick < 6000 {
+        "Classical"
+    } else if tick < 12000 {
+        "Medieval"
+    } else if tick < 25000 {
+        "Renaissance"
+    } else if tick < 50000 {
+        "Industrial"
+    } else if tick < 100000 {
+        "Modern"
+    } else {
+        "Information"
+    };
+    era.to_string()
+}
+
 #[cfg(feature = "egui")]
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
@@ -677,7 +706,7 @@ fn sync_game_ui_snapshot(
 
     // Pull the authoritative per-tick snapshot for stocks + vital stats.
     let snap = sim.snapshot();
-    let population = snap.population;
+    let population = snap.citizen_count as u64;
 
     // Emergent clusters (settlements) drive both the faction count chip and the
     // left-panel roster — these are NOT hardcoded factions.
@@ -689,12 +718,13 @@ fn sync_game_ui_snapshot(
         snap.tick,
         population,
         faction_count,
-        snap.tick.to_string(),
+        tick_to_era_label(snap.tick),
         speed.multiplier.max(1),
     );
 
     // World resource strip: global economy stocks + the pooled settlement
     // commons as a stand-in treasury, plus births/deaths this tick.
+    // TODO(FR-CIV-ECON): resources are seeded, not yet produced by agent labor at the resource-read site.
     let food = snap.resources.food.to_f64();
     let materials = snap.resources.wood.to_f64() + snap.resources.metal.to_f64();
     let energy = snap.resources.energy.to_f64();
@@ -785,6 +815,12 @@ mod tests {
             ];
             assert!(seen.insert(key), "duplicate building colour for {t:?}");
         }
+    }
+
+    #[test]
+    fn tick_to_era_label_uses_expected_boundaries() {
+        assert_eq!(tick_to_era_label(0), "Prehistoric");
+        assert_eq!(tick_to_era_label(50000), "Modern");
     }
 
     #[cfg(feature = "voxel")]

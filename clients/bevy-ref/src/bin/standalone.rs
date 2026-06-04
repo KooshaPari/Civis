@@ -234,6 +234,13 @@ fn main() {
         .add_systems(Update, auto_screenshot);
     }
 
+    // Machine-level scene + sim dump (CIVIS_DUMP=<path>) — writes authoritative
+    // scene-graph + sim-counter JSON after warmup, then exits. Lets a verifier
+    // find floating actors / dissolved terrain / T-poses / wrong counters from
+    // data, never from pixels.
+    #[cfg(feature = "voxel")]
+    let _ = civ_bevy_ref::scene_dump::arm_from_env(&mut app);
+
     app.run();
 }
 

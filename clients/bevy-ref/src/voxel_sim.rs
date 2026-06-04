@@ -874,6 +874,7 @@ fn spawn_chunk_buffers(
         }
         let entity = commands
             .spawn((
+                ChunkMeshTag,
                 Mesh3d(meshes.add(bevy_mesh)),
                 MeshMaterial3d(materials.add(material)),
                 Transform::from_xyz(
@@ -887,6 +888,11 @@ fn spawn_chunk_buffers(
     }
     entities
 }
+
+/// Marks a terrain chunk mesh entity so the scene-dump harness can isolate
+/// terrain geometry from background decoration (stars, sky dome, trees).
+#[derive(Component)]
+pub struct ChunkMeshTag;
 
 /// Owned, `Send` inputs for one chunk's off-thread mesh compute.
 struct ChunkMeshInput {

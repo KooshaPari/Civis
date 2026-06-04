@@ -81,6 +81,8 @@ pub mod native_backend;
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
+#[cfg(all(feature = "bevy", feature = "voxel"))]
+pub mod scene_dump;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
 #[cfg(all(feature = "bevy", feature = "models"))]

@@ -1,0 +1,18 @@
+- generic [ref=e3]:
+  - link "Skip to content" [ref=e4] [cursor=pointer]:
+    - /url: "#VPContent"
+  - banner:
+    - generic:
+      - generic:
+        - generic:
+          - link "VitePress" [ref=e6] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e7]: VitePress
+          - button "extra navigation" [ref=e10] [cursor=pointer]
+  - generic [ref=e13]:
+    - paragraph [ref=e14]: "404"
+    - heading "PAGE NOT FOUND" [level=1] [ref=e15]
+    - blockquote [ref=e17]: But if you don't change your direction, and if you keep looking, you may end up where you are heading.
+    - link "go to home" [ref=e19] [cursor=pointer]:
+      - /url: /
+      - text: Take me home

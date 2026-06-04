@@ -81,6 +81,17 @@ Or download `DINOForge.Companion-vX.Y.Z-win-x64.zip` directly from [Releases](ht
 irm https://raw.githubusercontent.com/KooshaPari/Dino/main/src/Tools/Installer/Install-DINOForge.ps1 | iex
 ```
 
+For non-interactive CI/scripted installs:
+
+```powershell
+irm https://raw.githubusercontent.com/KooshaPari/Dino/main/src/Tools/Installer/Install-DINOForge.ps1 -OutFile .\Install-DINOForge.ps1
+.\Install-DINOForge.ps1 -Silent
+```
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KooshaPari/Dino/main/src/Tools/Installer/install.sh | bash -s -- --silent
+```
+
 ---
 
 ## NuGet Packages

@@ -1523,6 +1523,7 @@ namespace DINOForge.Runtime
         private string? _pendingPackToggleId;
         private bool _pendingPackToggleEnabled;
         private World? _pendingCatalogWorld;
+        private bool _sceneDumpQueued;
 
         // HMR tiered reloader — created once ModPlatform is available.
         private HotReload.HmrTieredReloader? _hmrTieredReloader;
@@ -2414,6 +2415,7 @@ namespace DINOForge.Runtime
                         $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
+                    QueueSceneDumpIfRequested(ecsWorld);
 
                     // Hide the loading screen now that world is ready and packs are loaded
                     if (_loadingScreen != null)
@@ -2454,6 +2456,98 @@ namespace DINOForge.Runtime
                     _worldReadyProcessing = false;
                 }
             }
+        }
+
+        private void QueueSceneDumpIfRequested(World ecsWorld)
+        {
+            if (_sceneDumpQueued)
+            {
+                return;
+            }
+
+            string? dumpPath = Environment.GetEnvironmentVariable("DINO_DUMP");
+            if (string.IsNullOrWhiteSpace(dumpPath))
+            {
+                return;
+            }
+
+            _sceneDumpQueued = true;
+            _log?.LogInfo($"[RuntimeDriver] Scene dump requested via DINO_DUMP='{dumpPath}'.");
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    World? bestWorld = ecsWorld;
+                    EntityManager bestEm = FindBestEntityManagerForDump(out bestWorld);
+                    if (bestWorld == null || !bestWorld.IsCreated)
+                    {
+                        _log?.LogWarning("[RuntimeDriver] Scene dump skipped: no created ECS world available.");
+                        return;
+                    }
+
+                    SceneDumper dumper = new SceneDumper(
+                        dumpPath,
+                        _modPlatform?.PacksDirectory ?? string.Empty,
+                        () => _modPlatform?.GetLoadedPackIds(),
+                        () => _modPlatform?.GetLoadedPackDisplayInfos());
+
+                    dumper.Dump(bestWorld, bestEm);
+                    _log?.LogInfo($"[RuntimeDriver] Scene dump written to '{dumpPath}'.");
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning($"[RuntimeDriver] Scene dump failed: {ex.Message}");
+                }
+            });
+        }
+
+        private EntityManager FindBestEntityManagerForDump(out World? bestWorld)
+        {
+            EntityManager best = default;
+            bestWorld = World.DefaultGameObjectInjectionWorld;
+            int bestCount = -1;
+            string bestName = bestWorld?.Name ?? "";
+
+            try
+            {
+                foreach (World world in World.All)
+                {
+                    if (world == null || !world.IsCreated)
+                    {
+                        continue;
+                    }
+
+                    int count;
+                    try
+                    {
+                        count = world.EntityManager.UniversalQuery.CalculateEntityCount();
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    if (count > bestCount)
+                    {
+                        bestCount = count;
+                        best = world.EntityManager;
+                        bestWorld = world;
+                        bestName = world.Name;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            if (bestWorld != null && bestCount < 0)
+            {
+                best = bestWorld.EntityManager;
+            }
+
+            _log?.LogInfo($"[RuntimeDriver] Scene dump using world '{bestName}' with entityCount={Math.Max(bestCount, 0)}.");
+            return best;
         }
 
         private IEnumerator ProcessPackReloadCoroutine(string reason)

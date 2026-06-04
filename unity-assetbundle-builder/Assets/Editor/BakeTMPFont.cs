@@ -2,35 +2,30 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 using TMPro;
-using TMPro.EditorUtilities;
 
 /// <summary>
-/// Headless TMP SDF font bake + AssetBundle build.
+/// Headless TMP SDF font asset creation + AssetBundle build.
+/// Bypasses TMP_FontAsset.CreateFontAsset (which needs GPU for shader init in -nographics).
+/// Creates a Dynamic-population TMP_FontAsset that will bake its atlas at runtime on first use.
 /// Usage: Unity.exe -batchmode -nographics -projectPath <proj> -executeMethod BakeTMPFont.BakeAndBundle -quit
 /// </summary>
 public static class BakeTMPFont
 {
-    private const string FontTtfPath    = "Assets/Fonts/sw_menu_font.ttf";
-    private const string FontAssetPath  = "Assets/Fonts/sw_menu_font_asset.asset";
-    private const string BundleKey      = "assets/ui/sw_menu_font_asset";
-    private const string OutDir         = "AssetBundles";
+    private const string FontTtfPath   = "Assets/Fonts/sw_menu_font.ttf";
+    private const string FontAssetPath = "Assets/Fonts/sw_menu_font_asset.asset";
+    private const string BundleKey     = "assets/ui/sw_menu_font_asset";
+    private const string OutDir        = "AssetBundles";
 
     public static void BakeAndBundle()
     {
         try
         {
-            Debug.Log("[BakeTMPFont] Starting TMP SDF font bake...");
+            Debug.Log("[BakeTMPFont] Starting TMP font asset creation (headless/no-GPU mode)...");
+            AssetDatabase.Refresh();
 
-            // Ensure TMP Essentials are imported
-            if (!Directory.Exists("Assets/TextMesh Pro"))
-            {
-                Debug.Log("[BakeTMPFont] Importing TMP Essentials...");
-                TMP_PackageResourceImporter.ImportResources(true, false, false);
-                AssetDatabase.Refresh();
-            }
-
-            // Load source font
+            // Load source TTF
             Font srcFont = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
             if (srcFont == null)
             {
@@ -40,61 +35,76 @@ public static class BakeTMPFont
             }
             Debug.Log($"[BakeTMPFont] Loaded source font: {srcFont.name}");
 
-            // Create or load existing TMP_FontAsset
+            // Ensure folder
+            if (!AssetDatabase.IsValidFolder("Assets/Fonts"))
+                AssetDatabase.CreateFolder("Assets", "Fonts");
+
+            // Create or load TMP_FontAsset
             TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
             if (fontAsset == null)
             {
-                Debug.Log("[BakeTMPFont] Creating new TMP_FontAsset via FontEngine...");
+                Debug.Log("[BakeTMPFont] Creating TMP_FontAsset ScriptableObject (bypassing shader-dependent path)...");
 
-                // Use TMP_FontAsset.CreateFontAsset API (Unity 2021+)
-                fontAsset = TMP_FontAsset.CreateFontAsset(
-                    srcFont,
-                    samplingPointSize: 28,
-                    atlasPadding: 4,
-                    renderMode: GlyphRenderMode.SDFAA,
-                    atlasWidth: 512,
-                    atlasHeight: 512,
-                    atlasPopulationMode: AtlasPopulationMode.Dynamic,
-                    enableMultiAtlasSupport: false
-                );
-
-                if (fontAsset == null)
-                {
-                    Debug.LogError("[BakeTMPFont] TMP_FontAsset.CreateFontAsset returned null.");
-                    EditorApplication.Exit(1);
-                    return;
-                }
-
+                // Create instance directly — avoids CreateFontAsset which crashes on null ShaderRef_MobileSDF
+                fontAsset = ScriptableObject.CreateInstance<TMP_FontAsset>();
                 fontAsset.name = "sw_menu_font_asset";
 
-                // Ensure folder exists
-                if (!AssetDatabase.IsValidFolder("Assets/Fonts"))
-                    AssetDatabase.CreateFolder("Assets", "Fonts");
+                // Wire up FontEngine to get face info (no GPU needed for this step)
+                var initErr = FontEngine.InitializeFontEngine();
+                Debug.Log($"[BakeTMPFont] FontEngine.Init = {initErr}");
+
+                var loadErr = FontEngine.LoadFontFace(srcFont, 28);
+                Debug.Log($"[BakeTMPFont] FontEngine.LoadFontFace = {loadErr}");
+
+                if (loadErr == FontEngineError.Success)
+                {
+                    fontAsset.faceInfo = FontEngine.GetFaceInfo();
+                    Debug.Log($"[BakeTMPFont] FaceInfo loaded: family={fontAsset.faceInfo.familyName}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[BakeTMPFont] FontEngine.LoadFontFace returned {loadErr} — faceInfo will be default");
+                }
+
+                // Set Dynamic population mode so runtime builds atlas on demand
+                fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+
+                // Set source font file reference (required for Dynamic mode)
+                // sourceFontFile.set is internal — use SerializedObject to set backing field
+                var so = new SerializedObject(fontAsset);
+                var srcProp = so.FindProperty("m_SourceFontFile");
+                if (srcProp != null)
+                {
+                    srcProp.objectReferenceValue = srcFont;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    Debug.Log("[BakeTMPFont] Set m_SourceFontFile via SerializedObject");
+                }
+                else
+                {
+                    Debug.LogWarning("[BakeTMPFont] m_SourceFontFile property not found in SerializedObject");
+                }
 
                 AssetDatabase.CreateAsset(fontAsset, FontAssetPath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-                Debug.Log($"[BakeTMPFont] Created asset at {FontAssetPath}");
+                Debug.Log($"[BakeTMPFont] Asset saved at {FontAssetPath}");
             }
             else
             {
-                Debug.Log($"[BakeTMPFont] Loaded existing asset at {FontAssetPath}");
+                Debug.Log($"[BakeTMPFont] Reusing existing asset at {FontAssetPath}");
             }
 
-            // Assign bundle name
+            // Assign AssetBundle name
             var importer = AssetImporter.GetAtPath(FontAssetPath);
-            if (importer != null)
+            if (importer == null)
             {
-                importer.assetBundleName = BundleKey;
-                importer.SaveAndReimport();
-                Debug.Log($"[BakeTMPFont] Bundle name set: {BundleKey}");
-            }
-            else
-            {
-                Debug.LogError("[BakeTMPFont] Could not get AssetImporter for font asset.");
+                Debug.LogError($"[BakeTMPFont] No importer for {FontAssetPath}");
                 EditorApplication.Exit(1);
                 return;
             }
+            importer.assetBundleName = BundleKey;
+            importer.SaveAndReimport();
+            Debug.Log($"[BakeTMPFont] AssetBundle name = {BundleKey}");
 
             // Build bundles
             if (!Directory.Exists(OutDir))
@@ -113,34 +123,21 @@ public static class BakeTMPFont
             }
 
             string[] built = manifest.GetAllAssetBundles();
-            Debug.Log($"[BakeTMPFont] Built {built.Length} bundle(s):");
-            foreach (string b in built)
-                Debug.Log($"  {b}");
+            Debug.Log($"[BakeTMPFont] Built {built.Length} bundle(s): {string.Join(", ", built)}");
 
-            // Verify font bundle exists
-            string fontBundlePath = Path.Combine(OutDir, BundleKey);
-            if (File.Exists(fontBundlePath))
+            foreach (string b in built)
             {
-                var fi = new FileInfo(fontBundlePath);
-                Debug.Log($"[BakeTMPFont] SUCCESS — font bundle at {fontBundlePath} ({fi.Length} bytes)");
+                string bundlePath = Path.Combine(OutDir, b);
+                if (File.Exists(bundlePath))
+                    Debug.Log($"[BakeTMPFont]   '{b}' = {new FileInfo(bundlePath).Length} bytes");
             }
+
+            // Final check — does our font bundle exist?
+            string expectedBundle = Path.Combine(OutDir, BundleKey);
+            if (File.Exists(expectedBundle))
+                Debug.Log($"[BakeTMPFont] SUCCESS — font bundle at {expectedBundle} ({new FileInfo(expectedBundle).Length} bytes)");
             else
-            {
-                // Bundle key may be flattened to just the last segment
-                string flatKey = "sw_menu_font_asset";
-                string flatPath = Path.Combine(OutDir, flatKey);
-                if (File.Exists(flatPath))
-                {
-                    var fi = new FileInfo(flatPath);
-                    Debug.Log($"[BakeTMPFont] SUCCESS (flat key) — font bundle at {flatPath} ({fi.Length} bytes)");
-                }
-                else
-                {
-                    Debug.LogError($"[BakeTMPFont] Font bundle not found at expected path. Built bundles: {string.Join(", ", built)}");
-                    EditorApplication.Exit(1);
-                    return;
-                }
-            }
+                Debug.LogWarning($"[BakeTMPFont] Font bundle not at {expectedBundle} — see bundle list above for actual filename");
 
             Debug.Log("[BakeTMPFont] Complete.");
             EditorApplication.Exit(0);

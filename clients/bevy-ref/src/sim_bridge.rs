@@ -50,6 +50,13 @@ const BUILDING_MODEL_SCALE: f32 = 6.0;
 #[derive(Component)]
 struct FactionTint(#[allow(dead_code)] u32);
 
+#[cfg(feature = "models")]
+#[derive(Component, Clone, Copy)]
+struct PendingActorScene {
+    kind: ActorVisualKind,
+    faction: u32,
+}
+
 /// Resolve the loaded CC0 actor scene for `kind`, else `None` (capsule fallback).
 #[cfg(feature = "models")]
 fn actor_model_root(
@@ -61,6 +68,27 @@ fn actor_model_root(
     match models.map(|m| actor_scene(m, kind, faction)) {
         Some(ModelOrPrimitive::Model(root)) => Some(root),
         _ => None,
+    }
+}
+
+#[cfg(feature = "models")]
+fn actor_scene_if_loaded(
+    models: Option<&crate::gltf_models::GameModels>,
+    asset_server: &AssetServer,
+    kind: ActorVisualKind,
+    faction: u32,
+) -> Option<SceneRoot> {
+    use crate::gltf_models::{actor_scene, ModelOrPrimitive};
+    let Some(model) = models else {
+        return None;
+    };
+    match actor_scene(model, kind, faction) {
+        ModelOrPrimitive::Model(SceneRoot(handle)) => {
+            asset_server
+                .is_loaded_with_dependencies(&handle)
+                .then_some(SceneRoot(handle))
+        }
+        ModelOrPrimitive::Primitive => None,
     }
 }
 
@@ -194,13 +222,24 @@ impl Plugin for SimBridgePlugin {
         #[cfg(feature = "egui")]
         app.add_systems(
             Update,
-            sync_visible_gameplay
-                .run_if(in_process_sim_active)
-                .run_if(is_playing_or_paused),
+            (
+                sync_visible_gameplay
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing_or_paused),
+                upgrade_pending_actor_scenes
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing_or_paused),
+            ),
         );
 
         #[cfg(not(feature = "egui"))]
-        app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
+        app.add_systems(
+            Update,
+            (
+                sync_visible_gameplay.run_if(in_process_sim_active),
+                upgrade_pending_actor_scenes.run_if(in_process_sim_active),
+            ),
+        );
     }
 }
 
@@ -384,6 +423,7 @@ fn sync_visible_gameplay(
     #[cfg(feature = "voxel")]
     voxel_state: Option<Res<VoxelSimState>>,
     #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
+    #[cfg(feature = "models")] asset_server: Res<AssetServer>,
     mut rendered: ResMut<RenderedEntities>,
     mut transforms: Query<&mut Transform>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -428,7 +468,12 @@ fn sync_visible_gameplay(
             }
         } else {
             #[cfg(feature = "models")]
-            let scene_root = actor_model_root(models.as_deref(), visual_kind, civilian.faction);
+            let scene_root = actor_scene_if_loaded(
+                models.as_deref(),
+                &asset_server,
+                visual_kind,
+                civilian.faction,
+            );
             #[cfg(not(feature = "models"))]
             let scene_root: Option<SceneRoot> = None;
 
@@ -465,6 +510,10 @@ fn sync_visible_gameplay(
                         SimCivilianMarker,
                         Mesh3d(assets.civilian_mesh.clone()),
                         MeshMaterial3d(material),
+                        PendingActorScene {
+                            kind: visual_kind,
+                            faction: civilian.faction,
+                        },
                         Transform::from_translation(world_pos),
                     ))
                     .id()
@@ -564,6 +613,52 @@ fn sync_visible_gameplay(
         seen_buildings.len(),
         first_world_pos
     );
+}
+
+#[cfg(feature = "models")]
+fn upgrade_pending_actor_scenes(
+    mut commands: Commands,
+    models: Option<Res<crate::gltf_models::GameModels>>,
+    asset_server: Res<AssetServer>,
+    mut rendered: ResMut<RenderedEntities>,
+    query: Query<(Entity, &Transform, &PendingActorScene), (With<SimCivilianMarker>, With<Mesh3d>)>,
+) {
+    let Some(models) = models.as_deref() else {
+        return;
+    };
+
+    let mut upgrades: Vec<(u64, Entity)> = Vec::new();
+    for (&sim_id, &entity) in rendered.civilians.iter() {
+        let Ok((entity, transform, pending)) = query.get(entity) else {
+            continue;
+        };
+
+        let Some(scene_root) =
+            actor_scene_if_loaded(Some(models), &asset_server, pending.kind, pending.faction)
+        else {
+            continue;
+        };
+
+        let mut next_transform = *transform;
+        next_transform.translation -= Vec3::Y * CIVILIAN_HALF_HEIGHT;
+        next_transform.scale = Vec3::splat(model_scale_for(pending.kind));
+
+        let new_entity = commands
+            .spawn((
+                SimCivilianMarker,
+                FactionTint(pending.faction),
+                scene_root,
+                next_transform,
+            ))
+            .id();
+        commands.entity(entity).despawn();
+
+        upgrades.push((sim_id, new_entity));
+    }
+
+    for (sim_id, new_entity) in upgrades {
+        rendered.civilians.insert(sim_id, new_entity);
+    }
 }
 
 /// Map a normalised sim agent coordinate to centred, terrain-seated world XZ.

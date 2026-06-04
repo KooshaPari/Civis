@@ -80,16 +80,6 @@ namespace DINOForge.SDK.Models
         public string? VisualAsset { get; set; }
 
         /// <summary>
-        /// Optional <c>vanilla_mapping</c> targeting signal for the live mesh swap
-        /// (<c>AssetSwapSystem</c>). Names the vanilla DINO archetype family whose entities
-        /// this pack building's visual should replace (e.g. "barracks", "command", "building").
-        /// When null the swap system falls back to the <c>building_type</c> field or the
-        /// generic "building" mapping so the swap always carries a targeting signal.
-        /// </summary>
-        [YamlMember(Alias = "vanilla_mapping")]
-        public string? VanillaMapping { get; set; }
-
-        /// <summary>
         /// Defense tags controlling how this building interacts with combat systems.
         /// Supported values: AntiAir, Fortified, Shielded.
         /// A building with "AntiAir" will have <c>AntiAirComponent</c>

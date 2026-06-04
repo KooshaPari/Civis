@@ -3,6 +3,7 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+use bevy_water::WaterPlugin;
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
     camera::{camera_input, update_camera, CameraRig},
@@ -168,6 +169,9 @@ fn main() {
     // sandbox owns the world instead of the bounded dense `VoxelSimPlugin`.
     #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
+
+    #[cfg(feature = "voxel")]
+    app.add_plugins(WaterPlugin);
 
     // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
     #[cfg(feature = "voxel_stream")]

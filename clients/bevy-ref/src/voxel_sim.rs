@@ -6,8 +6,10 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
+use bevy::mesh::PlaneMeshBuilder;
 use bevy::prelude::*;
 use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task};
+use bevy_water::{StandardWaterMaterial, WaterMaterial, WaterQuality, WaterSettings, WaterTile};
 
 use civ_voxel::fluid_ca::{step, CaGrid};
 use civ_voxel::material::{
@@ -153,6 +155,22 @@ impl Plugin for VoxelSimPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VoxelSimState::default())
             .insert_resource(WorldBuilt::default())
+            .insert_resource(WaterSettings {
+                height: WORLD_DIMS[1] as f32 * 0.40,
+                amplitude: 0.35,
+                clarity: 0.22,
+                base_color: Color::srgba(0.07, 0.41, 0.67, 1.0),
+                deep_color: Color::srgba(0.02, 0.18, 0.46, 1.0),
+                shallow_color: Color::srgba(0.07, 0.68, 0.62, 1.0),
+                edge_scale: 0.09,
+                edge_color: Color::srgba(1.0, 1.0, 1.0, 1.0),
+                update_materials: true,
+                spawn_tiles: None,
+                water_quality: WaterQuality::High,
+                wave_direction: Vec2::new(1.0, 2.0),
+                wave_direction_blend_duration: 2.0,
+                ..Default::default()
+            })
             .add_systems(Update, (step_and_remesh, apply_chunk_mesh_tasks))
             .add_plugins(crate::voxel_triplanar::VoxelTriplanarPlugin);
 
@@ -176,6 +194,7 @@ pub fn setup_voxel_world_startup(
     commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut water_materials: ResMut<Assets<StandardWaterMaterial>>,
     mut triplanar_materials: ResMut<Assets<VoxelTriplanarMaterial>>,
     mut triplanar_bank: ResMut<VoxelPbrBank>,
     rig: ResMut<CameraRig>,
@@ -187,6 +206,7 @@ pub fn setup_voxel_world_startup(
         commands,
         &mut meshes,
         &mut materials,
+        &mut water_materials,
         &mut triplanar_materials,
         &mut triplanar_bank,
         rig,
@@ -206,6 +226,7 @@ pub fn build_world_on_play(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut water_materials: ResMut<Assets<StandardWaterMaterial>>,
     mut triplanar_materials: ResMut<Assets<VoxelTriplanarMaterial>>,
     mut triplanar_bank: ResMut<VoxelPbrBank>,
     rig: ResMut<CameraRig>,
@@ -238,6 +259,7 @@ pub fn build_world_on_play(
         commands,
         &mut meshes,
         &mut materials,
+        &mut water_materials,
         &mut triplanar_materials,
         &mut triplanar_bank,
         rig,
@@ -319,6 +341,7 @@ pub fn build_voxel_world(
     mut commands: Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    water_materials: &mut Assets<StandardWaterMaterial>,
     triplanar_materials: &mut Assets<VoxelTriplanarMaterial>,
     triplanar_bank: &mut VoxelPbrBank,
     mut rig: ResMut<CameraRig>,
@@ -397,7 +420,7 @@ pub fn build_voxel_world(
     let t_dispatch = std::time::Instant::now();
     dispatch_chunk_mesh_tasks(&mut commands, &state.grid, None);
     let t_dispatch_elapsed = t_dispatch.elapsed();
-    spawn_water_plane(&mut commands, meshes, materials);
+    spawn_bevy_water_plane(&mut commands, meshes, water_materials);
     // Phase breakdown. The mesh COMPUTE is now off-thread, so this dispatch time is
     // the main-thread cost (cheap slicing only) — expected <<1s, no load hitch.
     info!(
@@ -409,27 +432,49 @@ pub fn build_voxel_world(
     log_mesher_diagnostic(&state.grid);
 }
 
-fn spawn_water_plane(
+fn spawn_bevy_water_plane(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
+    materials: &mut Assets<StandardWaterMaterial>,
 ) {
     let sea_level_y = WORLD_DIMS[1] as f32 * 0.40;
     let plane_size_x = WORLD_DIMS[0] as f32;
     let plane_size_z = WORLD_DIMS[2] as f32;
-    commands.spawn((
-        WaterPlane,
-        Mesh3d(meshes.add(Mesh::from(
-            bevy::math::primitives::Plane3d::default().mesh().size(plane_size_x, plane_size_z),
-        ))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgba(0.05, 0.35, 0.75, 0.65),
-            perceptual_roughness: 0.05,
-            metallic: 0.0,
+    let tile_size = bevy_water::water::WATER_SIZE as f32;
+    let world_scale = Vec3::new(plane_size_x / tile_size, 1.0, plane_size_z / tile_size);
+
+    let mut plane_builder = PlaneMeshBuilder::from_length(tile_size);
+    plane_builder = plane_builder.subdivisions((tile_size / 4.0) as u32);
+    let mesh = Mesh3d(meshes.add(plane_builder));
+
+    let mut material_extension = WaterMaterial {
+        coord_scale: Vec2::new(plane_size_x, plane_size_z),
+        ..Default::default()
+    };
+    material_extension.wave_dir_a = Vec2::new(1.0, 2.0).normalize_or_zero();
+    material_extension.wave_dir_b = Vec2::new(1.0, 2.0).normalize_or_zero();
+
+    let material = MeshMaterial3d(materials.add(StandardWaterMaterial {
+        base: StandardMaterial {
+            base_color: Color::srgba(0.07, 0.41, 0.67, 1.0),
+            perceptual_roughness: 0.22,
             alpha_mode: AlphaMode::Blend,
             ..default()
-        })),
-        Transform::from_xyz(plane_size_x * 0.5, sea_level_y, plane_size_z * 0.5),
+        },
+        extension: material_extension,
+    }));
+
+    commands.spawn((
+        WaterPlane,
+        mesh,
+        material,
+        WaterTile::default(),
+        Transform {
+            translation: Vec3::new(plane_size_x * 0.5, sea_level_y, plane_size_z * 0.5),
+            scale: world_scale,
+            ..default()
+        },
+        NotShadowCaster,
     ));
 }
 

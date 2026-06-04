@@ -30,6 +30,7 @@ surface-nets = "0.1"
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
 bevy = { version = "0.18", optional = true }
+bevy_water = { version = "0.18.1", optional = true }
 bevy_egui = { version = "0.39", optional = true }
 # Decode the embedded window-icon PNG (src/window_icon.rs) into RGBA for winit.
 # Pinned to the version already in the workspace lock (pulled by bevy). default
@@ -109,7 +110,7 @@ hot = ["dev", "bevy/dynamic_linking"]
 # civ-voxel (CubicMesher) coloured per-material, with the material CA stepped
 # each tick so water flows and powders pile. OFF by default so the heightmap +
 # flat-water build stays the playable fallback. Enable: `--features voxel`.
-voxel = ["bevy"]
+voxel = ["bevy", "dep:bevy_water"]
 # Camera-driven chunk streaming of the large voxel world (civ-voxel StreamingWorld
 # + HeightFieldGen). Coexists with the dense `voxel` sandbox rather than replacing
 # it. OFF by default. Enable: `--features voxel_stream` (implies `voxel`).

@@ -165,9 +165,16 @@ fn index(dims: [usize; 3], x: usize, y: usize, z: usize) -> usize {
 }
 
 fn fbm2(seed: u64, x: f64, z: f64) -> f64 {
+    let seed_basis = splitmix64(seed ^ 0xa5a5_5a5a_1234_5678);
+    let off_x = ((seed_basis & 0xffff_ffff) as f64) / (u32::MAX as f64) * 1000.0;
+    let off_z = (splitmix64(seed_basis) & 0xffff_ffff) as f64 / (u32::MAX as f64) * 1000.0;
+    let freq_mix = (splitmix64(seed_basis ^ 0x9e37_79b9_7f4a_7c15) & 0x1f) as f64;
+    let freq_scale = 0.5 + (freq_mix / 31.0) * 1.5;
+    let x = x + off_x * 0.001;
+    let z = z + off_z * 0.001;
     let mut total = 0.0;
     let mut amp = 1.0;
-    let mut freq = 1.0;
+    let mut freq = freq_scale;
     let mut norm = 0.0;
     for octave in 0..4 {
         total += value_noise2(seed.wrapping_add(octave as u64), x * freq, z * freq) * amp;
@@ -311,6 +318,32 @@ mod tests {
         assert!(max_h > min_h, "surface is flat — no relief (min={min_h} max={max_h})");
         // Meaningful relief, not a 1-voxel ripple, relative to the 64-tall world.
         assert!(max_h - min_h >= 6, "relief too small: {}", max_h - min_h);
+    }
+
+    #[test]
+    fn different_seeds_produce_different_terrain() {
+        let dims = [64usize, 32usize, 64usize];
+        let mut total = 0usize;
+        let mut changed = 0usize;
+        for z in 0..dims[2] {
+            for x in 0..dims[0] {
+                let h1 = surface_height(dims, 1, x, z);
+                let h2 = surface_height(dims, 999, x, z);
+                if h1 != h2 {
+                    changed += 1;
+                }
+                total += 1;
+            }
+        }
+
+        let percent = (changed as f64 / total as f64) * 100.0;
+        println!(
+            "[worldgen] different-seed terrain diff = {changed}/{total} ({percent:.2}%)"
+        );
+        assert!(
+            percent >= 20.0,
+            "expected >=20% differing surface cells, found {percent:.2}%"
+        );
     }
 
     #[test]

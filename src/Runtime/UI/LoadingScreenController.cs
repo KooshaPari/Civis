@@ -3,8 +3,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using BepInEx.Logging;
 using DINOForge.Runtime.Diagnostics;
+using DINOForge.Runtime.Bridge;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -85,6 +87,8 @@ namespace DINOForge.Runtime.UI
         private bool _animating;
         private float _elapsed;
         private ManualLogSource? _log;
+        private Timer? _safetyTimer;
+        private readonly object _timerLock = new object();
 
         // EPIC-027 BUG B: when no real pack/scene progress has been reported yet we run an
         // INDETERMINATE animation — the bar creeps forward continuously (never frozen, so it
@@ -281,6 +285,7 @@ namespace DINOForge.Runtime.UI
                 $"bg={(theme.Background != null)}, logo={(theme.Logo != null)}, tips={_tips.Length}");
             _log?.LogInfo($"[LoadingScreenController] Built ({(theme.IsPackTheme ? "pack theme " + theme.SourceLabel : "default theme")}).");
 
+            StartSafetyTimer();
             StartCoroutine(AnimationLoop());
         }
 
@@ -296,8 +301,10 @@ namespace DINOForge.Runtime.UI
             _fadingOut = false;
             _fadeRequested = false;
             _hasRealProgress = false;
+            _elapsed = 0f;
             _canvasGroup.alpha = 1f;
             if (_canvas != null) _canvas.enabled = true;
+            StartSafetyTimer();
             // If the animation loop had exited (a fade had started but not yet completed),
             // restart it so the bar/shimmer resume animating for the new load window.
             if (!_animating && isActiveAndEnabled) StartCoroutine(AnimationLoop());
@@ -331,6 +338,7 @@ namespace DINOForge.Runtime.UI
             if (_fadingOut || this == null) return;
             _fadeRequested = true;
             _targetProgress = 1f;
+            CancelSafetyTimer();
             if (_elapsed >= MinVisibleSeconds) StartFadeNow();
         }
 
@@ -338,6 +346,7 @@ namespace DINOForge.Runtime.UI
         {
             if (_fadingOut || this == null) return;
             _fadingOut = true;
+            CancelSafetyTimer();
             if (isActiveAndEnabled) StartCoroutine(FadeOutRoutine());
         }
 
@@ -363,15 +372,6 @@ namespace DINOForge.Runtime.UI
                 }
 
                 // Safety-net: force fade after MaxVisibleSeconds even if BeginFadeOut was never called
-                // (guards against scene-event race or _modPlatform null path that skips the fade call).
-                if (_elapsed >= MaxVisibleSeconds)
-                {
-                    DebugLog.Write("LoadingScreen", $"[LoadingScreenController] Safety-net timeout ({MaxVisibleSeconds}s) — forcing fade.");
-                    _log?.LogWarning($"[LoadingScreenController] Safety-net timeout ({MaxVisibleSeconds}s) — forcing fade (BeginFadeOut was never called).");
-                    StartFadeNow();
-                    break;
-                }
-
                 // Tip rotation
                 if (_tips.Length > 1)
                 {
@@ -423,6 +423,51 @@ namespace DINOForge.Runtime.UI
             _animating = false;
         }
 
+        private void StartSafetyTimer()
+        {
+            lock (_timerLock)
+            {
+                _safetyTimer?.Dispose();
+                _safetyTimer = new Timer(OnSafetyTimerElapsed, null, (int)(MaxVisibleSeconds * 1000f), Timeout.Infinite);
+            }
+        }
+
+        private void CancelSafetyTimer()
+        {
+            lock (_timerLock)
+            {
+                _safetyTimer?.Dispose();
+                _safetyTimer = null;
+            }
+        }
+
+        private void OnSafetyTimerElapsed(object? state)
+        {
+            if (_fadingOut || this == null) return;
+
+            DebugLog.Write("LoadingScreen", $"[LoadingScreenController] Safety-net timeout ({MaxVisibleSeconds}s) — forcing fade.");
+            _log?.LogWarning($"[LoadingScreenController] Safety-net timeout ({MaxVisibleSeconds}s) — forcing fade (wall-clock timer).");
+
+            try
+            {
+                if (MainThreadDispatcher.IsPumpAlive)
+                {
+                    MainThreadDispatcher.RunOnMainThread(() =>
+                    {
+                        if (this != null) StartFadeNow();
+                        return true;
+                    });
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LoadingScreenController] Failed to marshal fade timeout to main thread: {ex}");
+            }
+
+            Debug.LogWarning("[LoadingScreenController] Main-thread dispatcher unavailable; safety-net fade could not be marshaled.");
+        }
+
         private IEnumerator FadeOutRoutine()
         {
             var wait = new WaitForEndOfFrame();
@@ -441,6 +486,7 @@ namespace DINOForge.Runtime.UI
 
         private void OnDestroy()
         {
+            CancelSafetyTimer();
             if (Instance == this) Instance = null;
         }
 

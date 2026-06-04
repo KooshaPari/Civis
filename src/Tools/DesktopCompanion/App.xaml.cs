@@ -53,7 +53,7 @@ namespace DINOForge.DesktopCompanion
                 _mainWindow.Activate();
                 CompanionLogger.Append("Activate done");
 
-                _ = EnsureHostStartedAsync();
+                EnsureHostStartedAsync();
             }
             catch (Exception ex)
             {

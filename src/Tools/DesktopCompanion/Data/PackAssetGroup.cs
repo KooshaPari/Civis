@@ -10,16 +10,16 @@ namespace DINOForge.DesktopCompanion.Data
     public sealed partial class PackAssetGroup : ObservableObject
     {
         /// <summary>Pack ID from pack.yaml.</summary>
-        public string PackId { get; init; } = "";
+        public string PackId { get; set; } = "";
 
         /// <summary>Human-readable pack name.</summary>
-        public string PackName { get; init; } = "";
+        public string PackName { get; set; } = "";
 
         /// <summary>Pack version.</summary>
-        public string PackVersion { get; init; } = "";
+        public string PackVersion { get; set; } = "";
 
         /// <summary>Absolute path to the pack directory.</summary>
-        public string PackPath { get; init; } = "";
+        public string PackPath { get; set; } = "";
 
         /// <summary>List of bundle entries discovered for this pack.</summary>
         public ObservableCollection<BundleEntry> Bundles { get; } = new ObservableCollection<BundleEntry>();

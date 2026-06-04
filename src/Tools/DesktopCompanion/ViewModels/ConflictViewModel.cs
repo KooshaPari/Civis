@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -121,7 +122,7 @@ namespace DINOForge.DesktopCompanion.ViewModels
                 DependencyIssueCount = DependencyIssues.Count;
                 HasIssues = report.HasIssues;
 
-                if (!report.IsSuccess)
+                if (report.HasIssues)
                 {
                     StatusMessage = $"{report.IssueCount} issue(s) detected among {result.Packs.Count} packs";
                 }

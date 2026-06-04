@@ -30,7 +30,7 @@
                 IsOpen="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
                 Severity="Informational"
                 Title="Loading"
-                Message="Scanning packs directoryâ€¦" />
+                Message="Scanning packs directory..." />
 
             <!-- Summary cards -->
             <Grid ColumnSpacing="16">

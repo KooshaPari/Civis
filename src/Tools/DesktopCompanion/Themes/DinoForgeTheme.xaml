@@ -73,6 +73,13 @@
         <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
 
+    <Style x:Key="TitleTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource DFTextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
     <!-- Body text -->
     <Style x:Key="DFBodyText" TargetType="TextBlock">
         <Setter Property="FontSize" Value="13" />

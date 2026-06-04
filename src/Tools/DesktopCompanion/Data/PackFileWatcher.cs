@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using DINOForge.DesktopCompanion.ViewModels;
+using DINOForge.Tools.DesktopCompanion;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 

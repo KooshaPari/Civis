@@ -12,17 +12,22 @@
 .PARAMETER SkipBepInEx
     Skip BepInEx installation (use if already installed).
 
+.PARAMETER Silent
+    Run without prompts and with CI-safe defaults.
+
 .EXAMPLE
     .\Install-DINOForge.ps1
     .\Install-DINOForge.ps1 -GamePath "D:\Games\Diplomacy is Not an Option"
     .\Install-DINOForge.ps1 -Dev
+    .\Install-DINOForge.ps1 -Silent
 #>
 
 [CmdletBinding()]
 param(
     [string]$GamePath,
     [switch]$Dev,
-    [switch]$SkipBepInEx
+    [switch]$SkipBepInEx,
+    [switch]$Silent
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,6 +61,29 @@ function Write-Err {
     param([string]$Message)
     Write-Host "[-] " -ForegroundColor Red -NoNewline
     Write-Host $Message
+}
+
+function Exit-Installer {
+    param(
+        [bool]$Success,
+        [string]$Message
+    )
+
+    if ($Message) {
+        if ($Success) {
+            Write-Success $Message
+        } else {
+            Write-Err $Message
+        }
+    }
+
+    if ($Success) {
+        Write-Host "INSTALLATION_RESULT: SUCCESS"
+        exit 0
+    }
+
+    Write-Host "INSTALLATION_RESULT: FAILURE"
+    exit 1
 }
 
 function Find-SteamPath {
@@ -143,7 +171,7 @@ Write-Host ""
 if ($GamePath) {
     if (-not (Test-Path $GamePath)) {
         Write-Err "Specified game path does not exist: $GamePath"
-        exit 1
+        Exit-Installer -Success:$false
     }
     Write-Step "Using specified game path: $GamePath"
 } else {
@@ -151,10 +179,15 @@ if ($GamePath) {
     $GamePath = Find-DinoPath
     if (-not $GamePath) {
         Write-Warn "Could not auto-detect DINO installation."
-        $GamePath = Read-Host "Enter the full path to the DINO game directory"
+        if ($Silent) {
+            $GamePath = Join-Path "$env:ProgramFiles\Steam\steamapps\common" $DinoDirName
+            Write-Warn "Using silent-mode default: $GamePath"
+        } else {
+            $GamePath = Read-Host "Enter the full path to the DINO game directory"
+        }
         if (-not (Test-Path $GamePath)) {
             Write-Err "Path does not exist: $GamePath"
-            exit 1
+            Exit-Installer -Success:$false
         }
     } else {
         Write-Success "Found DINO at: $GamePath"
@@ -181,7 +214,7 @@ if (-not $SkipBepInEx) {
             Write-Success "Downloaded BepInEx."
         } catch {
             Write-Err "Failed to download BepInEx: $_"
-            exit 1
+            Exit-Installer -Success:$false
         }
 
         Write-Step "Extracting BepInEx to game directory..."
@@ -190,7 +223,7 @@ if (-not $SkipBepInEx) {
             Write-Success "BepInEx extracted."
         } catch {
             Write-Err "Failed to extract BepInEx: $_"
-            exit 1
+            Exit-Installer -Success:$false
         }
 
         Remove-Item $tempZip -ErrorAction SilentlyContinue
@@ -298,7 +331,8 @@ $runtimeCheck = Join-Path $GamePath "BepInEx\plugins\DINOForge.Runtime.dll"
 if (Test-Path $runtimeCheck) {
     Write-Success "DINOForge Runtime DLL ... OK"
 } else {
-    Write-Warn "DINOForge Runtime DLL ... NOT FOUND (build and copy manually)"
+    Write-Err "DINOForge Runtime DLL ... NOT FOUND (build and copy manually)"
+    $allGood = $false
 }
 
 Write-Host ""
@@ -306,7 +340,7 @@ if ($allGood) {
     Write-Success "DINOForge installation complete!"
     Write-Host "  Game path: $GamePath" -ForegroundColor Gray
     Write-Host "  Run the game to generate BepInEx config." -ForegroundColor Gray
-} else {
-    Write-Warn "Installation has issues. Review the messages above."
+    Exit-Installer -Success:$true
 }
-Write-Host ""
+
+Exit-Installer -Success:$false

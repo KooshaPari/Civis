@@ -1,0 +1,15 @@
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj]
+  DINOForge.Analyzers -> C:\Users\koosh\Dino\src\Analyzers\bin\Release\netstandard2.0\DINOForge.Analyzers.dll
+  DINOForge.SDK -> C:\Users\koosh\Dino\src\SDK\bin\Release\netstandard2.0\DINOForge.SDK.dll
+C:\Users\koosh\.nuget\packages\microsoft.windowsappsdk\1.6.250108002\buildTransitive\Microsoft.UI.Xaml.Markup.Compiler.interop.targets(590,9): error MSB3073: The command ""C:\Users\koosh\.nuget\packages\microsoft.windowsappsdk\1.6.250108002\buildTransitive\..\tools\net6.0\..\net472\XamlCompiler.exe" "obj\Release\net8.0-windows10.0.19041.0\\input.json" "obj\Release\net8.0-windows10.0.19041.0\\output.json"" exited with code 1. [C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj]
+
+Build FAILED.
+
+C:\Users\koosh\.nuget\packages\microsoft.windowsappsdk\1.6.250108002\buildTransitive\Microsoft.UI.Xaml.Markup.Compiler.interop.targets(590,9): error MSB3073: The command ""C:\Users\koosh\.nuget\packages\microsoft.windowsappsdk\1.6.250108002\buildTransitive\..\tools\net6.0\..\net472\XamlCompiler.exe" "obj\Release\net8.0-windows10.0.19041.0\\input.json" "obj\Release\net8.0-windows10.0.19041.0\\output.json"" exited with code 1. [C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:07.35

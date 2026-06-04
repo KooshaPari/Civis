@@ -220,7 +220,7 @@ namespace DINOForge.Tests
 
             // Count units (lines starting with "- id:")
             var unitLines = yaml.Split('\n').Where(l => l.TrimStart().StartsWith("- id:")).ToList();
-            unitLines.Count.Should().Be(15, "CIS units should have exactly 15 units defined (incl. Nantex aerial fighter)");
+            unitLines.Count.Should().Be(15, "CIS units should have exactly 15 units defined");
         }
 
         [Theory]

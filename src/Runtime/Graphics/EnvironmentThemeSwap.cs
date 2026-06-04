@@ -1,219 +1,310 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using BepInEx.Logging;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace DINOForge.Runtime.Graphics
 {
     /// <summary>
-    /// Applies a skybox + GI refresh for gameplay scenes based on the active planet.
-    /// The loader first prefers bundled skybox materials (for future SW bundle support);
-    /// if no SW bundle exists, it creates procedural solid-color placeholders so gameplay
-    /// still gets a readable SW atmosphere until real bundles land.
-    /// TODO: Replace fallback placeholders with loaded SW skybox bundles (tatooine/naboo/umbara/coruscant).
+    /// Phase-2 spike (#975): applies pack-defined environment themes (skybox, ambient, fog)
+    /// via Unity <see cref="RenderSettings"/> when a gameplay map scene becomes active.
+    /// RenderSettings are scene-level and outside the ECS bridge — this is the dedicated hook.
     /// </summary>
-    internal sealed class EnvironmentThemeSwap
+    internal static class EnvironmentThemeSwap
     {
-        private const string LogCategory = "EnvironmentThemeSwap";
-        private static readonly string[] PlanetKeywords =
-        {
-            "tatooine",
-            "naboo",
-            "umbara",
-            "coruscant"
-        };
+        private static ManualLogSource? _log;
+        private static string _packsDirectory = string.Empty;
+        private static bool _subscribed;
+        private static string? _lastAppliedScene;
+        private static Material? _loadedSkybox;
 
-        private static readonly Dictionary<string, string> PlanetLabelByKeyword = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["tatooine"] = "tatooine",
-            ["naboo"] = "naboo",
-            ["umbara"] = "umbara",
-            ["coruscant"] = "coruscant"
-        };
-
-        private static readonly Dictionary<string, string[]> PlanetSkyboxBundleKeys = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["tatooine"] = new[] { "skybox_tatooine", "tatooine_skybox", "sw_tatooine_skybox", "Environment/skybox_tatooine" },
-            ["naboo"] = new[] { "skybox_naboo", "naboo_skybox", "sw_naboo_skybox", "Environment/skybox_naboo" },
-            ["umbara"] = new[] { "skybox_umbara", "umbara_skybox", "sw_umbara_skybox", "Environment/skybox_umbara" },
-            ["coruscant"] = new[] { "skybox_coruscant", "coruscant_skybox", "sw_coruscant_skybox", "Environment/skybox_coruscant" }
-        };
-
-        private static readonly Dictionary<string, Color> PlanetSkyColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["tatooine"] = new Color(0.89f, 0.74f, 0.49f, 1f),
-            ["naboo"] = new Color(0.22f, 0.46f, 0.78f, 1f),
-            ["umbara"] = new Color(0.12f, 0.12f, 0.14f, 1f),
-            ["coruscant"] = new Color(0.98f, 0.56f, 0.24f, 1f)
-        };
-
-        private static readonly string[] CandidateSkyboxShaders =
-        {
-            "Skybox/Procedural",
-            "Skybox/6 Sided",
-            "Universal Render Pipeline/Lit",
-            "Universal Render Pipeline/Unlit"
-        };
-
-        private readonly ManualLogSource _log;
-        private readonly Dictionary<string, Material> _cache = new(StringComparer.OrdinalIgnoreCase);
-
-        public EnvironmentThemeSwap(ManualLogSource log)
+        /// <summary>Registers the scene-change hook. Call from plugin bootstrap when wired.</summary>
+        public static void Initialize(ManualLogSource log, string packsDirectory)
         {
             _log = log;
+            _packsDirectory = packsDirectory ?? string.Empty;
+            EnsureSubscribed();
         }
 
-        public bool TryApplyForScene(string sceneName)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoRegisterSceneHook()
         {
-            if (string.IsNullOrWhiteSpace(sceneName))
-                return false;
+            EnsureSubscribed();
+        }
 
-            string? planet = ResolvePlanet(sceneName);
-            if (planet == null)
+        private static void EnsureSubscribed()
+        {
+            if (_subscribed) return;
+            SceneManager.activeSceneChanged += OnActiveSceneChanged;
+            _subscribed = true;
+        }
+
+        private static void OnActiveSceneChanged(Scene previous, Scene next)
+        {
+            if (!next.IsValid() || !next.isLoaded) return;
+            if (string.Equals(_lastAppliedScene, next.name, StringComparison.Ordinal)) return;
+            if (!IsGameplayScene(next.name)) return;
+
+            EnvironmentThemeData? theme = ResolveActiveEnvironmentTheme();
+            if (theme == null) return;
+
+            if (TryApply(theme))
             {
-                _log.LogDebug($"[EnvironmentThemeSwap] No planet mapping for scene '{sceneName}'.");
-                return false;
+                _lastAppliedScene = next.name;
+                _log?.LogInfo($"[EnvironmentThemeSwap] Applied planet '{theme.PlanetId}' for scene '{next.name}'.");
             }
+        }
+
+        internal static bool TryApply(EnvironmentThemeData theme)
+        {
+            if (theme == null) return false;
 
             try
             {
-                bool usedPlaceholder;
-                Material? skybox = GetOrCreateSkyboxMaterial(planet, out usedPlaceholder);
-                if (skybox == null)
-                {
-                    _log.LogWarning($"[EnvironmentThemeSwap] No usable URP-compatible skybox material for '{planet}' scene '{sceneName}'.");
-                    return false;
-                }
-
-                if (!ReferenceEquals(RenderSettings.skybox, skybox))
-                {
-                    RenderSettings.skybox = skybox;
-                    DynamicGI.UpdateEnvironment();
-                    string source = usedPlaceholder ? "placeholder" : "bundled";
-                    _log.LogInfo($"[EnvironmentThemeSwap] Applied {source} skybox '{skybox.name}' for scene '{sceneName}' (planet '{planet}').");
-                }
-                else
-                {
-                    _log.LogDebug($"[EnvironmentThemeSwap] Scene '{sceneName}' already using skybox '{skybox.name}'.");
-                }
-
+                ApplyAmbient(theme);
+                ApplyFog(theme);
+                ApplySkybox(theme);
                 return true;
             }
             catch (Exception ex)
             {
-                _log.LogWarning($"[EnvironmentThemeSwap] Apply failed for scene '{sceneName}': {ex.Message}");
+                _log?.LogWarning($"[EnvironmentThemeSwap] Apply failed: {ex.Message}");
                 return false;
             }
         }
 
-        public static bool IsGameplayScene(string sceneName)
+        private static void ApplyAmbient(EnvironmentThemeData theme)
         {
-            if (string.IsNullOrWhiteSpace(sceneName))
-                return false;
-
-            string lowered = sceneName.ToLowerInvariant();
-            if (lowered.Equals("mainmenu", StringComparison.OrdinalIgnoreCase) ||
-                lowered.Equals("initialgameload", StringComparison.OrdinalIgnoreCase) ||
-                lowered.Contains("menu"))
+            if (theme.AmbientModeSetting.HasValue)
             {
-                return false;
+                RenderSettings.ambientMode = theme.AmbientModeSetting.Value;
             }
 
-            return true;
+            if (theme.AmbientLight != null && ColorUtility.TryParseHtmlString(theme.AmbientLight, out Color ambient))
+            {
+                RenderSettings.ambientLight = ambient;
+            }
         }
 
-        private static string? ResolvePlanet(string sceneName)
+        private static void ApplyFog(EnvironmentThemeData theme)
         {
-            string lowered = sceneName.ToLowerInvariant();
-            foreach (string keyword in PlanetKeywords)
+            if (theme.FogEnabled.HasValue)
             {
-                if (lowered.Contains(keyword))
-                    return PlanetLabelByKeyword[keyword];
+                RenderSettings.fog = theme.FogEnabled.Value;
+            }
+
+            if (theme.FogColor != null && ColorUtility.TryParseHtmlString(theme.FogColor, out Color fogColor))
+            {
+                RenderSettings.fogColor = fogColor;
+            }
+
+            if (theme.FogDensity.HasValue)
+            {
+                RenderSettings.fogDensity = theme.FogDensity.Value;
+            }
+
+            if (theme.FogModeSetting.HasValue)
+            {
+                RenderSettings.fogMode = theme.FogModeSetting.Value;
+            }
+        }
+
+        private static void ApplySkybox(EnvironmentThemeData theme)
+        {
+            if (string.IsNullOrWhiteSpace(theme.SkyboxMaterial)) return;
+
+            Material? material = LoadSkyboxMaterial(theme.SkyboxMaterial, theme.PackId);
+            if (material == null) return;
+
+            if (_loadedSkybox != null && _loadedSkybox != material)
+            {
+                UnityEngine.Object.Destroy(_loadedSkybox);
+            }
+
+            _loadedSkybox = material;
+            RenderSettings.skybox = material;
+        }
+
+        private static Material? LoadSkyboxMaterial(string reference, string? packId)
+        {
+            if (string.IsNullOrWhiteSpace(reference)) return null;
+
+            if (reference.StartsWith("bundle:", StringComparison.OrdinalIgnoreCase))
+            {
+                return LoadSkyboxFromBundle(reference.Substring("bundle:".Length), packId);
+            }
+
+            return Resources.Load<Material>(reference);
+        }
+
+        private static Material? LoadSkyboxFromBundle(string bundleRef, string? packId)
+        {
+            if (string.IsNullOrWhiteSpace(packId) || string.IsNullOrWhiteSpace(_packsDirectory)) return null;
+
+            string[] parts = bundleRef.Split(new[] { '/' }, 2);
+            if (parts.Length != 2) return null;
+
+            string bundleName = parts[0];
+            string assetName = parts[1];
+            string bundlePath = Path.Combine(_packsDirectory, packId, "assets", "bundles", bundleName);
+            if (!File.Exists(bundlePath)) return null;
+
+            AssetBundle? bundle = AssetBundle.LoadFromFile(bundlePath);
+            if (bundle == null) return null;
+
+            try
+            {
+                return bundle.LoadAsset<Material>(assetName);
+            }
+            finally
+            {
+                bundle.Unload(unloadAllLoadedObjects: false);
+            }
+        }
+
+        internal static EnvironmentThemeData? ResolveActiveEnvironmentTheme()
+        {
+            if (string.IsNullOrWhiteSpace(_packsDirectory) || !Directory.Exists(_packsDirectory)) return null;
+
+            foreach (string packDir in Directory.EnumerateDirectories(_packsDirectory))
+            {
+                string packYaml = Path.Combine(packDir, "pack.yaml");
+                if (!File.Exists(packYaml)) continue;
+
+                string yaml = File.ReadAllText(packYaml, Encoding.UTF8);
+                if (yaml.IndexOf("type: total_conversion", StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                string packId = Path.GetFileName(packDir);
+                EnvironmentThemeData? fromSidecar = ReadEnvironmentSidecar(packId);
+                if (fromSidecar != null) return fromSidecar;
+
+                EnvironmentThemeData? inline = ReadInlineEnvironmentBlock(yaml, packId);
+                if (inline != null) return inline;
             }
 
             return null;
         }
 
-        private Material? GetOrCreateSkyboxMaterial(string planet, out bool usedPlaceholder)
+        private static EnvironmentThemeData? ReadEnvironmentSidecar(string packId)
         {
-            usedPlaceholder = false;
-            if (_cache.TryGetValue(planet, out Material? cached))
-            {
-                return cached;
-            }
+            string sidecarPath = Path.Combine(_packsDirectory, packId, "ui_theme.environment.yaml");
+            if (!File.Exists(sidecarPath)) return null;
 
-            if (!PlanetSkyColors.TryGetValue(planet, out Color tint))
-                tint = Color.black;
+            string yaml = File.ReadAllText(sidecarPath, Encoding.UTF8);
+            return ParsePlanetEntry(yaml, ResolveScenePlanetId(SceneManager.GetActiveScene().name), packId);
+        }
 
-            if (TryLoadBundledSkyboxMaterial(planet, out Material? bundledMaterial))
-            {
-                _cache[planet] = bundledMaterial;
-                return bundledMaterial;
-            }
+        private static EnvironmentThemeData? ReadInlineEnvironmentBlock(string packYaml, string packId)
+        {
+            int envIdx = packYaml.IndexOf("environment:", StringComparison.Ordinal);
+            if (envIdx < 0) return null;
 
-            usedPlaceholder = true;
-            Shader? skyboxShader = null;
-            for (int i = 0; i < CandidateSkyboxShaders.Length; i++)
-            {
-                skyboxShader = Shader.Find(CandidateSkyboxShaders[i]);
-                if (skyboxShader != null)
-                    break;
-            }
+            return ParsePlanetEntry(packYaml, ResolveScenePlanetId(SceneManager.GetActiveScene().name), packId);
+        }
 
-            if (skyboxShader == null)
-            {
-                _log.LogWarning($"[EnvironmentThemeSwap] No skybox shader found in candidate set: {string.Join(", ", CandidateSkyboxShaders)}");
-                return null;
-            }
+        private static EnvironmentThemeData? ParsePlanetEntry(string yaml, string planetId, string packId)
+        {
+            int planetsIdx = yaml.IndexOf("planets:", StringComparison.Ordinal);
+            if (planetsIdx < 0) return null;
 
-            Material material = new(skyboxShader)
+            int planetIdx = yaml.IndexOf(planetId + ":", planetsIdx, StringComparison.OrdinalIgnoreCase);
+            if (planetIdx < 0) return null;
+
+            return new EnvironmentThemeData
             {
-                name = $"DINOForge_{planet}_skybox"
+                PackId = packId,
+                PlanetId = planetId,
+                SkyboxMaterial = ExtractYamlScalar(yaml, planetIdx, "skybox_material"),
+                AmbientLight = ExtractYamlScalar(yaml, planetIdx, "ambient_light"),
+                AmbientModeSetting = ParseAmbientMode(ExtractYamlScalar(yaml, planetIdx, "ambient_mode")),
+                FogEnabled = ParseNullableBool(ExtractYamlScalar(yaml, planetIdx, "fog_enabled")),
+                FogColor = ExtractYamlScalar(yaml, planetIdx, "fog_color"),
+                FogDensity = ParseNullableFloat(ExtractYamlScalar(yaml, planetIdx, "fog_density")),
+                FogModeSetting = ParseFogMode(ExtractYamlScalar(yaml, planetIdx, "fog_mode")),
             };
-
-            ApplyColorTint(material, tint);
-            _cache[planet] = material;
-            return material;
         }
 
-        private bool TryLoadBundledSkyboxMaterial(string planet, out Material? material)
+        private static string ResolveScenePlanetId(string sceneName)
         {
-            material = null;
+            if (string.IsNullOrWhiteSpace(sceneName)) return "default";
 
-            if (!PlanetSkyboxBundleKeys.TryGetValue(planet, out string[]? bundleKeys))
-            {
-                _log.LogDebug($"[EnvironmentThemeSwap] No skybox bundle key map for planet '{planet}'.");
-                return false;
-            }
-
-            for (int i = 0; i < bundleKeys.Length; i++)
-            {
-                string candidatePath = bundleKeys[i];
-                material = Resources.Load<Material>(candidatePath);
-                if (material != null)
-                {
-                    _log.LogInfo($"[EnvironmentThemeSwap] Loaded bundled skybox material '{material.name}' using Resources key '{candidatePath}' for planet '{planet}'.");
-                    return true;
-                }
-            }
-
-            _log.LogDebug($"[EnvironmentThemeSwap] No SW skybox bundle material found for planet '{planet}' from keys: {string.Join(", ", bundleKeys)}. Using procedural placeholder.");
-            return false;
+            string lower = sceneName.ToLowerInvariant();
+            if (lower.Contains("tatooine")) return "tatooine";
+            if (lower.Contains("naboo")) return "naboo";
+            if (lower.Contains("umbara")) return "umbara";
+            if (lower.Contains("coruscant")) return "coruscant";
+            return "default";
         }
 
-        private static void ApplyColorTint(Material material, Color tint)
+        private static bool IsGameplayScene(string sceneName)
         {
-            if (material.HasProperty("_Tint"))
-                material.SetColor("_Tint", tint);
-            if (material.HasProperty("_SkyTint"))
-                material.SetColor("_SkyTint", tint);
-            if (material.HasProperty("_BaseColor"))
-                material.SetColor("_BaseColor", tint);
-            if (material.HasProperty("_Color"))
-                material.SetColor("_Color", tint);
-            if (material.HasProperty("_UnlitColor"))
-                material.SetColor("_UnlitColor", tint);
+            if (string.IsNullOrWhiteSpace(sceneName)) return false;
+
+            string lower = sceneName.ToLowerInvariant();
+            if (lower.Contains("mainmenu") || lower.Contains("main_menu")) return false;
+            if (lower.Contains("loading")) return false;
+            return true;
+        }
+
+        private static string? ExtractYamlScalar(string yaml, int blockStart, string key)
+        {
+            string searchKey = key + ":";
+            int keyIdx = yaml.IndexOf(searchKey, blockStart, StringComparison.Ordinal);
+            if (keyIdx < 0) return null;
+
+            int valueStart = keyIdx + searchKey.Length;
+            int lineEnd = yaml.IndexOf('\n', valueStart);
+            if (lineEnd < 0) lineEnd = yaml.Length;
+
+            string raw = yaml.Substring(valueStart, lineEnd - valueStart).Trim();
+            if (raw.Length >= 2 && (raw[0] == '"' || raw[0] == '\''))
+            {
+                raw = raw.Substring(1, raw.Length - 2);
+            }
+
+            return string.IsNullOrWhiteSpace(raw) ? null : raw;
+        }
+
+        private static AmbientMode? ParseAmbientMode(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return Enum.TryParse(value, ignoreCase: true, out AmbientMode mode) ? mode : null;
+        }
+
+        private static FogMode? ParseFogMode(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return Enum.TryParse(value, ignoreCase: true, out FogMode mode) ? mode : null;
+        }
+
+        private static bool? ParseNullableBool(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return bool.TryParse(value, out bool parsed) ? parsed : null;
+        }
+
+        private static float? ParseNullableFloat(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return float.TryParse(value, out float parsed) ? parsed : null;
+        }
+
+        internal sealed class EnvironmentThemeData
+        {
+            public string? PackId;
+            public string? PlanetId;
+            public string? SkyboxMaterial;
+            public string? AmbientLight;
+            public AmbientMode? AmbientModeSetting;
+            public bool? FogEnabled;
+            public string? FogColor;
+            public float? FogDensity;
+            public FogMode? FogModeSetting;
         }
     }
 }

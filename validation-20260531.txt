@@ -1,0 +1,12 @@
+{"status":"ok","pack":"economy-balanced","errors":[]}
+{"status":"ok","pack":"example-hello-world","errors":[]}
+{"status":"ok","pack":"example-hello-world","errors":[]}
+{"status":"ok","pack":"example-total-conversion","errors":[]}
+{"status":"ok","pack":"example-ui-counter","errors":[]}
+{"status":"ok","pack":"scenario-tutorial","errors":[]}
+{"status":"ok","pack":"ui-hud-minimal","errors":[]}
+{"status":"ok","pack":"vanilla-dino","errors":[]}
+{"status":"ok","pack":"warfare-aerial","errors":[]}
+{"status":"error","pack":"warfare-modern","errors":["#/ui_theme.logo: NoAdditionalPropertiesAllowed: #/ui_theme.logo","#/ui_theme.background_image: NoAdditionalPropertiesAllowed: #/ui_theme.background_image","#/ui_theme.button_frame: NoAdditionalPropertiesAllowed: #/ui_theme.button_frame","#/ui_theme.button_frame_hover: NoAdditionalPropertiesAllowed: #/ui_theme.button_frame_hover"]}
+{"status":"ok","pack":"warfare-naval","errors":[]}
+{"status":"error","pack":"warfare-starwars","errors":["#/ui_theme.logo: NoAdditionalPropertiesAllowed: #/ui_theme.logo","#/ui_theme.background_image: NoAdditionalPropertiesAllowed: #/ui_theme.background_image","#/ui_theme.button_frame: NoAdditionalPropertiesAllowed: #/ui_theme.button_frame","#/ui_theme.button_frame_hover: NoAdditionalPropertiesAllowed: #/ui_theme.button_frame_hover","#/ui_theme.font: NoAdditionalPropertiesAllowed: #/ui_theme.font","#/ui_theme.loading_screen: NoAdditionalPropertiesAllowed: #/ui_theme.loading_screen","#/loads.projectiles: NoAdditionalPropertiesAllowed: #/loads.projectiles"]}

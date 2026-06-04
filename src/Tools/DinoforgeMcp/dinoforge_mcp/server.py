@@ -174,7 +174,7 @@ def _run_game_cli(*args: str, timeout: int = 20, json_output: bool = True, pipe_
     if pipe_name:
         cmd.extend(["--pipe-name", pipe_name])
 
-    cmd.extend([*args, "--format=json"])
+    cmd.extend(["--format=json", *args])
 
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=REPO_ROOT)
@@ -1988,6 +1988,49 @@ async def catalog_resource() -> str:
 async def health_check(request: Request):
     """Health check endpoint for service monitoring and startup verification."""
     return JSONResponse({"status": "ok", "server": "dinoforge-mcp", "version": "0.13.0"})
+
+
+@mcp.custom_route("/game/navigate", methods=["POST"])
+async def game_navigate_route(request: Request):
+    """REST shim: POST /game/navigate  body: {"state":"gameplay"}"""
+    body = await request.json()
+    state = body.get("state", "gameplay")
+    # Primary: check via pipe bridge
+    result = _run_game_cli("status")
+    running = result.get("Running") or ('"Running":true' in result.get("raw", ""))
+    # Fallback: process-based check (pipe is unavailable on main menu)
+    if not running:
+        import subprocess as _sp
+        try:
+            ps_out = _sp.check_output(
+                ["powershell.exe", "-Command",
+                 "Get-Process -Name 'Diplomacy is Not an Option' -ErrorAction SilentlyContinue | "
+                 "Select-Object -First 1 -ExpandProperty Id"],
+                timeout=5, text=True
+            ).strip()
+            running = bool(ps_out and ps_out.isdigit())
+        except Exception:
+            pass
+    if not running:
+        return JSONResponse({"success": False, "error": "Game not running"})
+    if state == "gameplay":
+        save_result = _run_game_cli("load-save", "AUTOSAVE_1")
+        _run_game_cli("dismiss")
+        return JSONResponse({"success": True, "loadResult": save_result})
+    return JSONResponse({"success": False, "error": f"Unsupported state: {state}"})
+
+
+@mcp.custom_route("/game/status", methods=["GET"])
+async def game_status_route(request: Request):
+    """REST shim: GET /game/status"""
+    return JSONResponse(_run_game_cli("status"))
+
+
+@mcp.custom_route("/game/screenshot", methods=["POST"])
+async def game_screenshot_route(request: Request):
+    """REST shim: POST /game/screenshot"""
+    result = _run_game_cli("screenshot")
+    return JSONResponse(result)
 
 
 # ===========================================================================

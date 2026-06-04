@@ -43,6 +43,9 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialTargetingSystem : SystemBase
     {
+        private static bool _isRuntimeEnabled = false;
+        private static bool _disabledWarningLogged;
+
         /// <summary>
         /// Query matching ground-based enemy units: have Translation and Components.Enemy tag,
         /// exclude AerialUnitComponent. Used for aerial target acquisition.
@@ -53,31 +56,22 @@ namespace DINOForge.Runtime.Aviation
         /// <summary>Whether enemy query initialization has been attempted and failed.</summary>
         private bool _enemyQueryResolveFailed;
 
-        /// <summary>
-        /// Cached query matching aerial units: AerialUnitComponent (read-write) + Translation (read-only).
-        /// Built in <see cref="OnCreate"/> with <see cref="EntityQueryOptions.IncludePrefab"/> because
-        /// all DINO entities are ECS Prefab entities — without it the query returns 0 results.
-        /// </summary>
-        private EntityQuery _aerialQuery;
-
         public override void OnCreate()
         {
             base.OnCreate();
             DebugLog.Write("AerialTargeting", "AerialTargetingSystem.OnCreate — attempting enemy ground query init");
 
-            // NOTE: Manual EntityQuery loop (NOT Entities.ForEach / Job.WithCode) — those require the
-            // Unity.Entities DOTS source generator, which only runs inside the Unity Editor. This
-            // assembly is built netstandard2.0 via `dotnet build` outside the editor, so codegen never
-            // runs and the placeholder throws "This method should have been replaced by codegen" every frame.
-            _aerialQuery = GetEntityQuery(new EntityQueryDesc
+            if (!_isRuntimeEnabled)
             {
-                All = new[]
+                if (!_disabledWarningLogged)
                 {
-                    ComponentType.ReadWrite<AerialUnitComponent>(),
-                    ComponentType.ReadOnly<Translation>()
-                },
-                Options = EntityQueryOptions.IncludePrefab
-            });
+                    DebugLog.Write("AerialTargeting", "AerialTargetingSystem disabled (feature gate OFF). Restore runtime enablement when DOTS codegen path is stable.");
+                    _disabledWarningLogged = true;
+                }
+
+                Enabled = false;
+                return;
+            }
 
             TryInitEnemyGroundQuery();
         }
@@ -96,51 +90,50 @@ namespace DINOForge.Runtime.Aviation
             }
 
             NativeArray<Entity> enemyGroundUnits =
-                _enemyGroundUnitQuery.Value.ToEntityArray(Allocator.Temp);
+                _enemyGroundUnitQuery.Value.ToEntityArray(Allocator.TempJob);
             NativeArray<Translation> enemyGroundTranslations =
-                _enemyGroundUnitQuery.Value.ToComponentDataArray<Translation>(Allocator.Temp);
+                _enemyGroundUnitQuery.Value.ToComponentDataArray<Translation>(Allocator.TempJob);
 
             try
             {
-                // Manual query loop over aerial units (codegen-free; see OnCreate note).
-                using (NativeArray<Entity> aerialUnits = _aerialQuery.ToEntityArray(Allocator.Temp))
+                // Manual EntityQuery loop — avoids Entities.ForEach DOTS codegen path
+                // which crashes in netstandard2.0 Mono even when system is disabled
+                // (job types are registered at world-create time). Pattern #233.
+                EntityQueryDesc targetDesc = new EntityQueryDesc
                 {
-                    for (int a = 0; a < aerialUnits.Length; a++)
+                    All = new[] { ComponentType.ReadWrite<AerialUnitComponent>(), ComponentType.ReadOnly<Translation>() }
+                };
+                EntityQuery aerialQuery = EntityManager.CreateEntityQuery(targetDesc);
+                using NativeArray<Entity> aerialEntities = aerialQuery.ToEntityArray(Allocator.Temp);
+
+                float attackRange = 25f;
+                float attackRangeSq = attackRange * attackRange;
+
+                foreach (Entity entity in aerialEntities)
+                {
+                    AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                    Translation translation = EntityManager.GetComponentData<Translation>(entity);
+
+                    // Find nearest enemy ground target within range
+                    Entity targetEntity = Entity.Null;
+                    float nearestDistSq = float.MaxValue;
+
+                    for (int i = 0; i < enemyGroundUnits.Length; i++)
                     {
-                        Entity aerialEntity = aerialUnits[a];
-                        AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(aerialEntity);
-                        Translation translation = EntityManager.GetComponentData<Translation>(aerialEntity);
+                        Translation targetTrans = enemyGroundTranslations[i];
+                        float3 delta = targetTrans.Value - translation.Value;
+                        float distSq = math.lengthsq(delta);
 
-                        // Default attack range of 25 units
-                        // (ideally this would come from the unit's weapon definition)
-                        float attackRange = 25f;
-                        float attackRangeSq = attackRange * attackRange;
-
-                        // Find nearest enemy ground target within range
-                        Entity targetEntity = Entity.Null;
-                        float nearestDistSq = float.MaxValue;
-
-                        for (int i = 0; i < enemyGroundUnits.Length; i++)
+                        if (distSq < attackRangeSq && distSq < nearestDistSq)
                         {
-                            Translation targetTrans = enemyGroundTranslations[i];
-                            float3 delta = targetTrans.Value - translation.Value;
-                            float distSq = math.lengthsq(delta);
-
-                            if (distSq < attackRangeSq && distSq < nearestDistSq)
-                            {
-                                nearestDistSq = distSq;
-                                targetEntity = enemyGroundUnits[i];
-                            }
-                        }
-
-                        // Engage or disengage target
-                        bool nowAttacking = (targetEntity != Entity.Null);
-                        if (aerial.IsAttacking != nowAttacking)
-                        {
-                            aerial.IsAttacking = nowAttacking;
-                            EntityManager.SetComponentData(aerialEntity, aerial);
+                            nearestDistSq = distSq;
+                            targetEntity = enemyGroundUnits[i];
                         }
                     }
+
+                    // Engage or disengage target
+                    aerial.IsAttacking = (targetEntity != Entity.Null);
+                    EntityManager.SetComponentData(entity, aerial);
                 }
             }
             finally

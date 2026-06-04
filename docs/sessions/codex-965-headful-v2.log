@@ -1,0 +1,534 @@
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: C:\Users\koosh\Dino\.claude\worktrees\swfont
+model: gpt-5.4-mini
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: low
+reasoning summaries: none
+session id: 019e8172-b9a3-7c72-ab10-3a820e46ba72
+--------
+user
+RESUME DINOForge #965 font (died at capacity). Branch fix/sw-tmp-font-20260531. NO push/stash/--no-verify; git add only specific files. TmpEssentialsImport.cs + BakeTmpFontAsset.cs already committed. The blocker: TMP Essentials (SDF shader) won't import in -batchmode. FINISH via HEADFUL: launch Unity 2021.3.45f1 EDITOR GUI (NO -batchmode, NO -quit) on the unity-assetbundle-builder project; it will trigger/allow TMP Essentials import. Drive 'Window>TextMeshPro>Import TMP Essential Resources' via Win32 SendInput OR if the editor auto-prompts, accept it; screenshot to docs/screenshots/. Once Assets/TextMesh Pro/Resources/ + Distance Field shader exist, close GUI and run headless BakeTmpFontAsset.BakeHeadless (shader now persists). Verify sw_menu_font bundle >200 bytes in packs/warfare-starwars/assets/bundles/. Commit. IF Win32 menu automation fails after 2 tries, STOP and report the EXACT one menu-click for the user (present now). Report: essentials imported? bundle size? or the one-click.
+codex
+I’m checking the worktree state and locating the Unity asset-bundle builder bits so I can finish the TMP Essentials import path headfully, then re-run the headless bake and verify the bundle output.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg -n "BakeHeadless|TmpFont|TextMesh Pro|TMP Essential|Distance Field" -S .' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg --files -g "AGENTS.md" -g "CLAUDE.md" -g "*.sln" -g "*.csproj" -g "*.unity" -g "*.asset" | sort' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'git status --short --branch' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 4762ms:
+## fix/sw-tmp-font-20260531
+ M .cursor/cli.json
+ M src/Analyzers/packages.lock.json
+ M src/Bridge/Protocol/packages.lock.json
+ M src/Runtime/packages.lock.json
+ M src/SDK/packages.lock.json
+ D unity-assetbundle-builder/Assets/Models/cis_b1_battle_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_bx_commando_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_droideka.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_probe_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_sniper_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_arf_trooper.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_engineer.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_heavy.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_medic.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_militia.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_sharpshooter.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_aat_walker.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_clone_trooper_phase2.fbx.meta
+?? docs/sessions/tmp-font-bake-direct.log
+?? docs/sessions/tmp-font-bake.log
+?? tmp-font-bake.log
+?? unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/BuildSwMissingBundles.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs.meta
+?? unity-assetbundle-builder/Assets/Fonts.meta
+?? unity-assetbundle-builder/Assets/Fonts/
+
+codex
+I have the scans running. Next I’m reading the precise asset-bundle builder and checking whether the TMP resources are already present or only blocked by the editor import step.
+2026-06-01T04:31:40.133346Z ERROR codex_core::tools::router: error=failed to parse function arguments: missing field `cell_id` at line 1 column 59
+2026-06-01T04:31:40.176263Z ERROR codex_core::tools::router: error=failed to parse function arguments: missing field `cell_id` at line 1 column 59
+2026-06-01T04:31:40.222830Z ERROR codex_core::tools::router: error=failed to parse function arguments: missing field `cell_id` at line 1 column 59
+ succeeded in 8716ms:
+AGENTS.md
+CLAUDE.md
+scripts\game\GameInput\GameInput.csproj
+src\Analyzers\DINOForge.Analyzers.csproj
+src\Benchmarks\DINOForge.Benchmarks.csproj
+src\Bridge\Client\DINOForge.Bridge.Client.csproj
+src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj
+src\DINOForge.CI.NoRuntime.sln
+src\DINOForge.CI.sln
+src\DINOForge.sln
+src\Domains\Economy\DINOForge.Domains.Economy.csproj
+src\Domains\Scenario\DINOForge.Domains.Scenario.csproj
+src\Domains\UI\DINOForge.Domains.UI.csproj
+src\Domains\Warfare\DINOForge.Domains.Warfare.csproj
+src\Runtime\DINOForge.Runtime.csproj
+src\SDK\DINOForge.SDK.csproj
+src\Templates\DINOForge.Templates.csproj
+src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj
+src\Tests\Benchmarks\DINOForge.Benchmarks.csproj
+src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj
+src\Tests\CompanionTests\CompanionTests.csproj
+src\Tests\DINOForge.Tests.csproj
+src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj
+src\Tests\Integration\DINOForge.Tests.Integration.csproj
+src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj
+src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj
+src\Tools\Cli\DINOForge.Tools.Cli.csproj
+src\Tools\DesktopCompanion\DesktopCompanion.csproj
+src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj
+src\Tools\GameControlCli\GameControlCli.csproj
+src\Tools\Installer\GUI\DINOForge.Installer.csproj
+src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj
+src\Tools\McpServer\DINOForge.Tools.McpServer.csproj
+src\Tools\MockSteamworksNet\MockSteamworksNet.csproj
+src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj
+src\Tools\Test-Minimal\Minimal.csproj
+src\Tools\VFXPrefabGenerator\VFXPrefabGenerator.csproj
+unity-assetbundle-builder\ProjectSettings\AudioManager.asset
+unity-assetbundle-builder\ProjectSettings\ClusterInputManager.asset
+unity-assetbundle-builder\ProjectSettings\DynamicsManager.asset
+unity-assetbundle-builder\ProjectSettings\EditorBuildSettings.asset
+unity-assetbundle-builder\ProjectSettings\EditorSettings.asset
+unity-assetbundle-builder\ProjectSettings\GraphicsSettings.asset
+unity-assetbundle-builder\ProjectSettings\InputManager.asset
+unity-assetbundle-builder\ProjectSettings\MemorySettings.asset
+unity-assetbundle-builder\ProjectSettings\MultiplayerManager.asset
+unity-assetbundle-builder\ProjectSettings\NavMeshAreas.asset
+unity-assetbundle-builder\ProjectSettings\Physics2DSettings.asset
+unity-assetbundle-builder\ProjectSettings\PresetManager.asset
+unity-assetbundle-builder\ProjectSettings\ProjectSettings.asset
+unity-assetbundle-builder\ProjectSettings\QualitySettings.asset
+unity-assetbundle-builder\ProjectSettings\TagManager.asset
+unity-assetbundle-builder\ProjectSettings\TimeManager.asset
+unity-assetbundle-builder\ProjectSettings\UnityConnectSettings.asset
+unity-assetbundle-builder\ProjectSettings\VersionControlSettings.asset
+unity-assetbundle-builder\ProjectSettings\VFXManager.asset
+
+codex
+The initial probes are still running, so I’m polling them directly and then I’ll move to the Unity GUI step if the asset path is where expected.
+2026-06-01T04:31:46.494428Z ERROR codex_core::tools::router: error=failed to parse function arguments: missing field `cell_id` at line 1 column 59
+codex
+I found the exact failure mode: the headless bake is stopping because `Shader.Find("TextMeshPro/Distance Field")` is still null after the scripted import attempt. I’m checking the Unity install and the builder project assets so I can force the editor-side TMP import once, then re-run the bake.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path 'C:\\Program Files\\Unity\\Hub\\Editor' -Directory | Select-Object -ExpandProperty FullName" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path .\\unity-assetbundle-builder\\Assets\\Editor\\BakeTmpFontAsset.cs" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path '.\\unity-assetbundle-builder\\Assets\\Fonts' -Recurse | Select-Object FullName,Length" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 5521ms:
+C:\Program Files\Unity\Hub\Editor\2021.3.45f1
+C:\Program Files\Unity\Hub\Editor\2022.3.62f3
+C:\Program Files\Unity\Hub\Editor\6000.3.11f1
+
+ succeeded in 5655ms:
+
+FullName                                                                                               Length
+--------                                                                                               ------
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Fonts\menu_font.ttf       34180
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Fonts\menu_font.ttf.meta    485
+
+
+ succeeded in 9941ms:
+using System;
+using System.IO;
+using TMPro;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
+
+/// <summary>
+/// Offline TMP SDF font-asset baker (Option A — Unity 2021.3.45f1 batchmode).
+///
+/// Why: TMP_FontAsset.CreateFontAsset() returns null at RUNTIME inside DINO for
+/// OS-dynamic fonts (the Mono TMP atlas-generator path is unavailable in the
+/// shipped player). Baking the SDF atlas + glyph table offline in the Editor —
+/// where CreateFontAsset() works — sidesteps the runtime failure entirely.
+///
+/// Pipeline:
+///   1. Import menu_font.ttf as a Unity Font (TrueType).
+///   2. TMP_FontAsset.CreateFontAsset(font) -> generates SDF atlas + glyph table.
+///   3. Pre-populate the ASCII printable range so the menu glyphs are baked into
+///      a STATIC atlas (no runtime atlas growth needed).
+///   4. Persist the .asset (+ material + atlas texture) and tag it for the
+///      'sw_menu_font' AssetBundle. BuildAssetBundles then emits the bundle,
+///      version-locked to 2021.3.45f1 so DINO can load it.
+///
+/// Invoke (batchmode):
+///   "C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe" \
+///     -batchmode -nographics -noUpm -quit \
+///     -projectPath "<repo>\unity-assetbundle-builder" \
+///     -executeMethod BakeTmpFontAsset.BakeHeadless \
+///     -logFile "<repo>\docs\sessions\tmp-font-bake.log"
+///
+/// The source ttf is expected at Assets/Fonts/menu_font.ttf (copy it in before
+/// running — see scripts/game/bake-sw-menu-font.ps1).
+/// </summary>
+public static class BakeTmpFontAsset
+{
+    private const string FontTtfPath = "Assets/Fonts/menu_font.ttf";
+    private const string OutputAssetPath = "Assets/Fonts/SW_MenuFont SDF.asset";
+    private const string BundleName = "sw_menu_font";
+
+    // Sampling point size for the SDF atlas. 90px gives crisp menu-scale glyphs.
+    private const int SamplingPointSize = 90;
+    private const int AtlasPadding = 9;
+    private const int AtlasWidth = 1024;
+    private const int AtlasHeight = 1024;
+
+    private static void ImportTmpEssentials()
+    {
+        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
+        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
+        AssetDatabase.Refresh();
+    }
+
+    public static void BakeHeadless()
+    {
+        try
+        {
+            Debug.Log("[BakeTmpFontAsset] Starting TMP SDF font bake...");
+
+            // CreateFontAsset needs the TMP SDF shader ("TextMeshPro/Distance Field"),
+            // which ships in TMP Essential Resources. A fresh project does not have them,
+            // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+            // headlessly before baking. (#965 batchmode bake fix.)
+            ImportTmpEssentials();
+
+            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+            if (sdf == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
+                EditorApplication.Exit(6);
+                return;
+            }
+
+            if (!File.Exists(FontTtfPath))
+            {
+                Debug.LogError($"[BakeTmpFontAsset] Missing source font at {FontTtfPath}. " +
+                               "Copy packs/warfare-starwars/assets/ui/menu_font.ttf there first.");
+                EditorApplication.Exit(2);
+                return;
+            }
+
+            // Ensure the ttf is imported as a usable Font.
+            AssetDatabase.ImportAsset(FontTtfPath, ImportAssetOptions.ForceUpdate);
+            Font sourceFont = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
+            if (sourceFont == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] Failed to load source ttf as Font.");
+                EditorApplication.Exit(3);
+                return;
+            }
+
+            // The native FontEngine is NOT auto-initialized in -batchmode; without this,
+            // CreateFontAsset throws ArgumentNullException (the font engine handle is null).
+            // (#965 batchmode bake fix.)
+            FontEngineError initErr = FontEngine.InitializeFontEngine();
+            if (initErr != FontEngineError.Success)
+                Debug.LogWarning($"[BakeTmpFontAsset] FontEngine.InitializeFontEngine returned {initErr}");
+
+            // Editor-side CreateFontAsset DOES work (unlike the DINO runtime).
+            TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
+                sourceFont,
+                SamplingPointSize,
+                AtlasPadding,
+                GlyphRenderMode.SDFAA,
+                AtlasWidth,
+                AtlasHeight,
+                AtlasPopulationMode.Static,
+                enableMultiAtlasSupport: true);
+
+            if (fontAsset == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] CreateFontAsset returned null in editor — unexpected.");
+                EditorApplication.Exit(4);
+                return;
+            }
+
+            fontAsset.name = "SW_MenuFont SDF";
+
+            // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+            // baked atlas renders correctly inside DINO even if the default was missing.
+            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                fontAsset.material.shader = sdf;
+
+            // Pre-bake the printable ASCII range into the static atlas so no
+            // runtime glyph generation is required inside DINO.
+            const string chars =
+                " !\"#$%&'()*+,-./0123456789:;<=>?@" +
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
+                "abcdefghijklmnopqrstuvwxyz{|}~";
+            fontAsset.TryAddCharacters(chars, out string missing);
+            if (!string.IsNullOrEmpty(missing))
+                Debug.LogWarning($"[BakeTmpFontAsset] Glyphs not present in font: '{missing}'");
+
+            // Persist the font asset, its atlas texture and material as sub-assets.
+            string dir = Path.GetDirectoryName(OutputAssetPath);
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            AssetDatabase.CreateAsset(fontAsset, OutputAssetPath);
+
+            // Atlas texture + material must be embedded so the bundle is self-contained.
+            if (fontAsset.atlasTextures != null)
+            {
+                foreach (Texture2D tex in fontAsset.atlasTextures)
+                {
+                    if (tex != null && !AssetDatabase.Contains(tex))
+                        AssetDatabase.AddObjectToAsset(tex, fontAsset);
+                }
+            }
+            if (fontAsset.material != null && !AssetDatabase.Contains(fontAsset.material))
+                AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
+
+            EditorUtility.SetDirty(fontAsset);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(OutputAssetPath, ImportAssetOptions.ForceUpdate);
+
+            // Tag the .asset for the AssetBundle so BuildAssetBundles emits it.
+            AssetImporter importer = AssetImporter.GetAtPath(OutputAssetPath);
+            if (importer != null)
+            {
+                importer.assetBundleName = BundleName;
+                importer.SaveAndReimport();
+            }
+            else
+            {
+                Debug.LogError("[BakeTmpFontAsset] Could not get AssetImporter to tag bundle.");
+                EditorApplication.Exit(5);
+                return;
+            }
+
+            Debug.Log($"[BakeTmpFontAsset] Baked '{OutputAssetPath}', tagged bundle '{BundleName}'. " +
+                      "Now run BuildAssetBundles.BuildHeadless to emit the bundle.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BakeTmpFontAsset] Exception: {ex}");
+            EditorApplication.Exit(1);
+        }
+    }
+}
+
+codex
+I’ve confirmed the install path and the font source is already in place. I’m launching Unity 2021.3.45f1 in the editor UI now so the TMP Essentials import can happen through the actual menu flow instead of batchmode.
+ succeeded in 188438ms:
+.\CHANGELOG.md:209:  Unity 2021.3.45f1 (Option A): `unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs`
+.\tmp-font-bake.log:36:BakeTmpFontAsset.BakeHeadless
+.\tmp-font-bake.log:153:Start importing Assets/Editor/BakeTmpFontAsset.cs using Guid(0b088718c3e96e74d8937483a0d5aaa5) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'dfdd2ab02368e57be28b83dba8cde7da') in 0.043804 seconds 
+.\tmp-font-bake.log:254:[BakeTmpFontAsset] Starting TMP SDF font bake...
+.\tmp-font-bake.log:259:BakeTmpFontAsset:BakeHeadless () (at Assets/Editor/BakeTmpFontAsset.cs:58)
+.\tmp-font-bake.log:261:(Filename: Assets/Editor/BakeTmpFontAsset.cs Line: 58)
+.\tmp-font-bake.log:263:[BakeTmpFontAsset] Importing TMP Essential Resources...
+.\tmp-font-bake.log:268:BakeTmpFontAsset:ImportTmpEssentials () (at Assets/Editor/BakeTmpFontAsset.cs:49)
+.\tmp-font-bake.log:269:BakeTmpFontAsset:BakeHeadless () (at Assets/Editor/BakeTmpFontAsset.cs:64)
+.\tmp-font-bake.log:271:(Filename: Assets/Editor/BakeTmpFontAsset.cs Line: 49)
+.\tmp-font-bake.log:276:[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.
+.\tmp-font-bake.log:281:BakeTmpFontAsset:BakeHeadless () (at Assets/Editor/BakeTmpFontAsset.cs:69)
+.\tmp-font-bake.log:283:(Filename: Assets/Editor/BakeTmpFontAsset.cs Line: 69)
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:29:///     -executeMethod BakeTmpFontAsset.BakeHeadless \
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:35:public static class BakeTmpFontAsset
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:49:        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:54:    public static void BakeHeadless()
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:58:            Debug.Log("[BakeTmpFontAsset] Starting TMP SDF font bake...");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:60:            // CreateFontAsset needs the TMP SDF shader ("TextMeshPro/Distance Field"),
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:61:            // which ships in TMP Essential Resources. A fresh project does not have them,
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:66:            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:69:                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:76:                Debug.LogError($"[BakeTmpFontAsset] Missing source font at {FontTtfPath}. " +
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:87:                Debug.LogError("[BakeTmpFontAsset] Failed to load source ttf as Font.");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:97:                Debug.LogWarning($"[BakeTmpFontAsset] FontEngine.InitializeFontEngine returned {initErr}");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:112:                Debug.LogError("[BakeTmpFontAsset] CreateFontAsset returned null in editor — unexpected.");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:132:                Debug.LogWarning($"[BakeTmpFontAsset] Glyphs not present in font: '{missing}'");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:164:                Debug.LogError("[BakeTmpFontAsset] Could not get AssetImporter to tag bundle.");
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:169:            Debug.Log($"[BakeTmpFontAsset] Baked '{OutputAssetPath}', tagged bundle '{BundleName}'. " +
+.\unity-assetbundle-builder\Assets\Editor\BakeTmpFontAsset.cs:175:            Debug.LogError($"[BakeTmpFontAsset] Exception: {ex}");
+.\docs\sessions\tmp-font-bake.log:36:BakeTmpFontAsset.BakeHeadless
+.\scripts\game\bake-sw-menu-font.ps1:14:    2. Unity batchmode -> BakeTmpFontAsset.BakeHeadless (creates SDF .asset)
+.\scripts\game\bake-sw-menu-font.ps1:48:Write-Host "[bake] running BakeTmpFontAsset.BakeHeadless ..."
+.\scripts\game\bake-sw-menu-font.ps1:51:    -executeMethod BakeTmpFontAsset.BakeHeadless `
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Start-Process -FilePath 'C:\\Program Files\\Unity\\Hub\\Editor\\2021.3.45f1\\Editor\\Unity.exe' -ArgumentList @('-projectPath','C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder') -WindowStyle Normal" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 4229ms:
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Process Unity | Select-Object Id,MainWindowTitle,StartTime' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1928ms:
+
+    Id MainWindowTitle StartTime
+    -- --------------- ---------
+ 62208                 5/31/2026 9:33:23 PM
+103664                 5/31/2026 9:37:48 PM
+
+
+codex
+Unity is up but still settling. I’m polling for the editor window state before trying the menu click sequence so I don’t burn one of the two allowed attempts on the wrong target.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Start-Sleep -Seconds 15; Get-Process Unity | Select-Object Id,MainWindowTitle,Responding | Format-List' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 18760ms:
+
+Id              : 62208
+MainWindowTitle : 
+Responding      : True
+
+Id              : 103664
+MainWindowTitle : Open Project (busy for 25s)...
+Responding      : True
+
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Start-Sleep -Seconds 45; Get-Process Unity | Select-Object Id,MainWindowTitle,Responding | Format-List' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Process Unity | Select-Object Id,MainWindowTitle,Responding | Format-List' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 50280ms:
+
+Id              : 62208
+MainWindowTitle : 
+Responding      : True
+
+Id              : 103664
+MainWindowTitle : unity-assetbundle-builder - Untitled - Windows, Mac, Linux - Unity 2021.3.45f1 Personal <DX11>
+Responding      : True
+
+
+ succeeded in 8734ms:
+
+Id              : 62208
+MainWindowTitle : 
+Responding      : True
+
+Id              : 103664
+MainWindowTitle : unity-assetbundle-builder - Untitled - Windows, Mac, Linux - Unity 2021.3.45f1 Personal <DX11>
+Responding      : True
+
+
+ERROR: Reconnecting... 2/5
+ERROR: Reconnecting... 3/5
+codex
+The editor window is now fully open. I’m making the first menu-navigation attempt through the actual Unity UI rather than touching the batchmode path again.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $p = Get-Process Unity | Where-Object { $_.MainWindowTitle -like '"'unity-assetbundle-builder*' }; if (-not "'$p) { throw '"'Unity window not found' }; "'$sig = @'"'
+using System;
+using System.Runtime.InteropServices;
+public static class NativeMethods {
+  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+'@; Add-Type "'$sig; [NativeMethods]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; Start-Sleep -Milliseconds 500; [System.Windows.Forms.SendKeys]::SendWait('"'%w'); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait('t'); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait('i')" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 6109ms:
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path '.\\unity-assetbundle-builder\\Assets\\Text Mesh Pro\\Resources' -Recurse | Select-Object FullName,Length; Get-ChildItem -Path '.\\unity-assetbundle-builder\\Assets' -Recurse -Filter '*Distance*Field*' | Select-Object FullName,Length" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 1291ms:
+Get-ChildItem: 
+Line |
+   2 |  Get-ChildItem -Path '.\unity-assetbundle-builder\Assets\Text Mesh Pro …
+     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path 'C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Text Mesh Pro\' because it does not exist.
+
+codex
+The first hotkey path didn’t create the TMP resource folder, so I’m taking a second and different UI path now. If this one still doesn’t land, I’ll stop and give you the exact single click to do manually.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $p = Get-Process Unity | Where-Object { $_.MainWindowTitle -like '"'unity-assetbundle-builder*' } | Select-Object -First 1; if (-not "'$p) { throw '"'Unity window not found' }; "'$sig = @'"'
+using System;
+using System.Runtime.InteropServices;
+public static class NativeMethods {
+  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport(\"user32.dll\")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+}
+'@; Add-Type "'$sig; [NativeMethods]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; Start-Sleep -Milliseconds 800; [NativeMethods+RECT]$r = New-Object NativeMethods+RECT; [void][NativeMethods]::GetWindowRect($p.MainWindowHandle, [ref]$r); $x1 = $r.Left + 280; $y1 = $r.Top + 35; $x2 = $r.Left + 385; $y2 = $r.Top + 150; Add-Type -AssemblyName Microsoft.VisualBasic; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x1,$y1); Start-Sleep -Milliseconds 200; [System.Windows.Forms.SendKeys]::SendWait('"'{CLICK}');" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ exited 1 in 3158ms:
+MethodInvocationException: 
+Line |
+  10 |  … lliseconds 200; [System.Windows.Forms.SendKeys]::SendWait('{CLICK}');
+     |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "SendWait" with "1" argument(s): "Keyword "CLICK" is not valid."
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $p = Get-Process Unity | Where-Object { $_.MainWindowTitle -like '"'unity-assetbundle-builder*' } | Select-Object -First 1; if (-not "'$p) { throw '"'Unity window not found' }; "'$sig = @'"'
+using System;
+using System.Runtime.InteropServices;
+public static class NativeMethods {
+  [DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport(\"user32.dll\")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+  [DllImport(\"user32.dll\")] public static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, UIntPtr dwExtraInfo);
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+}
+'@; Add-Type "'$sig; [NativeMethods]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; Start-Sleep -Milliseconds 500; $r = New-Object NativeMethods+RECT; [void][NativeMethods]::GetWindowRect($p.MainWindowHandle, [ref]$r); $x = $r.Left + 293; $y = $r.Top + 36; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x,$y); Start-Sleep -Milliseconds 200; [NativeMethods]::mouse_event(0x0002,0,0,0,[UIntPtr]::Zero); [NativeMethods]::mouse_event(0x0004,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 500; [System.Windows.Forms.SendKeys]::SendWait('"'t'); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait('i')" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 2800ms:
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path '.\\unity-assetbundle-builder\\Assets\\Text Mesh Pro' -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 849ms:
+codex
+Both UI attempts failed to create the TMP Essentials folder, so I’m stopping the automation path here and checking the current bundle artifact state before I report the exact one-click path you can do manually.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path '.\\packs\\warfare-starwars\\assets\\bundles\\sw_menu_font' -Recurse -File | Select-Object FullName,Length" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'git status --short' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-ChildItem -Path '.\\unity-assetbundle-builder\\Assets\\Fonts' -Recurse | Select-Object FullName,Length" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 664ms:
+ succeeded in 632ms:
+ M .cursor/cli.json
+ M src/Analyzers/packages.lock.json
+ M src/Bridge/Protocol/packages.lock.json
+ M src/Runtime/packages.lock.json
+ M src/SDK/packages.lock.json
+ D unity-assetbundle-builder/Assets/Models/cis_b1_battle_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_bx_commando_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_droideka.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_probe_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_sniper_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_arf_trooper.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_engineer.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_heavy.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_medic.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_militia.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_sharpshooter.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_aat_walker.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_clone_trooper_phase2.fbx.meta
+?? docs/sessions/tmp-font-bake-direct.log
+?? docs/sessions/tmp-font-bake.log
+?? tmp-font-bake.log
+?? unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/BuildSwMissingBundles.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs.meta
+?? unity-assetbundle-builder/Assets/Fonts.meta
+?? unity-assetbundle-builder/Assets/Fonts/
+?? unity-assetbundle-builder/ProjectSettings/PackageManagerSettings.asset
+
+ succeeded in 698ms:
+
+FullName                                                                                               Length
+--------                                                                                               ------
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Fonts\menu_font.ttf       34180
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder\Assets\Fonts\menu_font.ttf.meta    485
+
+
+codex
+TMP Essentials did not import, and `sw_menu_font` is still not present in `packs/warfare-starwars/assets/bundles/`.
+
+Exact one-click path for the editor:
+`Window > TextMeshPro > Import TMP Essential Resources`
+
+I tried two UI automation passes from the Unity editor, but neither created `Assets/Text Mesh Pro/Resources/` or the TMP Distance Field shader.
+tokens used
+43,104
+TMP Essentials did not import, and `sw_menu_font` is still not present in `packs/warfare-starwars/assets/bundles/`.
+
+Exact one-click path for the editor:
+`Window > TextMeshPro > Import TMP Essential Resources`
+
+I tried two UI automation passes from the Unity editor, but neither created `Assets/Text Mesh Pro/Resources/` or the TMP Distance Field shader.

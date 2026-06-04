@@ -8,7 +8,7 @@ Runs a Unity Editor project in batch mode to compile asset bundles for DINOForge
 Bundles are built with ChunkBasedCompression for optimal runtime loading.
 
 .PARAMETER UnityPath
-Path to Unity.exe (default: C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe)
+Path to Unity.exe (default: C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Unity.exe)
 
 .PARAMETER ProjectPath
 Path to the Bundle Builder project (default: scripts/unity/BundleBuilder relative to repo root)
@@ -29,7 +29,7 @@ Output log file for Unity build (default: scripts/unity/unity_build.log relative
 
 #>
 param(
-    [string]$UnityPath = "C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe",
+    [string]$UnityPath = "C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Unity.exe",
     [string]$ProjectPath = "",
     [string]$RepoRoot = "C:\Users\koosh\Dino",
     [string]$LogFile = ""

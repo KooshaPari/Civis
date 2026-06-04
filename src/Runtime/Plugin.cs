@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 // Iter-144 #543 gray-freeze patch — pre-existing DF analyzer warnings in this file are
 // outside the scope of the patch and tracked separately (see Pattern Catalog #105/#106/#111/#231).
 #pragma warning disable DF0105 // event-lifecycle asymmetry (pre-existing, tracked)
@@ -506,7 +506,6 @@ namespace DINOForge.Runtime
             {
                 if (scene.name == "MainMenu")
                     UI.LoadingScreenController.Instance?.BeginFadeOut();
-                TryApplyEnvironmentThemeForScene(scene.name, "sceneLoaded(main-thread)");
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded LoadingScreen fade failed (non-fatal): {ex.Message}"); }
         }
@@ -563,31 +562,6 @@ namespace DINOForge.Runtime
             catch (Exception ex)
             {
                 DebugLog.Write("Plugin", $"[Plugin] {trigger} TryResurrect threw: {ex.GetType().Name}: {ex.Message} — retained for next main-thread tick.");
-            }
-        }
-
-        private static void TryApplyEnvironmentThemeForScene(string sceneName, string source)
-        {
-            if (!Graphics.EnvironmentThemeSwap.IsGameplayScene(sceneName))
-                return;
-
-            try
-            {
-                if (PersistentRoot == null)
-                    return;
-
-                RuntimeDriver? driver = PersistentRoot.GetComponent<RuntimeDriver>();
-                if (driver == null)
-                {
-                    DebugLog.Write("Plugin", $"[Plugin] EnvironmentThemeSwap skipped ({source}): no RuntimeDriver on PersistentRoot.");
-                    return;
-                }
-
-                driver.TryApplyEnvironmentTheme(sceneName, source);
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Write("Plugin", $"[Plugin] EnvironmentThemeSwap failed ({source}): {ex.Message}");
             }
         }
 
@@ -659,6 +633,19 @@ namespace DINOForge.Runtime
             try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
 
+            // Re-arm the MainMenuThemer retry loop when the MainMenu scene becomes active.
+            // The canvas takes ~37s to appear, far beyond the original 30-frame window.
+            // Resetting here ensures the pump loop retries from frame 0 for each MainMenu entry.
+            if (newScene.name != null && newScene.name.IndexOf("MainMenu", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                RuntimeDriver? driver = PersistentRoot?.GetComponent<RuntimeDriver>();
+                if (driver != null)
+                {
+                    driver.RearmThemer();
+                }
+                DebugLog.Write("Plugin", "[Plugin] OnActiveSceneChanged: MainMenu detected — MainMenuThemer re-armed");
+            }
+
             // EPIC-027 loading-screen takeover: show during the game's own asset-load window
             // (InitialGameLoader / first scene), hide once the MainMenu is active.
             try
@@ -666,11 +653,13 @@ namespace DINOForge.Runtime
                 var ls = UI.LoadingScreenController.Instance;
                 if (ls != null)
                 {
-                    if (newScene.name == "InitialGameLoader" || string.IsNullOrEmpty(oldScene.name))
-                        ls.EnsureVisible();
-                    else if (newScene.name == "MainMenu")
+                    // EPIC-027 fix: check MainMenu FIRST so a cold-start transition (oldScene=""→MainMenu)
+                    // triggers BeginFadeOut, not EnsureVisible. The old order hit the "empty oldScene"
+                    // branch first, calling EnsureVisible on the very transition where we need to fade out.
+                    if (newScene.name == "MainMenu")
                         ls.BeginFadeOut();
-                    TryApplyEnvironmentThemeForScene(newScene.name, "activeSceneChanged(main-thread)");
+                    else if (newScene.name == "InitialGameLoader" || string.IsNullOrEmpty(oldScene.name))
+                        ls.EnsureVisible();
                 }
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged LoadingScreen toggle failed (non-fatal): {ex.Message}"); }
@@ -1450,9 +1439,21 @@ namespace DINOForge.Runtime
         private HudIndicator? _hudIndicator;
         private NativeMenuInjector? _nativeMenuInjector;
         private MainMenuThemer? _mainMenuThemer;
-        private Graphics.EnvironmentThemeSwap? _environmentThemeSwap;
         private UI.CanvasReskinner? _canvasReskinner;
         private int _reskinRetryCount;
+
+        // Theme retry counter — promoted from local so RearmThemer() can reset it.
+        private int _themeRetryCount = 0;
+
+        /// <summary>
+        /// Resets the MainMenuThemer retry counter so the pump loop retries from frame 0.
+        /// Called on every MainMenu scene activation so the themer has a fresh window to apply.
+        /// </summary>
+        internal void RearmThemer()
+        {
+            _themeRetryCount = 0;
+            DebugLog.Write("Plugin", "[RuntimeDriver] RearmThemer: theme retry counter reset");
+        }
 
         // ── Engine-UI self-healing (fix/engine-ui-injection-race) ────────────────
         // RunMainMenuInit() is idempotent and re-runnable; these track its state so the
@@ -1522,6 +1523,7 @@ namespace DINOForge.Runtime
         private string? _pendingPackToggleId;
         private bool _pendingPackToggleEnabled;
         private World? _pendingCatalogWorld;
+        private bool _sceneDumpQueued;
 
         // HMR tiered reloader — created once ModPlatform is available.
         private HotReload.HmrTieredReloader? _hmrTieredReloader;
@@ -1970,7 +1972,6 @@ namespace DINOForge.Runtime
             _log.LogInfo("[DINOForge] RuntimeDriver.Initialize() EXIT");
 
             // Pump deferred work on the main thread until destruction.
-            int _themeRetryCount = 0;
             int _themeAuxFrame = 0;
             while (!_destroyed)
             {
@@ -2004,7 +2005,7 @@ namespace DINOForge.Runtime
                 }
 
                 // Retry MainMenuThemer if canvas wasn't ready during Step 7
-                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 30)
+                if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 600)
                 {
                     _themeRetryCount++;
                     if (_themeRetryCount % 5 == 0) // every ~5 frames
@@ -2256,31 +2257,6 @@ namespace DINOForge.Runtime
             }
         }
 
-        public void TryApplyEnvironmentTheme(string sceneName, string source)
-        {
-            if (!Graphics.EnvironmentThemeSwap.IsGameplayScene(sceneName))
-                return;
-
-            if (_modPlatform == null)
-            {
-                _log.LogWarning($"[RuntimeDriver] EnvironmentThemeSwap skipped ({source}): ModPlatform is null.");
-                return;
-            }
-
-            try
-            {
-                _environmentThemeSwap ??= new Graphics.EnvironmentThemeSwap(_log);
-                if (_environmentThemeSwap.TryApplyForScene(sceneName))
-                {
-                    _log.LogInfo($"[RuntimeDriver] EnvironmentThemeSwap applied for '{sceneName}' ({source}).");
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning($"[RuntimeDriver] EnvironmentThemeSwap failed ({source}): {ex.Message}");
-            }
-        }
-
         /// <summary>
         /// Emits a single unambiguous launch-time heartbeat summarising engine-UI readiness so the
         /// user (and tooling) can confirm state at a glance from the BepInEx console / LogOutput.log.
@@ -2391,7 +2367,6 @@ namespace DINOForge.Runtime
             {
                 _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
                 _registeredWorldInstance = ecsWorld;
-                TryApplyEnvironmentTheme(SceneManager.GetActiveScene().name, "ProcessWorldReadyCoroutine");
 
                 if (_dumpOnStartup)
                 {
@@ -2440,6 +2415,7 @@ namespace DINOForge.Runtime
                         $"loaded={loadResult.LoadedPacks.Count}, errors={loadResult.Errors.Count}");
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
+                    QueueSceneDumpIfRequested(ecsWorld);
 
                     // Hide the loading screen now that world is ready and packs are loaded
                     if (_loadingScreen != null)
@@ -2447,9 +2423,6 @@ namespace DINOForge.Runtime
                         _loadingScreen.BeginFadeOut();
                         _log?.LogInfo("[RuntimeDriver] LoadingScreenController faded out (world ready).");
                     }
-
-                    string activeSceneName = SceneManager.GetActiveScene().name;
-                    TryApplyEnvironmentTheme(activeSceneName, "process-world-ready");
                 }
 
                 yield return null;
@@ -2483,6 +2456,98 @@ namespace DINOForge.Runtime
                     _worldReadyProcessing = false;
                 }
             }
+        }
+
+        private void QueueSceneDumpIfRequested(World ecsWorld)
+        {
+            if (_sceneDumpQueued)
+            {
+                return;
+            }
+
+            string? dumpPath = Environment.GetEnvironmentVariable("DINO_DUMP");
+            if (string.IsNullOrWhiteSpace(dumpPath))
+            {
+                return;
+            }
+
+            _sceneDumpQueued = true;
+            _log?.LogInfo($"[RuntimeDriver] Scene dump requested via DINO_DUMP='{dumpPath}'.");
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    World? bestWorld = ecsWorld;
+                    EntityManager bestEm = FindBestEntityManagerForDump(out bestWorld);
+                    if (bestWorld == null || !bestWorld.IsCreated)
+                    {
+                        _log?.LogWarning("[RuntimeDriver] Scene dump skipped: no created ECS world available.");
+                        return;
+                    }
+
+                    SceneDumper dumper = new SceneDumper(
+                        dumpPath,
+                        _modPlatform?.PacksDirectory ?? string.Empty,
+                        () => _modPlatform?.GetLoadedPackIds(),
+                        () => _modPlatform?.GetLoadedPackDisplayInfos());
+
+                    dumper.Dump(bestWorld, bestEm);
+                    _log?.LogInfo($"[RuntimeDriver] Scene dump written to '{dumpPath}'.");
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning($"[RuntimeDriver] Scene dump failed: {ex.Message}");
+                }
+            });
+        }
+
+        private EntityManager FindBestEntityManagerForDump(out World? bestWorld)
+        {
+            EntityManager best = default;
+            bestWorld = World.DefaultGameObjectInjectionWorld;
+            int bestCount = -1;
+            string bestName = bestWorld?.Name ?? "";
+
+            try
+            {
+                foreach (World world in World.All)
+                {
+                    if (world == null || !world.IsCreated)
+                    {
+                        continue;
+                    }
+
+                    int count;
+                    try
+                    {
+                        count = world.EntityManager.UniversalQuery.CalculateEntityCount();
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    if (count > bestCount)
+                    {
+                        bestCount = count;
+                        best = world.EntityManager;
+                        bestWorld = world;
+                        bestName = world.Name;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            if (bestWorld != null && bestCount < 0)
+            {
+                best = bestWorld.EntityManager;
+            }
+
+            _log?.LogInfo($"[RuntimeDriver] Scene dump using world '{bestName}' with entityCount={Math.Max(bestCount, 0)}.");
+            return best;
         }
 
         private IEnumerator ProcessPackReloadCoroutine(string reason)

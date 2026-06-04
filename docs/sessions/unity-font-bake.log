@@ -1,0 +1,1963 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Successfully connected to the License Client on channel: "LicenseClient-koosh" at "2026-06-03T21:18:19.8511924Z"
+[Licensing::Client] Error: Code 10 while verifying Licensing Client signature (process Id: 61944, path: "C:/Program Files/Unity Hub/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] Error: LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.17.4+4293ba1
+  Session Id:              55a88505c86a40f69a36a8f823f600bb
+  Correlation Id:          9924d0bf21283238ecd8a9d956c53e23
+  External correlation Id: 8034537901866001962
+  Machine Id:              1URxonWXDqhd4gyhtwvDtzxLEKo=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-koosh" (connect: 0.00s, validation: 0.07s, handshake: 0.46s)
+[Licensing::IpcConnector] Successfully connected to the License Notification on channel: "LicenseClient-koosh-notifications" at "2026-06-03T21:18:20.3834362Z"
+Entitlement-based licensing initiated
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully updated license
+Built from '2021.3/respin/2021.3.45f2-0da89fac8e' branch; Version is '2021.3.45f2 (88f88f591b2e) revision 8976527'; Using compiler version '192829333'; Build Type 'Release'
+OS: 'Windows 11  (10.0.28020) 64bit Professional' Language: 'en' Physical Memory: 65437 MB
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Serial number assigned to: "6577137-UnityPersXXXX"
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1, IsPro: 0
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Server::Start -- Port 59451 was selected
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+C:\Users\koosh\Dino\unity-assetbundle-builder
+-executeMethod
+BakeTMPFont.BakeAndBundle
+-logFile
+C:\Users\koosh\Dino\docs\sessions\unity-font-bake.log
+-quit
+Successfully changed project path to: C:\Users\koosh\Dino\unity-assetbundle-builder
+C:/Users/koosh/Dino/unity-assetbundle-builder
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [260648] Host "[IP] 192.168.1.159 [Port] 55496 [Flags] 2 [Guid] 2695407120 [EditorId] 2695407120 [Version] 1048832 [Id] WindowsEditor(7,kooshapari-desk) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined multi-casting on [225.0.0.222:54997]...
+
+Player connection [260648] Host "[IP] 192.168.1.159 [Port] 55496 [Flags] 2 [Guid] 2695407120 [EditorId] 2695407120 [Version] 1048832 [Id] WindowsEditor(7,kooshapari-desk) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined alternative multi-casting on [225.0.0.222:34997]...
+
+[Physics::Module] Initialized MultithreadedJobDispatcher with {0} workers.
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] 
+Registered 43 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.textmeshpro@3.0.6 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6)
+    com.unity.collab-proxy@2.5.2 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.collab-proxy@2.5.2)
+    com.unity.ide.rider@3.0.31 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.ide.rider@3.0.31)
+    com.unity.ide.visualstudio@2.0.22 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.ide.visualstudio@2.0.22)
+    com.unity.ide.vscode@1.2.5 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.ide.vscode@1.2.5)
+    com.unity.timeline@1.7.6 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.timeline@1.7.6)
+    com.unity.visualscripting@1.9.4 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.visualscripting@1.9.4)
+    com.unity.test-framework@1.1.33 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.test-framework@1.1.33)
+    com.unity.ext.nunit@1.0.6 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.ext.nunit@1.0.6)
+  Built-in packages:
+    com.unity.ugui@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.ugui@1.0.0)
+    com.unity.modules.ai@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.ai@1.0.0)
+    com.unity.modules.androidjni@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.androidjni@1.0.0)
+    com.unity.modules.animation@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.animation@1.0.0)
+    com.unity.modules.assetbundle@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.assetbundle@1.0.0)
+    com.unity.modules.audio@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.audio@1.0.0)
+    com.unity.modules.cloth@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.cloth@1.0.0)
+    com.unity.modules.director@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.director@1.0.0)
+    com.unity.modules.imageconversion@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.imageconversion@1.0.0)
+    com.unity.modules.imgui@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.imgui@1.0.0)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.jsonserialize@1.0.0)
+    com.unity.modules.particlesystem@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.particlesystem@1.0.0)
+    com.unity.modules.physics@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.physics@1.0.0)
+    com.unity.modules.physics2d@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.physics2d@1.0.0)
+    com.unity.modules.screencapture@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.screencapture@1.0.0)
+    com.unity.modules.terrain@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.terrain@1.0.0)
+    com.unity.modules.terrainphysics@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.terrainphysics@1.0.0)
+    com.unity.modules.tilemap@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.tilemap@1.0.0)
+    com.unity.modules.ui@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.ui@1.0.0)
+    com.unity.modules.uielements@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.uielements@1.0.0)
+    com.unity.modules.umbra@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.umbra@1.0.0)
+    com.unity.modules.unityanalytics@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.unityanalytics@1.0.0)
+    com.unity.modules.unitywebrequest@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.unitywebrequest@1.0.0)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle@1.0.0)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.unitywebrequestaudio@1.0.0)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.unitywebrequesttexture@1.0.0)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.unitywebrequestwww@1.0.0)
+    com.unity.modules.vehicles@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.vehicles@1.0.0)
+    com.unity.modules.video@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.video@1.0.0)
+    com.unity.modules.vr@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.vr@1.0.0)
+    com.unity.modules.wind@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.wind@1.0.0)
+    com.unity.modules.xr@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.xr@1.0.0)
+    com.unity.modules.subsystems@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.subsystems@1.0.0)
+    com.unity.modules.uielementsnative@1.0.0 (location: C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.modules.uielementsnative@1.0.0)
+
+[Subsystems] No new subsystems found in resolved package list.
+Package Manager log level set to [2]
+[Package Manager] Done registering packages in 1.55s seconds
+Refreshing native plugins compatible for Editor in 14.88 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 2021.3.45f2 (88f88f591b2e)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/2021.3.45f2/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/koosh/Dino/unity-assetbundle-builder/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; threaded=0; jobified=0
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+[Licensing::Client] Successfully resolved entitlement details
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/2021.3.45f2/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/2021.3.45f2/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/2021.3.45f2/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56252
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/2021.3.45f2/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.038081 seconds.
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 2.95 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  2.000 seconds
+Domain Reload Profiling:
+	ReloadAssembly (2001ms)
+		BeginReloadAssembly (312ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (0ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (1ms)
+		EndReloadAssembly (1134ms)
+			LoadAssemblies (304ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (357ms)
+			ReleaseScriptCaches (0ms)
+			RebuildScriptCaches (58ms)
+			SetupLoadedEditorAssemblies (581ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (21ms)
+				SetLoadedEditorAssemblies (0ms)
+				RefreshPlugins (3ms)
+				BeforeProcessingInitializeOnLoad (4ms)
+				ProcessInitializeOnLoadAttributes (408ms)
+				ProcessInitializeOnLoadMethodAttributes (144ms)
+				AfterProcessingInitializeOnLoad (0ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (0ms)
+Platform modules already initialized, skipping
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+Registering precompiled user dll's ...
+Registered in 0.018324 seconds.
+Start importing Assets/Editor/BakeTMPFont.cs using Guid(a075bb5e9ac42914aaf2664c6b9a0faa) Importer(-1,00000000000000000000000000000000)  -> (artifact id: '8698b2cfb9b501c4fdc61945ef7f837a') in 0.047988 seconds 
+[ScriptCompilation] Requested script compilation because: Assetdatabase observed changes in script compilation related files
+Starting: C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Data\bee_backend.exe --profile="Library/Bee/backend_profiler0.traceevents" --stdin-canary --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure ScriptAssemblies
+WorkingDir: C:/Users/koosh/Dino/unity-assetbundle-builder
+ExitCode: 0 Duration: 3s101ms
+[263/266    1s] Csc Library/Bee/artifacts/1900b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+Assets\Editor\GenerateStarWarsPrefabsFromModels.cs(24,58): warning CS8632: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+[264/266    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.pdb
+[265/266    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.dll
+*** Tundra build success (2.74 seconds), 3 items updated, 266 evaluated
+Assets\Editor\GenerateStarWarsPrefabsFromModels.cs(24,58): warning CS8632: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+AssetDatabase: script compilation time: 3.749386s
+Begin MonoManager ReloadAssembly
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 1.13 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  4.897 seconds
+Domain Reload Profiling:
+	ReloadAssembly (4899ms)
+		BeginReloadAssembly (381ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (12ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (91ms)
+		EndReloadAssembly (4294ms)
+			LoadAssemblies (1051ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (655ms)
+			ReleaseScriptCaches (1ms)
+			RebuildScriptCaches (131ms)
+			SetupLoadedEditorAssemblies (2388ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (16ms)
+				SetLoadedEditorAssemblies (1ms)
+				RefreshPlugins (1ms)
+				BeforeProcessingInitializeOnLoad (168ms)
+				ProcessInitializeOnLoadAttributes (2091ms)
+				ProcessInitializeOnLoadMethodAttributes (76ms)
+				AfterProcessingInitializeOnLoad (36ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (15ms)
+Platform modules already initialized, skipping
+Registering precompiled user dll's ...
+Registered in 0.024986 seconds.
+Refreshing native plugins compatible for Editor in 0.97 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh: Total: 12.466 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=1 (actual=1, local cache=0, cache server=0)
+		Asset DB Process Time: managed=3 ms, native=1222 ms
+		Asset DB Callback time: managed=165 ms, native=10 ms
+		Scripting: domain reloads=1, domain reload time=5244 ms, compile time=3769 ms, other=2050 ms
+		Project Asset Count: scripts=3522, non-scripts=805
+		Asset File Changes: new=0, changed=1, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokeBeforeRefreshCallbacks: 2.440ms
+	ApplyChangesToAssetFolders: 0.130ms
+	Scan: 770.469ms
+	OnSourceAssetsModified: 1.511ms
+	InitializeImportedAssetsSnapshot: 9.334ms
+	GetAllGuidsForCategorization: 0.976ms
+	CategorizeAssets: 236.626ms
+	ImportOutOfDateAssets: 11204.297ms (7346.844ms without children)
+		ImportManagerImport: 51.279ms (2.790ms without children)
+			ImportInProcess: 48.454ms
+			UpdateCategorizedAssets: 0.035ms
+		CompileScripts: 3768.803ms
+		ReloadImportedAssets: 0.001ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 2.941ms
+		InitializingProgressBar: 0.006ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.787ms
+		OnDemandSchedulerStart: 33.636ms
+	ReloadSourceAssets: 1.761ms
+	UnloadImportedAssets: 32.279ms
+	PostProcessAllAssets: 169.233ms
+	Hotreload: 1.882ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.000ms
+	UnloadStreamsBegin: 0.990ms
+	LoadedImportedAssetsSnapshotReleaseGCHandles: 1.627ms
+	GetLoadedSourceAssetsIDs: 0.103ms
+	GetLoadedSourceAssetsSnapshot: 0.976ms
+	PersistCurrentRevisions: 0.556ms
+	UnloadStreamsEnd: 0.037ms
+	GenerateScriptTypeHashes: 0.945ms
+	Untracked: 200.025ms
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 31.351ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-AssetBundleBuilder
+ProgressiveSceneManager::Cancel()
+Unloading 107 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 139 unused Assets / (494.6 KB). Loaded Objects now: 3458.
+Memory consumption went from 79.2 MB to 78.7 MB.
+Total: 12.313400 ms (FindLiveObjects: 0.418800 ms CreateObjectMapping: 0.245500 ms MarkObjects: 11.189800 ms  DeleteObjects: 0.457800 ms)
+
+[BakeTMPFont] Starting TMP font asset creation (headless/no-GPU mode)...
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:25)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 25)
+
+Registering precompiled user dll's ...
+Registered in 0.032376 seconds.
+Asset Pipeline Refresh: Total: 0.107 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[BakeTMPFont] Loaded source font: sw_menu_font
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:36)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 36)
+
+[BakeTMPFont] Creating TMP_FontAsset ScriptableObject (bypassing shader-dependent path)...
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:46)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 46)
+
+[BakeTMPFont] FontEngine.Init = Success
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:54)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 54)
+
+[BakeTMPFont] FontEngine.LoadFontFace = Success
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:57)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 57)
+
+[BakeTMPFont] FaceInfo loaded: family=Kenney Future Narrow
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:62)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 62)
+
+UnassignedReferenceException: The variable material of TMP_FontAsset has not been assigned.
+You probably need to assign the material variable of the TMP_FontAsset script in the inspector.
+  at (wrapper managed-to-native) UnityEngine.Material.HasProperty(UnityEngine.Material,int)
+  at TMPro.TMP_FontAsset.ReadFontAssetDefinition () [0x0008f] in C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_FontAsset.cs:588 
+  at TMPro.TMP_FontAsset.OnValidate () [0x00010] in C:\Users\koosh\Dino\unity-assetbundle-builder\Library\PackageCache\com.unity.textmeshpro@3.0.6\Scripts\Runtime\TMP_FontAsset.cs:555 
+UnityEditor.SerializedObject:ApplyModifiedPropertiesWithoutUndo(SerializedObject)
+BakeTMPFont:BakeAndBundle() (at Assets\Editor\BakeTMPFont.cs:79)
+
+(Filename: Library/PackageCache/com.unity.textmeshpro@3.0.6/Scripts/Runtime/TMP_FontAsset.cs Line: 588)
+
+[BakeTMPFont] Set m_SourceFontFile via SerializedObject
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:80)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 80)
+
+Registering precompiled user dll's ...
+Registered in 0.018190 seconds.
+Start importing Assets/Fonts/sw_menu_font_asset.asset using Guid(c7e621ad70c275d4da1579c673fa9d90) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'e246956c923ef6c065b7ff4d192cb9e9') in 0.043278 seconds 
+Refreshing native plugins compatible for Editor in 6.60 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh: Total: 0.216 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh: Total: 0.011 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[BakeTMPFont] Asset saved at Assets/Fonts/sw_menu_font_asset.asset
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:90)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 90)
+
+Registering precompiled user dll's ...
+Registered in 0.016652 seconds.
+Start importing Assets/Fonts/sw_menu_font_asset.asset using Guid(c7e621ad70c275d4da1579c673fa9d90) Importer(-1,00000000000000000000000000000000)  -> (artifact id: 'a489b51a2d81013cb1a5b92d400b0f38') in 0.033277 seconds 
+Refreshing native plugins compatible for Editor in 0.85 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh: Total: 0.206 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+[BakeTMPFont] AssetBundle name = assets/ui/sw_menu_font_asset
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:107)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 107)
+
+[Licensing::Client] Successfully resolved entitlement details
+Registering precompiled user dll's ...
+Registered in 0.021807 seconds.
+Asset Pipeline Refresh: Total: 0.253 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.34 seconds
+BuildPlayerGenerator: Succeeded
+Asset Pipeline Refresh: Total: 0.004 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[ScriptCompilation] Requested script compilation because: Recompiling scripts for player build.
+BuildPlayer: start building target 19
+Starting: C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Data\bee_backend.exe --profile="Library/Bee/backend_profiler0.traceevents" --stdin-canary --dagfile="Library/Bee/1900b0aP.dag" --continue-on-failure ScriptAssemblies
+WorkingDir: C:/Users/koosh/Dino/unity-assetbundle-builder
+ExitCode: 4 Duration: 0s622ms
+Rebuilding DAG because FileSignature timestamp changed: Library/Bee/1900b0aP-inputdata.json
+*** Tundra requires additional run (0.33 seconds), 0 items updated, 0 evaluated
+Starting: C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Data\Tools\netcorerun\netcorerun.exe "C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Data\Tools\BuildPipeline\ScriptCompilationBuildProgram.exe" "Library/Bee/1900b0aP.dag.json" "Library/Bee/1900b0aP-inputdata.json" "Library/Bee/buildprogram0.traceevents"
+WorkingDir: C:/Users/koosh/Dino/unity-assetbundle-builder
+ExitCode: 0 Duration: 1s547ms
+Starting: C:\Program Files\Unity\Hub\Editor\2021.3.45f2\Editor\Data\bee_backend.exe --profile="Library/Bee/backend_profiler1.traceevents" --stdin-canary --dagfile="Library/Bee/1900b0aP.dag" --continue-on-failure --dagfilejson="Library/Bee/1900b0aP.dag.json" ScriptAssemblies
+WorkingDir: C:/Users/koosh/Dino/unity-assetbundle-builder
+ExitCode: 0 Duration: 5s432ms
+Finished compiling graph: 122 nodes, 742 flattened edges (742 ToBuild, 0 ToUse), maximum node priority 28
+[ 89/121    0s] WriteText Library/Bee/artifacts/1900b0aP.dag/Unity.TextMeshPro.AdditionalFile.txt
+[ 90/121    0s] WriteText Library/Bee/artifacts/1900b0aP.dag/Unity.TextMeshPro.rsp
+[ 91/121    0s] WriteText Library/Bee/artifacts/1900b0aP.dag/Unity.TextMeshPro.dll.mvfrm.rsp
+[105/121    0s] CopyFiles Library/PlayerScriptAssemblies/UnityEngine.TestRunner.dll
+[106/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.Timeline.dll
+[107/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.VisualScripting.State.pdb
+[108/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.Timeline.pdb
+[109/121    0s] CopyFiles Library/PlayerScriptAssemblies/UnityEngine.UI.pdb
+[110/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.VisualScripting.State.dll
+[111/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.VisualScripting.Flow.dll
+[112/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.VisualScripting.Flow.pdb
+[113/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.VisualScripting.Core.dll
+[114/121    0s] CopyFiles Library/PlayerScriptAssemblies/UnityEngine.UI.dll
+[115/121    0s] CopyFiles Library/PlayerScriptAssemblies/UnityEngine.TestRunner.pdb
+[116/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.VisualScripting.Core.pdb
+[117/121    1s] MovedFromExtractorCombine Library/Bee/artifacts/1900b0aP.dag/Unity.TextMeshPro.dll.mvfrm
+[118/121    4s] Csc Library/Bee/artifacts/1900b0aP.dag/Unity.TextMeshPro.dll (+2 others)
+[119/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.TextMeshPro.pdb
+[120/121    0s] CopyFiles Library/PlayerScriptAssemblies/Unity.TextMeshPro.dll
+*** Tundra build success (5.14 seconds), 19 items updated, 121 evaluated
+BuildPlayerGenerator: Succeeded
+
+***Player size statistics***
+Total compressed size 14.0 KB. Total uncompressed size 57.2 KB.
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 18 unused Assets / (0 B). Loaded Objects now: 3466.
+Memory consumption went from 75.9 MB to 75.9 MB.
+Total: 13.772600 ms (FindLiveObjects: 0.513200 ms CreateObjectMapping: 0.355400 ms MarkObjects: 12.868900 ms  DeleteObjects: 0.033900 ms)
+
+
+***Player size statistics***
+Total compressed size 4.6 KB. Total uncompressed size 8.8 KB.
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 0 unused Assets / (0 B). Loaded Objects now: 3468.
+Memory consumption went from 74.5 MB to 74.5 MB.
+Total: 16.322600 ms (FindLiveObjects: 0.407600 ms CreateObjectMapping: 0.154800 ms MarkObjects: 15.745300 ms  DeleteObjects: 0.013300 ms)
+
+
+-------------------------------------------------------------------------------
+Bundle Name: sw_menu_font_asset
+Compressed Size:14.0 kb
+Uncompressed usage by category (Percentages based on user generated assets only):
+Textures               0.1 kb	 0.2% 
+Meshes                 0.0 kb	 0.0% 
+Animations             0.0 kb	 0.0% 
+Sounds                 0.0 kb	 0.0% 
+Shaders                0.0 kb	 0.0% 
+Other Assets           34.6 kb	 60.4% 
+Levels                 0.0 kb	 0.0% 
+Scripts                0.1 kb	 0.2% 
+Included DLLs          0.0 kb	 0.0% 
+File headers           22.4 kb	 39.2% 
+Total User Assets      57.2 kb	 100.0% 
+Complete build size    57.2 kb
+Used Assets and files from the Resources folder, sorted by uncompressed size:
+ 33.8 kb	 59.0% Assets/Fonts/sw_menu_font.ttf
+ 0.7 kb	 1.2% Assets/Fonts/sw_menu_font_asset.asset
+ 0.2 kb	 0.4% AssetBundle Object
+ 0.1 kb	 0.2% Packages/com.unity.textmeshpro/Scripts/Runtime/TMP_FontAsset.cs
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+Bundle Name: AssetBundles
+Compressed Size:4.6 kb
+Uncompressed usage by category (Percentages based on user generated assets only):
+Textures               0.0 kb	 0.0% 
+Meshes                 0.0 kb	 0.0% 
+Animations             0.0 kb	 0.0% 
+Sounds                 0.0 kb	 0.0% 
+Shaders                0.0 kb	 0.0% 
+Other Assets           4.8 kb	 54.6% 
+Levels                 0.0 kb	 0.0% 
+Scripts                0.0 kb	 0.0% 
+Included DLLs          0.0 kb	 0.0% 
+File headers           4.0 kb	 45.4% 
+Total User Assets      8.8 kb	 100.0% 
+Complete build size    8.8 kb
+Used Assets and files from the Resources folder, sorted by uncompressed size:
+ 4.7 kb	 53.5% Built-in AssetBundleManifest: AssetBundleManifest
+ 0.1 kb	 1.2% AssetBundle Object
+-------------------------------------------------------------------------------
+[BakeTMPFont] Built 93 bundle(s): assets/ui/sw_menu_font_asset, sw-aat-walker, sw-arf-trooper, sw-assembly-line, sw-b1-battle-droid, sw-b1-squad, sw-b2-super-droid, sw-barc-speeder, sw-blast-wall, sw-bx-commando-droid, sw-cis-aa-tower, sw-cis-aat, sw-cis-b1-battle-droid, sw-cis-b2-super-droid, sw-cis-command-center, sw-cis-commando-droid, sw-cis-control-ship, sw-cis-droid-factory, sw-cis-droid-pilot, sw-cis-droideka, sw-cis-grapple-droid, sw-cis-hangar-bay, sw-cis-hmp-droid-gunship, sw-cis-ion-cannon, sw-cis-magna-guard, sw-cis-medical-droid, sw-cis-nantex-fighter, sw-cis-octuptarra, sw-cis-repair-bay, sw-cis-rocket-droid, sw-cis-sensor-array, sw-cis-shield-generator, sw-cis-sniper-droid, sw-cis-spider-droid, sw-cis-stap, sw-cis-supply-depot, sw-cis-trade-fed-core, sw-clone-barracks, sw-clone-commando, sw-clone-heavy, sw-clone-medic, sw-clone-militia, sw-clone-wall-guard, sw-commando-droid, sw-droideka, sw-durasteel-barrier, sw-general-grievous, sw-guard-tower, sw-hangar-bay, sw-heavy-foundry, sw-hmp-droid-gunship, sw-jedi-knight, sw-medical-droid, sw-mining-facility, sw-nantex-fighter, sw-octuptarra, sw-probe-droid, sw-processing-plant, sw-rep-arc-trooper, sw-rep-at-rt-walker, sw-rep-at-te-walker, sw-rep-clone-commander, sw-rep-clone-engineer, sw-rep-clone-facility, sw-rep-clone-heavy, sw-rep-clone-jet, sw-rep-clone-medic, sw-rep-clone-mortar, sw-rep-clone-pilot, sw-rep-clone-sniper, sw-rep-clone-trooper, sw-rep-command-center, sw-rep-gunship-bay, sw-rep-ion-cannon, sw-rep-jedi-fighter, sw-rep-laat-gunship, sw-rep-med-center, sw-rep-research-lab, sw-rep-senate-outpost, sw-rep-shield-generator, sw-rep-supply-depot, sw-rep-turbolaser-tower, sw-rep-vehicle-bay, sw-skyshield-generator, sw-sniper-droid, sw-tech-union-lab, sw-tibanna-refinery, sw-trade-fed-core, sw-tri-fighter, sw-v19-torrent, sw-v19-torrent-unit, sw-vulture-nest, sw-weapons-factory
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:126)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 126)
+
+[BakeTMPFont]   'assets/ui/sw_menu_font_asset' = 14344 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-aat-walker' = 43653 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-arf-trooper' = 43915 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-assembly-line' = 43616 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-b1-battle-droid' = 43781 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-b1-squad' = 43829 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-b2-super-droid' = 43816 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-barc-speeder' = 43756 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-blast-wall' = 43654 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-bx-commando-droid' = 43774 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-aa-tower' = 43751 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-aat' = 43792 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-b1-battle-droid' = 116265 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-b2-super-droid' = 1298394 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-command-center' = 44208 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-commando-droid' = 717389 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-control-ship' = 43875 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-droid-factory' = 43807 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-droid-pilot' = 44396 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-droideka' = 2565069 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-grapple-droid' = 44295 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-hangar-bay' = 43823 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-hmp-droid-gunship' = 44208 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-ion-cannon' = 43984 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-magna-guard' = 43805 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-medical-droid' = 43783 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-nantex-fighter' = 44271 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-octuptarra' = 44206 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-repair-bay' = 43817 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-rocket-droid' = 44220 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-sensor-array' = 43990 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-shield-generator' = 43908 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-sniper-droid' = 2012421 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-spider-droid' = 43768 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-stap' = 43928 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-supply-depot' = 43763 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-cis-trade-fed-core' = 44002 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-clone-barracks' = 43739 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-clone-commando' = 43814 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-clone-heavy' = 43649 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-clone-medic' = 43778 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-clone-militia' = 43676 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-clone-wall-guard' = 43792 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-commando-droid' = 43797 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-droideka' = 43800 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-durasteel-barrier' = 43748 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-general-grievous' = 43747 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-guard-tower' = 43841 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-hangar-bay' = 43647 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-heavy-foundry' = 43814 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-hmp-droid-gunship' = 43881 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-jedi-knight' = 43829 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-medical-droid' = 43792 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-mining-facility' = 43625 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-nantex-fighter' = 43741 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-octuptarra' = 43866 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-probe-droid' = 43696 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-processing-plant' = 43890 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-arc-trooper' = 1121703 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-at-rt-walker' = 44280 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-at-te-walker' = 44197 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-commander' = 44382 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-engineer' = 354210 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-facility' = 43950 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-heavy' = 79423 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-jet' = 44320 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-medic' = 1214862 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-mortar' = 43941 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-pilot' = 43902 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-sniper' = 353520 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-clone-trooper' = 1210221 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-command-center' = 44260 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-gunship-bay' = 43809 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-ion-cannon' = 43847 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-jedi-fighter' = 43830 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-laat-gunship' = 43803 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-med-center' = 43954 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-research-lab' = 44274 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-senate-outpost' = 43799 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-shield-generator' = 44351 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-supply-depot' = 43837 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-turbolaser-tower' = 43857 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-rep-vehicle-bay' = 43895 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-skyshield-generator' = 43733 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-sniper-droid' = 43644 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-tech-union-lab' = 43791 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-tibanna-refinery' = 43733 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-trade-fed-core' = 43770 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-tri-fighter' = 43738 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-v19-torrent' = 43790 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-v19-torrent-unit' = 43842 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-vulture-nest' = 43772 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont]   'sw-weapons-factory' = 43738 bytes
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:132)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 132)
+
+[BakeTMPFont] SUCCESS — font bundle at AssetBundles\assets/ui/sw_menu_font_asset (14344 bytes)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:138)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 138)
+
+[BakeTMPFont] Complete.
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BakeTMPFont:BakeAndBundle () (at Assets/Editor/BakeTMPFont.cs:142)
+
+(Filename: Assets/Editor/BakeTMPFont.cs Line: 142)
+
+[Licensing::IpcConnector] License Notification channel disconnected successfully.
+[Licensing::IpcConnector] License Client channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+debugger-agent: Unable to listen on 4596
+[Performance] WinEditorMain                                                                                              :        1 samples, Peak.  1.95 s (1.0x), Avg.  1.95 s, Total. 1.945 s (3.4%)
+[Performance] WinEditorMain.ConfigureCrashHandler                                                                        :        1 samples, Peak.  54.7 us (1.0x), Avg.  54.7 us, Total. 54.70 us (0.0%)
+[Performance] WinEditorMain.CurlRequestInitialize                                                                        :        1 samples, Peak.   880 us (1.0x), Avg.   880 us, Total. 879.9 us (0.0%)
+[Performance] WinEditorMain.SetupLogFile                                                                                 :        1 samples, Peak.  1.24 ms (1.0x), Avg.  1.24 ms, Total. 1.242 ms (0.0%)
+[Performance] WinEditorMain.RunNativeTestsIfRequiredAndExit                                                              :        1 samples, Peak.   300 ns (1.0x), Avg.   300 ns, Total. 300.0 ns (0.0%)
+[Performance] WinEditorMain.Licensing                                                                                    :        1 samples, Peak.  1.74 s (1.0x), Avg.  1.74 s, Total. 1.736 s (3.0%)
+[Performance] WinEditorMain.InitializeCrashHandler                                                                       :        1 samples, Peak.   201 ms (1.0x), Avg.   201 ms, Total. 200.6 ms (0.4%)
+[Performance] WinEditorMain.CreateApplication                                                                            :        1 samples, Peak.   304 us (1.0x), Avg.   304 us, Total. 304.1 us (0.0%)
+[Performance] Application.InitializeProject                                                                              :        1 samples, Peak.  22.9 s (1.0x), Avg.  22.9 s, Total. 22.92 s (40.2%)
+[Performance] Application.PackageManager.StartServer                                                                     :        1 samples, Peak.   207 ms (1.0x), Avg.   207 ms, Total. 207.3 ms (0.4%)
+[Performance] Application.AcquireProjectLock                                                                             :        1 samples, Peak.  15.4 ms (1.0x), Avg.  15.4 ms, Total. 15.36 ms (0.0%)
+[Performance] Application.InitializeEngineNoGraphics                                                                     :        1 samples, Peak.   277 ms (1.0x), Avg.   277 ms, Total. 277.1 ms (0.5%)
+[Performance] Application.PackageManager.Initialize                                                                      :        1 samples, Peak.  2.89 s (1.0x), Avg.  2.89 s, Total. 2.892 s (5.1%)
+[Performance] CurlRequestCheck                                                                                           :       48 samples, Peak.  62.2 us (6.1x), Avg.  10.3 us, Total. 492.3 us (0.0%)
+[Performance] Application.EngineGraphics.Initialize                                                                      :        1 samples, Peak.   118 ms (1.0x), Avg.   118 ms, Total. 117.7 ms (0.2%)
+[Performance] Application.GI.Initialize                                                                                  :        1 samples, Peak.  3.43 ms (1.0x), Avg.  3.43 ms, Total. 3.426 ms (0.0%)
+[Performance] Application.LoadAllDefaultResourcesFromEditor                                                              :        1 samples, Peak.  3.35 ms (1.0x), Avg.  3.35 ms, Total. 3.347 ms (0.0%)
+[Performance] Application.LoadMonoAssemblies                                                                             :        1 samples, Peak.  2.03 s (1.0x), Avg.  2.03 s, Total. 2.031 s (3.6%)
+[Performance] RestoreManagedReferences                                                                                   :        2 samples, Peak.   116 ms (2.0x), Avg.  57.8 ms, Total. 115.5 ms (0.2%)
+[Performance] InitializeOnLoad LayerSettingsWindow                                                                       :        2 samples, Peak.   627 us (1.1x), Avg.   570 us, Total. 1.140 ms (0.0%)
+[Performance] InitializeOnLoad ParameterControllerEditor                                                                 :        2 samples, Peak.  30.2 us (1.1x), Avg.  28.3 us, Total. 56.60 us (0.0%)
+[Performance] InitializeOnLoad ServicesRepository                                                                        :        2 samples, Peak.  1.94 ms (1.2x), Avg.  1.66 ms, Total. 3.316 ms (0.0%)
+[Performance] InitializeOnLoad AdsService                                                                                :        2 samples, Peak.  3.91 ms (1.4x), Avg.  2.71 ms, Total. 5.430 ms (0.0%)
+[Performance] InitializeOnLoad AnalyticsService                                                                          :        2 samples, Peak.   247 us (1.0x), Avg.   244 us, Total. 488.7 us (0.0%)
+[Performance] InitializeOnLoad BuildService                                                                              :        2 samples, Peak.   528 us (1.0x), Avg.   515 us, Total. 1.031 ms (0.0%)
+[Performance] InitializeOnLoad CloudBuildPoller                                                                          :        2 samples, Peak.   325 us (1.2x), Avg.   267 us, Total. 533.7 us (0.0%)
+[Performance] InitializeOnLoad CrashService                                                                              :        2 samples, Peak.   721 us (1.5x), Avg.   469 us, Total. 937.4 us (0.0%)
+[Performance] InitializeOnLoad PurchasingService                                                                         :        2 samples, Peak.  18.6 ms (1.7x), Avg.  11.3 ms, Total. 22.53 ms (0.0%)
+[Performance] InitializeOnLoad UDPService                                                                                :        2 samples, Peak.   388 us (1.2x), Avg.   317 us, Total. 634.9 us (0.0%)
+[Performance] InitializeOnLoad UIDocumentHierarchyWatcher                                                                :        2 samples, Peak.  1.76 ms (1.6x), Avg.  1.07 ms, Total. 2.141 ms (0.0%)
+[Performance] InitializeOnLoad RetainedMode                                                                              :        2 samples, Peak.  4.05 ms (1.1x), Avg.  3.74 ms, Total. 7.480 ms (0.0%)
+[Performance] InitializeOnLoad EditorMonitor                                                                             :        2 samples, Peak.   400 us (1.2x), Avg.   348 us, Total. 696.5 us (0.0%)
+[Performance] InitializeOnLoad EditorShaderLoader                                                                        :        2 samples, Peak.  6.70 ms (1.6x), Avg.  4.26 ms, Total. 8.515 ms (0.0%)
+[Performance] InitializeOnLoad UXMLEditorFactories                                                                       :        2 samples, Peak.   192 ms (1.1x), Avg.   171 ms, Total. 342.6 ms (0.6%)
+[Performance] InitializeOnLoad SearchMonitor                                                                             :        2 samples, Peak.  75.6 ms (1.4x), Avg.  55.0 ms, Total. 109.9 ms (0.2%)
+[Performance] InitializeOnLoad CustomIndexers                                                                            :        2 samples, Peak.  42.1 ms (1.0x), Avg.  41.2 ms, Total. 82.39 ms (0.1%)
+[Performance] InitializeOnLoad PlayModeDownload                                                                          :        2 samples, Peak.  4.91 ms (1.7x), Avg.  2.95 ms, Total. 5.908 ms (0.0%)
+[Performance] InitializeOnLoad SearchWindow                                                                              :        2 samples, Peak.   348 us (1.2x), Avg.   298 us, Total. 596.2 us (0.0%)
+[Performance] InitializeOnLoad EditMode                                                                                  :        2 samples, Peak.  1.10 ms (1.0x), Avg.  1.08 ms, Total. 2.159 ms (0.0%)
+[Performance] InitializeOnLoad AssetStoreContext                                                                         :        2 samples, Peak.  13.2 ms (1.8x), Avg.  7.32 ms, Total. 14.64 ms (0.0%)
+[Performance] InitializeOnLoad DrivenRectTransformUndo                                                                   :        2 samples, Peak.   516 us (1.1x), Avg.   491 us, Total. 981.1 us (0.0%)
+[Performance] InitializeOnLoad CacheServerWindow                                                                         :        2 samples, Peak.  24.0 us (1.2x), Avg.  20.7 us, Total. 41.50 us (0.0%)
+[Performance] InitializeOnLoad ManagedDebuggerWindow                                                                     :        2 samples, Peak.  1.69 ms (1.2x), Avg.  1.42 ms, Total. 2.841 ms (0.0%)
+[Performance] InitializeOnLoad WindowLayout                                                                              :        2 samples, Peak.  65.6 ms (2.0x), Avg.  33.1 ms, Total. 66.13 ms (0.1%)
+[Performance] InitializeOnLoad PrefabInstanceChangedListener                                                             :        2 samples, Peak.   319 us (1.5x), Avg.   213 us, Total. 425.2 us (0.0%)
+[Performance] InitializeOnLoad SettingsService                                                                           :        2 samples, Peak.  11.6 us (1.0x), Avg.  11.5 us, Total. 23.10 us (0.0%)
+[Performance] InitializeOnLoad NativeFormatImporterUtility                                                               :        2 samples, Peak.  5.12 ms (1.1x), Avg.  4.64 ms, Total. 9.282 ms (0.0%)
+[Performance] InitializeOnLoad UISystemProfilerRenderService                                                             :        2 samples, Peak.  20.1 us (1.1x), Avg.  18.0 us, Total. 36.00 us (0.0%)
+[Performance] InitializeOnLoad ShortcutIntegration                                                                       :        2 samples, Peak.   266 us (1.2x), Avg.   218 us, Total. 435.4 us (0.0%)
+[Performance] InitializeOnLoad UnityConnect                                                                              :        2 samples, Peak.   119 us (1.0x), Avg.   119 us, Total. 237.9 us (0.0%)
+[Performance] InitializeOnLoad ObjectSelectorSearch                                                                      :        2 samples, Peak.  1.30 ms (1.9x), Avg.   686 us, Total. 1.373 ms (0.0%)
+[Performance] InitializeOnLoad ProjectSearch                                                                             :        2 samples, Peak.   172 us (1.4x), Avg.   119 us, Total. 238.3 us (0.0%)
+[Performance] InitializeOnLoad SceneSearch                                                                               :        2 samples, Peak.  93.4 us (1.2x), Avg.  77.9 us, Total. 155.7 us (0.0%)
+[Performance] InitializeOnLoad SearchService                                                                             :        2 samples, Peak.   342 us (1.2x), Avg.   278 us, Total. 556.9 us (0.0%)
+[Performance] InitializeOnLoad AddComponentWindow                                                                        :        2 samples, Peak.   210 us (1.0x), Avg.   205 us, Total. 409.5 us (0.0%)
+[Performance] InitializeOnLoad CloudBuild                                                                                :        2 samples, Peak.  7.40 us (1.0x), Avg.  7.20 us, Total. 14.40 us (0.0%)
+[Performance] InitializeOnLoad MixerEffectDefinitionReloader                                                             :        2 samples, Peak.  6.26 ms (1.3x), Avg.  4.79 ms, Total. 9.572 ms (0.0%)
+[Performance] InitializeOnLoad MenuItems                                                                                 :        2 samples, Peak.   212 us (1.1x), Avg.   193 us, Total. 385.6 us (0.0%)
+[Performance] InitializeOnLoad ManagedDebugger                                                                           :        2 samples, Peak.  1.70 us (1.1x), Avg.  1.55 us, Total. 3.100 us (0.0%)
+[Performance] InitializeOnLoad EditorDragAndDrop.RegisterEditorClient                                                    :        2 samples, Peak.  2.53 ms (1.7x), Avg.  1.46 ms, Total. 2.920 ms (0.0%)
+[Performance] InitializeOnLoad EditorDelegateRegistration.Initialize                                                     :        2 samples, Peak.  1.15 ms (1.2x), Avg.   939 us, Total. 1.878 ms (0.0%)
+[Performance] InitializeOnLoad LiveReloadTrackerCreator.Initialize                                                       :        2 samples, Peak.   571 us (1.2x), Avg.   482 us, Total. 963.6 us (0.0%)
+[Performance] InitializeOnLoad PackageManagerHookGUIDConverter.RegisterPackagesEventHandler                              :        2 samples, Peak.   377 us (1.2x), Avg.   327 us, Total. 653.2 us (0.0%)
+[Performance] InitializeOnLoad RuntimeEditorDelegateRegistration.Initialize                                              :        2 samples, Peak.   836 us (1.3x), Avg.   634 us, Total. 1.268 ms (0.0%)
+[Performance] InitializeOnLoad EditorEventCallbacks.InitializeFontAssetResourceChangeCallBacks                           :        2 samples, Peak.  5.81 ms (1.4x), Avg.  4.18 ms, Total. 8.356 ms (0.0%)
+[Performance] InitializeOnLoad SceneTemplateService.Init                                                                 :        2 samples, Peak.  1.11 ms (1.4x), Avg.   812 us, Total. 1.624 ms (0.0%)
+[Performance] InitializeOnLoad PackageManagerWindow.EditorInitializedInSafeMode                                          :        2 samples, Peak.  83.2 ms (2.0x), Avg.  41.7 ms, Total. 83.45 ms (0.1%)
+[Performance] InitializeOnLoad EntitlementsErrorChecker.OpenFirstEntitlementError                                        :        2 samples, Peak.  19.9 ms (1.9x), Avg.  10.6 ms, Total. 21.18 ms (0.0%)
+[Performance] InitializeOnLoad ScopedRegistryAddedPopup.SubscribeToRegistriesAdded                                       :        2 samples, Peak.   242 us (1.1x), Avg.   224 us, Total. 448.1 us (0.0%)
+[Performance] InitializeOnLoad DiagnosticSwitchesConsoleMessage.Init                                                     :        2 samples, Peak.  15.4 ms (1.1x), Avg.  14.1 ms, Total. 28.25 ms (0.0%)
+[Performance] InitializeOnLoad SysrootManager.Initialize                                                                 :        2 samples, Peak.  1.61 ms (1.0x), Avg.  1.57 ms, Total. 3.146 ms (0.0%)
+[Performance] InitializeOnLoad AssetPostprocessingInternal.RefreshCustomDependencies                                     :        2 samples, Peak.  8.57 ms (1.6x), Avg.  5.52 ms, Total. 11.05 ms (0.0%)
+[Performance] InitializeOnLoad EditorWindow.Initialize                                                                   :        2 samples, Peak.   596 us (1.2x), Avg.   486 us, Total. 971.4 us (0.0%)
+[Performance] InitializeOnLoad SceneVisibilityManager.Initialize                                                         :        2 samples, Peak.  22.8 ms (1.8x), Avg.  12.4 ms, Total. 24.75 ms (0.0%)
+[Performance] InitializeOnLoad MemoryProfilerCompilationGuard.InjectCompileGuard                                         :        2 samples, Peak.   602 us (1.3x), Avg.   473 us, Total. 945.5 us (0.0%)
+[Performance] ProcessService.EditorAfterLoadAllAssemblies                                                                :        2 samples, Peak.  1.24 ms (1.1x), Avg.  1.12 ms, Total. 2.230 ms (0.0%)
+[Performance] Application.ReadLicenseInfo                                                                                :        1 samples, Peak.   188 ms (1.0x), Avg.   188 ms, Total. 188.2 ms (0.3%)
+[Performance] Application.InitialRefresh                                                                                 :        1 samples, Peak.  12.5 s (1.0x), Avg.  12.5 s, Total. 12.47 s (21.9%)
+[Performance] ShaderImporter.SourceAssetModified                                                                         :        4 samples, Peak.  1.50 us (1.3x), Avg.  1.15 us, Total. 4.600 us (0.0%)
+[Performance] ShaderIncludeImporter.SourceAssetModified                                                                  :        4 samples, Peak.  1.20 us (1.1x), Avg.  1.07 us, Total. 4.300 us (0.0%)
+[Performance] PresetManagerPostProcessor.OnPreprocessAsset                                                               :        3 samples, Peak.   716 us (1.6x), Avg.   439 us, Total. 1.316 ms (0.0%)
+[Performance] CancelSplashScreenOnAssetChange.OnPreprocessAsset                                                          :        3 samples, Peak.   562 us (1.9x), Avg.   292 us, Total. 876.2 us (0.0%)
+[Performance] Compiling Scripts                                                                                          :        1 samples, Peak.  3.77 s (1.0x), Avg.  3.77 s, Total. 3.765 s (6.6%)
+[Performance] InitializeOnLoad RiderScriptEditor                                                                         :        1 samples, Peak.  26.0 ms (1.0x), Avg.  26.0 ms, Total. 26.01 ms (0.0%)
+[Performance] InitializeOnLoad CallbackInitializer                                                                       :        1 samples, Peak.  15.2 ms (1.0x), Avg.  15.2 ms, Total. 15.25 ms (0.0%)
+[Performance] InitializeOnLoad PlasticPlugin                                                                             :        1 samples, Peak.   369 ms (1.0x), Avg.   369 ms, Total. 369.2 ms (0.6%)
+[Performance] InitializeOnLoad PrefabLayoutRebuilder                                                                     :        1 samples, Peak.   655 us (1.0x), Avg.   655 us, Total. 654.7 us (0.0%)
+[Performance] InitializeOnLoad ToolbarBootstrap                                                                          :        1 samples, Peak.  1.24 s (1.0x), Avg.  1.24 s, Total. 1.244 s (2.2%)
+[Performance] Package.AsyncRequest                                                                                       :        4 samples, Peak.  24.8 us (3.3x), Avg.  7.53 us, Total. 30.10 us (0.0%)
+[Performance] InitializeOnLoad RerunCallbackInitializer                                                                  :        1 samples, Peak.  4.30 ms (1.0x), Avg.  4.30 ms, Total. 4.304 ms (0.0%)
+[Performance] InitializeOnLoad UnityTestProtocolStarter                                                                  :        1 samples, Peak.  1.30 ms (1.0x), Avg.  1.30 ms, Total. 1.297 ms (0.0%)
+[Performance] InitializeOnLoad TestStarter                                                                               :        1 samples, Peak.  1.82 ms (1.0x), Avg.  1.82 ms, Total. 1.817 ms (0.0%)
+[Performance] InitializeOnLoad BackgroundWatcher                                                                         :        1 samples, Peak.  1.49 ms (1.0x), Avg.  1.49 ms, Total. 1.492 ms (0.0%)
+[Performance] InitializeOnLoad VSUsageUtility                                                                            :        1 samples, Peak.   104 ms (1.0x), Avg.   104 ms, Total. 103.8 ms (0.2%)
+[Performance] InitializeOnLoad VisualStudioEditor                                                                        :        1 samples, Peak.  10.6 ms (1.0x), Avg.  10.6 ms, Total. 10.57 ms (0.0%)
+[Performance] InitializeOnLoad VisualStudioIntegration                                                                   :        1 samples, Peak.   939 us (1.0x), Avg.   939 us, Total. 939.5 us (0.0%)
+[Performance] InitializeOnLoad TestRunnerApiListener                                                                     :        1 samples, Peak.   157 us (1.0x), Avg.   157 us, Total. 157.5 us (0.0%)
+[Performance] InitializeOnLoad VSCodeScriptEditor                                                                        :        1 samples, Peak.  4.38 ms (1.0x), Avg.  4.38 ms, Total. 4.382 ms (0.0%)
+[Performance] InitializeOnLoad TestJobDataHolder.ResumeRunningJobs                                                       :        1 samples, Peak.  1.19 ms (1.0x), Avg.  1.19 ms, Total. 1.192 ms (0.0%)
+[Performance] InitializeOnLoad AnalyticsReporter.RegisterCallbacks                                                       :        1 samples, Peak.   558 us (1.0x), Avg.   558 us, Total. 557.8 us (0.0%)
+[Performance] InitializeOnLoad VisualStudioEditor.LegacyVisualStudioCodePackageDisabler                                  :        1 samples, Peak.  20.6 ms (1.0x), Avg.  20.6 ms, Total. 20.61 ms (0.0%)
+[Performance] DidReloadScriptsTestListCache.ScriptReloaded                                                               :        1 samples, Peak.  2.06 ms (1.0x), Avg.  2.06 ms, Total. 2.060 ms (0.0%)
+[Performance] DidReloadScriptsTestRunnerWindow.CompilationCallback                                                       :        1 samples, Peak.  1.87 ms (1.0x), Avg.  1.87 ms, Total. 1.865 ms (0.0%)
+[Performance] DidReloadScriptsAdvancedDropdownWindow.OnScriptReload                                                      :        1 samples, Peak.   438 us (1.0x), Avg.   438 us, Total. 438.1 us (0.0%)
+[Performance] AssetDatabase.ImportAssets                                                                                 :        3 samples, Peak.  1.60 us (1.4x), Avg.  1.13 us, Total. 3.400 us (0.0%)
+[Performance] VersionControl.Task.Wait                                                                                   :        1 samples, Peak.  23.8 us (1.0x), Avg.  23.8 us, Total. 23.80 us (0.0%)
+[Performance] TMPro_TexturePostProcessor.OnPostprocessAllAssets                                                          :        6 samples, Peak.  2.40 ms (1.9x), Avg.  1.26 ms, Total. 7.536 ms (0.0%)
+[Performance] AssetPostprocessor.OnPostprocessAllAssets                                                                  :        6 samples, Peak.  4.79 ms (3.0x), Avg.  1.60 ms, Total. 9.610 ms (0.0%)
+[Performance] BuilderAssetPostprocessor.OnPostprocessAllAssets                                                           :        6 samples, Peak.  6.86 ms (3.0x), Avg.  2.31 ms, Total. 13.86 ms (0.0%)
+[Performance] ArtifactBrowserPostProcessor.OnPostprocessAllAssets                                                        :        6 samples, Peak.  1.32 ms (3.0x), Avg.   443 us, Total. 2.658 ms (0.0%)
+[Performance] AssetEvents.OnPostprocessAllAssets                                                                         :       12 samples, Peak.   565 us (5.1x), Avg.   112 us, Total. 1.341 ms (0.0%)
+[Performance] AudioMixerPostprocessor.OnPostprocessAllAssets                                                             :        6 samples, Peak.   598 us (3.0x), Avg.   200 us, Total. 1.203 ms (0.0%)
+[Performance] StyleCatalogPostProcessor.OnPostprocessAllAssets                                                           :        6 samples, Peak.  36.9 ms (3.0x), Avg.  12.3 ms, Total. 73.83 ms (0.1%)
+[Performance] BuildCatalog                                                                                               :        1 samples, Peak.  34.8 ms (1.0x), Avg.  34.8 ms, Total. 34.79 ms (0.1%)
+[Performance] ModelImporterPostProcessor.OnPostprocessAllAssets                                                          :        6 samples, Peak.  2.38 ms (2.4x), Avg.   995 us, Total. 5.972 ms (0.0%)
+[Performance] RetainedModeAssetPostprocessor.OnPostprocessAllAssets                                                      :        6 samples, Peak.  3.37 ms (3.0x), Avg.  1.13 ms, Total. 6.780 ms (0.0%)
+[Performance] AssetChangedListener.OnPostprocessAllAssets                                                                :        6 samples, Peak.  10.8 ms (2.8x), Avg.  3.79 ms, Total. 22.72 ms (0.0%)
+[Performance] SpeedTreePostProcessor.OnPostprocessAllAssets                                                              :        6 samples, Peak.   526 us (2.8x), Avg.   186 us, Total. 1.115 ms (0.0%)
+[Performance] TextAssetPostProcessor.OnPostprocessAllAssets                                                              :        6 samples, Peak.   600 us (2.8x), Avg.   212 us, Total. 1.270 ms (0.0%)
+[Performance] UIDocumentAssetPostProcessor.OnPostprocessAllAssets                                                        :        6 samples, Peak.  1.13 ms (3.0x), Avg.   381 us, Total. 2.287 ms (0.0%)
+[Performance] SyncVS.PostprocessSyncProject                                                                              :        3 samples, Peak.   132 us (3.0x), Avg.  44.5 us, Total. 133.4 us (0.0%)
+[Performance] Application.ImportPackagesAndSetTemplateWhenCreatingProject                                                :        1 samples, Peak.  27.8 ms (1.0x), Avg.  27.8 ms, Total. 27.76 ms (0.0%)
+[Performance] Application.SyncCurrentColorSpace                                                                          :        1 samples, Peak.  17.9 ms (1.0x), Avg.  17.9 ms, Total. 17.85 ms (0.0%)
+[Performance] Application.OnUsbDevicesChanged                                                                            :        1 samples, Peak.  31.4 ms (1.0x), Avg.  31.4 ms, Total. 31.45 ms (0.1%)
+[Performance] Application.AssetInstanceCacheUpdate                                                                       :        1 samples, Peak.   600 ns (1.0x), Avg.   600 ns, Total. 600.0 ns (0.0%)
+[Performance] Application.UnityExtensions.Initialize                                                                     :        1 samples, Peak.  2.31 ms (1.0x), Avg.  2.31 ms, Total. 2.307 ms (0.0%)
+[Performance] Application.InitializeManagedCompilationPipeline                                                           :        1 samples, Peak.   150 ms (1.0x), Avg.   150 ms, Total. 149.7 ms (0.3%)
+[Performance] Application.ExecuteStartups                                                                                :        1 samples, Peak.  96.1 ms (1.0x), Avg.  96.1 ms, Total. 96.06 ms (0.2%)
+[Performance] Menu.RegisterMenuInterface                                                                                 :       26 samples, Peak.  1.40 us (4.5x), Avg.   312 ns, Total. 8.100 us (0.0%)
+[Performance] Gizmo.RebuildRenderers                                                                                     :        2 samples, Peak.  93.2 ms (1.9x), Avg.  49.9 ms, Total. 99.81 ms (0.2%)
+[Performance] Gizmo.AddGizmoRenderers                                                                                    :       98 samples, Peak.  3.97 ms (46.9x), Avg.  84.5 us, Total. 8.285 ms (0.0%)
+[Performance] Application.editorInitializingProject                                                                      :        1 samples, Peak.  61.2 us (1.0x), Avg.  61.2 us, Total. 61.20 us (0.0%)
+[Performance] Application.InitializeMenu                                                                                 :        1 samples, Peak.   239 ms (1.0x), Avg.   239 ms, Total. 239.2 ms (0.4%)
+[Performance] Menu.RebuildAll                                                                                            :        1 samples, Peak.   239 ms (1.0x), Avg.   239 ms, Total. 239.2 ms (0.4%)
+[Performance] Menu.BuildRegisteredMenuInterfaces                                                                         :        1 samples, Peak.   232 ms (1.0x), Avg.   232 ms, Total. 232.2 ms (0.4%)
+[Performance] Menu.FilterMenuItem                                                                                        :      526 samples, Peak.  93.0 ms (519.4x), Avg.   179 us, Total. 94.15 ms (0.2%)
+[Performance] UpdateAllMenus                                                                                             :        1 samples, Peak.  1.02 ms (1.0x), Avg.  1.02 ms, Total. 1.025 ms (0.0%)
+[Performance] Menu.RebuildOSMainMenu                                                                                     :        3 samples, Peak.  5.87 ms (1.3x), Avg.  4.47 ms, Total. 13.42 ms (0.0%)
+[Performance] EditorSceneManager.sceneClosing: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneClosing       :        1 samples, Peak.   622 us (1.0x), Avg.   622 us, Total. 621.5 us (0.0%)
+[Performance] EditorSceneManager.sceneClosed: callback in UnityEditor.Search.SearchMonitor                               :        1 samples, Peak.   128 us (1.0x), Avg.   128 us, Total. 127.8 us (0.0%)
+[Performance] EditorSceneManager.activeSceneChangedInEditMode: callback in UnityEditor.Search.SearchMonitor              :        1 samples, Peak.  48.9 us (1.0x), Avg.  48.9 us, Total. 48.90 us (0.0%)
+[Performance] GUIView.RepaintAll.PlayerLoopController                                                                    :        1 samples, Peak.  7.20 us (1.0x), Avg.  7.20 us, Total. 7.200 us (0.0%)
+[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnNewSceneCreated :        1 samples, Peak.   585 us (1.0x), Avg.   585 us, Total. 584.8 us (0.0%)
+[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneManagement.StageNavigationManager.OnNewSceneCreated   :        1 samples, Peak.   118 us (1.0x), Avg.   118 us, Total. 118.3 us (0.0%)
+[Performance] Application.InvokeFinishedLoadingProject                                                                   :        1 samples, Peak.   562 ms (1.0x), Avg.   562 ms, Total. 561.6 ms (1.0%)
+[Performance] ProcessService.OnProjectLoaded                                                                             :        1 samples, Peak.  64.8 us (1.0x), Avg.  64.8 us, Total. 64.80 us (0.0%)
+[Performance] AssetDatabase.Refresh                                                                                      :        3 samples, Peak.   107 ms (2.6x), Avg.  40.4 ms, Total. 121.3 ms (0.2%)
+[Performance] BuilderAssetModificationProcessor.OnWillCreateAsset                                                        :        2 samples, Peak.   600 us (1.9x), Avg.   319 us, Total. 637.2 us (0.0%)
+[Performance] EditorApplication.projectChanged: UnityEditor.Audio.MixerEffectDefinitionReloader.OnProjectChanged         :        2 samples, Peak.  1.45 ms (1.4x), Avg.  1.04 ms, Total. 2.073 ms (0.0%)
+[Performance] AssetModificationProcessor.OnWillSaveAssets                                                                :        4 samples, Peak.   694 us (3.7x), Avg.   187 us, Total. 748.0 us (0.0%)
+[Performance] StateMacroSavedEvent.OnWillSaveAssets                                                                      :        4 samples, Peak.  1.10 ms (3.9x), Avg.   282 us, Total. 1.129 ms (0.0%)
+[Performance] FlowMacroSavedEvent.OnWillSaveAssets                                                                       :        4 samples, Peak.   781 us (3.9x), Avg.   199 us, Total. 797.1 us (0.0%)
+[Performance] BuilderAssetModificationProcessor.OnWillSaveAssets                                                         :        4 samples, Peak.  1.49 ms (4.0x), Avg.   375 us, Total. 1.499 ms (0.0%)
+[Performance] TerrainModificationProcessor.OnWillSaveAssets                                                              :        4 samples, Peak.  2.53 ms (4.0x), Avg.   635 us, Total. 2.540 ms (0.0%)
+[Performance] AssetImporterEditorPostProcessAsset.OnPostprocessAssetbundleNameChanged                                    :        1 samples, Peak.   396 us (1.0x), Avg.   396 us, Total. 396.1 us (0.0%)
+[Performance] AssetDatabase.ImportAsset                                                                                  :        1 samples, Peak.   206 ms (1.0x), Avg.   206 ms, Total. 206.3 ms (0.4%)
+[Performance] BuildAssetBundles                                                                                          :        1 samples, Peak.  24.8 s (1.0x), Avg.  24.8 s, Total. 24.76 s (43.4%)
+[Performance] GenerateAssemblyTypeInfos                                                                                  :        2 samples, Peak.  4.12 s (1.2x), Avg.  3.49 s, Total. 6.971 s (12.2%)
+[Performance] Application.Shutdown.SaveDefaultWindowPreferences                                                          :        1 samples, Peak.   277 us (1.0x), Avg.   277 us, Total. 276.7 us (0.0%)
+[Performance] Application.Shutdown.SaveSceneManagerSetup                                                                 :        1 samples, Peak.  1.29 ms (1.0x), Avg.  1.29 ms, Total. 1.287 ms (0.0%)
+[Performance] Application.Shutdown.CleanupAllContainerWindows                                                            :        1 samples, Peak.  8.50 us (1.0x), Avg.  8.50 us, Total. 8.500 us (0.0%)
+[Performance] EditorApplication.quitting: UnityEditor.Search.SearchMonitor.OnQuitting                                    :        1 samples, Peak.  2.52 ms (1.0x), Avg.  2.52 ms, Total. 2.520 ms (0.0%)
+[Performance] EditorApplication.quitting: callback in UnityEditor.TextCore.Text.EditorEventCallbacks                     :        1 samples, Peak.  64.3 ms (1.0x), Avg.  64.3 ms, Total. 64.25 ms (0.1%)
+[Performance] Application.Shutdown.PauseProfilerSession                                                                  :        1 samples, Peak.  67.9 us (1.0x), Avg.  67.9 us, Total. 67.90 us (0.0%)
+[Performance] Application.Shutdown.PauseAssetImportWorkers                                                               :        1 samples, Peak.  51.7 ms (1.0x), Avg.  51.7 ms, Total. 51.74 ms (0.1%)
+[Performance] Application.Shutdown.SaveAssets                                                                            :        1 samples, Peak.   599 us (1.0x), Avg.   599 us, Total. 598.5 us (0.0%)
+[Performance] Application.Shutdown.CleanupRenderPipeline                                                                 :        1 samples, Peak.  3.80 us (1.0x), Avg.  3.80 us, Total. 3.800 us (0.0%)
+[Performance] Application.Shutdown.StopPreloadManager                                                                    :        1 samples, Peak.  9.96 ms (1.0x), Avg.  9.96 ms, Total. 9.965 ms (0.0%)
+[Performance] Application.Shutdown.DestroyWorld                                                                          :        1 samples, Peak.  1.76 ms (1.0x), Avg.  1.76 ms, Total. 1.755 ms (0.0%)
+[Performance] Application.Shutdown.CleanupAfterLoad                                                                      :        1 samples, Peak.  10.1 ms (1.0x), Avg.  10.1 ms, Total. 10.10 ms (0.0%)
+[Performance] Application.Shutdown.Progress                                                                              :        1 samples, Peak.  9.70 us (1.0x), Avg.  9.70 us, Total. 9.700 us (0.0%)
+[Performance] Application.Shutdown.GICleanupManagers                                                                     :        1 samples, Peak.  79.1 ms (1.0x), Avg.  79.1 ms, Total. 79.12 ms (0.1%)
+[Performance] Application.Shutdown.MenuCleanupClass                                                                      :        1 samples, Peak.   321 us (1.0x), Avg.   321 us, Total. 320.9 us (0.0%)
+[Performance] Application.Shutdown.ADBSaveStateBeforeShutdown                                                            :        1 samples, Peak.  10.5 us (1.0x), Avg.  10.5 us, Total. 10.50 us (0.0%)
+[Performance] Application.Shutdown.RemoteShutdown                                                                        :        1 samples, Peak.  1.50 us (1.0x), Avg.  1.50 us, Total. 1.500 us (0.0%)
+[Performance] Application.Shutdown.CleanupVCProvider                                                                     :        1 samples, Peak.  98.1 us (1.0x), Avg.  98.1 us, Total. 98.10 us (0.0%)
+[Performance] Application.Shutdown.InputShutdown                                                                         :        1 samples, Peak.  4.60 us (1.0x), Avg.  4.60 us, Total. 4.600 us (0.0%)
+[Performance] Application.Shutdown.GizmoManagerDestroy                                                                   :        1 samples, Peak.  1.75 ms (1.0x), Avg.  1.75 ms, Total. 1.748 ms (0.0%)
+[Performance] Application.Shutdown.ProfilerSession                                                                       :        1 samples, Peak.   298 us (1.0x), Avg.   298 us, Total. 298.2 us (0.0%)
+[Performance] Application.Shutdown.ReleaseGfxWindowOnAllGUIViews                                                         :        1 samples, Peak.   900 ns (1.0x), Avg.   900 ns, Total. 900.0 ns (0.0%)
+[Performance] Application.Shutdown.CleanupEngine                                                                         :        1 samples, Peak.  5.10 s (1.0x), Avg.  5.10 s, Total. 5.098 s (8.9%)
+[Performance] Application.Shutdown.CleanupAssetDatabase                                                                  :        1 samples, Peak.   103 ms (1.0x), Avg.   103 ms, Total. 102.7 ms (0.2%)
+[Performance] Application.Shutdown.ScriptCompilationCleanUp                                                              :        1 samples, Peak.  21.4 us (1.0x), Avg.  21.4 us, Total. 21.40 us (0.0%)
+[Performance] Application.Shutdown.DestroyJobSystem                                                                      :        1 samples, Peak.  73.3 us (1.0x), Avg.  73.3 us, Total. 73.30 us (0.0%)
+[Performance] Application.Shutdown.CleanupPersistentManager                                                              :        1 samples, Peak.  2.97 ms (1.0x), Avg.  2.97 ms, Total. 2.968 ms (0.0%)
+[Performance] Application.Shutdown.CleanupAsyncReadManager                                                               :        1 samples, Peak.   362 us (1.0x), Avg.   362 us, Total. 362.2 us (0.0%)
+[Performance] Application.Shutdown.CleanupProgressBar                                                                    :        1 samples, Peak.  7.50 us (1.0x), Avg.  7.50 us, Total. 7.500 us (0.0%)
+[Performance] Application.Shutdown.CleanupMono                                                                           :        1 samples, Peak.   148 ms (1.0x), Avg.   148 ms, Total. 147.9 ms (0.3%)
+[Performance] Application.Shutdown.CleanupStdConverters                                                                  :        1 samples, Peak.  14.3 us (1.0x), Avg.  14.3 us, Total. 14.30 us (0.0%)
+[Performance] Application.Shutdown.UnloadAllPlatformSupportModuleNativeDlls                                              :        1 samples, Peak.   500 ns (1.0x), Avg.   500 ns, Total. 500.0 ns (0.0%)
+[Performance] Application.Shutdown.UnloadAllPlatformSupportNativeLibraries                                               :        1 samples, Peak.   300 ns (1.0x), Avg.   300 ns, Total. 300.0 ns (0.0%)
+[Performance] Application.Shutdown.CleanupAutoDocumentation                                                              :        1 samples, Peak.   540 us (1.0x), Avg.   540 us, Total. 539.6 us (0.0%)
+[Performance] Application.Shutdown.ShaderNameManagerDestroy                                                              :        1 samples, Peak.  71.1 us (1.0x), Avg.  71.1 us, Total. 71.10 us (0.0%)
+[Performance] Application.Shutdown.CleanupCacheServer                                                                    :        1 samples, Peak.   300 ns (1.0x), Avg.   300 ns, Total. 300.0 ns (0.0%)
+[Performance] Application.Shutdown.Virtualization_Shutdown                                                               :        1 samples, Peak.   500 ns (1.0x), Avg.   500 ns, Total. 500.0 ns (0.0%)
+[Performance] Application.Shutdown.DevConnections                                                                        :        1 samples, Peak.   372 us (1.0x), Avg.   372 us, Total. 371.7 us (0.0%)
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server::Kill -- Server was shutdown
+Memory Statistics:
+[ALLOC_TEMP_TLS] TLS Allocator
+  StackAllocators : 
+    [ALLOC_TEMP_CurlRequest]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 0 B
+      Overflow Count 0
+    [ALLOC_TEMP_MAIN]
+      Peak usage frame count: [8.0 MB-16.0 MB]: 1 frames
+      Initial Block Size 16.0 MB
+      Current Block Size 16.2 MB
+      Peak Allocated Bytes 13.4 MB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 8]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 4]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.7 KB
+      Overflow Count 0
+    [ALLOC_TEMP_AUDIO_FMOD mixer thread]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 5]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 11]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 3]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_BatchDeleteObjects]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_CoreBusinessMetricsCache]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 8.2 KB
+      Overflow Count 0
+    [ALLOC_TEMP_REST Message Handler]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 13]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.7 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 2]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_AssetDatabase.IOService]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 10]
+      Initial Block Size 256.0 KB
+      Current Block Size 0.6 MB
+      Peak Allocated Bytes 0.6 MB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 12]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Loading.PreloadManager]
+      Initial Block Size 32.0 MB
+      Current Block Size 32.0 MB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Profiler.Dispatcher]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 14]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.7 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 3]
+      Initial Block Size 256.0 KB
+      Current Block Size 0.6 MB
+      Peak Allocated Bytes 0.6 MB
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 7]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 5]
+      Initial Block Size 32.0 KB
+      Current Block Size 92.0 KB
+      Peak Allocated Bytes 68.0 KB
+      Overflow Count 0
+    [ALLOC_TEMP_CurlRequest]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 257 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 13]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 2]
+      Initial Block Size 256.0 KB
+      Current Block Size 0.6 MB
+      Peak Allocated Bytes 0.6 MB
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 6]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 11]
+      Initial Block Size 256.0 KB
+      Current Block Size 1.0 MB
+      Peak Allocated Bytes 1.0 MB
+      Overflow Count 1
+    [ALLOC_TEMP_Job.Worker 6]
+      Initial Block Size 256.0 KB
+      Current Block Size 1.0 MB
+      Peak Allocated Bytes 1.0 MB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 5]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 0]
+      Initial Block Size 256.0 KB
+      Current Block Size 0.6 MB
+      Peak Allocated Bytes 0.6 MB
+      Overflow Count 1
+    [ALLOC_TEMP_Background Job.Worker 9]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_DirMonitor]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 0.7 KB
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 9]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 1]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Loading.AsyncRead]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 128 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 10]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 6]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_AUDIO_FMOD (WASAPI) feeder thread]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 168 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 1]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_AUDIO_FMOD stream thread]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 2]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 7]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 8]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.7 KB
+      Overflow Count 2
+    [ALLOC_TEMP_Job.Worker 1]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.6 KB
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 0]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 3]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_EditorTaskManager]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 0 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 15]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_BakingJobs.Worker 4]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 12]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_HTTP REST Server]
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 76 B
+      Overflow Count 0
+    [ALLOC_TEMP_AssetGarbageCollectorHelper] x 15
+      Initial Block Size 64.0 KB
+      Current Block Size 64.0 KB
+      Peak Allocated Bytes 0 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 0]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 4]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Background Job.Worker 14]
+      Initial Block Size 32.0 KB
+      Current Block Size 32.0 KB
+      Peak Allocated Bytes 54 B
+      Overflow Count 0
+    [ALLOC_TEMP_Job.Worker 7]
+      Initial Block Size 256.0 KB
+      Current Block Size 256.0 KB
+      Peak Allocated Bytes 1.7 KB
+      Overflow Count 0
+[ALLOC_MEMORYPROFILER]
+  Peak usage frame count: [0.5 MB-1.0 MB]: 1 frames
+  Requested Block Size 1.0 MB
+  Peak Block count 1
+  Peak Allocated memory 0.5 MB
+  Peak Large allocation bytes 0 B
+[ALLOC_DEFAULT] Dual Thread Allocator
+  Peak main deferred allocation count 1300
+    [ALLOC_BUCKET]
+      Large Block size 32.0 MB
+      Used Block count 1
+      Peak Allocated bytes 8.1 MB
+    [ALLOC_DEFAULT_MAIN]
+      Peak usage frame count: [32.0 MB-64.0 MB]: 1 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 5
+      Peak Allocated memory 65.0 MB
+      Peak Large allocation bytes 0 B
+    [ALLOC_DEFAULT_THREAD]
+      Peak usage frame count: [4.0 MB-8.0 MB]: 1 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 1
+      Peak Allocated memory 4.1 MB
+      Peak Large allocation bytes 0 B
+[ALLOC_TEMP_JOB_1_FRAME]
+  Initial Block Size 2.0 MB
+  Used Block Count 1
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_TEMP_JOB_2_FRAMES]
+  Initial Block Size 2.0 MB
+  Used Block Count 1
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_TEMP_JOB_4_FRAMES (JobTemp)]
+  Initial Block Size 2.0 MB
+  Used Block Count 16
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_TEMP_JOB_ASYNC (Background)]
+  Initial Block Size 1.0 MB
+  Used Block Count 4
+  Overflow Count (too large) 0
+  Overflow Count (full) 0
+[ALLOC_GFX] Dual Thread Allocator
+  Peak main deferred allocation count 0
+    [ALLOC_BUCKET]
+      Large Block size 32.0 MB
+      Used Block count 1
+      Peak Allocated bytes 8.1 MB
+    [ALLOC_GFX_MAIN]
+      Peak usage frame count: [4.0 MB-8.0 MB]: 1 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 1
+      Peak Allocated memory 6.0 MB
+      Peak Large allocation bytes 0 B
+    [ALLOC_GFX_THREAD]
+      Peak usage frame count: [0-1.0 KB]: 1 frames
+      Requested Block Size 16.0 MB
+      Peak Block count 1
+      Peak Allocated memory 0.5 KB
+      Peak Large allocation bytes 0 B
+[ALLOC_CACHEOBJECTS] Dual Thread Allocator
+  Peak main deferred allocation count 839
+    [ALLOC_BUCKET]
+      Large Block size 32.0 MB
+      Used Block count 1
+      Peak Allocated bytes 8.1 MB
+    [ALLOC_CACHEOBJECTS_MAIN]
+      Peak usage frame count: [32.0 MB-64.0 MB]: 1 frames
+      Requested Block Size 4.0 MB
+      Peak Block count 14
+      Peak Allocated memory 50.1 MB
+      Peak Large allocation bytes 10.7 MB
+    [ALLOC_CACHEOBJECTS_THREAD]
+      Peak usage frame count: [0-1.0 KB]: 1 frames
+      Requested Block Size 4.0 MB
+      Peak Block count 1
+      Peak Allocated memory 304 B
+      Peak Large allocation bytes 0 B
+[ALLOC_TYPETREE] Dual Thread Allocator
+  Peak main deferred allocation count 744
+    [ALLOC_BUCKET]
+      Large Block size 32.0 MB
+      Used Block count 1
+      Peak Allocated bytes 8.1 MB
+    [ALLOC_TYPETREE_MAIN]
+      Peak usage frame count: [8.0 MB-16.0 MB]: 1 frames
+      Requested Block Size 2.0 MB
+      Peak Block count 7
+      Peak Allocated memory 12.3 MB
+      Peak Large allocation bytes 0 B
+    [ALLOC_TYPETREE_THREAD]
+      Peak usage frame count: [1.0 KB-2.0 KB]: 1 frames
+      Requested Block Size 2.0 MB
+      Peak Block count 1
+      Peak Allocated memory 1.9 KB
+      Peak Large allocation bytes 0 B
+[ALLOC_PROFILER]
+  Peak usage frame count: [256.0 KB-0.5 MB]: 1 frames
+  Requested Block Size 16.0 MB
+  Peak Block count 1
+  Peak Allocated memory 494.7 KB
+  Peak Large allocation bytes 0 B
+    [ALLOC_PROFILER_BUCKET]
+      Large Block size 32.0 MB
+      Used Block count 1
+      Peak Allocated bytes 2.5 KB
+[ALLOC_PROFILER_EDITOR]
+  Peak usage frame count: [0-1.0 KB]: 1 frames
+  Requested Block Size 1.0 MB
+  Peak Block count 0
+  Peak Allocated memory 0 B
+  Peak Large allocation bytes 0 B
+    [ALLOC_PROFILER_BUCKET]
+      Large Block size 32.0 MB
+      Used Block count 1
+      Peak Allocated bytes 2.5 KB
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1780521557264,"processId":264252,"allocatedMemory":6951589,"memoryLabels":[{"Default":10343},{"Permanent":15296},{"NewDelete":94995},{"Thread":4229244},{"Manager":30725},{"VertexData":12},{"Geometry":560},{"Texture":168},{"Shader":67879},{"Material":24},{"GfxDevice":49648},{"Animation":248},{"Audio":3928},{"FontEngine":272},{"Physics":241},{"Serialization":936},{"Input":14720},{"JobScheduler":200},{"Mono":40},{"ScriptingNativeRuntime":43568},{"BaseObject":1627180},{"Resource":1464},{"Renderer":1960},{"Transform":16},{"File":888},{"WebCam":80},{"Culling":40},{"Terrain":1025},{"Wind":24},{"STL":48},{"String":17487},{"DynamicArray":60086},{"HashMap":86346},{"Utility":13159},{"Curl":4287},{"PoolAlloc":32424},{"AI":104},{"TypeTree":2080},{"ScriptManager":440},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3808},{"Unet":16},{"Director":7848},{"WebRequest":688},{"VR":45969},{"SceneManager":608},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"SerializationCache":624},{"APIUpdating":5872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327760},{"EditorGui":80},{"EditorUtility":15869},{"VersionControl":4},{"Undo":426},{"AssetDatabase":10669},{"RestService":1414},{"EditorGi":368},{"License":3584},{"UnityConnect":28416},{"Collab":593},{"Upm":1664},{"DrivenProperties":96},{"HubClient":40},{"LocalIPC":276},{"ProfilerEditor":20133},{"CoreBusinessMetrics":3893},{"AssetReference":40}]}

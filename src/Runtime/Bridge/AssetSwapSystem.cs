@@ -64,23 +64,6 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private readonly HashSet<string> _reportedFailures = new HashSet<string>(StringComparer.Ordinal);
 
-        /// <summary>
-        /// #992: Bundles (keyed by mod bundle path) that have PERMANENTLY failed to yield a usable
-        /// swap — stub bundles (the 13 #986 90-byte stubs), bundles with no renderable mesh, or
-        /// hard load errors. These can never succeed, yet AssetSwapRegistry keeps them pending and
-        /// the swap retries them EVERY frame, re-loading the bundle each pass → the per-frame
-        /// 'another AssetBundle with the same files is already loaded' flood. Once a bundle is in
-        /// this set we skip it entirely (logged once, then silent), stopping the flood for all stub
-        /// bundles while leaving working swaps (units/cims/buildings) untouched.
-        /// </summary>
-        private readonly HashSet<string> _permanentlyFailedBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// Tracks bundles for which a non-URP/legacy material swap was already skipped.
-        /// This prevents repeated logs while the same bundle is retried across frames.
-        /// </summary>
-        private static readonly HashSet<string> _reportedNonUrpMaterialBundles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         private int _frameCount;
 
         /// <summary>Whether the one-shot vanilla mesh diagnostic dump has been emitted.</summary>
@@ -93,133 +76,55 @@ namespace DINOForge.Runtime.Bridge
         private const int MaxSwapsPerBundle = 500;
 
         /// <summary>
-        /// Declarative map from a pack <c>vanilla_mapping</c> value to the vanilla DINO mesh-name
-        /// substrings it should replace. This is the real "bundle → vanilla mesh" mapping that exits
-        /// DIAGNOSTIC MODE: the source of truth is the pack's <c>vanilla_mapping</c> field on every
-        /// unit/building definition (carried through to <see cref="AssetSwapRequest.VanillaMapping"/>),
-        /// NOT a hardcoded bundle-filename table.
+        /// Maps mod bundle name prefixes to vanilla mesh name substrings for selective matching.
+        /// Key = substring found in the bundle filename (case-insensitive).
+        /// Value = list of vanilla mesh name substrings that should be replaced.
+        /// When a bundle's filename contains the key, only entities whose current mesh name
+        /// contains one of the value substrings will be swapped.
         ///
-        /// Targeting works in two layers:
-        ///   1. PRIMARY (authoritative): the ECS entity query is already narrowed to the archetype
-        ///      component resolved from <c>vanilla_mapping</c> (e.g. militia → Components.MeleeUnit)
-        ///      via <see cref="PackStatMappings.TryResolveMapping"/>. This is what actually scopes
-        ///      the swap to the correct vanilla units.
-        ///   2. SECONDARY (optional refinement): the substrings below let the swap further filter by
-        ///      the live mesh name when DINO's vanilla mesh names are known. When a mapping has no
-        ///      substrings (or the value is empty) the swap relies on the archetype filter alone and
-        ///      still proceeds (no longer DIAGNOSTIC MODE).
-        ///
-        /// Keyed by <c>vanilla_mapping</c> so it stays declarative and pack-driven: adding a new
-        /// mapping value only requires a single entry here, and packs reference it by name.
+        /// This mapping is populated after the first diagnostic dump reveals vanilla mesh names.
+        /// Until the mapping is known, the system runs in DIAGNOSTIC MODE (logs mesh names, skips swap).
         /// </summary>
-        private static readonly Dictionary<string, string[]> VanillaMappingToMeshSubstrings =
+        private static readonly Dictionary<string, string[]> BundleToVanillaMeshMap =
             new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                // Melee / infantry archetypes (mapped to Components.MeleeUnit).
-                { "militia",         new[] { "Militia", "militia", "Peasant", "peasant" } },
-                { "line_infantry",   new[] { "Swordsman", "swordsman", "Soldier", "soldier", "Infantry", "infantry" } },
-                { "heavy_infantry",  new[] { "Heavy", "heavy", "Armored", "armored" } },
-                { "elite",           new[] { "Elite", "elite", "Knight", "knight", "Veteran", "veteran" } },
-                { "hero",            new[] { "Hero", "hero", "Champion", "champion", "Lord", "lord" } },
-                { "wall_defender",   new[] { "Wall", "wall", "Guard", "guard", "Defender", "defender" } },
-                { "support",         new[] { "Support", "support", "Healer", "healer", "Medic", "medic", "Priest", "priest" } },
-                { "special",         new[] { "Special", "special", "Mage", "mage" } },
-
-                // Ranged archetypes (mapped to Components.RangeUnit).
-                { "ranged_infantry", new[] { "Archer", "archer", "Ranged", "ranged", "Crossbow", "crossbow", "Gun", "gun" } },
-                { "skirmisher",      new[] { "Skirmisher", "skirmisher", "Slinger", "slinger", "Scout", "scout" } },
-                { "scout",           new[] { "Scout", "scout", "Recon", "recon" } },
-
-                // Mounted / mechanised archetypes.
-                { "cavalry",         new[] { "Cavalry", "cavalry", "Rider", "rider", "Horse", "horse", "Mount", "mount" } },
-                { "siege",           new[] { "Siege", "siege", "Catapult", "catapult", "Trebuchet", "trebuchet", "Ram", "ram", "Cannon", "cannon" } },
-
-                // Aerial archetype (BUG B fix #101). Provides a mesh-name fallback so the swap
-                // proceeds for sw-tri-fighter / sw-nantex-fighter even before AerialSpawnSystem
-                // has tagged the entity with AerialUnitComponent. Covers DINO's airstrike/flyer
-                // mesh names plus generic aerial tokens.
-                { "aerial_fighter",  new[] { "Aerial", "aerial", "Air", "Flying", "flying", "Flyer", "flyer", "Bird", "bird", "Bomber", "bomber", "Airstrike", "airstrike", "Plane", "plane", "Fighter", "fighter" } },
-
-                // #975 Phase 1 — CIMS (citizens/workers). DINO's roaming population renders with
-                // bomj_* meshes (бомж = vagrant). When the Components.Worker archetype filter does
-                // not resolve, these substrings let the swap proceed via the secondary mesh-name
-                // filter so cims still exit DIAGNOSTIC MODE.
-                { "cims",            new[] { "bomj", "Bomj", "cim", "Cim", "Citizen", "citizen", "Worker", "worker", "Peon", "peon", "Villager", "villager" } },
-                { "worker",          new[] { "bomj", "Bomj", "Worker", "worker", "Peon", "peon", "Villager", "villager" } },
-                { "citizen",         new[] { "bomj", "Bomj", "Citizen", "citizen", "cim", "Cim" } },
-
-                // #975 Phase 1 — BUILDINGS. Vanilla DINO building mesh-name substrings, keyed by
-                // building-type vanilla_mapping. The archetype filter (Components.BuildingBase) is
-                // authoritative; these substrings are the optional secondary refinement that lets
-                // distinct building meshes be swapped selectively. Empty/unknown DINO mesh names
-                // fall back to archetype-only targeting.
-                { "command",         new[] { "Castle", "castle", "Keep", "keep", "Command", "command", "TownHall", "townhall", "Hall", "hall" } },
-                { "barracks",        new[] { "Barrack", "barrack", "Baraks", "baraks", "Stable", "stable", "Train", "train" } },
-                { "resource",        new[] { "Farm", "farm", "Mine", "mine", "Mill", "mill", "Lumber", "lumber", "Quarry", "quarry", "Storage", "storage", "Warehouse", "warehouse" } },
-                { "economy",         new[] { "Farm", "farm", "Mine", "mine", "Mill", "mill", "Market", "market", "House", "house", "Storage", "storage" } },
-                { "defense",         new[] { "Tower", "tower", "Wall", "wall", "Gate", "gate", "Turret", "turret", "Fort", "fort" } },
-                { "tower",           new[] { "Tower", "tower", "Turret", "turret", "Watchtower", "watchtower" } },
-                { "wall",            new[] { "Wall", "wall", "Gate", "gate", "Palisade", "palisade", "Rampart", "rampart" } },
-                { "research",        new[] { "Research", "research", "Lab", "lab", "Library", "library", "University", "university", "Academy", "academy" } },
-                // Generic building archetype (#101 building fix). Pack structures default to the
-                // "building" mapping when they omit vanilla_mapping; these substrings cover DINO's
-                // common building mesh-name tokens so the swap can refine within the BuildingBase
-                // archetype query (and so it never falls into DIAGNOSTIC MODE for lack of a signal).
-                { "building",        new[] { "Building", "building", "House", "house", "Tower", "tower", "Barrack", "barrack", "Wall", "wall", "Gate", "gate", "Keep", "keep", "Castle", "castle", "Hall", "hall", "Factory", "factory", "Mill", "mill", "Mine", "mine", "Storage", "storage", "Depot", "depot", "Center", "center", "Centre", "centre", "Bay", "bay", "Lab", "lab", "Generator", "generator", "Foundry", "foundry", "Camp", "camp", "Tent", "tent", "Hut", "hut" } },
+                // Derived from DINO vanilla mesh survey (iter-153, 2026-06-03).
+                // Keys are substrings of bundle filenames; values are substrings of vanilla mesh names.
+                // Infantry / melee units (royal_sword_1=1686, royal_spear=657, royal_tough_guy=636 etc)
+                { "b1-battle-droid",      new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "b2-super-droid",       new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "bx-commando",          new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "commando-droid",       new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "clone-trooper",        new[] { "royal_sword", "royal_spear", "royal_shortsword", "royal_tough" } },
+                { "clone-heavy",          new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "clone-medic",          new[] { "royal_sword", "royal_spear", "royal_shortsword" } },
+                { "clone-militia",        new[] { "royal_sword", "royal_spear", "royal_shortsword" } },
+                { "clone-commander",      new[] { "royal_ban", "royal_horseman" } },
+                { "clone-engineer",       new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "clone-jet",            new[] { "royal_spear", "royal_horseman" } },
+                { "clone-mortar",         new[] { "royal_spear", "royal_tough" } },
+                { "clone-pilot",          new[] { "royal_horseman_spear", "royal_horseman_sword" } },
+                { "arc-trooper",          new[] { "royal_ban", "royal_horseman" } },
+                { "cis-droideka",         new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "cis-magna",            new[] { "royal_ban", "royal_horseman" } },
+                { "cis-spider",           new[] { "royal_tough_guy", "royal_horseman" } },
+                { "general-grievous",     new[] { "royal_ban", "royal_horseman" } },
+                { "jedi",                 new[] { "royal_ban", "royal_horseman" } },
+                { "sniper-droid",         new[] { "royal_spear", "royal_tough" } },
+                { "octuptarra",           new[] { "royal_tough_guy", "royal_horseman" } },
+                { "probe-droid",          new[] { "royal_spear", "royal_shortsword" } },
+                { "grapple-droid",        new[] { "royal_tough_guy", "royal_sword_2" } },
+                { "rocket-droid",         new[] { "royal_spear", "royal_tough" } },
+                // Aerial units — matched by aerial archetype filter; no mesh substrings needed
+                // Building meshes — broad match; archetype filter handles selectivity
+                { "clone-barracks",       new[] { "b1_", "ruins_building", "soul_stone" } },
+                { "assembly-line",        new[] { "b1_", "ruins_building" } },
+                { "weapons-factory",      new[] { "b1_", "ruins_building" } },
+                { "guard-tower",          new[] { "b1_", "ruins_building" } },
+                { "command-center",       new[] { "b1_", "ruins_building" } },
+                { "hangar-bay",           new[] { "b1_", "ruins_building" } },
+                { "cis-aa-tower",         new[] { "b1_", "ruins_building" } },
             };
-
-        /// <summary>
-        /// Component type name that aerial units (vanilla_mapping='aerial_fighter') are tagged
-        /// with by DINOForge's AerialSpawnSystem. Used as the archetype filter for the visual
-        /// mesh swap (BUG B fix #101). PackStatMappings deliberately maps aerial_fighter to null
-        /// for STAT injection (AerialSpawnSystem owns behaviour), so the swap resolves the archetype
-        /// here instead.
-        /// </summary>
-        /// <para>
-        /// #986 (2026-05-31): the original value <c>DINOForge.Runtime.Aviation.AerialUnitComponent</c>
-        /// resolved to 0 live entities (live entity dump, build 1BDC999C) — DINO never tags any
-        /// entity with our custom aviation component, and DINO has no native flying units. The
-        /// RenderMesh + AerialUnitComponent query therefore returned 0 → "0 succeeded" for every
-        /// aerial bundle. DINO's renderable combat archetypes that carry RenderMesh directly are
-        /// MeleeUnit/RangeUnit/CavalryUnit/SiegeUnit. We reskin SW aircraft onto
-        /// <c>Components.SiegeUnit</c> (live count 162, RenderMesh on the same entity) — distinct
-        /// from the melee/range archetypes used by infantry to reduce visual collision.
-        /// </para>
-        private const string AerialArchetypeTypeName = "Components.SiegeUnit";
-
-        /// <summary>
-        /// Vanilla DINO component every building entity carries. Used as the archetype filter for
-        /// the generic <c>building</c> swap mapping (#101 building fix) so pack structures (e.g.
-        /// sw-cis-command-center, sw-rep-vehicle-bay) reskin onto live building entities instead of
-        /// falling into DIAGNOSTIC MODE and rendering as native royal/undead buildings. Resolved in
-        /// the swap path only (NOT in PackStatMappings) so building stat injection is unaffected.
-        /// </summary>
-        private const string BuildingArchetypeTypeName = "Components.BuildingBase";
-
-        /// <summary>
-        /// Resolves a pack <c>vanilla_mapping</c> to the ECS component-type name the asset swap
-        /// should narrow its EntityQuery to. Wraps <see cref="PackStatMappings.TryResolveMapping"/>
-        /// but supplies the aerial archetype for <c>aerial_fighter</c> (which PackStatMappings
-        /// intentionally leaves null for stat injection). Returns false only when the mapping is
-        /// blank/unknown; a known mapping with a null component type still returns true with a null
-        /// out value.
-        /// </summary>
-        private static bool TryResolveSwapArchetype(string? vanillaMapping, out string? archetypeTypeName)
-        {
-            if (!string.IsNullOrWhiteSpace(vanillaMapping)
-                && string.Equals(vanillaMapping, "aerial_fighter", StringComparison.OrdinalIgnoreCase))
-            {
-                archetypeTypeName = AerialArchetypeTypeName;
-                return true;
-            }
-            if (!string.IsNullOrWhiteSpace(vanillaMapping)
-                && string.Equals(vanillaMapping, "building", StringComparison.OrdinalIgnoreCase))
-            {
-                archetypeTypeName = BuildingArchetypeTypeName;
-                return true;
-            }
-            return PackStatMappings.TryResolveMapping(vanillaMapping, out archetypeTypeName);
-        }
 
         private static volatile bool _resetPending;
         // Iter-144: dump EntityManager shared-component methods once on reflection failure
@@ -275,75 +180,6 @@ namespace DINOForge.Runtime.Bridge
             return best;
         }
 
-        /// <summary>
-        /// #986: For parent archetypes that do not carry RenderMesh on themselves (DINO buildings:
-        /// Components.BuildingBase has LinkedEntityGroup but RenderMesh lives on a child entity),
-        /// query the archetype alone, then walk each match's LinkedEntityGroup buffer and collect
-        /// the child entities that DO carry the RenderMesh shared component. Returns a NativeArray
-        /// (caller owns disposal). Empty/uncreated array means no child meshes were found.
-        /// </summary>
-        private NativeArray<Entity> CollectRenderMeshChildren(
-            EntityManager em, Type archetypeType, Type renderMeshType,
-            string assetName, string? vanillaMapping)
-        {
-            ComponentType renderMeshCt = ComponentType.ReadOnly(renderMeshType);
-            EntityQuery archetypeQuery = em.CreateEntityQuery(
-                new EntityQueryDesc
-                {
-                    All = new[] { ComponentType.ReadOnly(archetypeType) },
-                    Options = EntityQueryOptions.IncludePrefab,
-                });
-            NativeArray<Entity> parents = archetypeQuery.ToEntityArray(Allocator.Temp);
-
-            var collected = new List<Entity>();
-            var seen = new HashSet<int>();
-            try
-            {
-                for (int i = 0; i < parents.Length; i++)
-                {
-                    Entity parent = parents[i];
-                    // Walk LinkedEntityGroup (a DynamicBuffer<LinkedEntityGroup> of Entity-wrappers).
-                    if (!em.HasComponent<LinkedEntityGroup>(parent))
-                    {
-                        // No child group — if the parent itself somehow has RenderMesh, take it.
-                        if (em.HasComponent(parent, renderMeshCt) && seen.Add(parent.Index))
-                            collected.Add(parent);
-                        continue;
-                    }
-
-                    DynamicBuffer<LinkedEntityGroup> group = em.GetBuffer<LinkedEntityGroup>(parent);
-                    for (int j = 0; j < group.Length; j++)
-                    {
-                        Entity child = group[j].Value;
-                        if (child == parent) continue;
-                        if (!em.Exists(child)) continue;
-                        if (!em.HasComponent(child, renderMeshCt)) continue;
-                        if (seen.Add(child.Index))
-                            collected.Add(child);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Write("AssetSwap",
-                    $"CollectRenderMeshChildren: walk failed for archetype '{archetypeType.FullName}' " +
-                    $"(asset='{assetName}', vanilla_mapping='{vanillaMapping ?? "<null>"}'): {ex.Message}");
-            }
-            finally
-            {
-                parents.Dispose();
-                archetypeQuery.Dispose();
-            }
-
-            if (collected.Count == 0)
-                return default;
-
-            var result = new NativeArray<Entity>(collected.Count, Allocator.Temp);
-            for (int i = 0; i < collected.Count; i++)
-                result[i] = collected[i];
-            return result;
-        }
-
         /// <summary>Requests a full asset swap reset on next OnUpdate cycle (thread-safe).</summary>
         public static void ScheduleReset()
         {
@@ -386,9 +222,6 @@ namespace DINOForge.Runtime.Bridge
                 _resetPending = false;
                 _frameCount = 0;
                 _reportedFailures.Clear();
-                // #992: clear the negative-result cache on reset so a hot-reload that ships fixed
-                // (non-stub) bundles gets a fresh chance to swap.
-                _permanentlyFailedBundles.Clear();
                 DebugLog.Write("AssetSwap", "AssetSwapSystem.ScheduleReset: frame counter reset, will re-apply swaps after delay.");
             }
 
@@ -489,29 +322,31 @@ namespace DINOForge.Runtime.Bridge
         private bool ApplySwap(AssetSwapRequest request, string patchDir, RuntimeAssetService assetService, EntityManager bestEm)
         {
             // Resolve the mod bundle path (relative paths against BepInEx plugins dir).
-            string modBundleFullPath = ResolveModBundlePath(request.ModBundlePath);
-            if (!File.Exists(modBundleFullPath))
-            {
-                DebugLog.Write("AssetSwap", $"ApplySwap: mod bundle not found: {modBundleFullPath}");
-                return false;
-            }
+            // A null/empty ModBundlePath means Phase 1 (disk patch) is skipped — but Phase 2
+            // (entity swap) must still run because the bundle file may be located via pack
+            // registration even when ModBundlePath is absent (#992 regression fix).
+            bool hasBundlePath = !string.IsNullOrEmpty(request.ModBundlePath);
+            string modBundleFullPath = hasBundlePath ? ResolveModBundlePath(request.ModBundlePath) : string.Empty;
+            bool bundleFileExists = hasBundlePath && File.Exists(modBundleFullPath);
 
-            // #992 negative-result cache: a bundle that has permanently failed (stub / no usable
-            // mesh / load error) must NOT be re-loaded and retried every frame — that re-load is
-            // the source of the 'already loaded' flood. Skip silently (the permanent-failure was
-            // logged once when first detected). Returning false keeps the entity-swap contract
-            // unchanged for the registry; the bundle is never touched again.
-            if (_permanentlyFailedBundles.Contains(modBundleFullPath))
+            if (!hasBundlePath)
             {
-                return false;
+                DebugLog.Write("AssetSwap", $"ApplySwap: ModBundlePath is null/empty for address='{request.AssetAddress}' — skipping Phase 1 (disk patch), proceeding to Phase 2 (entity swap)");
+            }
+            else if (!bundleFileExists)
+            {
+                DebugLog.Write("AssetSwap", $"ApplySwap: mod bundle not found: {modBundleFullPath} — skipping Phase 1, proceeding to Phase 2");
             }
 
             // Phase 1 (optional): Patch the vanilla bundle on disk.
             // This only works when the AssetAddress matches a real Addressables catalog key.
             // Mod packs typically use bundle filenames as AssetAddress, so catalog lookup
             // may fail — that's expected. Phase 2 (entity swap) is the primary mechanism.
+            // Phase 1 is skipped entirely when the mod bundle file is missing/unavailable.
             bool patchResult = false;
-            byte[]? modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
+            byte[]? modAssetBytes = bundleFileExists
+                ? assetService.ExtractAsset(modBundleFullPath, request.AssetName)
+                : null;
 
             if (modAssetBytes != null && modAssetBytes.Length > 0)
             {
@@ -530,18 +365,28 @@ namespace DINOForge.Runtime.Bridge
                     else if (File.Exists(vanillaBundlePath))
                     {
                         string patchedFileName = Path.GetFileName(vanillaBundlePath);
-                        string outputPath = Path.Combine(patchDir, patchedFileName);
-
-                        patchResult = assetService.ReplaceAsset(
-                            vanillaBundlePath,
-                            request.AssetAddress,
-                            modAssetBytes,
-                            outputPath);
-
-                        if (patchResult)
-                            DebugLog.Write("AssetSwap", $"ApplySwap: patched bundle written to '{outputPath}'");
+                        // Path.GetFileName can return null on some Mono versions when the path
+                        // ends with a directory separator — guard to avoid path2 null crash.
+                        if (string.IsNullOrEmpty(patchedFileName))
+                        {
+                            if (_reportedFailures.Add($"filename:{request.AssetAddress}"))
+                                DebugLog.Write("AssetSwap", $"ApplySwap: could not extract filename from vanilla bundle path '{vanillaBundlePath}'");
+                        }
                         else
-                            DebugLog.Write("AssetSwap", $"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                        {
+                            string outputPath = Path.Combine(patchDir, patchedFileName);
+
+                            patchResult = assetService.ReplaceAsset(
+                                vanillaBundlePath,
+                                request.AssetAddress,
+                                modAssetBytes,
+                                outputPath);
+
+                            if (patchResult)
+                                DebugLog.Write("AssetSwap", $"ApplySwap: patched bundle written to '{outputPath}'");
+                            else
+                                DebugLog.Write("AssetSwap", $"ApplySwap: bundle patch failed for '{request.AssetAddress}'");
+                        }
                     }
                 }
                 else if (_reportedFailures.Add($"catalog:{request.AssetAddress}"))
@@ -555,15 +400,33 @@ namespace DINOForge.Runtime.Bridge
             }
 
             // Best-effort live RenderMesh swap on ECS entities.
-            bool entitySwapResult = TrySwapRenderMeshFromBundle(
-                modBundleFullPath, request.AssetName, request.VanillaMapping, bestEm);
-            DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
-            if (!patchResult && !entitySwapResult)
+            // Phase 2 requires a resolvable bundle path.
+            // Fallback: if ModBundlePath was null/empty at registration time, probe the standard
+            // pack layout (<BepInEx>/dinoforge_packs/<pack>/assets/bundles/<assetAddress>) across
+            // all deployed packs. This covers late-registered swaps and hot-reload scenarios where
+            // the bundle file exists but the registry entry was created without a path.
+            bool entitySwapResult = false;
+            string resolvedBundlePath = modBundleFullPath;
+            if (string.IsNullOrEmpty(resolvedBundlePath))
             {
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {request.AssetAddress}: both patch and entity-swap failed; " +
-                    $"diskPatched={patchResult}, entitySwap={entitySwapResult}, vanillaMapping='{request.VanillaMapping ?? "<null>"}'");
+                resolvedBundlePath = FindBundleInPacksDir(request.AssetAddress);
+                if (!string.IsNullOrEmpty(resolvedBundlePath))
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"ApplySwap: fallback bundle lookup found '{resolvedBundlePath}' for address='{request.AssetAddress}'");
+                }
             }
+
+            if (!string.IsNullOrEmpty(resolvedBundlePath))
+            {
+                entitySwapResult = TrySwapRenderMeshFromBundle(
+                    resolvedBundlePath, request.AssetName, request.VanillaMapping, bestEm);
+            }
+            else if (_reportedFailures.Add($"phase2-nopath:{request.AssetAddress}"))
+            {
+                DebugLog.Write("AssetSwap", $"ApplySwap: skipping Phase 2 — no bundle path for address='{request.AssetAddress}' (fallback scan also found nothing)");
+            }
+            DebugLog.Write("AssetSwap", $"ApplySwap: entity swap result={entitySwapResult} for '{request.AssetAddress}'");
 
             return patchResult || entitySwapResult;
         }
@@ -578,57 +441,94 @@ namespace DINOForge.Runtime.Bridge
         private bool TrySwapRenderMeshFromBundle(
             string modBundlePath, string assetName, string? vanillaMapping, EntityManager em)
         {
-            string requestBundleFileName = Path.GetFileName(modBundlePath);
             AssetBundle? bundle = LoadBundle(modBundlePath);
-            if (bundle == null)
+            if (bundle == null) return false;
+
+            Mesh? replacementMesh = bundle.LoadAsset<Mesh>(assetName);
+            Material? replacementMat = bundle.LoadAsset<Material>(assetName);
+
+            // Bundles built from Unity prefabs store a GameObject hierarchy, not a bare Mesh/Material.
+            // Fall back to loading the prefab and extracting its mesh and material.
+            // Prefer SkinnedMeshRenderer (animated characters) so mesh+material always come from
+            // the same component — avoids mismatches when both SMR and static MF/MR exist.
+            if (replacementMesh == null && replacementMat == null)
             {
-                // #992: bundle failed to load and could not be recovered from the already-loaded
-                // set — a hard load error that will recur every frame. Mark permanently failed so
-                // we stop re-attempting LoadFromFile (the flood source). Log once.
-                if (_permanentlyFailedBundles.Add(modBundlePath))
+                GameObject? prefab = bundle.LoadAsset<GameObject>(assetName);
+                if (prefab != null)
                 {
-                    DebugLog.Write("AssetSwap",
-                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: LoadBundle returned null for '{modBundlePath}'. " +
-                        "failed to load and could not be recovered — marking permanently failed (#992).");
+                    SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>();
+                    if (smr != null && smr.sharedMesh != null)
+                    {
+                        replacementMesh = smr.sharedMesh;
+                        if (smr.sharedMaterials.Length > 0)
+                            replacementMat = smr.sharedMaterials[0];
+                    }
+                    else
+                    {
+                        // Static mesh fallback — extract from the same object to stay consistent.
+                        MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>();
+                        if (mf != null)
+                            replacementMesh = mf.sharedMesh;
+
+                        MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>();
+                        if (mr != null && mr.sharedMaterials.Length > 0)
+                            replacementMat = mr.sharedMaterials[0];
+                    }
+
+                    if (replacementMesh != null || replacementMat != null)
+                        DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: extracted from prefab '{assetName}'");
                 }
-                return false;
             }
 
-            // #101 fix (Bug B): the mesh/material/prefab inside the bundle is named after the
-            // source FBX/prefab (e.g. "sw-cis-commando-droid"), NOT after the bundle key / asset
-            // address (e.g. "sw-bx-commando-droid"). Looking up by request.AssetName therefore
-            // returns null for most bundles. Resolve the replacement robustly by loading ALL assets
-            // of each type and taking the first viable one, instead of trusting the key string.
-            (Mesh? replacementMesh, Material? replacementMat) = ResolveReplacementAssets(bundle, assetName);
+            // Final fallback: bundle asset name doesn't match the key (e.g. bundle built with
+            // prefab name 'Clone_Heavy_Republic' but key is 'sw-clone-heavy'). Load the first
+            // available asset from the bundle and extract mesh/material from it.
+            if (replacementMesh == null && replacementMat == null)
+            {
+                string[] allNames = bundle.GetAllAssetNames();
+                if (allNames.Length > 0)
+                {
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: name '{assetName}' not found in bundle, " +
+                        $"trying first asset '{allNames[0]}' (bundle has {allNames.Length} assets)");
+                    replacementMesh = bundle.LoadAsset<Mesh>(allNames[0]);
+                    replacementMat = bundle.LoadAsset<Material>(allNames[0]);
+                    if (replacementMesh == null && replacementMat == null)
+                    {
+                        GameObject? fallbackPrefab = bundle.LoadAsset<GameObject>(allNames[0]);
+                        if (fallbackPrefab != null)
+                        {
+                            SkinnedMeshRenderer? smr = fallbackPrefab.GetComponentInChildren<SkinnedMeshRenderer>();
+                            if (smr != null && smr.sharedMesh != null)
+                            {
+                                replacementMesh = smr.sharedMesh;
+                                if (smr.sharedMaterials.Length > 0) replacementMat = smr.sharedMaterials[0];
+                            }
+                            else
+                            {
+                                MeshFilter? mf = fallbackPrefab.GetComponentInChildren<MeshFilter>();
+                                if (mf != null) replacementMesh = mf.sharedMesh;
+                                MeshRenderer? mr = fallbackPrefab.GetComponentInChildren<MeshRenderer>();
+                                if (mr != null && mr.sharedMaterials.Length > 0) replacementMat = mr.sharedMaterials[0];
+                            }
+                            if (replacementMesh != null || replacementMat != null)
+                                DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: extracted from fallback prefab '{allNames[0]}'");
+                        }
+                    }
+                }
+            }
 
             if (replacementMesh == null && replacementMat == null)
             {
-                // #992: a bundle with no usable Mesh/Material (the 13 #986 90-byte stubs) can NEVER
-                // yield a swap. Mark it permanently failed so ApplySwap skips it on every later
-                // frame instead of re-loading it — this is the primary stop for the per-frame
-                // 'already loaded' flood. Log once.
-                _permanentlyFailedBundles.Add(modBundlePath);
                 DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: no usable Mesh/Material/prefab found in bundle " +
-                    $"'{requestBundleFileName}' (requested asset='{assetName}'). " +
-                    "Bundle may be a stub or contain no renderable geometry. " +
-                    "Marking permanently failed — will skip on subsequent frames (#992).");
+                    $"TrySwapRenderMeshFromBundle: no Mesh/Material named '{assetName}' in bundle");
                 return false;
             }
-
-            // GFX-mode Phase 2: when the High graphics tier is active, upgrade the swapped
-            // material to URP/Lit with PBR slots (driven by pack PBR metadata when present).
-            // Pure passthrough when tier is Vanilla or no upgrade is possible — never breaks the swap.
-            if (replacementMat != null)
-            {
-                replacementMat = DINOForge.Runtime.Graphics.GraphicsMaterialUpgrader.Upgrade(replacementMat, assetName);
-            }
-            bool materialCompatible = replacementMat != null && IsUrpCompatibleMaterial(replacementMat, modBundlePath);
 
             Type? renderMeshType = ResolveRenderMeshType();
             if (renderMeshType == null)
             {
-                DebugLog.Write("AssetSwap", $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: Unity.Rendering.RenderMesh type not found");
+                DebugLog.Write("AssetSwap", "TrySwapRenderMeshFromBundle: Unity.Rendering.RenderMesh type not found");
                 return false;
             }
 
@@ -637,7 +537,7 @@ namespace DINOForge.Runtime.Bridge
             // apply. Bail out gracefully until HRV2 mesh-swap is implemented (separate task).
             if (IsHrv2Type(_renderMeshVariantName))
             {
-                DebugLog.Write("AssetSwap", $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: HRV2 mesh-swap not yet implemented (variant='{_renderMeshVariantName}') — falling back to no-op for entity swap. Bundle-disk patch (if successful) still applies.");
+                DebugLog.Write("AssetSwap", $"TrySwapRenderMeshFromBundle: HRV2 mesh-swap not yet implemented (variant='{_renderMeshVariantName}') — falling back to no-op for entity swap. Bundle-disk patch (if successful) still applies.");
                 return false;
             }
 
@@ -645,19 +545,13 @@ namespace DINOForge.Runtime.Bridge
             // When the mapping is absent or unrecognised we fall back to RenderMesh-only query,
             // which at minimum avoids modifying non-unit geometry in cases like buildings.
             ComponentType[] queryComponents;
-            // #986: When the archetype carries RenderMesh on a CHILD entity (DINO buildings:
-            // Components.BuildingBase has LinkedEntityGroup + Unity.Transforms.Child but NO
-            // RenderMesh on the parent), the RenderMesh+archetype query returns 0. We capture
-            // the resolved archetype type so we can re-query archetype-only and walk children.
-            Type? resolvedArchetypeType = null;
             if (!string.IsNullOrWhiteSpace(vanillaMapping)
-                && TryResolveSwapArchetype(vanillaMapping, out string? archetypeTypeName)
+                && PackStatMappings.TryResolveMapping(vanillaMapping, out string? archetypeTypeName)
                 && !string.IsNullOrEmpty(archetypeTypeName))
             {
                 Type? archetypeType = ResolveTypeByName(archetypeTypeName!);
                 if (archetypeType != null)
                 {
-                    resolvedArchetypeType = archetypeType;
                     queryComponents = new[]
                     {
                         ComponentType.ReadOnly(renderMeshType),
@@ -670,7 +564,7 @@ namespace DINOForge.Runtime.Bridge
                 else
                 {
                     DebugLog.Write("AssetSwap",
-                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: archetype type '{archetypeTypeName}' not " +
+                        $"TrySwapRenderMeshFromBundle: archetype type '{archetypeTypeName}' not " +
                         $"found in assemblies; falling back to RenderMesh-only query");
                     queryComponents = new[] { ComponentType.ReadOnly(renderMeshType) };
                 }
@@ -684,37 +578,6 @@ namespace DINOForge.Runtime.Bridge
                 new EntityQueryDesc { All = queryComponents, Options = EntityQueryOptions.IncludePrefab });
             NativeArray<Entity> entities = query.ToEntityArray(Allocator.Temp);
 
-            // #986: child-entity RenderMesh fallback. DINO buildings carry the archetype marker
-            // (Components.BuildingBase) on a PARENT entity whose RenderMesh lives on a CHILD
-            // entity referenced via LinkedEntityGroup. The RenderMesh+archetype query above
-            // therefore returns 0. When that happens (and we resolved a parent archetype), query
-            // archetype-only and collect the RenderMesh-bearing children. This is what makes
-            // buildings (and any other parent-rendered DINO entity) swap instead of "0 succeeded".
-            if (entities.Length == 0 && resolvedArchetypeType != null)
-            {
-                NativeArray<Entity> childMatches = CollectRenderMeshChildren(
-                    em, resolvedArchetypeType, renderMeshType, assetName, vanillaMapping);
-                if (childMatches.IsCreated && childMatches.Length > 0)
-                {
-                    entities.Dispose();
-                    query.Dispose();
-                    entities = childMatches;
-                    // No EntityQuery to dispose for the child path; use a no-op query handle.
-                    query = em.CreateEntityQuery(ComponentType.ReadOnly(renderMeshType));
-                    DebugLog.Write("AssetSwap",
-                        $"TrySwapRenderMeshFromBundle: parent archetype '{resolvedArchetypeType.FullName}' " +
-                        $"carries no RenderMesh; resolved {entities.Length} RenderMesh child entities " +
-                        $"via LinkedEntityGroup for asset='{assetName}'.");
-                }
-                else
-                {
-                    if (childMatches.IsCreated) childMatches.Dispose();
-                    DebugLog.Write("AssetSwap",
-                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: archetype '{resolvedArchetypeType.FullName}' " +
-                        $"resolved for vanilla_mapping='{vanillaMapping ?? "<null>"}' but no RenderMesh children were found.");
-                }
-            }
-
             // Iter-148 timing fix: ToEntityArray() may return 0 entities when the swap
             // fires before gameplay-scene entity population completes (observed ~9s gap
             // between AssetSwapSystem first OnUpdate at frame 600 and entities arriving
@@ -726,7 +589,7 @@ namespace DINOForge.Runtime.Bridge
                 if (_reportedFailures.Add($"empty-query:{assetName}"))
                 {
                     DebugLog.Write("AssetSwap",
-                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: entity query returned 0 results for asset='{assetName}' " +
+                        $"TrySwapRenderMeshFromBundle: entity query returned 0 results for asset='{assetName}' " +
                         $"(vanillaMapping='{vanillaMapping ?? "<null>"}') — entities not yet populated, will retry next frame.");
                 }
                 entities.Dispose();
@@ -743,6 +606,9 @@ namespace DINOForge.Runtime.Bridge
             // non-generic, arity=2, first param Entity, second param ComponentType.
             // Mono 4.x type-identity bug: typeof(Entity) != param.ParameterType across assembly
             // boundaries. Use FullName string comparison instead of reference equality.
+            // Unity 2021.3 EntityManager has GetSharedComponentData(Entity, int typeIndex)
+            // as the only non-generic 2-parameter overload — NOT (Entity, ComponentType).
+            // We must pass ComponentType.TypeIndex (int) as the argument.
             MethodInfo? getSharedNonGeneric = typeof(EntityManager).GetMethods(
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .FirstOrDefault(m =>
@@ -773,7 +639,7 @@ namespace DINOForge.Runtime.Bridge
                 if (_reflectionFailCount == 1 || (_reflectionFailCount % ReflectionFailLogEvery) == 0)
                 {
                     DebugLog.Write("AssetSwap",
-                        $"[AssetSwap] RESOLVE-FAIL {requestBundleFileName}: reflection lookup failed (#{_reflectionFailCount}) " +
+                        $"WARN: TrySwapRenderMeshFromBundle: reflection lookup failed (#{_reflectionFailCount}) " +
                         $"(getSharedNonGeneric={getSharedNonGeneric != null}, setSharedGeneric={setSharedGeneric != null}).");
                 }
                 if (!_dumpedEmMethods)
@@ -802,20 +668,6 @@ namespace DINOForge.Runtime.Bridge
             FieldInfo? materialField = renderMeshType.GetField("material");
 
             ComponentType renderMeshComponentType = ComponentType.ReadOnly(renderMeshType);
-
-            // BUG A fix (#101): DINO's Unity 2021.3 EntityManager exposes the non-generic
-            // GetSharedComponentData in TWO overloads — (Entity, ComponentType) AND
-            // (Entity, int typeIndex). The FirstOrDefault lookup above can bind the Int32
-            // overload (it explicitly accepts either FullName). Invoking that overload with a
-            // boxed ComponentType throws at runtime: "Object of type 'Unity.Entities.ComponentType'
-            // cannot be converted to type 'System.Int32'" → result=False ("swapped 0/100" for
-            // ground units like sw-cis-magna-guard). Detect which overload was bound and pass the
-            // matching argument type: ComponentType.TypeIndex (an int) when the param wants Int32.
-            bool getSharedWantsTypeIndex =
-                getSharedNonGeneric.GetParameters()[1].ParameterType.FullName == "System.Int32";
-            object renderMeshSharedArg = getSharedWantsTypeIndex
-                ? (object)renderMeshComponentType.TypeIndex
-                : renderMeshComponentType;
 
             // ---- DIAGNOSTIC PASS: log unique vanilla mesh names (one-shot) ----
             // Uses generic GetSharedComponentData<RenderMesh>(Entity) via MakeGenericMethod
@@ -870,63 +722,35 @@ namespace DINOForge.Runtime.Bridge
                 }
             }
 
-            // ---- SELECTIVE SWAP ----
-            // The PRIMARY (authoritative) targeting was already applied above: the EntityQuery
-            // was narrowed to the archetype component resolved from vanilla_mapping. The optional
-            // SECONDARY refinement below further filters by live mesh name when DINO's vanilla
-            // mesh names for this mapping are known (VanillaMappingToMeshSubstrings, keyed by the
-            // pack's vanilla_mapping value — NOT by bundle filename).
-            // preserve historical log key for lower-risk diagnostics
+            // ---- SELECTIVE SWAP: match by mesh name ----
+            // Determine which vanilla mesh names this bundle should target.
+            string bundleFileName = Path.GetFileNameWithoutExtension(modBundlePath) ?? "";
             string[]? targetMeshSubstrings = null;
-            if (!string.IsNullOrWhiteSpace(vanillaMapping)
-                && VanillaMappingToMeshSubstrings.TryGetValue(vanillaMapping!, out string[]? substrings)
-                && substrings != null
-                && substrings.Length > 0)
+            foreach (var kvp in BundleToVanillaMeshMap)
             {
-                targetMeshSubstrings = substrings;
-                DebugLog.Write("AssetSwap",
-                    $"TrySwapRenderMeshFromBundle: bundle '{requestBundleFileName}' vanilla_mapping='{vanillaMapping}' " +
-                    $"→ refining by mesh substrings: [{string.Join(", ", substrings)}]");
+                if (bundleFileName.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    targetMeshSubstrings = kvp.Value;
+                    DebugLog.Write("AssetSwap",
+                        $"TrySwapRenderMeshFromBundle: bundle '{bundleFileName}' matched mapping key '{kvp.Key}' " +
+                        $"→ targeting mesh substrings: [{string.Join(", ", kvp.Value)}]");
+                    break;
+                }
             }
 
-            // DIAGNOSTIC MODE only when there is NO targeting signal at all: no archetype filter
-            // (vanilla_mapping absent/unresolved) AND no mesh-name substrings. With either signal
-            // present we proceed — the archetype-narrowed query is authoritative; substrings are an
-            // optional refinement. A populated vanilla_mapping therefore exits DIAGNOSTIC MODE.
-            // #986 FINAL FIX: use the ACTUAL query-narrowing result (resolvedArchetypeType),
-            // NOT a separate re-resolution. The earlier code re-ran TryResolveSwapArchetype +
-            // ResolveTypeByName here, which could (and did, live) disagree with the resolution
-            // the EntityQuery actually used above — the query logged "filtering by
-            // 'Components.MeleeUnit'" (resolvedArchetypeType != null, 193 entities matched) yet
-            // this re-resolution returned false, leaving the hand-guessed mesh substrings active
-            // as a reject filter that dropped all 193 matched entities ("swapped 0/100"). The
-            // query already narrowed the entities to the right archetype, so trust that single
-            // source of truth: if the query was archetype-narrowed, treat the filter as present.
-            bool hasArchetypeFilter = resolvedArchetypeType != null;
-
-            // CRITICAL ("units look native") fix: when an archetype filter IS present it is the
-            // authoritative targeting — the EntityQuery is already narrowed to the right unit class.
-            // The mesh-name substrings were hand-guessed (e.g. "Swordsman") and do NOT match DINO's
-            // real mesh vocabulary (e.g. "swordsmen", "royal_sword_2", "bomj_*", "harpy_*",
-            // "undead_*"), so applying them as a *reject* filter dropped 100% of entities
-            // ("swapped 0/100 … skipped 100 non-matching meshes") and every unit stayed native.
-            // Substrings are therefore ONLY used as a fallback targeting signal when there is no
-            // archetype filter; with an archetype filter we swap every entity the query returned.
-            if (hasArchetypeFilter)
-            {
-                targetMeshSubstrings = null;
-            }
-
-            if (!hasArchetypeFilter && (targetMeshSubstrings == null || targetMeshSubstrings.Length == 0))
+            // If no mapping exists for this bundle, proceed with NO mesh-name filter.
+            // The vanillaMapping archetype component filter (EntityQuery) already scopes the
+            // candidate set to the right unit type — an additional mesh-name filter is only
+            // needed when one bundle must target a strict subset of that archetype.
+            // Logging here is intentional: surfaces which bundles are running unfiltered so
+            // an operator can later populate BundleToVanillaMeshMap for tighter targeting.
+            bool meshFilterActive = targetMeshSubstrings != null && targetMeshSubstrings.Length > 0;
+            if (!meshFilterActive)
             {
                 DebugLog.Write("AssetSwap",
-                    $"[DIAGNOSTIC MODE] No targeting signal for bundle '{requestBundleFileName}' " +
-                    $"(vanilla_mapping='{vanillaMapping ?? "<null>"}' yielded neither an archetype filter " +
-                    $"nor mesh-name substrings). Skipping entity swap for {entities.Length} entities. " +
-                    $"Add a 'vanilla_mapping' to the pack visual_asset to exit DIAGNOSTIC MODE.");
-                entities.Dispose();
-                query.Dispose();
-                return false;
+                    $"[SWAP] No BundleToVanillaMeshMap entry for bundle '{bundleFileName}'. " +
+                    $"Proceeding with no mesh-name filter — will swap all {entities.Length} entities " +
+                    $"matching vanillaMapping archetype. Add an entry to BundleToVanillaMeshMap for finer targeting.");
             }
 
             int swapCount = 0;
@@ -961,27 +785,36 @@ namespace DINOForge.Runtime.Bridge
                 try
                 {
                     if (!em.HasComponent(entity, renderMeshComponentType))
+                    {
+                        skippedNoMatch++;
                         continue;
+                    }
 
                     // Use non-generic overload to avoid "Ambiguous match found" on multi-mesh entities.
-                    // BUG A fix (#101): pass TypeIndex (int) when the bound overload is the
-                    // (Entity, int) one — passing a ComponentType there throws the Mono
-                    // "ComponentType cannot be converted to Int32" conversion error.
+                    // Unity 2021.3 EntityManager exposes (Entity, int typeIndex) not (Entity, ComponentType).
+                    // If the resolved overload takes int, pass TypeIndex; otherwise pass ComponentType directly.
+                    object getSharedArg = (getSharedNonGeneric.GetParameters()[1].ParameterType == typeof(int))
+                        ? (object)renderMeshComponentType.TypeIndex
+                        : (object)renderMeshComponentType;
                     object? renderMesh = getSharedNonGeneric.Invoke(
-                        em, new object[] { entity, renderMeshSharedArg });
-                    if (renderMesh == null) continue;
+                        em, new object[] { entity, getSharedArg });
+                    if (renderMesh == null)
+                    {
+                        skippedNoMatch++;
+                        DebugLog.Write("AssetSwap",
+                            $"[AssetSwap] entity has RenderMesh component but GetSharedComponentData returned null for asset='{assetName}'");
+                        continue;
+                    }
 
-                    // ---- Selective mesh-name check (SECONDARY refinement only) ----
-                    // Skip when no substrings were resolved: the archetype-narrowed query is
-                    // authoritative and we swap every entity it returned.
-                    if (meshField != null && targetMeshSubstrings != null)
+                    // ---- Selective mesh-name check (only when BundleToVanillaMeshMap has an entry) ----
+                    if (meshFilterActive && meshField != null)
                     {
                         object? currentMeshObj = meshField.GetValue(renderMesh);
                         if (currentMeshObj is Mesh currentMesh && currentMesh != null)
                         {
                             string currentName = currentMesh.name ?? "";
                             bool nameMatches = false;
-                            for (int s = 0; s < targetMeshSubstrings.Length; s++)
+                            for (int s = 0; s < targetMeshSubstrings!.Length; s++)
                             {
                                 if (currentName.IndexOf(targetMeshSubstrings[s], StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
@@ -998,6 +831,7 @@ namespace DINOForge.Runtime.Bridge
                         else
                         {
                             // Mesh field is null — entity not yet loaded, skip.
+                            skippedNoMatch++;
                             continue;
                         }
                     }
@@ -1020,13 +854,39 @@ namespace DINOForge.Runtime.Bridge
                         meshField.SetValue(renderMesh, replacementMesh);
                         changed = true;
                     }
-                    if (replacementMat != null && materialCompatible && materialField != null)
+                    if (materialField != null)
                     {
                         object? currentMat = materialField.GetValue(renderMesh);
-                        if (currentMat == null)
-                            continue;
-                        materialField.SetValue(renderMesh, replacementMat);
-                        changed = true;
+                        if (replacementMat != null)
+                        {
+                            if (currentMat == null)
+                            {
+                                // Vanilla entity has no current material — skip material SET but
+                                // keep the mesh swap already applied. Option C: log so we can
+                                // track which entities/bundles lack a compatible material slot.
+                                if (_reportedFailures.Add($"nomat:{assetName}:{entity.Index}"))
+                                {
+                                    DebugLog.Write("AssetSwap",
+                                        $"TrySwapRenderMeshFromBundle: entity {entity.Index} — " +
+                                        $"no current material slot for '{assetName}', keeping vanilla material (mesh swapped)");
+                                }
+                            }
+                            else
+                            {
+                                materialField.SetValue(renderMesh, replacementMat);
+                                changed = true;
+                            }
+                        }
+                        else if (replacementMesh != null && currentMat == null)
+                        {
+                            // No replacement material and no current material — log once per asset.
+                            if (_reportedFailures.Add($"nomatsrc:{assetName}"))
+                            {
+                                DebugLog.Write("AssetSwap",
+                                    $"TrySwapRenderMeshFromBundle: bundle '{assetName}' has no material; " +
+                                    $"mesh swapped with vanilla material retained");
+                            }
+                        }
                     }
 
                     if (changed)
@@ -1091,83 +951,6 @@ namespace DINOForge.Runtime.Bridge
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Returns true only when the material is safe for Hybrid Renderer V2/URP execution.
-        /// Legacy built-in shaders such as "Standard"/"Legacy"/"Diffuse" are rejected.
-        /// </summary>
-        private static bool IsUrpCompatibleMaterial(Material material, string bundlePath)
-        {
-            if (material == null)
-                return false;
-
-            Shader? shader = material.shader;
-            if (shader == null)
-            {
-                LogNonUrpMaterialSkip(bundlePath, "<null>");
-                return false;
-            }
-
-            string shaderName = shader.name ?? string.Empty;
-            if (shaderName.StartsWith("Universal Render Pipeline/", StringComparison.Ordinal))
-                return true;
-
-            if (HasSrpBatcherSupport(shader))
-                return true;
-
-            LogNonUrpMaterialSkip(bundlePath, shaderName);
-            return false;
-        }
-
-        private static bool HasSrpBatcherSupport(Shader shader)
-        {
-            try
-            {
-                MethodInfo? findPassTagValue = typeof(Shader).GetMethod(
-                    "FindPassTagValue",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new[] { typeof(int), typeof(string) },
-                    null);
-
-                if (findPassTagValue == null)
-                    return false;
-
-                for (int pass = 0; pass < 32; pass++)
-                {
-                    object? tagValue = findPassTagValue.Invoke(shader, new object[] { pass, "SRPBatcher" });
-                    try
-                    {
-                        if (tagValue != null && Convert.ToInt32(tagValue) != 0)
-                            return true;
-                    }
-                    catch
-                    {
-                        // Some Unity versions may expose FindPassTagValue with a non-convertible return type.
-                    }
-                }
-            }
-            catch
-            {
-                // If FindPassTagValue probing fails, fallback to shader-name check.
-            }
-
-            return false;
-        }
-
-        private static void LogNonUrpMaterialSkip(string bundlePath, string shaderName)
-        {
-            string bundleName = Path.GetFileName(bundlePath);
-            if (string.IsNullOrWhiteSpace(bundleName))
-                bundleName = bundlePath;
-
-            if (!_reportedNonUrpMaterialBundles.Add(bundleName))
-                return;
-
-            DebugLog.Write(
-                "AssetSwap",
-                $"[AssetSwap] skipped material swap for {bundleName}: shader {shaderName} not HRV2-compatible");
         }
 
         private static Type? _renderMeshType;
@@ -1334,102 +1117,51 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
+        /// Fallback bundle discovery: scans all deployed packs under
+        /// <c>&lt;BepInEx&gt;/dinoforge_packs/</c> for a bundle file whose name matches
+        /// <paramref name="assetAddress"/> (the standard pack layout is
+        /// <c>&lt;packDir&gt;/assets/bundles/&lt;assetAddress&gt;</c>).
+        /// Returns the full path of the first match, or <see cref="string.Empty"/> if none found.
+        /// Called only when <c>ModBundlePath</c> is null/empty on the registered swap request.
+        /// </summary>
+        private static string FindBundleInPacksDir(string assetAddress)
+        {
+            if (string.IsNullOrEmpty(assetAddress))
+                return string.Empty;
+
+            try
+            {
+                string packsRoot = Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                if (!Directory.Exists(packsRoot))
+                    return string.Empty;
+
+                foreach (string packDir in Directory.GetDirectories(packsRoot))
+                {
+                    string candidate = Path.Combine(packDir, "assets", "bundles", assetAddress);
+                    if (File.Exists(candidate))
+                        return candidate;
+                }
+            }
+            catch
+            {
+                // Best-effort: filesystem errors during scan are non-fatal.
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
         /// Resolves a mod bundle path. Relative paths are joined against the BepInEx plugins dir.
         /// </summary>
         private static string ResolveModBundlePath(string path)
         {
+            // Defensive: null/empty path would throw ArgumentNullException(path2) in Path.Combine
+            // on Mono (netstandard2.0 does not enforce C# nullable annotations at runtime).
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
             return Path.IsPathRooted(path)
                 ? path
                 : Path.Combine(BepInEx.Paths.PluginPath, path);
-        }
-
-        /// <summary>
-        /// Robustly resolves a replacement (Mesh, Material) pair from a mod bundle without relying
-        /// on the asset being named after the bundle key (#101 Bug B). Resolution order:
-        ///   1. Try the requested name as a bare Mesh / Material (fast path for purpose-built bundles).
-        ///   2. Load the first GameObject prefab and extract mesh+material from its renderer
-        ///      (SkinnedMeshRenderer preferred, then MeshFilter/MeshRenderer) — the common case for
-        ///      bundles built from prefabs, where the prefab is named after the FBX.
-        ///   3. Fall back to the first bare Mesh / Material asset in the bundle.
-        /// Mesh and material are always sourced from the same renderer where possible to avoid
-        /// mesh/material mismatches.
-        /// </summary>
-        private static (Mesh? mesh, Material? material) ResolveReplacementAssets(AssetBundle bundle, string requestedName)
-        {
-            string[] allAssetNames;
-            try
-            {
-                allAssetNames = bundle.GetAllAssetNames();
-            }
-            catch (Exception ex)
-            {
-                allAssetNames = Array.Empty<string>();
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {requestedName}: bundle.GetAllAssetNames() failed: {ex.Message}");
-            }
-            // 1. Fast path: exact-name bare assets.
-            Mesh? mesh = bundle.LoadAsset<Mesh>(requestedName);
-            Material? material = bundle.LoadAsset<Material>(requestedName);
-            if (mesh != null || material != null)
-            {
-                DebugLog.Write("AssetSwap", $"ResolveReplacementAssets: resolved bare asset by name '{requestedName}'");
-                return (mesh, material);
-            }
-
-            // 2. Prefab path: extract from the first GameObject's renderer.
-            GameObject[] prefabs = bundle.LoadAllAssets<GameObject>();
-            foreach (GameObject prefab in prefabs)
-            {
-                if (prefab == null) continue;
-
-                SkinnedMeshRenderer? smr = prefab.GetComponentInChildren<SkinnedMeshRenderer>(true);
-                if (smr != null && smr.sharedMesh != null)
-                {
-                    mesh = smr.sharedMesh;
-                    if (smr.sharedMaterials != null && smr.sharedMaterials.Length > 0)
-                        material = smr.sharedMaterials[0];
-                }
-                else
-                {
-                    MeshFilter? mf = prefab.GetComponentInChildren<MeshFilter>(true);
-                    if (mf != null && mf.sharedMesh != null)
-                        mesh = mf.sharedMesh;
-
-                    MeshRenderer? mr = prefab.GetComponentInChildren<MeshRenderer>(true);
-                    if (mr != null && mr.sharedMaterials != null && mr.sharedMaterials.Length > 0)
-                        material = mr.sharedMaterials[0];
-                }
-
-                if (mesh != null || material != null)
-                {
-                    DebugLog.Write("AssetSwap",
-                        $"ResolveReplacementAssets: extracted mesh='{mesh?.name ?? "<null>"}' " +
-                        $"material='{material?.name ?? "<null>"}' from prefab '{prefab.name}'");
-                    return (mesh, material);
-                }
-            }
-
-            // 3. Fall back to the first bare Mesh / Material asset in the bundle.
-            Mesh[] meshes = bundle.LoadAllAssets<Mesh>();
-            if (meshes.Length > 0) mesh = meshes[0];
-
-            Material[] materials = bundle.LoadAllAssets<Material>();
-            if (materials.Length > 0) material = materials[0];
-
-            if (mesh != null || material != null)
-            {
-                DebugLog.Write("AssetSwap",
-                    $"ResolveReplacementAssets: fell back to first bare mesh='{mesh?.name ?? "<null>"}' " +
-                    $"material='{material?.name ?? "<null>"}' in bundle");
-            }
-            else
-            {
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {requestedName}: ResolveReplacementAssets returned null mesh/material. " +
-                    $"bundle assets: [{string.Join(", ", allAssetNames)}]");
-            }
-
-            return (mesh, material);
         }
 
         /// <summary>
@@ -1437,13 +1169,6 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         private AssetBundle? LoadBundle(string path)
         {
-            if (_permanentlyFailedBundles.Contains(path))
-            {
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: request skipped because this bundle is permanently failed.");
-                return null;
-            }
-
             AssetBundle? cached = _loadedBundles.Get(path);
             if (cached != null)
                 return cached;
@@ -1452,8 +1177,7 @@ namespace DINOForge.Runtime.Bridge
 
             if (!File.Exists(fullPath))
             {
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: LoadBundle file not found: {fullPath}");
+                DebugLog.Write("AssetSwap", $"LoadBundle: file not found: {fullPath}");
                 return null;
             }
 
@@ -1464,87 +1188,14 @@ namespace DINOForge.Runtime.Bridge
                 {
                     _loadedBundles.Set(path, bundle);
                     DebugLog.Write("AssetSwap", $"LoadBundle: loaded '{fullPath}'");
-                    return bundle;
                 }
-
-                // #992 (null-return variant): when the LRU evicted+Unloaded a bundle but Unity's
-                // Unload has not yet completed (Unload lag), a fresh LoadFromFile of the SAME file
-                // returns NULL (not the documented 'already loaded' throw). With ~50 SW bundles and
-                // a 10-slot LRU this silently fails ~48/50 swaps. Recover by reusing the handle
-                // Unity still has loaded, keyed by bundle name. This is the load-bearing fix that
-                // lets a freshly built bundle (e.g. the rigged sw-clone-trooper-republic) actually
-                // swap instead of being marked permanently failed (#991).
-                AssetBundle? stillLoaded = FindLoadedBundleByPath(fullPath);
-                if (stillLoaded != null)
-                {
-                    _loadedBundles.Set(path, stillLoaded);
-                    if (_reportedFailures.Add($"reuse-null:{path}"))
-                        DebugLog.Write("AssetSwap",
-                            $"LoadBundle: LoadFromFile returned null but Unity still has '{Path.GetFileName(fullPath)}' " +
-                            "loaded — reusing existing handle (Unload-lag recovery, #992/#991).");
-                    return stillLoaded;
-                }
-
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: LoadFromFile returned null and no recoverable loaded bundle existed for '{fullPath}'.");
-
-                return null;
+                return bundle;
             }
             catch (Exception ex)
             {
-                // #992 flood fix: AssetBundle.LoadFromFile THROWS (and Unity logs an error every
-                // call) when "another AssetBundle with the same files is already loaded". This
-                // happens when our LRU evicted+Unloaded a bundle but Unity still considers the
-                // underlying file loaded (Unload lag / scene-transition skip), or when the same
-                // physical bundle was reached via a different cache key. Recover by reusing the
-                // already-loaded handle instead of re-loading — and re-cache it so subsequent
-                // passes hit the cache and never call LoadFromFile again.
-                if (ex.Message.IndexOf("already loaded", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    AssetBundle? existing = FindLoadedBundleByPath(fullPath);
-                    if (existing != null)
-                    {
-                        _loadedBundles.Set(path, existing);
-                        if (_reportedFailures.Add($"reuse:{path}"))
-                            DebugLog.Write("AssetSwap", $"LoadBundle: reused already-loaded bundle for '{fullPath}' (recovered from 'already loaded')");
-                        return existing;
-                    }
-                }
-                DebugLog.Write("AssetSwap",
-                    $"[AssetSwap] RESOLVE-FAIL {Path.GetFileName(path)}: LoadBundle failed '{fullPath}': {ex.Message}");
+                DebugLog.Write("AssetSwap", $"LoadBundle: failed '{fullPath}': {ex.Message}");
                 return null;
             }
-        }
-
-        /// <summary>
-        /// #992: Locates an AssetBundle Unity already has loaded that corresponds to
-        /// <paramref name="fullPath"/>. Unity does not expose the source path on a loaded bundle,
-        /// so match by bundle name (file name without extension) against
-        /// <see cref="AssetBundle.GetAllLoadedAssetBundles"/>. Returns null if none match.
-        /// </summary>
-        private static AssetBundle? FindLoadedBundleByPath(string fullPath)
-        {
-            string wantName = Path.GetFileNameWithoutExtension(fullPath) ?? "";
-            try
-            {
-                foreach (AssetBundle loaded in AssetBundle.GetAllLoadedAssetBundles())
-                {
-                    if (loaded == null) continue;
-                    string loadedName = loaded.name ?? "";
-                    if (string.Equals(loadedName, wantName, StringComparison.OrdinalIgnoreCase)
-                        || (loadedName.Length > 0
-                            && (loadedName.IndexOf(wantName, StringComparison.OrdinalIgnoreCase) >= 0
-                                || wantName.IndexOf(loadedName, StringComparison.OrdinalIgnoreCase) >= 0)))
-                    {
-                        return loaded;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                DebugLog.Write("AssetSwap", $"FindLoadedBundleByPath: enumeration failed: {ex.Message}");
-            }
-            return null;
         }
 
         /// <inheritdoc/>

@@ -1,0 +1,672 @@
+Reading additional input from stdin...
+OpenAI Codex v0.133.0
+--------
+workdir: C:\Users\koosh\Dino\.claude\worktrees\swfont
+model: gpt-5.3-codex-spark
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: low
+reasoning summaries: none
+session id: 019e8121-cef7-71f2-b4a7-30522a69369d
+--------
+user
+Finish DINOForge #965 font via a HEADFUL Unity Editor pass (user is present + approved headful; headless TMP essentials import no-ops in batchmode). Branch fix/sw-tmp-font-20260531. NO push/stash/--no-verify; git add only specific files. GOAL: get the prebuilt TMP_FontAsset bundle (sw_menu_font) built. 
+
+The blocker: TMP_FontAsset.CreateFontAsset needs TMP Essentials (SDF shader) which only imports via the Editor GUI 'Window > TextMeshPro > Import TMP Essential Resources' dialog, NOT batchmode. APPROACH: (1) Launch Unity 2021.3.45f1 EDITOR GUI (NOT -batchmode) on the project scripts/unity/unity-assetbundle-builder (or unity-assetbundle-builder): & 'C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe' -projectPath <abs> (no -quit, no -batchmode) and let it open. (2) Drive the menu: use Win32 SendInput / UI automation (pwsh + Add-Type SendInput, or the repo's input driver) to click Window menu > TextMeshPro > Import TMP Essential Resources, then click 'Import' in the dialog. Take screenshots to docs/screenshots/ to confirm each step. ALTERNATIVELY if you can invoke it programmatically once the Editor is interactively open (not batch): the TMP importer may work in an interactive Editor even via menu execution. (3) Once TMP Essentials are imported (verify: Assets/TextMesh Pro/Resources/ + the Distance Field shader exist), run the bake — either via the now-working BakeTmpFontAsset menu item in the open editor, OR close the GUI and run headless BakeTmpFontAsset.BakeHeadless (essentials now persist on disk so the shader resolves). (4) Verify sw_menu_font bundle >200 bytes in packs/warfare-starwars/assets/bundles/. Commit. CHANGELOG. 
+
+IF Win32 automation of the Editor menu proves unreliable after 2 real attempts, STOP and report the EXACT single manual step needed (which menu path + button) so the user (present now) can do that one click — then you finish the bake. DELIVERABLE: did TMP essentials import (headful)? bundle size? OR the precise one-click for the user. Screenshots.
+codex
+Starting with the requested headful pass in the current branch, then I’ll attempt the TMP Essential Resources import in interactive Unity with a bounded two-attempt automation run, capture screenshots, and if needed hand you the exact one-click fallback plus the bake verification.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont status --short" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+2026-06-01T03:04:29.787548Z ERROR codex_core::tools::router: error=write_stdin failed: stdin is closed for this session; rerun exec_command with tty=true to keep stdin open
+codex
+Quick note: initial status call hung due shell behavior, so I’m rerunning with a non-interactive-safe format and then moving to the requested Unity operations.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont -c core.pager=cat status --short" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 28672ms:
+ M .cursor/cli.json
+ M src/Analyzers/packages.lock.json
+ M src/Bridge/Protocol/packages.lock.json
+ M src/Runtime/packages.lock.json
+ M src/SDK/packages.lock.json
+ D unity-assetbundle-builder/Assets/Models/cis_b1_battle_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_bx_commando_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_droideka.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_probe_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_sniper_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_arf_trooper.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_engineer.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_heavy.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_medic.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_militia.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_sharpshooter.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_aat_walker.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_clone_trooper_phase2.fbx.meta
+?? docs/sessions/tmp-font-bake-direct.log
+?? docs/sessions/tmp-font-bake.log
+?? tmp-font-bake.log
+?? unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/BuildSwMissingBundles.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs.meta
+?? unity-assetbundle-builder/Assets/Fonts.meta
+?? unity-assetbundle-builder/Assets/Fonts/
+
+ succeeded in 6728ms:
+ M .cursor/cli.json
+ M src/Analyzers/packages.lock.json
+ M src/Bridge/Protocol/packages.lock.json
+ M src/Runtime/packages.lock.json
+ M src/SDK/packages.lock.json
+ D unity-assetbundle-builder/Assets/Models/cis_b1_battle_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_bx_commando_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_droideka.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_probe_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/cis_sniper_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_arf_trooper.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_engineer.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_heavy.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_medic.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_militia.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/rep_clone_sharpshooter.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_aat_walker.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_b2_super_droid.fbx.meta
+ D unity-assetbundle-builder/Assets/Models/sw_clone_trooper_phase2.fbx.meta
+?? docs/sessions/tmp-font-bake-direct.log
+?? docs/sessions/tmp-font-bake.log
+?? tmp-font-bake.log
+?? unity-assetbundle-builder/Assets/Editor/BakeTmpFontAsset.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/BuildSwMissingBundles.cs.meta
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs
+?? unity-assetbundle-builder/Assets/Editor/TmpEssentialsImport.cs.meta
+?? unity-assetbundle-builder/Assets/Fonts.meta
+?? unity-assetbundle-builder/Assets/Fonts/
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont rev-parse --abbrev-ref HEAD" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont -c core.pager=cat rev-parse --abbrev-ref HEAD" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "git -C C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont --no-pager rev-parse --abbrev-ref HEAD" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'git --version' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+codex
+I hit an odd shell issue where several direct `git` calls hang in this runner; I’ll proceed with robust PowerShell one-liners and explicit `-NoProfile` to keep operations deterministic.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command '$PSVersionTable.PSVersion.ToString(); Set-Location C:'"\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; Get-Location" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 66981ms:
+fix/sw-tmp-font-20260531
+
+ succeeded in 22066ms:
+git version 2.49.0.windows.1
+
+ succeeded in 34384ms:
+fix/sw-tmp-font-20260531
+
+ succeeded in 9898ms:
+7.5.5
+
+Path
+----
+C:\Users\koosh\Dino\.claude\worktrees\swfont
+
+
+ succeeded in 48163ms:
+fix/sw-tmp-font-20260531
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; & git rev-parse --abbrev-ref HEAD" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; Get-Content .git/HEAD" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ exited 1 in 5582ms:
+Get-Content: 
+Line |
+   2 |  … n C:\Users\koosh\Dino\.claude\worktrees\swfont; Get-Content .git/HEAD
+     |                                                    ~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path 'C:\Users\koosh\Dino\.claude\worktrees\swfont\.git\HEAD' because it does not exist.
+
+ succeeded in 18719ms:
+fix/sw-tmp-font-20260531
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; Get-Content .git" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 5868ms:
+gitdir: C:/Users/koosh/Dino/.git/worktrees/swfont
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content C:/Users/koosh/Dino/.git/worktrees/swfont/HEAD' in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 7428ms:
+ref: refs/heads/fix/sw-tmp-font-20260531
+
+codex
+I confirmed you’re already on `fix/sw-tmp-font-20260531`; I’ll now inspect the Unity builder project and the existing TMP import/bake helpers so I can drive the exact GUI click path only once.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; Get-ChildItem -Name unity-assetbundle-builder\\Assets\\Editor" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; if (Test-Path unity-assetbundle-builder) { Resolve-Path unity-assetbundle-builder }" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; if (Test-Path scripts\\unity\\unity-assetbundle-builder) { Resolve-Path scripts\\unity\\unity-assetbundle-builder }" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 12445ms:
+ succeeded in 12948ms:
+
+Path
+----
+C:\Users\koosh\Dino\.claude\worktrees\swfont\unity-assetbundle-builder
+
+
+ succeeded in 13640ms:
+BakeTmpFontAsset.cs
+BakeTmpFontAsset.cs.meta
+BuildAll.cs
+BuildAll.cs.meta
+BuildAssetBundles.cs
+BuildAssetBundles.cs.meta
+BuildSwMissingBundles.cs
+BuildSwMissingBundles.cs.meta
+GenerateStarWarsPrefabs.cs
+GenerateStarWarsPrefabs.cs.meta
+GenerateStarWarsPrefabsFromModels.cs
+GenerateStarWarsPrefabsFromModels.cs.meta
+RenderModelPreviews.cs
+RenderModelPreviews.cs.meta
+TmpEssentialsImport.cs
+TmpEssentialsImport.cs.meta
+VerifyBundleMesh.cs
+VerifyBundleMesh.cs.meta
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; rg --files -g AGENTS.md" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 11761ms:
+AGENTS.md
+
+codex
+I found the Unity editor scripts already present, including `TmpEssentialsImport.cs`; next I’m checking those plus the bake script to use the least-risky manual/interactive execution path.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\Editor\\BakeTmpFontAsset.cs" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\Editor\\TmpEssentialsImport.cs" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 2728ms:
+using System;
+using System.IO;
+using TMPro;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
+
+/// <summary>
+/// Offline TMP SDF font-asset baker (Option A — Unity 2021.3.45f1 batchmode).
+///
+/// Why: TMP_FontAsset.CreateFontAsset() returns null at RUNTIME inside DINO for
+/// OS-dynamic fonts (the Mono TMP atlas-generator path is unavailable in the
+/// shipped player). Baking the SDF atlas + glyph table offline in the Editor —
+/// where CreateFontAsset() works — sidesteps the runtime failure entirely.
+///
+/// Pipeline:
+///   1. Import menu_font.ttf as a Unity Font (TrueType).
+///   2. TMP_FontAsset.CreateFontAsset(font) -> generates SDF atlas + glyph table.
+///   3. Pre-populate the ASCII printable range so the menu glyphs are baked into
+///      a STATIC atlas (no runtime atlas growth needed).
+///   4. Persist the .asset (+ material + atlas texture) and tag it for the
+///      'sw_menu_font' AssetBundle. BuildAssetBundles then emits the bundle,
+///      version-locked to 2021.3.45f1 so DINO can load it.
+///
+/// Invoke (batchmode):
+///   "C:\Program Files\Unity\Hub\Editor\2021.3.45f1\Editor\Unity.exe" \
+///     -batchmode -nographics -noUpm -quit \
+///     -projectPath "<repo>\unity-assetbundle-builder" \
+///     -executeMethod BakeTmpFontAsset.BakeHeadless \
+///     -logFile "<repo>\docs\sessions\tmp-font-bake.log"
+///
+/// The source ttf is expected at Assets/Fonts/menu_font.ttf (copy it in before
+/// running — see scripts/game/bake-sw-menu-font.ps1).
+/// </summary>
+public static class BakeTmpFontAsset
+{
+    private const string FontTtfPath = "Assets/Fonts/menu_font.ttf";
+    private const string OutputAssetPath = "Assets/Fonts/SW_MenuFont SDF.asset";
+    private const string BundleName = "sw_menu_font";
+
+    // Sampling point size for the SDF atlas. 90px gives crisp menu-scale glyphs.
+    private const int SamplingPointSize = 90;
+    private const int AtlasPadding = 9;
+    private const int AtlasWidth = 1024;
+    private const int AtlasHeight = 1024;
+
+    private static void ImportTmpEssentials()
+    {
+        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
+        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
+        AssetDatabase.Refresh();
+    }
+
+    public static void BakeHeadless()
+    {
+        try
+        {
+            Debug.Log("[BakeTmpFontAsset] Starting TMP SDF font bake...");
+
+            // CreateFontAsset needs the TMP SDF shader ("TextMeshPro/Distance Field"),
+            // which ships in TMP Essential Resources. A fresh project does not have them,
+            // so CreateFontAsset throws "ArgumentNullException: ... shader". Import them
+            // headlessly before baking. (#965 batchmode bake fix.)
+            ImportTmpEssentials();
+
+            Shader sdf = Shader.Find("TextMeshPro/Distance Field");
+            if (sdf == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
+                EditorApplication.Exit(6);
+                return;
+            }
+
+            if (!File.Exists(FontTtfPath))
+            {
+                Debug.LogError($"[BakeTmpFontAsset] Missing source font at {FontTtfPath}. " +
+                               "Copy packs/warfare-starwars/assets/ui/menu_font.ttf there first.");
+                EditorApplication.Exit(2);
+                return;
+            }
+
+            // Ensure the ttf is imported as a usable Font.
+            AssetDatabase.ImportAsset(FontTtfPath, ImportAssetOptions.ForceUpdate);
+            Font sourceFont = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
+            if (sourceFont == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] Failed to load source ttf as Font.");
+                EditorApplication.Exit(3);
+                return;
+            }
+
+            // The native FontEngine is NOT auto-initialized in -batchmode; without this,
+            // CreateFontAsset throws ArgumentNullException (the font engine handle is null).
+            // (#965 batchmode bake fix.)
+            FontEngineError initErr = FontEngine.InitializeFontEngine();
+            if (initErr != FontEngineError.Success)
+                Debug.LogWarning($"[BakeTmpFontAsset] FontEngine.InitializeFontEngine returned {initErr}");
+
+            // Editor-side CreateFontAsset DOES work (unlike the DINO runtime).
+            TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
+                sourceFont,
+                SamplingPointSize,
+                AtlasPadding,
+                GlyphRenderMode.SDFAA,
+                AtlasWidth,
+                AtlasHeight,
+                AtlasPopulationMode.Static,
+                enableMultiAtlasSupport: true);
+
+            if (fontAsset == null)
+            {
+                Debug.LogError("[BakeTmpFontAsset] CreateFontAsset returned null in editor — unexpected.");
+                EditorApplication.Exit(4);
+                return;
+            }
+
+            fontAsset.name = "SW_MenuFont SDF";
+
+            // Belt-and-braces: ensure the font material uses the TMP SDF shader so the
+            // baked atlas renders correctly inside DINO even if the default was missing.
+            if (fontAsset.material != null && fontAsset.material.shader != sdf)
+                fontAsset.material.shader = sdf;
+
+            // Pre-bake the printable ASCII range into the static atlas so no
+            // runtime glyph generation is required inside DINO.
+            const string chars =
+                " !\"#$%&'()*+,-./0123456789:;<=>?@" +
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
+                "abcdefghijklmnopqrstuvwxyz{|}~";
+            fontAsset.TryAddCharacters(chars, out string missing);
+            if (!string.IsNullOrEmpty(missing))
+                Debug.LogWarning($"[BakeTmpFontAsset] Glyphs not present in font: '{missing}'");
+
+            // Persist the font asset, its atlas texture and material as sub-assets.
+            string dir = Path.GetDirectoryName(OutputAssetPath);
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            AssetDatabase.CreateAsset(fontAsset, OutputAssetPath);
+
+            // Atlas texture + material must be embedded so the bundle is self-contained.
+            if (fontAsset.atlasTextures != null)
+            {
+                foreach (Texture2D tex in fontAsset.atlasTextures)
+                {
+                    if (tex != null && !AssetDatabase.Contains(tex))
+                        AssetDatabase.AddObjectToAsset(tex, fontAsset);
+                }
+            }
+            if (fontAsset.material != null && !AssetDatabase.Contains(fontAsset.material))
+                AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
+
+            EditorUtility.SetDirty(fontAsset);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(OutputAssetPath, ImportAssetOptions.ForceUpdate);
+
+            // Tag the .asset for the AssetBundle so BuildAssetBundles emits it.
+            AssetImporter importer = AssetImporter.GetAtPath(OutputAssetPath);
+            if (importer != null)
+            {
+                importer.assetBundleName = BundleName;
+                importer.SaveAndReimport();
+            }
+            else
+            {
+                Debug.LogError("[BakeTmpFontAsset] Could not get AssetImporter to tag bundle.");
+                EditorApplication.Exit(5);
+                return;
+            }
+
+            Debug.Log($"[BakeTmpFontAsset] Baked '{OutputAssetPath}', tagged bundle '{BundleName}'. " +
+                      "Now run BuildAssetBundles.BuildHeadless to emit the bundle.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BakeTmpFontAsset] Exception: {ex}");
+            EditorApplication.Exit(1);
+        }
+    }
+}
+
+ succeeded in 2772ms:
+using UnityEditor;
+using UnityEngine;
+public static class TmpEssentialsImport
+{
+    // Pass 1: import TMP essentials so the SDF shader asset lands on disk + compiles.
+    public static void Run()
+    {
+        try {
+            var t = System.Type.GetType("TMPro.TMP_PackageResourceImporter, Unity.TextMeshPro.Editor")
+                 ?? System.Type.GetType("TMPro.TMP_PackageResourceImporter, Unity.TextMeshPro");
+            if (t != null) {
+                var m = t.GetMethod("ImportResources", System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static);
+                if (m != null) m.Invoke(null, new object[]{ true, false, false });
+            }
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[TmpEssentialsImport] essentials imported pass-1");
+            EditorApplication.Exit(0);
+        } catch (System.Exception e) { Debug.LogError("[TmpEssentialsImport] "+e); EditorApplication.Exit(1); }
+    }
+}
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\Editor\\BuildAssetBundles.cs" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Get-Content -Path C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont\\unity-assetbundle-builder\\Assets\\Editor\\BuildAll.cs" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 3278ms:
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+/// <summary>
+/// One-shot entry point: generate prefabs + build AssetBundles in a single headless run.
+/// Bundle keys match visual_asset values in warfare-starwars YAML definitions exactly.
+/// Usage: Unity.exe -batchmode -nographics -executeMethod BuildAll.Run -quit
+/// </summary>
+public static class BuildAll
+{
+    // Republic colors (Clone Trooper white + blue accent)
+    private static readonly Color RepublicWhite = new Color(0.95f, 0.95f, 0.95f);
+    private static readonly Color RepublicBlue  = new Color(0.18f, 0.40f, 0.78f);
+    private static readonly Color RepublicGold  = new Color(0.85f, 0.70f, 0.10f);
+
+    // CIS colors (droid grey/dark)
+    private static readonly Color CisGrey  = new Color(0.55f, 0.55f, 0.50f);
+    private static readonly Color CisDark  = new Color(0.30f, 0.28f, 0.25f);
+    private static readonly Color CisRed   = new Color(0.70f, 0.10f, 0.10f);
+
+    // Neutral/special
+    private static readonly Color JediBlue   = new Color(0.10f, 0.45f, 0.90f);
+    private static readonly Color JediGreen  = new Color(0.10f, 0.75f, 0.30f);
+    private static readonly Color NeutralGrey = new Color(0.60f, 0.58f, 0.55f);
+
+    // (key, faction-folder, color, shape)
+    private static readonly (string Key, string Folder, Color Color, PrimitiveType Shape)[] Defs =
+    {
+        // ── Republic units ────────────────────────────────────────────────────────
+        ("sw-rep-clone-trooper",  "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-rep-clone-heavy",    "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-rep-clone-sniper",   "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-rep-at-te-walker",   "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-rep-clone-medic",    "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-rep-arc-trooper",    "Republic", RepublicBlue,  PrimitiveType.Capsule),
+        ("sw-clone-militia",      "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-barc-speeder",       "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-arf-trooper",        "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-jedi-knight",        "Republic", JediBlue,      PrimitiveType.Capsule),
+        ("sw-clone-wall-guard",   "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-clone-commando",     "Republic", RepublicBlue,  PrimitiveType.Capsule),
+        ("sw-v19-torrent-unit",   "Republic", RepublicWhite, PrimitiveType.Sphere),
+
+        // ── Republic buildings ────────────────────────────────────────────────────
+        ("sw-rep-command-center",  "Republic", RepublicBlue,  PrimitiveType.Cube),
+        ("sw-rep-clone-facility",  "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-weapons-factory",     "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-rep-vehicle-bay",     "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-guard-tower",         "Republic", RepublicWhite, PrimitiveType.Cylinder),
+        ("sw-rep-shield-generator","Republic", RepublicBlue,  PrimitiveType.Sphere),
+        ("sw-rep-supply-depot",    "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-tibanna-refinery",    "Republic", NeutralGrey,   PrimitiveType.Cube),
+        ("sw-rep-research-lab",    "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-blast-wall",          "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-skyshield-generator", "Republic", RepublicBlue,  PrimitiveType.Sphere),
+
+        // ── CIS units ─────────────────────────────────────────────────────────────
+        ("sw-cis-b1-battle-droid", "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-b1-squad",            "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-cis-b2-super-droid",  "CIS",      CisDark,      PrimitiveType.Capsule),
+        ("sw-cis-sniper-droid",    "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-cis-stap",            "CIS",      CisGrey,      PrimitiveType.Cylinder),
+        ("sw-aat-walker",          "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-medical-droid",       "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-probe-droid",         "CIS",      CisDark,      PrimitiveType.Sphere),
+        ("sw-cis-commando-droid",  "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-general-grievous",    "CIS",      CisDark,      PrimitiveType.Capsule),
+        ("sw-cis-droideka",        "CIS",      CisDark,      PrimitiveType.Sphere),
+        ("sw-cis-spider-droid",    "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-cis-magna-guard",     "CIS",      CisDark,      PrimitiveType.Capsule),
+        ("sw-tri-fighter",         "CIS",      CisRed,       PrimitiveType.Sphere),
+
+        // ── CIS buildings ─────────────────────────────────────────────────────────
+        ("sw-cis-command-center",  "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-cis-droid-factory",   "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-assembly-line",       "CIS",      CisGrey,      PrimitiveType.Cube),
+        ("sw-heavy-foundry",       "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-cis-aa-tower",        "CIS",      CisGrey,      PrimitiveType.Cylinder),
+        ("sw-cis-shield-generator","CIS",      CisDark,      PrimitiveType.Sphere),
+        ("sw-mining-facility",     "CIS",      NeutralGrey,  PrimitiveType.Cube),
+        ("sw-processing-plant",    "CIS",      CisGrey,      PrimitiveType.Cube),
+        ("sw-tech-union-lab",      "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-durasteel-barrier",   "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-vulture-nest",        "CIS",      CisDark,      PrimitiveType.Cube),
+    };
+
+    public static void Run()
+    {
+        try
+        {
+            Debug.Log("[BuildAll] Generating prefabs...");
+            EnsureFolders();
+            int created = 0;
+            foreach (var def in Defs)
+            {
+                if (CreatePrefab(def.Key, def.Folder, def.Color, def.Shape))
+                    created++;
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[BuildAll] Generated {created}/{Defs.Length} prefabs (skipped {Defs.Length - created} existing).");
+
+            Debug.Log("[BuildAll] Building AssetBundles...");
+            string outDir = "AssetBundles";
+            if (!Directory.Exists(outDir))
+                Directory.CreateDirectory(outDir);
+
+            var manifest = BuildPipeline.BuildAssetBundles(
+                outDir,
+                BuildAssetBundleOptions.ChunkBasedCompression,
+                BuildTarget.StandaloneWindows64);
+
+            if (manifest == null)
+            {
+                Debug.LogError("[BuildAll] Build failed — manifest null.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            string[] built = manifest.GetAllAssetBundles();
+            Debug.Log($"[BuildAll] Built {built.Length} bundle(s):");
+            foreach (string b in built)
+                Debug.Log($"  {b}");
+
+            Debug.Log("[BuildAll] Complete.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BuildAll] Fatal: {ex}");
+            EditorApplication.Exit(1);
+        }
+    }
+
+    private static void EnsureFolders()
+    {
+        foreach (string f in new[] {
+            "Assets/Materials", "Assets/Materials/Republic", "Assets/Materials/CIS",
+            "Assets/Prefabs",   "Assets/Prefabs/Republic",   "Assets/Prefabs/CIS" })
+        {
+            if (!AssetDatabase.IsValidFolder(f))
+            {
+                string parent = System.IO.Path.GetDirectoryName(f)!.Replace('\\', '/');
+                string child  = System.IO.Path.GetFileName(f);
+                AssetDatabase.CreateFolder(parent, child);
+            }
+        }
+    }
+
+    /// <returns>true if created, false if skipped.</returns>
+    private static bool CreatePrefab(string key, string folder, Color color, PrimitiveType shape)
+    {
+        string prefabPath = $"Assets/Prefabs/{folder}/{key}.prefab";
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
+        {
+            Debug.Log($"  [skip] {key}");
+            return false;
+        }
+
+        string matPath = $"Assets/Materials/{folder}/{key}.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+        if (mat == null)
+        {
+            mat = new Material(Shader.Find("Standard")) { color = color };
+            AssetDatabase.CreateAsset(mat, matPath);
+            var mi = AssetImporter.GetAtPath(matPath);
+            if (mi != null) mi.assetBundleName = key;
+        }
+
+        GameObject go = GameObject.CreatePrimitive(shape);
+        go.name = key;
+        go.GetComponent<Renderer>().sharedMaterial = mat;
+        PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
+        GameObject.DestroyImmediate(go);
+
+        var pi = AssetImporter.GetAtPath(prefabPath);
+        if (pi != null) pi.assetBundleName = key;
+
+        Debug.Log($"  [ok] {key}");
+        return true;
+    }
+}
+
+ succeeded in 3309ms:
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+/// <summary>
+/// Headless AssetBundle builder for DINOForge warfare-starwars pack.
+/// Invoked via: Unity.exe -batchmode -nographics -executeMethod BuildAssetBundles.BuildHeadless -quit
+/// </summary>
+public static class BuildAssetBundles
+{
+    private const string OutputDir = "AssetBundles";
+
+    public static void BuildHeadless()
+    {
+        try
+        {
+            Debug.Log("[BuildAssetBundles] Starting headless AssetBundle build...");
+
+            if (!Directory.Exists(OutputDir))
+                Directory.CreateDirectory(OutputDir);
+
+            // Build for Windows Standalone (matches DINO's target platform)
+            var manifest = BuildPipeline.BuildAssetBundles(
+                OutputDir,
+                BuildAssetBundleOptions.ChunkBasedCompression,
+                BuildTarget.StandaloneWindows64);
+
+            if (manifest == null)
+            {
+                Debug.LogError("[BuildAssetBundles] Build failed — manifest is null.");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            string[] bundles = manifest.GetAllAssetBundles();
+            Debug.Log($"[BuildAssetBundles] Built {bundles.Length} bundle(s):");
+            foreach (string b in bundles)
+                Debug.Log($"  {b}");
+
+            Debug.Log("[BuildAssetBundles] Build complete.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[BuildAssetBundles] Exception: {ex}");
+            EditorApplication.Exit(1);
+        }
+    }
+}
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; rg -n \"BakeTmpFontAsset|TmpEssentialsImport|MenuItem|Import TMP|TMP_PackageResourceImporter|BakeHeadless\" unity-assetbundle-builder/Assets/Editor" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 10553ms:
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:29:///     -executeMethod BakeTmpFontAsset.BakeHeadless \
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:35:public static class BakeTmpFontAsset
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:49:        Debug.Log("[BakeTmpFontAsset] Importing TMP Essential Resources...");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:50:        TMP_PackageResourceImporter.ImportResources(importEssentials: true, importExamples: false, interactive: false);
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:54:    public static void BakeHeadless()
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:58:            Debug.Log("[BakeTmpFontAsset] Starting TMP SDF font bake...");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:69:                Debug.LogError("[BakeTmpFontAsset] TMP Distance Field shader still missing after essentials import.");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:76:                Debug.LogError($"[BakeTmpFontAsset] Missing source font at {FontTtfPath}. " +
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:87:                Debug.LogError("[BakeTmpFontAsset] Failed to load source ttf as Font.");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:97:                Debug.LogWarning($"[BakeTmpFontAsset] FontEngine.InitializeFontEngine returned {initErr}");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:112:                Debug.LogError("[BakeTmpFontAsset] CreateFontAsset returned null in editor — unexpected.");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:132:                Debug.LogWarning($"[BakeTmpFontAsset] Glyphs not present in font: '{missing}'");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:164:                Debug.LogError("[BakeTmpFontAsset] Could not get AssetImporter to tag bundle.");
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:169:            Debug.Log($"[BakeTmpFontAsset] Baked '{OutputAssetPath}', tagged bundle '{BundleName}'. " +
+unity-assetbundle-builder/Assets/Editor\BakeTmpFontAsset.cs:175:            Debug.LogError($"[BakeTmpFontAsset] Exception: {ex}");
+unity-assetbundle-builder/Assets/Editor\TmpEssentialsImport.cs:3:public static class TmpEssentialsImport
+unity-assetbundle-builder/Assets/Editor\TmpEssentialsImport.cs:9:            var t = System.Type.GetType("TMPro.TMP_PackageResourceImporter, Unity.TextMeshPro.Editor")
+unity-assetbundle-builder/Assets/Editor\TmpEssentialsImport.cs:10:                 ?? System.Type.GetType("TMPro.TMP_PackageResourceImporter, Unity.TextMeshPro");
+unity-assetbundle-builder/Assets/Editor\TmpEssentialsImport.cs:17:            Debug.Log("[TmpEssentialsImport] essentials imported pass-1");
+unity-assetbundle-builder/Assets/Editor\TmpEssentialsImport.cs:19:        } catch (System.Exception e) { Debug.LogError("[TmpEssentialsImport] "+e); EditorApplication.Exit(1); }
+
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "Set-Location C:\\Users\\koosh\\Dino\\.claude\\worktrees\\swfont; Test-Path unity-assetbundle-builder\\Assets\\Fonts\\menu_font.ttf; if (Test-Path unity-assetbundle-builder\\Assets\\Fonts\\menu_font.ttf) { (Get-Item unity-assetbundle-builder\\Assets\\Fonts\\menu_font.ttf).Length }" in C:\Users\koosh\Dino\.claude\worktrees\swfont
+ succeeded in 2602ms:
+True
+34180
+
+ERROR: Selected model is at capacity. Please try a different model.
+ERROR: Selected model is at capacity. Please try a different model.
+tokens used
+34,855

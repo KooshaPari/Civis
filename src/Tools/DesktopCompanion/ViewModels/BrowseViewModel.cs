@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -185,7 +186,7 @@ namespace DINOForge.DesktopCompanion.ViewModels
                 filtered = filtered.Where(e =>
                     e.Id.ToLowerInvariant().Contains(search) ||
                     e.Name.ToLowerInvariant().Contains(search) ||
-                    (e.Description?.ToLowerInvariant().Contains(search) ?? false) ||
+                    (!string.IsNullOrWhiteSpace(e.Description) && e.Description.ToLowerInvariant().Contains(search)) ||
                     e.Author.ToLowerInvariant().Contains(search));
             }
 

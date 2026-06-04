@@ -1,0 +1,236 @@
+- generic [ref=e3]:
+  - link "Skip to content" [ref=e4] [cursor=pointer]:
+    - /url: "#VPContent"
+  - banner [ref=e5]:
+    - generic [ref=e8]:
+      - link "hwLedger" [ref=e11] [cursor=pointer]:
+        - /url: /hwLedger/
+      - generic [ref=e13]:
+        - button "Search" [ref=e16]:
+          - generic [ref=e17]: Search
+          - generic [ref=e18]: K
+        - navigation "Main Navigation" [ref=e19]:
+          - text: Main Navigation
+          - link "Home" [ref=e20] [cursor=pointer]:
+            - /url: /hwLedger/
+          - link "Architecture" [ref=e21] [cursor=pointer]:
+            - /url: /hwLedger/architecture/
+          - link "Math" [ref=e22] [cursor=pointer]:
+            - /url: /hwLedger/math/kv-cache
+          - link "Fleet" [ref=e23] [cursor=pointer]:
+            - /url: /hwLedger/fleet/overview
+          - link "Getting Started" [ref=e24] [cursor=pointer]:
+            - /url: /hwLedger/getting-started/install
+          - link "Research" [ref=e25] [cursor=pointer]:
+            - /url: /hwLedger/research/
+          - link "GitHub" [ref=e26] [cursor=pointer]:
+            - /url: https://github.com/KooshaPari/hwLedger
+        - switch [ref=e28]
+        - generic:
+          - link "github":
+            - /url: https://github.com/KooshaPari/hwLedger
+        - generic [ref=e29]:
+          - button "extra navigation" [ref=e30]
+          - generic [ref=e32]:
+            - generic [ref=e34]:
+              - paragraph [ref=e35]: Appearance
+              - switch [ref=e37]
+            - generic:
+              - generic:
+                - generic:
+                  - link "github":
+                    - /url: https://github.com/KooshaPari/hwLedger
+        - button "mobile navigation" [ref=e38]
+  - generic [ref=e40]:
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - heading "hwLedgerLLM Capacity Planner + Fleet Ledger" [level=1] [ref=e44]
+        - paragraph [ref=e45]: Desktop inference runtime with enterprise-grade fleet management
+        - generic [ref=e46]:
+          - link "Download v0.1.0-alpha" [ref=e48] [cursor=pointer]:
+            - /url: /hwLedger/releases/v0.1.0-alpha
+          - link "Get Started" [ref=e50] [cursor=pointer]:
+            - /url: /hwLedger/getting-started/install
+          - link "View Architecture" [ref=e52] [cursor=pointer]:
+            - /url: /hwLedger/architecture/
+      - img "hwLedger" [ref=e55]
+    - generic [ref=e58]:
+      - article [ref=e61]:
+        - generic [ref=e62]: 📊
+        - heading "Capacity Planning" [level=2] [ref=e63]
+        - paragraph [ref=e64]: Predict VRAM and throughput for any model, correctly handling MoE, MLA, GQA, and hybrid architectures with live per-layer breakdown.
+      - article [ref=e67]:
+        - generic [ref=e68]: 🔍
+        - heading "Live Telemetry" [level=2] [ref=e69]
+        - paragraph [ref=e70]: Reconcile predictions against live telemetry from MLX, mistral.rs, llama.cpp, vLLM, or TGI with verified accuracy.
+      - article [ref=e73]:
+        - generic [ref=e74]: 🚀
+        - heading "Local Inference" [level=2] [ref=e75]
+        - paragraph [ref=e76]: Run inference locally on Apple Silicon via forked oMlx sidecar with SSD-paged KV cache or portable mistral.rs engine.
+      - article [ref=e79]:
+        - generic [ref=e80]: 🏗️
+        - heading "Fleet Ledger" [level=2] [ref=e81]
+        - paragraph [ref=e82]: Track heterogeneous fleets (NVIDIA/AMD boxes, Apple Silicon, cloud rentals) with shared event-sourced audit log and cost model.
+      - article [ref=e85]:
+        - generic [ref=e86]: 🎯
+        - heading "Native GUIs" [level=2] [ref=e87]
+        - paragraph [ref=e88]: Per-OS native interfaces (SwiftUI, WinUI 3, Qt 6) over shared Rust FFI core with unified planner UX across platforms.
+      - article [ref=e91]:
+        - generic [ref=e92]: ⚙️
+        - heading "Enterprise Ready" [level=2] [ref=e93]
+        - paragraph [ref=e94]: Production-grade architecture with mTLS fleet wire, structured event sourcing, and per-device provisioning and cost tracking.
+    - generic [ref=e97]:
+      - heading "Why hwLedger Permalink to \"Why hwLedger\"" [level=2] [ref=e98]:
+        - text: Why hwLedger
+        - link "Permalink to \"Why hwLedger\"":
+          - /url: "#why-hwledger"
+      - paragraph [ref=e99]:
+        - text: "Every public VRAM calculator (HF Accelerate, can-it-run-llm, LM Studio) gets MoE and MLA wrong. They undercount KV cache and overcount MoE throughput. hwLedger's math core is architecture-keyed: it dispatches per"
+        - code [ref=e100]: AttentionKind
+        - text: and treats resident-vs-active parameters separately for MoE.
+      - paragraph [ref=e101]:
+        - strong [ref=e102]: "The result:"
+        - text: hobbyist-sized fleet with enterprise bones.
+      - heading "Quick Start Permalink to \"Quick Start\"" [level=2] [ref=e103]:
+        - text: Quick Start
+        - link "Permalink to \"Quick Start\"":
+          - /url: "#quick-start"
+      - heading "1. Clone the repository Permalink to \"1. Clone the repository\"" [level=3] [ref=e104]:
+        - text: 1. Clone the repository
+        - link "Permalink to \"1. Clone the repository\"":
+          - /url: "#_1-clone-the-repository"
+      - generic [ref=e105]:
+        - button "Copy Code" [ref=e106]
+        - text: bash
+        - code [ref=e108]:
+          - generic [ref=e109]: git clone https://github.com/KooshaPari/hwLedger.git
+          - generic [ref=e110]: cd hwLedger
+      - heading "2. Build from source Permalink to \"2. Build from source\"" [level=3] [ref=e111]:
+        - text: 2. Build from source
+        - link "Permalink to \"2. Build from source\"":
+          - /url: "#_2-build-from-source"
+      - generic [ref=e112]:
+        - button "Copy Code" [ref=e113]
+        - text: bash
+        - code [ref=e115]:
+          - generic [ref=e116]: cargo build --release
+      - heading "3. Run the planner Permalink to \"3. Run the planner\"" [level=3] [ref=e117]:
+        - text: 3. Run the planner
+        - link "Permalink to \"3. Run the planner\"":
+          - /url: "#_3-run-the-planner"
+      - generic [ref=e118]:
+        - button "Copy Code" [ref=e119]
+        - text: bash
+        - code [ref=e121]:
+          - generic [ref=e122]: cargo run --bin hwledger-cli -- plan --model llama-2-70b
+      - generic [ref=e123]:
+        - figure "Live memory planning with colored VRAM breakdown" [ref=e124]:
+          - img "Live memory planning with colored VRAM breakdown"
+          - generic [ref=e125]: Live memory planning with colored VRAM breakdown
+        - group [ref=e126]:
+          - generic "Keyframes (0 — VLM-friendly)" [ref=e127]
+        - generic [ref=e128]:
+          - link "Download MP4" [ref=e129] [cursor=pointer]:
+            - /url: /hwLedger/cli-journeys/recordings/first-plan.mp4
+          - link "Download GIF" [ref=e130] [cursor=pointer]:
+            - /url: /hwLedger/cli-journeys/recordings/first-plan.gif
+          - link "Keyframes (repo)" [ref=e131] [cursor=pointer]:
+            - /url: https://github.com/KooshaPari/hwLedger/tree/main/apps/cli-journeys/keyframes/first-plan
+      - heading "Project Status Permalink to \"Project Status\"" [level=2] [ref=e132]:
+        - text: Project Status
+        - link "Permalink to \"Project Status\"":
+          - /url: "#project-status"
+      - table [ref=e133]:
+        - rowgroup [ref=e134]:
+          - row "Phase Status" [ref=e135]:
+            - columnheader "Phase" [ref=e136]
+            - columnheader "Status" [ref=e137]
+        - rowgroup [ref=e138]:
+          - row "P0 Foundation in progress" [ref=e139]:
+            - cell "P0 Foundation" [ref=e140]
+            - cell "in progress" [ref=e141]
+          - row "P1 Math core planned" [ref=e142]:
+            - cell "P1 Math core" [ref=e143]
+            - cell "planned" [ref=e144]
+          - row "P2 Ingestion + probe planned" [ref=e145]:
+            - cell "P2 Ingestion + probe" [ref=e146]
+            - cell "planned" [ref=e147]
+          - row "P3 macOS GUI MVP planned" [ref=e148]:
+            - cell "P3 macOS GUI MVP" [ref=e149]
+            - cell "planned" [ref=e150]
+          - row "P4 Inference planned (macOS only in MVP)" [ref=e151]:
+            - cell "P4 Inference" [ref=e152]
+            - cell "planned (macOS only in MVP)" [ref=e153]
+          - row "P5 Fleet planned" [ref=e154]:
+            - cell "P5 Fleet" [ref=e155]
+            - cell "planned" [ref=e156]
+          - row "P6 Windows GUI deferred" [ref=e157]:
+            - cell "P6 Windows GUI" [ref=e158]
+            - cell "deferred" [ref=e159]
+          - row "P7 Linux GUI deferred" [ref=e160]:
+            - cell "P7 Linux GUI" [ref=e161]
+            - cell "deferred" [ref=e162]
+      - paragraph [ref=e163]:
+        - text: "Tracked in AgilePlus: feature"
+        - code [ref=e164]: hwledger-v1-macos-mvp
+        - text: (run
+        - code [ref=e165]: agileplus status
+        - text: ).
+      - heading "Documentation Structure Permalink to \"Documentation Structure\"" [level=2] [ref=e166]:
+        - text: Documentation Structure
+        - link "Permalink to \"Documentation Structure\"":
+          - /url: "#documentation-structure"
+      - list [ref=e167]:
+        - listitem [ref=e168]:
+          - link "Architecture" [ref=e169] [cursor=pointer]:
+            - /url: /hwLedger/architecture/
+          - text: — System design, component map, and architecture decisions
+        - listitem [ref=e170]:
+          - link "Math Core" [ref=e171] [cursor=pointer]:
+            - /url: /hwLedger/math/kv-cache
+          - text: — KV cache formulas with per-architecture derivations
+        - listitem [ref=e172]:
+          - link "Fleet Ledger" [ref=e173] [cursor=pointer]:
+            - /url: /hwLedger/fleet/overview
+          - text: — Fleet wire, cost model, and audit log design
+        - listitem [ref=e174]:
+          - link "Getting Started" [ref=e175] [cursor=pointer]:
+            - /url: /hwLedger/getting-started/install
+          - text: — Installation and first steps
+        - listitem [ref=e176]:
+          - link "Research" [ref=e177] [cursor=pointer]:
+            - /url: /hwLedger/research/
+          - text: — Archived research briefs on MLX, GPU telemetry, FFI patterns, and more
+      - heading "Tech Stack Permalink to \"Tech Stack\"" [level=2] [ref=e178]:
+        - text: Tech Stack
+        - link "Permalink to \"Tech Stack\"":
+          - /url: "#tech-stack"
+      - list [ref=e179]:
+        - listitem [ref=e180]:
+          - strong [ref=e181]: Core
+          - text: ": Rust workspace (hwledger-core, -arch, -ingest, -probe, -inference, -ledger, -fleet-proto, -agent, -server, -cli, -ffi)"
+        - listitem [ref=e182]:
+          - strong [ref=e183]: Sidecar
+          - text: ": oMlx fork (Apache-2.0, Python/PyObjC) with SSD-paged KV cache"
+        - listitem [ref=e184]:
+          - strong [ref=e185]: Native apps
+          - text: ": SwiftUI (macOS) + UniFFI, WinUI 3 + .NET 9 (Windows), Qt 6 + cxx-qt (Linux)"
+        - listitem [ref=e186]:
+          - strong [ref=e187]: Fleet wire
+          - text: ": Axum + rustls mTLS, russh agentless, reqwest cloud provider integrations"
+      - heading "License Permalink to \"License\"" [level=2] [ref=e188]:
+        - text: License
+        - link "Permalink to \"License\"":
+          - /url: "#license"
+      - paragraph [ref=e189]:
+        - text: Apache-2.0. See
+        - link "LICENSE" [ref=e190] [cursor=pointer]:
+          - /url: https://github.com/KooshaPari/hwLedger/blob/main/LICENSE
+        - text: .
+      - separator [ref=e191]
+      - paragraph [ref=e192]:
+        - emphasis [ref=e193]: A hobbyist-sized fleet with enterprise bones.
+  - contentinfo [ref=e194]:
+    - generic [ref=e195]:
+      - paragraph [ref=e196]: Released under the Apache 2.0 License.
+      - paragraph [ref=e197]: Copyright © 2024-2026 hwLedger Contributors

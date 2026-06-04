@@ -8,6 +8,7 @@
 #   ./install.sh /path/to/game         # Manual game path
 #   ./install.sh --dev                 # Include dev tools
 #   ./install.sh /path/to/game --dev   # Both
+#   ./install.sh --silent              # Auto path + no prompts, CI-safe defaults
 #
 
 set -euo pipefail
@@ -32,14 +33,32 @@ err()     { echo -e "${RED}[-]${NC} $1"; }
 
 GAME_PATH=""
 DEV_MODE=false
+SILENT_MODE=false
+
+report_result() {
+    local success="$1"
+    if [ "$success" = true ]; then
+        echo "INSTALLATION_RESULT: SUCCESS"
+        exit 0
+    else
+        echo "INSTALLATION_RESULT: FAILURE"
+        exit 1
+    fi
+}
 
 # Parse arguments
 for arg in "$@"; do
     case "$arg" in
         --dev) DEV_MODE=true ;;
+        --silent) SILENT_MODE=true ;;
         *)     GAME_PATH="$arg" ;;
     esac
 done
+
+if [ -n "$GAME_PATH" ] && [ "$SILENT_MODE" = true ] && [ ! -d "$GAME_PATH" ]; then
+    err "Specified path does not exist: $GAME_PATH"
+    report_result false
+fi
 
 find_steam_path() {
     local paths=(
@@ -120,7 +139,7 @@ echo ""
 if [ -n "$GAME_PATH" ]; then
     if [ ! -d "$GAME_PATH" ]; then
         err "Specified path does not exist: $GAME_PATH"
-        exit 1
+        report_result false
     fi
     step "Using specified game path: $GAME_PATH"
 else
@@ -128,10 +147,15 @@ else
     GAME_PATH=$(find_dino_path || true)
     if [ -z "$GAME_PATH" ]; then
         warn "Could not auto-detect DINO installation."
-        read -rp "Enter the full path to the DINO game directory: " GAME_PATH
+        if [ "$SILENT_MODE" = true ]; then
+            GAME_PATH="$HOME/.local/share/Steam/steamapps/common/$DINO_DIR_NAME"
+            warn "Using silent-mode default: $GAME_PATH"
+        else
+            read -rp "Enter the full path to the DINO game directory: " GAME_PATH
+        fi
         if [ ! -d "$GAME_PATH" ]; then
             err "Path does not exist: $GAME_PATH"
-            exit 1
+            report_result false
         fi
     else
         success "Found DINO at: $GAME_PATH"
@@ -151,7 +175,7 @@ else
         wget -O "$TEMP_ZIP" "$BEPINEX_URL"
     else
         err "Neither curl nor wget found. Install one and retry."
-        exit 1
+        report_result false
     fi
     success "Downloaded BepInEx."
 
@@ -248,7 +272,8 @@ check_path "$GAME_PATH/packs" "Packs directory"
 if [ -f "$GAME_PATH/BepInEx/plugins/DINOForge.Runtime.dll" ]; then
     success "DINOForge Runtime DLL ... OK"
 else
-    warn "DINOForge Runtime DLL ... NOT FOUND (build and copy manually)"
+    err "DINOForge Runtime DLL ... NOT FOUND (build and copy manually)"
+    ALL_GOOD=false
 fi
 
 echo ""
@@ -256,7 +281,9 @@ if [ "$ALL_GOOD" = true ]; then
     success "DINOForge installation complete!"
     echo "  Game path: $GAME_PATH"
     echo "  Run the game to generate BepInEx config."
+    report_result true
 else
     warn "Installation has issues. Review the messages above."
+    report_result false
 fi
 echo ""

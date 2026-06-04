@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
@@ -215,6 +215,7 @@
     <Compile Include="Bridge\UnitSpawnRequest.cs" />
     <Compile Include="Bridge\PackStatMappings.cs" />
     <Compile Include="Bridge\BlasterBoltConfig.cs" />
+    <Compile Include="Bridge\BuildAliasMapper.cs" />
     <Compile Include="Bridge\BridgeReceiptBuilder.cs" />
     <Compile Include="Bridge\SessionHmac.cs" />
   </ItemGroup>

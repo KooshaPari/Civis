@@ -1314,7 +1314,9 @@ namespace DINOForge.Runtime.Bridge
         private JToken HandleScreenshot(JObject? parameters)
         {
             string path = parameters?.Value<string>("path") ?? "";
-            if (string.IsNullOrEmpty(path))
+            // Guard: if the path arg looks like a CLI flag (e.g. "--format=json" leaked from
+            // the MCP Python wrapper), discard it and fall back to the default path.
+            if (string.IsNullOrEmpty(path) || path.StartsWith("--", StringComparison.Ordinal))
             {
                 path = Path.Combine(
                     BepInEx.Paths.BepInExRootPath,
@@ -2184,13 +2186,33 @@ namespace DINOForge.Runtime.Bridge
                         return new { success = false, message = $"Button '{buttonName}' not found. Active buttons: {summary.ToString().Substring(0, Math.Min(600, summary.Length))}" };
 
                     // Primary: onClick.Invoke() fires the UnityEvent directly (works for modal dialogs)
-                    target.onClick.Invoke();
+                    // Guard against NRE inside button listeners that call EventSystem.current internally
+                    try
+                    {
+                        target.onClick.Invoke();
+                    }
+                    catch (Exception onClickEx)
+                    {
+                        DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] onClick.Invoke NRE on '{target.name}', falling back to pointer sim: {onClickEx.Message}");
+                    }
 
                     // Secondary: also fire pointer click for components that listen to IPointerClickHandler
-                    UnityEngine.EventSystems.ExecuteEvents.Execute(
-                        target.gameObject,
-                        new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current),
-                        UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+                    // Guard EventSystem.current null — absent on main menu scenes with only TMP buttons (#NRE-fix)
+                    var es = UnityEngine.EventSystems.EventSystem.current;
+                    if (es != null)
+                    {
+                        try
+                        {
+                            UnityEngine.EventSystems.ExecuteEvents.Execute(
+                                target.gameObject,
+                                new UnityEngine.EventSystems.PointerEventData(es),
+                                UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+                        }
+                        catch (Exception execEx)
+                        {
+                            DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] ExecuteEvents NRE on '{target.name}': {execEx.Message}");
+                        }
+                    }
 
                     DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] Clicked button: {target.name}");
                     return new { success = true, message = $"Clicked '{target.name}'" };
@@ -2204,8 +2226,14 @@ namespace DINOForge.Runtime.Bridge
             });
 
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(MainThreadWaitTimeoutMs);
-            if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
+            // Use heavy timeout (30s) — scene-loading buttons like "continue" block main thread for 5-20s
+            bool completed = result.Wait(30000);
+            if (!completed)
+            {
+                // Fire-and-forget succeeded: scene load is in progress, return dispatched status
+                DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] ClickButton '{buttonName}': scene load in progress (fire-and-forget)");
+                return JToken.FromObject(new { success = true, message = $"Dispatched '{buttonName}' (scene loading)" });
+            }
             // sync-over-async-unavoidable: ECS-bound, main-thread-required
             return JToken.FromObject(result.Result);
         }

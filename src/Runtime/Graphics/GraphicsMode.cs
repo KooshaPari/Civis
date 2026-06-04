@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using DINOForge.Runtime.Diagnostics;
 using UnityEngine;

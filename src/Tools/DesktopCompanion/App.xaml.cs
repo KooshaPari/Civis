@@ -3,6 +3,8 @@ using DINOForge.DesktopCompanion.Data;
 using DINOForge.DesktopCompanion.ViewModels;
 using DINOForge.Tools.DesktopCompanion;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
 namespace DINOForge.DesktopCompanion
@@ -17,6 +19,10 @@ namespace DINOForge.DesktopCompanion
         public static IServiceProvider Services { get; private set; } = null!;
 
         private MainWindow? _mainWindow;
+        private static IHost? _host;
+
+        /// <summary>Gets the active window dispatcher used for UI-thread work.</summary>
+        public DispatcherQueue? CurrentWindowDispatcherQueue => _mainWindow?.DispatcherQueue;
 
         /// <summary>Initialises a new instance of <see cref="App"/>.</summary>
         public App()
@@ -46,6 +52,8 @@ namespace DINOForge.DesktopCompanion
                 CompanionLogger.Append("MainWindow created");
                 _mainWindow.Activate();
                 CompanionLogger.Append("Activate done");
+
+                EnsureHostStartedAsync();
             }
             catch (Exception ex)
             {
@@ -54,24 +62,38 @@ namespace DINOForge.DesktopCompanion
             }
         }
 
+        private async void EnsureHostStartedAsync()
+        {
+            if (_host == null)
+                return;
+
+            await _host.StartAsync().ConfigureAwait(false);
+        }
+
         private static IServiceProvider BuildServiceProvider()
         {
-            ServiceCollection services = new ServiceCollection();
+            IHost host = Host.CreateDefaultBuilder()
+                .ConfigureServices((_, services) =>
+                {
+                    // Data layer
+                    services.AddSingleton<AppConfigService>();
+                    services.AddSingleton<DisabledPacksService>();
+                    services.AddSingleton<IPackDataService, FileSystemPackDataService>();
 
-            // Data layer
-            services.AddSingleton<AppConfigService>();
-            services.AddSingleton<DisabledPacksService>();
-            services.AddSingleton<IPackDataService, FileSystemPackDataService>();
+                    // ViewModels
+                    services.AddTransient<MainViewModel>();
+                    services.AddTransient<DashboardViewModel>();
+                    services.AddSingleton<PackListViewModel>();
+                    services.AddTransient<AssetBrowserViewModel>();
+                    services.AddTransient<DebugPanelViewModel>();
+                    services.AddTransient<SettingsViewModel>();
 
-            // ViewModels
-            services.AddTransient<MainViewModel>();
-            services.AddTransient<DashboardViewModel>();
-            services.AddTransient<PackListViewModel>();
-            services.AddTransient<AssetBrowserViewModel>();
-            services.AddTransient<DebugPanelViewModel>();
-            services.AddTransient<SettingsViewModel>();
+                    services.AddHostedService<PackFileWatcher>();
+                })
+                .Build();
 
-            return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+            _host = host;
+            return host.Services;
         }
     }
 }

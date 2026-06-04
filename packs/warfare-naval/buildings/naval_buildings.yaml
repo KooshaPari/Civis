@@ -1,0 +1,35 @@
+# Naval production buildings for Republic and CIS-style maritime infrastructure.
+
+- id: naval_shipyard
+  display_name: Naval Shipyard
+  description: Coastal production structure for medium and late-game naval hulls.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 350
+    stone: 240
+    iron: 220
+    gold: 160
+    population: 0
+  health: 1900
+  production:
+    rep_capital_ship_lite: 1
+    cis_capital_ship_lite: 1
+
+- id: naval_dock
+  display_name: Naval Dock
+  description: Forward dock facility for skiffs and patrol craft.
+  building_type: Production
+  cost:
+    food: 0
+    wood: 220
+    stone: 160
+    iron: 100
+    gold: 90
+    population: 0
+  health: 1400
+  production:
+    rep_gunboat: 1
+    cis_droid_gunship_naval: 1
+    rep_patrol_craft: 1
+    cis_patrol_craft: 1

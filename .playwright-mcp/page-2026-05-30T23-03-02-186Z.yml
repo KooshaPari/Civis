@@ -1,0 +1,70 @@
+- generic [ref=e3]:
+  - link "Skip to content" [ref=e4] [cursor=pointer]:
+    - /url: "#VPContent"
+  - banner:
+    - generic:
+      - generic:
+        - generic:
+          - link "Civ + Venture Specs" [ref=e6] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e7]: Civ + Venture Specs
+          - generic [ref=e8]:
+            - button "Search" [ref=e11] [cursor=pointer]:
+              - generic [ref=e14]: Search
+              - generic [ref=e15]:
+                - generic [ref=e16]: Ctrl
+                - generic [ref=e17]: K
+            - navigation "Main Navigation" [ref=e18]:
+              - generic [ref=e19]: Main Navigation
+              - link "Home" [ref=e20] [cursor=pointer]:
+                - /url: /
+                - generic [ref=e21]: Home
+              - link "Civ" [ref=e22] [cursor=pointer]:
+                - /url: /civ/
+                - generic [ref=e23]: Civ
+              - link "Venture" [ref=e24] [cursor=pointer]:
+                - /url: /venture/
+                - generic [ref=e25]: Venture
+              - link "Governance" [ref=e26] [cursor=pointer]:
+                - /url: /governance/
+                - generic [ref=e27]: Governance
+              - link "Traceability" [ref=e28] [cursor=pointer]:
+                - /url: /traceability/
+                - generic [ref=e29]: Traceability
+            - button "extra navigation" [ref=e31] [cursor=pointer]
+  - generic [ref=e34]:
+    - generic [ref=e37]:
+      - heading "Civ + Venture Specs Implementation-Ready Planning Closure" [level=1] [ref=e38]:
+        - generic [ref=e39]: Civ + Venture Specs
+        - generic [ref=e40]: Implementation-Ready Planning Closure
+      - paragraph [ref=e41]: Deterministic simulation + no-HITL autonomy specs with traceability and governance
+      - generic [ref=e42]:
+        - link "Civ Specs" [ref=e44] [cursor=pointer]:
+          - /url: /civ/
+        - link "Venture Specs" [ref=e46] [cursor=pointer]:
+          - /url: /venture/
+    - generic [ref=e49]:
+      - heading "Documentation Entry Points Permalink to \"Documentation Entry Points\"" [level=2] [ref=e50]:
+        - text: Documentation Entry Points
+        - link "Permalink to \"Documentation Entry Points\"" [ref=e51] [cursor=pointer]:
+          - /url: "#documentation-entry-points"
+          - text: "#"
+      - list [ref=e52]:
+        - listitem [ref=e53]:
+          - link "Civ Specs" [ref=e54] [cursor=pointer]:
+            - /url: /civ/
+        - listitem [ref=e55]:
+          - link "Venture Specs" [ref=e56] [cursor=pointer]:
+            - /url: /venture/
+        - listitem [ref=e57]:
+          - link "Governance" [ref=e58] [cursor=pointer]:
+            - /url: /governance/
+        - listitem [ref=e59]:
+          - link "Traceability" [ref=e60] [cursor=pointer]:
+            - /url: /traceability/
+        - listitem [ref=e61]:
+          - link "Conversation 1 Resolution Map" [ref=e62] [cursor=pointer]:
+            - /url: /CONVERSATION_1_RESOLUTION_MAP.html
+        - listitem [ref=e63]:
+          - link "Conversation 2 Resolution Map" [ref=e64] [cursor=pointer]:
+            - /url: /CONVERSATION_2_RESOLUTION_MAP.html

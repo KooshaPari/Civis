@@ -291,11 +291,7 @@ namespace DINOForge.Runtime.Updates
                 JObject state = new JObject(
                     new JProperty("last_check", DateTime.UtcNow.ToString("O"))
                 );
-                // Use the static JsonConvert.SerializeObject (present in EVERY Newtonsoft
-                // build) instead of the JToken.ToString(Formatting) instance overload, which
-                // is absent from Unity's stripped Newtonsoft.Json 13.0.2 (Managed/) and throws
-                // MethodNotFound at runtime in the BepInEx/Mono context. (iter-149 hotfix)
-                File.WriteAllText(_stateFilePath, JsonConvert.SerializeObject(state, Formatting.None),
+                File.WriteAllText(_stateFilePath, JsonConvert.SerializeObject(state),
                     System.Text.Encoding.UTF8);
             }
             catch

@@ -39,6 +39,9 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialSpawnSystem : SystemBase
     {
+        private static bool _isRuntimeEnabled = false;
+        private static bool _disabledWarningLogged;
+
         /// <summary>
         /// When true, newly detected aerial units are teleported to CruiseAltitude instantly.
         /// When false, units start at Y=0 and ascend naturally (takeoff animation feel).
@@ -82,55 +85,49 @@ namespace DINOForge.Runtime.Aviation
         // ECS lifecycle
         // -------------------------------------------------------------------------
 
-        /// <summary>
-        /// Cached query matching aerial units: AerialUnitComponent + Translation (both read-write).
-        /// Built in <see cref="OnCreate"/> with <see cref="EntityQueryOptions.IncludePrefab"/> because
-        /// all DINO entities are ECS Prefab entities — without it the query returns 0 results.
-        /// </summary>
-        private EntityQuery _aerialQuery;
-
         public override void OnCreate()
         {
             base.OnCreate();
 
-            // NOTE: Manual EntityQuery loop (NOT Entities.ForEach / Job.WithCode) — those require the
-            // Unity.Entities DOTS source generator, which only runs inside the Unity Editor. This
-            // assembly is built netstandard2.0 via `dotnet build` outside the editor, so codegen never
-            // runs and the placeholder throws "This method should have been replaced by codegen" every frame.
-            _aerialQuery = GetEntityQuery(new EntityQueryDesc
+            if (!_isRuntimeEnabled)
             {
-                All = new[]
+                if (!_disabledWarningLogged)
                 {
-                    ComponentType.ReadWrite<AerialUnitComponent>(),
-                    ComponentType.ReadWrite<Translation>()
-                },
-                Options = EntityQueryOptions.IncludePrefab
-            });
+                    DebugLog.Write("AerialSpawn", "AerialSpawnSystem disabled (feature gate OFF). Restore runtime enablement when DOTS codegen path is stable.");
+                    _disabledWarningLogged = true;
+                }
+
+                Enabled = false;
+            }
         }
 
         public override void OnUpdate()
         {
             _frameCount++;
 
-            // --- 1. Aerial unit altitude initialisation (manual query loop; codegen-free) ---
+            // --- 1. Aerial unit altitude initialisation ---
             if (SpawnAtAltitude)
             {
-                using (NativeArray<Entity> entities = _aerialQuery.ToEntityArray(Allocator.Temp))
+                // Manual EntityQuery loop — avoids Entities.ForEach DOTS codegen path
+                // which crashes in netstandard2.0 Mono even when the system is disabled
+                // (job types are registered at world-create time). Pattern #233.
+                EntityQueryDesc altDesc = new EntityQueryDesc
                 {
-                    for (int i = 0; i < entities.Length; i++)
+                    All = new[] { ComponentType.ReadWrite<AerialUnitComponent>(), ComponentType.ReadWrite<Translation>() }
+                };
+                EntityQuery altQuery = EntityManager.CreateEntityQuery(altDesc);
+                using NativeArray<Entity> altEntities = altQuery.ToEntityArray(Allocator.Temp);
+                foreach (Entity entity in altEntities)
+                {
+                    AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                    Translation translation = EntityManager.GetComponentData<Translation>(entity);
+                    if (translation.Value.y < 1f && aerial.CruiseAltitude > 0f)
                     {
-                        Entity entity = entities[i];
-                        AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
-                        Translation translation = EntityManager.GetComponentData<Translation>(entity);
-
-                        if (translation.Value.y < 1f && aerial.CruiseAltitude > 0f)
-                        {
-                            translation.Value = new float3(
-                                translation.Value.x,
-                                aerial.CruiseAltitude,
-                                translation.Value.z);
-                            EntityManager.SetComponentData(entity, translation);
-                        }
+                        translation.Value = new float3(
+                            translation.Value.x,
+                            aerial.CruiseAltitude,
+                            translation.Value.z);
+                        EntityManager.SetComponentData(entity, translation);
                     }
                 }
             }

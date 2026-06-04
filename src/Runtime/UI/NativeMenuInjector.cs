@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Text;
 using BepInEx.Logging;
@@ -453,6 +453,14 @@ namespace DINOForge.Runtime.UI
             catch (Exception ex)
             {
                 LogWarning($"[NativeMenuInjector::{_sessionId}] Attempt#{attemptId} TryInjectMenuButton EXCEPTION: {ex}");
+            }
+            finally
+            {
+                // Reset the guard so subsequent retry calls (Update timer, scene change, etc.)
+                // can proceed. The guard is set true at the top of this method to prevent
+                // re-entrant LoadScene calls; without this reset it permanently latches true
+                // after the first attempt, silently blocking all future injection retries.
+                _s_sceneTransitionGuard = false;
             }
         }
 

@@ -239,7 +239,7 @@
                                             <Run Text="{x:Bind PackName}" FontWeight="SemiBold" />
                                             <Run Text=" v" />
                                             <Run Text="{x:Bind Version}" />
-                                            <Run Text=" " Foreground="Transparent">|</Run>
+                                            <Run Text=" |" Foreground="Transparent" />
                                         </TextBlock>
                                     </Grid>
                                 </Border>

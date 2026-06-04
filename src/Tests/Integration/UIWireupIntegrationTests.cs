@@ -214,6 +214,10 @@ public class UIWireupIntegrationTests
             if (File.Exists(candidate))
                 return Path.Combine(dir, "packs", packId);
 
+            string disabledCandidate = Path.Combine(dir, "packs", packId + ".disabled", "pack.yaml");
+            if (File.Exists(disabledCandidate))
+                return Path.Combine(dir, "packs", packId + ".disabled");
+
             DirectoryInfo? parent = Directory.GetParent(dir);
             if (parent == null)
                 break;

@@ -74,6 +74,29 @@ public static class BuildAll
         ("sw-cis-magna-guard",     "CIS",      CisDark,      PrimitiveType.Capsule),
         ("sw-tri-fighter",         "CIS",      CisRed,       PrimitiveType.Sphere),
 
+        // ── CIS units (legacy keys without cis- prefix) ──────────────────────────
+        ("sw-b1-battle-droid",     "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-b2-super-droid",      "CIS",      CisDark,      PrimitiveType.Capsule),
+        ("sw-bx-commando-droid",   "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-cis-aat",             "CIS",      CisDark,      PrimitiveType.Cube),
+        ("sw-cis-medical-droid",   "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-commando-droid",      "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-droideka",            "CIS",      CisDark,      PrimitiveType.Sphere),
+        ("sw-hmp-droid-gunship",   "CIS",      CisDark,      PrimitiveType.Sphere),
+        ("sw-nantex-fighter",      "CIS",      CisRed,       PrimitiveType.Sphere),
+        ("sw-octuptarra",          "CIS",      CisDark,      PrimitiveType.Sphere),
+        ("sw-sniper-droid",        "CIS",      CisGrey,      PrimitiveType.Capsule),
+        ("sw-trade-fed-core",      "CIS",      CisDark,      PrimitiveType.Cube),
+
+        // ── Republic units/buildings (legacy keys) ───────────────────────────────
+        ("sw-clone-heavy",         "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-clone-medic",         "Republic", RepublicWhite, PrimitiveType.Capsule),
+        ("sw-v19-torrent",         "Republic", RepublicWhite, PrimitiveType.Sphere),
+
+        // ── Neutral/shared buildings ──────────────────────────────────────────────
+        ("sw-clone-barracks",      "Republic", RepublicWhite, PrimitiveType.Cube),
+        ("sw-hangar-bay",          "Republic", RepublicWhite, PrimitiveType.Cube),
+
         // ── CIS buildings ─────────────────────────────────────────────────────────
         ("sw-cis-command-center",  "CIS",      CisDark,      PrimitiveType.Cube),
         ("sw-cis-droid-factory",   "CIS",      CisDark,      PrimitiveType.Cube),

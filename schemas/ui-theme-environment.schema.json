@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dinoforge.dev/schemas/ui-theme-environment.schema.json",
+  "title": "DINOForge UI Theme Environment",
+  "description": "Pack-sidecar schema for per-map environment themes (skybox, ambient lighting, fog) applied via RenderSettings.",
+  "type": "object",
+  "required": ["planets"],
+  "properties": {
+    "planets": {
+      "type": "object",
+      "description": "Planet or map profile keyed by planet id (e.g. tatooine, naboo).",
+      "additionalProperties": {
+        "$ref": "#/definitions/planet_theme"
+      }
+    },
+    "default_planet": {
+      "type": "string",
+      "description": "Fallback planet id when the active scene name does not match a known profile."
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "planet_theme": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable planet name for debug overlays."
+        },
+        "skybox_material": {
+          "type": "string",
+          "description": "Skybox material reference: Resources path or bundle:bundleName/assetName."
+        },
+        "ambient_mode": {
+          "type": "string",
+          "enum": ["Skybox", "Trilight", "Flat", "Custom"],
+          "description": "RenderSettings.ambientMode value."
+        },
+        "ambient_light": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "RenderSettings.ambientLight color (hex)."
+        },
+        "fog_enabled": {
+          "type": "boolean",
+          "description": "RenderSettings.fog toggle."
+        },
+        "fog_mode": {
+          "type": "string",
+          "enum": ["Linear", "Exponential", "ExponentialSquared"],
+          "description": "RenderSettings.fogMode value."
+        },
+        "fog_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "RenderSettings.fogColor (hex)."
+        },
+        "fog_density": {
+          "type": "number",
+          "minimum": 0,
+          "description": "RenderSettings.fogDensity for exponential fog modes."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

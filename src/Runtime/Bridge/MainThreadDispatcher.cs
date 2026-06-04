@@ -33,15 +33,10 @@ namespace DINOForge.Runtime.Bridge
         /// Marked volatile so the read/write pair is visible across threads without a lock.
         /// </summary>
         private static volatile bool _pumpIsAlive;
+        private static volatile int _mainThreadId;
 
         /// <summary>Background-thread-safe view of <see cref="_pumpIsAlive"/>.</summary>
         public static bool IsPumpAlive => _pumpIsAlive;
-
-        /// <summary>
-        /// Managed thread id of the Unity main thread, captured the first time the queue is
-        /// drained (which always happens on the main thread). 0 until first observed.
-        /// </summary>
-        private static volatile int _mainThreadId;
 
         /// <summary>
         /// True when the caller is executing on the Unity main thread. Used by callers (e.g.

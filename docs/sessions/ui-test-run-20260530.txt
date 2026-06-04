@@ -1,0 +1,11 @@
+
+Test run for C:\Users\koosh\Dino\.claude\worktrees\agent-a9e33634f2cf0b6f8\src\Tests\bin\Release\net8.0\DINOForge.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+Testhost process for source(s) 'C:\Users\koosh\Dino\.claude\worktrees\agent-a9e33634f2cf0b6f8\src\Tests\bin\Release\net8.0\DINOForge.Tests.dll' exited with error: A fatal error was encountered. The library 'hostpolicy.dll' required to execute the application was not found in 'C:\program files\dotnet'.
+Failed to run as a self-contained app.
+  - The application was run as a self-contained app because 'C:\Users\koosh\Dino\.claude\worktrees\agent-a9e33634f2cf0b6f8\src\Tests\bin\Release\net8.0\testhost.runtimeconfig.json' was not found.
+  - If this should be a framework-dependent app, add the 'C:\Users\koosh\Dino\.claude\worktrees\agent-a9e33634f2cf0b6f8\src\Tests\bin\Release\net8.0\testhost.runtimeconfig.json' file and specify the appropriate framework.
+. Please check the diagnostic logs for more information.
+Results File: C:\Users\koosh\Dino\.claude\worktrees\agent-a9e33634f2cf0b6f8\src\Tests\TestResults\ui2.trx
+
+Test Run Aborted.

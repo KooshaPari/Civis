@@ -24,76 +24,68 @@ namespace DINOForge.Runtime.Aviation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public class AerialMovementSystem : SystemBase
     {
-        /// <summary>
-        /// Cached query matching aerial units: AerialUnitComponent + Translation (both read-write).
-        /// Built in <see cref="OnCreate"/> with <see cref="EntityQueryOptions.IncludePrefab"/> because
-        /// all DINO entities are ECS Prefab entities — without it the query returns 0 results.
-        /// </summary>
-        private EntityQuery _aerialQuery;
+        private static bool _isRuntimeEnabled = false;
+        private static bool _disabledWarningLogged;
 
         public override void OnCreate()
         {
             base.OnCreate();
-
-            // NOTE: We intentionally use a MANUAL EntityQuery loop (NOT Entities.ForEach /
-            // Job.WithCode) because those constructs require the Unity.Entities DOTS source
-            // generator, which only runs inside the Unity Editor compilation pipeline. This
-            // assembly (DINOForge.Runtime) is built netstandard2.0 via `dotnet build` OUTSIDE
-            // the editor, so codegen never runs and the generated placeholder throws
-            // "This method should have been replaced by codegen" at runtime, every frame.
-            _aerialQuery = GetEntityQuery(new EntityQueryDesc
-            {
-                All = new[]
-                {
-                    ComponentType.ReadWrite<AerialUnitComponent>(),
-                    ComponentType.ReadWrite<Translation>()
-                },
-                Options = EntityQueryOptions.IncludePrefab
-            });
-
             DebugLog.Write("AerialMovement", "AerialMovementSystem.OnCreate");
+
+            if (!_isRuntimeEnabled)
+            {
+                if (!_disabledWarningLogged)
+                {
+                    DebugLog.Write("AerialMovement", "AerialMovementSystem disabled (feature gate OFF). Restore runtime enablement when DOTS codegen path is stable.");
+                    _disabledWarningLogged = true;
+                }
+
+                Enabled = false;
+            }
         }
 
         public override void OnUpdate()
         {
             float deltaTime = (float)World.Time.DeltaTime;
 
-            // Process all entities with AerialUnitComponent + Translation via a manual query loop.
-            using (NativeArray<Entity> entities = _aerialQuery.ToEntityArray(Allocator.Temp))
+            // Manual EntityQuery loop — avoids Entities.ForEach DOTS codegen path
+            // which crashes in netstandard2.0 Mono even when system is disabled
+            // (job types are registered at world-create time). Pattern #233.
+            EntityQueryDesc moveDesc = new EntityQueryDesc
             {
-                for (int i = 0; i < entities.Length; i++)
+                All = new[] { ComponentType.ReadWrite<AerialUnitComponent>(), ComponentType.ReadWrite<Translation>() }
+            };
+            EntityQuery moveQuery = EntityManager.CreateEntityQuery(moveDesc);
+            using NativeArray<Entity> moveEntities = moveQuery.ToEntityArray(Allocator.Temp);
+            foreach (Entity entity in moveEntities)
+            {
+                AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                Translation translation = EntityManager.GetComponentData<Translation>(entity);
+
+                float targetY = aerial.IsAttacking ? 0f : aerial.CruiseAltitude;
+                float currentY = translation.Value.y;
+                float diff = targetY - currentY;
+
+                if (Math.Abs(diff) < 0.05f)
                 {
-                    Entity entity = entities[i];
-                    AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
-                    Translation translation = EntityManager.GetComponentData<Translation>(entity);
-
-                    float targetY = aerial.IsAttacking ? 0f : aerial.CruiseAltitude;
-                    float currentY = translation.Value.y;
-                    float diff = targetY - currentY;
-
-                    if (Math.Abs(diff) < 0.05f)
-                    {
-                        // Close enough — snap to target altitude
-                        translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
-                        EntityManager.SetComponentData(entity, translation);
-                        continue;
-                    }
-
-                    float moveSpeed = diff > 0f ? aerial.AscendSpeed : aerial.DescendSpeed;
-                    float step = moveSpeed * deltaTime;
-
-                    if (Math.Abs(diff) <= step)
-                    {
-                        translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
-                    }
-                    else
-                    {
-                        float newY = currentY + (diff > 0f ? step : -step);
-                        translation.Value = new float3(translation.Value.x, newY, translation.Value.z);
-                    }
-
+                    translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
                     EntityManager.SetComponentData(entity, translation);
+                    continue;
                 }
+
+                float moveSpeed = diff > 0f ? aerial.AscendSpeed : aerial.DescendSpeed;
+                float step = moveSpeed * deltaTime;
+
+                if (Math.Abs(diff) <= step)
+                {
+                    translation.Value = new float3(translation.Value.x, targetY, translation.Value.z);
+                }
+                else
+                {
+                    float newY = currentY + (diff > 0f ? step : -step);
+                    translation.Value = new float3(translation.Value.x, newY, translation.Value.z);
+                }
+                EntityManager.SetComponentData(entity, translation);
             }
         }
 

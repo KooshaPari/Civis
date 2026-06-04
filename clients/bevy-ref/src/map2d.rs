@@ -38,11 +38,13 @@ use civ_voxel::fluid_ca::CaGrid;
 use civ_voxel::material::{MaterialDef, MaterialRegistry, AIR, WATER};
 
 use crate::camera::CameraRig;
+use crate::spawn_tools::SelectEntityRequest;
 use crate::sim_bridge::SimState;
 use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
 use crate::AttachMode;
 
 /// Basemap raster resolution per side (crisp, sub-tile detail — not 8-bit).
+const MAP_CLICK_PICK_RADIUS_PX: f32 = 12.0;
 const MAP_TEX: usize = 512;
 
 /// Orbit distance at/above which the 2D map auto-engages (MAX_DISTANCE is 600).
@@ -343,6 +345,76 @@ fn building_norm_xz(building: &Building) -> egui::Vec2 {
     )
 }
 
+fn building_norm_xz_with_state(
+    building: &Building,
+    voxel_state: Option<&crate::voxel_sim::VoxelSimState>,
+) -> egui::Vec2 {
+    if let Some(voxel_state) = voxel_state {
+        let x_span = (voxel_state.grid.dims[0] as f32 - 1.0).max(1.0);
+        let z_span = (voxel_state.grid.dims[2] as f32 - 1.0).max(1.0);
+        egui::vec2(
+            (building.position.x as f32 / x_span).clamp(0.0, 1.0),
+            (building.position.y as f32 / z_span).clamp(0.0, 1.0),
+        )
+    } else {
+        building_norm_xz(building)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum MapMarkerKind {
+    Actor { faction: u32 },
+    Building { building_type: BuildingType },
+}
+
+#[derive(Clone, Copy)]
+struct MapMarker {
+    screen_pos: egui::Pos2,
+    world_pos: Vec3,
+    kind: MapMarkerKind,
+}
+
+fn marker_world_from_actor(
+    civ_world: &civ_agents::Position3d,
+    voxel_state: Option<&crate::voxel_sim::VoxelSimState>,
+) -> Vec3 {
+    let u = (civ_world.coord.x as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0);
+    let v = (civ_world.coord.z as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0);
+    if let Some(voxel_state) = voxel_state {
+        Vec3::new(u * voxel_state.grid.dims[0] as f32, 0.0, v * voxel_state.grid.dims[2] as f32)
+    } else {
+        Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0)
+    }
+}
+
+fn marker_world_from_building(
+    building: &Building,
+    voxel_state: Option<&crate::voxel_sim::VoxelSimState>,
+) -> Vec3 {
+    let n = building_norm_xz_with_state(building, voxel_state);
+    if let Some(voxel_state) = voxel_state {
+        Vec3::new(
+            n.x * voxel_state.grid.dims[0] as f32,
+            0.0,
+            n.y * voxel_state.grid.dims[2] as f32,
+        )
+    } else {
+        Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0)
+    }
+}
+
+fn marker_label(kind: BuildingType) -> &'static str {
+    match kind {
+        BuildingType::Farm => "Farm",
+        BuildingType::Mine => "Mine",
+        BuildingType::Barracks => "Barracks",
+        BuildingType::Temple => "Temple",
+        BuildingType::Market => "Market",
+        BuildingType::House => "House",
+        BuildingType::CityCenter => "City",
+    }
+}
+
 /// Deterministic cluster-tint for a faction id (stable hue ramp).
 fn faction_tint(faction: u32) -> egui::Color32 {
     let hue = (faction as f32 * 0.137).fract();
@@ -415,6 +487,7 @@ fn draw_map_view(
     mut view: ResMut<MapView>,
     mut basemap: ResMut<MapBasemap>,
     voxel_state: Option<Res<crate::voxel_sim::VoxelSimState>>,
+    mut select_entity: MessageWriter<SelectEntityRequest>,
     attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
     params: Res<crate::menus::WorldSetupParams>,
@@ -449,6 +522,7 @@ fn draw_map_view(
         .show(ctx, |ui| {
             let screen = ctx.screen_rect();
             let painter = ui.painter();
+            let min_zoom = (screen.width().max(screen.height())) / MAP_TEX as f32;
 
             // Vignette backdrop (darkens the page behind the map; eases the fade).
             painter.rect_filled(
@@ -457,8 +531,10 @@ fn draw_map_view(
                 egui::Color32::from_rgba_unmultiplied(6, 9, 14, (fade * 255.0) as u8),
             );
 
-            // Fit a square map into the screen, centred, with pan + zoom.
-            let side = screen.height().min(screen.width()) * 0.96 * view.zoom;
+            view.zoom = view.zoom.max(min_zoom).min(8.0);
+            // Fit-to-viewport coverage uses base texture pixels so the map never
+            // shows borders/void; zoom is clamped against that requirement.
+            let side = MAP_TEX as f32 * view.zoom;
             let centre = screen.center() + view.pan;
             let map_rect = egui::Rect::from_center_size(centre, egui::vec2(side, side));
 
@@ -492,11 +568,118 @@ fn draw_map_view(
                 )
             };
 
-            // --- Live overlay: buildings then agents (read from SimState) ---
+            let mut map_markers: Vec<MapMarker> = Vec::new();
             if *attach != AttachMode::Server {
                 if let Some(sim) = sim.as_ref() {
-                    draw_buildings(painter, &sim.0, &to_screen, fade);
-                    draw_agents(painter, &sim.0, &to_screen, fade);
+                    let voxel = voxel_state.as_ref().map(|s| s.as_ref());
+                    for (_, (civ, position)) in sim
+                        .0
+                        .world
+                        .query::<(&Civilian, &civ_agents::Position3d)>()
+                        .iter()
+                    {
+                        let n = agent_norm_xz(position);
+                        map_markers.push(MapMarker {
+                            screen_pos: to_screen(n),
+                            world_pos: marker_world_from_actor(position, voxel),
+                            kind: MapMarkerKind::Actor {
+                                faction: civ.faction,
+                            },
+                        });
+                    }
+                    for (_, building) in sim.0.world.query::<&Building>().iter() {
+                        let n = building_norm_xz_with_state(building, voxel);
+                        map_markers.push(MapMarker {
+                            screen_pos: to_screen(n),
+                            world_pos: marker_world_from_building(building, voxel),
+                            kind: MapMarkerKind::Building {
+                                building_type: building.building_type,
+                            },
+                        });
+                    }
+                }
+            }
+            for marker in map_markers.iter() {
+                match marker.kind {
+                    MapMarkerKind::Actor { faction } => {
+                        let tint = with_alpha(faction_tint(faction), fade);
+                        painter.circle_filled(marker.screen_pos, 3.2, with_alpha(tint, fade * 0.30));
+                        painter.circle(
+                            marker.screen_pos,
+                            1.8,
+                            tint,
+                            egui::Stroke::new(0.8, with_alpha(egui::Color32::from_rgb(18, 22, 28), fade)),
+                        );
+                    }
+                    MapMarkerKind::Building { building_type } => {
+                        let p = marker.screen_pos;
+                        let col = with_alpha(building_color(building_type), fade);
+                        let size = 5.0;
+                        match building_type {
+                            BuildingType::House | BuildingType::CityCenter => {
+                                painter.add(egui::Shape::convex_polygon(
+                                    vec![
+                                        egui::pos2(p.x, p.y - size * 1.15),
+                                        egui::pos2(p.x + size, p.y - size * 0.2),
+                                        egui::pos2(p.x, p.y + size * 1.0),
+                                        egui::pos2(p.x - size, p.y - size * 0.2),
+                                    ],
+                                    col,
+                                    egui::Stroke::new(0.6, with_alpha(egui::Color32::BLACK, fade * 0.6)),
+                                ));
+                            }
+                            BuildingType::Market => {
+                                painter.rect_stroke(
+                                    egui::Rect::from_center_size(p, egui::vec2(size * 1.8, size * 1.2)),
+                                    0.0,
+                                    egui::Stroke::new(1.0, with_alpha(egui::Color32::BLACK, fade)),
+                                    egui::StrokeKind::Outside,
+                                );
+                                painter.circle_filled(
+                                    egui::pos2(p.x, p.y + size * 0.3),
+                                    2.0,
+                                    with_alpha(egui::Color32::BLACK, fade * 0.22),
+                                );
+                            }
+                            BuildingType::Temple => {
+                                painter.add(egui::Shape::convex_polygon(
+                                    vec![
+                                        egui::pos2(p.x - size * 0.9, p.y + size),
+                                        egui::pos2(p.x - size * 0.35, p.y - size * 0.8),
+                                        egui::pos2(p.x + size * 0.35, p.y - size * 0.8),
+                                        egui::pos2(p.x + size * 0.9, p.y + size),
+                                    ],
+                                    col,
+                                    egui::Stroke::new(0.6, with_alpha(egui::Color32::BLACK, fade * 0.6)),
+                                ));
+                            }
+                            BuildingType::Mine => {
+                                painter.line_segment(
+                                    [p + egui::vec2(-size, -size), p + egui::vec2(size, size)],
+                                    egui::Stroke::new(1.0, with_alpha(egui::Color32::BLACK, fade)),
+                                );
+                                painter.line_segment(
+                                    [p + egui::vec2(-size, size), p + egui::vec2(size, -size)],
+                                    egui::Stroke::new(1.0, with_alpha(egui::Color32::BLACK, fade)),
+                                );
+                            }
+                            BuildingType::Farm | BuildingType::Barracks => {
+                                painter.circle_filled(p, size * 0.95, with_alpha(col, fade * 0.85));
+                                painter.circle_stroke(
+                                    p,
+                                    size * 0.75,
+                                    egui::Stroke::new(1.0, with_alpha(egui::Color32::BLACK, fade)),
+                                );
+                            }
+                        }
+                        painter.text(
+                            egui::pos2(p.x + size * 0.85, p.y - size * 1.35),
+                            egui::Align2::LEFT_TOP,
+                            marker_label(building_type),
+                            egui::FontId::proportional(9.0),
+                            with_alpha(egui::Color32::from_rgb(220, 228, 237), fade),
+                        );
+                    }
                 }
             }
 
@@ -510,57 +693,35 @@ fn draw_map_view(
             }
             let scroll = ctx.input(|i| i.raw_scroll_delta.y);
             if scroll != 0.0 && resp.hovered() {
-                view.zoom = (view.zoom * (1.0 + scroll * 0.0015)).clamp(0.5, 6.0);
+                view.zoom = (view.zoom * (1.0 + scroll * 0.0015)).clamp(min_zoom, 8.0);
+            }
+            let max_pan_x = ((side - screen.width()) * 0.5).max(0.0);
+            let max_pan_y = ((side - screen.height()) * 0.5).max(0.0);
+            view.pan = egui::vec2(
+                view.pan.x.clamp(-max_pan_x, max_pan_x),
+                view.pan.y.clamp(-max_pan_y, max_pan_y),
+            );
+
+            if resp.clicked() && resp.hovered() {
+                let Some(pointer) = resp.interact_pointer_pos() else {
+                    return;
+                };
+                let mut best: Option<(f32, MapMarker)> = None;
+                for marker in map_markers.iter() {
+                    let d2 = marker.screen_pos.distance_sq(pointer);
+                    if d2 <= MAP_CLICK_PICK_RADIUS_PX * MAP_CLICK_PICK_RADIUS_PX
+                        && best.is_none_or(|(best_d2, _)| d2 < best_d2)
+                    {
+                        best = Some((d2, *marker));
+                    }
+                }
+                if let Some((_, hit)) = best {
+                    select_entity.write(SelectEntityRequest {
+                        position: hit.world_pos,
+                    });
+                }
             }
         });
-}
-
-fn draw_buildings(
-    painter: &egui::Painter,
-    sim: &civ_engine::Simulation,
-    to_screen: &dyn Fn(egui::Vec2) -> egui::Pos2,
-    fade: f32,
-) {
-    for (_, building) in sim.world.query::<&Building>().iter() {
-        let p = to_screen(building_norm_xz(building));
-        let col = with_alpha(building_color(building.building_type), fade);
-        // Crisp little "house" glyph: filled diamond roof over a square base.
-        let r = 4.0;
-        painter.add(egui::Shape::convex_polygon(
-            vec![
-                egui::pos2(p.x, p.y - r * 1.3),
-                egui::pos2(p.x + r, p.y - r * 0.2),
-                egui::pos2(p.x - r, p.y - r * 0.2),
-            ],
-            col,
-            egui::Stroke::new(0.6, with_alpha(egui::Color32::BLACK, fade * 0.6)),
-        ));
-        painter.rect_filled(
-            egui::Rect::from_center_size(egui::pos2(p.x, p.y + r * 0.4), egui::vec2(r * 1.4, r * 1.2)),
-            1.0,
-            col,
-        );
-    }
-}
-
-fn draw_agents(
-    painter: &egui::Painter,
-    sim: &civ_engine::Simulation,
-    to_screen: &dyn Fn(egui::Vec2) -> egui::Pos2,
-    fade: f32,
-) {
-    for (_, (civ, pos)) in sim.world.query::<(&Civilian, &civ_agents::Position3d)>().iter() {
-        let p = to_screen(agent_norm_xz(pos));
-        let tint = with_alpha(faction_tint(civ.faction), fade);
-        // Soft halo + crisp core for a clean, anti-aliased marker.
-        painter.circle_filled(p, 3.2, with_alpha(tint, fade * 0.30));
-        painter.circle(
-            p,
-            1.8,
-            tint,
-            egui::Stroke::new(0.8, with_alpha(egui::Color32::from_rgb(18, 22, 28), fade)),
-        );
-    }
 }
 
 fn draw_title(painter: &egui::Painter, screen: egui::Rect, fade: f32) {

@@ -9,6 +9,7 @@ use civ_engine::Building;
 use std::collections::HashMap;
 
 use crate::camera::CameraRig;
+use crate::map2d::MapView;
 use crate::info_views::{cluster_color, InfoViewRegistry};
 use crate::sim_bridge::SimState;
 use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
@@ -98,10 +99,11 @@ impl Plugin for MinimapPlugin {
 /// than a `run_if` on a draw system.
 fn sync_minimap_visibility(
     mode: Res<crate::menus::GameUiMode>,
+    map_view: Res<MapView>,
     mut root: Query<&mut Visibility, With<MinimapRoot>>,
 ) {
     use crate::menus::GameUiMode;
-    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) {
+    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) && !map_view.active {
         Visibility::Inherited
     } else {
         Visibility::Hidden

@@ -120,7 +120,8 @@ impl Plugin for Map2dPlugin {
 
 /// `M` toggles the map and pins the manual override.
 fn toggle_map_hotkey(keys: Res<ButtonInput<KeyCode>>, mut view: ResMut<MapView>) {
-    if keys.just_pressed(KeyCode::KeyM) {
+    let shift_down = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+    if shift_down && keys.just_pressed(KeyCode::KeyM) {
         view.active = !view.active;
         view.manual_override = true;
         if !view.active {

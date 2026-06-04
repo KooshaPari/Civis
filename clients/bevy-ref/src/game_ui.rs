@@ -500,8 +500,12 @@ fn left_sidebar_cluster(
     egui::SidePanel::left("civis_game_left_sidebar")
         .resizable(false)
         .exact_width(252.0)
-        .frame(liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL))
+        .frame(egui::Frame::NONE)
         .show(ctx, |ui| {
+            let full_panel = ui.max_rect();
+            ui.painter().rect_filled(full_panel, RADIUS_PANEL as f32, crate::ui_theme::GLASS_FILL);
+            let glass = liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL);
+            glass.show(ui, |ui| {
             // Teal rim + lifted inner highlight on the cluster's own rect BEFORE
             // content, so the glass edge reads without glossing over text.
             let full = ui.max_rect();
@@ -514,6 +518,7 @@ fn left_sidebar_cluster(
                 LeftTab::Factions => faction_panel_ui(ui, roster),
                 LeftTab::InfoViews => crate::info_views::info_view_tab_body(ui, info_views),
             }
+            });
         });
 }
 

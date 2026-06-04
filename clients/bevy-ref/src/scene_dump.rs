@@ -13,6 +13,16 @@
 //!
 //! It reads the same data the renderer consumes, so it cannot "hallucinate"
 //! the way a screenshot read can. Pixels are never inspected.
+//!
+//! AUTHORITATIVE for (render-independent state): terrain mesh count/bounds,
+//! voxel census, sim counters (tick/pop/citizen_count/resources), actor/building
+//! LOGICAL positions vs terrain surface_y (seating check).
+//!
+//! NOT AUTHORITATIVE for (render-world-gated state): GLTF scene-graph
+//! instantiation and therefore AnimationPlayer presence. In a headless dump run
+//! (no window/GPU) Bevy does NOT instantiate GLTF SceneRoot child hierarchies,
+//! so `animation.players` reads 0 even when a windowed run would have them.
+//! Verify animation/material/lighting in a WINDOWED run, not from this dump.
 
 use bevy::prelude::*;
 
@@ -63,6 +73,15 @@ fn dump_scene_system(
         return;
     }
     if dump.armed_at.elapsed() < dump.warmup {
+        return;
+    }
+    // Wait until the world is actually populated before dumping — the windowed
+    // menu->Playing->worldgen->spawn chain finishes later than a fixed timer.
+    // Once warmup elapses, keep waiting (up to a hard ceiling) until either
+    // terrain meshes or actors exist, so we never dump an empty pre-spawn scene.
+    let populated = meshes_q.iter().count() > 0 || civilians.iter().count() > 0;
+    let hard_ceiling = dump.warmup + std::time::Duration::from_secs(30);
+    if !populated && dump.armed_at.elapsed() < hard_ceiling {
         return;
     }
     dump.done = true;
@@ -204,6 +223,9 @@ fn dump_scene_system(
     ));
 
     // --- Animation: are any clips actually playing (T-pose check)? ----------
+    // players==0 with actors>0 means actors spawned as PRIMITIVE capsules (no
+    // GLTF scene = no AnimationPlayer), i.e. the model fallback fired and never
+    // got swapped to a SceneRoot. That is the real T-pose root cause.
     let total_players = anim_players.iter().count();
     let playing = anim_players
         .iter()
@@ -227,5 +249,12 @@ fn dump_scene_system(
     }
     // Also echo to stdout so a headless run captures it even without file access.
     println!("=== CIVIS_DUMP BEGIN ===\n{out}=== CIVIS_DUMP END ===");
-    exit.write(AppExit::Success);
+    // HEADFUL-WITH-HEADLESS-ACCESS: when CIVIS_DUMP_KEEP_ALIVE=1, run the game
+    // WINDOWED (GLTF scenes instantiate -> AnimationPlayers real -> animation
+    // state is authoritative) and write the dump WITHOUT exiting. Otherwise the
+    // headless one-shot path exits after writing (render-world-gated state is a
+    // false-negative there — see module docs).
+    if std::env::var("CIVIS_DUMP_KEEP_ALIVE").as_deref() != Ok("1") {
+        exit.write(AppExit::Success);
+    }
 }

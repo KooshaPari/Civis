@@ -100,6 +100,7 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     let camera = CameraTarget::default();
     let eye = camera.orbit_position();
     let centre = Vec3::from_array(camera.centre);
+    let sun_dir = Vec3::new(-0.4, -0.8, -0.3).normalize();
 
     let day_factor = 1.0_f32;
     let clear_rgb = presentation_clear_color_rgb(day_factor);
@@ -118,11 +119,11 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     // Sun light — offset from the camera azimuth so voxels pick up depth.
     commands.spawn((
         DirectionalLight {
-            illuminance: 10_000.0,
+            illuminance: 12_000.0,
             shadows_enabled: true,
             ..default()
         },
-        Transform::from_xyz(eye[0] + 12.0, eye[1] + 20.0, eye[2] + 8.0).looking_at(centre, Vec3::Y),
+        Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir)),
     ));
 
     commands.spawn((

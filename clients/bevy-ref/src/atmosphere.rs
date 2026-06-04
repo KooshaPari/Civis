@@ -6,6 +6,7 @@ use crate::terrain::{lerp, WATER_LEVEL};
 const DAY_LENGTH_SECONDS: f32 = 10.0 * 60.0;
 const STAR_COUNT: usize = 240;
 const STAR_SHELL_RADIUS: f32 = 1_500.0;
+const SUN_KEY_DIR: Vec3 = Vec3::new(-0.4, 0.8, -0.3);
 
 #[derive(Resource, Clone, Copy)]
 pub struct DayNightCycle {
@@ -69,7 +70,7 @@ pub fn setup_atmosphere(
     // why the world read flat.
     commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.051, 0.086, 0.157),
-        brightness: 120.0,
+        brightness: 280.0,
         affects_lightmapped_meshes: true,
     });
     commands.insert_resource(DayNightCycle::default());
@@ -83,7 +84,7 @@ pub fn setup_atmosphere(
             shadows_enabled: true,
             ..default()
         },
-        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -PI / 4.0, PI / 8.0, 0.0)),
+        Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, SUN_KEY_DIR)),
     ));
 
     commands.spawn((
@@ -171,7 +172,12 @@ pub fn update_lighting(
 ) {
     let t = cycle.time_of_day;
     let sun_angle = t * TAU - PI * 0.5;
-    let sun_dir = Vec3::new(sun_angle.cos(), sun_angle.sin(), 0.35).normalize();
+    let sun_dir = Vec3::new(
+        sun_angle.cos().mul_add(0.4, SUN_KEY_DIR.x),
+        (sun_angle.sin() * 0.2 + SUN_KEY_DIR.y).clamp(-1.0, 1.0),
+        sun_angle.cos().mul_add(0.3, SUN_KEY_DIR.z),
+    )
+    .normalize();
     let moon_dir = -sun_dir;
     let daylight = ((sun_dir.y + 0.15) / 1.15).clamp(0.0, 1.0);
     // Warm key per docs/design/lighting-biomes-art.md §1.2/§3: the sun warms to
@@ -215,7 +221,7 @@ pub fn update_lighting(
     // @120 lx was far too weak a fill against a straight-down noon sun — every
     // vertical voxel face went black. Lift the daytime fill and warm/neutralize
     // the color so shaded faces stay legible while still cooler than the key.
-    ambient.brightness = lerp(120.0, 1_400.0, daylight);
+    ambient.brightness = lerp(220.0, 420.0, daylight);
     ambient.color = lerp_color(
         Color::srgb(0.07, 0.10, 0.18), // cool navy night fill
         Color::srgb(0.55, 0.62, 0.74), // bright cool-neutral day sky fill

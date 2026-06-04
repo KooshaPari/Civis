@@ -1071,6 +1071,7 @@ fn base_color(def: &MaterialDef) -> Color {
 fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
     let mut mat = StandardMaterial {
         base_color: base_color(def),
+        emissive: Color::BLACK.into(),
         perceptual_roughness: 0.9,
         metallic: 0.0,
         reflectance: 0.5,
@@ -1176,7 +1177,7 @@ fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
         }
         // --- Hard rock: low-ish roughness, slight reflectance. ---
         STONE | GRANITE => {
-            mat.perceptual_roughness = 0.82;
+            mat.perceptual_roughness = 0.9;
             mat.reflectance = 0.35;
         }
         // --- Powders & soils: very matte, no specular. ---
@@ -1193,7 +1194,7 @@ fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
             mat.reflectance = 0.5;
         }
         BONE => {
-            mat.perceptual_roughness = 0.7;
+            mat.perceptual_roughness = 0.92;
             mat.reflectance = 0.3;
         }
         _ => {
@@ -1214,7 +1215,7 @@ fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
                     mat.reflectance = 0.2;
                 }
                 Phase::Solid | Phase::Empty => {
-                    mat.perceptual_roughness = 0.8;
+                    mat.perceptual_roughness = 0.9;
                 }
             }
         }

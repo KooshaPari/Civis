@@ -8,10 +8,7 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use civ_voxel::{
-    material::{MaterialDef, Phase, AIR},
-    MaterialId, MeshBuffer, MeshVertex,
-};
+use civ_voxel::{material::AIR, MaterialId, MeshBuffer, MeshVertex};
 use civ_voxel::material::MaterialRegistry;
 
 // Must match voxel_sim::CHUNK_EDGE — both must be updated together.
@@ -107,7 +104,7 @@ struct ChunkBlurField {
     sat: Vec<f32>,
 }
 
-/// Build smooth per-material buffers.
+/// Build a single smooth terrain buffer shared across all materials.
 pub fn build_smooth_meshes(
     voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE],
     padded_voxels: &[MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
@@ -117,21 +114,15 @@ pub fn build_smooth_meshes(
     SMOOTH_CHUNKS.fetch_add(1, Ordering::Relaxed);
     // Shared, material-independent solid/saturation blur — blurred ONCE per chunk.
     let field = std::sync::Arc::new(build_chunk_blur_field(padded_voxels, saturation));
-    let mut materials = unique_materials(voxels);
-    materials.sort_unstable_by_key(|id| id.0);
-    materials
-        .into_iter()
-        .filter_map(|material_id| {
-            let def = registry.get(material_id)?;
-            let density = build_material_density(
-                *padded_voxels,
-                std::sync::Arc::clone(&field),
-                material_id,
-                *def,
-            );
-            Some(build_surface_nets(material_id, density))
-        })
-        .collect()
+    let _ = (voxels, registry);
+    let density = build_shared_solid_density(std::sync::Arc::clone(&field));
+    let material_id = dominant_material_lookup(
+        *padded_voxels,
+        CHUNK_EDGE_PADDED as isize,
+        CHUNK_EDGE_PADDED as isize,
+        CHUNK_EDGE_PADDED as isize,
+    );
+    vec![build_surface_nets(density, material_id)]
 }
 
 /// Precompute the blurred solid + saturation fields over every sample corner once.
@@ -169,23 +160,14 @@ pub fn record_cubic_chunk() {
     CUBIC_CHUNKS.fetch_add(1, Ordering::Relaxed);
 }
 
-fn unique_materials(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]) -> Vec<MaterialId> {
-    let mut unique = HashSet::new();
-    for &id in voxels.iter() {
-        if id != AIR {
-            unique.insert(id);
-        }
-    }
-    unique.into_iter().collect()
-}
-
 fn build_surface_nets(
-    material_id: MaterialId,
     density: impl Fn(usize, usize, usize) -> f32 + 'static,
+    material_id_at: impl Fn(f32, f32, f32) -> MaterialId + 'static,
 ) -> MeshBuffer {
     let (positions, normals, indices) = surface_net(CHUNK_EDGE_PADDED, &density, true);
     let mut vertices = Vec::with_capacity(positions.len());
     for (position, normal) in positions.iter().zip(normals.iter()) {
+        let material = material_id_at(position[0], position[1], position[2]);
         let normal = normalize_or_unit_up(*normal);
         let position = [
             position[0] - APRON as f32,
@@ -200,7 +182,7 @@ fn build_surface_nets(
             position,
             normal,
             uv,
-            material: material_id,
+            material,
         });
     }
     let indices = indices
@@ -210,82 +192,75 @@ fn build_surface_nets(
     MeshBuffer { vertices, indices }
 }
 
-fn build_material_density(
-    padded_voxels: [MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
+fn build_shared_solid_density(
     field: std::sync::Arc<ChunkBlurField>,
-    material: MaterialId,
-    def: MaterialDef,
 ) -> impl Fn(usize, usize, usize) -> f32 + 'static {
-    let softness = surface_softness(&def);
-    let phase_boost = match def.phase {
-        Phase::Liquid | Phase::Powder => 0.35f32,
-        Phase::Gas => 0.5,
-        Phase::Solid => 1.0,
-        Phase::Empty => 0.75,
-    };
-    let sharpness = (softness * phase_boost).clamp(0.25, 1.0);
     move |x, y, z| {
-        // Ownership gate stays per-material but is now a CHEAP center+6-neighbour
-        // presence check, not a full blur. The SURFACE shape uses the SHARED solid
-        // field (material-independent) so adjacent materials meet watertight and the
-        // expensive blur runs once per chunk, not once per material.
-        if !material_present_near(&padded_voxels, material, x, y, z) {
-            return 1.0;
-        }
         let idx = x + y * SAMPLE_EDGE + z * SAMPLE_EDGE * SAMPLE_EDGE;
         let solid_occ = field.solid[idx];
         let sat = field.sat[idx];
         let span = slope_aware_span(solid_occ);
-        let density = (ISO_LEVEL - solid_occ) * span * sharpness * DENSITY_GAIN;
+        let density = (ISO_LEVEL - solid_occ) * span * DENSITY_GAIN;
         let saturation_soften = 1.0 - sat * 0.25;
         (density * saturation_soften).clamp(-1.0, 1.0)
     }
 }
 
-/// Cheap per-material ownership test: is this material at, or directly adjacent to,
-/// the sample corner? Replaces the old per-material full blur for the gate (the
-/// surface shape comes from the shared solid field). Adjacency keeps a material's
-/// mesh covering its share of the interface so neighbours meet without a seam gap.
+/// Pick a dominant non-AIR material near a vertex sample position.
+/// Uses a cheap 3×3×3 neighbour weighted vote in padded-voxel space to avoid
+/// hard seams and keep one shared surface mesh continuous.
 #[inline]
-fn material_present_near(
-    padded_voxels: &[MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
-    material: MaterialId,
-    x: usize,
-    y: usize,
-    z: usize,
-) -> bool {
-    const OFFSETS: [(isize, isize, isize); 7] = [
-        (0, 0, 0),
-        (-1, 0, 0),
-        (1, 0, 0),
-        (0, -1, 0),
-        (0, 1, 0),
-        (0, 0, -1),
-        (0, 0, 1),
-    ];
-    for (dx, dy, dz) in OFFSETS {
-        let sx = x as isize + dx;
-        let sy = y as isize + dy;
-        let sz = z as isize + dz;
-        if sx < 0
-            || sy < 0
-            || sz < 0
-            || sx >= CHUNK_EDGE_PADDED as isize
-            || sy >= CHUNK_EDGE_PADDED as isize
-            || sz >= CHUNK_EDGE_PADDED as isize
-        {
-            continue;
+fn dominant_material_lookup(
+    padded_voxels: [MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
+    grid_w: isize,
+    grid_h: isize,
+    grid_d: isize,
+) -> impl Fn(f32, f32, f32) -> MaterialId + 'static {
+    move |x, y, z| {
+        let fx = x.floor() as isize;
+        let fy = y.floor() as isize;
+        let fz = z.floor() as isize;
+        let mut best_material = AIR;
+        let mut best_score = -1.0f32;
+        let mut all_air = true;
+        for dz in -1..=1 {
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let sx = fx + dx;
+                    let sy = fy + dy;
+                    let sz = fz + dz;
+                    if sx < 0
+                        || sy < 0
+                        || sz < 0
+                        || sx >= grid_w
+                        || sy >= grid_h
+                        || sz >= grid_d
+                    {
+                        continue;
+                    }
+                    let idx = sx as usize
+                        + sy as usize * CHUNK_EDGE_PADDED
+                        + sz as usize * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
+                    let material = padded_voxels[idx];
+                    if material == AIR {
+                        continue;
+                    }
+                    all_air = false;
+                    let dxp = sx as f32 - x;
+                    let dyp = sy as f32 - y;
+                    let dzp = sz as f32 - z;
+                    let dist_sq = dxp * dxp + dyp * dyp + dzp * dzp;
+                    let weight = 1.0 / (1.0 + dist_sq);
+                    if weight > best_score {
+                        best_score = weight;
+                        best_material = material;
+                    }
+                }
+            }
         }
-        let idx = sx as usize
-            + sy as usize * CHUNK_EDGE_PADDED
-            + sz as usize * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
-        if padded_voxels[idx] == material {
-            return true;
-        }
+        if all_air { AIR } else { best_material }
     }
-    false
 }
-
 /// Span used to scale the signed distance, eased on steep transitions.
 ///
 /// Cells whose blurred `solid_occ` sits near `ISO_LEVEL` are the surface-defining
@@ -298,16 +273,6 @@ fn slope_aware_span(solid_occ: f32) -> f32 {
     const BAND: f32 = 0.5;
     let t = (1.0 - (solid_occ - ISO_LEVEL).abs() / BAND).clamp(0.0, 1.0);
     ISO_SPAN + (ISO_SPAN_STEEP - ISO_SPAN) * t
-}
-
-fn surface_softness(def: &MaterialDef) -> f32 {
-    match def.phase {
-        Phase::Liquid => 0.55,
-        Phase::Powder => 0.68,
-        Phase::Gas => 0.62,
-        Phase::Solid => 1.0,
-        Phase::Empty => 0.8,
-    }
 }
 
 fn normalize_or_unit_up(mut normal: [f32; 3]) -> [f32; 3] {
@@ -324,8 +289,8 @@ fn normalize_or_unit_up(mut normal: [f32; 3]) -> [f32; 3] {
 
 /// Blur the material-INDEPENDENT solid occupancy + saturation at one sample corner.
 /// `solid_occ` = weighted fraction of any non-AIR neighbour (the shared surface
-/// field); `sat` = weighted saturation. No per-material work — that is gated cheaply
-/// in `material_present_near`.
+/// field); `sat` = weighted saturation. No per-material work — material ownership
+/// is assigned after extraction.
 fn sample_blurred_solid(
     padded_voxels: &[MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
     saturation: Option<&[u8]>,
@@ -417,12 +382,9 @@ mod tests {
     /// per-chunk shared-blur path `build_smooth_meshes` uses.
     fn density_for(
         padded: &[MaterialId; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED],
-        material: MaterialId,
     ) -> impl Fn(usize, usize, usize) -> f32 {
-        let registry = MaterialRegistry::standard();
-        let def = *registry.get(material).expect("material exists");
         let field = std::sync::Arc::new(build_chunk_blur_field(padded, None));
-        build_material_density(*padded, field, material, def)
+        build_shared_solid_density(field)
     }
 
     #[test]
@@ -494,7 +456,7 @@ mod tests {
                 }
             }
         }
-        let density = density_for(&padded, MaterialId(1));
+        let density = density_for(&padded);
         let air = density(13, 10, 10);
         let solid = density(4, 10, 10);
         let boundary = density(8, 10, 10);
@@ -507,7 +469,7 @@ mod tests {
     }
 
     #[test]
-    fn interface_does_not_create_seam_holes() {
+    fn interface_does_not_create_material_discontinuity_mesh() {
         let mut padded = [AIR; CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED];
         for z in 0..CHUNK_EDGE_PADDED {
             for y in 0..CHUNK_EDGE_PADDED {
@@ -522,15 +484,17 @@ mod tests {
                 }
             }
         }
-        let dirt_density = density_for(&padded, MaterialId(1));
-        let stone_density = density_for(&padded, MaterialId(2));
-        let interface = 8;
-        let y = 8;
-        let z = 8;
-        let dirt_density_here = dirt_density(interface, y, z);
-        let stone_density_here = stone_density(interface, y, z);
-        assert!(dirt_density_here < 0.0);
-        assert!(stone_density_here < 0.0);
+        let registry = MaterialRegistry::standard();
+        let chunk = [MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
+        assert!(!bufs.is_empty(), "interface region should mesh");
+        let mut materials = HashSet::new();
+        for v in bufs.iter().flat_map(|b| b.vertices.iter()) {
+            materials.insert(v.material);
+        }
+        assert!(materials.contains(&MaterialId(1)), "missing first material on interface surface");
+        assert!(materials.contains(&MaterialId(2)), "missing second material on interface surface");
+        assert!(materials.len() >= 2, "interface should expose at least two materials");
     }
 
     /// Smooth-mesher INVARIANT: Surface Nets over a soft density field must place
@@ -581,7 +545,7 @@ mod tests {
     /// Regression: with APRON=3 the density field extends far enough into neighbour
     /// context that seam faces get vertices, reducing visible gaps between chunks.
     #[test]
-    fn seam_chunk_produces_boundary_vertices() {
+    fn seam_chunk_produces_continuous_boundary_surface() {
         let chunk = [MaterialId(1); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
         let mut padded = [AIR; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE];
         for z in 0..CHUNK_EDGE {
@@ -597,9 +561,10 @@ mod tests {
         let registry = MaterialRegistry::standard();
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
         assert!(!bufs.is_empty(), "solid chunk produced no mesh buffers");
+        assert_eq!(bufs.len(), 1, "smooth terrain should be a single combined buffer");
         let vertex_count: usize = bufs.iter().map(|b| b.vertices.len()).sum();
         println!("[seam_test] vertex_count={vertex_count}");
-        assert!(vertex_count > 0, "solid chunk produced 0 vertices");
+        assert!(vertex_count > 1000, "solid chunk should produce a large connected surface, got {vertex_count}");
         assert!(
             bufs.iter().any(|b| b.vertices.iter().any(|v| v.position[0] >= 10.0)),
             "no vertex near chunk boundary (x>=10) — seam gap likely (vertex_count={vertex_count})"

@@ -1,0 +1,7075 @@
+{
+  "bundle": "G:/SteamLibrary/steamapps/common/Diplomacy is Not an Option/Diplomacy is Not an Option_Data/StreamingAssets/aa/StandaloneWindows64/settings_assets_all.bundle",
+  "filter": null,
+  "meshHits": 1178,
+  "results": [
+    {
+      "mesh": "u_trebuchet_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_cliff_empty_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_catapult",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "swamp_hulk",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Wagon-iron",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": " border_post_m1aa",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarangaSummonCircleCombined",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_zigurat_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s10",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wagon_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Fur_magic",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron_mine_advanced_mechanism",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.097",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stoneminer_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_knight",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_4x4_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_big2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "FireMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine_advanced_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_resource_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_rip_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_standard",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_double_line_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_A",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building1_Elevator",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "soul_stone_mine_placement",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_4x4_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stable0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm_bio2_ground",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_building_curved_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "harpy_fast",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_double_line_2x2_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_archer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "caravan",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_wall",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_cliff_empty_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_c_props",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_3x3_v2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_outer_1x1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_sword_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_12x12_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_cliff_empty_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_resource_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_shield_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cadaver_c",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s8",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stable1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "weath_floor.009",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "barrack3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_light_B",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadSpreaderEffectMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pile_stone_undead",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "DirectControlHitbuilding",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravediggers2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_military_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_12x12_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_resource_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lich_necromancer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wolfwalker_agile_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall_royal_top",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "\u0441atapult_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "academy_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_natives_m_1_",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravedigger_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_B",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_infinite_stone_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravediggers3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "katapulta_bomj_projectile",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gate2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_4x4_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_3_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravediggers2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_military_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_wall_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_basalt_temple_2x2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_archer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_army_limiter_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tower_big_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_cliff_empty_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrypicker_natives_child_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tower_big_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "moss",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_sarranga_city",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ballista_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_S_tree_big6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_light_3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_scorpion",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "resource_stone_undead_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dragon",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "torch_bamboo",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_infinite_iron_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_12",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wolf_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Fur",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine1_crane",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pile_wood_undead",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "road_niniendo_004",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_light_A",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_b5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_4_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "workshop1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ZigguratEffectMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_zerg_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_house_kamikaze",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_ballista_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_3_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravedigger_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_8x8_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_resource_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Wagon-food",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_market",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_kamikaze",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dodo",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "road_rodglen",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_resource_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_09",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hive_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_1x1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "resource_iron",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall_stone_and_tree",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_w_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_11",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_ban",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_trebuchet",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "giant_deer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_cliff_empty_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_wall_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_1_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "harpy_regular",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lumbermill2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "blood_scot",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_market_worm",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_wolfwalkers_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrybush_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall_stone_and_tree",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_natives_w_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_cliff_empty_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "spearman",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house_2_m9bx_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_fat_F",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall_royal_bottom",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_tower_big_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.033",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_outer_2x2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "woodcutter_natives_child_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_3x3_v1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_outer_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_admin_building",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_catapult_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "granary2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_tower_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hive_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_outer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "harpy_acid",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadResurrectionCircleMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gate1_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_burial_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_3_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SmallExplosionMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_wall_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builder_natives_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_80",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "digested_food",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "univer_great1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_Ground_3x3_v2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_town_hall_flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_army_limiter_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_food_2_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_shield_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_wall_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "shanhar_prison",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall1_flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_burial_improver_buff",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Sphere",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_12x12_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building2_Crane",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_2x2_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_3_ship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "scarab_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_5_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_destruction_machine_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "basalt",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hammer_body",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_heavy_3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_3x3_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrybush_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_ghost_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine2_fract",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_07",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_obelisk_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house_3_m9bx",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "LOW_POLY_Tree_3_006.001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fish_m_longboy",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "DirectControlHitUnit",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_tower_small_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrypicker_natives_child_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_heavy_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_horseman_sword",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builders2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_shortsword",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_cabin_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_6x6_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stoneminer_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_light_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house2_modified",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadGroundSpawnMesh2_Large",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine2_res",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_palace",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_60",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_garden",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_outer_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_4x4_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "granary1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Small_univer_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravediggers1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_b10_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_2x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "oilsplash",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_ghost",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_stone_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleTower_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_inner_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mission_6a_target_place_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mounted_archer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stable1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron_mine1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_tripe_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_house_big_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_watch_tower_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_worker",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_08",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lich_necromancer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_06",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_shanhar",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_s10_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_3_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleTower_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_zerg_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_6x6_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_flag_lion02",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_n_wall",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_heavy_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_cliff_empty_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house_3_m9bx_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_rich_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_boss_demon",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_temple_with_resources_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_cliff_empty_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house_2_m9bx",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_spirit_ziggurat1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_8x8_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_double_line_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravediggers1_Ground",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_props_e",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_corner.002",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_heavy_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "unemployed_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_army_limiter2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_battering_ram",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_mine_trap_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_3_tw",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_small2_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_5_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_building_block_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "volodya_qqq_summon_mod",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_outer_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_4x4_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_fat_C",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "arrow_balista",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_02",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm2_4way_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hive_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_fork_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_food_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_tripe_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_4_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_military",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_obelisk",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_spirit_refuge_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm3_4way_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleTower_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_military_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_resource_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_c",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_cabin_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_8x8_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tough_guy",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine_advanced_mechanism",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gravediggers3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SummonerSpawnMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fisherman_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hospital_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "FireMeshUndead",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "woodcutter_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "knight",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "NecromancerRaiseMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builders1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "giant_father_boss",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "great_academy",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_rip_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.47345",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_s10_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_shield_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_mast_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_defence_flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleGate",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "m9bx_cave_deer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mounted_crossbower",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_2_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "garden2_pool",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_walls_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Fur_agile",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm3_4way_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Sphere.001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_lich_spreader",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_S_tree_big7",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_zerg_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pointer_m1aa",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_b10_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrypicker_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": " border_post_m1aa_road_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_4x4_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_burial_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_decor",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_w_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "univer_great1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house1_modified",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ConstructionDustEffectMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "digested_wood",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_catapult_arm",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature_nest_abandoned ",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "torch",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_treb_light_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "porters2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.074",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_2x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_lich_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "academy",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_tripe_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "LOW_POLY_Tree_1_005.006",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Small_Univer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_01",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_palace",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": " border_post_m1aa_road_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "shanhar_on_gaint",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_gates_broken",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_s5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "porters2_Ground",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fish1_m_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_lord",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_cliff_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cadaver_hulk",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_bone_storage_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_bomber",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.101",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_pogost1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "woodcutter_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_house_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "road_niniendo_002",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "barrack2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.043",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "harpy_mini_boss",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "logs",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_4x4_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_catapult",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_gate_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature_regular",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_lich_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "LOW_POLY_Tree_3_006.004",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_tripe_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "forester1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.33180",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_rich_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_a",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_double_line_2x2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_infinite_stone_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_big_wood_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_wolfwalkers_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_outer_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "giant",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_gate_3_animated",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_small3_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_b10_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_house_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_cabin_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building2_Elevator",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_cliff_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_2x1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wolfwalker_magic_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "deer_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_3_base",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "worker_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "worker_natives_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "shanhar",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fisher1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_lich_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_4x4_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wolf_m.002",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_8x8_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_2_base",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_watch_tower_2_anim",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_4x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gate1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_7",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hospital_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "m9bx_cave_deer_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_small4_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_cliff_empty_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_catapult_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm2_4way_core",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Wagon-wood",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrypicker_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_1_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_small2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "m9bx_cave_deer_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "shabby ship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_port_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_line_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_inner_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snut_rebel",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "market1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_mast",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "\u0441atapult",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "GenericExplosionMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lighthouse_tree",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_basalt_temple_3x3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_40",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_flag_lion01",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_8x8_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_10",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_b_props",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.048",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stable0_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "unemployed_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_07",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_heavy_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building2_Gear",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fish_m_jumper",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_barrack_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "worker_natives_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_knight_player",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "granary1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_20",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_temple",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_obelisk_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_5_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_spirit_ziggurat3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "LOW_POLY_Tree_3_006.003",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_s5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.156",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fish2_m_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wolfwalker_weakened_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_fork_projectile",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_gate_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_01",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_08",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.33179",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builder_shanhar",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "trebuchet_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_rich",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "WolfwalkerSpawnEffectMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_treb_heavy",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mine_trap",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_shield_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "flag_base",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_stone_3_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ballista",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_hulk",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "workshop1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_8",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine1_pick",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lich_necromancer_skull_with_effects",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_soul_stone_mine",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mine_trap_exp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_6x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_inner_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_ghost_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_4_base",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_w_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "barraks3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.045",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "capybara",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_resource_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrybush_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "axe_warrior",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_bone_storage_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house3_modified",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_tower_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_wolfwalkers_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_ghost_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine1_res",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ironminer_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadBossCocoonGround",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_obelisk_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_temple_extra",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bitch_house_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall2_flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x1_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "worker_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Bone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_fork_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_military_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "GravityMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "storage1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "road_niniendo_001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pleague_tree5s",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "chicken",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "unemployed_natives_child_f.001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s9",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mission_6a_target_place",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fisher1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dark_knight",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_1_tw",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "projectile_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_zigurat_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadGroundSpawnMesh2_Medium",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_2_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.044",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_temple_with_resources_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_destruction_machine",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_wall_c_angle",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farmer_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadGroundSpawnMesh2_Small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine2_scaffold",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_fork_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_0_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_4x4_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "airship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_armored cadaver",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_spear",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x2_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_resource_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cylinder",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_gate_animated",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_barrack_2x2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s12",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_s5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm_bio1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cadaver_b",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_1x1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "LOW_POLY_Tree_1_005.005",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_n_1x1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "saranga_ritual_circle_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.047",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "food",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_building_block",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builders3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_3_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_flag_lion03",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_side",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_light_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature_nest_small ",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "watch_tower_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_Ground_8x8_v1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tavern1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_4x4_6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "digested_iron",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.3500",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_luter_1x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_corner.004",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_cliff_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "watch_tower_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_outer_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_big_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "saranga_ritual_circle",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "corpse",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_2_spec",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_pogost3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "oiltube",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "obelisk3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_outer_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_catapult",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_port",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_armored_cadaver_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lord",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_C",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_natives_chief",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_m_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_light_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hive_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_3x3_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building1_Gear",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "granary3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_big_wood_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "brander",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_8x8_v2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building1_Crane",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horseman",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_archer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "garden1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Sphere",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "resource_food",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine1_fract",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "arrow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wagon_iron",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_s2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_outer_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tower_big_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_rabid",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gate3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "arrow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_double_line_2x2_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ZergBodyParts",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builder_natives_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_resource_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "weath_floor.007",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_giant_storage_player",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_a_props",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron_mine2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_rogue",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_tripe_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_resource_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_wall_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lighthouse",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_7",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lich_summoner",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "projectile",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pleague_tree6s",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_horseman_spear",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_06",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_09",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.096",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "linkFlag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fish3_m_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "archer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_pogost2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.099",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builder_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "garden2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_Ground_3x3_v1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_inner_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_4x4_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_outer_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_crusher",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_4_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_snut",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_gate_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_gate_2_animated",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "m6_summon_range",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lich_summoner_leech",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "storage2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_4_ship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_small_wood_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pile_wood_undead_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house_1_m9bx_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_big3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "DeathMetalStorage2Glow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "builder_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_fat_B",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_market_sphincter",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_Ground_5x5_v1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_m_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_03",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_catapult_2_arm",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_11",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_b2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "deer_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_1x1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_food_4_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_line_8x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_corner.003",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hive_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "harpy_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_cliff_empty_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_town_hall",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_bone_storage_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bird.001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_props_c",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "horse_fat_A",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_3x3_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tree_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_02",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_b",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_burial_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "obelisk1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_s1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_tripe_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cadaver_horse",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_props_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fisher_natives_child_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "GroundImpactMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.102",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tower_small_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_tripe_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "chest_gold 2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_market",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "trebuchet",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "broken_ship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadCatapultAttackEffect",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_small1_simp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "m6_summon_range_arrow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_b5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "torch_wood",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_cliff_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_ballista_arrow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_ghost_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_king",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_barrack_3x3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm_bio3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tavern1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_rip_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_tower_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_barrack_1x1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_4x4_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dead_tree_1_spec",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "woodcutter_natives_child_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_tower_big_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_double_line_2x2_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_12x12_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "m6_summon_melee",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_army_limiter3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_wall_b",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_small_wood_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pine_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_treb_light",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_tripe_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_stall_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "digested_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "croc_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tower_small_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_prosperous_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_6x6_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_dmetal_mine_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "crossbower",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_d_props",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_6x6_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_walls_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_cliff_empty_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bug_point_m6b",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bat_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "BasaltRayMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "soul_stone_mine",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature_strong",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farmer_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_military_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron_mine2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_mill_shaft",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_stall_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_mill",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_crossbower",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_army_limiter_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_corner",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_big_wood_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_rip_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_place",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "rabbirt3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fisher_natives_child_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tower_small_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_tower_small_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "DeathMetalStorage1Glow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.040",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_rich_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Fur_weakened",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall3_flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_3x3_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ban_2_tw",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_3x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "unemployed_natives_child_f",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_spirit_ziggurat2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_natives_w_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hammer_splash",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "fisherman_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine3_crane",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_3x3_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_4x4_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "sequoia_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_gate",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_gate_1_animated",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_natives_m_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_storage_dmetal_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_4x4_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Saranga_hall-tower.001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_d",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_chest",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_1_base",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_resource_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bug_point_m6b_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_outer_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_b4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_light_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_m_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleTower_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_s4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cadaver_a",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron_mine1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_armored_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s11",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_armored_cadaver_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_pole_big_animated",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s13",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_wall_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_03",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "arrow_exp",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "great_academy_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_e",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_6x6_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_2x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_b5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "food",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_double_line_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_wood_3_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ShanharMassHealEffectMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "harpy_tiny",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "barrack1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "FireMeshWithGlow",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_scotts_prison",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_12x12_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "w_dno_offset",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_barraks_player_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_3x3_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrypicker1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_spirit_refuge_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_04",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_wood_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_tower_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_05",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_lich_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_destruction_machine_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_wall_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "WolfwalkerAttackEffectMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_tower_tall",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hospital1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lumbermill1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_12x12_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_zerg",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Chest_gold",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wagon_gold",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_house_e_props",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_zigurat_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_scorpion_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_Ground_5x5_v2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_heavy_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lighthouse_cliff",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_stall_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.042",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_s10_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_pole",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "GroundImpactMeshWithSpikes",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "water_creature_nest",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_b10_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.33182",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Malya",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "forester_w",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_8x8_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrybush_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_cliff_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_gate",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_04",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.100",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_stone_resource_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_5x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleTower_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_line_6x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_ballista",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_b1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_catapult_stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_kamikaze",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_0_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gate2_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "barrack2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "gate3_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "mana_crystal",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_2x2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_line_2x2_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm2_4way_rig",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_05",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "CurvedQuadParticleMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wood",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.44800",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ironminer_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_tripe_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_worker_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_iron_cliff_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "eletree_b3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wagon-stone",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wall_2_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "berrybush_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "obelisk2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "DragonImpactEffect_mesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_props_a",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_inner_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cavalier",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_wall_a_angle",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_wolfwalkers_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_6x6_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "giant_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s7",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "storage3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_dmetal_mine_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_catapult",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wolfwalker_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "small_cliff_any_4x4_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "port_2_ship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_tripe_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine3_fract",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_zigurat_small",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "underlay_royal_city_quarter_prosperous",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_ghost_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_line_1x1_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_barrack_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "forester_m",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "beach_pine_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bird",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "swordsmen",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm_bio1_ground",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_3x3_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_barrack_0",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine3_scaffold",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wagon_wood",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_top_30",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.041",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snowtree_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_army_limiter3_mushroom",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_8x8_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_tripe_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_rich_1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_fork_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_catapult_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ambar1_road.010",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_5x5_v2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_5x5_v1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall_stone_and_tree",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.046",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "spike_trap.001",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_wall_c",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "market1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.154",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cube.33181",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "straus",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm3_4way_core",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "ruins_temple_main",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "angry_rabbit",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_Ground_8x8_v2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_pole_big",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_4x4_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine2_crane",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "town_hall1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_barak_catapult_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_iron_cliff_empty_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_monk",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_small_wood_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hospital1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "dlc_tree_s10_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "health_bottle",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_shelter_rabid",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_w_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "UndeadGroundSpawnMesh",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wagon_food",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_props_b",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm_bio3_ground",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bones_2_6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_top_2x2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_obelisk",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "barrack1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarrangaTampleMain_6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_rich_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_00",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "garden1_pool",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineering_building2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_line_1x1_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "farm_bio2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_armored_cadaver_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_rabid",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_spreader_tower",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine3_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_stone_tripe_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Cylinder",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "healer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_double_line_2x2_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_storage_dmetal_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_tree_s14",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "SarangaSummonSmoke",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_line_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "road_niniendo_003",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pinata_6",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "wood",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_ship",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_inner_1x1_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_barrak_light_2_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "enemy_citizen_royal_m_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "snut",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Hobo_House_8x8_v1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_blood_scot",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tree5_s3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "garden1_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "bomj_ballista",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_lair_zerg_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "circle",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_standard_flag",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine3_res",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "house_1_m9bx",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "engineer",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "frame_n_corner",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cadaver_d",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "hobo_wall_b_angle",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_market_4_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_10",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_house_military_0_road",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Circle.098",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_small_cliff_top_3x3_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "iron_mine_advanced",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "stone_mine_advanced",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "tower_small3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_treb_heavy_static",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "b1_big_cliff_double_line_2x2_3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "undead_chest",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "Plane.078",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "u_giant_ship_4",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "pile_gold_dropped",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "cave_line_4x1_1",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "TempleBuildVFXWindows_00",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_tent_2x2_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "big_cliff_any_4x4_5",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "lumbermill3",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "royal_sword_2",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    },
+    {
+      "mesh": "natives_house",
+      "bindposeCount": 1,
+      "boneNameHashCount": 1,
+      "subMeshCount": 1
+    }
+  ]
+}

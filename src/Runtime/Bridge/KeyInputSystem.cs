@@ -205,10 +205,25 @@ namespace DINOForge.Runtime.Bridge
             // would fail because _resurrectionLog/_resurrectionConfig are null.
             if (Plugin.NeedsResurrection || ReferenceEquals(Plugin.PersistentRoot, null))
             {
-                DebugLog.Write("KeyInput", $"[KeyInputSystem.OnCreate] Resurrection needed: NeedsRes={Plugin.NeedsResurrection} rootRef={(!ReferenceEquals(Plugin.PersistentRoot, null))}");
-                Plugin.NeedsResurrection = false;
-                // Defer to background thread which runs after Plugin.Awake() completes
+                DebugLog.Write("KeyInput", $"[KeyInputSystem.OnCreate] Resurrection needed: NeedsRes={Plugin.NeedsResurrection} rootRef={(!ReferenceEquals(Plugin.PersistentRoot, null))} paramsReady={Plugin.ResurrectionParamsReady}");
+                // Keep the need MARKED (do NOT clear NeedsResurrection prematurely — clearing it here
+                // was a stale-event clear of the flag that the WinDbg-diagnosed dormant-plugin bug
+                // relied on the fallback to re-observe).
                 Plugin.NeedsDeferredResurrection = true;
+
+                // iter-149e DECISIVE fix: OnCreate fires on the Unity MAIN THREAD when DINO creates a
+                // new ECS world — and DINO creates one while bringing up MainMenu (the InitialGameLoader
+                // 'Default World' OnCreate proves this callback fires post-teardown). After the
+                // InitialGameLoader->MainMenu teardown, our bg fallback thread goes silent and no
+                // MainMenu sceneLoaded/activeSceneChanged reaches our static handlers, so this
+                // DINO-driven main-thread callback is the reliable revive hook. Revive DIRECTLY here
+                // (main-thread ECalls are safe) once Awake captured the resurrection params. The
+                // original "defer only" rationale (Awake not yet complete) only holds for the very
+                // first world during startup; ResurrectionParamsReady gates that.
+                if (Plugin.ResurrectionParamsReady)
+                {
+                    Plugin.ReviveFromMainThreadCallback("KeyInputSystem.OnCreate(main-thread)");
+                }
             }
 
             // Key insight: OnCreate fires BEFORE World.DefaultGameObjectInjectionWorld is set,

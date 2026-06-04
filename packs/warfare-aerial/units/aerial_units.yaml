@@ -350,3 +350,105 @@
     ascend_speed: 12.0
     descend_speed: 8.0
   weapon: bee_sting
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AIRPLANES — mechanical fixed-wing aircraft produced by the Airport / Hangar.
+# These are the canonical "airplane" aerial units: they carry the Aerial
+# behavior_tag so AerialUnitMapper attaches AerialUnitComponent on spawn and the
+# Aviation systems (AerialMovementSystem / AerialTargetingSystem) drive them.
+# ─────────────────────────────────────────────────────────────────────────────
+
+- id: aerial_fighter_plane
+  display_name: Fighter Plane
+  description: Fast fixed-wing fighter. Air-superiority aircraft that intercepts other flyers and strafes light ground targets.
+  unit_class: AirstrikeProxy
+  faction_id: lords_troops
+  tier: 2
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AntiAir, Kite]
+  stats:
+    hp: 100.0
+    damage: 16.0
+    armor: 4.0
+    range: 18.0
+    speed: 18.0
+    accuracy: 0.7
+    fire_rate: 3.0
+    morale: 100.0
+    cost:
+      food: 0
+      wood: 40
+      stone: 10
+      iron: 60
+      gold: 50
+      population: 2
+  aerial:
+    cruise_altitude: 24.0
+    ascend_speed: 10.0
+    descend_speed: 7.0
+    anti_air: true
+  weapon: plane_autocannon
+
+- id: aerial_bomber_plane
+  display_name: Bomber Plane
+  description: Heavy fixed-wing bomber. Slow and fragile to interceptors but devastating against ground formations and buildings.
+  unit_class: AirstrikeProxy
+  faction_id: lords_troops
+  tier: 3
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial, Large]
+  behavior_tags: [Aerial, SiegePriority, AntiStructure]
+  stats:
+    hp: 220.0
+    damage: 50.0
+    armor: 10.0
+    range: 22.0
+    speed: 10.0
+    accuracy: 0.75
+    fire_rate: 0.7
+    morale: 120.0
+    cost:
+      food: 0
+      wood: 80
+      stone: 30
+      iron: 140
+      gold: 120
+      population: 4
+  aerial:
+    cruise_altitude: 30.0
+    ascend_speed: 5.0
+    descend_speed: 4.0
+  weapon: plane_bombs
+
+- id: aerial_interceptor_plane
+  display_name: Interceptor Plane
+  description: Lightweight high-altitude interceptor. Cheap, blazing fast, built to swarm and run down enemy aircraft.
+  unit_class: AirstrikeProxy
+  faction_id: lords_troops
+  tier: 1
+  vanilla_mapping: aerial_fighter
+  defense_tags: [Mechanical, Aerial]
+  behavior_tags: [Aerial, AntiAir, Flank]
+  stats:
+    hp: 60.0
+    damage: 10.0
+    armor: 2.0
+    range: 14.0
+    speed: 22.0
+    accuracy: 0.65
+    fire_rate: 4.0
+    morale: 80.0
+    cost:
+      food: 0
+      wood: 20
+      stone: 0
+      iron: 35
+      gold: 25
+      population: 1
+  aerial:
+    cruise_altitude: 28.0
+    ascend_speed: 14.0
+    descend_speed: 9.0
+    anti_air: true
+  weapon: plane_machinegun

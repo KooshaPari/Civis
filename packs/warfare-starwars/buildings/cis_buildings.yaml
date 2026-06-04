@@ -4,6 +4,8 @@
   display_name: Tactical Droid Center
   description: Separatist command center housing the tactical droid coordinator.
   building_type: command
+  # #975 Phase 1 — CASTLE swap: vanilla DINO castle/command building → SW command center.
+  vanilla_mapping: command
   health: 1400
   cost:
     food: 0
@@ -171,10 +173,27 @@
     iron: 70
     gold: 40
     population: 0
-  production: {}
+  production:
+    cis_tri_fighter: 1
   defense_tags: [AntiAir]
   anti_air:
     range: 38.0
     damage_bonus: 1.5
 
   visual_asset: sw-vulture-nest
+- id: cis_droid_hangar
+  display_name: Droid Starfighter Hangar
+  description: Separatist aerial factory mass-producing droid starfighters. Assembles Tri-Fighters and Nantex-class fighters for overwhelming swarm air superiority.
+  building_type: barracks
+  health: 1100
+  cost:
+    food: 0
+    wood: 0
+    stone: 60
+    iron: 110
+    gold: 60
+    population: 0
+  production:
+    cis_tri_fighter: 1
+    cis_nantex_fighter: 1
+  visual_asset: sw-cis-hangar-bay

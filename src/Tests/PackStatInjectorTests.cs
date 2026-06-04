@@ -40,6 +40,19 @@ namespace DINOForge.Tests
         [InlineData("scout",           "Components.RangeUnit")]
         [InlineData("cavalry",         "Components.CavalryUnit")]
         [InlineData("siege",           "Components.SiegeUnit")]
+        // #975 Phase 1 — cims (citizens/workers) and buildings.
+        [InlineData("cims",            "Components.Worker")]
+        [InlineData("worker",          "Components.Worker")]
+        [InlineData("citizen",         "Components.Worker")]
+        [InlineData("building",        "Components.BuildingBase")]
+        [InlineData("command",         "Components.BuildingBase")]
+        [InlineData("barracks",        "Components.BuildingBase")]
+        [InlineData("resource",        "Components.BuildingBase")]
+        [InlineData("economy",         "Components.BuildingBase")]
+        [InlineData("defense",         "Components.BuildingBase")]
+        [InlineData("tower",           "Components.BuildingBase")]
+        [InlineData("wall",            "Components.BuildingBase")]
+        [InlineData("research",        "Components.BuildingBase")]
         public void VanillaMappingTable_KnownMappings_ReturnCorrectComponentType(
             string vanillaMapping, string expectedComponentType)
         {

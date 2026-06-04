@@ -117,6 +117,7 @@ namespace DINOForge.SDK
         /// <returns>Result indicating success or failure with errors.</returns>
         public ContentLoadResult LoadPack(string packDirectory)
         {
+            Assets.AssetService.ClearRuntimeCatalogEntries();
             return LoadPackInternal(packDirectory, skipDependencyCheck: false);
         }
 
@@ -213,6 +214,7 @@ namespace DINOForge.SDK
         /// <returns>Aggregate result of loading all packs.</returns>
         public ContentLoadResult LoadPacks(string packsRootDirectory)
         {
+            Assets.AssetService.ClearRuntimeCatalogEntries();
             if (!Directory.Exists(packsRootDirectory))
             {
                 List<string> pathErrors = new List<string> { $"Packs directory not found: {packsRootDirectory}" };
@@ -628,6 +630,7 @@ namespace DINOForge.SDK
                     bundlePath,
                     unit.VisualAsset!,
                     unit.VanillaMapping));
+                Assets.AssetService.RegisterRuntimeCatalogEntry(unit.VisualAsset!, bundlePath);
             }
 
             foreach (DINOForge.SDK.Registry.RegistryEntry<Models.BuildingDefinition> entry in _registryManager.Buildings.All.Values)
@@ -640,10 +643,25 @@ namespace DINOForge.SDK
                 if (!File.Exists(bundlePath))
                     continue;
 
+                // Gap A (#975): buildings were previously registered WITHOUT a vanilla_mapping,
+                // so the runtime AssetSwapSystem ran their swap in "no targeting signal"
+                // DIAGNOSTIC MODE and skipped it. Resolve a mapping in priority order:
+                //   1. explicit building.vanilla_mapping
+                //   2. building.building_type (e.g. command/barracks/resource/defense)
+                //   3. the generic "building" mapping (→ Components.BuildingBase)
+                // so every building swap carries a targeting signal and exits DIAGNOSTIC MODE.
+                string buildingMapping = !string.IsNullOrWhiteSpace(building.VanillaMapping)
+                    ? building.VanillaMapping!
+                    : !string.IsNullOrWhiteSpace(building.BuildingType)
+                        ? building.BuildingType!
+                        : "building";
+
                 Assets.AssetSwapRegistry.Register(new Assets.AssetSwapRequest(
                     building.VisualAsset!,
                     bundlePath,
-                    building.VisualAsset!));
+                    building.VisualAsset!,
+                    buildingMapping));
+                Assets.AssetService.RegisterRuntimeCatalogEntry(building.VisualAsset!, bundlePath);
             }
         }
     }

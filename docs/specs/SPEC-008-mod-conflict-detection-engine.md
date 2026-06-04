@@ -676,7 +676,7 @@ public Property VanillaMappingConflict_AlwaysDetected(
 |------|--------|------------|
 | False positive Tier 1 warnings for additive packs | User ignores all warnings | Tier 2 replaces vague Tier 1 warnings with precise ID-level data; Tier 1 becomes informational only |
 | Performance regression with 50+ packs | Slow game startup | Lazy conflict detection: compute on first F10 open, not on load |
-| Breaking change to IRegistry<T> interface | Test failures | Add `DetectMultiSourceEntries` with default interface method (C# 8+ DIM) returning empty list |
+| Breaking change to `IRegistry<T>` interface | Test failures | Add `DetectMultiSourceEntries` with default interface method (C# 8+ DIM) returning empty list |
 | Stat comparison floating-point drift | False semantic conflicts | Use epsilon-based comparison (delta > 0.01) for float stats |
 | Pack authors rely on load-order-wins behavior | Changing to explicit errors breaks existing setups | Tier 2 reports are warnings by default; only tied-priority becomes an error. Add `allow_override: true` manifest field for packs that intentionally override others |
 

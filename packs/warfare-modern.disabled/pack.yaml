@@ -1,0 +1,50 @@
+# Modern Warfare Pack
+# West vs Classic Enemy - modern military themed total conversion
+
+id: warfare-modern
+name: Modern Warfare
+version: 0.2.0
+framework_version: ">=0.1.0 <1.0.0"
+author: DINOForge
+description: |
+  A total conversion replacing DINO's fantasy armies with contemporary military forces. Deploy modern infantry, vehicles, and artillery in asymmetric warfare between NATO-inspired Western Alliance and a technologically-advanced adversary.
+
+  Factions included:
+  - Western Alliance: disciplined combined-arms force with strong research and defensive infrastructure
+  - Classic Enemy: adaptive force employing human-wave tactics and scorched-earth doctrine
+
+  Content features:
+  - 12 unique units per faction: riflemen, squads, special forces, gunners, mortars, scouts, APCs, armor
+  - 4 doctrines: combined arms, human wave, fortified defense, asymmetric tactics
+  - 4 campaign waves: early game, mid game, armor support, and final assault
+  - Modern weapons and ballistic systems
+
+  Gameplay shifts from medieval pacing to tactical modern warfare with emphasis on combined-arms coordination.
+type: total_conversion
+
+depends_on: []
+conflicts_with: []
+
+ui_theme:
+  title: "WARFARE: MODERN"
+  subtitle: "Western Alliance vs Classic Enemy"
+  primary_color: "#F5A623"
+  secondary_color: "#1C2B3A"
+  accent_color: "#CC2929"
+  text_color: "#EDE8DC"
+  background_tint: "#141A18"
+  # EPIC-027 visual takeover — pack-relative PNG art (rasterized from assets/svg/ via scripts/art/rasterize-menu-takeover.ps1)
+  logo: "assets/ui/menu_logo.png"
+  background_image: "assets/ui/menu_bg.png"
+  button_frame: "assets/ui/btn_normal.png"
+  button_frame_hover: "assets/ui/btn_hover.png"
+
+loads:
+  factions:
+    - factions
+  units:
+    - units
+  doctrines:
+    - doctrines
+  waves:
+    - waves

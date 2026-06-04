@@ -18,7 +18,7 @@ public static class GenerateStarWarsPrefabsFromModels
     private static readonly Color CisGrey       = new Color(0.55f, 0.55f, 0.50f);
     private static readonly Color CisDark       = new Color(0.30f, 0.28f, 0.25f);
 
-    // (bundleKey, faction, primaryColor, accentColor, fallbackShape, modelAssetName)
+        // (bundleKey, faction, primaryColor, accentColor, fallbackShape, modelAssetName)
     // modelAssetName = filename in Assets/Models/ without extension (null = primitive only)
     private static readonly (string Key, string Faction, Color Primary, Color Accent,
                               PrimitiveType Shape, string? ModelName)[] Defs =
@@ -28,14 +28,14 @@ public static class GenerateStarWarsPrefabsFromModels
         ("sw-rep-arc-trooper",     "Republic", RepublicBlue,  RepublicWhite, PrimitiveType.Capsule, "rep_arf_trooper"),
         ("sw-rep-clone-heavy",     "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, "rep_clone_heavy"),
         ("sw-rep-clone-sniper",    "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, "rep_clone_sharpshooter"),
-        ("sw-rep-clone-commander", "Republic", RepublicBlue,  RepublicWhite, PrimitiveType.Capsule, null),
+        ("sw-rep-clone-commander", "Republic", RepublicBlue,  RepublicWhite, PrimitiveType.Capsule, "rep_clone_militia"),
         ("sw-rep-clone-pilot",     "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, null),
         ("sw-rep-clone-engineer",  "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, "rep_clone_engineer"),
         ("sw-rep-clone-medic",     "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, "rep_clone_medic"),
         ("sw-rep-clone-jet",       "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, null),
         ("sw-rep-clone-mortar",    "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Capsule, null),
         ("sw-rep-at-rt-walker",    "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Cube,    null),
-        ("sw-rep-at-te-walker",    "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Cube,    "sw_at_te_walker"),
+        ("sw-rep-at-te-walker",    "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Cube,    "sw_aat_walker"),
         ("sw-rep-laat-gunship",    "Republic", RepublicWhite, RepublicBlue,  PrimitiveType.Cube,    null),
         ("sw-rep-jedi-fighter",    "Republic", RepublicBlue,  RepublicWhite, PrimitiveType.Sphere,  null),
         // ── Republic buildings ──────────────────────────────────────────────────
@@ -63,7 +63,7 @@ public static class GenerateStarWarsPrefabsFromModels
         ("sw-cis-octuptarra",      "CIS",      CisDark,       CisGrey,       PrimitiveType.Sphere,  null),
         ("sw-cis-hmp-droid-gunship","CIS",     CisDark,       CisGrey,       PrimitiveType.Cube,    null),
         ("sw-cis-stap",            "CIS",      CisGrey,       CisDark,       PrimitiveType.Cylinder,"cis_stap_speeder"),
-        ("sw-cis-spider-droid",    "CIS",      CisDark,       CisGrey,       PrimitiveType.Cube,    "cis_dwarf_spider_droid"),
+        ("sw-cis-spider-droid",    "CIS",      CisDark,       CisGrey,       PrimitiveType.Cube,    "cis_probe_droid"),
         ("sw-cis-nantex-fighter",  "CIS",      CisDark,       CisGrey,       PrimitiveType.Sphere,  null),
         // ── CIS buildings ──────────────────────────────────────────────────────
         ("sw-cis-droid-factory",   "CIS",      CisDark,       CisGrey,       PrimitiveType.Cube,    "cis_droid_factory"),
@@ -86,6 +86,7 @@ public static class GenerateStarWarsPrefabsFromModels
             Debug.Log("[GenerateStarWarsPrefabsFromModels] Starting...");
 
             EnsureDirs();
+            EnsureRawModels();
 
             // Force reimport of Models folder
             AssetDatabase.ImportAsset("Assets/Models", ImportAssetOptions.ImportRecursive);
@@ -99,12 +100,17 @@ public static class GenerateStarWarsPrefabsFromModels
                 string prefabPath = $"Assets/Prefabs/{def.Faction}/{def.Key}.prefab";
 
                 // Create material if missing
-                if (AssetDatabase.LoadAssetAtPath<Material>(matPath) == null)
+                var primaryMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                if (primaryMat == null)
                 {
-                    var mat = new Material(Shader.Find("Standard")) { color = def.Primary };
+                    var mat = CreateUrpMaterial(def.Primary);
                     AssetDatabase.CreateAsset(mat, matPath);
                     var mi = AssetImporter.GetAtPath(matPath);
                     if (mi != null) mi.assetBundleName = def.Key;
+                }
+                else
+                {
+                    SetUrpMaterial(primaryMat, def.Primary);
                 }
 
                 // Delete existing prefab to force regeneration (clears stale primitives)
@@ -113,15 +119,14 @@ public static class GenerateStarWarsPrefabsFromModels
                     AssetDatabase.DeleteAsset(prefabPath);
                 }
 
-                // Try loading real mesh from Assets/Models/
+                // Try loading real mesh from Assets/Models/ (copied from raw/*.glb as needed).
                 GameObject go = null;
 
                 if (def.ModelName != null)
                 {
-                    string[] guids = AssetDatabase.FindAssets($"{def.ModelName} t:Model", new[] { "Assets/Models" });
-                    if (guids.Length > 0)
+                    string modelPath = EnsureUsableModelAsset(def.ModelName);
+                    if (modelPath != null)
                     {
-                        string modelPath = AssetDatabase.GUIDToAssetPath(guids[0]);
                         var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
                         if (modelPrefab != null)
                         {
@@ -142,11 +147,11 @@ public static class GenerateStarWarsPrefabsFromModels
                 }
 
                 // Apply material
-                var mat2 = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-                if (mat2 != null)
+                var finalMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                if (finalMat != null)
                 {
                     foreach (var r in go.GetComponentsInChildren<Renderer>())
-                        r.sharedMaterial = mat2;
+                        r.sharedMaterial = finalMat;
                 }
 
                 // Save as prefab
@@ -187,5 +192,101 @@ public static class GenerateStarWarsPrefabsFromModels
                 AssetDatabase.CreateFolder(parent, child);
             }
         }
+    }
+
+    private static void EnsureRawModels()
+    {
+        foreach (var def in Defs)
+        {
+            if (string.IsNullOrWhiteSpace(def.ModelName))
+                continue;
+
+            EnsureUsableModelAsset(def.ModelName);
+        }
+    }
+
+    private static string? EnsureUsableModelAsset(string modelName)
+    {
+        if (string.IsNullOrWhiteSpace(modelName))
+            return null;
+
+        foreach (string existing in AssetDatabase.FindAssets($"{modelName} t:Model", new[] { "Assets/Models" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(existing);
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".fbx" || ext == ".glb" || ext == ".gltf")
+            {
+                return path;
+            }
+        }
+
+        string source = ResolveRawModelSource(modelName);
+        if (source == null)
+            return null;
+
+        string glbTarget = $"Assets/Models/{modelName}.glb";
+        string fullTarget = Path.Combine(Application.dataPath, "Models", $"{modelName}.glb");
+        Directory.CreateDirectory(Path.GetDirectoryName(fullTarget)!);
+        File.Copy(source, fullTarget, true);
+        AssetDatabase.ImportAsset(glbTarget, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        return glbTarget;
+    }
+
+    private static string? ResolveRawModelSource(string modelName)
+    {
+        string rawRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "packs", "warfare-starwars", "assets", "raw"));
+        if (!Directory.Exists(rawRoot))
+            return null;
+
+        string normalized = modelName.ToLowerInvariant();
+        string? bestMatch = null;
+        foreach (var dir in Directory.GetDirectories(rawRoot))
+        {
+            string dirName = Path.GetFileName(dir).ToLowerInvariant();
+            if (!dirName.Contains(normalized))
+                continue;
+
+            string candidate = Path.Combine(dir, "model.glb");
+            if (!File.Exists(candidate))
+                continue;
+
+            if (bestMatch == null)
+            {
+                bestMatch = candidate;
+                continue;
+            }
+
+            // Prefer non-LEGO sources when both exist.
+            bool bestIsLego = Path.GetFileName(bestMatch).Contains("_lego", StringComparison.OrdinalIgnoreCase);
+            bool candidateIsLego = dirName.Contains("_lego", StringComparison.OrdinalIgnoreCase);
+            if (bestIsLego && !candidateIsLego)
+                bestMatch = candidate;
+        }
+
+        return bestMatch;
+    }
+
+    private static Material CreateUrpMaterial(Color color)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ??
+                        Shader.Find("Universal Render Pipeline/Simple Lit");
+        if (shader == null)
+            throw new InvalidOperationException("No URP shader available.");
+
+        var mat = new Material(shader);
+        mat.SetColor("_BaseColor", color);
+        return mat;
+    }
+
+    private static void SetUrpMaterial(Material material, Color color)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ??
+                        Shader.Find("Universal Render Pipeline/Simple Lit");
+        if (shader == null)
+            throw new InvalidOperationException("No URP shader available.");
+
+        material.shader = shader;
+        material.SetColor("_BaseColor", color);
+        EditorUtility.SetDirty(material);
     }
 }

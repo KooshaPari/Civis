@@ -340,6 +340,55 @@ namespace DINOForge.SDK
 
         [YamlMember(Alias = "background_tint")]
         public string? BackgroundTint { get; set; }
+
+        /// <summary>
+        /// Optional themed loading screen for this total_conversion pack.
+        /// Shown by the Runtime <c>LoadingScreenController</c> during the
+        /// InitialGameLoader-&gt;MainMenu asset-load window and on scene transitions.
+        /// Only honoured for packs of <c>type: total_conversion</c>.
+        /// </summary>
+        [YamlMember(Alias = "loading_screen")]
+        public PackLoadingScreen? LoadingScreen { get; set; }
+
+        /// <summary>
+        /// Convenience shorthand: a single background image path (relative to pack root)
+        /// used for the loading screen when the full <see cref="LoadingScreen"/> block
+        /// is not declared. Equivalent to <c>loading_screen.background</c>.
+        /// </summary>
+        [YamlMember(Alias = "loading_background")]
+        public string? LoadingBackground { get; set; }
+    }
+
+    /// <summary>
+    /// Declares a pack-authored loading screen for <c>total_conversion</c> packs.
+    /// Resolved by the Runtime <c>LoadingScreenController</c> before the first ECS
+    /// world becomes ready. All paths are relative to the pack root directory.
+    /// </summary>
+    public sealed class PackLoadingScreen
+    {
+        /// <summary>Path (relative to pack root) to a 1920×1080 PNG/JPEG background.</summary>
+        [YamlMember(Alias = "background")]
+        public string? Background { get; set; }
+
+        /// <summary>Path (relative to pack root) to a max-512×256 PNG logo (transparent).</summary>
+        [YamlMember(Alias = "logo")]
+        public string? Logo { get; set; }
+
+        /// <summary>Rotating tip / lore strings displayed during loading.</summary>
+        [YamlMember(Alias = "tips")]
+        public List<string>? Tips { get; set; } // public-mutable-ok: YAML deserializer requires mutable List for YamlDotNet
+
+        /// <summary>Seconds between tip rotations (default 6).</summary>
+        [YamlMember(Alias = "tip_rotation_seconds")]
+        public float TipRotationSeconds { get; set; } = 6f;
+
+        /// <summary>Hex accent color for the progress bar and separator (e.g. <c>#FFE81F</c>).</summary>
+        [YamlMember(Alias = "accent_color")]
+        public string? AccentColor { get; set; }
+
+        /// <summary>Alpha of the background image overlay, 0.0–1.0 (default 0.95).</summary>
+        [YamlMember(Alias = "overlay_opacity")]
+        public float OverlayOpacity { get; set; } = 0.95f;
     }
 
     /// <summary>

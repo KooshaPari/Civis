@@ -212,6 +212,31 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <summary>
+        /// Resolve a CLR <see cref="Type"/> by full name from all loaded assemblies. Unlike
+        /// <see cref="ResolveComponentType"/> this does NOT require the type to be a valid ECS
+        /// component — used for game enums / ScriptableObject config types / UnityEngine types
+        /// (e.g. "Utility.EnumsStorage.BuildingType", "UnityEngine.Resources").
+        /// </summary>
+        /// <param name="fullTypeName">Full CLR type name.</param>
+        /// <returns>The CLR type, or null if not found in any loaded assembly.</returns>
+        public static Type? ResolveType(string fullTypeName)
+        {
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    Type? t = assembly.GetType(fullTypeName, throwOnError: false);
+                    if (t != null) return t;
+                }
+                catch
+                {
+                    // safe-swallow: type lookup can fail while assemblies load; continue scanning.
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Resolve a DINO ECS component type by full name from loaded assemblies,
         /// then convert it to a Unity.Entities.ComponentType.
         /// Results are cached for the lifetime of the AppDomain.

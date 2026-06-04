@@ -34,6 +34,9 @@ namespace DINOForge.Runtime.UI
         /// <summary>The always-visible HUD strip (top-right corner).</summary>
         public HudStrip? HudStrip { get; private set; }
 
+        /// <summary>The small DINOForge active badge.</summary>
+        public DinoForgeIndicator? DinoForgeIndicator { get; private set; }
+
         // ── Private state ─────────────────────────────────────────────────────────
         private ManualLogSource? _log;
         private string _lastEventSystemSnapshotKey = "";
@@ -155,6 +158,11 @@ namespace DINOForge.Runtime.UI
             HudStrip.OnClicked = ToggleModMenu;
             _hudStripRt = hudGo.GetComponent<RectTransform>();
 
+            GameObject indicatorGo = new GameObject("DinoForgeIndicatorHost", typeof(RectTransform));
+            indicatorGo.transform.SetParent(canvasRoot, false);
+            DinoForgeIndicator = indicatorGo.AddComponent<DinoForgeIndicator>();
+            DinoForgeIndicator.Build(canvasRoot);
+
             // Build mod menu panel
             GameObject menuGo = new GameObject("ModMenuPanelHost", typeof(RectTransform));
             menuGo.transform.SetParent(canvasRoot, false);
@@ -170,6 +178,12 @@ namespace DINOForge.Runtime.UI
             DebugPanel.Build(canvasRoot);
 
             NormalizeCanvasGroupRaycasts(canvasRoot, "BuildCanvas");
+        }
+
+        /// <summary>Applies the active conversion theme to the persistent badge.</summary>
+        public void SetIndicatorTheme(string activeConversionName, Color primaryColor)
+        {
+            DinoForgeIndicator?.SetTheme(activeConversionName, primaryColor);
         }
 
         // ── Input handling ────────────────────────────────────────────────────────

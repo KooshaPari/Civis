@@ -41,8 +41,42 @@ namespace DINOForge.Runtime.Bridge
                 { "cavalry",         "Components.CavalryUnit" },
                 { "siege",           "Components.SiegeUnit" },
 
-                // Intentionally skipped: AerialSpawnSystem handles aerial entities
+                // Intentionally null for stat injection: PackStatInjector skips aerial_fighter
+                // (AerialSpawnSystem owns aerial behaviour). NOTE: the visual mesh swap targets
+                // aerial units separately — see AssetSwapSystem.ResolveAerialArchetypeTypeName /
+                // VanillaMappingToMeshSubstrings (BUG B fix #101). Do NOT assume null here means
+                // "no swap target".
                 { "aerial_fighter",  null },
+
+                // ----------------------------------------------------------------------
+                // #975 Phase 1 — full-world conversion: cims (citizens/workers) + buildings.
+                //
+                // CIMS: DINO's roaming non-combatant population ("cims"). CONFIRMED via live
+                // entity dump (#986, build 1BDC999C, 2026-05-31): the renderable cim entity
+                // carries Components.Citizen and RenderMesh ON THE SAME ENTITY (count=58 in a
+                // live skirmish). The previous guess Components.Worker matched only 2 entities
+                // (worker singletons), so the RenderMesh+Worker query returned 0 → "0 succeeded".
+                // Components.Citizen is the correct archetype.
+                { "cims",            "Components.Citizen" },
+                { "worker",          "Components.Citizen" },   // alias for cims
+                { "citizen",         "Components.Citizen" },   // alias for cims
+
+                // BUILDINGS: every DINO building carries the Components.BuildingBase zero-size
+                // marker (confirmed via entity crosswalk). Buildings register with a
+                // vanilla_mapping resolved from building.vanilla_mapping → building_type →
+                // "building" (see ContentLoader.RegisterAssetSwaps, Gap A). All building-type
+                // values map to BuildingBase; mesh-name substrings (AssetSwapSystem) provide the
+                // optional secondary refinement so distinct building meshes can be swapped
+                // selectively as their vanilla mesh names become known.
+                { "building",        "Components.BuildingBase" },
+                { "command",         "Components.BuildingBase" },
+                { "barracks",        "Components.BuildingBase" },
+                { "resource",        "Components.BuildingBase" },
+                { "economy",         "Components.BuildingBase" },
+                { "defense",         "Components.BuildingBase" },
+                { "tower",           "Components.BuildingBase" },
+                { "wall",            "Components.BuildingBase" },
+                { "research",        "Components.BuildingBase" },
             };
 
         /// <summary>

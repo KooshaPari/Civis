@@ -1,0 +1,33 @@
+ManifestFileVersion: 0
+CRC: 4161474413
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 0c6e20eaa84ac87ed71daaca8f496a72
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 81fc4833398717ae320ec5bd08c661f4
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 0c6e20eaa84ac87ed71daaca8f496a72
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Materials/CIS/sw-b1-squad.mat
+- Assets/Prefabs/CIS/sw-b1-squad.prefab
+Dependencies: []

@@ -1,0 +1,90 @@
+# Hello World Swordsman Unit Definition
+# A simple infantry unit demonstrating unit override concepts.
+
+# Why this matters: Units are the core of any military faction. This example
+# shows how to define a unit and override vanilla stats.
+
+id: hello_world_swordsman
+display_name: Hello World Swordsman
+description: |
+  A basic melee infantry unit. This is a custom variant with boosted HP
+  and reduced cost, making it cheaper to train than vanilla swordsmen.
+
+  In real mods, you would customize:
+  - Attack speed and damage type (piercing, slashing, crushing)
+  - Special abilities and morale effects
+  - 3D model and weapon visuals
+  - Sound effects for attacks and death
+
+unit_class: CoreLineInfantry
+faction_id: hello_world_faction
+tier: 1
+
+# Why tier matters: Tier 1 units are cheap and early-game, Tier 2 are mid-game,
+# Tier 3 are late-game. The game engine uses this to decide unit upgrade paths.
+
+stats:
+  hp: 150                # Health points. Vanilla swordsman has ~100.
+  damage: 12             # Damage per hit
+  armor: 2               # Damage reduction (0-10 scale)
+  range: 1               # Melee range (1 = adjacent tiles)
+  speed: 3.5             # Movement speed
+  cost:
+    resource_1: 30       # Food cost (vanilla: ~40)
+    resource_2: 0        # Wood cost
+    resource_3: 0        # Stone cost
+    resource_4: 0        # Iron cost
+    population: 1        # Population slots consumed
+  accuracy: 0.8          # Hit chance (0.0-1.0)
+  fire_rate: 1.0         # Attacks per second
+  morale: 100            # Starting morale (affects behavior in combat)
+
+# Why these stats matter:
+# - Lower cost (30 vs 40) makes training faster and encourages use
+# - Higher HP (150 vs 100) makes swordsmen more durable
+# - Same speed/damage keeps balance neutral (not overpowered)
+# - This shows how to tweak vanilla units without breaking the game
+
+defense_tags:
+  - Unarmored            # No armor, takes full damage
+  - InfantryArmor        # Light armor (if you add it visually)
+
+# Why defense tags matter: The game engine uses these to calculate damage
+# multipliers. AntiArmor units do 2x damage to HeavyArmor units, etc.
+# These tags let you balance units against each other.
+
+behavior_tags:
+  - HoldLine             # Stands firm in formation
+  - AdvanceFire          # Moves forward while attacking
+  - Charge               # Rushes at enemies
+
+# Why behavior tags matter: These affect how the AI controls units in combat.
+# HoldLine units form defensive lines, while Charge units push forward.
+
+# Vanilla mapping (optional but useful):
+# vanilla_mapping: line_infantry
+
+# Why vanilla_mapping matters: If you set this, DINOForge will automatically
+# apply your unit's stats as overrides to vanilla units. Uncomment this to
+# replace all vanilla swordsmen with your boosted version!
+
+# Uncomment when you're ready to boost vanilla swordsmen:
+# vanilla_mapping: line_infantry
+
+# Visual overrides (optional):
+visuals:
+  # icon: "packs/example-hello-world/assets/icons/swordsman.png"
+  # portrait: "packs/example-hello-world/assets/portraits/swordsman.jpg"
+  # model_override: "sw-hello-world-swordsman"  # Asset bundle ID
+  # projectile_vfx: "slash_effect"
+  # muzzle_vfx: "sword_spark"
+
+# Audio overrides (optional):
+audio:
+  # attack_sound: "sword_slash"
+  # death_sound: "soldier_death"
+  # select_sound: "soldier_select"
+  # move_sound: "footstep_armor"
+
+# Tech requirements (optional):
+# tech_requirement: "swordsmanship"  # Locks unit behind a tech tree node

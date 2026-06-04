@@ -142,12 +142,11 @@ public class DINOForgeBundleBuilder
             if (collider != null)
                 Object.DestroyImmediate(collider);
 
-            // Set up material with faction-based color
-            var mat = new Material(Shader.Find("Standard"));
-            mat.color = GetFactionColor(packName);
-            var renderer = go.GetComponent<Renderer>();
-            if (renderer != null)
-                renderer.material = mat;
+        // Set up material with faction-based color
+        var mat = CreateUrpMaterial(GetFactionColor(packName));
+        var renderer = go.GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.material = mat;
 
             // Save as prefab
             PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
@@ -186,5 +185,14 @@ public class DINOForgeBundleBuilder
             // Default gray
             return new Color(0.8f, 0.8f, 0.8f);
         }
+    }
+
+    private static Material CreateUrpMaterial(Color tint)
+    {
+        var shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
+        var mat = new Material(shader);
+        mat.SetColor("_BaseColor", tint);
+        return mat;
     }
 }

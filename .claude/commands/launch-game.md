@@ -53,6 +53,31 @@ if ($remaining) { $remaining | Stop-Process -Force; Start-Sleep -Seconds 2 }
 Clear-Content "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_debug.log" -ErrorAction SilentlyContinue
 ```
 
+### 2b. Ensure steam_appid.txt (REQUIRED — prevents Steam self-relaunch dropping BepInEx)
+```powershell
+# Without this file (AppID 1272320, UTF-8 no BOM, no trailing newline) beside the exe,
+# DINO re-launches itself via Steam and kills the BepInEx-injected process (no MODS/F9/F10).
+# Steam "Verify Integrity" can delete it — recreate if missing/wrong.
+$appIdPaths = @(
+    "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\steam_appid.txt",
+    "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option_TEST\steam_appid.txt"
+)
+foreach ($appIdPath in $appIdPaths) {
+    $gameDir = Split-Path $appIdPath -Parent
+    if (-not (Test-Path $gameDir)) { continue }
+    $needsWrite = $true
+    if (Test-Path $appIdPath) {
+        if ([System.IO.File]::ReadAllText($appIdPath) -eq "1272320") { $needsWrite = $false }
+    }
+    if ($needsWrite) {
+        [System.IO.File]::WriteAllText($appIdPath, "1272320", (New-Object System.Text.UTF8Encoding $false))
+        Write-Host "Wrote steam_appid.txt: $appIdPath"
+    } else {
+        Write-Host "OK: $appIdPath"
+    }
+}
+```
+
 ### 3. Launch directly
 ```powershell
 Start-Process `

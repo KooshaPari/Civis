@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2597757890
+CRC: 840260113
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: c5f55ec7447a380b72c5d6bd44b1d0cb
+    Hash: 8e070d3ed8db772e2d34b9ccf6b9aa68
   TypeTreeHash:
     serializedVersion: 2
     Hash: a3954d9da6324b836c32a89fa85d00a9
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: c5f55ec7447a380b72c5d6bd44b1d0cb
+    Hash: 8e070d3ed8db772e2d34b9ccf6b9aa68
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -31,6 +31,6 @@ ClassTypes:
 SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/Materials/CIS/sw-cis-command-center-primary.mat
-- Assets/Prefabs/CIS/sw-cis-command-center.prefab
 - Assets/Materials/CIS/sw-cis-command-center.mat
+- Assets/Prefabs/CIS/sw-cis-command-center.prefab
 Dependencies: []

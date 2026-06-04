@@ -51,9 +51,20 @@ namespace DINOForge.Runtime.UI
             // Drop any persistent/runtime callbacks inherited from the source button.
             cloneBtn.onClick = new Button.ButtonClickedEvent();
 
-            // Remove any cloned game-specific scripts and event triggers that can still
-            // invoke the original Settings/Options behavior on click/submit.
-            StripNonUiBehaviours(clone);
+            // Remove cloned game-specific scripts and event triggers that can still invoke the
+            // original Settings/Options behaviour on click/submit — BUT preserve Selectable-derived
+            // components (#1 fix). In DINO each native menu row is a UnityEngine.UI.Button PLUS a
+            // custom MainMenuButton : Selectable that actually paints the hover/press highlight.
+            // Stripping MainMenuButton (its namespace is the game's, not UnityEngine) was killing
+            // the highlight, so the injected button "acted like the cursor was never over it".
+            // We keep those Selectable-derived highlight drivers and only neutralise their callbacks.
+            StripNonUiBehaviours(clone, preserveSelectables: true);
+            NeutralizePreservedSelectables(clone, cloneBtn);
+
+            // If the native Button itself has no usable transition (DINO sets it to None and lets
+            // the custom MainMenuButton drive visuals), force a ColorTint transition so even when
+            // the custom highlight script is absent the button still shows hover/press feedback.
+            EnsureVisibleTransition(cloneBtn);
 
             // Reset navigation to prevent inherited EventSystem conflicts from original button's menu layout
             Navigation nav = cloneBtn.navigation;
@@ -62,6 +73,54 @@ namespace DINOForge.Runtime.UI
 
             SetButtonText(cloneBtn, newText);
             return cloneBtn;
+        }
+
+        /// <summary>
+        /// After a button clone preserves Selectable-derived highlight drivers (e.g. DINO's
+        /// MainMenuButton), neutralise anything on them that could re-trigger the original
+        /// menu action on click/submit, while leaving their hover/press visual behaviour intact.
+        /// Any Selectable other than the surviving Button is left enabled (for visuals) but its
+        /// navigation is set to None so it does not fight the Button for EventSystem focus.
+        /// </summary>
+        private static void NeutralizePreservedSelectables(GameObject clone, Button surviving)
+        {
+            foreach (Selectable s in clone.GetComponentsInChildren<Selectable>(includeInactive: true))
+            {
+                if (s == null || s == surviving) continue;
+                try
+                {
+                    Navigation nav = s.navigation;
+                    nav.mode = Navigation.Mode.None;
+                    s.navigation = nav;
+                    // Keep interactable=true so highlight transitions still render on hover.
+                    s.interactable = true;
+                }
+                catch { /* best-effort: preserved highlight driver is non-fatal if it resists tweaks */ }
+            }
+        }
+
+        /// <summary>
+        /// Guarantees a button shows visible hover/press feedback. If the donor's transition was
+        /// <see cref="Selectable.Transition.None"/> (DINO defers visuals to a custom script),
+        /// switch to a ColorTint transition with a clearly-visible highlight/pressed tint so the
+        /// injected button always renders interaction state — even if no custom driver survives.
+        /// Leaves an already-configured ColorTint/SpriteSwap transition untouched.
+        /// </summary>
+        internal static void EnsureVisibleTransition(Button btn)
+        {
+            if (btn == null) return;
+            if (btn.transition != Selectable.Transition.None) return;
+
+            btn.transition = Selectable.Transition.ColorTint;
+            ColorBlock cb = btn.colors;
+            cb.normalColor = new Color(1f, 1f, 1f, 1f);
+            cb.highlightedColor = new Color(0.85f, 0.78f, 0.45f, 1f); // warm gold hover (DINO/SW palette)
+            cb.pressedColor = new Color(0.65f, 0.58f, 0.30f, 1f);
+            cb.selectedColor = new Color(0.85f, 0.78f, 0.45f, 1f);
+            cb.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            cb.colorMultiplier = 1f;
+            cb.fadeDuration = 0.1f;
+            btn.colors = cb;
         }
 
         internal static void SanitizeUiClone(GameObject root)
@@ -113,8 +172,26 @@ namespace DINOForge.Runtime.UI
 
                 if (preserved != null && preserved != btn)
                 {
+                    // Copy the donor's full interactive visual state (transition + colors +
+                    // sprite-swap states + targetGraphic + BG image) onto the new Button so
+                    // hover/press/normal render exactly like a native menu item (#1).
                     CopySelectableVisualState(btn, preserved);
+
+                    // Destroy the preserved custom MainMenuButton Selectable. Leaving two
+                    // Selectables on one GameObject means BOTH receive pointer events and the
+                    // custom one (whose script callbacks we stripped) can swallow/short-circuit
+                    // the transition rendering — the symptom the user reported ("acts like the
+                    // cursor was never over it"). With the visual state already transferred, the
+                    // Button alone now drives identical native hover/press/normal feedback.
+                    UnityEngine.Object.Destroy(preserved);
                 }
+
+                // Re-assert navigation on the surviving Button (Automatic so it participates
+                // in the native menu's keyboard/controller nav like its siblings).
+                Navigation btnNav = btn.navigation;
+                btnNav.mode = Navigation.Mode.Automatic;
+                btn.navigation = btnNav;
+                btn.interactable = true;
 
                 SetButtonText(btn, newText);
 
@@ -140,12 +217,95 @@ namespace DINOForge.Runtime.UI
             if (target == null || donor == null) return;
             try
             {
+                // 1. Copy the full interaction-transition configuration. This is what drives
+                //    the hover (highlighted), pressed, selected and disabled rendering.
                 target.transition = donor.transition;
                 target.colors = donor.colors;
                 target.spriteState = donor.spriteState;
                 target.animationTriggers = donor.animationTriggers;
+
+                // 2. CRITICAL (#1 root cause): a Selectable's transition only renders if its
+                //    targetGraphic is set. CloneSelectableAsButton adds a fresh Button whose
+                //    targetGraphic is null, so ColorTint/SpriteSwap had nothing to paint —
+                //    the injected button "acted like the cursor was never over it".
+                //    Resolve the donor's targetGraphic to the equivalent child on the clone
+                //    (same relative path), and copy the background Image sprite/material/color
+                //    so normal-state chrome matches native too.
+                //    (#970a robust resolve-by-path + #970b full-frame property copy unioned.)
+                Graphic? resolvedTargetGraphic = ResolveClonedTargetGraphic(target, donor);
+
+                if (resolvedTargetGraphic == null)
+                {
+                    // Fallback: prefer the native painterly background image from the clone.
+                    resolvedTargetGraphic = FindPreferredButtonGraphic(target.transform);
+                }
+
+                if (resolvedTargetGraphic is Image resolvedImage && donor.targetGraphic is Image donorImage)
+                {
+                    resolvedImage.sprite = donorImage.sprite;
+                    resolvedImage.type = donorImage.type;
+                    resolvedImage.color = donorImage.color;
+                    resolvedImage.material = donorImage.material;
+                    // #970b: carry the custom-shader frame's PPU + aspect so a sliced native
+                    // frame renders identically on the clone.
+                    resolvedImage.pixelsPerUnitMultiplier = donorImage.pixelsPerUnitMultiplier;
+                    resolvedImage.preserveAspect = donorImage.preserveAspect;
+                    resolvedImage.raycastTarget = true;
+                }
+
+                if (resolvedTargetGraphic != null)
+                {
+                    target.targetGraphic = resolvedTargetGraphic;
+                }
             }
             catch { /* safe-swallow: visual-state copy is best-effort; missing/destroyed donor is non-fatal */ }
+        }
+
+        /// <summary>
+        /// Resolves the donor Selectable's <c>targetGraphic</c> to the equivalent graphic on the
+        /// freshly-cloned button by matching the relative transform path. Returns null when the
+        /// donor has no targetGraphic or no matching child exists on the clone.
+        /// </summary>
+        private static Graphic? ResolveClonedTargetGraphic(Button target, Selectable donor)
+        {
+            if (donor.targetGraphic == null) return null;
+            try
+            {
+                string path = GetRelativePath(donor.targetGraphic.transform, donor.transform);
+                Transform? matching = string.IsNullOrEmpty(path) ? target.transform : target.transform.Find(path);
+                return matching?.GetComponent(donor.targetGraphic.GetType()) as Graphic;
+            }
+            catch { return null; /* safe-swallow: targetGraphic resolution is best-effort; falls back to FindPreferredButtonGraphic */ }
+        }
+
+        /// <summary>
+        /// Picks the most plausible background graphic from a cloned button hierarchy:
+        /// a child Image named "*background*" if present, else the first Image that has a sprite.
+        /// </summary>
+        private static Image? FindPreferredButtonGraphic(Transform root)
+        {
+            if (root == null) return null;
+            Image? firstSpriteImage = null;
+            foreach (Image image in root.GetComponentsInChildren<Image>(includeInactive: true))
+            {
+                if (image == null) continue;
+                if (image.sprite != null && firstSpriteImage == null) firstSpriteImage = image;
+                if (image.name.IndexOf("background", StringComparison.OrdinalIgnoreCase) >= 0) return image;
+            }
+            return firstSpriteImage;
+        }
+
+        private static string GetRelativePath(Transform node, Transform root)
+        {
+            if (node == root) return string.Empty;
+            System.Collections.Generic.Stack<string> parts = new System.Collections.Generic.Stack<string>();
+            Transform? current = node;
+            while (current != null && current != root)
+            {
+                parts.Push(current.name);
+                current = current.parent;
+            }
+            return string.Join("/", parts.ToArray());
         }
 
         private static void StripNonUiBehaviours(GameObject root, bool preserveSelectables = false)

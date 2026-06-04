@@ -460,6 +460,19 @@ public sealed class GameClient : IGameClient, IDisposable
         SendRequestAsync<ComponentMapResult>("getComponentMap", sdkPath != null ? new { sdkPath } : null, ct);
 
     /// <summary>
+    /// Drives the scripted main-menu → skirmish/gameplay UI sequence in-process and returns a
+    /// per-step trace (which selector resolved, wait condition satisfied, screenshot path). This
+    /// is the autonomous "reach gameplay" routine: it fires real EventSystem pointer clicks and
+    /// waits for next-screen / world-ready conditions between steps.
+    /// </summary>
+    /// <param name="plan">Plan name (default "skirmish").</param>
+    /// <param name="screenshotDir">Directory for per-step PNGs (server default when null).</param>
+    /// <param name="finalShot">Optional path for the final gameplay-camera capture.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<NavigationResult> NavigateToGameplayAsync(string? plan = null, string? screenshotDir = null, string? finalShot = null, CancellationToken ct = default) =>
+        SendRequestAsync<NavigationResult>("navigateToGameplay", new { plan, screenshotDir, finalShot }, ct);
+
+    /// <summary>
     /// Invokes an arbitrary bridge method and returns the raw JSON result.
     /// Useful for debugging or calling methods not yet wrapped.
     /// </summary>
@@ -488,6 +501,19 @@ public sealed class GameClient : IGameClient, IDisposable
     /// </summary>
     public Task<UiActionResult> ClickUiAsync(string selector, CancellationToken ct = default) =>
         SendRequestAsync<UiActionResult>("clickUi", new { selector }, ct);
+
+    /// <summary>
+    /// Drives Unity's EventSystem pointer lifecycle in-process (hover/press/click), bypassing
+    /// OS input which DINO's EventSystem does not receive. Supply either a <paramref name="target"/>
+    /// selector or screen coordinates (<paramref name="x"/>, <paramref name="y"/>).
+    /// </summary>
+    /// <param name="target">Selector for the target UI node (or null when using coordinates).</param>
+    /// <param name="ev">Pointer event: enter|exit|down|up|click|hover|press.</param>
+    /// <param name="x">Optional screen X coordinate (used when <paramref name="target"/> is null).</param>
+    /// <param name="y">Optional screen Y coordinate.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<UiActionResult> UiPointerAsync(string? target, string ev, float? x = null, float? y = null, CancellationToken ct = default) =>
+        SendRequestAsync<UiActionResult>("uiPointer", new { target, @event = ev, x, y }, ct);
 
     /// <summary>
     /// Waits for a live Unity UI selector to reach the requested state.

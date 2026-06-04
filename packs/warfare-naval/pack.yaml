@@ -1,0 +1,43 @@
+# Naval Expansion Pack
+# Naval vessels and harbor infrastructure for vanilla DINO factions
+#
+# Companion to warfare-aerial: an "extension" pack that ADDS base mechanics
+# (naval units + harbors) without replacing base-game factions. Modeled on
+# packs/warfare-aerial/pack.yaml.
+
+id: warfare-naval
+name: Naval Warfare Expansion
+version: 0.1.0
+framework_version: ">=0.1.0 <1.0.0"
+author: DINOForge
+description: |
+  Naval warfare expansion adding seafaring vessels to vanilla DINO factions.
+
+  Compatible with vanilla DINO — adds content without replacing base game factions.
+  Pairs with the warfare-aerial expansion: together they provide the base aerial
+  and naval mechanics that themed total conversions (e.g. warfare-starwars) can
+  optionally build on.
+
+  Content features:
+  - Naval vessels: scout skiffs, war galleys, and heavy warships
+  - Uses standard vehicle unit classes mapped to vanilla movement
+
+# Schema 'type' enum has no "extension" member; "content" is the additive-content
+# tier (same as warfare-aerial). The "extension" intent is carried by
+# classification: engine_extension and the tags below.
+type: content
+classification: engine_extension
+
+tags:
+  - extension
+  - naval
+  - warfare
+
+depends_on: []
+conflicts_with: []
+
+loads:
+  units:
+    - units/naval_units.yaml
+  buildings:
+    - buildings/naval_buildings.yaml

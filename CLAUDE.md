@@ -161,6 +161,7 @@ dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:DeployToGame=tru
 # Check after ~12s (600-frame delay):
 tail -50 "G:\SteamLibrary\steamapps\common\Diplomacy is Not an Option\BepInEx\dinoforge_debug.log"
 ```
+- **REQUIRED: `steam_appid.txt` = `1272320`** (UTF-8 no BOM, 7 bytes, no trailing newline) MUST sit beside the exe or DINO self-relaunches via Steam and drops BepInEx (no MODS/F9/F10). Steam "Verify Integrity" deletes it; `DeployToGame` re-creates it. Always launch directly (`Start-Process <exe>`) — do NOT rely on Steam relaunch.
 - **DeployToGame copies ALL `DINOForge.*.dll`** (Runtime + SDK + Bridge.Protocol + Bridge.Client + Domains), not just `DINOForge.Runtime.dll` — the SDK/Protocol deploy gap was fixed (#942). Verify a deploy by file hash/timestamp, NOT by build exit 0 (MSBuild can silently no-op — Pattern #530; always pass `-p:TargetFramework=netstandard2.0`).
 - After any TFM change: `Remove-Item obj/, bin/ -Recurse; dotnet clean; dotnet build --no-incremental` and test actual runtime behavior, not reflection metadata (Pattern #233).
 

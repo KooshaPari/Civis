@@ -234,13 +234,24 @@ namespace DINOForge.Runtime.Bridge
         /// </summary>
         public void EnsureServerAlive()
         {
-            // If RuntimeDriver was destroyed (scene transition), resurrect it.
-            // This creates a new RuntimeDriver which re-registers KeyInputSystem
-            // in the current ECS world, ensuring DrainQueue and F9/F10 work.
+            // FailureMode B fix (iter-149, 2026-05-29): DO NOT call TryResurrect here.
+            // EnsureServerAlive runs on the ResurrectionFallback BACKGROUND thread every poll
+            // tick. Calling TryResurrect when PersistentRoot==null reaches Unity ECalls
+            // (Camera.main / AddComponent / RuntimeDriver.Initialize, which touch
+            // Resources/asset APIs) on a background thread DURING the InitialGameLoader→MainMenu
+            // asset load — that DEADLOCKS the fallback thread (memory: "Resources.* from a bg
+            // thread DEADLOCKS during asset loading"). The wedged thread stops emitting
+            // heartbeats and never reaches the grace-windowed revive, so the driver stays
+            // dormant and no engine UI (MODS/F9/F10) appears.
+            //
+            // Resurrection is OWNED by ResurrectionFallbackLoop's grace-windowed path, which
+            // exists precisely to defer the revive until the scene has settled. This method now
+            // only restarts a dead bridge SERVER THREAD (pipe-only work, no Unity ECalls), and
+            // marks the deferred-resurrection flag so the grace path picks it up safely.
             if (Plugin.PersistentRoot == null)
             {
-                DebugLog.Write("GameBridgeServer", "[GameBridgeServer] PersistentRoot is null — triggering resurrection...");
-                Plugin.TryResurrect("(Bridge supervisor)", "EnsureServerAlive");
+                DebugLog.Write("GameBridgeServer", "[GameBridgeServer] PersistentRoot is null — deferring resurrection to grace-windowed fallback path (no bg-thread Unity ECalls).");
+                Plugin.MarkNeedsDeferredResurrection("EnsureServerAlive");
             }
 
             if (_running && (_serverThread == null || !_serverThread.IsAlive))
@@ -538,6 +549,9 @@ namespace DINOForge.Runtime.Bridge
                     return HandleQueryUi(parameters);
                 case "clickUi":
                     return HandleClickUi(parameters);
+                case "uiPointer":
+                case "ui_pointer":
+                    return HandleUiPointer(parameters);
                 case "waitForUi":
                     return HandleWaitForUi(parameters);
                 case "expectUi":
@@ -586,6 +600,9 @@ namespace DINOForge.Runtime.Bridge
                     return HandleInvokeMethod(parameters);
                 case "getMetrics":
                     return HandleGetMetrics();
+                case "navigateToGameplay":
+                case "navigate_to_gameplay":
+                    return HandleNavigateToGameplay(parameters);
                 default:
                     throw new InvalidOperationException($"Method not found: {method}");
             }
@@ -891,6 +908,60 @@ namespace DINOForge.Runtime.Bridge
 
             UiActionTrace.Record("click", selector, clickResult, clickResult.MatchedNode);
             return JToken.FromObject(clickResult);
+        }
+
+        /// <summary>
+        /// Drives Unity's EventSystem pointer lifecycle in-process (hover/press/click), bypassing
+        /// OS input which DINO's EventSystem does not receive. Params:
+        /// { target?: selector, x?, y?: screen coords, event: enter|exit|down|up|click|hover|press }.
+        /// Either <c>target</c> (selector) or <c>x</c>+<c>y</c> (screen coords) must be supplied.
+        /// </summary>
+        private JToken HandleUiPointer(JObject? parameters)
+        {
+            string evt = parameters?.Value<string>("event") ?? "click";
+            string? target = parameters?.Value<string>("target");
+            float? x = parameters?.Value<float?>("x");
+            float? y = parameters?.Value<float?>("y");
+
+            System.Threading.Tasks.Task<UiActionResult> task;
+            string selectorLabel;
+            if (!string.IsNullOrWhiteSpace(target))
+            {
+                selectorLabel = target!;
+                task = MainThreadDispatcher.RunOnMainThread(() => UI.EventSystemDriver.Drive(target!, evt));
+            }
+            else if (x.HasValue && y.HasValue)
+            {
+                selectorLabel = $"({x.Value},{y.Value})";
+                task = MainThreadDispatcher.RunOnMainThread(() => UI.EventSystemDriver.DriveAt(x.Value, y.Value, evt));
+            }
+            else
+            {
+                var bad = new UiActionResult
+                {
+                    Success = false,
+                    Selector = string.Empty,
+                    Message = "uiPointer requires either 'target' (selector) or 'x'+'y' (screen coords).",
+                    ActionabilityReason = "missing-target",
+                };
+                UiActionTrace.Record("pointer", string.Empty, bad);
+                return JToken.FromObject(bad);
+            }
+
+            // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            bool completed = task.Wait(MainThreadWaitTimeoutMs); // sync-over-async-unavoidable: ECS-bound, main-thread-required
+            UiActionResult result = completed
+                ? task.Result // sync-over-async-unavoidable: ECS-bound, main-thread-required
+                : new UiActionResult
+                {
+                    Success = false,
+                    Selector = selectorLabel,
+                    Message = "Timed out while driving EventSystem pointer.",
+                    ActionabilityReason = "timeout",
+                };
+
+            UiActionTrace.Record($"pointer:{evt}", selectorLabel, result, result.MatchedNode);
+            return JToken.FromObject(result);
         }
 
         private JToken HandleWaitForUi(JObject? parameters)
@@ -1257,27 +1328,30 @@ namespace DINOForge.Runtime.Bridge
             {
                 try
                 {
-                    string? dir = Path.GetDirectoryName(path);
-                    if (dir != null && !Directory.Exists(dir))
-                        Directory.CreateDirectory(dir);
-
-                    UnityEngine.ScreenCapture.CaptureScreenshot(path);
+                    // #972 fix: use FrameCapture (synchronous RenderTexture readback) instead of
+                    // the asynchronous UnityEngine.ScreenCapture.CaptureScreenshot. The legacy call
+                    // only QUEUED a deferred end-of-frame capture and returned Success=true before
+                    // any file was written; DINO's custom PlayerLoop never reliably flushed that
+                    // capture during active gameplay, so "saved" was reported with no PNG on disk.
+                    // FrameCapture renders the active camera into a temp RT, reads it back, encodes
+                    // PNG, and File.WriteAllBytes — the file exists before this returns, in ALL states.
+                    FrameCapture.Result fc = FrameCapture.Capture(path);
+                    if (!fc.Success)
+                    {
+                        DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleScreenshot FrameCapture failed for '{path}': {fc.Error}");
+                    }
 
                     return new ScreenshotResult
                     {
-                        Success = true,
+                        Success = fc.Success,
                         Path = path,
-                        Width = Screen.width,
-                        Height = Screen.height
+                        Width = fc.Width,
+                        Height = fc.Height
                     };
                 }
                 catch (Exception ex)
                 {
                     // Pattern #104 (Task #302): structured logging instead of catch-swallow-default.
-                    // Surface the failure path via WriteDebug (full Exception.ToString() per Pattern #96).
-                    // ScreenshotResult.Success=false is preserved as the wire signal; the DTO is shared
-                    // with Bridge.Protocol so we don't add a new field here, but the runtime log
-                    // captures the exception type, message, and stack for diagnosis.
                     DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleScreenshot failed for '{path}' ({ex.GetType().Name}): {ex}");
                     return new ScreenshotResult
                     {
@@ -1304,6 +1378,46 @@ namespace DINOForge.Runtime.Bridge
             }
 
             return JToken.FromObject(ssResult);
+        }
+
+        /// <summary>
+        /// Drives the scripted main-menu → skirmish/gameplay UI sequence in-process via
+        /// <see cref="Capture.NavigationScripter"/>, capturing a verification frame at each step.
+        /// This composes the EventSystem pointer driver (#972) + reliable FrameCapture (#980) into
+        /// the missing multi-step flow that actually reaches the gameplay camera. Params:
+        /// { plan?: "skirmish" (default), screenshotDir?: string, finalShot?: string }.
+        /// </summary>
+        private JToken HandleNavigateToGameplay(JObject? parameters)
+        {
+            string planName = parameters?.Value<string>("plan") ?? "skirmish";
+            string screenshotDir = parameters?.Value<string>("screenshotDir")
+                ?? Path.Combine(BepInEx.Paths.BepInExRootPath, "screenshots", "nav");
+            string? finalShot = parameters?.Value<string>("finalShot");
+
+            Capture.NavigationScripter.Plan plan = Capture.NavigationScripter.SkirmishPlan();
+            plan.Name = planName;
+
+            // The scripter blocks on per-step waits/captures; allow a long ceiling for the
+            // gameplay-world load (DINO can take tens of seconds to spin up a level).
+            const int NavigationWaitTimeoutMs = 120000;
+            var navTask = MainThreadDispatcher.RunOnMainThread(() =>
+                Capture.NavigationScripter.Run(plan, screenshotDir, finalShot));
+
+            // sync-over-async-unavoidable: ECS/EventSystem-bound, main-thread-required
+            if (!navTask.Wait(NavigationWaitTimeoutMs))
+            {
+                DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleNavigateToGameplay timed out ({NavigationWaitTimeoutMs}ms)");
+                return JToken.FromObject(new NavigationResult
+                {
+                    Success = false,
+                    Plan = planName,
+                    Message = $"Navigation timed out after {NavigationWaitTimeoutMs}ms.",
+                    FinalState = "timeout",
+                });
+            }
+
+            // sync-over-async-unavoidable: ECS/EventSystem-bound, main-thread-required
+            return JToken.FromObject(navTask.Result);
         }
 
         private JToken HandleDumpState(JObject? parameters)
@@ -1728,59 +1842,30 @@ namespace DINOForge.Runtime.Bridge
         {
             string saveName = parameters?.Value<string>("saveName") ?? "";
 
-            // Trigger the game's own world-loading system by creating the
-            // BeginGameWorldLoadingSingleton ECS entity, which SceneLoadingSystem listens for.
-            var result = MainThreadDispatcher.RunOnMainThread(() =>
+            // GATED OFF (regression fix, reconcile3 2026-05-31):
+            // Previously this RPC created a bare `Components.SingletonComponents.BeginGameWorldLoadingSingleton`
+            // ECS entity with EMPTY/unpopulated fields to programmatically trigger world-load. DINO's native
+            // Systems.GameWorldLoaderSystem.OnUpdate then calls GetSingleton<that type>() expecting its managed
+            // component (save path / map id / load params) populated, gets null/empty, and throws a
+            // NullReferenceException EVERY FRAME in InitializationSystemGroup — flooding the log and breaking
+            // world-load. The bare-entity creation MUST NOT happen. This is an experimental nav-scripter trigger,
+            // NOT core functionality; the nav/record-session paths do not depend on it. Normal menu-driven
+            // world-load (player clicking through the menu) populates the singleton correctly and is unaffected.
+            //
+            // To re-enable programmatic world-load, populate ALL required fields of the singleton with valid
+            // values BEFORE creating the entity (see Option B in the regression ticket). Until then this is a
+            // no-op so we never corrupt DINO's native loader.
+            DebugLog.Write("GameBridgeServer",
+                $"[GameBridgeServer] startGame RPC is GATED OFF (no-op) to avoid corrupting native GameWorldLoaderSystem; " +
+                $"saveName='{saveName}'. Load a world through the in-game menu instead.");
+
+            return JToken.FromObject(new
             {
-                try
-                {
-                    World? world = GetActiveWorld();
-                    if (world == null || !world.IsCreated)
-                        return new { success = false, message = "No ECS world" };
-
-                    // Resolve BeginGameWorldLoadingSingleton type dynamically
-                    Type? singletonType = null;
-                    foreach (System.Reflection.Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        singletonType = asm.GetType("Components.SingletonComponents.BeginGameWorldLoadingSingleton");
-                        if (singletonType != null) break;
-                    }
-
-                    if (singletonType == null)
-                        return new { success = false, message = "BeginGameWorldLoadingSingleton type not found" };
-
-                    // Dump the singleton's fields for diagnostics
-                    FieldInfo[] fields = singletonType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    string fieldList = string.Join(", ", System.Array.ConvertAll(fields, f => $"{f.FieldType.Name} {f.Name}"));
-                    DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] BeginGameWorldLoadingSingleton fields: [{fieldList}]");
-
-                    ComponentType ct = ComponentType.ReadWrite(singletonType);
-                    Entity e = world.EntityManager.CreateEntity(ct);
-                    DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] Created BeginGameWorldLoadingSingleton entity {e.Index}");
-
-                    // If the singleton has a NameToLoad field, try to set it via reflection
-                    // (ECS components are structs so we use SetComponentData via reflection)
-                    if (!string.IsNullOrEmpty(saveName))
-                    {
-                        FieldInfo? nameField = singletonType.GetField("NameToLoad",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] NameToLoad field: {(nameField == null ? "not found" : nameField.FieldType.Name)}");
-                    }
-
-                    return new { success = true, message = $"Created singleton entity {e.Index}, fields=[{fieldList}]" };
-                }
-                catch (Exception ex)
-                {
-                    DebugLog.Write("GameBridgeServer", $"[GameBridgeServer] HandleStartGame failed: {ex.Message}");
-                    return new { success = false, message = ex.Message };
-                }
+                success = false,
+                disabled = true,
+                message = "startGame RPC is disabled: programmatic BeginGameWorldLoadingSingleton creation broke "
+                          + "DINO's native GameWorldLoaderSystem (NRE/frame). Use the in-game menu to load a world."
             });
-
-            // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            bool completed = result.Wait(MainThreadWaitTimeoutMs);
-            if (!completed) return JToken.FromObject(new { success = false, message = "Timed out" });
-            // sync-over-async-unavoidable: ECS-bound, main-thread-required
-            return JToken.FromObject(result.Result);
         }
 
         private JToken HandleDismissLoadScreen()

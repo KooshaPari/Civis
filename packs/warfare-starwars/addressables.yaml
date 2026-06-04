@@ -469,6 +469,34 @@ entries:
       - level: 2
         polycount: 26000
 
+  - key: sw-rep-gunship-bay
+    address: buildings/sw-rep-gunship-bay
+    path: prefabs/sw-rep-gunship-bay.prefab
+    type: building
+    faction: republic
+    phase: v1_2_0_aerial
+    lod_levels:
+      - level: 0
+        polycount: 38000
+      - level: 1
+        polycount: 30400
+      - level: 2
+        polycount: 19000
+
+  - key: sw-cis-hangar-bay
+    address: buildings/sw-cis-hangar-bay
+    path: prefabs/sw-cis-hangar-bay.prefab
+    type: building
+    faction: cis
+    phase: v1_2_0_aerial
+    lod_levels:
+      - level: 0
+        polycount: 34000
+      - level: 1
+        polycount: 27200
+      - level: 2
+        polycount: 17000
+
   - key: sw-guard-tower
     address: buildings/Guard_Tower_Republic
     path: prefabs/Guard_Tower_Republic.prefab
@@ -911,6 +939,34 @@ entries:
       - level: 2
         polycount: 2550
 
+  - key: sw-rep-laat-gunship
+    address: units/sw-rep-laat-gunship
+    path: prefabs/sw-rep-laat-gunship.prefab
+    type: unit
+    faction: republic
+    phase: v1_2_0_aerial
+    lod_levels:
+      - level: 0
+        polycount: 9000
+      - level: 1
+        polycount: 5400
+      - level: 2
+        polycount: 2700
+
+  - key: sw-nantex-fighter
+    address: units/sw-nantex-fighter
+    path: prefabs/sw-nantex-fighter.prefab
+    type: unit
+    faction: cis
+    phase: v1_2_0_aerial
+    lod_levels:
+      - level: 0
+        polycount: 6000
+      - level: 1
+        polycount: 3600
+      - level: 2
+        polycount: 1800
+
   - key: sw-cis-probe-droid
     address: units/sw-cis-probe-droid
     path: prefabs/sw-cis-probe-droid.prefab
@@ -927,7 +983,7 @@ entries:
 
 metadata:
   generated_at: 2026-03-25T00:00:00Z
-  total_entries: 75
-  total_units: 43
-  total_buildings: 30
+  total_entries: 79
+  total_units: 45
+  total_buildings: 32
   total_lod_variants: 168

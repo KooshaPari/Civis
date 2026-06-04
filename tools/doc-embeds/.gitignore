@@ -1,0 +1,8 @@
+node_modules/
+public/
+.staged-props.json
+**/out/
+
+# Root .gitignore ignores bin/ (for .NET output); our CLI scripts must stay tracked.
+!bin/
+!bin/*.mjs

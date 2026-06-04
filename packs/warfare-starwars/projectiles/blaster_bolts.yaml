@@ -1,0 +1,29 @@
+# Star Wars blaster-bolt projectiles.
+#
+# DINO renders every projectile (arrows / bolts / ballista shots) through Unity.Rendering.RenderMesh.
+# The runtime ProjectileMeshSwapSystem recolours each in-flight projectile's material emission into a
+# glowing energy bolt, keyed on the firing faction (vanilla Components.Enemy tag):
+#   - enemy-tagged projectiles  -> CIS / Separatist red
+#   - friendly projectiles      -> Galactic Republic blue
+#
+# These definitions are declarative overrides of the compiled default colours. Edit bolt_color to
+# retune the look; no engine changes required. faction is matched case-insensitively
+# (cis/separatist/droid/confederacy -> red; everything else -> blue).
+
+- id: sw_blaster_bolt_republic
+  display_name: Republic Blaster Bolt
+  faction: republic
+  bolt_color: "#33A0FF"
+  speed: 70.0
+  damage: 0.0
+  visual_prefab: blaster-bolt-blue
+  impact_effect: BlasterImpact_Rep
+
+- id: sw_blaster_bolt_cis
+  display_name: CIS Blaster Bolt
+  faction: cis
+  bolt_color: "#FF2014"
+  speed: 70.0
+  damage: 0.0
+  visual_prefab: blaster-bolt-red
+  impact_effect: BlasterImpact_CIS

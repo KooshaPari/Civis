@@ -92,6 +92,8 @@ public static class Program
             "scan-scene" => await HandleScanSceneCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
             "invoke-method" => await HandleInvokeMethodCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
             "ui-tree" => await HandleUiTreeCommand(remainingArgs.Skip(1).FirstOrDefault()).ConfigureAwait(false),
+            "ui-pointer" => await HandleUiPointerCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
+            "navigate-to-gameplay" => await HandleNavigateToGameplayCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
             "demo" => await HandleDemoCommand().ConfigureAwait(false),
             // JSON-output bridge commands (used by Python MCP server)
             "get-stat" => await HandleGetStatCommand(remainingArgs.Skip(1).ToArray()).ConfigureAwait(false),
@@ -488,7 +490,13 @@ public static class Program
             await client.ConnectAsync().ConfigureAwait(false);
             var result = await client.QueryEntitiesAsync(componentType).ConfigureAwait(false);
 
-            AnsiConsole.MarkupLine("[green]✓[/] Query complete");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                componentType,
+                count = result.Count,
+                sampled = result.Entities.Count,
+                entities = result.Entities.Select(e => new { index = e.Index, components = e.Components }),
+            }, GameControlCliJsonOptions.Indented));
 
             client.Disconnect();
             return 0;
@@ -748,6 +756,126 @@ public static class Program
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]✗ Error:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Drives Unity's EventSystem pointer lifecycle in-process via the uiPointer RPC.
+    /// Usage: ui-pointer &lt;event&gt; &lt;selector&gt;   OR   ui-pointer &lt;event&gt; x=&lt;X&gt; y=&lt;Y&gt;
+    /// event = enter|exit|down|up|click|hover|press.
+    /// </summary>
+    /// <summary>
+    /// Drives the scripted main-menu → gameplay navigation sequence in-process.
+    /// Args (all optional): &lt;plan&gt; screenshotDir=&lt;dir&gt; finalShot=&lt;path&gt;.
+    /// </summary>
+    private static async Task<int> HandleNavigateToGameplayCommand(string[] args)
+    {
+        string? plan = null;
+        string? screenshotDir = null;
+        string? finalShot = null;
+        foreach (string a in args)
+        {
+            if (a.StartsWith("screenshotDir=", StringComparison.OrdinalIgnoreCase)) screenshotDir = a.Substring("screenshotDir=".Length);
+            else if (a.StartsWith("finalShot=", StringComparison.OrdinalIgnoreCase)) finalShot = a.Substring("finalShot=".Length);
+            else plan = a;
+        }
+
+        // Navigation can take tens of seconds while the gameplay world spins up.
+        using var client = new GameClient(CreateClientOptions(readTimeoutMs: 180000));
+        try
+        {
+            await client.ConnectAsync().ConfigureAwait(false);
+            NavigationResult result = await client.NavigateToGameplayAsync(plan, screenshotDir, finalShot).ConfigureAwait(false);
+            if (JsonOutput)
+            {
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    success = result.Success,
+                    message = result.Message,
+                    plan = result.Plan,
+                    finalState = result.FinalState,
+                    entityCount = result.EntityCount,
+                    worldName = result.WorldName,
+                    blockedAtStep = result.BlockedAtStep,
+                    steps = result.Steps.Select(s => new
+                    {
+                        name = s.Name,
+                        success = s.Success,
+                        resolvedSelector = s.ResolvedSelector,
+                        waitSatisfied = s.WaitSatisfied,
+                        waitCondition = s.WaitCondition,
+                        screenshot = s.Screenshot,
+                        detail = s.Detail
+                    })
+                }));
+            }
+            else
+            {
+                string mark = result.Success ? "[green]✓[/]" : "[red]✗[/]";
+                AnsiConsole.MarkupLine($"{mark} {Markup.Escape(result.Message)}");
+                foreach (NavigationStepResult s in result.Steps)
+                {
+                    string sm = s.Success ? "[green]✓[/]" : "[red]✗[/]";
+                    AnsiConsole.MarkupLine($"  {sm} {Markup.Escape(s.Name)} — sel='{Markup.Escape(s.ResolvedSelector)}' wait={s.WaitSatisfied} shot='{Markup.Escape(s.Screenshot)}'");
+                }
+            }
+            client.Disconnect();
+            return result.Success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            if (JsonOutput)
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { success = false, error = ex.Message }));
+            else
+                AnsiConsole.MarkupLine($"[red]✗ Error:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+    }
+
+    private static async Task<int> HandleUiPointerCommand(string[] args)
+    {
+        string ev = args.FirstOrDefault() ?? "click";
+        float? x = null, y = null;
+        string? target = null;
+        foreach (string a in args.Skip(1))
+        {
+            if (a.StartsWith("x=", StringComparison.OrdinalIgnoreCase) && float.TryParse(a.Substring(2), out float fx)) x = fx;
+            else if (a.StartsWith("y=", StringComparison.OrdinalIgnoreCase) && float.TryParse(a.Substring(2), out float fy)) y = fy;
+            else target = a;
+        }
+
+        using var client = new GameClient(CreateClientOptions());
+        try
+        {
+            await client.ConnectAsync().ConfigureAwait(false);
+            UiActionResult result = await client.UiPointerAsync(target, ev, x, y).ConfigureAwait(false);
+            if (JsonOutput)
+            {
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    success = result.Success,
+                    message = result.Message,
+                    selector = result.Selector,
+                    matchCount = result.MatchCount,
+                    actionable = result.Actionable,
+                    actionabilityReason = result.ActionabilityReason
+                }));
+            }
+            else
+            {
+                string mark = result.Success ? "[green]✓[/]" : "[red]✗[/]";
+                AnsiConsole.MarkupLine($"{mark} {Markup.Escape(result.Message)}");
+            }
+            client.Disconnect();
+            return result.Success ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            if (JsonOutput)
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { success = false, error = ex.Message }));
+            else
+                AnsiConsole.MarkupLine($"[red]✗ Error:[/] {Markup.Escape(ex.Message)}");
             return 1;
         }
     }

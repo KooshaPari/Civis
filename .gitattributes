@@ -25,3 +25,4 @@ packages.lock.json text eol=lf
 *.exe binary
 *.zip binary
 *.nupkg binary
+CHANGELOG.md merge=union

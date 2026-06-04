@@ -82,33 +82,57 @@ namespace DINOForge.Runtime.Aviation
         // ECS lifecycle
         // -------------------------------------------------------------------------
 
+        /// <summary>
+        /// Cached query matching aerial units: AerialUnitComponent + Translation (both read-write).
+        /// Built in <see cref="OnCreate"/> with <see cref="EntityQueryOptions.IncludePrefab"/> because
+        /// all DINO entities are ECS Prefab entities — without it the query returns 0 results.
+        /// </summary>
+        private EntityQuery _aerialQuery;
+
         public override void OnCreate()
         {
             base.OnCreate();
+
+            // NOTE: Manual EntityQuery loop (NOT Entities.ForEach / Job.WithCode) — those require the
+            // Unity.Entities DOTS source generator, which only runs inside the Unity Editor. This
+            // assembly is built netstandard2.0 via `dotnet build` outside the editor, so codegen never
+            // runs and the placeholder throws "This method should have been replaced by codegen" every frame.
+            _aerialQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new[]
+                {
+                    ComponentType.ReadWrite<AerialUnitComponent>(),
+                    ComponentType.ReadWrite<Translation>()
+                },
+                Options = EntityQueryOptions.IncludePrefab
+            });
         }
 
         public override void OnUpdate()
         {
             _frameCount++;
 
-            // --- 1. Aerial unit altitude initialisation ---
+            // --- 1. Aerial unit altitude initialisation (manual query loop; codegen-free) ---
             if (SpawnAtAltitude)
             {
-                Entities
-                    .WithAll<AerialUnitComponent>()
-                    .WithAll<Translation>()
-                    .ForEach((Entity entity, ref AerialUnitComponent aerial, ref Translation translation) =>
+                using (NativeArray<Entity> entities = _aerialQuery.ToEntityArray(Allocator.Temp))
+                {
+                    for (int i = 0; i < entities.Length; i++)
                     {
+                        Entity entity = entities[i];
+                        AerialUnitComponent aerial = EntityManager.GetComponentData<AerialUnitComponent>(entity);
+                        Translation translation = EntityManager.GetComponentData<Translation>(entity);
+
                         if (translation.Value.y < 1f && aerial.CruiseAltitude > 0f)
                         {
                             translation.Value = new float3(
                                 translation.Value.x,
                                 aerial.CruiseAltitude,
                                 translation.Value.z);
+                            EntityManager.SetComponentData(entity, translation);
                         }
-                    })
-                    .WithoutBurst()
-                    .Run();
+                    }
+                }
             }
 
             // --- 2. Anti-air building sweep (runs once after world is populated) ---

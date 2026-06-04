@@ -46,6 +46,8 @@ namespace DINOForge.Runtime
         private Harmony? _harmony;
 
         internal static ConfigEntry<bool>? _showOverlayOnStart;
+        internal static ConfigEntry<string>? _graphicsTier;
+        internal static Graphics.GraphicsMode? _graphicsMode;
         internal static ConfigEntry<bool>? _enableHotReload;
         internal static ConfigEntry<int>? _hmrDebounceMs;
 
@@ -72,6 +74,30 @@ namespace DINOForge.Runtime
         private static bool _resurrectionDump;
         private static string _resurrectionDumpPath = "";
 
+        /// <summary>
+        /// iter-149e: true once Plugin.Awake captured the resurrection parameters (_resurrectionLog /
+        /// _resurrectionConfig). Until then, a direct main-thread TryResurrect would NPE on those.
+        /// KeyInputSystem.OnCreate (a DINO-driven main-thread callback that fires when the MainMenu
+        /// ECS world is created — proven to fire post-teardown) checks this before reviving directly.
+        /// </summary>
+        internal static bool ResurrectionParamsReady => _resurrectionLog != null && _resurrectionConfig != null;
+
+        /// <summary>
+        /// iter-149e: main-thread revive entry usable by DINO-driven callbacks (KeyInputSystem.OnCreate,
+        /// PlayerLoop.SetPlayerLoop postfix) that fire after our own bg threads/scene events have gone
+        /// silent. Delegates to <see cref="MainThreadReviveIfNeeded"/>. Caller MUST be on the Unity
+        /// main thread (these callbacks are). Never throws (Pattern #104/#111).
+        /// </summary>
+        internal static void ReviveFromMainThreadCallback(string trigger)
+        {
+            try { MainThreadReviveIfNeeded(LastSceneNameForResurrection ?? "world-create", trigger); }
+            catch (Exception ex)
+            {
+                try { DebugLog.Write("Plugin", $"[Plugin] ReviveFromMainThreadCallback ({trigger}) threw: {ex.GetType().Name}: {ex.Message}"); }
+                catch { /* diagnostic only */ }
+            }
+        }
+
         /// <summary>Flag set by KeyInputSystem when F9 is pressed during ECS tick.</summary>
         internal static volatile bool PendingF9Toggle;
 
@@ -80,6 +106,48 @@ namespace DINOForge.Runtime
 
         /// <summary>Flag indicating PersistentRoot needs resurrection.</summary>
         internal static volatile bool NeedsResurrection;
+
+        // ── Engine-driven heartbeat (iter-149e, 2026-05-29) ───────────────────────────
+        // WinDbg MDMP (docs/sessions/engine-ui-windbg-mdmp-20260529.md) proved the wedge is a
+        // DORMANT-PLUGIN lifecycle bug, NOT a native deadlock: the engine main thread is in the
+        // normal Unity idle wait while the plugin's worker threads are gone. The old wedge
+        // classifier ("log mtime frozen + process alive + Responding") could not distinguish a
+        // benign-engine/dormant-plugin from a true native wedge. This heartbeat is incremented and
+        // flushed to BepInEx/dinoforge_heartbeat.txt from EVERY reliable main-thread tick
+        // (scene events + PlayerLoop). If the heartbeat keeps advancing while the plugin LOG is
+        // frozen, it is a dormant-plugin lifecycle bug (this class). If both are frozen, it is a
+        // native wedge (iter-144 class). Never misclassify again.
+        private static long _engineHeartbeat;
+        private static readonly object _engineHeartbeatLock = new object();
+        private const string EngineHeartbeatFileName = "dinoforge_heartbeat.txt";
+
+        /// <summary>
+        /// Increments the engine heartbeat and best-effort flushes it to
+        /// <c>BepInEx/dinoforge_heartbeat.txt</c>. Safe to call from any reliable main-thread tick
+        /// (scene events, PlayerLoop). Never throws (Pattern #104/#111).
+        /// </summary>
+        internal static void BumpEngineHeartbeat(string source)
+        {
+            try
+            {
+                long n;
+                lock (_engineHeartbeatLock)
+                {
+                    n = ++_engineHeartbeat;
+                }
+                // Throttle disk writes to ~once per N bumps to avoid I/O churn; callers gate cadence.
+                string root = BepInEx.Paths.BepInExRootPath;
+                if (string.IsNullOrEmpty(root)) return;
+                string path = Path.Combine(root, EngineHeartbeatFileName);
+                string body = n.ToString() + " " + DateTime.UtcNow.ToString("o") + " " + (source ?? "") + "\n";
+                File.WriteAllText(path, body, System.Text.Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                try { DebugLog.Write("Plugin", $"[Heartbeat] write failed (non-fatal): {ex.GetType().Name}: {ex.Message}"); }
+                catch { /* diagnostic only */ }
+            }
+        }
 
         /// <summary>Number of consecutive resurrection attempts since last successful resurrection.</summary>
         private static int _resurrectionAttempts;
@@ -141,9 +209,28 @@ namespace DINOForge.Runtime
                 new ConfigDescription("Logging verbosity for DINOForge runtime",
                     new AcceptableValueList<string>("Debug", "Info", "Warning", "Error")));
 
+            // Realistic-GFX mode (Tier-B Phase-1 PoC). OFF by default. When "High", DINOForge injects a
+            // URP post-processing Volume (ACES tonemap + bloom + color grading + vignette) onto the
+            // active camera for a more cinematic, less TABS-flat look. See Graphics/GraphicsMode.cs and
+            // docs/sessions/realistic-gfx-mode-rnd-20260530.md.
+            ConfigEntry<string> graphicsTier = Config.Bind("Graphics", "Tier", "Vanilla",
+                new ConfigDescription("Visual fidelity tier: Vanilla (no change) or High (cinematic post-processing).",
+                    new AcceptableValueList<string>("Vanilla", "High")));
+            _graphicsTier = graphicsTier;
+
             _showOverlayOnStart = showOverlayOnStart;
             _enableHotReload = enableHotReload;
             _hmrDebounceMs = hmrDebounceMs;
+
+            // Session recorder (#971): record a REAL user playthrough (pointer + key + EventSystem
+            // widget + screen frames) for in-process replay (#972) and journey embeds (#966).
+            ConfigEntry<bool> recorderEnabled = Config.Bind("SessionRecorder", "Enabled", true,
+                "Enable the F11 session recorder (records real user input + frames for replay/vision-verify)");
+            ConfigEntry<int> recorderFrameMs = Config.Bind("SessionRecorder", "FrameIntervalMs", 500,
+                new ConfigDescription("Periodic screen-frame cadence while recording (ms)",
+                    new AcceptableValueRange<int>(100, 5000)));
+            ConfigEntry<bool> recorderPerEvent = Config.Bind("SessionRecorder", "CaptureFramePerEvent", true,
+                "Also capture a screen frame on every pointer down/up event");
 
             // Detect game and log version compatibility info
             try
@@ -165,13 +252,34 @@ namespace DINOForge.Runtime
             {
                 _harmony = new Harmony(PluginInfo.GUID);
                 Bridge.DestroyGuardPatch.Apply(_harmony);
-                Bridge.ResourcesUnloadGuardPatch.Apply(_harmony);
-                Bridge.AssetBundleUnloadGuardPatch.Apply(_harmony);
-                Bridge.AssetBundleLoadGuardPatch.Apply(_harmony);
-                Bridge.SceneUnloadGuardPatch.Apply(_harmony);
-                Bridge.WorldDisposeGuardPatch.Apply(_harmony);
+
+                // iter-149c: The iter-144 H7/H8/H9 DIAGNOSTIC probes (Resources.UnloadUnusedAssets,
+                // AssetBundle.Unload/LoadFromFile, SceneManager.UnloadSceneAsync, World.Dispose) are
+                // Harmony Prefix/Postfix patches on dispose/unload/teardown hot paths. Each prefix calls
+                // `new StackTrace()` + synchronous BepInEx logging INSIDE those native calls. During the
+                // InitialGameLoader->MainMenu transition, Unity.Entities.World.Dispose() tears down the
+                // 45K-entity Default World while Mono is in teardown; a synchronous StackTrace+log there
+                // contends the BepInEx log lock / blocks the managed plugin thread mid-dispose — exactly
+                // matching the observed wedge (BepInEx's own LogOutput.log freezes at the same instant,
+                // recurrence of the iter-144 mono_jit_cleanup gray-freeze). These probes are
+                // diagnostics ONLY (no load-bearing functionality) — gate them OFF to test whether the
+                // diagnostic probes are themselves causing the World.Dispose wedge. Files are kept intact
+                // so the probes can be re-enabled for future native diagnosis. DestroyGuardPatch
+                // (protects DINOForge_Root) and ModsButtonTextPatch (engine-UI label) stay ACTIVE.
+                const bool EnableDisposeProbes = false;
+#pragma warning disable CS0162 // unreachable code (intentional compile-time probe gate)
+                if (EnableDisposeProbes)
+                {
+                    Bridge.ResourcesUnloadGuardPatch.Apply(_harmony);
+                    Bridge.AssetBundleUnloadGuardPatch.Apply(_harmony);
+                    Bridge.AssetBundleLoadGuardPatch.Apply(_harmony);
+                    Bridge.SceneUnloadGuardPatch.Apply(_harmony);
+                    Bridge.WorldDisposeGuardPatch.Apply(_harmony);
+                }
+#pragma warning restore CS0162
+
                 UI.ModsButtonTextPatch.Apply(_harmony);
-                Log.LogInfo("Harmony initialized and patches applied.");
+                Log.LogInfo($"Harmony initialized and patches applied (disposeProbes={EnableDisposeProbes}).");
             }
             catch (Exception ex)
             {
@@ -189,6 +297,21 @@ namespace DINOForge.Runtime
                 PersistentRoot.hideFlags = HideFlags.HideAndDontSave;
                 UnityEngine.Object.DontDestroyOnLoad(PersistentRoot);
                 Log.LogInfo("[Plugin] Persistent root GameObject created.");
+
+                // EPIC-027: create the themed loading screen as EARLY as possible so it is
+                // visible across the game's own InitialGameLoader asset-load window (before
+                // RuntimeDriver finishes pack loading). It is faded out on pack-load complete /
+                // world-ready / MainMenu. Created here (Awake, main thread) rather than waiting
+                // for RuntimeDriver.Initialize's coroutine.
+                try
+                {
+                    string lsPacksDir = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                    UI.LoadingScreenController.Create(PersistentRoot, lsPacksDir, Logger);
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning($"[Plugin] Early LoadingScreenController.Create failed (non-fatal): {ex.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -208,6 +331,26 @@ namespace DINOForge.Runtime
             catch (Exception ex)
             {
                 Log.LogError($"[Plugin] RuntimeDriver setup failed: {ex}");
+            }
+
+            // Realistic-GFX mode (Tier-B Phase-1 PoC). Attach the GraphicsMode component to the
+            // persistent root, seed it from config, and re-apply on every scene change (Camera.main is
+            // not available until a gameplay/menu scene loads, and DINO's PlayerLoop means we can't rely
+            // on Update()). Inert unless Graphics.Tier == "High".
+            try
+            {
+                Graphics.GraphicsMode gfx = PersistentRoot.AddComponent<Graphics.GraphicsMode>();
+                gfx.ConfiguredTier = string.Equals(_graphicsTier?.Value, "High", StringComparison.OrdinalIgnoreCase)
+                    ? Graphics.GraphicsTier.High
+                    : Graphics.GraphicsTier.Vanilla;
+                _graphicsMode = gfx;
+                SceneManager.activeSceneChanged += (_, __) => _graphicsMode?.Apply();
+                gfx.Apply();
+                Log.LogInfo($"[Plugin] GraphicsMode attached (tier={gfx.ConfiguredTier}).");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] GraphicsMode setup failed (non-fatal): {ex.Message}");
             }
 
             // Capture state for static resurrection callback (kept for emergency use)
@@ -242,6 +385,18 @@ namespace DINOForge.Runtime
                 {
                     Log.LogWarning($"[Plugin] StartKeyPollThread failed: {ex}");
                 }
+            }
+
+            // Session recorder (#971): F11 toggles recording of the real user playthrough.
+            // Uses its own PlayerLoop sampler + Win32 F11 bg thread (independent of F9/F10).
+            try
+            {
+                Capture.SessionRecorder.Configure(recorderEnabled.Value, recorderFrameMs.Value, recorderPerEvent.Value);
+                Capture.SessionRecorder.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"[Plugin] SessionRecorder init failed: {ex}");
             }
 
             DebugLog.Write("Plugin", "Awake completed");
@@ -282,41 +437,244 @@ namespace DINOForge.Runtime
         private static void StartResurrectionWatcher()
         {
             SceneManager.activeSceneChanged += OnActiveSceneChanged;
-            DebugLog.Write("Plugin", "[Plugin] activeSceneChanged watcher registered (iter-144 #546 fix).");
+            // Blocker 2 keystone fix (iter-149b, 2026-05-29): also subscribe to sceneLoaded.
+            // Live log evidence (dinoforge_debug.log, all relaunches) shows activeSceneChanged
+            // fires ONLY for '' and 'InitialGameLoader' — it NEVER fired for MainMenu. DINO loads
+            // MainMenu ADDITIVELY (LoadSceneMode.Additive) or via an async path that does NOT change
+            // the ACTIVE scene, so activeSceneChanged is silent for it while sceneLoaded DOES fire
+            // for additive loads. With both the bg fallback wedged (Blocker 1) and no MainMenu
+            // activeSceneChanged, resurrection never ran on a main thread. sceneLoaded is the missing
+            // main-thread hook for the MainMenu activation. Both events run on the Unity main thread,
+            // so resurrection (Unity ECalls) is safe in either handler.
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            DebugLog.Write("Plugin", "[Plugin] activeSceneChanged + sceneLoaded watchers registered (iter-149b Blocker 2 fix).");
             StartResurrectionFallbackThread();
+            // iter-149d BISECT (2026-05-29): PipeKeepAlive is the suspected NEW un-interruptible
+            // waiter behind the recurring gray-freeze. PipeKeepAliveLoop polls EnsureServerAlive()
+            // every 1s on a BACKGROUND thread; EnsureServerAlive does a pipe Stop()->Start() whenever
+            // the bridge server thread is dead — which is ALWAYS the case immediately after
+            // RuntimeDriver.OnDestroy calls RequestShutdown(). So during teardown OnDestroy disposes
+            // the pipe handle (iter-144 fix) to unwedge the accept thread, but PipeKeepAlive instantly
+            // re-creates a NamedPipeServerStream + re-arms BeginWaitForConnection — re-establishing
+            // exactly the kernel ConnectNamedPipe wait that RequestShutdown just tore down. That
+            // re-armed wait becomes the un-interruptible waiter that wedges mono_jit_cleanup during
+            // World.Dispose. Gated OFF to isolate. The pipe must stay DOWN through teardown and only
+            // be rebuilt by a clean main-thread resurrection (PlayerLoop/sceneLoaded path).
+            const bool EnablePipeKeepAlive = false;
+#pragma warning disable CS0162 // Unreachable code — intentional bisect gate (iter-149d).
+            if (EnablePipeKeepAlive)
+            {
+                StartPipeKeepAliveThread();
+            }
+            else
+            {
+                DebugLog.Write("Plugin", "[Plugin] PipeKeepAlive thread DISABLED (iter-149d bisect: suspected re-arm of ConnectNamedPipe wedge during World.Dispose).");
+            }
+#pragma warning restore CS0162
+        }
+
+        // Blocker 2 keystone fix (iter-149b): sceneLoaded fires for additive scene loads where
+        // activeSceneChanged stays silent (confirmed: MainMenu emitted NO activeSceneChanged).
+        // Runs on the Unity main thread, so it is a safe place to perform resurrection. We log the
+        // scene name + buildIndex + load mode on EVERY scene event so DINO's actual MainMenu emission
+        // is observable, then drive the same main-thread revive path as OnActiveSceneChanged.
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded: name='{scene.name}' buildIndex={scene.buildIndex} mode={mode} isLoaded={scene.isLoaded}");
+
+            // Always remember the latest scene name so a fallback revive has a meaningful label.
+            if (!string.IsNullOrEmpty(scene.name))
+            {
+                LastSceneNameForResurrection = scene.name;
+            }
+
+            // iter-149e ROOT-CAUSE fix: REVIVE FIRST. Previously EnsureEventSystemAlive() (a heavy
+            // FindObjectsOfType ECall) + RecreateInCurrentWorld() ran BEFORE the revive; if either
+            // wedged or threw during the MainMenu additive asset load, the revive never executed and
+            // the plugin stayed dormant (the MDMP symptom). The revive is the load-bearing action —
+            // run it on the main thread first, then do the (now best-effort) EventSystem/world fixups.
+            MainThreadReviveIfNeeded(scene.name, "sceneLoaded(main-thread)");
+
+            try { EnsureEventSystemAlive(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded EnsureEventSystemAlive failed (non-fatal): {ex.Message}"); }
+            try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
+
+            // EPIC-027: DINO loads MainMenu ADDITIVELY — activeSceneChanged stays silent for it, so
+            // the MainMenu fade-out must also fire from sceneLoaded (the missing main-thread hook).
+            try
+            {
+                if (scene.name == "MainMenu")
+                    UI.LoadingScreenController.Instance?.BeginFadeOut();
+                TryApplyEnvironmentThemeForScene(scene.name, "sceneLoaded(main-thread)");
+            }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded LoadingScreen fade failed (non-fatal): {ex.Message}"); }
+        }
+
+        /// <summary>
+        /// Blocker 2 fix (iter-149b): shared main-thread revive entry point used by BOTH
+        /// activeSceneChanged and sceneLoaded. Performs the actual resurrection on the Unity main
+        /// thread (where Camera.main / AddComponent / Initialize ECalls are safe), then clears the
+        /// need flags only on confirmed success. The bg fallback thread only MARKS the need; this is
+        /// where the revive actually executes. Never throws to the Unity caller (Pattern #104/#111).
+        /// </summary>
+        private static void MainThreadReviveIfNeeded(string sceneName, string trigger)
+        {
+            // iter-149e: engine-driven heartbeat — this runs on the Unity main thread for EVERY
+            // scene event, so it is a reliable liveness pulse that survives plugin-log freezes.
+            BumpEngineHeartbeat(trigger);
+
+            bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
+            bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null;
+            if (!needsRevive)
+            {
+                return;
+            }
+
+            // iter-149e ROOT-CAUSE fix: a NEW scene event is a fresh opportunity to revive. During
+            // InitialGameLoader (no Camera, no MainMenu) the create-root path can burn through
+            // MaxResurrectionAttempts (3) and PERMANENTLY halt (IsResurrectionCapExhausted latches
+            // true forever). When MainMenu later loads with a valid Camera, resurrection would stay
+            // capped-out and never fire — the dormant-plugin symptom. Reset the consecutive-attempt
+            // counter on each main-thread scene event so a loader-phase exhaustion never poisons the
+            // MainMenu revive. The cap still bounds churn WITHIN a single scene's tick window.
+            _resurrectionAttempts = 0;
+
+            LastSceneNameForResurrection = string.IsNullOrEmpty(sceneName) ? LastSceneNameForResurrection : sceneName;
+            NeedsDeferredResurrection = true;
+            DebugLog.Write("Plugin", $"[Plugin] MainThreadReviveIfNeeded ({trigger}): revive needed (NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull}) — invoking TryResurrect.");
+            try
+            {
+                TryResurrect(LastSceneNameForResurrection ?? sceneName ?? "main-thread-unknown", trigger);
+                if (ResurrectionSucceeded())
+                {
+                    NeedsResurrection = false;
+                    NeedsDeferredResurrection = false;
+                    s_rootJustDestroyed = false;
+                    s_skipBundleUnload = false;
+                    ResetGraceDeadline();
+                    DebugLog.Write("Plugin", $"[Plugin] Resurrection complete via {trigger} (driver live; flags cleared).");
+                }
+                else
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] {trigger} TryResurrect did not bring driver live — retained for next main-thread tick.");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] {trigger} TryResurrect threw: {ex.GetType().Name}: {ex.Message} — retained for next main-thread tick.");
+            }
+        }
+
+        private static void TryApplyEnvironmentThemeForScene(string sceneName, string source)
+        {
+            if (!Graphics.EnvironmentThemeSwap.IsGameplayScene(sceneName))
+                return;
+
+            try
+            {
+                if (PersistentRoot == null)
+                    return;
+
+                RuntimeDriver? driver = PersistentRoot.GetComponent<RuntimeDriver>();
+                if (driver == null)
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] EnvironmentThemeSwap skipped ({source}): no RuntimeDriver on PersistentRoot.");
+                    return;
+                }
+
+                driver.TryApplyEnvironmentTheme(sceneName, source);
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] EnvironmentThemeSwap failed ({source}): {ex.Message}");
+            }
+        }
+
+        // Blocker 1 fix (iter-149b): dedicated pipe-keepalive thread. Pipe Stop()/Start() may block
+        // (kernel-mode pipe teardown during asset loads) — running it here keeps that blocking work
+        // OFF the resurrection fallback thread, so resurrection heartbeats keep ticking regardless of
+        // pipe I/O latency. Polls every 1s; restart is idempotent (EnsureServerAlive no-ops when alive).
+        private static Thread? _pipeKeepAliveThread;
+        internal static readonly ManualResetEventSlim _pipeKeepAliveStopEvent = new(false);
+
+        private static void StartPipeKeepAliveThread()
+        {
+            if (_pipeKeepAliveThread != null) return;
+            _pipeKeepAliveThread = new Thread(PipeKeepAliveLoop)
+            {
+                Name = "DINOForge.PipeKeepAlive",
+                IsBackground = true,
+            };
+            _pipeKeepAliveThread.Start();
+            DebugLog.Write("Plugin", "[Plugin] Pipe-keepalive thread started (Blocker 1: pipe I/O off the resurrection heartbeat).");
+        }
+
+        private static void PipeKeepAliveLoop()
+        {
+            const int PipePollIntervalMs = 1000;
+            DebugLog.Write("Plugin", "[Plugin] PipeKeepAlive: loop entered.");
+            while (!_resurrectionFallbackStop)
+            {
+                try
+                {
+#pragma warning disable DF0116 // Intentional cooperative-stop blocking wait on the pipe-keepalive thread.
+                    if (_pipeKeepAliveStopEvent.Wait(PipePollIntervalMs)) break;
+#pragma warning restore DF0116
+                    // This MAY block on a dead-pipe Stop()->Start(); that is acceptable here because
+                    // it does not run on the resurrection heartbeat thread or the Unity main thread.
+                    SharedBridgeServer?.EnsureServerAlive();
+                }
+                catch (ThreadAbortException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Write("Plugin", $"[Plugin] PipeKeepAlive EnsureServerAlive: {ex.Message}");
+                }
+            }
+            DebugLog.Write("Plugin", "[Plugin] PipeKeepAlive thread exiting.");
         }
 
         private static void OnActiveSceneChanged(Scene oldScene, Scene newScene)
         {
             DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged: old='{oldScene.name}' new='{newScene.name}'");
+
+            // iter-149e ROOT-CAUSE fix: REVIVE FIRST (mirrors OnSceneLoaded). The revive is the
+            // load-bearing action and must not be gated behind the heavy EventSystem/world fixups
+            // that can wedge during an asset load. activeSceneChanged fires on the Unity main thread.
+            if (!string.IsNullOrEmpty(newScene.name))
+            {
+                LastSceneNameForResurrection = newScene.name;
+            }
+            MainThreadReviveIfNeeded(newScene.name, "activeSceneChanged(main-thread)");
+
             // Iter-144 menu-unclickable fix: DINO's MainMenu scene EventSystem is destroyed on
             // scene transitions, leaving EventSystem.current = null even though our
             // DontDestroyOnLoad'd EventSystem (DFCanvas) still exists. Re-promote (or recreate)
             // on every scene change so NativeMenuInjector clicks route correctly.
-            EnsureEventSystemAlive();
+            try { EnsureEventSystemAlive(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged EnsureEventSystemAlive failed (non-fatal): {ex.Message}"); }
+            try { Bridge.KeyInputSystem.RecreateInCurrentWorld(); }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed (non-fatal): {ex.Message}"); }
+
+            // EPIC-027 loading-screen takeover: show during the game's own asset-load window
+            // (InitialGameLoader / first scene), hide once the MainMenu is active.
             try
             {
-                Bridge.KeyInputSystem.RecreateInCurrentWorld();
+                var ls = UI.LoadingScreenController.Instance;
+                if (ls != null)
+                {
+                    if (newScene.name == "InitialGameLoader" || string.IsNullOrEmpty(oldScene.name))
+                        ls.EnsureVisible();
+                    else if (newScene.name == "MainMenu")
+                        ls.BeginFadeOut();
+                    TryApplyEnvironmentThemeForScene(newScene.name, "activeSceneChanged(main-thread)");
+                }
             }
-            catch (Exception ex)
-            {
-                DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged RecreateInCurrentWorld failed: {ex.Message}");
-            }
-            // RuntimeDriver may have been destroyed when DINO destroyed our root.
-            // Trigger resurrection here. IMPORTANT: we defer TryResurrect to the resurrection thread
-            // (or the new RuntimeDriver's BG poll thread) instead of calling directly, since a brand
-            // new RuntimeDriver may not have completed Initialize() yet at this exact tick.
-            // Iter-144 #543 fix: ReferenceEquals check + s_rootJustDestroyed avoids Unity fake-null
-            // trap (== null on a destroyed-but-not-nulled MonoBehaviour reports true via operator
-            // overload but the actual managed reference is still non-null).
-            bool rootIsRefNull = ReferenceEquals(PersistentRoot, null);
-            if (NeedsResurrection || s_rootJustDestroyed || rootIsRefNull || PersistentRoot == null)
-            {
-                DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged: resurrection needed - NeedsRes={NeedsResurrection} rootJustDestroyed={s_rootJustDestroyed} refNull={rootIsRefNull} unityNull={PersistentRoot == null}");
-                LastSceneNameForResurrection = newScene.name;
-                NeedsDeferredResurrection = true;
-                DebugLog.Write("Plugin", "[Plugin] Resurrection complete via activeSceneChanged (flagged for deferred TryResurrect)");
-            }
+            catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnActiveSceneChanged LoadingScreen toggle failed (non-fatal): {ex.Message}"); }
+            // Revive already executed at the TOP of this handler (iter-149e reorder).
         }
 
         /// <summary>
@@ -451,6 +809,17 @@ namespace DINOForge.Runtime
         // Mirrors _backgroundPollStopEvent pattern (#873).
         internal static readonly ManualResetEventSlim _resurrectionFallbackStopEvent = new(false);
 
+        // FailureMode B fix (iter-149, 2026-05-29): the grace deadline MUST persist across loop
+        // restarts. Previously `lastNeedsObservedUtc` was a LOCAL inside ResurrectionFallbackLoop;
+        // when the loop re-entered (a new thread start, or a fresh "loop entered" after the prior
+        // instance exited), the timer reset to MinValue and the 4000ms grace window NEVER elapsed,
+        // so TryResurrect was detected every cycle but never executed. Latching the deadline as a
+        // STATIC field means any loop iteration — even a brand-new one — honors the in-progress
+        // grace window set by a prior iteration. DateTime.MinValue = "not armed".
+        // Sentinel: DateTime.MinValue means no grace window is currently armed.
+        private static DateTime _graceDeadlineUtc = DateTime.MinValue;
+        private static readonly object _graceDeadlineLock = new();
+
         private static void StartResurrectionFallbackThread()
         {
             if (_resurrectionFallbackThread != null) return;
@@ -465,7 +834,6 @@ namespace DINOForge.Runtime
 
         private static void ResurrectionFallbackLoop()
         {
-            DateTime lastNeedsObservedUtc = DateTime.MinValue;
             long iterationCount = 0;
             const int PollIntervalMs = 500;
             const int GraceWindowMs = 4000; // 4s after NeedsResurrection observed, attempt direct revive
@@ -484,17 +852,30 @@ namespace DINOForge.Runtime
 #pragma warning restore DF0116
                     iterationCount++;
 
-                    // GameLaunch attach-mode: KeyInputSystem may be absent from the ECS world while the
-                    // plugin and PersistentRoot survive scene transitions. Restart the bridge pipe when
-                    // its server thread died (BridgeServerThreadAlive=False after OnDestroy).
-                    try
-                    {
-                        SharedBridgeServer?.EnsureServerAlive();
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback EnsureServerAlive: {ex.Message}");
-                    }
+                    // iter-149e: bump the engine heartbeat file from the FALLBACK thread too. This is
+                    // a separate file from the debug log, so if the heartbeat counter keeps advancing
+                    // with source "fallback" while the plugin LOG is frozen, the bg thread is ALIVE and
+                    // the freeze is purely a log-write contention — vs the counter freezing too, which
+                    // proves the bg thread itself is suspended/dead (the WinDbg dormant-plugin case).
+                    BumpEngineHeartbeat("fallback#" + iterationCount);
+
+                    // Blocker 1 fix (iter-149b, 2026-05-29): DO NOT call EnsureServerAlive() here.
+                    // EnsureServerAlive performs a pipe Stop()->Start() (NamedPipeServerStream dispose +
+                    // fresh server thread) whenever BridgeServerThreadAlive=False — which is ALWAYS the
+                    // case right after RuntimeDriver.OnDestroy's RequestShutdown(). That pipe
+                    // teardown/recreate BLOCKS this background thread during the
+                    // InitialGameLoader->MainMenu asset-load window. Confirmed in dinoforge_debug.log:
+                    // heartbeats #4..#20 tick cleanly until OnDestroy, then heartbeat #24 NEVER appears
+                    // (the loop wedged on the pipe restart), so the grace-windowed revive is never
+                    // reached. The deadlock did not disappear when TryResurrect was removed from this
+                    // loop in 6be0f5e3 — it MOVED to the pipe restart on this same background thread.
+                    //
+                    // The fallback loop's PRIMARY job is the grace-windowed revive heartbeat; pipe I/O
+                    // must NEVER starve it. Pipe keepalive is now owned by:
+                    //   (a) DINOForgePlayerLoopUpdate (main thread, %60 gate) -> EnsureServerAlive(), and
+                    //   (b) a dedicated background pipe-keepalive thread (PipeKeepAliveLoop) which may
+                    //       block freely on Stop()/Start() without affecting resurrection heartbeats.
+                    // This loop now performs pure managed work only (flag checks + grace timer + MARK).
 
                     // Iter-144 #547 H5: emit periodic heartbeat to prove Mono runtime + this thread are alive.
                     // If the gray-freeze is a native deadlock at runtime level, heartbeats stop appearing
@@ -511,43 +892,47 @@ namespace DINOForge.Runtime
                     bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed;
                     if (!needsRevive)
                     {
-                        lastNeedsObservedUtc = DateTime.MinValue;
+                        // No need observed: disarm the (static) grace window so a future need starts fresh.
+                        ResetGraceDeadline();
                         continue;
                     }
-                    if (lastNeedsObservedUtc == DateTime.MinValue)
+
+                    // FailureMode B fix: latch the grace DEADLINE in a STATIC field so a loop restart
+                    // RESUMES the in-progress window instead of resetting it. Returns true only once
+                    // the latched deadline has elapsed; until then we keep polling.
+                    if (!IsGraceWindowElapsed(GraceWindowMs, out bool justArmed))
                     {
-                        lastNeedsObservedUtc = DateTime.UtcNow;
-                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: NeedsResurrection observed, starting grace timer.");
+                        if (justArmed)
+                        {
+                            DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: NeedsResurrection observed, grace deadline armed ({GraceWindowMs}ms).");
+                        }
                         continue;
                     }
-                    TimeSpan since = DateTime.UtcNow - lastNeedsObservedUtc;
-                    if (since.TotalMilliseconds < GraceWindowMs) continue;
-                    // Grace window exceeded with no scene-event resolution: attempt direct resurrect.
-                    if (_resurrectionLog == null || _resurrectionConfig == null)
-                    {
-                        // Plugin.Awake never completed; can't resurrect. Reset timer to retry later.
-                        DebugLog.Write("Plugin", "[Plugin] ResurrectionFallback: cannot revive (Plugin.Awake state not captured). Will retry.");
-                        lastNeedsObservedUtc = DateTime.UtcNow;
-                        continue;
-                    }
-                    string sceneName = LastSceneNameForResurrection ?? "fallback-unknown";
-                    DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms exceeded — invoking TryResurrect (scene='{sceneName}').");
-                    try
-                    {
-                        TryResurrect(sceneName, "ResurrectionFallbackThread");
-                        // After attempt, clear flags so we don't spin; if revive failed, scene event/poller will re-set them.
-                        NeedsResurrection = false;
-                        NeedsDeferredResurrection = false;
-                        s_rootJustDestroyed = false;
-                        s_skipBundleUnload = false;
-                        DebugLog.Write("Plugin", "[Plugin] Resurrection complete via ResurrectionFallbackThread (flags cleared).");
-                        lastNeedsObservedUtc = DateTime.MinValue;
-                    }
-                    catch (Exception ex)
-                    {
-                        DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback TryResurrect threw: {ex.Message}");
-                        lastNeedsObservedUtc = DateTime.UtcNow; // back off, retry next grace window
-                    }
+
+                    // Blocker 2 fix (iter-149b, 2026-05-29): the grace window has elapsed without a
+                    // main-thread scene event resolving the revive. This BACKGROUND thread MUST NOT
+                    // call TryResurrect directly — TryResurrect reaches Unity ECalls (Camera.main /
+                    // AddComponent / RuntimeDriver.Initialize -> coroutine touching Resources/asset
+                    // APIs) which DEADLOCK on a bg thread during the InitialGameLoader->MainMenu asset
+                    // load (memory: "Resources.* from a bg thread DEADLOCKS during asset loading").
+                    // The bg path's ONLY job is to keep the need MARKED so a main-thread consumer
+                    // (DINOForgePlayerLoopUpdate or a scene event) performs the actual revive on a
+                    // thread where Unity ECalls are safe. We re-arm and keep heart-beating so the need
+                    // never silently drops, and so the heartbeat proves the loop is no longer wedged.
+                    // iter-149e ROOT-CAUSE fix (WinDbg MDMP): the previous code called
+                    // ResurrectionSucceeded() HERE — which performs a Unity ECall
+                    // (PersistentRoot.GetComponent<RuntimeDriver>()) on THIS BACKGROUND THREAD.
+                    // During the InitialGameLoader->MainMenu asset load, Unity ECalls from a bg
+                    // thread wedge/tear the calling thread (memory: "Resources.* from a bg thread
+                    // DEADLOCKS during asset loading"; GetComponent is in the same ECall family).
+                    // The MDMP showed this fallback thread GONE post-OnDestroy with NO managed frame
+                    // and NO stop-flag ever set — i.e. it was torn inside the ECall, never reaching
+                    // heartbeat #12. The bg loop MUST do PURE managed work only: mark the need and
+                    // re-arm. The actual revive (and the GetComponent liveness probe) happens ONLY on
+                    // the Unity main thread via OnSceneLoaded/OnActiveSceneChanged -> MainThreadReviveIfNeeded.
+                    NeedsDeferredResurrection = true;
+                    RearmGraceDeadline(GraceWindowMs);
+                    DebugLog.Write("Plugin", $"[Plugin] ResurrectionFallback: grace window {GraceWindowMs}ms elapsed — MARKED NeedsDeferredResurrection for main-thread revive (NO bg-thread Unity ECalls — iter-149e). scene='{LastSceneNameForResurrection ?? "fallback-unknown"}'.");
                 }
                 catch (ThreadAbortException)
                 {
@@ -559,6 +944,65 @@ namespace DINOForge.Runtime
                 }
             }
             DebugLog.Write("Plugin", "[Plugin] Resurrection fallback thread exiting.");
+        }
+
+        /// <summary>
+        /// FailureMode B helper: returns true once the latched (static) grace deadline has elapsed.
+        /// If no deadline is armed, arms one (now + graceWindowMs) and returns false with
+        /// <paramref name="justArmed"/>=true. Survives loop restarts because the deadline is static.
+        /// </summary>
+        private static bool IsGraceWindowElapsed(int graceWindowMs, out bool justArmed)
+        {
+            justArmed = false;
+            lock (_graceDeadlineLock)
+            {
+                if (_graceDeadlineUtc == DateTime.MinValue)
+                {
+                    _graceDeadlineUtc = DateTime.UtcNow.AddMilliseconds(graceWindowMs);
+                    justArmed = true;
+                    return false;
+                }
+                return DateTime.UtcNow >= _graceDeadlineUtc;
+            }
+        }
+
+        /// <summary>Re-arms the static grace deadline to now + graceWindowMs (back-off after a failed/partial revive).</summary>
+        private static void RearmGraceDeadline(int graceWindowMs)
+        {
+            lock (_graceDeadlineLock)
+            {
+                _graceDeadlineUtc = DateTime.UtcNow.AddMilliseconds(graceWindowMs);
+            }
+        }
+
+        /// <summary>Disarms the static grace deadline (no resurrection currently needed, or revive succeeded).</summary>
+        private static void ResetGraceDeadline()
+        {
+            lock (_graceDeadlineLock)
+            {
+                _graceDeadlineUtc = DateTime.MinValue;
+            }
+        }
+
+        /// <summary>
+        /// FailureMode B helper: true only when the resurrection actually brought a live, initialized
+        /// RuntimeDriver online. Used to decide whether to clear NeedsResurrection (only on success)
+        /// versus retain the need + re-arm for another attempt. Never throws to the caller.
+        /// </summary>
+        private static bool ResurrectionSucceeded()
+        {
+            try
+            {
+                if (ReferenceEquals(PersistentRoot, null)) return false;
+                RuntimeDriver? driver = PersistentRoot!.GetComponent<RuntimeDriver>();
+                return driver != null && driver.IsInitialized;
+            }
+            catch (Exception ex)
+            {
+                // Pattern #104/#111: surface, do not silently swallow.
+                try { DebugLog.Write("Plugin", $"[Plugin] ResurrectionSucceeded check threw: {ex.GetType().Name}: {ex.Message}"); } catch { /* diagnostic only */ }
+                return false;
+            }
         }
 
         /// <summary>
@@ -735,9 +1179,27 @@ namespace DINOForge.Runtime
             _playerLoopEventSystemTick++;
             if (_playerLoopEventSystemTick % 60 == 1)
             {
+                // iter-149e: heartbeat from the PlayerLoop too. The WinDbg MDMP showed NO Harmony/
+                // DINOForge frame on the idle main thread — i.e. this injected PlayerLoop callback
+                // may NOT actually tick under DINO's replaced PlayerLoop. If dinoforge_heartbeat.txt
+                // only ever advances with scene-event sources (never "playerloop"), that confirms
+                // the PlayerLoop revive path is dead and scene events are the sole reliable hook.
+                BumpEngineHeartbeat("playerloop");
                 EnsureEventSystemAlive();
                 try { SharedBridgeServer?.EnsureServerAlive(); }
                 catch (Exception ex) { DebugLog.Write("Plugin", $"[PlayerLoop] EnsureServerAlive: {ex.Message}"); }
+
+                // FailureMode B definitive fix (iter-149, 2026-05-29): MAIN-THREAD resurrection
+                // consumer. The PlayerLoop Update injection runs on the Unity MAIN THREAD every
+                // frame and SURVIVES RuntimeDriver teardown (it is static + Harmony-injected), so
+                // it is the correct place to perform resurrection — TryResurrect's Unity ECalls
+                // (Camera.main / AddComponent / Initialize) are main-thread-safe here, whereas the
+                // ResurrectionFallback BACKGROUND thread deadlocks on the same calls (and even on
+                // the Unity `==`/GetComponent ECalls) during the InitialGameLoader→MainMenu asset
+                // load — which is why its heartbeat went silent and the driver never revived.
+                // Throttled to once/sec (the %60 gate) so we don't thrash; idempotent + cap-guarded
+                // inside TryResurrect. Need flags are cleared only on confirmed success.
+                ConsumeResurrectionOnMainThread();
             }
 
             if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
@@ -766,6 +1228,59 @@ namespace DINOForge.Runtime
 
             _prevF9 = f9Now;
             _prevF10 = f10Now;
+        }
+
+        /// <summary>
+        /// FailureMode B definitive fix (iter-149, 2026-05-29): MAIN-THREAD resurrection consumer.
+        /// Invoked from <see cref="DINOForgePlayerLoopUpdate"/> (throttled by the caller's %60 gate),
+        /// this runs on the Unity main thread and SURVIVES RuntimeDriver teardown (it is a static
+        /// method reached via the Harmony-injected PlayerLoop entry). Unlike the ResurrectionFallback
+        /// BACKGROUND thread — which deadlocks on Unity ECalls (Camera.main / AddComponent / Initialize
+        /// touching Resources/asset APIs) during the InitialGameLoader→MainMenu asset load — every call
+        /// made here is main-thread-safe.
+        ///
+        /// Idempotent and cap-guarded inside <see cref="TryResurrect"/>. Need flags are cleared only on
+        /// confirmed success (<see cref="ResurrectionSucceeded"/>). Never throws to Unity (Pattern #104/#111).
+        /// </summary>
+        private static void ConsumeResurrectionOnMainThread()
+        {
+            try
+            {
+                bool needsRevive = NeedsResurrection || NeedsDeferredResurrection || s_rootJustDestroyed;
+                if (!needsRevive)
+                {
+                    return;
+                }
+
+                // Cap gate: when PersistentRoot is gone, TryResurrect's create-root path is bounded by
+                // MaxResurrectionAttempts. Checking here too avoids logging churn once the cap is hit.
+                if (ReferenceEquals(PersistentRoot, null) && IsResurrectionCapExhausted())
+                {
+                    return;
+                }
+
+                string sceneName;
+                try { sceneName = LastSceneNameForResurrection ?? SceneManager.GetActiveScene().name; }
+                catch { sceneName = LastSceneNameForResurrection ?? "main-thread-unknown"; }
+
+                DebugLog.Write("Plugin", $"[Plugin] ConsumeResurrectionOnMainThread: revive needed (NeedsRes={NeedsResurrection} NeedsDefRes={NeedsDeferredResurrection} rootJustDestroyed={s_rootJustDestroyed}) — invoking TryResurrect (scene='{sceneName}').");
+                TryResurrect(sceneName, "main-thread-playerloop");
+
+                if (ResurrectionSucceeded())
+                {
+                    NeedsResurrection = false;
+                    NeedsDeferredResurrection = false;
+                    s_rootJustDestroyed = false;
+                    s_skipBundleUnload = false;
+                    ResetGraceDeadline();
+                    DebugLog.Write("Plugin", "[Plugin] Resurrection complete via main-thread-playerloop (driver live; flags cleared).");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Pattern #104/#111: surface, never throw into the PlayerLoop.
+                try { DebugLog.Write("Plugin", $"[Plugin] ConsumeResurrectionOnMainThread threw: {ex.GetType().Name}: {ex.Message}"); } catch { /* diagnostic only */ }
+            }
         }
 
         private static void PatchPlayerLoopRejection()
@@ -802,10 +1317,41 @@ namespace DINOForge.Runtime
 
         private static void OnPlayerLoopSet()
         {
+            // Blocker 2 diagnostic (iter-149b): log every PlayerLoop rebuild + whether re-injection
+            // re-added our DINOForgeUpdateMarker. If DINO rebuilds the loop entering MainMenu and our
+            // marker is dropped, this surfaces it. Even if re-injection fails, the sceneLoaded /
+            // activeSceneChanged main-thread revive path (Blocker 2) covers resurrection, so the
+            // engine UI no longer depends solely on the PlayerLoop marker surviving.
             Bridge.PlayerLoopKeyInputInjection.OnAfterSetPlayerLoop(() =>
                 Bridge.PlayerLoopKeyInputInjection.InjectIntoCurrentPlayerLoop(
                     typeof(Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker),
                     DINOForgePlayerLoopUpdate));
+
+            // iter-149e DECISIVE fix (WinDbg MDMP + live repro): after RuntimeDriver.OnDestroy on the
+            // InitialGameLoader->MainMenu transition, ALL our managed activity halts — the
+            // ResurrectionFallback bg thread stops heart-beating (it armed the grace window then went
+            // silent), no MainMenu sceneLoaded/activeSceneChanged ever reaches our static handlers, and
+            // the injected PlayerLoop callback never ticks. The engine stays healthy (process alive,
+            // Responding=True, MainMenu rendered, engine heartbeat advances) — a DORMANT-PLUGIN bug,
+            // not a native wedge. The ONE callback DINO itself drives on the main thread post-teardown
+            // is THIS Harmony postfix on PlayerLoop.SetPlayerLoop — DINO calls SetPlayerLoop while
+            // bringing up MainMenu systems. So drive the revive directly from HERE, on the main thread,
+            // where TryResurrect's Unity ECalls (Camera.main / AddComponent / Initialize) are safe.
+            // This does not depend on a post-teardown scene event or on our suspended bg threads.
+            try { MainThreadReviveIfNeeded(LastSceneNameForResurrection ?? "playerloop-set", "playerloop-set(main-thread)"); }
+            catch (Exception ex) { try { DebugLog.Write("Plugin", $"[Plugin] OnPlayerLoopSet revive threw: {ex.GetType().Name}: {ex.Message}"); } catch { /* diagnostic only */ } }
+
+            try
+            {
+                bool markerPresent = Bridge.PlayerLoopKeyInputInjection.ContainsMarkerInUpdate(
+                    UnityEngine.LowLevel.PlayerLoop.GetCurrentPlayerLoop(),
+                    typeof(Bridge.PlayerLoopKeyInputInjection.DINOForgeUpdateMarker));
+                DebugLog.Write("Plugin", $"[Plugin] OnPlayerLoopSet postfix fired — DINOForgeUpdateMarker re-injected={markerPresent}.");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Write("Plugin", $"[Plugin] OnPlayerLoopSet marker-check threw: {ex.Message}");
+            }
         }
 
         private static void LogInstallDiagnostics()
@@ -855,6 +1401,7 @@ namespace DINOForge.Runtime
             try { _harmony?.UnpatchSelf(); } catch (Exception ex) { DebugLog.Write("Plugin", $"OnDestroy Harmony.UnpatchSelf failed: {ex.Message}"); }
             // P0 fix: stop the Win32 F9/F10 polling thread on plugin teardown.
             try { Bridge.KeyInputSystem.StopKeyPollThread(); } catch (Exception ex) { DebugLog.Write("Plugin", $"OnDestroy StopKeyPollThread failed: {ex.Message}"); }
+            try { Capture.SessionRecorder.Shutdown(); } catch (Exception ex) { DebugLog.Write("Plugin", $"OnDestroy SessionRecorder.Shutdown failed: {ex.Message}"); }
             // Iter-144 #547 H5 gray-freeze fix: do NOT unsubscribe activeSceneChanged here.
             // The handler is a static method on the Plugin class; the static delegate survives
             // BepInEx Plugin instance destruction. Previously we unsubscribed here, breaking
@@ -890,8 +1437,9 @@ namespace DINOForge.Runtime
         // UGUI system (preferred). Null if UGUI setup failed.
         internal DFCanvas? _dfCanvas;
 
-        // Loading overlay (shown during mod init, hidden when scene loads)
-        private ModLoadingOverlay? _loadingOverlay;
+        // EPIC-027: themed loading-screen takeover (shown during mod init / scene loads,
+        // faded out when the target scene + engine UI are ready).
+        private LoadingScreenController? _loadingScreen;
 
         // Active UI hosts.
         // _modMenuHost is always set to the active menu (UGUI when healthy, IMGUI fallback otherwise).
@@ -902,6 +1450,23 @@ namespace DINOForge.Runtime
         private HudIndicator? _hudIndicator;
         private NativeMenuInjector? _nativeMenuInjector;
         private MainMenuThemer? _mainMenuThemer;
+        private Graphics.EnvironmentThemeSwap? _environmentThemeSwap;
+        private UI.CanvasReskinner? _canvasReskinner;
+        private int _reskinRetryCount;
+
+        // ── Engine-UI self-healing (fix/engine-ui-injection-race) ────────────────
+        // RunMainMenuInit() is idempotent and re-runnable; these track its state so the
+        // main-thread pump can bounded-retry injection until the MODS button exists, and so
+        // the scene-change handler can re-run the menu-mode init when re-entering a menu scene.
+        // This kills the intermittent "no Mods button / no engine UI" race: a single missed
+        // timing window (ECS-world gate, late canvas, custom Selectable button) auto-recovers.
+        private bool _engineUiHeartbeatLogged;
+        private int _menuInitRetryFrames;
+        // Bounded retry budget — re-attempt MODS injection for up to N pump frames after the
+        // initial menu-mode init. At ~once-per-frame this covers several seconds of menu fade-in.
+        private const int MenuInitMaxRetryFrames = 600;
+        // Subscribed once; reset menu-mode init state when a menu scene becomes active again.
+        private bool _sceneChangeSubscribed;
 
         // _uguiReady: true once DFCanvas.Start() reports success via IsReady.
         // We check this each Update() because DFCanvas.Start() runs after Initialize().
@@ -1249,6 +1814,19 @@ namespace DINOForge.Runtime
                 {
                     _nativeMenuInjector = gameObject.AddComponent<NativeMenuInjector>();
                     _nativeMenuInjector.SetLogger(_log);
+                    // Fix (iter-149): wire the pack-data provider so the native MODS page
+                    // (TryShowNativeModsPage) can populate its INSTALLED PACKS list. Without
+                    // this, PackDataProvider stays null → SetPacks() is never called → the
+                    // left pack list renders empty even though packs are loaded.
+                    _nativeMenuInjector.PackDataProvider = () =>
+                        _modPlatform?.GetLoadedPackDisplayInfos()
+                        ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
+                    // Quick panel reads the active total_conversion ui_theme from disk.
+                    _nativeMenuInjector.PacksDirectory = _modPlatform?.PacksDirectory;
+                    // Route quick-panel / native-page pack toggles + reloads through the same
+                    // queued path the UGUI menu uses (SetPackEnabled persists disabled_packs.json).
+                    _nativeMenuInjector.OnNativePackToggled = (packId, enabled) => RequestPackToggle(packId, enabled);
+                    _nativeMenuInjector.OnNativeReloadRequested = () => RequestPackReload("native mods menu reload");
                     TryWireNativeMenuInjectorHost();
                     // SPEC-002 F-07: main-thread re-scan hook for tests/tooling (not background thread — ADR-015).
                     NativeMenuInjector.OnScanNeeded = () =>
@@ -1307,22 +1885,33 @@ namespace DINOForge.Runtime
             DebugLog.Write("Plugin", $"[RuntimeDriver.Initialize] ENTRY — Initialize starting on {gameObject.name}");
             _log.LogInfo($"[RuntimeDriver] F9/F10 key handlers registered on {gameObject.name}.");
 
-            // ── Step 6.5: Create loading overlay ────────────────────────────────────
-            // Show a skeleton UI during the ~30-45s mod initialization phase.
-            // This overlay is hidden when the MainMenu scene fully loads.
-            RunPhaseWithAbortGuard("ModLoadingOverlay.Create", () =>
+            // ── Step 6.5: Create themed loading screen (EPIC-027) ───────────────────
+            // Full-screen branded loading takeover during the ~30-45s mod-init phase.
+            // For an active total_conversion pack with a declared loading_screen, this
+            // paints the pack's themed background + logo + tips. Hidden when the
+            // MainMenu scene + engine UI are ready.
+            RunPhaseWithAbortGuard("LoadingScreenController.Create", () =>
             {
                 try
                 {
-                    _loadingOverlay = ModLoadingOverlay.Create(gameObject);
-                    if (_loadingOverlay != null)
+                    // Reuse the early instance created in Plugin.Awake if it is still alive;
+                    // only create a new one if it was never built or already faded out.
+                    _loadingScreen = LoadingScreenController.Instance;
+                    if (_loadingScreen == null)
                     {
-                        _log.LogInfo("[RuntimeDriver] ModLoadingOverlay created.");
+                        string packsDir = _modPlatform?.PacksDirectory
+                            ?? System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "dinoforge_packs");
+                        _loadingScreen = LoadingScreenController.Create(gameObject, packsDir, _log);
+                    }
+                    if (_loadingScreen != null)
+                    {
+                        _loadingScreen.EnsureVisible();
+                        _log.LogInfo("[RuntimeDriver] LoadingScreenController ready.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning($"[RuntimeDriver] ModLoadingOverlay creation failed: {ex}");
+                    _log.LogWarning($"[RuntimeDriver] LoadingScreenController creation failed: {ex}");
                 }
             });
             yield return null;
@@ -1334,43 +1923,16 @@ namespace DINOForge.Runtime
             DebugLog.Write("Plugin", $"[RuntimeDriver] Step 7 ENTERING MainMenu-mode PackLoad — _modPlatform={((_modPlatform != null) ? "present" : "NULL")}");
             RunPhaseWithAbortGuard("MainMenu-mode PackLoad", () =>
             {
-                if (_modPlatform != null)
-                {
-                    _log.LogInfo("[RuntimeDriver] MainMenu-mode pack-load: calling LoadPacks() (no ECS world required).");
-                    try
-                    {
-                        var result = _modPlatform.LoadPacks();
-                        _log.LogInfo($"[RuntimeDriver] MainMenu-mode pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
-                        WireUguiToModPlatform();
-                        PushLoadedPacksToUgui("main-menu init");
+                RunMainMenuInit("initialize");
 
-                        // Hide loading overlay now that packs are loaded
-                        if (_loadingOverlay != null)
-                        {
-                            _loadingOverlay.Hide();
-                            _log.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (MainMenu-mode pack-load complete).");
-                        }
-
-                        // Apply total_conversion theme to main menu
-                        try
-                        {
-                            _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
-                            var packInfos = _modPlatform.GetLoadedPackDisplayInfos();
-                            _mainMenuThemer.TryApplyTheme(packInfos);
-                        }
-                        catch (Exception themeEx)
-                        {
-                            _log.LogWarning($"[RuntimeDriver] MainMenuThemer failed: {themeEx.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.LogError($"[RuntimeDriver] MainMenu-mode pack-load FAILED: {ex}");
-                    }
-                }
-                else
+                // Subscribe to scene changes ONCE so re-entering a menu scene (e.g. returning
+                // from gameplay to the main menu) re-runs the idempotent menu-mode init. This is
+                // the self-healing path that recovers the engine UI after scene transitions.
+                if (!_sceneChangeSubscribed)
                 {
-                    _log.LogWarning("[RuntimeDriver] MainMenu-mode pack-load skipped — _modPlatform is null.");
+                    SceneManager.activeSceneChanged += OnRuntimeDriverSceneChanged;
+                    _sceneChangeSubscribed = true;
+                    _log.LogInfo("[RuntimeDriver] Subscribed activeSceneChanged for engine-UI self-heal.");
                 }
             });
 
@@ -1409,8 +1971,38 @@ namespace DINOForge.Runtime
 
             // Pump deferred work on the main thread until destruction.
             int _themeRetryCount = 0;
+            int _themeAuxFrame = 0;
             while (!_destroyed)
             {
+                // ── Engine-UI self-healing bounded retry ─────────────────────────
+                // Re-attempt MODS-button injection until it succeeds or the retry budget
+                // is spent. The native menu canvas / custom Selectable buttons may not be
+                // present on the exact frame Step 7 ran, so a single missed window would
+                // otherwise leave "no Mods button" until the next scene change. Re-running
+                // each pump frame on the main thread closes that race deterministically.
+                if (_nativeMenuInjector != null
+                    && !_nativeMenuInjector.IsModsButtonInjected
+                    && _menuInitRetryFrames < MenuInitMaxRetryFrames)
+                {
+                    _menuInitRetryFrames++;
+                    if (_menuInitRetryFrames % 30 == 0) // ~twice/sec at 60fps; cheap canvas scan
+                    {
+                        try { _nativeMenuInjector.TryInjectMenuButton(); }
+                        catch (Exception injEx)
+                        {
+                            // Surface, don't swallow (Pattern #104/#111).
+                            _log?.LogWarning($"[RuntimeDriver] Engine-UI retry injection failed: {injEx.Message}");
+                        }
+                        // Emit the heartbeat once injection succeeds (or once the budget is
+                        // exhausted) so the log shows the final engine-UI state at a glance.
+                        if (_nativeMenuInjector.IsModsButtonInjected
+                            || _menuInitRetryFrames >= MenuInitMaxRetryFrames)
+                        {
+                            LogEngineUiHeartbeat("self-heal retry");
+                        }
+                    }
+                }
+
                 // Retry MainMenuThemer if canvas wasn't ready during Step 7
                 if (_mainMenuThemer != null && !_mainMenuThemer.IsApplied && _modPlatform != null && _themeRetryCount < 30)
                 {
@@ -1425,6 +2017,39 @@ namespace DINOForge.Runtime
                         }
                         catch { /* safe-swallow: theme retry is best-effort */ }
                     }
+                }
+
+                // Re-skin non-MainMenu pages on a steady cadence. Settings sub-tabs and the
+                // game create/select screens are instantiated lazily when the user navigates,
+                // so a one-shot apply misses them. The reskinner is idempotent (per-object
+                // marker) — repeated passes only touch newly-appeared elements. (#970b)
+                if (_canvasReskinner != null && _modPlatform != null)
+                {
+                    _reskinRetryCount++;
+                    if (_reskinRetryCount % 15 == 0) // every ~15 frames
+                    {
+                        try
+                        {
+                            _canvasReskinner.ReskinAllPages(_modPlatform.GetLoadedPackDisplayInfos());
+                        }
+                        catch { /* safe-swallow: page reskin retry is best-effort */ }
+                    }
+                }
+
+                // ── Subpage FULL TAKEOVER (#974): Options + settings tabs + in-game panels ──
+                // Subpages are separate canvases the user opens AFTER the main menu and
+                // re-opens repeatedly. The packs-overload performs the SAME full takeover the
+                // main menu got (supersedes the #970a color-only aux-skin); it self-guards on
+                // the live canvas count so this per-frame call is cheap until a subpage opens.
+                if (_mainMenuThemer != null && _modPlatform != null && (_themeAuxFrame++ % 10) == 0)
+                {
+                    try
+                    {
+                        var auxPacks = _modPlatform.GetLoadedPackDisplayInfos();
+                        if (auxPacks.Count > 0)
+                            _mainMenuThemer.ApplyToAuxiliaryMenus(auxPacks);
+                    }
+                    catch { /* safe-swallow: aux takeover is best-effort */ }
                 }
 
                 // ── Step 8 deferred: push update-check results to UI once the Task completes ──
@@ -1526,6 +2151,167 @@ namespace DINOForge.Runtime
             }
         }
 
+        // ------------------------------------------------------------------ //
+        // Engine-UI MainMenu-mode init (deterministic, idempotent, self-healing)
+        // ------------------------------------------------------------------ //
+
+        /// <summary>
+        /// Loads packs, wires the UGUI mod menu, and attempts native MODS-button injection
+        /// WITHOUT requiring an ECS World. DINO only creates ECS worlds when entering gameplay,
+        /// so the ECS-gated <see cref="ProcessWorldReadyCoroutine"/> never runs at the main menu —
+        /// this is the only path that brings up the engine UI there.
+        ///
+        /// Idempotent: safe to call repeatedly. <see cref="ModPlatform.LoadPacks"/> is pure YAML
+        /// parsing, and <see cref="UI.NativeMenuInjector.TryInjectMenuButton"/> short-circuits when
+        /// the MODS button already exists. Every failure is logged (no silent swallow — Pattern
+        /// #104/#111) so the cause is visible in the BepInEx console.
+        /// </summary>
+        /// <param name="reason">Diagnostic tag for the log (e.g. "initialize", "scene-change").</param>
+        private void RunMainMenuInit(string reason)
+        {
+            if (_modPlatform == null)
+            {
+                _log.LogWarning($"[RuntimeDriver] MainMenu-mode init ({reason}) skipped — _modPlatform is null.");
+                return;
+            }
+
+            try
+            {
+                _log.LogInfo($"[RuntimeDriver] MainMenu-mode init ({reason}): calling LoadPacks() (no ECS world required).");
+                ContentLoadResult result = _modPlatform.LoadPacks();
+                _log.LogInfo($"[RuntimeDriver] MainMenu-mode init ({reason}) pack-load complete: success={result.IsSuccess}, loaded={result.LoadedPacks.Count}, errors={result.Errors.Count}");
+
+                WireUguiToModPlatform();
+                PushLoadedPacksToUgui("main-menu init");
+
+                // Hide loading screen now that packs are loaded.
+                if (_loadingScreen != null)
+                {
+                    _loadingScreen.BeginFadeOut();
+                    _log.LogInfo("[RuntimeDriver] LoadingScreenController faded out (MainMenu-mode init complete).");
+                }
+
+                // Apply total_conversion theme to main menu (best-effort; pump loop retries).
+                try
+                {
+                    _mainMenuThemer = new MainMenuThemer(_log, _modPlatform.PacksDirectory);
+                    IReadOnlyList<PackDisplayInfo> packInfos = _modPlatform.GetLoadedPackDisplayInfos();
+                    _mainMenuThemer.TryApplyTheme(packInfos);
+
+                    // Color-skin every non-MainMenu page (Settings + GAME/VIDEO/SOUND/CONTROLS/
+                    // TWITCH sub-tabs, game create/select) with the active total_conversion theme.
+                    // Sub-panels are created lazily on navigation, so the pump loop re-runs this.
+                    _canvasReskinner = new UI.CanvasReskinner(_log, _modPlatform.PacksDirectory);
+                    _canvasReskinner.Invalidate();
+                    _reskinRetryCount = 0;
+                    _canvasReskinner.ReskinAllPages(packInfos);
+                }
+                catch (Exception themeEx)
+                {
+                    _log.LogWarning($"[RuntimeDriver] MainMenuThemer failed: {themeEx.Message}");
+                }
+
+                // Kick a native injection attempt immediately; the pump loop bounded-retry
+                // handles the case where the menu canvas is not ready on this exact frame.
+                if (_nativeMenuInjector != null)
+                {
+                    try { _nativeMenuInjector.TryInjectMenuButton(); }
+                    catch (Exception injEx)
+                    {
+                        _log.LogWarning($"[RuntimeDriver] MainMenu-mode init ({reason}) injection attempt failed: {injEx.Message}");
+                    }
+                }
+
+                // Emit the single launch-time engine-UI heartbeat (idempotent: only once unless
+                // a scene change re-arms it). If injection is still pending the pump-loop retry
+                // re-emits with the final state.
+                LogEngineUiHeartbeat(reason);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError($"[RuntimeDriver] MainMenu-mode init ({reason}) FAILED: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Self-heal hook: when DINO transitions to a menu scene (no active gameplay ECS world),
+        /// re-arm the bounded retry and re-run the idempotent menu-mode init so the engine UI is
+        /// rebuilt after returning from gameplay. Never throws to Unity.
+        /// </summary>
+        private void OnRuntimeDriverSceneChanged(Scene previous, Scene next)
+        {
+            try
+            {
+                if (_destroyed) return;
+                _log.LogInfo($"[RuntimeDriver] activeSceneChanged: '{previous.name}' → '{next.name}' — re-arming engine-UI menu-mode init.");
+                // Re-arm: the scene swap destroyed the previous canvas + injected button, so allow
+                // a fresh injection attempt and a fresh heartbeat for the new scene.
+                _menuInitRetryFrames = 0;
+                _engineUiHeartbeatLogged = false;
+                RunMainMenuInit("scene-change");
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning($"[RuntimeDriver] OnRuntimeDriverSceneChanged failed: {ex.Message}");
+            }
+        }
+
+        public void TryApplyEnvironmentTheme(string sceneName, string source)
+        {
+            if (!Graphics.EnvironmentThemeSwap.IsGameplayScene(sceneName))
+                return;
+
+            if (_modPlatform == null)
+            {
+                _log.LogWarning($"[RuntimeDriver] EnvironmentThemeSwap skipped ({source}): ModPlatform is null.");
+                return;
+            }
+
+            try
+            {
+                _environmentThemeSwap ??= new Graphics.EnvironmentThemeSwap(_log);
+                if (_environmentThemeSwap.TryApplyForScene(sceneName))
+                {
+                    _log.LogInfo($"[RuntimeDriver] EnvironmentThemeSwap applied for '{sceneName}' ({source}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"[RuntimeDriver] EnvironmentThemeSwap failed ({source}): {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Emits a single unambiguous launch-time heartbeat summarising engine-UI readiness so the
+        /// user (and tooling) can confirm state at a glance from the BepInEx console / LogOutput.log.
+        /// Logged at most once per scene (re-armed on scene change).
+        /// </summary>
+        private void LogEngineUiHeartbeat(string reason)
+        {
+            if (_engineUiHeartbeatLogged) return;
+
+            int packs = 0;
+            try { packs = _modPlatform?.GetLoadedPackDisplayInfos().Count ?? 0; }
+            catch { /* safe-swallow: heartbeat is diagnostic-only and must not throw */ }
+
+            bool modsButton = _nativeMenuInjector != null && _nativeMenuInjector.IsModsButtonInjected;
+            bool f9 = _debugOverlay != null || _dfCanvas != null;       // F9 debug panel host present
+            bool f10 = _modMenuHost != null || _dfCanvas?.ModMenuPanel != null; // F10 mods panel host present
+
+            // Only mark the heartbeat as "logged" (final) once the MODS button is in OR we were
+            // called from the retry path; the first injectionless call may re-emit after retries.
+            if (modsButton || string.Equals(reason, "self-heal retry", StringComparison.Ordinal))
+            {
+                _engineUiHeartbeatLogged = true;
+            }
+
+            string readyLine = $"[DINOForge] ENGINE-UI READY: packs={packs} modsButton={modsButton} f9={f9} f10={f10} (via {reason})";
+            _log.LogInfo(readyLine);
+            // iter-149b: also mirror to dinoforge_debug.log so live verification (which reads the
+            // DINOForge debug log, not BepInEx LogOutput.log) can confirm engine-UI readiness.
+            DebugLog.Write("Plugin", readyLine);
+        }
+
         internal void RequestPackReload(string reason)
         {
             lock (_deferredWorkLock)
@@ -1605,6 +2391,7 @@ namespace DINOForge.Runtime
             {
                 _log.LogInfo($"[RuntimeDriver] ECS World available: {ecsWorld.Name}");
                 _registeredWorldInstance = ecsWorld;
+                TryApplyEnvironmentTheme(SceneManager.GetActiveScene().name, "ProcessWorldReadyCoroutine");
 
                 if (_dumpOnStartup)
                 {
@@ -1654,12 +2441,15 @@ namespace DINOForge.Runtime
                     _log?.LogInfo($"[RuntimeDriver.diag] ABOUT TO CALL PushLoadedPacksToUgui('initial load') — dfCanvas={_dfCanvas != null}, modPlatform={modPlatform != null}");
                     PushLoadedPacksToUgui("initial load");
 
-                    // Hide the loading overlay now that world is ready and packs are loaded
-                    if (_loadingOverlay != null)
+                    // Hide the loading screen now that world is ready and packs are loaded
+                    if (_loadingScreen != null)
                     {
-                        _loadingOverlay.Hide();
-                        _log?.LogInfo("[RuntimeDriver] ModLoadingOverlay hidden (world ready).");
+                        _loadingScreen.BeginFadeOut();
+                        _log?.LogInfo("[RuntimeDriver] LoadingScreenController faded out (world ready).");
                     }
+
+                    string activeSceneName = SceneManager.GetActiveScene().name;
+                    TryApplyEnvironmentTheme(activeSceneName, "process-world-ready");
                 }
 
                 yield return null;
@@ -2327,6 +3117,12 @@ namespace DINOForge.Runtime
             // _menuHost == null.
             NativeMainMenuModMenu nativeHost = new NativeMainMenuModMenu();
             if (_log != null) nativeHost.SetLogger(_log);
+            // Fix (iter-149): give the native MODS screen a live pack source. ModPlatform.UpdateUI
+            // only pushes packs to the overlay host it owns, not to this contextual host, so the
+            // native page would otherwise list zero packs.
+            nativeHost.PackDataProvider = () =>
+                _modPlatform?.GetLoadedPackDisplayInfos()
+                ?? (System.Collections.Generic.IReadOnlyList<PackDisplayInfo>)System.Array.Empty<PackDisplayInfo>();
             ContextualModMenuHost contextualHost = new ContextualModMenuHost(
                 _dfCanvas.ModMenuPanel, nativeHost);
             _nativeMenuInjector.SetModMenuHost(contextualHost);
@@ -2370,6 +3166,16 @@ namespace DINOForge.Runtime
             s_isBeingDestroyed = true;
             _destroyed = true; // Signal background polling thread to stop
             _backgroundPollStopEvent.Set();  // Wake up the polling loop
+
+            // Pair the activeSceneChanged subscription added in Step 7 (Pattern #105). This
+            // instance is being destroyed on the scene transition; the next RuntimeDriver
+            // resubscribes its own handler during its Initialize Step 7.
+            if (_sceneChangeSubscribed)
+            {
+                try { SceneManager.activeSceneChanged -= OnRuntimeDriverSceneChanged; }
+                catch { /* safe-swallow: unsubscribe is best-effort during teardown */ }
+                _sceneChangeSubscribed = false;
+            }
             // iter-145 #882 ROOT CAUSE: Removed _resurrectionFallbackStopEvent.Set() — that was killing
             // the fallback thread on every RuntimeDriver.OnDestroy (scene transition), preventing the
             // post-OnDestroy resurrection that's the whole point of the fallback. The "wake without

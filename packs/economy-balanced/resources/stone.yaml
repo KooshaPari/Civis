@@ -1,9 +1,0 @@
-id: stone
-name: Stone
-description: |
-  Durable construction material for fortifications and walls. Quarried from stone deposits.
-  Critical for defensive structures. No decay.
-production_rate: 0.6
-storage_capacity: 1500.0
-decay_rate: 0.0
-is_tradeable_default: true

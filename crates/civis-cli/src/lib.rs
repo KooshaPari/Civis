@@ -30,7 +30,7 @@ pub fn workspace_root() -> PathBuf {
     manifest_dir
         .parent()
         .and_then(|p| p.parent())
-        .map_or(manifest_dir, |p| p.to_path_buf())
+        .map_or_else(|| manifest_dir.clone(), |p| p.to_path_buf())
 }
 
 pub mod build;

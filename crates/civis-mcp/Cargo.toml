@@ -7,7 +7,7 @@ rust-version.workspace = true
 
 [dependencies]
 rmcp = { version = "0.9", features = ["server", "transport-io", "macros"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "process", "fs"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 schemars = "1"
@@ -15,4 +15,3 @@ civis-cli = { path = "../civis-cli" }
 
 [lib]
 path = "src/lib.rs"
-

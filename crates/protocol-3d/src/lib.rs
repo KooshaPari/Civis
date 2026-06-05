@@ -311,8 +311,13 @@ pub struct BattleEvent3d {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DisasterEvent3d {
     /// Disaster kind or label.
+    ///
+    /// Renamed to `disaster_kind` to avoid clashing with the
+    /// `EventFeedMessage3d` tagged-enum tag (`#[serde(tag = "kind")]`); the
+    /// serializer would otherwise emit two `kind` fields per disaster
+    /// message.
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub kind: String,
+    pub disaster_kind: String,
     /// Optional disaster severity.
     #[serde(default)]
     pub severity: f32,
@@ -795,7 +800,7 @@ mod tests {
                     position: Some(WorldXZ { x: 1.0, z: 2.0 }),
                 }),
                 EventFeedMessage3d::Disaster(DisasterEvent3d {
-                    kind: "flood".to_string(),
+                    disaster_kind: "flood".to_string(),
                     severity: 0.75,
                     position: Some(WorldXZ { x: 3.0, z: 4.0 }),
                 }),

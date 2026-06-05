@@ -153,7 +153,7 @@ mod tests {
         .expect("json");
         std::fs::write(
             mods.join("manifest.ron"),
-            r#"(mod:(id:"stone",name:"Stone Mod",version:"0.1.0",author:"CivLab",description:"adds stone",entrypoint:"stone.wasm"),buildings:[],recipes:[],events:[])"#,
+            r#"(mod:(id:"stone",name:"Stone Mod",version:"0.1.0",author:"CivLab",description:"adds stone",entrypoint:Some("stone.wasm")),buildings:[],recipes:[],events:[])"#,
         )
         .expect("ron");
 

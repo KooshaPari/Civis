@@ -113,18 +113,25 @@ fn requirement_new_world_differs_from_previous() {
 }
 
 #[test]
-#[ignore = "Missing public API: no pub basemap/world-extent mapper yet (map2d::build_basemap_image is private, and basemap extents are not exposed)."]
 fn requirement_2d_map_extent_matches_world() {
     // GIVEN a world size D from UI/worldgen wiring,
     // WHEN basemap sampling is executed,
     // THEN 2D map extents should cover [0..D.x] and [0..D.z].
-    // Once `map2d::build_basemap_image` becomes pub (or equivalent API is added),
-    // assert that raster coverage includes all world X/Z coordinates.
-    let map_samples_expected = true;
+    let dims = [24, 18, 31];
+    let grid = civ_voxel::fluid_ca::CaGrid::new(dims);
+    let extent = civ_bevy_ref::map2d::world_extent_for_basemap(&grid);
     assert!(
-        map_samples_expected,
-        "placeholder: assert full-map raster coverage once map API is public"
+        extent.min.x >= 0.0 && extent.min.y >= 0.0,
+        "map extent must be non-negative: {extent:?}"
     );
+    assert!(
+        extent.width() == dims[0] as f32 && extent.height() == dims[2] as f32,
+        "unexpected basemap extent {}x{} for world dims {dims:?}",
+        extent.width(),
+        extent.height(),
+    );
+    assert_eq!(extent.max.x, dims[0] as f32);
+    assert_eq!(extent.max.y, dims[2] as f32);
 }
 
 #[test]
@@ -276,4 +283,17 @@ fn requirement_terrain_is_continuous_not_blobs() {
         mesh.indices.len() % 6 == 0,
         "faces must stay in full quads (indices divisible by 6)"
     );
+}
+
+#[test]
+fn requirement_marker_types_differentiate_server_attach_vs_in_process() {
+    use std::any::type_name;
+
+    let live_agent = type_name::<civ_bevy_ref::live_stream::LiveAgentTag>();
+    let live_building = type_name::<civ_bevy_ref::live_stream::LiveBuildingTag>();
+    let sim_civilian = type_name::<civ_bevy_ref::sim_bridge::SimCivilianMarkerPublic>();
+    let sim_building = type_name::<civ_bevy_ref::sim_bridge::SimBuildingMarkerPublic>();
+
+    assert_ne!(live_agent, sim_civilian);
+    assert_ne!(live_building, sim_building);
 }

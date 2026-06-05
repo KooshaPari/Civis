@@ -287,6 +287,14 @@ fn sample_top_material(grid: &CaGrid, gx: f32, gz: f32) -> Option<civ_voxel::Mat
 /// palette the 3D view uses); height drives the hillshade. Sampled across the
 /// full grid extent so the map matches the active per-seed world.
 #[cfg(feature = "voxel")]
+pub fn world_extent_for_basemap(grid: &CaGrid) -> egui::Rect {
+    egui::Rect::from_min_max(
+        egui::pos2(0.0, 0.0),
+        egui::pos2(grid.dims[0] as f32, grid.dims[2] as f32),
+    )
+}
+
+#[cfg(feature = "voxel")]
 fn build_basemap_image(grid: &CaGrid) -> egui::ColorImage {
     let mut pixels = vec![egui::Color32::BLACK; MAP_TEX * MAP_TEX];
     let registry = MaterialRegistry::standard();

@@ -232,17 +232,29 @@ fn requirement_settings_has_gfx_audio_controls_gameplay_tabs() {
 
 #[test]
 fn requirement_emergent_factions_no_fixed_count_or_alignment() {
-    // GIVEN N>1 seeded simulation runs of identical length,
-    // WHEN the tick loop reaches convergence,
-    // THEN the count of distinct factions SHALL NOT be a hardcoded constant
-    // AND alignment vectors SHALL differ across runs (emergent, not scripted).
-    //
-    // Stub: asserts only the absence of a hardcoded constant; real assertions
-    // require `civ_engine::factions::FactionSet::count()` to be public.
-    let has_hardcoded_count = false;
+    // GIVEN two seeded simulation runs of identical length,
+    // WHEN faction aggregates are sampled after each run,
+    // THEN faction count or alignment vectors must differ across runs
+    // so the emergent behavior is not scripted.
+    const SEEDS: [u64; 2] = [7, 11];
+    const RUN_TICKS: u64 = 64;
+
+    let mut counts = Vec::with_capacity(2);
+    let mut alignments: Vec<Vec<civ_agents::Alignment>> = Vec::with_capacity(2);
+
+    for &seed in &SEEDS {
+        let mut sim = civ_engine::Simulation::with_seed(seed);
+        for _ in 0..RUN_TICKS {
+            sim.tick();
+        }
+        let count = sim.faction_count();
+        counts.push(count);
+        alignments.push((0..count).map(|id| sim.faction_alignment(id)).collect());
+    }
+
     assert!(
-        !has_hardcoded_count,
-        "placeholder: assert no hardcoded faction count + alignment variance once API is public"
+        counts[0] != counts[1] || alignments[0] != alignments[1],
+        "expect emergent variance: faction count or alignment vectors differ across seeded runs"
     );
 }
 

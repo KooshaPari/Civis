@@ -19,22 +19,18 @@ pub struct GenWorld {
 /// smooth mesher has real relief to round.
 const TERRAIN_FREQ: f64 = 5.0;
 
-/// Returns the deterministic surface height for a world column.
-///
-/// Relief = a base sea-adjacent level plus multi-octave fbm, with the land
-/// elevation above sea level scaled by a smooth radial falloff so the terrain
-/// slopes DOWN into the sea at the world boundary instead of dropping as a
-/// vertical cliff wall.
+/// Returns the sea level in voxel units for the world.
 #[must_use]
 pub const fn sea_level(dims: [usize; 3]) -> usize {
     dims[1].saturating_mul(40) / 100
 }
 
+/// Returns the deterministic surface height for a world column.
 #[must_use]
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
     let dz = dims[2].max(1);
-    let sea = dims[1] as f64 * 0.40;
+    let _sea = dims[1] as f64 * 0.40;
     // Base sits a touch BELOW sea level so that low-relief regions form genuine
     // interior lakes/seas (water fills above the seabed up to sea level), while
     // hills still rise well above it. Previously base (0.50H) was above sea and
@@ -93,25 +89,41 @@ fn carve_column(
     z: usize,
 ) {
     let surface = surface_height(dims, seed, x, z);
-    let soil = soil_depth(seed, x, z, dims[1]).min(2).max(1);
+    let soil = soil_depth(seed, x, z, dims[1]).clamp(1, 2);
     let ore_seed = mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64);
+    let params = CellMaterialParams {
+        dims,
+        seed,
+        sea,
+        surface,
+        soil,
+        ore_seed,
+    };
     for y in 0..dims[1] {
         let idx = index(dims, x, y, z);
-        cells[idx] = cell_material(dims, seed, sea, surface, soil, x, y, z, ore_seed);
+        cells[idx] = cell_material(&params, x, y, z);
     }
 }
 
-fn cell_material(
+#[derive(Copy, Clone)]
+struct CellMaterialParams {
     dims: [usize; 3],
     seed: u64,
     sea: usize,
     surface: usize,
     soil: usize,
-    x: usize,
-    y: usize,
-    z: usize,
     ore_seed: u64,
-) -> MaterialId {
+}
+
+fn cell_material(params: &CellMaterialParams, x: usize, y: usize, z: usize) -> MaterialId {
+    let CellMaterialParams {
+        dims,
+        seed,
+        sea,
+        surface,
+        soil,
+        ore_seed,
+    } = *params;
     if is_bedrock_shell(dims, x, y, z) || y < bedrock_depth(dims[1]) {
         return BEDROCK;
     }
@@ -262,10 +274,6 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// #16 measurement: worldgen must EMIT a meaningful amount of WATER (the sloped
-    /// coastlines + sea fill). Locks in that water exists to be rendered, with a
-    /// printed count so the absolute number is visible in test output.
-    #[test]
     /// Water must only appear in columns where terrain surface is below sea level.
     /// Regression test for the flat-blue-slab bug where water filled all y<=sea
     /// regardless of terrain height, producing water planes over elevated land.

@@ -35,7 +35,7 @@ bevy_egui = { version = "0.39", optional = true }
 # Decode the embedded window-icon PNG (src/window_icon.rs) into RGBA for winit.
 # Pinned to the version already in the workspace lock (pulled by bevy). default
 # features off → only the PNG decoder is compiled. Behind the `bevy` feature.
-image = { version = "0.25", optional = true, default-features = false, features = ["png"] }
+image = { version = "0.25", optional = true, default-features = false, features = ["png", "jpeg"] }
 # winit::window::Icon for the window-icon wiring (src/window_icon.rs). bevy_winit
 # re-exports only selected winit items (not `Icon`), so we depend on the same
 # winit version already in the workspace lock (0.30, pulled by bevy_winit).

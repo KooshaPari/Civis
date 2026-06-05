@@ -41,6 +41,7 @@ fn sample_chunk(world: &GenWorld, origin: [usize; 3], chunk_edge: usize) -> Vec<
     chunk
 }
 
+#[cfg(feature = "voxel")]
 #[test]
 fn requirement_world_size_selection_changes_dimensions() {
     // GIVEN size-indexed selection values from UI world-size controls (small..huge),
@@ -74,6 +75,7 @@ fn requirement_world_size_selection_changes_dimensions() {
     );
 }
 
+#[cfg(feature = "voxel")]
 #[test]
 fn requirement_new_world_differs_from_previous() {
     // GIVEN two different New World seeds,

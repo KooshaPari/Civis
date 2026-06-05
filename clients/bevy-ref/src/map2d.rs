@@ -94,6 +94,13 @@ struct MapBasemap {
     last_seed: Option<u64>,
 }
 
+/// Marker component on the *main* perspective `Camera3d` so this module can
+/// distinguish it from the minimap's `Camera3d` and toggle its `is_active`
+/// while the 2D map is up. Without this, the live 3D scene would render
+/// underneath the alpha-faded basemap and bleed through.
+#[derive(Component)]
+pub struct MainSceneCamera;
+
 /// Plugin: registers the 2D alternate map view (key + far-zoom toggle).
 #[derive(Default)]
 pub struct Map2dPlugin;
@@ -113,6 +120,10 @@ impl Plugin for Map2dPlugin {
                     toggle_map_hotkey,
                     auto_engage_from_zoom,
                     tick_fade,
+                    // After `tick_fade` has settled the new fade value, swap
+                    // the main 3D camera's `is_active` so the 3D scene no
+                    // longer bleeds through the alpha-faded 2D basemap.
+                    hide_3d_scene_when_map_active,
                 )
                     .chain(),
             )
@@ -187,6 +198,23 @@ fn tick_fade(time: Res<Time>, mut view: ResMut<MapView>) {
     view.fade += (target - view.fade) * rate.min(1.0);
     if (view.fade - target).abs() < 0.002 {
         view.fade = target;
+    }
+}
+
+/// Hysteresis band: when `fade` climbs past `0.5`, deactivate the main
+/// `Camera3d` so the 3D scene stops rendering and the alpha-faded basemap is
+/// the only thing the player sees. When `fade` drops back below `0.5`,
+/// reactivate it. The `0.5` threshold is the geometric centre of the ramp,
+/// so the swap is symmetric and avoids stuttering on the boundary.
+fn hide_3d_scene_when_map_active(
+    view: Res<MapView>,
+    mut cameras: Query<&mut Camera, With<MainSceneCamera>>,
+) {
+    let hide = view.fade > 0.5;
+    for mut cam in &mut cameras {
+        if cam.is_active != !hide {
+            cam.is_active = !hide;
+        }
     }
 }
 

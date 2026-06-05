@@ -129,6 +129,11 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
+        // Marker so `crate::map2d` can locate the *main* perspective camera
+        // (distinct from the minimap `Camera3d`) and toggle its `is_active`
+        // when the 2D map view fades in. Without this, the live 3D scene
+        // bleeds through the alpha-faded basemap.
+        crate::map2d::MainSceneCamera,
     ));
 }
 

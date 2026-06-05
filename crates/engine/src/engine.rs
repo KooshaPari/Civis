@@ -5,6 +5,7 @@
 use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
+    Alignment,
     Activity, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs, PoiKind,
     PoiRegistry, Position3d, Tools, Wardrobe,
 };
@@ -33,7 +34,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
@@ -877,6 +878,62 @@ impl Simulation {
     #[must_use]
     pub fn faction_doctrines(&self) -> &[DoctrineLibrary] {
         &self.faction_doctrines
+    }
+
+    /// Count distinct faction IDs currently represented by civilian alignments.
+    ///
+    /// If no explicit civilian `Alignment::Faction` values are present, this
+    /// falls back to a deterministic heuristic over known factions in
+    /// `WorldState::factions` (for parity with the current partial emergence
+    /// implementation). If/when a dedicated `HeuristicFactionSet` becomes
+    /// available, it should replace this fallback.
+    pub fn faction_count(&self) -> u32 {
+        let explicit_faction_ids = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .filter_map(|(_, civilian)| match civilian.alignment {
+                civ_agents::Alignment::Faction(faction_id) => Some(faction_id),
+                _ => None,
+            })
+            .collect::<HashSet<_>>();
+
+        if !explicit_faction_ids.is_empty() {
+            return explicit_faction_ids.len() as u32;
+        }
+
+        self.state.factions.len() as u32
+    }
+
+    /// Return a deterministic representative alignment for the requested faction.
+    ///
+    /// The method first searches for explicit `Alignment::Faction` values among
+    /// live civilians. If none is found for `faction_id`, it returns a
+    /// deterministic rotated representative from `WorldState::factions` as a
+    /// heuristic fallback.
+    pub fn faction_alignment(&self, faction_id: u32) -> civ_agents::Alignment {
+        if let Some(alignment) = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .find_map(|(_, civilian)| match civilian.alignment {
+                civ_agents::Alignment::Faction(fid) if fid == faction_id => {
+                    Some(civilian.alignment)
+                }
+                _ => None,
+            }) {
+            return alignment;
+        }
+
+        let mut registered_factions: Vec<u32> = self.state.factions.keys().copied().collect();
+        if registered_factions.is_empty() {
+            return Alignment::None;
+        }
+
+        registered_factions.sort_unstable();
+        let rotation = (self.state.rng_seed % registered_factions.len() as u64) as usize;
+        let fallback_index = (faction_id as usize + rotation) % registered_factions.len();
+        Alignment::with_faction(registered_factions[fallback_index])
     }
 
     /// Borrow the immutable planet config.

@@ -11,13 +11,13 @@ pre-commit:
       run: bash .github/hooks/pre-commit
 
 pre-push:
-  piped: true
+  piped: false
   commands:
     quality-manifest:
       run: |
-        # Skip in CI/non-interactive contexts and when a fresh manifest already exists.
-        if [ "${CI:-}" = "true" ] || [ "${CI:-}" = "1" ] || [ "${SKIP_QUALITY_MANIFEST:-}" = "1" ] || [ "${SKIP_QUALITY:-}" = "1" ] || [ ! -t 0 ]; then
-          echo "quality-manifest: skipped (CI/SKIP_QUALITY_MANIFEST/SKIP_QUALITY/no tty)"
+        # Skip in CI contexts and when an explicit skip flag is set.
+        if [ "${CI:-}" = "true" ] || [ "${CI:-}" = "1" ] || [ "${SKIP_QUALITY_MANIFEST:-}" = "1" ] || [ "${SKIP_QUALITY:-}" = "1" ]; then
+          echo "quality-manifest: skipped (CI or SKIP_QUALITY*)"
           exit 0
         fi
 

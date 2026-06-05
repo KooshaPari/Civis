@@ -534,7 +534,6 @@ fn draw_map_view(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-
     let current_dirty = voxel_state.as_ref().map(|s| s.grid.dirty_chunks.len());
     if current_dirty != basemap.last_dirty_marker && voxel_state.is_some() {
         basemap.handle = None;
@@ -546,7 +545,6 @@ fn draw_map_view(
     // Lazily rasterise the basemap on first display.
     if basemap.handle.is_none() {
         if let Some(voxel_state) = voxel_state.as_ref() {
-            let current_dirty = voxel_state.grid.dirty_chunks.len();
             let image = build_basemap_image(&voxel_state.grid);
             basemap.handle = Some(
                 ctx.load_texture("map2d_basemap", image, egui::TextureOptions::LINEAR),
@@ -555,6 +553,7 @@ fn draw_map_view(
             basemap.last_dirty_marker = Some(current_dirty);
         } else {
             basemap.last_seed = None;
+            basemap.last_dirty_marker = None;
         }
     }
     let fade = view.fade;
@@ -851,3 +850,4 @@ mod tests {
         )
     }
 }
+

@@ -842,7 +842,7 @@ fn with_alpha(c: egui::Color32, fade: f32) -> egui::Color32 {
     egui::Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), a)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "voxel"))]
 mod tests {
     use super::*;
 

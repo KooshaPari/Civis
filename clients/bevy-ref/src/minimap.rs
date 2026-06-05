@@ -9,7 +9,9 @@ use civ_engine::Building;
 use std::collections::HashMap;
 
 use crate::camera::CameraRig;
+#[cfg(feature = "egui")]
 use crate::info_views::{cluster_color, InfoViewRegistry};
+#[cfg(feature = "egui")]
 use crate::map2d::MapView;
 use crate::sim_bridge::SimState;
 use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
@@ -89,12 +91,15 @@ impl Plugin for MinimapPlugin {
         )
         .add_systems(
             Update,
+            (sync_minimap_viewport, teleport_camera_from_minimap),
+        );
+        #[cfg(feature = "egui")]
+        app.add_systems(
+            Update,
             (
                 sync_minimap_visibility,
                 sync_minimap_dots,
-                sync_minimap_viewport,
                 sync_overlay_tint,
-                teleport_camera_from_minimap,
             ),
         );
     }
@@ -104,6 +109,7 @@ impl Plugin for MinimapPlugin {
 /// loading) so the title screen renders clean. The minimap is Bevy UI (not
 /// egui), so it is gated by toggling [`Visibility`] on [`MinimapRoot`] rather
 /// than a `run_if` on a draw system.
+#[cfg(feature = "egui")]
 fn sync_minimap_visibility(
     mode: Res<crate::menus::GameUiMode>,
     map_view: Res<MapView>,
@@ -330,6 +336,7 @@ fn world_position_for_building(building: &Building) -> Vec3 {
     Vec3::new(building.position.x as f32, 0.0, building.position.y as f32)
 }
 
+#[cfg(feature = "egui")]
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
     sim: Res<SimState>,
@@ -463,6 +470,7 @@ fn sync_minimap_viewport(
 /// Reads the active overlay's legend mid-stop colour as a representative tint.
 /// Degrades gracefully: if no overlay is active (or the resource is absent) the
 /// tint is fully transparent.
+#[cfg(feature = "egui")]
 fn sync_overlay_tint(
     registry: Option<Res<InfoViewRegistry>>,
     mut tint: Query<&mut BackgroundColor, With<MinimapOverlayTint>>,

@@ -126,15 +126,18 @@ pub fn spawn_default_scene(commands: &mut Commands) {
         Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir)),
     ));
 
-    commands.spawn((
+    let mut cam = commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
-        // Marker so `crate::map2d` can locate the *main* perspective camera
-        // (distinct from the minimap `Camera3d`) and toggle its `is_active`
-        // when the 2D map view fades in. Without this, the live 3D scene
-        // bleeds through the alpha-faded basemap.
-        crate::map2d::MainSceneCamera,
     ));
+    // Marker so `crate::map2d` can locate the *main* perspective camera
+    // (distinct from the minimap `Camera3d`) and toggle its `is_active`
+    // when the 2D map view fades in. Without this, the live 3D scene
+    // bleeds through the alpha-faded basemap. Only attached under `egui`
+    // because the marker type lives in the egui-gated `map2d` module.
+    #[cfg(feature = "egui")]
+    cam.insert(crate::map2d::MainSceneCamera);
+    let _ = cam;
 }
 
 /// Spawn a voxel mesh entity with a basic stone-coloured PBR material.

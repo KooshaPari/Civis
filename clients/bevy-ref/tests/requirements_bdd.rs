@@ -113,6 +113,7 @@ fn requirement_new_world_differs_from_previous() {
 }
 
 #[test]
+#[cfg(feature = "egui")]
 fn requirement_2d_map_extent_matches_world() {
     // GIVEN a world size D from UI/worldgen wiring,
     // WHEN basemap sampling is executed,
@@ -323,6 +324,7 @@ fn requirement_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit() {
 }
 
 #[test]
+#[cfg(feature = "egui")]
 fn requirement_settings_has_gfx_audio_controls_gameplay_tabs() {
     // GIVEN the in-game settings panel,
     // WHEN opened, the UI SHALL expose all expected tabs:
@@ -504,6 +506,7 @@ fn requirement_native_ocean_renders_with_sea_level_match() {
 }
 
 #[test]
+#[cfg(feature = "egui")]
 fn requirement_keybind_rebinding_overrides_default() {
     // GIVEN the default keymap for a known action (e.g. "Toggle Settings"),
     // WHEN the user rebinds it to a different KeyCode via the Controls tab,

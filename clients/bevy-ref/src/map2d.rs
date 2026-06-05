@@ -92,6 +92,7 @@ impl Default for MapView {
 struct MapBasemap {
     handle: Option<egui::TextureHandle>,
     last_seed: Option<u64>,
+    last_dirty_marker: Option<usize>,
 }
 
 /// Marker component on the *main* perspective `Camera3d` so this module can
@@ -534,17 +535,24 @@ fn draw_map_view(
         return;
     };
 
+    let current_dirty = voxel_state.as_ref().map(|s| s.grid.dirty_chunks.len());
+    if current_dirty != basemap.last_dirty_marker && voxel_state.is_some() {
+        basemap.handle = None;
+    }
+
     if basemap.last_seed != Some(params.seed) {
         basemap.handle = None;
     }
     // Lazily rasterise the basemap on first display.
     if basemap.handle.is_none() {
         if let Some(voxel_state) = voxel_state.as_ref() {
+            let current_dirty = voxel_state.grid.dirty_chunks.len();
             let image = build_basemap_image(&voxel_state.grid);
             basemap.handle = Some(
                 ctx.load_texture("map2d_basemap", image, egui::TextureOptions::LINEAR),
             );
             basemap.last_seed = Some(params.seed);
+            basemap.last_dirty_marker = Some(current_dirty);
         } else {
             basemap.last_seed = None;
         }

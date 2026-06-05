@@ -46,6 +46,10 @@ pub struct StreamCulling {
 }
 
 /// Marker for a streamed voxel chunk entity.
+///
+/// This component is only used in **server-attach mode** when chunk voxels are
+/// driven from `Frame3d` streams and should not be attached to in-process
+/// simulation entities.
 #[derive(Component)]
 pub struct LiveChunkTag {
     /// Chunk id from the live bridge.
@@ -73,6 +77,9 @@ impl LiveChunkFade {
 }
 
 /// Marker for a streamed agent entity.
+///
+/// In server-attach mode, actors are rendered from remote `AgentAppearance`
+/// frames and must carry this tag (not an in-process `SimCivilianMarker`).
 #[derive(Component)]
 pub struct LiveAgentTag {
     /// Server agent id.
@@ -84,6 +91,9 @@ pub struct LiveAgentTag {
 pub struct LiveAgentLabel;
 
 /// Marker for a streamed building diff entry.
+///
+/// In server-attach mode, buildings are spawned from remote `BuildingDiff`
+/// payloads and must use this tag (not an in-process `SimBuildingMarker`).
 #[derive(Component)]
 pub struct LiveBuildingTag {
     /// Building id from the diff frame.
@@ -91,6 +101,9 @@ pub struct LiveBuildingTag {
 }
 
 /// Marker for a streamed building-graph parcel.
+///
+/// This marker is part of the server stream scene model and should remain scoped
+/// to attach-mode render synchronization.
 #[derive(Component)]
 pub struct LiveGraphParcelTag {
     /// Parcel id (raw bits).

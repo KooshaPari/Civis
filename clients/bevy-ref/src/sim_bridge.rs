@@ -136,9 +136,17 @@ struct GameplayAssets {
     building_mesh: Handle<Mesh>,
 }
 
+/// In-process simulation marker for civilian entities rendered from `SimState`.
+///
+/// This tag is only used when not in server-attach mode, and should never be
+/// attached by the live-stream `Frame3d` path.
 #[derive(Component)]
 pub struct SimCivilianMarker;
 
+/// In-process simulation marker for building entities rendered from `SimState`.
+///
+/// This tag is only used when not in server-attach mode, and should never be
+/// attached by the live-stream `Frame3d` path.
 #[derive(Component)]
 pub struct SimBuildingMarker;
 

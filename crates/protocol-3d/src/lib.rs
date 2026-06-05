@@ -413,6 +413,21 @@ fn default_agent_scale() -> f32 {
     1.0
 }
 
+/// Climate broadcast for one tick. Carries the planetary day/year/moon/tide
+/// phase plus the per-region weather grid so 3D clients can drive sky,
+/// lighting, and ambient effects without re-running the simulation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClimateFrame {
+    /// Server tick at which the climate was sampled.
+    pub tick: u64,
+    /// Planetary phase snapshot.
+    pub climate: civ_planet::Climate,
+    /// One weather cell per region, in the same region-id space used by the
+    /// `GeologyMap` / `RegionBiome` wire types.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub weather: Vec<civ_planet::WeatherCell>,
+}
+
 /// Discriminated union of all 3D-extension protocol frames. The existing Civis
 /// protocol carries this inside its binary-frame envelope.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -429,6 +444,10 @@ pub enum Frame3d {
     FactionState(FactionStateFrame),
     /// Event-feed batch for one tick.
     EventFeed(EventFeedFrame),
+    /// Climate broadcast for one tick (planetary phase + per-region weather).
+    /// Distinct from the other batch frames because it ticks on its own cadence
+    /// (driven by the planet sim) and carries a different per-tick payload shape.
+    Climate(ClimateFrame),
 }
 
 impl Frame3d {
@@ -442,6 +461,7 @@ impl Frame3d {
             Self::CivilianState(f) => f.tick,
             Self::FactionState(f) => f.tick,
             Self::EventFeed(f) => f.tick,
+            Self::Climate(f) => f.tick,
         }
     }
 }
@@ -481,6 +501,7 @@ enum Frame3dKind {
     CivilianState = 3,
     FactionState = 4,
     EventFeed = 5,
+    Climate = 6,
 }
 
 impl Frame3dKind {
@@ -492,6 +513,7 @@ impl Frame3dKind {
             Frame3d::CivilianState(_) => Self::CivilianState,
             Frame3d::FactionState(_) => Self::FactionState,
             Frame3d::EventFeed(_) => Self::EventFeed,
+            Frame3d::Climate(_) => Self::Climate,
         }
     }
 }

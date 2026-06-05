@@ -258,7 +258,7 @@ impl Default for WindowMode {
 
 /// Settings page tabs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum SettingsTab {
+pub enum SettingsTab {
     /// Quality and render options.
     Graphics,
     /// Windowing and framerate options.
@@ -293,6 +293,11 @@ impl SettingsTab {
             Self::World => "World / Game",
         }
     }
+}
+
+/// All settings tabs in panel order.
+pub fn settings_tabs() -> &'static [SettingsTab] {
+    &SettingsTab::ALL
 }
 
 impl Default for SettingsTab {

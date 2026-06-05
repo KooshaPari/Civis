@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.471",
-    "remotion": "4.0.467",
+    "remotion": "4.0.471",
     "react": "^19.2.7",
     "react-dom": "^18.3.0"
   },

@@ -13,6 +13,14 @@
 //! - `FR-CIV-INSPECT-910` — hover tooltip + god-hand cursor readout.
 
 use crate::terrain::{terrain_height, HEIGHT_SCALE, WATER_LEVEL, WORLD_SIZE};
+use civ_agents::Civilian;
+
+fn civilian_faction_id(civilian: &Civilian) -> Option<u32> {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => Some(faction),
+        _ => None,
+    }
+}
 
 /// What the inspector is currently looking at. Mirrors WorldBox's pick targets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -239,7 +247,8 @@ mod plugin {
             let det = SelectedEntityDetails {
                 kind: "Civilian".to_string(),
                 name: format!("Civilian #{}", civ.id),
-                faction: format!("Faction {}", civ.faction),
+                faction: civilian_faction_id(civ)
+                    .map_or_else(|| "—".to_string(), |faction| format!("Faction {faction}")),
                 health: format!("Needs pressure {:.0}%", pressure * 100.0),
                 profession: needs
                     .map(|n| {
@@ -252,7 +261,10 @@ mod plugin {
                         )
                     })
                     .unwrap_or_else(|| "—".to_string()),
-                position: format!("age {} · cluster {}", civ.age, civ.faction),
+                position: civilian_faction_id(civ)
+                    .map_or_else(|| format!("age {} · cluster —", civ.age), |faction| {
+                        format!("age {} · cluster {}", civ.age, faction)
+                    }),
             };
             if best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
                 best = Some((d2, det));

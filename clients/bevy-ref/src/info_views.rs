@@ -22,6 +22,14 @@
 use bevy::prelude::*;
 
 use crate::terrain::{terrain_height, HEIGHT_SCALE, WATER_LEVEL, WORLD_SIZE};
+use civ_agents::Civilian;
+
+fn civilian_faction_id(civilian: &Civilian) -> u32 {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => faction,
+        _ => 0,
+    }
+}
 
 /// A single colour-ramp stop: a value in `0.0..=1.0` mapped to an sRGB triple.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -603,7 +611,7 @@ mod plugin {
             if let Some(n) = needs {
                 needs_sum[i] += needs_pressure(n);
             }
-            *faction_votes[i].entry(civ.faction).or_insert(0) += 1;
+            *faction_votes[i].entry(civilian_faction_id(civ)).or_insert(0) += 1;
         }
 
         let max_count = counts.iter().copied().max().unwrap_or(0).max(1) as f32;

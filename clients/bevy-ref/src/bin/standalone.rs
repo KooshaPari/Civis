@@ -151,6 +151,9 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
 
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
+
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);

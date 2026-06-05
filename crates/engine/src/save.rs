@@ -8,13 +8,11 @@ use thiserror::Error;
 
 use crate::engine::Citizen;
 use crate::{
-    Building, CombatDamagePulse, DiplomacyEvent, MilitaryUnit, Position, ReplayLog, Simulation,
-    WorldState,
+    Building, CombatDamagePulse, MilitaryUnit, Position, ReplayLog, Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
 use civ_needs::Health as LifeHealth;
 use civ_planet::{Climate, MoonConfig, PlanetConfig, WeatherCell};
-use civ_tactics::DamageEvent;
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
 
 #[derive(Debug, Error)]
@@ -208,14 +206,6 @@ fn snapshot_voxel(voxel: &VoxelWorld<MaterialId>) -> SavedVoxelWorld {
         scale: crate::SCALE,
         writes,
     }
-}
-
-fn restore_voxel(saved: &SavedVoxelWorld) -> VoxelWorld<MaterialId> {
-    let mut world = VoxelWorld::new(saved.scale);
-    for (pos, value) in &saved.writes {
-        world.write(*pos, *value);
-    }
-    world
 }
 
 fn snapshot_sim(sim: &Simulation) -> SavedSimulation {

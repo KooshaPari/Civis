@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 use serde_json::Value;
 
-use crate::{CliError, CliResult};
+use crate::CliResult;
 
 #[derive(Debug, Default, Clone)]
 pub struct CensusData {

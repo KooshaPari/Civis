@@ -487,10 +487,18 @@ impl Default for AudioSettings {
 }
 
 /// Gameplay options.
+fn default_sim_speed() -> f32 {
+    1.0
+}
+
+fn default_gameplay_half() -> f32 {
+    0.5
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameplaySettings {
     /// Default simulation speed multiplier applied on load.
-    #[serde(default)]
+    #[serde(default = "default_sim_speed")]
     pub default_sim_speed: f32,
     /// Whether autosave is enabled.
     #[serde(default)]
@@ -499,13 +507,13 @@ pub struct GameplaySettings {
     #[serde(default)]
     pub autosave_minutes: u32,
     /// Difficulty tuning for the simulation layer.
-    #[serde(default)]
+    #[serde(default = "default_gameplay_half")]
     pub difficulty: f32,
     /// Disaster frequency multiplier.
-    #[serde(default)]
+    #[serde(default = "default_gameplay_half")]
     pub disaster_frequency: f32,
     /// Emergence intensity multiplier.
-    #[serde(default)]
+    #[serde(default = "default_gameplay_half")]
     pub emergence_intensity: f32,
 }
 
@@ -1595,8 +1603,9 @@ mod tests {
                 autosave_minutes: 5,
             ),
             keybinds: [
-                (action: "Toggle Settings", binding: Key(KeyO)),
+                (action: "Toggle Settings", binding: "key:KeyO"),
             ],
+            world: (world_size: 1, default_era: 1),
         )"#;
         let s: GameSettings = ron::from_str(legacy).expect("legacy ron");
         assert_eq!(s.world.world_size, 1);
@@ -1638,8 +1647,9 @@ mod tests {
                 autosave_minutes: 5,
             ),
             keybinds: [
-                (action: "Toggle Settings", binding: Key(KeyO)),
+                (action: "Toggle Settings", binding: "key:KeyO"),
             ],
+            world: (world_size: 1, default_era: 1),
         )"#;
 
         let s: GameSettings = ron::from_str(legacy).expect("legacy ron missing gameplay default");

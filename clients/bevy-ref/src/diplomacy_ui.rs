@@ -9,6 +9,9 @@
 //!
 //! # Usage
 //! ```no_run
+//! # use bevy::prelude::*;
+//! # use civ_bevy_ref::diplomacy_ui::{DiplomacyState, DiplomacyUiPlugin};
+//! let mut app = App::new();
 //! app.add_plugins(DiplomacyUiPlugin);
 //! // Optionally seed demo data:
 //! app.insert_resource(DiplomacyState::demo());

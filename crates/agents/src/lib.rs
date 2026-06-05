@@ -23,8 +23,8 @@
 
 pub mod cluster;
 pub mod culture;
-pub mod diplomacy;
 pub mod daily_path;
+pub mod diplomacy;
 pub mod psyche;
 pub mod social;
 
@@ -32,12 +32,12 @@ pub use cluster::{
     cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
     ClusterMember, MembershipPayoff,
 };
-pub use diplomacy::{
-    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
-};
 pub use daily_path::{
     choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
     wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
+};
+pub use diplomacy::{
+    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
 pub use psyche::{
     belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
@@ -131,11 +131,7 @@ impl Alignment {
 ///
 /// TODO(FR-CIV-EMERGENCE): if a parcel is owned by a faction or life-framework
 /// entity, return that alignment; otherwise keep non-aligned.
-pub fn infer_alignment_for_spawn(
-    _world: &World,
-    _x: f32,
-    _y: f32,
-) -> Alignment {
+pub fn infer_alignment_for_spawn(_world: &World, _x: f32, _y: f32) -> Alignment {
     Alignment::None
 }
 

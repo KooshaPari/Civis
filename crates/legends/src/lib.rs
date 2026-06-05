@@ -35,9 +35,7 @@ pub use model::{
     Role, Tag,
 };
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga};
-pub use rumor::{
-    render, retell, witness, HistorianMind, Rumor, RumorMill,
-};
+pub use rumor::{render, retell, witness, HistorianMind, Rumor, RumorMill};
 pub use worker::LegendsWorker;
 
 impl SagaGraph {

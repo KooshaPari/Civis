@@ -13,108 +13,108 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
-#[cfg(feature = "bevy")]
-pub mod materials;
+#[cfg(all(feature = "bevy", feature = "audio"))]
+pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
+#[cfg(feature = "bevy")]
+pub mod disaster_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_laws;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tool_categories;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_cluster;
+pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
+#[cfg(feature = "bevy")]
+pub mod gpu_features;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod holo_minimap;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_holo;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod info_views;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(all(feature = "bevy", feature = "audio"))]
-pub mod audio;
-#[cfg(all(feature = "bevy", feature = "vfx"))]
-pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod menus;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tech_tree_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod settings_ui;
-#[cfg(feature = "bevy")]
-pub mod gpu_features;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
 pub mod live_focus;
 #[cfg(feature = "bevy")]
+pub mod live_ground;
+#[cfg(feature = "bevy")]
 pub mod live_minimap;
 #[cfg(feature = "bevy")]
 pub mod live_pick;
-#[cfg(feature = "bevy")]
-pub mod live_ground;
 #[cfg(feature = "bevy")]
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod map2d;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
+#[cfg(feature = "bevy")]
+pub mod materials;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod menus;
 #[cfg(feature = "bevy")]
 pub mod minimap;
 #[cfg(feature = "bevy")]
 pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
 pub mod scene_dump;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod settings_ui;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod skybox;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
-#[cfg(feature = "bevy")]
-pub mod disaster_tools;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod terraform_brush;
 #[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(feature = "bevy")]
-pub mod window_icon;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tool_categories;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_cluster;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
+#[cfg(all(feature = "bevy", feature = "vfx"))]
+pub mod vfx;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]
 pub mod voxel_smooth_mesher;
-#[cfg(feature = "voxel")]
-pub mod voxel_triplanar;
 /// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
 /// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
 #[cfg(feature = "voxel_stream")]
 pub mod voxel_stream;
+#[cfg(feature = "voxel")]
+pub mod voxel_triplanar;
+#[cfg(feature = "bevy")]
+pub mod window_icon;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
@@ -312,7 +312,11 @@ impl LiveHudSnapshot {
             .unwrap_or_else(|| "—".to_string());
         let mut line = format!(
             "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{}",
-            self.fps, self.chunk_count, self.agent_count, self.building_count, self.graph_parcel_count
+            self.fps,
+            self.chunk_count,
+            self.agent_count,
+            self.building_count,
+            self.graph_parcel_count
         );
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
@@ -439,7 +443,10 @@ pub fn resolve_attach_mode(civis_attach: Option<&str>, civ_ws_url: Option<&str>)
     {
         return AttachMode::Server;
     }
-    if civ_ws_url.map(|value| !value.trim().is_empty()).unwrap_or(false) {
+    if civ_ws_url
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
+    {
         return AttachMode::Server;
     }
     AttachMode::Standalone
@@ -998,10 +1005,7 @@ mod tests {
 
     #[test]
     fn resolve_attach_mode_defaults_to_standalone() {
-        assert_eq!(
-            resolve_attach_mode(None, None),
-            AttachMode::Standalone
-        );
+        assert_eq!(resolve_attach_mode(None, None), AttachMode::Standalone);
         assert_eq!(
             resolve_attach_mode(Some("watch"), None),
             AttachMode::Standalone

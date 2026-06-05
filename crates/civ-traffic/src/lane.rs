@@ -142,11 +142,11 @@ impl LaneGraph {
                     if !lane_can_connect(&lane_graph.lanes[&from], &lane_graph.lanes[&to], node) {
                         continue;
                     }
-                    lane_graph.connections.entry(from).or_default().push(LaneConnection {
-                        from,
-                        to,
-                        node,
-                    });
+                    lane_graph
+                        .connections
+                        .entry(from)
+                        .or_default()
+                        .push(LaneConnection { from, to, node });
                 }
             }
         }
@@ -376,6 +376,9 @@ mod tests {
         let b = wc(1, 0);
         assert_eq!(g.speed_multiplier_at(a, b), 1.0);
         g.place_segment(a, b, RoadKind::Road);
-        assert_eq!(g.speed_multiplier_at(a, b), RoadKind::Road.speed_multiplier());
+        assert_eq!(
+            g.speed_multiplier_at(a, b),
+            RoadKind::Road.speed_multiplier()
+        );
     }
 }

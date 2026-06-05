@@ -105,7 +105,7 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
 
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
-    cargo run -p civ-bevy-ref
+    cargo run -p civ-bevy-ref --bin civ-bevy-ref
 
 # Run the Bevy windowed reference client behind the optional bevy feature.
 civis-3d-bevy-window:

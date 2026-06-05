@@ -215,11 +215,7 @@ impl SagaGraph {
 
     /// Apply one event's significance contribution to a participant and re-promote
     /// if it crosses the threshold (spec §5.1, §4.3). Returns `true` on a *new* promotion.
-    fn bump_significance(
-        &mut self,
-        id: LegendEntityId,
-        delta: f32,
-    ) -> bool {
+    fn bump_significance(&mut self, id: LegendEntityId, delta: f32) -> bool {
         let threshold = self.config.promotion_threshold;
         let (old_score, new_score, newly_promoted) = {
             let Some(e) = self.entity_mut(id) else {
@@ -246,7 +242,9 @@ impl SagaGraph {
         let ids: Vec<LegendEntityId> = self.entity_index.keys().copied().collect();
         for id in ids {
             let (old, new) = {
-                let Some(e) = self.entity_mut(id) else { continue };
+                let Some(e) = self.entity_mut(id) else {
+                    continue;
+                };
                 let old = e.significance;
                 e.significance *= decay;
                 (old, e.significance)
@@ -297,9 +295,9 @@ impl SagaGraph {
 
     /// True if any neighbor (1 hop) of `idx` is a promoted entity.
     fn touches_promoted(&self, idx: NodeIndex) -> bool {
-        self.g.neighbors_undirected(idx).any(|n| {
-            matches!(&self.g[n], LegendNode::Entity(e) if e.promoted)
-        })
+        self.g
+            .neighbors_undirected(idx)
+            .any(|n| matches!(&self.g[n], LegendNode::Entity(e) if e.promoted))
     }
 
     // ---- ingest (the core pipeline, §4) ----
@@ -439,7 +437,9 @@ impl SagaGraph {
                 if cand_id == event_id {
                     continue;
                 }
-                let Some(cand) = self.event(cand_id) else { continue };
+                let Some(cand) = self.event(cand_id) else {
+                    continue;
+                };
                 // acyclicity guard: cause must be strictly earlier in epoch (§4.4.5)
                 if cand.epoch.0 >= epoch.0 {
                     continue;
@@ -469,8 +469,13 @@ impl SagaGraph {
         for (cause_id, confidence) in &candidates {
             if let Some(cidx) = self.event_index.get(cause_id).copied() {
                 // CausedBy points effect → cause (the "why?" walk follows out-edges).
-                self.g
-                    .add_edge(ev_idx, cidx, LegendEdge::CausedBy { confidence: *confidence });
+                self.g.add_edge(
+                    ev_idx,
+                    cidx,
+                    LegendEdge::CausedBy {
+                        confidence: *confidence,
+                    },
+                );
                 linked += 1;
             }
         }
@@ -479,10 +484,7 @@ impl SagaGraph {
         // participant, regardless of causal confidence (§4.4).
         if let Some(&dominant) = participants.first() {
             if let Some(prev) = self.prev_event_with_participant(dominant, event_id) {
-                if let (Some(a), Some(b)) = (
-                    self.event_index.get(&prev).copied(),
-                    Some(ev_idx),
-                ) {
+                if let (Some(a), Some(b)) = (self.event_index.get(&prev).copied(), Some(ev_idx)) {
                     self.g.add_edge(b, a, LegendEdge::Succeeded);
                 }
             }

@@ -73,8 +73,7 @@ pub fn terrain_layer_for_material(id: MaterialId) -> Option<TerrainTextureLayer>
 }
 
 /// GPU uniform for [`VoxelTriplanarMaterial`].
-#[derive(Clone, Copy, Default, ShaderType)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Default, ShaderType, Debug)]
 pub struct TriplanarParams {
     pub scale: f32,
     pub normal_strength: f32,
@@ -200,7 +199,10 @@ fn load_voxel_pbr_bank(mut commands: Commands, asset_server: Res<AssetServer>) {
     let layers = std::array::from_fn(|i| {
         let biome = TerrainTextureLayer::ALL[i].biome();
         LayerTextures {
-            albedo: texture_load::load_albedo(&asset_server, &texture_load::biome_albedo_path(biome)),
+            albedo: texture_load::load_albedo(
+                &asset_server,
+                &texture_load::biome_albedo_path(biome),
+            ),
             normal: texture_load::load_linear_map(
                 &asset_server,
                 &texture_load::biome_normal_path(biome),

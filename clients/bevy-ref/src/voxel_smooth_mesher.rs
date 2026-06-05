@@ -8,8 +8,8 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use civ_voxel::{material::AIR, MaterialId, MeshBuffer, MeshVertex};
 use civ_voxel::material::MaterialRegistry;
+use civ_voxel::{material::AIR, MaterialId, MeshBuffer, MeshVertex};
 
 // Must match voxel_sim::CHUNK_EDGE — both must be updated together.
 const CHUNK_EDGE: usize = 32;
@@ -229,13 +229,7 @@ fn dominant_material_lookup(
                     let sx = fx + dx;
                     let sy = fy + dy;
                     let sz = fz + dz;
-                    if sx < 0
-                        || sy < 0
-                        || sz < 0
-                        || sx >= grid_w
-                        || sy >= grid_h
-                        || sz >= grid_d
-                    {
+                    if sx < 0 || sy < 0 || sz < 0 || sx >= grid_w || sy >= grid_h || sz >= grid_d {
                         continue;
                     }
                     let idx = sx as usize
@@ -258,7 +252,11 @@ fn dominant_material_lookup(
                 }
             }
         }
-        if all_air { AIR } else { best_material }
+        if all_air {
+            AIR
+        } else {
+            best_material
+        }
     }
 }
 /// Span used to scale the signed distance, eased on steep transitions.
@@ -339,7 +337,11 @@ fn sample_blurred_solid(
             }
         }
     }
-    let inv = if weight_sum > 0.0 { 1.0 / weight_sum } else { 0.0 };
+    let inv = if weight_sum > 0.0 {
+        1.0 / weight_sum
+    } else {
+        0.0
+    };
     (solid_occ * inv, sat_acc * inv)
 }
 
@@ -436,7 +438,10 @@ mod tests {
         chunk[0] = MaterialId(1);
         let registry = MaterialRegistry::standard();
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
-        assert!(!bufs.is_empty(), "a 3x3x3 solid feature must produce mesh buffers");
+        assert!(
+            !bufs.is_empty(),
+            "a 3x3x3 solid feature must produce mesh buffers"
+        );
         assert!(
             bufs.iter().all(|buf| !buf.vertices.is_empty()),
             "every produced buffer must have vertices"
@@ -450,8 +455,9 @@ mod tests {
             for y in 0..CHUNK_EDGE_PADDED {
                 for x in 0..CHUNK_EDGE_PADDED {
                     if x <= 8 {
-                        padded[x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] =
-                            MaterialId(1);
+                        padded[x
+                            + y * CHUNK_EDGE_PADDED
+                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(1);
                     }
                 }
             }
@@ -475,11 +481,13 @@ mod tests {
             for y in 0..CHUNK_EDGE_PADDED {
                 for x in 0..CHUNK_EDGE_PADDED {
                     if x <= 8 {
-                        padded[x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] =
-                            MaterialId(1);
+                        padded[x
+                            + y * CHUNK_EDGE_PADDED
+                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(1);
                     } else {
-                        padded[x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] =
-                            MaterialId(2);
+                        padded[x
+                            + y * CHUNK_EDGE_PADDED
+                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED] = MaterialId(2);
                     }
                 }
             }
@@ -492,9 +500,18 @@ mod tests {
         for v in bufs.iter().flat_map(|b| b.vertices.iter()) {
             materials.insert(v.material);
         }
-        assert!(materials.contains(&MaterialId(1)), "missing first material on interface surface");
-        assert!(materials.contains(&MaterialId(2)), "missing second material on interface surface");
-        assert!(materials.len() >= 2, "interface should expose at least two materials");
+        assert!(
+            materials.contains(&MaterialId(1)),
+            "missing first material on interface surface"
+        );
+        assert!(
+            materials.contains(&MaterialId(2)),
+            "missing second material on interface surface"
+        );
+        assert!(
+            materials.len() >= 2,
+            "interface should expose at least two materials"
+        );
     }
 
     /// Smooth-mesher INVARIANT: Surface Nets over a soft density field must place
@@ -512,9 +529,8 @@ mod tests {
             for y in 0..CHUNK_EDGE_PADDED {
                 for x in 0..CHUNK_EDGE_PADDED {
                     if x + y <= CHUNK_EDGE_PADDED {
-                        let idx = x
-                            + y * CHUNK_EDGE_PADDED
-                            + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
+                        let idx =
+                            x + y * CHUNK_EDGE_PADDED + z * CHUNK_EDGE_PADDED * CHUNK_EDGE_PADDED;
                         padded[idx] = MaterialId(1);
                     }
                 }
@@ -547,26 +563,37 @@ mod tests {
     #[test]
     fn seam_chunk_produces_continuous_boundary_surface() {
         let chunk = [MaterialId(1); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        let mut padded = [AIR; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE];
+        let mut padded =
+            [AIR; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE];
         for z in 0..CHUNK_EDGE {
             for y in 0..CHUNK_EDGE {
                 for x in 0..CHUNK_EDGE {
                     let px = x + APRON;
                     let py = y + APRON;
                     let pz = z + APRON;
-                    padded[px + py * SMOOTH_MESH_PADDED_EDGE + pz * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] = MaterialId(1);
+                    padded[px
+                        + py * SMOOTH_MESH_PADDED_EDGE
+                        + pz * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] = MaterialId(1);
                 }
             }
         }
         let registry = MaterialRegistry::standard();
         let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
         assert!(!bufs.is_empty(), "solid chunk produced no mesh buffers");
-        assert_eq!(bufs.len(), 1, "smooth terrain should be a single combined buffer");
+        assert_eq!(
+            bufs.len(),
+            1,
+            "smooth terrain should be a single combined buffer"
+        );
         let vertex_count: usize = bufs.iter().map(|b| b.vertices.len()).sum();
         println!("[seam_test] vertex_count={vertex_count}");
-        assert!(vertex_count > 1000, "solid chunk should produce a large connected surface, got {vertex_count}");
         assert!(
-            bufs.iter().any(|b| b.vertices.iter().any(|v| v.position[0] >= 10.0)),
+            vertex_count > 1000,
+            "solid chunk should produce a large connected surface, got {vertex_count}"
+        );
+        assert!(
+            bufs.iter()
+                .any(|b| b.vertices.iter().any(|v| v.position[0] >= 10.0)),
             "no vertex near chunk boundary (x>=10) — seam gap likely (vertex_count={vertex_count})"
         );
     }

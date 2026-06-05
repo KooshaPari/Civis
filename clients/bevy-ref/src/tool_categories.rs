@@ -375,7 +375,10 @@ pub struct ActiveSubTool {
 
 impl Default for ActiveSubTool {
     fn default() -> Self {
-        Self { current: SubTool::Select, open_category: None }
+        Self {
+            current: SubTool::Select,
+            open_category: None,
+        }
     }
 }
 
@@ -396,7 +399,11 @@ mod tests {
     fn taxonomy_is_rich() {
         // The overhaul brief asks for "MORE TOOLS heavily".
         assert!(CATEGORIES.len() >= 9, "expected >=9 categories");
-        assert!(subtool_count() >= 40, "expected >=40 sub-tools, got {}", subtool_count());
+        assert!(
+            subtool_count() >= 40,
+            "expected >=40 sub-tools, got {}",
+            subtool_count()
+        );
     }
 
     #[test]
@@ -413,7 +420,10 @@ mod tests {
     #[test]
     fn core_subtools_map_to_spawn_tools() {
         assert_eq!(SubTool::Select.spawn_tool(), Some(SpawnTool::Select));
-        assert_eq!(SubTool::SpawnOrganism.spawn_tool(), Some(SpawnTool::SpawnCivilian));
+        assert_eq!(
+            SubTool::SpawnOrganism.spawn_tool(),
+            Some(SpawnTool::SpawnCivilian)
+        );
         assert_eq!(SubTool::House.spawn_tool(), Some(SpawnTool::SpawnBuilding));
         assert_eq!(SubTool::Raise.spawn_tool(), Some(SpawnTool::Terraform));
         assert_eq!(SubTool::Kill.spawn_tool(), Some(SpawnTool::Destroy));
@@ -432,8 +442,15 @@ mod tests {
             SubTool::Plague,
         ] {
             assert!(d.is_disaster(), "{d:?} should be a disaster");
-            assert_eq!(d.spawn_tool(), None, "{d:?} must not map to an actor SpawnTool");
-            assert!(d.is_active_capable(), "{d:?} must still be active/selectable");
+            assert_eq!(
+                d.spawn_tool(),
+                None,
+                "{d:?} must not map to an actor SpawnTool"
+            );
+            assert!(
+                d.is_active_capable(),
+                "{d:?} must still be active/selectable"
+            );
         }
         assert!(!SubTool::House.is_disaster());
     }
@@ -449,7 +466,10 @@ mod tests {
 
     #[test]
     fn active_category_resolves_from_current() {
-        let st = ActiveSubTool { current: SubTool::Farm, open_category: None };
+        let st = ActiveSubTool {
+            current: SubTool::Farm,
+            open_category: None,
+        };
         let idx = st.active_category().unwrap();
         assert_eq!(CATEGORIES[idx].label, "Structure");
     }

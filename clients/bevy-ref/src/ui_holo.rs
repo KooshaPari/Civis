@@ -248,13 +248,7 @@ pub fn holo_text(
         fade(HOLO_ABERR_B, 0.35 * op),
     );
     // Soft glow pass.
-    painter.text(
-        pos,
-        anchor,
-        text,
-        font.clone(),
-        fade(HOLO_GLOW, 0.4 * op),
-    );
+    painter.text(pos, anchor, text, font.clone(), fade(HOLO_GLOW, 0.4 * op));
     // Crisp core pass on top.
     painter.text(pos, anchor, text, font, fade(HOLO_CORE, op))
 }
@@ -282,7 +276,10 @@ mod tests {
         let peak = (0..40)
             .map(|i| spawn_opacity(i as f32 / 40.0 * SPAWN_FLICKER_SECS))
             .fold(0.0_f32, f32::max);
-        assert!(peak > 1.0, "spawn intro should overshoot to ~1.1, got {peak}");
+        assert!(
+            peak > 1.0,
+            "spawn intro should overshoot to ~1.1, got {peak}"
+        );
     }
 
     #[test]

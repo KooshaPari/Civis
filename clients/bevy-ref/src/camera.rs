@@ -117,7 +117,9 @@ pub fn camera_input(
 
     // Right-drag orbits; consume motion events when not orbiting to avoid drift.
     if mouse_buttons.pressed(MouseButton::Right) {
-        let delta = mouse_motion.read().fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
+        let delta = mouse_motion
+            .read()
+            .fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
         rig.yaw -= delta.x * 0.003;
         rig.pitch = (rig.pitch - delta.y * 0.003).clamp(-1.5, 0.6);
     } else {

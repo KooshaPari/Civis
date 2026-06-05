@@ -48,10 +48,7 @@ impl Plugin for LiveAttachPlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(
-            Update,
-            (sync_live_game_ui, sync_live_connection_toasts),
-        );
+        app.add_systems(Update, (sync_live_game_ui, sync_live_connection_toasts));
     }
 }
 

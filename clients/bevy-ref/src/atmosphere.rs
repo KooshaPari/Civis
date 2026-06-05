@@ -107,7 +107,13 @@ pub fn setup_atmosphere(
     #[cfg(not(feature = "voxel"))]
     commands.spawn((
         WaterSurface,
-        Mesh3d(meshes.add(Mesh::from(bevy::math::primitives::Plane3d::default().mesh().size(256.0, 256.0)))),
+        Mesh3d(
+            meshes.add(Mesh::from(
+                bevy::math::primitives::Plane3d::default()
+                    .mesh()
+                    .size(256.0, 256.0),
+            )),
+        ),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgba(0.16, 0.34, 0.55, 0.78),
             perceptual_roughness: 0.12,
@@ -125,21 +131,20 @@ pub fn setup_atmosphere(
         unlit: true,
         ..default()
     });
-    commands.spawn((StarField, Transform::default(), Visibility::Hidden)).with_children(|parent| {
-        for i in 0..STAR_COUNT {
-            let (theta, phi) = star_angles(i as u32);
-            let dir = Vec3::new(
-                theta.cos() * phi.sin(),
-                phi.cos(),
-                theta.sin() * phi.sin(),
-            );
-            parent.spawn((
-                Mesh3d(star_mesh.clone()),
-                MeshMaterial3d(star_material.clone()),
-                Transform::from_translation(dir * STAR_SHELL_RADIUS).with_scale(Vec3::splat(0.75)),
-            ));
-        }
-    });
+    commands
+        .spawn((StarField, Transform::default(), Visibility::Hidden))
+        .with_children(|parent| {
+            for i in 0..STAR_COUNT {
+                let (theta, phi) = star_angles(i as u32);
+                let dir = Vec3::new(theta.cos() * phi.sin(), phi.cos(), theta.sin() * phi.sin());
+                parent.spawn((
+                    Mesh3d(star_mesh.clone()),
+                    MeshMaterial3d(star_material.clone()),
+                    Transform::from_translation(dir * STAR_SHELL_RADIUS)
+                        .with_scale(Vec3::splat(0.75)),
+                ));
+            }
+        });
 }
 
 pub fn animate_water(
@@ -237,14 +242,17 @@ pub fn update_lighting(
 
     if let Ok((mut moon_light, mut moon_transform, mut moon_visibility)) = moon_query.single_mut() {
         let is_night = daylight < 0.1;
-        *moon_visibility = if is_night { Visibility::Visible } else { Visibility::Hidden };
+        *moon_visibility = if is_night {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
         // Moonlight locked to #3A4D80 (cool) for palette coherence (§3).
         moon_light.color = Color::srgb(0.227, 0.302, 0.502).into();
         moon_light.illuminance = if is_night { 500.0 } else { 0.0 };
         // Same convention as the sun: `moon_dir` points up at the moon, so aim
         // the light's forward along `-moon_dir` to shine down on the terrain.
-        *moon_transform =
-            Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, -moon_dir));
+        *moon_transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, -moon_dir));
     }
 
     if let Ok(mut stars_visibility) = star_query.single_mut() {

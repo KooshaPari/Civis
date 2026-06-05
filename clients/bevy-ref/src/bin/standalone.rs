@@ -3,6 +3,7 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+#[cfg(feature = "voxel")]
 use bevy_water::WaterPlugin;
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
@@ -62,21 +63,30 @@ fn main() {
         AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),
     };
 
+    let mut default_plugins = DefaultPlugins
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                title: window_title,
+                ..default()
+            }),
+            ..default()
+        })
+        .set(native_render_plugin());
+
+    // `DefaultPlugins` includes Bevy's built-in `AudioPlugin`. When Civis enables
+    // the `audio` feature, `CivisAudioPlugin` adds `bevy_kira_audio::AudioPlugin`,
+    // which registers its own loaders for audio extensions. Keeping both stacks
+    // produces Bevy's "Multiple AssetLoaders found" warning; Kira owns audio here.
+    #[cfg(feature = "audio")]
+    {
+        default_plugins = default_plugins.disable::<bevy::audio::AudioPlugin>();
+    }
+
     let mut app = App::new();
     app.insert_resource(DayNightCycle::default())
         .insert_resource(CameraRig::default())
         .insert_resource(attach_mode)
-        .add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: window_title,
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(native_render_plugin()),
-        )
+        .add_plugins(default_plugins)
         .add_plugins(GpuFeaturesPlugin)
         // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
         // embedded icon on the primary winit window at startup.
@@ -201,9 +211,12 @@ fn main() {
     // `WorldSetupParams.seed`); forcing `Playing` triggers that exact path so a
     // headless screenshot captures a freshly generated world, not the title card.
     if std::env::var("CIVIS_AUTOSTART").as_deref() == Ok("1") {
-        app.add_systems(Startup, |mut mode: ResMut<civ_bevy_ref::menus::GameUiMode>| {
-            *mode = civ_bevy_ref::menus::GameUiMode::Playing;
-        });
+        app.add_systems(
+            Startup,
+            |mut mode: ResMut<civ_bevy_ref::menus::GameUiMode>| {
+                *mode = civ_bevy_ref::menus::GameUiMode::Playing;
+            },
+        );
     }
 
     // Headless brush-mutation proof: when CIVIS_PAINT_DEMO=1, stamp a bright
@@ -345,7 +358,10 @@ fn auto_screenshot(
             info!("[autoshot] saved {} -> exiting", shot.path);
             exit.write(AppExit::Success);
         } else if waited >= std::time::Duration::from_secs(15) {
-            warn!("[autoshot] exit safety cap: no png after {:.0}s, exiting", waited.as_secs_f32());
+            warn!(
+                "[autoshot] exit safety cap: no png after {:.0}s, exiting",
+                waited.as_secs_f32()
+            );
             exit.write(AppExit::Success);
         }
         return;

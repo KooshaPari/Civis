@@ -24,7 +24,10 @@ fn kill_by_image_name(name: &str) -> CliResult<()> {
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr).to_ascii_lowercase();
-    if stderr.contains("could not find") || stderr.contains("not found") || output.status.code() == Some(128) {
+    if stderr.contains("could not find")
+        || stderr.contains("not found")
+        || output.status.code() == Some(128)
+    {
         return Ok(());
     }
 
@@ -39,4 +42,3 @@ fn kill_by_image_name(name: &str) -> CliResult<()> {
     let _ = name;
     Ok(())
 }
-

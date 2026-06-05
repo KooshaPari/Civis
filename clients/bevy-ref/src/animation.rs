@@ -239,7 +239,10 @@ fn attach_actor_animation(
 
         let nodes = GaitNodes {
             idle: pick(&named, &["Idle", "Unarmed_Idle", "2H_Melee_Idle", "Idle_B"]),
-            walk: pick(&named, &["Walking_A", "Walking_B", "Walking_C", "Walking_D_Skeletons"]),
+            walk: pick(
+                &named,
+                &["Walking_A", "Walking_B", "Walking_C", "Walking_D_Skeletons"],
+            ),
             run: pick(&named, &["Running_A", "Running_B", "Running_C"]),
         };
 
@@ -285,7 +288,10 @@ fn pick(named: &HashMap<&str, AnimationNodeIndex>, names: &[&str]) -> Option<Ani
 
 /// Start the idle clip the same frame we attach graph + [`ActorAnim`].
 fn kick_start_actor_idle(
-    mut actors: Query<(&ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions), Added<ActorAnim>>,
+    mut actors: Query<
+        (&ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions),
+        Added<ActorAnim>,
+    >,
 ) {
     for (anim, mut player, mut transitions) in &mut actors {
         if anim.is_static {
@@ -304,7 +310,11 @@ fn kick_start_actor_idle(
 /// and rotate the actor root to face its movement direction.
 fn drive_actor_animation(
     time: Res<Time>,
-    mut actors: Query<(&mut ActorAnim, &mut AnimationPlayer, &mut AnimationTransitions)>,
+    mut actors: Query<(
+        &mut ActorAnim,
+        &mut AnimationPlayer,
+        &mut AnimationTransitions,
+    )>,
     global: Query<&GlobalTransform>,
     mut roots: Query<&mut Transform>,
 ) {
@@ -384,7 +394,10 @@ mod tests {
     #[test]
     fn gait_degrades_to_available_clip() {
         // Rig with only idle: walk/run resolve to idle.
-        let only_idle = GaitNodes { idle: Some(AnimationNodeIndex::new(1)), ..Default::default() };
+        let only_idle = GaitNodes {
+            idle: Some(AnimationNodeIndex::new(1)),
+            ..Default::default()
+        };
         assert_eq!(only_idle.node_for(Gait::Walk), only_idle.idle);
         assert_eq!(only_idle.node_for(Gait::Run), only_idle.idle);
         assert!(only_idle.any());

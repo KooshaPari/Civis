@@ -59,7 +59,9 @@ pub struct ClusterResponse {
 /// bottom bar before painting the flyout.
 #[must_use]
 pub fn expanded_items_height(count: usize) -> f32 {
-    let rows = count.div_ceil(CLUSTER_ITEMS_PER_ROW).min(CLUSTER_VISIBLE_ROWS);
+    let rows = count
+        .div_ceil(CLUSTER_ITEMS_PER_ROW)
+        .min(CLUSTER_VISIBLE_ROWS);
     let header = 26.0;
     header + rows as f32 * (CLUSTER_ITEM_H + GAP) + GAP
 }
@@ -96,26 +98,39 @@ pub fn category_pill(
     paint_cluster_icon_label(p, paint_rect, cat.icon, cat.label, lit, accent, icon_tex);
     // Caret hints the pill expands a larger items rect upward.
     let caret = paint_rect.center_top() + egui::vec2(0.0, 3.0);
-    let caret_col = if open { DECK_ACCENT } else { DECK_TEXT_MID.gamma_multiply(0.7) };
+    let caret_col = if open {
+        DECK_ACCENT
+    } else {
+        DECK_TEXT_MID.gamma_multiply(0.7)
+    };
     let caret_glyph = if open { "\u{25be}" } else { "\u{25b4}" };
-    p.text(caret, egui::Align2::CENTER_TOP, caret_glyph, egui::FontId::proportional(9.0), caret_col);
+    p.text(
+        caret,
+        egui::Align2::CENTER_TOP,
+        caret_glyph,
+        egui::FontId::proportional(9.0),
+        caret_col,
+    );
     resp.on_hover_text(format!("{}  [{}]", cat.label, cat.hotkey))
 }
 
 /// Draw the larger **items rect** (the expanded list) as a frosted block-pill
 /// holding a grid of sub-tool tiles, scrollable past [`CLUSTER_VISIBLE_ROWS`].
 /// Returns the picked sub-tool, if any.
-pub fn items_rect(
-    ui: &mut egui::Ui,
-    cat: &Category,
-    current: SubTool,
-) -> Option<SubTool> {
+pub fn items_rect(ui: &mut egui::Ui, cat: &Category, current: SubTool) -> Option<SubTool> {
     let mut picked = None;
-    let frame = crate::ui_theme::liquid_glass_frame(egui::Margin::symmetric(GAP as i8, GAP as i8), RADIUS_SM);
+    let frame = crate::ui_theme::liquid_glass_frame(
+        egui::Margin::symmetric(GAP as i8, GAP as i8),
+        RADIUS_SM,
+    );
     let inner = frame.show(ui, |ui| {
         ui.set_width(expanded_items_width());
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(format!("{}  {}", cat.icon, cat.label)).color(cat.accent).strong());
+            ui.label(
+                egui::RichText::new(format!("{}  {}", cat.icon, cat.label))
+                    .color(cat.accent)
+                    .strong(),
+            );
             ui.label(
                 egui::RichText::new(format!("{} tools", cat.subtools.len()))
                     .color(DECK_TEXT_MID)
@@ -144,7 +159,12 @@ pub fn items_rect(
 }
 
 /// One sub-tool tile inside an expanded items rect, lit when it is current.
-fn item_tile(ui: &mut egui::Ui, st: SubTool, active: bool, accent: egui::Color32) -> egui::Response {
+fn item_tile(
+    ui: &mut egui::Ui,
+    st: SubTool,
+    active: bool,
+    accent: egui::Color32,
+) -> egui::Response {
     let size = egui::vec2(CLUSTER_ITEM_W, CLUSTER_ITEM_H);
     let (rect, resp) = ui.allocate_exact_size(size, egui::Sense::click());
     let inert = !st.is_active_capable();

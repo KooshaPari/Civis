@@ -5,18 +5,20 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use bevy::pbr::{MeshMaterial3d, StandardMaterial};
-use bevy::mesh::PlaneMeshBuilder;
-use bevy::prelude::*;
 use bevy::light::NotShadowCaster;
+use bevy::mesh::PlaneMeshBuilder;
+use bevy::pbr::{MeshMaterial3d, StandardMaterial};
+use bevy::prelude::*;
 use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task};
 use bevy_water::water::{
     material::{StandardWaterMaterial, WaterMaterial},
-    WaterQuality,
-    WaterSettings,
-    WaterTile,
+    WaterQuality, WaterSettings, WaterTile,
 };
 
+use crate::voxel_smooth_mesher::{
+    build_smooth_meshes, mesher_chunk_stats, record_cubic_chunk, resolved_mesher_mode,
+    TerrainMesherMode, SMOOTH_MESH_PADDED_EDGE,
+};
 use civ_voxel::fluid_ca::{step, CaGrid};
 use civ_voxel::material::{
     MaterialDef, MaterialRegistry, Phase, AIR, ASH, BLOOD, BONE, CLAY, COAL, CRYSTAL, DIRT, EMBER,
@@ -25,10 +27,6 @@ use civ_voxel::material::{
 };
 use civ_voxel::worldgen;
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, MeshBuffer};
-use crate::voxel_smooth_mesher::{
-    build_smooth_meshes, mesher_chunk_stats, record_cubic_chunk, resolved_mesher_mode,
-    TerrainMesherMode, SMOOTH_MESH_PADDED_EDGE,
-};
 
 use crate::camera::CameraRig;
 use crate::voxel_triplanar::{VoxelPbrBank, VoxelTriplanarMaterial};
@@ -122,8 +120,10 @@ mod chunk_exposure_tests {
         // The boundary-touching voxels return true; only a chunk with zero solid
         // voxels returns false for the "any non-AIR" path. Use the air chunk for
         // the false case.
-        assert!(!chunk_has_exposed_face(&air_chunk()),
-            "all-AIR chunk should have no exposed face");
+        assert!(
+            !chunk_has_exposed_face(&air_chunk()),
+            "all-AIR chunk should have no exposed face"
+        );
     }
 
     /// A chunk with one solid voxel surrounded by AIR has an exposed face.
@@ -133,8 +133,10 @@ mod chunk_exposure_tests {
         // Place solid voxel in the interior (not on boundary)
         let idx = 2 + 2 * CHUNK_EDGE + 2 * CHUNK_EDGE * CHUNK_EDGE;
         voxels[idx] = DIRT;
-        assert!(chunk_has_exposed_face(&voxels),
-            "solid voxel surrounded by AIR should have an exposed face");
+        assert!(
+            chunk_has_exposed_face(&voxels),
+            "solid voxel surrounded by AIR should have an exposed face"
+        );
     }
 }
 
@@ -303,7 +305,11 @@ fn despawn_world_and_pending(
     pending: &Query<Entity, With<ComputingChunkMesh>>,
     water_planes: &Query<Entity, With<WaterPlane>>,
 ) {
-    for entity in state.chunk_entities.drain().flat_map(|(_, e)| e.into_iter()) {
+    for entity in state
+        .chunk_entities
+        .drain()
+        .flat_map(|(_, e)| e.into_iter())
+    {
         commands.entity(entity).despawn();
     }
     for carrier in pending.iter() {
@@ -534,9 +540,7 @@ fn log_mesher_diagnostic(grid: &CaGrid) {
                 let off_grid = bufs
                     .iter()
                     .flat_map(|b| b.vertices.iter())
-                    .filter(|v| {
-                        v.position.iter().any(|c| (c - c.round()).abs() > 0.01)
-                    })
+                    .filter(|v| v.position.iter().any(|c| (c - c.round()).abs() > 0.01))
                     .count();
                 let pct = if verts > 0 { off_grid * 100 / verts } else { 0 };
                 info!(
@@ -625,7 +629,12 @@ pub fn step_and_remesh(
 
 /// Slice a 16³ chunk from the dense grid, filling out-of-bounds cells with air.
 #[must_use]
-fn slice_chunk(grid: &CaGrid, cx: usize, cy: usize, cz: usize) -> [MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE] {
+fn slice_chunk(
+    grid: &CaGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+) -> [MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE] {
     let mut voxels = [AIR; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
     for z in 0..CHUNK_EDGE {
         for y in 0..CHUNK_EDGE {
@@ -734,12 +743,7 @@ fn should_use_smooth_mesh(
     }
 }
 
-fn chunk_saturation(
-    grid: &CaGrid,
-    cx: usize,
-    cy: usize,
-    cz: usize,
-) -> Option<Vec<u8>> {
+fn chunk_saturation(grid: &CaGrid, cx: usize, cy: usize, cz: usize) -> Option<Vec<u8>> {
     if grid.saturation.is_empty() {
         return None;
     }
@@ -762,12 +766,7 @@ fn chunk_saturation(
     Some(saturation)
 }
 
-fn chunk_saturation_with_apron(
-    grid: &CaGrid,
-    cx: usize,
-    cy: usize,
-    cz: usize,
-) -> Option<Vec<u8>> {
+fn chunk_saturation_with_apron(grid: &CaGrid, cx: usize, cy: usize, cz: usize) -> Option<Vec<u8>> {
     if grid.saturation.is_empty() {
         return None;
     }
@@ -788,13 +787,7 @@ fn chunk_saturation_with_apron(
                 let gx = isize::try_from(grid.dims[0]).unwrap_or(isize::MAX);
                 let gy = isize::try_from(grid.dims[1]).unwrap_or(isize::MAX);
                 let gz_max = isize::try_from(grid.dims[2]).unwrap_or(isize::MAX);
-                if gx_i < 0
-                    || gy_i < 0
-                    || gz_i < 0
-                    || gx_i >= gx
-                    || gy_i >= gy
-                    || gz_i >= gz_max
-                {
+                if gx_i < 0 || gy_i < 0 || gz_i < 0 || gx_i >= gx || gy_i >= gy || gz_i >= gz_max {
                     saturation.push(0);
                     continue;
                 }
@@ -918,15 +911,20 @@ fn chunk_has_exposed_face(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_
                 }
                 // Check all 6 neighbours within chunk bounds.
                 let neighbours: [(isize, isize, isize); 6] = [
-                    (-1, 0, 0), (1, 0, 0),
-                    (0, -1, 0), (0, 1, 0),
-                    (0, 0, -1), (0, 0, 1),
+                    (-1, 0, 0),
+                    (1, 0, 0),
+                    (0, -1, 0),
+                    (0, 1, 0),
+                    (0, 0, -1),
+                    (0, 0, 1),
                 ];
                 for (dx, dy, dz) in neighbours {
                     let nx = x as isize + dx;
                     let ny = y as isize + dy;
                     let nz = z as isize + dz;
-                    if nx < 0 || ny < 0 || nz < 0
+                    if nx < 0
+                        || ny < 0
+                        || nz < 0
                         || nx >= CHUNK_EDGE as isize
                         || ny >= CHUNK_EDGE as isize
                         || nz >= CHUNK_EDGE as isize
@@ -964,7 +962,11 @@ fn spawn_chunk_buffers(
 ) -> Vec<Entity> {
     let mut entities = Vec::new();
     for submesh in mesh_buffers {
-        if submesh.vertices.first().is_some_and(|vertex| vertex.material == WATER) {
+        if submesh
+            .vertices
+            .first()
+            .is_some_and(|vertex| vertex.material == WATER)
+        {
             continue;
         }
         let Some(material_id) = submesh.vertices.first().map(|v| v.material) else {
@@ -981,34 +983,35 @@ fn spawn_chunk_buffers(
         if !use_smooth {
             apply_voxel_jitter(&mut bevy_mesh, submesh, material_id);
         }
-        let entity = if let Some(handle) = triplanar_bank.material_for(material_id, triplanar_materials) {
-            commands
-                .spawn((
-                    ChunkMeshTag,
-                    Mesh3d(meshes.add(bevy_mesh)),
-                    MeshMaterial3d(handle),
-                    Transform::from_xyz(
-                        chunk_origin[0] as f32,
-                        chunk_origin[1] as f32,
-                        chunk_origin[2] as f32,
-                    ),
-                ))
-                .id()
-        } else {
-            let material = pbr_material_for(material_id, def);
-            commands
-                .spawn((
-                    ChunkMeshTag,
-                    Mesh3d(meshes.add(bevy_mesh)),
-                    MeshMaterial3d(materials.add(material)),
-                    Transform::from_xyz(
-                        chunk_origin[0] as f32,
-                        chunk_origin[1] as f32,
-                        chunk_origin[2] as f32,
-                    ),
-                ))
-                .id()
-        };
+        let entity =
+            if let Some(handle) = triplanar_bank.material_for(material_id, triplanar_materials) {
+                commands
+                    .spawn((
+                        ChunkMeshTag,
+                        Mesh3d(meshes.add(bevy_mesh)),
+                        MeshMaterial3d(handle),
+                        Transform::from_xyz(
+                            chunk_origin[0] as f32,
+                            chunk_origin[1] as f32,
+                            chunk_origin[2] as f32,
+                        ),
+                    ))
+                    .id()
+            } else {
+                let material = pbr_material_for(material_id, def);
+                commands
+                    .spawn((
+                        ChunkMeshTag,
+                        Mesh3d(meshes.add(bevy_mesh)),
+                        MeshMaterial3d(materials.add(material)),
+                        Transform::from_xyz(
+                            chunk_origin[0] as f32,
+                            chunk_origin[1] as f32,
+                            chunk_origin[2] as f32,
+                        ),
+                    ))
+                    .id()
+            };
         entities.push(entity);
     }
     entities
@@ -1025,7 +1028,8 @@ struct ChunkMeshInput {
     origin: [usize; 3],
     use_smooth: bool,
     voxels: [MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE],
-    padded: [MaterialId; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE],
+    padded:
+        [MaterialId; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE],
     saturation: Option<Vec<u8>>,
 }
 
@@ -1062,7 +1066,12 @@ fn compute_chunk_mesh(input: ChunkMeshInput) -> ChunkMeshJob {
         voxels: &input.voxels,
     };
     let mut buffers: Vec<MeshBuffer> = if input.use_smooth {
-        build_smooth_meshes(&input.voxels, &input.padded, input.saturation.as_deref(), &registry)
+        build_smooth_meshes(
+            &input.voxels,
+            &input.padded,
+            input.saturation.as_deref(),
+            &registry,
+        )
     } else if resolved_mesher_mode() == TerrainMesherMode::Smooth {
         // Global mode is Smooth — don't fall back to cubic even for distant chunks.
         // Cubic produces grey rectangular slabs that break the smooth terrain look.
@@ -1142,7 +1151,9 @@ fn dispatch_chunk_mesh_tasks(commands: &mut Commands, grid: &CaGrid, camera_eye:
 }
 
 fn chunk_is_all_water(voxels: &[MaterialId; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]) -> bool {
-    voxels.iter().all(|material| *material == AIR || *material == WATER)
+    voxels
+        .iter()
+        .all(|material| *material == AIR || *material == WATER)
 }
 
 /// Drain completed off-thread chunk mesh tasks and spawn their Bevy entities on the
@@ -1176,7 +1187,11 @@ pub fn apply_chunk_mesh_tasks(
             job.origin,
             job.use_smooth,
         );
-        state.chunk_entities.entry(job.chunk_id).or_default().extend(entities);
+        state
+            .chunk_entities
+            .entry(job.chunk_id)
+            .or_default()
+            .extend(entities);
     }
 }
 
@@ -1396,8 +1411,7 @@ fn apply_voxel_jitter(mesh: &mut Mesh, buf: &MeshBuffer, id: MaterialId) {
 /// Cheap integer hash (splitmix-style) for stable per-cell jitter.
 #[must_use]
 fn hash3(x: i64, y: i64, z: i64) -> u64 {
-    let mut h = (x as u64)
-        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+    let mut h = (x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
         ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
         ^ (z as u64).wrapping_mul(0x1656_67B1_9E37_79F9);
     h ^= h >> 33;

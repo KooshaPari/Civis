@@ -43,9 +43,7 @@ impl SentienceThreshold {
     /// Construct a threshold.
     #[must_use]
     pub fn new(minimum_cognition: f32) -> Self {
-        Self {
-            minimum_cognition,
-        }
+        Self { minimum_cognition }
     }
 }
 
@@ -125,7 +123,8 @@ mod tests {
     #[test]
     fn threshold_crossing_event_reflects_score() {
         let dna = Dna(vec![255, 255, 255, 0]);
-        let profile = CognitionTraitProfile::new("sapient-lineage", vec![(0, 0.5), (1, 0.5), (2, 0.5)]);
+        let profile =
+            CognitionTraitProfile::new("sapient-lineage", vec![(0, 0.5), (1, 0.5), (2, 0.5)]);
         let threshold = SentienceThreshold::new(0.8);
         let event = evaluate_sentience(Some(7), &dna, &profile, threshold);
 
@@ -137,7 +136,8 @@ mod tests {
     #[test]
     fn below_threshold_remains_unsentient() {
         let dna = Dna(vec![0, 0, 0, 255]);
-        let profile = CognitionTraitProfile::new("proto-lineage", vec![(0, 1.0), (1, 1.0), (2, 1.0)]);
+        let profile =
+            CognitionTraitProfile::new("proto-lineage", vec![(0, 1.0), (1, 1.0), (2, 1.0)]);
         let threshold = SentienceThreshold::new(0.4);
         let event = evaluate_sentience(None, &dna, &profile, threshold);
 

@@ -122,15 +122,15 @@ impl GameModels {
     #[must_use]
     pub fn all_present(&self) -> bool {
         self.civilian.is_some()
-        && self.herd.is_some()
-        && self.tree.is_some()
-        && self.building.is_some()
-        && self.building_house_b.is_some()
-        && self.building_market.is_some()
-        && self.building_church.is_some()
-        && self.building_tavern.is_some()
-        && self.building_tower.is_some()
-        && self.building_well.is_some()
+            && self.herd.is_some()
+            && self.tree.is_some()
+            && self.building.is_some()
+            && self.building_house_b.is_some()
+            && self.building_market.is_some()
+            && self.building_church.is_some()
+            && self.building_tavern.is_some()
+            && self.building_tower.is_some()
+            && self.building_well.is_some()
     }
 }
 
@@ -176,7 +176,8 @@ impl Plugin for GltfModelsPlugin {
 /// document — which is the conventional single-scene export from Quaternius /
 /// Kenney CC0 packs.
 pub fn load_game_models(mut models: ResMut<GameModels>, asset_server: Res<AssetServer>) {
-    models.civilian = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::CIVILIAN)));
+    models.civilian =
+        Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::CIVILIAN)));
     models.herd = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::HERD)));
     models.tree = Some(asset_server.load(GltfAssetLabel::Scene(0).from_asset(asset_paths::TREE)));
     models.building =
@@ -374,13 +375,27 @@ mod tests {
         // (type, slot-setter) — the type must resolve to a Model when ONLY its
         // mapped slot is populated.
         let cases: [(BuildingType, fn(&mut GameModels)); 7] = [
-            (BuildingType::Temple, |m| m.building_church = Some(Handle::default())),
-            (BuildingType::Market, |m| m.building_market = Some(Handle::default())),
-            (BuildingType::Barracks, |m| m.building_tower = Some(Handle::default())),
-            (BuildingType::CityCenter, |m| m.building_tower = Some(Handle::default())),
-            (BuildingType::Mine, |m| m.building_well = Some(Handle::default())),
-            (BuildingType::House, |m| m.building_house_b = Some(Handle::default())),
-            (BuildingType::Farm, |m| m.building_house_b = Some(Handle::default())),
+            (BuildingType::Temple, |m| {
+                m.building_church = Some(Handle::default())
+            }),
+            (BuildingType::Market, |m| {
+                m.building_market = Some(Handle::default())
+            }),
+            (BuildingType::Barracks, |m| {
+                m.building_tower = Some(Handle::default())
+            }),
+            (BuildingType::CityCenter, |m| {
+                m.building_tower = Some(Handle::default())
+            }),
+            (BuildingType::Mine, |m| {
+                m.building_well = Some(Handle::default())
+            }),
+            (BuildingType::House, |m| {
+                m.building_house_b = Some(Handle::default())
+            }),
+            (BuildingType::Farm, |m| {
+                m.building_house_b = Some(Handle::default())
+            }),
         ];
         for (ty, set_slot) in cases {
             let m = models_only(set_slot);

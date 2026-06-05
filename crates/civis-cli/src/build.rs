@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::{workspace_root, CliError, CliResult};
 use crate::proc::kill_competing_processes;
+use crate::{workspace_root, CliError, CliResult};
 
 pub fn run_build(target_dir: &Path) -> CliResult<PathBuf> {
     kill_competing_processes()?;
@@ -30,4 +30,3 @@ pub fn run_build(target_dir: &Path) -> CliResult<PathBuf> {
 
     Ok(target_dir.join("release").join("civ-standalone.exe"))
 }
-

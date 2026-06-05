@@ -270,7 +270,10 @@ mod tests {
         let mut members = vec![(5, None), (2, None)];
 
         reconcile_membership(&mut members, &colocated, &payoff, 0.0);
-        assert_eq!(members, vec![(2, Some(ClusterId(2))), (5, Some(ClusterId(2)))]);
+        assert_eq!(
+            members,
+            vec![(2, Some(ClusterId(2))), (5, Some(ClusterId(2)))]
+        );
 
         let payoff_negative = StubPayoff { value: -0.5 };
         reconcile_membership(&mut members, &colocated, &payoff_negative, 0.0);

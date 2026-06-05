@@ -105,10 +105,7 @@ impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SkyTexture>()
             .add_systems(Startup, (load_sky_texture, spawn_sky_dome).chain())
-            .add_systems(
-                Update,
-                (follow_camera, tint_dome_by_cycle).chain(),
-            );
+            .add_systems(Update, (follow_camera, tint_dome_by_cycle).chain());
     }
 }
 
@@ -174,8 +171,12 @@ fn tint_dome_by_cycle(
     dome_q: Query<&MeshMaterial3d<StandardMaterial>, With<SkyDome>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok(mat_handle) = dome_q.single() else { return };
-    let Some(mat) = materials.get_mut(mat_handle) else { return };
+    let Ok(mat_handle) = dome_q.single() else {
+        return;
+    };
+    let Some(mat) = materials.get_mut(mat_handle) else {
+        return;
+    };
 
     // When the HDR panorama is bound as the base-colour texture, never overwrite
     // base_color with a flat colour (that would hide the photo). Instead multiply
@@ -351,7 +352,13 @@ mod tests {
     fn day_blend_is_high_at_noon_low_at_midnight() {
         let noon = day_blend(0.75);
         let midnight = day_blend(0.25);
-        assert!(noon > 0.9, "day_blend at noon should be near 1.0, got {noon:.3}");
-        assert!(midnight < 0.1, "day_blend at midnight should be near 0.0, got {midnight:.3}");
+        assert!(
+            noon > 0.9,
+            "day_blend at noon should be near 1.0, got {noon:.3}"
+        );
+        assert!(
+            midnight < 0.1,
+            "day_blend at midnight should be near 0.0, got {midnight:.3}"
+        );
     }
 }

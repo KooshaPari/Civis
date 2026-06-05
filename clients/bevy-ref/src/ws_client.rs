@@ -171,8 +171,7 @@ fn run_client(
         publish_state(&state_tx, WsConnectionState::Disconnected);
         loop {
             publish_state(&state_tx, WsConnectionState::Reconnecting);
-            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx).await
-            {
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx).await {
                 Ok(()) => {
                     backoff.reset();
                 }

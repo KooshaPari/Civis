@@ -51,7 +51,8 @@ pub fn parse_census_text(text: &str) -> CensusData {
         r"\[voxel\] world dims=\[(\d+),\s*(\d+),\s*(\d+)\] total_cells=(\d+) non_air=(\d+) \(([\d.]+)%\) max_solid_y=(\d+)",
     )
     .expect("world regex");
-    let chunks = Regex::new(r"\[voxel\] spawned (\d+) chunk-submesh entities").expect("chunks regex");
+    let chunks =
+        Regex::new(r"\[voxel\] spawned (\d+) chunk-submesh entities").expect("chunks regex");
     let seed = Regex::new(r"seed=(\d+)").expect("seed regex");
 
     for raw_line in text.lines() {

@@ -96,8 +96,11 @@ pub enum BrushFalloff {
 
 impl BrushFalloff {
     /// All falloff curves in palette order, for UI iteration.
-    pub const ALL: [BrushFalloff; 3] =
-        [BrushFalloff::Linear, BrushFalloff::Smooth, BrushFalloff::Hard];
+    pub const ALL: [BrushFalloff; 3] = [
+        BrushFalloff::Linear,
+        BrushFalloff::Smooth,
+        BrushFalloff::Hard,
+    ];
 
     /// Player-facing label.
     #[must_use]
@@ -687,9 +690,7 @@ fn brush_param_sliders(ui: &mut bevy_egui::egui::Ui, brush: &mut BrushSettings) 
 
     match brush.op {
         BrushOp::LevelToHeight => {
-            ui.add(
-                egui::Slider::new(&mut brush.target_height, 0.0..=200.0).text("Target height"),
-            );
+            ui.add(egui::Slider::new(&mut brush.target_height, 0.0..=200.0).text("Target height"));
         }
         BrushOp::DropBiome => {
             ui.add(egui::Slider::new(&mut brush.biome_id, 0..=15).text("Biome id"));
@@ -809,11 +810,22 @@ mod tests {
             biome_id: 0,
         };
         apply_one_terraform_edit(&mut grid, &raise, solid);
-        assert_eq!(grid.get(4, 8, 4), solid, "raise must add solid above surface");
+        assert_eq!(
+            grid.get(4, 8, 4),
+            solid,
+            "raise must add solid above surface"
+        );
 
-        let lower = TerraformEditRequest { op: BrushOp::Lower, ..raise };
+        let lower = TerraformEditRequest {
+            op: BrushOp::Lower,
+            ..raise
+        };
         apply_one_terraform_edit(&mut grid, &lower, solid);
-        assert_eq!(grid.get(4, 8, 4), AIR, "lower must carve the raised solid back to air");
+        assert_eq!(
+            grid.get(4, 8, 4),
+            AIR,
+            "lower must carve the raised solid back to air"
+        );
     }
 
     #[cfg(feature = "voxel")]
@@ -826,7 +838,11 @@ mod tests {
         for y in 0..5 {
             grid.set(1, y, 1, solid);
         }
-        assert_eq!(surface_y(&grid, 1, 1), 5, "surface is one above the top solid cell");
+        assert_eq!(
+            surface_y(&grid, 1, 1),
+            5,
+            "surface is one above the top solid cell"
+        );
         assert_eq!(surface_y(&grid, 0, 0), 0, "all-air column has surface 0");
     }
 

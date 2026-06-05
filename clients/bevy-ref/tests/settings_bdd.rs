@@ -39,6 +39,12 @@ fn requirement_given_manual_shadow_change_when_applied_then_quality_becomes_cust
 #[test]
 fn requirement_key_lookup_is_authoritative() {
     let s = GameSettings::default();
-    assert_eq!(s.key_for("Toggle Settings"), Some(KeyBinding::Key(KeyCode::KeyO)));
-    assert_eq!(s.key_for("Zoom Camera"), Some(KeyBinding::Mouse(MouseButton::Middle)));
+    assert_eq!(
+        s.key_for("Toggle Settings"),
+        Some(KeyBinding::Key(KeyCode::KeyO))
+    );
+    assert_eq!(
+        s.key_for("Zoom Camera"),
+        Some(KeyBinding::Mouse(MouseButton::Middle))
+    );
 }

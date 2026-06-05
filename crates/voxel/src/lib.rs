@@ -29,8 +29,8 @@ pub use phenotype_voxel::{
 
 pub mod boundary;
 pub mod fluid_ca;
-pub mod material;
 pub mod lod;
+pub mod material;
 pub mod reactions;
 pub mod stream;
 pub mod worldgen;

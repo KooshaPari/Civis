@@ -142,42 +142,126 @@ pub fn ramp_color(legend: &[LegendStop], value: f32) -> [f32; 3] {
 // ---------------------------------------------------------------------------
 
 const RAMP_ELEVATION: &[LegendStop] = &[
-    LegendStop { at: 0.0, label: "Deep", rgb: [0.10, 0.20, 0.55] },
-    LegendStop { at: 0.18, label: "Coast", rgb: [0.86, 0.78, 0.52] },
-    LegendStop { at: 0.48, label: "Lowland", rgb: [0.28, 0.58, 0.24] },
-    LegendStop { at: 0.7, label: "Highland", rgb: [0.50, 0.45, 0.40] },
-    LegendStop { at: 1.0, label: "Peak", rgb: [0.97, 0.97, 0.97] },
+    LegendStop {
+        at: 0.0,
+        label: "Deep",
+        rgb: [0.10, 0.20, 0.55],
+    },
+    LegendStop {
+        at: 0.18,
+        label: "Coast",
+        rgb: [0.86, 0.78, 0.52],
+    },
+    LegendStop {
+        at: 0.48,
+        label: "Lowland",
+        rgb: [0.28, 0.58, 0.24],
+    },
+    LegendStop {
+        at: 0.7,
+        label: "Highland",
+        rgb: [0.50, 0.45, 0.40],
+    },
+    LegendStop {
+        at: 1.0,
+        label: "Peak",
+        rgb: [0.97, 0.97, 0.97],
+    },
 ];
 
 const RAMP_WATER: &[LegendStop] = &[
-    LegendStop { at: 0.0, label: "Dry", rgb: [0.80, 0.72, 0.50] },
-    LegendStop { at: 1.0, label: "Submerged", rgb: [0.10, 0.35, 0.75] },
+    LegendStop {
+        at: 0.0,
+        label: "Dry",
+        rgb: [0.80, 0.72, 0.50],
+    },
+    LegendStop {
+        at: 1.0,
+        label: "Submerged",
+        rgb: [0.10, 0.35, 0.75],
+    },
 ];
 
 const RAMP_TEMPERATURE: &[LegendStop] = &[
-    LegendStop { at: 0.0, label: "Cold", rgb: [0.20, 0.40, 0.95] },
-    LegendStop { at: 0.5, label: "Temperate", rgb: [0.30, 0.85, 0.40] },
-    LegendStop { at: 1.0, label: "Hot", rgb: [0.95, 0.25, 0.15] },
+    LegendStop {
+        at: 0.0,
+        label: "Cold",
+        rgb: [0.20, 0.40, 0.95],
+    },
+    LegendStop {
+        at: 0.5,
+        label: "Temperate",
+        rgb: [0.30, 0.85, 0.40],
+    },
+    LegendStop {
+        at: 1.0,
+        label: "Hot",
+        rgb: [0.95, 0.25, 0.15],
+    },
 ];
 
 const RAMP_MATERIAL: &[LegendStop] = &[
-    LegendStop { at: 0.0, label: "Water", rgb: [0.20, 0.40, 0.86] },
-    LegendStop { at: 0.25, label: "Sand", rgb: [0.86, 0.78, 0.52] },
-    LegendStop { at: 0.5, label: "Grass", rgb: [0.28, 0.58, 0.24] },
-    LegendStop { at: 0.75, label: "Rock", rgb: [0.50, 0.50, 0.52] },
-    LegendStop { at: 1.0, label: "Snow", rgb: [0.97, 0.97, 0.97] },
+    LegendStop {
+        at: 0.0,
+        label: "Water",
+        rgb: [0.20, 0.40, 0.86],
+    },
+    LegendStop {
+        at: 0.25,
+        label: "Sand",
+        rgb: [0.86, 0.78, 0.52],
+    },
+    LegendStop {
+        at: 0.5,
+        label: "Grass",
+        rgb: [0.28, 0.58, 0.24],
+    },
+    LegendStop {
+        at: 0.75,
+        label: "Rock",
+        rgb: [0.50, 0.50, 0.52],
+    },
+    LegendStop {
+        at: 1.0,
+        label: "Snow",
+        rgb: [0.97, 0.97, 0.97],
+    },
 ];
 
 const RAMP_DENSITY: &[LegendStop] = &[
-    LegendStop { at: 0.0, label: "Empty", rgb: [0.15, 0.15, 0.20] },
-    LegendStop { at: 0.5, label: "Settled", rgb: [0.95, 0.80, 0.20] },
-    LegendStop { at: 1.0, label: "Crowded", rgb: [0.90, 0.10, 0.10] },
+    LegendStop {
+        at: 0.0,
+        label: "Empty",
+        rgb: [0.15, 0.15, 0.20],
+    },
+    LegendStop {
+        at: 0.5,
+        label: "Settled",
+        rgb: [0.95, 0.80, 0.20],
+    },
+    LegendStop {
+        at: 1.0,
+        label: "Crowded",
+        rgb: [0.90, 0.10, 0.10],
+    },
 ];
 
 const RAMP_NEEDS: &[LegendStop] = &[
-    LegendStop { at: 0.0, label: "Content", rgb: [0.20, 0.80, 0.30] },
-    LegendStop { at: 0.5, label: "Strained", rgb: [0.95, 0.85, 0.20] },
-    LegendStop { at: 1.0, label: "Critical", rgb: [0.90, 0.10, 0.10] },
+    LegendStop {
+        at: 0.0,
+        label: "Content",
+        rgb: [0.20, 0.80, 0.30],
+    },
+    LegendStop {
+        at: 0.5,
+        label: "Strained",
+        rgb: [0.95, 0.85, 0.20],
+    },
+    LegendStop {
+        at: 1.0,
+        label: "Critical",
+        rgb: [0.90, 0.10, 0.10],
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -457,7 +541,6 @@ mod plugin {
         }
     }
 
-
     /// Draw the Info Views overlay picker + legend as a tab body (no window
     /// chrome). Used by the left HUD cluster's "Info Views" tab so the overlay
     /// suite lives inside the unified left panel instead of a separate window.
@@ -473,14 +556,22 @@ mod plugin {
                     let o = &registry.overlays[i];
                     (o.name, o.description, registry.active == Some(i))
                 };
-                if ui.selectable_label(selected, name).on_hover_text(desc).clicked() {
+                if ui
+                    .selectable_label(selected, name)
+                    .on_hover_text(desc)
+                    .clicked()
+                {
                     registry.active = Some(i);
                 }
             }
         });
         if let Some(overlay) = registry.active_overlay() {
             ui.separator();
-            ui.label(egui::RichText::new(format!("Legend — {}", overlay.name)).heading().color(TEXT));
+            ui.label(
+                egui::RichText::new(format!("Legend — {}", overlay.name))
+                    .heading()
+                    .color(TEXT),
+            );
             draw_legend(ui, overlay);
         }
     }
@@ -551,16 +642,8 @@ mod plugin {
                 let pos = Vec3::new(wx, sample.height + 0.6, wz);
                 let tint = Color::srgba(color[0], color[1], color[2], color[3]);
                 // Draw a small "+" gizmo per cell as the recolor marker.
-                gizmos.line(
-                    pos - Vec3::X * cell,
-                    pos + Vec3::X * cell,
-                    tint,
-                );
-                gizmos.line(
-                    pos - Vec3::Z * cell,
-                    pos + Vec3::Z * cell,
-                    tint,
-                );
+                gizmos.line(pos - Vec3::X * cell, pos + Vec3::X * cell, tint);
+                gizmos.line(pos - Vec3::Z * cell, pos + Vec3::Z * cell, tint);
             }
         }
     }
@@ -611,7 +694,9 @@ mod plugin {
             if let Some(n) = needs {
                 needs_sum[i] += needs_pressure(n);
             }
-            *faction_votes[i].entry(civilian_faction_id(civ)).or_insert(0) += 1;
+            *faction_votes[i]
+                .entry(civilian_faction_id(civ))
+                .or_insert(0) += 1;
         }
 
         let max_count = counts.iter().copied().max().unwrap_or(0).max(1) as f32;

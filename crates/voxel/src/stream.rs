@@ -127,8 +127,8 @@ impl ChunkStore {
 
     /// Persist an edited chunk. Overwrites any previous version.
     pub fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
-        let bytes = bincode::serialize(chunk)
-            .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
+        let bytes =
+            bincode::serialize(chunk).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         fs::write(self.path_for(coord), bytes)
     }
 
@@ -140,8 +140,8 @@ impl ChunkStore {
             Err(err) if err.kind() == ErrorKind::NotFound => return Ok(None),
             Err(err) => return Err(err),
         };
-        let chunk = bincode::deserialize(&bytes)
-            .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
+        let chunk =
+            bincode::deserialize(&bytes).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         Ok(Some(chunk))
     }
 
@@ -173,11 +173,7 @@ struct Resident {
 impl<G: WorldGen> StreamingWorld<G> {
     /// Construct a streaming world. Opens the disk cache if `cfg.disk_dir` is set.
     pub fn new(cfg: StreamConfig, gen: G) -> std::io::Result<Self> {
-        let store = cfg
-            .disk_dir
-            .clone()
-            .map(ChunkStore::open)
-            .transpose()?;
+        let store = cfg.disk_dir.clone().map(ChunkStore::open).transpose()?;
         Ok(Self {
             cfg,
             gen,
@@ -206,7 +202,10 @@ impl<G: WorldGen> StreamingWorld<G> {
     /// resident after the call. Order-independent given the same `coords`.
     pub fn load_set(&mut self, coords: &[ChunkCoord]) -> std::io::Result<()> {
         if self.cfg.active_budget < coords.len() {
-            return Err(Error::new(ErrorKind::InvalidInput, "active_budget below requested set"));
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                "active_budget below requested set",
+            ));
         }
         let mut ordered = coords.to_vec();
         ordered.sort_unstable_by_key(|coord| (coord.cx, coord.cy, coord.cz));
@@ -373,7 +372,12 @@ mod tests {
         }
         let edited = coords[0];
         assert!(a.edit(edited, 0, MaterialId(1)));
-        a.load(ChunkCoord { cx: 99, cy: 0, cz: 0 }).expect("force eviction");
+        a.load(ChunkCoord {
+            cx: 99,
+            cy: 0,
+            cz: 0,
+        })
+        .expect("force eviction");
         let fresh = HeightFieldGen {
             seed: 7,
             base_voxel_m: 4.0,
@@ -411,7 +415,11 @@ mod tests {
         });
         w.load_set(&coords).expect("budget");
         assert_eq!(w.resident_coords().len(), 4);
-        let extra = ChunkCoord { cx: 99, cy: 99, cz: 99 };
+        let extra = ChunkCoord {
+            cx: 99,
+            cy: 99,
+            cz: 99,
+        };
         w.load(extra).expect("extra");
         assert_eq!(w.resident_coords().len(), 4);
     }
@@ -424,8 +432,16 @@ mod tests {
             disk_dir: Some(dir),
             ..StreamConfig::default()
         });
-        let a = ChunkCoord { cx: 0, cy: 0, cz: 0 };
-        let b = ChunkCoord { cx: 1, cy: 0, cz: 0 };
+        let a = ChunkCoord {
+            cx: 0,
+            cy: 0,
+            cz: 0,
+        };
+        let b = ChunkCoord {
+            cx: 1,
+            cy: 0,
+            cz: 0,
+        };
         w.load(a).expect("a");
         assert!(w.edit(a, 0, MaterialId(1)));
         w.load(b).expect("b");

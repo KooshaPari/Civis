@@ -163,7 +163,11 @@ fn hit_agents(
                     needs.health = (needs.health - health_delta).max(0.0);
                 }
                 if let Ok(mut life_health) = sim.world.get::<&mut LifeHealth>(entity) {
-                    let damage = if heat_damage { health_delta * 0.5 } else { health_delta * 0.25 };
+                    let damage = if heat_damage {
+                        health_delta * 0.5
+                    } else {
+                        health_delta * 0.25
+                    };
                     life_health.integrity = (life_health.integrity - damage).max(0.0);
                     despawn = life_health.integrity <= 0.0;
                 }
@@ -188,11 +192,7 @@ mod tests {
     fn seeded_sim() -> Simulation {
         let mut sim = Simulation::with_seed(7);
         let pos = Position3d {
-            coord: WorldCoord {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
+            coord: WorldCoord { x: 0, y: 0, z: 0 },
         };
         let _ = sim.world.spawn((
             Civilian {

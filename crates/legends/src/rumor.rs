@@ -34,7 +34,11 @@ pub fn witness<R: Rng + ?Sized>(
         return None;
     }
 
-    let subject = ev.participants.first().copied().unwrap_or(LegendEntityId(0));
+    let subject = ev
+        .participants
+        .first()
+        .copied()
+        .unwrap_or(LegendEntityId(0));
     let mut rumor = Rumor {
         event_id: ev.id,
         origin_epoch: ev.epoch,
@@ -78,7 +82,12 @@ pub fn render(rumor: &Rumor) -> String {
     )
 }
 
-fn embellish_rumor<R: Rng + ?Sized>(historian: &HistorianMind, rumor: &mut Rumor, candidates: &[LegendEntityId], rng: &mut R) {
+fn embellish_rumor<R: Rng + ?Sized>(
+    historian: &HistorianMind,
+    rumor: &mut Rumor,
+    candidates: &[LegendEntityId],
+    rng: &mut R,
+) {
     let drift_sigma = (historian.embellishment * 0.15).max(0.0);
     if drift_sigma > 0.0 {
         let drift = rng.gen_range(-drift_sigma..drift_sigma);

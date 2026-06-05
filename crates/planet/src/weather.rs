@@ -41,8 +41,8 @@ pub struct WeatherCell {
 }
 
 fn sin_fp(angle_fp: i64) -> i32 {
-    let radians = (angle_fp.rem_euclid(FULL_TURN_FP) as f64 / FULL_TURN_FP as f64)
-        * std::f64::consts::TAU;
+    let radians =
+        (angle_fp.rem_euclid(FULL_TURN_FP) as f64 / FULL_TURN_FP as f64) * std::f64::consts::TAU;
     (radians.sin() * FP_SCALE as f64).round() as i32
 }
 
@@ -117,9 +117,8 @@ pub fn compute_weather(climate: &Climate, tick: u64, num_regions: u32) -> Vec<We
         let baseline_fp = temp_baseline_for_lat(lat_fp);
         let season_fp = season_offset(season, lat_fp);
         let wave_fp = pressure_wave_fp * (1 + hemisphere) / 2 + pressure_wave_fp.abs() / 3;
-        let temp_c_fp =
-            (baseline_fp + season_fp + day_heat_fp - latitude_cool_fp + wave_fp / 2)
-                .clamp(-60_000, 55_000) as i32;
+        let temp_c_fp = (baseline_fp + season_fp + day_heat_fp - latitude_cool_fp + wave_fp / 2)
+            .clamp(-60_000, 55_000) as i32;
 
         let moisture_fp = if matches!(season, SeasonKind::Spring | SeasonKind::Autumn) {
             900
@@ -138,8 +137,11 @@ pub fn compute_weather(climate: &Climate, tick: u64, num_regions: u32) -> Vec<We
             storm_intensity_fp as i64,
         )
         .clamp(0, 20_000) as i32;
-        let kind =
-            weather_kind_from(temp_c_fp as i64, precip_mm_fp as i64, storm_intensity_fp as i64);
+        let kind = weather_kind_from(
+            temp_c_fp as i64,
+            precip_mm_fp as i64,
+            storm_intensity_fp as i64,
+        );
 
         cells.push(WeatherCell {
             region_id,

@@ -34,40 +34,18 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
+use crate::game_laws::GameLawsOpen;
 use crate::holo_minimap::HoloMinimapPlugin;
 use crate::menus::GameUiMode;
 use crate::spawn_tools::{ActiveTool, SelectedEntity};
 use crate::tool_categories::{ActiveSubTool, SubTool, CATEGORIES};
 use crate::ui_theme::{
-    apply_theme,
-    compact,
-    deck_chip,
-    hairline,
-    liquid_glass_finish,
-    liquid_glass_frame,
-    panel_finish,
-    DECK_ACCENT,
-    DECK_BORDER,
-    DECK_GLASS,
-    DECK_SUCCESS,
-    DECK_TEXT,
-    DECK_TEXT_MID,
-    GOLD,
-    GREEN,
-    RED,
-    INSET_FILL,
-    RADIUS_BTN,
-    RADIUS_PANEL,
-    SPACE_LG,
-    SPACE_MD,
-    SPACE_SM,
-    SPACE_XS,
-    BORDER,
-    DIM,
-    TEXT,
+    apply_theme, compact, deck_chip, hairline, liquid_glass_finish, liquid_glass_frame,
+    panel_finish, BORDER, DECK_ACCENT, DECK_BORDER, DECK_GLASS, DECK_SUCCESS, DECK_TEXT,
+    DECK_TEXT_MID, DIM, GOLD, GREEN, INSET_FILL, RADIUS_BTN, RADIUS_PANEL, RED, SPACE_LG, SPACE_MD,
+    SPACE_SM, SPACE_XS, TEXT,
 };
 use crate::ui_theme::{panel_edge_stroke, panel_glass_fill};
-use crate::game_laws::GameLawsOpen;
 
 // ---------------------------------------------------------------------------
 // Resources
@@ -406,7 +384,11 @@ fn handle_category_hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sub: ResMut<Acti
     for (idx, cat) in CATEGORIES.iter().enumerate() {
         if let Some(code) = hotkey_to_code(cat.hotkey) {
             if keys.just_pressed(code) {
-                sub.open_category = if sub.open_category == Some(idx) { None } else { Some(idx) };
+                sub.open_category = if sub.open_category == Some(idx) {
+                    None
+                } else {
+                    Some(idx)
+                };
             }
         }
     }
@@ -470,7 +452,13 @@ fn draw_game_ui(
     apply_theme(ctx);
 
     // ---- Top cluster: CENTERED readout (floating, not a full-width bar) ----
-    top_center_cluster(ctx, &snapshot, &resources, &attach_mode, live_attach.as_deref());
+    top_center_cluster(
+        ctx,
+        &snapshot,
+        &resources,
+        &attach_mode,
+        live_attach.as_deref(),
+    );
 
     // ---- Left cluster: ONE tabbed column (Inspector / Factions / Info Views) ----
     left_sidebar_cluster(
@@ -505,11 +493,14 @@ fn top_center_cluster(
     egui::Area::new(egui::Id::new("civis_top_center"))
         .anchor(egui::Align2::CENTER_TOP, [0.0, 10.0])
         .show(ctx, |ui| {
-            liquid_glass_frame(egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8), RADIUS_PANEL)
-                .show(ui, |ui| {
-                    top_bar_ui(ui, snapshot, resources, attach_mode, live_attach);
-                    liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
-                });
+            liquid_glass_frame(
+                egui::Margin::symmetric(SPACE_LG as i8, SPACE_SM as i8),
+                RADIUS_PANEL,
+            )
+            .show(ui, |ui| {
+                top_bar_ui(ui, snapshot, resources, attach_mode, live_attach);
+                liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
+            });
         });
 }
 
@@ -530,21 +521,22 @@ fn left_sidebar_cluster(
         .frame(egui::Frame::NONE)
         .show(ctx, |ui| {
             let full_panel = ui.max_rect();
-            ui.painter().rect_filled(full_panel, RADIUS_PANEL as f32, crate::ui_theme::GLASS_FILL);
+            ui.painter()
+                .rect_filled(full_panel, RADIUS_PANEL as f32, crate::ui_theme::GLASS_FILL);
             let glass = liquid_glass_frame(egui::Margin::same(SPACE_MD as i8), RADIUS_PANEL);
             glass.show(ui, |ui| {
-            // Teal rim + lifted inner highlight on the cluster's own rect BEFORE
-            // content, so the glass edge reads without glossing over text.
-            let full = ui.max_rect();
-            sidebar_glass_edge(ui.painter(), full);
-            left_tab_strip(ui, tab);
-            ui.add_space(SPACE_SM);
-            hairline(ui);
-            match tab {
-                LeftTab::Inspector => inspector_ui(ui, has_selection, details),
-                LeftTab::Factions => faction_panel_ui(ui, roster),
-                LeftTab::InfoViews => crate::info_views::info_view_tab_body(ui, info_views),
-            }
+                // Teal rim + lifted inner highlight on the cluster's own rect BEFORE
+                // content, so the glass edge reads without glossing over text.
+                let full = ui.max_rect();
+                sidebar_glass_edge(ui.painter(), full);
+                left_tab_strip(ui, tab);
+                ui.add_space(SPACE_SM);
+                hairline(ui);
+                match tab {
+                    LeftTab::Inspector => inspector_ui(ui, has_selection, details),
+                    LeftTab::Factions => faction_panel_ui(ui, roster),
+                    LeftTab::InfoViews => crate::info_views::info_view_tab_body(ui, info_views),
+                }
             });
         });
 }
@@ -560,15 +552,18 @@ fn left_tab_strip(ui: &mut egui::Ui, tab: &mut LeftTab) {
         ] {
             let selected = *tab == variant;
             let is_hovering = false;
-            let text = egui::RichText::new(label).color(if selected { DECK_ACCENT } else { DECK_TEXT_MID });
-            let response = ui
-                .add(
-                    egui::Button::new(text)
-                        .fill(panel_glass_fill(is_hovering, false))
-                        .stroke(panel_edge_stroke(false, selected))
-                        .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
-                        .min_size(egui::vec2(102.0, 30.0)),
-                );
+            let text = egui::RichText::new(label).color(if selected {
+                DECK_ACCENT
+            } else {
+                DECK_TEXT_MID
+            });
+            let response = ui.add(
+                egui::Button::new(text)
+                    .fill(panel_glass_fill(is_hovering, false))
+                    .stroke(panel_edge_stroke(false, selected))
+                    .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
+                    .min_size(egui::vec2(102.0, 30.0)),
+            );
             if response.hovered() {
                 ui.painter().rect_stroke(
                     response.rect.shrink(0.8),
@@ -624,18 +619,23 @@ fn bottom_cluster(ctx: &egui::Context, bottom: &mut BottomBarCtx) {
             if let Some(idx) = bottom.sub.open_category {
                 if let Some(cat) = CATEGORIES.get(idx) {
                     ui.vertical_centered(|ui| {
-                        if let Some(picked) = crate::ui_cluster::items_rect(ui, cat, bottom.sub.current) {
+                        if let Some(picked) =
+                            crate::ui_cluster::items_rect(ui, cat, bottom.sub.current)
+                        {
                             select_subtool(bottom, picked);
                         }
                     });
                     ui.add_space(6.0);
                 }
             }
-            liquid_glass_frame(egui::Margin::symmetric(SPACE_MD as i8, SPACE_SM as i8), RADIUS_PANEL)
-                .show(ui, |ui| {
-                    category_pill_row(ui, bottom);
-                    liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
-                });
+            liquid_glass_frame(
+                egui::Margin::symmetric(SPACE_MD as i8, SPACE_SM as i8),
+                RADIUS_PANEL,
+            )
+            .show(ui, |ui| {
+                category_pill_row(ui, bottom);
+                liquid_glass_finish(ui.painter(), ui.min_rect(), RADIUS_PANEL);
+            });
         });
 }
 
@@ -703,7 +703,11 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
     } else {
         ("\u{2192}", DECK_TEXT_MID)
     };
-    let fill = if value.is_empty() { DECK_GLASS } else { DECK_GLASS };
+    let fill = if value.is_empty() {
+        DECK_GLASS
+    } else {
+        DECK_GLASS
+    };
     egui::Frame::NONE
         .fill(fill)
         .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
@@ -711,7 +715,12 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
         .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
         .show(ui, |ui| {
             ui.label(egui::RichText::new(icon).color(color));
-            ui.label(egui::RichText::new(value).monospace().color(DECK_TEXT).strong());
+            ui.label(
+                egui::RichText::new(value)
+                    .monospace()
+                    .color(DECK_TEXT)
+                    .strong(),
+            );
             ui.label(
                 egui::RichText::new(format!("{arrow}{:+.0}", delta))
                     .color(dcol)
@@ -748,7 +757,13 @@ fn top_bar_ui(
     });
     ui.add_space(SPACE_SM);
     ui.horizontal(|ui| {
-        resource_chip(ui, "\u{1f33e}", &compact(resources.food), resources.food_delta, DECK_ACCENT);
+        resource_chip(
+            ui,
+            "\u{1f33e}",
+            &compact(resources.food),
+            resources.food_delta,
+            DECK_ACCENT,
+        );
         resource_chip(
             ui,
             "\u{2699}",
@@ -791,7 +806,12 @@ fn ws_status_ui(
     };
     deck_chip(ui, dot, text, color);
     if let Some(overlay) = &snapshot.live_hud_overlay {
-        ui.label(egui::RichText::new(overlay).color(DECK_TEXT_MID).small().monospace());
+        ui.label(
+            egui::RichText::new(overlay)
+                .color(DECK_TEXT_MID)
+                .small()
+                .monospace(),
+        );
     }
 }
 
@@ -811,9 +831,19 @@ fn select_subtool(ctx: &mut BottomBarCtx, st: SubTool) {
 
 /// Segmented speed control: pause / 1x / 2x / 5x / 10x wired to GameSpeed.
 fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
-    ui.label(egui::RichText::new("\u{23f5} Speed").color(DECK_TEXT_MID).small());
+    ui.label(
+        egui::RichText::new("\u{23f5} Speed")
+            .color(DECK_TEXT_MID)
+            .small(),
+    );
     // Left-to-right order inside the bottom cluster row.
-    let steps = [(0u32, "\u{23f8}"), (1, "1x"), (2, "2x"), (3, "5x"), (4, "10x")];
+    let steps = [
+        (0u32, "\u{23f8}"),
+        (1, "1x"),
+        (2, "2x"),
+        (3, "5x"),
+        (4, "10x"),
+    ];
     for (mult, label) in steps {
         let active = speed.multiplier == mult;
         let mut text = egui::RichText::new(label).size(13.0).monospace();
@@ -844,7 +874,7 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
                 egui::StrokeKind::Inside,
             );
         }
-            if resp.is_pointer_button_down_on() {
+        if resp.is_pointer_button_down_on() {
             ui.painter().rect_filled(
                 resp.rect,
                 RADIUS_BTN as f32,
@@ -868,7 +898,11 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
 /// heading: the left-cluster tab strip already labels it.
 fn faction_panel_ui(ui: &mut egui::Ui, roster: &FactionRoster) {
     if roster.factions.is_empty() {
-        ui.label(egui::RichText::new("No factions yet.").color(DECK_TEXT_MID).small());
+        ui.label(
+            egui::RichText::new("No factions yet.")
+                .color(DECK_TEXT_MID)
+                .small(),
+        );
         ui.label(
             egui::RichText::new("Spawn life to seed groups.")
                 .color(DECK_TEXT_MID.gamma_multiply(0.8))
@@ -895,10 +929,19 @@ fn faction_row(ui: &mut egui::Ui, faction: &FactionInfo) {
             ui.horizontal(|ui| {
                 let (r, _) = ui.allocate_exact_size(egui::vec2(12.0, 12.0), egui::Sense::hover());
                 ui.painter().rect_filled(r, 3.0, swatch);
-                ui.painter().rect_stroke(r, 3.0, egui::Stroke::new(1.0, BORDER), egui::StrokeKind::Inside);
+                ui.painter().rect_stroke(
+                    r,
+                    3.0,
+                    egui::Stroke::new(1.0, BORDER),
+                    egui::StrokeKind::Inside,
+                );
                 ui.label(egui::RichText::new(&faction.name).strong().color(TEXT));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new(compact(faction.count as f64)).monospace().color(DIM));
+                    ui.label(
+                        egui::RichText::new(compact(faction.count as f64))
+                            .monospace()
+                            .color(DIM),
+                    );
                 });
             });
             panel_finish(ui.painter(), ui.min_rect(), 7, false, false);
@@ -918,9 +961,17 @@ fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntity
         return;
     }
 
-    let kind = if details.kind.is_empty() { "Entity" } else { &details.kind };
+    let kind = if details.kind.is_empty() {
+        "Entity"
+    } else {
+        &details.kind
+    };
     ui.horizontal(|ui| {
-        let name = if details.name.is_empty() { "Unnamed" } else { &details.name };
+        let name = if details.name.is_empty() {
+            "Unnamed"
+        } else {
+            &details.name
+        };
         ui.label(egui::RichText::new(name).strong().size(16.0));
     });
     ui.label(egui::RichText::new(kind).color(GOLD).small());
@@ -937,7 +988,11 @@ fn inspector_ui(ui: &mut egui::Ui, has_selection: bool, details: &SelectedEntity
 fn inspector_empty_state(ui: &mut egui::Ui) {
     ui.add_space(20.0);
     ui.vertical_centered(|ui| {
-        ui.label(egui::RichText::new("\u{1f9ed}").size(34.0).color(DIM.gamma_multiply(0.8)));
+        ui.label(
+            egui::RichText::new("\u{1f9ed}")
+                .size(34.0)
+                .color(DIM.gamma_multiply(0.8)),
+        );
         ui.add_space(6.0);
         ui.label(egui::RichText::new("Nothing selected").color(DIM).strong());
         ui.add_space(2.0);
@@ -961,7 +1016,11 @@ fn health_bar_ui(ui: &mut egui::Ui, health: &str) {
             } else {
                 RED
             };
-            ui.add(egui::ProgressBar::new(frac).fill(color).text(health.to_string()));
+            ui.add(
+                egui::ProgressBar::new(frac)
+                    .fill(color)
+                    .text(health.to_string()),
+            );
         }
         None => {
             let shown = if health.is_empty() { "—" } else { health };
@@ -1067,7 +1126,11 @@ mod tests {
     #[test]
     fn every_category_hotkey_maps_to_a_keycode() {
         for cat in CATEGORIES {
-            assert!(hotkey_to_code(cat.hotkey).is_some(), "{} hotkey unmapped", cat.label);
+            assert!(
+                hotkey_to_code(cat.hotkey).is_some(),
+                "{} hotkey unmapped",
+                cat.label
+            );
         }
     }
 }

@@ -1,18 +1,15 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{self, Value};
-use tokio::fs;
-use tokio::process::Command;
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{ServerCapabilities, ServerInfo},
     schemars::JsonSchema,
-    tool,
-    tool_handler,
-    tool_router,
-    Json,
-    ServiceExt,
+    tool, tool_handler, tool_router,
     transport::stdio,
+    Json, ServiceExt,
 };
+use serde::{Deserialize, Serialize};
+use serde_json::{self, Value};
+use tokio::fs;
+use tokio::process::Command;
 
 #[derive(Clone, Default)]
 struct CivisMcpServer {
@@ -96,7 +93,10 @@ struct StubResult {
 
 #[tool_router]
 impl CivisMcpServer {
-    #[tool(name = "civis_build", description = "Run civis build for civ-standalone")]
+    #[tool(
+        name = "civis_build",
+        description = "Run civis build for civ-standalone"
+    )]
     async fn civis_build(
         &self,
         Parameters(BuildArgs { target_dir }): Parameters<BuildArgs>,
@@ -114,27 +114,27 @@ impl CivisMcpServer {
             .unwrap_or("civis-build.log")
             .to_string();
 
-        Ok(Json(BuildResult { exit_code, log_path }))
+        Ok(Json(BuildResult {
+            exit_code,
+            log_path,
+        }))
     }
 
-    #[tool(name = "civis_screenshot", description = "Capture a screenshot from the running civis world")]
+    #[tool(
+        name = "civis_screenshot",
+        description = "Capture a screenshot from the running civis world"
+    )]
     async fn civis_screenshot(
         &self,
         Parameters(ScreenshotArgs { out }): Parameters<ScreenshotArgs>,
     ) -> Result<Json<ScreenshotResult>, String> {
         let _ = run_cli_json::<Value>(
             "civis_screenshot",
-            &[
-                "screenshot".into(),
-                "--out".into(),
-                out.clone(),
-            ],
+            &["screenshot".into(), "--out".into(), out.clone()],
         )
         .await?;
 
-        let bytes = fs::read(&out)
-            .await
-            .map_err(|err| err.to_string())?;
+        let bytes = fs::read(&out).await.map_err(|err| err.to_string())?;
 
         Ok(Json(ScreenshotResult { path: out, bytes }))
     }
@@ -144,10 +144,15 @@ impl CivisMcpServer {
         &self,
         _params: Parameters<serde_json::Value>,
     ) -> Result<Json<Value>, String> {
-        run_cli_json::<Value>("civis_census", &["census".into()]).await.map(Json)
+        run_cli_json::<Value>("civis_census", &["census".into()])
+            .await
+            .map(Json)
     }
 
-    #[tool(name = "civis_verify", description = "Run full verify loop and return screenshot, census and panic info")]
+    #[tool(
+        name = "civis_verify",
+        description = "Run full verify loop and return screenshot, census and panic info"
+    )]
     async fn civis_verify(
         &self,
         Parameters(VerifyArgs { out, target_dir }): Parameters<VerifyArgs>,
@@ -159,19 +164,20 @@ impl CivisMcpServer {
             .get("panicked")
             .and_then(Value::as_bool)
             .unwrap_or(false);
-        let panic_tail = raw
-            .get("panic_tail")
-            .and_then(Value::as_array)
-            .map(|tail| {
-                tail.iter()
-                    .filter_map(Value::as_str)
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-            });
+        let panic_tail = raw.get("panic_tail").and_then(Value::as_array).map(|tail| {
+            tail.iter()
+                .filter_map(Value::as_str)
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        });
         let census = raw.get("census").cloned().unwrap_or(Value::Null);
         let screenshot = raw.get("screenshot").cloned();
 
-        let bytes = match screenshot.as_ref().and_then(|val| val.get("path")).and_then(Value::as_str) {
+        let bytes = match screenshot
+            .as_ref()
+            .and_then(|val| val.get("path"))
+            .and_then(Value::as_str)
+        {
             Some(path) => Some(
                 fs::read(path)
                     .await
@@ -189,7 +195,10 @@ impl CivisMcpServer {
         }))
     }
 
-    #[tool(name = "civis_spawn", description = "Spawn an object at the requested coordinates")]
+    #[tool(
+        name = "civis_spawn",
+        description = "Spawn an object at the requested coordinates"
+    )]
     async fn civis_spawn(
         &self,
         Parameters(params): Parameters<SpawnArgs>,
@@ -200,13 +209,15 @@ impl CivisMcpServer {
             kind: "not yet wired".to_string(),
             message: "TODO: route to running instance via <mechanism> (spawn command bridge)."
                 .to_string(),
-            params: serde_json::to_value(params)
-                .map_err(|err| err.to_string())?,
+            params: serde_json::to_value(params).map_err(|err| err.to_string())?,
         };
         Ok(Json(result))
     }
 
-    #[tool(name = "civis_brush_paint", description = "Paint a brush at the given point")]
+    #[tool(
+        name = "civis_brush_paint",
+        description = "Paint a brush at the given point"
+    )]
     async fn civis_brush_paint(
         &self,
         Parameters(params): Parameters<BrushArgs>,
@@ -215,10 +226,10 @@ impl CivisMcpServer {
         let result = StubResult {
             ok: false,
             kind: "not yet wired".to_string(),
-            message: "TODO: route to running instance via <mechanism> (brush paint command bridge)."
-                .to_string(),
-            params: serde_json::to_value(params)
-                .map_err(|err| err.to_string())?,
+            message:
+                "TODO: route to running instance via <mechanism> (brush paint command bridge)."
+                    .to_string(),
+            params: serde_json::to_value(params).map_err(|err| err.to_string())?,
         };
         Ok(Json(result))
     }

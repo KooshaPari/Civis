@@ -2,7 +2,7 @@ use civ_voxel::{
     material::{AIR, WATER},
     worldgen,
     worldgen::GenWorld,
-    ChunkId, CubicMesher, ChunkView, LodLevel, MaterialId,
+    ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId,
 };
 
 fn linear_index(dims: [usize; 3], x: usize, y: usize, z: usize) -> usize {
@@ -71,7 +71,10 @@ fn requirement_world_size_selection_changes_dimensions() {
     assert!(
         medium[1] >= small[1] && large[1] >= medium[1] && huge[1] >= large[1],
         "height must be non-shrinking across presets: s={} m={} l={} h={}",
-        small[1], medium[1], large[1], huge[1]
+        small[1],
+        medium[1],
+        large[1],
+        huge[1]
     );
 }
 
@@ -87,7 +90,9 @@ fn requirement_new_world_differs_from_previous() {
     use civ_bevy_ref::voxel_sim::world_dims_for;
     let dims = world_dims_for(0); // small preset for test cost
     let seed_a = 0x1E_5F_3A_C2_9D_17_4B_81u64;
-    let seed_b = seed_a.wrapping_mul(13_245_799_145_678_972_871).rotate_left(13);
+    let seed_b = seed_a
+        .wrapping_mul(13_245_799_145_678_972_871)
+        .rotate_left(13);
     let world_a = worldgen::generate(dims, seed_a);
     let world_b = worldgen::generate(dims, seed_b);
 
@@ -101,7 +106,10 @@ fn requirement_new_world_differs_from_previous() {
     }
     let total = dims[0] * dims[2];
     let ratio = diffs as f32 / total as f32;
-    assert!(ratio > 0.20, "surface change ratio {ratio:.2} is below requirement (expected > 0.20)");
+    assert!(
+        ratio > 0.20,
+        "surface change ratio {ratio:.2} is below requirement (expected > 0.20)"
+    );
 }
 
 #[test]
@@ -113,7 +121,10 @@ fn requirement_2d_map_extent_matches_world() {
     // Once `map2d::build_basemap_image` becomes pub (or equivalent API is added),
     // assert that raster coverage includes all world X/Z coordinates.
     let map_samples_expected = true;
-    assert!(map_samples_expected, "placeholder: assert full-map raster coverage once map API is public");
+    assert!(
+        map_samples_expected,
+        "placeholder: assert full-map raster coverage once map API is public"
+    );
 }
 
 #[test]

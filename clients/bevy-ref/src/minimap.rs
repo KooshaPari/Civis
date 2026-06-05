@@ -9,8 +9,8 @@ use civ_engine::Building;
 use std::collections::HashMap;
 
 use crate::camera::CameraRig;
-use crate::map2d::MapView;
 use crate::info_views::{cluster_color, InfoViewRegistry};
+use crate::map2d::MapView;
 use crate::sim_bridge::SimState;
 use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
 use crate::AttachMode;
@@ -364,7 +364,9 @@ fn sync_minimap_dots(
             .iter()
         {
             let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
-            let entry = cluster_acc.entry(civilian_faction_id(civilian)).or_insert((Vec2::ZERO, 0));
+            let entry = cluster_acc
+                .entry(civilian_faction_id(civilian))
+                .or_insert((Vec2::ZERO, 0));
             entry.0 += uv;
             entry.1 += 1;
             parent.spawn((

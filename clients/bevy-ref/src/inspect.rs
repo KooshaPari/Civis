@@ -223,8 +223,12 @@ mod plugin {
     /// `agent_norm_xy` mapping so inspect + overlay agree on where agents are).
     fn agent_world_pos(id: u64) -> Vec3 {
         let h = id.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        let nx = ((h >> 11) as f32 / (1u64 << 53) as f32).fract().clamp(0.0, 1.0);
-        let nz = ((h >> 5) as f32 / (1u64 << 53) as f32).fract().clamp(0.0, 1.0);
+        let nx = ((h >> 11) as f32 / (1u64 << 53) as f32)
+            .fract()
+            .clamp(0.0, 1.0);
+        let nz = ((h >> 5) as f32 / (1u64 << 53) as f32)
+            .fract()
+            .clamp(0.0, 1.0);
         let wx = nx * WORLD_SIZE - WORLD_SIZE * 0.5;
         let wz = nz * WORLD_SIZE - WORLD_SIZE * 0.5;
         Vec3::new(wx, 0.0, wz)
@@ -261,10 +265,10 @@ mod plugin {
                         )
                     })
                     .unwrap_or_else(|| "—".to_string()),
-                position: civilian_faction_id(civ)
-                    .map_or_else(|| format!("age {} · cluster —", civ.age), |faction| {
-                        format!("age {} · cluster {}", civ.age, faction)
-                    }),
+                position: civilian_faction_id(civ).map_or_else(
+                    || format!("age {} · cluster —", civ.age),
+                    |faction| format!("age {} · cluster {}", civ.age, faction),
+                ),
             };
             if best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
                 best = Some((d2, det));

@@ -54,13 +54,22 @@ pub struct DipFaction {
 
 impl DipFaction {
     fn new(id: u32, name: impl Into<String>, color: [f32; 3], population: u32) -> Self {
-        Self { id, name: name.into(), color, population }
+        Self {
+            id,
+            name: name.into(),
+            color,
+            population,
+        }
     }
 
     /// Convert the stored linear `[r, g, b]` to `egui::Color32` (gamma 2.2 approx).
     fn egui_color(&self) -> egui::Color32 {
         let to_u8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-        egui::Color32::from_rgb(to_u8(self.color[0]), to_u8(self.color[1]), to_u8(self.color[2]))
+        egui::Color32::from_rgb(
+            to_u8(self.color[0]),
+            to_u8(self.color[1]),
+            to_u8(self.color[2]),
+        )
     }
 }
 
@@ -96,10 +105,10 @@ impl DiplomacyState {
     /// Build a 4-faction demo suitable for screenshots and unit tests.
     pub fn demo() -> Self {
         let factions = vec![
-            DipFaction::new(0, "Red Kingdom",   [0.85, 0.20, 0.20], 12_400),
+            DipFaction::new(0, "Red Kingdom", [0.85, 0.20, 0.20], 12_400),
             DipFaction::new(1, "Blue Republic", [0.20, 0.45, 0.90], 9_800),
-            DipFaction::new(2, "Green Clans",   [0.20, 0.75, 0.30], 7_250),
-            DipFaction::new(3, "Yellow Guild",  [0.90, 0.80, 0.10], 5_100),
+            DipFaction::new(2, "Green Clans", [0.20, 0.75, 0.30], 7_250),
+            DipFaction::new(3, "Yellow Guild", [0.90, 0.80, 0.10], 5_100),
         ];
         #[rustfmt::skip]
         let relations = vec![
@@ -108,7 +117,13 @@ impl DiplomacyState {
             vec![-80, 20,   0,  10],  // Green → {Red, Blue, self, Yellow}
             vec![ 30,-55,  10,   0],  // Yellow→ {Red, Blue, Green, self}
         ];
-        Self { factions, relations, open: true, live: false, last_event_tick: 0 }
+        Self {
+            factions,
+            relations,
+            open: true,
+            live: false,
+            last_event_tick: 0,
+        }
     }
 
     /// Ensure the relation matrix is square and sized to the faction count,
@@ -163,10 +178,7 @@ impl Plugin for DiplomacyUiPlugin {
 // Systems
 // ---------------------------------------------------------------------------
 
-fn toggle_diplomacy_panel(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut state: ResMut<DiplomacyState>,
-) {
+fn toggle_diplomacy_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<DiplomacyState>) {
     if keys.just_pressed(KeyCode::KeyG) {
         state.open = !state.open;
     }
@@ -247,10 +259,7 @@ pub fn sync_diplomacy_from_sim(
     state.live = true;
 }
 
-fn draw_diplomacy_panel(
-    mut contexts: EguiContexts,
-    mut state: ResMut<DiplomacyState>,
-) {
+fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyState>) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     if !state.open {
@@ -264,7 +273,10 @@ fn draw_diplomacy_panel(
         .default_size(egui::vec2(520.0, 380.0))
         .resizable(true)
         .collapsible(false)
-        .frame(ui_theme::liquid_glass_frame(egui::Margin::same(14), ui_theme::RADIUS_PANEL))
+        .frame(ui_theme::liquid_glass_frame(
+            egui::Margin::same(14),
+            ui_theme::RADIUS_PANEL,
+        ))
         .show(ctx, |ui| {
             // Live-data status badge.
             ui.horizontal(|ui| {
@@ -373,8 +385,7 @@ fn relation_grid_ui(ui: &mut egui::Ui, factions: &[DipFaction], relations: &[Vec
             // Row label: abbreviated name coloured by faction.
             ui.allocate_ui(egui::vec2(64.0, cell_size.y), |ui| {
                 ui.centered_and_justified(|ui| {
-                    let abbrev =
-                        row_faction.name.chars().next().unwrap_or('?').to_string();
+                    let abbrev = row_faction.name.chars().next().unwrap_or('?').to_string();
                     ui.label(
                         egui::RichText::new(abbrev)
                             .color(row_faction.egui_color())
@@ -437,7 +448,8 @@ fn relation_grid_ui(ui: &mut egui::Ui, factions: &[DipFaction], relations: &[Vec
 /// A small coloured square swatch.
 fn color_swatch(ui: &mut egui::Ui, color: egui::Color32) {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::hover());
-    ui.painter().rect_filled(rect, egui::CornerRadius::same(3), color);
+    ui.painter()
+        .rect_filled(rect, egui::CornerRadius::same(3), color);
 }
 
 // ---------------------------------------------------------------------------
@@ -455,23 +467,23 @@ fn color_swatch(ui: &mut egui::Ui, color: egui::Color32) {
 /// | < −50        | At War   |
 pub fn stance_label(stance: i8) -> &'static str {
     match stance {
-        s if s > 50  => "Allied",
-        s if s > 0   => "Friendly",
-        0            => "Neutral",
+        s if s > 50 => "Allied",
+        s if s > 0 => "Friendly",
+        0 => "Neutral",
         // -50 is the last "Tense" stance; -51 and below is "At War".
         s if s >= -50 => "Tense",
-        _            => "At War",
+        _ => "At War",
     }
 }
 
 /// Returns `(background_fill, text_color)` for a given stance value.
 fn stance_colors(stance: i8) -> (egui::Color32, egui::Color32) {
     match stance {
-        s if s > 50  => (GREEN.gamma_multiply(0.25),  GREEN),
-        s if s > 0   => (GREEN.gamma_multiply(0.12),  GREEN),
-        0            => (CHIP_FILL,                   DIM),
-        s if s > -50 => (GOLD.gamma_multiply(0.20),   GOLD),
-        _            => (RED.gamma_multiply(0.25),    RED),
+        s if s > 50 => (GREEN.gamma_multiply(0.25), GREEN),
+        s if s > 0 => (GREEN.gamma_multiply(0.12), GREEN),
+        0 => (CHIP_FILL, DIM),
+        s if s > -50 => (GOLD.gamma_multiply(0.20), GOLD),
+        _ => (RED.gamma_multiply(0.25), RED),
     }
 }
 
@@ -494,11 +506,11 @@ mod tests {
 
     #[test]
     fn stance_label_boundaries() {
-        assert_eq!(stance_label(51),  "Allied");
-        assert_eq!(stance_label(50),  "Friendly");
-        assert_eq!(stance_label(1),   "Friendly");
-        assert_eq!(stance_label(0),   "Neutral");
-        assert_eq!(stance_label(-1),  "Tense");
+        assert_eq!(stance_label(51), "Allied");
+        assert_eq!(stance_label(50), "Friendly");
+        assert_eq!(stance_label(1), "Friendly");
+        assert_eq!(stance_label(0), "Neutral");
+        assert_eq!(stance_label(-1), "Tense");
         assert_eq!(stance_label(-50), "Tense");
         assert_eq!(stance_label(-51), "At War");
         assert_eq!(stance_label(i8::MAX), "Allied");
@@ -533,8 +545,8 @@ mod tests {
 
     #[test]
     fn format_pop_thresholds() {
-        assert_eq!(format_pop(999),    "999");
-        assert_eq!(format_pop(1_000),  "1.0k");
+        assert_eq!(format_pop(999), "999");
+        assert_eq!(format_pop(1_000), "1.0k");
         assert_eq!(format_pop(12_400), "12.4k");
     }
 

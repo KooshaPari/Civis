@@ -257,7 +257,7 @@ mod tests {
 
         let mut sim = Simulation::with_seed(9);
         let mut rng = sim.rng_mut().clone();
-            let _ = spawn_civilian_at(
+        let _ = spawn_civilian_at(
             &mut sim.world,
             42_007,
             civ_agents::Alignment::None,

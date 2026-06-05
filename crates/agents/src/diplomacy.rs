@@ -125,11 +125,15 @@ impl DiplomacyMatrix {
         signal: DiplomacySignal,
     ) -> DiplomacyOutcome {
         let key = Self::key(a, b);
-        let entry = self.relations.entry(key).or_insert_with(RelationRecord::new);
+        let entry = self
+            .relations
+            .entry(key)
+            .or_insert_with(RelationRecord::new);
         let before = Self::relation_kind(entry.score);
 
-        let drift =
-            signal.trade_volume * 0.08 - signal.resource_competition * 0.12 - signal.proximity * 0.04;
+        let drift = signal.trade_volume * 0.08
+            - signal.resource_competition * 0.12
+            - signal.proximity * 0.04;
         entry.score = (entry.score + drift).clamp(-1.0, 1.0);
         entry.samples = entry.samples.saturating_add(1);
 

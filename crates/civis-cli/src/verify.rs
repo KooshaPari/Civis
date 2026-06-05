@@ -4,14 +4,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::{
-    run_build,
-    run_screenshot,
-    CensusData,
-    CliError,
-    CliResult,
-    find_latest_run_log,
-    parse_census_text,
-    workspace_root,
+    find_latest_run_log, parse_census_text, run_build, run_screenshot, workspace_root, CensusData,
+    CliError, CliResult,
 };
 
 #[derive(Debug, Clone)]
@@ -131,10 +125,7 @@ pub fn run_verify(target_dir: &Path, out: &Path) -> CliResult<VerifyResult> {
 
     if panic_log.exists() {
         let tail = read_last_lines(&panic_log, 20)?;
-        return Err(CliError::new(
-            1,
-            format!("civ-panic.log detected:\n{tail}"),
-        ));
+        return Err(CliError::new(1, format!("civ-panic.log detected:\n{tail}")));
     }
 
     // Stale/incomplete assets surface as load failures in the run's stderr.

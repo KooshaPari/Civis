@@ -19,16 +19,16 @@ pub mod material;
 pub mod registry;
 
 pub use building::{
-    BuildingBlueprint, BuildingCatalog, BuildingKind, BuildingRegistration, BuildingRegistrar,
-    RecipeCatalog, RecipeDefinition, RecipeRegistration, RecipeRegistrar,
+    BuildingBlueprint, BuildingCatalog, BuildingKind, BuildingRegistrar, BuildingRegistration,
+    RecipeCatalog, RecipeDefinition, RecipeRegistrar, RecipeRegistration,
 };
 pub use events::{BirthEvent, DeathEvent, SimulationEvent, SimulationEventHook, TechEvent};
 pub use manifest::{
-    load_manifest_file, load_manifests_from_dir, ManifestError, ModManifest, ModMetadata,
-    ModManifestFormat,
+    load_manifest_file, load_manifests_from_dir, ManifestError, ModManifest, ModManifestFormat,
+    ModMetadata,
 };
 pub use material::{
-    CustomMaterial, MaterialCatalog, MaterialRegistration, MaterialRegistrar, MaterialSpec,
+    CustomMaterial, MaterialCatalog, MaterialRegistrar, MaterialRegistration, MaterialSpec,
 };
 pub use registry::ModRegistry;
 
@@ -125,11 +125,17 @@ mod tests {
 
         let mut buildings = BuildingCatalog::default();
         mod_.register_buildings(&mut buildings);
-        assert_eq!(buildings.by_id("marble-cottage").unwrap().blueprint.era_min, 2);
+        assert_eq!(
+            buildings.by_id("marble-cottage").unwrap().blueprint.era_min,
+            2
+        );
 
         let mut recipes = RecipeCatalog::default();
         mod_.register_recipes(&mut recipes);
-        assert_eq!(recipes.by_id("marble-block").unwrap().recipe.inputs.len(), 1);
+        assert_eq!(
+            recipes.by_id("marble-block").unwrap().recipe.inputs.len(),
+            1
+        );
     }
 
     #[test]

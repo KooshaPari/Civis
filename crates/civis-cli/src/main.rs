@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 use civis_cli::{
-    census_to_json, command_bench, command_inspect_save, command_new_world, run_build, run_screenshot,
-    run_verify, CliError, CliResult,
+    census_to_json, command_bench, command_inspect_save, command_new_world, run_build,
+    run_screenshot, run_verify, CliError, CliResult,
 };
 use civis_cli::{find_latest_run_log, parse_census_text};
 
@@ -95,9 +95,7 @@ fn dispatch(command: Commands) -> CliResult<i32> {
             println!("{}", env!("CARGO_PKG_VERSION"));
             Ok(0)
         }
-        Commands::Build { target_dir } => {
-            run_build(&target_dir).map(|_| 0)
-        }
+        Commands::Build { target_dir } => run_build(&target_dir).map(|_| 0),
         Commands::Screenshot { out } => {
             let root = civis_cli::workspace_root();
             let result = run_screenshot(&out, &root)?;

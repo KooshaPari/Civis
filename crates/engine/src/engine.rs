@@ -4,18 +4,18 @@
 
 use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
-    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    wander_anchor, Activity, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier,
-    Needs, PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
-};
-use civ_economy::Stocks as ClusterStocks;
-use civ_needs::{
-    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
+    Activity, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs, PoiKind,
+    PoiRegistry, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
+use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
+use civ_needs::{
+    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
@@ -1531,7 +1531,10 @@ impl Simulation {
                 }
                 Activity::Wander => {
                     let mut local_rng = ChaCha8Rng::seed_from_u64(
-                        self.state.tick ^ civ.id ^ (pos.coord.x as u64).rotate_left(13) ^ (pos.coord.z as u64).rotate_left(29),
+                        self.state.tick
+                            ^ civ.id
+                            ^ (pos.coord.x as u64).rotate_left(13)
+                            ^ (pos.coord.z as u64).rotate_left(29),
                     );
                     if local_rng.gen_bool(0.65) {
                         let target_pos = wander_anchor(&pos, civ.id, self.state.tick);
@@ -1578,7 +1581,9 @@ impl Simulation {
         for (agent_id, cluster) in &assignments {
             *cluster_sizes.entry(cluster.0).or_insert(0) += 1;
             if let Some(&entity) = id_to_entity.get(agent_id) {
-                let _ = self.world.insert_one(entity, ClusterMember { cluster: *cluster });
+                let _ = self
+                    .world
+                    .insert_one(entity, ClusterMember { cluster: *cluster });
             }
         }
 
@@ -1667,14 +1672,7 @@ impl Simulation {
 
         for (child_id, x, y) in births {
             let alignment = civ_agents::infer_alignment_for_spawn(&self.world, x, y);
-            let _ = spawn_child_near(
-                &mut self.world,
-                child_id,
-                alignment,
-                x,
-                y,
-                &mut self.rng,
-            );
+            let _ = spawn_child_near(&mut self.world, child_id, alignment, x, y, &mut self.rng);
             self.last_births.push(PopulationEvent {
                 tick: self.state.tick,
                 entity_id: child_id,
@@ -2309,9 +2307,16 @@ mod tests {
         }
         // Every agent civilian now carries the civ-needs Needs + Health.
         let agents = sim.world.query::<&AgentCivilian>().iter().count();
-        let with_needs = sim.world.query::<(&AgentCivilian, &LifeNeeds)>().iter().count();
+        let with_needs = sim
+            .world
+            .query::<(&AgentCivilian, &LifeNeeds)>()
+            .iter()
+            .count();
         assert!(agents > 0);
-        assert_eq!(agents, with_needs, "all agents must have life needs attached");
+        assert_eq!(
+            agents, with_needs,
+            "all agents must have life needs attached"
+        );
 
         let snap = sim.snapshot();
         // Settlement count is exposed (emergent clusters; may be zero early).
@@ -3134,8 +3139,7 @@ mod tests {
         let planet_s = *sim_s.planet();
         let moon_s = *sim_s.moon();
         sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
-        sim_s.weather_grid =
-            compute_weather(&sim_s.climate, summer_tick, 16);
+        sim_s.weather_grid = compute_weather(&sim_s.climate, summer_tick, 16);
         let snap_summer = sim_s.snapshot();
 
         let mut sim_w = Simulation::with_seed(0);
@@ -3143,8 +3147,7 @@ mod tests {
         let planet_w = *sim_w.planet();
         let moon_w = *sim_w.moon();
         sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
-        sim_w.weather_grid =
-            compute_weather(&sim_w.climate, winter_tick, 16);
+        sim_w.weather_grid = compute_weather(&sim_w.climate, winter_tick, 16);
         let snap_winter = sim_w.snapshot();
 
         let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
@@ -3156,8 +3159,7 @@ mod tests {
         );
 
         // Determinism: re-running the same ticks must produce identical grids.
-        let summer_grid_2 =
-            compute_weather(&sim_s.climate, summer_tick, 16);
+        let summer_grid_2 = compute_weather(&sim_s.climate, summer_tick, 16);
         assert_eq!(
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"

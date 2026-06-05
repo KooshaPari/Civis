@@ -22,7 +22,10 @@ pub struct HoloMinimapPlugin;
 
 impl Plugin for HoloMinimapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(EguiPrimaryContextPass, draw_holo_minimap_overlay.run_if(in_game));
+        app.add_systems(
+            EguiPrimaryContextPass,
+            draw_holo_minimap_overlay.run_if(in_game),
+        );
     }
 }
 

@@ -125,7 +125,8 @@ pub fn drift_populations(
             }
             total_weight += adjusted;
             traits = mix_trait_vectors(traits, base[source].traits, adjusted * diffusion_rate);
-            language = mix_trait_vectors(language, base[source].language, adjusted * diffusion_rate);
+            language =
+                mix_trait_vectors(language, base[source].language, adjusted * diffusion_rate);
         }
 
         if total_weight == 0.0 {
@@ -156,8 +157,10 @@ pub fn drift_populations(
         let distance = language_distance(post[a].language, post[b].language);
         if distance >= creole_threshold {
             let blend = clamp01((weight + distance) * 0.5);
-            profiles[a].language = mix_trait_vectors(post[a].language, post[b].language, blend * 0.5);
-            profiles[b].language = mix_trait_vectors(post[b].language, post[a].language, blend * 0.5);
+            profiles[a].language =
+                mix_trait_vectors(post[a].language, post[b].language, blend * 0.5);
+            profiles[b].language =
+                mix_trait_vectors(post[b].language, post[a].language, blend * 0.5);
         }
     }
 }
@@ -165,8 +168,8 @@ pub fn drift_populations(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_chacha::ChaCha8Rng;
     use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     fn rng(seed: u64) -> ChaCha8Rng {
         ChaCha8Rng::seed_from_u64(seed)

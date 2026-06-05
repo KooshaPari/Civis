@@ -132,7 +132,10 @@ pub fn psych_genome_profile() -> PsychGenomeProfile {
 #[must_use]
 pub fn psyche_from_dna(dna: &Dna, profile: &PsychGenomeProfile) -> Psyche {
     Psyche {
-        drives: profile.drive_slots.clone().map(|slots| score_axis(dna, &slots)),
+        drives: profile
+            .drive_slots
+            .clone()
+            .map(|slots| score_axis(dna, &slots)),
         temperament: Temperament {
             reactivity: score_axis(dna, &profile.reactivity_slots),
             sociability: score_axis(dna, &profile.sociability_slots),

@@ -31,27 +31,27 @@
 #![allow(dead_code)] // Phase 1 scaffold — consumers land in a follow-up PR.
 
 #[cfg(feature = "bevy")]
-use std::collections::HashMap;
-#[cfg(feature = "bevy")]
-use bevy::prelude::*;
+use bevy::mesh::MeshVertexBufferLayoutRef;
 #[cfg(feature = "pbr-textures")]
 use bevy::pbr::StandardMaterial;
 #[cfg(feature = "bevy")]
-use bevy::mesh::MeshVertexBufferLayoutRef;
-#[cfg(feature = "bevy")]
 use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey, MaterialPlugin};
+#[cfg(feature = "bevy")]
+use bevy::prelude::*;
 #[cfg(feature = "bevy")]
 use bevy::reflect::TypePath;
 #[cfg(feature = "bevy")]
 use bevy::render::render_resource::{AsBindGroup, ShaderType, SpecializedMeshPipelineError};
 #[cfg(feature = "bevy")]
 use bevy::shader::ShaderRef;
+#[cfg(feature = "bevy")]
+use std::collections::HashMap;
 
 #[cfg(feature = "bevy")]
 pub mod texture_load {
+    use super::Biome;
     use bevy::asset::Handle;
     use bevy::image::ImageLoaderSettings;
-    use super::Biome;
     use bevy::prelude::*;
 
     /// sRGB albedo / base-color maps.
@@ -189,7 +189,7 @@ impl Biome {
             Biome::GrassField => [0.290, 0.604, 0.239], // #4A9A3D
             Biome::ForestFloor => [0.122, 0.341, 0.122], // #1F571F canopy floor
             Biome::RockCliff => [0.424, 0.439, 0.455], // #6C7074
-            Biome::SnowPure => [0.941, 0.965, 1.000], // #F0F6FF
+            Biome::SnowPure => [0.941, 0.965, 1.000],  // #F0F6FF
         }
     }
 
@@ -261,10 +261,7 @@ mod loader {
 
         /// Iterate over `(biome, handle)` pairs in canonical order.
         pub fn iter(&self) -> impl Iterator<Item = (Biome, &Handle<StandardMaterial>)> {
-            Biome::ALL
-                .iter()
-                .copied()
-                .zip(self.handles.iter())
+            Biome::ALL.iter().copied().zip(self.handles.iter())
         }
     }
 
@@ -314,7 +311,7 @@ mod loader {
 }
 
 #[cfg(feature = "pbr-textures")]
-pub use loader::{BiomeAssetPaths, BiomeMaterials, BiomeMaterialsPlugin, load_biome_materials};
+pub use loader::{load_biome_materials, BiomeAssetPaths, BiomeMaterials, BiomeMaterialsPlugin};
 
 #[cfg(test)]
 mod tests {
@@ -421,8 +418,7 @@ pub fn terrain_layer_for_material(id: MaterialId) -> Option<TerrainTextureLayer>
 }
 
 #[cfg(feature = "bevy")]
-#[derive(Clone, Copy, Default, ShaderType)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Default, ShaderType, Debug)]
 pub struct TriplanarParams {
     pub scale: f32,
     pub normal_strength: f32,
@@ -554,7 +550,10 @@ fn load_voxel_pbr_bank(mut commands: Commands, asset_server: Res<AssetServer>) {
     let layers = std::array::from_fn(|i| {
         let biome = TerrainTextureLayer::ALL[i].biome();
         LayerTextures {
-            albedo: texture_load::load_albedo(&asset_server, &texture_load::biome_albedo_path(biome)),
+            albedo: texture_load::load_albedo(
+                &asset_server,
+                &texture_load::biome_albedo_path(biome),
+            ),
             normal: texture_load::load_linear_map(
                 &asset_server,
                 &texture_load::biome_normal_path(biome),

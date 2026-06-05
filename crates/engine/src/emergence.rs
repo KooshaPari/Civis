@@ -7,12 +7,12 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use civ_agents::{
-    apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    ClusterMember, Interaction, Needs, Psyche, SocialEvent, SocialGraph, Civilian,
-};
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
+use civ_agents::{
+    apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
+    Civilian, ClusterMember, Interaction, Needs, Psyche, SocialEvent, SocialGraph,
+};
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
     Dna, DnaClass,
@@ -65,7 +65,7 @@ pub struct EmergenceState {
     pub(crate) psych_profile: civ_agents::PsychGenomeProfile,
     pub(crate) sentience_profile: CognitionTraitProfile,
     pub(crate) sentience_threshold: SentienceThreshold,
-    pub(crate)     sentient_agents: HashSet<u64>,
+    pub(crate) sentient_agents: HashSet<u64>,
 }
 
 impl EmergenceState {
@@ -88,7 +88,13 @@ impl EmergenceState {
         }
     }
 
-    fn push_feed(&mut self, tick: u64, kind: &str, summary: impl Into<String>, agent_id: Option<u64>) {
+    fn push_feed(
+        &mut self,
+        tick: u64,
+        kind: &str,
+        summary: impl Into<String>,
+        agent_id: Option<u64>,
+    ) {
         self.last_feed.push(EmergenceFeedEvent {
             tick,
             kind: kind.to_string(),
@@ -161,12 +167,8 @@ impl Simulation {
                     CultureProfile::new(seed)
                 });
         }
-        let mut profiles: Vec<CultureProfile> = self
-            .emergence
-            .cluster_cultures
-            .values()
-            .cloned()
-            .collect();
+        let mut profiles: Vec<CultureProfile> =
+            self.emergence.cluster_cultures.values().cloned().collect();
         if profiles.len() < 2 {
             if let Some(p) = profiles.first_mut() {
                 let mut one = std::slice::from_mut(p);
@@ -299,10 +301,17 @@ impl Simulation {
             .collect();
 
         for (entity, _, _) in &agents {
-            if self.world.get::<&Dna>(*entity).is_err() || self.world.get::<&Psyche>(*entity).is_ok() {
+            if self.world.get::<&Dna>(*entity).is_err()
+                || self.world.get::<&Psyche>(*entity).is_ok()
+            {
                 continue;
             }
-            let genome = self.world.get::<&Dna>(*entity).expect("dna present").0.clone();
+            let genome = self
+                .world
+                .get::<&Dna>(*entity)
+                .expect("dna present")
+                .0
+                .clone();
             let psyche = psyche_from_dna(&Dna(genome), &profile);
             let _ = self.world.insert(*entity, (psyche, SocialGraph::default()));
         }
@@ -346,17 +355,17 @@ impl Simulation {
             };
 
             let (needs, life_needs) = {
-                let agent_needs = self
-                    .world
-                    .get::<&Needs>(entity)
-                    .ok()
-                    .map(|n| *n)
-                    .unwrap_or(Needs {
-                        food: 0.5,
-                        shelter: 0.5,
-                        safety: 0.5,
-                        belonging: 0.5,
-                    });
+                let agent_needs =
+                    self.world
+                        .get::<&Needs>(entity)
+                        .ok()
+                        .map(|n| *n)
+                        .unwrap_or(Needs {
+                            food: 0.5,
+                            shelter: 0.5,
+                            safety: 0.5,
+                            belonging: 0.5,
+                        });
                 let life = self
                     .world
                     .get::<&LifeNeeds>(entity)
@@ -398,12 +407,7 @@ impl Simulation {
                 let mut local_rng =
                     ChaCha8Rng::seed_from_u64(self.state.rng_seed ^ self.state.tick ^ id);
                 if let Ok(mut psyche) = self.world.get::<&mut Psyche>(entity) {
-                    update_beliefs(
-                        &mut psyche.beliefs,
-                        exposure,
-                        sociability,
-                        &mut local_rng,
-                    );
+                    update_beliefs(&mut psyche.beliefs, exposure, sociability, &mut local_rng);
                 }
             }
             let _ = id;
@@ -411,11 +415,8 @@ impl Simulation {
         }
 
         if tick % 64 == 0 {
-            if let Some((_, (civ, psyche))) = self
-                .world
-                .query::<(&Civilian, &Psyche)>()
-                .iter()
-                .next()
+            if let Some((_, (civ, psyche))) =
+                self.world.query::<(&Civilian, &Psyche)>().iter().next()
             {
                 self.emergence.push_feed(
                     tick,
@@ -464,13 +465,21 @@ impl Simulation {
         let epoch = self.emergence.legends.graph.config.epoch_of(tick);
         for birth in self.last_births().to_vec() {
             let raw = RawSimEvent::new(tick, EventKind::Birth, SourceCrate::Agents, 0.45)
-                .with_participant(SourceCrate::Agents, SimRuntimeId(birth.entity_id), Role::Founder);
+                .with_participant(
+                    SourceCrate::Agents,
+                    SimRuntimeId(birth.entity_id),
+                    Role::Founder,
+                );
             let outcome = self.emergence_ingest_legend(raw);
             self.record_legend_promotions(tick, &outcome.promoted, birth.entity_id);
         }
         for death in self.last_deaths().to_vec() {
             let raw = RawSimEvent::new(tick, EventKind::Death, SourceCrate::Agents, 0.85)
-                .with_participant(SourceCrate::Agents, SimRuntimeId(death.entity_id), Role::Victim);
+                .with_participant(
+                    SourceCrate::Agents,
+                    SimRuntimeId(death.entity_id),
+                    Role::Victim,
+                );
             let outcome = self.emergence_ingest_legend(raw);
             if let Some(eid) = self
                 .emergence
@@ -496,7 +505,11 @@ impl Simulation {
                     SourceCrate::Genetics,
                     event.cognition_score,
                 )
-                .with_participant(SourceCrate::Agents, SimRuntimeId(id), Role::Effect);
+                .with_participant(
+                    SourceCrate::Agents,
+                    SimRuntimeId(id),
+                    Role::Effect,
+                );
                 let outcome = self.emergence_ingest_legend(raw);
                 self.record_legend_promotions(tick, &outcome.promoted, id);
             }
@@ -516,12 +529,7 @@ impl Simulation {
         self.emergence.legends.graph.ingest(raw)
     }
 
-    fn record_legend_promotions(
-        &mut self,
-        tick: u64,
-        promoted: &[LegendEntityId],
-        agent_id: u64,
-    ) {
+    fn record_legend_promotions(&mut self, tick: u64, promoted: &[LegendEntityId], agent_id: u64) {
         if promoted.is_empty() {
             return;
         }
@@ -552,10 +560,12 @@ impl Simulation {
             );
             let output = civ_ai_sync_generate(&prompt);
             let name = NameRef(agent_id);
-            if let Some(legend_id) = self.emergence.legends.graph.entity_for_sim(
-                SourceCrate::Agents,
-                SimRuntimeId(agent_id),
-            ) {
+            if let Some(legend_id) = self
+                .emergence
+                .legends
+                .graph
+                .entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
+            {
                 self.emergence.legends.graph.set_name(legend_id, name);
             }
             self.emergence.last_ai_decisions.push(CivAiDecision {

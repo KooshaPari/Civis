@@ -164,7 +164,11 @@ pub fn apply_disaster(
         return DisasterImpact::default();
     }
     let r = kind.radius();
-    let (cx, cy, cz) = (center.x.round() as i64, center.y.round() as i64, center.z.round() as i64);
+    let (cx, cy, cz) = (
+        center.x.round() as i64,
+        center.y.round() as i64,
+        center.z.round() as i64,
+    );
     let ri = r.ceil() as i64;
     let r2 = r * r;
     let mut changed = 0usize;
@@ -177,7 +181,9 @@ pub fn apply_disaster(
                 }
                 let (xu, yu, zu) = (x as usize, y as usize, z as usize);
                 let dist2 = (dx * dx + dy * dy + dz * dz) as f32;
-                if let Some((mat, temp)) = disaster_cell(kind, dx, dy, dz, dist2, r2, grid, xu, yu, zu) {
+                if let Some((mat, temp)) =
+                    disaster_cell(kind, dx, dy, dz, dist2, r2, grid, xu, yu, zu)
+                {
                     let prev = grid.get(xu, yu, zu);
                     grid.set_with_temp(xu, yu, zu, mat, temp);
                     if grid.get(xu, yu, zu) != prev {
@@ -187,7 +193,9 @@ pub fn apply_disaster(
             }
         }
     }
-    DisasterImpact { cells_changed: changed }
+    DisasterImpact {
+        cells_changed: changed,
+    }
 }
 
 /// Decide the (material, temperature) a disaster writes at a cell offset, or
@@ -277,8 +285,15 @@ mod tests {
         g.dirty_chunks.clear();
         let impact = apply_disaster(&mut g, Vec3::new(16.0, 18.0, 16.0), DisasterKind::Meteor);
         assert!(impact.cells_changed > 0, "meteor changed no voxels");
-        assert_eq!(g.get(16, 19, 16), AIR, "crater centre-top should be carved to air");
-        assert!(!g.dirty_chunks().is_empty(), "meteor must mark chunks dirty for remesh");
+        assert_eq!(
+            g.get(16, 19, 16),
+            AIR,
+            "crater centre-top should be carved to air"
+        );
+        assert!(
+            !g.dirty_chunks().is_empty(),
+            "meteor must mark chunks dirty for remesh"
+        );
     }
 
     #[cfg(feature = "voxel")]
@@ -290,7 +305,10 @@ mod tests {
         let impact = apply_disaster(&mut g, Vec3::new(16.0, 10.0, 16.0), DisasterKind::Flood);
         let after = g.cells.iter().filter(|&&c| c == WATER).count();
         assert!(impact.cells_changed > 0, "flood changed no voxels");
-        assert!(after > before, "flood did not add water (before {before}, after {after})");
+        assert!(
+            after > before,
+            "flood did not add water (before {before}, after {after})"
+        );
     }
 
     #[cfg(feature = "voxel")]
@@ -314,8 +332,14 @@ mod tests {
     #[cfg(feature = "egui")]
     #[test]
     fn subtool_maps_to_disaster() {
-        assert_eq!(DisasterKind::from_subtool(SubTool::Meteor), Some(DisasterKind::Meteor));
-        assert_eq!(DisasterKind::from_subtool(SubTool::Wildfire), Some(DisasterKind::Wildfire));
+        assert_eq!(
+            DisasterKind::from_subtool(SubTool::Meteor),
+            Some(DisasterKind::Meteor)
+        );
+        assert_eq!(
+            DisasterKind::from_subtool(SubTool::Wildfire),
+            Some(DisasterKind::Wildfire)
+        );
         assert_eq!(DisasterKind::from_subtool(SubTool::House), None);
     }
 }

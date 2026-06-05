@@ -87,7 +87,10 @@ pub const REACTIONS: &[ReactionRule] = &[
 /// Looks up the first matching rule for an unordered pair.
 #[must_use]
 pub fn reaction_for(left: MaterialId, right: MaterialId) -> Option<ReactionRule> {
-    REACTIONS.iter().copied().find(|rule| rule.matches(left, right))
+    REACTIONS
+        .iter()
+        .copied()
+        .find(|rule| rule.matches(left, right))
 }
 
 #[cfg(test)]
@@ -96,13 +99,13 @@ mod tests {
 
     #[test]
     fn lookup_finds_requested_rules() {
-        let lava_water = reaction_for(crate::material::LAVA, crate::material::WATER)
-            .expect("lava + water");
+        let lava_water =
+            reaction_for(crate::material::LAVA, crate::material::WATER).expect("lava + water");
         assert_eq!(lava_water.result.left, crate::material::STONE);
         assert_eq!(lava_water.result.right, crate::material::STEAM);
 
-        let acid_wood = reaction_for(crate::material::WOOD, crate::material::ACID)
-            .expect("acid + wood");
+        let acid_wood =
+            reaction_for(crate::material::WOOD, crate::material::ACID).expect("acid + wood");
         assert_eq!(acid_wood.result.left, crate::material::AIR);
         assert_eq!(acid_wood.result.right, crate::material::AIR);
     }

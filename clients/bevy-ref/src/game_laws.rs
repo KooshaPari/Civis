@@ -76,10 +76,7 @@ impl Plugin for GameLawsPlugin {
     }
 }
 
-fn draw_game_laws_panel(
-    mut contexts: EguiContexts,
-    mut open: ResMut<GameLawsOpen>,
-) {
+fn draw_game_laws_panel(mut contexts: EguiContexts, mut open: ResMut<GameLawsOpen>) {
     if !open.0 {
         return;
     }

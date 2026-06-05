@@ -170,7 +170,11 @@ impl SagaGraph {
                     ) {
                         edges.push((eff.id, cau.id, *confidence));
                     }
-                    let next = if backward { edge.target() } else { edge.source() };
+                    let next = if backward {
+                        edge.target()
+                    } else {
+                        edge.source()
+                    };
                     if seen.insert(next) {
                         q.push_back((next, depth + 1));
                     }
@@ -222,10 +226,8 @@ impl SagaGraph {
     /// the same across reloads (AC-Q-2), without requiring sim determinism.
     pub fn epoch_digest(&self, epoch: Epoch, region: Option<RegionId>) -> EpochDigest {
         // gather this epoch's events (optionally region-scoped)
-        let region_filter: Option<BTreeSet<LegendEventId>> = region.and_then(|r| {
-            self.region_events(r)
-                .map(|v| v.iter().copied().collect())
-        });
+        let region_filter: Option<BTreeSet<LegendEventId>> =
+            region.and_then(|r| self.region_events(r).map(|v| v.iter().copied().collect()));
         let mut events: Vec<&EventNode> = self
             .epoch_buckets
             .get(&epoch)
@@ -298,7 +300,14 @@ impl SagaGraph {
         }
         causal_notes.sort_by(|a, b| (a.0 .0, a.1 .0).cmp(&(b.0 .0, b.1 .0)));
 
-        let digest_hash = hash_digest(epoch, region, &headline_events, &risen, &fallen, &causal_notes);
+        let digest_hash = hash_digest(
+            epoch,
+            region,
+            &headline_events,
+            &risen,
+            &fallen,
+            &causal_notes,
+        );
         EpochDigest {
             epoch,
             region,

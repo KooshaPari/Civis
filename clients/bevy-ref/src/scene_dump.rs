@@ -96,9 +96,18 @@ fn dump_scene_system(
         out.push_str(&format!("    \"tick\": {},\n", snap.tick));
         out.push_str(&format!("    \"population\": {},\n", snap.population));
         out.push_str(&format!("    \"citizen_count\": {},\n", snap.citizen_count));
-        out.push_str(&format!("    \"building_count\": {},\n", snap.building_count));
-        out.push_str(&format!("    \"food\": {:.1},\n", snap.resources.food.to_f64()));
-        out.push_str(&format!("    \"energy\": {:.1},\n", snap.resources.energy.to_f64()));
+        out.push_str(&format!(
+            "    \"building_count\": {},\n",
+            snap.building_count
+        ));
+        out.push_str(&format!(
+            "    \"food\": {:.1},\n",
+            snap.resources.food.to_f64()
+        ));
+        out.push_str(&format!(
+            "    \"energy\": {:.1},\n",
+            snap.resources.energy.to_f64()
+        ));
         out.push_str(&format!(
             "    \"materials\": {:.1}\n",
             snap.resources.wood.to_f64() + snap.resources.metal.to_f64()

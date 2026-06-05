@@ -91,7 +91,11 @@ impl Bounds3 {
     pub const fn from_origin_size(origin: [i32; 3], size: [i32; 3]) -> Self {
         Self {
             min: origin,
-            max: [origin[0] + size[0], origin[1] + size[1], origin[2] + size[2]],
+            max: [
+                origin[0] + size[0],
+                origin[1] + size[1],
+                origin[2] + size[2],
+            ],
         }
     }
 
@@ -201,7 +205,11 @@ mod tests {
         assert_eq!(world.read(cell_to_world(1, [3, 3, 3])), BEDROCK);
         assert_eq!(world.read(cell_to_world(1, [1, 1, 1])), MaterialId(0));
         assert!(contains_world_coord(bounds, 1, cell_to_world(1, [2, 2, 2])));
-        assert!(!contains_world_coord(bounds, 1, cell_to_world(1, [4, 2, 2])));
+        assert!(!contains_world_coord(
+            bounds,
+            1,
+            cell_to_world(1, [4, 2, 2])
+        ));
         assert_ne!(world.read(cell_to_world(1, [1, 1, 1])), WATER);
     }
 }

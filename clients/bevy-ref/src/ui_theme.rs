@@ -13,9 +13,9 @@
 //! TODO(holocron-3d-phase): tilt panels into perspective 3D quads; WGSL specular
 //! sweep + fresnel rim; moving curved-perspective background + radial plasma.
 
+use bevy::log::warn;
 use bevy_egui::egui;
 use egui::{FontData, FontFamily, FontId, TextStyle};
-use bevy::log::warn;
 
 // ===========================================================================
 // Keycap Palette — locked sRGB (dark mode primary)
@@ -244,9 +244,10 @@ fn try_load_font_files(fonts: &mut egui::FontDefinitions) -> bool {
         let path = base.join(file);
         match std::fs::read(&path) {
             Ok(bytes) => {
-                fonts
-                    .font_data
-                    .insert(name.into(), std::sync::Arc::new(FontData::from_owned(bytes)));
+                fonts.font_data.insert(
+                    name.into(),
+                    std::sync::Arc::new(FontData::from_owned(bytes)),
+                );
                 ok = true;
             }
             Err(err) => {
@@ -359,13 +360,22 @@ pub fn apply_type_scale(style: &mut egui::Style) {
     // which checks the binding per-frame. This keeps the HUD crash-proof.
     style.text_styles = [
         (TextStyle::Heading, FontId::new(16.0, Proportional)),
-        (TextStyle::Name("Display".into()), FontId::new(22.0, Proportional)),
+        (
+            TextStyle::Name("Display".into()),
+            FontId::new(22.0, Proportional),
+        ),
         (TextStyle::Body, FontId::new(13.5, Proportional)),
         (TextStyle::Button, FontId::new(11.5, Proportional)),
         (TextStyle::Small, FontId::new(10.5, Proportional)),
         (TextStyle::Monospace, FontId::new(14.0, Monospace)),
-        (TextStyle::Name("NumericSm".into()), FontId::new(11.5, Monospace)),
-        (TextStyle::Name("Coord".into()), FontId::new(12.0, Monospace)),
+        (
+            TextStyle::Name("NumericSm".into()),
+            FontId::new(11.5, Monospace),
+        ),
+        (
+            TextStyle::Name("Coord".into()),
+            FontId::new(12.0, Monospace),
+        ),
     ]
     .into();
     style.spacing.item_spacing = egui::vec2(8.0, 8.0);
@@ -399,8 +409,17 @@ pub fn deck_chip(ui: &mut egui::Ui, label: &str, value: &str, accent: egui::Colo
         .inner_margin(egui::Margin::symmetric(SPACE_MD as i8, SPACE_XS as i8))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new(label.to_uppercase()).color(DECK_TEXT_MID).small());
-                ui.label(egui::RichText::new(value).monospace().color(DECK_TEXT).strong());
+                ui.label(
+                    egui::RichText::new(label.to_uppercase())
+                        .color(DECK_TEXT_MID)
+                        .small(),
+                );
+                ui.label(
+                    egui::RichText::new(value)
+                        .monospace()
+                        .color(DECK_TEXT)
+                        .strong(),
+                );
             });
             let r = ui.min_rect();
             ui.painter().hline(
@@ -573,8 +592,11 @@ pub fn inner_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color
 pub fn hairline(ui: &mut egui::Ui) {
     let rect = ui.available_rect_before_wrap();
     let y = ui.cursor().top();
-    ui.painter()
-        .hline(rect.x_range(), y, egui::Stroke::new(1.0, KC_DIVIDER.gamma_multiply(0.85)));
+    ui.painter().hline(
+        rect.x_range(),
+        y,
+        egui::Stroke::new(1.0, KC_DIVIDER.gamma_multiply(0.85)),
+    );
     ui.add_space(8.0);
 }
 
@@ -609,7 +631,11 @@ pub fn chip_labeled(
             if !glyph.is_empty() {
                 ui.label(egui::RichText::new(glyph).color(color));
             }
-            ui.label(egui::RichText::new(label.to_uppercase()).color(TEXT_LOW).small());
+            ui.label(
+                egui::RichText::new(label.to_uppercase())
+                    .color(TEXT_LOW)
+                    .small(),
+            );
             ui.label(egui::RichText::new(value).monospace().color(value_color));
         });
 }
@@ -743,7 +769,12 @@ pub fn panel_edge_stroke(hovered: bool, focused: bool) -> egui::Stroke {
 }
 
 /// Subtle multi-pass inner glow inset for depth in glass panels and pills.
-pub fn soft_inner_glow(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, radius: u8) {
+pub fn soft_inner_glow(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    color: egui::Color32,
+    radius: u8,
+) {
     for (i, alpha) in [(1.0_f32, 0.18_f32), (2.7, 0.12), (4.6, 0.08)] {
         painter.rect_stroke(
             rect.shrink(i),
@@ -776,7 +807,12 @@ pub fn specular_sweep(painter: &egui::Painter, rect: egui::Rect, time: f64, radi
     mesh.add_triangle(i, i + 1, i + 2);
     mesh.add_triangle(i, i + 2, i + 3);
     painter.add(egui::Shape::mesh(mesh));
-    painter.rect_stroke(rect, radius as f32, egui::Stroke::new(1.0, DECK_BORDER), egui::StrokeKind::Inside);
+    painter.rect_stroke(
+        rect,
+        radius as f32,
+        egui::Stroke::new(1.0, DECK_BORDER),
+        egui::StrokeKind::Inside,
+    );
     panel_finish(painter, rect, radius, false, false);
 }
 
@@ -797,7 +833,11 @@ pub fn paint_cluster_icon_label(
     if let Some(tex) = icon_tex {
         let side = (rect.height() * 0.42).clamp(18.0, 28.0);
         let img_rect = egui::Rect::from_center_size(icon_at, egui::vec2(side, side));
-        let tint = if lit { egui::Color32::WHITE } else { egui::Color32::from_white_alpha(220) };
+        let tint = if lit {
+            egui::Color32::WHITE
+        } else {
+            egui::Color32::from_white_alpha(220)
+        };
         p.image(
             tex,
             img_rect,
@@ -805,11 +845,23 @@ pub fn paint_cluster_icon_label(
             tint,
         );
     } else {
-        p.text(icon_at, egui::Align2::CENTER_CENTER, icon, egui::FontId::proportional(20.0), icon_color);
+        p.text(
+            icon_at,
+            egui::Align2::CENTER_CENTER,
+            icon,
+            egui::FontId::proportional(20.0),
+            icon_color,
+        );
     }
     let label_color = if lit { accent } else { DECK_TEXT_MID };
     let label_at = rect.min + egui::vec2(rect.width() * 0.5, rect.height() * 0.80);
-    p.text(label_at, egui::Align2::CENTER_CENTER, label, egui::FontId::proportional(10.5), label_color);
+    p.text(
+        label_at,
+        egui::Align2::CENTER_CENTER,
+        label,
+        egui::FontId::proportional(10.5),
+        label_color,
+    );
 }
 
 #[cfg(test)]
@@ -835,7 +887,13 @@ mod tests {
     fn no_accent_used_as_widget_bg_fill() {
         let mut v = egui::Visuals::dark();
         apply_widget_visuals(&mut v, egui::CornerRadius::same(RADIUS));
-        let graphite = [GRAPHITE_500, GRAPHITE_600, GRAPHITE_700, GRAPHITE_800, GRAPHITE_900];
+        let graphite = [
+            GRAPHITE_500,
+            GRAPHITE_600,
+            GRAPHITE_700,
+            GRAPHITE_800,
+            GRAPHITE_900,
+        ];
         for fill in [
             v.widgets.inactive.bg_fill,
             v.widgets.hovered.bg_fill,

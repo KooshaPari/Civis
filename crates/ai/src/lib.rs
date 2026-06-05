@@ -31,15 +31,15 @@ pub mod cache;
 pub mod config;
 pub mod pool;
 pub mod preflight;
-pub mod providers;
 pub mod provenance;
+pub mod providers;
 pub mod registry;
 
 pub use cache::AiCache;
 pub use config::AiConfig;
 pub use pool::{AiPayload, AiResult, AiTask, AiWorkerPool, TaskId};
-pub use providers::DummyAiProvider;
 pub use provenance::{AiEvent, ReplayAdvanceOutcome, ReplayMode, ReplayRefusal};
+pub use providers::DummyAiProvider;
 pub use registry::{ProviderRegistry, ProviderRole};
 
 use serde::{Deserialize, Serialize};

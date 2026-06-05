@@ -79,7 +79,14 @@ pub fn generate(dims: [usize; 3], seed: u64) -> GenWorld {
     GenWorld { dims, cells }
 }
 
-fn carve_column(cells: &mut [MaterialId], dims: [usize; 3], seed: u64, sea: usize, x: usize, z: usize) {
+fn carve_column(
+    cells: &mut [MaterialId],
+    dims: [usize; 3],
+    seed: u64,
+    sea: usize,
+    x: usize,
+    z: usize,
+) {
     let surface = surface_height(dims, seed, x, z);
     let soil = soil_depth(seed, x, z, dims[1]).min(2).max(1);
     let ore_seed = mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64);
@@ -277,8 +284,10 @@ mod tests {
                 }
             }
         }
-        assert_eq!(violations, 0,
-            "found {violations} WATER cells in above-sea columns (flat-slab regression)");
+        assert_eq!(
+            violations, 0,
+            "found {violations} WATER cells in above-sea columns (flat-slab regression)"
+        );
     }
 
     #[test]
@@ -314,8 +323,14 @@ mod tests {
                 assert_eq!(h, surface_height(d, 11, x, z));
             }
         }
-        println!("[worldgen] surface_height range = {min_h}..={max_h} (relief = {})", max_h - min_h);
-        assert!(max_h > min_h, "surface is flat — no relief (min={min_h} max={max_h})");
+        println!(
+            "[worldgen] surface_height range = {min_h}..={max_h} (relief = {})",
+            max_h - min_h
+        );
+        assert!(
+            max_h > min_h,
+            "surface is flat — no relief (min={min_h} max={max_h})"
+        );
         // Meaningful relief, not a 1-voxel ripple, relative to the 64-tall world.
         assert!(max_h - min_h >= 6, "relief too small: {}", max_h - min_h);
     }
@@ -337,9 +352,7 @@ mod tests {
         }
 
         let percent = (changed as f64 / total as f64) * 100.0;
-        println!(
-            "[worldgen] different-seed terrain diff = {changed}/{total} ({percent:.2}%)"
-        );
+        println!("[worldgen] different-seed terrain diff = {changed}/{total} ({percent:.2}%)");
         assert!(
             percent >= 20.0,
             "expected >=20% differing surface cells, found {percent:.2}%"
@@ -442,7 +455,10 @@ mod tests {
                 }
             }
         }
-        assert!(exposed, "no water cell has AIR above it — water is fully buried (invisible)");
+        assert!(
+            exposed,
+            "no water cell has AIR above it — water is fully buried (invisible)"
+        );
     }
 
     #[test]

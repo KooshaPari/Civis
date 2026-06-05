@@ -13,6 +13,9 @@ mods/example-policy/example-policy.civmod
 /web/dashboard/dist/
 /web/node_modules/
 
+# Ignore legacy npm lockfile in web dashboard
+/web/dashboard/package-lock.json
+
 # Generated tooling artifacts
 clients/unreal-show/scripts/vswhere-out.json
 clients/unreal-show/scripts/vs-modify.log

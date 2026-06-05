@@ -242,18 +242,24 @@ fn requirement_native_ocean_renders_with_sea_level_match() {
 }
 
 #[test]
-#[ignore = "Settings rebinding requires runtime `KeyBinding` mutation; no public `rebind(action, KeyBinding)` API exists yet."]
 fn requirement_keybind_rebinding_overrides_default() {
     // GIVEN the default keymap for a known action (e.g. "Toggle Settings"),
     // WHEN the user rebinds it to a different KeyCode via the Controls tab,
     // THEN subsequent lookups via `GameSettings::key_for(action)` SHALL return the new binding
     // AND persistence layer SHALL serialize the override.
-    //
-    // Stub: assertion deferred until `pub fn rebind(&mut GameSettings, &str, KeyBinding)` exists.
-    let rebound = true;
-    assert!(
-        rebound,
-        "placeholder: assert rebound lookup + persisted override once rebind API is public"
+    use bevy::input::keyboard::KeyCode;
+
+    use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding};
+
+    let mut settings = GameSettings::default();
+    settings.rebind("Toggle Settings", KeyBinding::Key(KeyCode::KeyR));
+    assert_eq!(settings.key_for("Toggle Settings"), Some(KeyBinding::Key(KeyCode::KeyR)));
+
+    let text = ron::ser::to_string_pretty(&settings, ron::ser::PrettyConfig::default()).unwrap();
+    let persisted: GameSettings = ron::from_str(&text).unwrap();
+    assert_eq!(
+        persisted.key_for("Toggle Settings"),
+        Some(KeyBinding::Key(KeyCode::KeyR))
     );
 }
 

@@ -868,6 +868,13 @@ impl GameSettings {
             .map(|bind| bind.binding)
     }
 
+    /// Update an action binding in-place.
+    pub fn rebind(&mut self, action: &str, new_binding: KeyBinding) {
+        if let Some(bind) = self.keybinds.iter_mut().find(|bind| bind.action == action) {
+            bind.binding = new_binding;
+        }
+    }
+
     fn duplicate_binding(&self, action: &str, binding: KeyBinding) -> Option<String> {
         self.keybinds
             .iter()

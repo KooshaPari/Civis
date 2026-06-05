@@ -15,6 +15,13 @@ use crate::sim_bridge::SimState;
 use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
 use crate::AttachMode;
 
+fn civilian_faction_id(civilian: &AgentCivilian) -> u32 {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => faction,
+        _ => 0,
+    }
+}
+
 /// Minimap side length in UI pixels. Enlarged 1.8x (was 200) so the right-side
 /// holocron map reads as a prominent command-deck element, per user request.
 pub const MINIMAP_SIZE: f32 = 360.0;
@@ -302,7 +309,8 @@ fn minimap_uv_to_world(uv: Vec2) -> Vec3 {
 }
 
 fn civilian_color(civilian: &AgentCivilian) -> Color {
-    let hue = (civilian.faction as f32 * 85.0) % 360.0;
+    let faction = civilian_faction_id(civilian);
+    let hue = (faction as f32 * 85.0) % 360.0;
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
@@ -356,7 +364,7 @@ fn sync_minimap_dots(
             .iter()
         {
             let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
-            let entry = cluster_acc.entry(civilian.faction).or_insert((Vec2::ZERO, 0));
+            let entry = cluster_acc.entry(civilian_faction_id(civilian)).or_insert((Vec2::ZERO, 0));
             entry.0 += uv;
             entry.1 += 1;
             parent.spawn((

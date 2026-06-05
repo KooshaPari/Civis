@@ -43,6 +43,13 @@ use crate::sim_bridge::SimState;
 use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
 use crate::AttachMode;
 
+fn civilian_faction_id(civilian: &Civilian) -> u32 {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => faction,
+        _ => 0,
+    }
+}
+
 /// Basemap raster resolution per side (crisp, sub-tile detail — not 8-bit).
 const MAP_CLICK_PICK_RADIUS_PX: f32 = 12.0;
 const MAP_TEX: usize = 512;
@@ -583,7 +590,7 @@ fn draw_map_view(
                             screen_pos: to_screen(n),
                             world_pos: marker_world_from_actor(position, voxel),
                             kind: MapMarkerKind::Actor {
-                                faction: civ.faction,
+                                faction: civilian_faction_id(civ),
                             },
                         });
                     }

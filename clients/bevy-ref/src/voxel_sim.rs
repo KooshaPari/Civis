@@ -859,11 +859,14 @@ fn spawn_chunk_meshes(
                         Err(_) => Vec::new(),
                     }
                 };
-                if use_smooth && mesh_buffers.is_empty() && false {
-                    // Cubic fallback disabled in smooth mode: it caused a giant opaque box
-                    // (interior solid chunks) and disconnected island fragments (boundary
-                    // chunks). The smooth mesher with its padded apron handles continuity
-                    // across chunk seams; empty smooth results should remain invisible.
+                // Cubic fallback disabled in smooth mode: it caused a giant opaque box
+                // (interior solid chunks) and disconnected island fragments (boundary
+                // chunks). The smooth mesher with its padded apron handles continuity
+                // across chunk seams; empty smooth results should remain invisible.
+                // The dead branch is kept (not removed) as documentation of what was
+                // tried; the `if false` is intentional disable — clippy lints the
+                // always-false conjunction, so we mark the condition explicitly.
+                if false {
                     record_cubic_chunk();
                     match CubicMesher::mesh_cubic(view, LodLevel(0)) {
                         Ok(mesh_buffer) => {

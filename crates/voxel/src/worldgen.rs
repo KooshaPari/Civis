@@ -26,6 +26,11 @@ const TERRAIN_FREQ: f64 = 5.0;
 /// slopes DOWN into the sea at the world boundary instead of dropping as a
 /// vertical cliff wall.
 #[must_use]
+pub const fn sea_level(dims: [usize; 3]) -> usize {
+    dims[1].saturating_mul(40) / 100
+}
+
+#[must_use]
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
     let dz = dims[2].max(1);
@@ -70,7 +75,7 @@ fn edge_falloff(u: f64, v: f64) -> f64 {
 #[must_use]
 pub fn generate(dims: [usize; 3], seed: u64) -> GenWorld {
     let mut cells = vec![AIR; dims[0] * dims[1] * dims[2]];
-    let sea_level = dims[1].saturating_mul(40) / 100;
+    let sea_level = sea_level(dims);
     for z in 0..dims[2] {
         for x in 0..dims[0] {
             carve_column(&mut cells, dims, seed, sea_level, x, z);
@@ -269,7 +274,7 @@ mod tests {
         let dims = [64usize, 32, 64];
         let seed = 42u64;
         let w = generate(dims, seed);
-        let sea = dims[1].saturating_mul(40) / 100;
+        let sea = sea_level(dims);
         let mut violations = 0usize;
         for z in 0..dims[2] {
             for x in 0..dims[0] {
@@ -396,7 +401,7 @@ mod tests {
     #[test]
     fn water_at_or_below_sea_level() {
         let w = generate(dims(), 19);
-        let sea = w.dims[1] * 40 / 100;
+        let sea = sea_level(w.dims);
         let mut water_found = false;
         for z in 0..w.dims[2] {
             for y in 0..w.dims[1] {

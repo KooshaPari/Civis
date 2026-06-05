@@ -137,7 +137,22 @@ mod chunk_exposure_tests {
 // chunks loads in ~1-2s and is a genuine ~0.2mi² sandbox. Scale back to 256³
 // once worldgen + initial mesh stream over frames (FR-CIV-SCALE async-load
 // TODO) + dirty-chunk CA lands.
-const WORLD_DIMS: [usize; 3] = [96, 64, 96];
+pub const WORLD_DIMS_SMALL: [usize; 3] = [96, 64, 96];
+pub const WORLD_DIMS_MEDIUM: [usize; 3] = [160, 64, 160];
+pub const WORLD_DIMS_LARGE: [usize; 3] = [256, 96, 256];
+pub const WORLD_DIMS_HUGE: [usize; 3] = [384, 96, 384];
+
+/// Resolve the world-size combo index to concrete voxel dimensions.
+#[must_use]
+pub fn world_dims_for(size_index: usize) -> [usize; 3] {
+    match size_index {
+        0 => WORLD_DIMS_SMALL,
+        1 => WORLD_DIMS_MEDIUM,
+        2 => WORLD_DIMS_LARGE,
+        3 => WORLD_DIMS_HUGE,
+        _ => WORLD_DIMS_MEDIUM,
+    }
+}
 
 /// Tracks whether the live voxel world has been generated for the current
 /// session. Set `true` after a build; reset to `false` to force regeneration
@@ -156,7 +171,7 @@ impl Plugin for VoxelSimPlugin {
         app.insert_resource(VoxelSimState::default())
             .insert_resource(WorldBuilt::default())
             .insert_resource(WaterSettings {
-                height: WORLD_DIMS[1] as f32 * 0.40,
+                height: WORLD_DIMS_MEDIUM[1] as f32 * 0.40,
                 amplitude: 0.35,
                 clarity: 0.22,
                 base_color: Color::srgba(0.07, 0.41, 0.67, 1.0),
@@ -213,6 +228,7 @@ pub fn setup_voxel_world_startup(
         state,
         cameras,
         SEED,
+        WORLD_DIMS_MEDIUM,
     );
     built.0 = true;
 }
@@ -255,6 +271,7 @@ pub fn build_world_on_play(
     // so a task computed for the OLD world can't apply onto the new one.
     despawn_world_and_pending(&mut commands, &mut state, &pending, &water_planes);
     let seed = params.seed;
+    let dims = world_dims_for(params.world_size);
     build_voxel_world(
         commands,
         &mut meshes,
@@ -266,6 +283,7 @@ pub fn build_world_on_play(
         state,
         cameras,
         seed,
+        dims,
     );
     built.0 = true;
 }
@@ -348,12 +366,13 @@ pub fn build_voxel_world(
     mut state: ResMut<VoxelSimState>,
     cameras: Query<&Transform, With<Camera3d>>,
     seed: u64,
+    dims: [usize; 3],
 ) {
     info!("[voxel] generating world from seed={seed:#018x}");
     // Phase timing (task #4 perf): localize where the ~33s world-load stall lives
     // — worldgen vs grid/CA init vs meshing — instead of guessing.
     let t_start = std::time::Instant::now();
-    let generated = worldgen::generate(WORLD_DIMS, seed);
+    let generated = worldgen::generate(dims, seed);
     let t_worldgen = t_start.elapsed();
     let cell_count = generated.cells.len();
     state.grid = CaGrid {
@@ -420,7 +439,7 @@ pub fn build_voxel_world(
     let t_dispatch = std::time::Instant::now();
     dispatch_chunk_mesh_tasks(&mut commands, &state.grid, None);
     let t_dispatch_elapsed = t_dispatch.elapsed();
-    spawn_bevy_water_plane(&mut commands, meshes, water_materials);
+    spawn_bevy_water_plane(&mut commands, meshes, water_materials, generated.dims);
     // Phase breakdown. The mesh COMPUTE is now off-thread, so this dispatch time is
     // the main-thread cost (cheap slicing only) — expected <<1s, no load hitch.
     info!(
@@ -436,10 +455,11 @@ fn spawn_bevy_water_plane(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardWaterMaterial>,
+    dims: [usize; 3],
 ) {
-    let sea_level_y = WORLD_DIMS[1] as f32 * 0.40;
-    let plane_size_x = WORLD_DIMS[0] as f32;
-    let plane_size_z = WORLD_DIMS[2] as f32;
+    let sea_level_y = dims[1] as f32 * 0.40;
+    let plane_size_x = dims[0] as f32;
+    let plane_size_z = dims[2] as f32;
     let tile_size = bevy_water::water::WATER_SIZE as f32;
     let world_scale = Vec3::new(plane_size_x / tile_size, 1.0, plane_size_z / tile_size);
 

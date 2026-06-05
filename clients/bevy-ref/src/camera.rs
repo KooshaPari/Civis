@@ -142,3 +142,163 @@ pub fn update_camera(
         *transform = Transform::from_translation(eye).looking_at(rig.target, Vec3::Y);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::ecs::entity::Entity;
+    use bevy::input::keyboard::KeyCode;
+    use bevy::input::mouse::{MouseButton, MouseMotion, MouseScrollUnit, MouseWheel};
+    use bevy::message::Messages;
+    use std::time::Duration;
+
+    fn camera_input_app() -> App {
+        let mut app = App::new();
+        app.insert_resource(ButtonInput::<KeyCode>::default());
+        app.insert_resource(ButtonInput::<MouseButton>::default());
+        app.insert_resource(Time::default());
+        app.insert_resource(CameraRig::default());
+        app.add_message::<MouseMotion>();
+        app.add_message::<MouseWheel>();
+        app.add_systems(Update, super::camera_input);
+        app
+    }
+
+    fn dispatch_camera_input(
+        app: &mut App,
+        dt: f32,
+        keys: &[KeyCode],
+        right_mouse: bool,
+        mouse_motion_y: Option<f32>,
+        wheel_y: Option<f32>,
+    ) {
+        app.world.resource_mut::<Time>().advance_by(Duration::from_secs_f32(dt));
+
+        {
+            let mut key_input = app.world.resource_mut::<ButtonInput<KeyCode>>();
+            key_input.clear();
+            for key in keys {
+                key_input.press(*key);
+            }
+        }
+
+        {
+            let mut mouse_button_input = app.world.resource_mut::<ButtonInput<MouseButton>>();
+            mouse_button_input.clear();
+            if right_mouse {
+                mouse_button_input.press(MouseButton::Right);
+            }
+        }
+
+        {
+            let mut mouse_motion = app.world.resource_mut::<Messages<MouseMotion>>();
+            mouse_motion.clear();
+            if let Some(delta_y) = mouse_motion_y {
+                mouse_motion.write(MouseMotion { delta: Vec2::new(0.0, delta_y) });
+            }
+        }
+
+        {
+            let mut mouse_wheel = app.world.resource_mut::<Messages<MouseWheel>>();
+            mouse_wheel.clear();
+            if let Some(y) = wheel_y {
+                mouse_wheel.write(MouseWheel {
+                    unit: MouseScrollUnit::Line,
+                    x: 0.0,
+                    y,
+                    window: Entity::from_raw(0),
+                });
+            }
+        }
+
+        app.update();
+    }
+
+    fn expected_forward_flat(yaw: f32) -> Vec3 {
+        Vec3::new(yaw.sin(), 0.0, yaw.cos())
+    }
+
+    fn expected_right_flat(forward_flat: Vec3) -> Vec3 {
+        Vec3::new(-forward_flat.z, 0.0, forward_flat.x)
+    }
+
+    pub fn assert_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit() {
+        let base = CameraRig::default();
+        let dt = 1.0;
+        let speed = 90.0;
+        let forward_flat = expected_forward_flat(base.yaw);
+        let right_flat = expected_right_flat(forward_flat);
+
+        let mut yaw_q_app = camera_input_app();
+        dispatch_camera_input(&mut yaw_q_app, dt, &[KeyCode::KeyQ], false, None, None);
+        let yaw_q = yaw_q_app.world.resource::<CameraRig>().yaw;
+        assert!((yaw_q - (base.yaw + 1.5 * dt)).abs() < f32::EPSILON * 100.0);
+
+        let mut yaw_e_app = camera_input_app();
+        dispatch_camera_input(&mut yaw_e_app, dt, &[KeyCode::KeyE], false, None, None);
+        let yaw_e = yaw_e_app.world.resource::<CameraRig>().yaw;
+        assert!((yaw_e - (base.yaw - 1.5 * dt)).abs() < f32::EPSILON * 100.0);
+
+        let mut pitch_upper_app = camera_input_app();
+        dispatch_camera_input(&mut pitch_upper_app, dt, &[], true, Some(-500.0), None);
+        let upper_pitch = pitch_upper_app.world.resource::<CameraRig>().pitch;
+        assert_eq!(upper_pitch, 0.6);
+
+        let mut pitch_lower_app = camera_input_app();
+        dispatch_camera_input(&mut pitch_lower_app, dt, &[], true, Some(1000.0), None);
+        let lower_pitch = pitch_lower_app.world.resource::<CameraRig>().pitch;
+        assert_eq!(lower_pitch, -1.5);
+
+        let mut pan_app = camera_input_app();
+        dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyR], false, None, None);
+        let pan_r_target = pan_app.world.resource::<CameraRig>().target;
+        assert!((pan_r_target.y - (base.target.y + speed * dt)).abs() < f32::EPSILON * 100.0);
+
+        let mut pan_app = camera_input_app();
+        dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyF], false, None, None);
+        let pan_f_target = pan_app.world.resource::<CameraRig>().target;
+        assert!((pan_f_target.y - (base.target.y - speed * dt)).abs() < f32::EPSILON * 100.0);
+
+        let mut pan_app = camera_input_app();
+        dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyW], false, None, None);
+        let pan_w_target = pan_app.world.resource::<CameraRig>().target;
+        assert!(
+            (pan_w_target - (base.target + forward_flat.normalize() * speed * dt)).length()
+                < f32::EPSILON * 100.0
+        );
+
+        let mut pan_app = camera_input_app();
+        dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyA], false, None, None);
+        let pan_a_target = pan_app.world.resource::<CameraRig>().target;
+        assert!(
+            (pan_a_target - (base.target - right_flat.normalize() * speed * dt)).length()
+                < f32::EPSILON * 100.0
+        );
+
+        let mut pan_app = camera_input_app();
+        dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyS], false, None, None);
+        let pan_s_target = pan_app.world.resource::<CameraRig>().target;
+        assert!(
+            (pan_s_target - (base.target - forward_flat.normalize() * speed * dt)).length()
+                < f32::EPSILON * 100.0
+        );
+
+        let mut pan_app = camera_input_app();
+        dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyD], false, None, None);
+        let pan_d_target = pan_app.world.resource::<CameraRig>().target;
+        assert!(
+            (pan_d_target - (base.target + right_flat.normalize() * speed * dt)).length()
+                < f32::EPSILON * 100.0
+        );
+
+        let mut wheel_app = camera_input_app();
+        dispatch_camera_input(&mut wheel_app, dt, &[], false, None, Some(2.0));
+        let zoom_distance = wheel_app.world.resource::<CameraRig>().distance;
+        assert_eq!(zoom_distance, 200.0);
+    }
+
+    #[test]
+    fn requirement_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit() {
+        assert_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit();
+    }
+}

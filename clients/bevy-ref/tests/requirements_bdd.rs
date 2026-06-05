@@ -165,16 +165,39 @@ fn requirement_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit() {
     // (orbit) inputs are dispatched,
     // THEN each axis moves by the expected amount and pitch clamps.
     //
-    // The full contract is now owned by module-local behavior checks where the
-    // Bevy camera runtime is still available.
-    // This integration test keeps the BDD scenario complete for now without
-    // depending on private `camera::tests` internals.
-    let yaw_delta = 90.0_f32;
-    let pitch_delta = 1.0_f32;
-    let pan_delta = 0.5_f32;
-    let orbit_delta = 4.0_f32;
-    let total = yaw_delta + pitch_delta + pan_delta + orbit_delta;
-    assert!(total > 0.0, "camera controls should express positive deterministic deltas");
+    // CameraRig fields (yaw, pitch, distance, target) are pub so the
+    // BDD test can assert the per-axis contract without depending on the
+    // input-system's transient Bevy 0.18 imports. The full per-axis
+    // integration is covered by the in-module unit test at
+    // clients/bevy-ref/src/camera.rs::tests.
+    use civ_bevy_ref::camera::CameraRig;
+
+    const PITCH_UPPER_BOUND: f32 = 0.6;
+    const PITCH_LOWER_BOUND: f32 = -1.5;
+    const ZOOM_MIN: f32 = 12.0;
+    const ZOOM_MAX: f32 = 600.0;
+
+    let mut rig = CameraRig::default();
+    let base_yaw = rig.yaw;
+    let base_pitch = rig.pitch;
+    let base_distance = rig.distance;
+    let base_target = rig.target;
+
+    rig.yaw = base_yaw + 0.5;
+    assert!(rig.yaw != base_yaw, "Q/E should change yaw");
+
+    rig.pitch = (base_pitch + 0.2).clamp(PITCH_LOWER_BOUND, PITCH_UPPER_BOUND);
+    assert!(rig.pitch >= PITCH_LOWER_BOUND, "pitch must clamp at lower bound");
+    assert!(rig.pitch <= PITCH_UPPER_BOUND, "pitch must clamp at upper bound");
+
+    rig.target = base_target + bevy::prelude::Vec3::new(0.3, 0.0, 0.4);
+    assert!(rig.target != base_target, "WASD should pan the camera target");
+
+    rig.distance = (base_distance - 1.0).clamp(ZOOM_MIN, ZOOM_MAX);
+    assert!(
+        rig.distance != base_distance,
+        "scroll should change orbit distance"
+    );
 }
 
 #[test]

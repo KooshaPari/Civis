@@ -443,10 +443,10 @@ pub struct Simulation {
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Number of emergent settlements (multi-member clusters) detected on the
     /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
-    last_settlement_count: u32,
+    pub(crate) last_settlement_count: u32,
     /// Deaths attributed to unmet-need sickness on the most recent life phase
     /// (FR-CIV-LIFE-003); surfaced for the HUD.
-    last_life_deaths: u32,
+    pub(crate) last_life_deaths: u32,
     /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
     pub(crate) emergence: crate::emergence::EmergenceState,
 }

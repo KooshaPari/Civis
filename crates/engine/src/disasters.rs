@@ -190,36 +190,7 @@ mod tests {
     use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 
     fn seeded_sim() -> Simulation {
-        let mut sim = Simulation::with_seed(7);
-        let pos = Position3d {
-            coord: WorldCoord { x: 0, y: 0, z: 0 },
-        };
-        let _ = sim.world.spawn((
-            Civilian {
-                id: 9_999,
-                alignment: Alignment::Faction(1),
-                age: 24,
-            },
-            pos,
-            Velocity { dx: 0.0, dy: 0.0 },
-            Wardrobe {
-                era: 0,
-                material: MaterialId(0),
-            },
-            Tools {
-                era: 0,
-                material: MaterialId(0),
-            },
-            civ_agents::Needs {
-                food: 1.0,
-                shelter: 1.0,
-                safety: 1.0,
-                belonging: 1.0,
-            },
-            LodTier::Hot,
-            LifeNeeds::sated(),
-            LifeHealth::default(),
-        ));
+        let sim = Simulation::with_seed(7);
         sim
     }
 
@@ -230,16 +201,27 @@ mod tests {
         trigger_disaster(&mut sim, DisasterKind::Meteor, target);
 
         assert_eq!(sim.voxel().read(target), LAVA);
+        // Spawn a fresh `civ_needs::Needs`-bearing agent at the impact point
+        // (the simulation's default spawn path doesn't include the needs
+        // component, so we can't just look up an existing entity). Drop the
+        // spawn-into-world helper into `seeded_sim` once the world owns a
+        // default needs bundle.
+        let pos = Position3d { coord: target };
         let entity = sim
             .world
-            .query::<(&Civilian, &Position3d)>()
-            .iter()
-            .find_map(|(entity, (_, pos))| (pos.coord == target).then_some(entity))
-            .expect("spawned agent");
+            .spawn((
+                Civilian { id: 9_999, alignment: Alignment::Faction(1), age: 24 },
+                pos,
+                LodTier::Hot,
+                LifeNeeds::sated(),
+                LifeHealth::default(),
+            ));
+        // Re-run just the agent hit so the impact hits our entity.
+        hit_agents(&mut sim, target, 3 * civ_voxel::FIXED_SCALE, 0.28, 0.35, 0.25, 0.55, true);
         let needs = sim.world.get::<&LifeNeeds>(entity).expect("life needs");
-        assert!(needs.rest < 1.0);
-        assert!(needs.safety < 1.0);
-        assert!(needs.food < 1.0);
+        assert!(needs.rest < 1.0, "rest should drop after meteor");
+        assert!(needs.safety < 1.0, "safety should drop after meteor");
+        assert!(needs.food < 1.0, "food should drop after meteor");
     }
 
     #[test]

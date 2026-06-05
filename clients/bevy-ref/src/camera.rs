@@ -142,4 +142,3 @@ pub fn update_camera(
         *transform = Transform::from_translation(eye).looking_at(rig.target, Vec3::Y);
     }
 }
-

@@ -28,6 +28,8 @@ pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod game_laws;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod material_brush_ui;

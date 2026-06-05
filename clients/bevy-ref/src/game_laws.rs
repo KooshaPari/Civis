@@ -23,6 +23,7 @@ impl Default for GameLawsOpen {
 /// A single law line for the popup list.
 #[derive(Debug, Clone, Copy)]
 struct LawLine {
+    category: &'static str,
     title: &'static str,
     description: &'static str,
 }
@@ -38,22 +39,27 @@ impl GameLawsPanel {
     fn fallback_laws() -> &'static [LawLine] {
         const FALLBACK_LAWS: &[LawLine] = &[
             LawLine {
+                category: "Physical",
                 title: "Conservation of Matter",
                 description: "Mass is neither created nor destroyed by simulation events; terrain edits redistributes existing mass.",
             },
             LawLine {
+                category: "Physical",
                 title: "Energy Conservation",
                 description: "Energy is tracked explicitly and only reduced through consumptive simulation sinks such as movement and production.",
             },
             LawLine {
+                category: "Genomic",
                 title: "Population Growth Bound",
                 description: "Population growth has diminishing returns constrained by food throughput and carrying capacity.",
             },
             LawLine {
+                category: "Environmental",
                 title: "Biome Stability",
                 description: "Biome state (soil/water/temperature) feeds back into settlement productivity and migration pressure.",
             },
             LawLine {
+                category: "Environmental",
                 title: "Disaster Envelope",
                 description: "Disasters are pseudo-random but reproducible within seeded law tables and world state.",
             },
@@ -109,7 +115,17 @@ fn draw_game_laws_panel(mut contexts: EguiContexts, mut open: ResMut<GameLawsOpe
             );
             ui.add_space(8.0);
             egui::ScrollArea::vertical().show(ui, |ui| {
+                let mut current_category = "";
                 for law in GameLawsPanel::laws() {
+                    if current_category != law.category {
+                        current_category = law.category;
+                        ui.label(
+                            egui::RichText::new(law.category)
+                                .color(ui_theme::ACCENT)
+                                .strong(),
+                        );
+                        ui.add_space(2.0);
+                    }
                     ui.group(|ui| {
                         ui.label(egui::RichText::new(law.title).strong().color(ui_theme::TEXT));
                         ui.label(

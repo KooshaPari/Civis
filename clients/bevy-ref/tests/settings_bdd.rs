@@ -7,7 +7,7 @@ use civ_bevy_ref::settings_ui::{
 };
 
 #[test]
-fn requirement_given_ultra_preset_when_applied_then_all_rich_fields_are_max() {
+fn bdd_given_ultra_preset_when_applied_then_all_rich_fields_are_max() {
     let mut g = GraphicsSettings::default();
 
     g.apply_preset(QualityPreset::Ultra);
@@ -26,7 +26,7 @@ fn requirement_given_ultra_preset_when_applied_then_all_rich_fields_are_max() {
 }
 
 #[test]
-fn requirement_given_manual_shadow_change_when_applied_then_quality_becomes_custom() {
+fn bdd_given_manual_shadow_change_when_applied_then_quality_becomes_custom() {
     let mut g = GraphicsSettings::default();
 
     g.apply_preset(QualityPreset::High);
@@ -37,7 +37,7 @@ fn requirement_given_manual_shadow_change_when_applied_then_quality_becomes_cust
 }
 
 #[test]
-fn requirement_key_lookup_is_authoritative() {
+fn key_lookup_is_authoritative() {
     let s = GameSettings::default();
     assert_eq!(
         s.key_for("Toggle Settings"),

@@ -485,6 +485,7 @@ impl Default for AudioSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameplaySettings {
     /// Default simulation speed multiplier applied on load.
+    #[serde(default)]
     pub default_sim_speed: f32,
     /// Whether autosave is enabled.
     #[serde(default)]
@@ -1590,5 +1591,46 @@ mod tests {
         assert_eq!(s.gameplay.difficulty, 0.5);
         assert_eq!(s.gameplay.disaster_frequency, 0.5);
         assert_eq!(s.gameplay.emergence_intensity, 0.5);
+    }
+
+    #[test]
+    fn legacy_ron_without_default_sim_speed_uses_default() {
+        let legacy = r#"(
+            graphics: (
+                resolution: R720p,
+                vsync: true,
+                quality: High,
+                resolution_scale: 1.0,
+                shadow_quality: Medium,
+                anti_aliasing: TAA,
+                view_distance: 256,
+                texture_quality: High,
+                ambient_occlusion: true,
+                bloom: true,
+                motion_blur: false,
+                gi: false,
+                vfx: true,
+            ),
+            display: (
+                window_mode: Windowed,
+                target_fps: 120,
+                fps_uncapped: false,
+            ),
+            audio: (
+                master: 0.8,
+                music: 0.6,
+                sfx: 0.8,
+            ),
+            gameplay: (
+                autosave: true,
+                autosave_minutes: 5,
+            ),
+            keybinds: [
+                (action: "Toggle Settings", binding: Key(KeyO)),
+            ],
+        )"#;
+
+        let s: GameSettings = ron::from_str(legacy).expect("legacy ron missing gameplay default");
+        assert_eq!(s.gameplay.default_sim_speed, 1.0);
     }
 }

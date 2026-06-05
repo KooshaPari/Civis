@@ -63,7 +63,7 @@ fn main() {
         AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),
     };
 
-    let mut default_plugins = DefaultPlugins
+    let default_plugins = DefaultPlugins
         .set(WindowPlugin {
             primary_window: Some(Window {
                 title: window_title,
@@ -71,16 +71,16 @@ fn main() {
             }),
             ..default()
         })
-        .set(native_render_plugin());
+        .set(native_render_plugin())
+        // `DefaultPlugins` includes Bevy's built-in `AudioPlugin`. When Civis
+        // enables the `audio` feature, `CivisAudioPlugin` adds
+        // `bevy_kira_audio::AudioPlugin`, which registers its own loaders for
+        // audio extensions. Keeping both stacks produces Bevy's "Multiple
+        // AssetLoaders found" warning; Kira owns audio here.
+        .build();
 
-    // `DefaultPlugins` includes Bevy's built-in `AudioPlugin`. When Civis enables
-    // the `audio` feature, `CivisAudioPlugin` adds `bevy_kira_audio::AudioPlugin`,
-    // which registers its own loaders for audio extensions. Keeping both stacks
-    // produces Bevy's "Multiple AssetLoaders found" warning; Kira owns audio here.
     #[cfg(feature = "audio")]
-    {
-        default_plugins = default_plugins.disable::<bevy::audio::AudioPlugin>();
-    }
+    let default_plugins = default_plugins.disable::<bevy::audio::AudioPlugin>();
 
     let mut app = App::new();
     app.insert_resource(DayNightCycle::default())

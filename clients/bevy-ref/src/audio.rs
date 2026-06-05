@@ -16,12 +16,12 @@
 //!
 //! ## Public API for other systems
 //! ```ignore
-//! // From any system with `Commands`/`EventWriter<SfxEvent>` access:
-//! fn on_birth(mut sfx: EventWriter<civ_bevy_ref::audio::SfxEvent>) {
+//! // From any system with `Commands`/`MessageWriter<SfxEvent>` access:
+//! fn on_birth(mut sfx: MessageWriter<civ_bevy_ref::audio::SfxEvent>) {
 //!     sfx.write(civ_bevy_ref::audio::SfxEvent::new(SfxKind::Birth));
 //! }
 //! ```
-//! [`play_sfx`] is a thin helper for the common `EventWriter` path.
+//! [`play_sfx`] is a thin helper for the common `MessageWriter` path.
 //!
 //! ## Audio assets (CC0 drop-in)
 //! This plugin loads its clips from **`assets/audio/`** relative to the client
@@ -76,15 +76,15 @@ pub enum SfxKind {
     Build,
 }
 
-/// Bevy event other systems write to trigger a one-shot SFX.
+/// Bevy message other systems write to trigger a one-shot SFX.
 ///
 /// Prefer the [`play_sfx`] helper, which constructs and sends this for you.
-#[derive(Event, Debug, Clone, Copy)]
+#[derive(Message, Debug, Clone, Copy)]
 pub struct SfxEvent {
     /// Which catalogue entry to play.
     pub kind: SfxKind,
     /// Linear volume multiplier (`1.0` = unmodified clip gain).
-    pub volume: f64,
+    pub volume: f32,
 }
 
 impl SfxEvent {
@@ -96,7 +96,7 @@ impl SfxEvent {
 
     /// A SFX trigger for `kind` at an explicit linear `volume`.
     #[must_use]
-    pub fn with_volume(kind: SfxKind, volume: f64) -> Self {
+    pub fn with_volume(kind: SfxKind, volume: f32) -> Self {
         Self { kind, volume }
     }
 }
@@ -104,11 +104,11 @@ impl SfxEvent {
 /// Ergonomic one-liner the rest of the client uses to fire a sound effect.
 ///
 /// ```ignore
-/// fn on_button(mut writer: EventWriter<SfxEvent>) {
+/// fn on_button(mut writer: MessageWriter<SfxEvent>) {
 ///     play_sfx(&mut writer, SfxKind::UiClick);
 /// }
 /// ```
-pub fn play_sfx(writer: &mut EventWriter<SfxEvent>, kind: SfxKind) {
+pub fn play_sfx(writer: &mut MessageWriter<SfxEvent>, kind: SfxKind) {
     writer.write(SfxEvent::new(kind));
 }
 
@@ -149,17 +149,17 @@ impl Default for AudioFiles {
 #[derive(Resource, Default)]
 pub struct AudioHandles {
     /// Looping ambient bed.
-    pub ambient: Handle<AudioSource>,
+    pub ambient: Handle<bevy_kira_audio::AudioSource>,
     /// UI click.
-    pub ui_click: Handle<AudioSource>,
+    pub ui_click: Handle<bevy_kira_audio::AudioSource>,
     /// Agent birth.
-    pub birth: Handle<AudioSource>,
+    pub birth: Handle<bevy_kira_audio::AudioSource>,
     /// Agent death.
-    pub death: Handle<AudioSource>,
+    pub death: Handle<bevy_kira_audio::AudioSource>,
     /// Disaster.
-    pub disaster: Handle<AudioSource>,
+    pub disaster: Handle<bevy_kira_audio::AudioSource>,
     /// Building constructed.
-    pub build: Handle<AudioSource>,
+    pub build: Handle<bevy_kira_audio::AudioSource>,
 }
 
 impl AudioHandles {
@@ -171,7 +171,7 @@ impl AudioHandles {
     /// that handle as the fallback. The asset-file path above is preferred so
     /// the default keeps zero baked binary data in the repo.
     #[must_use]
-    pub fn for_kind(&self, kind: SfxKind) -> Handle<AudioSource> {
+    pub fn for_kind(&self, kind: SfxKind) -> Handle<bevy_kira_audio::AudioSource> {
         match kind {
             SfxKind::UiClick => self.ui_click.clone(),
             SfxKind::Birth => self.birth.clone(),
@@ -183,7 +183,7 @@ impl AudioHandles {
 }
 
 /// Startup ambient-bed volume (linear).
-pub const AMBIENT_VOLUME: f64 = 0.35;
+pub const AMBIENT_VOLUME: f32 = 0.35;
 
 // ── Plugin ──────────────────────────────────────────────────────────────────
 
@@ -203,7 +203,7 @@ impl Plugin for CivisAudioPlugin {
             .add_audio_channel::<SfxChannel>()
             .init_resource::<AudioFiles>()
             .init_resource::<AudioHandles>()
-            .add_event::<SfxEvent>()
+            .add_message::<SfxEvent>()
             .add_systems(Startup, (load_audio, start_ambient).chain())
             .add_systems(Update, drain_sfx_events);
     }
@@ -233,7 +233,7 @@ fn start_ambient(channel: Res<AudioChannel<AmbientChannel>>, handles: Res<AudioH
 
 /// Drain queued [`SfxEvent`]s and play each on the SFX channel.
 fn drain_sfx_events(
-    mut events: EventReader<SfxEvent>,
+    mut events: MessageReader<SfxEvent>,
     channel: Res<AudioChannel<SfxChannel>>,
     handles: Res<AudioHandles>,
 ) {
@@ -252,14 +252,14 @@ mod tests {
     fn sfx_event_defaults_to_unit_volume() {
         let event = SfxEvent::new(SfxKind::Birth);
         assert_eq!(event.kind, SfxKind::Birth);
-        assert!((event.volume - 1.0).abs() < f64::EPSILON);
+    assert!((event.volume - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn sfx_event_with_volume_preserves_kind() {
         let event = SfxEvent::with_volume(SfxKind::Disaster, 0.5);
         assert_eq!(event.kind, SfxKind::Disaster);
-        assert!((event.volume - 0.5).abs() < f64::EPSILON);
+        assert!((event.volume - 0.5).abs() < f32::EPSILON);
     }
 
     #[test]

@@ -43,6 +43,7 @@ fn sample_chunk(world: &GenWorld, origin: [usize; 3], chunk_edge: usize) -> Vec<
 
 #[cfg(feature = "voxel")]
 #[test]
+#[cfg(feature = "voxel")]
 fn requirement_world_size_selection_changes_dimensions() {
     // GIVEN size-indexed selection values from UI world-size controls (small..huge),
     // WHEN world_dims_for(index) is invoked for each index,
@@ -80,6 +81,7 @@ fn requirement_world_size_selection_changes_dimensions() {
 
 #[cfg(feature = "voxel")]
 #[test]
+#[cfg(feature = "voxel")]
 fn requirement_new_world_differs_from_previous() {
     // GIVEN two different New World seeds,
     // WHEN worldgen::generate is called with same user size and different seeds,
@@ -160,6 +162,7 @@ fn requirement_water_only_below_sea() {
 }
 
 #[test]
+#[cfg(feature = "bevy")]
 fn requirement_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit() {
     use bevy::ecs::entity::Entity;
     use bevy::ecs::message::Messages;
@@ -355,6 +358,7 @@ fn requirement_settings_has_gfx_audio_controls_gameplay_tabs() {
 }
 
 #[test]
+#[cfg(feature = "bevy")]
 fn requirement_emergent_factions_no_fixed_count_or_alignment() {
     // GIVEN two seeded simulation runs of identical length,
     // WHEN faction aggregates are sampled after each run,
@@ -383,6 +387,7 @@ fn requirement_emergent_factions_no_fixed_count_or_alignment() {
 }
 
 #[test]
+#[cfg(feature = "bevy")]
 fn requirement_actor_spawn_avoids_t_pose_and_animates() {
     // GIVEN a deterministic synthetic 6-bone actor skeleton and deterministic test frame.
     // WHEN sampling frame 0 and a later frame for each animation-ready visual kind,
@@ -557,6 +562,7 @@ fn requirement_terrain_is_continuous_not_blobs() {
 }
 
 #[test]
+#[cfg(feature = "bevy")]
 fn requirement_marker_types_differentiate_server_attach_vs_in_process() {
     use std::any::type_name;
 

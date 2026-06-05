@@ -13,7 +13,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-#[cfg(all(feature = "bevy", feature = "models"))]
+#[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;

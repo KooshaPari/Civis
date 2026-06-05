@@ -56,6 +56,7 @@
 
 use std::time::Duration;
 
+use civ_agents::ActorVisualKind;
 use bevy::animation::RepeatAnimation;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -69,6 +70,26 @@ const RUN_SPEED: f32 = 14.0;
 const TRANSITION: Duration = Duration::from_millis(250);
 /// How aggressively the model yaw chases the movement direction (per second).
 const FACING_SLERP: f32 = 8.0;
+/// Synthetic rest pose used by animation requirements BDD tests.
+pub fn idle_angles_for_test() -> [Vec3; 6] {
+    [
+        Vec3::new(0.00, 0.00, 0.00), // root
+        Vec3::new(0.45, 1.20, 0.00), // shoulder
+        Vec3::new(0.85, 1.20, 0.00), // elbow
+        Vec3::new(1.30, 1.20, 0.00), // wrist
+        Vec3::new(0.10, 0.95, 0.00), // hip
+        Vec3::new(0.10, 0.10, 0.00), // knee
+    ]
+}
+
+/// Deterministic test frame time for actor animation fixtures.
+pub fn clip_frame_for_test(actor_kind: ActorVisualKind, frame: u32) -> f32 {
+    let fps = match actor_kind {
+        ActorVisualKind::Humanoid => 30.0,
+        ActorVisualKind::Herd => 24.0,
+    };
+    frame as f32 / fps
+}
 
 /// Coarse locomotion state derived from an actor's motion. Maps 1:1 to the clip
 /// categories shared by the Quaternius / KayKit rigs.

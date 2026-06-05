@@ -67,6 +67,7 @@ use crate::ui_theme::{
     TEXT,
 };
 use crate::ui_theme::{panel_edge_stroke, panel_glass_fill};
+use crate::game_laws::GameLawsOpen;
 
 // ---------------------------------------------------------------------------
 // Resources
@@ -433,6 +434,7 @@ struct BottomBarCtx<'a> {
     sub: &'a mut ActiveSubTool,
     speed: &'a mut GameSpeed,
     icons: &'a std::collections::HashMap<&'static str, egui::TextureId>,
+    laws_open: Option<&'a mut GameLawsOpen>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -453,6 +455,7 @@ fn draw_game_ui(
     mut info_views: ResMut<crate::info_views::InfoViewRegistry>,
     ui_mode: Res<GameUiMode>,
     tool_icons: Res<ToolIcons>,
+    mut laws_open: Option<ResMut<GameLawsOpen>>,
 ) {
     // Show the HUD while Playing OR Paused (frozen-but-visible) — matches the
     // `menus::in_game` gate the brush/map panels use, so the left cluster, top
@@ -485,6 +488,7 @@ fn draw_game_ui(
         sub: &mut sub_tool,
         speed: &mut speed,
         icons: &tool_icons.ids,
+        laws_open: laws_open.as_mut().map(|open| &mut **open),
     };
     bottom_cluster(ctx, &mut bottom);
 }
@@ -673,6 +677,16 @@ fn category_pill_row(ui: &mut egui::Ui, ctx: &mut BottomBarCtx) {
         }
         ui.add_space(SPACE_MD);
         speed_control_ui(ui, ctx.speed);
+        ui.add_space(SPACE_SM);
+        if ui
+            .button(egui::RichText::new("Laws").color(TEXT))
+            .on_hover_text("Open game laws viewer")
+            .clicked()
+        {
+            if let Some(laws_open) = ctx.laws_open.as_deref_mut() {
+                laws_open.0 = !laws_open.0;
+            }
+        }
     });
 }
 

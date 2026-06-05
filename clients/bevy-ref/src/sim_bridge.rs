@@ -56,6 +56,12 @@ struct PendingActorScene {
     kind: ActorVisualKind,
     faction: u32,
 }
+#[cfg(not(feature = "models"))]
+#[derive(Component, Clone, Copy)]
+struct PendingActorScene {
+    kind: ActorVisualKind,
+    faction: u32,
+}
 
 /// Resolve the loaded CC0 actor scene for `kind`, else `None` (capsule fallback).
 #[cfg(feature = "models")]
@@ -219,13 +225,14 @@ impl Plugin for SimBridgePlugin {
 
         // sync_visible_gameplay must also be gated: only render entities in Playing/Paused.
         // In Paused we keep entities visible (frozen) but don't tick; in menus we despawn all.
-        #[cfg(feature = "egui")]
+#[cfg(feature = "egui")]
         app.add_systems(
             Update,
             (
                 sync_visible_gameplay
                     .run_if(in_process_sim_active)
                     .run_if(is_playing_or_paused),
+                #[cfg(feature = "models")]
                 upgrade_pending_actor_scenes
                     .run_if(in_process_sim_active)
                     .run_if(is_playing_or_paused),
@@ -237,6 +244,7 @@ impl Plugin for SimBridgePlugin {
             Update,
             (
                 sync_visible_gameplay.run_if(in_process_sim_active),
+                #[cfg(feature = "models")]
                 upgrade_pending_actor_scenes.run_if(in_process_sim_active),
             ),
         );
@@ -472,7 +480,7 @@ fn sync_visible_gameplay(
                 models.as_deref(),
                 &asset_server,
                 visual_kind,
-                civilian.faction,
+                civilian_faction_id(civilian),
             );
             #[cfg(not(feature = "models"))]
             let scene_root: Option<SceneRoot> = None;
@@ -483,7 +491,7 @@ fn sync_visible_gameplay(
                     commands
                         .spawn((
                             SimCivilianMarker,
-                            FactionTint(civilian.faction),
+                            FactionTint(civilian_faction_id(civilian)),
                             scene_root,
                             Transform::from_translation(world_pos - Vec3::Y * CIVILIAN_HALF_HEIGHT)
                                 .with_scale(Vec3::splat(model_scale_for(visual_kind))),
@@ -494,9 +502,11 @@ fn sync_visible_gameplay(
                 {
                     let _ = scene_root;
                     unreachable!()
+                    }
                 }
             } else {
-                let color = faction_color(civilian.faction);
+                let faction = civilian_faction_id(civilian);
+                let color = faction_color(faction);
                 let material = materials.add(StandardMaterial {
                     base_color: color,
                     // Solid lit object, not a glowing pill: kill the emissive bloom.
@@ -507,13 +517,17 @@ fn sync_visible_gameplay(
                 });
                 commands
                     .spawn((
+                        #[cfg(feature = "models")]
+                        SimCivilianMarker,
+                        #[cfg(feature = "models")]
+                        PendingActorScene {
+                            kind: visual_kind,
+                            faction,
+                        },
+                        #[cfg(not(feature = "models"))]
                         SimCivilianMarker,
                         Mesh3d(assets.civilian_mesh.clone()),
                         MeshMaterial3d(material),
-                        PendingActorScene {
-                            kind: visual_kind,
-                            faction: civilian.faction,
-                        },
                         Transform::from_translation(world_pos),
                     ))
                     .id()
@@ -613,6 +627,13 @@ fn sync_visible_gameplay(
         seen_buildings.len(),
         first_world_pos
     );
+}
+
+fn civilian_faction_id(civilian: &Civilian) -> u32 {
+    match civilian.alignment {
+        civ_agents::Alignment::Faction(faction) => faction,
+        _ => 0,
+    }
 }
 
 #[cfg(feature = "models")]

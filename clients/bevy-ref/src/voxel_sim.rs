@@ -8,8 +8,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::mesh::PlaneMeshBuilder;
 use bevy::prelude::*;
+use bevy::light::NotShadowCaster;
 use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task};
-use bevy_water::{StandardWaterMaterial, WaterMaterial, WaterQuality, WaterSettings, WaterTile};
+use bevy_water::water::{
+    material::{StandardWaterMaterial, WaterMaterial},
+    WaterQuality,
+    WaterSettings,
+    WaterTile,
+};
 
 use civ_voxel::fluid_ca::{step, CaGrid};
 use civ_voxel::material::{

@@ -207,17 +207,28 @@ mod tests {
         // spawn-into-world helper into `seeded_sim` once the world owns a
         // default needs bundle.
         let pos = Position3d { coord: target };
-        let entity = sim
-            .world
-            .spawn((
-                Civilian { id: 9_999, alignment: Alignment::Faction(1), age: 24 },
-                pos,
-                LodTier::Hot,
-                LifeNeeds::sated(),
-                LifeHealth::default(),
-            ));
+        let entity = sim.world.spawn((
+            Civilian {
+                id: 9_999,
+                alignment: Alignment::Faction(1),
+                age: 24,
+            },
+            pos,
+            LodTier::Hot,
+            LifeNeeds::sated(),
+            LifeHealth::default(),
+        ));
         // Re-run just the agent hit so the impact hits our entity.
-        hit_agents(&mut sim, target, 3 * civ_voxel::FIXED_SCALE, 0.28, 0.35, 0.25, 0.55, true);
+        hit_agents(
+            &mut sim,
+            target,
+            3 * civ_voxel::FIXED_SCALE,
+            0.28,
+            0.35,
+            0.25,
+            0.55,
+            true,
+        );
         let needs = sim.world.get::<&LifeNeeds>(entity).expect("life needs");
         assert!(needs.rest < 1.0, "rest should drop after meteor");
         assert!(needs.safety < 1.0, "safety should drop after meteor");

@@ -286,28 +286,32 @@ fn requirement_camera_qe_yaw_rf_pitch_wasd_pan_scroll_orbit() {
     dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyW], false, None, None);
     let pan_w_target = pan_app.world().resource::<CameraRig>().target;
     assert!(
-        (pan_w_target - (base.target + forward_flat.normalize() * speed * dt)).length() < f32::EPSILON * 100.0
+        (pan_w_target - (base.target + forward_flat.normalize() * speed * dt)).length()
+            < f32::EPSILON * 100.0
     );
 
     let mut pan_app = camera_input_app();
     dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyA], false, None, None);
     let pan_a_target = pan_app.world().resource::<CameraRig>().target;
     assert!(
-        (pan_a_target - (base.target - right_flat.normalize() * speed * dt)).length() < f32::EPSILON * 100.0
+        (pan_a_target - (base.target - right_flat.normalize() * speed * dt)).length()
+            < f32::EPSILON * 100.0
     );
 
     let mut pan_app = camera_input_app();
     dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyS], false, None, None);
     let pan_s_target = pan_app.world().resource::<CameraRig>().target;
     assert!(
-        (pan_s_target - (base.target - forward_flat.normalize() * speed * dt)).length() < f32::EPSILON * 100.0
+        (pan_s_target - (base.target - forward_flat.normalize() * speed * dt)).length()
+            < f32::EPSILON * 100.0
     );
 
     let mut pan_app = camera_input_app();
     dispatch_camera_input(&mut pan_app, dt, &[KeyCode::KeyD], false, None, None);
     let pan_d_target = pan_app.world().resource::<CameraRig>().target;
     assert!(
-        (pan_d_target - (base.target + right_flat.normalize() * speed * dt)).length() < f32::EPSILON * 100.0
+        (pan_d_target - (base.target + right_flat.normalize() * speed * dt)).length()
+            < f32::EPSILON * 100.0
     );
 
     let mut wheel_app = camera_input_app();
@@ -341,7 +345,10 @@ fn requirement_settings_has_gfx_audio_controls_gameplay_tabs() {
         tabs.contains(&SettingsTab::Graphics),
         "Graphics tab must be exposed"
     );
-    assert!(tabs.contains(&SettingsTab::Audio), "Audio tab must be exposed");
+    assert!(
+        tabs.contains(&SettingsTab::Audio),
+        "Audio tab must be exposed"
+    );
     assert!(
         tabs.contains(&SettingsTab::Controls),
         "Controls tab must be exposed"
@@ -354,7 +361,10 @@ fn requirement_settings_has_gfx_audio_controls_gameplay_tabs() {
         tabs.contains(&SettingsTab::Display),
         "Display tab must be exposed"
     );
-    assert!(tabs.contains(&SettingsTab::World), "World tab must be exposed");
+    assert!(
+        tabs.contains(&SettingsTab::World),
+        "World tab must be exposed"
+    );
 }
 
 #[test]
@@ -405,7 +415,11 @@ fn requirement_actor_spawn_avoids_t_pose_and_animates() {
         out
     }
 
-    fn shoulder_elbow_wrist_angle(shoulder: bevy::prelude::Vec3, elbow: bevy::prelude::Vec3, wrist: bevy::prelude::Vec3) -> f32 {
+    fn shoulder_elbow_wrist_angle(
+        shoulder: bevy::prelude::Vec3,
+        elbow: bevy::prelude::Vec3,
+        wrist: bevy::prelude::Vec3,
+    ) -> f32 {
         let a = shoulder - elbow;
         let b = wrist - elbow;
         let dot = a.dot(b);
@@ -523,7 +537,10 @@ fn requirement_keybind_rebinding_overrides_default() {
 
     let mut settings = GameSettings::default();
     settings.rebind("Toggle Settings", KeyBinding::Key(KeyCode::KeyR));
-    assert_eq!(settings.key_for("Toggle Settings"), Some(KeyBinding::Key(KeyCode::KeyR)));
+    assert_eq!(
+        settings.key_for("Toggle Settings"),
+        Some(KeyBinding::Key(KeyCode::KeyR))
+    );
 
     let text = ron::ser::to_string_pretty(&settings, ron::ser::PrettyConfig::default()).unwrap();
     let persisted: GameSettings = ron::from_str(&text).unwrap();

@@ -16,15 +16,17 @@
 //!    and use a saturated faction colour with near-zero emissive so they read
 //!    as solid actors, not hovering neon pills.
 
+#[cfg(feature = "models")]
+use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
 use bevy::math::primitives::{Capsule3d, Circle, Cuboid};
 use bevy::prelude::*;
 use civ_agents::ActorVisualKind;
-#[cfg(feature = "models")]
-use crate::gltf_models::{actor_scene, building_scene, ModelOrPrimitive};
 
 use crate::minimap::MinimapCamera;
 use crate::terrain::{terrain_height, terrain_surface_y, WORLD_SIZE};
+#[cfg(feature = "voxel")]
 use crate::voxel_sim::VoxelSimState;
+#[cfg(feature = "voxel")]
 use civ_voxel::material::AIR;
 
 /// Civilian capsule radius (world units).
@@ -311,7 +313,7 @@ fn update_cursor_marker(
     // Present only when `VoxelSimPlugin` is active (the `voxel` feature). When
     // it is, clicks must raycast the VISIBLE voxel surface, not the analytic
     // heightmap (which is no longer rendered under `voxel`).
-    voxel: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel: Option<Res<VoxelSimState>>,
 ) {
     if over_ui.0 {
         marker.visible = false;
@@ -319,7 +321,12 @@ fn update_cursor_marker(
         return;
     }
     let had_hit = marker.position.is_some();
-    let hit = cursor_terrain_hit(&windows, &cameras, voxel.as_deref());
+    let hit = cursor_terrain_hit(
+        &windows,
+        &cameras,
+        #[cfg(feature = "voxel")]
+        voxel.as_deref(),
+    );
     log_hit_transition(had_hit, hit.is_some());
     marker.position = hit;
     marker.visible = hit.is_some();
@@ -342,7 +349,7 @@ fn log_hit_transition(prev: bool, now: bool) {
 fn cursor_terrain_hit(
     windows: &Query<&Window>,
     cameras: &Query<(&Camera, &GlobalTransform), (With<Camera3d>, Without<MinimapCamera>)>,
-    voxel: Option<&VoxelSimState>,
+    #[cfg(feature = "voxel")] voxel: Option<&VoxelSimState>,
 ) -> Option<Vec3> {
     let window = windows.single().ok()?;
     let cursor = window.cursor_position()?;
@@ -351,6 +358,7 @@ fn cursor_terrain_hit(
     // Under the voxel feature the chunk meshes are the visible world, so the
     // click must hit a real voxel cell. Fall back to the heightmap analytic
     // surface only when no voxel grid is loaded (heightmap sandbox build).
+    #[cfg(feature = "voxel")]
     if let Some(state) = voxel {
         if !state.grid.cells.is_empty() {
             return raycast_to_voxel(&state.grid, ray.origin, ray.direction.as_vec3());
@@ -362,7 +370,12 @@ fn cursor_terrain_hit(
 /// March a ray through the dense voxel grid (world-space == grid coords; chunk
 /// meshes are spawned at raw cell offsets with no centring) and return the
 /// surface point of the first non-air cell hit, or `None` if the ray misses.
-fn raycast_to_voxel(grid: &civ_voxel::fluid_ca::CaGrid, origin: Vec3, direction: Vec3) -> Option<Vec3> {
+#[cfg(feature = "voxel")]
+fn raycast_to_voxel(
+    grid: &civ_voxel::fluid_ca::CaGrid,
+    origin: Vec3,
+    direction: Vec3,
+) -> Option<Vec3> {
     let dir = direction.normalize_or_zero();
     if dir == Vec3::ZERO {
         return None;
@@ -445,7 +458,10 @@ fn handle_spawn_tool_clicks(
             };
             #[cfg(not(feature = "egui"))]
             let model_kind = ActorVisualKind::Humanoid;
-            spawn_civilian.write(SpawnCivilianRequest { position, model_kind });
+            spawn_civilian.write(SpawnCivilianRequest {
+                position,
+                model_kind,
+            });
         }
         SpawnTool::SpawnBuilding => {
             spawn_building.write(SpawnBuildingRequest { position });
@@ -454,10 +470,18 @@ fn handle_spawn_tool_clicks(
             #[cfg(all(feature = "voxel", feature = "egui"))]
             {
                 let op = match sub.current {
-                    crate::tool_categories::SubTool::Raise => crate::terraform_brush::BrushOp::Raise,
-                    crate::tool_categories::SubTool::Lower => crate::terraform_brush::BrushOp::Lower,
-                    crate::tool_categories::SubTool::Flatten => crate::terraform_brush::BrushOp::Flatten,
-                    crate::tool_categories::SubTool::PaintBiome => crate::terraform_brush::BrushOp::DropBiome,
+                    crate::tool_categories::SubTool::Raise => {
+                        crate::terraform_brush::BrushOp::Raise
+                    }
+                    crate::tool_categories::SubTool::Lower => {
+                        crate::terraform_brush::BrushOp::Lower
+                    }
+                    crate::tool_categories::SubTool::Flatten => {
+                        crate::terraform_brush::BrushOp::Flatten
+                    }
+                    crate::tool_categories::SubTool::PaintBiome => {
+                        crate::terraform_brush::BrushOp::DropBiome
+                    }
                     _ => brush.op,
                 };
                 brush.select_op(op);
@@ -575,12 +599,16 @@ fn apply_spawn_requests(
         #[cfg(feature = "models")]
         {
             let mut spawned = false;
-            if let Some(models) = models.as_ref().and_then(|models| building_root_for_spawn(models)) {
+            if let Some(models) = models
+                .as_ref()
+                .and_then(|models| building_root_for_spawn(models))
+            {
                 let seated = seat_on_terrain(request.position, BUILDING_HALF_HEIGHT);
                 commands.spawn((
                     SandboxEntity,
                     models,
-                    Transform::from_translation(seated).with_scale(Vec3::splat(BUILDING_MODEL_SCALE)),
+                    Transform::from_translation(seated)
+                        .with_scale(Vec3::splat(BUILDING_MODEL_SCALE)),
                 ));
                 spawned = true;
             }
@@ -620,7 +648,6 @@ fn building_root_for_spawn(models: &crate::gltf_models::GameModels) -> Option<Sc
         ModelOrPrimitive::Primitive => None,
     }
 }
-
 
 /// Shared data tag carried by every user-placed infra actor (road segment,
 /// structure, or vehicle). Records which [`SpawnTool`] authored it so the
@@ -736,7 +763,10 @@ fn apply_place_structure_requests(
             MeshMaterial3d(material),
             Transform::from_translation(seated),
         ));
-        info!("[tools] PLACED {:?} at {:?}", request.kind, request.position);
+        info!(
+            "[tools] PLACED {:?} at {:?}",
+            request.kind, request.position
+        );
     }
 }
 

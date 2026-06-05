@@ -9,10 +9,10 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::spawn_tools::{SpawnBuildingRequest, SpawnCivilianRequest};
-#[cfg(feature = "voxel")]
-use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 #[cfg(not(feature = "voxel"))]
 use crate::terrain::{terrain_surface_y, WATER_LEVEL, WORLD_SIZE};
+#[cfg(feature = "voxel")]
+use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 use crate::{live_attach::is_server_attach_mode, AttachMode};
 
 /// Half-height of the civilian capsule (used to seat its base on terrain).
@@ -89,11 +89,9 @@ fn actor_scene_if_loaded(
         return None;
     };
     match actor_scene(model, kind, faction) {
-        ModelOrPrimitive::Model(SceneRoot(handle)) => {
-            asset_server
-                .is_loaded_with_dependencies(&handle)
-                .then_some(SceneRoot(handle))
-        }
+        ModelOrPrimitive::Model(SceneRoot(handle)) => asset_server
+            .is_loaded_with_dependencies(&handle)
+            .then_some(SceneRoot(handle)),
         ModelOrPrimitive::Primitive => None,
     }
 }
@@ -145,8 +143,8 @@ pub struct SimCivilianMarker;
 pub struct SimBuildingMarker;
 
 // Public aliases for the scene-dump harness (machine-level verification).
-pub use SimCivilianMarker as SimCivilianMarkerPublic;
 pub use SimBuildingMarker as SimBuildingMarkerPublic;
+pub use SimCivilianMarker as SimCivilianMarkerPublic;
 
 impl Default for SimState {
     fn default() -> Self {
@@ -225,7 +223,7 @@ impl Plugin for SimBridgePlugin {
 
         // sync_visible_gameplay must also be gated: only render entities in Playing/Paused.
         // In Paused we keep entities visible (frozen) but don't tick; in menus we despawn all.
-#[cfg(feature = "egui")]
+        #[cfg(feature = "egui")]
         app.add_systems(
             Update,
             (
@@ -355,8 +353,7 @@ fn world_to_norm(position: Vec3, voxel: Option<&VoxelSimState>) -> (f32, f32) {
 fn apply_spawn_civilian_requests(
     mut sim: ResMut<SimState>,
     mut requests: MessageReader<SpawnCivilianRequest>,
-    #[cfg(feature = "voxel")]
-    voxel_state: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
 ) {
     for request in requests.read() {
         let (nx, ny) = {
@@ -387,8 +384,7 @@ fn apply_spawn_civilian_requests(
 fn apply_spawn_building_requests(
     mut sim: ResMut<SimState>,
     mut requests: MessageReader<SpawnBuildingRequest>,
-    #[cfg(feature = "voxel")]
-    voxel_state: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
 ) {
     for request in requests.read() {
         let (nx, ny) = {
@@ -408,7 +404,9 @@ fn apply_spawn_building_requests(
 /// Build the shared civilian/building meshes once at startup.
 fn init_gameplay_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let civilian_mesh = meshes.add(Mesh::from(bevy::math::primitives::Capsule3d::new(1.4, 3.2)));
-    let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(7.0, 14.0, 7.0)));
+    let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(
+        7.0, 14.0, 7.0,
+    )));
     commands.insert_resource(GameplayAssets {
         civilian_mesh,
         building_mesh,
@@ -428,8 +426,7 @@ fn sync_visible_gameplay(
     mut commands: Commands,
     sim: Res<SimState>,
     assets: Option<Res<GameplayAssets>>,
-    #[cfg(feature = "voxel")]
-    voxel_state: Option<Res<VoxelSimState>>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
     #[cfg(feature = "models")] models: Option<Res<crate::gltf_models::GameModels>>,
     #[cfg(feature = "models")] asset_server: Res<AssetServer>,
     mut rendered: ResMut<RenderedEntities>,
@@ -459,11 +456,12 @@ fn sync_visible_gameplay(
         let world_pos = {
             #[cfg(not(feature = "voxel"))]
             {
-                sim_position_to_world(position, None) + Vec3::Y * CIVILIAN_HALF_HEIGHT
+                sim_position_to_world(position) + Vec3::Y * CIVILIAN_HALF_HEIGHT
             }
             #[cfg(feature = "voxel")]
             {
-                sim_position_to_world(position, voxel_state.as_deref()) + Vec3::Y * CIVILIAN_HALF_HEIGHT
+                sim_position_to_world(position, voxel_state.as_deref())
+                    + Vec3::Y * CIVILIAN_HALF_HEIGHT
             }
         };
         if first_world_pos.is_none() {
@@ -502,7 +500,6 @@ fn sync_visible_gameplay(
                 {
                     let _ = scene_root;
                     unreachable!()
-                    }
                 }
             } else {
                 let faction = civilian_faction_id(civilian);
@@ -555,11 +552,12 @@ fn sync_visible_gameplay(
         let world_pos = {
             #[cfg(not(feature = "voxel"))]
             {
-                building_world_position(building, None) + Vec3::Y * BUILDING_HALF_HEIGHT
+                building_world_position(building) + Vec3::Y * BUILDING_HALF_HEIGHT
             }
             #[cfg(feature = "voxel")]
             {
-                building_world_position(building, voxel_state.as_deref()) + Vec3::Y * BUILDING_HALF_HEIGHT
+                building_world_position(building, voxel_state.as_deref())
+                    + Vec3::Y * BUILDING_HALF_HEIGHT
             }
         };
 
@@ -684,10 +682,7 @@ fn upgrade_pending_actor_scenes(
 
 /// Map a normalised sim agent coordinate to centred, terrain-seated world XZ.
 #[cfg(not(feature = "voxel"))]
-fn sim_position_to_world(
-    position: &civ_agents::Position3d,
-    _voxel: Option<&VoxelSimState>,
-) -> Vec3 {
+fn sim_position_to_world(position: &civ_agents::Position3d) -> Vec3 {
     let scale = civ_voxel::FIXED_SCALE as f32;
     let nx = position.coord.x as f32 / scale;
     let nz = position.coord.z as f32 / scale;
@@ -727,7 +722,7 @@ fn sim_position_to_world(position: &civ_agents::Position3d, voxel: Option<&Voxel
 /// below sea level the base is clamped to [`WATER_LEVEL`] so the building rests
 /// at the shoreline instead of being submerged or floating on the water plane.
 #[cfg(not(feature = "voxel"))]
-fn building_world_position(building: &Building, _voxel: Option<&VoxelSimState>) -> Vec3 {
+fn building_world_position(building: &Building) -> Vec3 {
     let nx = ((building.position.x + 64) as f32 / 127.0).clamp(0.0, 1.0);
     let nz = ((building.position.y + 64) as f32 / 127.0).clamp(0.0, 1.0);
     let mesh_x = nx * WORLD_SIZE;
@@ -894,7 +889,10 @@ mod tests {
     fn model_scale_matches_actor_kind() {
         // Guards the sub-pixel actor-scale fix: humanoids and herd use their
         // respective constants (and herd reads larger than a civilian).
-        assert_eq!(model_scale_for(ActorVisualKind::Humanoid), CIVILIAN_MODEL_SCALE);
+        assert_eq!(
+            model_scale_for(ActorVisualKind::Humanoid),
+            CIVILIAN_MODEL_SCALE
+        );
         assert_eq!(model_scale_for(ActorVisualKind::Herd), HERD_MODEL_SCALE);
         assert!(HERD_MODEL_SCALE >= CIVILIAN_MODEL_SCALE);
     }
@@ -977,7 +975,11 @@ mod tests {
         // `highest_solid_y + 1` (top face of voxel index 2).
         let expected_y = voxel_surface_y(&voxel.grid, world.x, world.z);
         assert!((world.y - expected_y).abs() < f32::EPSILON);
-        assert!((world.y - 3.0).abs() < f32::EPSILON, "surface should be 3.0, got {}", world.y);
+        assert!(
+            (world.y - 3.0).abs() < f32::EPSILON,
+            "surface should be 3.0, got {}",
+            world.y
+        );
         assert!(world.x >= 0.0 && world.x <= dims[0] as f32);
         assert!(world.z >= 0.0 && world.z <= dims[2] as f32);
     }

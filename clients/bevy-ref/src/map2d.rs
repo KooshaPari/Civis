@@ -34,14 +34,21 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_agents::Civilian;
 use civ_engine::{Building, BuildingType};
+#[cfg(feature = "voxel")]
 use civ_voxel::fluid_ca::CaGrid;
+#[cfg(feature = "voxel")]
 use civ_voxel::material::{MaterialDef, MaterialRegistry, AIR, WATER};
 
 use crate::camera::CameraRig;
-use crate::spawn_tools::SelectEntityRequest;
 use crate::sim_bridge::SimState;
+use crate::spawn_tools::SelectEntityRequest;
 use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
+#[cfg(feature = "voxel")]
+use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
 use crate::AttachMode;
+#[cfg(not(feature = "voxel"))]
+#[derive(Resource)]
+struct VoxelSimState;
 
 fn civilian_faction_id(civilian: &Civilian) -> u32 {
     match civilian.alignment {
@@ -161,9 +168,7 @@ fn toggle_map_hotkey(keys: Res<ButtonInput<KeyCode>>, mut view: ResMut<MapView>)
 /// disengage it at the (now closer) default camera distance during warm-up. The
 /// env var is read once via a `Local` cache.
 fn open_map_for_autoshot(mut view: ResMut<MapView>, mut enabled: Local<Option<bool>>) {
-    let on = *enabled.get_or_insert_with(|| {
-        std::env::var("CIVIS_MAP_OPEN").as_deref() == Ok("1")
-    });
+    let on = *enabled.get_or_insert_with(|| std::env::var("CIVIS_MAP_OPEN").as_deref() == Ok("1"));
     if on {
         view.active = true;
         view.manual_override = true;
@@ -262,6 +267,7 @@ const BAYER4: [[f32; 4]; 4] = [
 ///
 /// Coordinates are floored into the grid and clamped in-bounds. An all-AIR
 /// column yields `(0.0, None)` so callers treat it as open water / void.
+#[cfg(feature = "voxel")]
 fn sample_top_material(grid: &CaGrid, gx: f32, gz: f32) -> Option<civ_voxel::MaterialId> {
     let max_x = grid.dims[0].saturating_sub(1);
     let max_z = grid.dims[2].saturating_sub(1);
@@ -280,6 +286,7 @@ fn sample_top_material(grid: &CaGrid, gx: f32, gz: f32) -> Option<civ_voxel::Mat
 /// colour of each pixel is the top surface voxel's material colour (the same
 /// palette the 3D view uses); height drives the hillshade. Sampled across the
 /// full grid extent so the map matches the active per-seed world.
+#[cfg(feature = "voxel")]
 fn build_basemap_image(grid: &CaGrid) -> egui::ColorImage {
     let mut pixels = vec![egui::Color32::BLACK; MAP_TEX * MAP_TEX];
     let registry = MaterialRegistry::standard();
@@ -293,7 +300,7 @@ fn build_basemap_image(grid: &CaGrid) -> egui::ColorImage {
         for px in 0..MAP_TEX {
             let gx = px as f32 * (grid.dims[0].max(1) as f32 - 1.0) / (MAP_TEX as f32 - 1.0);
             let gz = py as f32 * (grid.dims[2].max(1) as f32 - 1.0) / (MAP_TEX as f32 - 1.0);
-            let h = crate::voxel_sim::voxel_surface_y(grid, gx, gz);
+            let h = voxel_surface_y(grid, gx, gz);
             let top_material = sample_top_material(grid, gx, gz);
             let mut base = top_material
                 .and_then(|id| registry.get(id))
@@ -307,30 +314,21 @@ fn build_basemap_image(grid: &CaGrid) -> egui::ColorImage {
                 .unwrap_or([0.04, 0.08, 0.20]);
 
             // Finite-difference normal for hillshade (sample neighbours).
-            let hx = crate::voxel_sim::voxel_surface_y(
+            let hx = voxel_surface_y(
                 grid,
                 (gx + cell_x).min((grid.dims[0].max(1) - 1) as f32),
                 gz,
-            )
-                - crate::voxel_sim::voxel_surface_y(
-                    grid,
-                    (gx - cell_x).max(0.0),
-                    gz,
-                );
-            let hz = crate::voxel_sim::voxel_surface_y(
+            ) - voxel_surface_y(grid, (gx - cell_x).max(0.0), gz);
+            let hz = voxel_surface_y(
                 grid,
                 gx,
                 (gz + cell_z).min((grid.dims[2].max(1) - 1) as f32),
-            )
-                - crate::voxel_sim::voxel_surface_y(
-                    grid,
-                    gx,
-                    (gz - cell_z).max(0.0),
-                );
+            ) - voxel_surface_y(grid, gx, (gz - cell_z).max(0.0));
             let n = Vec3::new(-hx, scale, -hz).normalize();
             let lambert = n.dot(light).clamp(0.0, 1.0);
 
-            let is_water = top_material.is_none() || top_material == Some(WATER) || top_material == Some(AIR);
+            let is_water =
+                top_material.is_none() || top_material == Some(WATER) || top_material == Some(AIR);
             // Hillshade only the land; water gets a gentle flat sheen.
             let shade = if is_water {
                 0.92 + 0.08 * lambert
@@ -383,8 +381,14 @@ fn building_norm_xz(building: &Building) -> egui::Vec2 {
 
 fn building_norm_xz_with_state(
     building: &Building,
-    voxel_state: Option<&crate::voxel_sim::VoxelSimState>,
+    voxel_state: Option<&VoxelSimState>,
 ) -> egui::Vec2 {
+    #[cfg(not(feature = "voxel"))]
+    {
+        let _ = voxel_state;
+        return building_norm_xz(building);
+    }
+    #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
         let x_span = (voxel_state.grid.dims[0] as f32 - 1.0).max(1.0);
         let z_span = (voxel_state.grid.dims[2] as f32 - 1.0).max(1.0);
@@ -412,22 +416,35 @@ struct MapMarker {
 
 fn marker_world_from_actor(
     civ_world: &civ_agents::Position3d,
-    voxel_state: Option<&crate::voxel_sim::VoxelSimState>,
+    voxel_state: Option<&VoxelSimState>,
 ) -> Vec3 {
     let u = (civ_world.coord.x as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0);
     let v = (civ_world.coord.z as f32 / civ_voxel::FIXED_SCALE as f32).clamp(0.0, 1.0);
+    #[cfg(not(feature = "voxel"))]
+    {
+        let _ = voxel_state;
+        return Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0);
+    }
+    #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
-        Vec3::new(u * voxel_state.grid.dims[0] as f32, 0.0, v * voxel_state.grid.dims[2] as f32)
+        Vec3::new(
+            u * voxel_state.grid.dims[0] as f32,
+            0.0,
+            v * voxel_state.grid.dims[2] as f32,
+        )
     } else {
         Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0)
     }
 }
 
-fn marker_world_from_building(
-    building: &Building,
-    voxel_state: Option<&crate::voxel_sim::VoxelSimState>,
-) -> Vec3 {
+fn marker_world_from_building(building: &Building, voxel_state: Option<&VoxelSimState>) -> Vec3 {
     let n = building_norm_xz_with_state(building, voxel_state);
+    #[cfg(not(feature = "voxel"))]
+    {
+        let _ = voxel_state;
+        return Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0);
+    }
+    #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
         Vec3::new(
             n.x * voxel_state.grid.dims[0] as f32,
@@ -522,7 +539,7 @@ fn draw_map_view(
     mut contexts: EguiContexts,
     mut view: ResMut<MapView>,
     mut basemap: ResMut<MapBasemap>,
-    voxel_state: Option<Res<crate::voxel_sim::VoxelSimState>>,
+    voxel_state: Option<Res<VoxelSimState>>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
     attach: Res<AttachMode>,
     sim: Option<Res<SimState>>,
@@ -534,7 +551,10 @@ fn draw_map_view(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+    #[cfg(feature = "voxel")]
     let current_dirty = voxel_state.as_ref().map(|s| s.grid.dirty_chunks.len());
+    #[cfg(not(feature = "voxel"))]
+    let current_dirty = None;
     if current_dirty != basemap.last_dirty_marker && voxel_state.is_some() {
         basemap.handle = None;
     }
@@ -544,14 +564,19 @@ fn draw_map_view(
     }
     // Lazily rasterise the basemap on first display.
     if basemap.handle.is_none() {
+        #[cfg(feature = "voxel")]
         if let Some(voxel_state) = voxel_state.as_ref() {
             let image = build_basemap_image(&voxel_state.grid);
-            basemap.handle = Some(
-                ctx.load_texture("map2d_basemap", image, egui::TextureOptions::LINEAR),
-            );
+            basemap.handle =
+                Some(ctx.load_texture("map2d_basemap", image, egui::TextureOptions::LINEAR));
             basemap.last_seed = Some(params.seed);
-            basemap.last_dirty_marker = Some(current_dirty);
-        } else {
+            // current_dirty is `Option<usize>`; we know it's `Some(_)` here
+            // because `voxel_state.as_ref()` already matched above.
+            basemap.last_dirty_marker = current_dirty;
+        }
+        #[cfg(not(feature = "voxel"))]
+        {
+            let _ = voxel_state;
             basemap.last_seed = None;
             basemap.last_dirty_marker = None;
         }
@@ -585,10 +610,7 @@ fn draw_map_view(
                 painter.image(
                     tex.id(),
                     map_rect,
-                    egui::Rect::from_min_max(
-                        egui::pos2(0.0, 0.0),
-                        egui::pos2(1.0, 1.0),
-                    ),
+                    egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                     tint,
                 );
             } else {
@@ -598,7 +620,10 @@ fn draw_map_view(
             painter.rect_stroke(
                 map_rect,
                 4.0,
-                egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(180, 200, 220, (fade * 160.0) as u8)),
+                egui::Stroke::new(
+                    1.5,
+                    egui::Color32::from_rgba_unmultiplied(180, 200, 220, (fade * 160.0) as u8),
+                ),
                 egui::StrokeKind::Outside,
             );
 
@@ -645,12 +670,19 @@ fn draw_map_view(
                 match marker.kind {
                     MapMarkerKind::Actor { faction } => {
                         let tint = with_alpha(faction_tint(faction), fade);
-                        painter.circle_filled(marker.screen_pos, 3.2, with_alpha(tint, fade * 0.30));
+                        painter.circle_filled(
+                            marker.screen_pos,
+                            3.2,
+                            with_alpha(tint, fade * 0.30),
+                        );
                         painter.circle(
                             marker.screen_pos,
                             1.8,
                             tint,
-                            egui::Stroke::new(0.8, with_alpha(egui::Color32::from_rgb(18, 22, 28), fade)),
+                            egui::Stroke::new(
+                                0.8,
+                                with_alpha(egui::Color32::from_rgb(18, 22, 28), fade),
+                            ),
                         );
                     }
                     MapMarkerKind::Building { building_type } => {
@@ -667,12 +699,18 @@ fn draw_map_view(
                                         egui::pos2(p.x - size, p.y - size * 0.2),
                                     ],
                                     col,
-                                    egui::Stroke::new(0.6, with_alpha(egui::Color32::BLACK, fade * 0.6)),
+                                    egui::Stroke::new(
+                                        0.6,
+                                        with_alpha(egui::Color32::BLACK, fade * 0.6),
+                                    ),
                                 ));
                             }
                             BuildingType::Market => {
                                 painter.rect_stroke(
-                                    egui::Rect::from_center_size(p, egui::vec2(size * 1.8, size * 1.2)),
+                                    egui::Rect::from_center_size(
+                                        p,
+                                        egui::vec2(size * 1.8, size * 1.2),
+                                    ),
                                     0.0,
                                     egui::Stroke::new(1.0, with_alpha(egui::Color32::BLACK, fade)),
                                     egui::StrokeKind::Outside,
@@ -692,7 +730,10 @@ fn draw_map_view(
                                         egui::pos2(p.x + size * 0.9, p.y + size),
                                     ],
                                     col,
-                                    egui::Stroke::new(0.6, with_alpha(egui::Color32::BLACK, fade * 0.6)),
+                                    egui::Stroke::new(
+                                        0.6,
+                                        with_alpha(egui::Color32::BLACK, fade * 0.6),
+                                    ),
                                 ));
                             }
                             BuildingType::Mine => {
@@ -729,7 +770,11 @@ fn draw_map_view(
             draw_title(painter, screen, fade);
 
             // --- Interaction: pan (drag) + zoom (scroll) within the map ---
-            let resp = ui.interact(map_rect, egui::Id::new("map2d_drag"), egui::Sense::click_and_drag());
+            let resp = ui.interact(
+                map_rect,
+                egui::Id::new("map2d_drag"),
+                egui::Sense::click_and_drag(),
+            );
             if resp.dragged() {
                 view.pan += resp.drag_delta();
             }
@@ -850,4 +895,3 @@ mod tests {
         )
     }
 }
-

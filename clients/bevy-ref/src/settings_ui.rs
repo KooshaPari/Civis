@@ -61,8 +61,7 @@ pub enum ResolutionPreset {
 
 impl ResolutionPreset {
     /// All presets in menu order.
-    pub const ALL: [ResolutionPreset; 4] =
-        [Self::R720p, Self::R1080p, Self::R1440p, Self::R2160p];
+    pub const ALL: [ResolutionPreset; 4] = [Self::R720p, Self::R1080p, Self::R1440p, Self::R2160p];
 
     /// Pixel dimensions `(width, height)` for the preset.
     pub fn dimensions(self) -> (u32, u32) {
@@ -474,7 +473,11 @@ pub struct AudioSettings {
 
 impl Default for AudioSettings {
     fn default() -> Self {
-        Self { master: 0.8, music: 0.6, sfx: 0.8 }
+        Self {
+            master: 0.8,
+            music: 0.6,
+            sfx: 0.8,
+        }
     }
 }
 
@@ -525,7 +528,7 @@ pub enum KeyBinding {
 impl KeyBinding {
     fn to_token(&self) -> String {
         match self {
-            Self::Key(key) => format!("key:{key}"),
+            Self::Key(key) => format!("key:{key:?}"),
             Self::Mouse(MouseButton::Left) => "mouse:left".to_string(),
             Self::Mouse(MouseButton::Right) => "mouse:right".to_string(),
             Self::Mouse(MouseButton::Middle) => "mouse:middle".to_string(),
@@ -548,7 +551,9 @@ impl KeyBinding {
                 _ => {
                     let (kind, index) = value.split_once(':')?;
                     match kind {
-                        "other" => Some(KeyBinding::Mouse(MouseButton::Other(index.parse::<u16>().ok()?))),
+                        "other" => Some(KeyBinding::Mouse(MouseButton::Other(
+                            index.parse::<u16>().ok()?,
+                        ))),
                         _ => None,
                     }
                 }
@@ -704,15 +709,10 @@ impl std::fmt::Display for KeyBinding {
     }
 }
 
-impl std::fmt::Display for KeyCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let KeyCode::Unidentified(_) = self {
-            f.write_str("Unidentified")
-        } else {
-            write!(f, "{:?}", self)
-        }
-    }
-}
+// NOTE: do NOT add `impl Display for KeyCode` — that would violate Rust's
+// orphan rules (KeyCode is foreign to this crate). `KeyBinding::label()`
+// already produces the user-facing text via `format!("{k:?}")` and
+// per-key overrides, so the orphan impl was dead code.
 
 /// A single keybind row in the reference list (`action`, `binding`).
 ///
@@ -728,7 +728,10 @@ pub struct Keybind {
 
 impl Keybind {
     fn new(action: &str, binding: KeyBinding) -> Self {
-        Self { action: action.into(), binding }
+        Self {
+            action: action.into(),
+            binding,
+        }
     }
 }
 
@@ -901,10 +904,12 @@ impl Plugin for SettingsPlugin {
 /// Runs every frame (not just Startup) so the panel stays open through the whole
 /// autoshot warm-up regardless of when the autostart→Playing transition or a
 /// stray key event lands. The env var is read once via a `Local` cache.
-fn open_settings_for_autoshot(mut settings: ResMut<GameSettings>, mut enabled: Local<Option<bool>>) {
-    let on = *enabled.get_or_insert_with(|| {
-        std::env::var("CIVIS_SETTINGS_OPEN").as_deref() == Ok("1")
-    });
+fn open_settings_for_autoshot(
+    mut settings: ResMut<GameSettings>,
+    mut enabled: Local<Option<bool>>,
+) {
+    let on =
+        *enabled.get_or_insert_with(|| std::env::var("CIVIS_SETTINGS_OPEN").as_deref() == Ok("1"));
     if on {
         settings.open = true;
     }
@@ -1003,7 +1008,7 @@ fn draw_settings_panel(
                 draw_settings_page(ui, &mut settings, &mut capture, &mut dirty);
             });
             ui_theme::hairline(ui);
-                draw_footer(ui, &mut settings, &mut dirty);
+            draw_footer(ui, &mut settings, &mut dirty);
         });
 
     if !open {
@@ -1020,7 +1025,11 @@ fn draw_settings_tabs(ui: &mut egui::Ui, active_tab: &mut SettingsTab) -> bool {
     let mut changed = false;
     for tab in SettingsTab::ALL {
         let selected = *active_tab == tab;
-        let color = if selected { ui_theme::ACCENT } else { ui_theme::TEXT };
+        let color = if selected {
+            ui_theme::ACCENT
+        } else {
+            ui_theme::TEXT
+        };
         let label = egui::RichText::new(tab.label()).color(color).strong();
         if ui.selectable_label(selected, label).clicked() {
             *active_tab = tab;
@@ -1088,7 +1097,9 @@ where
             .selected_text(selected)
             .show_ui(ui, |ui| {
                 for &entry in all {
-                    changed |= ui.selectable_value(current, entry, to_text(entry)).changed();
+                    changed |= ui
+                        .selectable_value(current, entry, to_text(entry))
+                        .changed();
                 }
             });
     });
@@ -1110,11 +1121,37 @@ fn graphics_quality_preset_row(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> b
     let mut preset = g.quality;
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Quality preset").color(ui_theme::DIM));
-        changed |= ui.selectable_value(&mut preset, QualityPreset::Low, QualityPreset::Low.label()).changed();
-        changed |= ui.selectable_value(&mut preset, QualityPreset::Medium, QualityPreset::Medium.label()).changed();
-        changed |= ui.selectable_value(&mut preset, QualityPreset::High, QualityPreset::High.label()).changed();
-        changed |= ui.selectable_value(&mut preset, QualityPreset::Ultra, QualityPreset::Ultra.label()).changed();
-        changed |= ui.selectable_value(&mut preset, QualityPreset::Custom, QualityPreset::Custom.label()).changed();
+        changed |= ui
+            .selectable_value(&mut preset, QualityPreset::Low, QualityPreset::Low.label())
+            .changed();
+        changed |= ui
+            .selectable_value(
+                &mut preset,
+                QualityPreset::Medium,
+                QualityPreset::Medium.label(),
+            )
+            .changed();
+        changed |= ui
+            .selectable_value(
+                &mut preset,
+                QualityPreset::High,
+                QualityPreset::High.label(),
+            )
+            .changed();
+        changed |= ui
+            .selectable_value(
+                &mut preset,
+                QualityPreset::Ultra,
+                QualityPreset::Ultra.label(),
+            )
+            .changed();
+        changed |= ui
+            .selectable_value(
+                &mut preset,
+                QualityPreset::Custom,
+                QualityPreset::Custom.label(),
+            )
+            .changed();
     });
     if preset != g.quality {
         g.apply_preset(preset);
@@ -1131,7 +1168,9 @@ fn graphics_resolution_row(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool 
             .selected_text(g.resolution.label())
             .show_ui(ui, |ui| {
                 for res in ResolutionPreset::ALL {
-                    changed |= ui.selectable_value(&mut g.resolution, res, res.label()).changed();
+                    changed |= ui
+                        .selectable_value(&mut g.resolution, res, res.label())
+                        .changed();
                 }
             });
     });
@@ -1143,7 +1182,13 @@ fn graphics_resolution_row(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool 
 
 fn graphics_quality_fields(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
-    changed |= enum_combo(ui, "Shadows", &mut g.shadow_quality, &ShadowQuality::ALL, |v| v.label());
+    changed |= enum_combo(
+        ui,
+        "Shadows",
+        &mut g.shadow_quality,
+        &ShadowQuality::ALL,
+        |v| v.label(),
+    );
     changed |= enum_combo(
         ui,
         "Anti-aliasing",
@@ -1161,30 +1206,48 @@ fn graphics_quality_fields(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool 
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Resolution scale").color(ui_theme::DIM));
         changed |= ui
-            .add(egui::Slider::new(&mut g.resolution_scale, 0.5..=2.0).show_value(true).fixed_decimals(2))
+            .add(
+                egui::Slider::new(&mut g.resolution_scale, 0.5..=2.0)
+                    .show_value(true)
+                    .fixed_decimals(2),
+            )
             .changed();
     });
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("View distance").color(ui_theme::DIM));
-        changed |= ui.add(egui::Slider::new(&mut g.view_distance, 64..=1024)).changed();
+        changed |= ui
+            .add(egui::Slider::new(&mut g.view_distance, 64..=1024))
+            .changed();
     });
-    if changed { g.mark_custom(); }
+    if changed {
+        g.mark_custom();
+    }
     changed
 }
 
 fn graphics_special_toggles(ui: &mut egui::Ui, g: &mut GraphicsSettings) -> bool {
     let mut changed = false;
-    changed |= ui.checkbox(&mut g.ambient_occlusion, "Ambient Occlusion").changed();
+    changed |= ui
+        .checkbox(&mut g.ambient_occlusion, "Ambient Occlusion")
+        .changed();
     changed |= ui.checkbox(&mut g.bloom, "Bloom").changed();
     changed |= ui.checkbox(&mut g.motion_blur, "Motion Blur").changed();
     changed |= ui.checkbox(&mut g.vsync, "VSync").changed();
-    changed |= ui.checkbox(&mut g.gi, "Raytraced Global Illumination").changed();
+    changed |= ui
+        .checkbox(&mut g.gi, "Raytraced Global Illumination")
+        .changed();
     changed |= ui.checkbox(&mut g.vfx, "Particle / Screen VFX").changed();
-    if changed { g.mark_custom(); }
+    if changed {
+        g.mark_custom();
+    }
     changed
 }
 
-fn controls_tab(ui: &mut egui::Ui, settings: &mut GameSettings, capture: &mut KeybindCaptureState) -> bool {
+fn controls_tab(
+    ui: &mut egui::Ui,
+    settings: &mut GameSettings,
+    capture: &mut KeybindCaptureState,
+) -> bool {
     let mut changed = false;
     section_heading(ui, "\u{2328}", "Controls");
     if let Some(warn) = &capture.duplicate_warning {
@@ -1204,9 +1267,17 @@ fn controls_tab(ui: &mut egui::Ui, settings: &mut GameSettings, capture: &mut Ke
         .show(ui, |ui| {
             for bind in &settings.keybinds {
                 ui.label(egui::RichText::new(&bind.action).color(ui_theme::TEXT));
-                ui.label(egui::RichText::new(bind.binding.to_string()).color(ui_theme::ACCENT).strong());
+                ui.label(
+                    egui::RichText::new(bind.binding.to_string())
+                        .color(ui_theme::ACCENT)
+                        .strong(),
+                );
                 let rebinding = capture.pending_action.as_deref() == Some(bind.action.as_str());
-                let button_text = if rebinding { "Press a key…" } else { "Rebind" };
+                let button_text = if rebinding {
+                    "Press a key…"
+                } else {
+                    "Rebind"
+                };
                 if ui.button(button_text).clicked() {
                     capture.pending_action = Some(bind.action.clone());
                     capture.duplicate_warning = None;
@@ -1224,37 +1295,75 @@ fn world_tab(ui: &mut egui::Ui, settings: &mut GameSettings) -> bool {
     section_heading(ui, "\u{1f30d}", "World / Game");
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Default sim speed").color(ui_theme::DIM));
-        changed |= ui.add(egui::Slider::new(&mut settings.gameplay.default_sim_speed, 0.25..=8.0).suffix("x")).changed();
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut settings.gameplay.default_sim_speed, 0.25..=8.0).suffix("x"),
+            )
+            .changed();
     });
-    changed |= ui.checkbox(&mut settings.gameplay.autosave, "Autosave").changed();
+    changed |= ui
+        .checkbox(&mut settings.gameplay.autosave, "Autosave")
+        .changed();
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Autosave minutes").color(ui_theme::DIM));
-        changed |= ui.add(egui::Slider::new(&mut settings.gameplay.autosave_minutes, 1..=60)).changed();
+        changed |= ui
+            .add(egui::Slider::new(
+                &mut settings.gameplay.autosave_minutes,
+                1..=60,
+            ))
+            .changed();
     });
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Difficulty").color(ui_theme::DIM));
-        changed |= ui.add(egui::Slider::new(&mut settings.gameplay.difficulty, 0.0..=1.0)).changed();
+        changed |= ui
+            .add(egui::Slider::new(
+                &mut settings.gameplay.difficulty,
+                0.0..=1.0,
+            ))
+            .changed();
     });
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Disaster frequency").color(ui_theme::DIM));
-        changed |= ui.add(egui::Slider::new(&mut settings.gameplay.disaster_frequency, 0.0..=1.0)).changed();
+        changed |= ui
+            .add(egui::Slider::new(
+                &mut settings.gameplay.disaster_frequency,
+                0.0..=1.0,
+            ))
+            .changed();
     });
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Emergence intensity").color(ui_theme::DIM));
-        changed |= ui.add(egui::Slider::new(&mut settings.gameplay.emergence_intensity, 0.0..=1.0)).changed();
+        changed |= ui
+            .add(egui::Slider::new(
+                &mut settings.gameplay.emergence_intensity,
+                0.0..=1.0,
+            ))
+            .changed();
     });
     ui.separator();
-        ui.label(egui::RichText::new("World size mirror").color(ui_theme::DIM));
-    ui.label(egui::RichText::new(format!("{} (mirrors menus.rs WorldSetupParams::world_size)", settings.world.world_size)).color(ui_theme::ACCENT));
+    ui.label(egui::RichText::new("World size mirror").color(ui_theme::DIM));
+    ui.label(
+        egui::RichText::new(format!(
+            "{} (mirrors menus.rs WorldSetupParams::world_size)",
+            settings.world.world_size
+        ))
+        .color(ui_theme::ACCENT),
+    );
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("Default starting era").color(ui_theme::DIM));
-        ui.label(egui::RichText::new(format!("{}", settings.world.default_era)).color(ui_theme::ACCENT));
+        ui.label(
+            egui::RichText::new(format!("{}", settings.world.default_era)).color(ui_theme::ACCENT),
+        );
     });
     ui.label(egui::RichText::new("Session defaults are read-only mirrors until the world setup menu is wired through settings.").color(ui_theme::DIM).small());
     changed
 }
 
-fn display_tab(ui: &mut egui::Ui, display: &mut DisplaySettings, _graphics: &mut GraphicsSettings) -> bool {
+fn display_tab(
+    ui: &mut egui::Ui,
+    display: &mut DisplaySettings,
+    _graphics: &mut GraphicsSettings,
+) -> bool {
     let mut changed = false;
     section_heading(ui, "\u{1f4fa}", "Display");
 
@@ -1292,7 +1401,11 @@ fn volume_slider(ui: &mut egui::Ui, label: &str, value: &mut f32) -> bool {
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new(label).color(ui_theme::DIM));
         changed = ui
-            .add(egui::Slider::new(value, 0.0..=1.0).show_value(true).fixed_decimals(2))
+            .add(
+                egui::Slider::new(value, 0.0..=1.0)
+                    .show_value(true)
+                    .fixed_decimals(2),
+            )
             .changed();
     });
     changed
@@ -1400,8 +1513,14 @@ mod tests {
     #[test]
     fn key_for_looks_up_bindings() {
         let s = GameSettings::default();
-        assert_eq!(s.key_for("Toggle Settings"), Some(KeyBinding::Key(KeyCode::KeyO)));
-        assert_eq!(s.key_for("Zoom Camera"), Some(KeyBinding::Mouse(MouseButton::Middle)));
+        assert_eq!(
+            s.key_for("Toggle Settings"),
+            Some(KeyBinding::Key(KeyCode::KeyO))
+        );
+        assert_eq!(
+            s.key_for("Zoom Camera"),
+            Some(KeyBinding::Mouse(MouseButton::Middle))
+        );
         assert_eq!(s.key_for("missing"), None);
     }
 
@@ -1412,11 +1531,21 @@ mod tests {
             s.duplicate_binding("Toggle Settings", KeyBinding::Key(KeyCode::KeyG)),
             Some("Toggle Diplomacy".into())
         );
-        assert_eq!(s.duplicate_binding("Toggle Settings", KeyBinding::Key(KeyCode::KeyP)), None);
-        if let Some(entry) = s.keybinds.iter_mut().find(|b| b.action == "Toggle Settings") {
+        assert_eq!(
+            s.duplicate_binding("Toggle Settings", KeyBinding::Key(KeyCode::KeyP)),
+            None
+        );
+        if let Some(entry) = s
+            .keybinds
+            .iter_mut()
+            .find(|b| b.action == "Toggle Settings")
+        {
             entry.binding = KeyBinding::Mouse(MouseButton::Right);
         }
-        assert_eq!(s.key_for("Toggle Settings"), Some(KeyBinding::Mouse(MouseButton::Right)));
+        assert_eq!(
+            s.key_for("Toggle Settings"),
+            Some(KeyBinding::Mouse(MouseButton::Right))
+        );
     }
 
     #[test]

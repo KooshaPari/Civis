@@ -42,16 +42,36 @@ fn sample_chunk(world: &GenWorld, origin: [usize; 3], chunk_edge: usize) -> Vec<
 }
 
 #[test]
-#[ignore = "Missing public API: world size mapping is currently private (civ_voxel::worldgen::world_dims_for). Export mapping and replace placeholder assertions."]
 fn requirement_world_size_selection_changes_dimensions() {
-    // GIVEN size-indexed selection values from UI world-size controls (small..large),
+    // GIVEN size-indexed selection values from UI world-size controls (small..huge),
     // WHEN world_dims_for(index) is invoked for each index,
     // THEN generated dimensions must strictly increase with each index.
-    //
-    // This is currently blocked until `world_dims_for` is public (or replaced by a
-    // dedicated public world-size mapping API).
-    let expected_increasing: bool = true;
-    assert!(expected_increasing, "placeholder: world_dims_for(index) should be public to validate this requirement");
+    use civ_bevy_ref::voxel_sim::world_dims_for;
+    let small = world_dims_for(0);
+    let medium = world_dims_for(1);
+    let large = world_dims_for(2);
+    let huge = world_dims_for(3);
+
+    // Width and depth must grow monotonically.
+    assert!(
+        medium[0] > small[0] && medium[2] > small[2],
+        "medium {medium:?} must be wider+deeper than small {small:?}"
+    );
+    assert!(
+        large[0] > medium[0] && large[2] > medium[2],
+        "large {large:?} must be wider+deeper than medium {medium:?}"
+    );
+    assert!(
+        huge[0] > large[0] && huge[2] > large[2],
+        "huge {huge:?} must be wider+deeper than large {large:?}"
+    );
+
+    // Height must not shrink between presets.
+    assert!(
+        medium[1] >= small[1] && large[1] >= medium[1] && huge[1] >= large[1],
+        "height must be non-shrinking across presets: s={} m={} l={} h={}",
+        small[1], medium[1], large[1], huge[1]
+    );
 }
 
 #[test]
@@ -59,7 +79,11 @@ fn requirement_new_world_differs_from_previous() {
     // GIVEN two different New World seeds,
     // WHEN worldgen::generate is called with same user size and different seeds,
     // THEN at least 20% of sampled surface columns should differ.
-    let dims = [64, 48, 64];
+    //
+    // Proves the "New World" button regenerates a meaningfully different world
+    // (vs. producing an identical/seed-locked scene).
+    use civ_bevy_ref::voxel_sim::world_dims_for;
+    let dims = world_dims_for(0); // small preset for test cost
     let seed_a = 0x1E_5F_3A_C2_9D_17_4B_81u64;
     let seed_b = seed_a.wrapping_mul(13_245_799_145_678_972_871).rotate_left(13);
     let world_a = worldgen::generate(dims, seed_a);

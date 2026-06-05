@@ -20,7 +20,7 @@ const CHUNK_EDGE: usize = 16;
 /// a 5x5x5 (`BLUR_RADIUS = 2`) blur needs; with only 1 the outer blur ring falls
 /// out of bounds and chunk faces step. Kept in sync with the apron built by
 /// `voxel_sim::slice_chunk_with_apron` via `SMOOTH_MESH_PADDED_EDGE`.
-const APRON: usize = 2;
+const APRON: usize = 3;
 const CHUNK_EDGE_PADDED: usize = CHUNK_EDGE + 2 * APRON;
 pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
 /// Blur half-width. 1 -> a 3x3x3 Gaussian neighbourhood (27 samples). Dropped from
@@ -30,7 +30,7 @@ pub const SMOOTH_MESH_PADDED_EDGE: usize = CHUNK_EDGE_PADDED;
 /// interpolated (smooth), so radius 1 keeps the molded look at ~5x less mesh cost.
 /// The 2-voxel `APRON` stays, so chunk seams are still better-fed than the original
 /// 1-voxel apron. (Reserve: raise back to 2 once meshing is async/threaded.)
-const BLUR_RADIUS: isize = 1;
+const BLUR_RADIUS: isize = 2;
 const SOLID_CENTER_BIAS: f32 = 0.08;
 // Iso-surface tuning. The surface is the shared `solid_occ` contour at `ISO_LEVEL`.
 // `ISO_LEVEL` near 0.5 keeps the surface gently rounded; a low value over-favors
@@ -498,5 +498,35 @@ mod tests {
         let stone_density_here = stone_density(interface, y, z);
         assert!(dirt_density_here < 0.0);
         assert!(stone_density_here < 0.0);
+    }
+
+    #[test]
+    fn seam_chunk_produces_boundary_vertices() {
+        let mut chunk = [AIR; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut padded =
+            [AIR; SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE];
+
+        for z in 0..CHUNK_EDGE {
+            for y in 0..CHUNK_EDGE {
+                for x in 0..CHUNK_EDGE {
+                    chunk[x + y * CHUNK_EDGE + z * CHUNK_EDGE * CHUNK_EDGE] = MaterialId(1);
+                    let px = x + APRON;
+                    let py = y + APRON;
+                    let pz = z + APRON;
+                    padded[px
+                        + py * SMOOTH_MESH_PADDED_EDGE
+                        + pz * SMOOTH_MESH_PADDED_EDGE * SMOOTH_MESH_PADDED_EDGE] = MaterialId(1);
+                }
+            }
+        }
+
+        let registry = MaterialRegistry::standard();
+        let bufs = build_smooth_meshes(&chunk, &padded, None, &registry);
+        let vertex_count: usize = bufs.iter().map(|buf| buf.vertices.len()).sum();
+        println!("vertex_count={vertex_count}");
+        assert!(vertex_count > 0);
+        assert!(bufs
+            .iter()
+            .any(|buf| buf.vertices.iter().any(|v| v.position[0] >= 10.0)));
     }
 }

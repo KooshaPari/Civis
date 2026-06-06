@@ -41,7 +41,7 @@ jobs:
             command: cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
           - name: bevy
             os: ubuntu-latest
-            command: cargo build -p civ-bevy-ref
+            command: cargo build -p civ-bevy-ref --features bevy
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

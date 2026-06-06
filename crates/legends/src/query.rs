@@ -298,7 +298,7 @@ impl SagaGraph {
                 }
             }
         }
-        causal_notes.sort_by(|a, b| (a.0 .0, a.1 .0).cmp(&(b.0 .0, b.1 .0)));
+        causal_notes.sort_by_key(|a| (a.0 .0, a.1 .0));
 
         let digest_hash = hash_digest(
             epoch,

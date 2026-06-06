@@ -13,30 +13,48 @@ const FULL_TURN_FP: i64 = 360_000;
 const FP_SCALE: i64 = 1_000;
 const MAX_LAT_FP: i64 = 90_000;
 
+/// Coarse weather state for a region.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WeatherKind {
+    /// Clear skies.
     Clear,
+    /// Rainfall.
     Rain,
+    /// Snowfall.
     Snow,
+    /// Storm conditions.
     Storm,
 }
 
+/// Seasonal bucket used by the weather generator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SeasonKind {
+    /// Spring.
     Spring,
+    /// Summer.
     Summer,
+    /// Autumn.
     Autumn,
+    /// Winter.
     Winter,
 }
 
+/// Deterministic weather result for a single region.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WeatherCell {
+    /// Region identifier.
     pub region_id: u32,
+    /// Latitude in fixed-point degrees.
     pub latitude_fp: i32,
+    /// Current season.
     pub season: SeasonKind,
+    /// Weather classification.
     pub kind: WeatherKind,
+    /// Temperature in fixed-point Celsius.
     pub temp_c_fp: i32,
+    /// Precipitation in fixed-point millimeters.
     pub precip_mm_fp: i32,
+    /// Storm intensity in fixed-point units.
     pub storm_intensity_fp: i32,
 }
 
@@ -101,6 +119,8 @@ fn weather_kind_from(temp_c_fp: i64, precip_mm_fp: i64, storm_intensity_fp: i64)
     }
 }
 
+/// Compute the current weather for each region.
+#[must_use]
 pub fn compute_weather(climate: &Climate, tick: u64, num_regions: u32) -> Vec<WeatherCell> {
     let n = num_regions.max(1);
     let season = season_from_year_phase(climate.year_phase);

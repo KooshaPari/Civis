@@ -12,11 +12,20 @@ pub const MAX_TIES: usize = 150;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Interaction {
     /// Cooperative contact with a positive benefit.
-    Cooperated { benefit: f32 },
+    Cooperated {
+        /// Benefit gained from the interaction.
+        benefit: f32,
+    },
     /// Contested contact with pressure.
-    Competed { pressure: f32 },
+    Competed {
+        /// Pressure exerted by the interaction.
+        pressure: f32,
+    },
     /// Betrayal, theft, or attack.
-    Defected { harm: f32 },
+    Defected {
+        /// Harm caused by the interaction.
+        harm: f32,
+    },
     /// Mere co-location.
     Coexisted,
     /// Kinship link established at birth.

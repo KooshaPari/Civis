@@ -117,3 +117,17 @@ If Blockers 1 + 2 persist after the wait + dashboard review, escalate by:
 ---
 
 **End of report.**
+
+---
+
+## Update 2026-06-06
+
+PR #338 (`fix(ci): correct pr-governance-gate actions/github-script SHA`) MERGED to main. The previous report's "GitHub-side workflow cache" diagnosis was wrong — the actual root cause was a **typo'd SHA** (`60a0d4aa...` is off by one char from v7.0.1's `60a0d830...`). The SHA `60a0d4aab8c21a6b6c375a657fbe2e65754290a2` does not exist in `actions/github-script` (404 on github.com). The fix is one character change: `f28e40c7f34bde8b3046d885e986cb6290c5673b` (v7 tag SHA).
+
+All PRs that target `main` should now pass `pr-governance-gate` cleanly. PRs #333, #337 can be re-tested by pushing a new commit (re-trigger).
+
+**Status of other blockers:**
+- Blocker 2 (GitGuardian on #333): pre-existing flagged commit in wave-1 history, dashboard-only fix.
+- Blocker 3 (curl proxy on #334/#335): MISDIAGNOSED. Actual root cause is `cargo fmt --check` failing on `crates/voxel/src/fluid_ca.rs` because the project uses nightly rustfmt features. Fix: either use `dtolnay/rust-toolchain@nightly` in `dev-parity.yml` or drop the unstable `imports_granularity`/`group_imports` settings.
+- NEW Blocker 3b: `quality-manifest (cloud verify)` on #334/#335 fails with `git_sha 3cd997ed != HEAD 1391f0d0` — stale manifest. Fix: re-run `lefthook run pre-push && commit .ci/quality-manifest.json` on those branches.
+- NEW Blocker 4: PR #333 is now CONFLICTING with main (PR #331 climate-replay chain merged). Needs rebase or merge from origin/main.

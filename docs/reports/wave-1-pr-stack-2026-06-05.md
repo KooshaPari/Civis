@@ -131,3 +131,17 @@ All PRs that target `main` should now pass `pr-governance-gate` cleanly. PRs #33
 - Blocker 3 (curl proxy on #334/#335): MISDIAGNOSED. Actual root cause is `cargo fmt --check` failing on `crates/voxel/src/fluid_ca.rs` because the project uses nightly rustfmt features. Fix: either use `dtolnay/rust-toolchain@nightly` in `dev-parity.yml` or drop the unstable `imports_granularity`/`group_imports` settings.
 - NEW Blocker 3b: `quality-manifest (cloud verify)` on #334/#335 fails with `git_sha 3cd997ed != HEAD 1391f0d0` — stale manifest. Fix: re-run `lefthook run pre-push && commit .ci/quality-manifest.json` on those branches.
 - NEW Blocker 4: PR #333 is now CONFLICTING with main (PR #331 climate-replay chain merged). Needs rebase or merge from origin/main.
+
+---
+
+## Update 2026-06-06 (round 2)
+
+PR #338 (SHA typo fix) AND PR #339 (Set->Array fix) BOTH MERGED to main. After the SHA cache was finally resolved, the workflow hit a second pre-existing bug: `requiredOk = new Set([...])` is then called as `requiredOk.some(...)` — Sets don't have `.some()` (only Arrays do). The TypeError crashed the github-script step on every PR. Fixed by changing to a plain array literal.
+
+PRs #333, #337 should now pass `pr-governance-gate` cleanly on next CI re-trigger (push a no-op commit or wait for any sync).
+
+**Status of remaining blockers:**
+- Blocker 2 (GitGuardian on #333/#337): pre-existing flagged commit in history, dashboard-only fix. No CLI path.
+- Blocker 3 (cargo fmt on #334/#335): pre-existing rustfmt nightly/stable skew. Project uses nightly rustfmt features (imports_granularity, group_imports) but CI uses stable. Fix: use `dtolnay/rust-toolchain@nightly` in dev-parity.yml or drop unstable settings.
+- Blocker 3b (quality-manifest stale on #334/#335): manifest pinned to 3cd997ed, heads are 1391f0d0/d06ebe2d. Fix: re-run lefthook pre-push + commit manifest.
+- Blocker 4 (PR #333 CONFLICTING with main): PR #331 (climate-replay) merged to main. #333 needs rebase or merge from origin/main.

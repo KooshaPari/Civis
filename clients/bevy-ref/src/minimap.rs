@@ -112,11 +112,12 @@ impl Plugin for MinimapPlugin {
 #[cfg(feature = "egui")]
 fn sync_minimap_visibility(
     mode: Res<crate::menus::GameUiMode>,
-    map_view: Res<MapView>,
+    map_view: Option<Res<MapView>>,
     mut root: Query<&mut Visibility, With<MinimapRoot>>,
 ) {
     use crate::menus::GameUiMode;
-    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) && !map_view.active {
+    let map_active = map_view.as_deref().is_some_and(|view| view.active);
+    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) && !map_active {
         Visibility::Inherited
     } else {
         Visibility::Hidden

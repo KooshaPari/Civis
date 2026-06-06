@@ -69,7 +69,8 @@ async function choose() {
     minio: "docker.io/minio/minio",
   };
   const args = {
-    postgres: ["run", "--rm", "-p", `${process.env.CIV_PG_PORT || "5432"}:5432`, "-e", "POSTGRES_USER=civis", "-e", "POSTGRES_PASSWORD=civis", "-e", "POSTGRES_DB=civis", "-v", `${repoRoot}\\.process-compose\\data\\pg:/var/lib/postgresql/data`, imageMap.postgres],
+    // Local-dev placeholder creds. Override CIV_PG_USER / CIV_PG_PASSWORD / CIV_PG_DB in .env for any non-throwaway use.
+    postgres: ["run", "--rm", "-p", `${process.env.CIV_PG_PORT || "5432"}:5432`, "-e", `POSTGRES_USER=${process.env.CIV_PG_USER || "civis"}`, "-e", `POSTGRES_PASSWORD=${process.env.CIV_PG_PASSWORD || "civis"}`, "-e", `POSTGRES_DB=${process.env.CIV_PG_DB || "civis"}`, "-v", `${repoRoot}\\.process-compose\\data\\pg:/var/lib/postgresql/data`, imageMap.postgres],
     dragonfly: ["run", "--rm", "-p", `${process.env.CIV_REDIS_PORT || "6379"}:6379`, imageMap.dragonfly],
     nats: ["run", "--rm", "-p", `${process.env.CIV_NATS_PORT || "4222"}:4222`, imageMap.nats, "--jetstream", "--port", "4222", "--addr", "0.0.0.0"],
     minio: ["run", "--rm", "-p", `${process.env.CIV_MINIO_PORT || "9000"}:9000`, "-p", `${process.env.CIV_MINIO_CONSOLE_PORT || "9001"}:9001`, "-e", `MINIO_ROOT_USER=${process.env.CIV_MINIO_ACCESS_KEY || "minioadmin"}`, "-e", `MINIO_ROOT_PASSWORD=${process.env.CIV_MINIO_SECRET_KEY || "minioadmin"}`, "-v", `${repoRoot}\\.process-compose\\data\\minio:/data`, imageMap.minio, "server", "/data", "--address", "0.0.0.0:9000", "--console-address", "0.0.0.0:9001"],

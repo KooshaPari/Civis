@@ -54,10 +54,22 @@ debug = 1
 # MSVC this maps to a separate .pdb ("packed"); on *nix to "unpacked".
 split-debuginfo = "packed"
 
-[profile.dev.package."*"]
-# Third-party deps (bevy, wgpu, etc.) are compiled once and rarely change, so
-# optimizing them keeps the *running* sandbox fast without slowing our warm
-# rebuilds. opt-level 3 here is the standard Bevy fast-dev recommendation.
+# Heavy third-party deps are compiled once and rarely change, so optimizing
+# them keeps the *running* sandbox fast without slowing our warm rebuilds.
+# opt-level 3 here is the standard Bevy fast-dev recommendation. We scope to
+# the heavy game-engine crates (bevy, wgpu, bevy_kira_audio) so lighter deps
+# (serde, rand, etc.) keep their cheap debug builds and don't bloat target/.
+[profile.dev.package.bevy]
 opt-level = 3
-# Deps don't need debuginfo for our backtraces — dropping it speeds first build.
-debug = false
+# `debug = 1` (line tables only, no inline) — keeps backtraces usable when a
+# developer needs to step into bevy_ecs / wgpu / kira to debug a sim issue,
+# without paying for full DWARF on the first build.
+debug = 1
+
+[profile.dev.package.wgpu]
+opt-level = 3
+debug = 1
+
+[profile.dev.package.bevy_kira_audio]
+opt-level = 3
+debug = 1

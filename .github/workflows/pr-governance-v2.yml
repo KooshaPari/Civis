@@ -126,8 +126,11 @@ jobs:
             conclusion=$(echo "$node" | jq -r '.conclusion // ""')
             state=$(echo "$node" | jq -r '.state // ""')
 
-            # Always allow our own self-check.
-            if [ "$name" = "pr-governance-gate-v2" ] || printf '%s' "$name" | grep -Eqi '^quality-manifest'; then
+            # Always allow our own self-check, AND the bare "pr-governance-gate"
+            # name that may still appear in the rollup from a run before the
+            # 2026-06-06 rename. A failed stale governance check from the
+            # removed workflow must not block merges once the v2 gate passes.
+            if [ "$name" = "pr-governance-gate-v2" ] || [ "$name" = "pr-governance-gate" ] || printf '%s' "$name" | grep -Eqi '^quality-manifest'; then
               continue
             fi
 
@@ -147,8 +150,14 @@ jobs:
               fi
             fi
           done < <(echo "$ROLLUP_JSON" | jq -c '
-            .commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]
-            | {kind: .__typename, name: (.name // .context), status: .status, conclusion: .conclusion, state: .state}
+            # Null-safe traversal: when the rollup, contexts, or commits array
+            # is missing (e.g. brand-new PRs with no checks yet), the bash port
+            # of the old github-script step used to crash here under `set -e`.
+            # Mirror the JS implementation "treat as empty list" semantics.
+            ((.commits.nodes // []) as $commits
+             | ($commits[0].commit.statusCheckRollup.contexts.nodes // []) as $nodes
+             | $nodes[]
+             | {kind: .__typename, name: (.name // .context), status: .status, conclusion: .conclusion, state: .state})
           ')
 
           if [ -s "$FAILURES_FILE" ]; then

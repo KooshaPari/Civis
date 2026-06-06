@@ -56,10 +56,10 @@
 
 use std::time::Duration;
 
-use civ_agents::ActorVisualKind;
 use bevy::animation::RepeatAnimation;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
+use civ_agents::ActorVisualKind;
 
 /// Speed (world-units / second of root translation) below which an actor is
 /// considered idle.

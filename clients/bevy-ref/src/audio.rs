@@ -252,7 +252,7 @@ mod tests {
     fn sfx_event_defaults_to_unit_volume() {
         let event = SfxEvent::new(SfxKind::Birth);
         assert_eq!(event.kind, SfxKind::Birth);
-    assert!((event.volume - 1.0).abs() < f32::EPSILON);
+        assert!((event.volume - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]

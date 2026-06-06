@@ -49,15 +49,13 @@ bevy_rapier3d = { version = "0.34", optional = true }
 # our `bevy = "0.18"` pin. default-features off → only the `ogg` decoder is
 # pulled (CC0 clips ship as .ogg), avoiding extra codec deps. See src/audio.rs.
 bevy_kira_audio = { version = "0.25", optional = true, default-features = false, features = ["ogg"] }
-# PART A — bevy_atmosphere (real physically-based sky), gated behind the
-# `atmosphere` feature. NOTE (checked 2026-05-29 via crates.io): the latest
-# published bevy_atmosphere is 0.13.0 (2025-05-06) which depends on `bevy ^0.16`
-# — there is NO release compatible with Bevy 0.18 yet. The dep line + feature
-# below are therefore left COMMENTED so the manifest stays parseable and the
-# existing procedural skybox dome (src/skybox.rs + src/atmosphere.rs) remains
-# the sky. Uncomment the dep + the `atmosphere` feature once an 0.18-compatible
-# bevy_atmosphere (expected ~0.14) ships, then wire `AtmospherePlugin` per the
-# note in src/gltf_models.rs.
+# PART A — bevy_atmosphere (real physically-based sky).
+# NOTE (checked 2026-05-29 via crates.io): the latest published bevy_atmosphere
+# is 0.13.0 (2025-05-06) which depends on `bevy ^0.16` — there is NO release
+# compatible with Bevy 0.18 yet. The existing procedural skybox dome
+# (src/skybox.rs + src/atmosphere.rs) remains the sky. When an 0.18-compatible
+# bevy_atmosphere (expected ~0.14) ships, add the dep line and the `atmosphere`
+# feature together — do NOT reintroduce a no-op `atmosphere` feature flag.
 # bevy_atmosphere = { version = "0.14", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"], optional = true }
 tokio-tungstenite = { version = "0.24", optional = true, default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
@@ -119,10 +117,6 @@ voxel_stream = ["voxel"]
 # disabled (or when assets/models/*.glb are absent) callers fall back to the
 # procedural primitives (capsule civilians / cuboid buildings / cone trees).
 models = ["bevy"]
-# PART A — real sky. Currently a no-op placeholder feature: NO 0.18-compatible
-# bevy_atmosphere exists yet (see the commented dep above). When one ships,
-# uncomment its dep and change this to `atmosphere = ["bevy", "dep:bevy_atmosphere"]`.
-atmosphere = ["bevy"]
 # Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
 # (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
 audio = ["bevy", "dep:bevy_kira_audio"]

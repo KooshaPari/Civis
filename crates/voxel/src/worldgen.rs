@@ -30,11 +30,11 @@ pub const fn sea_level(dims: [usize; 3]) -> usize {
     dims[1].saturating_mul(40) / 100
 }
 
+/// Return the deterministic surface height for one world column.
 #[must_use]
 pub fn surface_height(dims: [usize; 3], seed: u64, x: usize, z: usize) -> usize {
     let dx = dims[0].max(1);
     let dz = dims[2].max(1);
-    let sea = dims[1] as f64 * 0.40;
     // Base sits a touch BELOW sea level so that low-relief regions form genuine
     // interior lakes/seas (water fills above the seabed up to sea level), while
     // hills still rise well above it. Previously base (0.50H) was above sea and
@@ -92,26 +92,39 @@ fn carve_column(
     x: usize,
     z: usize,
 ) {
-    let surface = surface_height(dims, seed, x, z);
-    let soil = soil_depth(seed, x, z, dims[1]).min(2).max(1);
-    let ore_seed = mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64);
+    let ctx = ColumnCtx {
+        dims,
+        seed,
+        sea,
+        surface: surface_height(dims, seed, x, z),
+        soil: soil_depth(seed, x, z, dims[1]).clamp(1, 2),
+        ore_seed: mix3(seed ^ 0x9e37_79b9_7f4a_7c15, x as u64, z as u64),
+    };
     for y in 0..dims[1] {
         let idx = index(dims, x, y, z);
-        cells[idx] = cell_material(dims, seed, sea, surface, soil, x, y, z, ore_seed);
+        cells[idx] = cell_material(ctx, x, y, z);
     }
 }
 
-fn cell_material(
+#[derive(Clone, Copy)]
+struct ColumnCtx {
     dims: [usize; 3],
     seed: u64,
     sea: usize,
     surface: usize,
     soil: usize,
-    x: usize,
-    y: usize,
-    z: usize,
     ore_seed: u64,
-) -> MaterialId {
+}
+
+fn cell_material(ctx: ColumnCtx, x: usize, y: usize, z: usize) -> MaterialId {
+    let ColumnCtx {
+        dims,
+        seed,
+        sea,
+        surface,
+        soil,
+        ore_seed,
+    } = ctx;
     if is_bedrock_shell(dims, x, y, z) || y < bedrock_depth(dims[1]) {
         return BEDROCK;
     }

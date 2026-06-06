@@ -1,6 +1,12 @@
 # Local-first merge gate (Phenotype / agileplus pattern).
 # Heavy quality runs locally via lefthook; this job enforces manifest attestation and
-# ignores billable-runner failures when labeled ci-billing-exception.
+# ignores billable-runner failures when labeled ci-billing-exception or local-first-ci.
+#
+# Implementation note: the prior version used `actions/github-script@v7`, but the
+# action-resolution cache on this repo was returning a stale SHA even after file
+# edits and renames. To make this stable, the GitHub-script step has been replaced
+# by a pure `gh api graphql` call from a bash step. No third-party actions are
+# used after checkout.
 name: pr-governance-gate
 
 on:
@@ -20,6 +26,8 @@ jobs:
     name: pr-governance-gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.review.pull_request.number }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -30,39 +38,37 @@ jobs:
         run: bash scripts/quality/verify-quality-manifest.sh
 
       - name: Evaluate PR checks (billing bypass)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber =
-              context.payload.pull_request?.number ??
-              context.payload.review?.pull_request?.number;
-            if (!prNumber) {
-              core.setFailed("No pull request number was provided.");
-              return;
-            }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
+        run: |
+          set -euo pipefail
 
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    labels(first: 30) { nodes { name } }
-                    commits(last: 1) {
-                      nodes {
-                        commit {
-                          statusCheckRollup {
-                            contexts(first: 100) {
-                              nodes {
-                                __typename
-                                ... on CheckRun {
-                                  name
-                                  status
-                                  conclusion
-                                }
-                                ... on StatusContext {
-                                  context
-                                  state
-                                }
-                              }
+          if [ -z "${PR_NUMBER:-}" ] || [ "$PR_NUMBER" = "null" ]; then
+            echo "::error::No pull request number was provided."
+            exit 1
+          fi
+
+          QUERY='query($owner: String!, $repo: String!, $number: Int!) {
+            repository(owner: $owner, name: $repo) {
+              pullRequest(number: $number) {
+                labels(first: 30) { nodes { name } }
+                commits(last: 1) {
+                  nodes {
+                    commit {
+                      statusCheckRollup {
+                        contexts(first: 100) {
+                          nodes {
+                            __typename
+                            ... on CheckRun {
+                              name
+                              status
+                              conclusion
+                            }
+                            ... on StatusContext {
+                              context
+                              state
                             }
                           }
                         }
@@ -71,91 +77,79 @@ jobs:
                   }
                 }
               }
-            `;
-
-            const result = await github.graphql(query, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: prNumber,
-            });
-
-            const pr = result.repository.pullRequest;
-            const labels = new Set((pr.labels.nodes || []).map((n) => n.name));
-            const billingException =
-              labels.has("ci-billing-exception") || labels.has("local-first-ci");
-
-            const requiredOk = new Set([
-              /^pr-governance-gate$/i,
-              /^quality-manifest/i,
-            ]);
-
-            const billingBypass = [
-              /billing/i,
-              /quota/i,
-              /spending/i,
-              /actions.*limit/i,
-              /^cargo-/i,
-              /^Analyze \(rust\)$/i,
-              /^quality-gate$/i,
-              /^gate$/i,
-              /^coverage$/i,
-              /^links$/i,
-              /^docs-build$/i,
-              /^journey-validate$/i,
-              /^Legacy Tooling/i,
-              /^policy-gate$/i,
-              /^guard$/i,
-              /^semver-checks$/i,
-              /^machete$/i,
-              /^civ-show/i,
-              /^GitGuardian/i,
-              /^Kilo/i,
-              /^semgrep/i,
-              /^SonarCloud/i,
-              /^Cursor Bugbot/i,
-              /^CodeRabbit$/i,
-            ];
-
-            const contexts =
-              pr.commits.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
-            const failures = [];
-
-            for (const node of contexts) {
-              const name =
-                node.__typename === "CheckRun" ? node.name : node.context;
-              if (!name || requiredOk.some((re) => re.test(name))) {
-                continue;
-              }
-              if (billingException && billingBypass.some((re) => re.test(name))) {
-                continue;
-              }
-              if (node.__typename === "CheckRun") {
-                if (node.status !== "COMPLETED") {
-                  failures.push(`Check '${name}' is still ${node.status}.`);
-                  continue;
-                }
-                if (!["SUCCESS", "SKIPPED", "NEUTRAL"].includes(node.conclusion || "")) {
-                  failures.push(`Check '${name}' concluded with ${node.conclusion}.`);
-                }
-              } else if (!["SUCCESS", "PENDING"].includes(node.state)) {
-                failures.push(`Status '${name}' is ${node.state}.`);
-              }
             }
+          }'
 
-            if (failures.length > 0) {
-              core.summary.addHeading("PR governance").addList(failures);
-              core.setFailed(
-                failures.join("\n") +
-                  "\n\nTip: add label `ci-billing-exception` or `local-first-ci` when GitHub Actions billing blocks legacy jobs."
-              );
-              return;
-            }
+          PAYLOAD=$(jq -n \
+            --arg q "$QUERY" \
+            --arg owner "${REPO%/*}" \
+            --arg repo  "${REPO#*/}" \
+            --argjson number "$PR_NUMBER" \
+            '{query:$q, variables:{owner:$owner, repo:$repo, number:$number}}')
 
-            core.summary
-              .addHeading("PR governance")
-              .addRaw(
-                billingException
-                  ? "Manifest OK; legacy CI failures ignored (billing/local-first label)."
-                  : "Manifest OK; all reported checks passed or were ignored as optional."
-              )
-              .write();
+          ROLLUP_JSON=$(gh api graphql -H "X-Github-Next-Global-ID: false" \
+            --input - <<<"$PAYLOAD" --jq '.data.repository.pullRequest')
+
+          LABELS=$(echo "$ROLLUP_JSON" | jq -r '.labels.nodes[].name' | sort -u)
+          printf '%s\n' "$LABELS" | sed 's/^/label: /'
+
+          BILLING_EXCEPTION="false"
+          if printf '%s\n' "$LABELS" | grep -Eqx 'ci-billing-exception|local-first-ci'; then
+            BILLING_EXCEPTION="true"
+          fi
+
+          # Evaluate each rollup context.
+          FAILURES_FILE=$(mktemp)
+          trap 'rm -f "$FAILURES_FILE"' EXIT
+
+          # NOTE: use process substitution (not a pipe) so the loop runs in the
+          # current shell and writes to $FAILURES_FILE persist after the loop.
+          while IFS= read -r node; do
+            name=$(echo "$node" | jq -r '.name')
+            kind=$(echo "$node" | jq -r '.kind')
+            status=$(echo "$node" | jq -r '.status // ""')
+            conclusion=$(echo "$node" | jq -r '.conclusion // ""')
+            state=$(echo "$node" | jq -r '.state // ""')
+
+            # Always allow our own self-check.
+            if [ "$name" = "pr-governance-gate" ] || printf '%s' "$name" | grep -Eqi '^quality-manifest'; then
+              continue
+            fi
+
+            if [ "$BILLING_EXCEPTION" = "true" ] && printf '%s' "$name" | grep -Eqi '(billing|quota|spending|actions.*limit|^cargo-|^Analyze \(rust\)$|^quality-gate$|^gate$|^coverage$|^links$|^docs-build$|^journey-validate$|Legacy Tooling|^policy-gate$|^guard$|^semver-checks$|^machete$|^civ-show$|^GitGuardian$|^Kilo$|^semgrep$|^SonarCloud$|^Cursor Bugbot$|^CodeRabbit$)'; then
+              continue
+            fi
+
+            if [ "$kind" = "CheckRun" ]; then
+              if [ "$status" != "COMPLETED" ]; then
+                echo "Check '$name' is still $status." >> "$FAILURES_FILE"
+              elif ! printf '%s' "$conclusion" | grep -Eq '^(SUCCESS|SKIPPED|NEUTRAL)$'; then
+                echo "Check '$name' concluded with $conclusion." >> "$FAILURES_FILE"
+              fi
+            else
+              if ! printf '%s' "$state" | grep -Eq '^(SUCCESS|PENDING)$'; then
+                echo "Status '$name' is $state." >> "$FAILURES_FILE"
+              fi
+            fi
+          done < <(echo "$ROLLUP_JSON" | jq -c '
+            .commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]
+            | {kind: .__typename, name: (.name // .context), status: .status, conclusion: .conclusion, state: .state}
+          ')
+
+          if [ -s "$FAILURES_FILE" ]; then
+            {
+              echo "## PR governance"
+              echo
+              while IFS= read -r line; do echo "- $line"; done < "$FAILURES_FILE"
+              echo
+              echo "Tip: add label \`ci-billing-exception\` or \`local-first-ci\` when GitHub Actions billing blocks legacy jobs."
+            } >> "$GITHUB_STEP_SUMMARY"
+            cat "$FAILURES_FILE"
+            exit 1
+          fi
+
+          if [ "$BILLING_EXCEPTION" = "true" ]; then
+            echo "Manifest OK; legacy CI failures ignored (billing/local-first label)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Manifest OK; all reported checks passed or were ignored as optional." >> "$GITHUB_STEP_SUMMARY"
+          fi

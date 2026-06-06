@@ -43,9 +43,11 @@ use bevy::reflect::TypePath;
 #[cfg(feature = "bevy")]
 use bevy::render::render_resource::{AsBindGroup, ShaderType, SpecializedMeshPipelineError};
 #[cfg(feature = "bevy")]
-use bevy::shader::ShaderRef;
+use bevy::shader::{Shader, ShaderRef};
 #[cfg(feature = "bevy")]
 use std::collections::HashMap;
+#[cfg(feature = "bevy")]
+use std::sync::OnceLock;
 
 #[cfg(feature = "bevy")]
 pub mod texture_load {
@@ -366,6 +368,8 @@ use civ_voxel::MaterialId;
 #[cfg(feature = "bevy")]
 const TRI_SHADER: &str = "shaders/voxel_triplanar.wgsl";
 #[cfg(feature = "bevy")]
+static TRI_SHADER_HANDLE: OnceLock<Handle<Shader>> = OnceLock::new();
+#[cfg(feature = "bevy")]
 const TRI_SCALE: f32 = 0.22;
 
 #[cfg(feature = "bevy")]
@@ -449,7 +453,11 @@ pub struct VoxelTriplanarMaterial {
 #[cfg(feature = "bevy")]
 impl Material for VoxelTriplanarMaterial {
     fn fragment_shader() -> ShaderRef {
-        TRI_SHADER.into()
+        TRI_SHADER_HANDLE
+            .get()
+            .cloned()
+            .map(ShaderRef::Handle)
+            .unwrap_or_else(|| TRI_SHADER.into())
     }
 
     fn alpha_mode(&self) -> AlphaMode {
@@ -546,7 +554,17 @@ impl Plugin for VoxelTriplanarPlugin {
 }
 
 #[cfg(feature = "bevy")]
-fn load_voxel_pbr_bank(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn load_voxel_pbr_bank(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut shaders: ResMut<Assets<Shader>>,
+) {
+    let shader = shaders.add(Shader::from_wgsl(
+        include_str!("../assets/shaders/voxel_triplanar.wgsl"),
+        TRI_SHADER,
+    ));
+    let _ = TRI_SHADER_HANDLE.set(shader);
+
     let layers = std::array::from_fn(|i| {
         let biome = TerrainTextureLayer::ALL[i].biome();
         LayerTextures {

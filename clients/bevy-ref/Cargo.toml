@@ -29,7 +29,7 @@ surface-nets = "0.1"
 
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
-bevy = { version = "0.18", optional = true }
+bevy = { version = "0.18", optional = true, features = ["jpeg"] }
 bevy_water = { version = "0.18.1", optional = true }
 bevy_egui = { version = "0.39", optional = true }
 # Decode the embedded window-icon PNG (src/window_icon.rs) into RGBA for winit.
@@ -119,6 +119,9 @@ voxel_stream = ["voxel"]
 # disabled (or when assets/models/*.glb are absent) callers fall back to the
 # procedural primitives (capsule civilians / cuboid buildings / cone trees).
 models = ["bevy"]
+# Visual-effects plugin placeholder and shader/material texture-bank toggles.
+vfx = ["bevy"]
+pbr-textures = ["bevy"]
 # PART A — real sky. Currently a no-op placeholder feature: NO 0.18-compatible
 # bevy_atmosphere exists yet (see the commented dep above). When one ships,
 # uncomment its dep and change this to `atmosphere = ["bevy", "dep:bevy_atmosphere"]`.

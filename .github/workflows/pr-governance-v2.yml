@@ -12,10 +12,20 @@
 # and file `pr-governance.yml` -> `pr-governance-v2.yml` to invalidate the
 # GitHub-side workflow registration cache that was still binding the
 # `actions/github-script@60a0d4aa...` SHA from the original file.
+#
+# Trigger change: the previous workflow used `pull_request_target`, which
+# (per GitHub's security model) runs the workflow file from the BASE branch,
+# not the PR head. The base (`main`) still ships the broken
+# `pr-governance-gate.yml` with the cached `actions/github-script@60a0d4aa...`
+# SHA, so the cache issue persists regardless of changes to the head.
+# Switching to `pull_request` causes GitHub to execute the workflow file from
+# the PR head (this file), which is the rewritten pure-bash version. The
+# permissions block grants only `checks: read` + `pull-requests: read`, which
+# is all the bash+gh-api step needs.
 name: pr-governance-gate-v2
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review, labeled, unlabeled]
   pull_request_review:
     types: [submitted, edited, dismissed]

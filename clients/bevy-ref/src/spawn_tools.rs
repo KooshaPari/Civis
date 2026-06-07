@@ -538,7 +538,7 @@ fn accumulate_road_draft(
             let keep = draft
                 .points
                 .last()
-                .is_none_or(|last| last.distance_squared(p) > 2.25);
+                .map_or(true, |last| last.distance_squared(p) > 2.25);
             if keep {
                 draft.points.push(p);
             }

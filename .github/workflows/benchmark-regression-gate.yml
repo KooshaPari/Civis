@@ -9,10 +9,6 @@ on:
       - 'src/Tools/PackCompiler/**'
       - 'src/Tests/Benchmarks/**'
       - '.github/workflows/benchmark-regression-gate.yml'
-
-permissions:
-  pull-requests: write
-
 jobs:
   benchmark-regression:
     runs-on: ubuntu-latest
@@ -21,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
@@ -54,7 +50,7 @@ jobs:
           echo "Found CSV: $CSV_PATH"
 
       - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v-latest
         with:
           python-version: '3.11'
 
@@ -83,7 +79,7 @@ jobs:
 
       - name: Comment PR on regression
         if: steps.report.outputs.status == 'FAIL'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v-latest
         with:
           script: |
             const fs = require('fs');
@@ -114,8 +110,15 @@ jobs:
 
       - name: Upload benchmark report
         if: always()
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a  # v4.3.6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         with:
           name: benchmark-report
           path: benchmark_report.json
           retention-days: 30
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+

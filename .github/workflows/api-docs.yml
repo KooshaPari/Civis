@@ -1,4 +1,11 @@
 name: API Reference
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
   push:
@@ -8,15 +15,11 @@ on:
       - 'src/Bridge/Client/**'
       - 'docfx.json'
   workflow_dispatch:
-
-permissions:
-  contents: read
-
 jobs:
   build-api-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
       - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
         with:
           dotnet-version: '11.0.x'
@@ -25,7 +28,7 @@ jobs:
       - name: Generate API metadata
         run: docfx metadata docfx.json
       - name: Upload API docs artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         with:
           name: api-docs
           path: docs/api/

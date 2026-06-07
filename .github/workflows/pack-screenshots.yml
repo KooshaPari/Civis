@@ -10,6 +10,13 @@ on:
   schedule:
     # Weekly Sunday at 2:00 UTC (intentionally off-minute per feedback_parallel_subagent_minimum)
     - cron: "7 2 * * 0"
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 jobs:
   capture:

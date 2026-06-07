@@ -5,9 +5,6 @@ on:
     paths:
       - 'packs/**'
       - '.github/workflows/pack-validation.yml'
-
-permissions:
-  contents: read
   pull-requests: write
 
 jobs:
@@ -149,3 +146,10 @@ jobs:
       - name: Fail workflow if validation failed
         if: steps.status.outputs.failed == '1'
         run: exit 1
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+

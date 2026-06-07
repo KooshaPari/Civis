@@ -1,4 +1,11 @@
 name: schema-drift
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 # Pattern #90 detection gate — fails CI when schemas/ silently de-syncs from
 # its callers: missing schema files referenced by C# code, broken `$ref`
@@ -30,10 +37,6 @@ on:
       - "docs/qa/schema-drift-allowlist.txt"
       - ".github/workflows/schema-drift.yml"
   workflow_dispatch:
-
-permissions:
-  contents: read
-
 jobs:
   schema-drift-check:
     name: Pattern #90 schema-drift
@@ -41,10 +44,10 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v-latest
         with:
           python-version: "3.12"
 
@@ -59,7 +62,7 @@ jobs:
 
       - name: Upload report on failure
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         with:
           name: schema-drift-report
           path: docs/qa/schema-drift-report.json

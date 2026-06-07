@@ -42,6 +42,7 @@ use civ_voxel::material::{MaterialDef, MaterialRegistry, AIR, WATER};
 use crate::camera::CameraRig;
 use crate::sim_bridge::SimState;
 use crate::spawn_tools::SelectEntityRequest;
+#[cfg(feature = "voxel")]
 use crate::terrain::{HEIGHT_SCALE, WATER_LEVEL};
 #[cfg(feature = "voxel")]
 use crate::voxel_sim::{voxel_surface_y, VoxelSimState};
@@ -230,6 +231,7 @@ fn hide_3d_scene_when_map_active(
 
 /// Biome-ish palette by elevation + water, mirroring the 3D `terrain` look but
 /// flattened for a clean cartographic read. Returns linear-ish sRGB 0..1.
+#[cfg(any(feature = "voxel", test))]
 fn map_palette(h: f32) -> [f32; 3] {
     let sea = WATER_LEVEL;
     if h < sea - 0.05 * HEIGHT_SCALE {
@@ -255,6 +257,7 @@ fn map_palette(h: f32) -> [f32; 3] {
 }
 
 /// 4x4 Bayer ordered-dither matrix scaled to ±~1/512 so bands don't posterise.
+#[cfg(feature = "voxel")]
 const BAYER4: [[f32; 4]; 4] = [
     [0.0, 8.0, 2.0, 10.0],
     [12.0, 4.0, 14.0, 6.0],
@@ -394,7 +397,7 @@ fn building_norm_xz_with_state(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        return building_norm_xz(building);
+        building_norm_xz(building)
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -431,7 +434,7 @@ fn marker_world_from_actor(
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        return Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0);
+        Vec3::new(u * 256.0 - 128.0, 0.0, v * 256.0 - 128.0)
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -450,7 +453,7 @@ fn marker_world_from_building(building: &Building, voxel_state: Option<&VoxelSim
     #[cfg(not(feature = "voxel"))]
     {
         let _ = voxel_state;
-        return Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0);
+        Vec3::new(n.x * 256.0 - 128.0, 0.0, n.y * 256.0 - 128.0)
     }
     #[cfg(feature = "voxel")]
     if let Some(voxel_state) = voxel_state {
@@ -595,7 +598,7 @@ fn draw_map_view(
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
         .show(ctx, |ui| {
-            let screen = ctx.screen_rect();
+            let screen = ctx.content_rect();
             let painter = ui.painter();
             let min_zoom = (screen.width().max(screen.height())) / MAP_TEX as f32;
 
@@ -805,7 +808,7 @@ fn draw_map_view(
                 for marker in map_markers.iter() {
                     let d2 = marker.screen_pos.distance_sq(pointer);
                     if d2 <= MAP_CLICK_PICK_RADIUS_PX * MAP_CLICK_PICK_RADIUS_PX
-                        && best.is_none_or(|(best_d2, _)| d2 < best_d2)
+                        && best.map_or(true, |(best_d2, _)| d2 < best_d2)
                     {
                         best = Some((d2, *marker));
                     }

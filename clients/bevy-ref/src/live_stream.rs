@@ -76,6 +76,12 @@ impl LiveChunkFade {
     }
 }
 
+impl Default for LiveChunkFade {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Marker for a streamed agent entity.
 ///
 /// In server-attach mode, actors are rendered from remote `AgentAppearance`

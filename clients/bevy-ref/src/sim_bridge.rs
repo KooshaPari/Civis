@@ -56,12 +56,6 @@ struct PendingActorScene {
     kind: ActorVisualKind,
     faction: u32,
 }
-#[cfg(not(feature = "models"))]
-#[derive(Component, Clone, Copy)]
-struct PendingActorScene {
-    kind: ActorVisualKind,
-    faction: u32,
-}
 
 /// Resolve the loaded CC0 actor scene for `kind`, else `None` (capsule fallback).
 #[cfg(feature = "models")]
@@ -458,7 +452,10 @@ fn sync_visible_gameplay(
         .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
+        #[cfg(feature = "models")]
         let visual_kind = visual.map(|v| v.0).unwrap_or(ActorVisualKind::Humanoid);
+        #[cfg(not(feature = "models"))]
+        let _visual_kind = visual.map(|v| v.0).unwrap_or(ActorVisualKind::Humanoid);
         civ_count += 1;
         seen_civilians.push(civilian.id);
         let world_pos = {

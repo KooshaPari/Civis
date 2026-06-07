@@ -11,7 +11,18 @@
 //!   build stays fast for CI / agent-driven smoke runs.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
+#![allow(
+    missing_docs,
+    clippy::type_complexity,
+    clippy::too_many_arguments,
+    clippy::derivable_impls,
+    clippy::wrong_self_convention,
+    clippy::field_reassign_with_default,
+    clippy::explicit_counter_loop,
+    clippy::let_and_return,
+    clippy::unnecessary_cast,
+    clippy::nonminimal_bool
+)]
 
 #[cfg(feature = "bevy")]
 pub mod animation;

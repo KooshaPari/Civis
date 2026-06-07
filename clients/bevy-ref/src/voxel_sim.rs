@@ -1218,7 +1218,7 @@ fn base_color(def: &MaterialDef) -> Color {
 fn pbr_material_for(id: MaterialId, def: &MaterialDef) -> StandardMaterial {
     let mut mat = StandardMaterial {
         base_color: base_color(def),
-        emissive: Color::BLACK,
+        emissive: Color::BLACK.into(),
         perceptual_roughness: 0.9,
         metallic: 0.0,
         reflectance: 0.5,

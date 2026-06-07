@@ -11,14 +11,8 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::ui_theme;
 
 /// Public state shared with the toolbar button in `game_ui`.
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 pub struct GameLawsOpen(pub bool);
-
-impl Default for GameLawsOpen {
-    fn default() -> Self {
-        Self(false)
-    }
-}
 
 /// A single law line for the popup list.
 #[derive(Debug, Clone, Copy)]

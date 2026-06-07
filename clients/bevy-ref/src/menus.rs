@@ -535,7 +535,7 @@ fn draw_settings_window(
 
 /// Full-screen near-opaque dark backdrop used behind menus and loading screen.
 fn full_screen_backdrop(ctx: &egui::Context) {
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     let bg = egui::Color32::from_rgba_premultiplied(8, 10, 18, 245);
     egui::Area::new(egui::Id::new("menu_backdrop"))
         .fixed_pos(egui::pos2(0.0, 0.0))
@@ -554,7 +554,7 @@ fn image_backdrop(ctx: &egui::Context, tex: Option<&egui::TextureHandle>, id: &s
         full_screen_backdrop(ctx);
         return;
     };
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     egui::Area::new(egui::Id::new(id))
         .fixed_pos(egui::pos2(0.0, 0.0))
         .order(egui::Order::Background)
@@ -1224,9 +1224,7 @@ fn themed_button(
         egui::StrokeKind::Inside,
     );
 
-    let txt = if hovered {
-        egui::Color32::WHITE
-    } else if primary {
+    let txt = if hovered || primary {
         egui::Color32::WHITE
     } else {
         egui::Color32::from_rgb(214, 224, 240)

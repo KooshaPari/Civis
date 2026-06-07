@@ -221,7 +221,7 @@ pub fn draw_event_feed(
 /// Render the most-recent [`TOAST_COUNT`] events as stacked glass cards,
 /// anchored to the bottom-right corner above the bottom HUD bar (~60 px).
 fn draw_toasts(ctx: &egui::Context, feed: &EventFeed) {
-    let screen = ctx.screen_rect();
+    let screen = ctx.content_rect();
     // Anchor: bottom-right with margin above the ~60 px bottom HUD bar.
     let anchor = egui::pos2(screen.right() - 16.0, screen.bottom() - 68.0);
 

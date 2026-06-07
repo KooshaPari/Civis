@@ -77,7 +77,7 @@ impl DipFaction {
 }
 
 /// Primary resource for the Diplomacy panel.
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Default)]
 pub struct DiplomacyState {
     /// All known factions.
     pub factions: Vec<DipFaction>,
@@ -90,18 +90,6 @@ pub struct DiplomacyState {
     pub live: bool,
     /// Tick of the most recently ingested diplomacy event (dedup guard).
     last_event_tick: u64,
-}
-
-impl Default for DiplomacyState {
-    fn default() -> Self {
-        Self {
-            factions: Vec::new(),
-            relations: Vec::new(),
-            open: false,
-            live: false,
-            last_event_tick: 0,
-        }
-    }
 }
 
 impl DiplomacyState {

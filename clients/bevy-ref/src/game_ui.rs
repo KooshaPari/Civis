@@ -476,7 +476,7 @@ fn draw_game_ui(
         sub: &mut sub_tool,
         speed: &mut speed,
         icons: &tool_icons.ids,
-        laws_open: laws_open.as_mut().map(|open| &mut **open),
+        laws_open: laws_open.as_deref_mut(),
     };
     bottom_cluster(ctx, &mut bottom);
 }
@@ -703,11 +703,7 @@ fn resource_chip(ui: &mut egui::Ui, icon: &str, value: &str, delta: f64, color: 
     } else {
         ("\u{2192}", DECK_TEXT_MID)
     };
-    let fill = if value.is_empty() {
-        DECK_GLASS
-    } else {
-        DECK_GLASS
-    };
+    let fill = DECK_GLASS;
     egui::Frame::NONE
         .fill(fill)
         .corner_radius(egui::CornerRadius::same(RADIUS_BTN))

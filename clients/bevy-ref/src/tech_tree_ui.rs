@@ -23,7 +23,6 @@ use crate::ui_theme;
 // the cohesive dark-glass HUD language used across every panel.
 // ---------------------------------------------------------------------------
 
-const PANEL_FILL: egui::Color32 = ui_theme::PANEL_FILL;
 const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
 const ACCENT: egui::Color32 = ui_theme::ACCENT;
 const LOCKED_DIM: egui::Color32 = ui_theme::DIM;

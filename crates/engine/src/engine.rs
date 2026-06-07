@@ -5,9 +5,8 @@
 use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
-    Alignment,
-    Activity, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs, PoiKind,
-    PoiRegistry, Position3d, Tools, Wardrobe,
+    Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
+    PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
@@ -912,16 +911,17 @@ impl Simulation {
     /// deterministic rotated representative from `WorldState::factions` as a
     /// heuristic fallback.
     pub fn faction_alignment(&self, faction_id: u32) -> civ_agents::Alignment {
-        if let Some(alignment) = self
-            .world
-            .query::<&AgentCivilian>()
-            .iter()
-            .find_map(|(_, civilian)| match civilian.alignment {
-                civ_agents::Alignment::Faction(fid) if fid == faction_id => {
-                    Some(civilian.alignment)
-                }
-                _ => None,
-            }) {
+        if let Some(alignment) =
+            self.world
+                .query::<&AgentCivilian>()
+                .iter()
+                .find_map(|(_, civilian)| match civilian.alignment {
+                    civ_agents::Alignment::Faction(fid) if fid == faction_id => {
+                        Some(civilian.alignment)
+                    }
+                    _ => None,
+                })
+        {
             return alignment;
         }
 

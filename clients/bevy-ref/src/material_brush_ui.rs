@@ -39,6 +39,8 @@
 use bevy::prelude::*;
 
 use bevy_egui::egui;
+#[cfg(feature = "voxel")]
+use civ_voxel::material::AIR;
 use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase};
 use civ_voxel::MaterialId;
 

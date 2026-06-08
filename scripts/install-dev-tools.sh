@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 #
 # Install DINOForge optional development tools (UnityExplorer, etc.)
 #

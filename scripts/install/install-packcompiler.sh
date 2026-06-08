@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 # Install PackCompiler CLI tool for DINOForge
 
 set -e

@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 # Install DumpTools CLI tool for DINOForge
 
 set -e

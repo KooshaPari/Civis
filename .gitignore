@@ -147,3 +147,6 @@ myeasylog.log
 
 # Stray worktree artifact directories at repo root (agent worktree copy artifacts)
 UserskooshDino.*
+
+# Rust build artifacts (added 2026-06-08)
+target/

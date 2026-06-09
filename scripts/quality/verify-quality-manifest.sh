@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # Cloud CI: verify committed local quality attestation (no cargo/rust on the runner).
 #
 # Gate tiers (see scripts/quality/README.md):

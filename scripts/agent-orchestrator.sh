@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 # agent-orchestrator.sh - Service-style management for external CLI agents
 #
 # Provides bash-native introspection and control of cursor-agent and codex

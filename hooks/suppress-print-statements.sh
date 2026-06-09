@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # suppress-print-statements.sh — Anti-pattern: print() over structlog
 # Trigger: PreToolUse:Write/Edit
 # Severity: WARNING (advisory)

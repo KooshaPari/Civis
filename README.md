@@ -1,3 +1,14 @@
+## Work State
+
+| Field | Value |
+|---|---|
+| Last commit | 2026-06-05 |
+| Open issues | 158 |
+| Open PRs | 3 |
+| Focus | Civic engagement platform (CivLab) |
+
+Progress: ████░░░░░░ 45%
+
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml
 > - cargo-deny config: see deny.toml

@@ -136,6 +136,57 @@ pub fn list_saves(dir: &Path) -> Result<Vec<SaveListEntry>, JsonRpcError> {
     Ok(entries)
 }
 
+/// Find the freshest on-disk save to use for load-on-launch (P5 / CIV-1000 §13.5).
+///
+/// Slots are preferred over autosaves; within each tier, the freshest `mtime`
+/// wins. Returns `Ok(None)` if `dir` is empty or unreadable so the caller can
+/// fall back to a fresh `Simulation::default()`.
+pub fn most_recent_save_path(dir: &Path) -> Result<Option<PathBuf>, std::io::Error> {
+    let read_dir = match std::fs::read_dir(dir) {
+        Ok(read) => read,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err),
+    };
+
+    let mut best: Option<(PathBuf, std::time::SystemTime, u8)> = None;
+    // tier 0 = production slot, tier 1 = autosave, tier 2 = manual / replay
+    let tier_for = |name: &str| -> u8 {
+        if PRODUCTION_SLOTS.contains(&name) {
+            0
+        } else if name == "autosave" || name.starts_with("autosave-") {
+            1
+        } else {
+            2
+        }
+    };
+
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        let Some(name) = save_stem_from_path(&path) else {
+            continue;
+        };
+        let mtime = entry
+            .metadata()
+            .and_then(|meta| meta.modified())
+            .unwrap_or(std::time::UNIX_EPOCH);
+        let tier = tier_for(&name);
+        let candidate = (path, mtime, tier);
+        best = match best {
+            None => Some(candidate),
+            Some(current) => {
+                if candidate.2 < current.2
+                    || (candidate.2 == current.2 && candidate.1 > current.1)
+                {
+                    Some(candidate)
+                } else {
+                    Some(current)
+                }
+            }
+        };
+    }
+    Ok(best.map(|(path, _, _)| path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,5 +213,52 @@ mod tests {
         assert_eq!(entries[0].name, "slot-1");
         assert_eq!(entries[0].tick, sim.state.tick);
         assert_eq!(entries[0].save_type, "slot");
+    }
+
+    #[test]
+    fn most_recent_save_path_prefers_slot_over_autosave() {
+        let dir = tempdir().expect("tempdir");
+        let mut sim = Simulation::with_seed(3);
+        for _ in 0..3 {
+            sim.tick();
+        }
+        let slot_path = dir.path().join("slot-2.civsave.zst");
+        CivSaveBundle::save_archive(&slot_path, &sim).expect("save slot");
+        // Sleep briefly so the autosave mtime is strictly newer, ensuring
+        // tier preference (not mtime) drives the choice.
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        let autosave_path = dir.path().join("autosave-00000000000000000003.civsave.zst");
+        CivSaveBundle::save_archive(&autosave_path, &sim).expect("save auto");
+
+        let chosen = most_recent_save_path(dir.path())
+            .expect("most recent")
+            .expect("found");
+        assert_eq!(chosen, slot_path, "slot tier should win even when older");
+    }
+
+    #[test]
+    fn most_recent_save_path_picks_freshest_in_tier() {
+        let dir = tempdir().expect("tempdir");
+        let mut sim = Simulation::with_seed(3);
+        sim.tick();
+        let old = dir.path().join("autosave-00000000000000000001.civsave.zst");
+        CivSaveBundle::save_archive(&old, &sim).expect("save old");
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        sim.tick();
+        let newer = dir.path().join("autosave-00000000000000000002.civsave.zst");
+        CivSaveBundle::save_archive(&newer, &sim).expect("save new");
+
+        let chosen = most_recent_save_path(dir.path())
+            .expect("most recent")
+            .expect("found");
+        assert_eq!(chosen, newer);
+    }
+
+    #[test]
+    fn most_recent_save_path_returns_none_on_missing_dir() {
+        let dir = tempdir().expect("tempdir");
+        let missing = dir.path().join("does-not-exist");
+        let chosen = most_recent_save_path(&missing).expect("none on missing");
+        assert!(chosen.is_none());
     }
 }

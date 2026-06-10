@@ -300,4 +300,36 @@ mod tests {
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);
         assert_eq!(*loaded.replay_log(), *sim.replay_log());
     }
+
+    /// P5 / CIV-1000 §13 round-trip: write a `.civsave.zst` archive via
+    /// [`crate::CivSaveBundle::save_archive`], reload it through
+    /// [`crate::CivSaveBundle::load`], and assert that the persisted state
+    /// surface (tick, macro population, settlement/life tallies, ECS entity
+    /// counts, hash-chain root) survives intact. This is the contract that
+    /// the load-on-launch path depends on.
+    #[test]
+    fn civsave_archive_round_trip_persists_state_surface() {
+        use crate::CivSaveBundle;
+
+        let mut sim = Simulation::with_seed(23);
+        for _ in 0..5 {
+            sim.tick();
+        }
+        let hash_before = sim.hash_chain_root();
+        let citizen_count = sim.snapshot().citizen_count;
+        let building_count = sim.snapshot().building_count;
+        let pop_before = sim.state.population;
+        let tick_before = sim.state.tick;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let archive_path = dir.path().join("round-trip.civsave.zst");
+        CivSaveBundle::save_archive(&archive_path, &sim).expect("save archive");
+
+        let loaded = CivSaveBundle::load_archive(&archive_path).expect("load archive");
+        assert_eq!(loaded.state.tick, tick_before);
+        assert_eq!(loaded.state.population, pop_before);
+        assert_eq!(loaded.snapshot().citizen_count, citizen_count);
+        assert_eq!(loaded.snapshot().building_count, building_count);
+        assert_eq!(loaded.hash_chain_root(), hash_before);
+    }
 }

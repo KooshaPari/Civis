@@ -17,11 +17,9 @@ mod institution;
 mod market;
 pub mod stocks;
 
-pub use allocation::{AllocationEngine, CapitalistAllocator};
-pub use allocator::{Allocator, Bid, CancelledOrder, ClearedTrade, GoodId, Offer, OrderId};
-pub use chains::{
-    step_chains, ChainBook, ChainConservationError, ChainStepOutcome, ChainStepReport, Recipe,
-    RecipeLeg,
+pub use allocation::{
+    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
+    JouleAllocator, PlannedAllocator, PriorityTier,
 };
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,

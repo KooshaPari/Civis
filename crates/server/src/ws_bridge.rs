@@ -349,24 +349,37 @@ async fn handle_jsonrpc_text(
                 }
             }
             let tick = state.tick.load(Ordering::SeqCst);
-            let (population, snapshot) = match req.method {
+            let (population, snapshot, emergence) = match req.method {
                 JsonRpcMethod::SimStatus => {
                     let sim = state.sim.lock().await;
                     let snap = sim.snapshot();
-                    (Some(snap.population), None)
+                    (Some(snap.population), None, None)
                 }
                 JsonRpcMethod::SimSnapshot => {
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
+                    let emergence = sim
+                        .last_emergence_sample()
+                        .map(crate::jsonrpc::EmergenceSampleFields::from);
                     (
                         None,
                         Some(crate::jsonrpc::snapshot_fields_from_sim(
                             &sim,
                             speed_multiplier,
                         )),
+                        emergence,
                     )
                 }
-                _ => (None, None),
+                JsonRpcMethod::SimEmergence => {
+                    // Read the latest sample (sampler is internal to
+                    // the simulation; we just expose it).
+                    let sim = state.sim.lock().await;
+                    let emergence = sim
+                        .last_emergence_sample()
+                        .map(crate::jsonrpc::EmergenceSampleFields::from);
+                    (None, None, emergence)
+                }
+                _ => (None, None, None),
             };
             let mut plan = dispatch_request(
                 req,
@@ -378,6 +391,7 @@ async fn handle_jsonrpc_text(
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
+                    emergence,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

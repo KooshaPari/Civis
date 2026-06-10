@@ -225,6 +225,38 @@ impl InstitutionLedger {
         Ok(())
     }
 
+    /// Levy a proportional tax from `payer` into the Treasury (FR-ECON-004).
+    ///
+    /// Tax = `base * rate_bps / 10_000` (e.g. `rate_bps = 1_500` is a 15% rate),
+    /// posted as a balanced transfer from `payer` to [`INSTITUTION_TREASURY`]
+    /// through [`post`](Self::post) — so it is double-entry and reconciles under
+    /// [`verify_conservation`](Self::verify_conservation). A non-positive base or
+    /// rate, or a sub-cent tax, is a no-op returning `Ok(0)`. Propagates the
+    /// posting error if the payer has insufficient balance. Returns the amount
+    /// actually levied.
+    pub fn levy(
+        &mut self,
+        economy: &mut EconomyState,
+        payer: LedgerSide,
+        base: i64,
+        rate_bps: i64,
+    ) -> Result<i64, InstitutionLedgerError> {
+        if base <= 0 || rate_bps <= 0 {
+            return Ok(0);
+        }
+        let tax = base.saturating_mul(rate_bps) / 10_000;
+        if tax <= 0 {
+            return Ok(0);
+        }
+        self.post(
+            economy,
+            payer,
+            LedgerSide::Institution(INSTITUTION_TREASURY),
+            tax,
+        )?;
+        Ok(tax)
+    }
+
     /// Verify every institution's stored balance reconciles against its posting
     /// history, and that no balance is negative.
     ///
@@ -379,6 +411,70 @@ mod tests {
                 id: INSTITUTION_MARKET,
                 before: 0,
                 requested: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn levy_taxes_payer_into_treasury_and_conserves() {
+        let mut economy = EconomyState::with_energy_budget(1_000);
+        let mut ledger = InstitutionLedger::with_defaults();
+
+        // 15% of a 200-joule base = 30 levied from the macro energy budget.
+        let levied = ledger
+            .levy(
+                &mut economy,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                200,
+                1_500,
+            )
+            .expect("levy");
+
+        assert_eq!(levied, 30);
+        assert_eq!(economy.energy_budget_joules, 970);
+        assert_eq!(ledger.institution_balance(INSTITUTION_TREASURY), 30);
+        ledger.verify_conservation().expect("levy reconciles");
+    }
+
+    #[test]
+    fn levy_is_noop_for_zero_rate_or_base() {
+        let mut economy = EconomyState::with_energy_budget(100);
+        let mut ledger = InstitutionLedger::with_defaults();
+        assert_eq!(
+            ledger
+                .levy(&mut economy, LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET), 200, 0)
+                .expect("zero rate"),
+            0
+        );
+        assert_eq!(
+            ledger
+                .levy(&mut economy, LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET), 0, 1_500)
+                .expect("zero base"),
+            0
+        );
+        assert_eq!(economy.energy_budget_joules, 100);
+        assert!(ledger.postings.is_empty());
+    }
+
+    #[test]
+    fn levy_propagates_insufficient_balance() {
+        let mut economy = EconomyState::with_energy_budget(5);
+        let mut ledger = InstitutionLedger::with_defaults();
+        // 50% of 100 = 50 tax, but only 5 available.
+        let err = ledger
+            .levy(
+                &mut economy,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                100,
+                5_000,
+            )
+            .expect_err("cannot levy more than payer holds");
+        assert_eq!(
+            err,
+            InstitutionLedgerError::InsufficientMacroBalance {
+                account: ACCOUNT_ENERGY_BUDGET,
+                available: 5,
+                requested: 50,
             }
         );
     }

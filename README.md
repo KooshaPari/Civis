@@ -65,6 +65,47 @@ just civis-3d-verify          # or: lefthook run pre-push (emits manifest + runs
 cargo run -p civ-server       # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
 ```
 
+### Launch the standalone game (Bevy)
+
+The Bevy reference client needs **both** the `bevy,egui` feature set and
+a `BEVY_ASSET_ROOT` env var. Bevy 0.18 `AssetPlugin::file_path` defaults
+to `"./assets"` relative to CWD — from the workspace root that resolves
+to the wrong directory and produces 6 phantom module errors + ~10 asset
+404s. Use the ergonomic launcher (it defaults `BEVY_ASSET_ROOT` and
+`CARGO_TARGET_DIR=G:/civis-target-gate` for you):
+
+```bash
+just play          # release build + detached launch + log tail
+just play-debug    # RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn
+just play-trace    # + RUST_BACKTRACE=full
+just play-window   # live F3D0 binary-frame client (civ-bevy-window)
+```
+
+Manual incantation if you don't have `just` (Windows PowerShell):
+
+```powershell
+$env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
+$env:CARGO_TARGET_DIR = "G:/civis-target-gate"   # any out-of-tree dir
+cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+```
+
+Manual incantation (POSIX / WSL):
+
+```bash
+BEVY_ASSET_ROOT="$PWD/clients/bevy-ref" \
+CARGO_TARGET_DIR="$PWD/target" \
+cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+```
+
+The `just play*` recipes call into `Tools/play.ps1` (Windows) or
+`Tools/play.sh` (POSIX) — both scripts honor a pre-set
+`CARGO_TARGET_DIR` and default `BEVY_ASSET_ROOT` to
+`clients/bevy-ref` when the env var is unset, so direct script
+invocation is also safe. A runtime asset-root fallback in
+`clients/bevy-ref/src/bin/standalone.rs` is planned but **deferred** to
+a follow-up PR; for now, set `BEVY_ASSET_ROOT` (or use `just play*`,
+which sets it for you).
+
 ### Local-first CI (avoid billable runners)
 
 Heavy quality runs **on your machine** via lefthook; GitHub Actions only **verifies** the committed attestation in `.ci/quality-manifest.json` (no `cargo` on the runner — same pattern as phenotype-journey `manifest.verified.json`).

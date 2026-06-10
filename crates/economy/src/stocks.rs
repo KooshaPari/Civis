@@ -137,6 +137,14 @@ pub struct TradeOffer {
     pub qty_b_to_a: i64,
 }
 
+/// True when a consumption deficit was clamped at zero: the request was a draw
+/// (`flow < 0`) but the applied delta is *less* negative than requested because
+/// stock ran out (e.g. wanted -10, only -3 existed). The previous inline check
+/// compared the wrong direction and so never fired.
+fn deficit_was_clamped(flow: i64, applied: i64) -> bool {
+    flow < 0 && applied > flow
+}
+
 /// Applies one production/consumption tick to `stocks`.
 ///
 /// Each good is advanced independently by its net flow. Deficits are clamped
@@ -146,7 +154,7 @@ pub fn step_stocks(stocks: &mut Stocks, profile: &ProductionProfile) {
         let flow = profile.net_flow(good);
         let before = stocks.get(good);
         let applied = stocks.add(good, flow);
-        if flow < 0 && before + applied < before + flow {
+        if deficit_was_clamped(flow, applied) {
             debug!(
                 good = ?good,
                 requested_deficit = flow,
@@ -283,6 +291,20 @@ mod tests {
     use proptest::prelude::*;
 
     /// FR-CIV-LIFE-020: stock stepping conserves totals and never drives any good below zero.
+    #[test]
+    fn deficit_was_clamped_detects_only_real_clamps() {
+        // Full deficit applied (stock covered it): not clamped.
+        assert!(!deficit_was_clamped(-10, -10));
+        // Deficit clamped (wanted -10, only -3 of stock): clamped.
+        assert!(deficit_was_clamped(-10, -3));
+        // Fully clamped to nothing (wanted -10, 0 stock): clamped.
+        assert!(deficit_was_clamped(-10, 0));
+        // Production (positive flow): never a deficit clamp.
+        assert!(!deficit_was_clamped(10, 10));
+        // No flow: not a clamp.
+        assert!(!deficit_was_clamped(0, 0));
+    }
+
     #[test]
     fn step_conserves_and_clamps_to_zero() {
         let mut stocks = Stocks::default();

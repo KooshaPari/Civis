@@ -1,5 +1,0 @@
-# Quixel / Fab imports (local only; engineering checklist README is tracked)
-Megascans/*
-!Megascans/README.md
-**/Megascans/**
-!**/Megascans/README.md

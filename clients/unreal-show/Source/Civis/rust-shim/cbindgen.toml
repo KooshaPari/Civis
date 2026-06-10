@@ -1,3 +1,0 @@
-language = "C"
-include_guard = "CIVIS_FFI_H"
-sys_includes = ["stdint.h"]

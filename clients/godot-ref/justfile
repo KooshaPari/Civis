@@ -1,4 +1,0 @@
-civis-3d-godot:
-	cd clients/godot-ref/rust && cargo build
-	@echo ""
-	@echo "Open clients/godot-ref/project.godot in Godot 4.3+ and press F5."

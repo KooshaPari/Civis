@@ -1,6 +1,0 @@
-### **ChatGPT**
-
-Lets do it
-
----
-

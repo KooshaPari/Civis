@@ -15,7 +15,7 @@ use civ_agents::{
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
+use civ_economy::{EconomyState, MarketState};
 use civ_mod_host::ModHost;
 use civ_genetics::Dna;
 use civ_needs::{
@@ -2229,7 +2229,11 @@ impl Simulation {
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
-        let allocated = CapitalistAllocator.allocate(budget, demand);
+        // Route through the pluggable allocation dispatch (FR-ECON-005) rather
+        // than hardcoding a concrete allocator. Default regime is Capitalist, so
+        // behavior is unchanged until a policy/scenario selects another regime.
+        let allocated =
+            civ_economy::allocate_with(civ_economy::AllocationRegime::default(), budget, demand);
         civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
         civ_economy::step(&mut self.economy_state);
 
@@ -2486,6 +2490,7 @@ pub struct SimulationSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use civ_economy::{AllocationEngine, CapitalistAllocator};
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};
     use civ_agents::{count_civilians, LodTier, Wardrobe};

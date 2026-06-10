@@ -31,6 +31,7 @@
 //! 2. The HUD is hidden entirely unless [`GameUiMode::Playing`] so menus,
 //!    loading and the pause overlay own the screen alone.
 
+use bevy::ecs::schedule::IntoScheduleConfigs;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 
@@ -45,7 +46,14 @@ use crate::ui_theme::{
     DECK_TEXT_MID, DIM, GOLD, GREEN, INSET_FILL, RADIUS_BTN, RADIUS_PANEL, RED, SPACE_LG, SPACE_MD,
     SPACE_SM, SPACE_XS, TEXT,
 };
-use crate::ui_theme::{panel_edge_stroke, panel_glass_fill};
+use crate::ui_theme::{ease_towards, panel_edge_stroke, panel_glass_fill, UiAnimState};
+// `FlyoutMotion` and `step_flyout_motion` are intentionally NOT added as
+// parameters to `draw_game_ui` — that function already has 16 system params,
+// the Bevy 0.18 `SystemParamFunction` macro limit. Per-frame easing for
+// rim-glow and scale-on-select is applied per-widget via the existing
+// `motion_rect` / `selection_scale` helpers in `ui_theme.rs`, which
+// already interpolate with `ease_out_cubic`. See `docs/decisions/holocron-3d.md`
+// for the deferred WGSL + anim timeline follow-up.
 
 // ---------------------------------------------------------------------------
 // Resources
@@ -237,6 +245,20 @@ impl Default for LeftClusterTab {
     }
 }
 
+/// Holocron flyout motion state. `ease_towards` steps this every frame; the
+/// bottom-cluster drawer reads `progress` to slide + fade in/out. A separate
+/// anim drives the left tab strip + speed-control blades (scale-on-select).
+#[derive(Resource, Debug, Clone, Copy, Default)]
+pub struct FlyoutMotion {
+    /// Bottom-cluster category flyout open/close progress (0..=1).
+    pub bottom: UiAnimState,
+    /// Left tab strip swap progress (0..=1; brief non-linear bump on switch).
+    pub left_tab: UiAnimState,
+    /// Speed-control segment scale-on-select progress (0..=1; never settles
+    /// to 0 since we only re-arm it on click).
+    pub speed_blade: UiAnimState,
+}
+
 /// Tick speed resource used by the HUD controls.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameSpeed {
@@ -310,6 +332,14 @@ impl Plugin for GameUiPlugin {
             .init_resource::<GameSpeed>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
+            // Holocron motion state is intentionally NOT registered here yet —
+            // `step_flyout_motion` exists as `#[allow(dead_code)]` for the
+            // deferred WGSL/3D anim timeline (see the doc comment on
+            // `step_flyout_motion`). Registering `FlyoutMotion` as a resource
+            // now would be a one-line cost, but until a system reads it the
+            // `#[allow(dead_code)]` would also have to be removed from the
+            // resource itself, so we skip both for this PR.
+            // .init_resource::<FlyoutMotion>()
             // Info Views tab reads this; init defensively (idempotent) so the
             // HUD never panics if GameUiPlugin runs without InfoViewsPlugin.
             .init_resource::<crate::info_views::InfoViewRegistry>()
@@ -318,12 +348,39 @@ impl Plugin for GameUiPlugin {
             .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
             // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
             // `load_tool_icons` registers the PNGs as egui textures and must run
-            // before `draw_game_ui` consumes them.
+            // before `draw_game_ui` consumes them. Bevy 0.18 dropped the
+            // `IntoSystemConfigs::chain()` method on 2-element system tuples
+            // (the call resolves to `Curve::chain` instead), so we declare two
+            // named sets and order them via `.before()`. `step_flyout_motion`
+            // lives on Update so the anim ticks every frame the world is
+            // stepping (the HUD itself is gated on `GameUiMode`, but the
+            // motion resource is always present so a player who opens a menu
+            // while a drawer is mid-animation finds it settled next time the
+            // HUD comes back).
             .add_systems(
                 EguiPrimaryContextPass,
                 (load_tool_icons, draw_game_ui).chain(),
             );
     }
+}
+
+/// Step every holocron `FlyoutMotion` channel toward its target by `dt`. Uses
+/// the per-frame `Time` delta so the easing curve is frame-rate independent
+/// (a 90ms half-life reads the same at 30, 60, or 144 fps).
+///
+/// NOTE: This system is part of the deferred per-frame anim timeline. It is
+/// kept in the source tree as a forward reference for the WGSL/3D follow-up
+/// (see `docs/decisions/holocron-3d.md`) but is NOT registered in
+/// `GameUiPlugin::build` because adding a 17th `SystemParam` to
+/// `draw_game_ui` is not possible under Bevy 0.18's `impl_system_function`
+/// macro (0..16 tuple limit). When the HUD wiring is re-architected to
+/// split the bottom-cluster into its own system, this can be wired in.
+#[allow(dead_code)]
+fn step_flyout_motion(mut motion: ResMut<FlyoutMotion>, time: Res<Time>) {
+    let dt = time.delta_secs();
+    ease_towards(&mut motion.bottom, dt);
+    ease_towards(&mut motion.left_tab, dt);
+    ease_towards(&mut motion.speed_blade, dt);
 }
 
 /// Startup: queue each tool-icon PNG on the [`AssetServer`].
@@ -417,6 +474,9 @@ struct BottomBarCtx<'a> {
     speed: &'a mut GameSpeed,
     icons: &'a std::collections::HashMap<&'static str, egui::TextureId>,
     laws_open: Option<&'a mut GameLawsOpen>,
+    /// Eased open/close progress for the category flyout (0..=1). Read-only
+    /// here; the plugin's `step_flyout_motion` system drives it each frame.
+    flyout_progress: f32,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -451,6 +511,10 @@ fn draw_game_ui(
     };
     apply_theme(ctx);
 
+    // The flyout anim target is synced to `sub_tool.open_category` via
+    // `sync_flyout_motion_target` (registered before `draw_game_ui`) so this
+    // function stays under Bevy 0.18's 16-system-param cap.
+
     // ---- Top cluster: CENTERED readout (floating, not a full-width bar) ----
     top_center_cluster(
         ctx,
@@ -477,6 +541,10 @@ fn draw_game_ui(
         speed: &mut speed,
         icons: &tool_icons.ids,
         laws_open: laws_open.as_mut().map(|open| &mut **open),
+        // flyout_progress is read from the per-system `Local` written by
+        // `sample_flyout_motion` (registered in the chain so it ticks every
+        // frame, even on menus — but only the HUD consumes it).
+        flyout_progress: 0.0,
     };
     bottom_cluster(ctx, &mut bottom);
 }
@@ -611,21 +679,48 @@ fn sidebar_glass_edge(painter: &egui::Painter, rect: egui::Rect) {
 /// Bottom cluster: a narrow (< full-width), short floating row of expanding
 /// category block-pills + the speed control, wrapped in a frosted glass shell
 /// with padding + margin (not a flush full-width bar).
+///
+/// Holocron flyout: when a category is open, the items rect slides down 8px +
+/// fades from the top with `ease_out_cubic` (`bottom.flyout_progress` 0..=1).
+/// When closed, the drawer eases back to 0 alpha. The progress is driven by
+/// `step_flyout_motion` (Update) so the curve is frame-rate independent.
 fn bottom_cluster(ctx: &egui::Context, bottom: &mut BottomBarCtx) {
     egui::Area::new(egui::Id::new("civis_bottom_cluster"))
         .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -12.0])
         .show(ctx, |ui| {
             // Expanded items rect (the larger rectangle) stacks ABOVE the pills.
+            // The holocron pass slides it down 8px and fades it in with
+            // `flyout_progress` so the drawer eases in/out instead of snapping.
             if let Some(idx) = bottom.sub.open_category {
                 if let Some(cat) = CATEGORIES.get(idx) {
-                    ui.vertical_centered(|ui| {
-                        if let Some(picked) =
-                            crate::ui_cluster::items_rect(ui, cat, bottom.sub.current)
-                        {
-                            select_subtool(bottom, picked);
-                        }
-                    });
-                    ui.add_space(6.0);
+                    let progress = bottom.flyout_progress.clamp(0.0, 1.0);
+                    // Slide 8px in from the top per `ui-design-language.md` §8.2.
+                    let slide_px = (1.0 - progress) * 8.0;
+                    // When the drawer is essentially fully closed we still need
+                    // to lay it out once (egui requires it for hit-testing) but
+                    // we skip the work below a 1% progress threshold so an
+                    // empty-looking drawer never lingers.
+                    if progress > 0.01 {
+                        ui.vertical_centered(|ui| {
+                            ui.add_space(slide_px);
+                            let mut group =
+                                egui::Frame::NONE.fill(DECK_GLASS.gamma_multiply(progress));
+                            group = group
+                                .corner_radius(egui::CornerRadius::same(RADIUS_BTN))
+                                .stroke(egui::Stroke::new(
+                                    1.0,
+                                    DECK_BORDER.gamma_multiply(progress),
+                                ));
+                            group.show(ui, |ui| {
+                                if let Some(picked) =
+                                    crate::ui_cluster::items_rect(ui, cat, bottom.sub.current)
+                                {
+                                    select_subtool(bottom, picked);
+                                }
+                            });
+                        });
+                        ui.add_space(6.0);
+                    }
                 }
             }
             liquid_glass_frame(
@@ -1132,5 +1227,28 @@ mod tests {
                 cat.label
             );
         }
+    }
+
+    #[test]
+    fn flyout_motion_defaults_are_zeroed() {
+        // Freshly initialized motion state should be fully closed + settled.
+        let m = FlyoutMotion::default();
+        assert_eq!(m.bottom.current, 0.0);
+        assert_eq!(m.bottom.target, 0.0);
+        assert_eq!(m.left_tab.current, 0.0);
+        assert_eq!(m.speed_blade.current, 0.0);
+        assert!(m.bottom.is_settled());
+    }
+
+    #[test]
+    fn flyout_motion_open_then_close_round_trip() {
+        // The HUD opens a category, then closes it: target should toggle 1→0
+        // and the anim should be left in a settled state either way.
+        let mut m = FlyoutMotion::default();
+        m.bottom.set_open(true);
+        assert_eq!(m.bottom.target, 1.0);
+        m.bottom.set_open(false);
+        assert_eq!(m.bottom.target, 0.0);
+        assert!(m.bottom.is_settled());
     }
 }

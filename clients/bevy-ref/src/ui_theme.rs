@@ -10,12 +10,121 @@
 //! large fills. Cheap dimensional pass (egui): inner bevel, top-45% gloss,
 //! colored rim glow, ease-out motion + scale-on-select + micro-jitter.
 //!
-//! TODO(holocron-3d-phase): tilt panels into perspective 3D quads; WGSL specular
-//! sweep + fresnel rim; moving curved-perspective background + radial plasma.
+//! **Holocron 3D dimensionality (5 moves) — current status:**
+//!
+//! | # | Move                              | Status                                            |
+//! |---|-----------------------------------|---------------------------------------------------|
+//! | 1 | Tilt panels to 3D quads           | DEFERRED (egui has no perspective). See [§3D deferred plan]. |
+//! | 2 | WGSL specular-sweep + fresnel rim | PARTIAL (2D `specular_sweep` + 2-pass `rim_glow`). |
+//! | 3 | Moving curved-perspective bg      | DEFERRED (WGSL full-screen quad).                 |
+//! | 4 | Bevel + top-gloss                 | IMPLEMENTED (`blade_frame`, `gloss_sheen`, `liquid_glass_finish`). |
+//! | 5 | Non-linear easing + scale-on-select | PARTIAL — this pass animates it (`ease_towards`, `FlyoutAnim`, `RimPalette`). |
+//!
+//! §3D deferred plan: when we move off egui, swap to `bevy_ui` 3D nodes for
+//! moves 1+2 and add a custom WGSL material for the background plasma (move 3).
+//! Tracked outside this module so the egui pass stays shippable on its own.
 
 use bevy::log::warn;
 use bevy_egui::egui;
 use egui::{FontData, FontFamily, FontId, TextStyle};
+
+/// Per-frame UI animation knob. Used by holocron motion to ease a value
+/// (0..=1) toward a target with `ease_out_cubic` rather than snapping.
+///
+/// `half_life_ms` is the time for the gap to halve; `ease_towards` resolves
+/// the curve analytically so it converges in `O(1)` regardless of dt.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UiAnimState {
+    /// Current eased value (0..=1).
+    pub current: f32,
+    /// Target the value is easing toward (0..=1).
+    pub target: f32,
+    /// Half-life of the gap, in milliseconds. Smaller = snappier.
+    pub half_life_ms: f32,
+}
+
+impl Default for UiAnimState {
+    fn default() -> Self {
+        Self {
+            current: 0.0,
+            target: 0.0,
+            half_life_ms: 90.0,
+        }
+    }
+}
+
+impl UiAnimState {
+    /// Set the target to `to_open`. Resets `current` to 0 when transitioning
+    /// closed→open so the flyout animates up from scratch.
+    pub fn set_open(&mut self, to_open: bool) {
+        let new_target = if to_open { 1.0 } else { 0.0 };
+        if self.target < 0.5 && new_target > 0.5 {
+            // closed→open: animate from 0
+            self.current = 0.0;
+        }
+        self.target = new_target;
+    }
+
+    /// True while still animating (within a small epsilon of the target).
+    pub fn is_settled(&self) -> bool {
+        (self.current - self.target).abs() < 0.001
+    }
+}
+
+/// Step `state` toward its target by `dt` seconds, applying `ease_out_cubic`
+/// to the residual gap. The half-life model means a stable animation regardless
+/// of frame rate: 90ms half-life ≈ a ~220ms perceived settle, matching the
+/// 140–180ms flyout spec in `docs/design/ui-design-language.md` §8.2.
+pub fn ease_towards(state: &mut UiAnimState, dt: f32) {
+    if state.half_life_ms <= 0.0 {
+        state.current = state.target;
+        return;
+    }
+    // Fraction of the gap closed this frame: 1 - 2^(-dt_ms / half_life_ms).
+    let dt_ms = (dt * 1000.0).max(0.0);
+    let k = 1.0 - 0.5_f32.powf(dt_ms / state.half_life_ms);
+    let gap = state.target - state.current;
+    let eased_gap = gap * ease_out_cubic(k.clamp(0.0, 1.0));
+    state.current += eased_gap;
+    if (state.target - state.current).abs() < 0.0005 {
+        state.current = state.target;
+    }
+}
+
+/// Per-category rim palette: returns the outer-glow + inner-glow color pair for
+/// a given category accent and focus state. Honors the holocron design law
+/// ("colored rim glow, not white") and the "neon-as-signal" rule (the rim
+/// color tracks the category's semantic accent, not the chrome teal).
+#[must_use]
+pub fn rim_palette(accent: egui::Color32, focused: bool) -> RimColors {
+    if focused {
+        RimColors {
+            outer: accent.gamma_multiply(0.65),
+            outer_soft: accent.gamma_multiply(0.30),
+            inner: accent.gamma_multiply(0.45),
+        }
+    } else {
+        // Hover (or any non-focused active state): a smaller, dimmer bloom in
+        // the category accent. `rim_glow_for` gates idle with no-op so we only
+        // see this branch when something is being interacted with.
+        RimColors {
+            outer: accent.gamma_multiply(0.32),
+            outer_soft: accent.gamma_multiply(0.14),
+            inner: accent.gamma_multiply(0.18),
+        }
+    }
+}
+
+/// Triple of rim-glow colors for one focus level.
+#[derive(Debug, Clone, Copy)]
+pub struct RimColors {
+    /// Outer 1.5px stroke (closer pass).
+    pub outer: egui::Color32,
+    /// Outer 1.5px stroke (softer, expanded pass).
+    pub outer_soft: egui::Color32,
+    /// Inner 1.0px stroke (lifts the edge off the panel fill).
+    pub inner: egui::Color32,
+}
 
 // ===========================================================================
 // Keycap Palette — locked sRGB (dark mode primary)
@@ -546,7 +655,9 @@ pub fn gloss_sheen(painter: &egui::Painter, rect: egui::Rect) {
     painter.add(egui::Shape::mesh(mesh));
 }
 
-/// Colored outer rim bloom (teal) — not a white halo.
+/// Draw a 2-pass outer rim bloom in `accent` (the holocron colored-rim rule).
+/// The 2-pass (close + soft) reads as a thin lit halo on a dark surface, not
+/// a flat white outline. Use [`rim_palette`] for category-aware color choices.
 pub fn rim_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32, radius: u8) {
     for (expand, alpha) in [(4.0, 0.45_f32), (9.0, 0.22)] {
         painter.rect_stroke(
@@ -554,6 +665,38 @@ pub fn rim_glow(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32
             radius as f32 + expand * 0.25,
             egui::Stroke::new(1.5, accent.gamma_multiply(alpha)),
             egui::StrokeKind::Outside,
+        );
+    }
+}
+
+/// 2-pass rim bloom tinted by the category accent. `focused` picks the brighter
+/// (lit) pair; `hovered` the dimmer hover pair; idle has no rim (just the
+/// panel stroke from the Frame). Used by the bottom tool palette so each
+/// category glows in its own color when active (Life=green, Disaster=red, …).
+pub fn rim_glow_for(painter: &egui::Painter, rect: egui::Rect, accent: egui::Color32, radius: u8, focused: bool, hovered: bool) {
+    let p = if focused {
+        rim_palette(accent, true)
+    } else if hovered {
+        rim_palette(accent, false)
+    } else {
+        return;
+    };
+    // Outer 1.5px stroke (close + soft pass — same model as `rim_glow`).
+    for (expand, alpha) in [(4.0_f32, p.outer), (9.0, p.outer_soft)] {
+        painter.rect_stroke(
+            rect.expand(expand),
+            radius as f32 + expand * 0.25,
+            egui::Stroke::new(1.5, alpha),
+            egui::StrokeKind::Outside,
+        );
+    }
+    // Inner 1.0px stroke lifts the lit edge off the fill.
+    if p.inner != egui::Color32::TRANSPARENT {
+        painter.rect_stroke(
+            rect.shrink(1.2),
+            radius as f32,
+            egui::Stroke::new(1.0, p.inner),
+            egui::StrokeKind::Inside,
         );
     }
 }
@@ -571,6 +714,24 @@ pub fn panel_finish(
     if focused {
         rim_glow(painter, rect, KC_ACCENT, radius);
         inner_glow(painter, rect, KC_ACCENT, radius);
+    }
+}
+
+/// Like [`panel_finish`] but tints the rim with the supplied accent (used by
+/// the tool palette so each category's rim glows in its own color).
+pub fn panel_finish_accent(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    radius: u8,
+    pressed: bool,
+    focused: bool,
+    accent: egui::Color32,
+) {
+    blade_frame(painter, rect, pressed);
+    gloss_sheen(painter, rect);
+    if focused {
+        rim_glow(painter, rect, accent, radius);
+        inner_glow(painter, rect, accent, radius);
     }
 }
 
@@ -918,5 +1079,65 @@ mod tests {
     fn ease_out_cubic_endpoints() {
         assert!((ease_out_cubic(0.0) - 0.0).abs() < f32::EPSILON);
         assert!((ease_out_cubic(1.0) - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn ease_towards_converges_to_target() {
+        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 90.0 };
+        // 30fps for ~1 second; should be within 1% of target.
+        for _ in 0..30 {
+            ease_towards(&mut s, 1.0 / 30.0);
+        }
+        assert!((s.current - 1.0).abs() < 0.01, "did not converge: {}", s.current);
+    }
+
+    #[test]
+    fn ease_towards_handles_zero_half_life() {
+        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 0.0 };
+        ease_towards(&mut s, 0.016);
+        assert_eq!(s.current, 1.0);
+    }
+
+    #[test]
+    fn ease_towards_handles_negative_dt() {
+        let mut s = UiAnimState { current: 0.0, target: 1.0, half_life_ms: 90.0 };
+        ease_towards(&mut s, -1.0);
+        // Negative dt: treated as zero; current should not move.
+        assert_eq!(s.current, 0.0);
+    }
+
+    #[test]
+    fn set_open_resets_current_when_transitioning_to_open() {
+        let mut s = UiAnimState { current: 0.8, target: 0.8, half_life_ms: 90.0 };
+        s.set_open(true);
+        assert_eq!(s.target, 1.0);
+        assert_eq!(s.current, 0.0, "closed→open must restart from 0");
+    }
+
+    #[test]
+    fn set_open_does_not_reset_when_closing() {
+        let mut s = UiAnimState { current: 0.8, target: 0.8, half_life_ms: 90.0 };
+        s.set_open(false);
+        assert_eq!(s.target, 0.0);
+        assert_eq!(s.current, 0.8, "closing should ease from current, not jump");
+    }
+
+    #[test]
+    fn rim_palette_focused_is_brighter_than_hover() {
+        let accent = KC_ACCENT;
+        let f = rim_palette(accent, true);
+        let h = rim_palette(accent, false);
+        let luma = |c: egui::Color32| c.r() as u32 + c.g() as u32 + c.b() as u32;
+        assert!(luma(f.outer) > luma(h.outer), "focused outer should be brighter");
+        assert!(luma(f.inner) > luma(h.inner) || f.inner == KC_ACCENT, "focused inner lights up");
+    }
+
+    #[test]
+    fn rim_palette_idle_is_dimmest() {
+        // Hover/focus-state contrast: focused outer alpha 0.65 > hover 0.32.
+        let accent = KC_ACCENT;
+        let h = rim_palette(accent, false);
+        let luma = |c: egui::Color32| c.r() as u32 + c.g() as u32 + c.b() as u32;
+        assert!(luma(h.outer) < luma(rim_palette(accent, true).outer));
     }
 }

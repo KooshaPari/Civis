@@ -1367,6 +1367,11 @@ impl Simulation {
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
         self.last_tick_voxel_damage_count = 0;
+        // CIV-006 (FR-CIV-WAR-003): combat damage inflicts population casualties.
+        // A mechanical/physical consequence (blast footprint · energy → deaths), so
+        // it is hardcoded rather than emergent. Stacks additively with lifecycle
+        // deaths booked in `phase_life`.
+        let mut combat_casualties: u64 = 0;
         let scale = FIXED_SCALE as f32;
         for event in self.pending_damage.drain(..) {
             let x = (event.center.x as f32 / scale).clamp(0.0, 1.0);
@@ -1383,6 +1388,12 @@ impl Simulation {
                 });
             }
             self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
+            combat_casualties =
+                combat_casualties.saturating_add(u64::from(event.estimated_casualties()));
+        }
+        // Deduct combat deaths from the living population (floored at zero).
+        if combat_casualties > 0 {
+            self.state.population = self.state.population.saturating_sub(combat_casualties);
         }
 
         const DOCTRINE_EVOLVE_MODULO: u64 = 64;
@@ -2664,6 +2675,46 @@ mod tests {
             "removal count exceeded chunk total: {removed}"
         );
         assert!(sim.pending_damage.is_empty());
+    }
+
+    /// CIV-006 / FR-CIV-WAR-003 — combat damage deducts personnel casualties
+    /// from the living population (blast footprint · energy → deaths).
+    #[test]
+    fn phase_tactics_combat_casualties_reduce_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 1000;
+        // r=4, energy=200 → footprint 3·16=48, casualties = 48·200/256 = 37.
+        let event = DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 4,
+            energy: 200,
+        };
+        let expected = event.estimated_casualties() as u64;
+        assert_eq!(expected, 37, "casualty model drifted");
+        sim.push_damage(event);
+
+        sim.phase_tactics();
+
+        assert_eq!(
+            sim.state.population,
+            1000 - expected,
+            "combat casualties must reduce population"
+        );
+        assert!(sim.pending_damage.is_empty(), "damage events drained");
+    }
+
+    /// CIV-006 — population deduction is floored at zero (never underflows).
+    #[test]
+    fn phase_tactics_casualties_floor_population_at_zero() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 5;
+        sim.push_damage(DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 12,
+            energy: 10_000,
+        });
+        sim.phase_tactics();
+        assert_eq!(sim.state.population, 0, "population floors at zero");
     }
 
     /// FR-CIV-ENGINE-INT-003 — compact runs every 64 ticks and the uniform

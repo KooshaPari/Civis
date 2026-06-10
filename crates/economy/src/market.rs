@@ -26,6 +26,32 @@ impl MarketState {
         &self.prices
     }
 
+    /// Clear one good's market by excess-demand price adjustment (FR-ECON-003).
+    ///
+    /// Moves the price toward equilibrium: excess demand (`demand > supply`)
+    /// pushes the price up, excess supply pushes it down, and a balanced market
+    /// leaves it unchanged. The adjustment is the normalized excess demand
+    /// `(demand - supply) / (demand + supply)` in `[-1, 1]`, scaled by
+    /// `ADJUST_BPS`, applied in integer fixed-point. Price is floored at 1 cent
+    /// so a good never becomes free or negative. Unknown goods are inserted at
+    /// the [`Default`] reference price before clearing.
+    ///
+    /// Deterministic and integer-only, so it is replay-stable.
+    pub fn clear(&mut self, good: &str, supply: i64, demand: i64) {
+        const ADJUST_BPS: i64 = 2_000; // max ±20% move per clearing step
+        let price = self.prices.entry(good.to_string()).or_insert(1_000);
+
+        let total = supply.saturating_add(demand);
+        if total <= 0 {
+            return; // no market: nobody supplying or demanding
+        }
+        let excess = demand.saturating_sub(supply); // >0 shortage, <0 glut
+        // delta_bps = ADJUST_BPS * excess / total, in [-ADJUST_BPS, ADJUST_BPS]
+        let delta_bps = ADJUST_BPS.saturating_mul(excess) / total;
+        let delta = (*price).saturating_mul(delta_bps) / 10_000;
+        *price = (*price).saturating_add(delta).max(1);
+    }
+
     /// Advance one market tick: updates exactly one good's price from `tick` (deterministic).
     pub fn step(&mut self, tick: u64) {
         if self.prices.is_empty() {
@@ -120,7 +146,62 @@ mod tests {
         );
     }
 
+    #[test]
+    fn clear_raises_price_on_excess_demand() {
+        let mut m = MarketState::default();
+        let before = m.prices["food"];
+        m.clear("food", 10, 40); // demand >> supply
+        assert!(m.prices["food"] > before, "shortage must raise price");
+    }
+
+    #[test]
+    fn clear_lowers_price_on_excess_supply() {
+        let mut m = MarketState::default();
+        let before = m.prices["food"];
+        m.clear("food", 40, 10); // supply >> demand
+        assert!(m.prices["food"] < before, "glut must lower price");
+    }
+
+    #[test]
+    fn clear_holds_price_at_equilibrium() {
+        let mut m = MarketState::default();
+        let before = m.prices["food"];
+        m.clear("food", 25, 25); // balanced
+        assert_eq!(m.prices["food"], before, "balanced market is stable");
+    }
+
+    #[test]
+    fn clear_inserts_unknown_good_at_reference_then_adjusts() {
+        let mut m = MarketState {
+            prices: BTreeMap::new(),
+        };
+        m.clear("ore", 5, 15); // unknown good, shortage
+        assert!(m.prices["ore"] > 1_000, "inserted at 1000 ref then raised");
+    }
+
+    #[test]
+    fn clear_is_noop_for_empty_market() {
+        let mut m = MarketState::default();
+        let before = m.prices.clone();
+        m.clear("food", 0, 0); // nobody trading
+        assert_eq!(m.prices, before);
+    }
+
     proptest! {
+        /// Clearing never drives a price to zero or negative, for any supply/demand.
+        #[test]
+        fn clear_keeps_price_positive(
+            supply in 0i64..1_000_000,
+            demand in 0i64..1_000_000,
+            rounds in 1usize..50,
+        ) {
+            let mut m = MarketState::default();
+            for _ in 0..rounds {
+                m.clear("food", supply, demand);
+            }
+            prop_assert!(m.prices["food"] >= 1, "price floored at 1, got {}", m.prices["food"]);
+        }
+
         /// Same tick sequence => identical prices after N steps.
         #[test]
         fn same_tick_sequence_yields_identical_prices(

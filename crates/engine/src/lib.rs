@@ -20,6 +20,7 @@ pub mod invariants;
 pub mod io;
 pub mod lod;
 pub mod metrics;
+pub mod perf;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;

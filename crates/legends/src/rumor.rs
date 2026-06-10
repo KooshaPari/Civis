@@ -139,7 +139,7 @@ fn render_with_rng<R: Rng + ?Sized>(rumor: &Rumor, rng: &mut R) -> String {
 fn collect_adjectives(rumor: &Rumor) -> String {
     let mut adjectives = vec!["heroic", "cursed", "vast", "treacherous"];
     for tag in rumor.tags.iter() {
-        if !adjectives.contains(&tag.as_str()) {
+        if !adjectives.iter().any(|a| *a == tag.as_str()) {
             adjectives.push(tag.as_str());
         }
     }
@@ -185,7 +185,7 @@ impl RumorMill {
             return;
         }
 
-        let spread_budget = self.rumors.len().clamp(1, 4);
+        let spread_budget = (self.rumors.len().min(4)).max(1);
         let total_rumors = self.rumors.len();
         for _ in 0..spread_budget {
             if self.rumors.is_empty() || total_rumors == 0 {
@@ -207,7 +207,8 @@ impl RumorMill {
             return;
         }
 
-        self.rumors.sort_by_key(|a| a.origin_epoch.0);
+        self.rumors
+            .sort_by(|a, b| a.origin_epoch.0.cmp(&b.origin_epoch.0));
         let keep = self.rumors.len() - RUMOR_LIMIT;
         self.rumors.drain(0..keep);
     }

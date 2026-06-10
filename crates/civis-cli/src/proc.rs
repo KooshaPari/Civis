@@ -7,7 +7,7 @@ const PROCESS_NAMES: [&str; 5] = ["civ-standalone", "civ-bevy-ref", "civis", "ca
 pub fn kill_competing_processes() -> CliResult<()> {
     for name in PROCESS_NAMES {
         if let Err(err) = kill_by_image_name(name) {
-            eprintln!("[civis-cli] best-effort process cleanup skipped {name}: {}", err.message);
+            return Err(err);
         }
     }
     Ok(())

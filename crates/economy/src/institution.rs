@@ -225,20 +225,46 @@ impl InstitutionLedger {
         Ok(())
     }
 
-    /// Verify aggregate debits equal aggregate credits and institution balances are non-negative.
+    /// Verify every institution's stored balance reconciles against its posting
+    /// history, and that no balance is negative.
+    ///
+    /// Each institution opens at zero (see [`with_defaults`](Self::with_defaults)),
+    /// so its current balance must equal the net of postings that credited it
+    /// minus those that debited it. A drift between the stored balance and the
+    /// replayed posting net signals a bookkeeping bug and is reported as
+    /// [`UnbalancedPostings`](InstitutionLedgerError::UnbalancedPostings)
+    /// (`debits` = stored balance, `credits` = replayed net). If non-zero opening
+    /// balances are introduced later, add them to `net` here.
     pub fn verify_conservation(&self) -> Result<(), InstitutionLedgerError> {
-        let debits: i64 = self.postings.iter().map(|p| p.amount).sum();
-        let credits: i64 = self.postings.iter().map(|p| p.amount).sum();
-        if debits != credits {
-            return Err(InstitutionLedgerError::UnbalancedPostings { debits, credits });
-        }
-
         for account in self.accounts.values() {
             if account.balance_joules < 0 {
                 return Err(InstitutionLedgerError::NegativeInstitutionBalance {
                     id: account.id,
                     before: account.balance_joules,
                     requested: 0,
+                });
+            }
+
+            let net: i64 = self
+                .postings
+                .iter()
+                .map(|p| {
+                    let credited = matches!(p.credit, LedgerSide::Institution(i) if i == account.id);
+                    let debited = matches!(p.debit, LedgerSide::Institution(i) if i == account.id);
+                    match (credited, debited) {
+                        (true, false) => p.amount,
+                        (false, true) => -p.amount,
+                        // A self-posting (debit==credit==this institution) or an
+                        // unrelated posting nets to zero for this account.
+                        _ => 0,
+                    }
+                })
+                .sum();
+
+            if net != account.balance_joules {
+                return Err(InstitutionLedgerError::UnbalancedPostings {
+                    debits: account.balance_joules,
+                    credits: net,
                 });
             }
         }
@@ -341,6 +367,42 @@ mod tests {
                 id: INSTITUTION_MARKET,
                 before: 0,
                 requested: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn verify_conservation_catches_balance_drift() {
+        // Regression: the old check summed `p.amount` into both sides, so it was
+        // a tautology that could never fail. Corrupt a stored balance away from
+        // its posting history and confirm reconciliation now reports the drift.
+        let mut economy = EconomyState::with_energy_budget(100);
+        let mut ledger = InstitutionLedger::with_defaults();
+        ledger
+            .post(
+                &mut economy,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_TREASURY),
+                40,
+            )
+            .expect("post");
+        ledger.verify_conservation().expect("clean ledger reconciles");
+
+        // Inject drift: treasury claims 99 but postings only credited 40.
+        ledger
+            .accounts
+            .get_mut(&INSTITUTION_TREASURY)
+            .expect("treasury")
+            .balance_joules = 99;
+
+        let err = ledger
+            .verify_conservation()
+            .expect_err("drift must be caught");
+        assert_eq!(
+            err,
+            InstitutionLedgerError::UnbalancedPostings {
+                debits: 99,
+                credits: 40,
             }
         );
     }

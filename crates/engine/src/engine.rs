@@ -1143,27 +1143,59 @@ impl Simulation {
     /// transition only; server command intake and client broadcast live outside this
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
     pub fn tick(&mut self) {
+        self.run_tick(None);
+    }
+
+    /// Like [`tick`](Self::tick) but records per-phase wall-clock timing into a
+    /// [`TickProfile`](crate::perf::TickProfile) for tick-budget enforcement
+    /// (FR-CORE-007). The timing path is observability only and never touches
+    /// simulation state, so `tick` and `tick_profiled` produce identical worlds
+    /// for identical inputs — the profile is purely a side-channel.
+    pub fn tick_profiled(&mut self) -> crate::perf::TickProfile {
+        let mut profile = crate::perf::TickProfile::default();
+        self.run_tick(Some(&mut profile));
+        profile
+    }
+
+    /// Shared tick body. When `profile` is `Some`, each phase is wall-clock
+    /// timed and recorded; when `None`, phases run with zero overhead (the
+    /// deterministic production path). Single phase list so the two entry points
+    /// can never drift.
+    fn run_tick(&mut self, mut profile: Option<&mut crate::perf::TickProfile>) {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
 
-        // Phases in PHASE_ORDER (CIV-0001 partial)
-        self.phase_production();
-        self.phase_citizen_lifecycle();
-        self.phase_military();
-        self.phase_economy();
-        self.phase_planet();
+        // Run a phase, timing it only when profiling is active.
+        macro_rules! phase {
+            ($name:expr, $body:expr) => {{
+                if let Some(p) = profile.as_deref_mut() {
+                    let start = std::time::Instant::now();
+                    $body;
+                    p.record($name, start.elapsed().as_micros() as u64);
+                } else {
+                    $body;
+                }
+            }};
+        }
+
+        // Phases in PHASE_ORDER (CIV-0001).
+        phase!("production", self.phase_production());
+        phase!("citizen_lifecycle", self.phase_citizen_lifecycle());
+        phase!("military", self.phase_military());
+        phase!("economy", self.phase_economy());
+        phase!("planet", self.phase_planet());
         self.diplomacy_events.clear();
-        self.phase_diplomacy();
-        self.phase_tactics();
-        self.phase_voxel();
-        self.phase_compact();
-        self.phase_buildings();
-        self.phase_diffusion();
-        self.phase_disasters();
-        self.phase_life();
-        self.phase_emergence();
+        phase!("diplomacy", self.phase_diplomacy());
+        phase!("tactics", self.phase_tactics());
+        phase!("voxel", self.phase_voxel());
+        phase!("compact", self.phase_compact());
+        phase!("buildings", self.phase_buildings());
+        phase!("diffusion", self.phase_diffusion());
+        phase!("disasters", self.phase_disasters());
+        phase!("life", self.phase_life());
+        phase!("emergence", self.phase_emergence());
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -2204,6 +2236,25 @@ mod tests {
         let mut sim = Simulation::new();
         sim.tick();
         assert_eq!(sim.state.tick, 1);
+    }
+
+    /// FR-CORE-007 — `tick_profiled` records every phase and advances the tick
+    /// exactly like `tick` (the profile is a side-channel, not sim state).
+    #[test]
+    fn tick_profiled_records_all_phases() {
+        let mut sim = Simulation::with_seed(1);
+        let profile = sim.tick_profiled();
+        assert_eq!(sim.state.tick, 1, "tick_profiled advances the tick");
+        // 14 phases run through the `phase!` macro.
+        assert_eq!(profile.phases.len(), 14, "all phases recorded");
+        // Total is the sum of recorded phases.
+        let sum: u64 = profile.phases.iter().map(|&(_, m)| m).sum();
+        assert_eq!(profile.total_micros, sum);
+        // Phase names are present and stable.
+        let names: Vec<&str> = profile.phases.iter().map(|&(n, _)| n).collect();
+        assert_eq!(names[0], "production");
+        assert!(names.contains(&"economy"));
+        assert_eq!(names[names.len() - 1], "emergence");
     }
 
     /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.

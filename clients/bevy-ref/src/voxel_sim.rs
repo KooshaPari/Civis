@@ -573,8 +573,8 @@ pub fn step_and_remesh(
     // full-grid multi-pass sweep, so running N steps in one frame freezes).
     // Clamp the accumulator so a long stall doesn't queue a backlog.
     state.accumulator = (state.accumulator - step_dt).min(step_dt);
-    let changed = step(&mut state.grid, MaterialRegistry::standard());
-    if !changed {
+    let outcome = step(&mut state.grid, MaterialRegistry::standard());
+    if !outcome.changed {
         return;
     }
     state.tick = state.tick.wrapping_add(1);
@@ -583,11 +583,16 @@ pub fn step_and_remesh(
         state.grid.dims[1].div_ceil(CHUNK_EDGE),
         state.grid.dims[2].div_ceil(CHUNK_EDGE),
     ];
-    let changed_chunks: HashSet<ChunkId> = state
+    // Use `last_changed_chunks` (the *remesh* set) not `dirty_chunks` (the
+    // halo-expanded *active* set). The dirty-chunk contract says: CA steps
+    // ONLY dirty chunks, the kernel emits `DirtyChunkEvent` for the cells that
+    // actually changed, and the renderer remeshes ONLY those. A static world
+    // returns `[]` here and skips every spawn/despawn — that's the perf win.
+    let mut changed_chunks: Vec<ChunkId> = state
         .grid
-        .dirty_chunks()
-        .into_iter()
-        .map(|chunk| {
+        .last_changed_chunks
+        .iter()
+        .map(|&chunk| {
             let cx = chunk % chunk_counts[0];
             let rem = chunk - cx;
             let cy = rem / chunk_counts[0] % chunk_counts[1];
@@ -595,10 +600,17 @@ pub fn step_and_remesh(
             ChunkId(((cx as u64) << 40) | ((cy as u64) << 16) | (cz as u64))
         })
         .collect();
+    changed_chunks.sort_unstable();
+    changed_chunks.dedup();
     if changed_chunks.is_empty() {
         return;
     }
-    let stale: Vec<ChunkId> = changed_chunks
+    // `spawn_chunk_meshes` takes a HashSet filter (it does chunk_id lookups in
+    // a tight loop); building a HashSet once here is cheaper than a slice
+    // linear scan per chunk and the input is bounded by the changed set
+    // (small on the perf-critical path).
+    let changed_set: HashSet<ChunkId> = changed_chunks.iter().copied().collect();
+    let stale: Vec<ChunkId> = changed_set
         .iter()
         .filter(|chunk| state.chunk_entities.contains_key(chunk))
         .cloned()
@@ -619,7 +631,7 @@ pub fn step_and_remesh(
         &mut triplanar_materials,
         &mut triplanar_bank,
         &state.grid,
-        Some(&changed_chunks),
+        Some(&changed_set),
         camera_eye,
     );
     for (id, entities) in rebuilt {

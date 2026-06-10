@@ -18,8 +18,8 @@ mod market;
 pub mod stocks;
 
 pub use allocation::{
-    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
-    JouleAllocator, PlannedAllocator, PriorityTier,
+    allocate_by_priority, AllocationEngine, CapitalistAllocator, JouleAllocator, PlannedAllocator,
+    PriorityTier,
 };
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,

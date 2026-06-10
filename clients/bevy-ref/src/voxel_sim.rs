@@ -234,13 +234,20 @@ pub fn build_voxel_world(
     );
     let camera_eye = cameras.iter().next().map(|t| t.translation.to_array());
     info!("[voxel] camera_eye at spawn time = {:?}", camera_eye);
+    // Initial full-world build meshes ALL solid chunks: pass `camera_eye = None`
+    // so distance culling (RENDER_MAX_DIST) is disabled here. The 96³ MVP world
+    // is only 216 chunks (~1-2s to mesh) and must render as one continuous
+    // landmass, not a spherical cap around a camera that is ~190 units out — the
+    // cull at load was pruning far chunks and fragmenting the terrain. Distance
+    // culling stays active in the incremental remesh path (step_and_remesh),
+    // which only rebuilds already-spawned chunks.
     state.chunk_entities = spawn_chunk_meshes(
         &mut commands,
         &mut meshes,
         &mut materials,
         &state.grid,
         None,
-        camera_eye,
+        None,
     );
     info!(
         "[voxel] spawned {} chunk-submesh entities",

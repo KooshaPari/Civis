@@ -292,7 +292,19 @@ pub fn step_institutions(state: &mut EconomyState) {
         state.institutions = InstitutionLedger::with_defaults();
     }
     // Future: baseline provision, treasury flows, market settlement.
-    let _ = state.institutions.verify_conservation();
+    //
+    // Surface conservation violations loudly rather than swallowing them: a
+    // ledger that fails to reconcile is a bookkeeping bug, not a recoverable
+    // condition. We log at error level every tick it holds and trip a
+    // debug_assert so it fails fast in dev/test builds.
+    if let Err(err) = state.institutions.verify_conservation() {
+        tracing::error!(
+            tick = state.tick,
+            ?err,
+            "institution ledger failed conservation reconciliation"
+        );
+        debug_assert!(false, "institution ledger conservation violated: {err:?}");
+    }
 }
 
 #[cfg(test)]

@@ -104,6 +104,34 @@ pub fn allocate_by_priority(
     out
 }
 
+/// Selectable allocation regime — the economy layer picks one and routes all
+/// rationing through [`allocate_with`] (FR-ECON-005). Serializable so a scenario
+/// or policy can set the regime deterministically.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum AllocationRegime {
+    /// Proportional market rationing (price-clearing proxy). Default.
+    #[default]
+    Capitalist,
+    /// Command fill: meet demand up to budget, no proportional rationing.
+    Planned,
+    /// Energy-priced fill; identical curve to planned at a single good, kept
+    /// distinct so the hybrid scheduler can weight by joule cost.
+    Joule,
+}
+
+/// Allocate `demand` from `budget` under the chosen [`AllocationRegime`].
+///
+/// Single dispatch point so callers (e.g. the engine's economy phase) select a
+/// regime without naming concrete allocator types.
+#[must_use]
+pub fn allocate_with(regime: AllocationRegime, budget: i64, demand: i64) -> i64 {
+    match regime {
+        AllocationRegime::Capitalist => CapitalistAllocator.allocate(budget, demand),
+        AllocationRegime::Planned => PlannedAllocator.allocate(budget, demand),
+        AllocationRegime::Joule => JouleAllocator.allocate(budget, demand),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,6 +158,32 @@ mod tests {
         assert_eq!(alloc.allocate(100, 0), 0);
         assert_eq!(alloc.allocate(-10, 50), 0);
         assert_eq!(alloc.allocate(50, -1), 0);
+    }
+
+    #[test]
+    fn allocate_with_dispatches_per_regime() {
+        // Scarce budget (40) vs demand (100): capitalist rations proportionally
+        // (40), planned/joule cap at the budget ceiling (also 40 here) — same
+        // single-good result, but routed through distinct regimes.
+        assert_eq!(allocate_with(AllocationRegime::Capitalist, 40, 100), 40);
+        assert_eq!(allocate_with(AllocationRegime::Planned, 40, 100), 40);
+        assert_eq!(allocate_with(AllocationRegime::Joule, 40, 100), 40);
+        // Sufficient budget: all regimes fill the demand.
+        assert_eq!(allocate_with(AllocationRegime::Planned, 100, 60), 60);
+        // Default regime is Capitalist.
+        assert_eq!(AllocationRegime::default(), AllocationRegime::Capitalist);
+    }
+
+    #[test]
+    fn allocate_with_never_exceeds_budget() {
+        for regime in [
+            AllocationRegime::Capitalist,
+            AllocationRegime::Planned,
+            AllocationRegime::Joule,
+        ] {
+            assert!(allocate_with(regime, 30, 1_000) <= 30);
+            assert_eq!(allocate_with(regime, 0, 100), 0);
+        }
     }
 
     #[test]

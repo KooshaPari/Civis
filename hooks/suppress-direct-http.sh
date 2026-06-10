@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 # suppress-direct-http.sh — Anti-pattern: direct requests/httpx calls without abstraction
 # Trigger: PreToolUse:Write/Edit
 # Severity: WARNING (advisory)

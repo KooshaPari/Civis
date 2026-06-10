@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- orbit ellipses + pivot + camera node (camera-orbit) -->
+  <g fill="none" stroke="#9AA4B2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="32" cy="32" rx="24" ry="11"/>
+    <ellipse cx="32" cy="32" rx="11" ry="24" stroke-width="2" opacity="0.5"/>
+    <rect x="48" y="27" width="10" height="8" rx="2"/>
+    <polygon points="48,29 44,31 44,30.5 48,32.5"/>
+  </g>
+  <circle cx="32" cy="32" r="3.5" fill="none" stroke="#3DF07A" stroke-width="2.6"/>
+  <polygon points="8,32 14,29 14,35" fill="#9AA4B2"/>
+</svg>

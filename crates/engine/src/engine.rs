@@ -3,13 +3,19 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
+    choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
+    propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
+    Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
+    PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
+use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
+use civ_needs::{
+    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
@@ -27,7 +33,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
@@ -55,6 +61,10 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "compact",
     "buildings",
     "diffusion",
+    "disasters",
+    "life",
+    // MOAT emergence (FR-CIV-LEGENDS-*, FR-CIV-PSYCHE-*, FR-CIV-GENETICS-*, FR-CIV-AI-*)
+    "emergence",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -158,13 +168,21 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
 
     let scale = FIXED_SCALE as f32;
     let mut next_civilian_id = 1u64;
-    for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
+    for (_faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
         for _ in 0..CIVILIANS_PER_FACTION {
             let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
-            spawn_civilian_at(world, next_civilian_id, faction as u32, norm_x, norm_y, rng);
+            spawn_civilian_at(
+                world,
+                next_civilian_id,
+                civ_agents::infer_alignment_for_spawn(world, norm_x, norm_y),
+                norm_x,
+                norm_y,
+                civ_agents::ActorVisualKind::Humanoid,
+                rng,
+            );
             next_civilian_id += 1;
         }
     }
@@ -418,6 +436,18 @@ pub struct Simulation {
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
     weather_grid: Vec<WeatherCell>,
+    /// Per-cluster (emergent settlement) resource stocks, maintained by
+    /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
+    /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
+    cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Number of emergent settlements (multi-member clusters) detected on the
+    /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
+    pub(crate) last_settlement_count: u32,
+    /// Deaths attributed to unmet-need sickness on the most recent life phase
+    /// (FR-CIV-LIFE-003); surfaced for the HUD.
+    pub(crate) last_life_deaths: u32,
+    /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
+    pub(crate) emergence: crate::emergence::EmergenceState,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -458,6 +488,37 @@ fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
             ],
         })
         .collect()
+}
+
+/// Build a [`PoiRegistry`] from the world's buildings, mapping each building
+/// type to the need-serving POI kind agents path to (FR-CIV-LIFE-010). Grid
+/// building coords are lifted into fixed-point world coordinates.
+fn build_poi_registry(world: &World) -> PoiRegistry {
+    let mut registry = PoiRegistry::default();
+    for (idx, (_, building)) in world.query::<&Building>().iter().enumerate() {
+        let kind = match building.building_type {
+            BuildingType::Farm => PoiKind::FoodSource,
+            BuildingType::House => PoiKind::Shelter,
+            BuildingType::Market => PoiKind::SocialHub,
+            BuildingType::Temple => PoiKind::SafeZone,
+            BuildingType::CityCenter => PoiKind::WaterSource,
+            BuildingType::Barracks => PoiKind::SafeZone,
+            BuildingType::Mine => continue,
+        };
+        registry.add(civ_agents::Poi {
+            id: idx as u64,
+            kind,
+            pos: Position3d {
+                coord: WorldCoord {
+                    x: i64::from(building.position.x),
+                    y: 0,
+                    z: i64::from(building.position.y),
+                },
+            },
+            capacity: 8,
+        });
+    }
+    registry
 }
 
 fn economy_state_from_world(world: &WorldState) -> EconomyState {
@@ -573,8 +634,7 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
-        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
-        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
+        let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState::default();
 
         Self {
@@ -589,6 +649,9 @@ impl Simulation {
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
+            cluster_stocks: BTreeMap::new(),
+            last_life_deaths: 0,
+            last_settlement_count: 0,
             allocator: Allocator::new(42),
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
@@ -616,6 +679,7 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            emergence: Self::default_emergence_state(42),
         }
     }
 
@@ -630,8 +694,7 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
-        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
-        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
+        let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -649,6 +712,9 @@ impl Simulation {
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
+            cluster_stocks: BTreeMap::new(),
+            last_life_deaths: 0,
+            last_settlement_count: 0,
             allocator: Allocator::new(seed),
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
@@ -676,6 +742,7 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            emergence: Self::default_emergence_state(seed),
         }
     }
 
@@ -810,6 +877,63 @@ impl Simulation {
     #[must_use]
     pub fn faction_doctrines(&self) -> &[DoctrineLibrary] {
         &self.faction_doctrines
+    }
+
+    /// Count distinct faction IDs currently represented by civilian alignments.
+    ///
+    /// If no explicit civilian `Alignment::Faction` values are present, this
+    /// falls back to a deterministic heuristic over known factions in
+    /// `WorldState::factions` (for parity with the current partial emergence
+    /// implementation). If/when a dedicated `HeuristicFactionSet` becomes
+    /// available, it should replace this fallback.
+    pub fn faction_count(&self) -> u32 {
+        let explicit_faction_ids = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .filter_map(|(_, civilian)| match civilian.alignment {
+                civ_agents::Alignment::Faction(faction_id) => Some(faction_id),
+                _ => None,
+            })
+            .collect::<HashSet<_>>();
+
+        if !explicit_faction_ids.is_empty() {
+            return explicit_faction_ids.len() as u32;
+        }
+
+        self.state.factions.len() as u32
+    }
+
+    /// Return a deterministic representative alignment for the requested faction.
+    ///
+    /// The method first searches for explicit `Alignment::Faction` values among
+    /// live civilians. If none is found for `faction_id`, it returns a
+    /// deterministic rotated representative from `WorldState::factions` as a
+    /// heuristic fallback.
+    pub fn faction_alignment(&self, faction_id: u32) -> civ_agents::Alignment {
+        if let Some(alignment) =
+            self.world
+                .query::<&AgentCivilian>()
+                .iter()
+                .find_map(|(_, civilian)| match civilian.alignment {
+                    civ_agents::Alignment::Faction(fid) if fid == faction_id => {
+                        Some(civilian.alignment)
+                    }
+                    _ => None,
+                })
+        {
+            return alignment;
+        }
+
+        let mut registered_factions: Vec<u32> = self.state.factions.keys().copied().collect();
+        if registered_factions.is_empty() {
+            return Alignment::None;
+        }
+
+        registered_factions.sort_unstable();
+        let rotation = (self.state.rng_seed % registered_factions.len() as u64) as usize;
+        let fallback_index = (faction_id as usize + rotation) % registered_factions.len();
+        Alignment::with_faction(registered_factions[fallback_index])
     }
 
     /// Borrow the immutable planet config.
@@ -1037,6 +1161,9 @@ impl Simulation {
         self.phase_compact();
         self.phase_buildings();
         self.phase_diffusion();
+        self.phase_disasters();
+        self.phase_life();
+        self.phase_emergence();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -1116,12 +1243,10 @@ impl Simulation {
     /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
-        let axial_tilt_fp = i32::from(self.planet.axial_tilt_deg) * 1_000;
         self.weather_grid = compute_weather(
+            &self.climate,
             self.state.tick,
             self.weather_grid.len().max(1) as u32,
-            axial_tilt_fp,
-            self.planet.year_length_ticks,
         );
         self.apply_tide_offset();
     }
@@ -1348,6 +1473,196 @@ impl Simulation {
         self.last_cohort_stats = Some(wardrobe_stats);
     }
 
+    /// Emergent life-sim phase (FR-CIV-LIFE-*). Runs the full needs pipeline
+    /// (decay → sickness → death via `civ-needs`), utility-AI daily pathing to
+    /// need-satisfying POIs (`civ-agents::daily_path`), and emergent settlement
+    /// clustering (`civ-agents::cluster`) with per-cluster resource stocks.
+    ///
+    /// Determinism: all stochastic transitions consume `self.rng` (seeded
+    /// ChaCha8). No wall-clock or `thread_rng`. Surfaced state (needs, cluster
+    /// membership, settlement count, life deaths, cluster stocks) is read by the
+    /// sim bridge / HUD.
+    fn phase_life(&mut self) {
+        // 1. Ensure every agent carries the life-sim needs + health components.
+        let missing: Vec<Entity> = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .filter(|(e, _)| self.world.get::<&LifeNeeds>(*e).is_err())
+            .map(|(e, _)| e)
+            .collect();
+        for entity in missing {
+            let _ = self
+                .world
+                .insert(entity, (LifeNeeds::sated(), LifeHealth::default()));
+        }
+
+        // 2. Build the POI registry from buildings (need-serving locations).
+        let registry = build_poi_registry(&self.world);
+
+        // 3. Tick needs/health, run utility-AI daily pathing, collect the dead.
+        let rates = DecayRates::default();
+        let params = HealthParams::default();
+        let move_speed = (0.01 * FIXED_SCALE as f32) as i64;
+        let satisfy_radius_sq: i128 = {
+            let r = (0.03 * FIXED_SCALE as f32) as i128;
+            r * r
+        };
+        let mut dead: Vec<(Entity, u64, WorldCoord)> = Vec::new();
+
+        let entities: Vec<Entity> = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .map(|(e, _)| e)
+            .collect();
+
+        for entity in entities {
+            // Needs/health pipeline.
+            let outcome = {
+                let mut needs = match self.world.get::<&mut LifeNeeds>(entity) {
+                    Ok(n) => n,
+                    Err(_) => continue,
+                };
+                let mut health = match self.world.get::<&mut LifeHealth>(entity) {
+                    Ok(h) => h,
+                    Err(_) => continue,
+                };
+                needs_tick(&mut needs, &mut health, &rates, &params, &mut self.rng)
+            };
+
+            if outcome.died {
+                if let Ok(civ) = self.world.get::<&AgentCivilian>(entity) {
+                    if let Ok(pos) = self.world.get::<&Position3d>(entity) {
+                        dead.push((entity, civ.id, pos.coord));
+                    }
+                }
+                continue;
+            }
+
+            // Utility-AI daily path: choose an activity first, then either seek a
+            // pressing need, idle, or wander locally when needs are comfortable
+            // or no POI is available.
+            let pos = match self.world.get::<&Position3d>(entity) {
+                Ok(p) => *p,
+                Err(_) => continue,
+            };
+            let civ = match self.world.get::<&AgentCivilian>(entity) {
+                Ok(c) => c.clone(),
+                Err(_) => continue,
+            };
+            let needs_snapshot = match self.world.get::<&LifeNeeds>(entity) {
+                Ok(n) => *n,
+                Err(_) => continue,
+            };
+            let activity = choose_activity(&needs_snapshot, registry.iter().next().is_some());
+            match activity {
+                Activity::Idle => {}
+                Activity::SeekNeed => {
+                    if let Some(target) = pick_target(&needs_snapshot, &registry, &pos) {
+                        let target_pos = target.pos;
+                        let served = civ_agents::need_for_poi_kind(target.kind);
+                        let next = path_step(&pos, &target_pos, move_speed);
+                        if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
+                            *p = next;
+                        }
+                        let dx = (next.coord.x - target_pos.coord.x) as i128;
+                        let dz = (next.coord.z - target_pos.coord.z) as i128;
+                        if dx * dx + dz * dz <= satisfy_radius_sq {
+                            if let Ok(mut n) = self.world.get::<&mut LifeNeeds>(entity) {
+                                n.satisfy(served, 0.5);
+                            }
+                        }
+                    } else {
+                        let mut local_rng = ChaCha8Rng::seed_from_u64(
+                            self.state.tick ^ civ.id ^ 0x9e37_79b9_7f4a_7c15,
+                        );
+                        if local_rng.gen_bool(0.5) {
+                            let target_pos = wander_anchor(&pos, civ.id, self.state.tick);
+                            let next = path_step(&pos, &target_pos, move_speed);
+                            if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
+                                *p = next;
+                            }
+                        }
+                    }
+                }
+                Activity::Wander => {
+                    let mut local_rng = ChaCha8Rng::seed_from_u64(
+                        self.state.tick
+                            ^ civ.id
+                            ^ (pos.coord.x as u64).rotate_left(13)
+                            ^ (pos.coord.z as u64).rotate_left(29),
+                    );
+                    if local_rng.gen_bool(0.65) {
+                        let target_pos = wander_anchor(&pos, civ.id, self.state.tick);
+                        let next = path_step(&pos, &target_pos, move_speed);
+                        if let Ok(mut p) = self.world.get::<&mut Position3d>(entity) {
+                            *p = next;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Despawn the dead and book them into the population deltas.
+        for (entity, entity_id, coord) in &dead {
+            let _ = self.world.despawn(*entity);
+            self.last_deaths.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id: *entity_id,
+                x: coord.x as f32 / FIXED_SCALE as f32,
+                y: coord.z as f32 / FIXED_SCALE as f32,
+            });
+        }
+        self.last_life_deaths = dead.len() as u32;
+        self.state.population = self.state.population.saturating_sub(dead.len() as u64);
+
+        // 5. Emergent settlement clustering by co-location.
+        let positions: Vec<(u64, Position3d)> = self
+            .world
+            .query::<(&AgentCivilian, &Position3d)>()
+            .iter()
+            .map(|(_, (civ, pos))| (civ.id, *pos))
+            .collect();
+        let cluster_radius = (0.06 * FIXED_SCALE as f32) as i64;
+        let assignments = cluster_by_colocation(&positions, cluster_radius);
+
+        // Map agent id -> entity for component writes.
+        let id_to_entity: HashMap<u64, Entity> = self
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .map(|(e, civ)| (civ.id, e))
+            .collect();
+        let mut cluster_sizes: BTreeMap<u64, u32> = BTreeMap::new();
+        for (agent_id, cluster) in &assignments {
+            *cluster_sizes.entry(cluster.0).or_insert(0) += 1;
+            if let Some(&entity) = id_to_entity.get(agent_id) {
+                let _ = self
+                    .world
+                    .insert_one(entity, ClusterMember { cluster: *cluster });
+            }
+        }
+
+        // A settlement is an emergent cluster with more than one member.
+        self.last_settlement_count = cluster_sizes.values().filter(|&&n| n > 1).count() as u32;
+
+        // 6. Maintain per-cluster (settlement) resource stocks: agents produce
+        // into their cluster's shared stock each tick (collective economics).
+        let mut next_stocks: BTreeMap<u64, ClusterStocks> = BTreeMap::new();
+        for (cluster_id, size) in &cluster_sizes {
+            let mut stock = self
+                .cluster_stocks
+                .get(cluster_id)
+                .cloned()
+                .unwrap_or_default();
+            // Each member contributes one unit of food per tick to the commons.
+            stock.add(civ_economy::Good::Food, i64::from(*size));
+            next_stocks.insert(*cluster_id, stock);
+        }
+        self.cluster_stocks = next_stocks;
+    }
+
     /// Production phase - buildings produce resources
     fn phase_production(&mut self) {
         let mut food = Fixed::ZERO;
@@ -1413,7 +1728,8 @@ impl Simulation {
         }
 
         for (child_id, x, y) in births {
-            let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
+            let alignment = civ_agents::infer_alignment_for_spawn(&self.world, x, y);
+            let _ = spawn_child_near(&mut self.world, child_id, alignment, x, y, &mut self.rng);
             self.last_births.push(PopulationEvent {
                 tick: self.state.tick,
                 entity_id: child_id,
@@ -1731,7 +2047,23 @@ impl Simulation {
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
+            settlement_count: self.last_settlement_count,
+            life_deaths_this_tick: self.last_life_deaths,
         }
+    }
+
+    /// Number of emergent settlements (multi-member clusters) from the most
+    /// recent life phase (FR-CIV-LIFE-030). Read by the HUD `FactionRoster`.
+    #[must_use]
+    pub fn settlement_count(&self) -> u32 {
+        self.last_settlement_count
+    }
+
+    /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for
+    /// the HUD `WorldResources` panel (FR-CIV-LIFE-020).
+    #[must_use]
+    pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
+        &self.cluster_stocks
     }
 }
 
@@ -1795,7 +2127,7 @@ impl Default for Simulation {
 }
 
 /// Snapshot of simulation state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SimulationSnapshot {
     pub tick: u64,
     pub population: u64,
@@ -1824,6 +2156,10 @@ pub struct SimulationSnapshot {
     ///
     /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
     pub geology_map: GeologyMap,
+    /// Emergent settlement count (multi-member clusters) — FR-CIV-LIFE-030.
+    pub settlement_count: u32,
+    /// Agents that died of unmet needs this tick — FR-CIV-LIFE-003.
+    pub life_deaths_this_tick: u32,
 }
 
 // ============================================================================
@@ -1902,6 +2238,9 @@ mod tests {
                 "compact",
                 "buildings",
                 "diffusion",
+                "disasters",
+                "life",
+                "emergence",
             ]
         );
     }
@@ -2013,6 +2352,46 @@ mod tests {
 
         assert_eq!(sim1.state.tick, sim2.state.tick);
         assert_eq!(sim1.state.population, sim2.state.population);
+    }
+
+    /// FR-CIV-LIFE-001/030 — phase_life attaches life-sim needs to agents and
+    /// the snapshot surfaces emergent settlement state for the HUD.
+    #[test]
+    fn phase_life_attaches_needs_and_exposes_settlements() {
+        let mut sim = Simulation::with_seed(777);
+        for _ in 0..5 {
+            sim.tick();
+        }
+        // Every agent civilian now carries the civ-needs Needs + Health.
+        let agents = sim.world.query::<&AgentCivilian>().iter().count();
+        let with_needs = sim
+            .world
+            .query::<(&AgentCivilian, &LifeNeeds)>()
+            .iter()
+            .count();
+        assert!(agents > 0);
+        assert_eq!(
+            agents, with_needs,
+            "all agents must have life needs attached"
+        );
+
+        let snap = sim.snapshot();
+        // Settlement count is exposed (emergent clusters; may be zero early).
+        assert_eq!(snap.settlement_count, sim.settlement_count());
+    }
+
+    /// FR-CIV-LIFE-030 — emergent settlement clustering is deterministic across
+    /// two same-seed simulations (replay-safe).
+    #[test]
+    fn phase_life_clustering_is_deterministic() {
+        let mut a = Simulation::with_seed(2024);
+        let mut b = Simulation::with_seed(2024);
+        for _ in 0..40 {
+            a.tick();
+            b.tick();
+        }
+        assert_eq!(a.settlement_count(), b.settlement_count());
+        assert_eq!(a.cluster_stocks(), b.cluster_stocks());
     }
 
     /// FR-CIV-ENGINE-INT-001 — climate is recomputed every tick and matches
@@ -2817,9 +3196,7 @@ mod tests {
         let planet_s = *sim_s.planet();
         let moon_s = *sim_s.moon();
         sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
-        let axial_tilt_fp = i32::from(planet_s.axial_tilt_deg) * 1_000;
-        sim_s.weather_grid =
-            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        sim_s.weather_grid = compute_weather(&sim_s.climate, summer_tick, 16);
         let snap_summer = sim_s.snapshot();
 
         let mut sim_w = Simulation::with_seed(0);
@@ -2827,8 +3204,7 @@ mod tests {
         let planet_w = *sim_w.planet();
         let moon_w = *sim_w.moon();
         sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
-        sim_w.weather_grid =
-            compute_weather(winter_tick, 16, axial_tilt_fp, planet_w.year_length_ticks);
+        sim_w.weather_grid = compute_weather(&sim_w.climate, winter_tick, 16);
         let snap_winter = sim_w.snapshot();
 
         let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
@@ -2840,8 +3216,7 @@ mod tests {
         );
 
         // Determinism: re-running the same ticks must produce identical grids.
-        let summer_grid_2 =
-            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        let summer_grid_2 = compute_weather(&sim_s.climate, summer_tick, 16);
         assert_eq!(
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"

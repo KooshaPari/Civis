@@ -20,21 +20,54 @@ civ-engine = { path = "../../crates/engine", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
+# RON persistence for the settings/options panel (src/settings_ui.rs). Pulled in
+# transitively by bevy already; pinned 0.8 to match the workspace lock.
+ron = "0.8"
 rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
+surface-nets = "0.1"
 
 # Bevy is an optional dep behind the `bevy` feature so the default workspace
 # build stays fast. Enable with `cargo run -p civ-bevy-ref --features bevy`.
 bevy = { version = "0.18", optional = true }
+bevy_water = { version = "0.18.1", optional = true }
 bevy_egui = { version = "0.39", optional = true }
+# Decode the embedded window-icon PNG (src/window_icon.rs) into RGBA for winit.
+# Pinned to the version already in the workspace lock (pulled by bevy). default
+# features off → only the PNG decoder is compiled. Behind the `bevy` feature.
+image = { version = "0.25", optional = true, default-features = false, features = ["png", "jpeg"] }
+# winit::window::Icon for the window-icon wiring (src/window_icon.rs). bevy_winit
+# re-exports only selected winit items (not `Icon`), so we depend on the same
+# winit version already in the workspace lock (0.30, pulled by bevy_winit).
+winit = { version = "0.30", optional = true, default-features = false }
 wgpu = { version = "27", optional = true }
 # Optional physics (not wired yet); keep out of default `bevy` feature to avoid wgpu version clashes.
 bevy_rapier3d = { version = "0.34", optional = true }
+# Audio (ambient soundscape + SFX), gated behind the `audio` feature.
+# Compat (checked 2026-05-30 via crates.io): bevy_kira_audio 0.25.x is the
+# release that targets Bevy 0.18 (0.26.x targets Bevy 0.19-rc), so it matches
+# our `bevy = "0.18"` pin. default-features off → only the `ogg` decoder is
+# pulled (CC0 clips ship as .ogg), avoiding extra codec deps. See src/audio.rs.
+bevy_kira_audio = { version = "0.25", optional = true, default-features = false, features = ["ogg"] }
+# PART A — bevy_atmosphere (real physically-based sky).
+# NOTE (checked 2026-05-29 via crates.io): the latest published bevy_atmosphere
+# is 0.13.0 (2025-05-06) which depends on `bevy ^0.16` — there is NO release
+# compatible with Bevy 0.18 yet. The existing procedural skybox dome
+# (src/skybox.rs + src/atmosphere.rs) remains the sky. When an 0.18-compatible
+# bevy_atmosphere (expected ~0.14) ships, add the dep line and the `atmosphere`
+# feature together — do NOT reintroduce a no-op `atmosphere` feature flag.
+# bevy_atmosphere = { version = "0.14", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"], optional = true }
 tokio-tungstenite = { version = "0.24", optional = true, default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
 futures-util = { version = "0.3", optional = true }
 serde_json = { version = "1", optional = true }
 civ-protocol-3d = { path = "../../crates/protocol-3d", optional = true }
+
+# Embeds the .exe icon (assets/icon/civis.ico) on Windows release builds via the
+# `exe-icon` feature + build.rs. winresource is a small, Windows-only resource
+# compiler wrapper; on non-Windows targets it is a no-op build-dep.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
 
 [dev-dependencies]
 civ-protocol-3d = { path = "../../crates/protocol-3d" }
@@ -53,10 +86,57 @@ bevy = [
     "dep:civ-engine",
     "dep:rand",
     "dep:rand_chacha",
+    "dep:image",
+    "dep:winit",
 ]
 egui = ["bevy", "dep:bevy_egui"]
+# Embed the multi-size civis.ico onto the Windows .exe (build.rs). Off by default
+# so the standard/CI build needs no Windows resource compiler. Release only.
+exe-icon = []
 rapier = ["bevy", "dep:bevy_rapier3d"]
+# --- Dev-loop features (see docs/development-guide/dev-loop.md) ---
+# `dev`: turn on Bevy's filesystem asset watcher so SVG-derived PNGs, .glb meshes,
+# and shaders hot-reload live without restarting. Desktop-only; never enabled for
+# release/CI builds so it cannot affect determinism.
+dev = ["bevy", "bevy/file_watcher"]
+# `hot`: fastest iteration loop — links Bevy as a shared library so warm rebuilds
+# skip relinking the engine. Pair with `just dev-fast`. Dev-only; do NOT ship.
+# (dexterous_developer system-level HMR is NOT yet Bevy-0.18-ready, so this
+#  dynamic_linking + cargo-watch loop is the supported subsecond fallback.)
+hot = ["dev", "bevy/dynamic_linking"]
+# P-VM-3 — real volumetric voxel material rendering: cubic-meshed chunks from
+# civ-voxel (CubicMesher) coloured per-material, with the material CA stepped
+# each tick so water flows and powders pile. OFF by default so the heightmap +
+# flat-water build stays the playable fallback. Enable: `--features voxel`.
+voxel = ["bevy", "dep:bevy_water"]
+# Camera-driven chunk streaming of the large voxel world (civ-voxel StreamingWorld
+# + HeightFieldGen). Coexists with the dense `voxel` sandbox rather than replacing
+# it. OFF by default. Enable: `--features voxel_stream` (implies `voxel`).
+voxel_stream = ["voxel"]
+# PART B — CC0 GLTF model loading (src/gltf_models.rs). OFF by default: when
+# disabled (or when assets/models/*.glb are absent) callers fall back to the
+# procedural primitives (capsule civilians / cuboid buildings / cone trees).
+models = ["bevy"]
+# Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
+# (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
+audio = ["bevy", "dep:bevy_kira_audio"]
 solari = [
+    "bevy",
+    "bevy/bevy_solari",
+]
+# `gi` — real-time raytraced global illumination (Lumen-equivalent) via Bevy's
+# in-tree `bevy_solari` (ReSTIR DI + ReSTIR GI + world-space irradiance cache +
+# specular GI). See src/lighting_gi.rs (`SolariGiPlugin`). bevy_solari is a Bevy
+# crate enabled through the `bevy/bevy_solari` cargo feature — there is no
+# separate crates.io dep line to add; the feature below pulls it in.
+#
+# HARDWARE: requires a GPU + backend exposing ray-tracing acceleration
+# structures (DXR on DX12, or Vulkan VK_KHR_ray_tracing). SolariGiPlugin
+# degrades to a loud, explicit no-op (logged) when that is unavailable — see
+# the module docs. Verified against the Bevy 0.18 `solari` example API on
+# 2026-05-30 (SolariPlugins + SolariLighting + CameraMainTextureUsages
+# STORAGE_BINDING + Msaa::Off).
+gi = [
     "bevy",
     "bevy/bevy_solari",
 ]
@@ -69,4 +149,9 @@ required-features = ["bevy"]
 [[bin]]
 name = "civ-standalone"
 path = "src/bin/standalone.rs"
+required-features = ["bevy", "egui"]
+
+[[bin]]
+name = "civ-native-hal-probe"
+path = "src/bin/native_hal_probe.rs"
 required-features = ["bevy"]

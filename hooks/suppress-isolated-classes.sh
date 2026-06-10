@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 # suppress-isolated-classes.sh — Anti-pattern: God classes / isolated oversized classes
 # Trigger: PreToolUse:Write/Edit
 # Severity: WARNING (advisory)

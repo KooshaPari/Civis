@@ -8,18 +8,17 @@
 //! - **Building diffs** — `BuildingGraph` mutations tagged with provenance
 //!   (procedural vs freehand).
 //! - **Agent appearance** — per-civilian wardrobe / tools state updates.
-//! - **Climate** — per-tick deterministic planet climate + weather-grid snapshot.
 //!
 //! This crate ships the wire-format types, a versioning gate, and a minimal
 //! length-prefixed binary envelope (`encode_frame3d_binary` / `decode_frame3d_binary`).
 //! Full zstd-compressed production framing and WebSocket attach land in
 //! `civ-server` once the schema stabilises.
 //!
-//! **Tick batch coalescing:** the server sends separate `F3D0` frames per
-//! tick (voxel, building, agent, climate) rather than one length-prefixed batch blob.
+//! **Tick batch coalescing:** the server sends three separate `F3D0` frames per
+//! tick (voxel, building, agent) rather than one length-prefixed batch blob.
 //! Clients already decode individual frames; merging them would require a new
 //! magic/batch envelope and break existing decoders for a small WebSocket
-//! framing win (4 headers ≈ 36 bytes vs 1).
+//! framing win (3 headers ≈ 27 bytes vs 1).
 //!
 //! See `docs/development-guide/fr-3d-additions.md` for `FR-CIV-PROTO3D-*`.
 
@@ -28,7 +27,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub use civ_planet::{Climate, WeatherCell};
+pub use civ_build::{BuildingGraph, BuildingId, FacadeStyle, Parcel, ParcelKind};
 pub use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
 
 /// Schema version of the public protocol-3d frame types. Bumped on any
@@ -43,6 +42,314 @@ pub enum BuildingProvenance {
     Procedural,
     /// Authored by the user in freehand mode.
     Freehand,
+}
+
+/// World-space X/Z anchor in Bevy terrain units (fixed-scale coords / [`civ_voxel::FIXED_SCALE`]).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct WorldXZ {
+    /// World X in the same units as the Bevy standalone terrain mesh.
+    pub x: f32,
+    /// World Z in the same units as the Bevy standalone terrain mesh.
+    pub z: f32,
+}
+
+impl WorldXZ {
+    /// Convert a fixed-point [`WorldCoord`] into Bevy terrain units.
+    #[must_use]
+    pub fn from_fixed_coord(coord: &civ_voxel::WorldCoord) -> Self {
+        let scale = civ_voxel::FIXED_SCALE as f32;
+        Self {
+            x: coord.x as f32 / scale,
+            z: coord.z as f32 / scale,
+        }
+    }
+}
+
+/// Building kind mirrored for wire payloads (matches `civ_engine::BuildingType` labels).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BuildingKind3d {
+    /// Farm parcel.
+    Farm,
+    /// Mine parcel.
+    Mine,
+    /// Barracks parcel.
+    Barracks,
+    /// Temple parcel.
+    Temple,
+    /// Market parcel.
+    Market,
+    /// House parcel.
+    House,
+    /// City center parcel.
+    CityCenter,
+}
+
+/// One building entry carried in a [`BuildingDiffFrame`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuildingDiffEntry {
+    /// Stable building entity id from the simulation ECS.
+    pub id: u64,
+    /// Building classification for client-side styling.
+    pub kind: BuildingKind3d,
+    /// Building tier or upgrade level. Defaults to `0` for legacy payloads.
+    #[serde(default)]
+    pub tier: u8,
+    /// World-space anchor for the building marker mesh.
+    pub position: WorldXZ,
+}
+
+/// Building-diff frame. Carries provenance plus optional building snapshots for renderers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuildingDiffFrame {
+    /// Server tick at which the diff was produced.
+    pub tick: u64,
+    /// Provenance of every mutation in this frame (mixed-provenance frames
+    /// carry the dominant provenance — finer per-mutation tagging lives inside
+    /// the `BuildingGraph` payload itself once it lands).
+    pub provenance: BuildingProvenance,
+    /// Buildings visible this tick (full snapshot; empty on legacy servers).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<BuildingDiffEntry>,
+    /// Full `BuildingGraph` snapshot for facade/provenance detail (optional).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graph: Option<BuildingGraph>,
+}
+
+/// Snapshot of civilian needs for client-side overlays.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct CivilianNeeds3d {
+    /// Food satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub food: f32,
+    /// Shelter satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub shelter: f32,
+    /// Safety satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub safety: f32,
+    /// Social satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub social: f32,
+    /// Rest satisfaction, normalized to `0.0..=1.0`.
+    #[serde(default)]
+    pub rest: f32,
+}
+
+/// Summary of a civilian genome for deterministic visual tagging.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct GenomeSummary3d {
+    /// Human-readable summary string.
+    #[serde(default)]
+    pub summary: String,
+    /// Optional short lineage or haplogroup label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub lineage: String,
+    /// Optional compact trait tags.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub traits: Vec<String>,
+}
+
+/// A single civilian state payload for the 3D wire protocol.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CivilianStateEntry {
+    /// Stable civilian entity id from the simulation ECS.
+    pub id: u64,
+    /// Latest needs snapshot.
+    #[serde(default)]
+    pub needs: CivilianNeeds3d,
+    /// Occupation label for UI filtering and badges.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub profession: String,
+    /// Genome summary payload. Defaults to an empty summary for legacy JSON.
+    #[serde(default, rename = "genome-summary")]
+    pub genome_summary: GenomeSummary3d,
+    /// Species label used by the deepened sim.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub species: String,
+    /// Health snapshot. Defaults to `1.0` for legacy JSON.
+    #[serde(default = "default_civilian_health")]
+    pub health: f32,
+}
+
+fn default_civilian_health() -> f32 {
+    1.0
+}
+
+/// Batch of civilian state updates for one server tick.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CivilianStateFrame {
+    /// Server tick at which the state was produced.
+    pub tick: u64,
+    /// One entry per civilian whose state changed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub civilians: Vec<CivilianStateEntry>,
+}
+
+/// Treasury snapshot for a faction in the 3D wire protocol.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct FactionTreasury3d {
+    /// Treasury balance in simulation currency units.
+    #[serde(default)]
+    pub amount: f64,
+    /// Optional human-readable currency label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency: String,
+}
+
+/// Government label carried on faction snapshots.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum Government3d {
+    /// Unknown or legacy payload.
+    #[default]
+    Unknown,
+    /// Monarchy or dynastic rule.
+    Monarchy,
+    /// Republic or elected civic rule.
+    Republic,
+    /// Theocracy or priestly rule.
+    Theocracy,
+    /// Military administration.
+    Junta,
+    /// Council or committee rule.
+    Council,
+    /// Corporate or merchant rule.
+    Corporate,
+}
+
+/// A single faction state payload for the 3D wire protocol.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FactionStateEntry {
+    /// Stable faction id from the simulation ECS.
+    pub id: u32,
+    /// Current era index.
+    #[serde(default)]
+    pub era: u16,
+    /// Government label.
+    #[serde(default)]
+    pub government: Government3d,
+    /// Treasury snapshot.
+    #[serde(default)]
+    pub treasury: FactionTreasury3d,
+}
+
+/// Batch of faction state updates for one server tick.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct FactionStateFrame {
+    /// Server tick at which the state was produced.
+    pub tick: u64,
+    /// One entry per faction whose state changed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub factions: Vec<FactionStateEntry>,
+}
+
+/// A birth event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct BirthEvent3d {
+    /// Stable entity id for the newborn.
+    #[serde(default)]
+    pub entity_id: u64,
+    /// Owning faction id, if known.
+    #[serde(default)]
+    pub faction_id: u32,
+    /// Species label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub species: String,
+    /// Optional spawn location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+}
+
+/// A death event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct DeathEvent3d {
+    /// Stable entity id for the deceased.
+    #[serde(default)]
+    pub entity_id: u64,
+    /// Owning faction id, if known.
+    #[serde(default)]
+    pub faction_id: u32,
+    /// Optional death location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+    /// Optional cause or short cause label.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cause: String,
+}
+
+/// A technology event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TechEvent3d {
+    /// Owning faction id, if known.
+    #[serde(default)]
+    pub faction_id: u32,
+    /// Era reached or unlocked.
+    #[serde(default)]
+    pub era: u16,
+    /// Technology label or identifier.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tech: String,
+}
+
+/// A battle event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct BattleEvent3d {
+    /// Attacking faction id, if known.
+    #[serde(default)]
+    pub attacker_faction: u32,
+    /// Defending faction id, if known.
+    #[serde(default)]
+    pub defender_faction: u32,
+    /// Short outcome summary.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub outcome: String,
+    /// Optional battle location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+}
+
+/// A disaster event in the wire-level event feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct DisasterEvent3d {
+    /// Disaster kind or label.
+    ///
+    /// Renamed to `disaster_kind` to avoid clashing with the
+    /// `EventFeedMessage3d` tagged-enum tag (`#[serde(tag = "kind")]`); the
+    /// serializer would otherwise emit two `kind` fields per disaster
+    /// message.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub disaster_kind: String,
+    /// Optional disaster severity.
+    #[serde(default)]
+    pub severity: f32,
+    /// Optional disaster location.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
+}
+
+/// One feed event emitted by the deepened sim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum EventFeedMessage3d {
+    /// Birth message.
+    Birth(BirthEvent3d),
+    /// Death message.
+    Death(DeathEvent3d),
+    /// Technology message.
+    Tech(TechEvent3d),
+    /// Battle message.
+    Battle(BattleEvent3d),
+    /// Disaster message.
+    Disaster(DisasterEvent3d),
+}
+
+/// Batch of event-feed messages for one server tick.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct EventFeedFrame {
+    /// Server tick at which the events were emitted.
+    pub tick: u64,
+    /// One feed message per simulation event.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<EventFeedMessage3d>,
 }
 
 /// One delta event for a single chunk. The renderer pairs `event` with the
@@ -78,19 +385,6 @@ pub struct VoxelDeltaFrame {
     pub deltas: Vec<VoxelChunkDelta>,
 }
 
-/// Building-diff frame. The actual `BuildingGraph` payload is supplied by
-/// `civ-build` in a future PR (the type is reserved here so renderers can
-/// recognise the frame kind before the schema lands).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BuildingDiffFrame {
-    /// Server tick at which the diff was produced.
-    pub tick: u64,
-    /// Provenance of every mutation in this frame (mixed-provenance frames
-    /// carry the dominant provenance — finer per-mutation tagging lives inside
-    /// the `BuildingGraph` payload itself once it lands).
-    pub provenance: BuildingProvenance,
-}
-
 /// Agent appearance update — one entry per agent whose visible state changed
 /// this tick (wardrobe, tools, era).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -115,29 +409,28 @@ pub struct AgentAppearanceUpdate {
     /// Uniform scale multiplier for the agent marker mesh (`1.0` when omitted).
     #[serde(default = "default_agent_scale")]
     pub scale: f32,
+    /// World-space anchor when the server knows agent ECS position (item 29+).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<WorldXZ>,
 }
 
 fn default_agent_scale() -> f32 {
     1.0
 }
 
-/// Climate + weather-grid snapshot delivered once per server tick.
-///
-/// Bundles the deterministic [`Climate`] output from `civ-planet` together with
-/// the per-region [`WeatherCell`] grid so clients can drive atmospheric rendering
-/// without recomputing it themselves.
-///
-/// Wire note: `climate` is ~40 bytes; `weather_grid` is `N × 12` bytes where N
-/// is the number of regions. For typical maps (≤64 regions) the uncompressed
-/// payload is under 800 bytes — well within one WebSocket frame.
+/// Climate broadcast for one tick. Carries the planetary day/year/moon/tide
+/// phase plus the per-region weather grid so 3D clients can drive sky,
+/// lighting, and ambient effects without re-running the simulation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClimateFrame {
-    /// Server tick at which the snapshot was produced.
+    /// Server tick at which the climate was sampled.
     pub tick: u64,
-    /// Deterministic planet-climate for this tick.
-    pub climate: Climate,
-    /// Per-region weather cells for this tick.
-    pub weather_grid: Vec<WeatherCell>,
+    /// Planetary phase snapshot.
+    pub climate: civ_planet::Climate,
+    /// One weather cell per region, in the same region-id space used by the
+    /// `GeologyMap` / `RegionBiome` wire types.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub weather: Vec<civ_planet::WeatherCell>,
 }
 
 /// Discriminated union of all 3D-extension protocol frames. The existing Civis
@@ -150,7 +443,15 @@ pub enum Frame3d {
     BuildingDiff(BuildingDiffFrame),
     /// Agent appearance batch for one tick.
     AgentAppearance(AgentAppearanceFrame),
-    /// Climate + weather-grid snapshot for one tick.
+    /// Civilian state batch for one tick.
+    CivilianState(CivilianStateFrame),
+    /// Faction state batch for one tick.
+    FactionState(FactionStateFrame),
+    /// Event-feed batch for one tick.
+    EventFeed(EventFeedFrame),
+    /// Climate broadcast for one tick (planetary phase + per-region weather).
+    /// Distinct from the other batch frames because it ticks on its own cadence
+    /// (driven by the planet sim) and carries a different per-tick payload shape.
     Climate(ClimateFrame),
 }
 
@@ -162,8 +463,30 @@ impl Frame3d {
             Self::VoxelDelta(f) => f.tick,
             Self::BuildingDiff(f) => f.tick,
             Self::AgentAppearance(f) => f.tick,
+            Self::CivilianState(f) => f.tick,
+            Self::FactionState(f) => f.tick,
+            Self::EventFeed(f) => f.tick,
             Self::Climate(f) => f.tick,
         }
+    }
+}
+
+/// Resolve agent world translation for 3D clients (legacy fallback uses `agent_id` on X).
+#[must_use]
+pub fn agent_world_translation(update: &AgentAppearanceUpdate, y: f32) -> (f32, f32, f32) {
+    if let Some(pos) = update.position {
+        (pos.x, y, pos.z)
+    } else {
+        (update.agent_id as f32, y, 0.0)
+    }
+}
+
+/// Maps civ-build provenance tags into wire [`BuildingProvenance`].
+#[must_use]
+pub fn map_build_provenance(provenance: civ_build::BuildingProvenance) -> BuildingProvenance {
+    match provenance {
+        civ_build::BuildingProvenance::Procedural => BuildingProvenance::Procedural,
+        civ_build::BuildingProvenance::Freehand => BuildingProvenance::Freehand,
     }
 }
 
@@ -180,7 +503,10 @@ enum Frame3dKind {
     VoxelDelta = 0,
     BuildingDiff = 1,
     AgentAppearance = 2,
-    Climate = 3,
+    CivilianState = 3,
+    FactionState = 4,
+    EventFeed = 5,
+    Climate = 6,
 }
 
 impl Frame3dKind {
@@ -189,6 +515,9 @@ impl Frame3dKind {
             Frame3d::VoxelDelta(_) => Self::VoxelDelta,
             Frame3d::BuildingDiff(_) => Self::BuildingDiff,
             Frame3d::AgentAppearance(_) => Self::AgentAppearance,
+            Frame3d::CivilianState(_) => Self::CivilianState,
+            Frame3d::FactionState(_) => Self::FactionState,
+            Frame3d::EventFeed(_) => Self::EventFeed,
             Frame3d::Climate(_) => Self::Climate,
         }
     }
@@ -258,7 +587,6 @@ pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_planet::WeatherCell;
 
     /// FR-CIV-PROTO3D-000 — schema version is exposed.
     #[test]
@@ -292,10 +620,195 @@ mod tests {
         let f = BuildingDiffFrame {
             tick: 100,
             provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
+            graph: None,
         };
         let s = serde_json::to_string(&f).expect("serialize");
         let back: BuildingDiffFrame = serde_json::from_str(&s).expect("deserialize");
         assert_eq!(back.provenance, BuildingProvenance::Freehand);
+    }
+
+    /// FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
+    #[test]
+    fn building_diff_entry_tier_roundtrip_and_backward_compat() {
+        let entry = BuildingDiffEntry {
+            id: 99,
+            kind: BuildingKind3d::Market,
+            tier: 3,
+            position: WorldXZ { x: 1.5, z: 2.5 },
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: BuildingDiffEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":99,"kind":"Market","position":{"x":1.5,"z":2.5}}"#;
+        let legacy: BuildingDiffEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.tier, 0);
+    }
+
+    /// FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
+    #[test]
+    fn building_graph_snapshot_roundtrips() {
+        use civ_build::{BuildingId, BuildingProvenance as BuildProvenance, ParcelKind};
+
+        let mut graph = BuildingGraph::new();
+        graph.insert_parcel(Parcel {
+            id: BuildingId(7),
+            kind: ParcelKind::Residential,
+            origin: civ_voxel::WorldCoord {
+                x: 128,
+                y: 0,
+                z: 256,
+            },
+            size: [8, 6, 4],
+            era_min: 1,
+        });
+        graph.set_provenance(BuildingId(7), BuildProvenance::Freehand);
+
+        let frame = BuildingDiffFrame {
+            tick: 12,
+            provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
+            graph: Some(graph.clone()),
+        };
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let back: BuildingDiffFrame = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.graph, Some(graph));
+    }
+
+    /// FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
+    #[test]
+    fn building_and_agent_position_extensions_roundtrip() {
+        let building = BuildingDiffFrame {
+            tick: 9,
+            provenance: BuildingProvenance::Procedural,
+            buildings: vec![BuildingDiffEntry {
+                id: 42,
+                kind: BuildingKind3d::House,
+                tier: 1,
+                position: WorldXZ { x: 12.5, z: 48.0 },
+            }],
+            graph: None,
+        };
+        let building_json = serde_json::to_string(&building).expect("serialize building");
+        let building_back: BuildingDiffFrame =
+            serde_json::from_str(&building_json).expect("deserialize building");
+        assert_eq!(building, building_back);
+
+        let agent = AgentAppearanceUpdate {
+            agent_id: 7,
+            era: 1,
+            wardrobe: MaterialId(0),
+            tools: MaterialId(0),
+            scale: 1.0,
+            position: Some(WorldXZ { x: 3.0, z: 9.0 }),
+        };
+        let agent_json = serde_json::to_string(&agent).expect("serialize agent");
+        let agent_back: AgentAppearanceUpdate =
+            serde_json::from_str(&agent_json).expect("deserialize agent");
+        assert_eq!(agent_back.position, Some(WorldXZ { x: 3.0, z: 9.0 }));
+        assert_eq!(agent_world_translation(&agent_back, 0.8), (3.0, 0.8, 9.0));
+    }
+
+    /// FR-CIV-PROTO3D-011 — civilian state entries round-trip and legacy payloads get defaults.
+    #[test]
+    fn civilian_state_entry_roundtrip_and_backward_compat() {
+        let entry = CivilianStateEntry {
+            id: 17,
+            needs: CivilianNeeds3d {
+                food: 0.8,
+                shelter: 0.6,
+                safety: 0.7,
+                social: 0.5,
+                rest: 0.9,
+            },
+            profession: "farmer".to_string(),
+            genome_summary: GenomeSummary3d {
+                summary: "dominant traits".to_string(),
+                lineage: "line-a".to_string(),
+                traits: vec!["hardy".to_string(), "curious".to_string()],
+            },
+            species: "human".to_string(),
+            health: 0.95,
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: CivilianStateEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":17}"#;
+        let legacy: CivilianStateEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.needs, CivilianNeeds3d::default());
+        assert_eq!(legacy.profession, "");
+        assert_eq!(legacy.genome_summary, GenomeSummary3d::default());
+        assert_eq!(legacy.species, "");
+        assert_eq!(legacy.health, 1.0);
+    }
+
+    /// FR-CIV-PROTO3D-012 — faction state entries round-trip and legacy payloads get defaults.
+    #[test]
+    fn faction_state_entry_roundtrip_and_backward_compat() {
+        let entry = FactionStateEntry {
+            id: 4,
+            era: 9,
+            government: Government3d::Republic,
+            treasury: FactionTreasury3d {
+                amount: 1234.5,
+                currency: "civ".to_string(),
+            },
+        };
+        let json = serde_json::to_string(&entry).expect("serialize");
+        let back: FactionStateEntry = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, entry);
+
+        let legacy_json = r#"{"id":4}"#;
+        let legacy: FactionStateEntry =
+            serde_json::from_str(legacy_json).expect("legacy deserialize");
+        assert_eq!(legacy.era, 0);
+        assert_eq!(legacy.government, Government3d::Unknown);
+        assert_eq!(legacy.treasury, FactionTreasury3d::default());
+    }
+
+    /// FR-CIV-PROTO3D-013 — event feed messages round-trip as a tagged enum.
+    #[test]
+    fn event_feed_roundtrip() {
+        let frame = EventFeedFrame {
+            tick: 27,
+            events: vec![
+                EventFeedMessage3d::Birth(BirthEvent3d {
+                    entity_id: 1,
+                    faction_id: 2,
+                    species: "human".to_string(),
+                    position: Some(WorldXZ { x: 10.0, z: 12.0 }),
+                }),
+                EventFeedMessage3d::Death(DeathEvent3d {
+                    entity_id: 3,
+                    faction_id: 4,
+                    position: Some(WorldXZ { x: 8.0, z: 9.0 }),
+                    cause: "battle".to_string(),
+                }),
+                EventFeedMessage3d::Tech(TechEvent3d {
+                    faction_id: 5,
+                    era: 6,
+                    tech: "agriculture".to_string(),
+                }),
+                EventFeedMessage3d::Battle(BattleEvent3d {
+                    attacker_faction: 7,
+                    defender_faction: 8,
+                    outcome: "attacker_won".to_string(),
+                    position: Some(WorldXZ { x: 1.0, z: 2.0 }),
+                }),
+                EventFeedMessage3d::Disaster(DisasterEvent3d {
+                    disaster_kind: "flood".to_string(),
+                    severity: 0.75,
+                    position: Some(WorldXZ { x: 3.0, z: 4.0 }),
+                }),
+            ],
+        };
+        let json = serde_json::to_string(&frame).expect("serialize");
+        let back: EventFeedFrame = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, frame);
     }
 
     /// FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
@@ -306,6 +819,12 @@ mod tests {
             deltas: Vec::new(),
         });
         assert_eq!(f.tick(), 17);
+
+        let faction = Frame3d::FactionState(FactionStateFrame {
+            tick: 21,
+            factions: Vec::new(),
+        });
+        assert_eq!(faction.tick(), 21);
     }
 
     /// FR-CIV-PROTO3D-004 — BuildingDiff round-trips through the binary envelope.
@@ -314,6 +833,8 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
+            buildings: Vec::new(),
+            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));
@@ -333,6 +854,21 @@ mod tests {
         let from_json = encode_frame3d_binary_from_json(&frame, &json).expect("from json");
         let full = encode_frame3d_binary(&frame).expect("full");
         assert_eq!(from_json, full);
+
+        let event_frame = Frame3d::EventFeed(EventFeedFrame {
+            tick: 8,
+            events: vec![EventFeedMessage3d::Tech(TechEvent3d {
+                faction_id: 1,
+                era: 2,
+                tech: "printing".to_string(),
+            })],
+        });
+        let event_bytes = encode_frame3d_binary(&event_frame).expect("full event");
+        assert_eq!(event_bytes[4], Frame3dKind::EventFeed as u8);
+        assert_eq!(
+            decode_frame3d_binary(&event_bytes).expect("decode event"),
+            event_frame
+        );
     }
 
     /// FR-CIV-PROTO3D-007 — agent appearance accepts optional scale with default.
@@ -352,6 +888,8 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 1,
             provenance: BuildingProvenance::Freehand,
+            buildings: Vec::new(),
+            graph: None,
         });
         let mut bytes = encode_frame3d_binary(&frame).expect("encode");
         bytes[0] = b'X';
@@ -359,67 +897,5 @@ mod tests {
             decode_frame3d_binary(&bytes),
             Err(Frame3dBinaryError::BadMagic)
         );
-    }
-
-    /// FR-CIV-PLANET-050 — ClimateFrame round-trips through bincode with
-    /// bit-identical bytes on encode/decode.
-    #[test]
-    fn climate_replay_event_round_trips_via_bincode() {
-        let frame = ClimateFrame {
-            tick: 42_000,
-            climate: Climate {
-                tick: 42_000,
-                day_phase: 0.5,
-                year_phase: 0.25,
-                moon_phase: 0.1,
-                tide_offset: 0.3,
-            },
-            weather_grid: vec![
-                WeatherCell {
-                    region_id: 0,
-                    temp_c_fp: 20_000,
-                    precip_mm_fp: 500,
-                },
-                WeatherCell {
-                    region_id: 1,
-                    temp_c_fp: -5_000,
-                    precip_mm_fp: 1_200,
-                },
-            ],
-        };
-
-        let config = bincode::config::standard();
-        let encoded: Vec<u8> =
-            bincode::serde::encode_to_vec(&frame, config).expect("bincode encode");
-        let (decoded, consumed): (ClimateFrame, usize) =
-            bincode::serde::decode_from_slice(&encoded, config).expect("bincode decode");
-
-        assert_eq!(consumed, encoded.len(), "all bytes consumed");
-        assert_eq!(
-            frame, decoded,
-            "ClimateFrame must be bit-identical after bincode round-trip"
-        );
-
-        // Verify a second encode produces identical bytes (determinism).
-        let encoded2: Vec<u8> =
-            bincode::serde::encode_to_vec(&decoded, config).expect("bincode encode 2");
-        assert_eq!(encoded, encoded2, "bincode encoding must be deterministic");
-    }
-
-    /// FR-CIV-PLANET-050 — ClimateFrame tick is accessible via Frame3d::tick().
-    #[test]
-    fn climate_frame_tick_extraction() {
-        let f = Frame3d::Climate(ClimateFrame {
-            tick: 99,
-            climate: Climate {
-                tick: 99,
-                day_phase: 0.0,
-                year_phase: 0.0,
-                moon_phase: 0.0,
-                tide_offset: 0.0,
-            },
-            weather_grid: Vec::new(),
-        });
-        assert_eq!(f.tick(), 99);
     }
 }

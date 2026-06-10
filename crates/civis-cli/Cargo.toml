@@ -1,0 +1,13 @@
+[package]
+name = "civis-cli"
+description = "Civis command-line interface for world creation, save inspection, and headless benchmarks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+civ-engine = { path = "../engine" }
+clap = { version = "4", features = ["derive"] }
+regex = "1"
+serde_json = "1"

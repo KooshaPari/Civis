@@ -20,6 +20,7 @@ clients/unreal-show/scripts/vs-modify2.log
 /.task
 .DS_Store
 .env
+scripts/omniroute.env
 *.log
 
 /docs/node_modules
@@ -51,6 +52,13 @@ clients/unreal-show/scripts/vs-modify2.log
 .llmignore
 worktrees/
 worktrees/
+.worktrees/
+.worktrees-prompts/
 vendor/phenodocs/node_modules/
 .vitepress/cache/
 target-ci/
+.worker_tasks/
+.worker_logs/
+/dist/
+target-check-build/
+*-target/

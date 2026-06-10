@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!--
+    Civis Start Menu / Phenotype Apps brand mark (holocron command-deck).
+    Hand-authored vector - project-owned. Palette:
+      - Deck base #0B0E14 (INK holocron plate)
+      - Amber accent #FFB347 - structural voxel/world edges
+      - Holo-cyan #5BE3FF - restrained orbit + emergence apex
+    Motif: 3-tier isometric voxel ziggurat on a glassy console plate.
+  -->
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#141A24"/>
+      <stop offset="0.45" stop-color="#0B0E14"/>
+      <stop offset="1"   stop-color="#06080C"/>
+    </linearGradient>
+    <radialGradient id="well" cx="50%" cy="40%" r="65%">
+      <stop offset="0"   stop-color="#121820"/>
+      <stop offset="1"   stop-color="#0B0E14"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.12"/>
+    </linearGradient>
+    <filter id="amberGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="holoGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="amberFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFB347" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#B8731E" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="14" y="14" width="228" height="228" rx="46" fill="url(#plate)"/>
+  <rect x="14.5" y="14.5" width="227" height="227" rx="45.5" fill="none"
+        stroke="#2A3340" stroke-opacity="0.65" stroke-width="1.5"/>
+  <rect x="15.5" y="15.5" width="225" height="225" rx="44.5" fill="none"
+        stroke="#05070A" stroke-opacity="0.85" stroke-width="1.5"/>
+  <rect x="14" y="14" width="228" height="228" rx="46" fill="url(#glass)"/>
+
+  <rect x="34" y="34" width="188" height="188" rx="34" fill="url(#well)"/>
+  <rect x="34.5" y="34.5" width="187" height="187" rx="33.5" fill="none"
+        stroke="#1A2230" stroke-width="1"/>
+
+  <ellipse cx="128" cy="132" rx="78" ry="30" fill="none"
+           stroke="#5BE3FF" stroke-opacity="0.42" stroke-width="2" filter="url(#holoGlow)"/>
+  <ellipse cx="128" cy="132" rx="78" ry="30" fill="none"
+           stroke="#2A9FB8" stroke-opacity="0.22" stroke-width="5"/>
+
+  <g filter="url(#amberGlow)">
+    <polygon points="128,178 76,150 128,122 180,150" fill="url(#amberFace)"
+             stroke="#FFB347" stroke-width="3.2" stroke-linejoin="round"/>
+    <polygon points="76,150 76,168 128,196 128,178" fill="#0B0E14" fill-opacity="0.9"
+             stroke="#B8731E" stroke-width="2.4" stroke-linejoin="round"/>
+    <polygon points="180,150 180,168 128,196 128,178" fill="#06080C" fill-opacity="0.95"
+             stroke="#B8731E" stroke-width="2.4" stroke-linejoin="round"/>
+
+    <polygon points="128,140 92,121 128,102 164,121" fill="url(#amberFace)"
+             stroke="#FFB347" stroke-width="3" stroke-linejoin="round"/>
+    <polygon points="92,121 92,135 128,154 128,140" fill="#0B0E14" fill-opacity="0.9"
+             stroke="#B8731E" stroke-width="2.2" stroke-linejoin="round"/>
+    <polygon points="164,121 164,135 128,154 128,140" fill="#06080C" fill-opacity="0.95"
+             stroke="#B8731E" stroke-width="2.2" stroke-linejoin="round"/>
+
+    <polygon points="128,108 108,97 128,86 148,97" fill="url(#amberFace)"
+             stroke="#FFB347" stroke-width="2.8" stroke-linejoin="round"/>
+    <polygon points="108,97 108,109 128,120 128,108" fill="#0B0E14" fill-opacity="0.9"
+             stroke="#B8731E" stroke-width="2" stroke-linejoin="round"/>
+    <polygon points="148,97 148,109 128,120 128,108" fill="#06080C" fill-opacity="0.95"
+             stroke="#B8731E" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+
+  <line x1="128" y1="86" x2="128" y2="60" stroke="#5BE3FF" stroke-width="2.4"
+        stroke-linecap="round" filter="url(#holoGlow)" opacity="0.92"/>
+  <circle cx="128" cy="58" r="5.5" fill="#5BE3FF" filter="url(#holoGlow)"/>
+  <circle cx="128" cy="58" r="2.4" fill="#E8F4F8"/>
+
+  <polyline points="108,97 128,86 148,97" fill="none" stroke="#FFD28A"
+            stroke-width="1.2" opacity="0.85" stroke-linejoin="round"/>
+
+  <g stroke="#FFB347" stroke-width="2" fill="none" opacity="0.45" stroke-linecap="round">
+    <polyline points="56,40 40,40 40,56"/>
+    <polyline points="200,40 216,40 216,56"/>
+    <polyline points="56,216 40,216 40,200"/>
+    <polyline points="200,216 216,216 216,200"/>
+  </g>
+</svg>

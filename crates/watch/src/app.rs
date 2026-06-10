@@ -11,6 +11,7 @@ use std::{
 
 use axum::body::Bytes;
 use axum::http::HeaderValue;
+use civ_economy::Stocks;
 use civ_engine::{DiplomacyKind, JobType, ModBrowserEntry, Simulation};
 use civ_laws::LawDb;
 use civ_save_db::SaveDb;
@@ -269,6 +270,8 @@ pub(crate) struct Snapshot {
     pub(crate) tick_dt_ms: u32,
     pub(crate) current_era: u16,
     pub(crate) population: u64,
+    pub(crate) settlement_count: u32,
+    pub(crate) cluster_stocks: std::collections::BTreeMap<u64, Stocks>,
     pub(crate) voxel_dirty_count: usize,
     pub(crate) voxel_chunk_count: usize,
     pub(crate) sample_civilians: Vec<SampleCivilian>,

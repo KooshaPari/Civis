@@ -1,33 +1,40 @@
-use std::collections::HashMap;
-
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use bevy::sprite::Text2d;
-use bevy::text::{TextColor, TextFont};
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_bevy_ref::{
-    agent_color_from_id, agent_label_stub, agent_scale_multiplier,
-    bevy_render::{
-        apply_chunk_material, mesh_buffer_to_bevy, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR,
-    },
-    chunk_distance_from_camera, chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv,
-    decode_chunk_id, focused_chunk_at_grid,
+    bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
+    chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
-    mesh_lod_level, minimap_uv_to_chunk_grid,
+    live_focus::{
+        compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
+    },
+    live_minimap::{
+        chunk_centre_world_xz, live_building_dot_color, minimap_bounds_from_keys,
+        spawn_minimap_dot, world_minimap_uv, MinimapDotLayout, MinimapFocusRect,
+        LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
+        LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
+    },
+    live_pick::{LivePickPlugin, LiveSelection},
+    live_stream::{
+        apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
+        apply_voxel_delta_frame, default_stream_meshes, AgentLabelConfig, LiveAgentTag,
+        LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes,
+        LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
+    },
+    minimap::MinimapRoot,
+    minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
-    presentation_day_factor_target, resolve_live_ws_url, should_render_chunk,
+    presentation_day_factor_target, resolve_live_ws_url,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, CubicMesher, DebugRender, LiveHudSnapshot, MinimapBounds, AGENT_MARKER_DEPTH,
-    AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
-use civ_protocol_3d::{AgentAppearanceFrame, Frame3d, VoxelDeltaFrame};
-use civ_voxel::{ChunkId, ChunkView, LodLevel};
+use civ_protocol_3d::Frame3d;
+use civ_voxel::ChunkId;
 
-const CHUNK_EDGE: usize = 16;
-const CHUNK_BASE_COLOR: [f32; 3] = [0.72, 0.69, 0.62];
+const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
 const ORBIT_KEYBOARD_DISTANCE_STEP: f32 = 4.0;
@@ -35,15 +42,15 @@ const ORBIT_PAN_SPEED: f32 = 12.0;
 const MIN_ORBIT_ELEVATION: f32 = 0.05;
 const MIN_ORBIT_DISTANCE: f32 = 8.0;
 const MAX_ORBIT_DISTANCE: f32 = 200.0;
-/// Small world-space id labels above agent markers (`Text2d` child entities).
-const AGENT_NAME_LABELS: bool = true;
-const AGENT_LABEL_FONT_SIZE: f32 = 10.0;
-const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 const MINIMAP_SIZE: f32 = 160.0;
-const MINIMAP_DOT: f32 = 4.0;
+const MINIMAP_DOT: f32 = LIVE_MINIMAP_DOT;
 const MINIMAP_INSET: f32 = 6.0;
+const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
+    panel_size: MINIMAP_SIZE,
+    inset: MINIMAP_INSET,
+    plot_margin_dot: MINIMAP_DOT,
+};
 
-/// Live orbit state derived from [`CameraTarget`]; updated by mouse drag and scroll.
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
     centre: [f32; 3],
@@ -79,7 +86,6 @@ impl OrbitCamera {
         self.distance = (self.distance + delta).clamp(MIN_ORBIT_DISTANCE, MAX_ORBIT_DISTANCE);
     }
 
-    /// Stub: pan orbit centre on the horizontal plane relative to current azimuth.
     fn pan_centre(&mut self, right: f32, forward: f32) {
         let sin = self.azimuth.sin();
         let cos = self.azimuth.cos();
@@ -91,13 +97,6 @@ impl OrbitCamera {
 #[derive(Resource)]
 struct LiveBridge {
     client: WsClient,
-}
-
-#[derive(Resource, Default)]
-struct LiveScene {
-    chunks: HashMap<u64, Entity>,
-    agents: HashMap<u64, Entity>,
-    agent_materials: HashMap<u64, Handle<StandardMaterial>>,
 }
 
 #[derive(Resource)]
@@ -120,7 +119,6 @@ struct MinimapUi {
     dots: Entity,
 }
 
-/// L5 presentation: day/night from `sim.snapshot` with smooth lighting ramp.
 #[derive(Resource)]
 struct ScenePresentation {
     is_day: bool,
@@ -139,42 +137,13 @@ impl Default for ScenePresentation {
 #[derive(Resource, Default)]
 struct MinimapCache {
     chunk_keys: Vec<u64>,
+    agent_count: usize,
+    building_count: usize,
+    graph_count: usize,
+    camera_chunk: Option<(i32, i32)>,
     bounds: Option<MinimapBounds>,
-}
-
-#[derive(Component)]
-#[allow(dead_code)]
-struct ChunkTag {
-    id: ChunkId,
-}
-
-#[derive(Component)]
-struct ChunkFade {
-    elapsed: f32,
-    base_rgb: [f32; 3],
-}
-
-impl ChunkFade {
-    fn new() -> Self {
-        Self {
-            elapsed: 0.0,
-            base_rgb: CHUNK_BASE_COLOR,
-        }
-    }
-}
-
-#[derive(Component)]
-#[allow(dead_code)]
-struct AgentTag {
-    id: u64,
-}
-
-#[derive(Component)]
-struct AgentLabel;
-
-#[derive(Resource)]
-struct AgentVisualAssets {
-    mesh: Handle<Mesh>,
+    focus: Option<LiveSceneFocus>,
+    use_focus_bounds: bool,
 }
 
 fn main() {
@@ -191,8 +160,10 @@ fn main() {
                 .set(native_render_plugin()),
             WireframePlugin::default(),
             GpuFeaturesPlugin,
+            LivePickPlugin,
         ))
-        .insert_resource(LiveScene::default())
+        .init_resource::<LiveStreamScene>()
+        .init_resource::<LiveSceneFocus>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -207,6 +178,9 @@ fn main() {
                 update_orbit_camera_transform,
                 apply_live_frames,
                 apply_spectator_meta,
+                sync_live_hud_stats,
+                update_live_focus,
+                follow_live_orbit_focus,
                 sync_chunk_debug_render,
                 update_chunk_fade,
                 update_hud,
@@ -229,9 +203,68 @@ fn apply_spectator_meta(
             hud.snapshot.connected = true;
         }
     }
+    if let Some(rtt) = bridge.client.latest_rtt_ms() {
+        hud.snapshot.ws_rtt_ms = Some(rtt);
+    }
 }
 
-/// L5 slice: day/night from `sim.snapshot` (`is_day`) on sun, ambient fill, and sky clear colour.
+fn sync_live_hud_stats(
+    bridge: Res<LiveBridge>,
+    scene: Res<LiveStreamScene>,
+    mut hud: ResMut<HudState>,
+) {
+    hud.snapshot.sync_scene_counts(
+        scene.chunks.len(),
+        scene.agents.len(),
+        scene.buildings.len(),
+        scene.graph_parcels.len(),
+    );
+    if let Some(rtt) = bridge.client.latest_rtt_ms() {
+        hud.snapshot.ws_rtt_ms = Some(rtt);
+    }
+}
+
+fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
+    !scene.chunks.is_empty()
+        || !scene.agents.is_empty()
+        || !scene.buildings.is_empty()
+        || !scene.graph_parcels.is_empty()
+}
+
+fn update_live_focus(
+    hud: Res<HudState>,
+    scene: Res<LiveStreamScene>,
+    agents: Query<&Transform, With<LiveAgentTag>>,
+    buildings: Query<&Transform, With<LiveBuildingTag>>,
+    graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
+    mut focus: ResMut<LiveSceneFocus>,
+) {
+    if !hud.snapshot.connected {
+        return;
+    }
+
+    let next = compute_live_scene_focus(&scene, &agents, &buildings, &graph_parcels);
+    if next != *focus {
+        *focus = next;
+    }
+}
+
+fn follow_live_orbit_focus(
+    hud: Res<HudState>,
+    scene: Res<LiveStreamScene>,
+    focus: Res<LiveSceneFocus>,
+    time: Res<Time>,
+    mut orbit: ResMut<OrbitCamera>,
+) {
+    if !hud.snapshot.connected || !live_stream_has_content(&scene) {
+        return;
+    }
+
+    let alpha = (time.delta_secs() * LIVE_FOCUS_LERP_SPEED).clamp(0.0, 1.0);
+    orbit.centre[0] += (focus.centre.x - orbit.centre[0]) * alpha;
+    orbit.centre[2] += (focus.centre.z - orbit.centre[2]) * alpha;
+}
+
 fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
@@ -258,13 +291,7 @@ fn update_presentation_lighting(
 
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     spawn_default_scene(&mut commands);
-    commands.insert_resource(AgentVisualAssets {
-        mesh: meshes.add(Cuboid::new(
-            AGENT_MARKER_WIDTH,
-            AGENT_MARKER_HEIGHT,
-            AGENT_MARKER_DEPTH,
-        )),
-    });
+    commands.insert_resource(default_stream_meshes(&mut meshes));
     commands.insert_resource(LiveBridge {
         client: WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default()),
     });
@@ -302,6 +329,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             BackgroundColor(Color::srgba(0.03, 0.06, 0.11, 0.88)),
             BorderColor::all(Color::srgba(0.35, 0.42, 0.52, 0.65)),
             MinimapPanel,
+            MinimapRoot,
             Interaction::default(),
             RelativeCursorPosition::default(),
         ))
@@ -338,9 +366,9 @@ fn sync_chunk_debug_render(
         (
             Entity,
             &MeshMaterial3d<StandardMaterial>,
-            Option<&ChunkFade>,
+            Option<&LiveChunkFade>,
         ),
-        With<ChunkTag>,
+        With<LiveChunkTag>,
     >,
 ) {
     if !debug.is_changed() {
@@ -372,11 +400,11 @@ fn sync_chunk_debug_render(
 fn apply_live_frames(
     mut commands: Commands,
     bridge: Res<LiveBridge>,
-    mut scene: ResMut<LiveScene>,
+    mut scene: ResMut<LiveStreamScene>,
     mut hud: ResMut<HudState>,
     orbit: Res<OrbitCamera>,
     debug: Res<DebugRender>,
-    assets: Res<AgentVisualAssets>,
+    assets: Res<LiveStreamMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -385,22 +413,46 @@ fn apply_live_frames(
         hud.snapshot.connected = true;
     }
 
+    let target = orbit.as_target();
+    let eye = target.orbit_position();
+    let culling = StreamCulling {
+        eye,
+        max_distance: orbit.distance,
+    };
+    let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
+
     for frame in frames {
         hud.snapshot.tick = Some(frame.tick());
         match frame {
-            Frame3d::VoxelDelta(delta) => apply_voxel_delta(
+            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
                 &mut commands,
                 &mut scene,
                 &mut meshes,
                 &mut materials,
-                &orbit,
+                culling,
                 debug.as_ref(),
                 delta,
+                wireframe_color,
             ),
-            Frame3d::AgentAppearance(agents) => {
-                apply_agent_appearance(&mut commands, &mut scene, &mut materials, &assets, agents)
-            }
-            Frame3d::BuildingDiff(_) => {}
+            Frame3d::AgentAppearance(agents) => apply_agent_appearance_frame_with_labels(
+                &mut commands,
+                &mut scene,
+                &mut materials,
+                assets.as_ref(),
+                agents,
+                AgentLabelConfig { enabled: true },
+            ),
+            Frame3d::BuildingDiff(building) => apply_building_diff_frame(
+                &mut commands,
+                &mut scene,
+                &mut materials,
+                assets.as_ref(),
+                building,
+            ),
+            Frame3d::CivilianState(_)
+            | Frame3d::FactionState(_)
+            | Frame3d::EventFeed(_)
+            | Frame3d::Climate(_) => {}
         }
     }
 }
@@ -491,6 +543,7 @@ fn update_orbit_camera_transform(
 
 fn update_hud(
     time: Res<Time>,
+    selection: Res<LiveSelection>,
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
@@ -500,6 +553,7 @@ fn update_hud(
     } else {
         hud.snapshot.fps * 0.9 + fps * 0.1
     };
+    hud.snapshot.selected_live = selection.0;
 
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;
@@ -507,40 +561,60 @@ fn update_hud(
     *text = Text::new(hud.snapshot.format_overlay());
 }
 
-fn minimap_bounds_from_keys(chunk_keys: &[u64]) -> Option<MinimapBounds> {
-    let mut min_x = i32::MAX;
-    let mut min_z = i32::MAX;
-    let mut max_x = i32::MIN;
-    let mut max_z = i32::MIN;
-    for &raw in chunk_keys {
-        let (cx, _cy, cz) = decode_chunk_id(ChunkId(raw));
-        min_x = min_x.min(cx);
-        min_z = min_z.min(cz);
-        max_x = max_x.max(cx);
-        max_z = max_z.max(cz);
-    }
-    if min_x == i32::MAX {
-        None
-    } else {
-        Some((min_x, min_z, max_x, max_z))
-    }
+fn inset_minimap_uv_from_cursor(normalized: Vec2) -> [f32; 2] {
+    let px = normalized.x * MINIMAP_SIZE;
+    let py = normalized.y * MINIMAP_SIZE;
+    let plot_origin = MINIMAP_INSET;
+    let plot_size = MINIMAP_SIZE - MINIMAP_INSET * 2.0 - MINIMAP_DOT;
+    let span = plot_size.max(f32::EPSILON);
+    [
+        ((px - plot_origin) / span).clamp(0.0, 1.0),
+        ((py - plot_origin) / span).clamp(0.0, 1.0),
+    ]
 }
 
 fn update_minimap(
     mut commands: Commands,
-    scene: Res<LiveScene>,
+    scene: Res<LiveStreamScene>,
+    focus: Res<LiveSceneFocus>,
     minimap: Res<MinimapUi>,
     orbit: Res<OrbitCamera>,
     hud: Res<HudState>,
     mut cache: ResMut<MinimapCache>,
     children: Query<&Children>,
+    agents: Query<&Transform, With<LiveAgentTag>>,
+    buildings: Query<&Transform, With<LiveBuildingTag>>,
+    graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
 ) {
     let mut keys: Vec<u64> = scene.chunks.keys().copied().collect();
     keys.sort_unstable();
-    if keys == cache.chunk_keys {
+    let agent_count = scene.agents.len();
+    let building_count = scene.buildings.len();
+    let graph_count = scene.graph_parcels.len();
+    let cam_cx = (orbit.centre[0] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+    let cam_cz = (orbit.centre[2] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+    let camera_chunk = Some((cam_cx, cam_cz));
+    let use_focus_bounds = hud.snapshot.connected && live_stream_has_content(&scene);
+    let focus_snapshot = use_focus_bounds.then_some(*focus);
+
+    if keys == cache.chunk_keys
+        && agent_count == cache.agent_count
+        && building_count == cache.building_count
+        && graph_count == cache.graph_count
+        && camera_chunk == cache.camera_chunk
+        && use_focus_bounds == cache.use_focus_bounds
+        && focus_snapshot == cache.focus
+    {
         return;
     }
+
     cache.chunk_keys = keys.clone();
+    cache.agent_count = agent_count;
+    cache.building_count = building_count;
+    cache.graph_count = graph_count;
+    cache.camera_chunk = camera_chunk;
+    cache.use_focus_bounds = use_focus_bounds;
+    cache.focus = focus_snapshot;
     cache.bounds = minimap_bounds_from_keys(&keys);
 
     for child in children
@@ -551,69 +625,157 @@ fn update_minimap(
         commands.entity(child).despawn();
     }
 
-    let Some(bounds) = cache.bounds else {
-        return;
-    };
-
-    let plot = MINIMAP_SIZE - MINIMAP_INSET * 2.0 - MINIMAP_DOT;
+    let building_dot = live_building_dot_color(scene.building_provenance);
     let focused = hud.snapshot.focused_chunk;
-    for &raw in &keys {
-        let [u, v] = chunk_to_minimap_uv(ChunkId(raw), bounds);
-        let left = MINIMAP_INSET + u * plot;
-        let top = MINIMAP_INSET + v * plot;
-        let is_focused = focused.map(|id| id.0 == raw).unwrap_or(false);
-        let dot_color = if is_focused {
-            Color::srgb(0.95, 0.92, 0.45)
-        } else {
-            Color::srgb(0.72, 0.69, 0.62)
-        };
-        commands.entity(minimap.dots).with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(left),
-                    top: Val::Px(top),
-                    width: Val::Px(MINIMAP_DOT),
-                    height: Val::Px(MINIMAP_DOT),
-                    ..default()
-                },
-                BackgroundColor(dot_color),
-                FocusPolicy::Pass,
-            ));
-        });
-    }
 
-    let cam_cx = (orbit.centre[0] / CHUNK_EDGE as f32).floor() as i32;
-    let cam_cz = (orbit.centre[2] / CHUNK_EDGE as f32).floor() as i32;
-    if let Some(cam_raw) = keys.iter().find(|&&raw| {
-        let (cx, _cy, cz) = decode_chunk_id(ChunkId(raw));
-        cx == cam_cx && cz == cam_cz
-    }) {
-        let [u, v] = chunk_to_minimap_uv(ChunkId(*cam_raw), bounds);
-        let left = MINIMAP_INSET + u * plot - 1.0;
-        let top = MINIMAP_INSET + v * plot - 1.0;
-        commands.entity(minimap.dots).with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(left),
-                    top: Val::Px(top),
-                    width: Val::Px(MINIMAP_DOT + 2.0),
-                    height: Val::Px(MINIMAP_DOT + 2.0),
-                    ..default()
-                },
-                BackgroundColor(Color::srgb(0.95, 0.95, 0.98)),
-                FocusPolicy::Pass,
-            ));
-        });
-    }
+    commands.entity(minimap.dots).with_children(|parent| {
+        if let Some(focus) = focus_snapshot {
+            let focus_rect = MinimapFocusRect {
+                centre_x: focus.centre.x,
+                centre_z: focus.centre.z,
+                half_extent: focus.half_extent,
+            };
+
+            for &raw in &keys {
+                let (x, z) = chunk_centre_world_xz(ChunkId(raw), LIVE_CHUNK_EDGE);
+                let uv = focus_rect.world_to_uv(x, z);
+                let dot_color = if focused.map(|id| id.0 == raw).unwrap_or(false) {
+                    LIVE_MINIMAP_CHUNK_FOCUSED_COLOR
+                } else {
+                    LIVE_MINIMAP_CHUNK_LOADED_COLOR
+                };
+                spawn_minimap_dot(
+                    parent,
+                    MINIMAP_HUD_LAYOUT,
+                    uv,
+                    MINIMAP_DOT,
+                    dot_color,
+                    false,
+                );
+            }
+
+            for transform in &agents {
+                let uv = focus_rect.world_to_uv(transform.translation.x, transform.translation.z);
+                spawn_minimap_dot(
+                    parent,
+                    MINIMAP_HUD_LAYOUT,
+                    uv,
+                    LIVE_MINIMAP_DOT,
+                    LIVE_MINIMAP_AGENT_COLOR,
+                    false,
+                );
+            }
+
+            for transform in &buildings {
+                let uv = focus_rect.world_to_uv(transform.translation.x, transform.translation.z);
+                spawn_minimap_dot(
+                    parent,
+                    MINIMAP_HUD_LAYOUT,
+                    uv,
+                    LIVE_MINIMAP_DOT,
+                    building_dot,
+                    false,
+                );
+            }
+
+            for transform in &graph_parcels {
+                let uv = focus_rect.world_to_uv(transform.translation.x, transform.translation.z);
+                spawn_minimap_dot(
+                    parent,
+                    MINIMAP_HUD_LAYOUT,
+                    uv,
+                    LIVE_MINIMAP_DOT * LIVE_MINIMAP_GRAPH_DOT_SCALE,
+                    building_dot,
+                    false,
+                );
+            }
+
+            let cam_uv = focus_rect.world_to_uv(orbit.centre[0], orbit.centre[2]);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                cam_uv,
+                MINIMAP_DOT + 2.0,
+                LIVE_MINIMAP_CAMERA_COLOR,
+                false,
+            );
+            return;
+        }
+
+        let Some(bounds) = cache.bounds else {
+            return;
+        };
+
+        for &raw in &keys {
+            let uv = chunk_to_minimap_uv(ChunkId(raw), bounds);
+            let dot_color = if focused.map(|id| id.0 == raw).unwrap_or(false) {
+                LIVE_MINIMAP_CHUNK_FOCUSED_COLOR
+            } else {
+                LIVE_MINIMAP_CHUNK_LOADED_COLOR
+            };
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                uv,
+                MINIMAP_DOT,
+                dot_color,
+                false,
+            );
+        }
+
+        for transform in &agents {
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                uv,
+                LIVE_MINIMAP_DOT,
+                LIVE_MINIMAP_AGENT_COLOR,
+                false,
+            );
+        }
+
+        for transform in &buildings {
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                uv,
+                LIVE_MINIMAP_DOT,
+                building_dot,
+                false,
+            );
+        }
+
+        for transform in &graph_parcels {
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                uv,
+                LIVE_MINIMAP_DOT * LIVE_MINIMAP_GRAPH_DOT_SCALE,
+                building_dot,
+                false,
+            );
+        }
+
+        let cam_uv = world_minimap_uv(orbit.centre[0], orbit.centre[2], bounds);
+        spawn_minimap_dot(
+            parent,
+            MINIMAP_HUD_LAYOUT,
+            cam_uv,
+            MINIMAP_DOT + 2.0,
+            LIVE_MINIMAP_CAMERA_COLOR,
+            false,
+        );
+    });
 }
 
 fn minimap_click_focus(
     mouse: Res<ButtonInput<MouseButton>>,
     panels: Query<(&Interaction, &RelativeCursorPosition), With<MinimapPanel>>,
     cache: Res<MinimapCache>,
-    scene: Res<LiveScene>,
+    scene: Res<LiveStreamScene>,
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
 ) {
@@ -628,18 +790,36 @@ fn minimap_click_focus(
         return;
     }
 
-    let Some(bounds) = cache.bounds else {
-        return;
-    };
     let Some(normalized) = cursor.normalized else {
         return;
     };
 
-    let (cx, cz) = minimap_uv_to_chunk_grid([normalized.x, normalized.y], bounds);
-    orbit.centre[0] = (cx as f32 + 0.5) * CHUNK_EDGE as f32;
-    orbit.centre[2] = (cz as f32 + 0.5) * CHUNK_EDGE as f32;
+    if cache.use_focus_bounds {
+        let Some(focus) = cache.focus else {
+            return;
+        };
+        let uv = inset_minimap_uv_from_cursor(normalized);
+        let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+        orbit.centre[0] = x;
+        orbit.centre[2] = z;
 
-    let preferred_cy = (orbit.centre[1] / CHUNK_EDGE as f32).floor() as i32;
+        let cx = (x / LIVE_CHUNK_EDGE as f32).floor() as i32;
+        let cz = (z / LIVE_CHUNK_EDGE as f32).floor() as i32;
+        let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+        let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
+        hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(cx, cz, preferred_cy, &loaded));
+        return;
+    }
+
+    let Some(bounds) = cache.bounds else {
+        return;
+    };
+
+    let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+    orbit.centre[0] = (cx as f32 + 0.5) * LIVE_CHUNK_EDGE as f32;
+    orbit.centre[2] = (cz as f32 + 0.5) * LIVE_CHUNK_EDGE as f32;
+
+    let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
     let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
     hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(cx, cz, preferred_cy, &loaded));
 }
@@ -684,91 +864,15 @@ fn viewport_chunk_raycast(
     }
 }
 
-fn apply_voxel_delta(
-    commands: &mut Commands,
-    scene: &mut LiveScene,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    orbit: &OrbitCamera,
-    debug: &DebugRender,
-    delta: VoxelDeltaFrame,
-) {
-    let target = orbit.as_target();
-    let eye = target.orbit_position();
-    let max_dist = orbit.distance;
-
-    for chunk in delta.deltas {
-        let chunk_id = chunk.event.chunk_id;
-        if !should_render_chunk(chunk_id, eye, max_dist) {
-            if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
-                commands.entity(entity).despawn();
-            }
-            continue;
-        }
-
-        if chunk.voxels.len() != CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE {
-            continue;
-        }
-
-        let chunk_view = ChunkView {
-            id: chunk.event.chunk_id,
-            voxels: &chunk.voxels,
-        };
-        let distance = chunk_distance_from_camera(chunk.event.chunk_id, eye, CHUNK_EDGE as f32);
-        let lod = LodLevel(mesh_lod_level(distance));
-        let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
-            continue;
-        };
-        let mesh = meshes.add(mesh_buffer_to_bevy(&mesh_buffer));
-        let mut material = StandardMaterial {
-            perceptual_roughness: 0.85,
-            metallic: 0.0,
-            ..default()
-        };
-        apply_chunk_material(&mut material, CHUNK_BASE_COLOR, debug.wireframe, Some(0.0));
-        let material_handle = materials.add(material);
-        let transform = chunk_transform(chunk.event.chunk_id);
-
-        let entity = *scene
-            .chunks
-            .entry(chunk.event.chunk_id.0)
-            .or_insert_with(|| {
-                commands
-                    .spawn((
-                        ChunkTag {
-                            id: chunk.event.chunk_id,
-                        },
-                        Transform::default(),
-                    ))
-                    .id()
-            });
-        commands.entity(entity).insert((
-            Mesh3d(mesh),
-            MeshMaterial3d(material_handle),
-            transform,
-            ChunkFade::new(),
-        ));
-        if debug.wireframe {
-            commands.entity(entity).insert((
-                Wireframe,
-                WireframeColor {
-                    color: CHUNK_WIREFRAME_LINE_COLOR,
-                },
-            ));
-        } else {
-            commands
-                .entity(entity)
-                .remove::<Wireframe>()
-                .remove::<WireframeColor>();
-        }
-    }
-}
-
 fn update_chunk_fade(
     time: Res<Time>,
     debug: Res<DebugRender>,
     mut commands: Commands,
-    mut fades: Query<(Entity, &mut ChunkFade, &MeshMaterial3d<StandardMaterial>)>,
+    mut fades: Query<(
+        Entity,
+        &mut LiveChunkFade,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if debug.wireframe {
@@ -781,74 +885,7 @@ fn update_chunk_fade(
             apply_chunk_material(material, fade.base_rgb, false, Some(fade.elapsed));
         }
         if chunk_fade_complete(fade.elapsed) {
-            commands.entity(entity).remove::<ChunkFade>();
+            commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
-}
-
-fn apply_agent_appearance(
-    commands: &mut Commands,
-    scene: &mut LiveScene,
-    materials: &mut Assets<StandardMaterial>,
-    assets: &AgentVisualAssets,
-    agents: AgentAppearanceFrame,
-) {
-    for update in agents.updates {
-        let rgb = agent_color_from_id(update.agent_id);
-        let scale = agent_scale_multiplier(update.scale);
-        let transform =
-            Transform::from_xyz(update.agent_id as f32, 0.8, 0.0).with_scale(Vec3::splat(scale));
-
-        let material_handle = scene
-            .agent_materials
-            .entry(update.agent_id)
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color: Color::srgb(rgb[0], rgb[1], rgb[2]),
-                    perceptual_roughness: 0.7,
-                    metallic: 0.0,
-                    ..default()
-                })
-            })
-            .clone();
-        if let Some(material) = materials.get_mut(&material_handle) {
-            material.base_color = Color::srgb(rgb[0], rgb[1], rgb[2]);
-        }
-
-        let entity = *scene.agents.entry(update.agent_id).or_insert_with(|| {
-            let entity = commands
-                .spawn(AgentTag {
-                    id: update.agent_id,
-                })
-                .id();
-            if AGENT_NAME_LABELS {
-                let label = agent_label_stub(update.agent_id, None);
-                commands.entity(entity).with_children(|parent| {
-                    parent.spawn((
-                        Text2d::new(label),
-                        TextFont::from_font_size(AGENT_LABEL_FONT_SIZE),
-                        TextColor(Color::srgba(0.95, 0.96, 0.98, 0.92)),
-                        Transform::from_xyz(0.0, AGENT_LABEL_Y_OFFSET, 0.0),
-                        AgentLabel,
-                    ));
-                });
-            }
-            entity
-        });
-
-        commands.entity(entity).insert((
-            Mesh3d(assets.mesh.clone()),
-            MeshMaterial3d(material_handle),
-            transform,
-        ));
-    }
-}
-
-fn chunk_transform(id: ChunkId) -> Transform {
-    let (x, y, z) = decode_chunk_id(id);
-    Transform::from_xyz(
-        x as f32 * CHUNK_EDGE as f32,
-        y as f32 * CHUNK_EDGE as f32,
-        z as f32 * CHUNK_EDGE as f32,
-    )
 }

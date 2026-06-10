@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "crates/engine",
-  "crates/infra",
+  "crates/civ-traffic",
   "crates/server",
   "crates/voxel",
   "crates/build",
@@ -9,16 +9,21 @@ members = [
   "crates/economy",
   "crates/species",
   "crates/agents",
+  "crates/needs",
   "crates/diffusion",
   "crates/laws",
   "crates/research",
+  "crates/ai",
   "crates/tactics",
-  "crates/planet",
-  "crates/protocol-3d",
-  "crates/mod-host",
-  "crates/civlab-sdk",
-  "crates/watch",
+    "crates/planet",
+    "crates/protocol-3d",
+    "crates/mod-host",
+    "crates/civlab-sdk",
+    "crates/civis-cli",
+    "crates/civis-mcp",
+    "crates/watch",
   "crates/save-db",
+  "crates/legends",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]
@@ -34,3 +39,38 @@ edition = "2021"
 authors = ["CivLab"]
 license = "MIT OR Apache-2.0"
 rust-version = "1.75"
+
+# --- Dev-loop profiles (see docs/development-guide/dev-loop.md) ---
+# These tune ONLY the dev profile; `release` is untouched, so release
+# determinism and optimization are unaffected.
+[profile.dev]
+# Our own crates: opt-level 0 = fastest possible compile (the code we edit).
+opt-level = 0
+# Lightweight line-table debuginfo only — full DWARF is the slowest part of a
+# dev link. `debug = 1` keeps backtraces/line numbers while shrinking link time.
+debug = 1
+# Split debuginfo out of the object files so the linker copies less. On Windows
+# MSVC this maps to a separate .pdb ("packed"); on *nix to "unpacked".
+split-debuginfo = "packed"
+
+# Heavy game-engine deps (bevy, wgpu, bevy_kira_audio) are compiled once and
+# rarely change, so optimizing them keeps the *running* sandbox fast without
+# slowing our warm rebuilds. opt-level 3 here is the standard Bevy fast-dev
+# recommendation. Lighter deps (serde, rand, etc.) intentionally fall through
+# to the workspace `[profile.dev]` (opt-level = 0, debug = 1) so target/ does
+# not bloat and incremental re-links stay cheap.
+#
+# `debug = 1` keeps line tables so breakpoints / backtraces inside bevy_ecs,
+# wgpu, and kira work when stepping through a sim issue — without paying for
+# full inline DWARF on the first build.
+[profile.dev.package.bevy]
+opt-level = 3
+debug = 1
+
+[profile.dev.package.wgpu]
+opt-level = 3
+debug = 1
+
+[profile.dev.package.bevy_kira_audio]
+opt-level = 3
+debug = 1

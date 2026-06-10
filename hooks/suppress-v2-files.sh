@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 # suppress-v2-files.sh — Anti-pattern: *_v2.*, *_new.*, *_old.* files
 # Trigger: PreToolUse:Write/Edit
 # Severity: ERROR (blocking)

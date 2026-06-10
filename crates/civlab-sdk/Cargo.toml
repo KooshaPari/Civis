@@ -1,6 +1,6 @@
 [package]
 name = "civlab-sdk"
-description = "CivLab mod guest SDK stub (CIV-0700 v3)"
+description = "CivLab modder-facing SDK for materials, buildings, events, and manifests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,3 +8,15 @@ publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+civ-agents = { path = "../agents" }
+civ-build = { path = "../build" }
+civ-voxel = { path = "../voxel" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ron = "0.8"
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3"

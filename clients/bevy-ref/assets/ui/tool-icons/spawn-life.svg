@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- emergence sprout: stem + two leaves + a neon "live" bud node -->
+  <g fill="none" stroke="#9AA4B2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32,52 L32,26"/>
+    <path d="M32,38 Q20,32 18,20"/>
+    <path d="M32,32 Q44,26 46,16"/>
+  </g>
+  <circle cx="32" cy="22" r="4.5" fill="none" stroke="#3DF07A" stroke-width="2.6"/>
+</svg>

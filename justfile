@@ -39,8 +39,9 @@ unused:
 # Full local CI sweep (install cargo-deny for audit: cargo install cargo-deny)
 ci: lint test audit unused
 
-# Phenotype-aligned alias: Rust + optional infra note in README
-quality: civis-3d-verify
+# Lint + audit + format check.
+quality: lint audit
+    cargo fmt --check
 
 # Emit `.ci/quality-manifest.json` after local gates (for cloud CI verification).
 quality-manifest:
@@ -104,7 +105,7 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
 
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
-    cargo run -p civ-bevy-ref
+    cargo run -p civ-bevy-ref --bin civ-bevy-ref
 
 # Run the Bevy windowed reference client behind the optional bevy feature.
 civis-3d-bevy-window:
@@ -112,7 +113,30 @@ civis-3d-bevy-window:
 
 # Run the standalone Bevy client with in-process simulation.
 civis-3d-standalone:
-    cargo run -p civ-bevy-ref --features bevy --bin civ-standalone
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+
+# Standalone client attached to civ-server (requires server running on :3000).
+civis-3d-standalone-live:
+    powershell -Command "$env:CIVIS_ATTACH='server'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+
+# Standalone live attach with explicit WS URL (Tailscale / remote civ-server).
+civis-3d-standalone-live-url URL:
+    powershell -Command "$env:CIVIS_ATTACH='server'; $env:CIV_WS_URL='{{URL}}'; cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone"
+
+# Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
+# P-W1 kickoff item 41 / FR-CIV-BEVY-016; item 47 / FR-CIV-BEVY-022; item 50 / FR-CIV-BEVY-025.
+civis-3d-live-smoke:
+    cargo test -p civ-server frame_triple
+    cargo test -p civ-server --test ws_smoke ws_client_receives_binary_frame3d_after_tick
+    cargo test -p civ-bevy-ref --features bevy --lib live_ground::
+    cargo test -p civ-bevy-ref --features bevy --lib live_stream::
+    cargo test -p civ-bevy-ref --features bevy --lib live_focus::
+    cargo test -p civ-bevy-ref --features bevy --lib live_minimap::
+    cargo test -p civ-bevy-ref --features bevy --lib live_pick::
+    cargo test -p civ-bevy-ref --lib chunk_to_minimap
+    cargo test -p civ-bevy-ref --lib minimap_uv_to_chunk
+    cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+    cargo check -p civ-bevy-ref --features bevy --bin civ-bevy-window
 
 # Run the live Bevy reference client against civ-server's WebSocket bridge.
 # Requires civ-server to be running first.
@@ -136,9 +160,90 @@ civis-3d-watch-build:
 godot-test:
     cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
 
-# Native infra + sim-server (postgres, dragonfly, nats, minio). Requires process-compose + sh.
-infra-up:
+# Full local dev stack: infra + civ-watch.
+dev:
     process-compose up
+
+# Tear down the local dev stack.
+dev-stop:
+    process-compose down
+
+# --- Fast Bevy dev loop (incremental + asset hot-reload + watch) ---
+# See docs/development-guide/dev-loop.md for measured compile-time deltas.
+# NOTE: `dev`/`dev-stop` above own the infra stack (process-compose); the fast
+# Bevy iteration loop lives under `run`/`run-voxel`/`dev-fast`/`dev-fast-voxel`.
+
+# One-shot launch of the standalone sandbox (incremental, no watcher).
+run:
+    cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
+
+# One-shot launch of the live voxel/windowed client.
+run-voxel:
+    cargo run -p civ-bevy-ref --features bevy --bin civ-bevy-window
+
+# Install the dev-loop watch tool (cargo-watch) if missing. Idempotent.
+dev-tools:
+    cargo watch --version > $null 2>&1; if ($LASTEXITCODE -ne 0) { cargo install cargo-watch --locked }
+
+# Fast dev loop: watch sources, rebuild incrementally, asset hot-reload on.
+# `hot` feature = dynamic_linking (engine linked as a shared lib) for subsecond
+# warm rebuilds. Edit a system -> save -> cargo-watch relinks only our crate.
+# Assets (PNG/.glb/WGSL) hot-reload live inside the running process (no rebuild).
+dev-fast: dev-tools
+    cargo watch -x "run -p civ-bevy-ref --features hot,egui --bin civ-standalone"
+
+# Same loop for the live windowed/voxel client.
+dev-fast-voxel: dev-tools
+    cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
+
+# Build the release civ-standalone binary, kill stale instances, launch with log capture, print PID.
+# Delegates to Tools/play.ps1 (Windows) or Tools/play.sh (Linux/macOS).
+play:
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
+
+# Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn.
+play-debug:
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
+
+# Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn and RUST_BACKTRACE=full.
+play-trace:
+    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
+
+# Kill a running civ-standalone game process.
+stop:
+    powershell -NoProfile -Command "Get-Process -Name civ-standalone -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Host '[stop] civ-standalone stopped.' -ForegroundColor Green"
+
+# Tail the civ-standalone game log (live follow).
+logs:
+    powershell -NoProfile -Command "Get-Content -LiteralPath '.process-compose/logs/civ-standalone.log' -Wait -Tail 50"
+
+# Build all clients.
+build-all:
+    cargo build -p civ-bevy-ref
+    cargo build --manifest-path clients/godot-ref/rust/Cargo.toml
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\clients\unreal-show\scripts\build.ps1
+
+# Run all available tests.
+test-all:
+    cargo test --workspace
+    cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
+    cd web && npm test
+
+# Release build + signing + packaging.
+deploy:
+    cargo build --release --workspace
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sign-example-mod.ps1 -ModId example-policy
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-policy
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-example-mod.ps1 -ModId example-economic
+
+# Criterion benchmarks.
+bench:
+    cargo bench --workspace
 
 # Rust gate without cargo-deny (when deny is not installed locally).
 rust-verify: lint test
+
+# Register/refresh Civis in %APPDATA%/.../Start Menu/Programs/Phenotype Apps/.
+# Call after packaging dist/Civis.exe (native launchType in phenotype-tooling apps.json).
+register-startmenu:
+    pwsh -NoProfile -File C:/Users/koosh/Dev/phenotype-tooling/Tools/Register-StartMenuApps.ps1 -App Civis

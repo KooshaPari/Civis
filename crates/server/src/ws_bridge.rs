@@ -399,6 +399,7 @@ fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceF
                 wardrobe: wardrobe.material,
                 tools: tools.material,
                 scale: 1.0,
+                position: None,
             },
         )
         .collect();
@@ -416,6 +417,8 @@ fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
         } else {
             BuildingProvenance::Freehand
         },
+        buildings: Vec::new(),
+        graph: None,
     };
     let agents = build_agent_appearance_frame(sim, tick);
     Ok([
@@ -500,8 +503,15 @@ async fn apply_dispatch_effect(
         } => {
             let mut sim = state.sim.lock().await;
             let mut rng = sim.rng_mut().clone();
-            let entity =
-                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, faction, x, y, &mut rng);
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                civ_agents::Alignment::Faction(faction),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }
@@ -524,9 +534,10 @@ async fn apply_dispatch_effect(
                     let entity = civ_agents::spawn_civilian_at(
                         &mut sim.world,
                         entity_seq,
-                        faction,
+                        civ_agents::Alignment::Faction(faction),
                         x,
                         y,
+                        civ_agents::ActorVisualKind::Humanoid,
                         &mut rng,
                     );
                     *sim.rng_mut() = rng;
@@ -843,10 +854,14 @@ mod tests {
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Procedural,
+                buildings: Vec::new(),
+                graph: None,
             }),
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Freehand,
+                buildings: Vec::new(),
+                graph: None,
             }),
             Frame3d::AgentAppearance(AgentAppearanceFrame {
                 tick: 1,
@@ -882,6 +897,8 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
+            buildings: Vec::new(),
+            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("json");
         let decoded: Frame3d = serde_json::from_str(&json).expect("decode");

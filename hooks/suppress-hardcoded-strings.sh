@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 # suppress-hardcoded-strings.sh — Anti-pattern: hardcoded provider/service strings
 # Trigger: PreToolUse:Write/Edit
 # Severity: WARNING (advisory)

@@ -66,3 +66,13 @@ target-check-build/
 # Traceability: stray user-drive nesting inside agileplus-specs/
 # (D:/ mount surface that Git Bash sometimes symlinks into the worktree)
 /agileplus-specs/d/
+
+# Agent scratch debris (observed 2026-06-10)
+# One-off .bat scripts agents drop at repo root while testing.
+/*.bat
+# Hidden helper batch files agents create.
+.check-*.bat
+.test-*.bat
+# Python scratch helpers agents leave behind.
+find_*.py
+check_chain.py

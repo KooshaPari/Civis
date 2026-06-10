@@ -1,0 +1,38 @@
+[package]
+name = "civ-infra"
+description = "Shared infrastructure clients for Civis services"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[features]
+default = []
+infra = ["pg", "nats", "s3", "cache"]
+pg = ["dep:sqlx"]
+nats = ["dep:async-nats"]
+s3 = ["dep:aws-config", "dep:aws-sdk-s3", "dep:tokio"]
+cache = ["dep:redis"]
+
+[dependencies]
+thiserror = "1"
+tokio = { version = "1", optional = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
+serde = { version = "1", features = ["derive"] }
+bytes = "1"
+
+sqlx = { version = "0.8", optional = true, features = ["postgres", "runtime-tokio-rustls", "migrate"] }
+async-nats = { version = "0.41", optional = true }
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+redis = { version = "0.27", optional = true, features = ["tokio-comp"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+testcontainers = "0.23"
+testcontainers-modules = { version = "0.11", features = ["postgres"] }
+
+[[test]]
+name = "pg_integration"
+path = "tests/pg_integration.rs"
+required-features = ["pg"]

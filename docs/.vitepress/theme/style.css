@@ -1,0 +1,45 @@
+/**
+ * Civ docs theme — amber brand from CIV-0300, tuned for contrast in light/dark.
+ */
+:root {
+  --vp-c-brand-1: #b86e00;
+  --vp-c-brand-2: #d48400;
+  --vp-c-brand-3: #e69f00;
+  --vp-c-brand-soft: rgba(230, 159, 0, 0.14);
+
+  --vp-c-text-1: rgba(15, 23, 42, 0.92);
+  --vp-c-text-2: rgba(15, 23, 42, 0.72);
+  --vp-c-divider: rgba(15, 52, 96, 0.12);
+  --vp-c-bg-soft: #f6f8fb;
+}
+
+.dark {
+  --vp-c-brand-1: #f5c04a;
+  --vp-c-brand-2: #e69f00;
+  --vp-c-brand-3: #c88a00;
+  --vp-c-brand-soft: rgba(230, 159, 0, 0.16);
+
+  --vp-c-text-1: rgba(248, 250, 252, 0.92);
+  --vp-c-text-2: rgba(226, 232, 240, 0.72);
+  --vp-c-bg: #0f172a;
+  --vp-c-bg-alt: #111827;
+  --vp-c-bg-soft: #1e293b;
+  --vp-c-divider: rgba(148, 163, 184, 0.16);
+}
+
+/* Search result highlights stay readable on both themes */
+:root,
+.dark {
+  --vp-local-search-highlight-text: var(--vp-c-bg);
+}
+
+/* Keyboard focus — matches game UI spec (#E69F00) */
+:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+.VPNavBarMenuLink.active,
+.VPSidebarItem.is-active > .item > .link {
+  color: var(--vp-c-brand-1);
+}

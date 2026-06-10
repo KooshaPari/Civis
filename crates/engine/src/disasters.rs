@@ -9,8 +9,6 @@ use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::material::{AIR, GRAVEL, ICE, LAVA, STEAM, STONE, WATER};
 use civ_voxel::WorldCoord;
 
-#[cfg(test)]
-use civ_voxel::MaterialId;
 use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
@@ -234,7 +232,7 @@ fn hit_agents(sim: &mut Simulation, pos: WorldCoord, radius: i64, effect: Disast
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_agents::{Alignment, Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
+    use civ_agents::{Alignment, Civilian, LodTier, Position3d};
     use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 
     fn seeded_sim() -> Simulation {

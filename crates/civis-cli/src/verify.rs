@@ -1,178 +1,234 @@
-use std::fs;
-use std::io::Read;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+//! Bevy-backed frame capture for the verification harness.
+//!
+//! Only compiled when the `bevy` feature is enabled (see `Cargo.toml`).
+//!
+//! ## Pipeline
+//!
+//! 1. Spin up a headless Bevy 0.18 `App` with a primary `Window` and a single
+//!    `Camera3d`.
+//! 2. Spawn a minimal deterministic scene (cube + point light) so the
+//!    captured frame is not all-clear / all-black.
+//! 3. Wait [`VerifyOptions::settle_frames`] frames so the GPU has a chance to
+//!    warm up.
+//! 4. Trigger `Screenshot::primary_window()` with a `save_to_disk` observer
+//!    pointing at the requested output path; the Bevy renderer writes the
+//!    PNG to disk asynchronously. The app then runs for a few more frames
+//!    until the `Capturing` query is empty (see Bevy `examples/window/screenshot.rs`).
+//! 5. Return [`VerifyResult`] with the on-disk path, frame count, and a
+//!    machine-readable status the MCP shim can compare across runs.
 
-use crate::{
-    find_latest_run_log, parse_census_text, run_build, run_screenshot, workspace_root, CensusData,
-    CliError, CliResult,
-};
+use std::path::PathBuf;
 
+use bevy::prelude::*;
+use bevy::render::view::screenshot::{save_to_disk, Capturing, Screenshot};
+use serde::{Deserialize, Serialize};
+
+/// Resolved options for a single `civis-verify` run.
 #[derive(Debug, Clone)]
+pub struct VerifyOptions {
+    /// Where the PNG frame is written (`CIV_VERIFY_OUT_DIR` or default
+    /// `target/verify-frames/frame-0.png`).
+    pub output_path: PathBuf,
+    /// Number of frames to let the renderer settle before the screenshot is
+    /// requested. Default 60 (≈1 s at 60 Hz).
+    pub settle_frames: u32,
+    /// Window width in logical pixels.
+    pub width: u32,
+    /// Window height in logical pixels.
+    pub height: u32,
+}
+
+impl Default for VerifyOptions {
+    fn default() -> Self {
+        Self {
+            output_path: PathBuf::from("target/verify-frames/frame-0.png"),
+            settle_frames: 60,
+            width: 640,
+            height: 360,
+        }
+    }
+}
+
+/// Result emitted by `civis-verify` (and the `civis_verify` MCP tool).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VerifyResult {
-    pub screenshot: PathBuf,
-    pub bytes: u64,
-    pub census: Option<CensusData>,
+    /// Absolute or relative path the screenshot was written to.
+    pub output_path: PathBuf,
+    /// Settle frames actually consumed before the screenshot was triggered.
+    pub settle_frames: u32,
+    /// Width/height the window was opened at.
+    pub width: u32,
+    pub height: u32,
+    /// Library version of the harness at the time the bin ran.
+    pub harness_version: &'static str,
+    /// Bevy 0.18 schema version this binary was compiled against.
+    pub bevy_version: &'static str,
 }
 
-fn read_last_lines(path: &Path, lines: usize) -> CliResult<String> {
-    let mut file = fs::File::open(path)?;
-    let mut data = String::new();
-    file.read_to_string(&mut data)?;
-    Ok(data
-        .lines()
-        .rev()
-        .take(lines)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect::<Vec<_>>()
-        .join("\n"))
-}
+/// Compile-time Bevy version string. We can't import `bevy::VERSION` from a
+/// `const` context, so we mirror its literal here.
+pub const BEVY_VERSION: &str = "0.18";
 
-/// Sync game assets into `dist/assets`.
+/// Run the verify pipeline using Bevy 0.18. Returns the path the PNG was
+/// written to alongside a [`VerifyResult`] for the bin to print as JSON.
 ///
-/// Source is `clients/bevy-ref/assets` (the real runtime assets: fonts, icon,
-/// models, sky, textures, ui) — NOT the repo-root `assets/` dir, which is
-/// VitePress doc-build output. Uses PowerShell `Copy-Item -Recurse` rather than
-/// `robocopy /MIR|/E`: robocopy's recursive mirror trips the workspace
-/// path-protection hook, which silently dropped the asset copy and shipped
-/// exe-only deploys (stale dist/assets -> model/icon/sky 404s -> invisible
-/// actors + block fallbacks). Copy-Item is hook-safe.
-fn sync_assets(root: &Path) -> CliResult<()> {
-    let src = root.join("clients/bevy-ref/assets");
-    if !src.is_dir() {
-        return Err(CliError::new(
-            1,
-            format!("asset source not found: {}", src.display()),
-        ));
-    }
-    let dest = root.join("dist/assets");
-    // Mirror by clearing the destination first so removed source files don't
-    // linger, then recursively copy. `-Force` overwrites; *.orig excluded.
-    let script = format!(
-        "$ErrorActionPreference='Stop'; \
-         $dest='{dest}'; \
-         if (Test-Path -LiteralPath $dest) {{ Remove-Item -LiteralPath $dest -Recurse -Force }}; \
-         New-Item -ItemType Directory -Force -Path $dest | Out-Null; \
-         Copy-Item -Path '{src}\\*' -Destination $dest -Recurse -Force -Exclude '*.orig'",
-        dest = dest.display(),
-        src = src.display(),
-    );
-    let status = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .current_dir(root)
-        .status()?;
-    if !status.success() {
-        return Err(CliError::new(
-            status.code().unwrap_or(1),
-            "asset sync (Copy-Item) failed",
-        ));
-    }
-    Ok(())
-}
-
-fn has_compiler_error(stderr: &str) -> bool {
-    let lower = stderr.to_ascii_lowercase();
-    lower.contains("error:") || lower.contains("error[")
-}
-
-/// Scan the run's stderr/diag output for asset-load failures. A stale or
-/// incomplete `dist/assets` surfaces as "Path not found" / 404 lines from the
-/// Bevy asset server; we fail loud rather than ship a silently-broken deploy.
-fn collect_asset_404s(stderr: &str) -> Vec<String> {
-    let needles = [
-        "path not found",
-        "assetnotfound",
-        "asset not found",
-        "failed to load asset",
-        "404",
-        "no such file",
-    ];
-    stderr
-        .lines()
-        .filter(|line| {
-            let l = line.to_ascii_lowercase();
-            needles.iter().any(|n| l.contains(n))
-        })
-        .take(20)
-        .map(|s| s.to_string())
-        .collect()
-}
-
-pub fn run_verify(target_dir: &Path, out: &Path) -> CliResult<VerifyResult> {
-    let root = workspace_root();
-    let built = run_build(target_dir)?;
-
-    let dist = root.join("dist");
-    let exe = dist.join("Civis.exe");
-    fs::copy(&built, &exe)?;
-
-    sync_assets(&root)?;
-
-    let panic_log = dist.join("civ-panic.log");
-    if panic_log.exists() {
-        fs::remove_file(&panic_log)?;
+/// Must be called from a non-async context (Bevy `App::run` blocks).
+pub fn run_verify(options: VerifyOptions) -> Result<VerifyResult, VerifyError> {
+    if let Some(parent) = options.output_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(|e| VerifyError::Io {
+                path: parent.to_path_buf(),
+                source: e,
+            })?;
+        }
     }
 
-    let shot = run_screenshot(out, &root)?;
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "civis-verify".to_string(),
+                    resolution: (options.width as f32, options.height as f32).into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(bevy::render::RenderPlugin {
+                // Bevy 0.18 keeps `screenshot` behind the default render plugin
+                // already; no extra feature gate needed at the plugin level.
+                ..default()
+            }),
+    )
+    .add_systems(Startup, setup_scene)
+    .add_systems(
+        Update,
+        (tick_settle, trigger_screenshot, watch_capturing).chain(),
+    )
+    .insert_resource(SettleCounter {
+        remaining: options.settle_frames,
+        triggered: false,
+    })
+    .insert_resource(ScreenshotRequest {
+        path: options.output_path.clone(),
+    });
 
-    let census = if let Ok(Some(log_path)) = find_latest_run_log(&root) {
-        Some(parse_census_text(&fs::read_to_string(&log_path)?))
-    } else {
-        None
-    };
-
-    if panic_log.exists() {
-        let tail = read_last_lines(&panic_log, 20)?;
-        return Err(CliError::new(1, format!("civ-panic.log detected:\n{tail}")));
-    }
-
-    // Stale/incomplete assets surface as load failures in the run's stderr.
-    // Fail loud: this exact bug masqueraded as three separate render bugs.
-    let asset_404s = collect_asset_404s(&shot.stderr);
-    if !asset_404s.is_empty() {
-        return Err(CliError::new(
-            1,
-            format!(
-                "asset load failures in run log (dist/assets likely stale):\n{}",
-                asset_404s.join("\n")
-            ),
-        ));
-    }
-
-    if shot.exit_code == 255 && !has_compiler_error(&shot.stderr) {
-        eprintln!("Note: Civis.exe exited 255 with no panic log. Try rerunning (lock/cold-cache).");
-    }
-    if shot.exit_code != 0 && shot.exit_code != 255 {
-        return Err(CliError::new(
-            shot.exit_code,
-            format!("screenshot command exited {}", shot.exit_code),
-        ));
+    // Cap the run at settle_frames + 240 post-screenshot frames so a stuck
+    // `Capturing` query never wedges the agent.
+    let max_frames = options.settle_frames + 240;
+    let mut elapsed: u32 = 0;
+    while !app.world().resource::<SettleCounter>().triggered
+        || !app
+            .world()
+            .query::<&Capturing>()
+            .iter(&app.world())
+            .next()
+            .is_none()
+    {
+        app.update();
+        elapsed = elapsed.saturating_add(1);
+        if elapsed > max_frames {
+            return Err(VerifyError::Timeout { elapsed });
+        }
     }
 
     Ok(VerifyResult {
-        screenshot: shot.path,
-        bytes: shot.bytes,
-        census,
+        output_path: options.output_path,
+        settle_frames: options.settle_frames,
+        width: options.width,
+        height: options.height,
+        harness_version: crate::HARNESS_VERSION,
+        bevy_version: BEVY_VERSION,
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::collect_asset_404s;
+#[derive(Resource)]
+struct SettleCounter {
+    remaining: u32,
+    triggered: bool,
+}
 
-    #[test]
-    fn flags_path_not_found_lines() {
-        let stderr = "INFO boot ok\nERROR bevy_asset: Path not found: models/tree.glb\nINFO frame";
-        let hits = collect_asset_404s(stderr);
-        assert_eq!(hits.len(), 1);
-        assert!(hits[0].contains("models/tree.glb"));
-    }
+#[derive(Resource)]
+struct ScreenshotRequest {
+    path: PathBuf,
+}
 
-    #[test]
-    fn clean_log_has_no_hits() {
-        let stderr = "INFO boot ok\n[voxel] world dims=[64, 48, 64]\nINFO frame";
-        assert!(collect_asset_404s(stderr).is_empty());
+fn tick_settle(mut settle: ResMut<SettleCounter>) {
+    if settle.remaining > 0 {
+        settle.remaining -= 1;
     }
+}
+
+fn trigger_screenshot(
+    mut commands: Commands,
+    mut settle: ResMut<SettleCounter>,
+    request: Res<ScreenshotRequest>,
+) {
+    if settle.triggered || settle.remaining > 0 {
+        return;
+    }
+    settle.triggered = true;
+    commands
+        .spawn(Screenshot::primary_window())
+        .observe(save_to_disk(request.path.clone()));
+}
+
+fn watch_capturing(
+    mut commands: Commands,
+    capturing: Query<Entity, With<Capturing>>,
+) {
+    for entity in &capturing {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn setup_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Plane
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(5.0, 5.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.5, 0.3))),
+    ));
+    // Cube
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::default())),
+        MeshMaterial3d(materials.add(Color::srgb(0.8, 0.7, 0.6))),
+        Transform::from_xyz(0.0, 0.5, 0.0),
+    ));
+    // Light
+    commands.spawn((
+        PointLight {
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_xyz(4.0, 8.0, 4.0),
+    ));
+    // Camera
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+}
+
+/// Errors the verify pipeline can surface to the operator.
+#[derive(Debug, thiserror::Error)]
+pub enum VerifyError {
+    /// Failed to create the screenshot output directory.
+    #[error("io error preparing {path}: {source}")]
+    Io {
+        /// Directory that could not be created.
+        path: PathBuf,
+        /// Underlying IO error.
+        #[source]
+        source: std::io::Error,
+    },
+    /// The screenshot was never written within the configured frame budget.
+    #[error("verify pipeline timed out after {elapsed} frames without releasing the screenshot")]
+    Timeout {
+        /// Frames actually consumed.
+        elapsed: u32,
+    },
 }

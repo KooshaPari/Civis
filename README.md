@@ -1,3 +1,14 @@
+## Work State
+
+| Field | Value |
+|---|---|
+| Updated | 2026-06-10 |
+| State | Engine-only on main — deterministic 100ms-tick sim (P-P1 climate replay complete); playable wave-1 Bevy client pending in PR #333; game NOT yet playable |
+| Open PRs | #333 (wave-1 playable foundation), #334, #337, #345 |
+| Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
+
+Progress: ███░░░░░░░ 30% (engine foundation; client + gameplay phases pending)
+
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml
 > - cargo-deny config: see deny.toml

@@ -697,7 +697,7 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// FR-CIV-AGENTS-000 — exposes a semver-like schema version stub.
+    /// Covers FR-CIV-AGENTS-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
@@ -707,7 +707,7 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// FR-CIV-AGENTS-001 — wardrobe + tools state ticks deterministically under
+    /// Covers FR-CIV-AGENTS-001 — wardrobe + tools state ticks deterministically under
     /// a fixed seed (replay-safe).
     #[test]
     fn wardrobe_tools_deterministic() {
@@ -734,7 +734,7 @@ mod tests {
         assert_eq!(tools_a, tools_b);
     }
 
-    /// FR-CIV-AGENTS-001 — propagate_wardrobe is deterministic under a fixed
+    /// Covers FR-CIV-AGENTS-001 — propagate_wardrobe is deterministic under a fixed
     /// seed (replay-safe).
     #[test]
     fn propagate_wardrobe_is_deterministic() {
@@ -753,7 +753,7 @@ mod tests {
         assert_eq!(w1, w2);
     }
 
-    /// FR-CIV-AGENTS-002 — propagation never goes backwards.
+    /// Covers FR-CIV-AGENTS-002 — propagation never goes backwards.
     #[test]
     fn propagation_is_monotone() {
         let params = DiffusionParams::default();
@@ -769,7 +769,7 @@ mod tests {
         assert!(w.era <= 5);
     }
 
-    /// FR-CIV-AGENTS-003 — civilians at the target era do not propagate further.
+    /// Covers FR-CIV-AGENTS-003 — civilians at the target era do not propagate further.
     #[test]
     fn at_target_era_is_a_noop() {
         let params = DiffusionParams::default();
@@ -784,7 +784,7 @@ mod tests {
         assert_eq!(w.era, 5);
     }
 
-    /// FR-CIV-AGENTS-010 — gestalt (Cold) and Hot tiers agree at shared sync ticks.
+    /// Covers FR-CIV-AGENTS-010 — gestalt (Cold) and Hot tiers agree at shared sync ticks.
     #[test]
     fn lod_gestalt_no_divergence() {
         let params = DiffusionParams::default();
@@ -808,7 +808,7 @@ mod tests {
         assert_eq!(hot, cold);
     }
 
-    /// FR-CIV-AGENTS-010 — LodTier debug / equality holds across copies.
+    /// Covers FR-CIV-AGENTS-010 — LodTier debug / equality holds across copies.
     #[test]
     fn lod_tier_equality_round_trips() {
         for t in [LodTier::Hot, LodTier::Warm, LodTier::Cold] {
@@ -817,7 +817,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-AGENTS-011 — fixture access: civilians compose with civ-genetics
+    /// Covers FR-CIV-AGENTS-011 — fixture access: civilians compose with civ-genetics
     /// and civ-species without leaking RNG into the type system.
     #[test]
     fn civilian_composition_smoke() {
@@ -833,7 +833,7 @@ mod tests {
         };
     }
 
-    /// FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
+    /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
         let mut world = World::new();
@@ -885,7 +885,7 @@ mod tests {
         assert_eq!(&*world.get::<&LodTier>(entity).unwrap(), &lod);
     }
 
-    /// FR-CIV-AGENTS-021 — spawn_many produces sequential IDs.
+    /// Covers FR-CIV-AGENTS-021 — spawn_many produces sequential IDs.
     #[test]
     fn spawn_many_produces_sequential_ids() {
         let mut world = World::new();
@@ -899,7 +899,7 @@ mod tests {
         assert_eq!(ids, vec![100, 101, 102, 103]);
     }
 
-    /// FR-CIV-AGENTS-022 — count_civilians reports the current world total.
+    /// Covers FR-CIV-AGENTS-022 — count_civilians reports the current world total.
     #[test]
     fn count_civilians_reports_correctly() {
         let mut world = World::new();
@@ -1041,7 +1041,7 @@ mod tests {
         assert!(pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32 <= 0.500_001);
     }
 
-    /// FR-CIV-AGENTS-030 — cohort wardrobe propagation is deterministic under a
+    /// Covers FR-CIV-AGENTS-030 — cohort wardrobe propagation is deterministic under a
     /// fixed seed.
     #[test]
     fn propagate_cohort_wardrobe_is_deterministic() {
@@ -1062,7 +1062,7 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// FR-CIV-AGENTS-031 — stats.total_civilians matches count_civilians.
+    /// Covers FR-CIV-AGENTS-031 — stats.total_civilians matches count_civilians.
     #[test]
     fn cohort_stats_total_matches_count_civilians() {
         let params = DiffusionParams::default();
@@ -1073,7 +1073,7 @@ mod tests {
         assert_eq!(stats.total_civilians as usize, count_civilians(&world));
     }
 
-    /// FR-CIV-AGENTS-032 — after many ticks, currently_at_target approaches total_civilians.
+    /// Covers FR-CIV-AGENTS-032 — after many ticks, currently_at_target approaches total_civilians.
     #[test]
     fn cohort_wardrobe_converges_over_many_ticks() {
         let params = DiffusionParams::default();
@@ -1089,7 +1089,7 @@ mod tests {
         assert!((stats.current_fraction - 1.0).abs() < f32::EPSILON);
     }
 
-    /// FR-CIV-AGENTS-033 — propagate_tools mirrors propagate_wardrobe behaviour.
+    /// Covers FR-CIV-AGENTS-033 — propagate_tools mirrors propagate_wardrobe behaviour.
     #[test]
     fn propagate_cohort_tools_mirrors_wardrobe() {
         let params = DiffusionParams::default();
@@ -1117,7 +1117,7 @@ mod tests {
         assert_eq!(wardrobe_eras, tool_eras);
     }
 
-    /// FR-CIV-AGENTS-034 — zero civilians produces zero-everything stats without panicking.
+    /// Covers FR-CIV-AGENTS-034 — zero civilians produces zero-everything stats without panicking.
     #[test]
     fn empty_cohort_returns_zeroed_stats() {
         let params = DiffusionParams::default();
@@ -1137,7 +1137,7 @@ mod tests {
         assert_eq!(tools_stats, wardrobe_stats);
     }
 
-    /// FR-CIV-AGENTS-023 — score_needs is a deterministic weighted sum.
+    /// Covers FR-CIV-AGENTS-023 — score_needs is a deterministic weighted sum.
     #[test]
     fn score_needs_returns_deterministic_sums() {
         let needs = Needs {
@@ -1158,7 +1158,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-AGENTS-024 — top_action selects the highest-weighted unmet need.
+    /// Covers FR-CIV-AGENTS-024 — top_action selects the highest-weighted unmet need.
     #[test]
     fn top_action_picks_highest_weighted_unmet_need() {
         let needs = Needs {
@@ -1176,7 +1176,7 @@ mod tests {
         assert_eq!(top_action(&needs, &weights), NeedAction::FindShelter);
     }
 
-    /// FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.
+    /// Covers FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.
     #[test]
     fn should_tick_now_respects_lod_modulo() {
         assert!(should_tick_now(LodTier::Hot, 1));

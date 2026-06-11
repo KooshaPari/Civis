@@ -501,6 +501,7 @@ mod tests {
 
     // -- Pair ordering -------------------------------------------------------
 
+    /// Covers FR-CIV-DIPLO-001.
     #[test]
     fn pair_is_canonical_and_symmetric() {
         let p1 = Pair::new(a(3), a(7));
@@ -510,6 +511,7 @@ mod tests {
         assert_eq!(p1.hi, a(7));
     }
 
+    /// Covers FR-CIV-DIPLO-001-RELATIONS.
     #[test]
     fn pair_with_equal_actors_is_self() {
         // a == b is degenerate; we still produce (a, a) and the relation
@@ -521,11 +523,13 @@ mod tests {
 
     // -- Config validation ---------------------------------------------------
 
+    /// Covers FR-CIV-DIPLO-002.
     #[test]
     fn default_config_validates() {
         assert!(DiplomacyConfig::default().validate().is_ok());
     }
 
+    /// Covers FR-CIV-DIPLO-002.
     #[test]
     fn overlapping_thresholds_rejected() {
         let bad = DiplomacyConfig {
@@ -539,6 +543,7 @@ mod tests {
         ));
     }
 
+    /// Covers FR-CIV-DIPLO-002.
     #[test]
     fn positive_hostile_threshold_rejected() {
         let bad = DiplomacyConfig {
@@ -554,6 +559,7 @@ mod tests {
 
     // -- Stance projection ---------------------------------------------------
 
+    /// Covers FR-CIV-DIPLO-001.
     #[test]
     fn stance_thresholds_partition_real_line() {
         let c = cfg();
@@ -568,6 +574,7 @@ mod tests {
 
     // -- Bump + decay mechanics ---------------------------------------------
 
+    /// Covers FR-CIV-DIPLO-003.
     #[test]
     fn first_bump_creates_relation_and_records_zero_to_neutral_event() {
         let mut s = DiplomacyState::new(cfg()).expect("cfg");
@@ -587,6 +594,7 @@ mod tests {
         assert!(evs[0].is_warming());
     }
 
+    /// Covers FR-CIV-DIPLO-003.
     #[test]
     fn bump_into_neutral_band_emits_no_event() {
         let mut s = DiplomacyState::new(cfg()).expect("cfg");
@@ -599,6 +607,7 @@ mod tests {
         assert!(s.pending_events().is_empty());
     }
 
+    /// Covers FR-CIV-GOV-001.
     #[test]
     fn combat_bump_is_symmetric_and_hostility_amplifying() {
         // Use a config with a tight hostile threshold so a single large
@@ -629,6 +638,7 @@ mod tests {
         assert_eq!(evs[0].to, Stance::Hostile);
     }
 
+    /// Covers FR-CIV-DIPLO-003.
     #[test]
     fn zero_energy_combat_records_no_standing_change() {
         let mut s = DiplomacyState::new(cfg()).expect("cfg");
@@ -642,6 +652,7 @@ mod tests {
         assert!(s.drain_events().is_empty());
     }
 
+    /// Covers FR-CIV-GOV-002.
     #[test]
     fn self_targeted_event_is_ignored() {
         let mut s = DiplomacyState::new(cfg()).expect("cfg");

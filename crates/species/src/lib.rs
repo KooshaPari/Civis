@@ -97,7 +97,7 @@ pub fn express(dna: &Dna) -> Phenotype {
 mod tests {
     use super::*;
 
-    /// FR-CIV-SPECIES-000 — exposes a semver-like schema version stub.
+    /// Covers FR-CIV-SPECIES-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
@@ -107,7 +107,7 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// FR-CIV-SPECIES-001 — identical DNA produces identical phenotype.
+    /// Covers FR-CIV-SPECIES-001 — identical DNA produces identical phenotype.
     #[test]
     fn identical_dna_produces_identical_phenotype() {
         let dna = Dna(vec![10, 20, 4, 2, 2, 200, 50, 128, 240, 99, 77, 55]);
@@ -116,7 +116,7 @@ mod tests {
         assert_eq!(p1, p2);
     }
 
-    /// FR-CIV-SPECIES-002 — expression is total: short DNAs zero-fill cleanly.
+    /// Covers FR-CIV-SPECIES-002 — expression is total: short DNAs zero-fill cleanly.
     #[test]
     fn expression_is_total_over_short_dnas() {
         let dna = Dna(vec![5]);
@@ -126,7 +126,7 @@ mod tests {
         assert!((p.behavior.aggression).abs() < 1e-6);
     }
 
-    /// FR-CIV-SPECIES-003 — behaviour weights stay in `[0, 1]`.
+    /// Covers FR-CIV-SPECIES-003 — behaviour weights stay in `[0, 1]`.
     #[test]
     fn behavior_weights_are_normalised() {
         let dna = Dna(vec![0; 9]);
@@ -155,7 +155,7 @@ mod tests {
     // Mutation boundary conditions
     // -----------------------------------------------------------------------
 
-    /// FR-CIV-SPECIES-004 — minimum trait values: all-zero DNA yields all-zero
+    /// Covers FR-CIV-SPECIES-004 — minimum trait values: all-zero DNA yields all-zero
     /// morphology fields and all-zero behaviour weights (the lower boundary).
     #[test]
     fn min_trait_values_from_zero_dna() {
@@ -172,7 +172,7 @@ mod tests {
         assert!(p.behavior.intelligence.abs() < 1e-6, "min intelligence");
     }
 
-    /// FR-CIV-SPECIES-005 — maximum trait values: all-255 DNA yields all-255
+    /// Covers FR-CIV-SPECIES-005 — maximum trait values: all-255 DNA yields all-255
     /// morphology and behaviour weights at 1.0 (the upper boundary).
     #[test]
     fn max_trait_values_from_saturated_dna() {
@@ -195,7 +195,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-SPECIES-006 — boundary byte 127 maps to a behaviour weight of
+    /// Covers FR-CIV-SPECIES-006 — boundary byte 127 maps to a behaviour weight of
     /// approximately 0.498 (127/255), checking mid-range precision.
     #[test]
     fn midpoint_byte_produces_correct_weight() {
@@ -215,7 +215,7 @@ mod tests {
     // Selection pressure with known inputs
     // -----------------------------------------------------------------------
 
-    /// FR-CIV-SPECIES-007 — a more-aggressive DNA outscores a less-aggressive one
+    /// Covers FR-CIV-SPECIES-007 — a more-aggressive DNA outscores a less-aggressive one
     /// in an environment that rewards high aggression (cosine similarity increases
     /// when the aggression byte is higher and the environment vector is all-255).
     #[test]
@@ -233,7 +233,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-SPECIES-008 — two DNAs that differ only in intelligence byte produce
+    /// Covers FR-CIV-SPECIES-008 — two DNAs that differ only in intelligence byte produce
     /// phenotypes that differ only in the intelligence weight, everything else equal.
     #[test]
     fn single_byte_change_affects_only_its_field() {
@@ -277,7 +277,7 @@ mod tests {
     // Species creation and default state
     // -----------------------------------------------------------------------
 
-    /// FR-CIV-SPECIES-009 — empty DNA (length 0) is expressible: all fields
+    /// Covers FR-CIV-SPECIES-009 — empty DNA (length 0) is expressible: all fields
     /// collapse to their zero-filled defaults without panicking.
     #[test]
     fn empty_dna_expresses_to_all_zero_phenotype() {
@@ -288,7 +288,7 @@ mod tests {
         assert!(p.behavior.intelligence.abs() < 1e-6);
     }
 
-    /// FR-CIV-SPECIES-010 — species with default DNA class produce phenotypes
+    /// Covers FR-CIV-SPECIES-010 — species with default DNA class produce phenotypes
     /// that respect the byte-layout contract: each byte maps to exactly one field,
     /// verified for all nine occupied positions.
     #[test]
@@ -306,7 +306,7 @@ mod tests {
         assert!((p.behavior.intelligence - 204.0 / 255.0).abs() < 1e-5);
     }
 
-    /// FR-CIV-SPECIES-011 — Phenotype is Clone + Copy: a copied phenotype equals
+    /// Covers FR-CIV-SPECIES-011 — Phenotype is Clone + Copy: a copied phenotype equals
     /// the original and mutations to derived DNA do not affect already-expressed
     /// phenotypes (pure value semantics, no shared state).
     #[test]

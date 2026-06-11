@@ -9,6 +9,9 @@ publish = false
 [lib]
 name = "civis_cli"
 path = "src/lib.rs"
+[[bin]]
+name = "civis"
+path = "src/main.rs"
 
 [[bin]]
 name = "civis-verify"

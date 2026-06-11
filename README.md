@@ -7,6 +7,8 @@
 
 # Civis — CivLab
 
+**Work state:** ~30-35% overall; sim backend ~60%, emergent layers ~15% (lifecycle+diplomacy specs written; diplomacy is being implemented), client/render ~45% (AAA graphics-settings, DX12 default, terrain-fragmentation fix, native ocean, holocron theme landed), assets ~20%, gameplay-feel ~25%. `[####------]` 35%
+
 [![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/Civis/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/Civis/actions)
 [![Release](https://img.shields.io/github/v/release/KooshaPari/Civis?include_prereleases&sort=semver)](https://github.com/KooshaPari/Civis/releases)
 [![License](https://img.shields.io/github/license/KooshaPari/Civis)](LICENSE)

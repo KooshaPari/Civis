@@ -27,11 +27,25 @@ public class VanillaMappingValidationTests
     private static readonly string RepoRoot = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
-    private static readonly string[] ShippingUnitFiles =
+    private static readonly string[] ShippingUnitFiles = BuildShippingUnitFiles();
+
+    private static string[] BuildShippingUnitFiles()
     {
-        Path.Combine(RepoRoot, "packs", "warfare-naval", "units", "naval_units.yaml"),
-        Path.Combine(RepoRoot, "packs", "warfare-aerial", "units", "aerial_units.yaml")
-    };
+        List<string> unitFiles =
+        [
+            Path.Combine(RepoRoot, "packs", "warfare-naval", "units", "naval_units.yaml"),
+            Path.Combine(RepoRoot, "packs", "warfare-aerial", "units", "aerial_units.yaml"),
+            Path.Combine(RepoRoot, "packs", "warfare-starwars", "units", "cims.yaml"),
+            Path.Combine(RepoRoot, "packs", "warfare-starwars", "units", "cis_units.yaml"),
+            Path.Combine(RepoRoot, "packs", "warfare-starwars", "units", "republic_units.yaml")
+        ];
+
+        string modernUnitsDirectory = Path.Combine(RepoRoot, "packs", "warfare-modern", "units");
+        if (Directory.Exists(modernUnitsDirectory))
+            unitFiles.AddRange(Directory.GetFiles(modernUnitsDirectory, "*.yaml"));
+
+        return unitFiles.ToArray();
+    }
 
     [Fact]
     public void ShippingPackVanillaMappings_AreAllRecognized()

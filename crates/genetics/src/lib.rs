@@ -175,7 +175,7 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// FR-CIV-GENETICS-000 — exposes a semver-like schema version stub.
+    /// Covers FR-CIV-GENETICS-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
@@ -185,7 +185,7 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// FR-CIV-GENETICS-001 — mutation is deterministic under a fixed seed.
+    /// Covers FR-CIV-GENETICS-001 — mutation is deterministic under a fixed seed.
     #[test]
     fn mutation_deterministic() {
         let class = DnaClass::default();
@@ -198,7 +198,7 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// FR-CIV-GENETICS-002 — recombination is deterministic under a fixed seed.
+    /// Covers FR-CIV-GENETICS-002 — recombination is deterministic under a fixed seed.
     #[test]
     fn recombination_deterministic() {
         let class = DnaClass::default();
@@ -215,7 +215,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-GENETICS-010 — speciation triggers above the class threshold and
+    /// Covers FR-CIV-GENETICS-010 — speciation triggers above the class threshold and
     /// not below.
     #[test]
     fn speciation_trigger() {
@@ -237,7 +237,7 @@ mod tests {
         assert!(should_speciate(&a, &b, &class));
     }
 
-    /// FR-CIV-GENETICS-011 — speciation_distance is symmetric.
+    /// Covers FR-CIV-GENETICS-011 — speciation_distance is symmetric.
     #[test]
     fn speciation_distance_is_symmetric() {
         let a = Dna(vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(speciation_distance(&a, &b), speciation_distance(&b, &a));
     }
 
-    /// FR-CIV-GENETICS-012 — fitness against the same vector as DNA is 1.0.
+    /// Covers FR-CIV-GENETICS-012 — fitness against the same vector as DNA is 1.0.
     #[test]
     fn self_fitness_is_one() {
         let dna = Dna(vec![123; 16]);

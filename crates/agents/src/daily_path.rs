@@ -300,7 +300,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-LIFE-010 — nearest_of_kind returns the closest matching POI.
+    /// Covers FR-CIV-LIFE-010 — nearest_of_kind returns the closest matching POI.
     #[test]
     fn nearest_of_kind_picks_closest() {
         let mut registry = PoiRegistry::default();
@@ -323,7 +323,7 @@ mod tests {
         assert_eq!(nearest.id, 1);
     }
 
-    /// FR-CIV-LIFE-011 — pick_target chooses the highest-pressure need.
+    /// Covers FR-CIV-LIFE-011 — pick_target chooses the highest-pressure need.
     #[test]
     fn pick_target_chooses_highest_pressure_need() {
         let needs = LifeNeeds {
@@ -359,7 +359,7 @@ mod tests {
         assert_eq!(target.id, 20);
     }
 
-    /// FR-CIV-LIFE-012 — path_step moves toward the target and never overshoots.
+    /// Covers FR-CIV-LIFE-012 — path_step moves toward the target and never overshoots.
     #[test]
     fn path_step_moves_toward_target_without_overshoot() {
         let from = pos(0, 0, 0);
@@ -371,7 +371,7 @@ mod tests {
         assert_eq!(final_step.coord.x, to.coord.x);
     }
 
-    /// FR-CIV-LIFE-013 — scoring is deterministic for the same inputs.
+    /// Covers FR-CIV-LIFE-013 — scoring is deterministic for the same inputs.
     #[test]
     fn scoring_is_deterministic() {
         let needs = LifeNeeds {
@@ -395,7 +395,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-LIFE-014 — empty registry yields no target.
+    /// Covers FR-CIV-LIFE-014 — empty registry yields no target.
     #[test]
     fn empty_registry_returns_none() {
         let needs = LifeNeeds::sated();
@@ -403,7 +403,7 @@ mod tests {
         assert!(pick_target(&needs, &registry, &pos(0, 0, 0)).is_none());
     }
 
-    /// FR-CIV-LIFE-015 — satisfied needs prefer idle/wander over seek.
+    /// Covers FR-CIV-LIFE-015 — satisfied needs prefer idle/wander over seek.
     #[test]
     fn satisfied_needs_do_not_seek() {
         let needs = LifeNeeds::sated();
@@ -411,7 +411,7 @@ mod tests {
         assert_eq!(choose_activity(&needs, true), Activity::Idle);
     }
 
-    /// FR-CIV-LIFE-016 — wander anchors remain local and deterministic.
+    /// Covers FR-CIV-LIFE-016 — wander anchors remain local and deterministic.
     #[test]
     fn wander_anchor_stays_local() {
         let from = pos(100 * FIXED_SCALE, 0, -50 * FIXED_SCALE);

@@ -260,7 +260,7 @@ async fn post_control_place_voxel_returns_ok() {
 }
 
 #[tokio::test]
-async fn post_control_save_and_load_round_trip() {
+async fn fr_save_004_post_control_save_and_load_round_trip() {
     let app = test_app();
     let save_name = "unit-test-save";
 
@@ -342,7 +342,7 @@ fn autosave_archive_count(dir: &std::path::Path) -> usize {
 }
 
 #[tokio::test]
-async fn post_save_slot_round_trip() {
+async fn fr_save_002_post_save_slot_round_trip() {
     let state = test_state();
     let app = test_app_with_state(state.clone());
 
@@ -418,7 +418,7 @@ async fn post_save_slot_round_trip() {
 }
 
 #[tokio::test]
-async fn autosave_ring_evicts_oldest_beyond_max() {
+async fn fr_save_003_autosave_ring_evicts_oldest_beyond_max() {
     let state = test_state();
     let saves_dir = state.saves_dir.clone();
     let app = test_app_with_state(state.clone());

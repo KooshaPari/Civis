@@ -132,7 +132,7 @@ pub fn list_saves(dir: &Path) -> Result<Vec<SaveListEntry>, JsonRpcError> {
             save_type: save_type_for_name(&name),
         });
     }
-    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    entries.sort_by(|a, b| b.tick.cmp(&a.tick).then_with(|| a.name.cmp(&b.name)));
     Ok(entries)
 }
 
@@ -199,6 +199,25 @@ mod tests {
             validate_production_slot(slot).expect(slot);
         }
         assert!(validate_production_slot("slot-6").is_err());
+    }
+
+    #[test]
+    fn fr_save_025_list_saves_sorts_by_tick_descending() {
+        let dir = tempdir().expect("tempdir");
+        let mut sim = Simulation::with_seed(3);
+        sim.tick();
+        let older_path = dir.path().join("slot-1.civsave.zst");
+        CivSaveBundle::save_archive(&older_path, &sim).expect("save older");
+        sim.tick();
+        sim.tick();
+        let newer_path = dir.path().join("slot-2.civsave.zst");
+        CivSaveBundle::save_archive(&newer_path, &sim).expect("save newer");
+
+        let entries = list_saves(dir.path()).expect("list");
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].name, "slot-2");
+        assert_eq!(entries[1].name, "slot-1");
+        assert!(entries[0].tick > entries[1].tick);
     }
 
     #[test]

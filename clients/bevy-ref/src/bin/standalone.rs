@@ -4,7 +4,7 @@ use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 #[cfg(feature = "voxel")]
-use bevy_water::WaterPlugin;
+use civ_bevy_ref::ocean::OceanPlugin;
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle},
     camera::{camera_input, update_camera, CameraRig},
@@ -183,8 +183,20 @@ fn main() {
     #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
     app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
 
-    #[cfg(feature = "voxel")]
-    app.add_plugins(WaterPlugin);
+    // OceanPlugin — wraps bevy_water::WaterPlugin.  Gated on `voxel` (which
+    // pulls bevy_water).  Two modes:
+    //
+    // • voxel + voxel_stream  → full mode (OceanPlugin::default): WaterPlugin
+    //   + WaterSettings + wave-plane spawn.  VoxelStreamPlugin does NOT spawn
+    //   a water plane, so OceanPlugin owns the surface here.
+    //
+    // • voxel only (VoxelSimPlugin active) → thin mode (water_plugin_only):
+    //   registers WaterPlugin shader infrastructure but skips the spawn because
+    //   VoxelSimPlugin::spawn_bevy_water_plane already owns the wave surface.
+    #[cfg(all(feature = "voxel", feature = "voxel_stream"))]
+    app.add_plugins(OceanPlugin::default());
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
+    app.add_plugins(OceanPlugin::water_plugin_only());
 
     // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
     #[cfg(feature = "voxel_stream")]

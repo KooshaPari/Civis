@@ -210,6 +210,7 @@ impl Plugin for SimBridgePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SimState>()
             .init_resource::<RenderedEntities>()
+            .init_resource::<DiplomacyStandings>()
             .add_systems(Startup, init_gameplay_assets)
             .insert_resource(SimTickTimer(Timer::from_seconds(
                 SIM_TICK_SECONDS,
@@ -250,6 +251,19 @@ impl Plugin for SimBridgePlugin {
         app.add_systems(
             Update,
             sync_game_ui_snapshot
+                .run_if(in_process_sim_active)
+                .run_if(is_playing),
+        );
+
+        // Diplomacy standings seam (civ-007 / P4). Polls the engine snapshot
+        // and folds legacy `civ_engine::DiplomacyEvent`s into a local
+        // `civ_diplomacy::DiplomacyState` to produce a sorted per-pair list
+        // for the Diplomacy panel. Event-driven wiring is the upgrade path
+        // (see module-level seam note on `DiplomacyStandings`).
+        #[cfg(feature = "egui")]
+        app.add_systems(
+            Update,
+            sync_diplomacy_standings
                 .run_if(in_process_sim_active)
                 .run_if(is_playing),
         );
@@ -982,6 +996,207 @@ fn build_faction_roster(sim: &Simulation) -> Vec<crate::game_ui::FactionInfo> {
     rows
 }
 
+// ---------------------------------------------------------------------------
+// Diplomacy Standings seam (civ-007 / P4 diplomacy substrate).
+// ---------------------------------------------------------------------------
+
+/// One row in the Diplomacy panel's Standings list — a single pairwise
+/// relation between two actor ids, projected from the live substrate into a
+/// UI-friendly scalar + coarse stance label.
+///
+/// # Seam
+///
+/// This struct is the **client-side projection** of a
+/// [`civ_diplomacy::Relation`]. The bevy-ref client does not own the substrate
+/// (the simulation does); it mirrors the engine's pair list by polling the
+/// snapshot each tick and folding legacy `civ_engine::DiplomacyEvent`s into a
+/// local [`civ_diplomacy::DiplomacyState`] for projection.
+///
+/// **Upgrade path:** when the simulation exposes a Bevy message stream
+/// (`Messages<DiplomacyTickEvent>`) directly, replace `sync_diplomacy_standings`
+/// with a message reader and drop the local substrate instance. The shape of
+/// [`StandingRow`] is the contract — keep it stable.
+#[cfg(feature = "egui")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StandingRow {
+    /// Lower actor id (canonical pair key).
+    pub a: u32,
+    /// Higher actor id.
+    pub b: u32,
+    /// Signed scalar standing in `[-standing_max, +standing_max]`.
+    pub standing: i32,
+    /// Coarse stance label, derived from `standing` + the substrate config's
+    /// thresholds. One of `"Hostile" | "Neutral" | "Allied"`.
+    pub stance: StandingStance,
+    /// Tick of the last update (bump or decay step that actually changed the
+    /// value). Useful for tooltip / replay debugging.
+    pub last_updated_tick: u64,
+}
+
+/// Coarse stance surfaced to the UI. Mirrors `civ_diplomacy::Stance` but as a
+/// `Copy` enum so the UI can pattern-match without importing the substrate.
+#[cfg(feature = "egui")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StandingStance {
+    /// Standing ≤ `hostile_threshold`.
+    Hostile,
+    /// Standing between the two thresholds.
+    Neutral,
+    /// Standing ≥ `allied_threshold`.
+    Allied,
+}
+
+/// Diplomacy Standings resource read by `crate::diplomacy_ui`.
+///
+/// Updated each frame the sim ticks (gated by `is_playing`). Rows are kept
+/// sorted descending by absolute standing so the most intense relations sit at
+/// the top — players scan for "who is at war" and "who is allied", not the
+/// middle. The substrate's BTreeMap iteration is stable but ascending; we
+/// resort on write to keep the UI work in O(n log n) and zero per-frame
+/// allocation.
+#[cfg(feature = "egui")]
+#[derive(Resource, Default, Debug, Clone)]
+pub struct DiplomacyStandings {
+    /// Sorted rows (descending |standing|). Empty until the first sample.
+    pub rows: Vec<StandingRow>,
+    /// Tick the rows were last refreshed from the sim. `0` means "no sample
+    /// yet" so the UI can show a "waiting for sim" placeholder.
+    pub last_refresh_tick: u64,
+    /// Whether the substrate has ever received any input. Mirrors the
+    /// `live` flag in `crate::diplomacy_ui::DiplomacyState`.
+    pub live: bool,
+}
+
+#[cfg(feature = "egui")]
+impl DiplomacyStandings {
+    /// Project a signed standing value to a [`StandingStance`] using the same
+    /// thresholds as the substrate (`hostile_threshold` ≤ 0, `allied_threshold`
+    /// ≥ 0). Matches `civ_diplomacy::stance_for` semantically.
+    pub fn stance_for(standing: i32, hostile_threshold: i32, allied_threshold: i32) -> StandingStance {
+        if standing <= hostile_threshold {
+            StandingStance::Hostile
+        } else if standing >= allied_threshold {
+            StandingStance::Allied
+        } else {
+            StandingStance::Neutral
+        }
+    }
+}
+
+/// Build the `DiploamcyStandings` rows from a sim snapshot, folding legacy
+/// `civ_engine::DiplomacyEvent`s through a local substrate instance.
+///
+/// This is the **seam** between the engine's event surface and the new
+/// `civ-diplomacy` substrate. The substrate is the authoritative scorer; the
+/// engine's `DiplomacyEvent` list is the input we already have. When the
+/// substrate is wired directly into the engine (civ-007 Phase 2), this
+/// function should be replaced by a reader on the live event stream — the
+/// output shape (`Vec<StandingRow>` sorted by |standing|) is the contract.
+#[cfg(feature = "egui")]
+fn build_standings_rows(
+    sim: &Simulation,
+    substrate: &mut civ_diplomacy::DiplomacyState,
+    last_event_tick: &mut u64,
+) -> Vec<StandingRow> {
+    let snap = sim.snapshot();
+
+    // Fold any new diplomacy events through the substrate. The substrate
+    // emits threshold-crossing events on its own `pending_events` queue; we
+    // drain them after the fold so the substrate state stays in sync (decay
+    // is not applied here — we mirror the engine's pacing, not the substrate's
+    // intrinsic decay clock, because the panel reflects "what the sim knows",
+    // not "what the substrate believes after a fixed decay interval").
+    for ev in &snap.diplomacy_events {
+        if ev.tick <= *last_event_tick {
+            continue;
+        }
+        let interaction = legacy_event_to_interaction(ev);
+        substrate.ingest(&[interaction]);
+        *last_event_tick = (*last_event_tick).max(ev.tick);
+    }
+    // Drain substrate-emitted events so they don't accumulate; we don't render
+    // them here, but a future event-feed could subscribe to them.
+    let _ = substrate.drain_events();
+
+    let cfg = &substrate.config;
+    let mut rows: Vec<StandingRow> = substrate
+        .relations()
+        .map(|rel| StandingRow {
+            a: rel.pair.lo.0,
+            b: rel.pair.hi.0,
+            standing: rel.standing,
+            stance: DiplomacyStandings::stance_for(rel.standing, cfg.hostile_threshold, cfg.allied_threshold),
+            last_updated_tick: rel.last_updated_tick,
+        })
+        .collect();
+    // Sort: most extreme (positive or negative) standing first. Ties broken
+    // by the canonical (lo, hi) id pair so the order is deterministic across
+    // frames and across runs (replay-safe).
+    rows.sort_by(|x, y| {
+        y.standing
+            .unsigned_abs()
+            .cmp(&x.standing.unsigned_abs())
+            .then((x.a, x.b).cmp(&(y.a, y.b)))
+    });
+    rows
+}
+
+/// Translate a legacy `civ_engine::DiplomacyEvent` into a substrate
+/// `InteractionEvent::Gesture` with a coarse delta. The magnitudes are
+/// chosen to map the engine's three coarse kinds onto the substrate's
+/// scalar standing so a single TradeAgreement nudges a pair toward Allied
+/// and a single Conflict crosses the Hostile threshold given the default
+/// `hostile_threshold = -100`.
+#[cfg(feature = "egui")]
+fn legacy_event_to_interaction(
+    ev: &civ_engine::DiplomacyEvent,
+) -> civ_diplomacy::InteractionEvent {
+    use civ_diplomacy::{ActorId, InteractionEvent};
+    let delta: i32 = match ev.kind {
+        civ_engine::DiplomacyKind::TradeAgreement => 60,
+        civ_engine::DiplomacyKind::Peace => 25,
+        civ_engine::DiplomacyKind::Conflict => -120,
+    };
+    InteractionEvent::Gesture {
+        from: ActorId(ev.faction_a),
+        to: ActorId(ev.faction_b),
+        delta,
+        tick: ev.tick,
+    }
+}
+
+/// System: pull diplomacy events out of the sim snapshot and refresh the
+/// `DiplomacyStandings` resource.
+///
+/// Uses a `Local` to keep the substrate instance + dedup cursor on the
+/// system itself rather than the resource, so the resource stays a pure
+/// view (cheap to clone for the UI; no leaked substrate state).
+#[cfg(feature = "egui")]
+fn sync_diplomacy_standings(
+    sim: Res<SimState>,
+    mut standings: ResMut<DiplomacyStandings>,
+    // Local: persistent across frames but not serialized.
+    mut local: Local<Option<(civ_diplomacy::DiplomacyState, u64)>>,
+) {
+    if !sim.is_changed() {
+        return;
+    }
+    let (substrate, last_event_tick) = local.get_or_insert_with(|| {
+        // Default substrate config matches the substrate crate's `Default`
+        // (standing_max 1000, decay 1, hostile -100, allied 100). We never
+        // call `decay()` from this seam — the engine's pacing wins.
+        let cfg = civ_diplomacy::DiplomacyConfig::default();
+        let state = civ_diplomacy::DiplomacyState::new(cfg)
+            .expect("civ-diplomacy default config validates");
+        (state, 0)
+    });
+    let rows = build_standings_rows(&sim.0, substrate, last_event_tick);
+    let tick = sim.0.state.tick;
+    standings.last_refresh_tick = tick;
+    standings.live = !rows.is_empty() || *last_event_tick > 0;
+    standings.rows = rows;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1037,6 +1252,137 @@ mod tests {
     fn tick_to_era_label_uses_expected_boundaries() {
         assert_eq!(tick_to_era_label(0), "Prehistoric");
         assert_eq!(tick_to_era_label(50000), "Modern");
+    }
+
+    // -- Diplomacy standings seam -------------------------------------------
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn standings_stance_for_matches_substrate_thresholds() {
+        let (h, a) = (-100, 100);
+        // Boundaries: ≤ hostile → Hostile, ≥ allied → Allied, else Neutral.
+        assert_eq!(
+            DiplomacyStandings::stance_for(-101, h, a),
+            StandingStance::Hostile
+        );
+        assert_eq!(
+            DiplomacyStandings::stance_for(-100, h, a),
+            StandingStance::Hostile
+        );
+        assert_eq!(
+            DiplomacyStandings::stance_for(-99, h, a),
+            StandingStance::Neutral
+        );
+        assert_eq!(
+            DiplomacyStandings::stance_for(0, h, a),
+            StandingStance::Neutral
+        );
+        assert_eq!(
+            DiplomacyStandings::stance_for(99, h, a),
+            StandingStance::Neutral
+        );
+        assert_eq!(
+            DiplomacyStandings::stance_for(100, h, a),
+            StandingStance::Allied
+        );
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn legacy_event_to_interaction_maps_kinds_to_signed_deltas() {
+        use civ_diplomacy::InteractionEvent;
+        let trade = legacy_event_to_interaction(&civ_engine::DiplomacyEvent {
+            tick: 5,
+            faction_a: 1,
+            faction_b: 2,
+            kind: civ_engine::DiplomacyKind::TradeAgreement,
+        });
+        let peace = legacy_event_to_interaction(&civ_engine::DiplomacyEvent {
+            tick: 5,
+            faction_a: 1,
+            faction_b: 2,
+            kind: civ_engine::DiplomacyKind::Peace,
+        });
+        let conflict = legacy_event_to_interaction(&civ_engine::DiplomacyEvent {
+            tick: 5,
+            faction_a: 1,
+            faction_b: 2,
+            kind: civ_engine::DiplomacyKind::Conflict,
+        });
+        // TradeAgreement and Peace produce positive deltas; Conflict negative.
+        let (from, to, delta, tick) = match trade {
+            InteractionEvent::Gesture { from, to, delta, tick } => (from, to, delta, tick),
+            _ => panic!("trade is a Gesture"),
+        };
+        assert_eq!((from.0, to.0, tick), (1, 2, 5));
+        assert!(delta > 0);
+        let conflict_delta = match conflict {
+            InteractionEvent::Gesture { delta, .. } => delta,
+            _ => panic!("conflict is a Gesture"),
+        };
+        assert!(conflict_delta < 0);
+        let peace_delta = match peace {
+            InteractionEvent::Gesture { delta, .. } => delta,
+            _ => panic!("peace is a Gesture"),
+        };
+        assert!(peace_delta > 0);
+        // Sanity: a single Conflict (-120) crosses the default hostile
+        // threshold of -100, so the projection should land the pair in the
+        // Hostile band after a single event.
+        assert!(conflict_delta <= -100);
+    }
+
+    #[cfg(feature = "egui")]
+    #[test]
+    fn build_standings_rows_folds_legacy_events_and_sorts_by_abs() {
+        use civ_diplomacy::{ActorId, InteractionEvent};
+        // Fresh sim has no diplomacy events → no rows.
+        let sim = Simulation::default();
+        let cfg = civ_diplomacy::DiplomacyConfig::default();
+        let mut substrate =
+            civ_diplomacy::DiplomacyState::new(cfg).expect("default config validates");
+        let mut last_event_tick: u64 = 0;
+        let rows = build_standings_rows(&sim, &mut substrate, &mut last_event_tick);
+        assert!(rows.is_empty(), "no events -> no rows");
+        assert_eq!(last_event_tick, 0);
+
+        // Seed two relations directly into the substrate and verify the
+        // projection + sort order: most extreme |standing| first.
+        substrate.ingest(&[InteractionEvent::Gesture {
+            from: ActorId(0),
+            to: ActorId(2),
+            delta: 60, // +60 (positive, but mid-band)
+            tick: 1,
+        }]);
+        substrate.ingest(&[InteractionEvent::Gesture {
+            from: ActorId(0),
+            to: ActorId(1),
+            delta: -150, // -150 → Hostile
+            tick: 1,
+        }]);
+        substrate.ingest(&[InteractionEvent::Gesture {
+            from: ActorId(1),
+            to: ActorId(2),
+            delta: 120, // +120 → Allied
+            tick: 1,
+        }]);
+
+        let rows = build_standings_rows(&sim, &mut substrate, &mut last_event_tick);
+        assert_eq!(rows.len(), 3, "three pairwise relations");
+        // (0,1) is at -150, (1,2) is at +120, (0,2) is at +60 → |standings|
+        // are 150, 120, 60. Sort descending by |standing| yields that order.
+        let order: Vec<(u32, u32, i32)> = rows
+            .iter()
+            .map(|r| (r.a, r.b, r.standing))
+            .collect();
+        assert_eq!(order, vec![(0, 1, -150), (1, 2, 120), (0, 2, 60)]);
+        // Stance labels project correctly given the default thresholds.
+        assert!(matches!(rows[0].stance, StandingStance::Hostile));
+        assert!(matches!(rows[1].stance, StandingStance::Allied));
+        assert!(matches!(rows[2].stance, StandingStance::Neutral));
+        // Dedup cursor must advance when the sim has no events (we just
+        // seeded the substrate directly, so the cursor stays at 0).
+        assert_eq!(last_event_tick, 0);
     }
 
     #[cfg(feature = "voxel")]

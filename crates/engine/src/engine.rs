@@ -8,6 +8,10 @@ use civ_agents::{
     Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
     PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
+use civ_agents::{
+    diplomacy::{DiplomacyMatrix, DiplomacySignal, GriefAccumulator, RelationKind},
+    ClusterId,
+};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
@@ -397,6 +401,13 @@ pub struct Simulation {
     last_births: Vec<PopulationEvent>,
     last_deaths: Vec<PopulationEvent>,
     diplomacy_events: Vec<DiplomacyEvent>,
+    /// Continuous pairwise relation matrix (CIV-007). Keyed by canonical
+    /// `(ClusterId, ClusterId)` pairs; scores drift each tick from gradient
+    /// signals.  Macro states (Alliance/Trade/Neutral/Rivalry/War) are
+    /// read-off projections, not stored primary state.
+    pub diplomacy_matrix: DiplomacyMatrix,
+    /// Per-faction-pair grievance accumulator with exponential decay (CIV-007 §2.2).
+    pub grief_accumulator: GriefAccumulator,
     next_civilian_id: u64,
     research_cache: ResearchCache,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
@@ -659,6 +670,8 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             diplomacy_events: Vec::new(),
+            diplomacy_matrix: DiplomacyMatrix::new(),
+            grief_accumulator: GriefAccumulator::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache,
             voxel: VoxelWorld::new(FIXED_SCALE),
@@ -722,6 +735,8 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             diplomacy_events: Vec::new(),
+            diplomacy_matrix: DiplomacyMatrix::new(),
+            grief_accumulator: GriefAccumulator::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache,
             voxel: VoxelWorld::new(FIXED_SCALE),
@@ -1905,47 +1920,217 @@ impl Simulation {
         }
     }
 
+    /// Emergent diplomacy phase — CIV-007.
+    ///
+    /// Replaces the old random coin-flip stub with a continuous relation-score
+    /// model driven by six live gradient signals (combat grievance, resource
+    /// competition, border friction, trade volume, need complementarity, energy
+    /// scarcity).  Macro states (Alliance / Trade / Neutral / Rivalry / War) are
+    /// read-off thresholds on the continuous score, not stored primary state.
+    ///
+    /// Runs **every tick** (≤ 10-tick cadence per spec §6).
     fn phase_diplomacy(&mut self) {
-        if self.state.tick % 500 != 0 {
-            return;
-        }
         self.diplomacy_events.clear();
+
         let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
         if faction_ids.len() < 2 {
             return;
         }
-        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
-        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
-            DiplomacyKind::TradeAgreement
-        } else {
-            DiplomacyKind::Conflict
-        };
-        match kind {
-            DiplomacyKind::TradeAgreement => {
-                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
-                    *v += Fixed::from_num(100);
-                }
-                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
-                    *v += Fixed::from_num(100);
-                }
+
+        // ── Step 1: apply grievance decay and accumulate new engagements ────
+        self.grief_accumulator.tick_decay();
+        for eng in &self.last_tick_engagements {
+            if eng.shooter_faction != eng.target_faction {
+                self.grief_accumulator
+                    .add_engagement(eng.shooter_faction, eng.target_faction);
             }
-            DiplomacyKind::Conflict => {
-                if let Some(v) = self.state.faction_treasury.get_mut(&a) {
-                    *v -= Fixed::from_num(50);
-                }
-                if let Some(v) = self.state.faction_treasury.get_mut(&b) {
-                    *v -= Fixed::from_num(50);
-                }
-            }
-            DiplomacyKind::Peace => {}
         }
-        self.diplomacy_events.push(DiplomacyEvent {
-            tick: self.state.tick,
-            faction_a: a,
-            faction_b: b,
-            kind,
-        });
+
+        // ── Step 2: compute per-faction scarcity index ──────────────────────
+        // economy_state.energy_budget_joules is already a raw i64 (divided by SCALE
+        // from world Fixed; see phase_economy sync).
+        let total_budget_i64 = self.economy_state.energy_budget_joules;
+        let n_factions = faction_ids.len() as i64;
+        let per_faction_budget_i64 = if n_factions > 0 {
+            total_budget_i64 / n_factions
+        } else {
+            total_budget_i64
+        };
+        // Subsistence demand from tiered_demand (returns i64 tier allocations).
+        let subsistence_demand = {
+            let tiers = self.tiered_demand(total_budget_i64.max(1));
+            tiers[0].1.max(1)
+        };
+        let per_faction_subsistence = (subsistence_demand / n_factions.max(1)).max(1);
+
+        // Scarcity fraction ∈ [0, 1]: 0.0 = fully satisfied, 1.0 = empty.
+        let scarcity_fraction = |faction_id: u32| -> f32 {
+            // faction_resources.energy is a Fixed; convert to the same i64 scale
+            // as economy_state (raw / SCALE).
+            let energy_holding = self
+                .state
+                .faction_resources
+                .get(&faction_id)
+                .map(|r| r.energy.raw / crate::SCALE)
+                .unwrap_or(0);
+            let budget_share = per_faction_budget_i64 + energy_holding;
+            let fill = (budget_share as f32) / (per_faction_subsistence as f32);
+            1.0 - fill.clamp(0.0, 1.0)
+        };
+
+        // ── Step 3: compute faction cluster ids (faction_id → ClusterId) ──
+        // We use faction_id as the ClusterId directly via ClusterId(id as u64).
+        // This is consistent with the scaffold that maps factions to clusters.
+
+        // ── Step 4: compute signals for every faction pair and apply ─────────
+        let pairs: Vec<(u32, u32)> = {
+            let ids = &faction_ids;
+            let mut v = Vec::new();
+            for i in 0..ids.len() {
+                for j in (i + 1)..ids.len() {
+                    v.push((ids[i], ids[j]));
+                }
+            }
+            v
+        };
+
+        for (fa, fb) in pairs {
+            let cid_a = ClusterId(u64::from(fa));
+            let cid_b = ClusterId(u64::from(fb));
+
+            // --- trade_volume: sum TradeRoute.volume for routes between fa↔fb
+            let trade_volume: f32 = self
+                .state
+                .trade_routes
+                .iter()
+                .filter(|r| {
+                    (r.from_faction == fa && r.to_faction == fb)
+                        || (r.from_faction == fb && r.to_faction == fa)
+                })
+                .map(|r| r.volume.to_f64() as f32)
+                .sum::<f32>()
+                .max(0.0)
+                / 20.0; // normalise: route volumes ~10-20 → signal ∈ [0,1]
+
+            // --- resource_competition: cosine-like overlap of resource vectors
+            let competition: f32 = {
+                let ra = self.state.faction_resources.get(&fa);
+                let rb = self.state.faction_resources.get(&fb);
+                match (ra, rb) {
+                    (Some(ra), Some(rb)) => {
+                        let overlap = |a: Fixed, b: Fixed| -> f32 {
+                            let av = a.to_f64() as f32;
+                            let bv = b.to_f64() as f32;
+                            let av = av.max(0.0);
+                            let bv = bv.max(0.0);
+                            av.min(bv) / (av + bv + 1.0)
+                        };
+                        let food_c = overlap(ra.food, rb.food);
+                        let metal_c = overlap(ra.metal, rb.metal);
+                        let wood_c = overlap(ra.wood, rb.wood);
+                        let energy_c = overlap(ra.energy, rb.energy);
+                        (food_c + metal_c + wood_c + energy_c) / 4.0
+                    }
+                    _ => 0.0,
+                }
+            };
+
+            // --- proximity: fraction of cluster members co-located
+            // Pre-collect cluster sets per faction to avoid nested borrows.
+            let proximity: f32 = {
+                let mut clusters_a: HashSet<ClusterId> = HashSet::new();
+                let mut clusters_b: HashSet<ClusterId> = HashSet::new();
+                for (_, (civ, member)) in
+                    self.world.query::<(&AgentCivilian, &ClusterMember)>().iter()
+                {
+                    match civ.alignment {
+                        Alignment::Faction(fid) if fid == fa => {
+                            clusters_a.insert(member.cluster);
+                        }
+                        Alignment::Faction(fid) if fid == fb => {
+                            clusters_b.insert(member.cluster);
+                        }
+                        _ => {}
+                    }
+                }
+                let total_a = clusters_a.len() as f32;
+                let total_b = clusters_b.len() as f32;
+                let shared = clusters_a.intersection(&clusters_b).count() as f32;
+                let total = (total_a + total_b).max(1.0);
+                (shared / total).clamp(0.0, 1.0)
+            };
+
+            // --- combat_grievance from accumulator
+            let grievance = self.grief_accumulator.get(fa, fb).clamp(0.0, 1.0);
+
+            // --- need_complementarity: A-surplus matches B-deficit
+            let complementarity: f32 = {
+                let ra = self.state.faction_resources.get(&fa);
+                let rb = self.state.faction_resources.get(&fb);
+                match (ra, rb) {
+                    (Some(ra), Some(rb)) => {
+                        let complement_pair = |a: Fixed, b: Fixed| -> f32 {
+                            let av = (a.to_f64() as f32).max(0.0);
+                            let bv = (b.to_f64() as f32).max(0.0);
+                            let sum = av + bv + 1.0;
+                            // High when one is high and the other is low
+                            (av - bv).abs() / sum
+                        };
+                        let food_c = complement_pair(ra.food, rb.food);
+                        let metal_c = complement_pair(ra.metal, rb.metal);
+                        let wood_c = complement_pair(ra.wood, rb.wood);
+                        (food_c + metal_c + wood_c) / 3.0
+                    }
+                    _ => 0.0,
+                }
+            };
+
+            // --- scarcity_pressure: both scarce → positive (competition sharpens)
+            //     one surplus → negative (pull toward cooperation)
+            let scarcity: f32 = {
+                let sa = scarcity_fraction(fa);
+                let sb = scarcity_fraction(fb);
+                // Both scarce: positive pressure; one surplus: negative pressure
+                sa * sb - (1.0 - sa) * (1.0 - sb) * 0.5
+            };
+
+            let signal = DiplomacySignal {
+                resource_competition: competition,
+                trade_volume,
+                proximity,
+                combat_grievance: grievance,
+                need_complementarity: complementarity,
+                scarcity_pressure: scarcity,
+            };
+
+            let outcome = self.diplomacy_matrix.apply_signal(cid_a, cid_b, signal);
+
+            // ── Step 5: war → trade route suppression (CIV-007 §2.4) ────────
+            if outcome.after == RelationKind::War {
+                for route in self.state.trade_routes.iter_mut() {
+                    if (route.from_faction == fa && route.to_faction == fb)
+                        || (route.from_faction == fb && route.to_faction == fa)
+                    {
+                        route.volume = Fixed::ZERO;
+                    }
+                }
+            }
+
+            // ── Step 6: emit DiplomacyEvent on RelationKind transitions ────
+            if outcome.before != outcome.after {
+                let kind = match outcome.after {
+                    RelationKind::Alliance | RelationKind::Trade => DiplomacyKind::TradeAgreement,
+                    RelationKind::War | RelationKind::Rivalry => DiplomacyKind::Conflict,
+                    RelationKind::Neutral => DiplomacyKind::Peace,
+                };
+                self.diplomacy_events.push(DiplomacyEvent {
+                    tick: self.state.tick,
+                    faction_a: fa,
+                    faction_b: fb,
+                    kind,
+                });
+            }
+        }
     }
 
     /// Split an aggregate energy `total` into the four consumer priority tiers
@@ -2206,6 +2391,19 @@ impl Simulation {
     #[must_use]
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
+    }
+
+    /// Immutable borrow of the emergent diplomacy relation matrix (CIV-007).
+    #[must_use]
+    pub fn diplomacy_matrix(&self) -> &DiplomacyMatrix {
+        &self.diplomacy_matrix
+    }
+
+    /// Shannon trust-entropy over the five `RelationKind` buckets (CIV-007 §4.3).
+    /// Target operating range: `[1.5, 2.1]`.
+    #[must_use]
+    pub fn diplomacy_trust_entropy(&self) -> f32 {
+        self.diplomacy_matrix.trust_entropy()
     }
 }
 
@@ -3471,5 +3669,258 @@ mod tests {
         let granted = civ_economy::allocate_by_priority(&CapitalistAllocator, 0, &tiers);
         assert_eq!(granted.iter().sum::<i64>(), 0);
         assert!(granted.iter().all(|&g| g == 0));
+    }
+
+    // ── CIV-007 Emergent Diplomacy behavior tests ────────────────────────────
+
+    /// CIV-007 — sustained combat engagements push the relation score negative
+    /// (war→grievance→r falls feedback).
+    #[test]
+    fn diplomacy_war_drives_score_negative() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(0);
+        let b = ClusterId(1);
+
+        // Inject pure combat-grievance signal for 30 ticks.
+        let mut last_score = 0.0_f32;
+        for _ in 0..30 {
+            let outcome = matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: 1.0,
+                    ..Default::default()
+                },
+            );
+            last_score = outcome.score;
+        }
+
+        assert!(
+            last_score < -0.60,
+            "30 ticks of grievance should push score into War territory, got {last_score}"
+        );
+        assert_eq!(
+            matrix.relation(a, b),
+            RelationKind::War,
+            "score {last_score} should map to War"
+        );
+    }
+
+    /// CIV-007 — resource scarcity (high competition) raises rivalry between
+    /// factions without any explicit combat.
+    #[test]
+    fn diplomacy_resource_scarcity_raises_rivalry() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(10);
+        let b = ClusterId(20);
+
+        for _ in 0..20 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    resource_competition: 1.0,
+                    proximity: 0.8,
+                    ..Default::default()
+                },
+            );
+        }
+
+        let record = matrix.record(a, b).expect("record present");
+        assert!(
+            record.score <= -0.20,
+            "resource + proximity should push into Rivalry or War, got {}",
+            record.score
+        );
+        let kind = matrix.relation(a, b);
+        assert!(
+            matches!(kind, RelationKind::Rivalry | RelationKind::War),
+            "expected Rivalry or War, got {kind:?}"
+        );
+    }
+
+    /// CIV-007 — sustained war followed by halted engagements → score recovers
+    /// toward neutral (attrition + exhaustion: grievance decays, score drifts up).
+    #[test]
+    fn diplomacy_war_attrition_exhaustion_recovers() {
+        use civ_agents::diplomacy::{GriefAccumulator, DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let mut grief = GriefAccumulator::new();
+        let a = ClusterId(3);
+        let b = ClusterId(4);
+
+        // Phase 1: sustained war (50 ticks of grievance engagements).
+        for _ in 0..50 {
+            grief.add_engagement(3, 4);
+            grief.tick_decay();
+            let g = grief.get(3, 4);
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: g,
+                    ..Default::default()
+                },
+            );
+        }
+        let war_score = matrix.record(a, b).expect("record").score;
+        assert!(war_score < -0.20, "should be at least Rivalry after war phase, got {war_score}");
+
+        // Phase 2: engagements stop — only grievance decay, no new signals.
+        // Score should drift upward (toward zero) over 200 ticks.
+        for _ in 0..200 {
+            grief.tick_decay();
+            let g = grief.get(3, 4);
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: g,
+                    ..Default::default()
+                },
+            );
+        }
+        let recovery_score = matrix.record(a, b).expect("record").score;
+        assert!(
+            recovery_score > war_score,
+            "score should recover after engagements stop: war={war_score}, recovery={recovery_score}"
+        );
+    }
+
+    /// CIV-007 — zero-input (no signals) leaves score stable at initial 0.0.
+    #[test]
+    fn diplomacy_zero_input_leaves_score_stable() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(5);
+        let b = ClusterId(6);
+
+        // Neutral start — apply zero-signal 100 times.
+        for _ in 0..100 {
+            matrix.apply_signal(a, b, DiplomacySignal::default());
+        }
+
+        let record = matrix.record(a, b).expect("record");
+        assert!(
+            record.score.abs() < 1e-5,
+            "zero-input should leave score stable at ~0.0, got {}",
+            record.score
+        );
+    }
+
+    /// CIV-007 — score is always clamped to [-1.0, 1.0] under extreme inputs.
+    #[test]
+    fn diplomacy_score_clamped_under_extremes() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(7);
+        let b = ClusterId(8);
+
+        // Extreme positive push.
+        for _ in 0..200 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    trade_volume: 100.0,
+                    need_complementarity: 100.0,
+                    ..Default::default()
+                },
+            );
+        }
+        let score = matrix.record(a, b).expect("record").score;
+        assert!((-1.0..=1.0).contains(&score), "score must stay in [-1,1], got {score}");
+        assert!((score - 1.0).abs() < 1e-4, "extreme positive should saturate at 1.0, got {score}");
+
+        // Reset and extreme negative push.
+        let mut matrix2 = DiplomacyMatrix::new();
+        for _ in 0..200 {
+            matrix2.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: 100.0,
+                    resource_competition: 100.0,
+                    scarcity_pressure: 100.0,
+                    ..Default::default()
+                },
+            );
+        }
+        let score2 = matrix2.record(a, b).expect("record").score;
+        assert!((-1.0..=1.0).contains(&score2), "score must stay in [-1,1], got {score2}");
+        assert!((score2 + 1.0).abs() < 1e-4, "extreme negative should saturate at -1.0, got {score2}");
+    }
+
+    /// CIV-007 — phase_diplomacy runs every tick (not gated on tick%500).
+    #[test]
+    fn phase_diplomacy_runs_every_tick() {
+        let mut sim = Simulation::with_seed(42);
+        // After one tick the matrix should have records for all 3 faction pairs.
+        sim.tick();
+        let snapshot = sim.diplomacy_matrix.snapshot();
+        assert_eq!(
+            snapshot.len(),
+            3,
+            "all 3 faction pairs should have a relation record after one tick"
+        );
+    }
+
+    /// CIV-007 — trust entropy is in the valid [0, log2(5)] range.
+    #[test]
+    fn diplomacy_trust_entropy_in_valid_range() {
+        let mut sim = Simulation::with_seed(7);
+        for _ in 0..50 {
+            sim.tick();
+        }
+        let h = sim.diplomacy_trust_entropy();
+        assert!(
+            (0.0..=2.33).contains(&h),
+            "trust entropy must be in [0, log2(5)≈2.32], got {h}"
+        );
+    }
+
+    /// CIV-007 — GriefAccumulator decays correctly and grievance accumulates.
+    #[test]
+    fn grief_accumulator_decays_and_accumulates() {
+        use civ_agents::diplomacy::GriefAccumulator;
+
+        let mut grief = GriefAccumulator::new();
+
+        // Add engagements and verify accumulation.
+        grief.add_engagement(0, 1);
+        grief.add_engagement(0, 1);
+        let after_add = grief.get(0, 1);
+        assert!(
+            after_add > 0.0,
+            "grievance should be positive after engagements, got {after_add}"
+        );
+
+        // Decay should reduce the value.
+        let before = grief.get(0, 1);
+        grief.tick_decay();
+        let after = grief.get(0, 1);
+        assert!(after < before, "decay should reduce grievance: before={before}, after={after}");
+
+        // Many decay ticks should approach zero.
+        for _ in 0..1000 {
+            grief.tick_decay();
+        }
+        let near_zero = grief.get(0, 1);
+        assert!(
+            near_zero < 1e-4,
+            "grievance should decay near zero after 1000 ticks, got {near_zero}"
+        );
     }
 }

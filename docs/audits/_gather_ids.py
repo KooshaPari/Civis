@@ -123,6 +123,7 @@ SPEC_FILES_EXACT = {
 ID_RE = re.compile(
     r"\b(FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:[-A-Z]+\d*)*\b"
 )
+COVERS_RE = re.compile(r"^\s*///\s*Covers\s*:?(?:\s*(?:FR|NFR)-(?:[A-Z]+-)?[A-Z]+[-A-Z0-9]*\d+(?:[-A-Z]+\d*)*)")
 
 
 def is_self_ref(rel: str) -> bool:
@@ -231,6 +232,31 @@ def main():
         kind = classify(rel)
         in_func = rel == "FUNCTIONAL_REQUIREMENTS.md"
 
+        lines = text.splitlines()
+        if kind == "test":
+            in_cfg_test = [True] * (len(lines) + 1)
+        else:
+            in_cfg_test = [False] * (len(lines) + 1)
+            brace_depth = 0
+            cfg_depths = []
+            pending_cfg_test = False
+            for i, line in enumerate(lines, start=1):
+                stripped = line.strip()
+                if stripped.startswith("#[cfg(test)]"):
+                    pending_cfg_test = True
+                    continue
+
+                in_cfg_test[i] = bool(cfg_depths and brace_depth >= cfg_depths[-1])
+
+                if pending_cfg_test and "{" in line:
+                    cfg_depths.append(brace_depth + 1)
+                    pending_cfg_test = False
+
+                brace_depth += line.count("{") - line.count("}")
+                while cfg_depths and brace_depth < cfg_depths[-1]:
+                    cfg_depths.pop()
+
+        has_cfg_test_attr = "#[cfg(test)]" in text
         for m in ID_RE.finditer(text):
             line_no = text.count("\n", 0, m.start()) + 1
             eid = m.group(0)
@@ -242,7 +268,9 @@ def main():
                 eid = cleaned
             rec = by_id[eid]
             ref = f"{rel}:{line_no}"
-            if kind == "test":
+            is_cover = bool(COVERS_RE.match(lines[line_no - 1])) if 0 < line_no <= len(lines) else False
+            is_test_ref = kind == "test" or in_cfg_test[line_no] or (is_cover and has_cfg_test_attr)
+            if is_test_ref:
                 if ref not in rec["in_tests"] and len(rec["in_tests"]) < max_refs:
                     rec["in_tests"].append(ref)
             elif kind == "meta":

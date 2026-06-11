@@ -73,28 +73,22 @@ mod tests {
     use rand::rngs::OsRng;
 
     #[test]
-    fn verify_accepts_valid_signature() {
+    fn fr_civ_tactics_043_green_signature_is_verified_and_rejected_when_tampered() {
         let signing_key = ed25519_dalek::SigningKey::generate(&mut OsRng);
         let wasm = b"(module)";
         let sig = signing_key.sign(wasm);
         let pk_hex = pubkey_hex(signing_key.verifying_key().as_bytes());
         verify_wasm_signature(wasm, sig.to_bytes().as_slice(), &pk_hex).expect("valid sig");
-    }
 
-    fn pubkey_hex(bytes: &[u8; 32]) -> String {
-        bytes.iter().map(|b| format!("{b:02x}")).collect()
-    }
-
-    #[test]
-    fn verify_rejects_tampered_wasm() {
-        let signing_key = ed25519_dalek::SigningKey::generate(&mut OsRng);
-        let wasm = b"(module)";
-        let sig = signing_key.sign(wasm);
-        let pk_hex = pubkey_hex(signing_key.verifying_key().as_bytes());
         let mut tampered = wasm.to_vec();
         tampered.push(0);
         let err = verify_wasm_signature(&tampered, sig.to_bytes().as_slice(), &pk_hex)
             .expect_err("tampered wasm");
         assert_eq!(err, SignatureError::VerifyFailed);
     }
+
+    fn pubkey_hex(bytes: &[u8; 32]) -> String {
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
 }

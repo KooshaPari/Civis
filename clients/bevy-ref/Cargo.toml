@@ -72,6 +72,9 @@ winresource = "0.1"
 [dev-dependencies]
 civ-protocol-3d = { path = "../../crates/protocol-3d" }
 serde_json = "1"
+# P2 visible-citizen-lifecycle test: the sim-side `hecs::Entity` is the unit
+# we despawn from the in-process sim world. Kept as a dev-dep only.
+hecs = "0.10"
 
 [features]
 default = []

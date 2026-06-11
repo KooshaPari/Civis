@@ -20,6 +20,31 @@ const CIVILIAN_HALF_HEIGHT: f32 = 1.6 + 1.4; // capsule half-length + radius
 /// Half-height of the building cuboid (seats its base on terrain).
 const BUILDING_HALF_HEIGHT: f32 = 7.0;
 
+/// Maximum number of civilian entities the standalone Bevy client will render
+/// concurrently. Matches the MVP cap noted in the P2 actors slice plan: the
+/// sim may carry more, but the renderer drops the tail until the cap is
+/// raised. Instanced meshes are the documented scale path beyond this cap.
+const MAX_VISIBLE_CIVILIANS: usize = 512;
+
+/// Approach speed for visual → sim-position interpolation (per second).
+/// Higher = stiffer (snaps faster); lower = more visible drift. Picked so
+/// the lerp covers ~5 sim ticks (0.5 s @ 10 Hz) inside one e-fold — a
+/// civilian walking at the Hot LOD's `movement_speed_factor` ~0.002 moves
+/// ~0.01 normalised units per tick, so 5 ticks ≈ 0.05 normalised units is
+/// the typical step the interpolator has to absorb.
+const CIVILIAN_LERP_SPEED: f32 = 8.0;
+
+/// Latest sim-derived world position for a civilian visual entity. Written
+/// by [`reconcile_civilian_lifecycle`], read by [`interpolate_civilian_transforms`].
+/// Decoupling the write-rate (sim-tick cadence) from the read-rate
+/// (frame cadence) is what lets the visual slide smoothly toward each new
+/// sim position rather than snapping.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct CivilianVisualTarget {
+    /// World-space target translation the entity is interpolating toward.
+    pub translation: Vec3,
+}
+
 /// Uniform scale for the CC0 GLTF civilian (KayKit Knight) so it reads near the
 /// gameplay capsule's height.
 // Voxel world is [0, dims] world-space with 1 voxel = 1 world unit and terrain
@@ -231,11 +256,19 @@ impl Plugin for SimBridgePlugin {
 
         // sync_visible_gameplay must also be gated: only render entities in Playing/Paused.
         // In Paused we keep entities visible (frozen) but don't tick; in menus we despawn all.
+        // P2 visible-citizen-lifecycle: the reconcile pass runs every frame so births
+        // and deaths surface the same frame the sim commits them (a tick-rate detection
+        // shortcut would miss births that fire mid-`advance_simulation`). The interpolation
+        // pass also runs every frame (sim ticks at 10 Hz; visuals must move at 60+ Hz to
+        // feel like a walk, not a teleport).
         #[cfg(feature = "egui")]
         app.add_systems(
             Update,
             (
-                sync_visible_gameplay
+                reconcile_civilian_lifecycle
+                    .run_if(in_process_sim_active)
+                    .run_if(is_playing_or_paused),
+                interpolate_civilian_transforms
                     .run_if(in_process_sim_active)
                     .run_if(is_playing_or_paused),
                 #[cfg(feature = "models")]
@@ -249,7 +282,8 @@ impl Plugin for SimBridgePlugin {
         app.add_systems(
             Update,
             (
-                sync_visible_gameplay.run_if(in_process_sim_active),
+                reconcile_civilian_lifecycle.run_if(in_process_sim_active),
+                interpolate_civilian_transforms.run_if(in_process_sim_active),
                 #[cfg(feature = "models")]
                 upgrade_pending_actor_scenes.run_if(in_process_sim_active),
             ),
@@ -421,16 +455,20 @@ fn init_gameplay_assets(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>
     });
 }
 
-/// Incrementally reconcile rendered civilians/buildings with the simulation.
+/// Reconcile rendered civilians/buildings with the simulation.
 ///
-/// Spawns one entity per stable sim id (tracked in [`RenderedEntities`]),
-/// updates the transform of already-spawned entities every change, and
-/// despawns entities whose sim id has disappeared. Civilians/buildings are
-/// seated on the procedural terrain surface and centred on the origin to match
-/// the centred terrain mesh.
+/// P2 visible-citizen-lifecycle split: this system owns the lifecycle
+/// (spawn on birth, despawn on death, write the sim-derived target
+/// position into [`CivilianVisualTarget`]) and runs every frame. The
+/// per-frame transform smoothing lives in [`interpolate_civilian_transforms`].
 ///
-/// Only runs in Playing (and Paused to keep entities visible but frozen).
-fn sync_visible_gameplay(
+/// **Why every frame and not gated on `sim.is_changed()`:** the sim uses
+/// in-place mutation of `hecs::World`, which means a hecs despawn in
+/// `phase_life` is invisible to Bevy's change-detection plumbing. We pay
+/// the O(N) query cost each frame so births and deaths surface the same
+/// frame the sim commits them, instead of being deferred until the next
+/// user-initiated `sim.snapshot` or replay event.
+fn reconcile_civilian_lifecycle(
     mut commands: Commands,
     sim: Res<SimState>,
     assets: Option<Res<GameplayAssets>>,
@@ -439,11 +477,9 @@ fn sync_visible_gameplay(
     #[cfg(feature = "models")] asset_server: Res<AssetServer>,
     mut rendered: ResMut<RenderedEntities>,
     mut transforms: Query<&mut Transform>,
+    mut targets: Query<&mut CivilianVisualTarget>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if !sim.is_changed() {
-        return;
-    }
     let Some(assets) = assets else {
         return;
     };
@@ -451,6 +487,7 @@ fn sync_visible_gameplay(
     let mut civ_count = 0_usize;
     let mut first_world_pos: Option<Vec3> = None;
     let mut seen_civilians: Vec<u64> = Vec::new();
+    let mut skipped_cap = 0_usize;
 
     for (_, (civilian, position, visual)) in sim
         .0
@@ -458,6 +495,11 @@ fn sync_visible_gameplay(
         .query::<(&Civilian, &civ_agents::Position3d, Option<&ActorVisual>)>()
         .iter()
     {
+        if civ_count >= MAX_VISIBLE_CIVILIANS {
+            // Cap reached: track the dropped count for the log line below.
+            skipped_cap += 1;
+            continue;
+        }
         let visual_kind = visual.map(|v| v.0).unwrap_or(ActorVisualKind::Humanoid);
         civ_count += 1;
         seen_civilians.push(civilian.id);
@@ -477,8 +519,15 @@ fn sync_visible_gameplay(
         }
 
         if let Some(&entity) = rendered.civilians.get(&civilian.id) {
-            if let Ok(mut transform) = transforms.get_mut(entity) {
-                transform.translation = world_pos;
+            // Already known: refresh the sim-derived *target* so the
+            // interpolation pass can slide the visual toward the latest
+            // sim position. We deliberately do NOT write `transform.translation`
+            // here — that would snap the visual every sim tick (10 Hz) and
+            // defeat the whole point of `interpolate_civilian_transforms`.
+            // The first-frame spawn already sets Transform to world_pos, so
+            // there is no visual discontinuity.
+            if let Ok(mut target) = targets.get_mut(entity) {
+                target.translation = world_pos;
             }
         } else {
             #[cfg(feature = "models")]
@@ -499,6 +548,9 @@ fn sync_visible_gameplay(
                             SimCivilianMarker,
                             FactionTint(civilian_faction_id(civilian)),
                             scene_root,
+                            CivilianVisualTarget {
+                                translation: world_pos,
+                            },
                             Transform::from_translation(world_pos - Vec3::Y * CIVILIAN_HALF_HEIGHT)
                                 .with_scale(Vec3::splat(model_scale_for(visual_kind))),
                         ))
@@ -531,6 +583,9 @@ fn sync_visible_gameplay(
                         },
                         #[cfg(not(feature = "models"))]
                         SimCivilianMarker,
+                        CivilianVisualTarget {
+                            translation: world_pos,
+                        },
                         Mesh3d(assets.civilian_mesh.clone()),
                         MeshMaterial3d(material),
                         Transform::from_translation(world_pos),
@@ -541,7 +596,11 @@ fn sync_visible_gameplay(
         }
     }
 
-    // Despawn civilians that no longer exist in the simulation.
+    // Despawn civilians that no longer exist in the simulation (death path).
+    // This is the visibility half of the lifecycle: every frame we walk the
+    // map and drop entities whose sim id is gone, so the world stays clean
+    // even when the sim despawns civilians faster than the next hecs query
+    // re-runs.
     rendered.civilians.retain(|id, &mut entity| {
         if seen_civilians.contains(id) {
             true
@@ -627,12 +686,47 @@ fn sync_visible_gameplay(
         }
     });
 
-    info!(
-        "[sim_bridge] civilians={} buildings={} civilian[0] world={:?}",
-        civ_count,
-        seen_buildings.len(),
-        first_world_pos
-    );
+    if skipped_cap > 0 {
+        info!(
+            "[sim_bridge] civilians visible={} (cap={}, dropped {} above cap) buildings={} civilian[0] world={:?}",
+            civ_count,
+            MAX_VISIBLE_CIVILIANS,
+            skipped_cap,
+            seen_buildings.len(),
+            first_world_pos
+        );
+    } else {
+        info!(
+            "[sim_bridge] civilians={} buildings={} civilian[0] world={:?}",
+            civ_count,
+            seen_buildings.len(),
+            first_world_pos
+        );
+    }
+}
+
+/// Smoothly slide every visible civilian's transform toward its latest sim
+/// position. Pairs with [`reconcile_civilian_lifecycle`], which writes
+/// [`CivilianVisualTarget`] once per sim tick. This system runs every frame
+/// so civilians move at the renderer's cadence (60+ Hz) rather than the
+/// sim's (10 Hz), making the walk read as a walk instead of a teleport.
+///
+/// Uses an exponential approach (`1 - exp(-k·dt)`) so the lerp factor is
+/// frame-rate independent: doubling the dt roughly doubles the closure
+/// fraction. `CIVILIAN_LERP_SPEED` is the picked stiffness.
+fn interpolate_civilian_transforms(
+    time: Res<Time>,
+    mut query: Query<(&mut Transform, &CivilianVisualTarget), With<SimCivilianMarker>>,
+) {
+    let dt = time.delta_secs();
+    // Clamp dt so a long pause (debugger break, alt-tab, slow CI) doesn't
+    // catapult the visual past the target in a single frame — same
+    // robustness rule Bevy's `Slerp` interpolators use.
+    let dt = dt.min(0.1);
+    let alpha = 1.0 - (-CIVILIAN_LERP_SPEED * dt).exp();
+    for (mut transform, target) in &mut query {
+        transform.translation = transform.translation.lerp(target.translation, alpha);
+    }
 }
 
 fn civilian_faction_id(civilian: &Civilian) -> u32 {
@@ -990,5 +1084,215 @@ mod tests {
         );
         assert!(world.x >= 0.0 && world.x <= dims[0] as f32);
         assert!(world.z >= 0.0 && world.z <= dims[2] as f32);
+    }
+
+    // -------------------------------------------------------------------
+    // P2 visible-citizen-lifecycle — reconcile + interpolate unit tests.
+    //
+    // These build a minimal Bevy `App` with the sim-bridge resources and
+    // systems, drive the hecs sim directly (spawn/despawn/tick), then
+    // assert the resulting entity population + transforms. The mesh /
+    // material handles are dummy — the tests never render, they only
+    // assert the (de)spawn + transform pipeline.
+    // -------------------------------------------------------------------
+
+    #[cfg(feature = "bevy")]
+    fn build_bridge_app() -> App {
+        let mut app = App::new();
+        // MinimalPlugins gives us `Time` (the interpolator's clock). We add
+        // `AssetPlugin` + `ImagePlugin` separately so `Assets<Mesh>` /
+        // `Assets<StandardMaterial>` exist (the `from_world`-init that
+        // installs them lives in `bevy::prelude::PipelinedRenderingPlugin`).
+        // Headless (no GPU) — we never render, only build the (de)spawn +
+        // transform pipeline.
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::asset::AssetPlugin::default())
+            .add_plugins(bevy::image::ImagePlugin::default())
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_resource::<SimState>()
+            .init_resource::<RenderedEntities>()
+            .add_systems(Startup, |mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>| {
+                let civilian_mesh = meshes
+                    .add(Mesh::from(bevy::math::primitives::Capsule3d::new(1.4, 3.2)));
+                let building_mesh = meshes.add(Mesh::from(bevy::math::primitives::Cuboid::new(
+                    7.0, 14.0, 7.0,
+                )));
+                commands.insert_resource(GameplayAssets {
+                    civilian_mesh,
+                    building_mesh,
+                });
+            })
+            .add_systems(Update, (reconcile_civilian_lifecycle, interpolate_civilian_transforms));
+        app
+    }
+
+    /// P2 visible-citizen-lifecycle — when a sim civilian exists, a Bevy
+    /// `SimCivilianMarker` entity is spawned carrying the sim-derived
+    /// world position in `CivilianVisualTarget`. Guards the **birth**
+    /// half of the lifecycle slice.
+    #[cfg(feature = "bevy")]
+    #[test]
+    fn reconcile_spawns_entity_per_sim_civilian() {
+        use civ_agents::Civilian;
+        let mut app = build_bridge_app();
+
+        // Sanity: a fresh sim already carries a population.
+        let sim_count = {
+            let sim = app.world().resource::<SimState>();
+            sim.0.world.query::<&Civilian>().iter().count()
+        };
+        assert!(sim_count > 0, "default sim should have at least one civilian");
+
+        // First reconcile: produces one entity per sim civilian.
+        app.update();
+
+        let bevy_count = app
+            .world_mut()
+            .query_filtered::<Entity, With<SimCivilianMarker>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            bevy_count, sim_count,
+            "reconcile must spawn one Bevy entity per sim civilian"
+        );
+
+        // Every spawned entity must carry a CivilianVisualTarget with a
+        // finite translation (proves the sim → world position math wired
+        // through the bridge, not just the marker).
+        let mut bad = 0_usize;
+        let mut q = app
+            .world_mut()
+            .query::<(&Transform, &CivilianVisualTarget)>();
+        for (t, target) in q.iter(app.world()) {
+            if !t.translation.is_finite() || !target.translation.is_finite() {
+                bad += 1;
+            }
+            // First-spawn frame: target and transform must agree (the
+            // interpolator hasn't run yet, so the transform == target).
+            if (t.translation - target.translation).length() > f32::EPSILON {
+                bad += 1;
+            }
+        }
+        assert_eq!(bad, 0, "every visual must have finite, aligned transform+target");
+    }
+
+    /// P2 visible-citizen-lifecycle — when a sim civilian is despawned
+    /// from the hecs world (death path), the next reconcile drops the
+    /// matching Bevy entity. Guards the **death** half of the slice.
+    #[cfg(feature = "bevy")]
+    #[test]
+    fn reconcile_despawns_entity_when_sim_citizen_dies() {
+        use civ_agents::Civilian;
+        let mut app = build_bridge_app();
+
+        // Spawn everything.
+        app.update();
+        let before = app
+            .world_mut()
+            .query_filtered::<Entity, With<SimCivilianMarker>>()
+            .iter(app.world())
+            .count();
+        assert!(before > 0);
+
+        // Kill every civilian in the hecs world. Hold a single
+        // `&mut SimState` borrow for the whole despawn pass so the
+        // hecs query borrows don't outlive `sim`.
+        let killed: usize = {
+            let mut sim = app.world_mut().resource_mut::<SimState>();
+            let to_kill: Vec<hecs::Entity> = sim
+                .0
+                .world
+                .query::<&Civilian>()
+                .iter()
+                .map(|(e, _)| e)
+                .collect();
+            for e in to_kill {
+                let _ = sim.0.world.despawn(e);
+            }
+            // Sanity: sim is empty after the pass.
+            let remaining = sim.0.world.query::<&Civilian>().iter().count();
+            assert_eq!(remaining, 0);
+            before
+        };
+        assert!(killed > 0);
+
+        // One more reconcile → all Bevy marker entities must be gone.
+        app.update();
+        let after = app
+            .world_mut()
+            .query_filtered::<Entity, With<SimCivilianMarker>>()
+            .iter(app.world())
+            .count();
+        assert_eq!(
+            after, 0,
+            "every despawned sim civilian must drop its Bevy entity on the next reconcile"
+        );
+    }
+
+    /// P2 visible-citizen-lifecycle — the interpolator slides the visual
+    /// transform toward the sim target each frame, so an entity whose
+    /// transform starts off-target moves part-way toward the target
+    /// (not the full distance) in a single update. This is the
+    /// smoothness contract the slice promises: civilians walk, they
+    /// don't teleport.
+    #[cfg(feature = "bevy")]
+    #[test]
+    fn interpolation_moves_visual_toward_target() {
+        let mut app = build_bridge_app();
+
+        // First reconcile spawns the entities at their sim positions.
+        app.update();
+
+        // Pick any spawned entity, capture its (sim-aligned) target, and
+        // yank its Transform back to origin. The reconciler has nothing
+        // to change about the target (sim hasn't moved), so on the
+        // *next* update the interpolator will lerp Transform from
+        // origin toward the still-unchanged target. The reconciler
+        // runs *before* the interpolator in the schedule tuple, so we
+        // don't fight a stale target write.
+        let (entity, target_translation) = {
+            let mut q = app
+                .world_mut()
+                .query::<(Entity, &Transform, &CivilianVisualTarget)>();
+            q.iter(app.world())
+                .map(|(e, _, t)| (e, t.translation))
+                .next()
+                .expect("at least one civilian visual")
+        };
+        {
+            let mut q = app.world_mut().query::<&mut Transform>();
+            let Ok(mut t) = q.get_mut(app.world_mut(), entity) else {
+                panic!("entity must have a Transform")
+            };
+            t.translation = Vec3::ZERO;
+        }
+
+        // Advance the clock by 0.1 s and run an update. With
+        // CIVILIAN_LERP_SPEED = 8.0, the per-frame alpha is
+        // 1 - exp(-0.8) ≈ 0.55, so the visual should move ~55% of
+        // the gap (not the full distance) in a single update.
+        {
+            let mut time = app.world_mut().resource_mut::<Time>();
+            time.advance_by(std::time::Duration::from_secs_f64(0.1));
+        }
+        app.update();
+
+        let after = app
+            .world()
+            .entity(entity)
+            .get::<Transform>()
+            .unwrap()
+            .translation;
+        let traveled = (after - Vec3::ZERO).length();
+        let full = (target_translation - Vec3::ZERO).length();
+        assert!(
+            traveled > 0.0,
+            "interpolator should move visual toward target: after={after:?}"
+        );
+        assert!(
+            traveled < full,
+            "interpolator should not snap full distance in one frame: traveled={traveled} full={full}"
+        );
     }
 }

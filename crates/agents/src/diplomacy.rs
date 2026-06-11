@@ -61,9 +61,9 @@ pub struct DiplomacySignal {
 pub struct GriefAccumulator {
     /// Per-pair grievance scores keyed by canonical `(min_id, max_id)` pair.
     pub pairs: std::collections::HashMap<(u32, u32), f32>,
-    /// Exponential decay rate applied every tick (suggested: 0.01).
+    /// Exponential decay rate applied every tick (suggested: 0.03).
     pub decay_rate: f32,
-    /// Weight per engagement added to the accumulator (suggested: 0.05).
+    /// Weight per engagement added to the accumulator (suggested: 0.02).
     pub engagement_weight: f32,
 }
 
@@ -73,8 +73,8 @@ impl GriefAccumulator {
     pub fn new() -> Self {
         Self {
             pairs: std::collections::HashMap::new(),
-            decay_rate: 0.01,
-            engagement_weight: 0.05,
+            decay_rate: 0.03,
+            engagement_weight: 0.02,
         }
     }
 
@@ -212,6 +212,7 @@ impl DiplomacyMatrix {
         const W_GRIEVANCE: f32 = 0.18;
         const W_COMPLEMENT: f32 = 0.06;
         const W_SCARCITY: f32 = 0.10;
+        const W_RELAX: f32 = 0.01;
 
         let key = Self::key(a, b);
         let entry = self
@@ -226,7 +227,9 @@ impl DiplomacyMatrix {
             - signal.combat_grievance * W_GRIEVANCE
             + signal.need_complementarity * W_COMPLEMENT
             - signal.scarcity_pressure * W_SCARCITY;
-        entry.score = (entry.score + drift).clamp(-1.0, 1.0);
+        // Light neutral relaxation models exhaustion / cooling when the live
+        // gradients stop pushing the pair in one direction.
+        entry.score = ((entry.score + drift) * (1.0 - W_RELAX)).clamp(-1.0, 1.0);
         entry.samples = entry.samples.saturating_add(1);
 
         DiplomacyOutcome {

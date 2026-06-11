@@ -40,6 +40,14 @@ namespace DINOForge.Runtime.Bridge
                 // Other archetypes
                 { "cavalry",         "Components.CavalryUnit" },
                 { "siege",           "Components.SiegeUnit" },
+                // DINO does not expose a dedicated vehicle marker in the runtime bridge.
+                // The closest confirmed ECS archetypes are the existing mobility tags used
+                // everywhere else in the runtime: light/fast chassis behave like cavalry,
+                // while heavy/main-battle chassis behave like siege.
+                { "fast_vehicle",    "Components.CavalryUnit" },
+                { "light_vehicle",   "Components.CavalryUnit" },
+                { "heavy_vehicle",   "Components.SiegeUnit" },
+                { "main_battle_vehicle", "Components.SiegeUnit" },
 
                 // Intentionally null for stat injection: PackStatInjector skips aerial_fighter
                 // (AerialSpawnSystem owns aerial behaviour). NOTE: the visual mesh swap targets

@@ -14,7 +14,7 @@ permissions:
 jobs:
   manifest-verify:
     name: manifest-verify (cloud)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -24,12 +24,12 @@ jobs:
   coverage:
     # Manual escape hatch: rerun the FR coverage sweep on the cloud.
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
       - name: FR coverage
         run: bash scripts/fr-coverage/run-fr-coverage.sh

@@ -14,7 +14,7 @@ permissions:
 jobs:
   quality-manifest:
     name: quality-manifest (cloud verify)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -25,10 +25,10 @@ jobs:
   quality-full:
     name: quality-full (manual)
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:

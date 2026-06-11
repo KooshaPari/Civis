@@ -62,3 +62,7 @@ target-ci/
 /dist/
 target-check-build/
 *-target/
+.agileplus/
+
+# Cargo check/clippy/test scratch target dirs (never commit build artifacts)
+target-check-*/

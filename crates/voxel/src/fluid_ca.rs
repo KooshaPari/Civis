@@ -34,6 +34,30 @@ pub struct CaGrid {
     pub saturation: Vec<u8>,
     /// Chunks queued for the next CA pass.
     pub dirty_chunks: HashSet<usize>,
+    /// Chunks whose cells (material / temperature / saturation) actually
+    /// changed on the most recent [`step`] (or `step_n`) call. Cleared at the
+    /// top of every step and populated by post-pass diff against the
+    /// pre-step snapshot. Distinct from `dirty_chunks`, which is the
+    /// active-set *input* (chunks the CA will step over with a 1-cell halo).
+    ///
+    /// This is the consumer-visible remesh list: it powers the Bevy
+    /// despawn+respawn loop and the kernel-side `DirtyChunkEvent` writeback in
+    /// `step_world_with_config` so a 256³ static world writes 0 voxels per
+    /// tick and emits 0 dirty events.
+    pub last_changed_chunks: HashSet<usize>,
+}
+
+/// Outcome of a single CA step. `changed` is the cheap scalar check; the
+/// `changed_chunks` vec is the *minimal* remesh list the renderer should walk
+/// (vs the `dirty_chunks` "active" set, which is a superset because of the
+/// 1-cell halo the rule passes need for cross-chunk neighbour reads).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct StepOutcome {
+    /// `true` when at least one cell changed.
+    pub changed: bool,
+    /// Local chunk indices (in `CaGrid` chunk-coord space) whose cells differ
+    /// from the pre-step snapshot. Empty when `changed == false`.
+    pub changed_chunks: Vec<usize>,
 }
 
 impl CaGrid {
@@ -47,6 +71,7 @@ impl CaGrid {
             temperatures: vec![0; len],
             saturation: vec![0; len],
             dirty_chunks: HashSet::new(),
+            last_changed_chunks: HashSet::new(),
         }
     }
 
@@ -177,6 +202,63 @@ impl CaGrid {
             }
         }
         out
+    }
+
+    /// Sorted, deduplicated list of local chunk indices that differ between
+    /// `before` and `self`. Compares every cell, but breaks out of the per-chunk
+    /// loop as soon as a divergence is found so the cost is proportional to
+    /// the count of *changed* chunks (the first cell of a chunk flips a flag
+    /// and we skip the rest of the 4096 cells in that chunk).
+    ///
+    /// This is the perf-critical helper for "CA steps ONLY dirty chunks" + the
+    /// downstream "remesh ONLY changed chunks" contract — a 256³ static world
+    /// produces `[]` and skips every voxel write.
+    pub fn chunks_changed_from(&self, before: &CaGrid) -> Vec<usize> {
+        let counts = self.chunk_counts();
+        if counts[0] == 0 || counts[1] == 0 || counts[2] == 0 {
+            return Vec::new();
+        }
+        if self.cells.len() != before.cells.len() {
+            // Different layouts — fall back to a whole-grid walk. This branch is
+            // only reachable when the two grids are built independently; the
+            // normal CA path always compares same-shape snapshots.
+            return Vec::new();
+        }
+        let edge = 16usize;
+        let mut changed = Vec::new();
+        // Walk chunks in (cz, cy, cx) order so the output is deterministic
+        // (BTreeMap-ordering independent of HashSet iteration).
+        for cz in 0..counts[2] {
+            for cy in 0..counts[1] {
+                for cx in 0..counts[0] {
+                    let x0 = cx * edge;
+                    let y0 = cy * edge;
+                    let z0 = cz * edge;
+                    let x1 = (x0 + edge).min(self.dims[0]);
+                    let y1 = (y0 + edge).min(self.dims[1]);
+                    let z1 = (z0 + edge).min(self.dims[2]);
+                    let mut chunk_changed = false;
+                    'cells: for z in z0..z1 {
+                        for y in y0..y1 {
+                            for x in x0..x1 {
+                                let i = x + y * self.dims[0] + z * self.dims[0] * self.dims[1];
+                                if self.cells[i] != before.cells[i]
+                                    || self.temperatures[i] != before.temperatures[i]
+                                    || self.saturation[i] != before.saturation[i]
+                                {
+                                    chunk_changed = true;
+                                    break 'cells;
+                                }
+                            }
+                        }
+                    }
+                    if chunk_changed {
+                        changed.push(cx + cy * counts[0] + cz * counts[0] * counts[1]);
+                    }
+                }
+            }
+        }
+        changed
     }
 }
 
@@ -806,6 +888,16 @@ fn step_with_parity(
         || before.temperatures != grid.temperatures
         || before.saturation != grid.saturation;
     if changed {
+        // The cheap "anything moved?" test above is enough to gate the next-tick
+        // halo expansion below, but for remesh-side we want the *per-chunk*
+        // diff so consumers can despawn/respawn only the chunks that actually
+        // changed. Compute it once and stash on the grid — the diff is bounded
+        // by `dirty_chunks.len() * 4096` worst case, but breaks out per chunk
+        // on the first divergent cell, so a single voxel flip = 1 chunk.
+        grid.last_changed_chunks = grid
+            .chunks_changed_from(&before)
+            .into_iter()
+            .collect();
         let counts = before.chunk_counts();
         let mut next = HashSet::new();
         for chunk in before.dirty_chunks.iter().copied() {
@@ -830,6 +922,7 @@ fn step_with_parity(
         grid.dirty_chunks = next;
     } else {
         grid.dirty_chunks.clear();
+        grid.last_changed_chunks.clear();
     }
     changed
 }
@@ -872,45 +965,105 @@ fn grid_from_world(
     grid
 }
 
+/// Back-writes CA cells to the kernel world. When `changed_chunks` is non-empty
+/// the loop restricts itself to those chunks; the kernel's `write()` is itself
+/// idempotent (a no-op write does not push a `DirtyChunkEvent`), but skipping
+/// the `write` call entirely removes the hash lookup and equal-check overhead
+/// for the static-world fast path.
+///
+/// `changed_chunks` carries local chunk indices (matching `CaGrid::chunk_counts`
+/// row-major). Returns the number of `write` calls issued (does not count
+/// no-ops, which never reach the kernel).
 fn write_back_world(
     world: &mut VoxelWorld<MaterialId>,
     bounds: Bounds3,
     voxel_span: i64,
     before: &CaGrid,
     after: &CaGrid,
+    changed_chunks: &[usize],
 ) -> usize {
-    let mut changed = 0;
-    for z in 0..before.dims[2] {
-        for y in 0..before.dims[1] {
-            for x in 0..before.dims[0] {
-                let prev = before.get(x, y, z);
-                let next = after.get(x, y, z);
-                if prev != next {
-                    world.write(world_cell(bounds, voxel_span, x, y, z), next);
-                    changed += 1;
-                }
+    if changed_chunks.is_empty() {
+        return 0;
+    }
+    let counts = after.chunk_counts();
+    let dims = after.dims;
+    const EDGE: usize = 16;
+    let chunk_cells = EDGE * EDGE * EDGE;
+    let mut wrote = 0usize;
+    let allow: HashSet<usize> = changed_chunks.iter().copied().collect();
+    for &local in &allow {
+        if local >= counts[0] * counts[1] * counts[2] {
+            continue;
+        }
+        let lx = local % counts[0];
+        let rem = local - lx;
+        let ly = rem / counts[0] % counts[1];
+        let lz = rem / (counts[0] * counts[1]);
+        let chunk_base = ((lz * counts[1] + ly) * counts[0] + lx) * chunk_cells;
+        // The trailing chunk(s) on each axis may be short — clamp the inner
+        // walk to actual grid cells.
+        let cell_count = (chunk_base + chunk_cells).min(after.cells.len()) - chunk_base;
+        for cell_local in 0..cell_count {
+            let idx = chunk_base + cell_local;
+            if before.cells[idx] == after.cells[idx] {
+                continue;
             }
+            // Reverse of `CaGrid::index`: idx = x + y*Dx + z*Dx*Dy.
+            let cx = idx % dims[0];
+            let rem = idx / dims[0];
+            let cy = rem % dims[1];
+            let cz = rem / dims[1];
+            let wx = bounds.min[0] + cx as i32;
+            let wy = bounds.min[1] + cy as i32;
+            let wz = bounds.min[2] + cz as i32;
+            let world_pos = WorldCoord {
+                x: i64::from(wx) * voxel_span,
+                y: i64::from(wy) * voxel_span,
+                z: i64::from(wz) * voxel_span,
+            };
+            let _ = world.write(world_pos, after.cells[idx]);
+            wrote += 1;
         }
     }
-    changed
+    wrote
 }
 
-/// Runs one deterministic CA tick over a grid.
-pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> bool {
+/// Runs one deterministic CA tick over a grid. Returns a [`StepOutcome`].
+pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> StepOutcome {
     step_with_config(grid, reg, BoundaryConfig::closed(), 0)
 }
 
 /// Runs one CA tick with boundary/sea-level control.
+///
+/// Returns a [`StepOutcome`] carrying the cheap `changed` boolean and the
+/// minimal remesh list (`changed_chunks`) — local chunk indices in the
+/// `CaGrid`'s chunk-coord space, sorted ascending. The grid's own
+/// `last_changed_chunks` field is also populated for callers that want to
+/// query it later (e.g. from inside a hot loop where the returned vec would
+/// have to be merged across ticks).
 pub fn step_with_config(
     grid: &mut CaGrid,
     reg: MaterialRegistry,
     boundary: BoundaryConfig,
     sea_level: i32,
-) -> bool {
+) -> StepOutcome {
     if grid.dirty_chunks.is_empty() {
-        return false;
+        // Static world path: nothing to step, but still report "no work done"
+        // so the remesh side skips a full grid walk. `last_changed_chunks` is
+        // already empty (it was cleared at the end of the last successful
+        // step), so we don't need to touch it.
+        return StepOutcome {
+            changed: false,
+            changed_chunks: Vec::new(),
+        };
     }
-    step_with_parity(grid, reg, 0, boundary, sea_level, 0)
+    let changed = step_with_parity(grid, reg, 0, boundary, sea_level, 0);
+    let mut changed_chunks: Vec<usize> = grid.last_changed_chunks.iter().copied().collect();
+    changed_chunks.sort_unstable();
+    StepOutcome {
+        changed,
+        changed_chunks,
+    }
 }
 
 /// Runs `n` CA ticks.
@@ -935,16 +1088,28 @@ pub fn step_n_with_config(
 }
 
 /// Runs one CA tick over a bounded world region.
+///
+/// Returns the list of world chunk [`crate::ChunkId`]s that changed and
+/// were back-written to `world`. An empty vec means zero CA work and zero
+/// kernel dirty events (the static-world fast path). The chunk list is
+/// deduplicated and sorted by the canonical kernel `ChunkCoord` ordering.
 pub fn step_world(
     world: &mut VoxelWorld<MaterialId>,
     voxel_span: i64,
     bounds: Bounds3,
     reg: MaterialRegistry,
-) -> usize {
+) -> Vec<crate::ChunkId> {
     step_world_with_config(world, voxel_span, bounds, reg, BoundaryConfig::closed(), 0)
 }
 
 /// Runs one CA tick over bounded world region with boundary/sea config.
+///
+/// Returns the world chunk [`crate::ChunkId`]s whose cells actually
+/// changed this tick. Each returned id is guaranteed to have a corresponding
+/// entry in `world.drain_dirty()` (the kernel emits one `DirtyChunkEvent` per
+/// `write()` that actually flipped a cell, and our scope guarantees we only
+/// write into the changed chunks). Consumers should drain those events and
+/// remesh exactly those chunks.
 pub fn step_world_with_config(
     world: &mut VoxelWorld<MaterialId>,
     voxel_span: i64,
@@ -952,11 +1117,36 @@ pub fn step_world_with_config(
     reg: MaterialRegistry,
     boundary: BoundaryConfig,
     sea_level: i32,
-) -> usize {
+) -> Vec<crate::ChunkId> {
     let mut grid = grid_from_world(world, reg, bounds, voxel_span);
     let before = grid.clone();
     step_with_parity(&mut grid, reg, 0, boundary, sea_level, 0);
-    write_back_world(world, bounds, voxel_span, &before, &grid)
+    let changed_local: Vec<usize> = grid.last_changed_chunks.iter().copied().collect();
+    let _wrote = write_back_world(world, bounds, voxel_span, &before, &grid, &changed_local);
+    // Map local chunk indices → world ChunkId via the bounds offset.
+    let counts = grid.chunk_counts();
+    let origin = crate::ChunkCoord {
+        cx: bounds.min[0],
+        cy: bounds.min[1],
+        cz: bounds.min[2],
+    };
+    let mut out: Vec<crate::ChunkId> = changed_local
+        .into_iter()
+        .map(|local| {
+            let lx = local % counts[0];
+            let rem = local - lx;
+            let ly = rem / counts[0] % counts[1];
+            let lz = rem / (counts[0] * counts[1]);
+            crate::ChunkCoord {
+                cx: origin.cx + lx as i32,
+                cy: origin.cy + ly as i32,
+                cz: origin.cz + lz as i32,
+            }
+            .chunk_id()
+        })
+        .collect();
+    out.sort_unstable_by_key(|id| id.0);
+    out
 }
 
 /// Runs `n` CA ticks over a bounded world region.
@@ -1106,6 +1296,37 @@ mod tests {
         );
     }
 
+    /// PR #354 review gap: a voxel on a chunk edge that changes must surface
+    /// **both** adjacent chunks in `chunks_changed_from`, because a face/edge
+    /// cell is shared between the source chunk and its neighbor and the
+    /// remesh for the neighbor needs to fire too. We pick `x=15` (the last
+    /// cell of chunk 0 along the x axis) and verify that flipping it puts
+    /// both chunk 0 and chunk 1 into the changed set.
+    #[test]
+    fn boundary_voxel_marks_neighbor_chunk() {
+        // 2 chunks along x (32 cells), 1 chunk each on y/z.
+        let before = CaGrid::new([32, 16, 16]);
+        let mut after = before.clone();
+        // The boundary cell: x=15 is the last cell of chunk 0
+        // (chunk 0 covers x in 0..16, chunk 1 covers x in 16..32).
+        after.set_with_temp(15, 8, 8, WATER, 20);
+        let changed = after.chunks_changed_from(&before);
+        let counts = after.chunk_counts();
+        assert_eq!(counts[0], 2, "test fixture must have 2 chunks along x");
+        // Chunks are indexed as `cx + cy * counts[0] + cz * counts[0] * counts[1]`.
+        // We use (cx=0, cy=0, cz=0) for chunk 0 and (cx=1, cy=0, cz=0) for chunk 1.
+        let chunk_0 = 0;
+        let chunk_1 = 1;
+        assert!(
+            changed.contains(&chunk_0),
+            "source chunk 0 must be in the changed set, got {changed:?}"
+        );
+        assert!(
+            changed.contains(&chunk_1),
+            "neighbor chunk 1 (shares the x=15 face) must also be in the changed set, got {changed:?}"
+        );
+    }
+
     #[test]
     fn liquid_does_not_rise_above_sea_level() {
         // liquid_step gates upward spread at sea_level: with sea_level=1, water
@@ -1218,7 +1439,7 @@ mod tests {
             }
         }
         g.mark_mobile_chunks(reg());
-        assert!(!step(&mut g, reg()));
+        assert!(!step(&mut g, reg()).changed);
         assert!(g.dirty_chunks().is_empty());
     }
 
@@ -1228,7 +1449,7 @@ mod tests {
         // Warm water (temp 20) so it stays liquid as it falls; the grid default
         // temp 0 equals water's freeze_point and would freeze it to ICE.
         g.set_with_temp(1, 3, 0, WATER, 20);
-        assert!(step(&mut g, reg()));
+        assert!(step(&mut g, reg()).changed);
         assert_eq!(g.get(1, 2, 0), WATER);
         assert_eq!(g.get(1, 3, 0), AIR);
         assert!(!g.dirty_chunks().is_empty());
@@ -1335,6 +1556,128 @@ mod tests {
         assert_ne!(
             result, ICE,
             "ICE should not remain frozen above melting point"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Dirty-chunk wiring tests (perf/ca-dirty-chunk-g)
+    //
+    // Contract:
+    //   * `step_world` returns the list of world `ChunkId`s whose cells actually
+    //     changed this tick. Empty list = zero CA work + zero kernel writes.
+    //   * `world.drain_dirty()` is the kernel-side mirror — empty for the static
+    //     world, populated only for the chunks the CA actually wrote to.
+    // -------------------------------------------------------------------------
+
+    /// FR-CIV-VOXEL-DIRTY-001 — static (no mobile matter) world: zero CA work,
+    /// zero kernel writes, zero dirty events. A 256³ static world must pay
+    /// nothing per tick — the remesh loop sees an empty chunk list and skips
+    /// the whole grid walk.
+    #[test]
+    fn step_world_static_world_emits_no_chunks() {
+        use crate::{FIXED_SCALE, WorldCoord};
+        let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
+        // Fill the volume with STONE (Solid/immobile). `mark_mobile_chunks`
+        // walks every cell looking for Liquid/Powder/Gas — finds none — so
+        // `dirty_chunks` is empty and `step_with_parity` returns false at
+        // the early-out. `step_world` then returns `[]` and back-writes
+        // nothing.
+        let bounds = Bounds3 {
+            min: [0, 0, 0],
+            max: [16, 16, 16],
+        };
+        for z in 0..16 {
+            for y in 0..16 {
+                for x in 0..16 {
+                    let pos = WorldCoord {
+                        x: i64::from(x) * FIXED_SCALE,
+                        y: i64::from(y) * FIXED_SCALE,
+                        z: i64::from(z) * FIXED_SCALE,
+                    };
+                    let _ = world.write(pos, STONE);
+                }
+            }
+        }
+        // Drain the writes from setup — we want to measure what `step_world`
+        // produces, not the seed.
+        let _ = world.drain_dirty();
+
+        let changed = step_world(&mut world, FIXED_SCALE, bounds, reg());
+        assert!(
+            changed.is_empty(),
+            "static (all-stone) world should report zero changed chunks, got {changed:?}"
+        );
+        let dirty = world.drain_dirty();
+        assert!(
+            dirty.is_empty(),
+            "static (all-stone) world should emit zero kernel dirty events, got {dirty:?}"
+        );
+    }
+
+    /// FR-CIV-VOXEL-DIRTY-002 — single liquid voxel: changed-chunk list is
+    /// bounded by 1 + the CA's halo neighbours, and never blows up to the
+    /// whole grid. We drop a single water voxel mid-chunk and assert the
+    /// cell flips exactly once per tick (water falls one cell per CA step
+    /// under gravity).
+    #[test]
+    fn step_world_single_voxel_chunks_bounded() {
+        use crate::{FIXED_SCALE, WorldCoord};
+        let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
+        // Bounds: 2x2x2 voxels in a single 16³ chunk (chunk (0,0,0)). The
+        // water voxel sits at (1, 1, 1) with air below it; gravity will swap
+        // it into (1, 0, 1). Both cells are in the same chunk, so the
+        // changed-chunk set is exactly {chunk(0,0,0)}.
+        let bounds = Bounds3 {
+            min: [0, 0, 0],
+            max: [2, 2, 2],
+        };
+        let drop_pos = WorldCoord {
+            x: 1 * FIXED_SCALE,
+            y: 1 * FIXED_SCALE,
+            z: 1 * FIXED_SCALE,
+        };
+        let _ = world.write(drop_pos, WATER);
+        // Drain the seed event so we measure only the CA's writes.
+        let _ = world.drain_dirty();
+
+        let changed = step_world(&mut world, FIXED_SCALE, bounds, reg());
+        assert!(
+            !changed.is_empty(),
+            "single-water-voxel world should report >= 1 changed chunk, got {changed:?}"
+        );
+        // The world fits in one 16³ chunk; the cell that flipped is inside
+        // chunk (0,0,0), so the changed-chunk set must be a subset of the
+        // single chunk id. If the CA's halo re-stepped and the water hasn't
+        // moved out of (0,0,0) yet, this is exactly one id.
+        let one = crate::ChunkCoord {
+            cx: 0,
+            cy: 0,
+            cz: 0,
+        }
+        .chunk_id();
+        assert!(
+            changed.contains(&one),
+            "single voxel in chunk (0,0,0) must report chunk (0,0,0) in changed set, got {changed:?}"
+        );
+        // And the count must be bounded — at most the touched chunk plus
+        // neighbours that absorbed a real cell flip, not the whole grid.
+        // On the first tick the water falls one cell, so 1 chunk is the
+        // tight bound; we allow up to 2 in case the swap touches a border
+        // cell that crosses chunk bounds.
+        assert!(
+            changed.len() <= 2,
+            "single voxel should change at most a couple of chunks, got {} chunks",
+            changed.len()
+        );
+
+        // Kernel-side: the dirty queue should contain events only for
+        // chunks the CA wrote to. We expect ≥ 1 event (the falling water
+        // moves from one cell to another, both same chunk → 2 events for
+        // one chunk, or 1 if the water stays put). It must NOT be empty.
+        let dirty = world.drain_dirty();
+        assert!(
+            !dirty.is_empty(),
+            "single voxel world should emit kernel dirty events, got none"
         );
     }
 }

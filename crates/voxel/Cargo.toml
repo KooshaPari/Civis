@@ -18,3 +18,5 @@ phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-voxel.git", r
 
 [dev-dependencies]
 proptest = "1.4"
+# Used by the PBR substrate unit tests to round-trip attestation manifests.
+serde_json = "1"

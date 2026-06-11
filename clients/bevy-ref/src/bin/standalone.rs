@@ -91,7 +91,7 @@ fn main() {
         // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
         // second at INFO so the 90s frame-budget profile has a measurable
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
-        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin)
+        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
         // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
         // embedded icon on the primary winit window at startup.

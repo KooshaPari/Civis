@@ -342,6 +342,7 @@ impl Default for VoxelSimState {
                 temperatures: Vec::new(),
                 saturation: Vec::new(),
                 dirty_chunks: HashSet::new(),
+                last_changed_chunks: HashSet::new(),
             },
             tick: 0,
             accumulator: 0.0,
@@ -393,6 +394,7 @@ pub fn build_voxel_world(
         temperatures: vec![20; cell_count],
         saturation: vec![0; cell_count],
         dirty_chunks: HashSet::new(),
+        last_changed_chunks: HashSet::new(),
     };
     let t_grid_init = std::time::Instant::now();
     state.grid.mark_mobile_chunks(MaterialRegistry::standard());

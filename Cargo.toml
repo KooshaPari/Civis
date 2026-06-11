@@ -41,6 +41,19 @@ edition = "2021"
 authors = ["CivLab"]
 license = "MIT OR Apache-2.0"
 rust-version = "1.75"
+repository = "https://github.com/KooshaPari/Civis"
+
+[workspace.dependencies]
+anyhow = "1"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+thiserror = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # --- Dev-loop profiles (see docs/development-guide/dev-loop.md) ---
 # These tune ONLY the dev profile; `release` is untouched, so release

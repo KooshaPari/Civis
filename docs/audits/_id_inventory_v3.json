@@ -1454,9 +1454,17 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/README.md:15",
+        "crates/audio/README.md:16",
+        "crates/audio/src/lib.rs:4",
+        "crates/audio/src/lib.rs:14",
+        "crates/audio/src/mix.rs:1",
         "docs/design/audio-direction.md:294"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/bus.rs:208",
+        "crates/audio/src/mix.rs:193"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-002",
@@ -1465,9 +1473,14 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/README.md:17",
+        "crates/audio/src/ambient.rs:1",
+        "crates/audio/src/lib.rs:17",
         "docs/design/audio-direction.md:295"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/ambient.rs:507"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-003",
@@ -1487,9 +1500,14 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/README.md:18",
+        "crates/audio/src/lib.rs:20",
+        "crates/audio/src/mood.rs:1",
         "docs/design/audio-direction.md:297"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/mood.rs:400"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-005",
@@ -1509,9 +1527,14 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/README.md:19",
+        "crates/audio/src/lib.rs:23",
+        "crates/audio/src/sfx.rs:1",
         "docs/design/audio-direction.md:299"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/sfx.rs:400"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-007",
@@ -2128,8 +2151,13 @@
       ],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/fluid_ca.rs:30"
+      ],
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1462",
+        "crates/voxel/src/fluid_ca.rs:1788"
+      ]
     },
     {
       "id": "FR-CIV-CA-002",
@@ -2142,7 +2170,14 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1473",
+        "crates/voxel/src/fluid_ca.rs:1493",
+        "crates/voxel/src/fluid_ca.rs:1508",
+        "crates/voxel/src/fluid_ca.rs:1661",
+        "crates/voxel/src/fluid_ca.rs:1809",
+        "crates/voxel/src/fluid_ca.rs:1854"
+      ]
     },
     {
       "id": "FR-CIV-CA-003",
@@ -2155,7 +2190,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1520"
+      ]
     },
     {
       "id": "FR-CIV-CA-004",
@@ -2168,7 +2205,10 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1534",
+        "crates/voxel/src/fluid_ca.rs:1671"
+      ]
     },
     {
       "id": "FR-CIV-CA-005",
@@ -2181,7 +2221,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1647"
+      ]
     },
     {
       "id": "FR-CIV-CA-006",
@@ -2190,7 +2232,10 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1682",
+        "crates/voxel/src/fluid_ca.rs:1709"
+      ]
     },
     {
       "id": "FR-CIV-CA-007",
@@ -2199,7 +2244,11 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:1474",
+        "crates/voxel/src/fluid_ca.rs:1494",
+        "crates/voxel/src/fluid_ca.rs:1509"
+      ]
     },
     {
       "id": "FR-CIV-CA-008",
@@ -2207,8 +2256,22 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/fluid_ca.rs:33",
+        "crates/voxel/src/fluid_ca.rs:60",
+        "crates/voxel/src/fluid_ca.rs:85",
+        "crates/voxel/src/fluid_ca.rs:248",
+        "crates/voxel/src/fluid_ca.rs:257",
+        "crates/voxel/src/fluid_ca.rs:265",
+        "crates/voxel/src/fluid_ca.rs:694",
+        "crates/voxel/src/fluid_ca.rs:1076"
+      ],
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:2000",
+        "crates/voxel/src/fluid_ca.rs:2005",
+        "crates/voxel/src/fluid_ca.rs:2032",
+        "crates/voxel/src/fluid_ca.rs:2033"
+      ]
     },
     {
       "id": "FR-CIV-CA-009",
@@ -2216,8 +2279,20 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/engine/src/engine.rs:417",
+        "crates/engine/src/engine.rs:1449",
+        "crates/engine/src/engine.rs:1501",
+        "crates/voxel/src/fluid_ca.rs:124",
+        "crates/voxel/src/fluid_ca.rs:141"
+      ],
+      "in_tests": [
+        "crates/engine/src/engine.rs:3343",
+        "crates/engine/src/engine.rs:3346",
+        "crates/engine/src/engine.rs:3356",
+        "crates/voxel/src/fluid_ca.rs:2105",
+        "crates/voxel/src/fluid_ca.rs:2110"
+      ]
     },
     {
       "id": "FR-CIV-CA-010",
@@ -2226,7 +2301,12 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/fluid_ca.rs:2135",
+        "crates/voxel/src/fluid_ca.rs:2139",
+        "crates/voxel/src/fluid_ca.rs:2175",
+        "crates/voxel/src/fluid_ca.rs:2202"
+      ]
     },
     {
       "id": "FR-CIV-CLIENT-GODOT-001",
@@ -2680,7 +2760,8 @@
         "docs/development-guide/fr-3d-additions.md:63"
       ],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:82"
+        "crates/diffusion/src/lib.rs:82",
+        "crates/diffusion/src/lib.rs:83"
       ]
     },
     {
@@ -2697,7 +2778,8 @@
         "docs/development-guide/fr-3d-additions.md:64"
       ],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:92"
+        "crates/diffusion/src/lib.rs:93",
+        "crates/diffusion/src/lib.rs:94"
       ]
     },
     {
@@ -2708,7 +2790,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:107"
+        "crates/diffusion/src/lib.rs:109"
       ]
     },
     {
@@ -2721,7 +2803,7 @@
         "docs/design/tech-engineering.md:149"
       ],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:114"
+        "crates/diffusion/src/lib.rs:116"
       ]
     },
     {
@@ -2732,7 +2814,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:131"
+        "crates/diffusion/src/lib.rs:133"
       ]
     },
     {
@@ -2743,7 +2825,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:139"
+        "crates/diffusion/src/lib.rs:141"
       ]
     },
     {
@@ -2754,7 +2836,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:153"
+        "crates/diffusion/src/lib.rs:155"
       ]
     },
     {
@@ -2765,7 +2847,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:170"
+        "crates/diffusion/src/lib.rs:172"
       ]
     },
     {
@@ -2776,7 +2858,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:185"
+        "crates/diffusion/src/lib.rs:187"
       ]
     },
     {
@@ -2787,7 +2869,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:207"
+        "crates/diffusion/src/lib.rs:209"
       ]
     },
     {
@@ -2798,7 +2880,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:223"
+        "crates/diffusion/src/lib.rs:225"
       ]
     },
     {
@@ -2809,7 +2891,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:253"
+        "crates/diffusion/src/lib.rs:255"
       ]
     },
     {
@@ -2820,7 +2902,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:281"
+        "crates/diffusion/src/lib.rs:283"
       ]
     },
     {
@@ -2831,7 +2913,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:291"
+        "crates/diffusion/src/lib.rs:293"
       ]
     },
     {
@@ -2842,7 +2924,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:306"
+        "crates/diffusion/src/lib.rs:308"
       ]
     },
     {
@@ -2853,7 +2935,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diffusion/src/lib.rs:320"
+        "crates/diffusion/src/lib.rs:322"
       ]
     },
     {
@@ -3346,7 +3428,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2434"
+        "crates/engine/src/engine.rs:2501"
       ]
     },
     {
@@ -3357,7 +3439,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2619"
+        "crates/engine/src/engine.rs:2687"
       ]
     },
     {
@@ -3368,7 +3450,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2652"
+        "crates/engine/src/engine.rs:2720"
       ]
     },
     {
@@ -3379,7 +3461,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2794"
+        "crates/engine/src/engine.rs:2862"
       ]
     },
     {
@@ -3390,7 +3472,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2223"
+        "crates/engine/src/engine.rs:2289"
       ]
     },
     {
@@ -3401,7 +3483,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2668"
+        "crates/engine/src/engine.rs:2736"
       ]
     },
     {
@@ -3412,7 +3494,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2681"
+        "crates/engine/src/engine.rs:2749"
       ]
     },
     {
@@ -3423,7 +3505,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2746"
+        "crates/engine/src/engine.rs:2814"
       ]
     },
     {
@@ -3434,7 +3516,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2784"
+        "crates/engine/src/engine.rs:2852"
       ]
     },
     {
@@ -3445,7 +3527,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2705"
+        "crates/engine/src/engine.rs:2773"
       ]
     },
     {
@@ -3456,7 +3538,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2910"
+        "crates/engine/src/engine.rs:2978"
       ]
     },
     {
@@ -3467,7 +3549,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2935"
+        "crates/engine/src/engine.rs:3003"
       ]
     },
     {
@@ -3478,7 +3560,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:3086"
+        "crates/engine/src/engine.rs:3156"
       ]
     },
     {
@@ -3489,7 +3571,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:3102"
+        "crates/engine/src/engine.rs:3172"
       ]
     },
     {
@@ -3500,7 +3582,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:3153"
+        "crates/engine/src/engine.rs:3223"
       ]
     },
     {
@@ -4705,7 +4787,8 @@
         "docs/development-guide/fr-3d-additions.md:69"
       ],
       "in_tests": [
-        "crates/laws/src/lib.rs:165"
+        "crates/laws/src/lib.rs:165",
+        "crates/laws/src/lib.rs:166"
       ]
     },
     {
@@ -4721,7 +4804,8 @@
         "docs/development-guide/fr-3d-additions.md:70"
       ],
       "in_tests": [
-        "crates/laws/src/lib.rs:206"
+        "crates/laws/src/lib.rs:207",
+        "crates/laws/src/lib.rs:208"
       ]
     },
     {
@@ -4737,7 +4821,8 @@
         "docs/development-guide/fr-3d-additions.md:71"
       ],
       "in_tests": [
-        "crates/laws/src/lib.rs:217"
+        "crates/laws/src/lib.rs:219",
+        "crates/laws/src/lib.rs:220"
       ]
     },
     {
@@ -4748,7 +4833,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/laws/src/lib.rs:240"
+        "crates/laws/src/lib.rs:243"
       ]
     },
     {
@@ -4759,7 +4844,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/laws/src/lib.rs:261"
+        "crates/laws/src/lib.rs:264"
       ]
     },
     {
@@ -4770,7 +4855,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/laws/src/lib.rs:283"
+        "crates/laws/src/lib.rs:286"
       ]
     },
     {
@@ -4797,8 +4882,17 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/rumor.rs:7",
+        "crates/legends/src/rumor.rs:36",
+        "crates/legends/src/rumor.rs:46",
+        "crates/legends/src/rumor.rs:110",
+        "crates/legends/src/rumor.rs:309",
+        "crates/legends/src/rumor.rs:324"
+      ],
+      "in_tests": [
+        "crates/legends/src/rumor.rs:652"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-004",
@@ -4806,8 +4900,16 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/rumor.rs:115",
+        "crates/legends/src/rumor.rs:132",
+        "crates/legends/src/rumor.rs:204",
+        "crates/legends/src/rumor.rs:303",
+        "crates/legends/src/rumor.rs:343"
+      ],
+      "in_tests": [
+        "crates/legends/src/rumor.rs:742"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-005",
@@ -4833,8 +4935,14 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/rumor.rs:55",
+        "crates/legends/src/rumor.rs:113",
+        "crates/legends/src/rumor.rs:199"
+      ],
+      "in_tests": [
+        "crates/legends/src/rumor.rs:787"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-008",
@@ -4842,8 +4950,14 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/rumor.rs:76",
+        "crates/legends/src/rumor.rs:215",
+        "crates/legends/src/rumor.rs:236"
+      ],
+      "in_tests": [
+        "crates/legends/src/rumor.rs:828"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-BROWSER-09",
@@ -5022,7 +5136,7 @@
         "crates/needs/src/lib.rs:14"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2392",
+        "crates/engine/src/engine.rs:2458",
         "crates/needs/src/lib.rs:336",
         "crates/needs/src/lib.rs:350",
         "crates/needs/src/lib.rs:370",
@@ -5062,12 +5176,12 @@
         "docs/traceability/civis-tracelinks.md:16"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:447",
-        "crates/engine/src/engine.rs:2195",
+        "crates/engine/src/engine.rs:452",
+        "crates/engine/src/engine.rs:2261",
         "crates/needs/src/lib.rs:15"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2392",
+        "crates/engine/src/engine.rs:2458",
         "crates/needs/src/lib.rs:428",
         "crates/needs/src/lib.rs:455",
         "crates/needs/src/lib.rs:588",
@@ -5086,11 +5200,11 @@
         "docs/traceability/civis-tracelinks.md:17"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:500"
+        "crates/engine/src/engine.rs:505"
       ],
       "in_tests": [
         "crates/agents/src/daily_path.rs:303",
-        "crates/engine/src/engine.rs:2392"
+        "crates/engine/src/engine.rs:2458"
       ]
     },
     {
@@ -5168,8 +5282,8 @@
         "docs/traceability/civis-tracelinks.md:18"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:440",
-        "crates/engine/src/engine.rs:2097"
+        "crates/engine/src/engine.rs:445",
+        "crates/engine/src/engine.rs:2163"
       ],
       "in_tests": [
         "crates/economy/src/stocks.rs:285",
@@ -5248,13 +5362,13 @@
         "docs/traceability/civis-tracelinks.md:19"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:444",
-        "crates/engine/src/engine.rs:2090",
-        "crates/engine/src/engine.rs:2193"
+        "crates/engine/src/engine.rs:449",
+        "crates/engine/src/engine.rs:2156",
+        "crates/engine/src/engine.rs:2259"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2392",
-        "crates/engine/src/engine.rs:2419",
+        "crates/engine/src/engine.rs:2458",
+        "crates/engine/src/engine.rs:2485",
         "crates/engine/tests/fr_matrix_batch1.rs:20"
       ]
     },
@@ -5543,7 +5657,10 @@
         "docs/design/modding-platform.md:53",
         "docs/specs/CIV-0700-modding-api-spec.md:2356"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1404",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:275"
+      ]
     },
     {
       "id": "FR-CIV-MOD-002",
@@ -6321,11 +6438,12 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2182",
+        "crates/engine/src/engine.rs:2248",
         "crates/server/src/jsonrpc.rs:411"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2451"
+        "crates/engine/src/engine.rs:2500",
+        "crates/engine/src/engine.rs:2518"
       ]
     },
     {
@@ -6339,15 +6457,16 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:434",
-        "crates/engine/src/engine.rs:460",
-        "crates/engine/src/engine.rs:466",
-        "crates/engine/src/engine.rs:1277",
-        "crates/engine/src/engine.rs:1290",
-        "crates/engine/src/engine.rs:1319"
+        "crates/engine/src/engine.rs:439",
+        "crates/engine/src/engine.rs:465",
+        "crates/engine/src/engine.rs:471",
+        "crates/engine/src/engine.rs:1284",
+        "crates/engine/src/engine.rs:1297",
+        "crates/engine/src/engine.rs:1326"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2494"
+        "crates/engine/src/engine.rs:2560",
+        "crates/engine/src/engine.rs:2562"
       ]
     },
     {
@@ -6361,13 +6480,14 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:437",
-        "crates/engine/src/engine.rs:1277",
-        "crates/engine/src/engine.rs:2184",
+        "crates/engine/src/engine.rs:442",
+        "crates/engine/src/engine.rs:1284",
+        "crates/engine/src/engine.rs:2250",
         "crates/planet/src/weather.rs:1"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:3222"
+        "crates/engine/src/engine.rs:3292",
+        "crates/engine/src/engine.rs:3294"
       ]
     },
     {
@@ -6379,7 +6499,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2189",
+        "crates/engine/src/engine.rs:2255",
         "crates/planet/src/geology.rs:1",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:1",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:34",
@@ -6389,6 +6509,7 @@
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:337"
       ],
       "in_tests": [
+        "crates/engine/src/engine.rs:3293",
         "crates/planet/src/geology.rs:106",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:107"
       ]
@@ -6411,6 +6532,7 @@
         "crates/engine/src/replay.rs:234"
       ],
       "in_tests": [
+        "crates/engine/src/engine.rs:3014",
         "crates/engine/src/hash_chain.rs:235"
       ]
     },
@@ -7490,7 +7612,8 @@
         "docs/development-guide/fr-3d-additions.md:76"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:371"
+        "crates/research/src/lib.rs:371",
+        "crates/research/src/lib.rs:372"
       ]
     },
     {
@@ -7510,8 +7633,9 @@
         "PLAN.md:234"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:377",
-        "crates/research/src/lib.rs:408"
+        "crates/research/src/lib.rs:378",
+        "crates/research/src/lib.rs:409",
+        "crates/research/src/lib.rs:410"
       ]
     },
     {
@@ -7543,7 +7667,8 @@
         "PLAN.md:236"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:601"
+        "crates/research/src/lib.rs:603",
+        "crates/research/src/lib.rs:604"
       ]
     },
     {
@@ -7575,7 +7700,8 @@
         "PLAN.md:238"
       ],
       "in_tests": [
-        "crates/research/src/lib.rs:616"
+        "crates/research/src/lib.rs:619",
+        "crates/research/src/lib.rs:620"
       ]
     },
     {
@@ -7622,7 +7748,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:424"
+        "crates/research/src/lib.rs:426"
       ]
     },
     {
@@ -7633,7 +7759,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:442"
+        "crates/research/src/lib.rs:444"
       ]
     },
     {
@@ -7644,7 +7770,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:460"
+        "crates/research/src/lib.rs:462"
       ]
     },
     {
@@ -7655,7 +7781,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:478"
+        "crates/research/src/lib.rs:480"
       ]
     },
     {
@@ -7666,7 +7792,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:510"
+        "crates/research/src/lib.rs:512"
       ]
     },
     {
@@ -7677,7 +7803,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:540"
+        "crates/research/src/lib.rs:542"
       ]
     },
     {
@@ -7688,7 +7814,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:563"
+        "crates/research/src/lib.rs:565"
       ]
     },
     {
@@ -7699,7 +7825,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/research/src/lib.rs:631"
+        "crates/research/src/lib.rs:635"
       ]
     },
     {
@@ -8069,7 +8195,10 @@
         "docs/traceability/civis-tracelinks.md:64"
       ],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/server/src/jsonrpc.rs:2607",
+        "crates/server/src/jsonrpc.rs:2640"
+      ]
     },
     {
       "id": "FR-CIV-SAVE-002",
@@ -8080,7 +8209,10 @@
         "docs/traceability/civis-tracelinks.md:65"
       ],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/server/src/jsonrpc.rs:2608",
+        "crates/server/src/jsonrpc.rs:2641"
+      ]
     },
     {
       "id": "FR-CIV-SAVE-003",
@@ -8111,12 +8243,23 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "crates/voxel/src/window/mod.rs:4",
-        "docs/design/streaming-window.md:6",
-        "docs/design/streaming-window.md:382",
-        "docs/design/streaming-window.md:388"
+        "crates/voxel/src/scale_budget.rs:1",
+        "crates/voxel/src/scale_budget.rs:9",
+        "crates/voxel/src/scale_budget.rs:57",
+        "crates/voxel/src/scale_budget.rs:62",
+        "crates/voxel/src/scale_budget.rs:82",
+        "crates/voxel/src/scale_budget.rs:84",
+        "crates/voxel/src/scale_budget.rs:209",
+        "crates/voxel/src/scale_budget.rs:210"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/scale_budget.rs:895",
+        "crates/voxel/src/scale_budget.rs:907",
+        "crates/voxel/src/scale_budget.rs:909",
+        "crates/voxel/src/scale_budget.rs:924",
+        "crates/voxel/src/scale_budget.rs:936",
+        "crates/voxel/src/scale_budget.rs:951"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-002",
@@ -8124,8 +8267,23 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/scale_budget.rs:11",
+        "crates/voxel/src/scale_budget.rs:277",
+        "crates/voxel/src/scale_budget.rs:284",
+        "crates/voxel/src/scale_budget.rs:300",
+        "crates/voxel/src/scale_budget.rs:305",
+        "crates/voxel/src/scale_budget.rs:306",
+        "crates/voxel/src/scale_budget.rs:317",
+        "crates/voxel/src/scale_budget.rs:367"
+      ],
+      "in_tests": [
+        "crates/voxel/src/scale_budget.rs:970",
+        "crates/voxel/src/scale_budget.rs:972",
+        "crates/voxel/src/scale_budget.rs:985",
+        "crates/voxel/src/scale_budget.rs:1006",
+        "crates/voxel/src/scale_budget.rs:1025"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-003",
@@ -8134,9 +8292,19 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/scale_budget.rs:14",
+        "crates/voxel/src/scale_budget.rs:404",
+        "crates/voxel/src/scale_budget.rs:494",
+        "crates/voxel/src/scale_budget.rs:495",
         "docs/design/streaming-window.md:225"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/scale_budget.rs:1033",
+        "crates/voxel/src/scale_budget.rs:1035",
+        "crates/voxel/src/scale_budget.rs:1058",
+        "crates/voxel/src/scale_budget.rs:1077",
+        "crates/voxel/src/scale_budget.rs:1095"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-004",
@@ -8145,9 +8313,20 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/scale_budget.rs:18",
+        "crates/voxel/src/scale_budget.rs:667",
+        "crates/voxel/src/scale_budget.rs:798",
+        "crates/voxel/src/scale_budget.rs:799",
         "docs/design/streaming-window.md:150"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/scale_budget.rs:1113",
+        "crates/voxel/src/scale_budget.rs:1115",
+        "crates/voxel/src/scale_budget.rs:1127",
+        "crates/voxel/src/scale_budget.rs:1156",
+        "crates/voxel/src/scale_budget.rs:1174",
+        "crates/voxel/src/scale_budget.rs:1201"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-005",
@@ -8155,8 +8334,12 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/window/plan.rs:10"
+      ],
+      "in_tests": [
+        "crates/voxel/src/window/plan.rs:329"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-006",
@@ -8164,8 +8347,12 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/window/io.rs:13"
+      ],
+      "in_tests": [
+        "crates/voxel/src/window/io.rs:213"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-007",
@@ -8174,9 +8361,12 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/window/io.rs:17",
         "docs/design/streaming-window.md:77"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/window/io.rs:253"
+      ]
     },
     {
       "id": "FR-CIV-SCALE-008",
@@ -8184,8 +8374,13 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/window/plan.rs:14",
+        "crates/voxel/src/window/plan.rs:184"
+      ],
+      "in_tests": [
+        "crates/voxel/src/window/plan.rs:446"
+      ]
     },
     {
       "id": "FR-CIV-SERVER-001",
@@ -8933,13 +9128,13 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:431",
+        "crates/engine/src/engine.rs:436",
         "docs/development-guide/fr-3d-additions.md:87",
         "docs/development-guide/p-w1-kickoff.md:14",
         "docs/development-guide/p-w1-kickoff.md:22"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2602",
+        "crates/engine/src/engine.rs:2670",
         "crates/tactics/src/lib.rs:262",
         "crates/tactics/tests/fr_matrix_batch2.rs:78",
         "crates/tactics/tests/fr_matrix_batch2.rs:81",
@@ -9071,12 +9266,12 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:411",
-        "crates/engine/src/engine.rs:2179",
+        "crates/engine/src/engine.rs:2245",
         "crates/tactics/src/war_bridge.rs:29",
         "docs/development-guide/p-w1-kickoff.md:27"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:3208",
+        "crates/engine/src/engine.rs:3278",
         "crates/tactics/src/war_bridge.rs:346",
         "crates/tactics/tests/fr_matrix_batch2.rs:201",
         "crates/tactics/tests/fr_matrix_batch2.rs:204",
@@ -9100,11 +9295,11 @@
         "docs/development-guide/p-w1-kickoff.md:28"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2963",
-        "crates/engine/src/engine.rs:2986",
-        "crates/engine/src/engine.rs:3022",
-        "crates/engine/src/engine.rs:3066",
-        "crates/engine/src/engine.rs:3178"
+        "crates/engine/src/engine.rs:3031",
+        "crates/engine/src/engine.rs:3054",
+        "crates/engine/src/engine.rs:3090",
+        "crates/engine/src/engine.rs:3134",
+        "crates/engine/src/engine.rs:3248"
       ]
     },
     {
@@ -9179,7 +9374,7 @@
         "docs/development-guide/p-w1-kickoff.md:31"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:3066"
+        "crates/engine/src/engine.rs:3135"
       ]
     },
     {
@@ -9217,7 +9412,10 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:33"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1115",
+        "crates/mod-host/src/lib.rs:1149"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-035",
@@ -9229,12 +9427,12 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:429",
+        "crates/engine/src/engine.rs:434",
         "crates/tactics/src/military_phase.rs:1",
         "docs/development-guide/p-w1-kickoff.md:34"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:3066",
+        "crates/engine/src/engine.rs:3136",
         "crates/engine/src/scenario.rs:317"
       ]
     },
@@ -9253,7 +9451,9 @@
         "docs/development-guide/p-w1-kickoff.md:36"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:385"
+        "crates/tactics/src/lib.rs:385",
+        "crates/tactics/tests/fr_matrix_batch9.rs:3",
+        "crates/tactics/tests/fr_matrix_batch9.rs:31"
       ]
     },
     {
@@ -9290,7 +9490,14 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:38"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1116",
+        "crates/mod-host/src/lib.rs:1150",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:12",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:24",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:25",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:26"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-039",
@@ -9307,7 +9514,9 @@
         "docs/development-guide/p-w1-kickoff.md:41"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:356"
+        "crates/tactics/src/lib.rs:356",
+        "crates/tactics/tests/fr_matrix_batch9.rs:3",
+        "crates/tactics/tests/fr_matrix_batch9.rs:54"
       ]
     },
     {
@@ -9323,6 +9532,7 @@
         "docs/development-guide/p-w1-kickoff.md:42"
       ],
       "in_tests": [
+        "crates/tactics/src/fog_of_war.rs:169",
         "crates/tactics/src/fog_of_war.rs:170",
         "crates/tactics/src/fog_of_war.rs:208",
         "crates/tactics/src/fog_of_war.rs:232",
@@ -9346,7 +9556,7 @@
         "docs/development-guide/p-w1-kickoff.md:43"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2946"
+        "crates/engine/src/engine.rs:3014"
       ]
     },
     {
@@ -9367,7 +9577,8 @@
         "docs/development-guide/p-w1-kickoff.md:44"
       ],
       "in_tests": [
-        "crates/tactics/src/war_bridge.rs:416"
+        "crates/tactics/src/war_bridge.rs:416",
+        "crates/tactics/src/war_bridge.rs:417"
       ]
     },
     {
@@ -9400,7 +9611,9 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:46"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1461"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-045",
@@ -9413,7 +9626,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2032",
+        "crates/engine/src/engine.rs:2098",
         "crates/engine/src/scenario.rs:34",
         "docs/development-guide/p-w1-kickoff.md:47"
       ],
@@ -9435,7 +9648,7 @@
         "docs/development-guide/p-w1-kickoff.md:48"
       ],
       "in_tests": [
-        "crates/mod-host/src/lib.rs:1213"
+        "crates/mod-host/src/lib.rs:1218"
       ]
     },
     {
@@ -9467,7 +9680,10 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:50"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1219",
+        "crates/mod-host/src/lib.rs:1220"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-049",
@@ -9496,7 +9712,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2040",
+        "crates/engine/src/engine.rs:2106",
         "crates/engine/src/scenario.rs:40",
         "crates/engine/src/scenario.rs:62",
         "docs/development-guide/p-w1-kickoff.md:52"
@@ -9533,7 +9749,7 @@
         "docs/development-guide/p-w1-kickoff.md:54"
       ],
       "in_tests": [
-        "crates/mod-host/src/lib.rs:1292"
+        "crates/mod-host/src/lib.rs:1300"
       ]
     },
     {
@@ -9570,7 +9786,7 @@
         "docs/development-guide/p-w1-kickoff.md:56"
       ],
       "in_tests": [
-        "crates/mod-host/src/lib.rs:1346"
+        "crates/mod-host/src/lib.rs:1358"
       ]
     },
     {
@@ -9585,7 +9801,10 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:57"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1301",
+        "crates/mod-host/src/lib.rs:1302"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-056",
@@ -9599,7 +9818,11 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:58"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/determinism.rs:124",
+        "crates/mod-host/src/determinism.rs:126",
+        "crates/mod-host/src/determinism.rs:148"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-057",
@@ -9615,7 +9838,8 @@
         "docs/development-guide/p-w1-kickoff.md:59"
       ],
       "in_tests": [
-        "crates/mod-host/src/determinism.rs:141"
+        "crates/mod-host/src/determinism.rs:145",
+        "crates/mod-host/src/determinism.rs:146"
       ]
     },
     {
@@ -9630,7 +9854,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:61"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:12",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:48",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:49",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:50"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-059",
@@ -9645,7 +9874,12 @@
         "docs/development-guide/p-w1-kickoff.md:62",
         "justfile:90"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:12",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:69",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:70",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:71"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-060",
@@ -9659,7 +9893,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:63"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:13",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:87",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:88",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:89"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-061",
@@ -9675,7 +9914,7 @@
         "docs/development-guide/p-w1-kickoff.md:60"
       ],
       "in_tests": [
-        "crates/mod-host/src/determinism.rs:124"
+        "crates/mod-host/src/determinism.rs:125"
       ]
     },
     {
@@ -9690,7 +9929,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:64"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:13",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:108",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:109",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:110"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-063",
@@ -9704,7 +9948,11 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:65"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1925",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:255",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:256"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-064",
@@ -9718,7 +9966,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:66"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:13",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:132",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:133",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:134"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-065",
@@ -9746,7 +9999,11 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:68"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/server/src/jsonrpc.rs:2609",
+        "crates/server/src/jsonrpc.rs:2610",
+        "crates/server/src/jsonrpc.rs:2642"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-067",
@@ -9760,7 +10017,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:69"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:14",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:161",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:162",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:163"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-068",
@@ -9774,7 +10036,9 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:70"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1940"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-069",
@@ -9788,7 +10052,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:71"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:14",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:184",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:185",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:186"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-070",
@@ -9802,7 +10071,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:72"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:14",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:214",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:215",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:216"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-071",
@@ -9816,7 +10090,9 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:73"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1462"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-072",
@@ -9830,7 +10106,12 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:74"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:15",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:235",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:236",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:237"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-073",
@@ -9858,7 +10139,10 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:76"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1359",
+        "crates/mod-host/src/lib.rs:1360"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-075",
@@ -9872,7 +10156,10 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:77"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/lib.rs:1463",
+        "crates/mod-host/src/lib.rs:1464"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-076",
@@ -9900,7 +10187,10 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:79"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/src/signature.rs:76",
+        "crates/mod-host/src/signature.rs:77"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-100",
@@ -10920,8 +11210,10 @@
         "docs/development-guide/fr-3d-additions.md:15"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:54",
-        "crates/voxel/src/lib.rs:64"
+        "crates/voxel/src/lib.rs:65",
+        "crates/voxel/src/lib.rs:66",
+        "crates/voxel/src/lib.rs:76",
+        "crates/voxel/src/lib.rs:78"
       ]
     },
     {
@@ -10944,7 +11236,9 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:59"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:136"
+        "crates/voxel/src/lib.rs:77",
+        "crates/voxel/src/lib.rs:150",
+        "crates/voxel/src/lib.rs:151"
       ]
     },
     {
@@ -10962,18 +11256,19 @@
         "docs/traceability/civis-tracelinks.md:75"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:473",
-        "crates/engine/src/engine.rs:1301",
-        "crates/engine/src/engine.rs:1322",
-        "crates/engine/src/engine.rs:1358",
+        "crates/engine/src/engine.rs:478",
+        "crates/engine/src/engine.rs:1308",
+        "crates/engine/src/engine.rs:1329",
+        "crates/engine/src/engine.rs:1365",
         "docs/development-guide/fr-3d-additions.md:18",
         "docs/guides/voxel-emergent-vision-and-migration.md:183"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2493",
-        "crates/engine/src/engine.rs:2537",
-        "crates/voxel/src/lib.rs:70",
-        "crates/voxel/src/lib.rs:167"
+        "crates/engine/src/engine.rs:2561",
+        "crates/engine/src/engine.rs:2605",
+        "crates/voxel/src/lib.rs:84",
+        "crates/voxel/src/lib.rs:182",
+        "crates/voxel/src/lib.rs:183"
       ]
     },
     {
@@ -10991,7 +11286,8 @@
         "docs/development-guide/fr-3d-additions.md:20"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:198"
+        "crates/voxel/src/lib.rs:214",
+        "crates/voxel/src/lib.rs:215"
       ]
     },
     {
@@ -11009,7 +11305,8 @@
         "docs/development-guide/fr-3d-additions.md:22"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:218"
+        "crates/voxel/src/lib.rs:235",
+        "crates/voxel/src/lib.rs:236"
       ]
     },
     {
@@ -11024,7 +11321,7 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:252"
+        "crates/voxel/src/lib.rs:271"
       ]
     },
     {
@@ -11035,7 +11332,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2818"
+        "crates/engine/src/engine.rs:2886"
       ]
     },
     {
@@ -11046,7 +11343,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/engine/src/engine.rs:2867"
+        "crates/engine/src/engine.rs:2935"
       ]
     },
     {
@@ -11067,8 +11364,9 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:88",
-        "crates/voxel/src/lib.rs:227"
+        "crates/voxel/src/lib.rs:102",
+        "crates/voxel/src/lib.rs:245",
+        "crates/voxel/src/lib.rs:246"
       ]
     },
     {
@@ -11194,7 +11492,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/voxel/src/fluid_ca.rs:1572"
+        "crates/voxel/src/fluid_ca.rs:1887"
       ]
     },
     {
@@ -11205,7 +11503,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/voxel/src/fluid_ca.rs:1617"
+        "crates/voxel/src/fluid_ca.rs:1932"
       ]
     },
     {
@@ -11731,7 +12029,7 @@
         "README.md:202"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:2238",
+        "crates/engine/src/engine.rs:2304",
         "crates/engine/tests/tick_budget.rs:1",
         "crates/engine/tests/tick_budget.rs:16",
         "crates/engine/tests/tick_budget.rs:17"
@@ -12219,7 +12517,7 @@
       "in_traceability": [],
       "in_code": [
         "crates/economy/src/lib.rs:101",
-        "crates/engine/src/engine.rs:1945",
+        "crates/engine/src/engine.rs:2011",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:260"
@@ -12680,7 +12978,9 @@
       "in_code": [
         "docs/development-guide/fr-modding-roadmap.md:78"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:276"
+      ]
     },
     {
       "id": "FR-MOD-002",
@@ -12713,7 +13013,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:1220",
+        "crates/engine/src/engine.rs:1227",
         "crates/engine/src/replay.rs:51",
         "crates/engine/src/replay.rs:63",
         "crates/engine/src/replay.rs:82",
@@ -13041,13 +13341,13 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:1261",
+        "crates/engine/src/engine.rs:1268",
         "crates/engine/src/replay_format.rs:1",
         "docs/reference/agileplus-artifacts-index.md:239",
         "docs/reference/agileplus-artifacts-index.md:311"
       ],
       "in_tests": [
-        "crates/engine/src/engine.rs:3136",
+        "crates/engine/src/engine.rs:3206",
         "crates/engine/tests/fr_matrix_batch1.rs:15",
         "crates/engine/tests/fr_matrix_batch1.rs:191",
         "crates/engine/tests/fr_matrix_batch1.rs:192",

@@ -30,6 +30,7 @@ pub use phenotype_voxel::{
 pub mod boundary;
 pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
 pub mod fluid_ca;
+pub mod hud;
 pub mod lod;
 pub mod material;
 pub mod material_pbr;
@@ -40,10 +41,17 @@ pub mod window;
 pub mod worldgen;
 
 pub use material_pbr::{
-    AttestationError, BuildFlavour, Cc0Source, LicenseAttestation, LodDistanceConfig,
-    LodRenderPlan, ManifestError, MaterialMode, MaterialOverride, MaterialSeedManifest,
-    MissingTexturePolicy, MissingTextureReport, PolicyAction, RenderMode, RuntimeAction,
-    SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
+    AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
+    GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
+    MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
+    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction,
+    SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION, TextureChannelMap, TriplanarLayer,
+    TriplanarSplatPlan,
+};
+pub use hud::{
+    DiplomacyFsm, DiplomacyPanel, EventFeed, EventFeedItem, EventSeverity, MenuKind, MenuStack,
+    MenuStackError, TechNode, TechTree, TechTreeError, ToolEntry, ToolPalette, ToolPaletteError,
+    TreatySlot, HUB_PALETTE_SCHEMA_VERSION, HUB_TECH_SCHEMA_VERSION,
 };
 
 pub use scale_budget::{

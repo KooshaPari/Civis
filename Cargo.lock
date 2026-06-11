@@ -2316,6 +2316,7 @@ dependencies = [
  "bevy_rapier3d",
  "bevy_water",
  "civ-agents",
+ "civ-diplomacy",
  "civ-engine",
  "civ-protocol-3d",
  "civ-voxel",

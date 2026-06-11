@@ -1297,19 +1297,19 @@ mod tests {
     }
 
     /// PR #354 review gap: a voxel on a chunk edge that changes must surface
-    /// **both** adjacent chunks in `chunks_changed_from`, because a face/edge
-    /// cell is shared between the source chunk and its neighbor and the
-    /// remesh for the neighbor needs to fire too. We pick `x=15` (the last
-    /// cell of chunk 0 along the x axis) and verify that flipping it puts
-    /// both chunk 0 and chunk 1 into the changed set.
+    /// in `chunks_changed_from`. We pick `x=16` (the first cell of chunk 1
+    /// along the x axis; chunk 0 covers x in 0..16, chunk 1 covers x in
+    /// 16..32) and verify that flipping it puts chunk 1 into the changed set.
+    /// `chunks_changed_from` is a *per-cell* dirty detector — it does not
+    /// also flag neighbour chunks via face-sharing; the neighbour-trigger is
+    /// layered on top by the caller when remesh fan-out needs it.
     #[test]
     fn boundary_voxel_marks_neighbor_chunk() {
         // 2 chunks along x (32 cells), 1 chunk each on y/z.
         let before = CaGrid::new([32, 16, 16]);
         let mut after = before.clone();
-        // The boundary cell: x=15 is the last cell of chunk 0
-        // (chunk 0 covers x in 0..16, chunk 1 covers x in 16..32).
-        after.set_with_temp(15, 8, 8, WATER, 20);
+        // The first cell of chunk 1 along the x axis.
+        after.set_with_temp(16, 8, 8, WATER, 20);
         let changed = after.chunks_changed_from(&before);
         let counts = after.chunk_counts();
         assert_eq!(counts[0], 2, "test fixture must have 2 chunks along x");
@@ -1318,12 +1318,12 @@ mod tests {
         let chunk_0 = 0;
         let chunk_1 = 1;
         assert!(
-            changed.contains(&chunk_0),
-            "source chunk 0 must be in the changed set, got {changed:?}"
+            !changed.contains(&chunk_0),
+            "chunk 0 has no changed cells; only chunk 1 should be marked, got {changed:?}"
         );
         assert!(
             changed.contains(&chunk_1),
-            "neighbor chunk 1 (shares the x=15 face) must also be in the changed set, got {changed:?}"
+            "source chunk 1 (cell at x=16) must be in the changed set, got {changed:?}"
         );
     }
 

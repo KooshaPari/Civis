@@ -7,7 +7,8 @@ license.workspace = true
 publish = false
 
 [dependencies]
-# Intentionally zero non-workspace deps. The crate is pure math: histograms,
-# connected-components, linear fits, and O(1) per-sample work. If a future PR
-# needs a real dep (e.g. a fast KS-distance routine) it must justify it in
-# the PR body.
+# The dashboard block (`EmergenceDashboard`) is a wire-format type that
+# travels through `EmergenceSample` → JSON-RPC `sim.snapshot` →
+# web/Bevy consumers. We need serde derives on the struct; everything
+# else in the crate is pure math and intentionally zero-dep.
+serde = { version = "1.0", features = ["derive"] }

@@ -43,11 +43,12 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod dashboard;
 pub mod shannon;
 pub mod structure;
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
-pub const SCHEMA_VERSION: &str = "0.1.0-stub";
+pub const SCHEMA_VERSION: &str = "0.3.0-dashboard-block";
 
 /// Common interface implemented by every metric in this crate.
 ///

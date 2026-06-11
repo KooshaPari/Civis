@@ -2391,6 +2391,9 @@ dependencies = [
 [[package]]
 name = "civ-emergence-metrics"
 version = "0.1.0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "civ-engine"
@@ -2556,6 +2559,7 @@ dependencies = [
  "axum",
  "civ-agents",
  "civ-economy",
+ "civ-emergence-metrics",
  "civ-engine",
  "civ-mod-host",
  "civ-protocol-3d",

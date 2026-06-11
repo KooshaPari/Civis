@@ -325,7 +325,7 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// FR-CIV-LIFE-000 — schema version is a non-empty semver triple.
+    /// Covers FR-CIV-LIFE-000 — schema version is a non-empty semver triple.
     #[test]
     fn schema_version_is_semver() {
         let parts: Vec<&str> = SCHEMA_VERSION.split('.').collect();
@@ -333,7 +333,7 @@ mod tests {
         assert!(parts.iter().all(|p| !p.is_empty()));
     }
 
-    /// FR-CIV-LIFE-001 — needs decay monotonically toward zero each tick.
+    /// Covers FR-CIV-LIFE-001 — needs decay monotonically toward zero each tick.
     #[test]
     fn needs_decay_toward_zero() {
         let mut needs = Needs::sated();
@@ -347,7 +347,7 @@ mod tests {
         assert!(needs.water < needs.food);
     }
 
-    /// FR-CIV-LIFE-001 — decay never produces negative satisfaction.
+    /// Covers FR-CIV-LIFE-001 — decay never produces negative satisfaction.
     #[test]
     fn decay_clamps_at_zero() {
         let mut needs = Needs {
@@ -367,7 +367,7 @@ mod tests {
     }
 
     proptest! {
-        /// FR-CIV-LIFE-001 — decay keeps every need within the closed interval [0, 1].
+        /// Covers FR-CIV-LIFE-001 — decay keeps every need within the closed interval [0, 1].
         #[test]
         fn decay_preserves_need_bounds(
             food in 0.0f32..=1.0,
@@ -402,7 +402,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-LIFE-001 — most_pressing reports the lowest-satisfaction need.
+    /// Covers FR-CIV-LIFE-001 — most_pressing reports the lowest-satisfaction need.
     #[test]
     fn most_pressing_picks_lowest() {
         let needs = Needs {
@@ -416,7 +416,7 @@ mod tests {
         assert_eq!(needs.most_pressing(), (NeedKind::Water, 0.2));
     }
 
-    /// FR-CIV-LIFE-001 — satisfying a need raises it and clamps at 1.0.
+    /// Covers FR-CIV-LIFE-001 — satisfying a need raises it and clamps at 1.0.
     #[test]
     fn satisfy_raises_and_clamps() {
         let mut needs = Needs::sated();
@@ -425,7 +425,7 @@ mod tests {
         assert_eq!(needs.satisfy(NeedKind::Food, 5.0), 1.0);
     }
 
-    /// FR-CIV-LIFE-003 — sustained unmet needs drain health to death.
+    /// Covers FR-CIV-LIFE-003 — sustained unmet needs drain health to death.
     #[test]
     fn unmet_needs_cause_death() {
         let mut needs = Needs {
@@ -452,7 +452,7 @@ mod tests {
         assert!(health.is_dead());
     }
 
-    /// FR-CIV-LIFE-003 — deprivation damage is applied at the critical boundary.
+    /// Covers FR-CIV-LIFE-003 — deprivation damage is applied at the critical boundary.
     #[test]
     fn critical_boundary_triggers_damage() {
         let mut needs = Needs {
@@ -482,7 +482,7 @@ mod tests {
         assert!(health.integrity < 1.0);
     }
 
-    /// FR-CIV-LIFE-002 — sickness onset is governed by the streak threshold.
+    /// Covers FR-CIV-LIFE-002 — sickness onset is governed by the streak threshold.
     #[test]
     fn sickness_onset_respects_threshold() {
         let mut needs = Needs {
@@ -525,7 +525,7 @@ mod tests {
         assert!(health.sick);
     }
 
-    /// FR-CIV-LIFE-002 — recovery clears sickness once integrity has rebuilt enough.
+    /// Covers FR-CIV-LIFE-002 — recovery clears sickness once integrity has rebuilt enough.
     #[test]
     fn sickness_recovery_requires_high_integrity() {
         let mut needs = Needs::sated();
@@ -554,7 +554,7 @@ mod tests {
     }
 
     proptest! {
-        /// FR-CIV-LIFE-001/002/003 — repeated ticks keep health bounded and never resurrect a dead agent.
+        /// Covers FR-CIV-LIFE-001/002/003 — repeated ticks keep health bounded and never resurrect a dead agent.
         #[test]
         fn health_stays_bounded_and_dead_is_terminal(
             seed in any::<u64>(),
@@ -585,7 +585,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-LIFE-003 — a fully-sated agent never dies.
+    /// Covers FR-CIV-LIFE-003 — a fully-sated agent never dies.
     #[test]
     fn sated_agent_survives() {
         let mut needs = Needs::sated();
@@ -604,7 +604,7 @@ mod tests {
         assert!(!health.is_dead());
     }
 
-    /// FR-CIV-LIFE-002 — slow deprivation triggers sickness before death.
+    /// Covers FR-CIV-LIFE-002 — slow deprivation triggers sickness before death.
     ///
     /// A single mildly-critical need accrues a deprivation streak past the
     /// onset threshold without draining integrity to zero first, so the
@@ -645,7 +645,7 @@ mod tests {
         assert!(ever_sick, "prolonged deprivation must cause sickness");
     }
 
-    /// FR-CIV-LIFE-002/003 — the pipeline is deterministic under a fixed seed.
+    /// Covers FR-CIV-LIFE-002/003 — the pipeline is deterministic under a fixed seed.
     #[test]
     fn pipeline_is_deterministic() {
         let run = |seed: u64| {
@@ -676,7 +676,7 @@ mod tests {
         assert_eq!(run(99), run(99));
     }
 
-    /// FR-CIV-LIFE-003 — a dead agent is a no-op (integrity stays at zero).
+    /// Covers FR-CIV-LIFE-003 — a dead agent is a no-op (integrity stays at zero).
     #[test]
     fn dead_agent_is_a_noop() {
         let mut needs = Needs::sated();
@@ -697,3 +697,4 @@ mod tests {
         assert_eq!(health.integrity, 0.0);
     }
 }
+

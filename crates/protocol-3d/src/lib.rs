@@ -922,13 +922,13 @@ pub fn decode_agent_stream_binary(bytes: &[u8]) -> Result<AgentStream, AgentStre
 mod tests {
     use super::*;
 
-    /// FR-CIV-PROTO3D-000 — schema version is exposed.
+    /// Covers FR-CIV-PROTO3D-000 — schema version is exposed.
     #[test]
     fn schema_version_present() {
         assert_eq!(SCHEMA_VERSION, 0);
     }
 
-    /// FR-CIV-PROTO3D-001 — VoxelDeltaFrame round-trips through serde JSON
+    /// Covers FR-CIV-PROTO3D-001 — VoxelDeltaFrame round-trips through serde JSON
     /// losslessly. Binary framing lands in a follow-up PR but JSON is a useful
     /// determinism floor.
     #[test]
@@ -948,7 +948,7 @@ mod tests {
         assert_eq!(frame, back);
     }
 
-    /// FR-CIV-PROTO3D-002 — building diff carries provenance.
+    /// Covers FR-CIV-PROTO3D-002 — building diff carries provenance.
     #[test]
     fn building_diff_carries_provenance() {
         let f = BuildingDiffFrame {
@@ -962,7 +962,7 @@ mod tests {
         assert_eq!(back.provenance, BuildingProvenance::Freehand);
     }
 
-    /// FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
+    /// Covers FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
     #[test]
     fn building_diff_entry_tier_roundtrip_and_backward_compat() {
         let entry = BuildingDiffEntry {
@@ -981,7 +981,7 @@ mod tests {
         assert_eq!(legacy.tier, 0);
     }
 
-    /// FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
+    /// Covers FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
     #[test]
     fn building_graph_snapshot_roundtrips() {
         use civ_build::{BuildingId, BuildingProvenance as BuildProvenance, ParcelKind};
@@ -1011,7 +1011,7 @@ mod tests {
         assert_eq!(back.graph, Some(graph));
     }
 
-    /// FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
+    /// Covers FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
     #[test]
     fn building_and_agent_position_extensions_roundtrip() {
         let building = BuildingDiffFrame {
@@ -1045,7 +1045,7 @@ mod tests {
         assert_eq!(agent_world_translation(&agent_back, 0.8), (3.0, 0.8, 9.0));
     }
 
-    /// FR-CIV-PROTO3D-011 — civilian state entries round-trip and legacy payloads get defaults.
+    /// Covers FR-CIV-PROTO3D-011 — civilian state entries round-trip and legacy payloads get defaults.
     #[test]
     fn civilian_state_entry_roundtrip_and_backward_compat() {
         let entry = CivilianStateEntry {
@@ -1080,7 +1080,7 @@ mod tests {
         assert_eq!(legacy.health, 1.0);
     }
 
-    /// FR-CIV-PROTO3D-012 — faction state entries round-trip and legacy payloads get defaults.
+    /// Covers FR-CIV-PROTO3D-012 — faction state entries round-trip and legacy payloads get defaults.
     #[test]
     fn faction_state_entry_roundtrip_and_backward_compat() {
         let entry = FactionStateEntry {
@@ -1104,7 +1104,7 @@ mod tests {
         assert_eq!(legacy.treasury, FactionTreasury3d::default());
     }
 
-    /// FR-CIV-PROTO3D-013 — event feed messages round-trip as a tagged enum.
+    /// Covers FR-CIV-PROTO3D-013 — event feed messages round-trip as a tagged enum.
     #[test]
     fn event_feed_roundtrip() {
         let frame = EventFeedFrame {
@@ -1145,7 +1145,7 @@ mod tests {
         assert_eq!(back, frame);
     }
 
-    /// FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
+    /// Covers FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
     #[test]
     fn frame3d_tick_extraction() {
         let f = Frame3d::VoxelDelta(VoxelDeltaFrame {
@@ -1161,7 +1161,7 @@ mod tests {
         assert_eq!(faction.tick(), 21);
     }
 
-    /// FR-CIV-PROTO3D-004 — BuildingDiff round-trips through the binary envelope.
+    /// Covers FR-CIV-PROTO3D-004 — BuildingDiff round-trips through the binary envelope.
     #[test]
     fn building_diff_binary_roundtrip() {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
@@ -1177,7 +1177,7 @@ mod tests {
         assert_eq!(back, frame);
     }
 
-    /// FR-CIV-PROTO3D-006 — pre-serialized JSON matches full encode path.
+    /// Covers FR-CIV-PROTO3D-006 — pre-serialized JSON matches full encode path.
     #[test]
     fn binary_from_json_matches_full_encode() {
         let frame = Frame3d::AgentAppearance(AgentAppearanceFrame {
@@ -1205,7 +1205,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-PROTO3D-007 — agent appearance accepts optional scale with default.
+    /// Covers FR-CIV-PROTO3D-007 — agent appearance accepts optional scale with default.
     #[test]
     fn agent_appearance_update_default_scale() {
         let json = r#"{"agent_id":3,"era":1,"wardrobe":0,"tools":0}"#;
@@ -1216,7 +1216,7 @@ mod tests {
         assert!((scaled.scale - 1.25).abs() < f32::EPSILON);
     }
 
-    /// FR-CIV-PROTO3D-005 — corrupt magic is rejected.
+    /// Covers FR-CIV-PROTO3D-005 — corrupt magic is rejected.
     #[test]
     fn decode_rejects_bad_magic() {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
@@ -1237,7 +1237,7 @@ mod tests {
     // FR-CIV-PROTO3D-014..017 — AgentStream parallel envelope.
     // -----------------------------------------------------------
 
-    /// FR-CIV-PROTO3D-014 — the parallel `AgentStream` envelope encodes a
+    /// Covers FR-CIV-PROTO3D-014 — the parallel `AgentStream` envelope encodes a
     /// header + zero or more `{id, cell_x, cell_y, cell_z}` entries and the
     /// decoder returns the same payload (identity round-trip).
     #[test]
@@ -1292,7 +1292,7 @@ mod tests {
         assert_eq!(back, stream);
     }
 
-    /// FR-CIV-PROTO3D-014 (roundtrip property) — for arbitrary agent sets
+    /// Covers FR-CIV-PROTO3D-014 (roundtrip property) — for arbitrary agent sets
     /// satisfying the i16 cell bound, encode -> decode is the identity.
     /// Manual property loop (mirrors what `proptest!` would do); keeps the
     /// test self-contained so it runs in this PR even on crates that have
@@ -1341,7 +1341,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-PROTO3D-015 — quantization is bounded by `GRID_STEP_M / 2`
+    /// Covers FR-CIV-PROTO3D-015 — quantization is bounded by `GRID_STEP_M / 2`
     /// per axis for every world-meter offset that fits in the i16 grid.
     /// Tests the chosen step (0.25 m) against the documented bound.
     #[test]
@@ -1362,7 +1362,7 @@ mod tests {
         }
     }
 
-    /// FR-CIV-PROTO3D-015 — `quantize_axis` rejects values that would
+    /// Covers FR-CIV-PROTO3D-015 — `quantize_axis` rejects values that would
     /// overflow the i16 grid (i.e. the world origin is mis-configured).
     #[test]
     fn agent_stream_quantization_out_of_range() {
@@ -1381,7 +1381,7 @@ mod tests {
         assert_eq!(quantize_axis(10_000.0, 0), None);
     }
 
-    /// FR-CIV-PROTO3D-016 — capability / mode flag is parsed and the delta
+    /// Covers FR-CIV-PROTO3D-016 — capability / mode flag is parsed and the delta
     /// mode is reserved (rejected at decode time so old clients fail fast
     /// instead of silently corrupting positions).
     #[test]
@@ -1399,7 +1399,7 @@ mod tests {
         assert_eq!(unknown.mode(), AgentStreamMode::Full);
     }
 
-    /// FR-CIV-PROTO3D-016 — a `Delta` frame on the wire is rejected by the
+    /// Covers FR-CIV-PROTO3D-016 — a `Delta` frame on the wire is rejected by the
     /// v1 decoder with `UnsupportedMode` (older clients are not expected to
     /// understand the format).
     #[test]
@@ -1416,7 +1416,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-PROTO3D-017 — corrupt magic / short buffer / length mismatch /
+    /// Covers FR-CIV-PROTO3D-017 — corrupt magic / short buffer / length mismatch /
     /// unknown version all produce distinct errors so the dispatcher can
     /// route them.
     #[test]
@@ -1466,7 +1466,7 @@ mod tests {
         );
     }
 
-    /// FR-CIV-PROTO3D-014 — agent count > MAX is rejected at encode time
+    /// Covers FR-CIV-PROTO3D-014 — agent count > MAX is rejected at encode time
     /// (the v1 stream caps at 65 536 entries to keep header math bounded).
     #[test]
     fn agent_stream_encode_rejects_overflow() {
@@ -1491,3 +1491,4 @@ mod tests {
         assert!(matches!(err, AgentStreamBinaryError::LengthMismatch { .. }));
     }
 }
+

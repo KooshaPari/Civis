@@ -46,6 +46,8 @@ pub mod game_laws;
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod graphics_settings;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -114,6 +116,8 @@ pub mod ui_holo;
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
+#[cfg(all(feature = "bevy", feature = "voxel"))]
+pub mod ocean;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]

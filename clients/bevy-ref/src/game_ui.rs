@@ -321,8 +321,33 @@ impl Plugin for GameUiPlugin {
             // before `draw_game_ui` consumes them.
             .add_systems(
                 EguiPrimaryContextPass,
-                (load_tool_icons, draw_game_ui).chain(),
+                // apply_keycap_theme MUST run first: it sets the global egui
+                // Style/Visuals (Keycap Palette + holocron chrome) before any
+                // draw call can consume it. load_tool_icons and draw_game_ui
+                // follow in order.
+                (apply_keycap_theme, load_tool_icons, draw_game_ui).chain(),
             );
+    }
+}
+
+/// Global egui theme system — runs first in every [`EguiPrimaryContextPass`] frame.
+///
+/// Applies the Phenotype Keycap Palette + holocron command-deck chrome:
+/// - Background: midnight `#090a0c` / `#1a1e24` (GRAPHITE_900) surfaces
+/// - Primary accent: teal `#7ebab5` on edges, selection, and active strokes only
+///   (never as a large fill — "neon-as-signal" rule)
+/// - Holographic glass panels: frosted DECK_GLASS fill + DECK_BORDER rim
+/// - Colored teal rim-glow on focus (not white)
+/// - Rounded corners (8 px buttons, 12 px panels)
+/// - Drop shadows for depth hierarchy
+/// - Montserrat (body), JetBrains Mono (numeric), Bricolage Grotesque (display)
+///
+/// Delegates to [`crate::ui_theme::apply_theme`] which is the canonical
+/// implementation; this system exists purely to give it an explicit, named place
+/// in the Bevy schedule and to separate theming from HUD draw logic.
+fn apply_keycap_theme(mut contexts: EguiContexts) {
+    if let Ok(ctx) = contexts.ctx_mut() {
+        apply_theme(ctx);
     }
 }
 
@@ -449,7 +474,6 @@ fn draw_game_ui(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    apply_theme(ctx);
 
     // ---- Top cluster: CENTERED readout (floating, not a full-width bar) ----
     top_center_cluster(

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-06-10",
+  "generated_at": "2026-06-11",
   "source_inventory": "docs/audits/_id_inventory_v3.json",
   "status_legend": {
     "COVERED": "spec + code + test all present",

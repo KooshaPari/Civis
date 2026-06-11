@@ -16,9 +16,9 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-WORK = Path("G:/civis-wt-matrix")
+WORK = Path("D:/civis-build/matrix5")
 INVENTORY = WORK / "docs/audits/_id_inventory_v3.json"
-MD_OUT = WORK / "docs/audits/fr-matrix-2026-06-10.md"
+MD_OUT = WORK / "docs/audits/fr-matrix-2026-06-11.md"
 JSON_OUT = WORK / "docs/audits/fr-matrix.json"
 
 data = json.loads(INVENTORY.read_text(encoding="utf-8"))
@@ -126,9 +126,9 @@ def esc(x):
 
 # ---- Markdown deliverable ----
 md = []
-md.append("# FR / NFR ↔ Code ↔ Test Matrix — 2026-06-10")
+md.append("# FR / NFR ↔ Code ↔ Test Matrix — 2026-06-11")
 md.append("")
-md.append(f"**Generated:** 2026-06-10  ")
+md.append(f"**Generated:** 2026-06-11  ")
 md.append(f"**Total unique FR/NFR IDs:** {len(rows)}  ")
 md.append("**Source-of-truth inventory:** `docs/audits/_id_inventory_v3.json`  ")
 md.append("**Generator:** `docs/audits/_gather_ids.py`  ")
@@ -197,7 +197,7 @@ MD_OUT.write_text("\n".join(md) + "\n", encoding="utf-8")
 # ---- JSON deliverable ----
 json_doc = {
     "schema_version": 1,
-    "generated_at": "2026-06-10",
+    "generated_at": "2026-06-11",
     "source_inventory": "docs/audits/_id_inventory_v3.json",
     "status_legend": {
         "COVERED": "spec + code + test all present",

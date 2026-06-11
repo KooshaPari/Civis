@@ -26,6 +26,10 @@ pub enum RelationKind {
 }
 
 /// Inputs that drive relation updates.
+///
+/// Six micro-driver signals per the CIV-007 spec. All fields are non-negative
+/// magnitudes; direction is baked into [`DiplomacyMatrix::apply_signal`] via
+/// the weight signs.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub struct DiplomacySignal {
     /// Shared-resource pressure between clusters. Higher values push relations negative.
@@ -34,6 +38,74 @@ pub struct DiplomacySignal {
     pub trade_volume: f32,
     /// Proximity pressure between clusters. Higher values mildly push relations negative.
     pub proximity: f32,
+    /// Accumulated combat grievance this tick (from `last_tick_engagements`).
+    /// Decays via [`GriefAccumulator`]; caller passes the current decayed value.
+    /// Pushes relations strongly negative.
+    pub combat_grievance: f32,
+    /// How much faction A's surplus matches faction B's deficit across goods.
+    /// High complementarity implies latent trade benefit; pushes relations positive.
+    pub need_complementarity: f32,
+    /// Energy-scarcity pressure derived from `energy_budget_joules` vs
+    /// Subsistence demand. Positive when both factions are energy-scarce
+    /// (sharpens competition). Negative (represented as a negative value here)
+    /// when one faction has surplus that the other needs (pull toward cooperation).
+    pub scarcity_pressure: f32,
+}
+
+/// Per-pair grievance accumulator with exponential decay (CIV-007 §2.2).
+///
+/// Decay rate is in units of "fraction lost per tick", i.e.
+/// `grievance(t+1) = grievance(t) * (1 - decay_rate) + new_damage`.
+/// Suggested range: 0.005–0.03 per tick.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct GriefAccumulator {
+    /// Per-pair grievance scores keyed by canonical `(min_id, max_id)` pair.
+    pub pairs: std::collections::HashMap<(u32, u32), f32>,
+    /// Exponential decay rate applied every tick (suggested: 0.01).
+    pub decay_rate: f32,
+    /// Weight per engagement added to the accumulator (suggested: 0.05).
+    pub engagement_weight: f32,
+}
+
+impl GriefAccumulator {
+    /// Create a default accumulator with criticality-safe defaults.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            pairs: std::collections::HashMap::new(),
+            decay_rate: 0.01,
+            engagement_weight: 0.05,
+        }
+    }
+
+    fn key(a: u32, b: u32) -> (u32, u32) {
+        if a <= b { (a, b) } else { (b, a) }
+    }
+
+    /// Advance decay for all pairs without adding new engagements (called at
+    /// the top of every `phase_diplomacy` tick).
+    pub fn tick_decay(&mut self) {
+        let decay = 1.0 - self.decay_rate;
+        for v in self.pairs.values_mut() {
+            *v *= decay;
+            if *v < 1e-5 {
+                *v = 0.0;
+            }
+        }
+    }
+
+    /// Record engagements for the tick.  `shooter` and `target` are faction ids.
+    pub fn add_engagement(&mut self, shooter: u32, target: u32) {
+        let key = Self::key(shooter, target);
+        let entry = self.pairs.entry(key).or_insert(0.0);
+        *entry += self.engagement_weight;
+    }
+
+    /// Current grievance for a faction pair (symmetric).
+    #[must_use]
+    pub fn get(&self, a: u32, b: u32) -> f32 {
+        self.pairs.get(&Self::key(a, b)).copied().unwrap_or(0.0)
+    }
 }
 
 /// Stored relation record for a cluster pair.
@@ -116,14 +188,31 @@ impl DiplomacyMatrix {
 
     /// Applies a new interaction signal to a pair and returns the outcome.
     ///
-    /// Positive trade pushes the score upward. Competition and proximity push
-    /// it downward. The record is clamped to keep the matrix stable.
+    /// Drift equation (CIV-007 §1.3):
+    /// ```text
+    /// drift = trade_volume    × W_trade      (0.08)
+    ///       - competition     × W_compete    (0.12)
+    ///       - proximity       × W_border     (0.04)
+    ///       - combat_grievance× W_grievance  (0.18)
+    ///       + complementarity × W_complement (0.06)
+    ///       - scarcity_pressure × W_scarcity (0.10)
+    /// ```
+    /// `scarcity_pressure` may be negative (one-surplus-one-deficit case),
+    /// which would then add to the score rather than subtract — correct by
+    /// design, representing a pull toward cooperation.
     pub fn apply_signal(
         &mut self,
         a: ClusterId,
         b: ClusterId,
         signal: DiplomacySignal,
     ) -> DiplomacyOutcome {
+        const W_TRADE: f32 = 0.08;
+        const W_COMPETE: f32 = 0.12;
+        const W_BORDER: f32 = 0.04;
+        const W_GRIEVANCE: f32 = 0.18;
+        const W_COMPLEMENT: f32 = 0.06;
+        const W_SCARCITY: f32 = 0.10;
+
         let key = Self::key(a, b);
         let entry = self
             .relations
@@ -131,9 +220,12 @@ impl DiplomacyMatrix {
             .or_insert_with(RelationRecord::new);
         let before = Self::relation_kind(entry.score);
 
-        let drift = signal.trade_volume * 0.08
-            - signal.resource_competition * 0.12
-            - signal.proximity * 0.04;
+        let drift = signal.trade_volume * W_TRADE
+            - signal.resource_competition * W_COMPETE
+            - signal.proximity * W_BORDER
+            - signal.combat_grievance * W_GRIEVANCE
+            + signal.need_complementarity * W_COMPLEMENT
+            - signal.scarcity_pressure * W_SCARCITY;
         entry.score = (entry.score + drift).clamp(-1.0, 1.0);
         entry.samples = entry.samples.saturating_add(1);
 
@@ -142,6 +234,36 @@ impl DiplomacyMatrix {
             after: Self::relation_kind(entry.score),
             score: entry.score,
         }
+    }
+
+    /// Shannon entropy over the five [`RelationKind`] buckets across all pairs
+    /// (CIV-007 §4.3).  `H = 0` means all pairs are in the same state;
+    /// `H ≈ 2.32` is maximum diversity.  Target operating range: `[1.5, 2.1]`.
+    #[must_use]
+    pub fn trust_entropy(&self) -> f32 {
+        if self.relations.is_empty() {
+            return 0.0;
+        }
+        let total = self.relations.len() as f32;
+        let mut counts = [0u32; 5]; // Alliance, Trade, Neutral, Rivalry, War
+        for record in self.relations.values() {
+            let idx = match Self::relation_kind(record.score) {
+                RelationKind::Alliance => 0,
+                RelationKind::Trade => 1,
+                RelationKind::Neutral => 2,
+                RelationKind::Rivalry => 3,
+                RelationKind::War => 4,
+            };
+            counts[idx] += 1;
+        }
+        counts
+            .iter()
+            .filter(|&&c| c > 0)
+            .map(|&c| {
+                let p = c as f32 / total;
+                -p * p.log2()
+            })
+            .sum()
     }
 
     /// Returns a sorted snapshot of all stored relations.

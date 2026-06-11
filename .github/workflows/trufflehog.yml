@@ -9,7 +9,7 @@ on:
 jobs:
   manifest-verify:
     name: manifest-verify (cloud)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -21,7 +21,7 @@ jobs:
   trufflehog:
     # Manual escape hatch: rerun the secrets scan on the cloud.
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

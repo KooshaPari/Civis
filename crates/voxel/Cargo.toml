@@ -20,3 +20,7 @@ phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-voxel.git", r
 proptest = "1.4"
 # Used by the PBR substrate unit tests to round-trip attestation manifests.
 serde_json = "1"
+# Used by the PBR / HUD substrate unit tests to round-trip plans and
+# panel state through RON (the laws + civ-traffic crates already standardise
+# on RON for replay/save formats).
+ron = "0.8"

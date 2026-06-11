@@ -359,28 +359,34 @@ impl Plugin for GameUiPlugin {
             // HUD comes back).
             .add_systems(
                 EguiPrimaryContextPass,
-                (load_tool_icons, draw_game_ui).chain(),
+                // apply_keycap_theme MUST run first: it sets the global egui
+                // Style/Visuals (Keycap Palette + holocron chrome) before any
+                // draw call can consume it. load_tool_icons and draw_game_ui
+                // follow in order.
+                (apply_keycap_theme, load_tool_icons, draw_game_ui).chain(),
             );
     }
 }
 
-/// Step every holocron `FlyoutMotion` channel toward its target by `dt`. Uses
-/// the per-frame `Time` delta so the easing curve is frame-rate independent
-/// (a 90ms half-life reads the same at 30, 60, or 144 fps).
+/// Global egui theme system — runs first in every [`EguiPrimaryContextPass`] frame.
 ///
-/// NOTE: This system is part of the deferred per-frame anim timeline. It is
-/// kept in the source tree as a forward reference for the WGSL/3D follow-up
-/// (see `docs/decisions/holocron-3d.md`) but is NOT registered in
-/// `GameUiPlugin::build` because adding a 17th `SystemParam` to
-/// `draw_game_ui` is not possible under Bevy 0.18's `impl_system_function`
-/// macro (0..16 tuple limit). When the HUD wiring is re-architected to
-/// split the bottom-cluster into its own system, this can be wired in.
-#[allow(dead_code)]
-fn step_flyout_motion(mut motion: ResMut<FlyoutMotion>, time: Res<Time>) {
-    let dt = time.delta_secs();
-    ease_towards(&mut motion.bottom, dt);
-    ease_towards(&mut motion.left_tab, dt);
-    ease_towards(&mut motion.speed_blade, dt);
+/// Applies the Phenotype Keycap Palette + holocron command-deck chrome:
+/// - Background: midnight `#090a0c` / `#1a1e24` (GRAPHITE_900) surfaces
+/// - Primary accent: teal `#7ebab5` on edges, selection, and active strokes only
+///   (never as a large fill — "neon-as-signal" rule)
+/// - Holographic glass panels: frosted DECK_GLASS fill + DECK_BORDER rim
+/// - Colored teal rim-glow on focus (not white)
+/// - Rounded corners (8 px buttons, 12 px panels)
+/// - Drop shadows for depth hierarchy
+/// - Montserrat (body), JetBrains Mono (numeric), Bricolage Grotesque (display)
+///
+/// Delegates to [`crate::ui_theme::apply_theme`] which is the canonical
+/// implementation; this system exists purely to give it an explicit, named place
+/// in the Bevy schedule and to separate theming from HUD draw logic.
+fn apply_keycap_theme(mut contexts: EguiContexts) {
+    if let Ok(ctx) = contexts.ctx_mut() {
+        apply_theme(ctx);
+    }
 }
 
 /// Startup: queue each tool-icon PNG on the [`AssetServer`].
@@ -509,7 +515,6 @@ fn draw_game_ui(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    apply_theme(ctx);
 
     // The flyout anim target is synced to `sub_tool.open_category` via
     // `sync_flyout_motion_target` (registered before `draw_game_ui`) so this

@@ -1948,6 +1948,96 @@ impl Simulation {
         });
     }
 
+    /// Split an aggregate energy `total` into the four consumer priority tiers
+    /// (FR-ECON-005, CIV-002), highest-priority first. The *ordering* is a
+    /// survival floor (subsistence before luxury) — defensible to hardcode under
+    /// the Civis Emergence Charter — while the *share* each tier receives is
+    /// derived from the population's live need pressure so culture/preference is
+    /// not baked in.
+    ///
+    /// Tier→need mapping (Maslow / Stone-Geary linear-expenditure grounding):
+    /// - `Subsistence` = food + water + health (physiological survival).
+    /// - `Basic` = rest + safety (security).
+    /// - `Comfort` = social (belonging).
+    /// - `Luxury` = residual headroom above satiated needs (supernumerary income
+    ///   in Stone-Geary terms) — first cut under scarcity.
+    ///
+    /// Weighting: each tier's weight is the population's aggregate *unmet*
+    /// pressure for its needs (`1 - satisfaction`, summed) — more starvation ⇒
+    /// larger subsistence share. Pressure is converted to integer basis points
+    /// deterministically (no `f32` survives into the returned `i64` split), so
+    /// replay equality is preserved. When there are no citizens/needs to sample,
+    /// a fixed survival-floor baseline (50/25/15/10 — physiological-heavy, a
+    /// documented floor, not a culture knob) is used.
+    ///
+    /// The four returned demands sum to `total` (remainder assigned to the
+    /// lowest tier so the budget is never silently lost).
+    fn tiered_demand(&self, total: i64) -> [(civ_economy::PriorityTier, i64); 4] {
+        use civ_economy::PriorityTier;
+        if total <= 0 {
+            return [
+                (PriorityTier::Subsistence, 0),
+                (PriorityTier::Basic, 0),
+                (PriorityTier::Comfort, 0),
+                (PriorityTier::Luxury, 0),
+            ];
+        }
+
+        // Aggregate unmet need pressure across all living citizens. Pressure is
+        // quantised to integer milli-units (`1 - satisfaction`, scaled ×1000)
+        // immediately so the persisted/replayed path carries no f32.
+        let mut subsist_p: i64 = 0; // food + water + health
+        let mut basic_p: i64 = 0; // rest + safety
+        let mut comfort_p: i64 = 0; // social
+        let mut n: i64 = 0;
+        let unmet = |s: f32| -> i64 { ((1.0 - s.clamp(0.0, 1.0)) * 1000.0) as i64 };
+        for (_e, needs) in self.world.query::<&LifeNeeds>().iter() {
+            subsist_p += unmet(needs.food) + unmet(needs.water) + unmet(needs.health);
+            basic_p += unmet(needs.rest) + unmet(needs.safety);
+            comfort_p += unmet(needs.social);
+            n += 1;
+        }
+
+        // Tier weights in basis points (sum 10_000). Subsistence carries a hard
+        // floor (5_000 bps) regardless of measured pressure — the survival floor
+        // the charter permits us to hardcode; the remaining 5_000 bps are split
+        // by live pressure (or the baseline split when no pressure data exists).
+        const SUBSIST_FLOOR_BPS: i64 = 5_000;
+        const LUX_BASELINE_BPS: i64 = 1_000;
+        // Luxury bps is the residual (10_000 − others), so only three are bound.
+        let (sub_bps, basic_bps, comfort_bps) = if n == 0 {
+            // No citizens: documented survival-floor baseline 50/25/15(/10 lux).
+            (5_000, 2_500, 1_500)
+        } else {
+            let pressure_total = subsist_p + basic_p + comfort_p;
+            let headroom = 10_000 - SUBSIST_FLOOR_BPS - LUX_BASELINE_BPS; // 4_000
+            if pressure_total == 0 {
+                // Everyone sated: minimal subsistence pull, surplus flows down to
+                // comfort/luxury (Stone-Geary supernumerary spend).
+                (SUBSIST_FLOOR_BPS, 1_500, 2_000)
+            } else {
+                let sub_extra = subsist_p.saturating_mul(headroom) / pressure_total;
+                let basic_extra = basic_p.saturating_mul(headroom) / pressure_total;
+                let comfort_extra = comfort_p.saturating_mul(headroom) / pressure_total;
+                (SUBSIST_FLOOR_BPS + sub_extra, basic_extra, comfort_extra)
+            }
+        };
+
+        // Convert bps → joule demands; remainder to Luxury (lowest tier) so the
+        // full `total` is distributed and conservation holds.
+        let sub_d = total.saturating_mul(sub_bps) / 10_000;
+        let basic_d = total.saturating_mul(basic_bps) / 10_000;
+        let comfort_d = total.saturating_mul(comfort_bps) / 10_000;
+        // Luxury is the residual (LUX_BASELINE_BPS is the implicit floor within it).
+        let lux_d = total - sub_d - basic_d - comfort_d;
+        [
+            (PriorityTier::Subsistence, sub_d),
+            (PriorityTier::Basic, basic_d),
+            (PriorityTier::Comfort, comfort_d),
+            (PriorityTier::Luxury, lux_d.max(0)),
+        ]
+    }
+
     /// Economy phase — sync joule budget with `civ-economy`, apply policy drain, step,
     /// and advance market prices.
     ///
@@ -1968,11 +2058,16 @@ impl Simulation {
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
-        // Route through the pluggable allocation dispatch (FR-ECON-005) rather
-        // than hardcoding a concrete allocator. Default regime is Capitalist, so
-        // behavior is unchanged until a policy/scenario selects another regime.
-        let allocated =
-            civ_economy::allocate_with(civ_economy::AllocationRegime::default(), budget, demand);
+        // Split aggregate demand into subsistence-first priority tiers (FR-ECON-005,
+        // CIV-002) and ration the scarce budget highest-priority-first: subsistence
+        // is filled before luxury, and luxury is starved first under scarcity.
+        let tiers = self.tiered_demand(demand);
+        let granted = civ_economy::allocate_by_priority(
+            &civ_economy::CapitalistAllocator,
+            budget,
+            &tiers,
+        );
+        let allocated: i64 = granted.iter().sum();
         civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
         civ_economy::step(&mut self.economy_state);
 
@@ -3328,5 +3423,53 @@ mod tests {
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"
         );
+    }
+
+    /// FR-ECON-005 / CIV-002 — the tiered split never demands more than the
+    /// aggregate total (conservation: shares partition the budget exactly).
+    #[test]
+    fn tiered_demand_partitions_total() {
+        let sim = Simulation::with_seed(5);
+        for total in [0i64, 1, 1_000, 5_000_000_000] {
+            let tiers = sim.tiered_demand(total);
+            let sum: i64 = tiers.iter().map(|(_, d)| *d).sum();
+            assert_eq!(sum, total, "tier demands must sum to total ({total})");
+            assert!(tiers.iter().all(|(_, d)| *d >= 0), "no negative demand");
+            // Subsistence is the highest-priority tier and (by floor) gets a
+            // non-trivial share when there is anything to allocate.
+            if total > 10_000 {
+                assert!(
+                    tiers[0].1 >= total / 2,
+                    "subsistence honors its survival floor (>=50%)"
+                );
+            }
+        }
+    }
+
+    /// FR-ECON-005 / CIV-002 — under scarcity the priority allocator fills
+    /// subsistence before luxury (luxury starves first).
+    #[test]
+    fn tiered_allocation_fills_subsistence_before_luxury() {
+        let sim = Simulation::with_seed(5);
+        let total = 1_000_000i64;
+        let tiers = sim.tiered_demand(total);
+        // Budget covers only the subsistence tier's demand.
+        let budget = tiers[0].1;
+        let granted =
+            civ_economy::allocate_by_priority(&CapitalistAllocator, budget, &tiers);
+        assert_eq!(granted[0], tiers[0].1, "subsistence fully met");
+        assert_eq!(granted[3], 0, "luxury starved under scarcity");
+        let total_granted: i64 = granted.iter().sum();
+        assert!(total_granted <= budget, "never exceeds budget");
+    }
+
+    /// FR-ECON-005 / CIV-002 — a zero budget grants nothing across all tiers.
+    #[test]
+    fn tiered_allocation_zero_budget_grants_nothing() {
+        let sim = Simulation::with_seed(5);
+        let tiers = sim.tiered_demand(1_000_000);
+        let granted = civ_economy::allocate_by_priority(&CapitalistAllocator, 0, &tiers);
+        assert_eq!(granted.iter().sum::<i64>(), 0);
+        assert!(granted.iter().all(|&g| g == 0));
     }
 }

@@ -190,3 +190,86 @@
       gold: 200
       population: 6
   weapon: siege_cannon
+
+# --- Transport + anti-air roles (previously-missing roster gaps) ---
+
+- id: naval_landing_barge
+  display_name: Landing Barge
+  description: Lightly armed transport hull that ferries ground troops and cargo across water. The fleet's logistics backbone.
+  unit_class: LightVehicle
+  faction_id: republic
+  tier: 1
+  vanilla_mapping: light_vehicle
+  defense_tags: [Mechanical, Naval]
+  behavior_tags: [Naval, Transport]
+  stats:
+    hp: 200.0
+    damage: 4.0
+    armor: 5.0
+    range: 6.0
+    speed: 8.0
+    accuracy: 0.5
+    fire_rate: 0.6
+    morale: 70.0
+    cost:
+      food: 25
+      wood: 100
+      stone: 0
+      iron: 35
+      gold: 30
+      population: 2
+  weapon: light_peashooter
+
+- id: naval_flak_escort
+  display_name: Flak Escort
+  description: Dedicated anti-air screen vessel bristling with rapid-fire flak guns. Protects fleets from aerial strikes.
+  unit_class: FastVehicle
+  faction_id: republic
+  tier: 2
+  vanilla_mapping: fast_vehicle
+  defense_tags: [Mechanical, Naval]
+  behavior_tags: [Naval, AntiAir]
+  stats:
+    hp: 160.0
+    damage: 18.0
+    armor: 6.0
+    range: 20.0
+    speed: 10.0
+    accuracy: 0.82
+    fire_rate: 2.4
+    morale: 85.0
+    cost:
+      food: 22
+      wood: 85
+      stone: 0
+      iron: 95
+      gold: 60
+      population: 2
+  weapon: light_cannon
+
+- id: cis_naval_aa_skimmer
+  display_name: CIS AA Skimmer
+  description: Fast CIS hovercraft mounting twin flak turrets for mobile fleet air defense.
+  unit_class: FastVehicle
+  faction_id: confederacy-of-independent-systems
+  tier: 2
+  vanilla_mapping: fast_vehicle
+  defense_tags: [Mechanical, Naval]
+  behavior_tags: [Naval, AntiAir]
+  stats:
+    hp: 140.0
+    damage: 20.0
+    armor: 5.0
+    range: 19.0
+    speed: 12.0
+    accuracy: 0.8
+    fire_rate: 2.6
+    morale: 80.0
+    cost:
+      food: 18
+      wood: 70
+      stone: 0
+      iron: 105
+      gold: 65
+      population: 2
+  weapon: light_cannon

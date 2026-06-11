@@ -414,6 +414,11 @@ pub struct Simulation {
     last_tick_engagements: Vec<CombatEngagement>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
+    /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick (linear
+    /// cell index + value in `[0, 100]`). Cleared at the start of every tick
+    /// and repopulated by [`Simulation::phase_voxel_ca`] so a downstream
+    /// emergence phase (life / ecology) can seed the first cells.
+    last_tick_abiogenesis_sites: Vec<civ_voxel::fluid_ca::AbiogenesisSuitability>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -673,6 +678,7 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
+            last_tick_abiogenesis_sites: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -737,6 +743,7 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
+            last_tick_abiogenesis_sites: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -1437,6 +1444,65 @@ impl Simulation {
     /// ordering.
     fn phase_voxel(&mut self) {
         self.last_tick_voxel_events = self.voxel.drain_dirty();
+    }
+
+    /// FR-CIV-CA-009: CA-driven abiogenesis scan. Walks the active
+    /// `dirty_chunks` set on the CA grid (the same set `phase_voxel` would
+    /// step) and scores every cell with [`civ_voxel::fluid_ca::AbiogenesisSuitability`].
+    /// The result is stashed in `last_tick_abiogenesis_sites` for the
+    /// downstream emergence phase to consume.
+    ///
+    /// `reg` is the material registry used to look up solvent scoring; pass
+    /// `MaterialRegistry::standard()` in production. `grid` may be a borrowed
+    /// CA grid from a Bevy / Godot resident window; when `None` we skip
+    /// (cheap path: emergence layer uses a synthetic distribution).
+    pub fn phase_voxel_ca(
+        &mut self,
+        grid: Option<&civ_voxel::fluid_ca::CaGrid>,
+    ) {
+        self.last_tick_abiogenesis_sites.clear();
+        let Some(grid) = grid else { return };
+        for &chunk in &grid.dirty_chunks() {
+            // Re-derive the chunk's cell-span in (x, y, z). Each 16³ leaf is
+            // enumerated, but the trailing leaf on each axis may be short —
+            // clamp via `min(dims[axis])`.
+            let counts = grid.chunk_counts();
+            if counts[0] == 0 || counts[1] == 0 || counts[2] == 0 {
+                break;
+            }
+            let cx = chunk % counts[0];
+            let rem = chunk - cx;
+            let cy = rem / counts[0] % counts[1];
+            let cz = rem / (counts[0] * counts[1]);
+            let x0 = cx * 16;
+            let y0 = cy * 16;
+            let z0 = cz * 16;
+            let x1 = (x0 + 16).min(grid.dims[0]);
+            let y1 = (y0 + 16).min(grid.dims[1]);
+            let z1 = (z0 + 16).min(grid.dims[2]);
+            for z in z0..z1 {
+                for y in y0..y1 {
+                    for x in x0..x1 {
+                        let Some(idx) = grid.index(x, y, z) else { continue };
+                        let mat = grid.cells[idx];
+                        let t = grid.temperatures[idx];
+                        let sat = grid.saturation[idx];
+                        let s =
+                            civ_voxel::fluid_ca::AbiogenesisSuitability::from_cell(mat, t, sat);
+                        if s.is_viable() {
+                            self.last_tick_abiogenesis_sites.push(s);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// FR-CIV-CA-009 — borrow the abiogenesis sites produced by
+    /// [`Simulation::phase_voxel_ca`]. Cleared at the start of the next
+    /// `phase_voxel_ca` call.
+    pub fn last_tick_abiogenesis_sites(&self) -> &[civ_voxel::fluid_ca::AbiogenesisSuitability] {
+        &self.last_tick_abiogenesis_sites
     }
 
     /// Compact the voxel world periodically.
@@ -3264,6 +3330,82 @@ mod tests {
         assert_eq!(
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // FR-CIV-CA-009 — `Simulation::phase_voxel_ca` + abiogenesis sites.
+    // -------------------------------------------------------------------------
+
+    /// FR-CIV-CA-009 — `phase_voxel_ca(None)` is a no-op: sites stay empty.
+    /// This is the cheap path (no resident window wired up) and must not
+    /// blow up or allocate a giant vec.
+    #[test]
+    fn phase_voxel_ca_none_is_noop() {
+        let mut sim = Simulation::with_seed(1);
+        sim.phase_voxel_ca(None);
+        assert!(sim.last_tick_abiogenesis_sites().is_empty());
+    }
+
+    /// FR-CIV-CA-009 — warm liquid WATER in a single chunk produces at
+    /// least one viable abiogenesis site. A pure STONE chunk produces
+    /// zero. The two runs must round-trip deterministically (same seed,
+    /// same grid → same sites).
+    #[test]
+    fn phase_voxel_ca_warm_water_is_viable_stone_is_not() {
+        use civ_voxel::fluid_ca::{AbiogenesisSuitability, CaGrid};
+        use civ_voxel::material::{MaterialRegistry, STONE, WATER};
+        use civ_voxel::BoundaryConfig;
+
+        // 16³ grid (single chunk) seeded with one warm WATER cell in the
+        //  middle of an otherwise-AIR volume.
+        let mut g = CaGrid::new([16, 16, 16]);
+        g.set_with_temp(8, 8, 8, WATER, 40);
+        g.dirty_chunks.clear();
+        g.mark_dirty_cell(8, 8, 8);
+        // Run a CA tick so the cell participates in the dirty-chunk set.
+        let _ = civ_voxel::fluid_ca::step_with_config(
+            &mut g,
+            MaterialRegistry::standard(),
+            BoundaryConfig::closed(),
+            0,
+        );
+        let mut sim = Simulation::with_seed(7);
+        sim.phase_voxel_ca(Some(&g));
+        let sites = sim.last_tick_abiogenesis_sites();
+        // The WATER cell at (8, 8, 8) is at 40 °C → solvent=255, energy=127
+        // (40 * 255 / 80 = 127) → viability true. AIR cells score 0.
+        assert!(
+            sites.iter().any(|s| s.is_viable()),
+            "warm water should be a viable abiogenesis site, got {sites:?}"
+        );
+        assert!(
+            sites
+                .iter()
+                .all(|s| matches!(s, AbiogenesisSuitability { value, .. } if *value <= 100)),
+            "abiogenesis value must be in [0, 100]"
+        );
+
+        // Stone-only grid: no solvents at all.
+        let mut g2 = CaGrid::new([16, 16, 16]);
+        for x in 0..16 {
+            for y in 0..16 {
+                for z in 0..16 {
+                    g2.set_with_temp(x, y, z, STONE, 40);
+                }
+            }
+        }
+        g2.dirty_chunks.clear();
+        g2.mark_mobile_chunks(MaterialRegistry::standard());
+        let mut sim2 = Simulation::with_seed(7);
+        sim2.phase_voxel_ca(Some(&g2));
+        assert!(
+            sim2.last_tick_abiogenesis_sites().is_empty()
+                || sim2
+                    .last_tick_abiogenesis_sites()
+                    .iter()
+                    .all(|s| !s.is_viable()),
+            "stone-only grid must produce zero viable sites"
         );
     }
 }

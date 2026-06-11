@@ -12,13 +12,16 @@ Status (per task):
   CODE-ONLY-no-spec: code, no spec
 """
 import json
+import os
 import re
 from collections import Counter, defaultdict
+from datetime import date
 from pathlib import Path
 
-WORK = Path("D:/civis-build/matrix5")
+WORK = Path(os.environ.get("CIVIS_AUDIT_WORK", ".")).resolve()
+GENERATED_AT = os.environ.get("CIVIS_AUDIT_DATE", date.today().isoformat())
 INVENTORY = WORK / "docs/audits/_id_inventory_v3.json"
-MD_OUT = WORK / "docs/audits/fr-matrix-2026-06-11.md"
+MD_OUT = WORK / f"docs/audits/fr-matrix-{GENERATED_AT}.md"
 JSON_OUT = WORK / "docs/audits/fr-matrix.json"
 
 data = json.loads(INVENTORY.read_text(encoding="utf-8"))
@@ -126,9 +129,9 @@ def esc(x):
 
 # ---- Markdown deliverable ----
 md = []
-md.append("# FR / NFR ↔ Code ↔ Test Matrix — 2026-06-11")
+md.append(f"# FR / NFR ↔ Code ↔ Test Matrix — {GENERATED_AT}")
 md.append("")
-md.append(f"**Generated:** 2026-06-11  ")
+md.append(f"**Generated:** {GENERATED_AT}  ")
 md.append(f"**Total unique FR/NFR IDs:** {len(rows)}  ")
 md.append("**Source-of-truth inventory:** `docs/audits/_id_inventory_v3.json`  ")
 md.append("**Generator:** `docs/audits/_gather_ids.py`  ")
@@ -197,7 +200,7 @@ MD_OUT.write_text("\n".join(md) + "\n", encoding="utf-8")
 # ---- JSON deliverable ----
 json_doc = {
     "schema_version": 1,
-    "generated_at": "2026-06-11",
+    "generated_at": GENERATED_AT,
     "source_inventory": "docs/audits/_id_inventory_v3.json",
     "status_legend": {
         "COVERED": "spec + code + test all present",

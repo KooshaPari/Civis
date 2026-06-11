@@ -377,7 +377,12 @@ fn advance_simulation(
     }
     timer.0.tick(time.delta());
     if timer.0.just_finished() {
+        let prior_sample_tick = sim.0.last_emergence_sample().map(|sample| sample.tick);
         sim.0.tick();
+        let latest_sample_tick = sim.0.last_emergence_sample().map(|sample| sample.tick);
+        if latest_sample_tick != Some(sim.0.state.tick) && latest_sample_tick == prior_sample_tick {
+            sim.0.sample_emergence();
+        }
     }
 }
 

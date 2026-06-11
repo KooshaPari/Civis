@@ -1211,6 +1211,226 @@ write_policy = false
     }
 
     #[test]
+    fn fr_civ_tactics_046_green_economy_phase_only_ticks_economic_mods() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let econ_dir = root.path().join("econ");
+        let policy_dir = root.path().join("policy");
+        std::fs::create_dir(&econ_dir).expect("econ dir");
+        std::fs::create_dir(&policy_dir).expect("policy dir");
+
+        const ECON_WAT: &str = r#"
+            (module
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                i32.const 19)
+            )
+        "#;
+        const POLICY_WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                i32.const 7)
+            )
+        "#;
+
+        std::fs::write(
+            econ_dir.join("manifest.toml"),
+            r#"
+            [mod]
+            id = "econ-demo"
+            name = "Econ Demo"
+            version = "0.0.1"
+            api_version = "1"
+            mod_type = "economic"
+            author = "t"
+            description = "d"
+
+            [dependencies]
+            civlab-api = ">=1.0.0, <2.0.0"
+
+            [permissions]
+            read_economy = true
+            "#,
+        )
+        .expect("econ manifest");
+        std::fs::write(econ_dir.join(MOD_WASM_NAME), wat::parse_str(ECON_WAT).expect("wat"))
+            .expect("econ wasm");
+
+        std::fs::write(
+            policy_dir.join("manifest.toml"),
+            r#"
+            [mod]
+            id = "policy-demo"
+            name = "Policy Demo"
+            version = "0.0.1"
+            api_version = "1"
+            mod_type = "policy"
+            author = "t"
+            description = "d"
+
+            [dependencies]
+            civlab-api = ">=1.0.0, <2.0.0"
+
+            [permissions]
+            write_policy = true
+            "#,
+        )
+        .expect("policy manifest");
+        std::fs::write(
+            policy_dir.join(MOD_WASM_NAME),
+            wat::parse_str(POLICY_WAT).expect("wat"),
+        )
+        .expect("policy wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(&econ_dir).expect("load economic mod");
+        host.load_manifest_dir(&policy_dir).expect("load policy mod");
+        let lines = host.economy_tick(4);
+        assert!(lines.iter().any(|line| line.contains("mod:econ-demo:wasm_economy_tick:tick=4:code=19")));
+        assert!(!lines.iter().any(|line| line.contains("mod:policy-demo")));
+    }
+
+    #[test]
+    fn fr_civ_tactics_052_green_economy_tick_persists_guest_memory() {
+        const WAT: &str = r#"
+            (module
+              (import "civlab" "memory_read" (func $read (param i32) (result i32)))
+              (import "civlab" "memory_write" (func $write (param i32 i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (call $read)
+                (if (result i32)
+                  (i32.eqz)
+                  (then
+                    (i32.const 0)
+                    (i32.const 55)
+                    (call $write)
+                    (i32.const 55))
+                  (else
+                    (i32.const 0)
+                    (call $read))))
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+            [mod]
+            id = "mem-econ"
+            name = "Mem Eco"
+            version = "0.0.1"
+            api_version = "1"
+            mod_type = "economic"
+            author = "t"
+            description = "d"
+
+            [dependencies]
+            civlab-api = ">=1.0.0, <2.0.0"
+
+            [permissions]
+            read_economy = true
+            "#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT).expect("wat"))
+            .expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let _ = host.economy_tick(1);
+        assert_eq!(host.guest_memory_snapshot("mem-econ").first().copied(), Some(55));
+        let _ = host.economy_tick(2);
+        assert_eq!(host.guest_memory_snapshot("mem-econ").first().copied(), Some(55));
+    }
+
+    #[test]
+    fn fr_civ_tactics_054_green_browser_entries_include_loaded_mod() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                i32.const 3)
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+            [mod]
+            id = "browser-demo"
+            name = "Browser Demo"
+            version = "1.2.0"
+            api_version = "1"
+            mod_type = "policy"
+            author = "t"
+            description = "d"
+
+            [dependencies]
+            civlab-api = ">=1.0.0, <2.0.0"
+
+            [permissions]
+            write_policy = true
+            "#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT).expect("wat"))
+            .expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        let entries = host.browser_entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, "browser-demo");
+        assert_eq!(entries[0].mod_type, "policy");
+        assert!(entries[0].has_wasm);
+        assert_eq!(entries[0].guest_memory_len, 0);
+    }
+
+    #[test]
+    fn fr_mod_004_green_records_mod_loaded_v1_event() {
+        const WAT: &str = r#"
+            (module
+              (func (export "civlab_policy_tick") (param i64) (result i32)
+                i32.const 12)
+            )
+        "#;
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("manifest.toml"),
+            r#"
+            [mod]
+            id = "loaded-demo"
+            name = "Loaded Demo"
+            version = "1.2.3"
+            api_version = "1"
+            mod_type = "policy"
+            author = "t"
+            description = "d"
+
+            [dependencies]
+            civlab-api = ">=1.0.0, <2.0.0"
+
+            [permissions]
+            write_policy = true
+            "#,
+        )
+        .expect("manifest");
+        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT).expect("wat"))
+            .expect("wasm");
+
+        let mut host = ModHost::new();
+        host.load_manifest_dir(dir.path()).expect("load");
+        assert_eq!(host.loaded_records().len(), 1);
+        let record = &host.loaded_records()[0];
+        assert_eq!(record.mod_id, "loaded-demo");
+        assert_eq!(record.version, "1.2.3");
+        assert_eq!(record.tick, 0);
+        let events = host.loaded_events();
+        assert_eq!(events.len(), 1);
+        let line = &events[0];
+        assert!(line.contains("mod.loaded.v1"));
+        assert!(line.contains("loaded-demo"));
+        assert!(line.contains("tick=0"));
+    }
+
+    #[test]
     fn capability_imports_list_is_complete() {
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"sim_tick"));
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"memory_read"));

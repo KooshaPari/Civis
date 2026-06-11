@@ -557,4 +557,52 @@ mod tests {
             1
         );
     }
+
+    #[test]
+    fn fr_civ_tactics_047_green_host_import_module_constant_is_civlab() {
+        assert_eq!(HOST_IMPORT_MODULE, "civlab");
+    }
+
+    #[test]
+    fn fr_civ_tactics_053_green_host_capability_imports_include_world_read() {
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"world_read"));
+        assert!(HOST_CAPABILITY_IMPORTS.contains(&"action_emit"));
+    }
+
+    #[test]
+    fn fr_civ_tactics_049_green_trims_guest_memory_before_call_out_of_bounds_write() {
+        let mut mem = vec![0u8; HOST_GUEST_MEMORY_CAP + 5];
+        let wasm = wat::parse_str(
+            r#"
+            (module
+              (import "civlab" "memory_write" (func $write (param i32 i32)))
+              (func (export "civlab_economy_tick") (param i64) (result i32)
+                (i32.const 0)
+                (i32.const 0)
+                (call $write)
+                i32.const 0)
+            )
+            "#,
+        )
+        .expect("wat");
+
+        trim_guest_memory(&mut mem);
+        let mut state = HostState {
+            guest_memory: mem,
+            ..HostState::default()
+        };
+        let mut enforcement = ModEnforcementCtx::default();
+        assert_eq!(
+            invoke_economy_tick_with_capabilities(
+                &wasm,
+                0,
+                &mut state.guest_memory,
+                ModCapabilitySet::allow_all(),
+                &mut enforcement,
+            )
+            .expect("invoke"),
+            0
+        );
+        assert_eq!(state.guest_memory.len(), HOST_GUEST_MEMORY_CAP);
+    }
 }

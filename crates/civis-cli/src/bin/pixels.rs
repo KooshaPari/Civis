@@ -1,7 +1,7 @@
 use std::{fs::File, io::BufReader, path::PathBuf};
 
-use clap::Parser;
 use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid};
+use clap::Parser;
 use serde_json::json;
 
 #[derive(Debug, Parser)]
@@ -20,6 +20,8 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pheno_tracing::init();
+
     let args = Args::parse();
     let file = File::open(&args.input)?;
     let decoder = png::Decoder::new(BufReader::new(file));
@@ -44,7 +46,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let samples = sample_rgb_grid(output.width as usize, output.height as usize, args.grid, &data);
+    let samples = sample_rgb_grid(
+        output.width as usize,
+        output.height as usize,
+        args.grid,
+        &data,
+    );
     let mut stats = compute_pixel_stats(&samples);
     if args.near_black_threshold != 8 && !samples.is_empty() {
         let near_black = samples

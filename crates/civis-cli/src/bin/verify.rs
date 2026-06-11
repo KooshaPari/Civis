@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use clap::Parser;
 use civis_cli::config::{load_dotenv, verify_output_dir_from_env, verify_settle_frames_from_env};
 use civis_cli::verify::{run_verify, VerifyOptions, VerifyResult};
+use clap::Parser;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -29,22 +29,17 @@ struct Args {
 
 fn main() {
     load_dotenv();
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,bevy_render=warn")),
-        )
-        .init();
+    pheno_tracing::init();
 
     let args = Args::parse();
     let out_dir = verify_output_dir_from_env();
-    let output_path = args
-        .out
-        .unwrap_or_else(|| out_dir.join("frame-0.png"));
+    let output_path = args.out.unwrap_or_else(|| out_dir.join("frame-0.png"));
 
     let options = VerifyOptions {
         output_path,
-        settle_frames: args.settle_frames.unwrap_or_else(verify_settle_frames_from_env),
+        settle_frames: args
+            .settle_frames
+            .unwrap_or_else(verify_settle_frames_from_env),
         width: args.width,
         height: args.height,
     };

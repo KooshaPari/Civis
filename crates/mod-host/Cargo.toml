@@ -16,6 +16,7 @@ wasmtime = "45.0.0"
 wasmparser = "0.248.0"
 zip = "2"
 rand = "0.8"
+pheno-tracing = { path = "../pheno-tracing" }
 
 [[bin]]
 name = "civ-mod-sign"

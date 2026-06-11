@@ -16,6 +16,7 @@ members = [
   "crates/research",
   "crates/ai",
   "crates/tactics",
+    "crates/pheno-tracing",
     "crates/planet",
     "crates/protocol-3d",
     "crates/mod-host",

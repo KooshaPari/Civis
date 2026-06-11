@@ -33,6 +33,10 @@ use civis_cli::census::{
 use civis_cli::config::census_config_from_env;
 use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid, PixelStats};
 
+pub mod error;
+
+pub use error::Error;
+
 /// Canonical names of the MCP tools this crate registers. The PR description
 /// references this list; tests assert the rmcp router matches it exactly so a
 /// future rename surfaces in CI rather than in production.
@@ -200,8 +204,6 @@ mod tests {
     //!    hand-built PNG) so the test stays deterministic and offline.
 
     use super::*;
-    use std::io::Write;
-
     /// Synthesize an 8x8 RGB PNG file on disk. The image alternates rows
     /// of red and black so the expected pixel stats are trivial to verify.
     fn write_synthetic_png(path: &Path) {
@@ -226,9 +228,8 @@ mod tests {
         }
         let file = std::fs::File::create(path).expect("create png");
         let mut encoder = png::Encoder::new(file, width, height);
-        encoder
-            .set_color(png::ColorType::Rgb)
-            .set_depth(png::BitDepth::Eight);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Eight);
         let mut writer = encoder.write_header().expect("png header");
         writer.write_image_data(&data).expect("png data");
         writer.finish().expect("png finish");

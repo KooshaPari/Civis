@@ -8,6 +8,8 @@ use rmcp::ServiceExt;
 
 #[tokio::main]
 async fn main() {
+    pheno_tracing::init();
+
     let service = civis_mcp::CivisMcpServer::new().serve(stdio()).await;
     match service {
         Ok(service) => {

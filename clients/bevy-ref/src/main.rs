@@ -20,6 +20,8 @@ const VOXEL_SPAN: i64 = 1_000_000;
 const CHUNK_EDGE: usize = 16;
 
 fn main() {
+    pheno_tracing::init();
+
     let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(VOXEL_SPAN);
 
     for ix in 0..4 {

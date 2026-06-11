@@ -18,6 +18,8 @@ use civ_bevy_ref::{
 };
 
 fn main() {
+    pheno_tracing::init();
+
     // Persist any panic to `civ-panic.log` in the working dir so a crash is
     // captured even when launched from a shortcut with no console (per the
     // "fail loudly, never silently" stance). Chains to the default hook.

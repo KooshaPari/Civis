@@ -41,6 +41,8 @@ fn pubkey_hex(pk: &[u8; 32]) -> String {
 }
 
 fn main() {
+    pheno_tracing::init();
+
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         usage();

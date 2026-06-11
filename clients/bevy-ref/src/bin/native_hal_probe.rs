@@ -7,6 +7,8 @@ use bevy::render::RenderApp;
 use civ_bevy_ref::{gpu_features::GpuFeaturesPlugin, native_backend::native_render_plugin};
 
 fn main() {
+    pheno_tracing::init();
+
     App::new()
         .add_plugins(
             DefaultPlugins

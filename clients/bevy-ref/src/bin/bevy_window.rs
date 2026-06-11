@@ -147,6 +147,8 @@ struct MinimapCache {
 }
 
 fn main() {
+    pheno_tracing::init();
+
     App::new()
         .add_plugins((
             DefaultPlugins

@@ -6,6 +6,8 @@ use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
+    pheno_tracing::init();
+
     let port = std::env::var("CIV_SERVER_PORT")
         .ok()
         .and_then(|value| value.parse().ok())
@@ -57,7 +59,10 @@ async fn initial_simulation(saves_dir: &std::path::Path, autoload: bool) -> Simu
             return Simulation::default();
         }
     }) else {
-        tracing::info!(?saves_dir, "CIV_AUTOLOAD enabled but no saves found; starting from Simulation::default()");
+        tracing::info!(
+            ?saves_dir,
+            "CIV_AUTOLOAD enabled but no saves found; starting from Simulation::default()"
+        );
         return Simulation::default();
     };
 

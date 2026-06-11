@@ -13,11 +13,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 schemars = "1"
 civis-cli = { path = "../civis-cli" }
+pheno-tracing = { path = "../pheno-tracing" }
 # Direct deps required for the pixels (PNG decode) and census (WS JSON-RPC)
 # library paths exposed by `civis-cli`. Kept in sync with `crates/civis-cli/Cargo.toml`.
 png = "0.17"
 tokio-tungstenite = { version = "0.24", default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
 futures-util = "0.3"
+thiserror = "1"
 
 [features]
 # Default empty: tools that need a windowed Bevy renderer (currently only

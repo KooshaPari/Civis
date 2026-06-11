@@ -3,14 +3,16 @@ spec_id: civ-021
 state: ACTIVE
 plan_status: IN_PROGRESS
 last_audit: 2026-06-10
-workstream_branch: docs/phantom-id-triage
+workstream_branch: docs/phantom-id-triage-2
 ---
 
-# Specification: Recovered Requirements — Phantom-ID Triage Batch 1
+# Specification: Recovered Requirements — Phantom-ID Triage Batch 1 + 2
 
 **Slug**: civ-021-recovered-requirements | **Epic**: E2 | **Date**: 2026-06-10 | **State**: ACTIVE
-**Workstream branch**: `docs/phantom-id-triage` (in `D:/civis-build/triage`)
-**Audit source**: [`docs/audits/phantom-triage-batch1.md`](../../../docs/audits/phantom-triage-batch1.md)
+**Workstream branch**: `docs/phantom-id-triage` (batch 1) + `docs/phantom-id-triage-2` (batch 2)
+**Audit sources**:
+[`docs/audits/phantom-triage-batch1.md`](../../../docs/audits/phantom-triage-batch1.md)
+[`docs/audits/phantom-triage-batch2.md`](../../../docs/audits/phantom-triage-batch2.md)
 
 ## Problem Statement
 
@@ -149,6 +151,28 @@ review). They are methodology / governance asks that the
   Source: `docs/research/xdd-sota-traceability.md:5,11,28-42` +
   demand #25 in `docs/audits/user-demand-trace-2026-06-10.md`.
 
+## Batch 2 additions (2026-06-10)
+
+The batch-2 audit
+([`phantom-triage-batch2.md`](../../../docs/audits/phantom-triage-batch2.md),
+150 rows, `FR-CIV-EMERGENCE-004` … `FR-SAVE-010`) found **one** new
+uncovered real-requirement stub — `FR-CIV-PLANET-010`. Every other
+batch-2 ID is either (a) covered by an existing spec home, or (b) a
+`STALE-ID` whose only footprint is the L3 `PLAN.md` work-log and which
+maps onto an existing spec'd ID via the rename table at the bottom of
+this doc.
+
+- [ ] **FR-CIV-PLANET-010** — Deterministic climate snapshot on
+  `Simulation::snapshot()`. `phase_planet` produces a `Climate` value
+  that is **bit-identical** to a pure
+  `compute_climate(tick, planet, moon)` call, and the snapshot
+  surfaces it on the wire for the JSON-RPC server. Source:
+  `crates/engine/src/engine.rs:2161,2427` (doc comments) +
+  `crates/server/src/jsonrpc.rs:411` (`phase_planet` reference) +
+  test `engine_tick_includes_climate_in_snapshot` at `engine.rs:2429`.
+  Acceptance is the existing `#[test]` round-trip: a freshly-built
+  `Simulation::with_seed(s)` snapshot equals `compute_climate(0, …)`,
+  and again after one `tick()` equals `compute_climate(1, …)`.
 ## Non-Functional Requirements
 
 - Determinism: every recovered ID's underlying implementation MUST
@@ -163,13 +187,41 @@ review). They are methodology / governance asks that the
 ## Validation
 
 - A re-run of `_id_inventory_v3.py` after this commit lands MUST
-  drop the 12 stub IDs from `CODE-ONLY-no-spec` into `COVERED` (they
-  now have a spec doc with the same `fr_ids` keys in the YAML front
-  matter). The matrix is the source of truth; this doc is the harness.
+  drop the 13 stub IDs (12 batch-1 + 1 batch-2) from `CODE-ONLY-no-spec`
+  into `COVERED` (they now have a spec doc with the same `fr_ids` keys
+  in the YAML front matter). The matrix is the source of truth; this
+  doc is the harness.
 - The verify gate `just civis-3d-verify` MUST remain green.
 
 ## Follow-up batches
 
-The remaining 686 `CODE-ONLY-no-spec` rows will be triaged in subsequent
+The remaining 535 `CODE-ONLY-no-spec` rows will be triaged in subsequent
 batches using the same template. This spec doc grows by appending new
 stubs (no overwrite); the `meta.json` `fr_ids` array grows likewise.
+
+## RENAME mappings (cumulative, batch 1 + 2)
+
+The IDs below are *stale* aliases that appear in `PLAN.md` L3 work-log
+rows or the agent-guide / worktree-guide commit-message templates but
+do not name their own implementation. Each maps onto the spec'd ID
+that owns the real implementation and its acceptance tests.
+
+| Old ID | → | New (existing) ID | Rationale |
+|--------|---|-------------------|-----------|
+| `FR-CIV-0001` | → | `FR-CIV-CORE-001` | `PLAN.md:16` + `GIT_WORKTREE_GUIDE.md:151`; the real tick loop is `FR-CIV-CORE-001` in `crates/engine/src/engine.rs`. |
+| `FR-CIV-ACTOR-001-LIFECYCLE` | → | `FR-CIV-ACT-001` | `PLAN.md:145-146`; the real citizen lifecycle is `FR-CIV-ACT-001` (see batch-1 stub). |
+| `FR-CIV-DIPLO-001-RELATIONS` | → | `FR-CIV-DIPLO-001` | `PLAN.md:207-208`; the real 8-state FSM is `FR-CIV-DIPLO-001` in `crates/diplomacy/src/lib.rs:1,15`. |
+| `FR-CIV-DIPLO-002-SHADOW` | → | `FR-CIV-DIPLO-002` | `PLAN.md:209-210`; the real influence-capital line is `FR-CIV-DIPLO-002` in `crates/diplomacy/src/lib.rs:16`. |
+| `FR-CIV-METRICS-001` | → | `FR-CIV-METRICS-001-TIMESERIES` | `PLAN.md:151`; non-hyphenated form is a phantom alias. |
+| `FR-CIV-METRICS-001-TIMESERIES` | → | (keep) | `PLAN.md:151-152`; the real time-series lives in `crates/engine` metrics (no separate `crates/metrics` per `PLAN.md:22`). Spec'd in `docs/reference/FR_TRACKER.md` + `STATUS_REPORT.md`. |
+| `FR-CIV-RESEARCH-001-SCENARIO` | → | (keep) | `PLAN.md:233-234`; the real LLM cache + card acceptance is `FR-CIV-RESEARCH-001` in `crates/research/src/lib.rs:377,408`. |
+| `FR-CIV-RESEARCH-002-SNAPSHOT` | → | (keep) | `PLAN.md:235-236`; the real canonical-replay line is `crates/research/src/lib.rs:601`. |
+| `FR-CIV-RESEARCH-003-EXPORT` | → | (keep) | `PLAN.md:237-238`; the real hybrid-replay line is `crates/research/src/lib.rs:616`. |
+| `FR-CIV-SERVER-001` | → | `FR-CIV-SERVER-001-WS` | `PLAN.md:174-175`; the real WebSocket server is the hyphenated form. |
+| `FR-CIV-SERVER-001-WS` | → | (keep) | `PLAN.md:174-175`; the real `SimServer` is in `crates/server/src/websocket.rs` (token at `crates/server/src/main.rs` + `crates/server/src/jsonrpc.rs`). |
+| `FR-CIV-SERVER-002` | → | `FR-CIV-SERVER-002-PROTO` | `PLAN.md:176-177`; the real protocol is the hyphenated form. |
+| `FR-CIV-SERVER-002-PROTO` | → | (keep) | `PLAN.md:176-177`; the real `ClientMessage`/`ServerMessage` is in `crates/server/src/`. |
+| `FR-CIV-SOCIAL-001-INSTITUTIONS` | → | `FR-CIV-ACT-001` (deferred) | `PLAN.md:147-148`; **`crates/social` does not exist** (`PLAN.md:20`), so the institution layer is not implemented; the partial citizen-lifecycle work lives under `FR-CIV-ACT-001`. |
+| `FR-CIV-SOCIAL-002-IDEOLOGY` | → | `FR-CIV-ACT-001` (deferred) | `PLAN.md:149-150`; same as above — `crates/social` not in workspace. |
+| `FR-CIV-WAR-001-UNITS` | → | (keep, group with `FR-CIV-WAR-010..013`) | `PLAN.md:203-204`; the real unit-handling code is in `crates/tactics/src/{formation,pathfinding,movement,operational}.rs` and spec'd in `docs/design/warfare.md`. |
+| `FR-CIV-WAR-002-COMBAT` | → | (keep, group with `FR-CIV-WAR-020..022`) | `PLAN.md:205-206`; the real combat-resolution code is in `crates/tactics/src/military_phase.rs` + `crates/tactics/src/war_bridge.rs` and spec'd in `docs/design/warfare.md`. |

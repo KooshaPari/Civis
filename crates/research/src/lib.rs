@@ -368,6 +368,7 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-RESEARCH-000.
     /// FR-CIV-RESEARCH-000 — schema present.
     #[test]
     fn schema_version_present() {
@@ -405,6 +406,7 @@ mod tests {
         assert_eq!(cache.get(key), Some(&card));
     }
 
+    /// Covers FR-CIV-RESEARCH-001.
     /// FR-CIV-RESEARCH-001 — a well-formed card with valid dependencies is
     /// accepted.
     #[test]
@@ -598,6 +600,7 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-RESEARCH-002.
     /// FR-CIV-RESEARCH-002 — Canonical replay refuses first `LlmEvent` (ADR-006).
     #[test]
     fn canonical_replay_refuses_llm() {
@@ -613,6 +616,7 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-RESEARCH-003.
     /// FR-CIV-RESEARCH-003 — Hybrid replay on cache miss refuses to advance (ADR-006).
     #[test]
     fn hybrid_cache_miss_refuses() {

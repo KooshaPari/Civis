@@ -413,6 +413,7 @@ mod tests {
         assert!(positions.is_empty());
     }
 
+    /// Covers FR-CIV-TACTICS-042.
     /// FR-CIV-TACTICS-042 — fog hides distant targets even within engage range.
     #[test]
     fn fog_blocks_engagement_beyond_vision() {

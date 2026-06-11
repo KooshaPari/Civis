@@ -26,10 +26,10 @@ pub const COALESCE_CAP_PER_KIND: u8 = 3;
 ///
 /// Mirrors the `SfxKind` in `clients/bevy-ref/src/audio.rs` and
 /// extends it with the new event kinds called for in audio-direction
-/// §1 tier 3: `Tech`, `Battle`, and the per-`DisasterKind` stings.
-/// The mapping is owned by the kira plugin (which decides which
-/// `.ogg` to play per kind); the substrate owns the coalescing math
-/// + ordering.
+/// §1 tier 3: `Tech`, `Battle`, and the per-`DisasterKind` stings
+/// (FR-CIV-AUDIO-005). The mapping is owned by the kira plugin (which
+/// decides which `.ogg` to play per kind); the substrate owns the
+/// coalescing math + ordering.
 ///
 /// Wire-stable order — append only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -55,26 +55,61 @@ pub enum SfxKind {
     Tech,
     /// Battle engagement from `EventFeedMessage3d::Battle` (intensity-scaled).
     Battle,
-    /// Disaster — split per `DisasterSfx` variant.
+    /// Disaster — split per `DisasterSfx` variant (FR-CIV-AUDIO-005).
+    /// Kept as a wire-stable umbrella; the per-kind stings live below
+    /// and are routed by [`SfxKind::for_disaster_label`].
     Disaster,
+    // --- Per-disaster stings (FR-CIV-AUDIO-005; audio-direction §1
+    // tier 3 per-disaster table). Appended at the end to preserve the
+    // existing wire format. ---
+    /// High whistle→deep impact boom.
+    Meteor,
+    /// Surging water roar.
+    Flood,
+    /// Sub-bass rumble + debris.
+    Quake,
+    /// Crackle + whoosh.
+    Wildfire,
+    /// Wind gust + thunder.
+    Storm,
+    /// Low dread drone + sparse bell (least terrain-y, most ominous).
+    Plague,
 }
 
 impl SfxKind {
     /// Returns the disaster-specific SFX kind for a given
     /// `disaster_label` string. Matches the 6 variants of
     /// `civ_engine::disasters::DisasterKind` — see audio-direction
-    /// §1 tier 3 per-disaster table. Unknown labels fall back to
-    /// [`SfxKind::Disaster`].
+    /// §1 tier 3 per-disaster table (FR-CIV-AUDIO-005).
     ///
-    /// Today the substrate coalesces Disaster as one kind; the
-    /// kira plugin picks the per-kind `.ogg` from the kind label.
-    /// This function exists now to keep call-sites stable when the
-    /// SFX enum is later split into 6 disaster-specific variants.
-    pub fn for_disaster_label(_label: &str) -> SfxKind {
-        // Currently 1 variant. When split, this becomes a match on
-        // the lowercased label and returns SfxKind::Meteor, SfxKind::Flood,
-        // SfxKind::Quake, SfxKind::Wildfire, SfxKind::Storm, SfxKind::Plague.
-        SfxKind::Disaster
+    /// The mapping is case-insensitive and falls back to
+    /// [`SfxKind::Disaster`] for unknown labels so a new disaster
+    /// kind never crashes the audio drain.
+    pub fn for_disaster_label(label: &str) -> SfxKind {
+        match label.trim().to_ascii_lowercase().as_str() {
+            "meteor" => SfxKind::Meteor,
+            "flood" => SfxKind::Flood,
+            "quake" | "earthquake" => SfxKind::Quake,
+            "wildfire" | "fire" => SfxKind::Wildfire,
+            "storm" => SfxKind::Storm,
+            "plague" => SfxKind::Plague,
+            _ => SfxKind::Disaster,
+        }
+    }
+
+    /// `true` for the six per-disaster stings (`Meteor`, `Flood`,
+    /// `Quake`, `Wildfire`, `Storm`, `Plague`). Used by the coalescer
+    /// to apply the per-kind cap uniformly to disaster variants.
+    pub fn is_disaster_variant(self) -> bool {
+        matches!(
+            self,
+            SfxKind::Meteor
+                | SfxKind::Flood
+                | SfxKind::Quake
+                | SfxKind::Wildfire
+                | SfxKind::Storm
+                | SfxKind::Plague
+        )
     }
 
     /// `true` for UI kinds (the four UI palette roles + Alert).
@@ -370,15 +405,49 @@ mod tests {
     }
 
     #[test]
-    fn for_disaster_label_returns_disaster_variant() {
-        // Currently the substrate coalesces Disaster as one kind;
-        // the kira plugin picks the per-kind .ogg from the kind.
-        // Future work may split into 6 variants. The function
-        // exists now to keep call-sites stable when we split.
-        for label in [
-            "Meteor", "flood", "QUAKE", "wildfire", "storm", "plague", "unknown",
+    fn for_disaster_label_routes_to_per_kind_stings() {
+        // FR-CIV-AUDIO-005: the substrate routes the 6 disaster kinds
+        // from `civ_engine::disasters::DisasterKind` to per-sting
+        // SfxKind variants; unknown labels fall back to the umbrella
+        // `SfxKind::Disaster`.
+        assert_eq!(SfxKind::for_disaster_label("Meteor"), SfxKind::Meteor);
+        assert_eq!(SfxKind::for_disaster_label("flood"), SfxKind::Flood);
+        assert_eq!(SfxKind::for_disaster_label("QUAKE"), SfxKind::Quake);
+        assert_eq!(SfxKind::for_disaster_label("earthquake"), SfxKind::Quake);
+        assert_eq!(SfxKind::for_disaster_label("wildfire"), SfxKind::Wildfire);
+        assert_eq!(SfxKind::for_disaster_label("fire"), SfxKind::Wildfire);
+        assert_eq!(SfxKind::for_disaster_label("storm"), SfxKind::Storm);
+        assert_eq!(SfxKind::for_disaster_label("plague"), SfxKind::Plague);
+        assert_eq!(SfxKind::for_disaster_label("unknown"), SfxKind::Disaster);
+        // Whitespace + case insensitivity.
+        assert_eq!(SfxKind::for_disaster_label("  METEOR  "), SfxKind::Meteor);
+    }
+
+    #[test]
+    fn is_disaster_variant_flags_only_the_six_per_kind_stings() {
+        // The 6 per-disaster stings are flagged; the umbrella
+        // `Disaster` variant is NOT (callers wanting a single
+        // bucket should match on `SfxKind::Disaster` directly).
+        for kind in [
+            SfxKind::Meteor,
+            SfxKind::Flood,
+            SfxKind::Quake,
+            SfxKind::Wildfire,
+            SfxKind::Storm,
+            SfxKind::Plague,
         ] {
-            assert_eq!(SfxKind::for_disaster_label(label), SfxKind::Disaster);
+            assert!(kind.is_disaster_variant(), "{kind:?} should be flagged");
+        }
+        for kind in [
+            SfxKind::Birth,
+            SfxKind::Death,
+            SfxKind::Build,
+            SfxKind::Tech,
+            SfxKind::Battle,
+            SfxKind::Disaster,
+            SfxKind::UiClick,
+        ] {
+            assert!(!kind.is_disaster_variant(), "{kind:?} must NOT be flagged");
         }
     }
 

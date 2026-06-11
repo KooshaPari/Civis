@@ -63,6 +63,22 @@ target-ci/
 target-check-build/
 *-target/
 
+# --- Org standard ---
+node_modules/
+target/
+dist/
+.astro/
+_stub/bin/
+_stub/obj/
+coverage/
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.log
+.env*
+!.env.example
+
 # Traceability: stray user-drive nesting inside agileplus-specs/
 # (D:/ mount surface that Git Bash sometimes symlinks into the worktree)
 /agileplus-specs/d/

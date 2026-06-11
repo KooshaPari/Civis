@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FluentAssertions;
 using Xunit;
@@ -87,7 +88,11 @@ public sealed class CompanionDashboardTests(CompanionFixture fixture)
 
         // Click and wait for async refresh to finish — no crash expected
         btn!.AsButton().Invoke();
-        Thread.Sleep(1500);
+        bool refreshCompleted = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindFirstDescendant(cf => cf.ByAutomationId("DashLoadedCount")) != null,
+            TimeSpan.FromSeconds(5),
+            pollMs: 50).GetAwaiter().GetResult();
+        refreshCompleted.Should().BeTrue("dashboard refresh must complete before the follow-up assertion");
 
         // Dashboard should still be navigable (window alive, stat still present)
         AutomationElement? el = fixture.WaitForElement("DashLoadedCount");

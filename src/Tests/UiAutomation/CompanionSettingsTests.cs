@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FluentAssertions;
 using Xunit;
@@ -110,7 +111,11 @@ public sealed class CompanionSettingsTests(CompanionFixture fixture)
         btn.Should().NotBeNull();
 
         btn!.AsButton().Invoke();
-        Thread.Sleep(600); // Allow SaveAsync to complete
+        bool saveCompleted = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindFirstDescendant(cf => cf.ByAutomationId("SaveStatusText")) != null,
+            TimeSpan.FromSeconds(5),
+            pollMs: 50).GetAwaiter().GetResult();
+        saveCompleted.Should().BeTrue("SaveAsync must complete before the save status is asserted");
 
         // SaveStatusText should show a non-empty confirmation after save
         AutomationElement? statusEl = fixture.WaitForElement("SaveStatusText");

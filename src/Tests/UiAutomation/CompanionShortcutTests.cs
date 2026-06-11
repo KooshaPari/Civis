@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FluentAssertions;
 using Xunit;
@@ -27,7 +28,11 @@ public sealed class CompanionShortcutTests(CompanionFixture fixture)
         // Simulate Ctrl+R shortcut — use Windows keyboard simulation via AutoIt or FlaUI key press
         // Note: FlaUI's keyboard simulation may require the window to be focused
         fixture.MainWindow!.Focus();
-        Thread.Sleep(100);
+        bool packListStable = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindFirstDescendant(cf => cf.ByAutomationId("PackListView")) != null,
+            TimeSpan.FromSeconds(1),
+            pollMs: 25).GetAwaiter().GetResult();
+        packListStable.Should().BeTrue("pack list must remain accessible after focusing for the shortcut");
 
         // In a real scenario, this would trigger a refresh via keyboard handler.
         // For now, we verify the window is still responsive after the key combination
@@ -48,7 +53,11 @@ public sealed class CompanionShortcutTests(CompanionFixture fixture)
 
         // Focus the window and send a key combination
         fixture.MainWindow.Focus();
-        Thread.Sleep(100);
+        bool dashboardStable = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindFirstDescendant(cf => cf.ByAutomationId("DashLoadedCount")) != null,
+            TimeSpan.FromSeconds(1),
+            pollMs: 25).GetAwaiter().GetResult();
+        dashboardStable.Should().BeTrue("dashboard stats must remain accessible after keyboard focus");
 
         // Window should still be active after key press
         fixture.MainWindow.IsOffscreen.Should().BeFalse(

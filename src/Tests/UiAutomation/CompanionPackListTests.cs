@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FluentAssertions;
@@ -57,7 +58,11 @@ public sealed class CompanionPackListTests(CompanionFixture fixture)
 
         // Click should not throw
         btn.AsButton().Invoke();
-        Thread.Sleep(600);
+        bool reloaded = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindFirstDescendant(cf => cf.ByAutomationId("PackListView")) != null,
+            TimeSpan.FromSeconds(5),
+            pollMs: 50).GetAwaiter().GetResult();
+        reloaded.Should().BeTrue("PackListView must reappear after Reload");
 
         // List should still be present after reload
         fixture.WaitForElement("PackListView").Should().NotBeNull(

@@ -3134,6 +3134,7 @@ mod tests {
     /// Covers FR-CIV-TACTICS-025.
     /// Covers FR-CIV-TACTICS-032.
     /// Covers FR-CIV-TACTICS-035.
+    /// FR-CIV-WAR-020 — war replay and live state share combat markers through shared snapshots.
     /// War-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
@@ -3151,8 +3152,7 @@ mod tests {
                 } if *shooter_id != 0 && *target_id != 0
             )
         }));
-    }
-
+}
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
     #[test]
     fn push_damage_records_damage_event() {
@@ -3415,4 +3415,3 @@ mod tests {
         );
     }
 }
-

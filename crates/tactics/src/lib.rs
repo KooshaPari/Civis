@@ -314,6 +314,9 @@ mod tests {
         assert_eq!(wedge[0], (0, 0));
     }
 
+    /// FR-CIV-WAR-001 — military units form opposing-side pairs for first-phase war outcomes.
+    /// FR-CIV-WAR-002-COMBAT — war-bridge combat is cadence-gated and produces engagements.
+    /// FR-CIV-WAR-001-UNITS — `MilitaryUnitSample` identity/faction fields participate in engagement setup.
     /// FR-CIV-TACTICS-022/024 — war bridge returns per-soldier engagements on cadence.
     #[test]
     fn war_bridge_queues_damage_on_cadence_with_los() {
@@ -353,6 +356,8 @@ mod tests {
         assert_eq!(bfs_next_step((0, 0), (5, 0), 16), Some((1, 0)));
     }
 
+    /// FR-CIV-WAR-003 — operational movement routes respond to local formation/pressure layout.
+    /// FR-CIV-WAR-004 — tactical groups keep movement behavior stable under local occupancy constraints.
     /// FR-CIV-TACTICS-039 — movement routes around cells occupied by other units.
     #[test]
     fn operational_movement_avoids_occupied_cell() {
@@ -382,6 +387,8 @@ mod tests {
         assert!(moves.iter().any(|m| m.unit_index == 0 && m.new_grid_y == 1));
     }
 
+    /// FR-CIV-WAR-004 — tactical movement accounts for environmental obstruction.
+    /// FR-CIV-WAR-010 — operational pathways remain pathable under terrain constraints.
     /// FR-CIV-TACTICS-036 — movement routes around solid voxels on the grid plane.
     #[test]
     fn operational_movement_avoids_voxel_obstacle() {
@@ -407,6 +414,8 @@ mod tests {
         assert!(moves.iter().any(|m| m.unit_index == 0 && m.new_grid_y == 1));
     }
 
+    /// FR-CIV-WAR-010 — operational pressure drives movement cadence and engagement approach.
+    /// FR-CIV-WAR-020 — tactical movement pressure is shared across order/initiative cycles.
     /// FR-CIV-TACTICS-031 — operational movement steps toward nearest enemy.
     #[test]
     fn operational_movement_steps_toward_enemy() {

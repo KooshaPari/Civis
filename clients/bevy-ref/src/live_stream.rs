@@ -708,6 +708,8 @@ mod tests {
         assert!((building_y - (surface + BUILDING_GROUND_Y)).abs() < f32::EPSILON);
     }
 
+    /// FR-CIV-BEVY-016 — live_stream applies voxel deltas and updates chunk scene state for attach smoke.
+    /// FR-CIV-BEVY-025 — scene update test coverage is part of attach smoke expectations.
     #[test]
     fn apply_voxel_delta_frame_spawns_chunk_in_scene() {
         use bevy::prelude::*;

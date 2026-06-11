@@ -12,12 +12,17 @@
 
 mod allocation;
 mod allocator;
+pub mod chains;
 mod institution;
 mod market;
 pub mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
 pub use allocator::{Allocator, Bid, CancelledOrder, ClearedTrade, GoodId, Offer, OrderId};
+pub use chains::{
+    step_chains, ChainBook, ChainConservationError, ChainStepOutcome, ChainStepReport, Recipe,
+    RecipeLeg,
+};
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,

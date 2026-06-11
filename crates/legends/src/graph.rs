@@ -74,6 +74,43 @@ pub struct AggregateKey {
     pub start_bucket: u64,
 }
 
+/// One loud gap in a producer's event stream (FR-CIV-LEGENDS-006).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GapReport {
+    pub source: SourceCrate,
+    pub last_seen_epoch: Epoch,
+    pub now_epoch: Epoch,
+    /// Human-readable reason surfaced in the UI / logs, e.g.
+    /// `"no Agents events for epoch 0..12"`. Format-stable so the inspector
+    /// can grep for it.
+    pub reason: String,
+}
+
+/// Why a saga is empty (FR-CIV-LEGENDS-006). Distinct from "no data" — the
+/// UI renders the variant's text, never a silent omission.
+#[derive(Debug, Clone, PartialEq)]
+pub enum EmptySagaReason {
+    /// The `LegendEntityId` was never inserted into the graph.
+    UnknownEntity,
+    /// The id resolved to an event node, not an entity (caller bug).
+    NotAnEntity,
+    /// Entity is in the graph but has no events yet.
+    NoEventsYet,
+    /// The producer that registered this entity is currently silent.
+    ProducerGap { source: SourceCrate, reason: String },
+}
+
+impl EmptySagaReason {
+    pub fn reason_text(&self) -> String {
+        match self {
+            EmptySagaReason::UnknownEntity => "entity not in saga graph".to_string(),
+            EmptySagaReason::NotAnEntity => "id resolves to an event, not an entity".to_string(),
+            EmptySagaReason::NoEventsYet => "entity has no witnessed events yet".to_string(),
+            EmptySagaReason::ProducerGap { reason, .. } => reason.clone(),
+        }
+    }
+}
+
 impl Default for SagaGraph {
     fn default() -> Self {
         Self::new(LegendsConfig::default())
@@ -122,6 +159,10 @@ impl SagaGraph {
     }
 
     /// Resolution bridge the inspector uses on a click (spec §6 `entity_for_sim`).
+    ///
+    /// `entity_for_sim` — spec §6 query API. **`Covers FR-CIV-LEGENDS-005`**
+    /// (saga-graph ingest stays compatible with `docs/design/legends-engine.md`
+    /// query API).
     pub fn entity_for_sim(
         &self,
         source: SourceCrate,
@@ -542,6 +583,64 @@ impl SagaGraph {
             }
         }
         gaps
+    }
+
+    /// Same as [`SagaGraph::detect_gaps`] but typed with a human-readable
+    /// reason string per gap (FR-CIV-LEGENDS-006). The empty-saga-with-reason
+    /// contract: a `Saga` query on an entity from a silent producer must
+    /// surface this reason, never a silent omission.
+    pub fn gap_reports(&self, now: Epoch) -> Vec<GapReport> {
+        self.detect_gaps(now)
+            .into_iter()
+            .map(|(src, last)| GapReport {
+                source: src,
+                last_seen_epoch: last,
+                now_epoch: now,
+                reason: format!(
+                    "no {:?} events for epoch {}..{}",
+                    src, last.0, now.0
+                ),
+            })
+            .collect()
+    }
+
+    /// Reason for a *missing* saga (FR-CIV-LEGENDS-006). Returns
+    /// `Some(reason)` when the entity is not in the graph or has no events;
+    /// `None` only when the saga was empty because the sim has not produced
+    /// a notable event for it yet. The UI / inspector surfaces the reason
+    /// string instead of "no data".
+    pub fn empty_saga_reason(&self, entity: LegendEntityId) -> Option<EmptySagaReason> {
+        let Some(idx) = self.entity_idx(entity) else {
+            return Some(EmptySagaReason::UnknownEntity);
+        };
+        let Some(e) = self.g[idx].as_entity() else {
+            return Some(EmptySagaReason::NotAnEntity);
+        };
+        let events = self
+            .g
+            .edges_directed(idx, Direction::Outgoing)
+            .filter_map(|edge| self.g[edge.target()].as_event())
+            .count();
+        if events == 0 {
+            // Check whether the entity was recently pruned and whether the
+            // producer it was registered with is currently silent.
+            let src = e.sim_ref.map(|s| s.source);
+            let now = self.cur_epoch;
+            if let Some(src) = src {
+                if self
+                    .detect_gaps(now)
+                    .iter()
+                    .any(|(s, _)| *s == src)
+                {
+                    return Some(EmptySagaReason::ProducerGap {
+                        source: src,
+                        reason: format!("producer {:?} is silent as of epoch {}", src, now.0),
+                    });
+                }
+            }
+            return Some(EmptySagaReason::NoEventsYet);
+        }
+        None
     }
 
     pub fn current_epoch(&self) -> Epoch {

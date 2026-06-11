@@ -1,4 +1,4 @@
-use crate::ids::{Epoch, LegendEntityId, LegendEventId, NameRef};
+use crate::ids::{Epoch, LegendEntityId, LegendEventId, NameRef, SourceCrate};
 use crate::model::{EventKind, EventNode, Tag};
 use rand::{Rng, SeedableRng};
 use smallvec::SmallVec;
@@ -396,6 +396,89 @@ fn collect_adjectives(rumor: &Rumor) -> String {
 
 fn clamp01(v: f32) -> f32 {
     v.clamp(0.0, 1.0)
+}
+
+/// A historian's factual record re-emitted from witnessed event subsets only
+/// (FR-CIV-LEGENDS-002). Distinct from [`Rumor`]: a Chronicle is the
+/// formal/historian-of-record retelling — no embellishment, no actor-swap, no
+/// OCEAN gates. The Chronicle lists the *actual* events the historian
+/// witnessed (per `witness_set`), in chronological order, tagged with their
+/// source crates, magnitudes, and the historian's reliability at the time of
+/// witnessing. It is the long-form factual record, the prose-level counterpart
+/// to the structured [`EventNode`] graph.
+#[derive(Debug, Clone)]
+pub struct Chronicle {
+    /// Stable id of the historian who authored this Chronicle.
+    pub historian_id: u64,
+    /// The events the historian actually witnessed, in the order they were
+    /// witnessed. Strictly a subset of the historian's `witness_set`; the
+    /// constructor refuses entries that are not in the set
+    /// (FR-CIV-LEGENDS-002 "witnessed event subsets only").
+    pub entries: Vec<ChronicleEntry>,
+    /// Hop count — how many retellings deep this Chronicle is. `0` for a
+    /// first-hand Chronicle, `n` for an n-hop derivative. The hop count does
+    /// not mutate the entries (Chronicle is a factual record), but it does
+    /// let the literature UI display "X as told by Y" vs "X as witnessed by
+    /// Y".
+    pub hop: u16,
+}
+
+/// One witnessed event inside a [`Chronicle`].
+#[derive(Debug, Clone)]
+pub struct ChronicleEntry {
+    pub event_id: LegendEventId,
+    pub origin_epoch: Epoch,
+    pub kind: EventKind,
+    /// Resolved subject (first participant).
+    pub subject: LegendEntityId,
+    /// Crate-normalized magnitude as recorded by the producer.
+    pub magnitude: f32,
+    pub source: SourceCrate,
+    /// Historian's reliability *at the time of witnessing* — recorded once
+    /// and never re-rolled, so a Chronicle is an auditable factual record.
+    pub reliability_at_witness: f32,
+}
+
+impl Chronicle {
+    /// Build a first-hand Chronicle from a witnessed event subset. The
+    /// constructor enforces FR-CIV-LEGENDS-002: every entry MUST appear in
+    /// `witness_set`, else the function returns `Err` with the offending
+    /// event id. The set is a `&[LegendEventId]` slice (the historian's
+    /// witnessed-event index) — the caller is responsible for materializing
+    /// it from the saga graph (`entity.events` projection, or a
+    /// `RumorMill.witnessed` accounting list).
+    pub fn from_witnessed(
+        historian_id: u64,
+        entries: Vec<ChronicleEntry>,
+        witness_set: &[LegendEventId],
+    ) -> Result<Self, LegendEventId> {
+        for e in &entries {
+            if !witness_set.contains(&e.event_id) {
+                return Err(e.event_id);
+            }
+        }
+        Ok(Chronicle {
+            historian_id,
+            entries,
+            hop: 0,
+        })
+    }
+
+    /// A retold Chronicle at `prior.hop + 1`. Re-emission is structural copy
+    /// only (no embellishment, no swap) — the new Chronicle is the same
+    /// factual record attributed to a new historian.
+    pub fn retold(&self, new_historian_id: u64) -> Self {
+        Chronicle {
+            historian_id: new_historian_id,
+            entries: self.entries.clone(),
+            hop: self.hop.saturating_add(1),
+        }
+    }
+
+    /// True iff this Chronicle is a first-hand (hop=0) record.
+    pub fn is_witness(&self) -> bool {
+        self.hop == 0
+    }
 }
 
 const RUMOR_LIMIT: usize = 512;

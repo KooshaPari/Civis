@@ -62,3 +62,7 @@ target-ci/
 /dist/
 target-check-build/
 *-target/
+
+# Traceability: stray user-drive nesting inside agileplus-specs/
+# (D:/ mount surface that Git Bash sometimes symlinks into the worktree)
+/agileplus-specs/d/

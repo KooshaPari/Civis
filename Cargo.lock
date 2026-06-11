@@ -2307,6 +2307,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-audio"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "civ-bevy-ref"
 version = "0.1.0"
 dependencies = [

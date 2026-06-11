@@ -25,19 +25,19 @@ pub mod rumor;
 pub mod worker;
 
 pub use config::LegendsConfig;
-pub use graph::{AggregateKey, IngestOutcome, SagaGraph};
+pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};
 pub use ids::{
     ClusterId, Epoch, LegendEntityId, LegendEventId, NameRef, Provenance, RawEventRef, RegionId,
     SimRef, SimRuntimeId, SourceCrate,
 };
 pub use model::{
-    summary_key, EntityKind, EntityNode, EventKind, EventNode, LegendEdge, LegendNode, RawSimEvent,
-    Role, Tag,
+    summary_key, EntityKind, EntityNode, EventKind, EventNode, HistoricalEvent, LegendEdge,
+    LegendNode, RawSimEvent, Role, Tag,
 };
-pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga};
+pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga, QUERY_API_VERSION};
 pub use rumor::{
-    render, register_render, retell, witness, DefaultNameResolver, HistorianMind, NameResolver,
-    Ocean, Register, Rumor, RumorMill,
+    render, register_render, retell, witness, Chronicle, ChronicleEntry, DefaultNameResolver,
+    HistorianMind, NameResolver, Ocean, Register, Rumor, RumorMill,
 };
 pub use worker::LegendsWorker;
 

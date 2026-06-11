@@ -2621,6 +2621,7 @@ dependencies = [
  "phenotype-voxel",
  "proptest",
  "serde",
+ "serde_json",
  "tracing",
 ]
 

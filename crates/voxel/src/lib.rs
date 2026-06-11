@@ -32,11 +32,19 @@ pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
 pub mod fluid_ca;
 pub mod lod;
 pub mod material;
+pub mod material_pbr;
 pub mod reactions;
 pub mod scale_budget;
 pub mod stream;
 pub mod window;
 pub mod worldgen;
+
+pub use material_pbr::{
+    AttestationError, BuildFlavour, Cc0Source, LicenseAttestation, LodDistanceConfig,
+    LodRenderPlan, ManifestError, MaterialMode, MaterialOverride, MaterialSeedManifest,
+    MissingTexturePolicy, MissingTextureReport, PolicyAction, RenderMode, RuntimeAction,
+    SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
+};
 
 pub use scale_budget::{
     CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,

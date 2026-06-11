@@ -40,6 +40,19 @@ pub struct Scenario {
     /// Optional military cadence and combat tuning (FR-CIV-TACTICS-050).
     #[serde(default)]
     pub military: ScenarioMilitary,
+    /// Optional content-seed wiring (FR-CONTENT-MODEL / CIV-008).
+    ///
+    /// * `seeds` is a list of RON files (paths relative to the repo root,
+    ///   resolved against the engine's manifest dir at load time) that are
+    ///   parsed into [`civ_genetics::SeedSet`]s and merged into the
+    ///   simulation's [`civ_genetics::SeedLibrary`].
+    /// * `active_seed` is the id of the seed used for spawn-time DNA (None
+    ///   means raw drift with no seed reference; the example seed set's
+    ///   `raw_organism` is loaded by default regardless).
+    #[serde(default)]
+    pub seeds: Vec<String>,
+    #[serde(default)]
+    pub active_seed: Option<String>,
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -151,6 +164,13 @@ impl Scenario {
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
         sim.apply_scenario_military(&self.military);
         sim.register_mod_stubs(&self.mods);
+        // Content seeds: load any referenced RON files into the library and
+        // pin the active seed id (FR-CONTENT-MODEL / CIV-008). Unknown ids
+        // are reported via the emergence feed and otherwise ignored.
+        for seed_path in &self.seeds {
+            sim.register_seed_file(seed_path);
+        }
+        sim.set_active_seed(self.active_seed);
         sim
     }
 
@@ -284,6 +304,8 @@ mod tests {
             fog_vision_radius: Some(6),
             fog_grid_size: 32,
             military: ScenarioMilitary::default(),
+            seeds: vec![],
+            active_seed: None,
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -308,6 +330,8 @@ mod tests {
                 war_cadence_ticks: Some(32),
                 engage_range_grid: Some(12),
             },
+            seeds: vec![],
+            active_seed: None,
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -410,6 +434,8 @@ mods:
             fog_vision_radius: None,
             fog_grid_size: default_fog_grid_size(),
             military: ScenarioMilitary::default(),
+            seeds: vec![],
+            active_seed: None,
         };
 
         let mut zero_scarcity = base.clone();
@@ -429,6 +455,39 @@ mods:
             sim_high.state.energy_budget_joules,
             budget_before - Fixed::from_num(2_000i64)
         );
+    }
+
+    /// Content seeds from scenario YAML wire into the simulation's seed
+    /// library and active seed id (FR-CONTENT-MODEL / CIV-008).
+    #[test]
+    fn scenario_seeds_wire_into_seed_library() {
+        let yaml = r#"
+version: 1
+name: seeds-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+seeds:
+  - scenarios/canonical_seeds.ron
+active_seed: human_baseline
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with seeds");
+        let sim = scenario.into_simulation(11);
+        // The example set is pre-loaded (raw_organism + human_baseline +
+        // deep_one) and canonical_seeds.ron adds no new ids.
+        assert!(sim.seed_library().get("raw_organism").is_some());
+        assert!(sim.seed_library().get("human_baseline").is_some());
+        assert!(sim.seed_library().get("deep_one").is_some());
+        // Active seed id is honoured.
+        assert_eq!(sim.active_seed_id(), Some("human_baseline"));
+        // No feed events for successful load (the example feed is empty
+        // until a tick runs, but seed_loaded entries may have been pushed
+        // by register_seed_file; just confirm no error feed was raised).
+        for ev in sim.emergence_feed() {
+            assert_ne!(ev.kind, "seed_load_failed");
+            assert_ne!(ev.kind, "seed_unknown");
+        }
     }
 
     #[test]

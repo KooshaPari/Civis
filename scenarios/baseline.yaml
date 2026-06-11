@@ -13,3 +13,6 @@ military:
 mods:
   - mods/example-policy
   - mods/example-economic
+seeds:
+  - scenarios/canonical_seeds.ron
+active_seed: raw_organism

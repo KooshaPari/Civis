@@ -2429,7 +2429,9 @@ dependencies = [
  "proptest",
  "rand 0.8.6",
  "rand_chacha 0.3.1",
+ "ron 0.8.1",
  "serde",
+ "thiserror 1.0.69",
  "tracing",
 ]
 

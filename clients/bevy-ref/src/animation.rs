@@ -267,10 +267,20 @@ fn attach_actor_animation(
                     "Walking_B",
                     "Walking_C",
                     "Walking_D_Skeletons",
+                    // Quaternius animal packs use the shorter alias.
                     "Walk",
                 ],
             ),
-            run: pick(&named, &["Running_A", "Running_B", "Running_C", "Run"]),
+            run: pick(
+                &named,
+                &[
+                    "Running_A",
+                    "Running_B",
+                    "Running_C",
+                    // Quaternius animal packs use the shorter alias.
+                    "Run",
+                ],
+            ),
         };
 
         let graph_handle = graphs.add(graph);

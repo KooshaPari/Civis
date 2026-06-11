@@ -123,6 +123,17 @@ models = ["bevy"]
 # Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
 # (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
 audio = ["bevy", "dep:bevy_kira_audio"]
+# Empty placeholder for the `vfx` feature. The actual implementation
+# (bevy_hanabi integration) is DEFERRED: `src/vfx.rs` and the
+# `#[cfg(feature = "vfx")]` blocks in `bin/standalone.rs` + `lib.rs` still
+# exist, but they fail to compile because the `bevy_hanabi` dep is not
+# declared. Defining the (empty) feature silences the `unexpected_cfgs`
+# warning that those guards produce today; enabling the feature on the
+# command line (`--features vfx`) will surface a clean "no dep" error
+# until the implementation lands. The expected follow-up is to wire
+# `bevy_hanabi` + the `vfx` feature together in a single PR (see
+# `docs/development-guide/fr-vfx.md` TBD).
+vfx = []
 solari = [
     "bevy",
     "bevy/bevy_solari",

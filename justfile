@@ -218,18 +218,42 @@ dev-fast: dev-tools
 dev-fast-voxel: dev-tools
     cargo watch -x "run -p civ-bevy-ref --features hot --bin civ-bevy-window"
 
-# Build the release civ-standalone binary, kill stale instances, launch with log capture, print PID.
-# Delegates to Tools/play.ps1 (Windows) or Tools/play.sh (Linux/macOS).
+# Build + run the standalone Bevy sandbox (release). Encodes the verified
+# boot incantation: `bevy,egui` features, CARGO_TARGET_DIR=G:/civis-target-gate
+# (out-of-tree build dir), and BEVY_ASSET_ROOT=clients/bevy-ref so the bin
+# finds its assets when launched from the workspace root (Bevy 0.18
+# `AssetPlugin::file_path` defaults to "./assets" relative to CWD, which is
+# the workspace root, not the crate). Both the script and the recipe set the
+# env, so callers can use either path and still get the correct asset root.
+# Override the target dir by exporting `CARGO_TARGET_DIR` before invoking
+# `just play` (the recipe's default is just a default — caller wins).
 play:
-    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
+        powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn.
 play-debug:
-    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
+        powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn'
 
 # Same as `play` with RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn and RUST_BACKTRACE=full.
 play-trace:
-    powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
+        powershell -NoProfile -ExecutionPolicy Bypass -File Tools/play.ps1 -LogLevel 'info,civ_bevy_ref=debug,wgpu=warn' -Backtrace full
+
+# Build + run the live windowed Bevy client (civ-bevy-window, F3D0 binary frame
+# attach). Mirrors the `play` verified incantation: `bevy,egui` features,
+# CARGO_TARGET_DIR=G:/civis-target-gate, and BEVY_ASSET_ROOT=clients/bevy-ref.
+# The window client reads the same asset dir as the standalone (sandbox
+# terrain fallback + sky HDR + UI panel textures) so the root must be the
+# bevy-ref crate.
+play-window:
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-G:/civis-target-gate}" \
+        BEVY_ASSET_ROOT="${BEVY_ASSET_ROOT:-$(pwd)/clients/bevy-ref}" \
+        cargo run -p civ-bevy-ref --features bevy,egui --bin civ-bevy-window
 
 # Kill a running civ-standalone game process.
 stop:

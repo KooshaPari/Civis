@@ -262,9 +262,15 @@ fn attach_actor_animation(
             idle: pick(&named, &["Idle", "Unarmed_Idle", "2H_Melee_Idle", "Idle_B"]),
             walk: pick(
                 &named,
-                &["Walking_A", "Walking_B", "Walking_C", "Walking_D_Skeletons"],
+                &[
+                    "Walking_A",
+                    "Walking_B",
+                    "Walking_C",
+                    "Walking_D_Skeletons",
+                    "Walk",
+                ],
             ),
-            run: pick(&named, &["Running_A", "Running_B", "Running_C"]),
+            run: pick(&named, &["Running_A", "Running_B", "Running_C", "Run"]),
         };
 
         let graph_handle = graphs.add(graph);

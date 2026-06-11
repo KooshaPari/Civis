@@ -61,7 +61,7 @@ pub mod asset_paths {
     /// Civilian / agent model (KayKit Knight — humanoid).
     pub const CIVILIAN: &str = "models/civilian.glb";
     /// Herd / fauna model (KayKit skeleton minion — unarmed creature).
-    pub const HERD: &str = "models/creature_skeleton_minion.glb";
+    pub const HERD: &str = "models/herd.glb";
     /// Tree / vegetation decoration model.
     pub const TREE: &str = "models/tree.glb";
     /// Generic building model.

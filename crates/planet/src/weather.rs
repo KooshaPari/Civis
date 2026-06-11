@@ -14,31 +14,51 @@ const FP_SCALE: i64 = 1_000;
 const MAX_LAT_FP: i64 = 90_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Discrete weather conditions produced by the weather model.
 pub enum WeatherKind {
+    /// Clear skies.
     Clear,
+    /// Rain.
     Rain,
+    /// Snow.
     Snow,
+    /// Heavy storm.
     Storm,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// The current climatological season.
 pub enum SeasonKind {
+    /// Spring.
     Spring,
+    /// Summer.
     Summer,
+    /// Autumn.
     Autumn,
+    /// Winter.
     Winter,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Deterministic per-region weather state snapshot.
 pub struct WeatherCell {
+    /// Owning region id.
     pub region_id: u32,
+    /// Latitude in fixed-point units.
     pub latitude_fp: i32,
+    /// Current season.
     pub season: SeasonKind,
+    /// Weather kind.
     pub kind: WeatherKind,
+    /// Temperature in fixed-point Celsius.
     pub temp_c_fp: i32,
+    /// Precipitation in fixed-point millimeters.
     pub precip_mm_fp: i32,
+    /// Storm intensity in fixed-point units.
     pub storm_intensity_fp: i32,
 }
+
+/// Compute deterministic weather cells for all regions using climate and tick phase.
 
 fn sin_fp(angle_fp: i64) -> i32 {
     let radians =
@@ -101,6 +121,7 @@ fn weather_kind_from(temp_c_fp: i64, precip_mm_fp: i64, storm_intensity_fp: i64)
     }
 }
 
+/// Build a deterministic weather vector for all regions from climate and tick.
 pub fn compute_weather(climate: &Climate, tick: u64, num_regions: u32) -> Vec<WeatherCell> {
     let n = num_regions.max(1);
     let season = season_from_year_phase(climate.year_phase);
@@ -215,3 +236,4 @@ mod tests {
         assert_eq!(a, b);
     }
 }
+

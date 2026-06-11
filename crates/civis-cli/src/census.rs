@@ -294,6 +294,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            emergence: None,
         };
         let response = dispatch_sim_status_for_test(&ctx);
         let result = validate_sim_status(&response).expect("valid");
@@ -312,6 +313,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            emergence: None,
         };
         let response = dispatch_sim_status_for_test(&ctx);
         let result = validate_sim_status(&response).expect("valid");
@@ -356,6 +358,7 @@ mod tests {
             speed_multiplier: 1,
             connection_role: None,
             saves_dir: None,
+            emergence: None,
         };
         let plan = jsonrpc::dispatch_request(
             JsonRpcRequest {

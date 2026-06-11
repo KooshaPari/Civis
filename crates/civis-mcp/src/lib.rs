@@ -200,7 +200,6 @@ mod tests {
     //!    hand-built PNG) so the test stays deterministic and offline.
 
     use super::*;
-    use std::io::Write;
 
     /// Synthesize an 8x8 RGB PNG file on disk. The image alternates rows
     /// of red and black so the expected pixel stats are trivial to verify.
@@ -226,9 +225,8 @@ mod tests {
         }
         let file = std::fs::File::create(path).expect("create png");
         let mut encoder = png::Encoder::new(file, width, height);
-        encoder
-            .set_color(png::ColorType::Rgb)
-            .set_depth(png::BitDepth::Eight);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Eight);
         let mut writer = encoder.write_header().expect("png header");
         writer.write_image_data(&data).expect("png data");
         writer.finish().expect("png finish");

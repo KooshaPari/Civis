@@ -696,4 +696,313 @@ mod tests {
         assert!(!out.died);
         assert_eq!(health.integrity, 0.0);
     }
+
+    /// FR-CIV-LIFE-001 — decay subtracts each need by its configured per-tick rate.
+    #[test]
+    fn fr_civ_life_001_decay_is_rate_specific() {
+        let mut needs = Needs {
+            food: 1.0,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let rates = DecayRates {
+            food: 0.01,
+            water: 0.02,
+            rest: 0.03,
+            safety: 0.04,
+            social: 0.05,
+            health: 0.06,
+        };
+
+        decay(&mut needs, &rates);
+
+        assert!((needs.food - 0.99).abs() < 1e-6);
+        assert!((needs.water - 0.98).abs() < 1e-6);
+        assert!((needs.rest - 0.97).abs() < 1e-6);
+        assert!((needs.safety - 0.96).abs() < 1e-6);
+        assert!((needs.social - 0.95).abs() < 1e-6);
+        assert!((needs.health - 0.94).abs() < 1e-6);
+    }
+
+    /// FR-CIV-LIFE-001 — `set` clamps values into the open range [0, 1].
+    #[test]
+    fn fr_civ_life_001_set_clamps_values() {
+        let mut needs = Needs::sated();
+        needs.set(NeedKind::Food, 1.5);
+        needs.set(NeedKind::Water, -0.25);
+        needs.set(NeedKind::Rest, 0.5);
+        needs.set(NeedKind::Safety, f32::NAN);
+        needs.set(NeedKind::Social, 2.0);
+        needs.set(NeedKind::Health, -3.0);
+
+        assert_eq!(needs.food, 1.0);
+        assert_eq!(needs.water, 0.0);
+        assert!((needs.rest - 0.5).abs() < 1e-6);
+        assert!(needs.safety.is_nan());
+        assert_eq!(needs.social, 1.0);
+        assert_eq!(needs.health, 0.0);
+    }
+
+    /// FR-CIV-LIFE-001 — `most_pressing` keeps the first minimum need in field order.
+    #[test]
+    fn fr_civ_life_001_most_pressing_tiebreaks_by_field_order() {
+        let needs = Needs {
+            food: 0.2,
+            water: 0.2,
+            rest: 0.8,
+            safety: 0.2,
+            social: 0.1,
+            health: 1.0,
+        };
+        assert_eq!(needs.most_pressing(), (NeedKind::Social, 0.1));
+    }
+
+    /// FR-CIV-LIFE-001 — `any_critical` is inclusive at the threshold boundary.
+    #[test]
+    fn fr_civ_life_001_critical_is_inclusive_boundary() {
+        let needs = Needs {
+            food: 0.25,
+            water: 0.1,
+            rest: 0.100_000_1,
+            safety: 0.99,
+            social: 1.0,
+            health: 1.0,
+        };
+        assert!(needs.any_critical(0.1));
+    }
+
+    /// FR-CIV-LIFE-002 — sickness onset requires an exact deprivation streak threshold.
+    #[test]
+    fn fr_civ_life_002_sickness_starts_only_after_threshold() {
+        let mut needs = Needs {
+            food: 0.0,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let mut health = Health::default();
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
+        let params = HealthParams {
+            critical: 0.5,
+            damage_per_critical: 0.0,
+            regen: 0.0,
+            sickness_onset_ticks: 3,
+            sickness_chance: 1.0,
+            sickness_damage: 0.0,
+        };
+
+        let mut r = rng(1);
+        for _ in 0..2 {
+            let out = tick(&mut needs, &mut health, &rates, &params, &mut r);
+            assert!(!out.fell_sick);
+            assert!(!health.sick);
+        }
+
+        let out = tick(&mut needs, &mut health, &rates, &params, &mut r);
+        assert!(out.fell_sick);
+        assert!(health.sick);
+        assert_eq!(health.deprivation_streak, 3);
+    }
+
+    /// FR-CIV-LIFE-002 — sickness is not reasserted when already sick.
+    #[test]
+    fn fr_civ_life_002_repeated_sickness_rolls_do_not_retrigger() {
+        let mut needs = Needs {
+            food: 0.0,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let mut health = Health::default();
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
+        let params = HealthParams {
+            critical: 0.5,
+            damage_per_critical: 0.0,
+            regen: 0.0,
+            sickness_onset_ticks: 1,
+            sickness_chance: 1.0,
+            sickness_damage: 0.0,
+        };
+        let mut r = rng(3);
+
+        let out1 = tick(&mut needs, &mut health, &rates, &params, &mut r);
+        let out2 = tick(&mut needs, &mut health, &rates, &params, &mut r);
+
+        assert!(out1.fell_sick);
+        assert!(!out2.fell_sick);
+        assert!(health.sick);
+    }
+
+    /// FR-CIV-LIFE-002 — critical streak resets when critical state is resolved.
+    #[test]
+    fn fr_civ_life_002_streak_resets_after_critical_recovery() {
+        let mut needs = Needs {
+            food: 0.0,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let mut health = Health {
+            integrity: 0.5,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        let mut rng = rng(2);
+        let mut rates = DecayRates::default();
+        rates.food = 0.0;
+        let params = HealthParams {
+            critical: 0.5,
+            damage_per_critical: 0.0,
+            regen: 0.2,
+            sickness_onset_ticks: 2,
+            sickness_chance: 0.0,
+            sickness_damage: 0.0,
+        };
+
+        let out = tick(&mut needs, &mut health, &rates, &params, &mut rng);
+        assert_eq!(out.critical_count, 1);
+        assert_eq!(health.deprivation_streak, 1);
+
+        needs.food = 1.0;
+        let out2 = tick(&mut needs, &mut health, &rates, &params, &mut rng);
+        assert_eq!(out2.critical_count, 0);
+        assert_eq!(health.deprivation_streak, 0);
+    }
+
+    /// FR-CIV-LIFE-003 — critical-count excludes health need from critical calculations.
+    #[test]
+    fn fr_civ_life_003_critical_count_excludes_health_need() {
+        let mut needs = Needs {
+            food: 0.5,
+            water: 0.5,
+            rest: 0.5,
+            safety: 0.5,
+            social: 0.5,
+            health: 0.0,
+        };
+        let mut health = Health::default();
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
+        let params = HealthParams {
+            critical: 0.1,
+            damage_per_critical: 0.0,
+            regen: 0.0,
+            sickness_onset_ticks: 5,
+            sickness_chance: 0.0,
+            sickness_damage: 0.0,
+        };
+        let mut rng = rng(4);
+
+        let out = tick(&mut needs, &mut health, &rates, &params, &mut rng);
+
+        assert_eq!(out.critical_count, 0);
+    }
+
+    /// FR-CIV-LIFE-003 — needs.health mirrors integrity after health updates.
+    #[test]
+    fn fr_civ_life_003_needs_health_tracks_integrity() {
+        let mut needs = Needs {
+            food: 1.0,
+            water: 1.0,
+            rest: 1.0,
+            safety: 1.0,
+            social: 1.0,
+            health: 1.0,
+        };
+        let mut health = Health {
+            integrity: 0.42,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        let mut rates = DecayRates::default();
+        rates.food = 0.0;
+        rates.water = 0.0;
+        rates.rest = 0.0;
+        rates.safety = 0.0;
+        rates.social = 0.0;
+        rates.health = 0.0;
+        let mut rng = rng(5);
+        let params = HealthParams {
+            critical: 1.0,
+            damage_per_critical: 0.2,
+            regen: 0.0,
+            sickness_onset_ticks: 1_000,
+            sickness_chance: 0.0,
+            sickness_damage: 0.0,
+        };
+
+        let _ = tick(&mut needs, &mut health, &rates, &params, &mut rng);
+
+        assert_eq!(health.integrity, needs.health);
+    }
+
+    /// FR-CIV-LIFE-003 — death is terminal and mirrored into needs.health.
+    #[test]
+    fn fr_civ_life_003_dead_state_is_reflected_in_needs_health() {
+        let mut needs = Needs {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 1.0,
+        };
+        let mut health = Health {
+            integrity: 0.02,
+            sick: false,
+            deprivation_streak: 0,
+        };
+        let mut rng = rng(9);
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
+        let params = HealthParams {
+            critical: 0.5,
+            damage_per_critical: 0.02,
+            regen: 0.0,
+            sickness_onset_ticks: 999,
+            sickness_chance: 0.0,
+            sickness_damage: 0.0,
+        };
+
+        let out = tick(&mut needs, &mut health, &rates, &params, &mut rng);
+        assert!(out.died);
+        assert!(health.is_dead());
+        assert_eq!(health.integrity, needs.health);
+        assert_eq!(needs.health, 0.0);
+    }
 }

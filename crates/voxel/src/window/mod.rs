@@ -45,8 +45,12 @@
 #![forbid(unsafe_code)]
 
 use phenotype_voxel::ChunkCoord;
+use serde::{Deserialize, Serialize};
 
+pub mod io;
+pub mod plan;
 pub mod ring_iter;
+pub use ring_iter::RingIter;
 
 /// Lifecycle state for a chunk in the streaming window.
 ///
@@ -55,7 +59,7 @@ pub mod ring_iter;
 /// fading_after)`. The streaming layer is free to track its own internal
 /// state (e.g. LRU position, last-touched tick), but the *visible* state
 /// the policy reports is one of these variants.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChunkState {
     /// Not in the resident set. Will regen from seed if requested.
     Unloaded,
@@ -99,7 +103,7 @@ impl ChunkState {
 /// Sim-LOD cohort, derived from ring distance. A chunk's cohort
 /// determines which tick path the simulator takes (full per-voxel CA,
 /// coarse statistical gestalt, or frozen).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SimCohort {
     /// Every tick, per-voxel CA, full agent tick.
     FullSim,
@@ -120,7 +124,7 @@ pub enum SimCohort {
 /// through `bincode` for replay/manifest persistence. Defaults are tuned
 /// to match `WORLD_DIMS_SMALL`'s working set (see
 /// `docs/design/streaming-window.md` §3.5 / §6).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WindowPolicy {
     /// Innermost ring fully meshed at LOD 0. Chunks at ring `≤
     /// mesh_ring` are `Meshed` (or `Fading` on a shrink).
@@ -623,6 +627,113 @@ mod tests {
         assert!(ChunkState::Fading { ticks_remaining: 1 }.is_resident());
         assert!(ChunkState::Evicting.is_resident());
         assert!(!ChunkState::Evicted.is_resident());
+    }
+
+    // ---- FR-CIV-SCALE slice 5 coverage ----
+
+    #[test]
+    fn fr_civ_scale_001_default_policy_guarantees_minimal_resident_area() {
+        let policy = WindowPolicy::default();
+        let anchor = coord(0, 0, 0);
+
+        // At minimum, a non-empty residency window exists with a
+        // 256^3-usable inner mesh band and a bounded seam band.
+        assert_eq!(policy.classify(anchor, anchor), ChunkState::Meshed);
+        assert_eq!(
+            policy.classify(coord(1, 0, 0), anchor),
+            ChunkState::Meshed,
+            "mesh_ring=1 should keep adjacent ring-1 chunks resident+meshed"
+        );
+        assert_eq!(
+            policy.classify(coord(2, 0, 0), anchor),
+            ChunkState::Resident,
+            "with seam_chunks=1 and fade_ticks=0, ring 2 is in the seam band and should be resident"
+        );
+        assert_eq!(
+            policy.classify(coord(3, 0, 0), anchor),
+            ChunkState::Unloaded,
+            "ring 3 is outside mesh+seam and should stay unloaded"
+        );
+    }
+
+    #[test]
+    fn fr_civ_scale_002_no_fixed_world_cap_allows_arbitrary_anchor_coords() {
+        let policy = WindowPolicy::default();
+        let anchor = coord(10_000, 5_000, -12_000);
+        let probe = coord(3_211, 4_212, -3_213);
+        let anchor_2 = coord(-9_000, -4_500, 15_000);
+        let probe_2 = coord(anchor_2.cx + 3_211, anchor_2.cy + 4_212, anchor_2.cz - 3_213);
+
+        // Same relative offset from far-apart anchors yields same ring band.
+        assert_eq!(
+            policy.classify(probe, anchor),
+            policy.classify(probe_2, anchor_2)
+        );
+        assert_eq!(policy.sim_cohort(probe, anchor), policy.sim_cohort(probe_2, anchor_2));
+        assert_eq!(
+            policy.in_prefetch_cone(probe, anchor, [32, 0, 0]),
+            policy.in_prefetch_cone(probe_2, anchor_2, [32, 0, 0])
+        );
+    }
+
+    #[test]
+    fn fr_civ_scale_003_lod_seams_are_modelled_as_fading_band() {
+        let policy = WindowPolicy {
+            fade_ticks: 2,
+            ..WindowPolicy::default()
+        };
+        let anchor = coord(0, 0, 0);
+        // Ring distance is `max(|dx|, |dy|*vy_weight, |dz|)` with `vy_weight=2`.
+        let near_chunk = coord(1, 0, 0); // ring 1 = mesh_ring
+        let seam_chunk = coord(2, 0, 0); // ring 2 = mesh_ring + seam_chunks
+        let far_chunk = coord(3, 0, 0); // ring 3 = past mesh + seam band
+
+        assert_eq!(
+            policy.classify(near_chunk, anchor),
+            ChunkState::Meshed,
+            "ring=1 (inside mesh_ring) should be meshed"
+        );
+        assert_eq!(
+            policy.classify(seam_chunk, anchor),
+            ChunkState::Fading {
+                ticks_remaining: 2
+            },
+            "ring=2 should be fading seam band with fade_ticks set"
+        );
+        assert_eq!(
+            policy.classify(far_chunk, anchor),
+            ChunkState::Unloaded,
+            "ring=3 (mesh+seam=2) should be unloaded"
+        );
+    }
+
+    #[test]
+    fn fr_civ_scale_004_sim_lod_transitions_from_full_to_coarse_to_frozen_by_distance() {
+        let policy = WindowPolicy {
+            sim_ring: 2,
+            coarse_ring: 4,
+            sim_lod_step: 4,
+            ..WindowPolicy::default()
+        };
+        let anchor = coord(0, 0, 0);
+
+        assert_eq!(
+            policy.sim_cohort(coord(0, 0, 0), anchor),
+            SimCohort::FullSim,
+            "inside full-sim ring should stay high-fidelity"
+        );
+        // ring 3 is between sim_ring=2 and coarse_ring=4 → CoarseSim.
+        assert_eq!(
+            policy.sim_cohort(coord(3, 0, 0), anchor),
+            SimCohort::CoarseSim { step_multiplier: 4 },
+            "outside mesh/sim ring but within coarse_ring should coarse-step"
+        );
+        // ring 5 is past coarse_ring=4 → Frozen.
+        assert_eq!(
+            policy.sim_cohort(coord(5, 0, 0), anchor),
+            SimCohort::Frozen,
+            "outside coarse_ring should freeze state updates"
+        );
     }
 
     // ---- Prefetch cone ----

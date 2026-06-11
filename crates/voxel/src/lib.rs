@@ -39,6 +39,11 @@ pub mod worldgen;
 pub use stream::{
     ChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE, CHUNK_EDGE_I32,
 };
+pub use window::io::{IoContract, MaterializedSnapshot, IO_CONTRACT_VERSION};
+pub use window::plan::{
+    prefetch_set, ChunkOffsetIter, ScaleReport, VelocityChunksPerTick, P99_SAMPLE_CAP,
+    DEFAULT_PREFETCH_TICKS,
+};
 pub use window::{ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy, ring_distance};
 pub use window::ring_iter::RingIter;
 pub use worldgen::HeightFieldGen;

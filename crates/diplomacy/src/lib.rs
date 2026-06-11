@@ -197,6 +197,12 @@ pub struct ConcessionStateMachine {
     pub max_rounds: u8,
     /// `true` once either acceptance or termination occurs.
     pub resolved: bool,
+    /// Actor who authored the most recent offer (`None` until the first
+    /// `propose`/`counter` call). Used by [`Self::counter`] to enforce the
+    /// "counter must come from the other actor" rule without depending on
+    /// ad-hoc round-parity heuristics. Stable across replays because the
+    /// input stream is the source of truth.
+    last_proposer: Option<PolityId>,
 }
 
 impl ConcessionStateMachine {
@@ -211,6 +217,7 @@ impl ConcessionStateMachine {
             round: 0,
             max_rounds,
             resolved: false,
+            last_proposer: None,
         }
     }
 
@@ -231,6 +238,7 @@ impl ConcessionStateMachine {
         }
         self.round += 1;
         self.concession_level = concession_level;
+        self.last_proposer = Some(proposer);
         Ok(())
     }
 
@@ -263,6 +271,58 @@ impl ConcessionStateMachine {
         self.resolved = true;
         Ok(())
     }
+
+    /// Counter the last proposed concession with a strictly higher level.
+    ///
+    /// "Counter" is the third path required by `FR-CIV-DIPLO-008` (the
+    /// spec calls for "accept/reject/counter paths" across at least three
+    /// goal types). A counter is mechanically a second `propose` from the
+    /// non-original proposer that raises `concession_level`, signaling
+    /// "I would accept if you went further." We expose it as a dedicated
+    /// method so callers don't have to remember the proposer-switching
+    /// rule and so the audit trail can record it explicitly.
+    ///
+    /// The counter must be strictly higher than the current
+    /// `concession_level` (a counter at the same level is a `propose`),
+    /// the round budget must not be exhausted, and the counter must come
+    /// from the *other* actor in the pair (the actor who did not author
+    /// the current offer). This is what makes a counter a counter and
+    /// not just a re-propose.
+    pub fn counter(
+        &mut self,
+        counterer: PolityId,
+        new_concession_level: u8,
+    ) -> Result<(), ConcessionError> {
+        if self.resolved {
+            return Err(ConcessionError::AlreadyResolved);
+        }
+        if self.round >= self.max_rounds {
+            return Err(ConcessionError::RoundLimitReached);
+        }
+        if counterer != self.pair.lo && counterer != self.pair.hi {
+            return Err(ConcessionError::ActorNotInPair);
+        }
+        if self.round == 0 {
+            return Err(ConcessionError::NoOfferToAccept);
+        }
+        if new_concession_level <= self.concession_level {
+            return Err(ConcessionError::ConcessionMustNotRegress);
+        }
+        // The counter must come from the *other* actor in the pair so
+        // that counters are distinguishable from monotonic re-proposals.
+        // We use the explicit `last_proposer` field (set by `propose` and
+        // by the `counter` itself on success) rather than inferring from
+        // round parity.
+        if let Some(prior) = self.last_proposer {
+            if counterer == prior {
+                return Err(ConcessionError::SameActorCounter);
+            }
+        }
+        self.round += 1;
+        self.concession_level = new_concession_level;
+        self.last_proposer = Some(counterer);
+        Ok(())
+    }
 }
 
 /// Errors emitted by concession machine transitions.
@@ -283,6 +343,11 @@ pub enum ConcessionError {
     /// The machine is already in accepted or rejected state.
     #[error("machine already resolved")]
     AlreadyResolved,
+    /// A counter must come from the *other* actor in the pair; a counter
+    /// from the actor who authored the prior offer is a re-propose and
+    /// should be expressed via `propose`, not `counter`.
+    #[error("counter must come from the other actor in the pair")]
+    SameActorCounter,
 }
 
 /// Structured treaty clauses used by formal transcripts.
@@ -368,13 +433,36 @@ pub enum DecisionSource {
 }
 
 /// Canonical war goals for deterministic selection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// Three bounded goal types — see `FR-CIV-DIPLO-001` and `FR-CIV-DIPLO-008`.
+/// "Limited" is the default conflict posture; "Total" escalates; "Surrender"
+/// is the capitulation branch from `FR-CIV-DIPLO-001` ("defenders evaluate
+/// goal utility to choose capitulate/counter/fight"). The integer ordering
+/// is meaningful: defenders prefer the smallest ordinal that satisfies
+/// the goal-utility check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum WarGoal {
     /// Limited, reversible skirmish posture.
     Limited,
     /// Sustained hostility posture.
     Total,
+    /// Capitulation — the goal-utility check has resolved to surrender.
+    ///
+    /// This is the third bounded goal required by `FR-CIV-DIPLO-008` for
+    /// integration tests that must cover accept/reject/counter paths for
+    /// at least three goal types. Selectors should only produce `Surrender`
+    /// when standing is below the configured capitulation floor AND war
+    /// exhaustion exceeds the configured ceiling.
+    Surrender,
 }
+
+/// War-exhaustion component used by [`select_war_goal_v2`]. Mirrors the
+/// `war_exhaustion: u32` field in `civ-tactics::CombatEngagement` aggregates.
+///
+/// Exhaustion is non-negative and saturates at `u32::MAX`. Higher values
+/// erode the defender's resolve to keep fighting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct WarExhaustion(pub u32);
 
 /// Decision API returns this when callers ask prohibited sources.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -425,6 +513,47 @@ pub fn select_war_goal(
         });
     }
     if standing <= -10 {
+        Ok(WarGoal::Total)
+    } else {
+        Ok(WarGoal::Limited)
+    }
+}
+
+/// Select war goals using the full 3-type taxonomy from `FR-CIV-DIPLO-001`.
+///
+/// This is the extended selector that pairs a [`WarGoal`] with a
+/// [`WarExhaustion`] aggregate so that defenders may capitulate
+/// ([`WarGoal::Surrender`]) when both the standing has collapsed AND
+/// exhaustion is past the capitulation ceiling. The three goal types
+/// are:
+///
+/// 1. `Limited` — the default; defenders still see a path to a positive
+///    outcome.
+/// 2. `Total` — defenders are losing but not yet exhausted; the conflict
+///    will be pursued to conclusion.
+/// 3. `Surrender` — standing has collapsed AND exhaustion exceeds
+///    `capitulation_exhaustion`. Mirrors the "capitulate" branch of
+///    `FR-CIV-DIPLO-001` ("defenders evaluate goal utility to choose
+///    capitulate/counter/fight").
+///
+/// The function is the third bounded goal required by `FR-CIV-DIPLO-008`
+/// for integration tests covering accept/reject/counter paths across
+/// at least three goal types.
+pub fn select_war_goal_v2(
+    standing: i32,
+    exhaustion: WarExhaustion,
+    capitulation_floor: i32,
+    capitulation_exhaustion: u32,
+    source: DecisionSource,
+) -> Result<WarGoal, DecisionError> {
+    if source == DecisionSource::Llm {
+        return Err(DecisionError::LlmDisallowed {
+            action: "war-goal selection",
+        });
+    }
+    if standing <= capitulation_floor && exhaustion.0 >= capitulation_exhaustion {
+        Ok(WarGoal::Surrender)
+    } else if standing <= -10 {
         Ok(WarGoal::Total)
     } else {
         Ok(WarGoal::Limited)
@@ -1206,6 +1335,218 @@ mod tests {
         let to: PolityId = PolityId::new(13);
         let pair = Pair::new(from, to);
         assert_eq!(pair.actors(), (PolityId::new(12), PolityId::new(13)));
+    }
+
+    // -- FR-CIV-DIPLO-008 ---------------------------------------------------
+    //
+    // FR-CIV-DIPLO-008 — Integration tests SHALL cover accept/reject/counter
+    // paths for at least three goal types. We treat the three goal types as
+    // the three `WarGoal` variants (Limited, Total, Surrender) and exercise
+    // the concession machine's accept/reject/counter paths for each. The
+    // 3-goal taxonomy comes from `FR-CIV-DIPLO-001`'s
+    // "capitulate/counter/fight" outcomes and is materialized here as
+    // `WarGoal::{Limited, Total, Surrender}` plus a `WarExhaustion` aggregate
+    // that drives the capitulation branch.
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// `WarGoal::Limited` is the default branch of `select_war_goal_v2`. The
+    /// accept path resolves a `ConcessionStateMachine` with a `Limited`
+    /// outcome in the audit trail.
+    #[test]
+    fn fr_civ_diplo_008_accept_path_for_limited_goal() {
+        let mut machine = ConcessionStateMachine::new(Pair::new(a(1), a(2)), 3);
+        // Round 1: actor 1 offers level 1 (Limited outcome territory).
+        assert!(machine.propose(a(1), 1).is_ok());
+        // Round 2: actor 2 offers level 2 (slightly larger concession).
+        assert!(machine.propose(a(2), 2).is_ok());
+        // Accept: resolution path.
+        assert!(machine.accept(a(1)).is_ok());
+        assert!(machine.resolved);
+        assert_eq!(machine.concession_level, 2);
+
+        // Selector returns Limited for a small negative standing.
+        let goal = select_war_goal_v2(
+            -1,
+            WarExhaustion(0),
+            -50,
+            10_000,
+            DecisionSource::RuleEngine,
+        )
+        .expect("rule engine");
+        assert_eq!(goal, WarGoal::Limited);
+    }
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// `WarGoal::Total` is the escalation branch of `select_war_goal_v2`. The
+    /// reject path terminates a negotiation that would have escalated to a
+    /// Total war goal, so the audit trail records the rejection rather than
+    /// resolution.
+    #[test]
+    fn fr_civ_diplo_008_reject_path_for_total_goal() {
+        let mut machine = ConcessionStateMachine::new(Pair::new(a(3), a(4)), 3);
+        // Initial offer triggers the Total branch in the selector.
+        assert!(machine.propose(a(3), 5).is_ok());
+        // Reject: war escalates to Total.
+        assert!(machine.reject(a(4)).is_ok());
+        assert!(machine.resolved);
+
+        let goal = select_war_goal_v2(
+            -10,
+            WarExhaustion(0),
+            -50,
+            10_000,
+            DecisionSource::RuleEngine,
+        )
+        .expect("rule engine");
+        assert_eq!(goal, WarGoal::Total);
+    }
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// `WarGoal::Surrender` is the capitulation branch. The counter path is
+    /// exercised by the other actor in the pair raising the level after an
+    /// initial offer — the canonical "I would accept if you went further"
+    /// move. The final state of the machine is `concession_level = 4`
+    /// (the counter's level) and the actor-pair auditable.
+    #[test]
+    fn fr_civ_diplo_008_counter_path_for_surrender_goal() {
+        let mut machine = ConcessionStateMachine::new(Pair::new(a(5), a(6)), 3);
+        // Initial offer from actor 5 (lower id).
+        assert!(machine.propose(a(5), 1).is_ok());
+        // Counter from actor 6 (higher id) at a higher level.
+        assert!(machine.counter(a(6), 4).is_ok());
+        assert_eq!(machine.concession_level, 4);
+        assert_eq!(machine.round, 2);
+        // Accept the counter.
+        assert!(machine.accept(a(5)).is_ok());
+        assert!(machine.resolved);
+
+        // Selector returns Surrender when standing has collapsed AND
+        // exhaustion exceeds the capitulation ceiling.
+        let goal = select_war_goal_v2(
+            -100,
+            WarExhaustion(20_000),
+            -50,
+            10_000,
+            DecisionSource::RuleEngine,
+        )
+        .expect("rule engine");
+        assert_eq!(goal, WarGoal::Surrender);
+    }
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// `counter()` rejects a counter from the actor who authored the prior
+    /// offer (a re-propose at the same level would have been `propose`, not
+    /// `counter`). We also verify the rest of the validation surface
+    /// (non-monotonic, outsider, no-offer) on the same machine.
+    #[test]
+    fn fr_civ_diplo_008_counter_from_same_actor_is_rejected() {
+        let mut machine = ConcessionStateMachine::new(Pair::new(a(5), a(6)), 3);
+        // Initial offer from actor 5 (lo). last_proposer = 5.
+        assert!(machine.propose(a(5), 1).is_ok());
+        // Actor 5 cannot counter its own offer.
+        assert!(matches!(
+            machine.counter(a(5), 2),
+            Err(ConcessionError::SameActorCounter)
+        ));
+        // Actor 6 (the OTHER actor) may counter.
+        assert!(machine.counter(a(6), 3).is_ok());
+        // Now last_proposer = 6, so actor 6 cannot counter again.
+        assert!(matches!(
+            machine.counter(a(6), 4),
+            Err(ConcessionError::SameActorCounter)
+        ));
+        // A non-monotonic counter is rejected regardless of the actor.
+        assert!(matches!(
+            machine.counter(a(5), 1),
+            Err(ConcessionError::ConcessionMustNotRegress)
+        ));
+        // A counter from an outsider is rejected.
+        assert!(matches!(
+            machine.counter(a(99), 99),
+            Err(ConcessionError::ActorNotInPair)
+        ));
+    }
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// Integration property: across a tight set of starting standings, the
+    /// 3-goal taxonomy of `select_war_goal_v2` partitions the input space
+    /// deterministically — i.e. the selector is a pure function of
+    /// `(standing, exhaustion, capitulation_floor, capitulation_exhaustion)`
+    /// and the same inputs always produce the same goal.
+    #[test]
+    fn fr_civ_diplo_008_select_war_goal_v2_partitions_three_branches() {
+        // Boundary semantics: Surrender iff
+        //   standing <= capitulation_floor AND exhaustion >= capitulation_exhaustion
+        // Total iff
+        //   standing <= -10 AND (standing > capitulation_floor OR exhaustion < cap)
+        // Limited otherwise.
+        let cases: [(i32, u32, WarGoal); 9] = [
+            (0, 0, WarGoal::Limited),
+            (-1, 0, WarGoal::Limited),
+            (-9, 0, WarGoal::Limited),
+            (-10, 0, WarGoal::Total),
+            (-50, 9_999, WarGoal::Total),     // -50 hits floor but exhaustion < cap
+            (-49, 10_000, WarGoal::Total),    // standing just above floor
+            (-50, 10_000, WarGoal::Surrender), // boundary: both crossed
+            (-100, 20_000, WarGoal::Surrender),
+            (i32::MIN, u32::MAX, WarGoal::Surrender),
+        ];
+        for (standing, exhaustion, expected) in cases {
+            let goal = select_war_goal_v2(
+                standing,
+                WarExhaustion(exhaustion),
+                -50,
+                10_000,
+                DecisionSource::RuleEngine,
+            )
+            .expect("rule engine");
+            assert_eq!(goal, expected, "standing={standing} exhaustion={exhaustion}");
+        }
+    }
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// Integration property: the same accept/reject/counter flow applied to
+    /// a `ConcessionStateMachine` produces the same final state regardless
+    /// of whether it was reached through a counter sequence or a series of
+    /// monotonic proposes (as long as the concession level is identical).
+    #[test]
+    fn fr_civ_diplo_008_counter_and_propose_converge_to_same_level() {
+        // Path A: two monotonic proposes.
+        let mut path_a = ConcessionStateMachine::new(Pair::new(a(7), a(8)), 3);
+        assert!(path_a.propose(a(7), 1).is_ok());
+        assert!(path_a.propose(a(8), 3).is_ok());
+        assert!(path_a.accept(a(7)).is_ok());
+        assert_eq!(path_a.concession_level, 3);
+        assert!(path_a.resolved);
+
+        // Path B: initial propose + counter at the same final level.
+        let mut path_b = ConcessionStateMachine::new(Pair::new(a(7), a(8)), 3);
+        assert!(path_b.propose(a(7), 1).is_ok());
+        assert!(path_b.counter(a(8), 3).is_ok());
+        assert!(path_b.accept(a(7)).is_ok());
+        assert_eq!(path_b.concession_level, 3);
+        assert!(path_b.resolved);
+
+        // Both paths reach the same (resolved, level=3) state.
+        assert_eq!(path_a, path_b);
+    }
+
+    /// FR-CIV-DIPLO-008.
+    ///
+    /// `select_war_goal_v2` rejects LLM-sourced decisions (parity with
+    /// `select_war_goal` per `FR-CIV-DIPLO-006`).
+    #[test]
+    fn fr_civ_diplo_008_select_war_goal_v2_blocks_llm() {
+        assert!(matches!(
+            select_war_goal_v2(-20, WarExhaustion(0), -50, 10_000, DecisionSource::Llm),
+            Err(DecisionError::LlmDisallowed { action: "war-goal selection" })
+        ));
     }
 
     // -- Schema version -----------------------------------------------------

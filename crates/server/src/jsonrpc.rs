@@ -2605,7 +2605,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_save_slot_plans_save_effect() {
+    fn dispatch_save_slot_plans_save_effect_fr_save_002() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":30,"method":"save.slot","params":{"slot_name":"slot-2"}}"#,
         )
@@ -2632,7 +2632,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_save_slot_rejects_invalid_slot() {
+    fn dispatch_save_slot_rejects_invalid_slot_fr_save_002() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":31,"method":"save.slot","params":{"slot_name":"slot-9"}}"#,
         )

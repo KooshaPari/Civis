@@ -150,6 +150,9 @@ pub(crate) fn enforce_autosave_ring(dir: &Path) {
         if !stem.starts_with("autosave") {
             continue;
         }
+        let save_tick = CivSaveBundle::read_metadata(&path)
+            .map(|meta| meta.tick)
+            .unwrap_or(0);
         let mtime = entry
             .metadata()
             .ok()
@@ -157,13 +160,18 @@ pub(crate) fn enforce_autosave_ring(dir: &Path) {
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        autosaves.push((path, mtime));
+        autosaves.push((path, mtime, save_tick));
     }
     if autosaves.len() <= AUTOSAVE_RING_MAX {
         return;
     }
-    autosaves.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.0.cmp(&a.0)));
-    for (path, _) in autosaves.into_iter().skip(AUTOSAVE_RING_MAX) {
+    autosaves.sort_by(|a, b| {
+        b.2
+            .cmp(&a.2)
+            .then_with(|| b.1.cmp(&a.1))
+            .then_with(|| b.0.cmp(&a.0))
+    });
+    for (path, _, _) in autosaves.into_iter().skip(AUTOSAVE_RING_MAX) {
         if let Err(err) = std::fs::remove_file(&path) {
             warn!(?path, ?err, "failed to evict autosave from ring");
         }
@@ -421,6 +429,11 @@ pub(crate) async fn list_saves_handler(
                 .and_then(|(_, _, created_at)| created_at.clone()),
         });
     }
-    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    entries.sort_by(|a, b| {
+        b.tick
+            .unwrap_or(0)
+            .cmp(&a.tick.unwrap_or(0))
+            .then_with(|| b.name.cmp(&a.name))
+    });
     Ok(Json(entries))
 }

@@ -45,30 +45,34 @@ use thiserror::Error;
 /// Schema version of this crate's public types. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// Stable actor identifier. Maps to faction ids in the engine.
+/// Stable polity identifier used by diplomacy contracts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct ActorId(pub u32);
+pub struct PolityId(pub u32);
 
-impl ActorId {
+impl PolityId {
     /// Wrap a raw `u32` id.
     pub const fn new(id: u32) -> Self {
         Self(id)
     }
 }
 
+/// Compatibility alias preserved for earlier crate code.
+#[deprecated(note = "PolityId is the preferred term in active diplomacy contracts")]
+pub type ActorId = PolityId;
+
 /// Ordered pair `(min, max)` of actor ids. The order is fixed at construction
 /// so that `Pair::new(a, b) == Pair::new(b, a)` for any `a, b`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Pair {
     /// The smaller id (always).
-    pub lo: ActorId,
+    pub lo: PolityId,
     /// The larger id (always).
-    pub hi: ActorId,
+    pub hi: PolityId,
 }
 
 impl Pair {
     /// Construct a canonical ordered pair.
-    pub fn new(a: ActorId, b: ActorId) -> Self {
+    pub fn new(a: PolityId, b: PolityId) -> Self {
         if a.0 <= b.0 {
             Self { lo: a, hi: b }
         } else {
@@ -77,7 +81,7 @@ impl Pair {
     }
 
     /// Iterate `(lo, hi)`.
-    pub fn actors(self) -> (ActorId, ActorId) {
+    pub fn actors(self) -> (PolityId, PolityId) {
         (self.lo, self.hi)
     }
 }
@@ -129,9 +133,9 @@ pub enum InteractionEvent {
     /// substrate config.
     Combat {
         /// Attacking faction.
-        attacker: ActorId,
+        attacker: PolityId,
         /// Defending faction.
-        defender: ActorId,
+        defender: PolityId,
         /// Energy of the engagement (mirrors `CombatEngagement::damage.energy`).
         energy: u32,
         /// Simulation tick.
@@ -141,9 +145,9 @@ pub enum InteractionEvent {
     /// future caller. Positive delta = warmer, negative = colder.
     Gesture {
         /// Acting faction.
-        from: ActorId,
+        from: PolityId,
         /// Receiving faction.
-        to: ActorId,
+        to: PolityId,
         /// Signed standing delta. Clamped to the substrate bounds.
         delta: i32,
         /// Simulation tick.
@@ -177,6 +181,253 @@ impl DiplomacyTickEvent {
                 | (Stance::Hostile, Stance::Allied)
                 | (Stance::Neutral, Stance::Allied)
         )
+    }
+}
+
+/// Minimal deterministic model for treaty concession rounds.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConcessionStateMachine {
+    /// Actors involved in this negotiation.
+    pub pair: Pair,
+    /// Monotonic concession level (0 = no concession, higher = deeper offer).
+    pub concession_level: u8,
+    /// Current round counter, starting at 0.
+    pub round: u8,
+    /// Maximum configured rounds before deadlock.
+    pub max_rounds: u8,
+    /// `true` once either acceptance or termination occurs.
+    pub resolved: bool,
+}
+
+impl ConcessionStateMachine {
+    /// Construct a new negotiation state machine for `pair` with a positive cap.
+    ///
+    /// A zero `max_rounds` behaves as immediate deadlock and is therefore valid
+    /// only when callers finish the negotiation before any offers.
+    pub fn new(pair: Pair, max_rounds: u8) -> Self {
+        Self {
+            pair,
+            concession_level: 0,
+            round: 0,
+            max_rounds,
+            resolved: false,
+        }
+    }
+
+    /// Propose a new concession level. Levels must be monotonic non-decreasing
+    /// until the round budget is exhausted.
+    pub fn propose(&mut self, proposer: PolityId, concession_level: u8) -> Result<(), ConcessionError> {
+        if self.resolved {
+            return Err(ConcessionError::AlreadyResolved);
+        }
+        if self.round >= self.max_rounds {
+            return Err(ConcessionError::RoundLimitReached);
+        }
+        if proposer != self.pair.lo && proposer != self.pair.hi {
+            return Err(ConcessionError::ActorNotInPair);
+        }
+        if concession_level < self.concession_level {
+            return Err(ConcessionError::ConcessionMustNotRegress);
+        }
+        self.round += 1;
+        self.concession_level = concession_level;
+        Ok(())
+    }
+
+    /// Accept the last proposed concession level.
+    pub fn accept(&mut self, accepter: PolityId) -> Result<(), ConcessionError> {
+        if self.resolved {
+            return Err(ConcessionError::AlreadyResolved);
+        }
+        if self.round == 0 {
+            return Err(ConcessionError::NoOfferToAccept);
+        }
+        if accepter != self.pair.lo && accepter != self.pair.hi {
+            return Err(ConcessionError::ActorNotInPair);
+        }
+        self.resolved = true;
+        Ok(())
+    }
+
+    /// Reject the negotiation and mark it resolved.
+    pub fn reject(&mut self, rejecter: PolityId) -> Result<(), ConcessionError> {
+        if self.resolved {
+            return Err(ConcessionError::AlreadyResolved);
+        }
+        if self.round == 0 {
+            return Err(ConcessionError::NoOfferToAccept);
+        }
+        if rejecter != self.pair.lo && rejecter != self.pair.hi {
+            return Err(ConcessionError::ActorNotInPair);
+        }
+        self.resolved = true;
+        Ok(())
+    }
+}
+
+/// Errors emitted by concession machine transitions.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum ConcessionError {
+    /// Only pair actors may propose/accept/reject.
+    #[error("actor is not part of this pair")]
+    ActorNotInPair,
+    /// Concession levels must be non-decreasing.
+    #[error("concession level regressed relative to prior round")]
+    ConcessionMustNotRegress,
+    /// No offer has been proposed yet.
+    #[error("no offer exists to accept")]
+    NoOfferToAccept,
+    /// Maximum configured rounds has been reached.
+    #[error("round limit reached")]
+    RoundLimitReached,
+    /// The machine is already in accepted or rejected state.
+    #[error("machine already resolved")]
+    AlreadyResolved,
+}
+
+/// Structured treaty clauses used by formal transcripts.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum TreatyClauseKind {
+    /// Temporary truce with an expiration window.
+    Ceasefire,
+    /// Mutual agreement not to target one another.
+    NonAggression,
+    /// Territory-related settlement terms.
+    TerritoryClause,
+    /// Trade, passage, or tribute obligations.
+    TradeClause,
+}
+
+/// Clause object used for deterministic replay + audit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreatyClause {
+    /// Clause discriminator.
+    pub kind: TreatyClauseKind,
+    /// Short machine-readable key (`"clause"`).
+    pub key: String,
+    /// Machine-readable payload value (`"30"`, `"sector-7"`).
+    pub value: String,
+}
+
+impl TreatyClause {
+    /// Construct a structured clause from raw key/value fields.
+    pub fn new<K, V>(kind: TreatyClauseKind, key: K, value: V) -> Self
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        Self {
+            kind,
+            key: key.into(),
+            value: value.into(),
+        }
+    }
+}
+
+/// Formal register transcript that keeps structured clauses separate from LLM text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreatyTranscript {
+    /// Deterministic clauses that drive replay and tests.
+    pub clauses: Vec<TreatyClause>,
+    /// Optional natural-language garnish layer generated by LLM.
+    pub llm_garnish: Option<String>,
+}
+
+impl TreatyTranscript {
+    /// Start from base clauses and optional garnish.
+    pub fn new(clauses: Vec<TreatyClause>, llm_garnish: Option<String>) -> Self {
+        Self {
+            clauses,
+            llm_garnish,
+        }
+    }
+
+    /// Append one structured clause.
+    pub fn push_clause(&mut self, clause: TreatyClause) {
+        self.clauses.push(clause);
+    }
+
+    /// Replace garnish text after deterministic clause computation.
+    pub fn set_llm_garnish<S: Into<String>>(&mut self, llm_garnish: S) {
+        self.llm_garnish = Some(llm_garnish.into());
+    }
+
+    /// Borrow structured clauses directly.
+    pub fn clauses(&self) -> &[TreatyClause] {
+        &self.clauses
+    }
+}
+
+/// Rule-source restriction for game-relevant diplomacy decisions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DecisionSource {
+    /// Deterministic gameplay rules.
+    RuleEngine,
+    /// Large-language-model fallback, explicitly disallowed for these actions.
+    Llm,
+}
+
+/// Canonical war goals for deterministic selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WarGoal {
+    /// Limited, reversible skirmish posture.
+    Limited,
+    /// Sustained hostility posture.
+    Total,
+}
+
+/// Decision API returns this when callers ask prohibited sources.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum DecisionError {
+    /// The selected source is forbidden for this decision.
+    #[error("LLM-based decisions are disallowed for {action}")]
+    LlmDisallowed {
+        /// Decision action that cannot use LLM input.
+        action: &'static str,
+    },
+}
+
+/// Decide treaty acceptance using deterministic rule inputs.
+pub fn decide_treaty_acceptance(
+    standing: i32,
+    source: DecisionSource,
+) -> Result<bool, DecisionError> {
+    if source == DecisionSource::Llm {
+        return Err(DecisionError::LlmDisallowed {
+            action: "treaty acceptance",
+        });
+    }
+    Ok(standing >= 0)
+}
+
+/// Apply a trust delta with deterministic rule inputs.
+pub fn update_trust_score(
+    trust: i32,
+    delta: i32,
+    source: DecisionSource,
+) -> Result<i32, DecisionError> {
+    if source == DecisionSource::Llm {
+        return Err(DecisionError::LlmDisallowed {
+            action: "trust updates",
+        });
+    }
+    Ok(trust.saturating_add(delta))
+}
+
+/// Select war goals from current relation and deterministic rule set.
+pub fn select_war_goal(
+    standing: i32,
+    source: DecisionSource,
+) -> Result<WarGoal, DecisionError> {
+    if source == DecisionSource::Llm {
+        return Err(DecisionError::LlmDisallowed {
+            action: "war-goal selection",
+        });
+    }
+    if standing <= -10 {
+        Ok(WarGoal::Total)
+    } else {
+        Ok(WarGoal::Limited)
     }
 }
 
@@ -299,7 +550,7 @@ impl DiplomacyState {
     }
 
     /// Look up the relation between `a` and `b`, if any.
-    pub fn get(&self, a: ActorId, b: ActorId) -> Option<&Relation> {
+    pub fn get(&self, a: PolityId, b: PolityId) -> Option<&Relation> {
         if a == b {
             return None;
         }
@@ -310,7 +561,7 @@ impl DiplomacyState {
     /// by tests that want to inspect mutation order without going through
     /// [`Self::ingest`]. Returns `None` for `a == b` and for untracked pairs.
     #[allow(dead_code)]
-    pub(crate) fn get_mut(&mut self, a: ActorId, b: ActorId) -> Option<&mut Relation> {
+    pub(crate) fn get_mut(&mut self, a: PolityId, b: PolityId) -> Option<&mut Relation> {
         if a == b {
             return None;
         }
@@ -413,7 +664,7 @@ impl DiplomacyState {
 
     /// Apply a signed `delta` to the relation `(a, b)`, creating the relation
     /// if needed. Emits a [`DiplomacyTickEvent`] on threshold crossing.
-    fn bump(&mut self, a: ActorId, b: ActorId, delta: i32, tick: u64) {
+    fn bump(&mut self, a: PolityId, b: PolityId, delta: i32, tick: u64) {
         let pair = Pair::new(a, b);
         let max = self.config.standing_max;
         let rel = self.relations.entry(pair).or_insert_with(|| Relation {
@@ -495,8 +746,8 @@ mod tests {
         }
     }
 
-    fn a(id: u32) -> ActorId {
-        ActorId(id)
+    fn a(id: u32) -> PolityId {
+        PolityId::new(id)
     }
 
     // -- Pair ordering -------------------------------------------------------
@@ -874,6 +1125,87 @@ mod tests {
             let r2 = s2.get(a(x), a(y)).cloned();
             prop_assert_eq!(r1, r2, "bump direction must be symmetric");
         });
+    }
+
+    // -- FR-CIV-DIPLO-004 ---------------------------------------------------
+
+    /// FR-CIV-DIPLO-004.
+    #[test]
+    fn fr_civ_diplo_004_concession_machine_is_monotonic() {
+        let mut machine = ConcessionStateMachine::new(Pair::new(a(1), a(2)), 3);
+        assert!(machine.propose(a(1), 1).is_ok());
+        assert!(machine.propose(a(2), 2).is_ok());
+        assert!(matches!(
+            machine.propose(a(1), 1),
+            Err(ConcessionError::ConcessionMustNotRegress)
+        ));
+    }
+
+    /// FR-CIV-DIPLO-004.
+    #[test]
+    fn fr_civ_diplo_004_rejects_round_limit() {
+        let mut machine = ConcessionStateMachine::new(Pair::new(a(1), a(2)), 1);
+        assert!(machine.propose(a(1), 1).is_ok());
+        assert!(matches!(
+            machine.propose(a(2), 2),
+            Err(ConcessionError::RoundLimitReached)
+        ));
+        assert!(matches!(machine.accept(a(2)), Ok(())));
+        assert!(matches!(
+            machine.accept(a(1)),
+            Err(ConcessionError::AlreadyResolved)
+        ));
+    }
+
+    // -- FR-CIV-DIPLO-005 ---------------------------------------------------
+
+    /// FR-CIV-DIPLO-005.
+    #[test]
+    fn fr_civ_diplo_005_structured_transcript_remains_stable_without_garnish() {
+        let clauses = vec![
+            TreatyClause::new(TreatyClauseKind::Ceasefire, "duration_ticks", "300"),
+            TreatyClause::new(TreatyClauseKind::TradeClause, "grain_tribute", "5"),
+        ];
+        let mut tx = TreatyTranscript::new(clauses.clone(), Some("LLM says handshake".to_string()));
+        let expected = tx.clauses().to_vec();
+        tx.set_llm_garnish("Alternative wording from LLM");
+        assert_eq!(tx.clauses(), expected.as_slice());
+    }
+
+    // -- FR-CIV-DIPLO-006 ---------------------------------------------------
+
+    /// FR-CIV-DIPLO-006.
+    #[test]
+    fn fr_civ_diplo_006_blocks_llm_treaty_acceptance_decision() {
+        assert!(matches!(
+            decide_treaty_acceptance(0, DecisionSource::Llm),
+            Err(DecisionError::LlmDisallowed { action: "treaty acceptance" })
+        ));
+        assert!(decide_treaty_acceptance(0, DecisionSource::RuleEngine).is_ok());
+    }
+
+    /// FR-CIV-DIPLO-006.
+    #[test]
+    fn fr_civ_diplo_006_blocks_llm_trust_and_war_goal_decisions() {
+        assert!(matches!(
+            update_trust_score(10, -3, DecisionSource::Llm),
+            Err(DecisionError::LlmDisallowed { action: "trust updates" })
+        ));
+        assert!(matches!(
+            select_war_goal(-20, DecisionSource::Llm),
+            Err(DecisionError::LlmDisallowed { action: "war-goal selection" })
+        ));
+    }
+
+    // -- FR-CIV-DIPLO-007 ---------------------------------------------------
+
+    /// FR-CIV-DIPLO-007.
+    #[test]
+    fn fr_civ_diplo_007_polity_ids_are_scalar_clusters() {
+        let from = PolityId::new(12);
+        let to: PolityId = PolityId::new(13);
+        let pair = Pair::new(from, to);
+        assert_eq!(pair.actors(), (PolityId::new(12), PolityId::new(13)));
     }
 
     // -- Schema version -----------------------------------------------------

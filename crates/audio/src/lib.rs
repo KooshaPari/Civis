@@ -15,12 +15,21 @@
 //! - **Biome-driven ambient beds** ([`BiomeFootprint`] + [`AmbientBlend`]) —
 //!   the camera footprint → normalised bed-weight vector → cross-fade
 //!   targets, deterministic for a given footprint + cadence. (FR-CIV-AUDIO-002)
+//! - **Weather / diurnal / seasonal modulation** of the bed weights
+//!   (rain, snow, storm, day, winter). (FR-CIV-AUDIO-003)
 //! - **Mood-driven score stems** ([`MoodVector`] + [`ScoreStem`]) — 4 stems
 //!   remix on a continuous `{prosperity, growth, tension, wonder}` readout
 //!   of sim aggregates + events, gain-only, no real-time DSP. (FR-CIV-AUDIO-004)
+//! - **Reactive event SFX routing** ([`triggers`]) — sim event →
+//!   `SfxRequest` batch, the substrate half of the contract. (FR-CIV-AUDIO-005)
 //! - **SFX coalescing / clamp** ([`SfxCoalescer`]) — caps concurrent
 //!   same-kind one-shots per frame, clamps summed gain to protect
 //!   headroom and the "one accent at a time" pillar. (FR-CIV-AUDIO-006)
+//! - **UI sound language** ([`ui_sound`]) — palette role mapping
+//!   (cyan / gold / cool / acid) + per-tick UI sound budget. (FR-CIV-AUDIO-007)
+//! - **Bus ducking** ([`ducking`]) — 150–400 ms tweens on disaster /
+//!   milestone / ui-modal / combat-swell, layered with loudest-wins
+//!   semantics. (FR-CIV-AUDIO-008)
 //!
 //! ## What does NOT live here
 //!
@@ -38,20 +47,25 @@
 //! explicit inputs — no RNG, no `Instant::now`, no I/O. This is the
 //! hard prerequisite for replay-bound audio test coverage.
 
-#![forbid(unsafe_code)]
-#![warn(missing_docs)]
+#![deny(missing_docs)]
+#![deny(unsafe_code)]
 
-pub mod bus;
-pub mod mix;
 pub mod ambient;
+pub mod bus;
+pub mod ducking;
+pub mod mix;
 pub mod mood;
 pub mod sfx;
+pub mod triggers;
+pub mod ui_sound;
 
+pub use ambient::{AmbientBed, AmbientBlend, BiomeFootprint, BedWeights};
 pub use bus::{BusId, BusLevels};
 pub use mix::{AudioMix, AudioMixPreset, MIX_SCHEMA_VERSION};
-pub use ambient::{AmbientBed, AmbientBlend, BiomeFootprint, BedWeights};
-pub use mood::{MoodVector, ScoreStem, StemMix, ScoreCadence};
-pub use sfx::{SfxCoalescer, SfxKind, SfxQueue, COALESCE_CAP_PER_KIND};
+pub use mood::{MoodVector, ScoreCadence, ScoreStem, StemMix};
+pub use sfx::{
+    SfxCoalescer, SfxKind, SfxQueue, SfxRequest, COALESCE_CAP_PER_KIND,
+};
 
 /// Marker version of this crate's public schema.
 ///

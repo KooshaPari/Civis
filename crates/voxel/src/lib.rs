@@ -28,6 +28,7 @@ pub use phenotype_voxel::{
 };
 
 pub mod boundary;
+pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
 pub mod fluid_ca;
 pub mod lod;
 pub mod material;

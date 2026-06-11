@@ -114,6 +114,41 @@ source-of-truth doc.
   `live_pick::` lib tests. Source: `clients/bevy-ref/README.md:26` +
   `docs/development-guide/p-w1-kickoff.md:136,740` + `justfile:127`.
 
+## Functional Requirements (recovered stubs, batch 2 — user-demand trace)
+
+The 4 FR IDs below are the `UNSPEC'D-DEMAND` rows from
+[`docs/audits/user-demand-trace-2026-06-10.md`](../../../docs/audits/user-demand-trace-2026-06-10.md)
+(session `1cae14f8-e6a7-4f55-b4ba-50bad36a87eb`, 2026-05-30 — domain-model
+review). They are methodology / governance asks that the
+`_id_inventory_v3.py` scan does not cover, so they live in
+**`SPEC-ONLY`** until code/docs land. Same one-line template as batch 1.
+
+- [ ] **FR-CIV-DOMAIN-CTX-CATALOG** — Bounded-context catalog naming
+  engine / economy / agents / needs / planet / tactics / voxel, with
+  one owning crate per context. Source: `docs/research/xdd-sota-traceability.md:9,23,24`
+  + the user-demand prompt itself (session `1cae14f8`).
+
+- [ ] **FR-CIV-UBIQ-LANG-RECONCILE** — Ubiquitous-language reconciliation
+  pass: pick one canonical term per concept and alias the others
+  (e.g. `faction:u32` → `cluster_id`; `settlement` reserved for the
+  emergent-overlap concept only; `polity` for the higher-level
+  container). Doc-only deliverable
+  (`docs/audits/naming-drift.md`); no code change required. Source:
+  demand #23 in `docs/audits/user-demand-trace-2026-06-10.md`.
+
+- [ ] **FR-CIV-DOMAIN-NOUN-DRIFT** — Per-spec-vs-code noun-drift report
+  (the "named-noun drift" audit). For each `FR-CIV-*` epic, list the
+  nouns used in the spec text, the nouns used in the code, and the
+  diff. Source: demand #24 in
+  `docs/audits/user-demand-trace-2026-06-10.md`.
+
+- [ ] **FR-CIV-XDD-METHODOLOGY-PLAN** — xDD (SDD / DDD / CDD) methodology
+  adoption plan for the Rust civ-sim: a per-crate matrix of which
+  methodology applies (SDD for sim-core deterministic laws; DDD for
+  bounded contexts above; CDD for the `protocol-3d` JSON-RPC surface).
+  Source: `docs/research/xdd-sota-traceability.md:5,11,28-42` +
+  demand #25 in `docs/audits/user-demand-trace-2026-06-10.md`.
+
 ## Non-Functional Requirements
 
 - Determinism: every recovered ID's underlying implementation MUST

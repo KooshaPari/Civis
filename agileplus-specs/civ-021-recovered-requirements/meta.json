@@ -10,6 +10,8 @@
     "FR-CIV-BEVY-016",
     "FR-CIV-BEVY-022",
     "FR-CIV-BEVY-025",
+    "FR-CIV-DOMAIN-CTX-CATALOG",
+    "FR-CIV-DOMAIN-NOUN-DRIFT",
     "FR-CIV-ECON-001-MARKET",
     "FR-CIV-ECON-002-JOULE",
     "FR-CIV-ECON-004",
@@ -17,10 +19,12 @@
     "FR-CIV-PLANET-020",
     "FR-CIV-PLANET-030",
     "FR-CIV-PLANET-060",
-    "FR-CIV-UX-005"
+    "FR-CIV-UBIQ-LANG-RECONCILE",
+    "FR-CIV-UX-005",
+    "FR-CIV-XDD-METHODOLOGY-PLAN"
   ],
   "created_at": "2026-06-10T00:00:00Z",
-  "updated_at": "2026-06-10T00:00:00Z",
+  "updated_at": "2026-06-10T00:01:00Z",
   "priority": "SHALL",
   "target_release": "MVP",
   "civ_spec_ref": "docs/audits/phantom-triage-batch1.md",

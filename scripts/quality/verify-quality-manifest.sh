@@ -54,7 +54,7 @@ if attested not in {head, ""}:
             + "\nRe-run: lefthook run pre-push && commit .ci/quality-manifest.json"
         )
 
-OPTIONAL_GATE_PREFIXES = ("unreal_",)
+OPTIONAL_GATE_PREFIXES = ("unreal_", "extra_")
 
 def gate_ok(key: str, status: str) -> bool:
     if status == "pass":

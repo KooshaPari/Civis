@@ -1,23 +1,38 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# pre-commit hooks run on the developer machine via lefthook pre-commit and
+# lefthook pre-push (which also writes the manifest). This workflow is
+# dispatch-only for the rare "cloud must reproduce" case.
 name: Security Guard
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+
 permissions:
   contents: read
 
 jobs:
-  guard:
+  manifest-verify:
+    name: manifest-verify (cloud)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
 
+  guard:
+    # Manual escape hatch: rerun the pre-commit hook stage on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
       - name: Run pre-commit guard checks
         uses: pre-commit/action@v3.0.1
         with:

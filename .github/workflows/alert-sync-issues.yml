@@ -1,7 +1,10 @@
+# Alert sync to issues. Calls the phenoShared reusable (caller body is tiny;
+# the heavy work is in phenoShared). Cron downshifted from hourly to weekly
+# to stop the pr-billing drift the reused reusable's transitive work caused.
 name: Alert sync issues
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 6 * * 1'
   workflow_dispatch:
 
 permissions:

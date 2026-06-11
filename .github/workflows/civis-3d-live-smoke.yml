@@ -1,38 +1,39 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# Heavy live-attach smoke (F3D0 + voxel ground; no GPU) runs locally via
+# `just civis-3d-live-smoke` on the developer machine and is attested in
+# `.ci/quality-manifest.json` (gates: civis_3d_verify covers cargo check +
+# clippy + targeted frame_triple / ws_smoke / bevy live_* tests). This workflow
+# is dispatch-only — used for the offline-deps fallback documented in
+# `docs/development-guide/fr-bevy-attach.md` (libasound/libudev/libxkbcommon
+# libs that aren't on every CI runner).
 name: Civis 3D Live Smoke
 
-# Headless live-attach protocol smoke (F3D0 + voxel ground; no GPU window).
-# FR-CIV-BEVY-021 / P-W1 kickoff item 46 — mirrors `just civis-3d-live-smoke`.
 on:
-  pull_request:
-    paths:
-      - 'clients/bevy-ref/**'
-      - 'crates/server/**'
-      - 'crates/protocol-3d/**'
-      - 'justfile'
-      - '.github/workflows/civis-3d-live-smoke.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'clients/bevy-ref/**'
-      - 'crates/server/**'
-      - 'crates/protocol-3d/**'
-      - 'justfile'
-      - '.github/workflows/civis-3d-live-smoke.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
   live-smoke:
+    # Manual escape hatch: rerun the smoke on a Linux runner with the wgpu
+    # link deps. Heavy (~10–20 min cold build) — never triggers automatically.
+    if: github.event_name == 'workflow_dispatch'
     name: headless live-attach smoke (no GPU)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-
       - uses: dtolnay/rust-toolchain@stable
-
       - name: Install Linux deps (Bevy / wgpu link)
         run: |
           sudo apt-get update
@@ -46,8 +47,6 @@ jobs:
             libxcursor-dev \
             libxi-dev \
             libxrandr-dev
-
       - uses: extractions/setup-just@v2
-
       - name: civis-3d-live-smoke
         run: just civis-3d-live-smoke

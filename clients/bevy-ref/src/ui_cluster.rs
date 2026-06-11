@@ -25,8 +25,8 @@ use bevy_egui::egui;
 
 use crate::tool_categories::{Category, SubTool};
 use crate::ui_theme::{
-    liquid_glass_pill, motion_rect, paint_cluster_icon_label, DECK_ACCENT, DECK_BORDER, DECK_GLASS,
-    DECK_TEXT, DECK_TEXT_MID, RADIUS_BTN, RADIUS_SM,
+    liquid_glass_pill, motion_rect, paint_cluster_icon_label, rim_glow_for, DECK_ACCENT,
+    DECK_BORDER, DECK_GLASS, DECK_TEXT, DECK_TEXT_MID, RADIUS_BTN, RADIUS_SM,
 };
 
 /// Width of one category block-pill in the bottom toolbar cluster.
@@ -89,6 +89,10 @@ pub fn category_pill(
     let paint_rect = motion_rect(rect, lit, resp.hovered(), time, ui.id().value());
     let p = ui.painter();
     liquid_glass_pill(p, paint_rect, RADIUS_BTN, lit, resp.hovered());
+    // Holocron rim glow: tint the bloom with the category's semantic accent
+    // (Life=green, Structure=gold, Disaster=red, …) when focused/hovered, not
+    // the chrome teal — see `ui_theme::rim_glow_for` for the design rationale.
+    rim_glow_for(p, paint_rect, cat.accent, RADIUS_BTN, lit, resp.hovered());
     // Animated specular sweep on lit/hovered pills — the "wet glass" highlight
     // sliding across the blade (holocron specular-sweep). Painted under the icon.
     if lit || resp.hovered() {
@@ -172,6 +176,10 @@ fn item_tile(
     let paint_rect = motion_rect(rect, active, resp.hovered(), time, ui.id().value());
     let p = ui.painter();
     liquid_glass_pill(p, paint_rect, RADIUS_SM, active, resp.hovered());
+    // Holocron rim glow: sub-tool tiles also pick up the parent category's
+    // accent on the rim, so a lit "House" inside the Structure flyout glows
+    // gold (matching Structure's `accent`), not chrome teal.
+    rim_glow_for(p, paint_rect, accent, RADIUS_SM, active, resp.hovered());
     let lit = active && !inert;
     let tile_accent = if active { accent } else { DECK_TEXT };
     paint_cluster_icon_label(p, paint_rect, st.icon(), st.label(), lit, tile_accent, None);

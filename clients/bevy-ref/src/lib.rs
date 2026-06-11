@@ -114,6 +114,8 @@ pub mod ui_holo;
 pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
+#[cfg(all(feature = "bevy", feature = "voxel"))]
+pub mod ocean;
 #[cfg(feature = "voxel")]
 pub mod voxel_sim;
 #[cfg(feature = "voxel")]

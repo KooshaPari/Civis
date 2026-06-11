@@ -2431,6 +2431,7 @@ mod tests {
         assert_eq!(a.cluster_stocks(), b.cluster_stocks());
     }
 
+    /// Covers FR-CIV-PLANET-010.
     /// FR-CIV-ENGINE-INT-001 — climate is recomputed every tick and matches
     /// `compute_climate` directly.
     #[test]
@@ -2490,6 +2491,7 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-PLANET-020.
     /// Covers FR-CIV-VOXEL-002.
     /// FR-CIV-PLANET-020 — `apply_tide_offset` shifts a registered coastal
     /// water-level voxel deterministically as the tide cycles, and the shift
@@ -2943,7 +2945,7 @@ mod tests {
         ));
     }
 
-    /// Covers FR-CIV-TACTICS-041.
+    /// Covers FR-CIV-PLANET-060, FR-CIV-TACTICS-041.
     /// Combat events extend the replay hash chain.
     #[test]
     fn combat_events_extend_replay_hash_chain() {
@@ -3063,7 +3065,9 @@ mod tests {
         assert_eq!(combat_a, combat_b);
     }
 
-    /// Covers FR-CIV-TACTICS-025, FR-CIV-TACTICS-032, and FR-CIV-TACTICS-035.
+    /// Covers FR-CIV-TACTICS-025.
+    /// Covers FR-CIV-TACTICS-032.
+    /// Covers FR-CIV-TACTICS-035.
     /// War-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
@@ -3219,6 +3223,8 @@ mod tests {
         assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
     }
 
+    /// Covers FR-CIV-PLANET-030.
+    /// Covers FR-CIV-PLANET-040.
     /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
     /// year phase (summer equatorial > winter equatorial) and results are
     /// deterministic across re-runs.

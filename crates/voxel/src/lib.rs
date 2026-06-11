@@ -51,6 +51,7 @@ pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 mod stub_tests {
     use super::*;
 
+    /// Covers FR-CIV-VOXEL-000.
     /// FR-CIV-VOXEL-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
@@ -61,6 +62,8 @@ mod stub_tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
+    /// Covers FR-CIV-VOXEL-000.
+    /// Covers FR-CIV-VOXEL-001.
     /// FR-CIV-VOXEL-000 — crate compiles, kernel re-exports resolve.
     #[test]
     fn kernel_reexports_resolve() {
@@ -133,6 +136,7 @@ mod stub_tests {
         assert_eq!(mesh.indices.len(), 54 * 6);
     }
 
+    /// Covers FR-CIV-VOXEL-001.
     /// FR-CIV-VOXEL-001 — adaptive storage: many writes within one 16³ leaf stay
     /// in a single dense chunk through the Civis re-export.
     #[test]
@@ -164,6 +168,7 @@ mod stub_tests {
         );
     }
 
+    /// Covers FR-CIV-VOXEL-002.
     /// FR-CIV-VOXEL-002 — dirty queue drains in `(chunk_id, write_seq)` order.
     #[test]
     fn dirty_queue_deterministic() {
@@ -195,6 +200,7 @@ mod stub_tests {
         }
     }
 
+    /// Covers FR-CIV-VOXEL-003.
     /// FR-CIV-VOXEL-003 — public world coordinates are fixed-point integers.
     #[test]
     fn fixed_point_api() {
@@ -215,6 +221,7 @@ mod stub_tests {
         assert_eq!(FIXED_SCALE, 1_000_000);
     }
 
+    /// Covers FR-CIV-VOXEL-004.
     /// FR-CIV-VOXEL-004 — `VoxelScaleMultiplier` keeps LOD selection scale-invariant.
     #[test]
     fn scale_multiplier_lod() {
@@ -224,6 +231,7 @@ mod stub_tests {
         assert_eq!(lod_a, lod_b);
     }
 
+    /// Covers FR-CIV-VOXEL-010.
     /// FR-CIV-VOXEL-010 — `Mesher` produces a non-empty watertight-style mesh
     /// for a fixed test block through the Civis re-export.
     #[test]

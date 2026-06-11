@@ -162,6 +162,7 @@ impl LawDb {
 mod tests {
     use super::*;
 
+    /// Covers FR-CIV-LAWS-000.
     /// FR-CIV-LAWS-000 — crate compiles and exposes a schema version.
     #[test]
     fn schema_version_stub() {
@@ -203,6 +204,7 @@ mod tests {
         )"#
     }
 
+    /// Covers FR-CIV-LAWS-001.
     /// FR-CIV-LAWS-001 — versioned RON schema round-trips.
     #[test]
     fn ron_roundtrips() {
@@ -214,6 +216,7 @@ mod tests {
         assert_eq!(db, back);
     }
 
+    /// Covers FR-CIV-LAWS-002.
     /// FR-CIV-LAWS-002 — validator rejects fictional extensions with no
     /// inputs/outputs/losses.
     #[test]

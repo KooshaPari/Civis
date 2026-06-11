@@ -11,6 +11,7 @@ members = [
   "crates/agents",
   "crates/needs",
   "crates/diffusion",
+  "crates/diplomacy",
   "crates/laws",
   "crates/research",
   "crates/ai",

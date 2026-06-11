@@ -5,8 +5,8 @@ Source: first 60 `SPEC-ONLY` rows in `docs/audits/fr-matrix.json` (matrix order)
 Total rows: `60`  
 Verdict counts:
 
-- `BUILD-NEXT`: `32`
-- `DEFER`: `18`
+- `BUILD-NEXT`: `36`
+- `DEFER`: `14`
 - `ARCHIVE`: `10`
 
 Legend for notes:
@@ -72,7 +72,7 @@ Legend for notes:
 | 54 | FR-CIV-LEGENDS-006 | FR-CIV-LEGENDS | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Top-20 gap #9; graceful gap handling is required for production storyteller UX. |
 | 55 | FR-CIV-LEGENDS-007 | FR-CIV-LEGENDS | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Top-20 gap #9; register/UI separation is needed for narrative readability. |
 | 56 | FR-CIV-LEGENDS-008 | FR-CIV-LEGENDS | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Top-20 gap #9; culturally variant naming is needed for immersion parity. |
-| 57 | FR-CIV-LLM-001 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | DEFER | AI cache contract is infra-wide and can follow gameplay parity core. |
-| 58 | FR-CIV-LLM-002 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | DEFER | Prompt-tag hygiene is non-blocking for the first 1.0 milestone. |
-| 59 | FR-CIV-LLM-003 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | DEFER | LLM call-budget policy is optimization/safety, not top-20 feature closure. |
-| 60 | FR-CIV-LLM-004 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | DEFER | Allowed-use matrix is useful, but not required for current parity blocker set. |
+| 57 | FR-CIV-LLM-001 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Player-visible narrative loops now have a cache contract lock for deterministic flavor delivery and replay-friendly AI affordances. |
+| 58 | FR-CIV-LLM-002 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Prompt tags/hashes are part of visible generation replayability and now have direct coverage in tests. |
+| 59 | FR-CIV-LLM-003 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Call-budget/env caps are now covered to keep AI throughput behavior deterministic under load. |
+| 60 | FR-CIV-LLM-004 | FR-CIV-LLM | `FUNCTIONAL_REQUIREMENTS.md` | BUILD-NEXT | Allowed-use boundaries are now asserted to avoid silent cross-mode provider misuse during gameplay. |

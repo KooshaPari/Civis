@@ -1210,6 +1210,7 @@ write_policy = false
         assert!(host.guest_memory_snapshot("missing").is_empty());
     }
 
+    /// Covers FR-CIV-TACTICS-046.
     #[test]
     fn fr_civ_tactics_046_green_economy_phase_only_ticks_economic_mods() {
         let root = tempfile::tempdir().expect("tempdir");
@@ -1288,6 +1289,7 @@ write_policy = false
         assert!(!lines.iter().any(|line| line.contains("mod:policy-demo")));
     }
 
+    /// Covers FR-CIV-TACTICS-052.
     #[test]
     fn fr_civ_tactics_052_green_economy_tick_persists_guest_memory() {
         const WAT: &str = r#"
@@ -1341,6 +1343,7 @@ write_policy = false
         assert_eq!(host.guest_memory_snapshot("mem-econ").first().copied(), Some(55));
     }
 
+    /// Covers FR-CIV-TACTICS-054.
     #[test]
     fn fr_civ_tactics_054_green_browser_entries_include_loaded_mod() {
         const WAT: &str = r#"

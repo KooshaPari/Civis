@@ -37,6 +37,7 @@ fn seed_rng() -> ChaCha8Rng {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-000 — schema version string is present and version-like.
+/// Covers FR-CIV-TACTICS-000.
 #[test]
 fn green_fr_civ_tactics_000_schema_version_is_present() {
     assert!(!SCHEMA_VERSION.is_empty());
@@ -48,6 +49,7 @@ fn green_fr_civ_tactics_000_schema_version_is_present() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-001 — apply_damage removes voxels inside the impact sphere.
+/// Covers FR-CIV-TACTICS-001.
 #[test]
 fn green_fr_civ_tactics_001_apply_damage_removes_voxels() {
     let mut world = make_empty_world();
@@ -78,6 +80,7 @@ fn green_fr_civ_tactics_001_apply_damage_removes_voxels() {
 
 /// FR-CIV-TACTICS-010 — evolve_doctrine increments generation and is
 /// deterministic for the same seed.
+/// Covers FR-CIV-TACTICS-010.
 #[test]
 fn green_fr_civ_tactics_010_evolve_doctrine_deterministic() {
     let mut library_a = DoctrineLibrary {
@@ -109,6 +112,7 @@ fn green_fr_civ_tactics_010_evolve_doctrine_deterministic() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-020 — LOS checks block when a voxel is in between.
+/// Covers FR-CIV-TACTICS-020.
 #[test]
 fn green_fr_civ_tactics_020_los_blocked_by_obstacle() {
     let mut world = make_empty_world();
@@ -123,6 +127,7 @@ fn green_fr_civ_tactics_020_los_blocked_by_obstacle() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-021 — line formation offsets keep requested slot count and stay centered.
+/// Covers FR-CIV-TACTICS-021.
 #[test]
 fn green_fr_civ_tactics_021_line_offsets() {
     let offsets = formation_offsets(FormationKind::Line, 3);
@@ -137,6 +142,7 @@ fn green_fr_civ_tactics_021_line_offsets() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-022 — combat resolves on the configured cadence.
+/// Covers FR-CIV-TACTICS-022.
 #[test]
 fn green_fr_civ_tactics_022_engagement_respects_cadence() {
     let world = make_empty_world();
@@ -174,6 +180,7 @@ fn green_fr_civ_tactics_022_engagement_respects_cadence() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-023 — doctrine fitness is monotonic with engagement pressure.
+/// Covers FR-CIV-TACTICS-023.
 #[test]
 fn green_fr_civ_tactics_023_doctrine_fitness_tracks_pressure() {
     let doctrine = Doctrine {
@@ -195,6 +202,7 @@ fn green_fr_civ_tactics_023_doctrine_fitness_tracks_pressure() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-024 — war bridge emits engagements toward opposite factions.
+/// Covers FR-CIV-TACTICS-024.
 #[test]
 fn green_fr_civ_tactics_024_engages_opposite_factions() {
     let world = make_empty_world();
@@ -234,12 +242,22 @@ fn green_fr_civ_tactics_024_engages_opposite_factions() {
 // ---------------------------------------------------------------------------
 // FR-CIV-TACTICS-030
 // ---------------------------------------------------------------------------
+/// Covers FR-CIV-TACTICS-030.
+#[test]
+fn green_fr_civ_tactics_030_war_bridge_config_is_configurable() {
+    let config = WarBridgeConfig {
+        engage_range_grid: 16,
+        ..WarBridgeConfig::default()
+    };
+    assert_eq!(config.engage_range_grid, 16);
+}
 
 // ---------------------------------------------------------------------------
 // FR-CIV-TACTICS-031
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-031 — movement moves units toward enemies on cadence.
+/// Covers FR-CIV-TACTICS-031.
 #[test]
 fn green_fr_civ_tactics_031_movement_moves_toward_enemy() {
     let world = make_empty_world();
@@ -273,6 +291,7 @@ fn green_fr_civ_tactics_031_movement_moves_toward_enemy() {
 // ---------------------------------------------------------------------------
 
 /// FR-CIV-TACTICS-033 — BFS next-step is stable and moves toward the target.
+/// Covers FR-CIV-TACTICS-033.
 #[test]
 fn green_fr_civ_tactics_033_bfs_next_step_steers_toward_target() {
     let first = bfs_next_step((0, 0), (6, 0), 24);

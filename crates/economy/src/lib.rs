@@ -218,11 +218,13 @@ mod tests {
     use super::*;
 
     /// CIV-0100 — schema version is exposed for persistence / replay alignment.
+    /// Covers FR-ECO-001.
     #[test]
     fn schema_version_present() {
         assert_eq!(SCHEMA_VERSION, 1);
     }
 
+    /// Covers FR-ECO-002.
     #[test]
     fn drain_energy_budget_records_ledger_entry() {
         let mut state = EconomyState::with_energy_budget(100);
@@ -236,6 +238,7 @@ mod tests {
         assert_eq!(entry.account, ACCOUNT_CONSUMPTION);
     }
 
+    /// Covers FR-ECO-003.
     /// Conservation: aggregate joule budget never goes negative after drain.
     #[test]
     fn drain_energy_budget_clamps_at_zero() {

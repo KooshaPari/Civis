@@ -2214,7 +2214,8 @@ mod tests {
         assert_eq!(sim.state.tick, 1);
     }
 
-    /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
+    /// Covers FR-CORE-001.
+    /// Each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
     #[test]
     fn fr_core_001_single_tick_event_per_tick() {
         use crate::invariants::check_tick_invariants;
@@ -2367,7 +2368,8 @@ mod tests {
         assert_eq!(sim1.state.population, sim2.state.population);
     }
 
-    /// FR-CIV-LIFE-001/030 — phase_life attaches life-sim needs to agents and
+    /// Covers FR-CIV-LIFE-001, FR-CIV-LIFE-003, FR-CIV-LIFE-010, and FR-CIV-LIFE-030.
+    /// phase_life attaches life-sim needs to agents and
     /// the snapshot surfaces emergent settlement state for the HUD.
     #[test]
     fn phase_life_attaches_needs_and_exposes_settlements() {
@@ -2393,7 +2395,8 @@ mod tests {
         assert_eq!(snap.settlement_count, sim.settlement_count());
     }
 
-    /// FR-CIV-LIFE-030 — emergent settlement clustering is deterministic across
+    /// Covers FR-CIV-LIFE-030.
+    /// Emergent settlement clustering is deterministic across
     /// two same-seed simulations (replay-safe).
     #[test]
     fn phase_life_clustering_is_deterministic() {
@@ -2466,6 +2469,7 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-VOXEL-002.
     /// FR-CIV-PLANET-020 — `apply_tide_offset` shifts a registered coastal
     /// water-level voxel deterministically as the tide cycles, and the shift
     /// is symmetric around the registered sea-level baseline within tight
@@ -2574,7 +2578,8 @@ mod tests {
         );
     }
 
-    /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
+    /// Covers FR-CIV-TACTICS-010.
+    /// Doctrine GA advances on a fixed tick cadence.
     #[test]
     fn phase_tactics_evolve_doctrine_on_cadence() {
         let mut sim = Simulation::with_seed(42);
@@ -2917,7 +2922,8 @@ mod tests {
         ));
     }
 
-    /// FR-CIV-TACTICS-041 — combat events extend the replay hash chain.
+    /// Covers FR-CIV-TACTICS-041.
+    /// Combat events extend the replay hash chain.
     #[test]
     fn combat_events_extend_replay_hash_chain() {
         let event = DamageEvent {
@@ -2933,7 +2939,8 @@ mod tests {
         assert_ne!(log.running_hash, after_tick);
     }
 
-    /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
+    /// Covers FR-CIV-TACTICS-025.
+    /// Replay log restores queued combat damage events.
     #[test]
     fn replay_combat_events_restore_pending_damage() {
         let event = DamageEvent {
@@ -2955,7 +2962,8 @@ mod tests {
         assert_eq!(replayed.state.tick, 16);
     }
 
-    /// FR-CIV-TACTICS-025-int2 — replay combat events drain to the same voxel state as live ticks.
+    /// Covers FR-CIV-TACTICS-025-.
+    /// Replay combat events drain to the same voxel state as live ticks.
     #[test]
     fn replay_combat_drains_to_same_voxel_state_as_live() {
         let seed = 12;
@@ -2990,7 +2998,8 @@ mod tests {
         assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
     }
 
-    /// FR-CIV-TACTICS-025-int3 — same seed reproduces identical combat replay markers.
+    /// Covers FR-CIV-TACTICS-025 and FR-CIV-TACTICS-025-.
+    /// Same seed reproduces identical combat replay markers.
     #[test]
     fn replay_combat_log_deterministic_for_seed_rerun() {
         let seed = 5;
@@ -3033,7 +3042,8 @@ mod tests {
         assert_eq!(combat_a, combat_b);
     }
 
-    /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
+    /// Covers FR-CIV-TACTICS-025, FR-CIV-TACTICS-032, and FR-CIV-TACTICS-035.
+    /// War-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
         let mut sim = Simulation::with_seed(1);
@@ -3102,7 +3112,8 @@ mod tests {
         }
     }
 
-    /// FR-REPLAY-001 — `.civreplay` save/load restores simulation tick after N ticks.
+    /// Covers FR-REPLAY-001.
+    /// `.civreplay` save/load restores simulation tick after N ticks.
     #[test]
     fn civreplay_save_load_restores_tick_after_ticks() {
         const N: u64 = 17;
@@ -3173,10 +3184,9 @@ mod tests {
         );
     }
 
-    /// FR-CIV-TACTICS-024 — snapshot.damage_events reflects combat pulses from
-    /// the most recent tick.
+    /// Covers FR-CIV-TACTICS-024.
     #[test]
-    fn snapshot_damage_events_reflects_last_tick_pulses() {
+    fn fr_civ_tactics_024_snapshot_damage_events_reflect_last_tick_pulses() {
         let mut sim = Simulation::with_seed(6);
         // Advance to a war-bridge cadence boundary (cadence = 16).
         for _ in 0..16 {

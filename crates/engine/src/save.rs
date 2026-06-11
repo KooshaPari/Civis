@@ -275,6 +275,7 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
 
+    /// Covers FR-SAVE-002.
     #[test]
     fn save_and_load_round_trip_snapshot_state() {
         let mut sim = Simulation::with_seed(17);

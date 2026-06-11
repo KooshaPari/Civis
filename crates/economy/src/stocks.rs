@@ -282,7 +282,8 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// FR-CIV-LIFE-020: stock stepping conserves totals and never drives any good below zero.
+    /// Covers FR-CIV-LIFE-020.
+    /// Stock stepping conserves totals and never drives any good below zero.
     #[test]
     fn step_conserves_and_clamps_to_zero() {
         let mut stocks = Stocks::default();

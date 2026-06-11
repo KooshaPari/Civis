@@ -297,6 +297,7 @@ mod tests {
 
     /// CIV-002 P1 allocator slice: `step` runs the auction, posts balanced
     /// institution transfers, and conserves total joule budget end-to-end.
+    /// Covers FR-ECON-001.
     #[test]
     fn step_integrates_allocator_with_conservation() {
         use crate::{Bid, INSTITUTION_MARKET, INSTITUTION_TREASURY, Offer};

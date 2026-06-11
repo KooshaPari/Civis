@@ -271,6 +271,7 @@ pub fn baseline_scenario_path() -> PathBuf {
 mod tests {
     use super::*;
 
+    /// Covers FR-API-001.
     #[test]
     fn baseline_yaml_parses() {
         let scenario = load_scenario(baseline_scenario_path()).expect("baseline.yaml should load");
@@ -291,6 +292,7 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-TACTICS-045.
     #[test]
     fn scenario_fog_wires_military_phase() {
         let scenario = Scenario {
@@ -312,6 +314,7 @@ mod tests {
         assert_eq!(sim.military_phase_config().war.fog_grid_size, 32);
     }
 
+    /// Covers FR-CIV-TACTICS-050 and FR-CIV-TACTICS-035.
     #[test]
     fn scenario_military_wires_military_phase() {
         let scenario = Scenario {
@@ -341,6 +344,7 @@ mod tests {
         assert_eq!(cfg.war.engage_range_grid, 12);
     }
 
+    /// Covers FR-MOD-004.
     #[test]
     fn scenario_mods_loads_example_policy() {
         let yaml = r#"

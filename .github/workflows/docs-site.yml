@@ -1,14 +1,27 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# Heavy docs check (bun install + Playwright chromium e2e) runs locally via
+# `cd docs && bun run docs:check` and is gated by the same lefthook pre-push
+# emission. The repo's pages.yml handles the actual VitePress build+deploy.
 name: Docs Site
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+
 jobs:
-  docs-build:
+  manifest-verify:
+    name: manifest-verify (cloud)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
+  docs-build:
+    # Manual escape hatch: rerun the full Playwright + e2e docs check.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: oven-sh/setup-bun@v2

@@ -1,15 +1,33 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# dev-parity ran fmt+clippy+test on every PR. All of that is now local-first:
+#   - `just civis-3d-verify` covers rust fmt + clippy --all-targets + cargo test
+#   - `just civis-3d-web-check` covers web node --test
+#   - `just civis-3d-mod-check` covers civ-mod-host + civlab-sdk tests
+# The attestation is recorded in `.ci/quality-manifest.json`; this workflow is
+# dispatch-only for the rare "the cloud must reproduce my local" case.
 name: Dev Parity
 
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  rust:
+  manifest-verify:
+    name: manifest-verify (cloud)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
+  rust:
+    # Manual escape hatch: rerun the Rust parity sweep on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@stable
@@ -20,7 +38,10 @@ jobs:
           cargo test --workspace
 
   web:
+    # Manual escape hatch: rerun the web parity sweep on the cloud.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: oven-sh/setup-bun@v2
@@ -33,6 +54,8 @@ jobs:
           npm test
 
   clients:
+    # Manual escape hatch: rerun the godot/bevy reference client tests.
+    if: github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         include:
@@ -43,6 +66,7 @@ jobs:
             os: ubuntu-latest
             command: cargo build -p civ-bevy-ref --features bevy
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@stable

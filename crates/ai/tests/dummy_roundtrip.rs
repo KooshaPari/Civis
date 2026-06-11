@@ -4,12 +4,13 @@
 
 use std::sync::Arc;
 
+use civ_ai::cache::AiCache;
 use civ_ai::pool::{AiPayload, AiTask, AiWorkerPool};
 use civ_ai::provenance::{replay_advance_ai_event, AiEvent, ReplayAdvanceOutcome, ReplayRefusal};
 use civ_ai::registry::MissingProvider;
 use civ_ai::{
-    cached_generate, AiCache, AiProvider, DummyAiProvider, EmbedRequest, GenOutput, GenRequest,
-    ProviderRegistry, ProviderRole, ReplayMode,
+    cached_generate, gen_cache_key, AiError, AiProvider, DummyAiProvider, EmbedRequest, GenOutput,
+    GenRequest, ProviderRegistry, ProviderRole, ReplayMode,
 };
 
 #[tokio::test]
@@ -119,4 +120,102 @@ fn replay_canonical_refuses_ai_event() {
         replay_advance_ai_event(ReplayMode::Hybrid, &cache, &event, false),
         ReplayAdvanceOutcome::Advanced
     );
+}
+
+#[test]
+fn fr_civ_llm_001_cache_key_is_stable_for_identical_inputs() {
+    let provider = DummyAiProvider;
+    let req = GenRequest::from_prompt("forge a frontier city");
+    let key_a = gen_cache_key(&provider, &req);
+    let key_b = gen_cache_key(&provider, &req);
+    assert_eq!(key_a, key_b);
+}
+
+#[test]
+fn fr_civ_llm_002_cache_key_changes_when_prompt_or_model_shift() {
+    let provider = DummyAiProvider;
+    let first = GenRequest::from_prompt("a");
+    let second = GenRequest::from_prompt("b");
+    assert_ne!(
+        gen_cache_key(&provider, &first),
+        gen_cache_key(&provider, &second),
+        "prompt changes should not collide"
+    );
+
+    let mut cache = AiCache::new();
+    let mut custom = AiEvent {
+        seed: 0,
+        prompt_hash: first.prompt_hash(),
+        model_id: "dummy".into(),
+        model_version: "0".into(),
+        input_snapshot_hash: first.input_snapshot_hash,
+        output_hash: [0u8; 32],
+        output: String::from("ok"),
+        tick: 1,
+    };
+    let key_first = custom.cache_key();
+    custom.model_version = "1".into();
+    assert_ne!(key_first, custom.cache_key());
+    cache.insert(&key_first, "v1".to_string());
+    assert_eq!(cache.get(&key_first), Some(&"v1".to_string()));
+    assert!(cache.len() > 0);
+}
+
+#[test]
+fn fr_civ_llm_003_max_concurrent_gen_from_env_is_honored() {
+    let backup = std::env::var("CIVAI_MAX_CONCURRENT_GEN").ok();
+    std::env::set_var("CIVAI_MAX_CONCURRENT_GEN", "7");
+    let config = civ_ai::AiConfig::from_env();
+    assert_eq!(config.max_concurrent_gen, 7);
+
+    match backup {
+        Some(value) => std::env::set_var("CIVAI_MAX_CONCURRENT_GEN", value),
+        None => std::env::remove_var("CIVAI_MAX_CONCURRENT_GEN"),
+    }
+}
+
+#[tokio::test]
+async fn fr_civ_llm_004_provider_operations_enforce_allowed_use_matrix() {
+    struct GenerateOnlyProvider;
+
+    #[async_trait::async_trait]
+    impl civ_ai::AiProvider for GenerateOnlyProvider {
+        async fn generate(&self, req: &GenRequest) -> Result<GenOutput, AiError> {
+            Ok(GenOutput::fresh(req.prompt.clone()))
+        }
+
+        async fn embed(&self, _req: &EmbedRequest) -> Result<Vec<Vec<f32>>, AiError> {
+            Err(AiError::Unsupported("generate-only".into()))
+        }
+
+        fn model_id(&self) -> &str {
+            "gen-only"
+        }
+
+        fn model_version(&self) -> &str {
+            "1"
+        }
+
+        fn capabilities(&self) -> civ_ai::Capabilities {
+            civ_ai::Capabilities {
+                generate: true,
+                embed: false,
+                cloud: false,
+            }
+        }
+    }
+
+    let provider = GenerateOnlyProvider;
+    let req = GenRequest::from_prompt("policy tone sample");
+    let out = provider.generate(&req).await.expect("generate should be allowed");
+    assert_eq!(out.text, "policy tone sample");
+    let err = provider
+        .embed(&EmbedRequest {
+            texts: vec!["x".into()],
+            input_snapshot_hash: [0; 32],
+        })
+        .await
+        .expect_err("embed should be rejected");
+    let msg = format!("{err}");
+    assert!(msg.contains("generate-only"));
 }

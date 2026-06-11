@@ -368,6 +368,7 @@ fn advance_simulation(
     mut timer: ResMut<SimTickTimer>,
     mut sim: ResMut<SimState>,
     #[cfg(feature = "egui")] speed: Res<crate::game_ui::GameSpeed>,
+    #[cfg(feature = "voxel")] voxel_state: Option<Res<VoxelSimState>>,
 ) {
     // Paused guard: the system is already excluded from Paused by run conditions,
     // but keep the speed-multiplier zero-check for game-speed=0 edge case.
@@ -378,6 +379,12 @@ fn advance_simulation(
     timer.0.tick(time.delta());
     if timer.0.just_finished() {
         let prior_sample_tick = sim.0.last_emergence_sample().map(|sample| sample.tick);
+        #[cfg(feature = "voxel")]
+        match voxel_state.as_deref() {
+            Some(voxel_state) => sim.0.tick_with_emergence_source(Some(&voxel_state.grid)),
+            None => sim.0.tick_with_emergence_source(None),
+        }
+        #[cfg(not(feature = "voxel"))]
         sim.0.tick();
         let latest_sample_tick = sim.0.last_emergence_sample().map(|sample| sample.tick);
         if latest_sample_tick != Some(sim.0.state.tick) && latest_sample_tick == prior_sample_tick {

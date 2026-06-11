@@ -47,6 +47,7 @@ use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::Histogram;
 use civ_voxel::{MaterialId, VoxelWorld, CHUNK_EDGE};
+use civ_voxel::{fluid_ca::CaGrid, material::AIR};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::Simulation;
@@ -150,13 +151,28 @@ impl Simulation {
     ///
     /// Returns `true` when a new sample was taken and cached.
     pub fn sample_emergence(&mut self) -> bool {
+        self.sample_emergence_with_source(None)
+    }
+
+    /// Take one emergence sample if the current tick is on a sample
+    /// boundary (every [`EMERGENCE_SAMPLE_INTERVAL`] ticks), using an
+    /// explicit CA grid for sampling.
+    pub(crate) fn sample_emergence_with_ca_grid(&mut self, grid: &CaGrid) -> bool {
+        self.sample_emergence_with_source(Some(grid))
+    }
+
+    fn sample_emergence_with_source(
+        &mut self,
+        source: Option<&CaGrid>,
+    ) -> bool {
         let tick = self.state.tick;
         if tick == 0 || tick % EMERGENCE_SAMPLE_INTERVAL != 0 {
             return false;
         }
 
         let started = Instant::now();
-        let (histogram, struct_summary) = sample_from_voxel_world(self.voxel());
+        let (histogram, struct_summary) = source
+            .map_or_else(|| sample_from_voxel_world(self.voxel()), sample_from_ca_grid);
         let shannon = ShannonEntropy::new();
         let entropy_bits = shannon.compute_bits(&histogram);
         let entropy_norm = shannon.compute_normalised(&histogram);
@@ -238,6 +254,68 @@ fn sample_from_voxel_world(
     let histogram = Histogram::from_counts(bins);
     let summary = first_chunk.and_then(|(edge, data)| {
         let grid = Grid::new(edge, edge, edge, &data)?;
+        Some(StructureCount.evaluate(&grid, |m: &MaterialId| m.0 != 0))
+    });
+    (histogram, summary)
+}
+
+fn sample_from_ca_grid(grid: &CaGrid) -> (Histogram, Option<ComponentSummary>) {
+    if grid.dims.iter().any(|&d| d == 0) {
+        return (Histogram::from_counts(vec![0; MATERIAL_HISTOGRAM_BINS]), None);
+    }
+
+    let mut bins = vec![0u64; MATERIAL_HISTOGRAM_BINS];
+    let mut first_chunk: Option<Vec<MaterialId>> = None;
+    let counts = grid.chunk_counts();
+
+    for cz in 0..counts[2] {
+        for cy in 0..counts[1] {
+            for cx in 0..counts[0] {
+                let x0 = cx * CHUNK_EDGE;
+                let y0 = cy * CHUNK_EDGE;
+                let z0 = cz * CHUNK_EDGE;
+                let x1 = (x0 + CHUNK_EDGE).min(grid.dims[0]);
+                let y1 = (y0 + CHUNK_EDGE).min(grid.dims[1]);
+                let z1 = (z0 + CHUNK_EDGE).min(grid.dims[2]);
+
+                let capture_first_chunk = first_chunk.is_none();
+                let mut chunk = if capture_first_chunk {
+                    vec![AIR; CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE]
+                } else {
+                    Vec::new()
+                };
+
+                for z in z0..z1 {
+                    for y in y0..y1 {
+                        for x in x0..x1 {
+                            let idx = grid.index(x, y, z).expect("chunk bounds are in-range");
+                            let material = grid.cells[idx];
+                            let local_x = x - x0;
+                            let local_y = y - y0;
+                            let local_z = z - z0;
+                            let local_idx =
+                                local_x + local_y * CHUNK_EDGE + local_z * CHUNK_EDGE * CHUNK_EDGE;
+
+                            if capture_first_chunk {
+                                chunk[local_idx] = material;
+                            }
+
+                            let idx8 = (material.0 as usize).min(OVERFLOW_BIN);
+                            bins[idx8] = bins[idx8].saturating_add(1);
+                        }
+                    }
+                }
+
+                if first_chunk.is_none() {
+                    first_chunk = Some(chunk);
+                }
+            }
+        }
+    }
+
+    let histogram = Histogram::from_counts(bins);
+    let summary = first_chunk.and_then(|data| {
+        let grid = Grid::new(CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE, &data)?;
         Some(StructureCount.evaluate(&grid, |m: &MaterialId| m.0 != 0))
     });
     (histogram, summary)

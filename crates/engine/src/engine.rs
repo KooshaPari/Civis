@@ -1147,10 +1147,27 @@ impl Simulation {
 
     /// Advance simulation by one tick.
     ///
+    /// Uses `None` for emergence sampling source, so the engine's
+    /// `VoxelWorld` continues to feed samplers in non-standalone contexts.
+    ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
     /// transition only; server command intake and client broadcast live outside this
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
     pub fn tick(&mut self) {
+        self.tick_with_emergence_source(None);
+    }
+
+    /// Advance simulation by one tick, with an optional override for emergence
+    /// sampling input.
+    ///
+    /// `emergence_ca_grid` is used only for metric collection in standalone
+    /// modes that maintain terrain in the `bevy-ref` CA layer (e.g.
+    /// `civ_voxel::fluid_ca::CaGrid`) and keeps the standard engine substrate
+    /// path unchanged.
+    pub fn tick_with_emergence_source(
+        &mut self,
+        emergence_ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>,
+    ) {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
@@ -1176,7 +1193,11 @@ impl Simulation {
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
         // one modulo + one branch.
-        self.sample_emergence();
+        if let Some(grid) = emergence_ca_grid {
+            self.sample_emergence_with_ca_grid(grid);
+        } else {
+            self.sample_emergence();
+        }
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -3246,3 +3267,4 @@ mod tests {
         );
     }
 }
+

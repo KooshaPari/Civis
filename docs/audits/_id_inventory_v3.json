@@ -141,7 +141,10 @@
         "docs/reference/agileplus-artifacts-index.md:239",
         "docs/reference/agileplus-artifacts-index.md:308"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:68",
+        "crates/build/tests/fr_matrix_batch12.rs:71"
+      ]
     },
     {
       "id": "FR-API-003",
@@ -162,7 +165,10 @@
         "docs/reference/agileplus-artifacts-index.md:239",
         "docs/reference/agileplus-artifacts-index.md:309"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:80",
+        "crates/build/tests/fr_matrix_batch12.rs:83"
+      ]
     },
     {
       "id": "FR-API-004",
@@ -180,7 +186,10 @@
         "docs/reference/agileplus-artifacts-index.md:239",
         "docs/reference/agileplus-artifacts-index.md:310"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:90",
+        "crates/build/tests/fr_matrix_batch12.rs:93"
+      ]
     },
     {
       "id": "FR-ASSET-001",
@@ -271,7 +280,10 @@
         "docs/guides/GIT_WORKTREE_GUIDE.md:151",
         "PLAN.md:16"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:102",
+        "crates/build/tests/fr_matrix_batch12.rs:105"
+      ]
     },
     {
       "id": "FR-CIV-0001-TICK",
@@ -579,7 +591,10 @@
         "docs/reference/REFERENCE_GAME_ANALYSIS.md:509",
         "docs/reports/STATUS_REPORT.md:97"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:115",
+        "crates/build/tests/fr_matrix_batch12.rs:118"
+      ]
     },
     {
       "id": "FR-CIV-ACT-003",
@@ -633,7 +648,10 @@
         "PLAN.md:145",
         "PLAN.md:146"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:135",
+        "crates/build/tests/fr_matrix_batch12.rs:138"
+      ]
     },
     {
       "id": "FR-CIV-ACTOR-001-LIFECYCLE",
@@ -647,7 +665,10 @@
         "PLAN.md:145",
         "PLAN.md:146"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:147",
+        "crates/build/tests/fr_matrix_batch12.rs:150"
+      ]
     },
     {
       "id": "FR-CIV-ACTOR-002",
@@ -663,7 +684,10 @@
         "docs/reference/agileplus-artifacts-index.md:73",
         "docs/reference/agileplus-artifacts-index.md:269"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:166",
+        "crates/build/tests/fr_matrix_batch12.rs:169"
+      ]
     },
     {
       "id": "FR-CIV-AGENTS-000",
@@ -1104,7 +1128,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:931"
+      ]
     },
     {
       "id": "FR-CIV-ARCH-004",
@@ -1113,7 +1139,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:973"
+      ]
     },
     {
       "id": "FR-CIV-ARCH-005",
@@ -1140,7 +1168,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:989"
+      ]
     },
     {
       "id": "FR-CIV-ARCH-008",
@@ -1149,7 +1179,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:1024"
+      ]
     },
     {
       "id": "FR-CIV-ARCH-NOSVG-001",
@@ -1489,9 +1521,13 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/src/lib.rs:19",
         "docs/design/audio-direction.md:296"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:180",
+        "crates/build/tests/fr_matrix_batch12.rs:183"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-004",
@@ -1501,7 +1537,7 @@
       "in_traceability": [],
       "in_code": [
         "crates/audio/README.md:18",
-        "crates/audio/src/lib.rs:20",
+        "crates/audio/src/lib.rs:22",
         "crates/audio/src/mood.rs:1",
         "docs/design/audio-direction.md:297"
       ],
@@ -1516,9 +1552,20 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/src/lib.rs:24",
+        "crates/audio/src/sfx.rs:30",
+        "crates/audio/src/sfx.rs:58",
+        "crates/audio/src/sfx.rs:62",
+        "crates/audio/src/sfx.rs:83",
+        "crates/audio/src/triggers.rs:1",
         "docs/design/audio-direction.md:298"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/sfx.rs:409",
+        "crates/audio/src/triggers.rs:266",
+        "crates/build/tests/fr_matrix_batch12.rs:191",
+        "crates/build/tests/fr_matrix_batch12.rs:194"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-006",
@@ -1528,12 +1575,12 @@
       "in_traceability": [],
       "in_code": [
         "crates/audio/README.md:19",
-        "crates/audio/src/lib.rs:23",
+        "crates/audio/src/lib.rs:27",
         "crates/audio/src/sfx.rs:1",
         "docs/design/audio-direction.md:299"
       ],
       "in_tests": [
-        "crates/audio/src/sfx.rs:400"
+        "crates/audio/src/sfx.rs:469"
       ]
     },
     {
@@ -1543,9 +1590,15 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/src/lib.rs:29",
+        "crates/audio/src/ui_sound.rs:1",
         "docs/design/audio-direction.md:300"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/ui_sound.rs:245",
+        "crates/build/tests/fr_matrix_batch12.rs:203",
+        "crates/build/tests/fr_matrix_batch12.rs:206"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-008",
@@ -1554,9 +1607,15 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/audio/src/ducking.rs:1",
+        "crates/audio/src/lib.rs:32",
         "docs/design/audio-direction.md:301"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/audio/src/ducking.rs:336",
+        "crates/build/tests/fr_matrix_batch12.rs:214",
+        "crates/build/tests/fr_matrix_batch12.rs:217"
+      ]
     },
     {
       "id": "FR-CIV-AUDIO-009",
@@ -1687,7 +1746,14 @@
         "docs/development-guide/p-w1-kickoff.md:127",
         "justfile:149"
       ],
-      "in_tests": []
+      "in_tests": [
+        "clients/bevy-ref/src/live_focus.rs:122",
+        "clients/bevy-ref/src/live_minimap.rs:181",
+        "clients/bevy-ref/src/live_minimap.rs:220",
+        "clients/bevy-ref/src/live_stream.rs:711",
+        "crates/build/tests/fr_matrix_batch12.rs:225",
+        "crates/build/tests/fr_matrix_batch12.rs:228"
+      ]
     },
     {
       "id": "FR-CIV-BEVY-017",
@@ -1760,7 +1826,13 @@
         "docs/development-guide/p-w1-kickoff.md:133",
         "justfile:149"
       ],
-      "in_tests": []
+      "in_tests": [
+        "clients/bevy-ref/src/live_focus.rs:123",
+        "clients/bevy-ref/src/live_minimap.rs:182",
+        "clients/bevy-ref/src/live_minimap.rs:207",
+        "crates/build/tests/fr_matrix_batch12.rs:263",
+        "crates/build/tests/fr_matrix_batch12.rs:266"
+      ]
     },
     {
       "id": "FR-CIV-BEVY-023",
@@ -1777,7 +1849,12 @@
         "docs/specs/quality/XDD_STRATEGY.md:182",
         "docs/specs/quality/XDD_STRATEGY.md:252"
       ],
-      "in_tests": []
+      "in_tests": [
+        "clients/bevy-ref/src/event_feed.rs:345",
+        "clients/bevy-ref/src/event_feed.rs:354",
+        "crates/build/tests/fr_matrix_batch12.rs:288",
+        "crates/build/tests/fr_matrix_batch12.rs:291"
+      ]
     },
     {
       "id": "FR-CIV-BEVY-024",
@@ -1791,7 +1868,11 @@
       "in_code": [
         "docs/development-guide/p-w1-kickoff.md:135"
       ],
-      "in_tests": []
+      "in_tests": [
+        "clients/bevy-ref/src/menus.rs:1252",
+        "crates/build/tests/fr_matrix_batch12.rs:313",
+        "crates/build/tests/fr_matrix_batch12.rs:316"
+      ]
     },
     {
       "id": "FR-CIV-BEVY-025",
@@ -1808,7 +1889,13 @@
         "docs/development-guide/p-w1-kickoff.md:136",
         "justfile:149"
       ],
-      "in_tests": []
+      "in_tests": [
+        "clients/bevy-ref/src/live_pick.rs:286",
+        "clients/bevy-ref/src/live_pick.rs:306",
+        "clients/bevy-ref/src/live_stream.rs:712",
+        "crates/build/tests/fr_matrix_batch12.rs:338",
+        "crates/build/tests/fr_matrix_batch12.rs:341"
+      ]
     },
     {
       "id": "FR-CIV-BEVY-026",
@@ -1825,7 +1912,11 @@
         "docs/development-guide/p-w1-kickoff.md:137",
         "docs/research/wgpu-native-escape-hatches.md:380"
       ],
-      "in_tests": []
+      "in_tests": [
+        "clients/bevy-ref/src/native_backend.rs:112",
+        "crates/build/tests/fr_matrix_batch12.rs:357",
+        "crates/build/tests/fr_matrix_batch12.rs:360"
+      ]
     },
     {
       "id": "FR-CIV-BIO-001",
@@ -1848,7 +1939,10 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:207",
         "docs/reference/agileplus-artifacts-index.md:153"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:381",
+        "crates/build/tests/fr_matrix_batch12.rs:384"
+      ]
     },
     {
       "id": "FR-CIV-BIO-002",
@@ -1865,7 +1959,10 @@
         "docs/reference/agileplus-artifacts-index.md:153",
         "docs/reference/agileplus-artifacts-index.md:288"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:404",
+        "crates/build/tests/fr_matrix_batch12.rs:407"
+      ]
     },
     {
       "id": "FR-CIV-BIO-003",
@@ -1882,7 +1979,10 @@
         "docs/reference/agileplus-artifacts-index.md:153",
         "docs/reference/agileplus-artifacts-index.md:289"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:434",
+        "crates/build/tests/fr_matrix_batch12.rs:437"
+      ]
     },
     {
       "id": "FR-CIV-BRUSH-01",
@@ -2039,7 +2139,11 @@
       "in_code": [
         "docs/development-guide/fr-3d-additions.md:29"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:505",
+        "crates/build/tests/fr_matrix_batch12.rs:464",
+        "crates/build/tests/fr_matrix_batch12.rs:467"
+      ]
     },
     {
       "id": "FR-CIV-BUILD-001",
@@ -2060,7 +2164,12 @@
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:272"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:515",
+        "crates/build/src/lib.rs:726",
+        "crates/build/tests/fr_matrix_batch12.rs:475",
+        "crates/build/tests/fr_matrix_batch12.rs:478"
+      ]
     },
     {
       "id": "FR-CIV-BUILD-002",
@@ -2078,7 +2187,11 @@
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:273"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:533",
+        "crates/build/tests/fr_matrix_batch12.rs:497",
+        "crates/build/tests/fr_matrix_batch12.rs:500"
+      ]
     },
     {
       "id": "FR-CIV-BUILD-003",
@@ -2095,7 +2208,33 @@
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:274"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:543",
+        "crates/build/tests/fr_matrix_batch12.rs:510",
+        "crates/build/tests/fr_matrix_batch12.rs:513"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-004",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:567"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-005",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:583"
+      ]
     },
     {
       "id": "FR-CIV-BUILD-010",
@@ -2110,7 +2249,67 @@
         "docs/design/emergent-systems-spec.md:97",
         "docs/development-guide/fr-3d-additions.md:31"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:604",
+        "crates/build/src/lib.rs:743",
+        "crates/build/tests/fr_matrix_batch12.rs:529",
+        "crates/build/tests/fr_matrix_batch12.rs:532"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-011",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:622"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-012",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:653"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-013",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:676"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-014",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:706"
+      ]
+    },
+    {
+      "id": "FR-CIV-BUILD-015",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": [
+        "crates/build/src/lib.rs:842"
+      ]
     },
     {
       "id": "FR-CIV-BUILD-020",
@@ -2125,7 +2324,11 @@
         "docs/design/emergent-systems-spec.md:97",
         "docs/development-guide/fr-3d-additions.md:33"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:766",
+        "crates/build/tests/fr_matrix_batch12.rs:553",
+        "crates/build/tests/fr_matrix_batch12.rs:556"
+      ]
     },
     {
       "id": "FR-CIV-BUILD-030",
@@ -2139,7 +2342,11 @@
       "in_code": [
         "docs/development-guide/fr-3d-additions.md:36"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/src/lib.rs:809",
+        "crates/build/tests/fr_matrix_batch12.rs:595",
+        "crates/build/tests/fr_matrix_batch12.rs:598"
+      ]
     },
     {
       "id": "FR-CIV-CA-001",
@@ -2323,7 +2530,10 @@
         "docs/reference/agileplus-artifacts-index.md:220",
         "docs/reference/agileplus-artifacts-index.md:305"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:607",
+        "crates/build/tests/fr_matrix_batch12.rs:610"
+      ]
     },
     {
       "id": "FR-CIV-CLIENT-GODOT-002",
@@ -2340,7 +2550,10 @@
         "docs/reference/agileplus-artifacts-index.md:220",
         "docs/reference/agileplus-artifacts-index.md:306"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:619",
+        "crates/build/tests/fr_matrix_batch12.rs:622"
+      ]
     },
     {
       "id": "FR-CIV-CLIMATE-001",
@@ -2358,7 +2571,10 @@
         "docs/reference/agileplus-artifacts-index.md:105",
         "docs/reference/agileplus-artifacts-index.md:275"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:631",
+        "crates/build/tests/fr_matrix_batch12.rs:634"
+      ]
     },
     {
       "id": "FR-CIV-CLIMATE-002",
@@ -2376,7 +2592,10 @@
         "docs/reference/agileplus-artifacts-index.md:105",
         "docs/reference/agileplus-artifacts-index.md:276"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:656",
+        "crates/build/tests/fr_matrix_batch12.rs:659"
+      ]
     },
     {
       "id": "FR-CIV-CLIMATE-003",
@@ -2393,7 +2612,10 @@
         "docs/reference/agileplus-artifacts-index.md:105",
         "docs/reference/agileplus-artifacts-index.md:277"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:671",
+        "crates/build/tests/fr_matrix_batch12.rs:674"
+      ]
     },
     {
       "id": "FR-CIV-CORE-001",
@@ -2414,7 +2636,10 @@
         "docs/AGILE_WORKSTREAM.md:618",
         "docs/models/civ-sim/TECHNICAL_SPEC.md:2104"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:692",
+        "crates/build/tests/fr_matrix_batch12.rs:695"
+      ]
     },
     {
       "id": "FR-CIV-CORE-002",
@@ -2647,7 +2872,10 @@
       "in_code": [
         "docs/specs/CIV-0001-core-simulation-loop.md:962"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/build/tests/fr_matrix_batch12.rs:707",
+        "crates/build/tests/fr_matrix_batch12.rs:710"
+      ]
     },
     {
       "id": "FR-CIV-CORE-DET-001",
@@ -2957,17 +3185,19 @@
         "crates/diplomacy/Cargo.toml:3",
         "crates/diplomacy/src/lib.rs:1",
         "crates/diplomacy/src/lib.rs:15",
-        "docs/reference/agileplus-artifacts-index.md:137",
-        "docs/reference/agileplus-artifacts-index.md:282",
-        "PLAN.md:207",
-        "PLAN.md:208"
+        "crates/diplomacy/src/lib.rs:437",
+        "crates/diplomacy/src/lib.rs:439",
+        "crates/diplomacy/src/lib.rs:522",
+        "crates/diplomacy/src/lib.rs:536",
+        "docs/reference/agileplus-artifacts-index.md:137"
       ],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:755",
-        "crates/diplomacy/src/lib.rs:813",
-        "crates/diplomacy/src/lib.rs:1032",
-        "crates/diplomacy/src/lib.rs:1083",
-        "crates/diplomacy/src/lib.rs:1109"
+        "crates/diplomacy/src/lib.rs:884",
+        "crates/diplomacy/src/lib.rs:942",
+        "crates/diplomacy/src/lib.rs:1161",
+        "crates/diplomacy/src/lib.rs:1212",
+        "crates/diplomacy/src/lib.rs:1238",
+        "crates/diplomacy/src/lib.rs:1346"
       ]
     },
     {
@@ -2983,7 +3213,7 @@
         "PLAN.md:208"
       ],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:765"
+        "crates/diplomacy/src/lib.rs:894"
       ]
     },
     {
@@ -3006,9 +3236,9 @@
         "PLAN.md:210"
       ],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:777",
-        "crates/diplomacy/src/lib.rs:783",
-        "crates/diplomacy/src/lib.rs:797"
+        "crates/diplomacy/src/lib.rs:906",
+        "crates/diplomacy/src/lib.rs:912",
+        "crates/diplomacy/src/lib.rs:926"
       ]
     },
     {
@@ -3042,9 +3272,9 @@
         "docs/reference/agileplus-artifacts-index.md:284"
       ],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:828",
-        "crates/diplomacy/src/lib.rs:848",
-        "crates/diplomacy/src/lib.rs:892"
+        "crates/diplomacy/src/lib.rs:957",
+        "crates/diplomacy/src/lib.rs:977",
+        "crates/diplomacy/src/lib.rs:1021"
       ]
     },
     {
@@ -3055,9 +3285,9 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:1130",
-        "crates/diplomacy/src/lib.rs:1132",
-        "crates/diplomacy/src/lib.rs:1144"
+        "crates/diplomacy/src/lib.rs:1259",
+        "crates/diplomacy/src/lib.rs:1261",
+        "crates/diplomacy/src/lib.rs:1273"
       ]
     },
     {
@@ -3068,8 +3298,8 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:1160",
-        "crates/diplomacy/src/lib.rs:1162"
+        "crates/diplomacy/src/lib.rs:1289",
+        "crates/diplomacy/src/lib.rs:1291"
       ]
     },
     {
@@ -3080,9 +3310,10 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:1175",
-        "crates/diplomacy/src/lib.rs:1177",
-        "crates/diplomacy/src/lib.rs:1187"
+        "crates/diplomacy/src/lib.rs:1304",
+        "crates/diplomacy/src/lib.rs:1306",
+        "crates/diplomacy/src/lib.rs:1316",
+        "crates/diplomacy/src/lib.rs:1543"
       ]
     },
     {
@@ -3093,8 +3324,8 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:1200",
-        "crates/diplomacy/src/lib.rs:1202"
+        "crates/diplomacy/src/lib.rs:1329",
+        "crates/diplomacy/src/lib.rs:1331"
       ]
     },
     {
@@ -3103,8 +3334,22 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/diplomacy/src/lib.rs:277",
+        "crates/diplomacy/src/lib.rs:437",
+        "crates/diplomacy/src/lib.rs:451",
+        "crates/diplomacy/src/lib.rs:539"
+      ],
+      "in_tests": [
+        "crates/diplomacy/src/lib.rs:1340",
+        "crates/diplomacy/src/lib.rs:1342",
+        "crates/diplomacy/src/lib.rs:1351",
+        "crates/diplomacy/src/lib.rs:1380",
+        "crates/diplomacy/src/lib.rs:1406",
+        "crates/diplomacy/src/lib.rs:1439",
+        "crates/diplomacy/src/lib.rs:1474",
+        "crates/diplomacy/src/lib.rs:1512"
+      ]
     },
     {
       "id": "FR-CIV-ECON-001",
@@ -3125,7 +3370,10 @@
         "docs/guides/COPILOT_L3_AGENTS.md:39",
         "docs/guides/COPILOT_L3_AGENTS.md:47"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/economy/src/chains.rs:627",
+        "crates/economy/src/chains.rs:629"
+      ]
     },
     {
       "id": "FR-CIV-ECON-001-MARKET",
@@ -3167,7 +3415,9 @@
         "docs/reference/FR_TRACKER.md:8",
         "docs/reports/STATUS_REPORT.md:90"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/economy/src/chains.rs:656"
+      ]
     },
     {
       "id": "FR-CIV-ECON-002-JOULE",
@@ -3224,8 +3474,19 @@
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/economy/src/chains.rs:2"
+      ],
+      "in_tests": [
+        "crates/economy/src/chains.rs:391",
+        "crates/economy/src/chains.rs:414",
+        "crates/economy/src/chains.rs:444",
+        "crates/economy/src/chains.rs:466",
+        "crates/economy/src/chains.rs:494",
+        "crates/economy/src/chains.rs:537",
+        "crates/economy/src/chains.rs:577",
+        "crates/economy/src/chains.rs:598"
+      ]
     },
     {
       "id": "FR-CIV-EMERG-001",
@@ -3237,8 +3498,21 @@
       ],
       "in_func_req": null,
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/civ-emergence-metrics/src/dashboard.rs:1",
+        "crates/civ-emergence-metrics/src/dashboard.rs:13",
+        "crates/civ-emergence-metrics/src/dashboard.rs:14",
+        "crates/civ-emergence-metrics/src/dashboard.rs:15",
+        "crates/civ-emergence-metrics/src/dashboard.rs:16",
+        "crates/civ-emergence-metrics/src/dashboard.rs:17",
+        "crates/civ-emergence-metrics/src/dashboard.rs:28",
+        "crates/engine/src/emergence_metrics.rs:113"
+      ],
+      "in_tests": [
+        "crates/civ-emergence-metrics/src/dashboard.rs:392",
+        "crates/civ-emergence-metrics/src/dashboard.rs:425",
+        "crates/engine/src/emergence_metrics.rs:579"
+      ]
     },
     {
       "id": "FR-CIV-EMERG-002",
@@ -3251,7 +3525,9 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/emergence_metrics.rs:692"
+      ]
     },
     {
       "id": "FR-CIV-EMERG-003",
@@ -3263,8 +3539,20 @@
       ],
       "in_func_req": null,
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/engine/src/emergence_metrics.rs:251",
+        "crates/engine/src/replay.rs:93",
+        "crates/engine/src/replay.rs:426",
+        "crates/engine/src/replay.rs:702",
+        "crates/server/src/jsonrpc.rs:413",
+        "crates/server/src/jsonrpc.rs:553",
+        "crates/server/src/jsonrpc.rs:774"
+      ],
+      "in_tests": [
+        "crates/engine/src/replay.rs:763",
+        "crates/engine/src/replay.rs:783",
+        "crates/server/src/jsonrpc.rs:1972"
+      ]
     },
     {
       "id": "FR-CIV-EMERG-004",
@@ -4058,7 +4346,7 @@
         "docs/reference/agileplus-artifacts-index.md:285"
       ],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:861"
+        "crates/diplomacy/src/lib.rs:990"
       ]
     },
     {
@@ -4077,7 +4365,7 @@
         "docs/reference/agileplus-artifacts-index.md:286"
       ],
       "in_tests": [
-        "crates/diplomacy/src/lib.rs:906"
+        "crates/diplomacy/src/lib.rs:1035"
       ]
     },
     {
@@ -4864,8 +5152,17 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/model.rs:240"
+      ],
+      "in_tests": [
+        "crates/legends/tests/fr_legends_completion.rs:1",
+        "crates/legends/tests/fr_legends_completion.rs:5",
+        "crates/legends/tests/fr_legends_completion.rs:31",
+        "crates/legends/tests/fr_legends_completion.rs:34",
+        "crates/legends/tests/fr_legends_completion.rs:60",
+        "crates/legends/tests/fr_legends_completion.rs:85"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-002",
@@ -4873,8 +5170,20 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/rumor.rs:402",
+        "crates/legends/src/rumor.rs:416",
+        "crates/legends/src/rumor.rs:444"
+      ],
+      "in_tests": [
+        "crates/legends/tests/fr_legends_completion.rs:6",
+        "crates/legends/tests/fr_legends_completion.rs:145",
+        "crates/legends/tests/fr_legends_completion.rs:148",
+        "crates/legends/tests/fr_legends_completion.rs:186",
+        "crates/legends/tests/fr_legends_completion.rs:206",
+        "crates/legends/tests/fr_legends_completion.rs:235",
+        "crates/legends/tests/fr_legends_completion.rs:279"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-003",
@@ -4891,7 +5200,7 @@
         "crates/legends/src/rumor.rs:324"
       ],
       "in_tests": [
-        "crates/legends/src/rumor.rs:652"
+        "crates/legends/src/rumor.rs:735"
       ]
     },
     {
@@ -4908,7 +5217,7 @@
         "crates/legends/src/rumor.rs:343"
       ],
       "in_tests": [
-        "crates/legends/src/rumor.rs:742"
+        "crates/legends/src/rumor.rs:825"
       ]
     },
     {
@@ -4917,8 +5226,22 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/graph.rs:163",
+        "crates/legends/src/query.rs:85",
+        "crates/legends/src/query.rs:92",
+        "crates/legends/src/query.rs:119",
+        "crates/legends/src/query.rs:137",
+        "crates/legends/src/query.rs:145",
+        "crates/legends/src/query.rs:217",
+        "crates/legends/src/query.rs:237"
+      ],
+      "in_tests": [
+        "crates/legends/tests/fr_legends_completion.rs:7",
+        "crates/legends/tests/fr_legends_completion.rs:287",
+        "crates/legends/tests/fr_legends_completion.rs:290",
+        "crates/legends/tests/fr_legends_completion.rs:367"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-006",
@@ -4926,8 +5249,21 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/legends/src/graph.rs:77",
+        "crates/legends/src/graph.rs:89",
+        "crates/legends/src/graph.rs:589",
+        "crates/legends/src/graph.rs:607"
+      ],
+      "in_tests": [
+        "crates/legends/tests/fr_legends_completion.rs:8",
+        "crates/legends/tests/fr_legends_completion.rs:376",
+        "crates/legends/tests/fr_legends_completion.rs:379",
+        "crates/legends/tests/fr_legends_completion.rs:417",
+        "crates/legends/tests/fr_legends_completion.rs:431",
+        "crates/legends/tests/fr_legends_completion.rs:468",
+        "crates/legends/tests/fr_legends_completion.rs:476"
+      ]
     },
     {
       "id": "FR-CIV-LEGENDS-007",
@@ -4941,7 +5277,7 @@
         "crates/legends/src/rumor.rs:199"
       ],
       "in_tests": [
-        "crates/legends/src/rumor.rs:787"
+        "crates/legends/src/rumor.rs:870"
       ]
     },
     {
@@ -4956,7 +5292,7 @@
         "crates/legends/src/rumor.rs:236"
       ],
       "in_tests": [
-        "crates/legends/src/rumor.rs:828"
+        "crates/legends/src/rumor.rs:911"
       ]
     },
     {
@@ -6005,8 +6341,16 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:16",
+        "crates/voxel/src/material_pbr.rs:41"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:502",
+        "crates/voxel/src/material_pbr.rs:504",
+        "crates/voxel/src/material_pbr.rs:530",
+        "crates/voxel/src/material_pbr.rs:554"
+      ]
     },
     {
       "id": "FR-CIV-PBR-002",
@@ -6041,8 +6385,15 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:17",
+        "crates/voxel/src/material_pbr.rs:144"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:571",
+        "crates/voxel/src/material_pbr.rs:573",
+        "crates/voxel/src/material_pbr.rs:595"
+      ]
     },
     {
       "id": "FR-CIV-PBR-006",
@@ -6059,8 +6410,16 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:19",
+        "crates/voxel/src/material_pbr.rs:245"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:614",
+        "crates/voxel/src/material_pbr.rs:616",
+        "crates/voxel/src/material_pbr.rs:641",
+        "crates/voxel/src/material_pbr.rs:670"
+      ]
     },
     {
       "id": "FR-CIV-PBR-008",
@@ -6068,8 +6427,16 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:21",
+        "crates/voxel/src/material_pbr.rs:394"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:682",
+        "crates/voxel/src/material_pbr.rs:684",
+        "crates/voxel/src/material_pbr.rs:698",
+        "crates/voxel/src/material_pbr.rs:712"
+      ]
     },
     {
       "id": "FR-CIV-PERF-001",
@@ -6529,7 +6896,7 @@
         "crates/engine/src/hash_chain.rs:5",
         "crates/engine/src/hash_chain.rs:129",
         "crates/engine/src/replay.rs:42",
-        "crates/engine/src/replay.rs:234"
+        "crates/engine/src/replay.rs:254"
       ],
       "in_tests": [
         "crates/engine/src/engine.rs:3014",
@@ -8194,10 +8561,20 @@
       "in_traceability": [
         "docs/traceability/civis-tracelinks.md:64"
       ],
-      "in_code": [],
+      "in_code": [
+        "crates/server/src/saves.rs:26",
+        "crates/server/src/saves.rs:99",
+        "crates/server/src/saves.rs:276"
+      ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:2607",
-        "crates/server/src/jsonrpc.rs:2640"
+        "crates/server/src/jsonrpc.rs:2799",
+        "crates/server/src/jsonrpc.rs:2832",
+        "crates/server/src/saves.rs:463",
+        "crates/server/src/saves.rs:465",
+        "crates/server/src/saves.rs:472",
+        "crates/server/src/saves.rs:499",
+        "crates/server/src/saves.rs:544",
+        "crates/server/src/saves.rs:556"
       ]
     },
     {
@@ -8210,8 +8587,8 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:2608",
-        "crates/server/src/jsonrpc.rs:2641"
+        "crates/server/src/jsonrpc.rs:2800",
+        "crates/server/src/jsonrpc.rs:2833"
       ]
     },
     {
@@ -9152,7 +9529,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/tactics/src/lib.rs:460"
+        "crates/tactics/src/lib.rs:469"
       ]
     },
     {
@@ -9221,7 +9598,7 @@
         "docs/development-guide/p-w1-kickoff.md:25"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:317",
+        "crates/tactics/src/lib.rs:320",
         "crates/tactics/src/war_bridge.rs:289",
         "crates/tactics/tests/fr_matrix_batch2.rs:141",
         "crates/tactics/tests/fr_matrix_batch2.rs:144",
@@ -9246,7 +9623,7 @@
         "docs/development-guide/p-w1-kickoff.md:26"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:441",
+        "crates/tactics/src/lib.rs:450",
         "crates/tactics/tests/fr_matrix_batch2.rs:179",
         "crates/tactics/tests/fr_matrix_batch2.rs:182",
         "crates/tactics/tests/fr_matrix_batch2.rs:183",
@@ -9272,7 +9649,7 @@
       ],
       "in_tests": [
         "crates/engine/src/engine.rs:3278",
-        "crates/tactics/src/war_bridge.rs:346",
+        "crates/tactics/src/war_bridge.rs:351",
         "crates/tactics/tests/fr_matrix_batch2.rs:201",
         "crates/tactics/tests/fr_matrix_batch2.rs:204",
         "crates/tactics/tests/fr_matrix_batch2.rs:205",
@@ -9354,7 +9731,7 @@
         "docs/development-guide/p-w1-kickoff.md:30"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:410",
+        "crates/tactics/src/lib.rs:419",
         "crates/tactics/tests/fr_matrix_batch2.rs:256",
         "crates/tactics/tests/fr_matrix_batch2.rs:259",
         "crates/tactics/tests/fr_matrix_batch2.rs:260"
@@ -9391,7 +9768,7 @@
         "docs/development-guide/p-w1-kickoff.md:32"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:350",
+        "crates/tactics/src/lib.rs:353",
         "crates/tactics/tests/fr_matrix_batch2.rs:290",
         "crates/tactics/tests/fr_matrix_batch2.rs:293",
         "crates/tactics/tests/fr_matrix_batch2.rs:294",
@@ -9451,7 +9828,7 @@
         "docs/development-guide/p-w1-kickoff.md:36"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:385",
+        "crates/tactics/src/lib.rs:392",
         "crates/tactics/tests/fr_matrix_batch9.rs:3",
         "crates/tactics/tests/fr_matrix_batch9.rs:31"
       ]
@@ -9514,7 +9891,7 @@
         "docs/development-guide/p-w1-kickoff.md:41"
       ],
       "in_tests": [
-        "crates/tactics/src/lib.rs:356",
+        "crates/tactics/src/lib.rs:361",
         "crates/tactics/tests/fr_matrix_batch9.rs:3",
         "crates/tactics/tests/fr_matrix_batch9.rs:54"
       ]
@@ -9577,8 +9954,8 @@
         "docs/development-guide/p-w1-kickoff.md:44"
       ],
       "in_tests": [
-        "crates/tactics/src/war_bridge.rs:416",
-        "crates/tactics/src/war_bridge.rs:417"
+        "crates/tactics/src/war_bridge.rs:425",
+        "crates/tactics/src/war_bridge.rs:426"
       ]
     },
     {
@@ -10000,9 +10377,9 @@
         "docs/development-guide/p-w1-kickoff.md:68"
       ],
       "in_tests": [
-        "crates/server/src/jsonrpc.rs:2609",
-        "crates/server/src/jsonrpc.rs:2610",
-        "crates/server/src/jsonrpc.rs:2642"
+        "crates/server/src/jsonrpc.rs:2801",
+        "crates/server/src/jsonrpc.rs:2802",
+        "crates/server/src/jsonrpc.rs:2834"
       ]
     },
     {
@@ -10751,8 +11128,8 @@
         "clients/unreal-show/Source/CivShow/CivProtocolClient.h:32",
         "crates/engine/src/spawn.rs:1",
         "crates/server/src/jsonrpc.rs:58",
-        "crates/server/src/jsonrpc.rs:748",
-        "crates/server/src/jsonrpc.rs:1261",
+        "crates/server/src/jsonrpc.rs:868",
+        "crates/server/src/jsonrpc.rs:1381",
         "crates/watch/src/snapshot.rs:663",
         "docs/development-guide/fr-p-u1-roadmap.md:16"
       ],
@@ -11210,10 +11587,10 @@
         "docs/development-guide/fr-3d-additions.md:15"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:65",
-        "crates/voxel/src/lib.rs:66",
-        "crates/voxel/src/lib.rs:76",
-        "crates/voxel/src/lib.rs:78"
+        "crates/voxel/src/lib.rs:73",
+        "crates/voxel/src/lib.rs:74",
+        "crates/voxel/src/lib.rs:84",
+        "crates/voxel/src/lib.rs:86"
       ]
     },
     {
@@ -11236,9 +11613,9 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:59"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:77",
-        "crates/voxel/src/lib.rs:150",
-        "crates/voxel/src/lib.rs:151"
+        "crates/voxel/src/lib.rs:85",
+        "crates/voxel/src/lib.rs:158",
+        "crates/voxel/src/lib.rs:159"
       ]
     },
     {
@@ -11266,9 +11643,9 @@
       "in_tests": [
         "crates/engine/src/engine.rs:2561",
         "crates/engine/src/engine.rs:2605",
-        "crates/voxel/src/lib.rs:84",
-        "crates/voxel/src/lib.rs:182",
-        "crates/voxel/src/lib.rs:183"
+        "crates/voxel/src/lib.rs:92",
+        "crates/voxel/src/lib.rs:190",
+        "crates/voxel/src/lib.rs:191"
       ]
     },
     {
@@ -11286,8 +11663,8 @@
         "docs/development-guide/fr-3d-additions.md:20"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:214",
-        "crates/voxel/src/lib.rs:215"
+        "crates/voxel/src/lib.rs:222",
+        "crates/voxel/src/lib.rs:223"
       ]
     },
     {
@@ -11305,8 +11682,8 @@
         "docs/development-guide/fr-3d-additions.md:22"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:235",
-        "crates/voxel/src/lib.rs:236"
+        "crates/voxel/src/lib.rs:243",
+        "crates/voxel/src/lib.rs:244"
       ]
     },
     {
@@ -11321,7 +11698,7 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:271"
+        "crates/voxel/src/lib.rs:279"
       ]
     },
     {
@@ -11364,9 +11741,9 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:102",
-        "crates/voxel/src/lib.rs:245",
-        "crates/voxel/src/lib.rs:246"
+        "crates/voxel/src/lib.rs:110",
+        "crates/voxel/src/lib.rs:253",
+        "crates/voxel/src/lib.rs:254"
       ]
     },
     {
@@ -11527,7 +11904,10 @@
         "PLAN.md:203",
         "PLAN.md:204"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/lib.rs:317",
+        "crates/tactics/src/war_bridge.rs:293"
+      ]
     },
     {
       "id": "FR-CIV-WAR-001-UNITS",
@@ -11541,7 +11921,10 @@
         "PLAN.md:203",
         "PLAN.md:204"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/lib.rs:319",
+        "crates/tactics/src/war_bridge.rs:294"
+      ]
     },
     {
       "id": "FR-CIV-WAR-002",
@@ -11561,7 +11944,9 @@
         "PLAN.md:205",
         "PLAN.md:206"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/war_bridge.rs:328"
+      ]
     },
     {
       "id": "FR-CIV-WAR-002-COMBAT",
@@ -11575,7 +11960,11 @@
         "PLAN.md:205",
         "PLAN.md:206"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/lib.rs:318",
+        "crates/tactics/src/war_bridge.rs:292",
+        "crates/tactics/src/war_bridge.rs:327"
+      ]
     },
     {
       "id": "FR-CIV-WAR-003",
@@ -11593,7 +11982,12 @@
         "docs/reference/agileplus-artifacts-index.md:121",
         "docs/reference/agileplus-artifacts-index.md:280"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/lib.rs:359",
+        "crates/tactics/src/war_bridge.rs:354",
+        "crates/tactics/src/war_bridge.rs:386",
+        "crates/tactics/src/war_bridge.rs:415"
+      ]
     },
     {
       "id": "FR-CIV-WAR-004",
@@ -11609,7 +12003,11 @@
         "docs/reference/agileplus-artifacts-index.md:121",
         "docs/reference/agileplus-artifacts-index.md:281"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/lib.rs:360",
+        "crates/tactics/src/lib.rs:390",
+        "crates/tactics/src/war_bridge.rs:355"
+      ]
     },
     {
       "id": "FR-CIV-WAR-010",
@@ -11623,7 +12021,11 @@
         "docs/design/warfare.md:77",
         "docs/design/warfare.md:191"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/src/lib.rs:391",
+        "crates/tactics/src/lib.rs:417",
+        "crates/tactics/src/war_bridge.rs:460"
+      ]
     },
     {
       "id": "FR-CIV-WAR-011",
@@ -11673,7 +12075,10 @@
         "docs/design/warfare.md:106",
         "docs/design/warfare.md:195"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/src/engine.rs:3137",
+        "crates/tactics/src/lib.rs:418"
+      ]
     },
     {
       "id": "FR-CIV-WAR-021",
@@ -12394,7 +12799,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/economy/src/lib.rs:221",
+        "crates/economy/src/lib.rs:226",
         "docs/specs/CIV-0100-economy-v1.md:1651"
       ]
     },
@@ -12406,7 +12811,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/economy/src/lib.rs:227",
+        "crates/economy/src/lib.rs:232",
         "docs/specs/CIV-0100-economy-v1.md:1662"
       ]
     },
@@ -12418,7 +12823,7 @@
       "in_traceability": [],
       "in_code": [],
       "in_tests": [
-        "crates/economy/src/lib.rs:241",
+        "crates/economy/src/lib.rs:246",
         "docs/specs/CIV-0100-economy-v1.md:1682"
       ]
     },
@@ -12516,14 +12921,14 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/lib.rs:101",
+        "crates/economy/src/lib.rs:106",
         "crates/engine/src/engine.rs:2011",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:260"
       ],
       "in_tests": [
-        "crates/economy/src/lib.rs:303",
+        "crates/economy/src/lib.rs:308",
         "crates/economy/tests/fr_matrix_batch7.rs:9",
         "crates/economy/tests/fr_matrix_batch7.rs:135",
         "crates/economy/tests/fr_matrix_batch7.rs:138",
@@ -12553,7 +12958,7 @@
       "in_tests": [
         "crates/economy/src/allocator.rs:765",
         "crates/economy/src/allocator.rs:816",
-        "crates/economy/src/lib.rs:376",
+        "crates/economy/src/lib.rs:381",
         "crates/economy/tests/fr_matrix_batch7.rs:10",
         "crates/economy/tests/fr_matrix_batch7.rs:180",
         "crates/economy/tests/fr_matrix_batch7.rs:183",
@@ -12991,7 +13396,11 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:15",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:290",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:291"
+      ]
     },
     {
       "id": "FR-MOD-003",
@@ -13002,7 +13411,11 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:15",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:332",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:333"
+      ]
     },
     {
       "id": "FR-MOD-004",
@@ -13017,8 +13430,8 @@
         "crates/engine/src/replay.rs:51",
         "crates/engine/src/replay.rs:63",
         "crates/engine/src/replay.rs:82",
-        "crates/engine/src/replay.rs:253",
-        "crates/engine/src/replay.rs:265",
+        "crates/engine/src/replay.rs:273",
+        "crates/engine/src/replay.rs:285",
         "crates/mod-host/src/lib.rs:204",
         "crates/mod-host/src/lib.rs:217"
       ],
@@ -13042,7 +13455,11 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [],
-      "in_tests": []
+      "in_tests": [
+        "crates/mod-host/tests/fr_matrix_batch10.rs:15",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:382",
+        "crates/mod-host/tests/fr_matrix_batch10.rs:383"
+      ]
     },
     {
       "id": "FR-NET-001",
@@ -13401,7 +13818,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/replay.rs:277",
+        "crates/engine/src/replay.rs:297",
         "docs/specs/CIV-1000-save-load-persistence-spec.md:2801"
       ],
       "in_tests": [

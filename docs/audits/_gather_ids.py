@@ -29,13 +29,16 @@ PR body artifacts, upstream-governance docs from other projects) are EXCLUDED
 so they don't pollute CODE-ONLY results.
 """
 import json
+import os
 import re
 import sys
+from datetime import date
 from pathlib import Path
 from collections import defaultdict
 
-WORK = Path("D:/civis-build/matrix5")
+WORK = Path(os.environ.get("CIVIS_AUDIT_WORK", ".")).resolve()
 OUT_JSON = WORK / "docs/audits/_id_inventory_v3.json"
+GENERATED_AT = os.environ.get("CIVIS_AUDIT_DATE", date.today().isoformat())
 
 SCAN_DIRS = [
     "crates", "clients", "docs", "agileplus-specs", "web", "scripts", "mods",
@@ -139,10 +142,17 @@ def is_self_ref(rel: str) -> bool:
 
 
 def should_skip(p: Path) -> bool:
-    parts = set(p.parts)
-    if parts & SKIP_TOP_DIRS:
+    try:
+        rel_parts = p.relative_to(WORK).parts
+    except ValueError:
+        rel_parts = p.parts
+
+    if rel_parts and rel_parts[0] in SKIP_TOP_DIRS:
         return True
-    if p.name in SKIP_TOP_DIRS:
+    nested_skip_dirs = SKIP_TOP_DIRS - {"build"}
+    if set(rel_parts[1:]) & nested_skip_dirs:
+        return True
+    if p.name in nested_skip_dirs:
         return True
     if p.suffix.lower() in SKIP_EXT:
         return True
@@ -295,7 +305,7 @@ def main():
         ids_out.append({"id": eid, **by_id[eid]})
 
     OUT_JSON.write_text(
-        json.dumps({"schema_version": 3, "generated_at": "2026-06-11", "ids": ids_out}, indent=2) + "\n",
+        json.dumps({"schema_version": 3, "generated_at": GENERATED_AT, "ids": ids_out}, indent=2) + "\n",
         encoding="utf-8",
     )
     print(f"Wrote {len(ids_out)} unique IDs to {OUT_JSON}", file=sys.stderr)

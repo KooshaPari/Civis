@@ -33,10 +33,15 @@ pub mod fluid_ca;
 pub mod lod;
 pub mod material;
 pub mod reactions;
+pub mod scale_budget;
 pub mod stream;
 pub mod window;
 pub mod worldgen;
 
+pub use scale_budget::{
+    CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
+    MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
+};
 pub use stream::{
     ChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE, CHUNK_EDGE_I32,
 };

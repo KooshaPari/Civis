@@ -1591,13 +1591,20 @@ mod tests {
         );
     }
 
-    /// PR #354 review gap: a voxel on a chunk edge that changes must surface
+    /// PR #354 review gap (resolved in slice 8, reaffirmed in slice 9): a
+    /// voxel on a chunk edge that changes must surface the **owning** chunk
     /// in `chunks_changed_from`. We pick `x=16` (the first cell of chunk 1
     /// along the x axis; chunk 0 covers x in 0..16, chunk 1 covers x in
-    /// 16..32) and verify that flipping it puts chunk 1 into the changed set.
+    /// 16..32) and verify that flipping it puts chunk 1 into the changed set
+    /// *and not* chunk 0 (which owns no changed cells).
+    ///
     /// `chunks_changed_from` is a *per-cell* dirty detector — it does not
     /// also flag neighbour chunks via face-sharing; the neighbour-trigger is
-    /// layered on top by the caller when remesh fan-out needs it.
+    /// layered on top by the caller when remesh fan-out needs it. (Slice 9
+    /// re-verified this contract after the slice-8 hardening: an earlier
+    /// version of the fixture expected the neighbour chunk to *also* be in
+    /// the changed set, but that conflates cell-ownership with the
+    /// streaming-layer remesh path.)
     #[test]
     fn boundary_voxel_marks_neighbor_chunk() {
         // 2 chunks along x (32 cells), 1 chunk each on y/z.

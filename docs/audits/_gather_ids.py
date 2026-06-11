@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
-WORK = Path("G:/civis-wt-matrix")
+WORK = Path("D:/civis-build/matrix5")
 OUT_JSON = WORK / "docs/audits/_id_inventory_v3.json"
 
 SCAN_DIRS = [
@@ -295,7 +295,7 @@ def main():
         ids_out.append({"id": eid, **by_id[eid]})
 
     OUT_JSON.write_text(
-        json.dumps({"schema_version": 3, "generated_at": "2026-06-10", "ids": ids_out}, indent=2) + "\n",
+        json.dumps({"schema_version": 3, "generated_at": "2026-06-11", "ids": ids_out}, indent=2) + "\n",
         encoding="utf-8",
     )
     print(f"Wrote {len(ids_out)} unique IDs to {OUT_JSON}", file=sys.stderr)

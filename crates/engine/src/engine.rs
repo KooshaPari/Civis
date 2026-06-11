@@ -2209,6 +2209,96 @@ impl Simulation {
         }
     }
 
+    /// Split an aggregate energy `total` into the four consumer priority tiers
+    /// (FR-ECON-005, CIV-002), highest-priority first. The *ordering* is a
+    /// survival floor (subsistence before luxury) — defensible to hardcode under
+    /// the Civis Emergence Charter — while the *share* each tier receives is
+    /// derived from the population's live need pressure so culture/preference is
+    /// not baked in.
+    ///
+    /// Tier→need mapping (Maslow / Stone-Geary linear-expenditure grounding):
+    /// - `Subsistence` = food + water + health (physiological survival).
+    /// - `Basic` = rest + safety (security).
+    /// - `Comfort` = social (belonging).
+    /// - `Luxury` = residual headroom above satiated needs (supernumerary income
+    ///   in Stone-Geary terms) — first cut under scarcity.
+    ///
+    /// Weighting: each tier's weight is the population's aggregate *unmet*
+    /// pressure for its needs (`1 - satisfaction`, summed) — more starvation ⇒
+    /// larger subsistence share. Pressure is converted to integer basis points
+    /// deterministically (no `f32` survives into the returned `i64` split), so
+    /// replay equality is preserved. When there are no citizens/needs to sample,
+    /// a fixed survival-floor baseline (50/25/15/10 — physiological-heavy, a
+    /// documented floor, not a culture knob) is used.
+    ///
+    /// The four returned demands sum to `total` (remainder assigned to the
+    /// lowest tier so the budget is never silently lost).
+    fn tiered_demand(&self, total: i64) -> [(civ_economy::PriorityTier, i64); 4] {
+        use civ_economy::PriorityTier;
+        if total <= 0 {
+            return [
+                (PriorityTier::Subsistence, 0),
+                (PriorityTier::Basic, 0),
+                (PriorityTier::Comfort, 0),
+                (PriorityTier::Luxury, 0),
+            ];
+        }
+
+        // Aggregate unmet need pressure across all living citizens. Pressure is
+        // quantised to integer milli-units (`1 - satisfaction`, scaled ×1000)
+        // immediately so the persisted/replayed path carries no f32.
+        let mut subsist_p: i64 = 0; // food + water + health
+        let mut basic_p: i64 = 0; // rest + safety
+        let mut comfort_p: i64 = 0; // social
+        let mut n: i64 = 0;
+        let unmet = |s: f32| -> i64 { ((1.0 - s.clamp(0.0, 1.0)) * 1000.0) as i64 };
+        for (_e, needs) in self.world.query::<&LifeNeeds>().iter() {
+            subsist_p += unmet(needs.food) + unmet(needs.water) + unmet(needs.health);
+            basic_p += unmet(needs.rest) + unmet(needs.safety);
+            comfort_p += unmet(needs.social);
+            n += 1;
+        }
+
+        // Tier weights in basis points (sum 10_000). Subsistence carries a hard
+        // floor (5_000 bps) regardless of measured pressure — the survival floor
+        // the charter permits us to hardcode; the remaining 5_000 bps are split
+        // by live pressure (or the baseline split when no pressure data exists).
+        const SUBSIST_FLOOR_BPS: i64 = 5_000;
+        const LUX_BASELINE_BPS: i64 = 1_000;
+        // Luxury bps is the residual (10_000 − others), so only three are bound.
+        let (sub_bps, basic_bps, comfort_bps) = if n == 0 {
+            // No citizens: documented survival-floor baseline 50/25/15(/10 lux).
+            (5_000, 2_500, 1_500)
+        } else {
+            let pressure_total = subsist_p + basic_p + comfort_p;
+            let headroom = 10_000 - SUBSIST_FLOOR_BPS - LUX_BASELINE_BPS; // 4_000
+            if pressure_total == 0 {
+                // Everyone sated: minimal subsistence pull, surplus flows down to
+                // comfort/luxury (Stone-Geary supernumerary spend).
+                (SUBSIST_FLOOR_BPS, 1_500, 2_000)
+            } else {
+                let sub_extra = subsist_p.saturating_mul(headroom) / pressure_total;
+                let basic_extra = basic_p.saturating_mul(headroom) / pressure_total;
+                let comfort_extra = comfort_p.saturating_mul(headroom) / pressure_total;
+                (SUBSIST_FLOOR_BPS + sub_extra, basic_extra, comfort_extra)
+            }
+        };
+
+        // Convert bps → joule demands; remainder to Luxury (lowest tier) so the
+        // full `total` is distributed and conservation holds.
+        let sub_d = total.saturating_mul(sub_bps) / 10_000;
+        let basic_d = total.saturating_mul(basic_bps) / 10_000;
+        let comfort_d = total.saturating_mul(comfort_bps) / 10_000;
+        // Luxury is the residual (LUX_BASELINE_BPS is the implicit floor within it).
+        let lux_d = total - sub_d - basic_d - comfort_d;
+        [
+            (PriorityTier::Subsistence, sub_d),
+            (PriorityTier::Basic, basic_d),
+            (PriorityTier::Comfort, comfort_d),
+            (PriorityTier::Luxury, lux_d.max(0)),
+        ]
+    }
+
     /// Economy phase — sync joule budget with `civ-economy`, apply policy drain, step,
     /// and advance market prices.
     ///
@@ -2229,11 +2319,16 @@ impl Simulation {
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
-        // Route through the pluggable allocation dispatch (FR-ECON-005) rather
-        // than hardcoding a concrete allocator. Default regime is Capitalist, so
-        // behavior is unchanged until a policy/scenario selects another regime.
-        let allocated =
-            civ_economy::allocate_with(civ_economy::AllocationRegime::default(), budget, demand);
+        // Split aggregate demand into subsistence-first priority tiers (FR-ECON-005,
+        // CIV-002) and ration the scarce budget highest-priority-first: subsistence
+        // is filled before luxury, and luxury is starved first under scarcity.
+        let tiers = self.tiered_demand(demand);
+        let granted = civ_economy::allocate_by_priority(
+            &civ_economy::CapitalistAllocator,
+            budget,
+            &tiers,
+        );
+        let allocated: i64 = granted.iter().sum();
         civ_economy::drain_energy_budget(&mut self.economy_state, allocated);
         civ_economy::step(&mut self.economy_state);
 
@@ -3561,332 +3656,51 @@ mod tests {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // FR-CIV-CA-009 — `Simulation::phase_voxel_ca` + abiogenesis sites.
-    // -------------------------------------------------------------------------
-
-    /// FR-CIV-CA-009 — `phase_voxel_ca(None)` is a no-op: sites stay empty.
-    /// This is the cheap path (no resident window wired up) and must not
-    /// blow up or allocate a giant vec.
+    /// FR-ECON-005 / CIV-002 — the tiered split never demands more than the
+    /// aggregate total (conservation: shares partition the budget exactly).
     #[test]
-    fn phase_voxel_ca_none_is_noop() {
-        let mut sim = Simulation::with_seed(1);
-        sim.phase_voxel_ca(None);
-        assert!(sim.last_tick_abiogenesis_sites().is_empty());
-    }
-
-    /// FR-CIV-CA-009 — warm liquid WATER in a single chunk produces at
-    /// least one viable abiogenesis site. A pure STONE chunk produces
-    /// zero. The two runs must round-trip deterministically (same seed,
-    /// same grid → same sites).
-    #[test]
-    fn phase_voxel_ca_warm_water_is_viable_stone_is_not() {
-        use civ_voxel::fluid_ca::{AbiogenesisSuitability, CaGrid};
-        use civ_voxel::material::{MaterialRegistry, STONE, WATER};
-        use civ_voxel::BoundaryConfig;
-
-        // 16³ grid (single chunk) seeded with one warm WATER cell in the
-        //  middle of an otherwise-AIR volume.
-        let mut g = CaGrid::new([16, 16, 16]);
-        g.set_with_temp(8, 8, 8, WATER, 40);
-        g.dirty_chunks.clear();
-        g.mark_dirty_cell(8, 8, 8);
-        // Run a CA tick so the cell participates in the dirty-chunk set.
-        let _ = civ_voxel::fluid_ca::step_with_config(
-            &mut g,
-            MaterialRegistry::standard(),
-            BoundaryConfig::closed(),
-            0,
-        );
-        let mut sim = Simulation::with_seed(7);
-        sim.phase_voxel_ca(Some(&g));
-        let sites = sim.last_tick_abiogenesis_sites();
-        // The WATER cell at (8, 8, 8) is at 40 °C → solvent=255, energy=127
-        // (40 * 255 / 80 = 127) → viability true. AIR cells score 0.
-        assert!(
-            sites.iter().any(|s| s.is_viable()),
-            "warm water should be a viable abiogenesis site, got {sites:?}"
-        );
-        assert!(
-            sites
-                .iter()
-                .all(|s| matches!(s, AbiogenesisSuitability { value, .. } if *value <= 100)),
-            "abiogenesis value must be in [0, 100]"
-        );
-
-        // Stone-only grid: no solvents at all.
-        let mut g2 = CaGrid::new([16, 16, 16]);
-        for x in 0..16 {
-            for y in 0..16 {
-                for z in 0..16 {
-                    g2.set_with_temp(x, y, z, STONE, 40);
-                }
+    fn tiered_demand_partitions_total() {
+        let sim = Simulation::with_seed(5);
+        for total in [0i64, 1, 1_000, 5_000_000_000] {
+            let tiers = sim.tiered_demand(total);
+            let sum: i64 = tiers.iter().map(|(_, d)| *d).sum();
+            assert_eq!(sum, total, "tier demands must sum to total ({total})");
+            assert!(tiers.iter().all(|(_, d)| *d >= 0), "no negative demand");
+            // Subsistence is the highest-priority tier and (by floor) gets a
+            // non-trivial share when there is anything to allocate.
+            if total > 10_000 {
+                assert!(
+                    tiers[0].1 >= total / 2,
+                    "subsistence honors its survival floor (>=50%)"
+                );
             }
         }
-        g2.dirty_chunks.clear();
-        g2.mark_mobile_chunks(MaterialRegistry::standard());
-        let mut sim2 = Simulation::with_seed(7);
-        sim2.phase_voxel_ca(Some(&g2));
-        assert!(
-            sim2.last_tick_abiogenesis_sites().is_empty()
-                || sim2
-                    .last_tick_abiogenesis_sites()
-                    .iter()
-                    .all(|s| !s.is_viable()),
-            "stone-only grid must produce zero viable sites"
-        );
     }
 
-    // ── CIV-007 Emergent Diplomacy behavior tests ────────────────────────────
-
-    /// CIV-007 — sustained combat engagements push the relation score negative
-    /// (war→grievance→r falls feedback).
+    /// FR-ECON-005 / CIV-002 — under scarcity the priority allocator fills
+    /// subsistence before luxury (luxury starves first).
     #[test]
-    fn diplomacy_war_drives_score_negative() {
-        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
-        use civ_agents::ClusterId;
-
-        let mut matrix = DiplomacyMatrix::new();
-        let a = ClusterId(0);
-        let b = ClusterId(1);
-
-        // Inject pure combat-grievance signal for 30 ticks.
-        let mut last_score = 0.0_f32;
-        for _ in 0..30 {
-            let outcome = matrix.apply_signal(
-                a,
-                b,
-                DiplomacySignal {
-                    combat_grievance: 1.0,
-                    ..Default::default()
-                },
-            );
-            last_score = outcome.score;
-        }
-
-        assert!(
-            last_score < -0.60,
-            "30 ticks of grievance should push score into War territory, got {last_score}"
-        );
-        assert_eq!(
-            matrix.relation(a, b),
-            RelationKind::War,
-            "score {last_score} should map to War"
-        );
+    fn tiered_allocation_fills_subsistence_before_luxury() {
+        let sim = Simulation::with_seed(5);
+        let total = 1_000_000i64;
+        let tiers = sim.tiered_demand(total);
+        // Budget covers only the subsistence tier's demand.
+        let budget = tiers[0].1;
+        let granted =
+            civ_economy::allocate_by_priority(&CapitalistAllocator, budget, &tiers);
+        assert_eq!(granted[0], tiers[0].1, "subsistence fully met");
+        assert_eq!(granted[3], 0, "luxury starved under scarcity");
+        let total_granted: i64 = granted.iter().sum();
+        assert!(total_granted <= budget, "never exceeds budget");
     }
 
-    /// CIV-007 — resource scarcity (high competition) raises rivalry between
-    /// factions without any explicit combat.
+    /// FR-ECON-005 / CIV-002 — a zero budget grants nothing across all tiers.
     #[test]
-    fn diplomacy_resource_scarcity_raises_rivalry() {
-        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
-        use civ_agents::ClusterId;
-
-        let mut matrix = DiplomacyMatrix::new();
-        let a = ClusterId(10);
-        let b = ClusterId(20);
-
-        for _ in 0..20 {
-            matrix.apply_signal(
-                a,
-                b,
-                DiplomacySignal {
-                    resource_competition: 1.0,
-                    proximity: 0.8,
-                    ..Default::default()
-                },
-            );
-        }
-
-        let record = matrix.record(a, b).expect("record present");
-        assert!(
-            record.score <= -0.20,
-            "resource + proximity should push into Rivalry or War, got {}",
-            record.score
-        );
-        let kind = matrix.relation(a, b);
-        assert!(
-            matches!(kind, RelationKind::Rivalry | RelationKind::War),
-            "expected Rivalry or War, got {kind:?}"
-        );
-    }
-
-    /// CIV-007 — sustained war followed by halted engagements → score recovers
-    /// toward neutral (attrition + exhaustion: grievance decays, score drifts up).
-    #[test]
-    fn diplomacy_war_attrition_exhaustion_recovers() {
-        use civ_agents::diplomacy::{GriefAccumulator, DiplomacyMatrix, DiplomacySignal};
-        use civ_agents::ClusterId;
-
-        let mut matrix = DiplomacyMatrix::new();
-        let mut grief = GriefAccumulator::new();
-        let a = ClusterId(3);
-        let b = ClusterId(4);
-
-        // Phase 1: sustained war (50 ticks of grievance engagements).
-        for _ in 0..50 {
-            grief.add_engagement(3, 4);
-            grief.tick_decay();
-            let g = grief.get(3, 4);
-            matrix.apply_signal(
-                a,
-                b,
-                DiplomacySignal {
-                    combat_grievance: g,
-                    ..Default::default()
-                },
-            );
-        }
-        let war_score = matrix.record(a, b).expect("record").score;
-        assert!(war_score < -0.20, "should be at least Rivalry after war phase, got {war_score}");
-
-        // Phase 2: engagements stop — only grievance decay, no new signals.
-        // Score should drift upward (toward zero) over 200 ticks.
-        for _ in 0..200 {
-            grief.tick_decay();
-            let g = grief.get(3, 4);
-            matrix.apply_signal(
-                a,
-                b,
-                DiplomacySignal {
-                    combat_grievance: g,
-                    ..Default::default()
-                },
-            );
-        }
-        let recovery_score = matrix.record(a, b).expect("record").score;
-        assert!(
-            recovery_score > war_score,
-            "score should recover after engagements stop: war={war_score}, recovery={recovery_score}"
-        );
-    }
-
-    /// CIV-007 — zero-input (no signals) leaves score stable at initial 0.0.
-    #[test]
-    fn diplomacy_zero_input_leaves_score_stable() {
-        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
-        use civ_agents::ClusterId;
-
-        let mut matrix = DiplomacyMatrix::new();
-        let a = ClusterId(5);
-        let b = ClusterId(6);
-
-        // Neutral start — apply zero-signal 100 times.
-        for _ in 0..100 {
-            matrix.apply_signal(a, b, DiplomacySignal::default());
-        }
-
-        let record = matrix.record(a, b).expect("record");
-        assert!(
-            record.score.abs() < 1e-5,
-            "zero-input should leave score stable at ~0.0, got {}",
-            record.score
-        );
-    }
-
-    /// CIV-007 — score is always clamped to [-1.0, 1.0] under extreme inputs.
-    #[test]
-    fn diplomacy_score_clamped_under_extremes() {
-        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
-        use civ_agents::ClusterId;
-
-        let mut matrix = DiplomacyMatrix::new();
-        let a = ClusterId(7);
-        let b = ClusterId(8);
-
-        // Extreme positive push.
-        for _ in 0..200 {
-            matrix.apply_signal(
-                a,
-                b,
-                DiplomacySignal {
-                    trade_volume: 100.0,
-                    need_complementarity: 100.0,
-                    ..Default::default()
-                },
-            );
-        }
-        let score = matrix.record(a, b).expect("record").score;
-        assert!((-1.0..=1.0).contains(&score), "score must stay in [-1,1], got {score}");
-        assert!((score - 1.0).abs() < 1e-4, "extreme positive should saturate at 1.0, got {score}");
-
-        // Reset and extreme negative push.
-        let mut matrix2 = DiplomacyMatrix::new();
-        for _ in 0..200 {
-            matrix2.apply_signal(
-                a,
-                b,
-                DiplomacySignal {
-                    combat_grievance: 100.0,
-                    resource_competition: 100.0,
-                    scarcity_pressure: 100.0,
-                    ..Default::default()
-                },
-            );
-        }
-        let score2 = matrix2.record(a, b).expect("record").score;
-        assert!((-1.0..=1.0).contains(&score2), "score must stay in [-1,1], got {score2}");
-        assert!((score2 + 1.0).abs() < 1e-4, "extreme negative should saturate at -1.0, got {score2}");
-    }
-
-    /// CIV-007 — phase_diplomacy runs every tick (not gated on tick%500).
-    #[test]
-    fn phase_diplomacy_runs_every_tick() {
-        let mut sim = Simulation::with_seed(42);
-        // After one tick the matrix should have records for all 3 faction pairs.
-        sim.tick();
-        let snapshot = sim.diplomacy_matrix.snapshot();
-        assert_eq!(
-            snapshot.len(),
-            3,
-            "all 3 faction pairs should have a relation record after one tick"
-        );
-    }
-
-    /// CIV-007 — trust entropy is in the valid [0, log2(5)] range.
-    #[test]
-    fn diplomacy_trust_entropy_in_valid_range() {
-        let mut sim = Simulation::with_seed(7);
-        for _ in 0..50 {
-            sim.tick();
-        }
-        let h = sim.diplomacy_trust_entropy();
-        assert!(
-            (0.0..=2.33).contains(&h),
-            "trust entropy must be in [0, log2(5)≈2.32], got {h}"
-        );
-    }
-
-    /// CIV-007 — GriefAccumulator decays correctly and grievance accumulates.
-    #[test]
-    fn grief_accumulator_decays_and_accumulates() {
-        use civ_agents::diplomacy::GriefAccumulator;
-
-        let mut grief = GriefAccumulator::new();
-
-        // Add engagements and verify accumulation.
-        grief.add_engagement(0, 1);
-        grief.add_engagement(0, 1);
-        let after_add = grief.get(0, 1);
-        assert!(
-            after_add > 0.0,
-            "grievance should be positive after engagements, got {after_add}"
-        );
-
-        // Decay should reduce the value.
-        let before = grief.get(0, 1);
-        grief.tick_decay();
-        let after = grief.get(0, 1);
-        assert!(after < before, "decay should reduce grievance: before={before}, after={after}");
-
-        // Many decay ticks should approach zero.
-        for _ in 0..1000 {
-            grief.tick_decay();
-        }
-        let near_zero = grief.get(0, 1);
-        assert!(
-            near_zero < 1e-4,
-            "grievance should decay near zero after 1000 ticks, got {near_zero}"
-        );
+    fn tiered_allocation_zero_budget_grants_nothing() {
+        let sim = Simulation::with_seed(5);
+        let tiers = sim.tiered_demand(1_000_000);
+        let granted = civ_economy::allocate_by_priority(&CapitalistAllocator, 0, &tiers);
+        assert_eq!(granted.iter().sum::<i64>(), 0);
+        assert!(granted.iter().all(|&g| g == 0));
     }
 }

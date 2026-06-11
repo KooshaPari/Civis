@@ -1,0 +1,19 @@
+name: Bench
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 9 * * 1"
+
+jobs:
+  criterion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Criterion benches
+        run: |
+          cargo bench -p civ-emergence-metrics --features bench
+          cargo bench -p civ-traffic --features bench
+          cargo bench -p civ-save-db --features bench

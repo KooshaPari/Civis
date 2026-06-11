@@ -12,5 +12,14 @@ civ-voxel = { path = "../voxel" }
 rand = "0.8"
 rand_chacha = "0.3"
 
+[features]
+bench = []
+
 [dev-dependencies]
+criterion = "0.5"
 ron = "0.8"
+
+[[bench]]
+name = "transformer_bench"
+harness = false
+required-features = ["bench"]

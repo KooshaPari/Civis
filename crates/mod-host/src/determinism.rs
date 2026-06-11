@@ -121,7 +121,11 @@ fn reject_operator(op: Operator<'_>) -> Option<&'static str> {
 mod tests {
     use super::*;
 
+    /// Covers FR-CIV-TACTICS-056.
     /// Covers FR-CIV-TACTICS-061.
+    /// FR-CIV-TACTICS-056 — the determinism scan is invoked at mod load
+    /// (`enforce_wasm_determinism` in `mod-host::lib`) and rejects sqrt
+    /// before the WASM is instantiated.
     #[test]
     fn fr_civ_tactics_061_green_rejects_non_deterministic_sqrt_instruction() {
         const WAT: &str = r#"
@@ -139,6 +143,9 @@ mod tests {
     }
 
     /// Covers FR-CIV-TACTICS-057.
+    /// FR-CIV-TACTICS-057 — `scan_wasm_determinism_report` returns a
+    /// `float_instruction_count` summary from the WASM operator stream
+    /// (used by the load-time scan invoked for FR-CIV-TACTICS-056).
     #[test]
     fn fr_civ_tactics_057_green_reports_float_contamination_statistics() {
         const WAT: &str = r#"

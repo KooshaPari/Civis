@@ -27,6 +27,7 @@ mod-dev = []
 determinism-strict = []
 
 [dev-dependencies]
+civ-save-db = { path = "../save-db" }
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand = "0.8"
 tempfile = "3"

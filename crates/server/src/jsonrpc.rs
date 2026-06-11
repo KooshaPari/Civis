@@ -2604,6 +2604,12 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-SAVE-001.
+    /// Covers FR-CIV-SAVE-002.
+    /// Covers FR-CIV-TACTICS-066.
+    /// FR-CIV-TACTICS-066 — `save.slot` is a JSON-RPC method dispatched on
+    /// the server bridge; the planner emits a `DispatchEffect::SaveSlot`
+    /// with the slot name from the request params.
     #[test]
     fn dispatch_save_slot_plans_save_effect_fr_save_002() {
         let req = parse_request(
@@ -2631,6 +2637,9 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-SAVE-001.
+    /// Covers FR-CIV-SAVE-002.
+    /// Covers FR-CIV-TACTICS-066.
     #[test]
     fn dispatch_save_slot_rejects_invalid_slot_fr_save_002() {
         let req = parse_request(

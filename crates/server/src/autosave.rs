@@ -8,7 +8,7 @@
 //! `0` disables the loop entirely. Ring size comes from `CIV_AUTOSAVE_KEEP`
 //! (default 3).
 
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{path::PathBuf, sync::{Arc, Mutex as StdMutex}, time::Duration};
 
 use civ_engine::{CivSaveBundle, Simulation};
 use civ_save_db::SaveDb;
@@ -183,7 +183,63 @@ pub fn spawn_autosave_loop(
 mod tests {
     use super::*;
     use std::path::Path;
+    use std::sync::OnceLock;
     use tempfile::tempdir;
+
+    static AUTOSAVE_ENV_MUTEX: OnceLock<StdMutex<()>> = OnceLock::new();
+
+    struct EnvVarScope {
+        key: &'static str,
+        previous: Option<String>,
+        _lock: std::sync::MutexGuard<'static, ()>,
+    }
+
+    impl EnvVarScope {
+        fn set(key: &'static str, value: impl AsRef<str>) -> Self {
+        let _lock = AUTOSAVE_ENV_MUTEX
+            .get_or_init(|| StdMutex::new(()))
+            .lock()
+            .expect("env lock poisoned");
+            let previous = std::env::var(key).ok();
+            unsafe {
+                std::env::set_var(key, value.as_ref());
+            }
+            Self {
+                key,
+                previous,
+                _lock,
+            }
+        }
+
+        fn remove(key: &'static str) -> Self {
+            let _lock = AUTOSAVE_ENV_MUTEX
+                .get_or_init(|| StdMutex::new(()))
+                .lock()
+                .expect("env lock poisoned");
+            let previous = std::env::var(key).ok();
+            unsafe {
+                std::env::remove_var(key);
+            }
+            Self {
+                key,
+                previous,
+                _lock,
+            }
+        }
+    }
+
+    impl Drop for EnvVarScope {
+        fn drop(&mut self) {
+            match self.previous.take() {
+                Some(value) => unsafe {
+                    std::env::set_var(self.key, value);
+                },
+                None => unsafe {
+                    std::env::remove_var(self.key);
+                },
+            }
+        }
+    }
 
     fn temp_saves_dir() -> (tempfile::TempDir, PathBuf) {
         let dir = tempdir().expect("tempdir");
@@ -212,67 +268,28 @@ mod tests {
 
     #[test]
     fn cadence_from_env_defaults_to_60s() {
-        let previous = std::env::var("CIV_AUTOSAVE_EVERY_SECS").ok();
-        // std::env::set_var is unsafe in concurrent programs; tests in this
-        // module run on a single test thread, so it is safe here.
-        unsafe {
-            std::env::remove_var("CIV_AUTOSAVE_EVERY_SECS");
-        }
+        // std::env::set_var/remove_var are unsafe in concurrent programs.
+        let _scope = EnvVarScope::remove("CIV_AUTOSAVE_EVERY_SECS");
         let cadence = autosave_cadence_from_env().expect("default cadence");
         assert_eq!(cadence, Duration::from_secs(60));
-        if let Some(value) = previous {
-            unsafe {
-                std::env::set_var("CIV_AUTOSAVE_EVERY_SECS", value);
-            }
-        }
     }
 
     #[test]
     fn cadence_from_env_zero_disables() {
-        let previous = std::env::var("CIV_AUTOSAVE_EVERY_SECS").ok();
-        unsafe {
-            std::env::set_var("CIV_AUTOSAVE_EVERY_SECS", "0");
-        }
+        let _scope = EnvVarScope::set("CIV_AUTOSAVE_EVERY_SECS", "0");
         assert!(autosave_cadence_from_env().is_none());
-        match previous {
-            Some(value) => unsafe {
-                std::env::set_var("CIV_AUTOSAVE_EVERY_SECS", value);
-            },
-            None => unsafe {
-                std::env::remove_var("CIV_AUTOSAVE_EVERY_SECS");
-            },
-        }
     }
 
     #[test]
     fn cadence_from_env_honors_explicit_value() {
-        let previous = std::env::var("CIV_AUTOSAVE_EVERY_SECS").ok();
-        unsafe {
-            std::env::set_var("CIV_AUTOSAVE_EVERY_SECS", "5");
-        }
+        let _scope = EnvVarScope::set("CIV_AUTOSAVE_EVERY_SECS", "5");
         assert_eq!(autosave_cadence_from_env(), Some(Duration::from_secs(5)));
-        match previous {
-            Some(value) => unsafe {
-                std::env::set_var("CIV_AUTOSAVE_EVERY_SECS", value);
-            },
-            None => unsafe {
-                std::env::remove_var("CIV_AUTOSAVE_EVERY_SECS");
-            },
-        }
     }
 
     #[test]
     fn keep_from_env_defaults_to_3() {
-        let previous = std::env::var("CIV_AUTOSAVE_KEEP").ok();
-        unsafe {
-            std::env::remove_var("CIV_AUTOSAVE_KEEP");
-        }
+        let _scope = EnvVarScope::remove("CIV_AUTOSAVE_KEEP");
         assert_eq!(autosave_keep_from_env(), 3);
-        if let Some(value) = previous {
-            unsafe {
-                std::env::set_var("CIV_AUTOSAVE_KEEP", value);
-            }
-        }
     }
 
     #[tokio::test]

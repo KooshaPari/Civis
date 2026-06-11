@@ -12,7 +12,7 @@ permissions:
 jobs:
   manifest-verify:
     name: manifest-verify (cloud)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -22,7 +22,7 @@ jobs:
   semver-checks:
     # Manual escape hatch: run heavy semver-checks on the runner when explicitly asked.
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683

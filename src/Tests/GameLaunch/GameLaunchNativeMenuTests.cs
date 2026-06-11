@@ -77,7 +77,8 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         StartGameResult startResult = await fixture.Client!.StartGameAsync();
         startResult.Success.Should().BeTrue("StartGameAsync should enter gameplay from main menu");
 
-        await Task.Delay(3000);
+        WaitResult world = await fixture.Client.WaitForWorldAsync(timeoutMs: 30_000).ConfigureAwait(false);
+        world.Ready.Should().BeTrue("ECS world should be ready before opening pause menu");
 
         GameStatus status = await fixture.Client.StatusAsync();
         status.WorldReady.Should().BeTrue("ECS world should be ready before opening pause menu");
@@ -89,9 +90,11 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
         await fixture.Client!.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
             .ConfigureAwait(false);
-        await Task.Delay(2500);
-
-        (await IsPauseMenuVisibleAsync(fixture.Client)).Should().BeTrue(
+        bool pauseVisible = await TestWait.UntilAsync(
+            async () => await IsPauseMenuVisibleAsync(fixture.Client).ConfigureAwait(false),
+            TimeSpan.FromSeconds(10),
+            pollMs: 250).ConfigureAwait(false);
+        pauseVisible.Should().BeTrue(
             "pause menu should expose Resume/Continue after pause open attempt");
 
         UiActionResult modsQuery = await QueryModsButtonAsync();
@@ -114,7 +117,9 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
             "Mods button should exist in main menu initially");
 
         await fixture.Client.StartGameAsync();
-        await Task.Delay(3000);
+        WaitResult world = await fixture.Client.WaitForWorldAsync(timeoutMs: 30_000).ConfigureAwait(false);
+        world.Ready.Should().BeTrue(
+            "ECS world should be ready after scene transition");
 
         GameStatus status = await fixture.Client.StatusAsync();
         status.WorldReady.Should().BeTrue(
@@ -226,29 +231,30 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
     /// </summary>
     private async Task ResetToMainMenuAndInjectModsButtonAsync()
     {
-        int postLoadSettleMs = IsAttachMode() ? 5000 : 3500;
-        bool sceneLoaded = false;
-
-        for (int attempt = 0; attempt < 3; attempt++)
-        {
-            LoadSceneResult sceneResult = await fixture.Client!.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex)
-                .ConfigureAwait(false);
-            if (sceneResult.Success)
+        bool sceneLoaded = await TestWait.UntilAsync(
+            async () =>
             {
-                sceneLoaded = true;
-                break;
-            }
-
-            await Task.Delay(1500).ConfigureAwait(false);
-        }
+                LoadSceneResult sceneResult = await fixture.Client!.LoadSceneAsync(GameLaunchSceneNames.MainMenuBuildIndex)
+                    .ConfigureAwait(false);
+                return sceneResult.Success;
+            },
+            TimeSpan.FromSeconds(15),
+            pollMs: 1500).ConfigureAwait(false);
 
         if (sceneLoaded)
         {
-            await Task.Delay(postLoadSettleMs).ConfigureAwait(false);
             WaitResult world = await fixture.Client.WaitForWorldAsync(timeoutMs: 30_000).ConfigureAwait(false);
             if (!world.Ready)
             {
-                await Task.Delay(2000).ConfigureAwait(false);
+                bool worldReady = await TestWait.UntilAsync(
+                    async () =>
+                    {
+                        GameStatus status = await fixture.Client!.StatusAsync().ConfigureAwait(false);
+                        return status.WorldReady;
+                    },
+                    TimeSpan.FromSeconds(10),
+                    pollMs: 500).ConfigureAwait(false);
+                worldReady.Should().BeTrue("main menu world should become ready before injection");
             }
 
             // Main menu must expose Settings/Options before injection can clone a donor button.
@@ -266,11 +272,21 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
 
         await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
             .ConfigureAwait(false);
-        // NativeMenuInjector rescans every 2s; allow one rescan cycle after explicit inject.
-        await Task.Delay(IsAttachMode() ? 2500 : 500).ConfigureAwait(false);
+        bool firstInjectVisible = await TestWait.UntilAsync(
+            async () => await QueryModsButtonVisibleAsync().ConfigureAwait(false),
+            TimeSpan.FromSeconds(IsAttachMode() ? 10 : 5),
+            pollMs: 500).ConfigureAwait(false);
+        firstInjectVisible.Should().BeTrue(
+            "native Mods button should appear after explicit injection");
+
         await fixture.Client.InvokeMethodAsync("NativeMenuInjector", "TryInjectMenuButton")
             .ConfigureAwait(false);
-        await Task.Delay(500).ConfigureAwait(false);
+        bool secondInjectVisible = await TestWait.UntilAsync(
+            async () => await QueryModsButtonVisibleAsync().ConfigureAwait(false),
+            TimeSpan.FromSeconds(5),
+            pollMs: 500).ConfigureAwait(false);
+        secondInjectVisible.Should().BeTrue(
+            "native Mods button should remain visible after a second injection attempt");
     }
 
     private static bool IsAttachMode()
@@ -384,8 +400,11 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
             StartGameResult togglePause = await client.TogglePauseMenuAsync().ConfigureAwait(false);
             if (togglePause.Success)
             {
-                await Task.Delay(750).ConfigureAwait(false);
-                if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+                bool pauseVisible = await TestWait.UntilAsync(
+                    async () => await IsPauseMenuVisibleAsync(client).ConfigureAwait(false),
+                    TimeSpan.FromSeconds(5),
+                    pollMs: 100).ConfigureAwait(false);
+                if (pauseVisible)
                 {
                     return true;
                 }
@@ -399,8 +418,11 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         StartGameResult esc = await client.PressEscapeAsync().ConfigureAwait(false);
         if (esc.Success)
         {
-            await Task.Delay(750).ConfigureAwait(false);
-            if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+            bool pauseVisible = await TestWait.UntilAsync(
+                async () => await IsPauseMenuVisibleAsync(client).ConfigureAwait(false),
+                TimeSpan.FromSeconds(5),
+                pollMs: 100).ConfigureAwait(false);
+            if (pauseVisible)
             {
                 return true;
             }
@@ -409,8 +431,11 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
         StartGameResult simulate = await client.SimulateKeyAsync("Escape").ConfigureAwait(false);
         if (simulate.Success)
         {
-            await Task.Delay(750).ConfigureAwait(false);
-            if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+            bool pauseVisible = await TestWait.UntilAsync(
+                async () => await IsPauseMenuVisibleAsync(client).ConfigureAwait(false),
+                TimeSpan.FromSeconds(5),
+                pollMs: 100).ConfigureAwait(false);
+            if (pauseVisible)
             {
                 return true;
             }
@@ -436,8 +461,11 @@ public sealed class GameLaunchNativeMenuTests(GameLaunchFixture fixture)
                 continue;
             }
 
-            await Task.Delay(750).ConfigureAwait(false);
-            if (await IsPauseMenuVisibleAsync(client).ConfigureAwait(false))
+            bool pauseVisible = await TestWait.UntilAsync(
+                async () => await IsPauseMenuVisibleAsync(client).ConfigureAwait(false),
+                TimeSpan.FromSeconds(5),
+                pollMs: 100).ConfigureAwait(false);
+            if (pauseVisible)
             {
                 return true;
             }

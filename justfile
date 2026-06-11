@@ -103,6 +103,28 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
     cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --check
 
+# Programmatic verification harness (verify/pixels/census subcommands).
+# `verify` requires the `bevy` feature so the windowed renderer can run.
+# `pixels` and `census` run with default features and are safe in headless CI.
+# KNOWN-GOOD launch facts (do not hardcode here):
+#   * civ-standalone needs `civ-bevy-ref --features bevy,egui` and
+#     `BEVY_ASSET_ROOT=<repo>/clients/bevy-ref` (see clients/bevy-ref/README.md).
+#   * `civis-census` targets civ-server at ws://$CIV_WS_HOST:$CIV_SERVER_PORT$/$CIV_WS_PATH
+#     (defaults: 127.0.0.1:3000/ws) and calls `sim.status` over JSON-RPC.
+#
+# `with_bevy=1` adds the heavier `cargo check --features bevy` step (the
+# `civis-verify` bin pulls in bevy_ecs/wgpu; expect several minutes on a cold
+# cache). Default is fast (default features only).
+civis-verify with_bevy="":
+    @echo "==> civis-cli: cargo check (default features)"
+    cargo check -p civis-cli
+    @echo "==> civis-cli: cargo test (lib + bins)"
+    cargo test -p civis-cli
+    powershell -NoProfile -Command "if ('{{with_bevy}}' -eq '1') { Write-Host '==> civis-cli: cargo check --features bevy (verify bin)'; & cargo check -p civis-cli --features bevy --bin civis-verify; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } else { Write-Host '==> Skipping bevy check (pass with_bevy=1 to include it).' }"
+    @echo "==> Hint: 'cargo run -p civis-cli --bin civis-census' against a live civ-server,"
+    @echo "        or 'cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone' with"
+    @echo "        BEVY_ASSET_ROOT=clients/bevy-ref for the windowed reference client."
+
 # Run the Bevy reference client smoke (headless; meshes one chunk).
 civis-3d-bevy-smoke:
     cargo run -p civ-bevy-ref --bin civ-bevy-ref

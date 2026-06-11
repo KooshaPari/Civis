@@ -1,94 +1,65 @@
-use std::path::PathBuf;
+//! `civis-cli` — programmatic verification harness for Civis.
+//!
+//! This crate is the *only* source of truth for visual + entity-count
+//! evidence. Agents that need to claim "the renderer produced X" or "the sim
+//! has N agents" must invoke one of the bins / tools defined here, capture
+//! the resulting JSON, and reference the numbers in their report. The
+//! [`fr-ax-dx-ux-maturity-audit.md`](../docs/development-guide/fr-ax-dx-ux-maturity-audit.md)
+//! policy ("only pixel numbers + entity counts count as evidence") is enforced
+//! by routing every visual claim through this crate.
+//!
+//! Four subcommands are exported as bins:
+//!
+//! | Bin | Purpose | Transport |
+//! |-----|---------|-----------|
+//! | `civis-verify` | Launch a windowed Bevy 0.18 client, wait N ticks, capture frame to PNG | Bevy `Screenshot` entity + `save_to_disk` observer |
+//! | `civis-pixels` | Sample RGB grid points on a PNG, emit JSON statistics (mean RGB, pct near-black, pct gray, distinct hue count) | local file (PNG only) |
+//! | `civis-census` | Query entity counts / sim stats via the WS JSON-RPC bridge | civ-server `ws://host:port/ws` |
+//! | `civis-mcp`   | Thin JSON-RPC server exposing `verify`/`pixels`/`census` as MCP-shaped tools | stdin/stdout newline-delimited JSON |
+//!
+//! ## Public layout
+//!
+//! - [`pixels`] — pure pixel-statistics functions (no I/O). Unit-tested on
+//!   synthetic images so the gate is deterministic.
+//! - [`census`] — pure JSON-RPC dispatcher + response struct decoders; no
+//!   network — the bin provides the transport.
+//! - [`verify`] — types only (no Bevy runtime); the bin wires Bevy.
+//! - [`config`] — `.env` + `CIV_*` env-var helpers, shared by every bin.
+//!
+//! ## Why a CLI instead of a `tools/` subcommand on `civ-server`?
+//!
+//! `civ-server` must stay focused on the live tick loop. A second binary
+//! process avoids an extra plugin lifecycle inside the server and keeps the
+//! verifier reusable against replay, snapshot, or mod-hosted simulations in
+//! future phases (see PR `feat/verify-harness` alternatives section).
 
-use civ_engine::{CivSaveBundle, Simulation};
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
-pub type CliResult<T> = Result<T, CliError>;
-
-#[derive(Debug, Clone)]
-pub struct CliError {
-    pub message: String,
-    pub exit_code: i32,
-}
-
-impl CliError {
-    pub fn new(exit_code: i32, message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            exit_code,
-        }
-    }
-}
-
-impl From<std::io::Error> for CliError {
-    fn from(value: std::io::Error) -> Self {
-        Self::new(1, value.to_string())
-    }
-}
-
-pub fn workspace_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map_or_else(|| manifest_dir.clone(), |p| p.to_path_buf())
-}
-
-pub mod build;
 pub mod census;
-pub mod proc;
-pub mod screenshot;
+pub mod config;
+pub mod pixels;
+
+#[cfg(feature = "bevy")]
 pub mod verify;
 
-pub use build::run_build;
-pub use census::{
-    census_to_json, find_latest_run_log, parse_census_text, read_census_from_log, CensusData,
-};
-pub use screenshot::{run_screenshot, ScreenshotResult};
-pub use verify::{run_verify, VerifyResult};
+/// Library version of the harness (semver-compatible; `0.1.0` until the
+/// Bevy 0.18 / RON schema freezes).
+pub const HARNESS_VERSION: &str = "0.1.0";
 
-pub fn command_new_world(seed: u64, out: &std::path::Path) -> CliResult<serde_json::Value> {
-    let sim = Simulation::with_seed(seed);
-    CivSaveBundle::save_archive(out, &sim)
-        .map_err(|err| CliError::new(1, format!("failed to write {}: {err}", out.display())))?;
-    Ok(serde_json::json!({
-        "command": "new-world",
-        "seed": seed,
-        "output": out,
-        "tick": sim.state.tick,
-    }))
+/// Resolve the path of the workspace root that contains this crate.
+///
+/// Walks upward from `CARGO_MANIFEST_DIR` to its parent; this is the
+/// directory a `cargo run -p civis-cli` invocation considers CWD-equivalent.
+/// Used by the MCP shim to anchor relative output paths.
+#[must_use]
+pub fn workspace_root() -> Option<std::path::PathBuf> {
+    let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    manifest.parent().map(std::path::Path::to_path_buf)
 }
 
-pub fn command_inspect_save(path: &std::path::Path) -> CliResult<serde_json::Value> {
-    let metadata = CivSaveBundle::read_metadata(path)
-        .map_err(|err| CliError::new(1, format!("failed to read {}: {err}", path.display())))?;
-    let sim = CivSaveBundle::load(path)
-        .map_err(|err| CliError::new(1, format!("failed to load {}: {err}", path.display())))?;
-    Ok(serde_json::json!({
-        "command": "inspect-save",
-        "path": path,
-        "metadata": metadata,
-        "state": {
-            "tick": sim.state.tick,
-            "population": sim.snapshot().population,
-            "energy_budget_joules": sim.state.energy_budget_joules,
-        },
-    }))
-}
-
-pub fn command_bench(seed: u64, ticks: u64) -> CliResult<serde_json::Value> {
-    let mut sim = Simulation::with_seed(seed);
-    let start = std::time::Instant::now();
-    for _ in 0..ticks {
-        sim.tick();
-    }
-    let elapsed = start.elapsed();
-    let per_tick_ns = elapsed.as_nanos() / u128::from(ticks.max(1));
-    Ok(serde_json::json!({
-        "command": "bench",
-        "seed": seed,
-        "ticks": ticks,
-        "elapsed_ms": elapsed.as_secs_f64() * 1000.0,
-        "per_tick_ns": per_tick_ns,
-        "final_tick": sim.state.tick,
-    }))
+/// Re-export of the canonical JSON-RPC method names used by [`census`]. Useful
+/// for test fixtures and MCP tool shims.
+pub mod jsonrpc {
+    pub use civ_server::jsonrpc::JsonRpcMethod;
 }

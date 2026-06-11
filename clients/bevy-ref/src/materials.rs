@@ -227,8 +227,11 @@ mod loader {
         pub albedo: String,
         /// `assets/textures/<slug>/normal.ktx2`
         pub normal: String,
-        /// `assets/textures/<slug>/orm.ktx2` (Occlusion / Roughness / Metallic)
-        pub orm: String,
+        /// `assets/textures/<slug>/orm.ktx2` (G=roughness, B=metallic, R=occlusion).
+        pub metallic_roughness: String,
+        /// `assets/textures/<slug>/orm.ktx2` (R=occlusion). Shared with
+        /// `metallic_roughness` when the source pack is already ORM.
+        pub occlusion: String,
     }
 
     impl BiomeAssetPaths {
@@ -241,7 +244,8 @@ mod loader {
             Self {
                 albedo: format!("textures/{slug}/albedo.jpg"),
                 normal: format!("textures/{slug}/normal.jpg"),
-                orm: format!("textures/{slug}/orm.ktx2"),
+                metallic_roughness: format!("textures/{slug}/orm.ktx2"),
+                occlusion: format!("textures/{slug}/orm.ktx2"),
             }
         }
     }
@@ -291,7 +295,11 @@ mod loader {
             let biome = Biome::ALL[i];
             let paths = BiomeAssetPaths::for_biome(biome);
             let albedo: Handle<Image> = asset_server.load(&paths.albedo);
-            let normal: Handle<Image> = asset_server.load(&paths.normal);
+            let normal: Handle<Image> = texture_load::load_linear_map(&asset_server, &paths.normal);
+            let metallic_roughness: Handle<Image> =
+                texture_load::load_linear_map(&asset_server, &paths.metallic_roughness);
+            let occlusion: Handle<Image> =
+                texture_load::load_linear_map(&asset_server, &paths.occlusion);
 
             let [r, g, b] = biome.tint_srgb();
             let (roughness, reflectance, metallic) = biome.surface_pbr();
@@ -300,6 +308,8 @@ mod loader {
                 base_color_texture: Some(albedo),
                 normal_map_texture: Some(normal),
                 perceptual_roughness: roughness,
+                metallic_roughness_texture: Some(metallic_roughness),
+                occlusion_texture: Some(occlusion),
                 metallic,
                 reflectance,
                 ..Default::default()
@@ -352,6 +362,20 @@ mod tests {
                 assert!((0.0..=1.0).contains(&c), "{biome:?} fallback out of gamut");
             }
         }
+    }
+
+    #[test]
+    fn fr_civ_pbr_002_orm_channels_are_split_and_orm_source_fans_in() {
+        let paths = BiomeAssetPaths::for_biome(Biome::RockCliff);
+        assert_eq!(paths.metallic_roughness, "textures/rock_cliff/orm.ktx2");
+        assert_eq!(paths.occlusion, "textures/rock_cliff/orm.ktx2");
+        assert_eq!(paths.metallic_roughness, paths.occlusion);
+    }
+
+    #[test]
+    fn fr_civ_pbr_006_texture_maps_are_color_space_partitioned() {
+        assert_eq!(texture_load::biome_albedo_path(Biome::SandBeach), "textures/sand_beach/albedo.jpg");
+        assert_eq!(texture_load::biome_normal_path(Biome::SandBeach), "textures/sand_beach/normal.jpg");
     }
 }
 

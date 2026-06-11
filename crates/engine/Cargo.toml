@@ -60,6 +60,12 @@ civ-legends = { path = "../legends" }
 civ-genetics = { path = "../genetics" }
 civ-species = { path = "../species" }
 
+# Weak-emergence / criticality metrics consumed by the Emergence Dashboard
+# (see `docs/design/emergence-dashboard.md`). Stacked on PR #350
+# (scaffold + design): this PR wires the live sampling into the engine
+# tick and exposes the latest sample over the WS JSON-RPC surface.
+civ-emergence-metrics = { path = "../civ-emergence-metrics" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.4"

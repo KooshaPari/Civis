@@ -448,6 +448,12 @@ pub struct Simulation {
     pub(crate) last_life_deaths: u32,
     /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
     pub(crate) emergence: crate::emergence::EmergenceState,
+    /// Latest emergence-metrics sample (civ-emergence-metrics). Updated by
+    /// [`crate::emergence_metrics::sample_emergence`] on every 50-tick
+    /// boundary (5 s at 100 ms tick). `None` before the first sample
+    /// boundary (ticks 0..49). Surfaced over JSON-RPC `sim.emergence`
+    /// (stacked on PR #350).
+    pub(crate) emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -680,6 +686,7 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(42),
+            emergence_sample: None,
         }
     }
 
@@ -743,6 +750,7 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(seed),
+            emergence_sample: None,
         }
     }
 
@@ -1164,6 +1172,11 @@ impl Simulation {
         self.phase_disasters();
         self.phase_life();
         self.phase_emergence();
+        // PR #350 stack: run the civ-emergence-metrics sampler on the
+        // 50-tick boundary. The sampler internally no-ops on
+        // non-boundary ticks so the cost on every other tick is just
+        // one modulo + one branch.
+        self.sample_emergence();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

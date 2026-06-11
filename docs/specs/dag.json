@@ -1,0 +1,196 @@
+{
+  "generated": "2026-06-10",
+  "features": [
+    {
+      "slug": "m13-runtime-survival-hmr-concurrency",
+      "tier": "feature",
+      "depends_on": [
+        "spec-005-duplicate-instance-bypass",
+        "spec-007-runtime-features-baseline"
+      ],
+      "wave": 2
+    },
+    {
+      "slug": "spec-002-native-menu-button-injection",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-002-native-menu-injector",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-003-prove-features-skill",
+      "tier": "feature",
+      "depends_on": [
+        "spec-006-prove-features-video-pipeline"
+      ],
+      "wave": 1
+    },
+    {
+      "slug": "spec-004-key-input-system",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-005-duplicate-instance-bypass",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-006-prove-features-video-pipeline",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-007-runtime-features-baseline",
+      "tier": "feature",
+      "depends_on": [
+        "spec-002-native-menu-button-injection",
+        "spec-002-native-menu-injector",
+        "spec-004-key-input-system",
+        "spec-005-duplicate-instance-bypass"
+      ],
+      "wave": 1
+    },
+    {
+      "slug": "spec-008-mod-conflict-detection-engine",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-fix-f10-blank-labels",
+      "tier": "feature",
+      "depends_on": [
+        "spec-007-runtime-features-baseline"
+      ],
+      "wave": 2
+    },
+    {
+      "slug": "spec-fix-f9-empty-debug",
+      "tier": "feature",
+      "depends_on": [
+        "spec-fix-f10-blank-labels"
+      ],
+      "wave": 3
+    },
+    {
+      "slug": "spec-fix-mods-button-ux",
+      "tier": "feature",
+      "depends_on": [
+        "spec-002-native-menu-injector"
+      ],
+      "wave": 1
+    },
+    {
+      "slug": "spec-fix-vanilla-gameplay-bridge",
+      "tier": "feature",
+      "depends_on": [
+        "v0-27-0-full-conversion-epic"
+      ],
+      "wave": 1
+    },
+    {
+      "slug": "spec-tier1-mvp",
+      "tier": "mvp",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "spec-tier2-mature",
+      "tier": "mature",
+      "depends_on": [
+        "spec-tier1-mvp"
+      ],
+      "wave": 1
+    },
+    {
+      "slug": "spec-tier3-elite",
+      "tier": "elite",
+      "depends_on": [
+        "spec-tier2-mature"
+      ],
+      "wave": 2
+    },
+    {
+      "slug": "technical-spec",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "traceability-matrix",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "user-spec",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "v0-27-0-full-conversion-epic",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    },
+    {
+      "slug": "validation-matrix",
+      "tier": "feature",
+      "depends_on": [],
+      "wave": 0
+    }
+  ],
+  "waves": [
+    {
+      "wave": 0,
+      "features": [
+        "spec-002-native-menu-button-injection",
+        "spec-002-native-menu-injector",
+        "spec-004-key-input-system",
+        "spec-005-duplicate-instance-bypass",
+        "spec-006-prove-features-video-pipeline",
+        "spec-008-mod-conflict-detection-engine",
+        "spec-tier1-mvp",
+        "technical-spec",
+        "traceability-matrix",
+        "user-spec",
+        "v0-27-0-full-conversion-epic",
+        "validation-matrix"
+      ]
+    },
+    {
+      "wave": 1,
+      "features": [
+        "spec-003-prove-features-skill",
+        "spec-007-runtime-features-baseline",
+        "spec-fix-mods-button-ux",
+        "spec-fix-vanilla-gameplay-bridge",
+        "spec-tier2-mature"
+      ]
+    },
+    {
+      "wave": 2,
+      "features": [
+        "m13-runtime-survival-hmr-concurrency",
+        "spec-fix-f10-blank-labels",
+        "spec-tier3-elite"
+      ]
+    },
+    {
+      "wave": 3,
+      "features": [
+        "spec-fix-f9-empty-debug"
+      ]
+    }
+  ]
+}

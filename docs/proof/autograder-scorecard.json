@@ -1,0 +1,199 @@
+{
+  "generated": "2026-06-10T02:21:05.1831049-07:00",
+  "tiers": [
+    {
+      "tier": "mvp",
+      "criteria": [
+        {
+          "criterion": "Canonical spec file exists",
+          "pass": true,
+          "evidence": [
+            "agileplus-specs/spec-tier1-mvp/spec.md",
+            "docs/specs/traceability-matrix.md:17"
+          ]
+        },
+        {
+          "criterion": "One focused test exists",
+          "pass": true,
+          "evidence": [
+            "src/Tools/DinoforgeMcp/tests/test_acceptance_contract_engine.py::test_tier1_mvp_acceptance_contract_scores_pass",
+            "docs/specs/traceability-matrix.md:17"
+          ]
+        },
+        {
+          "criterion": "One traceability row exists",
+          "pass": true,
+          "evidence": [
+            "docs/specs/traceability-matrix.md:13-17"
+          ]
+        },
+        {
+          "criterion": "Autograder recognizes the three-artifact minimum as pass",
+          "pass": true,
+          "evidence": [
+            "docs/specs/traceability-matrix.md:17",
+            "docs/sessions/tier1-scoring-wire-20260608.md:37"
+          ]
+        }
+      ],
+      "pass_count": 4,
+      "total": 4,
+      "score": 1
+    },
+    {
+      "tier": "mature",
+      "criteria": [
+        {
+          "criterion": "Tier-1 MVP passes first",
+          "pass": true,
+          "evidence": [
+            "docs/specs/traceability-matrix.md:17",
+            "docs/specs/SPEC-TIER1-MVP.md"
+          ]
+        },
+        {
+          "criterion": "At least 3 BDD features or equivalent scenarios are documented and traceable",
+          "pass": true,
+          "evidence": [
+            "src/Tests/BDD/Features/TotalConversionManifestValidation.feature",
+            "src/Tests/BDD/Features/PackHashDeterminism.feature",
+            "src/Tests/BDD/Features/BridgeHandshakeHappyPath.feature",
+            "src/Tests/BDD/Features/BridgeReplayAttackRejection.feature",
+            "docs/specs/traceability-matrix.md:448-449"
+          ]
+        },
+        {
+          "criterion": "Mutation score is documented at 85% or higher",
+          "pass": false,
+          "evidence": [
+            "docs/sessions/mutation-bridge-20260608.md:24-35",
+            "docs/sessions/mutation-bridge-2-20260608.md:30",
+            "docs/sessions/mutation-bridge-3-20260608.md:65",
+            "docs/sessions/mutation-bridge-4-20260608.md:46-47"
+          ]
+        },
+        {
+          "criterion": "At least one tamper-oriented chaos test is documented and passes",
+          "pass": true,
+          "evidence": [
+            "docs/sessions/chaos-test-add-20260608.md:5-38",
+            "src/Tests/Chaos/BridgeReceiptChaosTests.cs",
+            "src/Tests/Chaos/DINOForge.Tests.Chaos.csproj"
+          ]
+        },
+        {
+          "criterion": "A performance baseline is recorded for the relevant path",
+          "pass": true,
+          "evidence": [
+            "docs/sessions/perf-baseline-20260608.md:1-21",
+            "src/Tests/Perf/Result.txt"
+          ]
+        },
+        {
+          "criterion": "A load-test threshold is recorded and met",
+          "pass": false,
+          "evidence": [
+            "docs/sessions/load-test-skeleton-20260608.md:1-30",
+            "src/Tests/Load/BridgeLoadSkeletonTests.cs"
+          ]
+        },
+        {
+          "criterion": "The autograder can resolve the full Tier-2 evidence bundle",
+          "pass": false,
+          "evidence": [
+            "src/Tests/Autograder/BridgeAcceptanceEvidence.cs",
+            "src/Tests/Autograder/BridgeAcceptanceScorerTests.cs",
+            "docs/sessions/autograder-bridge-20260608.md:15-21"
+          ]
+        }
+      ],
+      "pass_count": 4,
+      "total": 7,
+      "score": 0.5714285714285714
+    },
+    {
+      "tier": "elite",
+      "criteria": [
+        {
+          "criterion": "Tier-2 Mature passes first",
+          "pass": false,
+          "evidence": [
+            "docs/specs/SPEC-TIER2-MATURE.md",
+            "docs/specs/traceability-matrix.md:23",
+            "docs/sessions/autograder-bridge-20260608.md:18-21"
+          ]
+        },
+        {
+          "criterion": "Bridge coverage is documented at 75% or higher",
+          "pass": false,
+          "evidence": [
+            "docs/sessions/coverage-current-measure-20260608.md:34-43",
+            "docs/sessions/coverage-rerun-20260608.md:20-27",
+            "docs/sessions/coverage-bridge-push-20260608.md:35-45",
+            "docs/sessions/coverage-bridge-push-2-20260608.md:36-46",
+            "docs/sessions/autograder-bridge-20260608.md:56-57"
+          ]
+        },
+        {
+          "criterion": "Mutation score is documented at 70% or higher",
+          "pass": false,
+          "evidence": [
+            "docs/sessions/mutation-bridge-20260608.md:24-35",
+            "docs/sessions/autograder-bridge-20260608.md:19-21"
+          ]
+        },
+        {
+          "criterion": "At least two tamper-oriented chaos tests are documented and pass",
+          "pass": true,
+          "evidence": [
+            "docs/sessions/chaos-test-add-20260608.md:5-38",
+            "docs/sessions/chaos-second-test-20260608.md:5-33",
+            "src/Tests/Chaos/BridgeReceiptChaosTests.cs",
+            "src/Tests/Chaos/BridgeReceiptReplayChaosTests.cs"
+          ]
+        },
+        {
+          "criterion": "At least two performance baselines are recorded for the relevant paths",
+          "pass": true,
+          "evidence": [
+            "docs/benchmarks/bridge_protocol_baseline_20260518.md",
+            "docs/benchmarks/pack_load_baseline_20260518.md",
+            "docs/sessions/perf-baseline-20260608.md:1-21"
+          ]
+        },
+        {
+          "criterion": "At least two load-test thresholds are recorded and met",
+          "pass": false,
+          "evidence": [
+            "docs/sessions/load-test-skeleton-20260608.md:1-30",
+            "src/Tests/Load/BridgeLoadSkeletonTests.cs"
+          ]
+        },
+        {
+          "criterion": "At least one BDD regression suite is documented and traceable",
+          "pass": true,
+          "evidence": [
+            "docs/sessions/bdd-skeleton-20260608.md:1-34",
+            "docs/sessions/bdd-feature-add-20260608.md:1-27",
+            "docs/sessions/bdd-regression-bridge-20260608.md:1-38",
+            "src/Tests/BDD/Features/BridgeHandshakeHappyPath.feature",
+            "src/Tests/BDD/Features/BridgeReplayAttackRejection.feature"
+          ]
+        },
+        {
+          "criterion": "The autograder can resolve the full Tier-3 evidence bundle",
+          "pass": false,
+          "evidence": [
+            "src/Tests/Autograder/BridgeAcceptanceEvidence.cs",
+            "src/Tests/Autograder/BridgeAcceptanceScorerTests.cs",
+            "docs/specs/traceability-matrix.md:25-29"
+          ]
+        }
+      ],
+      "pass_count": 3,
+      "total": 8,
+      "score": 0.375
+    }
+  ],
+  "overall_tier": "mvp"
+}

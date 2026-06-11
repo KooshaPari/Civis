@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Updated | 2026-06-10 |
-| State | Engine-only on main — deterministic 100ms-tick sim (P-P1 climate replay complete); playable wave-1 Bevy client pending in PR #333; game NOT yet playable |
+| Updated | 2026-06-11 |
+| State | Playable voxel build via one-click launcher; 15 BUILD-NEXT slices completed; covered 135+ / 1221 traced requirements; 82.6% line coverage; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is currently substrate-only. |
 | Open PRs | #333 (wave-1 playable foundation), #334, #337, #345 |
 | Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
 
-Progress: ███░░░░░░░ 30% (engine foundation; client + gameplay phases pending)
+Progress: ████████▓░░ 82.6% (playable voxel build shipped; BUILD-NEXT 15 slices in; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
 
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml

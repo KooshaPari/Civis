@@ -20,4 +20,9 @@
     <PackageReference Include="FlaUI.Core" Version="4.*" />
     <PackageReference Include="FlaUI.UIA3" Version="4.*" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Support\TestWait.cs">
+      <Link>Support\TestWait.cs</Link>
+    </Compile>
+  </ItemGroup>
 </Project>

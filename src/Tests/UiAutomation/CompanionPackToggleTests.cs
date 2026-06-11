@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FluentAssertions;
@@ -30,7 +31,11 @@ public sealed class CompanionPackToggleTests(CompanionFixture fixture)
         ToggleState stateBefore = toggle.ToggleState;
 
         toggle.Toggle();
-        Thread.Sleep(300);
+        bool toggled = TestWait.UntilAsync(
+            () => toggle.ToggleState != stateBefore,
+            TimeSpan.FromSeconds(2),
+            pollMs: 50).GetAwaiter().GetResult();
+        toggled.Should().BeTrue("toggle state must change after the pack toggle is invoked");
 
         ToggleState stateAfter = toggle.ToggleState;
         stateAfter.Should().NotBe(stateBefore, "toggling should flip the pack's enabled state");

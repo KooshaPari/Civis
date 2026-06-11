@@ -8,6 +8,7 @@ using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.UIA3;
 using FluentAssertions;
+using DINOForge.Tests.Support;
 using Xunit;
 
 namespace DINOForge.Tests.UiAutomation;
@@ -26,7 +27,6 @@ namespace DINOForge.Tests.UiAutomation;
 public sealed class CompanionFixture : IAsyncLifetime
 {
     private const int WindowTimeoutMs = 15_000;
-    private const int NavWaitMs = 400;
 
     private Application? _app;
     private UIA3Automation? _automation;
@@ -35,7 +35,7 @@ public sealed class CompanionFixture : IAsyncLifetime
 
     public Window? MainWindow { get; private set; }
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
         string? exePath = Environment.GetEnvironmentVariable("COMPANION_EXE");
 
@@ -51,9 +51,12 @@ public sealed class CompanionFixture : IAsyncLifetime
         MainWindow = _app.GetMainWindow(_automation, TimeSpan.FromMilliseconds(WindowTimeoutMs));
         MainWindow.Should().NotBeNull("the companion main window must appear within the timeout");
 
-        Thread.Sleep(600);
+        bool windowReady = await TestWait.UntilAsync(
+            () => MainWindow?.IsAvailable == true,
+            TimeSpan.FromSeconds(5),
+            pollMs: 100).ConfigureAwait(false);
+        windowReady.Should().BeTrue("the companion main window must become available before tests continue");
         IsInitialized = true;
-        return Task.CompletedTask;
     }
 
     public Task DisposeAsync()
@@ -71,7 +74,24 @@ public sealed class CompanionFixture : IAsyncLifetime
 
         item.Should().NotBeNull($"navigation item '{navAutomationId}' must be present");
         item!.Click();
-        Thread.Sleep(NavWaitMs);
+
+        string? expectedAutomationId = navAutomationId switch
+        {
+            "NavDashboard" => "DashLoadedCount",
+            "NavPackList" => "PackListView",
+            "NavDebugPanel" => "DebugRefreshButton",
+            "NavSettings" => "SaveButton",
+            _ => null
+        };
+
+        if (expectedAutomationId != null)
+        {
+            bool pageReady = TestWait.UntilAsync(
+                () => RequireWindow().FindFirstDescendant(cf => cf.ByAutomationId(expectedAutomationId)) != null,
+                TimeSpan.FromSeconds(3),
+                pollMs: 50).GetAwaiter().GetResult();
+            pageReady.Should().BeTrue($"navigation to '{navAutomationId}' must settle before continuing");
+        }
     }
 
     public void GoToDashboard() => NavigateTo("NavDashboard");

@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FluentAssertions;
 using Xunit;
@@ -57,7 +58,11 @@ public sealed class CompanionStatusBarTests(CompanionFixture fixture)
 
         // Simulate a state change by waiting — in a real scenario, this would be triggered
         // by a game connection or status update from the bridge
-        Thread.Sleep(500);
+        bool statusStable = TestWait.UntilAsync(
+            () => initialStatus?.IsAvailable == true,
+            TimeSpan.FromSeconds(2),
+            pollMs: 50).GetAwaiter().GetResult();
+        statusStable.Should().BeTrue("status text must remain available while the UI settles");
 
         // Re-query the status text to verify it's still present (no crash/disappearance)
         AutomationElement? updatedStatus = fixture.WaitForElement("StatusText", timeoutMs: 3000);

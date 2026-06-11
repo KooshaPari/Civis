@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Xunit;
 
@@ -53,35 +54,30 @@ public sealed class GameLaunchHotReloadTests(GameLaunchFixture fixture)
 
         File.SetLastWriteTimeUtc(yamlFile, System.DateTime.UtcNow);
 
-        bool reloadDetected = false;
         var sw = System.Diagnostics.Stopwatch.StartNew();
         const double pollTimeoutSeconds = 20.0;
-
-        while (sw.Elapsed.TotalSeconds < pollTimeoutSeconds)
-        {
-            await Task.Delay(500);
-
-            if (hotReloadLogPath != null && LogContainsHotReloadMarker(hotReloadLogPath, logOffset))
+        bool reloadDetected = await TestWait.UntilAsync(
+            async () =>
             {
-                reloadDetected = true;
-                break;
-            }
-
-            try
-            {
-                GameStatus polledStatus = await fixture.Client.StatusAsync();
-                if (polledStatus.EntityCount != initialStatus.EntityCount
-                    && polledStatus.EntityCount >= 0)
+                if (hotReloadLogPath != null && LogContainsHotReloadMarker(hotReloadLogPath, logOffset))
                 {
-                    reloadDetected = true;
-                    break;
+                    return true;
                 }
-            }
-            catch
-            {
-                // Transient error, keep polling
-            }
-        }
+
+                try
+                {
+                    GameStatus polledStatus = await fixture.Client.StatusAsync().ConfigureAwait(false);
+                    return polledStatus.EntityCount != initialStatus.EntityCount
+                        && polledStatus.EntityCount >= 0;
+                }
+                catch
+                {
+                    // Transient error, keep polling.
+                    return false;
+                }
+            },
+            TimeSpan.FromSeconds(pollTimeoutSeconds),
+            pollMs: 500).ConfigureAwait(false);
 
         sw.Stop();
         reloadDetected.Should().BeTrue(

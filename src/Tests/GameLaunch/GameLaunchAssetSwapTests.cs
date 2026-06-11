@@ -42,12 +42,10 @@ public sealed class GameLaunchAssetSwapTests(GameLaunchFixture fixture)
         string patchDir = Path.Combine(bepinexDir!, PatchedBundlesSubdir);
         string debugLogPath = Path.Combine(bepinexDir!, "dinoforge_debug.log");
 
-        // AssetSwap phase 1 runs post-boot (~frame 600, ~10s at 60fps). Wait at least 11s before polling.
-        await Task.Delay(TimeSpan.FromSeconds(11)).ConfigureAwait(false);
-
-        bool patchExists = await WaitForConditionAsync(
+        bool patchExists = await TestWait.UntilAsync(
             () => PatchedBundlesPresent(patchDir) || LogShowsAssetSwapApplied(debugLogPath),
-            timeoutMs: 20_000).ConfigureAwait(false);
+            TimeSpan.FromSeconds(30),
+            pollMs: 500).ConfigureAwait(false);
 
         if (!patchExists)
         {
@@ -307,15 +305,4 @@ public sealed class GameLaunchAssetSwapTests(GameLaunchFixture fixture)
         }
     }
 
-    private static async Task<bool> WaitForConditionAsync(Func<bool> condition, int timeoutMs)
-    {
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
-        while (sw.ElapsedMilliseconds < timeoutMs)
-        {
-            if (condition()) return true;
-            await Task.Delay(250).ConfigureAwait(false);
-        }
-        return false;
-    }
 }
-

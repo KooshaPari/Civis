@@ -44,7 +44,9 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         if (modMenuPanel.MatchedNode?.Visible == true)
         {
             await fixture.Client.ToggleUiAsync("modmenu").ConfigureAwait(false);
-            await Task.Delay(400).ConfigureAwait(false);
+            UiWaitResult closedWait = await fixture.Client.WaitForUiAsync(
+                "name=ModMenuPanel", "hidden", timeoutMs: 5_000);
+            closedWait.Ready.Should().BeTrue("mod menu should close before continuing");
         }
     }
 
@@ -57,14 +59,14 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         fixture.SkipIfNotInitialized();
 
         await fixture.Client!.ToggleUiAsync("debugoverlay");
-        await Task.Delay(300);
+        await WaitForStableBridgeStatusAsync().ConfigureAwait(false);
 
         GameStatus statusAfterToggle = await fixture.Client.StatusAsync();
         statusAfterToggle.EntityCount.Should().BeGreaterThan(0,
             "RuntimeDriver should maintain entity world after F9 toggle");
 
         await fixture.Client.ToggleUiAsync("debugoverlay");
-        await Task.Delay(300);
+        await WaitForStableBridgeStatusAsync().ConfigureAwait(false);
 
         GameStatus statusAfterSecondToggle = await fixture.Client.StatusAsync();
         statusAfterSecondToggle.EntityCount.Should().BeGreaterThan(0,
@@ -104,7 +106,9 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         if (debugState.MatchedNode?.Visible == true)
         {
             await fixture.Client!.ToggleUiAsync("debug").ConfigureAwait(false);
-            await Task.Delay(400).ConfigureAwait(false);
+            UiWaitResult closedWait = await fixture.Client.WaitForUiAsync(
+                "name=DebugPanel", "hidden", timeoutMs: 5_000);
+            closedWait.Ready.Should().BeTrue("debug panel should close before reopening it");
         }
 
         StartGameResult openResult = await fixture.Client!.ToggleUiAsync("debug");
@@ -115,8 +119,6 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
             "name=DebugPanel", "visible", timeoutMs: 5000);
         openWait.Ready.Should().BeTrue(
             "debug panel should be visible after first F9 toggle at main menu");
-
-        await Task.Delay(300);
 
         StartGameResult closeResult = await fixture.Client.ToggleUiAsync("debug");
         closeResult.Success.Should().BeTrue(
@@ -140,7 +142,8 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         startResult.Success.Should().BeTrue(
             "StartGameAsync should enter gameplay from main menu");
 
-        await Task.Delay(3000);
+        WaitResult worldReady = await fixture.Client.WaitForWorldAsync(timeoutMs: 30_000).ConfigureAwait(false);
+        worldReady.Ready.Should().BeTrue("ECS world should be ready after scene transition to gameplay");
 
         GameStatus status = await fixture.Client.StatusAsync();
         status.WorldReady.Should().BeTrue(
@@ -179,14 +182,14 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
             "ECS world should have entities at baseline");
 
         await fixture.Client.ToggleUiAsync("modmenu");
-        await Task.Delay(300);
+        await WaitForStableBridgeStatusAsync().ConfigureAwait(false);
 
         GameStatus openStatus = await fixture.Client.StatusAsync();
         openStatus.EntityCount.Should().Be(initialEntityCount,
             "entity count should remain unchanged when mod menu opens");
 
         await fixture.Client.ToggleUiAsync("modmenu");
-        await Task.Delay(300);
+        await WaitForStableBridgeStatusAsync().ConfigureAwait(false);
 
         GameStatus closedStatus = await fixture.Client.StatusAsync();
         closedStatus.EntityCount.Should().Be(initialEntityCount,
@@ -199,14 +202,17 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
             .ConfigureAwait(false);
         if (sceneResult.Success)
         {
-            await Task.Delay(3000).ConfigureAwait(false);
+            WaitResult worldReady = await fixture.Client.WaitForWorldAsync(timeoutMs: 15_000).ConfigureAwait(false);
+            worldReady.Ready.Should().BeTrue("main menu world should be ready before querying DFCanvas");
         }
 
         UiActionResult modMenuPanel = await QueryDfCanvasPanelAsync("ModMenuPanel").ConfigureAwait(false);
         if (modMenuPanel.MatchedNode?.Visible == true)
         {
             await fixture.Client.ToggleUiAsync("modmenu").ConfigureAwait(false);
-            await Task.Delay(400).ConfigureAwait(false);
+            UiWaitResult closedWait = await fixture.Client.WaitForUiAsync(
+                "name=ModMenuPanel", "hidden", timeoutMs: 5_000);
+            closedWait.Ready.Should().BeTrue("mod menu should close before querying main menu state");
         }
     }
 
@@ -237,6 +243,20 @@ public sealed class GameLaunchOverlayTests(GameLaunchFixture fixture)
         }
 
         return byName;
+    }
+
+    private async Task WaitForStableBridgeStatusAsync()
+    {
+        bool ready = await TestWait.UntilAsync(
+            async () =>
+            {
+                GameStatus status = await fixture.Client!.StatusAsync().ConfigureAwait(false);
+                return status.EntityCount > 0;
+            },
+            TimeSpan.FromSeconds(5),
+            pollMs: 100).ConfigureAwait(false);
+
+        ready.Should().BeTrue("bridge status should remain available after overlay toggle");
     }
 
     private static UiNode? FindUiNodeByName(UiNode root, string name)

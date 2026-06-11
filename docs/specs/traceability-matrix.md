@@ -10,6 +10,24 @@
 
 This document maps user stories, epics, and acceptance criteria to test methods using xUnit `[Trait]` attributes.
 
+## Tier-1 MVP Acceptance Contract
+
+| Spec | Canonical Doc | Focused Test | Result |
+|------|---------------|--------------|--------|
+| `SPEC-TIER1-MVP` | `docs/specs/SPEC-TIER1-MVP.md` | `src/Tools/DinoforgeMcp/tests/test_acceptance_contract_engine.py::test_tier1_mvp_acceptance_contract_scores_pass` | `tier=mvp`, `pass=true` |
+
+## Tier-2 Mature Acceptance Contract
+
+| Spec | Canonical Doc | Evidence Bundle | Result |
+|------|---------------|-----------------|--------|
+| `SPEC-TIER2-MATURE` | `docs/specs/SPEC-TIER2-MATURE.md` | `docs/specs/SPEC-TIER1-MVP.md`, `docs/user-journeys-tier2.md`, `docs/sessions/mutation-bridge-20260608.md`, `docs/sessions/chaos-test-add-20260608.md`, `docs/sessions/perf-baseline-20260608.md`, `docs/sessions/load-test-skeleton-20260608.md` | `tier=mature`, `tier-1 prerequisite=true` |
+
+## Tier-3 Elite Acceptance Contract
+
+| Spec | Canonical Doc | Evidence Bundle | Result |
+|------|---------------|-----------------|--------|
+| `SPEC-TIER3-ELITE` | `docs/specs/SPEC-TIER3-ELITE.md` | `docs/specs/SPEC-TIER1-MVP.md`, `docs/specs/SPEC-TIER2-MATURE.md`, `docs/sessions/spec-tier3-elite-20260608.md`, `docs/sessions/coverage-current-measure-20260608.md`, `docs/sessions/coverage-rerun-20260608.md`, `docs/sessions/coverage-bridge-push-20260608.md`, `docs/sessions/coverage-bridge-push-2-20260608.md`, `docs/sessions/mutation-bridge-20260608.md`, `docs/sessions/mutation-bridge-2-20260608.md`, `docs/sessions/chaos-test-add-20260608.md`, `docs/sessions/chaos-second-test-20260608.md`, `docs/benchmarks/bridge_protocol_baseline_20260518.md`, `docs/benchmarks/pack_load_baseline_20260518.md`, `docs/sessions/perf-baseline-20260608.md`, `docs/sessions/load-test-skeleton-20260608.md`, `docs/sessions/bdd-skeleton-20260608.md`, `docs/sessions/bdd-feature-add-20260608.md` | `tier=elite`, `tier-2 prerequisite=true` |
+
 ### Trait Convention
 
 - **Category**: High-level grouping (e.g., `UserStory`, `Epic`, `Journey`)
@@ -426,9 +444,52 @@ public class PackLoadingTests
 | [SPEC-005](./SPEC-005-duplicate-instance-bypass.md) | Cancelled / Superseded | `boot.config` `single-instance=0` |
 | [SPEC-006](./SPEC-006-prove-features-video-pipeline.md) | Superseded | [v2 design](../superpowers/specs/2026-03-27-prove-features-video-pipeline-v2-design.md) |
 | [SPEC-007](./SPEC-007-runtime-features-baseline.md) | Active | Runtime feature baseline; GameLaunch + `ModMenuTests` characterization |
+| [SPEC-TIER1-MVP](./SPEC-TIER1-MVP.md) | Draft | Traceability anchor for `tick13-autograder-spec-shape` (`src/Tools/DinoforgeMcp/tests/test_external_judge.py::test_receipt_exports_spec_shaped_autograder_payload`) and the `tick14-tier1-scoring-wire` focused autograder test wiring |
+| [SPEC-TIER2-MATURE](./SPEC-TIER2-MATURE.md) | Draft | Tier-2 mature acceptance contract; requires Tier-1 MVP, mutation, chaos, perf, and load evidence |
+| [SPEC-TIER3-ELITE](./SPEC-TIER3-ELITE.md) | Draft | Tier-3 elite acceptance contract; requires Tier-2 Mature, Bridge coverage, mutation, chaos, perf, load, and BDD evidence |
 | [M13](./M13-runtime-survival-hmr-concurrency.md) | Draft | HMR and concurrent instances |
 
 ---
 
 **Last Updated**: 2026-05-23
+**Next Review**: After each release
+
+---
+
+## Coverage Addendum — 2026-06-11 (PR #279, wsm/agileplus-dag)
+
+Systematic unit-coverage of the SDK model validators and Bridge protocol DTOs,
+each test verified under the exact CI gate (`CI=true GameInstalled=false dotnet test`).
+
+### SDK Models — `Validate()` branch coverage
+| Type | Test file | Cases | Branches covered |
+|------|-----------|------:|------------------|
+| `ResourceCost` | `src/Tests/SDK/ResourceCostCoverageTests.cs` | 9 | 6 non-negativity rules + aggregation |
+| `BuildingDefinition` | `src/Tests/SDK/BuildingDefinitionCoverageTests.cs` | 1 | Validate happy path |
+| `ProjectileDefinition` | `src/Tests/SDK/ProjectileDefinitionCoverageTests.cs` | 1 | Validate happy path |
+| `DoctrineDefinition` | `src/Tests/SDK/DoctrineDefinitionCoverageTests.cs` | 6 | Id / DisplayName / Modifier-non-negative / multi |
+| `FactionDefinition` | `src/Tests/SDK/FactionDefinitionCoverageTests.cs` | 15 | required fields + hex-color validation (4 reject paths) |
+| `FactionPatchDefinition` | `src/Tests/SDK/FactionPatchDefinitionCoverageTests.cs` | 7 | TargetFaction + at-least-one-addition |
+| `CrosswalkDictionary` | `src/Tests/SDK/CrosswalkDictionaryCoverageTests.cs` | 1 | — |
+| `DependencyResult` | `src/Tests/SDK/DependencyResultCoverageTests.cs` | — | — |
+| `AerialProperties` | `src/Tests/SDK/AerialPropertiesCoverageTests.cs` | 2 | — |
+
+### Bridge.Protocol DTOs — defaults + JSON round-trip (wire-contract guard)
+| Type(s) | Test file | Cases |
+|---------|-----------|------:|
+| `QueryResult` / `StatResult` / `OverrideResult` (+ `EntityInfo`) | `src/Tests/Bridge/ResultDtosCoverageTests.cs` | 6 |
+| `ProtocolException` / `ReloadResult` | `src/Tests/Bridge/ProtocolExceptionCoverageTests.cs` | 5 |
+| `ResourceSnapshot` / `CatalogSnapshot` (+ `CatalogEntry`) | `src/Tests/Bridge/SnapshotDtosCoverageTests.cs` | 4 |
+| `LoadSceneResult` / `ScreenshotResult` / `ComponentMapResult` (+ `ComponentMapEntry`) | `src/Tests/Bridge/SceneAndMapDtosCoverageTests.cs` | 7 |
+| `NavigationResult` (+ `NavigationStepResult`) | `src/Tests/Bridge/NavigationResultCoverageTests.cs` | 3 |
+
+**Round-trip rationale:** these DTOs cross the BepInEx↔CLI named-pipe boundary as JSON;
+serialize→deserialize→assert guards against silent property/casing drift in the protocol.
+
+**Flaky-test hardening (same PR):** GameClient + GameLaunch + UiAutomation flaky timeouts
+converted to `TestWait.UntilAsync` (Pattern #108). See `docs/sessions/forge-audits/flaky-test-audit-20260610.md`.
+
+---
+
+**Last Updated**: 2026-06-11
 **Next Review**: After each release

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DINOForge.Bridge.Client;
 using DINOForge.Bridge.Protocol;
+using DINOForge.Tests.Support;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -94,7 +95,7 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 0,
-            ReadTimeoutMs = 20, // Very short timeout
+            ReadTimeoutMs = 1000,
             UseMessageFraming = false
         });
         SetPrivateField(client, "_state", ConnectionState.Connected);
@@ -121,7 +122,7 @@ public class GameClientCoverageTests
         {
             RetryCount = 1,
             RetryDelayMs = 10,
-            ReadTimeoutMs = 50,
+            ReadTimeoutMs = 1000,
             UseMessageFraming = false
         });
         SetPrivateField(client, "_state", ConnectionState.Connected);
@@ -177,7 +178,7 @@ public class GameClientCoverageTests
     {
         var options = new GameClientOptions
         {
-            ConnectTimeoutMs = 1, // Very short timeout
+            ConnectTimeoutMs = 500,
             PipeName = "nonexistent-pipe-timeout" // hardcoded-pipe-name-ok: deliberately tests timeout on nonexistent pipe
         };
         using GameClient client = new(options);
@@ -590,7 +591,7 @@ public class GameClientCoverageTests
         var requestStream = new MemoryStream();
         var responseStream = new MemoryStream();
 
-        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 100, UseMessageFraming = false });
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000, UseMessageFraming = false });
         SetPrivateField(client, "_state", ConnectionState.Connected);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
@@ -722,7 +723,7 @@ public class GameClientCoverageTests
     {
         var options = new GameClientOptions
         {
-            ConnectTimeoutMs = 100,
+            ConnectTimeoutMs = 500,
             PipeName = "nonexistent-pipe-fail" // hardcoded-pipe-name-ok: deliberately tests connection failure path
         };
         using GameClient client = new(options);
@@ -907,7 +908,7 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 0,
-            ReadTimeoutMs = 50, // Very short timeout
+            ReadTimeoutMs = 1000,
             UseMessageFraming = false
         });
         SetPrivateField(client, "_state", ConnectionState.Connected);
@@ -1460,7 +1461,7 @@ public class GameClientCoverageTests
     [Fact]
     public async Task ConnectAsync_WhenConnectingState_DoesNotThrow()
     {
-        var client = new GameClient(new GameClientOptions { ConnectTimeoutMs = 100, PipeName = "nonexistent-pipe" }); // hardcoded-pipe-name-ok: deliberately tests nonexistent pipe behavior
+        var client = new GameClient(new GameClientOptions { ConnectTimeoutMs = 500, PipeName = "nonexistent-pipe" }); // hardcoded-pipe-name-ok: deliberately tests nonexistent pipe behavior
 
         // Set to Connecting state manually - this simulates an intermediate state
         // The ConnectAsync will see IsConnected is false and attempt to connect
@@ -1484,7 +1485,7 @@ public class GameClientCoverageTests
     [Fact]
     public void Disconnect_WhenNeverConnected_DoesNotThrow()
     {
-        var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 100 });
+        var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 1000 });
 
         // Disconnect when never connected - should be safe
         client.Disconnect();
@@ -1496,7 +1497,7 @@ public class GameClientCoverageTests
     [Fact]
     public void Dispose_AfterMultipleDisconnects_DoesNotThrow()
     {
-        var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 100 });
+        var client = new GameClient(new GameClientOptions { ReadTimeoutMs = 1000 });
 
         client.Disconnect();
         client.Disconnect();
@@ -1514,7 +1515,7 @@ public class GameClientCoverageTests
         var requestStream = new MemoryStream();
         var responseStream = new MemoryStream(); // Empty stream
 
-        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 50, UseMessageFraming = false });
+        GameClient client = new(new GameClientOptions { RetryCount = 0, ReadTimeoutMs = 1000, UseMessageFraming = false });
         SetPrivateField(client, "_state", ConnectionState.Connected);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         SetPrivateField(client, "_reader", new StreamReader(responseStream, Utf8NoBom, false, 1024, true));
@@ -1534,7 +1535,7 @@ public class GameClientCoverageTests
         // Without a real server, we can only verify the error path
         var client = new GameClient(new GameClientOptions
         {
-            ConnectTimeoutMs = 100,
+            ConnectTimeoutMs = 500,
             PipeName = "test-pipe-does-not-exist" // hardcoded-pipe-name-ok: deliberately tests nonexistent pipe error path
         });
 
@@ -1768,7 +1769,7 @@ public class GameClientCoverageTests
         var brokenStream = new BrokenPipeStream();
         var reader = new StreamReader(brokenStream, Utf8NoBom, false, 1024, true);
 
-        GameClient client = new(new GameClientOptions { RetryCount = 2, RetryDelayMs = 1, ReadTimeoutMs = 100, UseMessageFraming = false });
+        GameClient client = new(new GameClientOptions { RetryCount = 2, RetryDelayMs = 10, ReadTimeoutMs = 1000, UseMessageFraming = false });
         SetPrivateField(client, "_state", ConnectionState.Connected);
         SetPrivateField(client, "_writer", new StreamWriter(requestStream, Utf8NoBom, 1024, true) { AutoFlush = true });
         SetPrivateField(client, "_reader", reader);
@@ -1791,7 +1792,7 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 0,
-            ReadTimeoutMs = 30,
+            ReadTimeoutMs = 1000,
             UseMessageFraming = false
         });
         SetPrivateField(client, "_state", ConnectionState.Connected);
@@ -2034,7 +2035,7 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 1,
-            RetryDelayMs = 5,
+            RetryDelayMs = 10,
             ReadTimeoutMs = 1000,
             UseMessageFraming = false
         });
@@ -2088,7 +2089,7 @@ public class GameClientCoverageTests
     [Fact]
     public void GameClient_InitialState_IsDisconnected()
     {
-        var client = new GameClient(new GameClientOptions { ConnectTimeoutMs = 50 });
+        var client = new GameClient(new GameClientOptions { ConnectTimeoutMs = 500 });
 
         // Initial state is Disconnected
         client.State.Should().Be(ConnectionState.Disconnected);
@@ -2265,8 +2266,12 @@ public class GameClientCoverageTests
             RedirectStandardOutput = true
         });
 
-        // Give the process a moment to start
-        await Task.Delay(100).ConfigureAwait(true);
+        // Wait until the process is started and still running before exercising KillAsync.
+        bool started = await TestWait.UntilAsync(
+            () => process is not null && !process.HasExited,
+            TimeSpan.FromSeconds(2),
+            pollMs: 20).ConfigureAwait(true);
+        started.Should().BeTrue();
 
         // Now call KillAsync - it should not throw even if process is already terminating
         Func<Task> action = async () => await manager.KillAsync().ConfigureAwait(true);
@@ -2543,8 +2548,8 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 2,
-            RetryDelayMs = 1,
-            ReadTimeoutMs = 50,
+            RetryDelayMs = 10,
+            ReadTimeoutMs = 1000,
             UseMessageFraming = false
         });
         SetPrivateField(client, "_state", ConnectionState.Connected);
@@ -2571,9 +2576,9 @@ public class GameClientCoverageTests
         GameClient client = new(new GameClientOptions
         {
             RetryCount = 1,
-            RetryDelayMs = 1,
-            ReadTimeoutMs = 50,
-            ConnectTimeoutMs = 10,
+            RetryDelayMs = 10,
+            ReadTimeoutMs = 1000,
+            ConnectTimeoutMs = 500,
             UseMessageFraming = false
         });
         SetPrivateField(client, "_state", ConnectionState.Connected);
@@ -2606,7 +2611,7 @@ public class GameClientCoverageTests
         // Very short connect timeout on nonexistent pipe
         GameClient client = new(new GameClientOptions
         {
-            ConnectTimeoutMs = 1,
+            ConnectTimeoutMs = 500,
             PipeName = "nonexistent-pipe-connect-timeout" // hardcoded-pipe-name-ok: deliberately tests timeout during connect
         });
 

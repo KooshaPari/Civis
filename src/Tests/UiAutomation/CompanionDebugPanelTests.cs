@@ -1,5 +1,6 @@
 #nullable enable
-using System.Threading;
+using System;
+using DINOForge.Tests.Support;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FluentAssertions;
@@ -52,7 +53,11 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
         btn!.AsButton().Invoke();
 
         // Allow async ViewModel.RefreshAsync to complete
-        Thread.Sleep(800);
+        bool sectionsReady = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindFirstDescendant(cf => cf.ByAutomationId("DebugSectionsControl")) != null,
+            TimeSpan.FromSeconds(5),
+            pollMs: 50).GetAwaiter().GetResult();
+        sectionsReady.Should().BeTrue("debug sections must appear after refresh completes");
 
         AutomationElement? sections = fixture.WaitForElement("DebugSectionsControl");
         sections.Should().NotBeNull(
@@ -68,7 +73,11 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
         AutomationElement? btn = fixture.WaitForElement("DebugRefreshButton");
         btn!.AsButton().Invoke();
-        Thread.Sleep(800);
+        bool expandersReady = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindAllDescendants(cf => cf.ByControlType(ControlType.Group)).Length > 0,
+            TimeSpan.FromSeconds(5),
+            pollMs: 50).GetAwaiter().GetResult();
+        expandersReady.Should().BeTrue("debug sections must render after refresh completes");
 
         // Expanders are rendered inside the DebugSectionsControl ItemsControl.
         // In UIA, WinUI Expanders appear as Group or custom control types.
@@ -88,7 +97,11 @@ public sealed class CompanionDebugPanelTests(CompanionFixture fixture)
 
         AutomationElement? btn = fixture.WaitForElement("DebugRefreshButton");
         btn!.AsButton().Invoke();
-        Thread.Sleep(800);
+        bool textReady = TestWait.UntilAsync(
+            () => fixture.MainWindow!.FindAllDescendants(cf => cf.ByControlType(ControlType.Text)).Length > 0,
+            TimeSpan.FromSeconds(5),
+            pollMs: 50).GetAwaiter().GetResult();
+        textReady.Should().BeTrue("debug panel text must be available after refresh completes");
 
         // Gather all visible TextBlock names — section headers show as TextBlock content
         AutomationElement[] texts = fixture.MainWindow!

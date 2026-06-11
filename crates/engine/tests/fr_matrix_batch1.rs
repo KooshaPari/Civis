@@ -42,6 +42,7 @@ use civ_voxel::{MaterialId, WorldCoord};
 use tempfile::NamedTempFile;
 
 // ---------------------------------------------------------------- FR-LOD-001
+/// Covers FR-LOD-001.
 /// FR-LOD-001 — two zoom levels (Strategic, Operational) are defined and
 /// distinct (the engine SHALL support two zoom levels: strategic/region and
 /// operational/district/hex).
@@ -57,6 +58,7 @@ fn fr_lod_001_two_levels_defined() {
 }
 
 // ---------------------------------------------------------------- FR-LOD-002
+/// Covers FR-LOD-002.
 /// FR-LOD-002 — strategic view aggregates district populations into a region
 /// summary each tick. `aggregate_strategic` must sum all district populations
 /// exactly (no rounding, no cap).
@@ -73,6 +75,7 @@ fn fr_lod_002_strategic_aggregation() {
 }
 
 // ---------------------------------------------------------------- FR-LOD-003
+/// Covers FR-LOD-003.
 /// FR-LOD-003 — LOD transitions do not alter simulation state, only view
 /// projection. `project_zoom` must be the identity on the tick axis for any
 /// zoom level.
@@ -89,6 +92,7 @@ fn fr_lod_003_transition_no_state_mutation() {
 }
 
 // ---------------------------------------------------------------- FR-LOD-004
+/// Covers FR-LOD-004.
 /// FR-LOD-004 — operational view exposes per-hex resource and population
 /// data. `operational_hex_snapshot` must round-trip both fields verbatim.
 #[test]
@@ -120,6 +124,7 @@ fn fr_lod_004_operational_hex_data_visible() {
 }
 
 // ---------------------------------------------------------------- FR-CORE-005
+/// Covers FR-CORE-005.
 /// FR-CORE-005 — the engine SHALL emit a BLAKE3 hash of full world state at
 /// the end of every tick. After a `Simulation::tick()` call the
 /// `hash_chain_root` is `Some` and is exactly the BLAKE3 chain root that
@@ -146,6 +151,7 @@ fn fr_core_005_tick_hash_emitted() {
 }
 
 // ---------------------------------------------------------------- FR-CORE-006
+/// Covers FR-CORE-006.
 /// FR-CORE-006 — consecutive tick hashes SHALL form an append-only chain
 /// (each hash includes the prior hash). Verifies (a) the chain is strictly
 /// advancing off genesis, (b) each new tick strictly changes the root, and
@@ -183,6 +189,7 @@ fn fr_core_006_chain_includes_prior() {
 }
 
 // ---------------------------------------------------------------- FR-REPLAY-001
+/// Covers FR-REPLAY-001.
 /// FR-REPLAY-001 — `.civreplay` container has a header (magic + version +
 /// payload length) and a SHA-256 footer over header+payload; tampering with
 /// either the payload or the footer is detected. Round-trip preserves the
@@ -254,6 +261,7 @@ fn fr_replay_001_civreplay_roundtrip_and_tamper_detection() {
 }
 
 // ---------------------------------------------------------------- FR-MOD-004
+/// Covers FR-MOD-004.
 /// FR-MOD-004 — the engine SHALL emit `mod.loaded.v1`, `mod.unloaded.v1`, and
 /// `mod.error.v1` events. `ReplayLog::record_mod_loaded` / `record_mod_unloaded`
 /// push a typed `ReplayEvent` whose `bus_json` field is well-formed JSON of
@@ -312,6 +320,7 @@ fn fr_mod_004_lifecycle_events_emitted() {
 }
 
 // ---------------------------------------------------------------- FR-SAVE-002
+/// Covers FR-SAVE-002.
 /// FR-SAVE-002 — save SHALL emit `session.saved.v1` on success (or
 /// `session.save_failed.v1` on error). The engine routes the success event
 /// through `ReplayLog::record_session_saved`, which produces a JSON payload
@@ -340,6 +349,7 @@ fn fr_save_002_save_events_emitted() {
 }
 
 // ---------------------------------------------------------------- FR-API-001
+/// Covers FR-API-001.
 /// FR-API-001 — versioned scenario YAML; load-time schema validation;
 /// CI-validated example. The bundled `scenarios/baseline.yaml` parses
 /// against `SCENARIO_SCHEMA_VERSION` and yields the documented default
@@ -370,6 +380,7 @@ fn fr_api_001_baseline_yaml_parses() {
 }
 
 /// FR-API-001 (companion) — version drift is rejected with
+/// Covers FR-API-001.
 /// `ScenarioError::UnsupportedVersion`, proving load-time schema validation.
 #[test]
 fn fr_api_001_unsupported_version_rejected() {

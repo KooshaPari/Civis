@@ -121,6 +121,7 @@ fn reject_operator(op: Operator<'_>) -> Option<&'static str> {
 mod tests {
     use super::*;
 
+    /// Covers FR-CIV-TACTICS-061.
     #[test]
     fn fr_civ_tactics_061_green_rejects_non_deterministic_sqrt_instruction() {
         const WAT: &str = r#"
@@ -137,6 +138,7 @@ mod tests {
         assert!(matches!(err, DeterminismError::RejectedInstruction { .. }));
     }
 
+    /// Covers FR-CIV-TACTICS-057.
     #[test]
     fn fr_civ_tactics_057_green_reports_float_contamination_statistics() {
         const WAT: &str = r#"

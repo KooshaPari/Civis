@@ -1469,6 +1469,7 @@ async fn ws_client_receives_text_frames_after_tick() {
 }
 
 /// FR-PROTO-001: ten concurrent clients each receive tick-broadcast text frames.
+/// Covers FR-PROTO-001.
 #[tokio::test]
 async fn ws_ten_clients_each_receive_text_frame() {
     const MAX_CLIENTS: usize = 10;
@@ -1712,6 +1713,7 @@ async fn ws_jsonrpc_sim_damage_accepts_event() {
 }
 
 /// FR-CIV-UX-006 — spawn palette kinds accepted over WS JSON-RPC.
+/// Covers FR-CIV-UX-006.
 #[tokio::test]
 async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
     let kinds = ["civilian", "vehicle", "airport", "port", "hangar"];

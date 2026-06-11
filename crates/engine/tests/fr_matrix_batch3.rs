@@ -16,6 +16,7 @@ use civ_voxel::{MaterialId, WorldCoord};
 use tempfile::NamedTempFile;
 
 // FR-LOD-001
+/// Covers FR-LOD-001.
 #[test]
 fn fr_lod_001_has_strategic_and_operational_levels() {
     let levels = [ZoomLevel::Strategic, ZoomLevel::Operational];
@@ -24,6 +25,7 @@ fn fr_lod_001_has_strategic_and_operational_levels() {
 }
 
 // FR-LOD-002
+/// Covers FR-LOD-002.
 #[test]
 fn fr_lod_002_aggregates_strategic_regions() {
     assert_eq!(aggregate_strategic(&[100, 200, 50]), 350);
@@ -31,6 +33,7 @@ fn fr_lod_002_aggregates_strategic_regions() {
 }
 
 // FR-LOD-003
+/// Covers FR-LOD-003.
 #[test]
 fn fr_lod_003_project_zoom_is_view_only() {
     for tick in [0_u64, 1, 7, 64] {
@@ -40,6 +43,7 @@ fn fr_lod_003_project_zoom_is_view_only() {
 }
 
 // FR-LOD-004
+/// Covers FR-LOD-004.
 #[test]
 fn fr_lod_004_returns_operational_snapshot_fields() {
     let cell: HexCellSnapshot = operational_hex_snapshot(12, 500);
@@ -48,6 +52,7 @@ fn fr_lod_004_returns_operational_snapshot_fields() {
 }
 
 // FR-CORE-005
+/// Covers FR-CORE-005.
 #[test]
 fn fr_core_005_tick_hash_is_emitted() {
     let mut sim = Simulation::with_seed(1);
@@ -60,6 +65,7 @@ fn fr_core_005_tick_hash_is_emitted() {
 }
 
 // FR-CORE-006
+/// Covers FR-CORE-006.
 #[test]
 fn fr_core_006_chain_is_append_only() {
     let mut sim = Simulation::with_seed(2);
@@ -79,6 +85,7 @@ fn fr_core_006_chain_is_append_only() {
 }
 
 // FR-REPLAY-001
+/// Covers FR-REPLAY-001.
 #[test]
 fn fr_replay_001_roundtrips_and_detects_tamper() {
     let mut log = ReplayLog::default();
@@ -111,6 +118,7 @@ fn fr_replay_001_roundtrips_and_detects_tamper() {
 }
 
 // FR-MOD-004
+/// Covers FR-MOD-004.
 #[test]
 fn fr_mod_004_reports_mod_loaded_and_unloaded_events() {
     let mut log = ReplayLog::default();
@@ -141,6 +149,7 @@ fn fr_mod_004_reports_mod_loaded_and_unloaded_events() {
 }
 
 // FR-SAVE-002
+/// Covers FR-SAVE-002.
 #[test]
 fn fr_save_002_formats_session_saved_event_payload() {
     let payload = format_session_saved_event_json("sess-1", "save-abc", "slot-1", 42, 2048);
@@ -150,6 +159,7 @@ fn fr_save_002_formats_session_saved_event_payload() {
 }
 
 // FR-API-001
+/// Covers FR-API-001.
 #[test]
 fn fr_api_001_loads_baseline_scenario() {
     let scenario = load_scenario(baseline_scenario_path()).expect("baseline scenario");

@@ -558,17 +558,20 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-TACTICS-047.
     #[test]
     fn fr_civ_tactics_047_green_host_import_module_constant_is_civlab() {
         assert_eq!(HOST_IMPORT_MODULE, "civlab");
     }
 
+    /// Covers FR-CIV-TACTICS-053.
     #[test]
     fn fr_civ_tactics_053_green_host_capability_imports_include_world_read() {
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"world_read"));
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"action_emit"));
     }
 
+    /// Covers FR-CIV-TACTICS-049.
     #[test]
     fn fr_civ_tactics_049_green_trims_guest_memory_before_call_out_of_bounds_write() {
         let mut mem = vec![0u8; HOST_GUEST_MEMORY_CAP + 5];

@@ -74,6 +74,7 @@ fn empty_world() -> VoxelWorld<MaterialId> {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-000
+/// Covers FR-CIV-TACTICS-000.
 #[test]
 fn fr_civ_tactics_000_schema_version_is_semver_like() {
     let root = SCHEMA_VERSION.split('-').next().unwrap_or_default();
@@ -83,6 +84,7 @@ fn fr_civ_tactics_000_schema_version_is_semver_like() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-001
+/// Covers FR-CIV-TACTICS-001.
 #[test]
 fn fr_civ_tactics_001_apply_damage_erosion() {
     let mut world = world_for_damage();
@@ -101,6 +103,7 @@ fn fr_civ_tactics_001_apply_damage_erosion() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-010
+/// Covers FR-CIV-TACTICS-010.
 #[test]
 fn fr_civ_tactics_010_evolve_doctrine_is_deterministic() {
     let mut lib_a = DoctrineLibrary {
@@ -128,6 +131,7 @@ fn fr_civ_tactics_010_evolve_doctrine_is_deterministic() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-020
+/// Covers FR-CIV-TACTICS-020.
 #[test]
 fn fr_civ_tactics_020_los_respects_solid_blockers() {
     let mut world = empty_world();
@@ -156,6 +160,7 @@ fn fr_civ_tactics_020_los_respects_solid_blockers() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-021
+/// Covers FR-CIV-TACTICS-021.
 #[test]
 fn fr_civ_tactics_021_formation_offsets_are_centered_for_lines() {
     assert_eq!(formation_offsets(FormationKind::Line, 1), vec![(0, 0)]);
@@ -163,6 +168,7 @@ fn fr_civ_tactics_021_formation_offsets_are_centered_for_lines() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-022
+/// Covers FR-CIV-TACTICS-022.
 #[test]
 fn fr_civ_tactics_022_war_bridge_resolves_engagements_by_cadence() {
     let world = empty_world();
@@ -180,6 +186,7 @@ fn fr_civ_tactics_022_war_bridge_resolves_engagements_by_cadence() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-023
+/// Covers FR-CIV-TACTICS-023.
 #[test]
 fn fr_civ_tactics_023_drops_score_for_engagement_pressure() {
     let doctrine = Doctrine {
@@ -199,6 +206,7 @@ fn fr_civ_tactics_023_drops_score_for_engagement_pressure() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-024
+/// Covers FR-CIV-TACTICS-024.
 #[test]
 fn fr_civ_tactics_024_war_bridge_formation_positions_track_unit_count() {
     let world = empty_world();
@@ -213,6 +221,7 @@ fn fr_civ_tactics_024_war_bridge_formation_positions_track_unit_count() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-033
+/// Covers FR-CIV-TACTICS-033.
 #[test]
 fn fr_civ_tactics_033_bfs_moves_toward_goal_with_blocked_cells() {
     let blocked = |x: i32, y: i32| x == 1 && y == 0;
@@ -223,6 +232,7 @@ fn fr_civ_tactics_033_bfs_moves_toward_goal_with_blocked_cells() {
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-037
+/// Covers FR-CIV-TACTICS-037.
 #[test]
 fn fr_civ_tactics_037_astar_finds_blocked_path() {
     let blocked = |x: i32, y: i32| x == 1 && y == 0;

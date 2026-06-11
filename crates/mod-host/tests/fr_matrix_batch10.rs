@@ -8,15 +8,15 @@
 //! `agileplus-specs/civ-021-recovered-requirements/spec.md`. All IDs in
 //! this file were IMPL-NO-TEST before this commit.
 //!
-//! Covered IDs (10):
+//! Covered IDs (13):
 //!   FR-CIV-TACTICS-038, FR-CIV-TACTICS-058, FR-CIV-TACTICS-059,
 //!   FR-CIV-TACTICS-060, FR-CIV-TACTICS-062, FR-CIV-TACTICS-064,
 //!   FR-CIV-TACTICS-067, FR-CIV-TACTICS-069, FR-CIV-TACTICS-070,
-//!   FR-CIV-TACTICS-072
+//!   FR-CIV-TACTICS-072, FR-MOD-002, FR-MOD-003, FR-MOD-005
 
 use civ_mod_host::{
     example_economic_mod_dir, example_policy_mod_dir, format_mod_loaded_event,
-    format_mod_loaded_event_json, format_mod_unloaded_event_json, ModBrowserEntry, ModHost,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, ModBrowserEntry, ModHost, ModType,
     ModStatus, ModUnloadedRecord, MOD_GUEST_STATE_VERSION,
 };
 use civ_save_db::{format_session_saved_event_json, SaveDb, SessionSaveRecord};
@@ -285,4 +285,173 @@ fn fr_mod_001_load_mod_records_stable_id() {
     assert_eq!(record.mod_id, "example-policy");
     assert!(!record.mod_name.is_empty());
     assert!(!record.version.is_empty());
+}
+
+/// Covers FR-MOD-002.
+/// FR-MOD-002 — Mod execution is sandboxed by restricting host imports to
+/// `civlab` capability stubs; guest imports outside that contract must fail.
+#[test]
+fn fr_mod_002_rejects_disallowed_host_imports() {
+    const WAT: &str = r#"
+        (module
+          (import "wasi_snapshot_preview1" "fd_write" (func $fd_write (param i32 i32 i32 i32) (result i32)))
+          (func (export "civlab_policy_tick") (param i64) (result i32)
+            (call $fd_write (i32.const 0) (i32.const 0) (i32.const 0) (i32.const 0))
+            (i32.const 0))
+        )
+    "#;
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        dir.path().join("manifest.toml"),
+        r#"
+[mod]
+id = "mod-no-sandbox"
+name = "Mod No Sandbox"
+version = "0.1.0"
+api_version = "1"
+mod_type = "policy"
+author = "deployer"
+description = "sandbox test"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+    )
+    .expect("write manifest");
+    std::fs::write(dir.path().join("mod.wasm"), wat::parse_str(WAT).expect("wat")).expect("write wasm");
+
+    let mut host = ModHost::new();
+    host.load_manifest_dir(dir.path()).expect("load mod");
+    let lines = host.tick(1);
+    assert!(lines.iter().any(|line| line.contains("mod.error.v1")), "{lines:?}");
+}
+
+/// Covers FR-MOD-003.
+/// FR-MOD-003 — Mod state participates in save/load by round-tripping mod scratch
+/// bytes via `ModGuestStateSave`.
+#[test]
+fn fr_mod_003_state_persists_across_save_load_roundtrip() {
+    const WAT: &str = r#"
+        (module
+          (import "civlab" "memory_write" (func $write (param i32 i32)))
+          (func (export "civlab_policy_tick") (param i64) (result i32)
+            (i32.const 0)
+            (i32.const 77)
+            (call $write)
+            (i32.const 77))
+        )
+    "#;
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        dir.path().join("manifest.toml"),
+        r#"
+[mod]
+id = "mod-state-demo"
+name = "State Demo"
+version = "0.1.0"
+api_version = "1"
+mod_type = "policy"
+author = "deployer"
+description = "state test"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[permissions]
+write_policy = true
+"#,
+    )
+    .expect("write manifest");
+    std::fs::write(dir.path().join("mod.wasm"), wat::parse_str(WAT).expect("wat")).expect("write wasm");
+
+    let mut host = ModHost::new();
+    host.load_manifest_dir(dir.path()).expect("load");
+    let _ = host.tick(9);
+    assert_eq!(host.guest_memory_snapshot("mod-state-demo").first().copied(), Some(77));
+
+    let save = host.export_guest_state();
+    assert_eq!(save.memories.len(), 1);
+    let mut next = ModHost::new();
+    next.import_guest_state(&save).expect("import");
+    assert_eq!(next.guest_memory_snapshot("mod-state-demo").first().copied(), Some(77));
+}
+
+/// Covers FR-MOD-005.
+/// FR-MOD-005 — Mod manifests can declare extension-facing dependencies and are
+/// registered with catalog-facing metadata that allows policy/event wiring surfaces.
+#[test]
+fn fr_mod_005_registers_manifest_with_dependency_metadata() {
+    let policy_dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        policy_dir.path().join("manifest.toml"),
+        r#"
+[mod]
+id = "mod-policy"
+name = "Policy Mod"
+version = "0.1.0"
+api_version = "1"
+mod_type = "policy"
+author = "deployer"
+description = "policy registry test"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+
+[dependencies.mods]
+base-policy = "^1.0"
+
+[permissions]
+write_policy = true
+"#,
+    )
+    .expect("write manifest");
+
+    let event_dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        event_dir.path().join("manifest.toml"),
+        r#"
+[mod]
+id = "mod-event"
+name = "Event Mod"
+version = "0.1.0"
+api_version = "1"
+mod_type = "event"
+author = "deployer"
+description = "event registry test"
+
+[dependencies]
+civlab-api = ">=1.0.0, <2.0.0"
+"#,
+    )
+    .expect("write manifest");
+
+    let mut host = ModHost::new();
+    host.load_manifest_dir(policy_dir.path()).expect("load policy");
+    host.load_manifest_dir(event_dir.path()).expect("load event");
+
+    let policy_entry = host
+        .mods()
+        .iter()
+        .find(|entry| entry.manifest.meta.id == "mod-policy")
+        .expect("policy entry");
+    assert_eq!(policy_entry.manifest.meta.mod_type, ModType::Policy);
+    let deps = policy_entry
+        .manifest
+        .dependencies
+        .mods
+        .as_ref()
+        .expect("dependency map");
+    assert_eq!(deps.get("base-policy").expect("base dependency"), "^1.0");
+
+    let mut mod_types = host
+        .browser_entries()
+        .into_iter()
+        .map(|entry| entry.mod_type)
+        .collect::<Vec<_>>();
+    mod_types.sort_unstable();
+    assert!(mod_types.contains(&"event".to_string()));
+    assert!(mod_types.contains(&"policy".to_string()));
 }

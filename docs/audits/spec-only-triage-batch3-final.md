@@ -5,23 +5,23 @@ Source: SPEC-ONLY rows `121-179` in `docs/audits/fr-matrix.json` (continuing aft
 Total rows: `59`
 Verdict counts:
 
-- `BUILD-NEXT`: `0`
-- `DEFER`: `59`
+- `BUILD-NEXT`: `3`
+- `DEFER`: `56`
 - `ARCHIVE`: `0`
 
 Cumulative summary across all 3 batches:
 
-- `BUILD-NEXT`: `52`
-- `DEFER`: `103`
+- `BUILD-NEXT`: `55`
+- `DEFER`: `100`
 - `ARCHIVE`: `24`
 
 | # | FR ID | Epic | Spec | Verdict | Notes |
 |---|---|---|---|---|---|
 | 121 | FR-METRICS-004 | FR-METRICS | `docs/FR.md` | DEFER | Non-blocking metrics instrumentation detail; no visible gameplay closure coupling to current parity benchmark. |
 | 122 | FR-METRICS-005 | FR-METRICS | `docs/FR.md` | DEFER | Metric taxonomy completion can follow shipped KPI pipeline; not a 1.0 parity blocker. |
-| 123 | FR-MOD-002 | FR-MOD | `docs/traceability/TRACEABILITY_MATRIX.md` | DEFER | Mod lifecycle details are useful but out of scope until mod tick/host hardening already prioritized. |
-| 124 | FR-MOD-003 | FR-MOD | `docs/traceability/TRACEABILITY_MATRIX.md` | DEFER | Spec-only mod loader behavior without gameplay dependency; defer behind core replay/mod-host loop completion. |
-| 125 | FR-MOD-005 | FR-MOD | `docs/traceability/TRACEABILITY_MATRIX.md` | DEFER | Additional mod management behavior is post-1.0 polish versus active partial-good mod pipeline priorities. |
+| 123 | FR-MOD-002 | FR-MOD | `docs/traceability/TRACEABILITY_MATRIX.md` | BUILD-NEXT | Top-20 gap #13 (`mod store/publish`): promote to build-next so player-visible mod lifecycle behavior stays safe before shipping the next catalog slice. |
+| 124 | FR-MOD-003 | FR-MOD | `docs/traceability/TRACEABILITY_MATRIX.md` | BUILD-NEXT | Top-20 gap #13 (`mod store/publish`): promote to build-next to preserve mod state across player save/load loops. |
+| 125 | FR-MOD-005 | FR-MOD | `docs/traceability/TRACEABILITY_MATRIX.md` | BUILD-NEXT | Top-20 gap #13 (`mod store/publish`): promote to build-next so mod registration/management can be surfaced consistently in the browser path. |
 | 126 | FR-NET-001 | FR-NET | `docs/FR.md` | DEFER | Network hardening item is infra quality work and not one of the parity-close functional gaps. |
 | 127 | FR-NET-002 | FR-NET | `docs/FR.md` | DEFER | Net transport cleanup is stabilizing work, not required for current parity feature set. |
 | 128 | FR-NET-003 | FR-NET | `docs/FR.md` | DEFER | Additional network behavior can be staged after top-20 gap set is closed. |

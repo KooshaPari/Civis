@@ -283,6 +283,7 @@ fn pick_live_entity_on_release(
 mod tests {
     use super::*;
 
+    /// FR-CIV-BEVY-025 — live entity pick helpers support attach smoke and HUD selection paths.
     #[test]
     fn ray_aabb_hit_returns_entry_distance() {
         let origin = [0.0, 0.0, -5.0];
@@ -302,6 +303,7 @@ mod tests {
         assert!(ray_aabb_hit_distance(origin, direction, centre, half).is_none());
     }
 
+    /// FR-CIV-BEVY-025 — picking order remains deterministic under same-ray overlap.
     #[test]
     fn pick_live_entity_prefers_nearest_along_ray() {
         let origin = [0.0, 1.0, -10.0];

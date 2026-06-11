@@ -342,6 +342,7 @@ pub fn events_younger_than(events: &VecDeque<GameEvent>, max_age_secs: f32) -> V
 mod tests {
     use super::*;
 
+    /// FR-CIV-BEVY-023 — feed cap + ordering semantics are validated for event log HUD/toasts.
     fn make_event(kind: EventKind, age: f32) -> GameEvent {
         GameEvent {
             kind,
@@ -350,6 +351,7 @@ mod tests {
         }
     }
 
+    /// FR-CIV-BEVY-023 — feed cap and ordering semantics are validated.
     #[test]
     fn push_respects_cap() {
         let mut feed = EventFeed::default();

@@ -119,6 +119,8 @@ pub fn minimap_uv_to_world_xz(uv: Vec2, focus: LiveSceneFocus) -> (f32, f32) {
 mod tests {
     use super::*;
 
+    /// FR-CIV-BEVY-016 — live focus round-trips world-space to minimap UV and back.
+    /// FR-CIV-BEVY-022 — focus-driven minimap UV mapping used by shared live scene tooling.
     #[test]
     fn minimap_uv_roundtrips_world_xz() {
         let focus = LiveSceneFocus {

@@ -1249,6 +1249,7 @@ fn themed_button(
 mod tests {
     use super::*;
 
+    /// FR-CIV-BEVY-024 — pause/state transition helpers exercise menu-path and world-setup behavior.
     #[test]
     fn game_ui_mode_default_is_main_menu() {
         assert_eq!(GameUiMode::default(), GameUiMode::MainMenu);

@@ -1112,6 +1112,8 @@ write_policy = true
         assert!(!manifest.permissions.write_policy);
     }
 
+    /// Covers FR-CIV-TACTICS-034.
+    /// Covers FR-CIV-TACTICS-038.
     #[test]
     fn mod_registry_military_phase_emits_for_read_military() {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -1143,6 +1145,9 @@ write_policy = false
 
         let lines = host.registry().on_military_phase(7);
         assert_eq!(lines, vec!["mod:mil-observer:military_phase:tick=7"]);
+        // P-W1 military_tick wraps the registry stub: when no WASM is present
+        // the same line is emitted by the host-level hook (FR-CIV-TACTICS-034
+        // + FR-CIV-TACTICS-038 hook surface).
         assert_eq!(
             host.military_tick(8),
             vec!["mod:mil-observer:military_phase:tick=8"]
@@ -1211,6 +1216,9 @@ write_policy = false
     }
 
     /// Covers FR-CIV-TACTICS-046.
+    /// Covers FR-CIV-TACTICS-048.
+    /// FR-CIV-TACTICS-048 — `mods/example-economic` exposes `civlab_economy_tick`
+    /// and the host can load + invoke it.
     #[test]
     fn fr_civ_tactics_046_green_economy_phase_only_ticks_economic_mods() {
         let root = tempfile::tempdir().expect("tempdir");
@@ -1290,6 +1298,10 @@ write_policy = false
     }
 
     /// Covers FR-CIV-TACTICS-052.
+    /// Covers FR-CIV-TACTICS-055.
+    /// FR-CIV-TACTICS-055 — guest scratch memory is exposed as a versioned
+    /// `ModGuestStateSave` JSON that round-trips through `to_json` /
+    /// `from_json` and `import_guest_state` (CIV-1000 §16.3).
     #[test]
     fn fr_civ_tactics_052_green_economy_tick_persists_guest_memory() {
         const WAT: &str = r#"
@@ -1344,6 +1356,9 @@ write_policy = false
     }
 
     /// Covers FR-CIV-TACTICS-054.
+    /// Covers FR-CIV-TACTICS-074.
+    /// FR-CIV-TACTICS-074 — `ModBrowserEntry` is the surface consumed by the
+    /// civlab-sdk `PolicyMod` browser trait and the watch/dashboard mod UI.
     #[test]
     fn fr_civ_tactics_054_green_browser_entries_include_loaded_mod() {
         const WAT: &str = r#"
@@ -1386,6 +1401,8 @@ write_policy = false
         assert_eq!(entries[0].guest_memory_len, 0);
     }
 
+    /// Covers FR-CIV-MOD-001.
+    /// Covers FR-MOD-004.
     #[test]
     fn fr_mod_004_green_records_mod_loaded_v1_event() {
         const WAT: &str = r#"
@@ -1441,6 +1458,12 @@ write_policy = false
         assert!(HOST_CAPABILITY_IMPORTS.contains(&"action_emit"));
     }
 
+    /// Covers FR-CIV-TACTICS-044.
+    /// Covers FR-CIV-TACTICS-071.
+    /// Covers FR-CIV-TACTICS-075.
+    /// FR-CIV-TACTICS-075 — the `mod.permission_violation.v1` event is emitted
+    /// on the host log bus when a guest's WASM call exceeds the manifest-derived
+    /// capability set.
     #[test]
     fn policy_tick_emits_permission_violation_on_denied_world_read() {
         const WAT: &str = r#"
@@ -1899,6 +1922,7 @@ civlab-api = ">=1.0.0, <2.0.0"
         assert_eq!(v["reason"], "user_request");
     }
 
+    /// Covers FR-CIV-TACTICS-063.
     #[test]
     fn unload_mod_removes_from_registry() {
         let mut host = ModHost::new();
@@ -1913,6 +1937,7 @@ civlab-api = ">=1.0.0, <2.0.0"
         assert!(host.guest_memory_snapshot("example-policy").is_empty());
     }
 
+    /// Covers FR-CIV-TACTICS-068.
     #[test]
     fn reload_mod_rereads_wasm_from_root() {
         const WAT_V1: &str = r#"

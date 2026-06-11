@@ -73,6 +73,9 @@ mod tests {
     use rand::rngs::OsRng;
 
     /// Covers FR-CIV-TACTICS-043.
+    /// Covers FR-CIV-TACTICS-077.
+    /// FR-CIV-TACTICS-077 — the Ed25519 signature scheme is the foundation
+    /// for the signed remote mod registry (`mods/remote-registry.json`).
     #[test]
     fn fr_civ_tactics_043_green_signature_is_verified_and_rejected_when_tampered() {
         let signing_key = ed25519_dalek::SigningKey::generate(&mut OsRng);

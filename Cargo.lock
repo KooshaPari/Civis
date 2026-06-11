@@ -2464,6 +2464,7 @@ dependencies = [
 name = "civ-mod-host"
 version = "0.1.0"
 dependencies = [
+ "civ-save-db",
  "ed25519-dalek",
  "rand 0.8.6",
  "serde",

@@ -924,7 +924,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-000 — schema version is exposed.
     #[test]
-    fn schema_version_present() {
+    fn fr_civ_proto3d_000_schema_version_present() {
         assert_eq!(SCHEMA_VERSION, 0);
     }
 
@@ -932,7 +932,7 @@ mod tests {
     /// losslessly. Binary framing lands in a follow-up PR but JSON is a useful
     /// determinism floor.
     #[test]
-    fn voxel_delta_frame_roundtrips() {
+    fn fr_civ_proto3d_001_voxel_delta_frame_roundtrips() {
         let frame = VoxelDeltaFrame {
             tick: 42,
             deltas: vec![VoxelChunkDelta {
@@ -950,7 +950,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-002 — building diff carries provenance.
     #[test]
-    fn building_diff_carries_provenance() {
+    fn fr_civ_proto3d_002_building_diff_carries_provenance() {
         let f = BuildingDiffFrame {
             tick: 100,
             provenance: BuildingProvenance::Freehand,
@@ -964,7 +964,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-010 — building tier defaults for legacy payloads and round-trips when present.
     #[test]
-    fn building_diff_entry_tier_roundtrip_and_backward_compat() {
+    fn fr_civ_proto3d_010_building_diff_entry_tier_roundtrip_and_backward_compat() {
         let entry = BuildingDiffEntry {
             id: 99,
             kind: BuildingKind3d::Market,
@@ -983,7 +983,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-009 — optional `BuildingGraph` snapshot round-trips on building diff frames.
     #[test]
-    fn building_graph_snapshot_roundtrips() {
+    fn fr_civ_proto3d_009_building_graph_snapshot_roundtrips() {
         use civ_build::{BuildingId, BuildingProvenance as BuildProvenance, ParcelKind};
 
         let mut graph = BuildingGraph::new();
@@ -1013,7 +1013,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-008 — building diff entries and agent positions round-trip.
     #[test]
-    fn building_and_agent_position_extensions_roundtrip() {
+    fn fr_civ_proto3d_008_building_and_agent_position_extensions_roundtrip() {
         let building = BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
@@ -1047,7 +1047,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-011 — civilian state entries round-trip and legacy payloads get defaults.
     #[test]
-    fn civilian_state_entry_roundtrip_and_backward_compat() {
+    fn fr_civ_proto3d_011_civilian_state_entry_roundtrip_and_backward_compat() {
         let entry = CivilianStateEntry {
             id: 17,
             needs: CivilianNeeds3d {
@@ -1082,7 +1082,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-012 — faction state entries round-trip and legacy payloads get defaults.
     #[test]
-    fn faction_state_entry_roundtrip_and_backward_compat() {
+    fn fr_civ_proto3d_012_faction_state_entry_roundtrip_and_backward_compat() {
         let entry = FactionStateEntry {
             id: 4,
             era: 9,
@@ -1106,7 +1106,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-013 — event feed messages round-trip as a tagged enum.
     #[test]
-    fn event_feed_roundtrip() {
+    fn fr_civ_proto3d_013_event_feed_roundtrip() {
         let frame = EventFeedFrame {
             tick: 27,
             events: vec![
@@ -1147,7 +1147,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-003 — Frame3d::tick exposes the inner tick.
     #[test]
-    fn frame3d_tick_extraction() {
+    fn fr_civ_proto3d_003_frame3d_tick_extraction() {
         let f = Frame3d::VoxelDelta(VoxelDeltaFrame {
             tick: 17,
             deltas: Vec::new(),
@@ -1163,7 +1163,7 @@ mod tests {
 
     /// Covers FR-CIV-PROTO3D-004 — BuildingDiff round-trips through the binary envelope.
     #[test]
-    fn building_diff_binary_roundtrip() {
+    fn fr_civ_proto3d_004_building_diff_binary_roundtrip() {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
@@ -1491,4 +1491,3 @@ mod tests {
         assert!(matches!(err, AgentStreamBinaryError::LengthMismatch { .. }));
     }
 }
-

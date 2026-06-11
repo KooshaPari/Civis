@@ -104,12 +104,19 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/scenario.rs:1",
+        "crates/engine/src/scenario.rs:274",
         "docs/guides/scenario-yaml.md:3",
         "docs/IMPLEMENTATION_STATUS.md:33",
         "docs/reference/agileplus-artifacts-index.md:239",
         "docs/reference/agileplus-artifacts-index.md:307"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:18",
+        "crates/engine/tests/fr_matrix_batch1.rs:342",
+        "crates/engine/tests/fr_matrix_batch1.rs:343",
+        "crates/engine/tests/fr_matrix_batch1.rs:372",
+        "crates/engine/tests/fr_matrix_batch3.rs:152"
+      ]
     },
     {
       "id": "FR-API-002",
@@ -252,7 +259,9 @@
     },
     {
       "id": "FR-CIV-0001",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:212"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -568,8 +577,15 @@
     },
     {
       "id": "FR-CIV-ACT-001",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:60",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:213",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:225",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:226"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:9"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -637,7 +653,9 @@
     },
     {
       "id": "FR-CIV-ACTOR-001-LIFECYCLE",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:213"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -681,6 +699,8 @@
     {
       "id": "FR-CIV-AGENTS-001",
       "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:80",
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:76",
         "docs/traceability/fr-3d-matrix.md:64",
         "docs/traceability/full-traceability-matrix.md:155"
       ],
@@ -690,6 +710,7 @@
       "in_code": [
         "crates/agents/src/lib.rs:710",
         "crates/agents/src/lib.rs:737",
+        "docs/design/emergence-dashboard.md:7",
         "docs/development-guide/fr-3d-additions.md:57"
       ],
       "in_tests": []
@@ -940,8 +961,8 @@
       "in_traceability": [],
       "in_code": [
         "crates/ai/src/providers/dummy.rs:1",
-        "crates/engine/src/emergence.rs:48",
-        "crates/engine/src/emergence.rs:710",
+        "crates/engine/src/emergence.rs:51",
+        "crates/engine/src/emergence.rs:851",
         "docs/design/civ-ai-crate.md:38"
       ],
       "in_tests": [
@@ -1641,14 +1662,18 @@
     },
     {
       "id": "FR-CIV-BEVY-016",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:105"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:10"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
         "clients/bevy-ref/README.md:26",
         "docs/development-guide/p-w1-kickoff.md:127",
-        "justfile:127"
+        "justfile:149"
       ],
       "in_tests": []
     },
@@ -1710,14 +1735,18 @@
     },
     {
       "id": "FR-CIV-BEVY-022",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:110"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:11"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
         "clients/bevy-ref/README.md:26",
         "docs/development-guide/p-w1-kickoff.md:133",
-        "justfile:127"
+        "justfile:149"
       ],
       "in_tests": []
     },
@@ -1754,14 +1783,18 @@
     },
     {
       "id": "FR-CIV-BEVY-025",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:115"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:12"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
         "clients/bevy-ref/README.md:26",
         "docs/development-guide/p-w1-kickoff.md:136",
-        "justfile:127"
+        "justfile:149"
       ],
       "in_tests": []
     },
@@ -2098,8 +2131,12 @@
     },
     {
       "id": "FR-CIV-CA-001",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:40"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/meta.json:9"
+      ],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
@@ -2107,8 +2144,12 @@
     },
     {
       "id": "FR-CIV-CA-002",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:43"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/meta.json:10"
+      ],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
@@ -2116,8 +2157,12 @@
     },
     {
       "id": "FR-CIV-CA-003",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:46"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/meta.json:11"
+      ],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
@@ -2125,8 +2170,12 @@
     },
     {
       "id": "FR-CIV-CA-004",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:49"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/meta.json:12"
+      ],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
@@ -2134,8 +2183,12 @@
     },
     {
       "id": "FR-CIV-CA-005",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:52"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/meta.json:13"
+      ],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [],
@@ -2276,6 +2329,7 @@
     {
       "id": "FR-CIV-CORE-001",
       "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:212",
         "PRD.md:263"
       ],
       "in_meta": [],
@@ -2563,7 +2617,8 @@
       "id": "FR-CIV-CULT-001",
       "in_specs": [
         "agileplus-specs/civ-009-culture-diffusion/plan.md:5",
-        "agileplus-specs/civ-009-culture-diffusion/spec.md:24"
+        "agileplus-specs/civ-009-culture-diffusion/spec.md:24",
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:82"
       ],
       "in_meta": [
         "agileplus-specs/civ-009-culture-diffusion/meta.json:9"
@@ -2611,6 +2666,19 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-DET-001",
+      "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:36",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:53",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:73"
+      ],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-DIFFUSION-000",
       "in_specs": [
         "docs/traceability/fr-3d-matrix.md:73",
@@ -2628,6 +2696,7 @@
     {
       "id": "FR-CIV-DIFFUSION-001",
       "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:80",
         "docs/traceability/fr-3d-matrix.md:74",
         "docs/traceability/full-traceability-matrix.md:163"
       ],
@@ -2802,7 +2871,8 @@
         "agileplus-specs/civ-007-diplomacy-laws-government/plan.md:11",
         "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:24",
         "agileplus-specs/civ-009-culture-diffusion/spec.md:38",
-        "agileplus-specs/civ-011-bevy-primary-client/spec.md:45"
+        "agileplus-specs/civ-011-bevy-primary-client/spec.md:45",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:214"
       ],
       "in_meta": [
         "agileplus-specs/civ-007-diplomacy-laws-government/meta.json:9"
@@ -2810,20 +2880,27 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "docs/reference/agileplus-artifacts-index.md:137",
-        "docs/reference/agileplus-artifacts-index.md:282",
-        "PLAN.md:207",
-        "PLAN.md:208"
+        "crates/diplomacy/Cargo.toml:3",
+        "crates/diplomacy/src/lib.rs:1",
+        "crates/diplomacy/src/lib.rs:15",
+        "crates/diplomacy/src/lib.rs:504",
+        "crates/diplomacy/src/lib.rs:562",
+        "crates/diplomacy/src/lib.rs:781",
+        "crates/diplomacy/src/lib.rs:832",
+        "crates/diplomacy/src/lib.rs:858"
       ],
       "in_tests": []
     },
     {
       "id": "FR-CIV-DIPLO-001-RELATIONS",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:214"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/diplomacy/src/lib.rs:514",
         "PLAN.md:207",
         "PLAN.md:208"
       ],
@@ -2833,7 +2910,8 @@
       "id": "FR-CIV-DIPLO-002",
       "in_specs": [
         "agileplus-specs/civ-007-diplomacy-laws-government/plan.md:18",
-        "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:25"
+        "agileplus-specs/civ-007-diplomacy-laws-government/spec.md:25",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:215"
       ],
       "in_meta": [
         "agileplus-specs/civ-007-diplomacy-laws-government/meta.json:10"
@@ -2841,6 +2919,10 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/diplomacy/src/lib.rs:16",
+        "crates/diplomacy/src/lib.rs:526",
+        "crates/diplomacy/src/lib.rs:532",
+        "crates/diplomacy/src/lib.rs:546",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:283",
         "PLAN.md:209",
@@ -2850,7 +2932,9 @@
     },
     {
       "id": "FR-CIV-DIPLO-002-SHADOW",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:215"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -2872,6 +2956,10 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/diplomacy/src/lib.rs:17",
+        "crates/diplomacy/src/lib.rs:577",
+        "crates/diplomacy/src/lib.rs:597",
+        "crates/diplomacy/src/lib.rs:641",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:284"
       ],
@@ -2925,6 +3013,7 @@
     {
       "id": "FR-CIV-ECON-001",
       "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:68",
         "PRD.md:285"
       ],
       "in_meta": [],
@@ -2944,8 +3033,13 @@
     },
     {
       "id": "FR-CIV-ECON-001-MARKET",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/plan.md:39",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:64"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:15"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -2961,7 +3055,10 @@
     },
     {
       "id": "FR-CIV-ECON-002",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/plan.md:39",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:73"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -2978,8 +3075,12 @@
     },
     {
       "id": "FR-CIV-ECON-002-JOULE",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:70"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:16"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -3004,8 +3105,12 @@
     },
     {
       "id": "FR-CIV-ECON-004",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:76"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:17"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -3027,9 +3132,78 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-EMERG-001",
+      "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:39"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/meta.json:9"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-EMERG-002",
+      "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:43"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/meta.json:10"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-EMERG-003",
+      "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:47"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/meta.json:11"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-EMERG-004",
+      "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:51"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/meta.json:12"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-EMERG-005",
+      "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:55"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/meta.json:13"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-EMERGENCE-001",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:80"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:18"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -3065,7 +3239,9 @@
     },
     {
       "id": "FR-CIV-EMERGENCE-004",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:159"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -3155,7 +3331,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2397"
+        "crates/engine/src/engine.rs:2434"
       ],
       "in_tests": []
     },
@@ -3166,7 +3342,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2580"
+        "crates/engine/src/engine.rs:2619"
       ],
       "in_tests": []
     },
@@ -3177,7 +3353,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2613"
+        "crates/engine/src/engine.rs:2652"
       ],
       "in_tests": []
     },
@@ -3188,7 +3364,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2755"
+        "crates/engine/src/engine.rs:2794"
       ],
       "in_tests": []
     },
@@ -3199,7 +3375,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2189"
+        "crates/engine/src/engine.rs:2223"
       ],
       "in_tests": []
     },
@@ -3210,7 +3386,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2629"
+        "crates/engine/src/engine.rs:2668"
       ],
       "in_tests": []
     },
@@ -3221,7 +3397,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2642"
+        "crates/engine/src/engine.rs:2681"
       ],
       "in_tests": []
     },
@@ -3232,7 +3408,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2707"
+        "crates/engine/src/engine.rs:2746"
       ],
       "in_tests": []
     },
@@ -3243,7 +3419,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2745"
+        "crates/engine/src/engine.rs:2784"
       ],
       "in_tests": []
     },
@@ -3254,7 +3430,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2666"
+        "crates/engine/src/engine.rs:2705"
       ],
       "in_tests": []
     },
@@ -3265,7 +3441,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2871"
+        "crates/engine/src/engine.rs:2910"
       ],
       "in_tests": []
     },
@@ -3276,7 +3452,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2896"
+        "crates/engine/src/engine.rs:2935"
       ],
       "in_tests": []
     },
@@ -3287,7 +3463,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:3042"
+        "crates/engine/src/engine.rs:3086"
       ],
       "in_tests": []
     },
@@ -3298,7 +3474,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:3058"
+        "crates/engine/src/engine.rs:3102"
       ],
       "in_tests": []
     },
@@ -3309,8 +3485,73 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:3108"
+        "crates/engine/src/engine.rs:3153"
       ],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-FOG-001",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:47"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:12"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-FOG-002",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:51"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:13"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-FOG-003",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:54"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:14"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-FOG-004",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:57"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:15"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-FOG-005",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:61"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:16"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
       "in_tests": []
     },
     {
@@ -3323,7 +3564,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/genetics/src/lib.rs:172",
+        "crates/genetics/src/lib.rs:178",
         "docs/development-guide/fr-3d-additions.md:41"
       ],
       "in_tests": []
@@ -3331,6 +3572,7 @@
     {
       "id": "FR-CIV-GENETICS-001",
       "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:78",
         "docs/traceability/fr-3d-matrix.md:44",
         "docs/traceability/full-traceability-matrix.md:139"
       ],
@@ -3338,7 +3580,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/genetics/src/lib.rs:182",
+        "crates/genetics/src/lib.rs:188",
         "docs/development-guide/fr-3d-additions.md:42"
       ],
       "in_tests": []
@@ -3353,7 +3595,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/genetics/src/lib.rs:195",
+        "crates/genetics/src/lib.rs:201",
         "docs/development-guide/fr-3d-additions.md:43"
       ],
       "in_tests": []
@@ -3368,7 +3610,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/genetics/src/lib.rs:212",
+        "crates/genetics/src/lib.rs:218",
         "docs/development-guide/fr-3d-additions.md:45"
       ],
       "in_tests": []
@@ -3380,7 +3622,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/genetics/src/lib.rs:234"
+        "crates/genetics/src/lib.rs:240"
       ],
       "in_tests": []
     },
@@ -3391,7 +3633,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/genetics/src/lib.rs:242"
+        "crates/genetics/src/lib.rs:248"
       ],
       "in_tests": []
     },
@@ -3711,6 +3953,8 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/diplomacy/src/lib.rs:18",
+        "crates/diplomacy/src/lib.rs:610",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:285"
       ],
@@ -3728,6 +3972,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/diplomacy/src/lib.rs:655",
         "docs/reference/agileplus-artifacts-index.md:137",
         "docs/reference/agileplus-artifacts-index.md:286"
       ],
@@ -4618,7 +4863,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/emergence.rs:657",
+        "crates/engine/src/emergence.rs:798",
         "crates/legends/src/worker.rs:1",
         "docs/design/legends-engine.md:437"
       ],
@@ -4686,8 +4931,8 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/emergence.rs:35",
-        "crates/engine/src/emergence.rs:592",
+        "crates/engine/src/emergence.rs:38",
+        "crates/engine/src/emergence.rs:629",
         "docs/design/legends-engine.md:442"
       ],
       "in_tests": []
@@ -4736,7 +4981,7 @@
         "docs/traceability/civis-tracelinks.md:14"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:2357",
+        "crates/engine/src/engine.rs:2392",
         "crates/needs/src/lib.rs:14",
         "crates/needs/src/lib.rs:336",
         "crates/needs/src/lib.rs:350",
@@ -4760,7 +5005,10 @@
         "crates/needs/src/lib.rs:485",
         "crates/needs/src/lib.rs:528",
         "crates/needs/src/lib.rs:607",
-        "crates/needs/src/lib.rs:648"
+        "crates/needs/src/lib.rs:648",
+        "crates/needs/src/lib.rs:777",
+        "crates/needs/src/lib.rs:819",
+        "crates/needs/src/lib.rs:857"
       ],
       "in_tests": []
     },
@@ -4774,7 +5022,8 @@
       ],
       "in_code": [
         "crates/engine/src/engine.rs:447",
-        "crates/engine/src/engine.rs:2161",
+        "crates/engine/src/engine.rs:2195",
+        "crates/engine/src/engine.rs:2392",
         "crates/needs/src/lib.rs:15",
         "crates/needs/src/lib.rs:428",
         "crates/needs/src/lib.rs:455",
@@ -4793,7 +5042,8 @@
       ],
       "in_code": [
         "crates/agents/src/daily_path.rs:303",
-        "crates/engine/src/engine.rs:494"
+        "crates/engine/src/engine.rs:500",
+        "crates/engine/src/engine.rs:2392"
       ],
       "in_tests": []
     },
@@ -4873,9 +5123,9 @@
       ],
       "in_code": [
         "crates/economy/src/stocks.rs:285",
-        "crates/economy/src/stocks.rs:451",
+        "crates/economy/src/stocks.rs:452",
         "crates/engine/src/engine.rs:440",
-        "crates/engine/src/engine.rs:2063"
+        "crates/engine/src/engine.rs:2097"
       ],
       "in_tests": []
     },
@@ -4886,7 +5136,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/stocks.rs:305"
+        "crates/economy/src/stocks.rs:306"
       ],
       "in_tests": []
     },
@@ -4897,8 +5147,8 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/stocks.rs:317",
-        "crates/economy/src/stocks.rs:436"
+        "crates/economy/src/stocks.rs:318",
+        "crates/economy/src/stocks.rs:437"
       ],
       "in_tests": []
     },
@@ -4909,7 +5159,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/stocks.rs:324"
+        "crates/economy/src/stocks.rs:325"
       ],
       "in_tests": []
     },
@@ -4920,8 +5170,8 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/stocks.rs:335",
-        "crates/economy/src/stocks.rs:376"
+        "crates/economy/src/stocks.rs:336",
+        "crates/economy/src/stocks.rs:377"
       ],
       "in_tests": []
     },
@@ -4932,7 +5182,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/stocks.rs:361"
+        "crates/economy/src/stocks.rs:362"
       ],
       "in_tests": []
     },
@@ -4946,11 +5196,14 @@
       ],
       "in_code": [
         "crates/engine/src/engine.rs:444",
-        "crates/engine/src/engine.rs:2056",
-        "crates/engine/src/engine.rs:2159",
-        "crates/engine/src/engine.rs:2383"
+        "crates/engine/src/engine.rs:2090",
+        "crates/engine/src/engine.rs:2193",
+        "crates/engine/src/engine.rs:2392",
+        "crates/engine/src/engine.rs:2419"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:20"
+      ]
     },
     {
       "id": "FR-CIV-LIFE-035",
@@ -5107,8 +5360,88 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-MCP-001",
+      "in_specs": [
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:33"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-017-civis-mcp-server/meta.json:9"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-MCP-002",
+      "in_specs": [
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:38"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-017-civis-mcp-server/meta.json:10"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-MCP-003",
+      "in_specs": [
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:43"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-017-civis-mcp-server/meta.json:11"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-MCP-004",
+      "in_specs": [
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:46"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-017-civis-mcp-server/meta.json:12"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-MCP-005",
+      "in_specs": [
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:49"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-017-civis-mcp-server/meta.json:13"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-MCP-006",
+      "in_specs": [
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:52"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-017-civis-mcp-server/meta.json:14"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-METRICS-001",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:216"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -5120,7 +5453,10 @@
     },
     {
       "id": "FR-CIV-METRICS-001-TIMESERIES",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:216",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:217"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -5866,6 +6202,7 @@
       "in_traceability": [],
       "in_code": [
         "crates/planet/src/lib.rs:113",
+        "docs/design/emergence-dashboard.md:8",
         "docs/development-guide/fr-3d-additions.md:97"
       ],
       "in_tests": []
@@ -5920,57 +6257,70 @@
     },
     {
       "id": "FR-CIV-PLANET-010",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:160",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:166"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2148",
-        "crates/engine/src/engine.rs:2414",
-        "crates/server/src/jsonrpc.rs:406"
+        "crates/engine/src/engine.rs:2182",
+        "crates/engine/src/engine.rs:2451",
+        "crates/server/src/jsonrpc.rs:411"
       ],
       "in_tests": []
     },
     {
       "id": "FR-CIV-PLANET-020",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:85"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:19"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:434",
-        "crates/engine/src/engine.rs:454",
         "crates/engine/src/engine.rs:460",
-        "crates/engine/src/engine.rs:1243",
-        "crates/engine/src/engine.rs:1256",
-        "crates/engine/src/engine.rs:1285",
-        "crates/engine/src/engine.rs:2456"
+        "crates/engine/src/engine.rs:466",
+        "crates/engine/src/engine.rs:1277",
+        "crates/engine/src/engine.rs:1290",
+        "crates/engine/src/engine.rs:1319",
+        "crates/engine/src/engine.rs:2494"
       ],
       "in_tests": []
     },
     {
       "id": "FR-CIV-PLANET-030",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:91"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:20"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:437",
-        "crates/engine/src/engine.rs:1243",
-        "crates/engine/src/engine.rs:2150",
-        "crates/engine/src/engine.rs:3178",
+        "crates/engine/src/engine.rs:1277",
+        "crates/engine/src/engine.rs:2184",
+        "crates/engine/src/engine.rs:3222",
         "crates/planet/src/weather.rs:1"
       ],
       "in_tests": []
     },
     {
       "id": "FR-CIV-PLANET-040",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:182"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2155",
+        "crates/engine/src/engine.rs:2189",
         "crates/planet/src/geology.rs:1",
         "crates/planet/src/geology.rs:106",
         "docs/superpowers/plans/2026-05-28-fr-civ-planet-040-geology-seed.md:1",
@@ -5983,8 +6333,13 @@
     },
     {
       "id": "FR-CIV-PLANET-060",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:95",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:183"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:21"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -6286,7 +6641,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:591",
+        "crates/protocol-3d/src/lib.rs:925",
         "docs/development-guide/fr-3d-additions.md:102"
       ],
       "in_tests": []
@@ -6301,7 +6656,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:597",
+        "crates/protocol-3d/src/lib.rs:931",
         "docs/development-guide/fr-3d-additions.md:103"
       ],
       "in_tests": []
@@ -6316,7 +6671,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:617",
+        "crates/protocol-3d/src/lib.rs:951",
         "docs/development-guide/fr-3d-additions.md:104"
       ],
       "in_tests": []
@@ -6328,7 +6683,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:814"
+        "crates/protocol-3d/src/lib.rs:1148"
       ],
       "in_tests": []
     },
@@ -6339,7 +6694,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:830"
+        "crates/protocol-3d/src/lib.rs:1164"
       ],
       "in_tests": []
     },
@@ -6350,7 +6705,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:885"
+        "crates/protocol-3d/src/lib.rs:1219"
       ],
       "in_tests": []
     },
@@ -6361,7 +6716,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:846"
+        "crates/protocol-3d/src/lib.rs:1180"
       ],
       "in_tests": []
     },
@@ -6372,7 +6727,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:874"
+        "crates/protocol-3d/src/lib.rs:1208"
       ],
       "in_tests": []
     },
@@ -6383,7 +6738,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:680"
+        "crates/protocol-3d/src/lib.rs:1014"
       ],
       "in_tests": []
     },
@@ -6394,7 +6749,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:650"
+        "crates/protocol-3d/src/lib.rs:984"
       ],
       "in_tests": []
     },
@@ -6405,7 +6760,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:631",
+        "crates/protocol-3d/src/lib.rs:965",
         "crates/server/src/voxel_frame_builder.rs:117"
       ],
       "in_tests": []
@@ -6417,7 +6772,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:714",
+        "crates/protocol-3d/src/lib.rs:1048",
         "crates/server/src/voxel_frame_builder.rs:126"
       ],
       "in_tests": []
@@ -6429,7 +6784,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:749",
+        "crates/protocol-3d/src/lib.rs:1083",
         "crates/server/src/voxel_frame_builder.rs:150"
       ],
       "in_tests": []
@@ -6441,7 +6796,57 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/protocol-3d/src/lib.rs:773"
+        "crates/protocol-3d/src/lib.rs:1107"
+      ],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-PROTO3D-014",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/protocol-3d/src/lib.rs:589",
+        "crates/protocol-3d/src/lib.rs:1237",
+        "crates/protocol-3d/src/lib.rs:1240",
+        "crates/protocol-3d/src/lib.rs:1295",
+        "crates/protocol-3d/src/lib.rs:1469"
+      ],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-PROTO3D-015",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/protocol-3d/src/lib.rs:1344",
+        "crates/protocol-3d/src/lib.rs:1365"
+      ],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-PROTO3D-016",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/protocol-3d/src/lib.rs:1384",
+        "crates/protocol-3d/src/lib.rs:1402"
+      ],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-PROTO3D-017",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/protocol-3d/src/lib.rs:1419"
       ],
       "in_tests": []
     },
@@ -7023,6 +7428,7 @@
     {
       "id": "FR-CIV-RESEARCH-001",
       "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:218",
         "docs/traceability/fr-3d-matrix.md:93",
         "docs/traceability/full-traceability-matrix.md:178"
       ],
@@ -7041,7 +7447,9 @@
     },
     {
       "id": "FR-CIV-RESEARCH-001-SCENARIO",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:218"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7070,7 +7478,9 @@
     },
     {
       "id": "FR-CIV-RESEARCH-002-SNAPSHOT",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:219"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7099,7 +7509,9 @@
     },
     {
       "id": "FR-CIV-RESEARCH-003-EXPORT",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:220"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7627,7 +8039,12 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
+      "in_code": [
+        "crates/voxel/src/window/mod.rs:4",
+        "docs/design/streaming-window.md:6",
+        "docs/design/streaming-window.md:382",
+        "docs/design/streaming-window.md:388"
+      ],
       "in_tests": []
     },
     {
@@ -7645,7 +8062,9 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
+      "in_code": [
+        "docs/design/streaming-window.md:225"
+      ],
       "in_tests": []
     },
     {
@@ -7654,7 +8073,9 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
+      "in_code": [
+        "docs/design/streaming-window.md:150"
+      ],
       "in_tests": []
     },
     {
@@ -7681,7 +8102,9 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
+      "in_code": [
+        "docs/design/streaming-window.md:77"
+      ],
       "in_tests": []
     },
     {
@@ -7695,7 +8118,9 @@
     },
     {
       "id": "FR-CIV-SERVER-001",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:221"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7707,7 +8132,10 @@
     },
     {
       "id": "FR-CIV-SERVER-001-WS",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:221",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:222"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7719,7 +8147,9 @@
     },
     {
       "id": "FR-CIV-SERVER-002",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:223"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7731,7 +8161,10 @@
     },
     {
       "id": "FR-CIV-SERVER-002-PROTO",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:223",
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:224"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7763,7 +8196,9 @@
     },
     {
       "id": "FR-CIV-SOCIAL-001-INSTITUTIONS",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:225"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -7794,7 +8229,9 @@
     },
     {
       "id": "FR-CIV-SOCIAL-002-IDEOLOGY",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:226"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -8335,6 +8772,7 @@
     {
       "id": "FR-CIV-TACTICS-000",
       "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:83",
         "docs/traceability/fr-3d-matrix.md:103",
         "docs/traceability/full-traceability-matrix.md:191"
       ],
@@ -8346,7 +8784,12 @@
         "docs/development-guide/fr-3d-additions.md:85",
         "docs/development-guide/p-w1-kickoff.md:20"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:36",
+        "crates/tactics/tests/fr_matrix_batch2.rs:39",
+        "crates/tactics/tests/fr_matrix_batch5.rs:7",
+        "crates/tactics/tests/fr_matrix_batch5.rs:76"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-001",
@@ -8362,7 +8805,12 @@
         "docs/development-guide/fr-3d-additions.md:86",
         "docs/development-guide/p-w1-kickoff.md:21"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:47",
+        "crates/tactics/tests/fr_matrix_batch2.rs:50",
+        "crates/tactics/tests/fr_matrix_batch5.rs:8",
+        "crates/tactics/tests/fr_matrix_batch5.rs:85"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-001-",
@@ -8409,13 +8857,18 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:431",
-        "crates/engine/src/engine.rs:2564",
+        "crates/engine/src/engine.rs:2602",
         "crates/tactics/src/lib.rs:262",
         "docs/development-guide/fr-3d-additions.md:87",
         "docs/development-guide/p-w1-kickoff.md:14",
         "docs/development-guide/p-w1-kickoff.md:22"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:76",
+        "crates/tactics/tests/fr_matrix_batch2.rs:79",
+        "crates/tactics/tests/fr_matrix_batch5.rs:9",
+        "crates/tactics/tests/fr_matrix_batch5.rs:103"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-011",
@@ -8446,7 +8899,12 @@
         "docs/development-guide/fr-3d-additions.md:89",
         "docs/development-guide/p-w1-kickoff.md:23"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:108",
+        "crates/tactics/tests/fr_matrix_batch2.rs:111",
+        "crates/tactics/tests/fr_matrix_batch5.rs:10",
+        "crates/tactics/tests/fr_matrix_batch5.rs:130"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-021",
@@ -8464,7 +8922,12 @@
         "docs/development-guide/fr-3d-additions.md:90",
         "docs/development-guide/p-w1-kickoff.md:24"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:122",
+        "crates/tactics/tests/fr_matrix_batch2.rs:125",
+        "crates/tactics/tests/fr_matrix_batch5.rs:11",
+        "crates/tactics/tests/fr_matrix_batch5.rs:158"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-022",
@@ -8483,7 +8946,12 @@
         "docs/development-guide/fr-3d-additions.md:91",
         "docs/development-guide/p-w1-kickoff.md:25"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:136",
+        "crates/tactics/tests/fr_matrix_batch2.rs:139",
+        "crates/tactics/tests/fr_matrix_batch5.rs:12",
+        "crates/tactics/tests/fr_matrix_batch5.rs:165"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-023",
@@ -8500,7 +8968,12 @@
         "docs/design/warfare.md:122",
         "docs/development-guide/p-w1-kickoff.md:26"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:173",
+        "crates/tactics/tests/fr_matrix_batch2.rs:176",
+        "crates/tactics/tests/fr_matrix_batch5.rs:13",
+        "crates/tactics/tests/fr_matrix_batch5.rs:182"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-024",
@@ -8513,13 +8986,18 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:411",
-        "crates/engine/src/engine.rs:2145",
-        "crates/engine/src/engine.rs:3163",
+        "crates/engine/src/engine.rs:2179",
+        "crates/engine/src/engine.rs:3208",
         "crates/tactics/src/war_bridge.rs:29",
         "crates/tactics/src/war_bridge.rs:346",
         "docs/development-guide/p-w1-kickoff.md:27"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:194",
+        "crates/tactics/tests/fr_matrix_batch2.rs:197",
+        "crates/tactics/tests/fr_matrix_batch5.rs:14",
+        "crates/tactics/tests/fr_matrix_batch5.rs:201"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-025",
@@ -8531,8 +9009,11 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:3023",
-        "crates/engine/src/engine.rs:3133",
+        "crates/engine/src/engine.rs:2963",
+        "crates/engine/src/engine.rs:2986",
+        "crates/engine/src/engine.rs:3022",
+        "crates/engine/src/engine.rs:3066",
+        "crates/engine/src/engine.rs:3178",
         "crates/engine/src/replay.rs:29",
         "docs/development-guide/p-w1-kickoff.md:28"
       ],
@@ -8552,9 +9033,6 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2923",
-        "crates/engine/src/engine.rs:2945",
-        "crates/engine/src/engine.rs:2980",
         "docs/development-guide/p-w1-kickoff.md:35",
         "docs/development-guide/p-w1-kickoff.md:39",
         "docs/development-guide/p-w1-kickoff.md:40"
@@ -8574,7 +9052,9 @@
         "crates/tactics/src/operational.rs:1",
         "docs/development-guide/p-w1-kickoff.md:29"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:235"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-031",
@@ -8590,7 +9070,10 @@
         "crates/tactics/src/movement.rs:1",
         "docs/development-guide/p-w1-kickoff.md:30"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:239",
+        "crates/tactics/tests/fr_matrix_batch2.rs:242"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-032",
@@ -8603,6 +9086,7 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:273",
+        "crates/engine/src/engine.rs:3066",
         "docs/development-guide/p-w1-kickoff.md:31"
       ],
       "in_tests": []
@@ -8621,7 +9105,12 @@
         "crates/tactics/src/pathfinding.rs:1",
         "docs/development-guide/p-w1-kickoff.md:32"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch2.rs:272",
+        "crates/tactics/tests/fr_matrix_batch2.rs:275",
+        "crates/tactics/tests/fr_matrix_batch5.rs:15",
+        "crates/tactics/tests/fr_matrix_batch5.rs:215"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-034",
@@ -8648,6 +9137,8 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/engine.rs:429",
+        "crates/engine/src/engine.rs:3066",
+        "crates/engine/src/scenario.rs:317",
         "crates/tactics/src/military_phase.rs:1",
         "docs/development-guide/p-w1-kickoff.md:34"
       ],
@@ -8686,7 +9177,10 @@
         "crates/tactics/src/pathfinding.rs:241",
         "docs/development-guide/p-w1-kickoff.md:37"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/tactics/tests/fr_matrix_batch5.rs:16",
+        "crates/tactics/tests/fr_matrix_batch5.rs:225"
+      ]
     },
     {
       "id": "FR-CIV-TACTICS-038",
@@ -8741,6 +9235,7 @@
     {
       "id": "FR-CIV-TACTICS-041",
       "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:45",
         "docs/traceability/fr-3d-matrix.md:127",
         "docs/traceability/full-traceability-matrix.md:215"
       ],
@@ -8748,7 +9243,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2907",
+        "crates/engine/src/engine.rs:2946",
         "crates/engine/src/hash_chain.rs:79",
         "crates/engine/src/hash_chain.rs:97",
         "docs/development-guide/p-w1-kickoff.md:43"
@@ -8758,6 +9253,9 @@
     {
       "id": "FR-CIV-TACTICS-042",
       "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:16",
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:53",
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:90",
         "docs/traceability/fr-3d-matrix.md:128",
         "docs/traceability/full-traceability-matrix.md:216"
       ],
@@ -8805,6 +9303,7 @@
     {
       "id": "FR-CIV-TACTICS-045",
       "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:56",
         "docs/traceability/fr-3d-matrix.md:131",
         "docs/traceability/full-traceability-matrix.md:219"
       ],
@@ -8812,8 +9311,9 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:1998",
+        "crates/engine/src/engine.rs:2032",
         "crates/engine/src/scenario.rs:34",
+        "crates/engine/src/scenario.rs:295",
         "docs/development-guide/p-w1-kickoff.md:47"
       ],
       "in_tests": []
@@ -8887,9 +9387,10 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2006",
+        "crates/engine/src/engine.rs:2040",
         "crates/engine/src/scenario.rs:40",
-        "crates/engine/src/scenario.rs:49",
+        "crates/engine/src/scenario.rs:62",
+        "crates/engine/src/scenario.rs:317",
         "docs/development-guide/p-w1-kickoff.md:52"
       ],
       "in_tests": []
@@ -8941,6 +9442,7 @@
     {
       "id": "FR-CIV-TACTICS-054",
       "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:60",
         "docs/traceability/fr-3d-matrix.md:140",
         "docs/traceability/full-traceability-matrix.md:228"
       ],
@@ -8949,7 +9451,7 @@
       "in_traceability": [],
       "in_code": [
         "crates/mod-host/src/lib.rs:439",
-        "crates/server/src/jsonrpc.rs:398",
+        "crates/server/src/jsonrpc.rs:403",
         "crates/watch/src/app.rs:300",
         "docs/development-guide/p-w1-kickoff.md:56"
       ],
@@ -9281,6 +9783,45 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-TACTICS-100",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:36"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:9"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TACTICS-101",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:40"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:10"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TACTICS-102",
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:43"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/meta.json:11"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-TECH-001",
       "in_specs": [],
       "in_meta": [],
@@ -9512,6 +10053,84 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-TERRAIN-001",
+      "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:33"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/meta.json:9"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TERRAIN-002",
+      "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:38"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/meta.json:10"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TERRAIN-003",
+      "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:41"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/meta.json:11"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TERRAIN-004",
+      "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:44"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/meta.json:12"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TERRAIN-005",
+      "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:47"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/meta.json:13"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-TERRAIN-006",
+      "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:50"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/meta.json:14"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-TRAFFIC-LANE-001",
       "in_specs": [],
       "in_meta": [],
@@ -9685,8 +10304,12 @@
     },
     {
       "id": "FR-CIV-UX-005",
-      "in_specs": [],
-      "in_meta": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:100"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-021-recovered-requirements/meta.json:23"
+      ],
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
@@ -9703,6 +10326,7 @@
     {
       "id": "FR-CIV-UX-006",
       "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:68",
         "docs/traceability/fr-3d-matrix.md:204",
         "docs/traceability/full-traceability-matrix.md:276"
       ],
@@ -9714,8 +10338,8 @@
         "clients/unreal-show/Source/CivShow/CivProtocolClient.h:32",
         "crates/engine/src/spawn.rs:1",
         "crates/server/src/jsonrpc.rs:58",
-        "crates/server/src/jsonrpc.rs:692",
-        "crates/server/src/jsonrpc.rs:1188",
+        "crates/server/src/jsonrpc.rs:748",
+        "crates/server/src/jsonrpc.rs:1261",
         "crates/watch/src/snapshot.rs:663",
         "docs/development-guide/fr-p-u1-roadmap.md:16"
       ],
@@ -10014,6 +10638,149 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-VERIFY-001",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:34",
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:70"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:9"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-002",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:38"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:10"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-003",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:41"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:11"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-004",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:44"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:12"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-005",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:47"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:13"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-006",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:50"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:14"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-007",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:54",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:31",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:42"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:15",
+        "agileplus-specs/civ-018-verify-harness-extension/meta.json:9"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-008",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:61",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:30",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:46"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:16",
+        "agileplus-specs/civ-018-verify-harness-extension/meta.json:10"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-009",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:65",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:50"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:17",
+        "agileplus-specs/civ-018-verify-harness-extension/meta.json:11"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VERIFY-010",
+      "in_specs": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:69",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:55",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:66",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:75"
+      ],
+      "in_meta": [
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/meta.json:18",
+        "agileplus-specs/civ-018-verify-harness-extension/meta.json:12"
+      ],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-VOXEL-000",
       "in_specs": [
         "docs/traceability/fr-3d-matrix.md:18",
@@ -10025,8 +10792,9 @@
         "docs/traceability/civis-tracelinks.md:73"
       ],
       "in_code": [
-        "crates/voxel/src/lib.rs:51",
-        "crates/voxel/src/lib.rs:61",
+        "crates/voxel/src/lib.rs:54",
+        "crates/voxel/src/lib.rs:64",
+        "docs/design/emergence-dashboard.md:7",
         "docs/development-guide/fr-3d-additions.md:15"
       ],
       "in_tests": []
@@ -10034,6 +10802,9 @@
     {
       "id": "FR-CIV-VOXEL-001",
       "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:66",
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:79",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:71",
         "docs/traceability/fr-3d-matrix.md:19",
         "docs/traceability/full-traceability-matrix.md:118"
       ],
@@ -10043,7 +10814,7 @@
         "docs/traceability/civis-tracelinks.md:74"
       ],
       "in_code": [
-        "crates/voxel/src/lib.rs:133",
+        "crates/voxel/src/lib.rs:136",
         "docs/development-guide/fr-3d-additions.md:16",
         "docs/guides/voxel-emergent-vision-and-migration.md:29",
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:59"
@@ -10053,6 +10824,9 @@
     {
       "id": "FR-CIV-VOXEL-002",
       "in_specs": [
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:58",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:45",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:71",
         "docs/traceability/fr-3d-matrix.md:20",
         "docs/traceability/full-traceability-matrix.md:119"
       ],
@@ -10062,14 +10836,14 @@
         "docs/traceability/civis-tracelinks.md:75"
       ],
       "in_code": [
-        "crates/engine/src/engine.rs:467",
-        "crates/engine/src/engine.rs:1267",
-        "crates/engine/src/engine.rs:1288",
-        "crates/engine/src/engine.rs:1324",
-        "crates/engine/src/engine.rs:2499",
-        "crates/voxel/src/lib.rs:67",
-        "crates/voxel/src/lib.rs:164",
-        "docs/development-guide/fr-3d-additions.md:18"
+        "crates/engine/src/engine.rs:473",
+        "crates/engine/src/engine.rs:1301",
+        "crates/engine/src/engine.rs:1322",
+        "crates/engine/src/engine.rs:1358",
+        "crates/engine/src/engine.rs:2493",
+        "crates/engine/src/engine.rs:2537",
+        "crates/voxel/src/lib.rs:70",
+        "crates/voxel/src/lib.rs:167"
       ],
       "in_tests": []
     },
@@ -10085,7 +10859,7 @@
         "docs/traceability/civis-tracelinks.md:76"
       ],
       "in_code": [
-        "crates/voxel/src/lib.rs:195",
+        "crates/voxel/src/lib.rs:198",
         "docs/development-guide/fr-3d-additions.md:20"
       ],
       "in_tests": []
@@ -10102,7 +10876,7 @@
         "docs/traceability/civis-tracelinks.md:77"
       ],
       "in_code": [
-        "crates/voxel/src/lib.rs:215",
+        "crates/voxel/src/lib.rs:218",
         "docs/development-guide/fr-3d-additions.md:22"
       ],
       "in_tests": []
@@ -10116,7 +10890,7 @@
         "docs/traceability/civis-tracelinks.md:78"
       ],
       "in_code": [
-        "crates/voxel/src/lib.rs:249",
+        "crates/voxel/src/lib.rs:252",
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:73"
       ],
       "in_tests": []
@@ -10128,7 +10902,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2779"
+        "crates/engine/src/engine.rs:2818"
       ],
       "in_tests": []
     },
@@ -10139,7 +10913,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2828"
+        "crates/engine/src/engine.rs:2867"
       ],
       "in_tests": []
     },
@@ -10155,8 +10929,8 @@
         "docs/traceability/civis-tracelinks.md:79"
       ],
       "in_code": [
-        "crates/voxel/src/lib.rs:85",
-        "crates/voxel/src/lib.rs:224",
+        "crates/voxel/src/lib.rs:88",
+        "crates/voxel/src/lib.rs:227",
         "docs/development-guide/fr-3d-additions.md:24",
         "docs/guides/voxel-emergent-vision-and-migration.md:29",
         "docs/guides/voxel-emergent-vision-and-migration.md:96",
@@ -10171,7 +10945,7 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "clients/bevy-ref/src/bin/standalone.rs:189",
+        "clients/bevy-ref/src/bin/standalone.rs:194",
         "clients/bevy-ref/src/voxel_stream.rs:13",
         "clients/bevy-ref/src/voxel_stream.rs:352",
         "clients/bevy-ref/src/voxel_stream.rs:364",
@@ -10279,6 +11053,28 @@
       "in_tests": []
     },
     {
+      "id": "FR-CIV-VOXEL-DIRTY-001",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/voxel/src/fluid_ca.rs:1572"
+      ],
+      "in_tests": []
+    },
+    {
+      "id": "FR-CIV-VOXEL-DIRTY-002",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "crates/voxel/src/fluid_ca.rs:1617"
+      ],
+      "in_tests": []
+    },
+    {
       "id": "FR-CIV-WAR-001",
       "in_specs": [
         "agileplus-specs/civ-006-deep-combat/spec.md:24",
@@ -10303,7 +11099,9 @@
     },
     {
       "id": "FR-CIV-WAR-001-UNITS",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:227"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -10335,7 +11133,9 @@
     },
     {
       "id": "FR-CIV-WAR-002-COMBAT",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:228"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -10381,7 +11181,9 @@
     },
     {
       "id": "FR-CIV-WAR-010",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:227"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -10429,7 +11231,9 @@
     },
     {
       "id": "FR-CIV-WAR-020",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:228"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -10775,12 +11579,12 @@
       "in_specs": [
         "agileplus-specs/civ-001-core-simulation-engine/spec.md:24",
         "agileplus-specs/civ-002-economy-joule-system/spec.md:43",
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:88",
+        "agileplus-specs/civ-018-verify-harness-extension/spec.md:77",
         "docs/FR.md:13",
         "docs/FR_DETAILED.md:29",
         "docs/reference/non-functional-requirements.md:65",
-        "docs/reference/non-functional-requirements.md:82",
-        "docs/reference/non-functional-requirements.md:202",
-        "docs/reference/non-functional-requirements.md:246"
+        "docs/reference/non-functional-requirements.md:82"
       ],
       "in_meta": [
         "agileplus-specs/civ-001-core-simulation-engine/meta.json:9"
@@ -10788,10 +11592,10 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:2204",
+        "crates/engine/src/engine.rs:2238",
         "docs/reference/agileplus-artifacts-index.md:41",
         "docs/reference/agileplus-artifacts-index.md:253",
-        "README.md:150"
+        "README.md:202"
       ],
       "in_tests": [
         "crates/engine/tests/tick_budget.rs:1",
@@ -10804,11 +11608,11 @@
         "agileplus-specs/civ-001-core-simulation-engine/spec.md:25",
         "agileplus-specs/civ-003-actor-citizen-lifecycle/spec.md:38",
         "agileplus-specs/civ-004-building-tiers/spec.md:36",
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:58",
         "docs/FR.md:14",
         "docs/FR_DETAILED.md:54",
         "docs/reference/non-functional-requirements.md:110",
-        "docs/reference/non-functional-requirements.md:202",
-        "docs/reference/non-functional-requirements.md:596"
+        "docs/reference/non-functional-requirements.md:202"
       ],
       "in_meta": [
         "agileplus-specs/civ-001-core-simulation-engine/meta.json:10"
@@ -10888,7 +11692,12 @@
         "docs/reference/agileplus-artifacts-index.md:41",
         "docs/reference/agileplus-artifacts-index.md:257"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:14",
+        "crates/engine/tests/fr_matrix_batch1.rs:122",
+        "crates/engine/tests/fr_matrix_batch1.rs:123",
+        "crates/engine/tests/fr_matrix_batch3.rs:50"
+      ]
     },
     {
       "id": "FR-CORE-006",
@@ -10909,7 +11718,12 @@
         "docs/reference/agileplus-artifacts-index.md:41",
         "docs/reference/agileplus-artifacts-index.md:258"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:14",
+        "crates/engine/tests/fr_matrix_batch1.rs:148",
+        "crates/engine/tests/fr_matrix_batch1.rs:149",
+        "crates/engine/tests/fr_matrix_batch3.rs:62"
+      ]
     },
     {
       "id": "FR-CORE-007",
@@ -11262,8 +12076,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "crates/economy/src/lib.rs:95",
-        "crates/engine/src/engine.rs:1911",
+        "crates/economy/src/lib.rs:101",
+        "crates/economy/src/lib.rs:300",
+        "crates/engine/src/engine.rs:1945",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:89",
         "docs/reference/agileplus-artifacts-index.md:260"
@@ -11286,6 +12101,9 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/economy/src/allocator.rs:765",
+        "crates/economy/src/allocator.rs:816",
+        "crates/economy/src/lib.rs:373",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:261"
       ],
@@ -11307,6 +12125,7 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
+        "crates/economy/src/allocator.rs:29",
         "docs/reference/agileplus-artifacts-index.md:57",
         "docs/reference/agileplus-artifacts-index.md:262"
       ],
@@ -11519,7 +12338,12 @@
       "in_code": [
         "crates/engine/src/lod.rs:94"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:13",
+        "crates/engine/tests/fr_matrix_batch1.rs:44",
+        "crates/engine/tests/fr_matrix_batch1.rs:45",
+        "crates/engine/tests/fr_matrix_batch3.rs:18"
+      ]
     },
     {
       "id": "FR-LOD-002",
@@ -11533,7 +12357,12 @@
         "crates/engine/src/lod.rs:63",
         "crates/engine/src/lod.rs:102"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:13",
+        "crates/engine/tests/fr_matrix_batch1.rs:59",
+        "crates/engine/tests/fr_matrix_batch1.rs:60",
+        "crates/engine/tests/fr_matrix_batch3.rs:26"
+      ]
     },
     {
       "id": "FR-LOD-003",
@@ -11547,7 +12376,12 @@
         "crates/engine/src/lod.rs:85",
         "crates/engine/src/lod.rs:109"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:13",
+        "crates/engine/tests/fr_matrix_batch1.rs:75",
+        "crates/engine/tests/fr_matrix_batch1.rs:76",
+        "crates/engine/tests/fr_matrix_batch3.rs:33"
+      ]
     },
     {
       "id": "FR-LOD-004",
@@ -11562,7 +12396,13 @@
         "crates/engine/src/lod.rs:77",
         "crates/engine/src/lod.rs:119"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:13",
+        "crates/engine/tests/fr_matrix_batch1.rs:91",
+        "crates/engine/tests/fr_matrix_batch1.rs:92",
+        "crates/engine/tests/fr_matrix_batch1.rs:106",
+        "crates/engine/tests/fr_matrix_batch3.rs:42"
+      ]
     },
     {
       "id": "FR-MET-001",
@@ -11580,6 +12420,7 @@
       "id": "FR-METRICS-001",
       "in_specs": [
         "agileplus-specs/civ-002-economy-joule-system/spec.md:29",
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:85",
         "docs/FR.md:33",
         "docs/FR_DETAILED.md:199",
         "docs/reference/non-functional-requirements.md:471",
@@ -11708,16 +12549,22 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:1186",
+        "crates/engine/src/engine.rs:1220",
         "crates/engine/src/replay.rs:51",
         "crates/engine/src/replay.rs:63",
         "crates/engine/src/replay.rs:82",
         "crates/engine/src/replay.rs:253",
         "crates/engine/src/replay.rs:265",
-        "crates/mod-host/src/lib.rs:204",
-        "crates/mod-host/src/lib.rs:217"
+        "crates/engine/src/scenario.rs:347",
+        "crates/mod-host/src/lib.rs:204"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:16",
+        "crates/engine/tests/fr_matrix_batch1.rs:256",
+        "crates/engine/tests/fr_matrix_batch1.rs:257",
+        "crates/engine/tests/fr_matrix_batch1.rs:295",
+        "crates/engine/tests/fr_matrix_batch3.rs:113"
+      ]
     },
     {
       "id": "FR-MOD-005",
@@ -11914,13 +12761,13 @@
       "id": "FR-PROTO-001",
       "in_specs": [
         "agileplus-specs/civ-010-multi-client-protocol/spec.md:25",
+        "agileplus-specs/civ-014-terrain-playable-hardening/spec.md:67",
+        "agileplus-specs/civ-016-devx-verify-harness-and-worktree-hygiene/spec.md:89",
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:68",
         "docs/reference/non-functional-requirements.md:224",
         "docs/reference/non-functional-requirements.md:230",
         "docs/reference/non-functional-requirements.md:246",
-        "docs/reference/non-functional-requirements.md:318",
-        "docs/reference/non-functional-requirements.md:332",
-        "docs/reference/non-functional-requirements.md:602",
-        "docs/traceability/full-traceability-matrix.md:78"
+        "docs/reference/non-functional-requirements.md:318"
       ],
       "in_meta": [
         "agileplus-specs/civ-010-multi-client-protocol/meta.json:9"
@@ -11939,6 +12786,8 @@
       "id": "FR-PROTO-002",
       "in_specs": [
         "agileplus-specs/civ-010-multi-client-protocol/spec.md:26",
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:81",
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:84",
         "docs/traceability/full-traceability-matrix.md:79"
       ],
       "in_meta": [
@@ -11958,6 +12807,7 @@
         "agileplus-specs/civ-010-multi-client-protocol/spec.md:27",
         "agileplus-specs/civ-011-bevy-primary-client/spec.md:42",
         "agileplus-specs/civ-012-godot-secondary-client/spec.md:40",
+        "agileplus-specs/civ-017-civis-mcp-server/spec.md:69",
         "docs/traceability/full-traceability-matrix.md:80",
         "docs/traceability/full-traceability-matrix.md:328"
       ],
@@ -12034,10 +12884,10 @@
         "agileplus-specs/civ-013-research-api/plan.md:11",
         "agileplus-specs/civ-013-research-api/spec.md:29",
         "agileplus-specs/civ-013-research-api/spec.md:73",
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:82",
         "docs/reference/non-functional-requirements.md:140",
         "docs/reference/non-functional-requirements.md:182",
-        "docs/reference/non-functional-requirements.md:260",
-        "docs/reference/non-functional-requirements.md:268"
+        "docs/reference/non-functional-requirements.md:260"
       ],
       "in_meta": [
         "agileplus-specs/civ-013-research-api/meta.json:13"
@@ -12045,13 +12895,18 @@
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
       "in_code": [
-        "crates/engine/src/engine.rs:1227",
-        "crates/engine/src/engine.rs:3092",
+        "crates/engine/src/engine.rs:1261",
+        "crates/engine/src/engine.rs:3136",
         "crates/engine/src/replay_format.rs:1",
         "docs/reference/agileplus-artifacts-index.md:239",
         "docs/reference/agileplus-artifacts-index.md:311"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:15",
+        "crates/engine/tests/fr_matrix_batch1.rs:185",
+        "crates/engine/tests/fr_matrix_batch1.rs:186",
+        "crates/engine/tests/fr_matrix_batch3.rs:81"
+      ]
     },
     {
       "id": "FR-REPLAY-002",
@@ -12099,9 +12954,15 @@
       "in_traceability": [],
       "in_code": [
         "crates/engine/src/replay.rs:277",
+        "crates/engine/src/save.rs:278",
         "docs/specs/CIV-1000-save-load-persistence-spec.md:2801"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/engine/tests/fr_matrix_batch1.rs:17",
+        "crates/engine/tests/fr_matrix_batch1.rs:314",
+        "crates/engine/tests/fr_matrix_batch1.rs:315",
+        "crates/engine/tests/fr_matrix_batch3.rs:143"
+      ]
     },
     {
       "id": "FR-SAVE-003",
@@ -12193,7 +13054,9 @@
     },
     {
       "id": "FR-SAVE-010",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-021-recovered-requirements/spec.md:159"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -12591,7 +13454,10 @@
     },
     {
       "id": "FR-SESSION-014",
-      "in_specs": [],
+      "in_specs": [
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:62",
+        "agileplus-specs/civ-015-tactics-fog-of-war-and-combat-pipeline/spec.md:126"
+      ],
       "in_meta": [],
       "in_func_req": null,
       "in_traceability": [],
@@ -13809,6 +14675,7 @@
     {
       "id": "NFR-CIV-ACC-001",
       "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:108",
         "docs/reference/non-functional-requirements.md:352",
         "docs/reference/non-functional-requirements.md:573",
         "docs/reference/non-functional-requirements.md:610"
@@ -13978,6 +14845,17 @@
       "in_tests": []
     },
     {
+      "id": "NFR-CIV-DEV-HYGIENE-001",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": null,
+      "in_traceability": [],
+      "in_code": [
+        "docs/ops/history-purge-plan.md:4"
+      ],
+      "in_tests": []
+    },
+    {
       "id": "NFR-CIV-LEGENDS-CONFIG-04",
       "in_specs": [],
       "in_meta": [],
@@ -14144,14 +15022,14 @@
     {
       "id": "NFR-CIV-PERF-003",
       "in_specs": [
+        "agileplus-specs/civ-019-emergence-metrics-dashboard/spec.md:69",
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:25",
         "docs/reference/non-functional-requirements.md:55",
         "docs/reference/non-functional-requirements.md:192",
         "docs/reference/non-functional-requirements.md:202",
         "docs/reference/non-functional-requirements.md:553",
         "docs/reference/non-functional-requirements.md:595",
-        "docs/reference/non-functional-requirements.md:599",
-        "docs/reference/non-functional-requirements.md:600",
-        "docs/reference/non-functional-requirements.md:601"
+        "docs/reference/non-functional-requirements.md:599"
       ],
       "in_meta": [],
       "in_func_req": null,
@@ -14185,6 +15063,7 @@
     {
       "id": "NFR-CIV-PERF-005",
       "in_specs": [
+        "agileplus-specs/civ-020-ca-perf-dirty-chunk/spec.md:24",
         "docs/reference/non-functional-requirements.md:86",
         "docs/reference/non-functional-requirements.md:216",
         "docs/reference/non-functional-requirements.md:555",

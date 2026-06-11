@@ -293,7 +293,54 @@ async-mesh stack overflow, not on frame-budget headroom.
 
 ---
 
-## 7. Reproduction recipe
+## 7. Re-run after #376 (2026-06-11, 120s)
+
+**Command used**
+
+```powershell
+$env:CARGO_TARGET_DIR='G:/civis-target-gate'
+$env:CIVIS_AUTOSTART='1'
+$env:BEVY_ASSET_ROOT='G:/civis-main-gate/clients/bevy-ref'
+cargo run -p civ-bevy-ref --features bevy,egui,voxel,models --bin civ-standalone > profile-fixed.log 2>&1
+```
+
+Executed in `perf/frame-baseline-rerun` with a 120-second runtime gate.
+
+### 7.1 Extracted headline
+
+- `profile-fixed.log` contains no `FrameTimeDiagnostics` emission lines; the process aborts before the first 10s diagnostics tick via stack overflow.
+- Runtime fatal line is present and verbatim:
+
+```text
+thread '<unknown>' (750892) has overflowed its stack
+```
+
+- `SystemInfo` + Vulkan startup + `[voxel] world` + `[sim_bridge] camera` logs are present; the run exits with `0xc00000fd` (`STATUS_STACK_OVERFLOW`) after ~7s.
+
+### 7.2 Metrics
+
+| Source | Metric | NFR target | Observed | Verdict |
+|---|---|---|---|---|
+| `profile-fixed.log` | fps avg | ≥60 fps @ working set | N/A (no fps diagnostics emitted) | UNMEASURABLE |
+| `profile-fixed.log` | fps p99 | ≥30 fps floor (diagnostic requirement) | N/A (no fps diagnostics emitted) | UNMEASURABLE |
+| `profile-fixed.log` | frame_time avg (ms) | no regression versus steady budget | N/A (no `frame_time` diagnostics emitted) | UNMEASURABLE |
+| `profile-fixed.log` | frame_time worst (ms) | no major hitch (diagnostic target) | N/A (no `frame_time` diagnostics emitted) | UNMEASURABLE |
+| `profile-fixed.log` | non_air cells | non-zero expected | 650,894 / 1,638,400 (39.7%) | PASS |
+| `profile-fixed.log` | max_solid_y | non-zero expected | 32 | PASS |
+| `profile-fixed.log` | entropy | non-zero expected | none emitted | GAP |
+| `profile-fixed.log` | structures | non-zero expected | none emitted | GAP |
+
+### 7.3 ERRORs (verbatim)
+
+```text
+thread '<unknown>' (750892) has overflowed its stack
+```
+
+The rerun confirms the same blocker class as earlier profiles; no new classes of errors were introduced.
+
+---
+
+## 8. Reproduction recipe
 
 ```cmd
 :: from G:\civis-main-gate on branch perf/frame-baseline

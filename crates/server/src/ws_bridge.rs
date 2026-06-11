@@ -33,6 +33,9 @@ use tokio::{
 };
 
 use crate::{
+    autosave::{
+        autosave_cadence_from_env, autosave_keep_from_env, spawn_autosave_loop, AutosaveContext,
+    },
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
@@ -238,7 +241,34 @@ async fn serve_ws_bridge(
         }
     });
 
-    let _ = tokio::join!(server, ticker);
+    // Background autosaver (CIV-1000 §13 / P5). Cadence is configurable via
+    // `CIV_AUTOSAVE_EVERY_SECS` (default 60s, `0` disables). The loop shares
+    // the bridge's `Simulation` mutex and the `SaveDb` instance, so saves
+    // serialize against client-driven `save.slot` / `save.load` calls.
+    let autosave_handle = autosave_cadence_from_env().and_then(|cadence| {
+        let keep = autosave_keep_from_env();
+        let ctx = AutosaveContext {
+            sim: Arc::clone(&state.sim),
+            saves_dir: state.saves_dir.clone(),
+            session_id: state.session_id.clone(),
+            save_db: Arc::clone(&state.save_db),
+            keep,
+        };
+        spawn_autosave_loop(ctx, cadence)
+    });
+
+    let server_result = server.await;
+    // Tear down the long-lived background tasks so the process can exit
+    // cleanly. The tick task was already being polled by the previous
+    // `tokio::join!`; aborting it here preserves that intent.
+    ticker.abort();
+    if let Some(handle) = autosave_handle {
+        handle.abort();
+        let _ = handle.await;
+    }
+    if let Err(err) = server_result {
+        tracing::error!("ws bridge server error: {err}");
+    }
 }
 
 async fn healthz(State(state): State<AppState>) -> impl IntoResponse {

@@ -57,7 +57,7 @@ use crate::replay_format::{load_civreplay, save_civreplay};
 #[allow(dead_code)]
 pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
-    "lifecycle",
+    "citizen_lifecycle",
     "military",
     "economy",
     "planet",
@@ -1216,7 +1216,7 @@ impl Simulation {
 
         // Phases in PHASE_ORDER (CIV-0001).
         phase!("production", self.phase_production());
-        phase!("lifecycle", self.phase_lifecycle());
+        phase!("citizen_lifecycle", self.phase_citizen_lifecycle());
         phase!("military", self.phase_military());
         phase!("economy", self.phase_economy());
         phase!("planet", self.phase_planet());

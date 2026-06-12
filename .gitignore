@@ -103,6 +103,7 @@ scripts/game/desktop/
 
 # Test coverage output
 coverage/
+.grade-reports/
 
 # Python bytecode cache
 __pycache__/

@@ -104,6 +104,13 @@ pub fn labor_capacity(age: u16, health: &Health, dna: &Dna, params: &LifecyclePa
 }
 
 /// Classify a citizen from read-only continuous state.
+///
+/// The labels are a measurement vocabulary, not a control flow. The order of
+/// the predicates mirrors the spec's §1.2 table: dead first, then the
+/// age/integrity Elder trigger (so a senior citizen with full capacity is
+/// still classified as Elder, not Adult), then the maturity-integrity-capacity
+/// Adult gate, with Child as the residual so that a young agent with low
+/// labor capacity is still classified as Child rather than Elder.
 #[must_use]
 pub fn classify_lifecycle(
     age: u16,
@@ -113,10 +120,10 @@ pub fn classify_lifecycle(
 ) -> LifecycleLabel {
     if health.is_dead() {
         LifecycleLabel::Dead
+    } else if age >= 65 || health.integrity < 0.3 {
+        LifecycleLabel::Elder
     } else if maturity >= 0.65 && health.integrity > 0.3 && labor_capacity > 0.4 {
         LifecycleLabel::Adult
-    } else if age >= 65 || health.integrity < 0.3 || labor_capacity <= 0.4 {
-        LifecycleLabel::Elder
     } else {
         LifecycleLabel::Child
     }

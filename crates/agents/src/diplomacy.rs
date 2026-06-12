@@ -360,6 +360,9 @@ mod tests {
                     trade_volume: 2.0,
                     resource_competition: 0.5,
                     proximity: 0.5,
+                    combat_grievance: 0.0,
+                    need_complementarity: 0.0,
+                    scarcity_pressure: 0.0,
                 },
             );
         }

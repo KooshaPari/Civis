@@ -1,38 +1,38 @@
-use crate::InfraError;
+use crate::Error;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
 /// Resolve and validate a PostgreSQL URL from an optional environment value.
 ///
 /// Used by services that read `DATABASE_URL` before opening a pool.
-pub fn resolve_database_url(from_env: Option<&str>) -> Result<String, InfraError> {
+pub fn resolve_database_url(from_env: Option<&str>) -> Result<String, Error> {
     let url = from_env
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| InfraError::MissingConfig("DATABASE_URL".into()))?;
+        .ok_or_else(|| Error::MissingConfig("DATABASE_URL".into()))?;
     validate_postgres_url(url)?;
     Ok(url.to_owned())
 }
 
 /// Validate a PostgreSQL connection URL before connecting.
-pub fn validate_postgres_url(url: &str) -> Result<(), InfraError> {
+pub fn validate_postgres_url(url: &str) -> Result<(), Error> {
     let url = url.trim();
     if url.is_empty() {
-        return Err(InfraError::MissingConfig("DATABASE_URL is empty".into()));
+        return Err(Error::MissingConfig("DATABASE_URL is empty".into()));
     }
 
     let scheme_end = url.find("://").ok_or_else(|| {
-        InfraError::MissingConfig(format!("invalid DATABASE_URL (missing scheme): {url}"))
+        Error::MissingConfig(format!("invalid DATABASE_URL (missing scheme): {url}"))
     })?;
     let scheme = &url[..scheme_end];
     if scheme != "postgres" && scheme != "postgresql" {
-        return Err(InfraError::MissingConfig(format!(
+        return Err(Error::MissingConfig(format!(
             "DATABASE_URL scheme must be postgres or postgresql, got {scheme}"
         )));
     }
 
     let after_scheme = &url[scheme_end + 3..];
     if after_scheme.is_empty() || after_scheme.starts_with('/') {
-        return Err(InfraError::MissingConfig(format!(
+        return Err(Error::MissingConfig(format!(
             "invalid DATABASE_URL (missing host): {url}"
         )));
     }
@@ -58,14 +58,14 @@ pub struct PgConn {
 
 impl PgConn {
     /// Connect to a PostgreSQL database.
-    pub async fn connect(url: &str) -> Result<Self, InfraError> {
+    pub async fn connect(url: &str) -> Result<Self, Error> {
         validate_postgres_url(url)?;
         let pool = PgPoolOptions::new().connect(url).await?;
         Ok(Self { pool })
     }
 
     /// Save a replay blob and return its row id.
-    pub async fn save_replay(&self, name: &str, blob: &[u8]) -> Result<i64, InfraError> {
+    pub async fn save_replay(&self, name: &str, blob: &[u8]) -> Result<i64, Error> {
         let row: (i64,) = sqlx::query_as(replay_sql::INSERT)
             .bind(name)
             .bind(blob)
@@ -75,7 +75,7 @@ impl PgConn {
     }
 
     /// Load a replay blob by row id.
-    pub async fn load_replay(&self, id: i64) -> Result<Vec<u8>, InfraError> {
+    pub async fn load_replay(&self, id: i64) -> Result<Vec<u8>, Error> {
         let row: (Vec<u8>,) = sqlx::query_as(replay_sql::SELECT_BLOB_BY_ID)
             .bind(id)
             .fetch_one(&self.pool)
@@ -87,7 +87,7 @@ impl PgConn {
 #[cfg(test)]
 mod tests {
     use super::{replay_sql, resolve_database_url, validate_postgres_url, MIGRATION_0001};
-    use crate::InfraError;
+    use crate::Error;
     use std::path::Path;
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn validate_postgres_url_rejects_empty_and_bad_schemes() {
         let empty = validate_postgres_url("").unwrap_err();
-        assert!(matches!(empty, InfraError::MissingConfig(_)));
+        assert!(matches!(empty, Error::MissingConfig(_)));
         assert!(empty.to_string().contains("empty"));
 
         let mysql = validate_postgres_url("mysql://localhost/db").unwrap_err();
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn resolve_database_url_requires_non_empty_value() {
         let err = resolve_database_url(None).unwrap_err();
-        assert!(matches!(err, InfraError::MissingConfig(_)));
+        assert!(matches!(err, Error::MissingConfig(_)));
         assert!(err.to_string().contains("DATABASE_URL"));
 
         let err = resolve_database_url(Some("   ")).unwrap_err();

@@ -11,6 +11,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bincode = { version = "2.0", features = ["serde"] }
 tracing = "0.1"
+thiserror = "1"
+tokio = { version = "1", features = ["rt"] }
 civ-voxel = { path = "../voxel" }
 civ-build = { path = "../build" }
 civ-agents = { path = "../agents" }

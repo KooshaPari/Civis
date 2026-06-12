@@ -1,4 +1,4 @@
-use crate::InfraError;
+use crate::Error;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::{config::Credentials, primitives::ByteStream, Client};
 
@@ -14,7 +14,7 @@ impl MinioClient {
         endpoint: &str,
         access_key: &str,
         secret_key: &str,
-    ) -> Result<Self, InfraError> {
+    ) -> Result<Self, Error> {
         let credentials = Credentials::new(access_key, secret_key, None, None, "minio");
         let config = aws_config::defaults(BehaviorVersion::latest())
             .endpoint_url(endpoint)
@@ -28,7 +28,7 @@ impl MinioClient {
     }
 
     /// Put an object into the default bucket.
-    pub async fn put_object(&self, key: &str, body: Vec<u8>) -> Result<(), InfraError> {
+    pub async fn put_object(&self, key: &str, body: Vec<u8>) -> Result<(), Error> {
         self.client
             .put_object()
             .bucket(&self.bucket)
@@ -36,12 +36,12 @@ impl MinioClient {
             .body(ByteStream::from(body))
             .send()
             .await
-            .map_err(|err| InfraError::S3(err.to_string()))?;
+            .map_err(|err| Error::S3(err.to_string()))?;
         Ok(())
     }
 
     /// Fetch an object from the default bucket.
-    pub async fn get_object(&self, key: &str) -> Result<Vec<u8>, InfraError> {
+    pub async fn get_object(&self, key: &str) -> Result<Vec<u8>, Error> {
         let out = self
             .client
             .get_object()
@@ -49,12 +49,12 @@ impl MinioClient {
             .key(key)
             .send()
             .await
-            .map_err(|err| InfraError::S3(err.to_string()))?;
+            .map_err(|err| Error::S3(err.to_string()))?;
         let data = out
             .body
             .collect()
             .await
-            .map_err(|err| InfraError::S3(err.to_string()))?;
+            .map_err(|err| Error::S3(err.to_string()))?;
         Ok(data.into_bytes().to_vec())
     }
 }

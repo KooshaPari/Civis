@@ -24,6 +24,7 @@ members = [
     "crates/civis-cli",
     "crates/civis-mcp",
     "crates/watch",
+  "crates/infra",
   "crates/save-db",
   "crates/legends",
   "crates/civ-emergence-metrics",

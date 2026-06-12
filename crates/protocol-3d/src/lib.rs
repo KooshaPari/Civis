@@ -27,8 +27,11 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod error;
+
 pub use civ_build::{BuildingGraph, BuildingId, FacadeStyle, Parcel, ParcelKind};
 pub use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
+pub use error::Error;
 
 /// Schema version of the public protocol-3d frame types. Bumped on any
 /// wire-incompatible change; clients refuse to attach on mismatch.
@@ -1242,11 +1245,7 @@ mod tests {
     /// decoder returns the same payload (identity round-trip).
     #[test]
     fn agent_stream_roundtrip_identity() {
-        let origin = GridOriginI32 {
-            x: 0,
-            y: 0,
-            z: 0,
-        };
+        let origin = GridOriginI32 { x: 0, y: 0, z: 0 };
         let stream = AgentStream {
             header: AgentStreamHeader {
                 tick: 1_234_567,
@@ -1301,7 +1300,15 @@ mod tests {
     fn agent_stream_roundtrip_property() {
         let cases: Vec<(u32, Vec<AgentStreamEntry>)> = vec![
             (0, vec![]),
-            (1, vec![AgentStreamEntry { id: 0, cell_x: 0, cell_y: 0, cell_z: 0 }]),
+            (
+                1,
+                vec![AgentStreamEntry {
+                    id: 0,
+                    cell_x: 0,
+                    cell_y: 0,
+                    cell_z: 0,
+                }],
+            ),
             (
                 3,
                 (0..3)
@@ -1412,7 +1419,9 @@ mod tests {
         bytes.extend_from_slice(&[0u8; 12]); // origin
         assert_eq!(
             decode_agent_stream_binary(&bytes),
-            Err(AgentStreamBinaryError::UnsupportedMode(AgentStreamMode::Delta))
+            Err(AgentStreamBinaryError::UnsupportedMode(
+                AgentStreamMode::Delta
+            ))
         );
     }
 

@@ -1,4 +1,4 @@
-use crate::InfraError;
+use crate::Error;
 
 /// NATS client wrapper.
 pub struct NatsClient {
@@ -7,11 +7,11 @@ pub struct NatsClient {
 
 impl NatsClient {
     /// Connect to NATS.
-    pub async fn connect(url: &str) -> Result<Self, InfraError> {
+    pub async fn connect(url: &str) -> Result<Self, Error> {
         Ok(Self {
             client: async_nats::connect(url)
                 .await
-                .map_err(|err| InfraError::Nats(err.to_string()))?,
+                .map_err(|err| Error::Nats(err.to_string()))?,
         })
     }
 
@@ -20,19 +20,19 @@ impl NatsClient {
         &self,
         topic: &str,
         payload: impl Into<bytes::Bytes>,
-    ) -> Result<(), InfraError> {
+    ) -> Result<(), Error> {
         self.client
             .publish(topic.to_owned(), payload.into())
             .await
-            .map_err(|err| InfraError::Nats(err.to_string()))?;
+            .map_err(|err| Error::Nats(err.to_string()))?;
         Ok(())
     }
 
     /// Subscribe to a topic.
-    pub async fn subscribe(&self, topic: &str) -> Result<async_nats::Subscriber, InfraError> {
+    pub async fn subscribe(&self, topic: &str) -> Result<async_nats::Subscriber, Error> {
         self.client
             .subscribe(topic.to_owned())
             .await
-            .map_err(|err| InfraError::Nats(err.to_string()))
+            .map_err(|err| Error::Nats(err.to_string()))
     }
 }

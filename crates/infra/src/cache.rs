@@ -1,4 +1,4 @@
-use crate::InfraError;
+use crate::Error;
 
 /// Redis-compatible cache wrapper.
 pub struct Cache {
@@ -7,18 +7,18 @@ pub struct Cache {
 
 impl Cache {
     /// Connect to a Redis-compatible cache.
-    pub async fn connect(url: &str) -> Result<Self, InfraError> {
+    pub async fn connect(url: &str) -> Result<Self, Error> {
         Ok(Self {
             client: redis::Client::open(url)?,
         })
     }
 
-    async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, InfraError> {
+    async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, Error> {
         Ok(self.client.get_multiplexed_tokio_connection().await?)
     }
 
     /// Set a key to a binary payload.
-    pub async fn set(&self, key: &[u8], value: &[u8]) -> Result<(), InfraError> {
+    pub async fn set(&self, key: &[u8], value: &[u8]) -> Result<(), Error> {
         let mut conn = self.connection().await?;
         redis::cmd("SET")
             .arg(key)
@@ -29,7 +29,7 @@ impl Cache {
     }
 
     /// Fetch a binary payload.
-    pub async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, InfraError> {
+    pub async fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, Error> {
         let mut conn = self.connection().await?;
         Ok(redis::cmd("GET")
             .arg(key)
@@ -38,7 +38,7 @@ impl Cache {
     }
 
     /// Delete a key.
-    pub async fn del(&self, key: &[u8]) -> Result<(), InfraError> {
+    pub async fn del(&self, key: &[u8]) -> Result<(), Error> {
         let mut conn = self.connection().await?;
         redis::cmd("DEL")
             .arg(key)

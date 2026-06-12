@@ -16,8 +16,11 @@ use std::collections::BTreeMap;
 use civ_laws::LawDb;
 use serde::{Deserialize, Serialize};
 
+pub mod error;
 #[cfg(feature = "firepass-kimi")]
 pub mod firepass;
+
+pub use error::Error;
 
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;

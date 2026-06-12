@@ -11,13 +11,14 @@ default = []
 infra = ["pg", "nats", "s3", "cache"]
 pg = ["dep:sqlx"]
 nats = ["dep:async-nats"]
-s3 = ["dep:aws-config", "dep:aws-sdk-s3", "dep:tokio"]
+s3 = ["dep:aws-config", "dep:aws-sdk-s3"]
 cache = ["dep:redis"]
 
 [dependencies]
 thiserror = "1"
-tokio = { version = "1", optional = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync"] }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 bytes = "1"
 
 sqlx = { version = "0.8", optional = true, features = ["postgres", "runtime-tokio-rustls", "migrate"] }

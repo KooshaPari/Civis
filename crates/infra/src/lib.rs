@@ -5,6 +5,8 @@
 /// Redis-compatible cache wrapper.
 #[cfg(feature = "cache")]
 pub mod cache;
+/// Local error type.
+pub mod error;
 /// S3-compatible client wrapper.
 #[cfg(feature = "s3")]
 pub mod minio;
@@ -15,44 +17,15 @@ pub mod nats;
 #[cfg(feature = "pg")]
 pub mod pg;
 
-/// Unified infrastructure error.
-#[derive(Debug, thiserror::Error)]
-pub enum InfraError {
-    /// PostgreSQL error.
-    #[cfg(feature = "pg")]
-    #[error("postgres error: {0}")]
-    Postgres(#[from] sqlx::Error),
-    /// NATS error.
-    #[cfg(feature = "nats")]
-    #[error("nats error: {0}")]
-    Nats(String),
-    /// S3 error.
-    #[cfg(feature = "s3")]
-    #[error("s3 error: {0}")]
-    S3(String),
-    /// Redis error.
-    #[cfg(feature = "cache")]
-    #[error("cache error: {0}")]
-    Cache(String),
-    /// Missing runtime configuration.
-    #[error("missing configuration: {0}")]
-    MissingConfig(String),
-}
-
-#[cfg(feature = "cache")]
-impl From<redis::RedisError> for InfraError {
-    fn from(value: redis::RedisError) -> Self {
-        Self::Cache(value.to_string())
-    }
-}
+pub use error::Error;
 
 #[cfg(test)]
 mod tests {
-    use super::InfraError;
+    use super::Error;
 
     #[test]
     fn missing_config_error_is_actionable() {
-        let err = InfraError::MissingConfig("DATABASE_URL".into());
+        let err = Error::MissingConfig("DATABASE_URL".into());
         let message = err.to_string();
         assert!(message.contains("DATABASE_URL"));
         assert!(message.contains("missing configuration"));
@@ -61,7 +34,7 @@ mod tests {
     #[cfg(feature = "nats")]
     #[test]
     fn nats_error_includes_detail() {
-        let err = InfraError::Nats("connection refused".into());
+        let err = Error::Nats("connection refused".into());
         let message = err.to_string();
         assert!(message.contains("nats error"));
         assert!(message.contains("connection refused"));
@@ -70,7 +43,7 @@ mod tests {
     #[cfg(feature = "s3")]
     #[test]
     fn s3_error_includes_detail() {
-        let err = InfraError::S3("bucket missing".into());
+        let err = Error::S3("bucket missing".into());
         let message = err.to_string();
         assert!(message.contains("s3 error"));
         assert!(message.contains("bucket missing"));
@@ -79,7 +52,7 @@ mod tests {
     #[cfg(feature = "cache")]
     #[test]
     fn cache_error_includes_detail() {
-        let err = InfraError::Cache("broken pipe".into());
+        let err = Error::Cache("broken pipe".into());
         let message = err.to_string();
         assert!(message.contains("cache error"));
         assert!(message.contains("broken pipe"));
@@ -89,14 +62,14 @@ mod tests {
     #[test]
     fn redis_error_converts_to_cache_variant() {
         let redis_err = redis::RedisError::from((redis::ErrorKind::IoError, "broken pipe"));
-        let err: InfraError = redis_err.into();
+        let err: Error = redis_err.into();
         assert!(err.to_string().contains("cache error"));
     }
 
     #[cfg(feature = "pg")]
     #[test]
     fn postgres_error_includes_detail() {
-        let err = InfraError::Postgres(sqlx::Error::PoolClosed);
+        let err = Error::Postgres(sqlx::Error::PoolClosed);
         let message = err.to_string();
         assert!(message.contains("postgres error"));
     }
@@ -104,8 +77,8 @@ mod tests {
     #[cfg(feature = "pg")]
     #[test]
     fn sqlx_error_converts_to_postgres_variant() {
-        let err: InfraError = sqlx::Error::PoolClosed.into();
-        assert!(matches!(err, InfraError::Postgres(_)));
+        let err: Error = sqlx::Error::PoolClosed.into();
+        assert!(matches!(err, Error::Postgres(_)));
         assert!(err.to_string().contains("postgres error"));
     }
 }

@@ -12,12 +12,14 @@
 
 mod allocation;
 mod allocator;
+pub mod error;
 mod institution;
 mod market;
 pub mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
 pub use allocator::{Allocator, Bid, CancelledOrder, ClearedTrade, GoodId, Offer, OrderId};
+pub use error::Error;
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
@@ -299,7 +301,7 @@ mod tests {
     /// institution transfers, and conserves total joule budget end-to-end.
     #[test]
     fn step_integrates_allocator_with_conservation() {
-        use crate::{Bid, INSTITUTION_MARKET, INSTITUTION_TREASURY, Offer};
+        use crate::{Bid, Offer, INSTITUTION_MARKET, INSTITUTION_TREASURY};
 
         let mut state = EconomyState::with_energy_budget(2_000);
         // Seed the institution ledger (market + treasury accounts) so we can
@@ -435,7 +437,10 @@ mod tests {
                 + state.institutions.institution_balance(INSTITUTION_TREASURY)
                 + state.institutions.institution_balance(INSTITUTION_MARKET);
             assert_eq!(total, total_before, "joules leaked during economy step");
-            assert!(state.energy_budget_joules >= 0, "macro budget went negative");
+            assert!(
+                state.energy_budget_joules >= 0,
+                "macro budget went negative"
+            );
             assert!(
                 state.institutions.institution_balance(INSTITUTION_TREASURY) >= 0,
                 "treasury went negative"

@@ -20,6 +20,10 @@ public class VanillaMappingValidationTests
         @"^\s*-\s*id:\s*(?<value>\S+)\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex BuildingStartRegex = new(
+        @"^\s*-\s*id:\s*(?<value>\S+)\s*$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Regex VanillaMappingRegex = new(
         @"^\s*vanilla_mapping:\s*(?<value>\S+)\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -28,6 +32,7 @@ public class VanillaMappingValidationTests
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
     private static readonly string[] ShippingUnitFiles = BuildShippingUnitFiles();
+    private static readonly string[] ShippingBuildingFiles = BuildShippingBuildingFiles();
 
     private static string[] BuildShippingUnitFiles()
     {
@@ -45,6 +50,26 @@ public class VanillaMappingValidationTests
             unitFiles.AddRange(Directory.GetFiles(modernUnitsDirectory, "*.yaml"));
 
         return unitFiles.ToArray();
+    }
+
+    private static string[] BuildShippingBuildingFiles()
+    {
+        List<string> buildingFiles = [];
+
+        string packsDirectory = Path.Combine(RepoRoot, "packs");
+        if (!Directory.Exists(packsDirectory))
+            return buildingFiles.ToArray();
+
+        foreach (string packDirectory in Directory.GetDirectories(packsDirectory))
+        {
+            string buildingsDirectory = Path.Combine(packDirectory, "buildings");
+            if (!Directory.Exists(buildingsDirectory))
+                continue;
+
+            buildingFiles.AddRange(Directory.GetFiles(buildingsDirectory, "*.yaml"));
+        }
+
+        return buildingFiles.ToArray();
     }
 
     [Fact]
@@ -85,6 +110,49 @@ public class VanillaMappingValidationTests
 
         unknownMappings.Should().BeEmpty(
             "all shipping-pack vanilla_mapping values must be recognized by the runtime swap pipeline. " +
+            "Known mappings: {0}. Unknown entries: {1}",
+            string.Join(", ", recognizedMappings.OrderBy(value => value)),
+            string.Join("; ", unknownMappings));
+    }
+
+    [Fact]
+    public void ShippingPackBuildingVanillaMappings_AreAllRecognized()
+    {
+        HashSet<string> recognizedMappings = new(
+            PackStatMappings.VanillaMappingToComponentType.Keys,
+            StringComparer.OrdinalIgnoreCase);
+
+        List<string> unknownMappings = new();
+
+        foreach (string buildingFile in ShippingBuildingFiles)
+        {
+            string packName = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(buildingFile))!);
+            string currentBuildingId = "<unknown>";
+
+            foreach (string line in File.ReadLines(buildingFile))
+            {
+                Match buildingMatch = BuildingStartRegex.Match(line);
+                if (buildingMatch.Success)
+                {
+                    currentBuildingId = buildingMatch.Groups["value"].Value;
+                    continue;
+                }
+
+                Match mappingMatch = VanillaMappingRegex.Match(line);
+                if (!mappingMatch.Success)
+                    continue;
+
+                string vanillaMapping = mappingMatch.Groups["value"].Value;
+                if (PackStatMappings.TryResolveMapping(vanillaMapping, out _))
+                    continue;
+
+                unknownMappings.Add(
+                    $"{packName}:{Path.GetFileName(buildingFile)} building={currentBuildingId} mapping={vanillaMapping}");
+            }
+        }
+
+        unknownMappings.Should().BeEmpty(
+            "all shipping-pack building vanilla_mapping values must be recognized by the runtime swap pipeline. " +
             "Known mappings: {0}. Unknown entries: {1}",
             string.Join(", ", recognizedMappings.OrderBy(value => value)),
             string.Join("; ", unknownMappings));

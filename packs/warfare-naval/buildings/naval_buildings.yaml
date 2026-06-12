@@ -1,6 +1,7 @@
 # Naval production and defense buildings for Republic and CIS-style maritime infrastructure.
 
 - id: naval_shipyard
+  vanilla_mapping: command
   display_name: Naval Shipyard
   description: Coastal production structure for medium and late-game naval hulls.
   building_type: Production
@@ -17,6 +18,7 @@
     cis_capital_ship_lite: 1
 
 - id: naval_dock
+  vanilla_mapping: resource
   display_name: Naval Dock
   description: Forward dock facility for skiffs and patrol craft.
   building_type: Production
@@ -35,6 +37,7 @@
     cis_patrol_craft: 1
 
 - id: naval_drydock
+  vanilla_mapping: resource
   display_name: Naval Drydock
   description: Repair and refit facility for damaged ships and coastal support craft.
   building_type: Production
@@ -48,6 +51,7 @@
   health: 1650
 
 - id: coastal_defense_battery
+  vanilla_mapping: defense
   display_name: Coastal Defense Battery
   description: Heavy shore emplacement for anti-ship and anti-air coverage.
   building_type: Defense

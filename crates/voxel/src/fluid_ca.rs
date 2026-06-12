@@ -6,7 +6,8 @@
 
 use crate::boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
 use crate::material::{
-    MaterialRegistry, Phase, AIR, ICE, LAVA, MOLTEN_METAL, MUD, SALT_WATER, SNOW, STEAM, WATER,
+    MaterialRegistry, Phase, AIR, ICE, LAVA, MOLTEN_METAL, MUD, SALT_WATER, SAND, SNOW, STEAM,
+    WATER,
 };
 use crate::{MaterialId, VoxelWorld, WorldCoord};
 use std::collections::HashSet;

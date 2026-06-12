@@ -350,7 +350,11 @@ impl Simulation {
                 .0
                 .clone();
             let psyche = psyche_from_dna(&Dna(genome), &profile);
-            let _ = self.world.insert(*entity, (psyche, SocialGraph::default()));
+            let had_social_graph = self.world.get::<&SocialGraph>(*entity).is_ok();
+            let _ = self.world.insert(*entity, (psyche,));
+            if !had_social_graph {
+                let _ = self.world.insert(*entity, (SocialGraph::default(),));
+            }
         }
 
         for (entity, id, cluster) in agents {
@@ -425,14 +429,12 @@ impl Simulation {
                     delta_needs,
                     0.0,
                 );
-                let new_maturity = (maturity + 0.001).min(1.0);
                 let arousal = psyche.mood.arousal;
-                psyche.maturity = new_maturity;
                 nudge_temperament(
                     &mut psyche.temperament,
                     arousal,
                     needs.belonging,
-                    new_maturity,
+                    maturity,
                 );
             }
             let sociability = self

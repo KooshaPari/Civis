@@ -2495,6 +2495,7 @@ dependencies = [
 name = "civ-needs"
 version = "0.1.0"
 dependencies = [
+ "civ-genetics",
  "proptest",
  "rand 0.8.6",
  "rand_chacha 0.3.1",

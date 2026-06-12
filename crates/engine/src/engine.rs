@@ -8,13 +8,21 @@ use civ_agents::{
     Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
     PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
 };
+use civ_agents::{
+    diplomacy::{DiplomacyMatrix, DiplomacySignal, GriefAccumulator, RelationKind},
+    ClusterId, Interaction, SocialEvent, SocialGraph,
+};
+use civ_agents::psyche::tick_maturity;
+use civ_agents::social::should_reproduce;
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
+use civ_genetics::Dna;
 use civ_needs::{
-    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
+    classify_lifecycle, labor_capacity, tick as needs_tick, DecayRates, Health as LifeHealth,
+    HealthParams, LifecycleLabel, LifecycleParams, Needs as LifeNeeds,
 };
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
@@ -51,7 +59,7 @@ use crate::replay_format::{load_civreplay, save_civreplay};
 #[allow(dead_code)]
 pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
-    "citizen_lifecycle",
+    "lifecycle",
     "military",
     "economy",
     "planet",
@@ -445,6 +453,8 @@ pub struct Simulation {
     /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
     /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Lagged abundance signal derived from the previous tick's cluster stocks.
+    last_cluster_stock_gradient: BTreeMap<u64, f32>,
     /// Number of emergent settlements (multi-member clusters) detected on the
     /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
     pub(crate) last_settlement_count: u32,
@@ -661,6 +671,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            last_cluster_stock_gradient: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(42),
@@ -726,6 +737,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            last_cluster_stock_gradient: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(seed),
@@ -1180,12 +1192,25 @@ impl Simulation {
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
 
-        // Phases in PHASE_ORDER (CIV-0001 partial)
-        self.phase_production();
-        self.phase_citizen_lifecycle();
-        self.phase_military();
-        self.phase_economy();
-        self.phase_planet();
+        // Run a phase, timing it only when profiling is active.
+        macro_rules! phase {
+            ($name:expr, $body:expr) => {{
+                if let Some(p) = profile.as_deref_mut() {
+                    let start = std::time::Instant::now();
+                    $body;
+                    p.record($name, start.elapsed().as_micros() as u64);
+                } else {
+                    $body;
+                }
+            }};
+        }
+
+        // Phases in PHASE_ORDER (CIV-0001).
+        phase!("production", self.phase_production());
+        phase!("lifecycle", self.phase_lifecycle());
+        phase!("military", self.phase_military());
+        phase!("economy", self.phase_economy());
+        phase!("planet", self.phase_planet());
         self.diplomacy_events.clear();
         self.phase_diplomacy();
         self.phase_tactics();

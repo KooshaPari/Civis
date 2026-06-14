@@ -81,7 +81,7 @@ fn main() -> io::Result<()> {
     let mut stdout = io::stdout().lock();
     let mut lines = stdin.lock().lines();
 
-    while let Some(line) = lines.next() {
+    for line in lines {
         let line = line?;
         if line.trim().is_empty() {
             continue;
@@ -223,5 +223,5 @@ async fn census_tool(_params: &Value) -> Result<Value, String> {
     };
     let parsed = decode_response(&text).map_err(|err| format!("decode: {err:?}"))?;
     let result = validate_sim_status(&parsed).map_err(|err| format!("validate: {err}"))?;
-    Ok(serde_json::to_value(result).map_err(|err| format!("serialise: {err}"))?)
+    serde_json::to_value(result).map_err(|err| format!("serialise: {err}"))
 }

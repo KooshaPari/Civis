@@ -296,7 +296,7 @@ fn sample_from_voxel_world(
 }
 
 fn sample_from_ca_grid(grid: &CaGrid) -> (Histogram, Option<ComponentSummary>) {
-    if grid.dims.iter().any(|&d| d == 0) {
+    if grid.dims.contains(&0) {
         return (Histogram::from_counts(vec![0; MATERIAL_HISTOGRAM_BINS]), None);
     }
 

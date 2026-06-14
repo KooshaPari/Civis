@@ -8,7 +8,7 @@
 //! `0` disables the loop entirely. Ring size comes from `CIV_AUTOSAVE_KEEP`
 //! (default 3).
 
-use std::{path::PathBuf, sync::{Arc, Mutex as StdMutex}, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use civ_engine::{CivSaveBundle, Simulation};
 use civ_save_db::SaveDb;

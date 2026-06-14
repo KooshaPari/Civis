@@ -677,8 +677,8 @@ pub fn chunk_to_minimap_uv(chunk_id: ChunkId, bounds: MinimapBounds) -> [f32; 2]
 /// Map world XZ (metres) into normalised minimap UV within `bounds`.
 #[must_use]
 pub fn world_xz_to_minimap_uv(x: f32, z: f32, bounds: MinimapBounds) -> [f32; 2] {
-    let cx = (x / VOXEL_CHUNK_EDGE as f32).floor() as i32;
-    let cz = (z / VOXEL_CHUNK_EDGE as f32).floor() as i32;
+    let cx = (x / VOXEL_CHUNK_EDGE).floor() as i32;
+    let cz = (z / VOXEL_CHUNK_EDGE).floor() as i32;
     world_chunk_grid_to_minimap_uv(cx, cz, bounds)
 }
 
@@ -807,19 +807,11 @@ pub fn parse_frame3d_binary(bytes: &[u8]) -> Result<civ_protocol_3d::Frame3d, St
     civ_protocol_3d::decode_frame3d_binary(bytes).map_err(|err| format!("{err:?}"))
 }
 
-/// Returns true when `bytes` begins with the F3D0 binary frame magic.
-#[cfg(any(test, feature = "bevy"))]
-#[must_use]
-pub fn is_frame3d_binary(bytes: &[u8]) -> bool {
-    bytes.len() >= civ_protocol_3d::FRAME3D_BINARY_MAGIC.len()
-        && bytes.starts_with(civ_protocol_3d::FRAME3D_BINARY_MAGIC)
-}
-
 /// Decode a WebSocket payload the same way as [`ws_client`]: F3D0 binary first,
 /// then UTF-8 JSON text fallback.
 #[cfg(any(test, feature = "bevy"))]
 pub fn parse_ws_payload(payload: &[u8]) -> Result<civ_protocol_3d::Frame3d, String> {
-    if is_frame3d_binary(payload) {
+    if civ_protocol_3d::is_frame3d_binary(payload) {
         return parse_frame3d_binary(payload);
     }
     let text = std::str::from_utf8(payload).map_err(|err| err.to_string())?;
@@ -1256,7 +1248,7 @@ mod tests {
 
     #[test]
     fn is_frame3d_binary_detects_magic() {
-        use civ_protocol_3d::FRAME3D_BINARY_MAGIC;
+        use civ_protocol_3d::{is_frame3d_binary, FRAME3D_BINARY_MAGIC};
 
         assert!(is_frame3d_binary(FRAME3D_BINARY_MAGIC));
         assert!(!is_frame3d_binary(b"{\"VoxelDelta\""));

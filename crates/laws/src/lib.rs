@@ -292,4 +292,55 @@ mod tests {
         let modern: Vec<_> = db.unlocked_at_era(5).map(|l| l.id.as_str()).collect();
         assert_eq!(modern, vec!["mass_conservation", "steel"]);
     }
+
+    /// FR-CIV-LAWS-006 — `LawDb::get` returns the correct law by id, and
+    /// returns `None` for ids that do not exist.
+    #[test]
+    fn get_finds_existing_law_and_returns_none_for_missing() {
+        let db = LawDb::load_ron(sample_ron()).expect("parse");
+
+        // Existing law: "mass_conservation"
+        let law = db.get("mass_conservation");
+        assert!(law.is_some(), "expected 'mass_conservation' to be found");
+        let law = law.unwrap();
+        assert_eq!(law.id, "mass_conservation");
+        assert_eq!(law.kind, LawKind::Conservation);
+        assert_eq!(law.era_min, 0);
+
+        // Existing law: "steel"
+        let steel = db.get("steel");
+        assert!(steel.is_some(), "expected 'steel' to be found");
+        assert_eq!(steel.unwrap().id, "steel");
+
+        // Missing law
+        assert!(db.get("nonexistent").is_none(), "expected None for missing id");
+    }
+
+    /// FR-CIV-LAWS-006 — `LawDb::get` returns the correct law when multiple
+    /// laws are present, verifying linear scan does not return the first item
+    /// unconditionally.
+    #[test]
+    fn get_returns_correct_law_not_first_item() {
+        let db = LawDb::load_ron(sample_ron()).expect("parse");
+
+        let first = db.get("mass_conservation").unwrap();
+        assert_eq!(first.id, "mass_conservation");
+
+        let last = db.get("fusion_power").unwrap();
+        assert_eq!(last.id, "fusion_power");
+        assert_eq!(last.kind, LawKind::FictionalExtension);
+        assert_eq!(last.era_min, 9);
+    }
+
+    /// FR-CIV-LAWS-006 — `LawDb::get` on an empty database always returns `None`.
+    #[test]
+    fn get_on_empty_db_returns_none() {
+        let db = LawDb {
+            version: 0,
+            laws: vec![],
+        };
+        assert!(db.get("anything").is_none());
+    }
 }
+
+

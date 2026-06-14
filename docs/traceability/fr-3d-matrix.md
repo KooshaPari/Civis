@@ -82,6 +82,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-LAWS-000 | Stub. | `crates/laws/` | `laws::schema_version_stub` | implemented |
 | FR-CIV-LAWS-001 | Versioned RON schema loads and round-trips. | `crates/laws/` | `laws::ron_roundtrip` | implemented |
 | FR-CIV-LAWS-002 | Validator rejects extensions missing required fields. | `crates/laws/` | `laws::validator_rejects_incomplete` | implemented |
+| FR-CIV-LAWS-006 | `LawDb::get` returns correct law by id and `None` for missing ids. | `crates/laws/` | `laws::get_*` | implemented |
 
 ---
 

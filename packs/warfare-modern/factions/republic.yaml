@@ -1,0 +1,54 @@
+# Galactic Republic Faction - Order Archetype
+# Disciplined clone army with Jedi leadership
+
+faction:
+  id: republic
+  display_name: Galactic Republic
+  description: The Grand Army of the Republic, composed of disciplined clone troopers led by Jedi commanders. Balanced forces with strong morale and combined arms tactics.
+  theme: starwars
+  archetype: order
+  doctrine: elite_discipline
+
+economy:
+  gather_bonus: 1.0
+  upkeep_modifier: 1.1
+  research_speed: 1.1
+  build_speed: 1.0
+
+army:
+  morale_style: disciplined
+  unit_cap_modifier: 1.0
+  elite_cost_modifier: 0.9
+  spawn_rate_modifier: 1.0
+
+roster:
+  cheap_infantry: rep_clone_militia
+  line_infantry: rep_clone_trooper
+  elite_infantry: rep_arc_trooper
+  anti_armor: rep_clone_heavy
+  support_weapon: rep_atte_crew
+  recon: rep_arf_trooper
+  light_vehicle: rep_barc_speeder
+  heavy_vehicle: rep_clone_wall_guard
+  artillery: rep_atte_crew
+  hero_commander: rep_jedi_knight
+  spike_unit: rep_clone_commando
+
+buildings:
+  barracks: rep_clone_facility
+  workshop: rep_weapons_factory
+  artillery_foundry: rep_vehicle_bay
+  tower_mg: rep_guard_tower
+  heavy_defense: rep_shield_generator
+  command_center: rep_command_center
+  economy_primary: rep_supply_station
+  economy_secondary: rep_tibanna_refinery
+  research_facility: rep_research_lab
+  wall_segment: rep_blast_wall
+
+visuals:
+  primary_color: "#FFFFFF"
+  accent_color: "#CC0000"
+
+audio:
+  weapon_pack: starwars_weapons

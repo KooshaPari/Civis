@@ -49,7 +49,12 @@ namespace DINOForge.Runtime.UI
         // ── Defaults ───────────────────────────────────────────────────────────────
         private static readonly Color DefaultBackdrop = new Color(0.051f, 0.067f, 0.090f, 1f); // #0D1117
         private static readonly Color DefaultAccent = new Color(0.2f, 0.8f, 0.95f, 1f);        // DINOForge cyan
-        private const int CanvasSortingOrder = 9998; // below DFCanvas (32767), above DINO loader
+        private static readonly Color DefaultPrimary = new Color(0.95f, 0.91f, 0.25f, 1f);     // SW yellow
+        private static readonly Color DefaultSecondary = new Color(0.12f, 0.14f, 0.18f, 1f);    // SW-dark panel
+        private static readonly Color DefaultText = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+        private static readonly Color DefaultTrackColor = new Color(1f, 1f, 1f, 0.16f);        // track default
+        private static readonly Color DefaultShimmerColor = new Color(1f, 1f, 1f, 0.22f);      // shimmer default
+        private const int CanvasSortingOrder = 32000; // above almost all runtime canvases
 
         private static readonly string[] BuiltinTips =
         {
@@ -71,6 +76,7 @@ namespace DINOForge.Runtime.UI
         private Text? _subtitleText;
         private Text? _tipText;
         private Image? _progressFill;
+        private Image? _progressTrack;
         private Text? _progressLabel;
         private Text? _versionText;
 
@@ -154,6 +160,7 @@ namespace DINOForge.Runtime.UI
             canvasRt.offsetMax = Vector2.zero;
 
             Font arial = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            Font uiFont = ResolveUiFont(theme, arial);
 
             // ── Solid backdrop (always opaque so the game canvas never bleeds through) ─
             _backdrop = CreateStretchImage(canvasGo.transform, "Backdrop", theme.Backdrop);
@@ -198,11 +205,12 @@ namespace DINOForge.Runtime.UI
             }
             else
             {
-                _titleText = CreateText(card.transform, "Title", theme.Title, arial, 54, FontStyle.Bold, theme.Accent, 80f);
+                _titleText = CreateText(card.transform, "Title", theme.Title, uiFont, 54, FontStyle.Bold,
+                    theme.TitleColor, 80f);
             }
 
-            _subtitleText = CreateText(card.transform, "Subtitle", theme.Subtitle, arial, 22, FontStyle.Normal,
-                new Color(1f, 1f, 1f, 0.78f), 40f);
+            _subtitleText = CreateText(card.transform, "Subtitle", theme.Subtitle, uiFont, 22, FontStyle.Normal,
+                theme.SubtitleColor, 40f);
 
             // Separator
             var sep = CreateStretchImage(card.transform, "Separator", new Color(theme.Accent.r, theme.Accent.g, theme.Accent.b, 0.55f));
@@ -210,8 +218,8 @@ namespace DINOForge.Runtime.UI
             sepLe.preferredHeight = 2f;
 
             // Tip text
-            _tipText = CreateText(card.transform, "Tip", _tips.Length > 0 ? _tips[0] : "", arial, 18, FontStyle.Italic,
-                new Color(1f, 1f, 1f, 0.88f), 64f);
+            _tipText = CreateText(card.transform, "Tip", _tips.Length > 0 ? _tips[0] : "", uiFont, 18,
+                FontStyle.Italic, theme.TipTextColor, 64f);
 
             // Progress bar (track + fill)
             var track = new GameObject("ProgressTrack");
@@ -222,7 +230,8 @@ namespace DINOForge.Runtime.UI
             trackLe.preferredHeight = 14f;
             trackLe.preferredWidth = 640f;
             var trackImg = track.AddComponent<Image>();
-            trackImg.color = new Color(1f, 1f, 1f, 0.15f);
+            _progressTrack = trackImg;
+            trackImg.color = theme.ProgressTrackColor;
 
             var fillGo = new GameObject("ProgressFill");
             fillGo.transform.SetParent(track.transform, false);
@@ -233,7 +242,7 @@ namespace DINOForge.Runtime.UI
             fillRt.offsetMin = Vector2.zero;
             fillRt.offsetMax = Vector2.zero;
             _progressFill = fillGo.AddComponent<Image>();
-            _progressFill.color = theme.Accent;
+            _progressFill.color = theme.ProgressFillColor;
             SetFillAmount(0f);
 
             // Moving highlight that travels along the track so the bar always reads as LIVE
@@ -246,11 +255,11 @@ namespace DINOForge.Runtime.UI
             shimRt.pivot = new Vector2(0.5f, 0.5f);
             shimRt.sizeDelta = new Vector2(90f, 0f);
             _progressShimmer = shimmerGo.AddComponent<Image>();
-            _progressShimmer.color = new Color(1f, 1f, 1f, 0.22f);
+            _progressShimmer.color = theme.ProgressShimmerColor;
             _progressShimmer.raycastTarget = false;
 
-            _progressLabel = CreateText(card.transform, "ProgressLabel", "Initializing…", arial, 15, FontStyle.Normal,
-                new Color(0.78f, 0.78f, 0.78f, 1f), 28f);
+            _progressLabel = CreateText(card.transform, "ProgressLabel", "Initializing…", uiFont, 15, FontStyle.Normal,
+                theme.TextColor, 28f);
 
             // Spinner (rotated by coroutine)
             var spinnerGo = new GameObject("Spinner");
@@ -274,10 +283,10 @@ namespace DINOForge.Runtime.UI
             verRt.anchoredPosition = new Vector2(-16f, 110f);
             verRt.sizeDelta = new Vector2(260f, 24f);
             _versionText = verGo.AddComponent<Text>();
-            _versionText.font = arial;
+            _versionText.font = uiFont;
             _versionText.fontSize = 13;
             _versionText.alignment = TextAnchor.LowerRight;
-            _versionText.color = new Color(1f, 1f, 1f, 0.45f);
+            _versionText.color = theme.TextMutedColor;
             _versionText.text = $"DINOForge {theme.SourceLabel}";
 
             DebugLog.Write("LoadingScreen",
@@ -499,6 +508,11 @@ namespace DINOForge.Runtime.UI
                 Title = "DINOForge",
                 Subtitle = "Mod Platform",
                 Accent = DefaultAccent,
+                Primary = DefaultPrimary,
+                Secondary = DefaultSecondary,
+                TextColor = DefaultText,
+                TrackColor = DefaultTrackColor,
+                ShimmerColor = DefaultShimmerColor,
                 Backdrop = DefaultBackdrop,
                 OverlayOpacity = 1f,
                 SourceLabel = GetVersion(),
@@ -545,11 +559,31 @@ namespace DINOForge.Runtime.UI
 
                     theme.Title = ExtractScoped(yaml, "ui_theme:", "title") ?? packId;
                     theme.Subtitle = ExtractScoped(yaml, "ui_theme:", "subtitle") ?? "Total Conversion";
+                    theme.FontFamily = ExtractScoped(yaml, "ui_theme:", "font_family")
+                                      ?? ExtractScoped(yaml, "loading_screen:", "font_family");
+                    theme.FontAssetPath = NormalizePath(Path.Combine(packDir,
+                        ExtractScoped(yaml, "loading_screen:", "font") ?? string.Empty));
+                    if (string.IsNullOrWhiteSpace(theme.FontAssetPath))
+                    {
+                        string? uiThemeFont = ExtractScoped(yaml, "ui_theme:", "font");
+                        if (!string.IsNullOrWhiteSpace(uiThemeFont))
+                            theme.FontAssetPath = NormalizePath(Path.Combine(packDir, uiThemeFont!));
+                    }
 
                     string? accentHex = ExtractScoped(yaml, "loading_screen:", "accent_color")
                                         ?? ExtractScoped(yaml, "ui_theme:", "accent_color")
                                         ?? ExtractScoped(yaml, "ui_theme:", "primary_color");
                     if (accentHex != null && ColorUtility.TryParseHtmlString(accentHex, out Color ac)) theme.Accent = ac;
+                    theme.Primary = ParseColor(ExtractScoped(yaml, "ui_theme:", "primary_color"), theme.Primary);
+                    theme.Secondary = ParseColor(ExtractScoped(yaml, "ui_theme:", "secondary_color"), theme.Secondary);
+                    theme.TextColor = ParseColor(ExtractScoped(yaml, "ui_theme:", "text_color"), theme.TextColor);
+                    theme.TextMutedColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "text_muted_color"), theme.TextColor * 0.55f);
+                    theme.SubtitleColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "subtitle_color"), new Color(1f, 1f, 1f, 0.78f));
+                    theme.TipTextColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "tip_color"), new Color(1f, 1f, 1f, 0.88f));
+                    theme.TitleColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "title_color"), theme.Primary);
+                    theme.ProgressTrackColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "progress_track_color"), theme.ProgressTrackColor);
+                    theme.ProgressFillColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "progress_fill_color"), theme.Primary);
+                    theme.ProgressShimmerColor = ParseColor(ExtractScoped(yaml, "loading_screen:", "progress_shimmer_color"), theme.ProgressShimmerColor);
 
                     string? overlayStr = ExtractScoped(yaml, "loading_screen:", "overlay_opacity");
                     if (overlayStr != null && float.TryParse(overlayStr, out float op)) theme.OverlayOpacity = Mathf.Clamp01(op);
@@ -797,6 +831,84 @@ namespace DINOForge.Runtime.UI
             return tex;
         }
 
+        // ── Font resolution ────────────────────────────────────────────────────────────
+
+        private Font ResolveUiFont(LoadingTheme theme, Font fallback)
+        {
+            if (theme.FontAssetPath != null && File.Exists(theme.FontAssetPath))
+            {
+            Font? loaded = TryLoadFontFromAsset(theme.FontAssetPath);
+            if (loaded != null)
+                return loaded;
+            }
+
+            if (!string.IsNullOrWhiteSpace(theme.FontFamily))
+            {
+                try
+                {
+                    Font? found = Font.CreateDynamicFontFromOSFont(theme.FontFamily, fallback.fontSize);
+                    if (found != null) return found;
+                }
+                catch
+                {
+                    // Fall through to fallback.
+                }
+            }
+
+            return fallback;
+        }
+
+        private static Font? TryLoadFontFromAsset(string fullFontPath)
+        {
+            string lower = fullFontPath.ToLowerInvariant();
+            if (lower.EndsWith(".bundle", StringComparison.Ordinal) || lower.EndsWith(".unity3d", StringComparison.Ordinal))
+            {
+                try
+                {
+                    AssetBundle bundle = AssetBundle.LoadFromFile(fullFontPath);
+                    foreach (var asset in bundle != null ? bundle.LoadAllAssets() : Array.Empty<UnityEngine.Object>())
+                    {
+                        if (asset is Font font) return font;
+                    }
+                }
+                catch { }
+            }
+            else if (lower.EndsWith(".ttf", StringComparison.Ordinal) || lower.EndsWith(".otf", StringComparison.Ordinal))
+            {
+                string family = Path.GetFileNameWithoutExtension(fullFontPath);
+                try
+                {
+                    Font? fallbackFont = Font.CreateDynamicFontFromOSFont(family, 16);
+                    if (fallbackFont != null) return fallbackFont;
+                }
+                catch { }
+
+                Font? loaded = TryLoadDynamicFontFromData(fullFontPath);
+                if (loaded != null) return loaded;
+            }
+
+            return null;
+        }
+
+        private static Font? TryLoadDynamicFontFromData(string fullFontPath)
+        {
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(fullFontPath);
+                var create = typeof(Font).GetMethod(
+                    "CreateDynamicFontFromData",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+                    null,
+                    new[] { typeof(byte[]) },
+                    null);
+                return create != null ? create.Invoke(null, new object[] { bytes }) as Font : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static string GetVersion()
         {
             try { return "v" + typeof(LoadingScreenController).Assembly.GetName().Version?.ToString(3); }
@@ -810,10 +922,31 @@ namespace DINOForge.Runtime.UI
             public string Title = "DINOForge";
             public string Subtitle = "Mod Platform";
             public Color Accent;
+            public Color Primary;
+            public Color Secondary;
+            public Color TextColor;
+            public Color TextMutedColor;
+            public Color TitleColor;
+            public Color SubtitleColor;
+            public Color TipTextColor;
+            public Color ProgressTrackColor;
+            public Color ProgressFillColor;
+            public Color ProgressShimmerColor;
             public Color Backdrop;
             public float OverlayOpacity = 1f;
             public string SourceLabel = string.Empty;
             public bool IsPackTheme;
+            public string? FontFamily;
+            public string? FontAssetPath;
         }
+
+        private static Color ParseColor(string? hex, Color fallback)
+        {
+            if (!string.IsNullOrWhiteSpace(hex) && ColorUtility.TryParseHtmlString(hex, out Color parsed)) return parsed;
+            return fallback;
+        }
+
+        private static string? NormalizePath(string path)
+            => string.IsNullOrWhiteSpace(path) ? null : path;
     }
 }

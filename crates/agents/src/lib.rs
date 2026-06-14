@@ -54,6 +54,7 @@ use hecs::World;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
@@ -129,10 +130,29 @@ impl Alignment {
 
 /// Infer alignment for a new spawn at `(x, y)`.
 ///
-/// TODO(FR-CIV-EMERGENCE): if a parcel is owned by a faction or life-framework
-/// entity, return that alignment; otherwise keep non-aligned.
-pub fn infer_alignment_for_spawn(_world: &World, _x: f32, _y: f32) -> Alignment {
-    Alignment::None
+/// Returns the majority non-None alignment among all civilians within a
+/// `SPAWN_RADIUS` of the spawn point. This is the minimal slice of
+/// FR-CIV-EMERGENCE-010 (kinship proximity) and FR-CIV-EMERGENCE-002
+/// (agent bootstrap from local context).
+pub fn infer_alignment_for_spawn(world: &World, x: f32, y: f32) -> Alignment {
+    const SPAWN_RADIUS: f32 = 0.05;
+    let mut counts: HashMap<Alignment, usize> = HashMap::new();
+    for (_, (civilian, pos)) in world.query::<(&Civilian, &Position3d)>().iter() {
+        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        let dx = px - x;
+        let dy = py - y;
+        let dist_sq = dx * dx + dy * dy;
+        if dist_sq <= SPAWN_RADIUS * SPAWN_RADIUS {
+            *counts.entry(civilian.alignment).or_insert(0) += 1;
+        }
+    }
+    counts
+        .into_iter()
+        .filter(|(alignment, _)| *alignment != Alignment::None)
+        .max_by_key(|(_, count)| *count)
+        .map(|(alignment, _)| alignment)
+        .unwrap_or(Alignment::None)
 }
 
 /// Wardrobe state. The `era` is the civilian's currently worn-tech era;
@@ -1174,6 +1194,86 @@ mod tests {
             belonging: 3.0,
         };
         assert_eq!(top_action(&needs, &weights), NeedAction::FindShelter);
+    }
+
+    /// Covers FR-CIV-EMERGENCE-010 — spawn alignment is inferred from nearby
+    /// civilians (kinship proximity).
+    #[test]
+    fn infer_alignment_for_spawn_majority() {
+        let mut world = World::new();
+        let mut rng = rng(42);
+
+        // Spawn a cluster of faction-1 civilians near (0.5, 0.5)
+        for i in 0..3 {
+            let angle = (i as f32) * 0.5;
+            spawn_civilian_at(
+                &mut world,
+                100 + i as u64,
+                Alignment::with_faction(1),
+                0.5 + angle.cos() * 0.01,
+                0.5 + angle.sin() * 0.01,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+
+        // Spawn one faction-2 civilian nearby
+        spawn_civilian_at(
+            &mut world,
+            200,
+            Alignment::with_faction(2),
+            0.51,
+            0.51,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+
+        // Spawn a faction-3 civilian far away
+        spawn_civilian_at(
+            &mut world,
+            300,
+            Alignment::with_faction(3),
+            0.9,
+            0.9,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+
+        // Spawn point near the faction-1 cluster → should infer faction 1
+        assert_eq!(
+            infer_alignment_for_spawn(&world, 0.5, 0.5),
+            Alignment::with_faction(1)
+        );
+
+        // Spawn point near the distant faction-3 civilian → should infer faction 3
+        assert_eq!(
+            infer_alignment_for_spawn(&world, 0.9, 0.9),
+            Alignment::with_faction(3)
+        );
+
+        // Spawn point far from everyone → should be None
+        assert_eq!(infer_alignment_for_spawn(&world, 0.1, 0.1), Alignment::None);
+    }
+
+    /// Covers FR-CIV-EMERGENCE-010 — unaligned neighbors do not force a
+    /// spurious alignment; None is returned when only `Alignment::None`
+    /// civilians are nearby.
+    #[test]
+    fn infer_alignment_for_spawn_unaligned_only() {
+        let mut world = World::new();
+        let mut rng = rng(42);
+        for i in 0..3 {
+            spawn_civilian_at(
+                &mut world,
+                400 + i as u64,
+                Alignment::None,
+                0.5,
+                0.5,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        assert_eq!(infer_alignment_for_spawn(&world, 0.5, 0.5), Alignment::None);
     }
 
     /// Covers FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.

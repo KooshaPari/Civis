@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Updated | 2026-06-13 |
-| State | Playable voxel build via one-click launcher; 3D protocol + modding v3 partial; 113 / 212 traced requirements implemented; 82.6% line coverage; 750+ tests green; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is substrate-only. |
+| Updated | 2026-06-14 |
+| State | Recovery complete (p-l1+p-w1 merged); consolidation collapsing (branches 180→97, worktrees 95→25); 13 PRs this session; playable voxel build via one-click launcher; 3D protocol + modding v3 partial; 113 / 212 traced requirements implemented; 82.6% line coverage; 750+ tests green; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is substrate-only. |
 | Open PRs | None |
 | Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
 
-Progress: ████████▓░░ 82.6% (playable voxel build shipped; 3D protocol + modding v3 partial; 113 / 212 FRs implemented; 750+ tests green; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
+Progress: ████████▓░ 82.6% (recovery complete; consolidation collapsing: branches 180→97, worktrees 95→25; 13 PRs this session; playable voxel build shipped; 3D protocol + modding v3 partial; 113 / 212 FRs implemented; 750+ tests green; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
 
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml

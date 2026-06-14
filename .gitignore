@@ -66,3 +66,9 @@ target-check-build/
 
 # Cargo check/clippy/test scratch target dirs (never commit build artifacts)
 target-check-*/
+.codex-jobs*.jsonl
+.forge-audits.jsonl
+.target-civis-mcp/
+.tmp-*
+/e/
+*.stdout

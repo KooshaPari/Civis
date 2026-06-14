@@ -212,5 +212,95 @@ conflicts_with: []
                 Directory.Delete(tempPackDir, recursive: true);
             }
         }
+
+        /// <summary>
+        /// DEPTH gap: the warfare-modern/warfare-starwars pack conflict regressed this session
+        /// and was only caught by an integration SmokeTest. This unit test closes the gap
+        /// by asserting that ContentLoader.LoadPacks emits a hard error when two active packs
+        /// declare a conflicts_with relationship.
+        /// </summary>
+        [Fact]
+        public void LoadPacks_ConflictingPacks_ReportsHardError()
+        {
+            // Arrange: create two packs where pack-b declares conflicts_with: [pack-a]
+            string tempPackDir = Path.Combine(Path.GetTempPath(), "dinoforge-conflict-test-" + Guid.NewGuid().ToString("N"));
+            string packsRoot = Path.Combine(tempPackDir, "packs");
+            Directory.CreateDirectory(packsRoot);
+
+            try
+            {
+                string packADir = Path.Combine(packsRoot, "pack-a");
+                Directory.CreateDirectory(packADir);
+                Directory.CreateDirectory(Path.Combine(packADir, "units"));
+                File.WriteAllText(
+                    Path.Combine(packADir, "pack.yaml"),
+                    @"id: pack-a
+name: Pack A
+version: 0.1.0
+author: Test
+type: content
+loads:
+  units:
+    - units
+",
+                    Encoding.UTF8);
+                File.WriteAllText(
+                    Path.Combine(packADir, "units", "unit-a.yaml"),
+                    @"id: unit-a
+display_name: Unit A
+unit_class: CoreLineInfantry
+faction_id: test
+",
+                    Encoding.UTF8);
+
+                string packBDir = Path.Combine(packsRoot, "pack-b");
+                Directory.CreateDirectory(packBDir);
+                Directory.CreateDirectory(Path.Combine(packBDir, "units"));
+                File.WriteAllText(
+                    Path.Combine(packBDir, "pack.yaml"),
+                    @"id: pack-b
+name: Pack B
+version: 0.1.0
+author: Test
+type: content
+conflicts_with:
+  - pack-a
+loads:
+  units:
+    - units
+",
+                    Encoding.UTF8);
+                File.WriteAllText(
+                    Path.Combine(packBDir, "units", "unit-b.yaml"),
+                    @"id: unit-b
+display_name: Unit B
+unit_class: CoreLineInfantry
+faction_id: test
+",
+                    Encoding.UTF8);
+
+                var registryManager = new RegistryManager();
+                var loader = new ContentLoader(registryManager);
+
+                // Act
+                ContentLoadResult result = loader.LoadPacks(packsRoot);
+
+                // Assert: must be a hard error (not silently ignored)
+                result.IsSuccess.Should().BeFalse("conflicting packs must cause LoadPacks to fail");
+                result.Errors.Should().Contain(e =>
+                    e.Contains("conflicts", StringComparison.OrdinalIgnoreCase),
+                    "error message must mention the conflict");
+                result.Errors.Should().Contain(e =>
+                    e.Contains("pack-b", StringComparison.OrdinalIgnoreCase) &&
+                    e.Contains("pack-a", StringComparison.OrdinalIgnoreCase),
+                    "error message must name both conflicting packs");
+            }
+            finally
+            {
+                // test-cleanup-ok: ephemeral $env:TEMP scratch (TEST_OK per #871 allowlist)
+                if (Directory.Exists(tempPackDir))
+                    Directory.Delete(tempPackDir, recursive: true);
+            }
+        }
     }
 }

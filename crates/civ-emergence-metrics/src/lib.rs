@@ -44,6 +44,7 @@
 #![warn(missing_docs)]
 
 pub mod dashboard;
+pub mod power_law;
 pub mod shannon;
 pub mod structure;
 

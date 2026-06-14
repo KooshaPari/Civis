@@ -1,0 +1,17 @@
+You are a test-writing agent in repo C:/Users/koosh/Dino on branch wsm/agileplus-dag-20260610. Add 2 targeted unit tests that close DEPTH gaps the consolidation found (regressions that the build caught but tests did not). Keep scope tight.
+
+HARD RULES: NEVER --no-verify / git stash / push --force / new worktrees. Commit messages must be conventional (type(scope): subject) — the commit-msg hook validates first line via scripts/check-commit-msg.sh. NEVER git add tools/phenotype-journeys.
+
+TEST 1 — ContentLoader conflicts_with enforcement:
+- The warfare-modern/warfare-starwars pack conflict regressed this session and was only caught by an integration SmokeTest. Add a FOCUSED unit test in src/Tests/ (SDK or Integration area, match existing style) that constructs two packs where pack B declares conflicts_with: [A], loads both via ContentLoader.LoadPacks (or the registry conflict path), and asserts a hard error is reported. Find the existing ContentLoader + ContentLoadResult API by reading src/SDK/ContentLoader.cs first. Use xUnit + FluentAssertions like neighboring tests.
+
+TEST 2 — LoadingTheme field integrity (LoadingScreenController):
+- The TrackColor->ProgressTrackColor field rename regressed (no test caught it, only the net8.0 build). Add a test that constructs a LoadingScreenController.LoadingTheme (it's a private nested class — if not accessible, instead test the public theme-building/parse path that populates ProgressTrackColor/ProgressShimmerColor from YAML, asserting the parsed values). Read src/Runtime/UI/LoadingScreenController.cs to find the accessible seam (ParseColor / ExtractScoped / the default-theme builder). If LoadingTheme is truly private with no public seam, instead add a reflection-based test asserting LoadingTheme has fields ProgressTrackColor + ProgressShimmerColor (guards against future renames). Place in src/Tests/ matching existing Runtime-facing test style.
+
+GATE each before commit:
+- dotnet build src/Tests/DINOForge.Tests.csproj -c Release   (if your test lands there)
+- dotnet test src/Tests/DINOForge.Tests.csproj -c Release --filter <YourTestClass>   (must pass)
+- For Runtime-net8.0-touching code: dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=net8.0 --no-incremental
+Commit each test with a conventional message (test(coverage): ...). Do NOT push (orchestrator will batch-push after verifying).
+
+REPORT to docs/sessions/consolidation-20260613/forge-L6-testfills-report.md: the 2 test files added, the API seams used, gate results (pass/fail), commit shas. Then echo: L6-TESTFILLS-DONE.

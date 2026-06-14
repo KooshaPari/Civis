@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Updated | 2026-06-11 |
-| State | Playable voxel build via one-click launcher; 15 BUILD-NEXT slices completed; covered 135+ / 1221 traced requirements; 82.6% line coverage; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is currently substrate-only. |
-| Open PRs | #333 (wave-1 playable foundation), #334, #337, #345 |
+| Updated | 2026-06-13 |
+| State | Playable voxel build via one-click launcher; 3D protocol + modding v3 partial; 113 / 212 traced requirements implemented; 82.6% line coverage; 750+ tests green; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is substrate-only. |
+| Open PRs | None |
 | Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
 
-Progress: ████████▓░░ 82.6% (playable voxel build shipped; BUILD-NEXT 15 slices in; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
+Progress: ████████▓░░ 82.6% (playable voxel build shipped; 3D protocol + modding v3 partial; 113 / 212 FRs implemented; 750+ tests green; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
 
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml
@@ -37,7 +37,7 @@ CivLab decouples simulation logic from rendering: a Rust simulation core runs he
 
 | Dimension | Choice |
 |---|---|
-| **Language** | Rust (edition 2024) |
+| **Language** | Rust (edition 2021) |
 | **Architecture** | ECS via [`hecs`](https://crates.io/crates/hecs) |
 | **Determinism** | Fixed-point `i64` @ 10^6 scale; `ChaCha8Rng` seeded once per run; `BTreeMap` for ordered iteration |
 | **Tick loop** | Fixed-timestep, 100 ms/tick, sub-16 ms target budget |
@@ -53,7 +53,7 @@ See [`COMPARISON.md`](./COMPARISON.md) for how CivLab differs from Dwarf Fortres
 
 ## Repository Structure
 
-- `src/` — simulation core (Rust workspace)
+- `crates/` — simulation core (Rust workspace, 28 members)
 - `Cargo.toml` — Rust 2024 workspace manifest
 - `docs/` — VitePress docs and specification corpus
   - `docs/wiki/` — concept and architecture knowledge

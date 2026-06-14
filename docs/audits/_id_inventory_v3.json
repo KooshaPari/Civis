@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-06-11",
+  "generated_at": "2026-06-13",
   "ids": [
     {
       "id": "FR-AI-001",
@@ -4380,10 +4380,17 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/hud.rs:5",
+        "crates/voxel/src/hud.rs:7",
+        "crates/voxel/src/hud.rs:32",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:300"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/hud.rs:729",
+        "crates/voxel/src/hud.rs:731",
+        "crates/voxel/src/hud.rs:748"
+      ]
     },
     {
       "id": "FR-CIV-HUD-002",
@@ -4396,10 +4403,16 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/hud.rs:8",
+        "crates/voxel/src/hud.rs:222",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:301"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/hud.rs:778",
+        "crates/voxel/src/hud.rs:780",
+        "crates/voxel/src/hud.rs:809"
+      ]
     },
     {
       "id": "FR-CIV-HUD-003",
@@ -4412,10 +4425,16 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/hud.rs:9",
+        "crates/voxel/src/hud.rs:400",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:302"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/hud.rs:829",
+        "crates/voxel/src/hud.rs:831",
+        "crates/voxel/src/hud.rs:841"
+      ]
     },
     {
       "id": "FR-CIV-HUD-004",
@@ -4428,10 +4447,17 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/hud.rs:10",
+        "crates/voxel/src/hud.rs:509",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:303"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/hud.rs:858",
+        "crates/voxel/src/hud.rs:860",
+        "crates/voxel/src/hud.rs:872",
+        "crates/voxel/src/hud.rs:889"
+      ]
     },
     {
       "id": "FR-CIV-HUD-005",
@@ -4444,10 +4470,16 @@
       "in_func_req": null,
       "in_traceability": [],
       "in_code": [
+        "crates/voxel/src/hud.rs:11",
+        "crates/voxel/src/hud.rs:636",
         "docs/reference/agileplus-artifacts-index.md:201",
         "docs/reference/agileplus-artifacts-index.md:304"
       ],
-      "in_tests": []
+      "in_tests": [
+        "crates/voxel/src/hud.rs:900",
+        "crates/voxel/src/hud.rs:902",
+        "crates/voxel/src/hud.rs:919"
+      ]
     },
     {
       "id": "FR-CIV-INFOVIEW-900",
@@ -4734,7 +4766,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:353"
+        "crates/civ-traffic/src/lib.rs:359"
       ]
     },
     {
@@ -4747,7 +4779,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:365"
+        "crates/civ-traffic/src/lib.rs:371"
       ]
     },
     {
@@ -4760,7 +4792,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:376"
+        "crates/civ-traffic/src/lib.rs:382"
       ]
     },
     {
@@ -4773,7 +4805,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:385"
+        "crates/civ-traffic/src/lib.rs:391"
       ]
     },
     {
@@ -4786,7 +4818,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:395"
+        "crates/civ-traffic/src/lib.rs:401"
       ]
     },
     {
@@ -4799,7 +4831,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:411"
+        "crates/civ-traffic/src/lib.rs:417"
       ]
     },
     {
@@ -4814,7 +4846,7 @@
         "crates/civ-traffic/src/lib.rs:20"
       ],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:424"
+        "crates/civ-traffic/src/lib.rs:430"
       ]
     },
     {
@@ -4829,7 +4861,7 @@
         "docs/design/vehicles-logistics.md:407"
       ],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:437"
+        "crates/civ-traffic/src/lib.rs:443"
       ]
     },
     {
@@ -4842,7 +4874,7 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:447"
+        "crates/civ-traffic/src/lib.rs:453"
       ]
     },
     {
@@ -4855,7 +4887,52 @@
       ],
       "in_code": [],
       "in_tests": [
-        "crates/civ-traffic/src/lib.rs:457"
+        "crates/civ-traffic/src/lib.rs:463"
+      ]
+    },
+    {
+      "id": "FR-CIV-INFRA-070",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
+      "in_traceability": [],
+      "in_code": [
+        "crates/civ-traffic/src/grid.rs:12"
+      ],
+      "in_tests": [
+        "crates/civ-traffic/src/grid.rs:299",
+        "crates/civ-traffic/src/grid.rs:301",
+        "crates/civ-traffic/src/grid.rs:318"
+      ]
+    },
+    {
+      "id": "FR-CIV-INFRA-071",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
+      "in_traceability": [],
+      "in_code": [
+        "crates/civ-traffic/src/grid.rs:15"
+      ],
+      "in_tests": [
+        "crates/civ-traffic/src/grid.rs:333",
+        "crates/civ-traffic/src/grid.rs:335"
+      ]
+    },
+    {
+      "id": "FR-CIV-INFRA-072",
+      "in_specs": [],
+      "in_meta": [],
+      "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
+      "in_traceability": [],
+      "in_code": [
+        "crates/civ-traffic/src/grid.rs:18"
+      ],
+      "in_tests": [
+        "crates/civ-traffic/src/grid.rs:356",
+        "crates/civ-traffic/src/grid.rs:358",
+        "crates/civ-traffic/src/grid.rs:381",
+        "crates/civ-traffic/src/grid.rs:400"
       ]
     },
     {
@@ -6346,10 +6423,10 @@
         "crates/voxel/src/material_pbr.rs:41"
       ],
       "in_tests": [
-        "crates/voxel/src/material_pbr.rs:502",
-        "crates/voxel/src/material_pbr.rs:504",
-        "crates/voxel/src/material_pbr.rs:530",
-        "crates/voxel/src/material_pbr.rs:554"
+        "crates/voxel/src/material_pbr.rs:902",
+        "crates/voxel/src/material_pbr.rs:904",
+        "crates/voxel/src/material_pbr.rs:930",
+        "crates/voxel/src/material_pbr.rs:954"
       ]
     },
     {
@@ -6358,8 +6435,16 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:495",
+        "crates/voxel/src/material_pbr.rs:526"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:1145",
+        "crates/voxel/src/material_pbr.rs:1147",
+        "crates/voxel/src/material_pbr.rs:1175",
+        "crates/voxel/src/material_pbr.rs:1195"
+      ]
     },
     {
       "id": "FR-CIV-PBR-003",
@@ -6367,8 +6452,15 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:643"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:1205",
+        "crates/voxel/src/material_pbr.rs:1207",
+        "crates/voxel/src/material_pbr.rs:1224",
+        "crates/voxel/src/material_pbr.rs:1253"
+      ]
     },
     {
       "id": "FR-CIV-PBR-004",
@@ -6376,8 +6468,14 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:760"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:1276",
+        "crates/voxel/src/material_pbr.rs:1278",
+        "crates/voxel/src/material_pbr.rs:1295"
+      ]
     },
     {
       "id": "FR-CIV-PBR-005",
@@ -6390,9 +6488,9 @@
         "crates/voxel/src/material_pbr.rs:144"
       ],
       "in_tests": [
-        "crates/voxel/src/material_pbr.rs:571",
-        "crates/voxel/src/material_pbr.rs:573",
-        "crates/voxel/src/material_pbr.rs:595"
+        "crates/voxel/src/material_pbr.rs:971",
+        "crates/voxel/src/material_pbr.rs:973",
+        "crates/voxel/src/material_pbr.rs:995"
       ]
     },
     {
@@ -6401,8 +6499,14 @@
       "in_meta": [],
       "in_func_req": "FUNCTIONAL_REQUIREMENTS.md",
       "in_traceability": [],
-      "in_code": [],
-      "in_tests": []
+      "in_code": [
+        "crates/voxel/src/material_pbr.rs:832"
+      ],
+      "in_tests": [
+        "crates/voxel/src/material_pbr.rs:1307",
+        "crates/voxel/src/material_pbr.rs:1309",
+        "crates/voxel/src/material_pbr.rs:1333"
+      ]
     },
     {
       "id": "FR-CIV-PBR-007",
@@ -6415,10 +6519,10 @@
         "crates/voxel/src/material_pbr.rs:245"
       ],
       "in_tests": [
-        "crates/voxel/src/material_pbr.rs:614",
-        "crates/voxel/src/material_pbr.rs:616",
-        "crates/voxel/src/material_pbr.rs:641",
-        "crates/voxel/src/material_pbr.rs:670"
+        "crates/voxel/src/material_pbr.rs:1014",
+        "crates/voxel/src/material_pbr.rs:1016",
+        "crates/voxel/src/material_pbr.rs:1041",
+        "crates/voxel/src/material_pbr.rs:1070"
       ]
     },
     {
@@ -6432,10 +6536,10 @@
         "crates/voxel/src/material_pbr.rs:394"
       ],
       "in_tests": [
-        "crates/voxel/src/material_pbr.rs:682",
-        "crates/voxel/src/material_pbr.rs:684",
-        "crates/voxel/src/material_pbr.rs:698",
-        "crates/voxel/src/material_pbr.rs:712"
+        "crates/voxel/src/material_pbr.rs:1082",
+        "crates/voxel/src/material_pbr.rs:1084",
+        "crates/voxel/src/material_pbr.rs:1098",
+        "crates/voxel/src/material_pbr.rs:1112"
       ]
     },
     {
@@ -11125,13 +11229,13 @@
       "in_traceability": [],
       "in_code": [
         "clients/godot-ref/rust/src/ux.rs:52",
+        "clients/unreal-show/Intermediate/Build/Win64/UnrealEditor/Inc/CivShow/UHT/CivProtocolClient.gen.cpp:427",
+        "clients/unreal-show/Intermediate/Build/Win64/UnrealEditor/Inc/CivShow/UHT/CivProtocolClient.gen.cpp:431",
         "clients/unreal-show/Source/CivShow/CivProtocolClient.h:32",
         "crates/engine/src/spawn.rs:1",
         "crates/server/src/jsonrpc.rs:58",
         "crates/server/src/jsonrpc.rs:868",
-        "crates/server/src/jsonrpc.rs:1381",
-        "crates/watch/src/snapshot.rs:663",
-        "docs/development-guide/fr-p-u1-roadmap.md:16"
+        "crates/server/src/jsonrpc.rs:1381"
       ],
       "in_tests": [
         "crates/server/tests/ws_smoke.rs:1715",
@@ -11587,10 +11691,10 @@
         "docs/development-guide/fr-3d-additions.md:15"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:73",
-        "crates/voxel/src/lib.rs:74",
-        "crates/voxel/src/lib.rs:84",
-        "crates/voxel/src/lib.rs:86"
+        "crates/voxel/src/lib.rs:81",
+        "crates/voxel/src/lib.rs:82",
+        "crates/voxel/src/lib.rs:92",
+        "crates/voxel/src/lib.rs:94"
       ]
     },
     {
@@ -11613,9 +11717,9 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:59"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:85",
-        "crates/voxel/src/lib.rs:158",
-        "crates/voxel/src/lib.rs:159"
+        "crates/voxel/src/lib.rs:93",
+        "crates/voxel/src/lib.rs:166",
+        "crates/voxel/src/lib.rs:167"
       ]
     },
     {
@@ -11643,9 +11747,9 @@
       "in_tests": [
         "crates/engine/src/engine.rs:2561",
         "crates/engine/src/engine.rs:2605",
-        "crates/voxel/src/lib.rs:92",
-        "crates/voxel/src/lib.rs:190",
-        "crates/voxel/src/lib.rs:191"
+        "crates/voxel/src/lib.rs:100",
+        "crates/voxel/src/lib.rs:198",
+        "crates/voxel/src/lib.rs:199"
       ]
     },
     {
@@ -11663,8 +11767,8 @@
         "docs/development-guide/fr-3d-additions.md:20"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:222",
-        "crates/voxel/src/lib.rs:223"
+        "crates/voxel/src/lib.rs:230",
+        "crates/voxel/src/lib.rs:231"
       ]
     },
     {
@@ -11682,8 +11786,8 @@
         "docs/development-guide/fr-3d-additions.md:22"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:243",
-        "crates/voxel/src/lib.rs:244"
+        "crates/voxel/src/lib.rs:251",
+        "crates/voxel/src/lib.rs:252"
       ]
     },
     {
@@ -11698,7 +11802,7 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:279"
+        "crates/voxel/src/lib.rs:287"
       ]
     },
     {
@@ -11741,9 +11845,9 @@
         "docs/worklogs/2026-05-22-civis-3d-kickoff.md:72"
       ],
       "in_tests": [
-        "crates/voxel/src/lib.rs:110",
-        "crates/voxel/src/lib.rs:253",
-        "crates/voxel/src/lib.rs:254"
+        "crates/voxel/src/lib.rs:118",
+        "crates/voxel/src/lib.rs:261",
+        "crates/voxel/src/lib.rs:262"
       ]
     },
     {

@@ -6,7 +6,9 @@ pre-commit:
   parallel: true
   commands:
     editorconfig:
-      run: git diff --cached --name-only | xargs -n1 test -f && echo "Checking editorconfig..."
+      # --diff-filter=d excludes deletions (a deleted file isn't test -f and made xargs exit 123 on
+      # pure-deletion commits). `|| true` keeps a no-staged-files case from failing the hook.
+      run: git diff --cached --name-only --diff-filter=d | xargs -r -n1 test -f || true && echo "Checking editorconfig..."
       skip:
         - merge
         - rebase

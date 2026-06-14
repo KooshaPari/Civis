@@ -1,0 +1,8 @@
+Read-only analysis in C:/Users/koosh/Dino. Goal: identify the lowest-coverage classes in Bridge / SDK / Domains that are in the net8.0 build (NOT UI/* which is excluded from net8.0), to target test-fills toward 75-85% coverage. Do NOT build/test/commit — just analyze + write one report.
+
+STEPS:
+1. List public classes in src/Bridge/, src/SDK/, src/Domains/ (grep 'public class'/'public sealed class'). Exclude anything under UI/ or using UnityEngine (net8.0-excluded).
+2. For each, check if a corresponding test exists in src/Tests/ (grep the class name). Classify: TESTED (has refs) / UNTESTED (zero refs).
+3. Rank the UNTESTED + thinly-tested classes by importance (core registries, loaders, mappers, calculators first).
+4. Write docs/sessions/consolidation-20260613/coverage-gap-survey.md: table | Class | Project | Test refs | Priority |, plus a top-15 "write tests for these next" list with the public methods each exposes (so a follow-up can write targeted tests). Note for each whether it's net8.0-safe (no UnityEngine).
+Then echo: COVERAGE-SURVEY-DONE.

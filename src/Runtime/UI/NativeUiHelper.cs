@@ -242,7 +242,10 @@ namespace DINOForge.Runtime.UI
 
                 if (resolvedTargetGraphic is Image resolvedImage && donor.targetGraphic is Image donorImage)
                 {
-                    resolvedImage.sprite = donorImage.sprite;
+                    if (donorImage.sprite != null)
+                    {
+                        resolvedImage.sprite = donorImage.sprite;
+                    }
                     resolvedImage.type = donorImage.type;
                     resolvedImage.color = donorImage.color;
                     resolvedImage.material = donorImage.material;

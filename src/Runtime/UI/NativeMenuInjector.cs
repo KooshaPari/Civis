@@ -1701,7 +1701,10 @@ namespace DINOForge.Runtime.UI
                 return;
             }
 
-            target.sprite = source.sprite;
+            if (source.sprite != null)
+            {
+                target.sprite = source.sprite;
+            }
             target.type = source.type;
             target.color = source.color;
             // #R1: carry the donor's material so a custom-shader native frame keeps its

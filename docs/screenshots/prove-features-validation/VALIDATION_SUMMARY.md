@@ -55,6 +55,8 @@ python src/Tests/e2e/vlm_judge.py C:\Users\koosh\Dino\docs\screenshots\prove-fea
 python src/Tests/e2e/vlm_judge.py C:\Users\koosh\Dino\docs\screenshots\prove-features-validation\validate_f10.png "The screenshot shows a mod menu or pack browser panel open in the game"
 ```
 
+The CLI prints machine-readable JSON and returns a non-zero exit code when the screenshot fails the assertion, so it can be used directly in a scoring or CI smoke step.
+
 ## Features Validated by Screenshots
 
 1. **Mods Button** - Verifies DINOForge mod system is discoverable in main menu

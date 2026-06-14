@@ -1,7 +1,7 @@
 # docs/sessions/ — Index & Retrospective Roadmap
 
-**Last Updated**: 2026-05-18  
-**Total Files**: 84 markdown documents  
+**Last Updated**: 2026-06-08  
+**Total Files**: 85 markdown documents  
 **Scope**: DINOForge development retrospectives, audit-rotation methodology, infrastructure investigations, and release milestones
 
 ---
@@ -25,6 +25,7 @@
 ### Proof System & Validation
 - [PROOF_OF_COMPLETION_20260420.md](PROOF_OF_COMPLETION_20260420.md) **[2026-04-27]** — Delivery proof via 4 Remotion video reels (3.2 MB), CLI run-through, Kimi judge tier wiring. Supersedes earlier prove-features claims.
 - [TRACEABILITY_VERIFICATION_20260420.md](TRACEABILITY_VERIFICATION_20260420.md) **[2026-04-27]** — 100% user story → test → docs linkage verification. v0.23.0 quality gate checklist. Headless automation runbook.
+- [traceability-refresh-v3-20260608.md](traceability-refresh-v3-20260608.md) **[2026-06-08]** — Traceability refresh for coverage gate, chaos green, autograder real scoring, coverage 85 roadmap, and coverage expansion. Records proof gaps when no machine-readable v3 convention exists.
 
 ### Phase 4 Closure Reports
 - [2026-04-26-phase-4a-retrospective.md](2026-04-26-phase-4a-retrospective.md) **[2026-04-26]** — Phase 4a (iter-85-91) closure. Infra pivot from DINOBox to playCUA. 5 HIGH-severity pattern categories cleared. GameBridgeServer async refactor (22 sites).
@@ -194,7 +195,7 @@
 
 | Category | Files | Total Size | Notes |
 |----------|-------|-----------|-------|
-| **Active (2026-04-26+)** | 13 | ~110 KB | Retrospectives, release snapshots, recent audits |
+| **Active (2026-04-26+)** | 14 | ~111 KB | Retrospectives, release snapshots, recent audits |
 | **Audit-Rotation (2026-04-24-25)** | 8 | ~65 KB | Phase 3 close, infrastructure pivot, methodology lock |
 | **PhenoCompose & Isolation** | 5 | ~48 KB | Roadmap docs (v0.25.0+) + playCUA integration |
 | **Hidden Desktop Research** | 8 | ~110 KB | Prototypes, test plans, P/Invoke reference (DEPRECATED) |
@@ -204,7 +205,7 @@
 | **Foundation & Setup** | 10 | ~80 KB | Project onboarding, architecture, research |
 | **Quick Reference** | 7 | ~30 KB | Worklog, plans, setup notes |
 | **Historical Release** | 5 | ~45 KB | v0.17.0 + prior validation snapshots |
-| **TOTAL** | 84 | ~588 KB | — |
+| **TOTAL** | 85 | ~589 KB | — |
 
 ---
 
@@ -230,4 +231,4 @@
 
 ---
 
-**Last audit**: 2026-05-18 — Catalogued 84 files, identified 13 active, 8 audit-rotation, 63 superseded/historical.
+**Last audit**: 2026-06-08 — Catalogued 85 files, identified 14 active, 8 audit-rotation, 63 superseded/historical.

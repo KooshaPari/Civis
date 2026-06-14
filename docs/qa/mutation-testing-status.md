@@ -1,77 +1,87 @@
 # Mutation Testing Status
 
-## Current State
+## Decision
 
-Stryker.NET is blocked before mutant discovery. The configured mutation smoke path does not reach test execution, so there is no mutation score to report yet.
+Keep Stryker.NET, but only against a dedicated `net8.0` Bridge mutation harness.
 
-## Latest Pinning Attempt
+I evaluated the available mutation tools that are surfaced for this workspace:
 
-- Requested pin: `dotnet-stryker` `3.13.1`
-- Smoke result: `dotnet stryker --version` did not complete cleanly in the smoke window after the pin attempt
-- Tooling blocker: `dotnet tool update -g dotnet-stryker --version 3.13.1` refused to downgrade the existing global install from `4.14.2`
+- `dotnet-stryker-netx` exists, but its own package description says it is a .NET 10 port of Stryker.NET 4.14.1. That makes it a poor fit for this repo's mixed `net8.0` / `net11.0` test surface.
+- `faultify` / `faultify.cli` are available as tools, but I could not find current compatibility evidence for this repo's test stack, and they are not already integrated here.
 
-## Configured Stryker Files
+Given that, the least risky path is to keep the existing Stryker-based Bridge harness and keep the mutation scope pinned to `net8.0`.
 
-- `stryker-smoke-config.json` is the checked-in Bridge smoke config used for the recent Bridge mutation attempts.
-- `stryker-config.json` is the repo-root config, but it is stale for the installed Stryker version and uses the older root test-project shape.
-- `StrykerConfig.json` is also present, but the Bridge mutation work used the smoke config above.
+## Chosen Path
 
-## Exact Blocking Error
+Use the dedicated Bridge mutation project:
 
-Stryker 4.14.2 aborts during hosted discovery with the following error path:
+- `src/Tests/BridgeMutation/DINOForge.Tests.BridgeMutation.csproj`
+- target project: `src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj`
+- target framework: `net8.0`
+- mutation scope: `src/Bridge/Protocol/CanonicalJson.cs`
 
-```text
-Could not load file or assembly 'System.Runtime, Version=8.0.0.0'
-Could not load type 'Microsoft.VisualStudio.TestPlatform.ObjectModel.EqtTrace'
-Project 'C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj' did not report any test.
+## Exact Command And Config
+
+Run from the repo root:
+
+```powershell
+dotnet stryker --config-file stryker-bridge-net8.json --configuration Release --skip-version-check
 ```
 
-The MTP path also failed before discovery:
+Temporary config content:
 
-```text
-Failed to start test server for C:\Users\koosh\Dino\src\Tests\BridgeMutation\bin\Release\net8.0\DINOForge.Tests.BridgeMutation.dll
+```json
+{
+  "stryker-config": {
+    "project": "src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj",
+    "test-projects": [
+      "src/Tests/BridgeMutation/DINOForge.Tests.BridgeMutation.csproj"
+    ],
+    "target-framework": "net8.0",
+    "test-runner": "vstest",
+    "reporters": [
+      "json",
+      "progress"
+    ],
+    "thresholds": {
+      "high": 0,
+      "low": 0,
+      "break": 0
+    },
+    "mutation-level": "Standard",
+    "since": {
+      "enabled": false
+    },
+    "report-file-name": "mutation-bridge-net8",
+    "ignore-mutations": [
+      "String",
+      "Linq"
+    ],
+    "mutate": [
+      "src/Bridge/Protocol/CanonicalJson.cs"
+    ]
+  }
+}
 ```
 
-## What Was Tried
+## Smoke Check
 
-- Ran Stryker against the Bridge smoke project with the checked-in smoke config.
-- Re-ran the same target with both `vstest` and `mtp` runner modes.
-- Built the Bridge smoke test project directly with `dotnet test` to verify the project itself is healthy.
-- Ran direct `dotnet vstest /ListTests` against the built `net8.0` BridgeMutation assembly.
-- Added and used a focused `BridgeMutation` harness so Stryker would not need to traverse unrelated runtime areas.
-- Tried a temporary harness-only workaround that pinned older test SDK packages and retargeted the harness to `net6.0`; direct test runs still worked, but Stryker discovery still failed, so that workaround was reverted.
+Help-only smoke passed:
 
-## Root Cause
+```powershell
+dotnet stryker --help
+```
 
-The blocker is the Stryker runner/toolchain path, not the Bridge mutation target itself.
+That confirms the installed CLI exposes the needed `--project`, `--test-project`, `--target-framework`, and `--test-runner` options without starting a mutation run.
 
-- The Bridge smoke and Bridge mutation harnesses are `net8.0` test projects and pass under direct `dotnet test`.
-- Stryker 4.14.2 is the component failing before discovery.
-- The failure happens inside Stryker-hosted test discovery, where the bundled VSTest host cannot load `System.Runtime 8.0` and `EqtTrace`.
-- The MTP host also fails to start, which makes this look like a Stryker/test-platform compatibility problem rather than a test code regression.
+## Viability
 
-## Concrete Next Attempt
+**BLOCKED**.
 
-Attempt one of these, in this order:
+Reason:
 
-1. Remove the existing global `dotnet-stryker` install and reinstall `3.13.1` explicitly, then rerun `dotnet stryker --version`.
-2. If the downgrade still cannot be made to stick, treat Stryker 4.14.2 as unsupported in this workspace.
-3. Fall back to a manual mutation-seed workflow for Bridge coverage evidence, using targeted hand-edited mutant seeds plus the existing Bridge tests to prove kill behavior without Stryker-hosted discovery.
+- The chosen path is structurally correct for this repo because the mutation target and test harness are both `net8.0`.
+- The current Stryker 4.14.2 host still fails during test discovery in this workspace, before mutant execution starts.
+- The installed non-Stryker alternatives do not provide a better supported path for this repo's current `net8.0` / `net11.0` test mix.
 
-## Conclusion
-
-Do not spend another long Stryker session on the current setup. The current evidence is sufficient to mark this as a toolchain compatibility blocker, not a Bridge code defect.
-
-## Status
-
-**BLOCKED**: the requested `3.13.1` pin could not be applied over the existing global `4.14.2` install, so the version smoke could not be validated as loaded in this environment.
-
-## Verdict (2026-06-10): BLOCKED — with concrete fix path
-
-**Status: BLOCKED.** Stryker 4.14.2 (global) cannot load `System.Runtime 8.0.0.0`/`EqtTrace` to discover tests in the net8.0 `BridgeMutation` project, and a downgrade to 3.13.1 is refused by `dotnet tool update -g` (won't downgrade an existing global install).
-
-**To unblock (needs one env change, not yet applied to avoid disrupting the swarm-shared toolchain):**
-1. `dotnet tool uninstall -g dotnet-stryker` then `dotnet tool install -g dotnet-stryker --version 3.13.1` (clean downgrade), OR
-2. Add a **local** tool manifest pinning dotnet-stryker 3.13.1 in `src/Tests/BridgeMutation/` (`dotnet new tool-manifest` + `dotnet tool install dotnet-stryker --version 3.13.1`) so the version is repo-scoped and doesn't touch the global install, then `dotnet stryker` from that dir.
-
-**Autograder impact:** the Tier-2 Mature "mutation ≥85%" criterion stays `pass:false` with this documented rationale. Path (2) is the recommended fix — repo-local, swarm-safe, no global toolchain mutation.
+So the actionable status is: the config is ready, but the workspace is blocked on the Stryker/test-platform integration layer, not on the Bridge protocol code itself.

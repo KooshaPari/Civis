@@ -1,0 +1,214 @@
+C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj	Microsoft.CodeAnalysis	4.10.0
+C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj	Microsoft.CodeAnalysis.CSharp	4.10.0
+C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj	Microsoft.CodeAnalysis.Analyzers	3.3.4
+C:\Users\koosh\Dino\src\Benchmarks\DINOForge.Benchmarks.csproj	BenchmarkDotNet	0.13.2
+C:\Users\koosh\Dino\src\Benchmarks\DINOForge.Benchmarks.csproj		
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj	Serilog	4.*
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj	Serilog.Sinks.Console	6.*
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj	Serilog.Sinks.File	6.*
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj		
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj		
+C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj		
+C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj	jsoncanonicalizer	1.0.0
+C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj		
+C:\Users\koosh\Dino\src\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj		
+C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj		
+C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj		
+C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj		
+C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj		
+C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj		
+C:\Users\koosh\Dino\src\Domains\UI\DINOForge.Domains.UI.csproj		
+C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj		
+C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj		
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj		
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj		
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj		
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj	AssetsTools.NET	3.0.4
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj	Microsoft.Bcl.TimeProvider	8.0.0
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj	BepInEx.AssemblyPublicizer.MSBuild	0.4.3
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj		
+C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj		
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj		
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj		
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj		
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj		
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	AssetsTools.NET	3.0.4
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	QuikGraph	2.5.0
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	YamlDotNet	16.*
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	NJsonSchema	10.*
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	System.Text.Json	10.*
+C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj	Microsoft.Bcl.TimeProvider	8.0.0
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	NetArchTest.Rules	1.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	AutoFixture	4.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	AutoFixture.Xunit2	4.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	FsCheck.Xunit	3.*
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	System.Net.Http	4.3.4
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	System.Text.RegularExpressions	4.3.1
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj	SharpFuzz	2.2.0
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj		
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	xunit	2.3.0
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	xunit.runner.visualstudio	2.8.2
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	Microsoft.CodeAnalysis.Analyzers	3.*
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	Microsoft.CodeAnalysis	4.10.0
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	Microsoft.CodeAnalysis.CSharp	4.10.0
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj	Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.xunit	1.1.2
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj		
+C:\Users\koosh\Dino\src\Tests\Autograder\DINOForge.Tests.Autograder.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Autograder\DINOForge.Tests.Autograder.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\Autograder\DINOForge.Tests.Autograder.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\Autograder\DINOForge.Tests.Autograder.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj	Microsoft.NET.Test.Sdk	17.14.1
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj	Reqnroll	3.3.4
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj	Reqnroll.xUnit	3.3.4
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj	xunit	2.8.1
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj	xunit.runner.visualstudio	2.8.1
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj	FluentAssertions	6.12.2
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj		
+C:\Users\koosh\Dino\src\Tests\Benchmarks\DINOForge.Benchmarks.csproj	BenchmarkDotNet	0.13.*
+C:\Users\koosh\Dino\src\Tests\Benchmarks\DINOForge.Benchmarks.csproj	BenchmarkDotNet.Diagnostics.Windows	0.13.*
+C:\Users\koosh\Dino\src\Tests\Benchmarks\DINOForge.Benchmarks.csproj		
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj		
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj	MSTest.TestAdapter	3.*
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj	MSTest.TestFramework	3.*
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj		
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj		
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj		
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj	Moq	4.*
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj		
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	Microsoft.NET.Test.Sdk	17.11.1
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	xunit	2.9.3
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	xunit.runner.visualstudio	2.8.2
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	FluentAssertions	6.12.1
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	Moq	4.20.72
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	YamlDotNet	15.3.0
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj	Newtonsoft.Json	13.0.3
+C:\Users\koosh\Dino\src\Tests\Contract\DINOForge.Tests.Contract.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Contract\DINOForge.Tests.Contract.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\Contract\DINOForge.Tests.Contract.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\Contract\DINOForge.Tests.Contract.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\Contract\DINOForge.Tests.Contract.csproj		
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj	Xunit.SkippableFact	1.4.*
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj		
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj		
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj	Xunit.SkippableFact	1.4.*
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj		
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj		
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj		
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj		
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj		
+C:\Users\koosh\Dino\src\Tests\Perf\DINOForge.Tests.Perf.csproj	BenchmarkDotNet	0.13.12
+C:\Users\koosh\Dino\src\Tests\Perf\DINOForge.Tests.Perf.csproj		
+C:\Users\koosh\Dino\src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj		
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj	Microsoft.NET.Test.Sdk	17.*
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj	xunit	2.*
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj	xunit.runner.visualstudio	2.*
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj	FluentAssertions	6.*
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj	FlaUI.Core	4.*
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj	FlaUI.UIA3	4.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj		
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	System.CommandLine	2.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Spectre.Console	0.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.Configuration	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.Configuration.Json	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.Configuration.EnvironmentVariables	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.DependencyInjection	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.Http	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.Logging	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Extensions.Logging.Console	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	SketchFabApi.Net	1.0.4
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	ScreenRecorderLib	6.6.0
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Microsoft.Data.Sqlite	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	Sentry	4.11.0
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj	System.Drawing.Common	8.*
+C:\Users\koosh\Dino\src\Tools\Cli\DINOForge.Tools.Cli.csproj		
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	Microsoft.WindowsAppSDK	1.6.250108002
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	CommunityToolkit.Mvvm	8.4.0
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	CommunityToolkit.WinUI.Controls.SettingsControls	8.2.251219
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	Microsoft.Extensions.Hosting	8.0.1
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	Microsoft.Extensions.DependencyInjection	8.0.1
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	YamlDotNet	16.3.0
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj	Newtonsoft.Json	13.0.4
+C:\Users\koosh\Dino\src\Tools\DesktopCompanion\DesktopCompanion.csproj		
+C:\Users\koosh\Dino\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj	Spectre.Console	0.*
+C:\Users\koosh\Dino\src\Tools\DumpTools\DINOForge.Tools.DumpTools.csproj	Newtonsoft.Json	13.*
+C:\Users\koosh\Dino\src\Tools\GameControlCli\GameControlCli.csproj	System.CommandLine	2.*
+C:\Users\koosh\Dino\src\Tools\GameControlCli\GameControlCli.csproj	Spectre.Console	0.*
+C:\Users\koosh\Dino\src\Tools\GameControlCli\GameControlCli.csproj		
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj	Avalonia	11.3.16
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj	Avalonia.Desktop	11.3.16
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj	Avalonia.Themes.Fluent	11.3.16
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj	CommunityToolkit.Mvvm	8.4.2
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj	Octokit	13.0.1
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj		
+C:\Users\koosh\Dino\src\Tools\Installer\GUI\DINOForge.Installer.csproj		
+C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj		
+C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj	Octokit	13.0.1
+C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj	ModelContextProtocol	1.1.0
+C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj	Microsoft.Extensions.Hosting	9.*
+C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj	ScreenCapture.NET.DX11	3.0.0
+C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj	ScreenRecorderLib	6.6.0
+C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj	System.Drawing.Common	10.0.5
+C:\Users\koosh\Dino\src\Tools\McpServer\DINOForge.Tools.McpServer.csproj		
+C:\Users\koosh\Dino\src\Tools\MockSteamworksNet\MockSteamworksNet.csproj		
+C:\Users\koosh\Dino\src\Tools\MockSteamworksNet\MockSteamworksNet.csproj		
+C:\Users\koosh\Dino\src\Tools\MockSteamworksNet\MockSteamworksNet.csproj	Steamworks.NET	15.0.*
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	Microsoft.NET.ILLink.Tasks	11.0.0-preview.2.26159.112
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	Spectre.Console	0.*
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	System.CommandLine	2.0.3
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	AssimpNet	4.1.0
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	SixLabors.ImageSharp	3.1.11
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	xunit	2.7.0
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	xunit.runner.visualstudio	2.5.4
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	Microsoft.NET.Test.Sdk	17.9.0
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj	FluentAssertions	6.12.0
+C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj		
+C:\Users\koosh\Dino\src\Tools\SkeletonExtractor\SkeletonExtractor.csproj	AssetsTools.NET	3.0.4

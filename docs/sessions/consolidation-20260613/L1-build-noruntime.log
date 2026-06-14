@@ -1,0 +1,26 @@
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Economy\DINOForge.Domains.Economy.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Domains\Scenario\DINOForge.Domains.Scenario.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Analyzers\DINOForge.Analyzers.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Tools\PackCompiler\DINOForge.Tools.PackCompiler.csproj]
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+  DINOForge.Templates -> C:\Users\koosh\Dino\src\Templates\bin\Release\net11.0\DINOForge.Templates.dll
+C:\program files\dotnet\sdk\11.0.100-preview.2.26159.112\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\koosh\Dino\src\SDK\DINOForge.SDK.csproj]
+  DINOForge.Analyzers -> C:\Users\koosh\Dino\src\Analyzers\bin\Release\netstandard2.0\DINOForge.Analyzers.dll
+  DINOForge.Tools.DumpTools -> C:\Users\koosh\Dino\src\Tools\DumpTools\bin\Release\net11.0\win-x64\DINOForge.Tools.DumpTools.dll
+  DINOForge.SDK -> C:\Users\koosh\Dino\src\SDK\bin\Release\netstandard2.0\DINOForge.SDK.dll
+  DINOForge.Domains.Warfare -> C:\Users\koosh\Dino\src\Domains\Warfare\bin\Release\netstandard2.0\DINOForge.Domains.Warfare.dll
+  DINOForge.Domains.Economy -> C:\Users\koosh\Dino\src\Domains\Economy\bin\Release\netstandard2.0\DINOForge.Domains.Economy.dll
+  DINOForge.Domains.UI -> C:\Users\koosh\Dino\src\Domains\UI\bin\Release\netstandard2.0\DINOForge.Domains.UI.dll
+  DINOForge.Tools.Installer -> C:\Users\koosh\Dino\src\Tools\Installer\InstallerLib\bin\Release\net8.0\DINOForge.Tools.Installer.dll
+  DINOForge.Bridge.Protocol -> C:\Users\koosh\Dino\src\Bridge\Protocol\bin\Release\netstandard2.0\DINOForge.Bridge.Protocol.dll
+  DINOForge.Domains.Scenario -> C:\Users\koosh\Dino\src\Domains\Scenario\bin\Release\netstandard2.0\DINOForge.Domains.Scenario.dll
+  DINOForge.Tools.PackCompiler -> C:\Users\koosh\Dino\src\Tools\PackCompiler\bin\Release\net11.0\win-x64\DINOForge.Tools.PackCompiler.dll
+  DINOForge.Bridge.Client -> C:\Users\koosh\Dino\src\Bridge\Client\bin\Release\netstandard2.0\DINOForge.Bridge.Client.dll
+  DINOForge.Tests.GameLaunch -> C:\Users\koosh\Dino\src\Tests\GameLaunch\bin\Release\net11.0\DINOForge.Tests.GameLaunch.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.17
+exit=0

@@ -149,3 +149,4 @@ myeasylog.log
 
 # Stray worktree artifact directories at repo root (agent worktree copy artifacts)
 UserskooshDino.*
+tools/phenotype-journeys/

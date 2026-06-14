@@ -65,6 +65,9 @@ DINOForge specifications are divided into two primary documents:
 | SPEC-006 | [Prove-Features Video Pipeline v1](./SPEC-006-prove-features-video-pipeline.md) | Superseded |
 | SPEC-007 | [Runtime Features Baseline](./SPEC-007-runtime-features-baseline.md) | Active |
 | SPEC-008 | [Mod Conflict Detection Engine](./SPEC-008-mod-conflict-detection-engine.md) | Proposed |
+| SPEC-TIER1-MVP | [Tier-1 MVP Acceptance Contract](./SPEC-TIER1-MVP.md) | Draft |
+| SPEC-TIER2-MATURE | [Tier-2 Mature Acceptance Contract](./SPEC-TIER2-MATURE.md) | Draft |
+| SPEC-TIER3-ELITE | [Tier-3 Elite Acceptance Contract](./SPEC-TIER3-ELITE.md) | Draft |
 | M13 | [Runtime Survival, HMR & Concurrency](./M13-runtime-survival-hmr-concurrency.md) | Draft |
 
 **Supersession notes**:

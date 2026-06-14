@@ -331,6 +331,22 @@ public class BridgeReceiptVerifierUnitTests
         hmac1.Should().NotBe(hmac2);
     }
 
+    [Theory]
+    [InlineData("0123456789abcdef", "0123456789abcdef", true)]
+    [InlineData("0123456789ABCDEF", "0123456789abcdef", true)]
+    [InlineData("0123456789abcdef", "0123456789abcdee", false)]
+    [InlineData("0123456789abcdef", "0123456789abcde", false)]
+    [InlineData("0123456789abcdeg", "0123456789abcdeg", false)]
+    [InlineData(null, "0123456789abcdef", false)]
+    [InlineData("0123456789abcdef", null, false)]
+    public void ConstantTimeHexEquals_CoversValidAndInvalidInputs(
+        string? left,
+        string? right,
+        bool expected)
+    {
+        BridgeReceiptVerifier.ConstantTimeHexEquals(left, right).Should().Be(expected);
+    }
+
     [Fact]
     public void VerificationResult_Construction_StoredCorrectly()
     {

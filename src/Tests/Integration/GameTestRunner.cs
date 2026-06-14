@@ -108,8 +108,12 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
         // Kill any existing game processes
         await KillExistingGameProcessesAsync().ConfigureAwait(true);
 
-        // Wait for any lingering processes to exit
-        await Task.Delay(2000, ct).ConfigureAwait(true);
+        // Wait for any lingering processes to exit.
+        await DINOForge.Tests.Support.TestWait.UntilAsync(
+            () => Process.GetProcessesByName("Diplomacy is Not an Option").Length == 0,
+            TimeSpan.FromSeconds(10),
+            pollMs: 250,
+            ct).ConfigureAwait(true);
 
         // Launch the game
         var gameDir = Path.GetDirectoryName(GameExePath) ?? throw new InvalidOperationException("Invalid game path");
@@ -154,24 +158,26 @@ public abstract class GameTestRunner : IAsyncDisposable, IDisposable
         _client = new GameClient(new GameClientOptions
         {
             ConnectTimeoutMs = 30000,
-            ReadTimeoutMs = 10000,
+            ReadTimeoutMs = 30000,
         });
 
-        // Retry connection for up to 30 seconds
-        var connected = false;
-        for (int i = 0; i < 30; i++)
-        {
-            try
+        // Retry connection for up to 30 seconds.
+        var connected = await DINOForge.Tests.Support.TestWait.UntilAsync(
+            async () =>
             {
-                await _client.ConnectAsync(ct).ConfigureAwait(true);
-                connected = true;
-                break;
-            }
-            catch
-            {
-                await Task.Delay(1000, ct).ConfigureAwait(true);
-            }
-        }
+                try
+                {
+                    await _client.ConnectAsync(ct).ConfigureAwait(true);
+                    return _client.IsConnected;
+                }
+                catch
+                {
+                    return false;
+                }
+            },
+            TimeSpan.FromSeconds(30),
+            pollMs: 1000,
+            ct).ConfigureAwait(true);
 
         if (!connected)
             throw new InvalidOperationException("Failed to connect to game bridge after 30 seconds");

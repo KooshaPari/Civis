@@ -1,0 +1,2 @@
+Benchmark: ComputeReceiptHmac
+MeanNsPerOp: 1670.17

@@ -126,7 +126,18 @@ public class GameTestFixture : IDisposable
             // Wait for game to start
             if (_process != null)
             {
-                Thread.Sleep(5000); // Wait for Unity to initialize
+                DINOForge.Tests.Support.TestWait.UntilAsync(
+                    () =>
+                    {
+                        try
+                        {
+                            _process.Refresh();
+                            return _process.HasExited || _process.MainWindowHandle != IntPtr.Zero;
+                        }
+                        catch { return false; }
+                    },
+                    TimeSpan.FromSeconds(30),
+                    pollMs: 250).GetAwaiter().GetResult();
             }
         }
 
@@ -136,21 +147,30 @@ public class GameTestFixture : IDisposable
 
     private void ConnectToBridge()
     {
-        var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (DateTime.UtcNow < deadline)
-        {
-            try
+        GameClient? connectedClient = null;
+        var connected = DINOForge.Tests.Support.TestWait.UntilAsync(
+            () =>
             {
-                _client = new GameClient();
-                _client.ConnectAsync().GetAwaiter().GetResult();
-                if (_client.IsConnected)
-                    return;
-                _client.Dispose();
-            }
-            catch { /* not ready yet */ }
-            Thread.Sleep(1000);
-        }
-        throw new InvalidOperationException("Failed to connect to game bridge");
+                try
+                {
+                    connectedClient = new GameClient();
+                    connectedClient.ConnectAsync().GetAwaiter().GetResult();
+                    if (connectedClient.IsConnected)
+                        return true;
+                    connectedClient.Dispose();
+                }
+                catch { /* not ready yet */ }
+
+                connectedClient = null;
+                return false;
+            },
+            TimeSpan.FromSeconds(30),
+            pollMs: 1000).GetAwaiter().GetResult();
+
+        if (!connected || connectedClient == null)
+            throw new InvalidOperationException("Failed to connect to game bridge");
+
+        _client = connectedClient;
     }
 
     public void Dispose()
@@ -306,22 +326,20 @@ public class ParallelGameE2ETests : IDisposable
     /// </summary>
     private async Task<bool> WaitForWorldAsync(int timeoutSeconds = 60)
     {
-        var startTime = DateTime.UtcNow;
-        while ((DateTime.UtcNow - startTime).TotalSeconds < timeoutSeconds)
-        {
-            try
+        return await DINOForge.Tests.Support.TestWait.UntilAsync(
+            async () =>
             {
-                var status = await GetGameStatusAsync().ConfigureAwait(true);
-                if (status.Running && status.WorldReady)
+                try
                 {
-                    return true;
+                    var status = await GetGameStatusAsync().ConfigureAwait(true);
+                    return status.Running && status.WorldReady;
                 }
-            }
-            catch { /* not ready yet */ }
+                catch { /* not ready yet */ }
 
-            await Task.Delay(2000).ConfigureAwait(true);
-        }
-        return false;
+                return false;
+            },
+            TimeSpan.FromSeconds(timeoutSeconds),
+            pollMs: 200).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -394,23 +412,27 @@ public class ParallelGameE2ETests : IDisposable
     /// </summary>
     private async Task<GameClient?> ConnectToBridgeAsync(int timeoutSeconds = 60)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            try
+        GameClient? connectedClient = null;
+        var connected = await DINOForge.Tests.Support.TestWait.UntilAsync(
+            async () =>
             {
-                var client = new GameClient();
-                await client.ConnectAsync().ConfigureAwait(true);
-                if (client.IsConnected)
-                    return client;
-                client.Dispose();
-            }
-            catch { /* not ready yet */ }
+                try
+                {
+                    connectedClient = new GameClient();
+                    await connectedClient.ConnectAsync().ConfigureAwait(true);
+                    if (connectedClient.IsConnected)
+                        return true;
+                    connectedClient.Dispose();
+                }
+                catch { /* not ready yet */ }
 
-            await Task.Delay(1000).ConfigureAwait(true);
-        }
-        return null;
+                connectedClient = null;
+                return false;
+            },
+            TimeSpan.FromSeconds(timeoutSeconds),
+            pollMs: 1000).ConfigureAwait(true);
+
+        return connected ? connectedClient : null;
     }
 
     /// <summary>
@@ -420,7 +442,10 @@ public class ParallelGameE2ETests : IDisposable
     {
         // Kill any existing game process
         StopGame();
-        await Task.Delay(3000).ConfigureAwait(true);
+        await DINOForge.Tests.Support.TestWait.UntilAsync(
+            () => Process.GetProcessesByName("Diplomacy is Not an Option").Length == 0,
+            TimeSpan.FromSeconds(10),
+            pollMs: 250).ConfigureAwait(true);
 
         // Launch fresh game
         var process = LaunchGame();
@@ -751,26 +776,27 @@ public class GameInstance : IDisposable
         if (Process == null || Process.HasExited)
             return false;
 
-        var startTime = DateTime.UtcNow;
-        while ((DateTime.UtcNow - startTime).TotalSeconds < timeoutSeconds)
-        {
-            try
+        var settleUntil = DateTime.UtcNow.AddSeconds(2);
+        return await DINOForge.Tests.Support.TestWait.UntilAsync(
+            () =>
             {
-                // Check if process is still alive
-                if (Process.HasExited)
-                    return false;
+                try
+                {
+                    // Check if process is still alive
+                    if (Process.HasExited)
+                        return false;
 
-                // In real implementation, would check via bridge CLI
-                // For now, just wait for startup
-                await Task.Delay(2000).ConfigureAwait(true);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        return false;
+                    // In real implementation, would check via bridge CLI
+                    // For now, just wait for startup.
+                    return DateTime.UtcNow >= settleUntil;
+                }
+                catch
+                {
+                    return false;
+                }
+            },
+            TimeSpan.FromSeconds(timeoutSeconds),
+            pollMs: 100).ConfigureAwait(true);
     }
 
     public void Dispose()
@@ -1025,7 +1051,11 @@ public class ScenarioParallelTests : IDisposable
             var results = await harness.RunParallelTestsAsync(async instance =>
             {
                 // Simulate pack loading test
-                await Task.Delay(1000).ConfigureAwait(true);
+                var readyAt = DateTime.UtcNow.AddSeconds(1);
+                await DINOForge.Tests.Support.TestWait.UntilAsync(
+                    () => DateTime.UtcNow >= readyAt,
+                    TimeSpan.FromSeconds(2),
+                    pollMs: 50).ConfigureAwait(true);
 
                 return new TestResult
                 {
@@ -1078,7 +1108,11 @@ public class ScenarioParallelTests : IDisposable
                 var instanceId = instance.DesktopName;
 
                 // Simulate state modification
-                await Task.Delay(500).ConfigureAwait(true);
+                var readyAt = DateTime.UtcNow.AddMilliseconds(500);
+                await DINOForge.Tests.Support.TestWait.UntilAsync(
+                    () => DateTime.UtcNow >= readyAt,
+                    TimeSpan.FromSeconds(2),
+                    pollMs: 50).ConfigureAwait(true);
 
                 // Verify state is instance-local
                 return new TestResult

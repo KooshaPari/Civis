@@ -40,6 +40,10 @@ namespace DINOForge.Tests
         [InlineData("scout",           "Components.RangeUnit")]
         [InlineData("cavalry",         "Components.CavalryUnit")]
         [InlineData("siege",           "Components.SiegeUnit")]
+        [InlineData("fast_vehicle",    "Components.CavalryUnit")]
+        [InlineData("light_vehicle",   "Components.CavalryUnit")]
+        [InlineData("heavy_vehicle",   "Components.SiegeUnit")]
+        [InlineData("main_battle_vehicle", "Components.SiegeUnit")]
         // #975 Phase 1 — cims (citizens/workers) and buildings.
         [InlineData("cims",            "Components.Worker")]
         [InlineData("worker",          "Components.Worker")]
@@ -86,6 +90,10 @@ namespace DINOForge.Tests
         [InlineData("cavalry",   "Components.CavalryUnit")]
         [InlineData("CAVALRY",   "Components.CavalryUnit")]
         [InlineData("siege",     "Components.SiegeUnit")]
+        [InlineData("fast_vehicle",  "Components.CavalryUnit")]
+        [InlineData("light_vehicle", "Components.CavalryUnit")]
+        [InlineData("heavy_vehicle", "Components.SiegeUnit")]
+        [InlineData("main_battle_vehicle", "Components.SiegeUnit")]
         public void TryResolveMapping_ValidMappings_ReturnsTrueWithComponentType(
             string vanillaMapping, string expectedComponentType)
         {

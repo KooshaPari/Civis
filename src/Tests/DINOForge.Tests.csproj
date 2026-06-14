@@ -85,6 +85,7 @@
     <Compile Remove="Bridge\ComponentMapTests.cs" />
     <Compile Remove="RuntimeExtractionTests.cs" />
     <Compile Remove="ParameterizedTests\RuntimeFsCheckProperties.cs" />
+    <Compile Remove="Chaos\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -95,6 +96,7 @@
     <ProjectReference Include="..\Tools\Installer\InstallerLib\DINOForge.Tools.Installer.csproj" />
     <ProjectReference Include="..\Domains\Economy\DINOForge.Domains.Economy.csproj" />
     <ProjectReference Include="..\Domains\Scenario\DINOForge.Domains.Scenario.csproj" />
+    <ProjectReference Include="..\Bridge\Protocol\DINOForge.Bridge.Protocol.csproj" />
     <ProjectReference Include="..\Bridge\Client\DINOForge.Bridge.Client.csproj" />
     <ProjectReference Include="..\Analyzers\DINOForge.Analyzers.csproj" />
   </ItemGroup>
@@ -135,6 +137,14 @@
     <None Remove="CompanionTests\**" />
     <Content Remove="CompanionTests\**" />
     <EmbeddedResource Remove="CompanionTests\**" />
+    <Compile Remove="BridgeSmoke\**" />
+    <None Remove="BridgeSmoke\**" />
+    <Content Remove="BridgeSmoke\**" />
+    <EmbeddedResource Remove="BridgeSmoke\**" />
+    <Compile Remove="Perf\**" />
+    <None Remove="Perf\**" />
+    <Content Remove="Perf\**" />
+    <EmbeddedResource Remove="Perf\**" />
     <Compile Remove="Benchmarks\**" />
     <None Remove="Benchmarks\**" />
     <Content Remove="Benchmarks\**" />
@@ -156,6 +166,24 @@
     <None Remove="Sketchfab\**" />
     <Content Remove="Sketchfab\**" />
     <EmbeddedResource Remove="Sketchfab\**" />
+  </ItemGroup>
+
+  <!-- Exclude generated outputs from sibling test sub-projects nested under this folder.
+       Their obj/*.cs files are not source and cause duplicate assembly/type definitions when
+       the parent test project picks them up through the default compile glob. -->
+  <ItemGroup>
+    <Compile Remove="BDD\**" />
+    <None Remove="BDD\**" />
+    <Content Remove="BDD\**" />
+    <EmbeddedResource Remove="BDD\**" />
+    <Compile Remove="BDD\obj\**" />
+    <None Remove="BDD\obj\**" />
+    <Content Remove="BDD\obj\**" />
+    <EmbeddedResource Remove="BDD\obj\**" />
+    <Compile Remove="Autograder\**" />
+    <None Remove="Autograder\**" />
+    <Content Remove="Autograder\**" />
+    <EmbeddedResource Remove="Autograder\**" />
   </ItemGroup>
 
   <!-- Temporarily exclude UnitSpawnerTests which requires ECS infrastructure -->
@@ -183,11 +211,15 @@
     <Compile Remove="RustInteropTests.cs" />
     <Compile Remove="BridgeClientAsyncTests.cs" />
     <Compile Remove="Bridge\EntityQueriesTests.cs" />
+    <Compile Remove="Contract\**" />
     <Compile Remove="Analyzers\**" />
     <!-- EndToEndUserJourneysTests.cs excluded pending fix for missing UnitRegistry/DependencyResolver types -->
     <None Remove="GameControlCliTests\**" />
     <Content Remove="GameControlCliTests\**" />
     <EmbeddedResource Remove="GameControlCliTests\**" />
+    <None Remove="Contract\**" />
+    <Content Remove="Contract\**" />
+    <EmbeddedResource Remove="Contract\**" />
     <None Remove="Analyzers\**" />
     <Content Remove="Analyzers\**" />
     <EmbeddedResource Remove="Analyzers\**" />

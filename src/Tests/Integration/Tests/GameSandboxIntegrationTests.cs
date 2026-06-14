@@ -92,25 +92,28 @@ public class GameSandboxIntegrationTests : IDisposable
 
     private void WaitForBridgeReady()
     {
-        var deadline = System.DateTime.UtcNow.AddSeconds(30);
-        while (System.DateTime.UtcNow < deadline)
-        {
-            try
+        DINOForge.Tests.Support.TestWait.UntilAsync(
+            () =>
             {
-                var testClient = new GameClient(SandboxClientOptions);
-                var connectTask = testClient.ConnectAsync();
-                connectTask.Wait(SandboxConnectWait);
-                if (testClient.IsConnected)
+                try
                 {
-                    testClient.Disconnect();
+                    var testClient = new GameClient(SandboxClientOptions);
+                    var connectTask = testClient.ConnectAsync();
+                    connectTask.Wait(SandboxConnectWait);
+                    if (testClient.IsConnected)
+                    {
+                        testClient.Disconnect();
+                        testClient.Dispose();
+                        return true;
+                    }
                     testClient.Dispose();
-                    return;
                 }
-                testClient.Dispose();
-            }
-            catch { }
-            System.Threading.Thread.Sleep(500);
-        }
+                catch { }
+
+                return false;
+            },
+            System.TimeSpan.FromSeconds(30),
+            pollMs: 500).GetAwaiter().GetResult();
     }
 
     private void TryConnect()

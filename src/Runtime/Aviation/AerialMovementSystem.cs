@@ -27,7 +27,11 @@ namespace DINOForge.Runtime.Aviation
         private static bool _isRuntimeEnabled = false;
         private static bool _disabledWarningLogged;
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("AerialMovement", "AerialMovementSystem.OnCreate");
@@ -44,7 +48,11 @@ namespace DINOForge.Runtime.Aviation
             }
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             float deltaTime = (float)World.Time.DeltaTime;
 

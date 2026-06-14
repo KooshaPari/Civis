@@ -63,13 +63,21 @@ namespace DINOForge.Runtime.Bridge
             DebugLog.Write("WaveInjector", "WaveInjector.SetRegistryManager: Registry initialized");
         }
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("WaveInjector", "WaveInjector.OnCreate");
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             _frameCount++;
 

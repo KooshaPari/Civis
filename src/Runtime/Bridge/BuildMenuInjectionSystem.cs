@@ -24,14 +24,22 @@ namespace DINOForge.Runtime.Bridge
         private bool _injected;
 
         /// <inheritdoc />
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("BuildMenuInjector", "BuildMenuInjectionSystem.OnCreate");
         }
 
         /// <inheritdoc />
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             if (_injected) return;
             _frameCount++;

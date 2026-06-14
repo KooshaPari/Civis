@@ -24,6 +24,7 @@ namespace DINOForge.SDK
         private readonly IRegistryImportService _registryImport;
         private readonly PackLoader _packLoader;
         private readonly PackDependencyResolver _dependencyResolver;
+        private readonly Action<string> _log;
 
         // Stored so RegisterAssetSwaps() can enumerate units/buildings after registration.
         private readonly RegistryManager? _registryManager;
@@ -54,7 +55,8 @@ namespace DINOForge.SDK
                 new ContentDiscoveryService(),
                 new SchemaResolverService(),
                 CreateRegistryImport(registryManager, schemaValidator, log),
-                registryManager)
+                registryManager,
+                log)
         {
         }
 
@@ -68,11 +70,13 @@ namespace DINOForge.SDK
         /// Optional registry manager reference used to wire <see cref="DINOForge.SDK.Assets.AssetSwapRegistry"/>
         /// after units and buildings are loaded. Pass null to skip asset swap registration.
         /// </param>
+        /// <param name="log">Optional logger used for warning-level fallbacks.</param>
         internal ContentLoader(
             IContentDiscoveryService discoveryService,
             ISchemaResolverService schemaResolver,
             IRegistryImportService registryImport,
-            RegistryManager? registryManager = null)
+            RegistryManager? registryManager = null,
+            Action<string>? log = null)
         {
             _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
             _schemaResolver = schemaResolver ?? throw new ArgumentNullException(nameof(schemaResolver));
@@ -80,6 +84,7 @@ namespace DINOForge.SDK
             _registryManager = registryManager;
             _packLoader = new PackLoader();
             _dependencyResolver = new PackDependencyResolver();
+            _log = log ?? (_ => { });
         }
 
         private static IRegistryImportService CreateRegistryImport(
@@ -188,10 +193,33 @@ namespace DINOForge.SDK
                 return ContentLoadResult.Failure(LastLoadErrors);
             }
 
-            LoadManifestContent(packDirectory, manifest, loadErrors);
+            try
+            {
+                LoadManifestContent(packDirectory, manifest, loadErrors);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Failed while loading content for pack '{manifest.Id}': {ex.GetType().Name}: {ex.Message}";
+                _log($"[ContentLoader] WARNING: {message}");
+                loadErrors.Add(message);
+            }
+
+            if (loadErrors.Count > 0)
+            {
+                _log($"[ContentLoader] WARNING: pack '{manifest.Id}' loaded with {loadErrors.Count} error(s); continuing with fallback registration path.");
+            }
 
             // Wire AssetSwapRegistry for all units and buildings with visual_asset references.
-            RegisterAssetSwaps(packDirectory);
+            try
+            {
+                RegisterAssetSwaps(packDirectory);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Asset swap registration failed for pack '{manifest.Id}': {ex.GetType().Name}: {ex.Message}";
+                _log($"[ContentLoader] WARNING: {message}");
+                loadErrors.Add(message);
+            }
 
             LastLoadErrors = loadErrors.AsReadOnly();
             IReadOnlyList<string> loadedPackIds = new List<string> { manifest.Id }.AsReadOnly();
@@ -454,10 +482,17 @@ namespace DINOForge.SDK
             foreach (string contentType in contentTypes)
             {
                 List<string>? declaredPaths = GetDeclaredPaths(manifest, contentType);
-                IReadOnlyList<string> files = _discoveryService.DiscoverYamlFiles(packDirectory, contentType, declaredPaths);
-                if (files.Count > 0)
+                try
                 {
-                    result[contentType] = files;
+                    IReadOnlyList<string> files = _discoveryService.DiscoverYamlFiles(packDirectory, contentType, declaredPaths);
+                    if (files.Count > 0)
+                    {
+                        result[contentType] = files;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log($"[ContentLoader] WARNING: failed to collect '{contentType}' files for patch phase in '{packDirectory}': {ex.GetType().Name}: {ex.Message}");
                 }
             }
 
@@ -494,7 +529,20 @@ namespace DINOForge.SDK
         {
             List<(string Directory, PackManifest Manifest)> manifests = new List<(string Directory, PackManifest Manifest)>();
 
-            foreach (string directory in _discoveryService.DiscoverPackDirectories(packsRootDirectory))
+            IReadOnlyList<string> packDirectories;
+            try
+            {
+                packDirectories = _discoveryService.DiscoverPackDirectories(packsRootDirectory);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Failed to discover pack directories in {packsRootDirectory}: {ex.GetType().Name}: {ex.Message}";
+                errors.Add(message);
+                _log($"[ContentLoader] WARNING: {message}");
+                return manifests;
+            }
+
+            foreach (string directory in packDirectories)
             {
                 string manifestPath = Path.Combine(directory, "pack.yaml");
                 try
@@ -579,14 +627,34 @@ namespace DINOForge.SDK
             List<string>? declaredPaths,
             IList<string> errors)
         {
-            IReadOnlyList<string> yamlFiles = _discoveryService.DiscoverYamlFiles(
-                packDirectory,
-                contentType,
-                declaredPaths);
+            IReadOnlyList<string> yamlFiles;
+            try
+            {
+                yamlFiles = _discoveryService.DiscoverYamlFiles(
+                    packDirectory,
+                    contentType,
+                    declaredPaths);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Content discovery failed for '{contentType}' in '{packDirectory}': {ex.GetType().Name}: {ex.Message}";
+                _log($"[ContentLoader] WARNING: {message}");
+                errors.Add(message);
+                return;
+            }
 
             foreach (string yamlFile in yamlFiles)
             {
-                _registryImport.LoadAndRegisterContent(yamlFile, contentType, manifest, errors);
+                try
+                {
+                    _registryImport.LoadAndRegisterContent(yamlFile, contentType, manifest, errors);
+                }
+                catch (Exception ex)
+                {
+                    string message = $"Failed to load '{yamlFile}' as '{contentType}': {ex.GetType().Name}: {ex.Message}";
+                    _log($"[ContentLoader] WARNING: {message}");
+                    errors.Add(message);
+                }
             }
         }
 

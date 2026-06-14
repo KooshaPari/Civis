@@ -265,13 +265,21 @@ namespace DINOForge.Runtime.Bridge
             return modifiedCount;
         }
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("StatModifier", "StatModifierSystem.OnCreate");
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             _frameCount++;
 

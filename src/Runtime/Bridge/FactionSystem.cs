@@ -79,13 +79,21 @@ namespace DINOForge.Runtime.Bridge
             }
         }
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("FactionSystem", "FactionSystem.OnCreate");
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             // This system is primarily a data holder and query interface.
             // Updates to faction state (entity counts) would happen here if needed.

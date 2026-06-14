@@ -85,6 +85,7 @@ namespace DINOForge.SDK
                 }
                 catch (Exception ex)
                 {
+                    _log($"[ContentLoader] WARNING: failed to read {yamlFilePath}: {ex.GetType().Name}: {ex.Message}");
                     errors.Add($"Failed to read {yamlFilePath}: {ex.Message}");
                     return;
                 }
@@ -102,6 +103,7 @@ namespace DINOForge.SDK
             }
             catch (Exception ex)
             {
+                _log($"[ContentLoader] WARNING: failed to deserialize/register {yamlFilePath}: {ex.GetType().Name}: {ex.Message}");
                 errors.Add($"Failed to deserialize/register {yamlFilePath}: {ex.Message}");
             }
         }

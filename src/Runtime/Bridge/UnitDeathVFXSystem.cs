@@ -30,13 +30,21 @@ namespace DINOForge.Runtime.Bridge
             DebugLog.Write("UnitDeathVFX", "SetPoolManager: Pool initialized");
         }
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("UnitDeathVFX", "OnCreate");
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             _frameCount++;
 

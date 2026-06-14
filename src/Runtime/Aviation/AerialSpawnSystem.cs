@@ -85,7 +85,11 @@ namespace DINOForge.Runtime.Aviation
         // ECS lifecycle
         // -------------------------------------------------------------------------
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
 
@@ -101,7 +105,11 @@ namespace DINOForge.Runtime.Aviation
             }
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             _frameCount++;
 

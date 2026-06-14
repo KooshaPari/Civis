@@ -208,14 +208,22 @@ namespace DINOForge.Runtime.Bridge
         private const string PatchedBundlesDir = "dinoforge_patched_bundles";
 
         /// <inheritdoc/>
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("AssetSwap", "AssetSwapSystem.OnCreate");
         }
 
         /// <inheritdoc/>
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             if (_resetPending)
             {
@@ -344,9 +352,18 @@ namespace DINOForge.Runtime.Bridge
             // may fail — that's expected. Phase 2 (entity swap) is the primary mechanism.
             // Phase 1 is skipped entirely when the mod bundle file is missing/unavailable.
             bool patchResult = false;
-            byte[]? modAssetBytes = bundleFileExists
-                ? assetService.ExtractAsset(modBundleFullPath, request.AssetName)
-                : null;
+            byte[]? modAssetBytes = null;
+            if (bundleFileExists)
+            {
+                try
+                {
+                    modAssetBytes = assetService.ExtractAsset(modBundleFullPath, request.AssetName);
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Write("AssetSwap", $"ApplySwap: failed to extract '{request.AssetName}' from '{modBundleFullPath}': {ex.Message} — skipping Phase 1 and continuing with entity swap");
+                }
+            }
 
             if (modAssetBytes != null && modAssetBytes.Length > 0)
             {
@@ -1199,7 +1216,11 @@ namespace DINOForge.Runtime.Bridge
         }
 
         /// <inheritdoc/>
+#if NET8_0
         public override void OnDestroy()
+#else
+        protected override void OnDestroy()
+#endif
         {
             // Iter-144 #543 fix: skip bundle unload when RuntimeDriver is being destroyed as part
             // of a scene transition (NeedsResurrection / s_skipBundleUnload). AssetBundle.Unload(false)

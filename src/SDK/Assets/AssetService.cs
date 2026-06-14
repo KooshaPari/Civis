@@ -103,10 +103,9 @@ namespace DINOForge.SDK.Assets
             }
 
             var results = new List<AssetInfo>();
-
-            BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(bundlePath);
             try
             {
+                BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(bundlePath);
                 AssetsFileInstance assetsInst = _assetsManager.LoadAssetsFileFromBundle(bundleInst, 0);
                 AssetsFile assetsFile = assetsInst.file;
 
@@ -242,9 +241,9 @@ namespace DINOForge.SDK.Assets
                 return null;
             }
 
-            BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(bundlePath);
             try
             {
+                BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(bundlePath);
                 AssetsFileInstance assetsInst = _assetsManager.LoadAssetsFileFromBundle(bundleInst, 0);
                 AssetsFile assetsFile = assetsInst.file;
 
@@ -296,9 +295,9 @@ namespace DINOForge.SDK.Assets
 
             try
             {
-                BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(modBundlePath);
                 try
                 {
+                    BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(modBundlePath);
                     AssetsFileInstance assetsInst = _assetsManager.LoadAssetsFileFromBundle(bundleInst, 0);
                     AssetsFile assetsFile = assetsInst.file;
 
@@ -406,9 +405,9 @@ namespace DINOForge.SDK.Assets
         /// </summary>
         private int CountAssetsInBundle(string bundlePath)
         {
-            BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(bundlePath);
             try
             {
+                BundleFileInstance bundleInst = _assetsManager.LoadBundleFile(bundlePath);
                 AssetsFileInstance assetsInst = _assetsManager.LoadAssetsFileFromBundle(bundleInst, 0);
                 return assetsInst.file.AssetInfos.Count;
             }

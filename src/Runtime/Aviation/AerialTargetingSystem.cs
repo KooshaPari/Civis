@@ -56,7 +56,11 @@ namespace DINOForge.Runtime.Aviation
         /// <summary>Whether enemy query initialization has been attempted and failed.</summary>
         private bool _enemyQueryResolveFailed;
 
+#if NET8_0
         public override void OnCreate()
+#else
+        protected override void OnCreate()
+#endif
         {
             base.OnCreate();
             DebugLog.Write("AerialTargeting", "AerialTargetingSystem.OnCreate — attempting enemy ground query init");
@@ -76,7 +80,11 @@ namespace DINOForge.Runtime.Aviation
             TryInitEnemyGroundQuery();
         }
 
+#if NET8_0
         public override void OnUpdate()
+#else
+        protected override void OnUpdate()
+#endif
         {
             // Lazy-init: retry if OnCreate could not resolve Components.Enemy yet.
             if (_enemyGroundUnitQuery == null && !_enemyQueryResolveFailed)

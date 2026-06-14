@@ -1,5 +1,3 @@
-#![cfg(all(feature = "bevy", feature = "egui"))]
-
 //! Faction Diplomacy panel for the Civis reference client.
 //!
 //! Provides a dark-glassmorphism overlay (matching `game_ui.rs` palette) that
@@ -9,35 +7,34 @@
 //!
 //! # Usage
 //! ```no_run
-//! # use bevy::prelude::*;
-//! # use civ_bevy_ref::diplomacy_ui::{DiplomacyState, DiplomacyUiPlugin};
-//! let mut app = App::new();
 //! app.add_plugins(DiplomacyUiPlugin);
 //! // Optionally seed demo data:
 //! app.insert_resource(DiplomacyState::demo());
 //! ```
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-
-use crate::sim_bridge::{DiplomacyStandings, StandingStance};
-use crate::ui_theme;
+use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 
 // ---------------------------------------------------------------------------
-// Palette — sourced from the shared `ui_theme` dark-glass language.
+// Palette (mirrors game_ui.rs)
 // ---------------------------------------------------------------------------
 
-/// Chip / cell tint.
-const CHIP_FILL: egui::Color32 = ui_theme::SURFACE;
-/// Cyan accent.
-const ACCENT: egui::Color32 = ui_theme::ACCENT;
-/// Dimmed label colour.
-const DIM: egui::Color32 = ui_theme::DIM;
+/// Dark glass panel fill — identical to `PANEL_FILL` in `game_ui.rs`.
+const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+/// Chip / cell tint — identical to `CHIP_FILL` in `game_ui.rs`.
+const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
+/// Cyan accent — identical to `ACCENT` in `game_ui.rs`.
+const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
+/// Dimmed label colour — identical to `DIM` in `game_ui.rs`.
+const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 
 // Relation colour stops
-const GREEN: egui::Color32 = ui_theme::GREEN;
-const GOLD: egui::Color32 = ui_theme::GOLD;
-const RED: egui::Color32 = ui_theme::RED;
+const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);
+const GOLD: egui::Color32 = egui::Color32::from_rgb(240, 200, 90);
+const RED: egui::Color32 = egui::Color32::from_rgb(220, 80, 80);
 
 // ---------------------------------------------------------------------------
 // Data model
@@ -87,10 +84,6 @@ pub struct DiplomacyState {
     pub relations: Vec<Vec<i8>>,
     /// Whether the panel is currently visible.
     pub open: bool,
-    /// Whether at least one live sim sample has populated this state.
-    pub live: bool,
-    /// Tick of the most recently ingested diplomacy event (dedup guard).
-    last_event_tick: u64,
 }
 
 impl Default for DiplomacyState {
@@ -99,13 +92,24 @@ impl Default for DiplomacyState {
             factions: Vec::new(),
             relations: Vec::new(),
             open: false,
-            live: false,
-            last_event_tick: 0,
         }
     }
 }
 
 impl DiplomacyState {
+    /// Build [`DiplomacyState`] from a live `FactionState` wire frame.
+    ///
+    /// Faction rows use government labels and deterministic banner colours.
+    /// Population comes from `population_by_faction` when present, otherwise a
+    /// treasury-scaled stub. Relations are a square neutral matrix (`0`).
+    #[must_use]
+    pub fn from_faction_frame(
+        frame: &FactionStateFrame,
+        population_by_faction: &HashMap<u32, u32>,
+    ) -> Self {
+        diplomacy_state_from_faction_frame(frame, population_by_faction)
+    }
+
     /// Build a 4-faction demo suitable for screenshots and unit tests.
     pub fn demo() -> Self {
         let factions = vec![
@@ -125,36 +129,83 @@ impl DiplomacyState {
             factions,
             relations,
             open: true,
-            live: false,
-            last_event_tick: 0,
         }
     }
+}
 
-    /// Ensure the relation matrix is square and sized to the faction count,
-    /// preserving existing accumulated stances. New cells default to neutral.
-    fn resize_matrix(&mut self) {
-        let n = self.factions.len();
-        self.relations.resize(n, Vec::new());
-        for row in &mut self.relations {
-            row.resize(n, 0);
-        }
+/// Maps a `FactionState` wire frame into panel rows and a neutral relation matrix.
+#[must_use]
+pub fn diplomacy_state_from_faction_frame(
+    frame: &FactionStateFrame,
+    population_by_faction: &HashMap<u32, u32>,
+) -> DiplomacyState {
+    let mut entries = frame.factions.clone();
+    entries.sort_by_key(|entry| entry.id);
+    let factions: Vec<DipFaction> = entries
+        .iter()
+        .map(|entry| dip_faction_from_entry(entry, population_by_faction))
+        .collect::<Vec<_>>();
+    let relations = neutral_relations_matrix(factions.len());
+    DiplomacyState {
+        factions,
+        relations,
+        open: false,
     }
+}
 
-    /// Find a faction row index by its sim id.
-    fn index_of(&self, id: u32) -> Option<usize> {
-        self.factions.iter().position(|f| f.id == id)
+/// Symmetric N×N relation matrix with neutral (`0`) off-diagonal cells.
+#[must_use]
+pub fn neutral_relations_matrix(n: usize) -> Vec<Vec<i8>> {
+    (0..n).map(|_| vec![0_i8; n]).collect()
+}
+
+/// Display name for a faction row (`"Republic #2"`).
+#[must_use]
+pub fn faction_display_name(entry: &FactionStateEntry) -> String {
+    format!("{} #{}", government_label(&entry.government), entry.id)
+}
+
+/// Deterministic sRGB triple for a faction id (matches agent colour hashing).
+#[must_use]
+pub fn faction_color_from_id(id: u32) -> [f32; 3] {
+    crate::agent_color_from_id(u64::from(id))
+}
+
+fn dip_faction_from_entry(
+    entry: &FactionStateEntry,
+    population_by_faction: &HashMap<u32, u32>,
+) -> DipFaction {
+    DipFaction {
+        id: entry.id,
+        name: faction_display_name(entry),
+        color: faction_color_from_id(entry.id),
+        population: population_for_faction(entry, population_by_faction),
     }
+}
 
-    /// Accumulate a single emergent diplomacy outcome into the symmetric
-    /// relation matrix. Trade agreements warm the relation, conflicts cool it;
-    /// values saturate within the `i8` stance range.
-    fn accumulate(&mut self, a: u32, b: u32, delta: i8) {
-        let (Some(i), Some(j)) = (self.index_of(a), self.index_of(b)) else {
-            return;
-        };
-        let bump = |v: i8| v.saturating_add(delta).clamp(-100, 100);
-        self.relations[i][j] = bump(self.relations[i][j]);
-        self.relations[j][i] = bump(self.relations[j][i]);
+fn population_for_faction(
+    entry: &FactionStateEntry,
+    population_by_faction: &HashMap<u32, u32>,
+) -> u32 {
+    if let Some(count) = population_by_faction.get(&entry.id).copied() {
+        return count;
+    }
+    let amount = entry.treasury.amount;
+    if amount.is_finite() && amount > 0.0 {
+        return (amount / 10.0).clamp(100.0, 999_999.0) as u32;
+    }
+    1_000 * (entry.id + 1)
+}
+
+fn government_label(government: &Government3d) -> &'static str {
+    match government {
+        Government3d::Unknown => "Faction",
+        Government3d::Monarchy => "Monarchy",
+        Government3d::Republic => "Republic",
+        Government3d::Theocracy => "Theocracy",
+        Government3d::Junta => "Junta",
+        Government3d::Council => "Council",
+        Government3d::Corporate => "Corporate",
     }
 }
 
@@ -170,11 +221,8 @@ pub struct DiplomacyUiPlugin;
 impl Plugin for DiplomacyUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DiplomacyState>()
-            .add_systems(Update, (toggle_diplomacy_panel, sync_diplomacy_from_sim))
-            .add_systems(
-                EguiPrimaryContextPass,
-                draw_diplomacy_panel.run_if(crate::menus::in_game),
-            );
+            .add_systems(Update, toggle_diplomacy_panel)
+            .add_systems(EguiPrimaryContextPass, draw_diplomacy_panel);
     }
 }
 
@@ -188,86 +236,7 @@ fn toggle_diplomacy_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<Dip
     }
 }
 
-/// Faction-banner hue for a sim faction id (matches `sim_bridge::faction_color`).
-fn faction_banner(id: u32) -> [f32; 3] {
-    let hue = (id as f32 * 85.0) % 360.0;
-    let c = Color::hsla(hue, 0.6, 0.5, 1.0).to_srgba();
-    [c.red, c.green, c.blue]
-}
-
-/// Pull emergent inter-faction relations out of the running simulation.
-///
-/// The simulation exposes its factions (`sim.state.factions`) and a rolling
-/// list of emergent [`civ_engine::DiplomacyEvent`]s via `snapshot()`. This
-/// system rebuilds the faction roster (name + treasury-derived size + banner
-/// colour) and folds each new trade/conflict outcome into an accumulated,
-/// symmetric stance matrix. It degrades gracefully: with <2 factions the panel
-/// simply shows whatever roster exists and an empty grid.
-pub fn sync_diplomacy_from_sim(
-    sim: Res<crate::sim_bridge::SimState>,
-    mut state: ResMut<DiplomacyState>,
-) {
-    if !sim.is_changed() {
-        return;
-    }
-    let world_state = &sim.0.state;
-
-    // Rebuild the roster from the sim's faction registry (id-ordered for a
-    // stable matrix layout). Population stands in via treasury magnitude.
-    let mut ids: Vec<u32> = world_state.factions.keys().copied().collect();
-    ids.sort_unstable();
-    let factions: Vec<DipFaction> = ids
-        .iter()
-        .map(|&id| {
-            let name = world_state
-                .factions
-                .get(&id)
-                .cloned()
-                .unwrap_or_else(|| format!("Faction {id}"));
-            let treasury = world_state
-                .faction_treasury
-                .get(&id)
-                .map(|t| t.to_f64().max(0.0) as u32)
-                .unwrap_or(0);
-            DipFaction::new(id, name, faction_banner(id), treasury)
-        })
-        .collect();
-
-    let roster_changed = factions.len() != state.factions.len()
-        || factions
-            .iter()
-            .zip(state.factions.iter())
-            .any(|(a, b)| a.id != b.id);
-    state.factions = factions;
-    if roster_changed {
-        // Faction set changed — reset accumulated stances to a clean matrix.
-        state.relations.clear();
-    }
-    state.resize_matrix();
-
-    // Fold in any emergent diplomacy outcomes newer than the last we ingested.
-    let snap = sim.0.snapshot();
-    for ev in &snap.diplomacy_events {
-        if ev.tick <= state.last_event_tick {
-            continue;
-        }
-        let delta: i8 = match ev.kind {
-            civ_engine::DiplomacyKind::TradeAgreement => 18,
-            civ_engine::DiplomacyKind::Peace => 8,
-            civ_engine::DiplomacyKind::Conflict => -22,
-        };
-        state.accumulate(ev.faction_a, ev.faction_b, delta);
-        state.last_event_tick = state.last_event_tick.max(ev.tick);
-    }
-
-    state.live = true;
-}
-
-fn draw_diplomacy_panel(
-    mut contexts: EguiContexts,
-    mut state: ResMut<DiplomacyState>,
-    standings: Option<Res<DiplomacyStandings>>,
-) {
+fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyState>) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     if !state.open {
@@ -281,21 +250,13 @@ fn draw_diplomacy_panel(
         .default_size(egui::vec2(520.0, 380.0))
         .resizable(true)
         .collapsible(false)
-        .frame(ui_theme::liquid_glass_frame(
-            egui::Margin::same(14),
-            ui_theme::RADIUS_PANEL,
-        ))
+        .frame(
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .inner_margin(egui::Margin::same(14))
+                .corner_radius(egui::CornerRadius::same(10)),
+        )
         .show(ctx, |ui| {
-            // Live-data status badge.
-            ui.horizontal(|ui| {
-                let (badge, color) = if state.live {
-                    ("● live — emergent inter-faction relations", ACCENT)
-                } else {
-                    ("○ waiting for simulation…", DIM)
-                };
-                ui.label(egui::RichText::new(badge).color(color).size(12.0));
-            });
-            ui.add_space(6.0);
             ui.horizontal(|ui| {
                 // Left column: faction list
                 ui.vertical(|ui| {
@@ -330,27 +291,6 @@ fn draw_diplomacy_panel(
                     relation_grid_ui(ui, &state.factions, &state.relations);
                 });
             });
-
-            // Standings list (civ-007 P4). Polled from the sim each tick
-            // (see sim_bridge::sync_diplomacy_standings). Event-driven
-            // refresh is the upgrade path — the row shape is stable.
-            ui.add_space(8.0);
-            ui.separator();
-            ui.add_space(6.0);
-            ui.label(
-                egui::RichText::new("Standings")
-                    .color(ACCENT)
-                    .strong()
-                    .size(16.0),
-            );
-            ui.add_space(2.0);
-            standings_list_ui(
-                ui,
-                &state.factions,
-                standings.as_deref().unwrap_or(&DiplomacyStandings::default()),
-            );
-
-            ui_theme::liquid_glass_finish(ui.painter(), ui.min_rect(), ui_theme::RADIUS_PANEL);
         });
 
     // Sync close button back to state.
@@ -473,180 +413,6 @@ fn relation_grid_ui(ui: &mut egui::Ui, factions: &[DipFaction], relations: &[Vec
     }
 }
 
-/// Renders the Standings list (civ-007 P4 diplomacy substrate projection).
-///
-/// Each row is one pairwise relation: a pair of faction swatches + names on
-/// the left, then a numeric standing, then a colored stance badge on the
-/// right. Rows come pre-sorted by the resource (descending |standing|) so the
-/// most intense relations surface at the top — the panel's primary job is to
-/// answer "who is at war / allied right now".
-///
-/// Colors come from the shared `ui_theme` tokens:
-/// - Hostile  → RED  (red-tone, semantic danger)
-/// - Neutral  → STEEL_300 (Keycap steel, low-chrome)
-/// - Allied   → KC_ACCENT (Keycap teal, primary accent)
-///
-/// The standing value itself is the **scalar** from `civ_diplomacy` (i.e.
-/// the actual substrate standing, not the legacy `i8` matrix), so a single
-/// glance tells the player where in the band a pair sits. The 3-band badge
-/// reduces that to Hostile/Neutral/Allied for fast scanning.
-fn standings_list_ui(
-    ui: &mut egui::Ui,
-    factions: &[DipFaction],
-    standings: &DiplomacyStandings,
-) {
-    if !standings.live {
-        ui.label(
-            egui::RichText::new("○ waiting for first diplomacy sample…")
-                .color(DIM)
-                .small(),
-        );
-        return;
-    }
-    if standings.rows.is_empty() {
-        ui.label(
-            egui::RichText::new("No pairwise relations yet — emergent stances appear after trade, peace, or combat events.")
-                .color(DIM)
-                .small(),
-        );
-        return;
-    }
-
-    // Column widths: pair (flex) | standing (right-aligned) | badge (fixed).
-    let badge_w = 64.0;
-    let standing_w = 56.0;
-
-    for row in &standings.rows {
-        let name_a = faction_name(factions, row.a);
-        let name_b = faction_name(factions, row.b);
-        let color_a = faction_color(factions, row.a);
-        let color_b = faction_color(factions, row.b);
-
-        ui.horizontal(|ui| {
-            // Pair: swatch a · name a  →  swatch b · name b
-            ui.horizontal(|ui| {
-                color_swatch(ui, color_a);
-                ui.label(
-                    egui::RichText::new(&name_a)
-                        .strong()
-                        .small(),
-                );
-                ui.label(
-                    egui::RichText::new("→")
-                        .color(DIM)
-                        .small(),
-                );
-                color_swatch(ui, color_b);
-                ui.label(
-                    egui::RichText::new(&name_b)
-                        .strong()
-                        .small(),
-                );
-            });
-
-            // Standing value (right-aligned, fixed width).
-            ui.with_layout(
-                egui::Layout::right_to_left(egui::Align::Center),
-                |ui| {
-                    ui.allocate_ui(egui::vec2(standing_w, 18.0), |ui| {
-                        ui.with_layout(
-                            egui::Layout::right_to_left(egui::Align::Center),
-                            |ui| {
-                                ui.label(
-                                    egui::RichText::new(format!("{:+}", row.standing))
-                                        .monospace()
-                                        .small()
-                                        .color(standing_value_color(row.standing)),
-                                );
-                            },
-                        );
-                    });
-                },
-            );
-
-            // Stance badge: filled chip with stance label.
-            ui.allocate_ui(egui::vec2(badge_w, 18.0), |ui| {
-                let (fill, text) = stance_badge(row.stance);
-                egui::Frame::NONE
-                    .fill(fill)
-                    .corner_radius(egui::CornerRadius::same(4))
-                    .inner_margin(egui::Margin::symmetric(6, 2))
-                    .show(ui, |ui| {
-                        ui.centered_and_justified(|ui| {
-                            ui.label(
-                                egui::RichText::new(text)
-                                    .color(egui::Color32::WHITE)
-                                    .small()
-                                    .strong(),
-                            );
-                        });
-                    });
-            });
-        });
-
-        // Tooltip: extra context (last tick + pair ids) for debugging / replay.
-        let tooltip = format!(
-            "Pair ({a}, {b}) — standing {s:+} (last @ tick {t})",
-            a = row.a,
-            b = row.b,
-            s = row.standing,
-            t = row.last_updated_tick,
-        );
-        // Attach the tooltip to a transparent row-height response so hovering
-        // anywhere on the row surfaces the pair context. We use a fixed-height
-        // (zero) Sense::hover() rect via `allocate_ui` so the visible row above
-        // is what the user actually sees.
-        let row_resp = ui
-            .allocate_ui(egui::vec2(ui.available_width(), 0.0), |_| {});
-        row_resp.response.on_hover_text(tooltip);
-    }
-}
-
-/// Look up a faction's display name by id, falling back to a stable label
-/// when the pair includes an actor not present in the local roster (e.g. a
-/// new faction spawned mid-tick that hasn't propagated yet).
-fn faction_name(factions: &[DipFaction], id: u32) -> String {
-    factions
-        .iter()
-        .find(|f| f.id == id)
-        .map(|f| f.name.clone())
-        .unwrap_or_else(|| format!("Faction {id}"))
-}
-
-/// Look up a faction's egui color by id, falling back to DIM.
-fn faction_color(factions: &[DipFaction], id: u32) -> egui::Color32 {
-    factions
-        .iter()
-        .find(|f| f.id == id)
-        .map(|f| f.egui_color())
-        .unwrap_or(DIM)
-}
-
-/// Standing value text colour: red-tone for negative, teal for positive, dim
-/// for zero. Mirrors the badge's Hostile/Allied mapping for fast at-a-glance
-/// reading.
-fn standing_value_color(standing: i32) -> egui::Color32 {
-    if standing > 0 {
-        ui_theme::KC_ACCENT
-    } else if standing < 0 {
-        ui_theme::RED
-    } else {
-        DIM
-    }
-}
-
-/// Stance badge `(fill, text)` for a coarse [`StandingStance`]. The fill is a
-/// low-alpha wash of the semantic token (Hostile = red-tone, Neutral = steel,
-/// Allied = teal accent) so the chip reads as a tinted capsule against the
-/// dark glass panel.
-fn stance_badge(stance: StandingStance) -> (egui::Color32, &'static str) {
-    match stance {
-        StandingStance::Hostile => (ui_theme::RED.gamma_multiply(0.28), "Hostile"),
-        StandingStance::Neutral => (ui_theme::STEEL_300.gamma_multiply(0.55), "Neutral"),
-        StandingStance::Allied => (ui_theme::KC_ACCENT.gamma_multiply(0.32), "Allied"),
-    }
-}
-
 /// A small coloured square swatch.
 fn color_swatch(ui: &mut egui::Ui, color: egui::Color32) {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::hover());
@@ -672,7 +438,6 @@ pub fn stance_label(stance: i8) -> &'static str {
         s if s > 50 => "Allied",
         s if s > 0 => "Friendly",
         0 => "Neutral",
-        // -50 is the last "Tense" stance; -51 and below is "At War".
         s if s >= -50 => "Tense",
         _ => "At War",
     }
@@ -684,7 +449,7 @@ fn stance_colors(stance: i8) -> (egui::Color32, egui::Color32) {
         s if s > 50 => (GREEN.gamma_multiply(0.25), GREEN),
         s if s > 0 => (GREEN.gamma_multiply(0.12), GREEN),
         0 => (CHIP_FILL, DIM),
-        s if s > -50 => (GOLD.gamma_multiply(0.20), GOLD),
+        s if s >= -50 => (GOLD.gamma_multiply(0.20), GOLD),
         _ => (RED.gamma_multiply(0.25), RED),
     }
 }
@@ -760,30 +525,57 @@ mod tests {
         assert_eq!(text_war, RED);
     }
 
-    // -- Standings list helpers --------------------------------------------
-
+    /// FR-CIV-BEVY-034 — faction wire frame maps to diplomacy panel rows + neutral matrix.
     #[test]
-    fn stance_badge_maps_to_red_steel_teal() {
-        let (_, hostile) = stance_badge(StandingStance::Hostile);
-        let (_, neutral) = stance_badge(StandingStance::Neutral);
-        let (_, allied) = stance_badge(StandingStance::Allied);
-        assert_eq!(hostile, "Hostile");
-        assert_eq!(neutral, "Neutral");
-        assert_eq!(allied, "Allied");
+    fn diplomacy_state_from_faction_frame_maps_entries() {
+        use civ_protocol_3d::{FactionTreasury3d, Government3d};
+
+        let frame = FactionStateFrame {
+            tick: 9,
+            factions: vec![
+                FactionStateEntry {
+                    id: 2,
+                    era: 1,
+                    government: Government3d::Republic,
+                    treasury: FactionTreasury3d {
+                        amount: 25_000.0,
+                        currency: "joules".to_string(),
+                    },
+                },
+                FactionStateEntry {
+                    id: 0,
+                    era: 1,
+                    government: Government3d::Monarchy,
+                    treasury: FactionTreasury3d::default(),
+                },
+            ],
+        };
+        let mut counts = HashMap::new();
+        counts.insert(0, 42);
+
+        let state = diplomacy_state_from_faction_frame(&frame, &counts);
+        assert_eq!(state.factions.len(), 2);
+        assert_eq!(state.factions[0].id, 0);
+        assert_eq!(state.factions[0].name, "Monarchy #0");
+        assert_eq!(state.factions[0].population, 42);
+        assert_eq!(state.factions[1].id, 2);
+        assert_eq!(state.factions[1].name, "Republic #2");
+        assert_eq!(state.factions[1].population, 2_500);
+        assert_eq!(state.relations, neutral_relations_matrix(2));
+        for row in &state.relations {
+            assert!(row.iter().all(|cell| *cell == 0));
+        }
     }
 
     #[test]
-    fn standing_value_color_reflects_sign() {
-        // Positive → teal accent, negative → red, zero → dim.
-        assert_eq!(standing_value_color(50), ui_theme::KC_ACCENT);
-        assert_eq!(standing_value_color(-50), ui_theme::RED);
-        assert_eq!(standing_value_color(0), DIM);
-    }
+    fn faction_display_name_uses_government_label() {
+        use civ_protocol_3d::FactionStateEntry;
 
-    #[test]
-    fn faction_name_falls_back_when_missing() {
-        let factions = vec![DipFaction::new(0, "Alpha", [0.5, 0.5, 0.5], 1)];
-        assert_eq!(faction_name(&factions, 0), "Alpha");
-        assert_eq!(faction_name(&factions, 7), "Faction 7");
+        let entry = FactionStateEntry {
+            id: 7,
+            government: Government3d::Corporate,
+            ..Default::default()
+        };
+        assert_eq!(faction_display_name(&entry), "Corporate #7");
     }
 }

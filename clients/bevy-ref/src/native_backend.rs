@@ -62,23 +62,6 @@ pub fn native_render_plugin() -> RenderPlugin {
     }
 }
 
-/// Dev-loop [`AssetPlugin`] that hot-reloads assets when the `dev` feature is on.
-///
-/// With `--features dev` (or `hot`), Bevy's filesystem watcher is forced on so
-/// SVG-derived PNGs, `.glb` meshes, and WGSL shaders reload live without a
-/// restart. Without the feature this is a plain [`AssetPlugin::default`], so
-/// release/CI builds never watch the filesystem (no determinism impact).
-///
-/// Apply via `DefaultPlugins.set(dev_asset_plugin())`.
-#[must_use]
-pub fn dev_asset_plugin() -> bevy::asset::AssetPlugin {
-    bevy::asset::AssetPlugin {
-        // `cfg!` resolves at compile time: Some(true) only when `dev` is enabled.
-        watch_for_changes_override: cfg!(feature = "dev").then_some(true),
-        ..Default::default()
-    }
-}
-
 fn forced_backend_from_env() -> Option<Backends> {
     forced_backend_from_var(std::env::var(BACKEND_ENV).ok())
 }
@@ -142,6 +125,38 @@ mod tests {
     fn parse_forced_backend_value_rejects_gles_and_unknown() {
         for raw in ["", "gles", "gl", "webgpu", "browser_webgpu", "opengl"] {
             assert_eq!(parse_forced_backend_value(raw), None, "raw={raw:?}");
+        }
+    }
+
+    #[test]
+    fn forced_backend_from_var_unset_returns_none() {
+        assert_eq!(forced_backend_from_var(None), None);
+    }
+
+    #[test]
+    fn forced_backend_from_var_accepts_valid_tokens() {
+        assert_eq!(
+            forced_backend_from_var(Some("vulkan".into())),
+            Some(Backends::VULKAN)
+        );
+        assert_eq!(
+            forced_backend_from_var(Some(" DX12 ".into())),
+            Some(Backends::DX12)
+        );
+        assert_eq!(
+            forced_backend_from_var(Some("metal".into())),
+            Some(Backends::METAL)
+        );
+    }
+
+    #[test]
+    fn forced_backend_from_var_rejects_gles_and_unknown() {
+        for raw in ["gles", "webgpu", "not-a-backend"] {
+            assert_eq!(
+                forced_backend_from_var(Some(raw.into())),
+                None,
+                "raw={raw:?}"
+            );
         }
     }
 

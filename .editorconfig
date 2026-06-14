@@ -8,5 +8,10 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
+[*.cs]
+# C# codebase uses 4-space indentation (global default is 2 for YAML/JSON/etc).
+# Without this, `dotnet format` would reformat the entire 4-space C# tree to 2-space.
+indent_size = 4
+
 [*.md]
 trim_trailing_whitespace = false

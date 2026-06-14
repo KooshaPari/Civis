@@ -1,7 +1,7 @@
 //! WebSocket payload decode for civ-server attach (F3D0 + JSON-RPC fallback).
 
 use crate::f3d0_mesh::{mesh_chunk_from_material_ids, CHUNK_VOXELS};
-use civ_protocol_3d::{decode_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
+use civ_protocol_3d::{decode_frame3d_binary, is_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
 use godot::prelude::*;
 use serde_json::Value;
 
@@ -13,10 +13,6 @@ pub struct DecodedWsPacket {
     pub tick: u64,
     /// JSON text for `JSON.parse_string` in GDScript.
     pub json: String,
-}
-
-fn is_frame3d_binary(bytes: &[u8]) -> bool {
-    bytes.len() >= FRAME3D_BINARY_MAGIC.len() && bytes.starts_with(FRAME3D_BINARY_MAGIC)
 }
 
 fn frame_kind_tick_json(frame: &Frame3d) -> DecodedWsPacket {

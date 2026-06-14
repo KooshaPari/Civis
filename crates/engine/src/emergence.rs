@@ -209,7 +209,7 @@ impl Simulation {
         if profiles.len() < 2 {
             if let Some(p) = profiles.first_mut() {
                 let mut one = std::slice::from_mut(p);
-                drift_populations(&mut one, &[], self.rng_mut(), 0.02, 0.0, 0.85);
+                drift_populations(one, &[], self.rng_mut(), 0.02, 0.0, 0.85);
             }
             return;
         }

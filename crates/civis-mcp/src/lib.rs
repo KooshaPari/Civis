@@ -164,8 +164,8 @@ pub fn census_sim_status(
 /// Resolve the [`CensusConfig`] from environment, plus the URL string the
 /// MCP tool should echo back to the operator.
 pub fn census_config_with_url() -> CensusConfig {
-    let cfg = census_config_from_env();
-    cfg
+    
+    census_config_from_env()
 }
 
 /// Build a `serde_json::Value` for the `civis_pixels` MCP tool. Splits the

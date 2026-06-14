@@ -168,7 +168,7 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
 
     let scale = FIXED_SCALE as f32;
     let mut next_civilian_id = 1u64;
-    for (_faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
+    for (center_x, center_y) in faction_capitals.into_iter() {
         for _ in 0..CIVILIANS_PER_FACTION {
             let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);

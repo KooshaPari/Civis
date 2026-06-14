@@ -507,7 +507,8 @@ namespace DINOForge.Runtime
             {
                 if (scene.name == "MainMenu")
                     UI.LoadingScreenController.Instance?.BeginFadeOut();
-                TryApplyEnvironmentThemeForScene(scene.name, "sceneLoaded(main-thread)");
+                // Cursor theme on scene load (cursors branch). Env-theme is wired via bootstrap (#985),
+                // not here — the cursors-branch TryApplyEnvironmentThemeForScene helper was never defined.
                 TcCursorApplicator.ApplyForScene(scene.name, "sceneLoaded(main-thread)");
             }
             catch (Exception ex) { DebugLog.Write("Plugin", $"[Plugin] OnSceneLoaded LoadingScreen fade failed (non-fatal): {ex.Message}"); }

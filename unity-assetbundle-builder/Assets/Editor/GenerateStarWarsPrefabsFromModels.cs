@@ -18,7 +18,7 @@ public static class GenerateStarWarsPrefabsFromModels
     private static readonly Color CisGrey       = new Color(0.55f, 0.55f, 0.50f);
     private static readonly Color CisDark       = new Color(0.30f, 0.28f, 0.25f);
 
-        // (bundleKey, faction, primaryColor, accentColor, fallbackShape, modelAssetName)
+    // (bundleKey, faction, primaryColor, accentColor, fallbackShape, modelAssetName)
     // modelAssetName = filename in Assets/Models/ without extension (null = primitive only)
     private static readonly (string Key, string Faction, Color Primary, Color Accent,
                               PrimitiveType Shape, string? ModelName)[] Defs =
@@ -86,7 +86,6 @@ public static class GenerateStarWarsPrefabsFromModels
             Debug.Log("[GenerateStarWarsPrefabsFromModels] Starting...");
 
             EnsureDirs();
-            EnsureRawModels();
 
             // Force reimport of Models folder
             AssetDatabase.ImportAsset("Assets/Models", ImportAssetOptions.ImportRecursive);
@@ -100,8 +99,7 @@ public static class GenerateStarWarsPrefabsFromModels
                 string prefabPath = $"Assets/Prefabs/{def.Faction}/{def.Key}.prefab";
 
                 // Create material if missing
-                var primaryMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-                if (primaryMat == null)
+                if (AssetDatabase.LoadAssetAtPath<Material>(matPath) == null)
                 {
                     var mat = CreateUrpMaterial(def.Primary);
                     AssetDatabase.CreateAsset(mat, matPath);
@@ -110,7 +108,9 @@ public static class GenerateStarWarsPrefabsFromModels
                 }
                 else
                 {
-                    SetUrpMaterial(primaryMat, def.Primary);
+                    var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                    if (existing != null)
+                        UpgradeToUrp(existing, def.Primary);
                 }
 
                 // Delete existing prefab to force regeneration (clears stale primitives)
@@ -119,14 +119,15 @@ public static class GenerateStarWarsPrefabsFromModels
                     AssetDatabase.DeleteAsset(prefabPath);
                 }
 
-                // Try loading real mesh from Assets/Models/ (copied from raw/*.glb as needed).
+                // Try loading real mesh from Assets/Models/
                 GameObject go = null;
 
                 if (def.ModelName != null)
                 {
-                    string modelPath = EnsureUsableModelAsset(def.ModelName);
-                    if (modelPath != null)
+                    string[] guids = AssetDatabase.FindAssets($"{def.ModelName} t:Model", new[] { "Assets/Models" });
+                    if (guids.Length > 0)
                     {
+                        string modelPath = AssetDatabase.GUIDToAssetPath(guids[0]);
                         var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
                         if (modelPrefab != null)
                         {
@@ -147,11 +148,11 @@ public static class GenerateStarWarsPrefabsFromModels
                 }
 
                 // Apply material
-                var finalMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-                if (finalMat != null)
+                var mat2 = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                if (mat2 != null)
                 {
                     foreach (var r in go.GetComponentsInChildren<Renderer>())
-                        r.sharedMaterial = finalMat;
+                        r.sharedMaterial = mat2;
                 }
 
                 // Save as prefab
@@ -194,99 +195,38 @@ public static class GenerateStarWarsPrefabsFromModels
         }
     }
 
-    private static void EnsureRawModels()
+    private static Material CreateUrpMaterial(Color tint)
     {
-        foreach (var def in Defs)
-        {
-            if (string.IsNullOrWhiteSpace(def.ModelName))
-                continue;
-
-            EnsureUsableModelAsset(def.ModelName);
-        }
-    }
-
-    private static string? EnsureUsableModelAsset(string modelName)
-    {
-        if (string.IsNullOrWhiteSpace(modelName))
-            return null;
-
-        foreach (string existing in AssetDatabase.FindAssets($"{modelName} t:Model", new[] { "Assets/Models" }))
-        {
-            string path = AssetDatabase.GUIDToAssetPath(existing);
-            string ext = Path.GetExtension(path).ToLowerInvariant();
-            if (ext == ".fbx" || ext == ".glb" || ext == ".gltf")
-            {
-                return path;
-            }
-        }
-
-        string source = ResolveRawModelSource(modelName);
-        if (source == null)
-            return null;
-
-        string glbTarget = $"Assets/Models/{modelName}.glb";
-        string fullTarget = Path.Combine(Application.dataPath, "Models", $"{modelName}.glb");
-        Directory.CreateDirectory(Path.GetDirectoryName(fullTarget)!);
-        File.Copy(source, fullTarget, true);
-        AssetDatabase.ImportAsset(glbTarget, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-        return glbTarget;
-    }
-
-    private static string? ResolveRawModelSource(string modelName)
-    {
-        string rawRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "packs", "warfare-starwars", "assets", "raw"));
-        if (!Directory.Exists(rawRoot))
-            return null;
-
-        string normalized = modelName.ToLowerInvariant();
-        string? bestMatch = null;
-        foreach (var dir in Directory.GetDirectories(rawRoot))
-        {
-            string dirName = Path.GetFileName(dir).ToLowerInvariant();
-            if (!dirName.Contains(normalized))
-                continue;
-
-            string candidate = Path.Combine(dir, "model.glb");
-            if (!File.Exists(candidate))
-                continue;
-
-            if (bestMatch == null)
-            {
-                bestMatch = candidate;
-                continue;
-            }
-
-            // Prefer non-LEGO sources when both exist.
-            bool bestIsLego = Path.GetFileName(bestMatch).Contains("_lego", StringComparison.OrdinalIgnoreCase);
-            bool candidateIsLego = dirName.Contains("_lego", StringComparison.OrdinalIgnoreCase);
-            if (bestIsLego && !candidateIsLego)
-                bestMatch = candidate;
-        }
-
-        return bestMatch;
-    }
-
-    private static Material CreateUrpMaterial(Color color)
-    {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ??
-                        Shader.Find("Universal Render Pipeline/Simple Lit");
-        if (shader == null)
-            throw new InvalidOperationException("No URP shader available.");
-
+        Shader shader = GetUrpShader();
         var mat = new Material(shader);
-        mat.SetColor("_BaseColor", color);
+        mat.SetColor("_BaseColor", tint);
+        LogShader("GenerateStarWarsPrefabsFromModels", mat);
         return mat;
     }
 
-    private static void SetUrpMaterial(Material material, Color color)
+    private static void UpgradeToUrp(Material material, Color tint)
     {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ??
-                        Shader.Find("Universal Render Pipeline/Simple Lit");
+        Shader shader = GetUrpShader();
+        material.shader = shader;
+        material.SetColor("_BaseColor", tint);
+        EditorUtility.SetDirty(material);
+        LogShader("GenerateStarWarsPrefabsFromModels", material);
+    }
+
+    private static Shader GetUrpShader()
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit")
+            ?? Shader.Find("Universal Render Pipeline/Simple Lit");
         if (shader == null)
             throw new InvalidOperationException("No URP shader available.");
+        return shader;
+    }
 
-        material.shader = shader;
-        material.SetColor("_BaseColor", color);
-        EditorUtility.SetDirty(material);
+    private static void LogShader(string source, Material material)
+    {
+        string shaderName = material.shader != null ? material.shader.name : "<null>";
+        Debug.Log($"[{source}] material {material.name} shader={shaderName}");
+        string shaderReportPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, "sw-shader-report.log");
+        File.AppendAllText(shaderReportPath, $"material {material.name} shader={shaderName}{Environment.NewLine}");
     }
 }

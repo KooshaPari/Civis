@@ -42,7 +42,7 @@ public sealed class CompanionFixture : IAsyncLifetime
         if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
         {
             IsInitialized = false;
-            return Task.CompletedTask;
+            return;
         }
 
         _automation = new UIA3Automation();

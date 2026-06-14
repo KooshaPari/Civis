@@ -1,0 +1,38 @@
+You are a git consolidation agent in repo C:/Users/koosh/Dino on branch wsm/agileplus-dag-20260610 (HEAD should be 4cbd2549, pushed to origin). LAYER 4 completion: fold the last 4 preserved feature branches in, clean up, open ONE PR to main.
+
+HARD RULES (violation = failure):
+- NEVER: git stash, --no-verify, LEFTHOOK=0, git push --force, git reset --hard, rm/del.
+- NEVER create worktrees. NEVER touch .agileplus/ or agileplus-specs/.
+- Push ONLY with: git -c push.recurseSubmodules=no push --no-recurse-submodules origin wsm/agileplus-dag-20260610
+- If any `git add`/merge stages tools/phenotype-journeys as a gitlink (mode 160000): git rm --cached tools/phenotype-journeys before committing.
+- Verify every push by: git ls-remote origin refs/heads/wsm/agileplus-dag-20260610 == local HEAD (NOT exit code).
+- Respect lefthook on push (full test gate ~3min). NEVER bypass. If push fails with real test failures, FIX them.
+
+STEP A — delete the 8 already-merged branches (their merges are on HEAD+remote):
+  git branch -d feat/naval-20260531 rnd/brickalyzer-20260531 fix/cursor-agent-config-resolution-20260531 feat/bldicons-20260531 feat/uicensus-20260601 fix/sw-tmp-font-20260531 feat/loadingscreen-20260531 feat/modern-20260531
+  (if -d refuses 'not fully merged' for any, that branch's tip isn't in HEAD — investigate, don't force -D blindly.)
+
+STEP B — merge the 3 CONFLICTED branches, one at a time. For EACH:
+  1. git merge --no-ff --no-edit <branch>
+  2. If conflicts: resolve each conflicted file by hand. Strategy: keep HEAD's structure/naming, graft in the branch's UNIQUE additions; for add/add doc conflicts take the union of both. Remove all <<<<<<< ======= >>>>>>> markers. git add the resolved files. git commit --no-edit.
+  3. CRITICAL — after each merge, run BOTH regression gates (textual merges hide these):
+     - dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=net8.0   (must be 0 errors — catches field/name drift like the loadingscreen TrackColor→ProgressTrackColor regression)
+     - DINO_DISABLE_TEST_LAUNCH=1 dotnet test src/Tests/Integration/DINOForge.Tests.Integration.csproj -c Release --filter "FullyQualifiedName~PackLoader_LoadsAllExamplePacks"   (must pass — catches pack conflicts like the warfare-modern/warfare-starwars regression)
+     If either fails, FIX it before the next merge (e.g. a resurrected conflicting pack → git rm the duplicate; a renamed field → use the canonical name).
+  The 3 branches + their known conflict files:
+    feat/icons-20260601        → src/Runtime/UI/MainMenuThemer.cs
+    feat/cursors-20260601      → src/Runtime/Plugin.cs
+    feat/rigging-optimizer-20260531 → docs/sessions/rigging-optimizer-pipeline-20260531.md + packs/warfare-starwars/assets/tools/blender_rig_and_decimate.py
+
+STEP C — merge the big bundle branch LAST:
+  git merge --no-ff --no-edit feat/sw-building-bundles-20260531   (163 files; likely binary bundle adds, low textual-conflict risk). Resolve any conflicts as above.
+
+STEP D — final gate + push + PR:
+  1. dotnet build src/DINOForge.CI.NoRuntime.sln -c Release  (0 errors)
+  2. dotnet build src/Runtime/DINOForge.Runtime.csproj -c Release -p:TargetFramework=net8.0  (0 errors)
+  3. git -c push.recurseSubmodules=no push --no-recurse-submodules origin wsm/agileplus-dag-20260610  (full lefthook gate)
+  4. Verify ls-remote == HEAD.
+  5. git branch -d the remaining 4 merged branches (feat/icons-20260601 feat/cursors-20260601 feat/rigging-optimizer-20260531 feat/sw-building-bundles-20260531).
+  6. gh pr create --base main --head wsm/agileplus-dag-20260610 --title "Consolidation: integration branch → main (L0-L4)" --body "Disk-sprawl cleanup + L1 dirty triage (CI-green) + L4 fold of 12 preserved feature branches. See docs/sessions/consolidation-20260613/."
+
+REPORT: write docs/sessions/consolidation-20260613/forge-L4-rest-report.md with: branches deleted, each conflict merge + how resolved + gate results, bundle merge result, final push sha + ls-remote verification, PR number/URL. Then echo: L4-DONE-<sha>.

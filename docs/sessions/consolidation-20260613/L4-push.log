@@ -1,0 +1,15 @@
+       (CoreCompile target) -> 
+         C:\Users\koosh\Dino\src\Runtime\UI\LoadingScreenController.cs(514,17): error CS0117: 'LoadingScreenController.LoadingTheme' does not contain a definition for 'TrackColor' [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj::TargetFramework=net8.0]
+         C:\Users\koosh\Dino\src\Runtime\UI\LoadingScreenController.cs(515,17): error CS0117: 'LoadingScreenController.LoadingTheme' does not contain a definition for 'ShimmerColor' [C:\Users\koosh\Dino\src\Runtime\DINOForge.Runtime.csproj::TargetFramework=net8.0]
+
+    124 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:37.82
+
+exit status 1                                      
+  ────────────────────────────────────
+summary: (done in 207.54 seconds)     
+✔️ build (9.38 seconds)
+✔️ test-unit (155.16 seconds)
+🥊 test-integration (38.75 seconds)

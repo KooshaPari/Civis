@@ -1,0 +1,21 @@
+       "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (default target) (4:6) ->
+         C:\Users\koosh\Dino\src\Tests\SDK\ContentLoaderExtraCoverageTests.cs(49,34): warning SYSLIB0050: 'FormatterServices' is obsolete: 'Formatter-based serialization is obsolete and should not be used.' (https://aka.ms/dotnet-warnings/SYSLIB0050) [C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj]
+
+    119 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:19.58
+
+                                      
+  ────────────────────────────────────
+summary: (done in 183.30 seconds)     
+✔️ build (8.35 seconds)
+✔️ test-unit (152.90 seconds)
+✔️ test-integration (20.02 seconds)
+remote: 
+remote: GitHub found 8 vulnerabilities on KooshaPari/Dino's default branch (2 high, 4 moderate, 2 low). To find out more, visit:        
+remote:      https://github.com/KooshaPari/Dino/security/dependabot        
+remote: 
+To https://github.com/KooshaPari/Dino.git
+   1a552447..76099bf7  wsm/agileplus-dag-20260610 -> wsm/agileplus-dag-20260610
+exit=0

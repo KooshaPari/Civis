@@ -1,0 +1,12 @@
+╭────────────────────────────────────╮
+│ 🥊 lefthook v2.1.4  hook: pre-push │
+╰────────────────────────────────────╯
+error: Justfile does not contain recipe `grade`
+┃  grade ❯ 
+
+
+exit status 1                                      
+  ────────────────────────────────────
+summary: (done in 4.11 seconds)       
+🥊 grade (1.19 seconds)
+error: failed to push some refs to 'https://github.com/KooshaPari/Dino.git'

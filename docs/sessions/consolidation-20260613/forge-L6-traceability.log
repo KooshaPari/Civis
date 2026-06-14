@@ -1,0 +1,599 @@
+[2K⠋ Migrating credentials 00s · Ctrl+C to interrupt[2K[2K● [20:05:18] Initialize 2731933f-6b59-409b-84bd-6dd75d5e5f73
+[2K⠋ Contemplating 00s · Ctrl+C to interrupt[2K⠙ Contemplating 00s · Ctrl+C to interrupt[2K⠹ Contemplating 00s · Ctrl+C to interrupt[2K⠸ Contemplating 00s · Ctrl+C to interrupt[2K⠼ Contemplating 00s · Ctrl+C to interrupt[2K⠴ Contemplating 00s · Ctrl+C to interrupt[2K⠦ Contemplating 00s · Ctrl+C to interrupt[2K⠧ Contemplating 00s · Ctrl+C to interrupt[2K⠇ Contemplating 00s · Ctrl+C to interrupt[2K⠏ Contemplating 00s · Ctrl+C to interrupt[2K⠋ Contemplating 00s · Ctrl+C to interrupt[2K⠙ Contemplating 00s · Ctrl+C to interrupt[2K⠹ Contemplating 00s · Ctrl+C to interrupt[2K⠸ Contemplating 00s · Ctrl+C to interrupt[2K⠴ Contemplating 00s · Ctrl+C to interrupt[2KThe user wants me to produce a traceability matrix as a read-only analysis task. I need to:
+[2K
+[2K⠴ Contemplating 00s · Ctrl+C to interrupt[2K1. Enumerate specs in docs/specs/
+[2K⠴ Contemplating 00s · Ctrl+C to interrupt[2K2. Enumerate test surfaces in src/Tests/
+[2K⠦ Contemplating 00s · Ctrl+C to interrupt[2K⠧ Contemplating 01s · Ctrl+C to interrupt[2K⠇ Contemplating 01s · Ctrl+C to interrupt[2K⠏ Contemplating 01s · Ctrl+C to interrupt[2K3. Build a matrix mapping specs to tests4. Write the output to
+[2K   docs/sessions/consolidation-20260613/L6-traceability-matrix.mdLet me start by
+[2K   creating a todo list for this task, then systematically read the files.
+[2K
+[2K⠋ Contemplating 01s · Ctrl+C to interrupt[2K⠙ Contemplating 01s · Ctrl+C to interrupt[2K⠹ Contemplating 01s · Ctrl+C to interrupt[2KFirst, I should check if there are skills that apply. This is primarily an analysis task. Let me think about which skills might apply:
+[2K⠸ Contemplating 01s · Ctrl+C to interrupt[2K⠼ Contemplating 01s · Ctrl+C to interrupt[2K⠴ Contemplating 01s · Ctrl+C to interrupt[2K⠦ Contemplating 01s · Ctrl+C to interrupt[2K• using-superpowers is always required first- This is analysis, not really
+[2K  build/debug/TDD. Maybe brainstorming? Not really, it's just reading and
+[2K  reporting.
+[2K⠦ Contemplating 01s · Ctrl+C to interrupt[2K⠇ Contemplating 01s · Ctrl+C to interrupt[2K• systematic-debugging? No, this is audit.
+[2K⠇ Contemplating 01s · Ctrl+C to interrupt[2K⠏ Contemplating 01s · Ctrl+C to interrupt[2K• verification-before-completion? Maybe at the end, but this is read-only
+[2K  analysis.
+[2K
+[2K⠏ Contemplating 01s · Ctrl+C to interrupt[2K⠋ Contemplating 01s · Ctrl+C to interrupt[2K⠙ Contemplating 01s · Ctrl+C to interrupt[2KSince this is a read-only analysis task that doesn't involve building, testing, or committing, I should follow the skill instructions. The most critical one is superpowers/using-superpowers first.
+[2K
+[2K⠙ Contemplating 01s · Ctrl+C to interrupt[2K⠙ Contemplating 01s · Ctrl+C to interrupt[2K⠸ Contemplating 01s · Ctrl+C to interrupt[2K⠼ Contemplating 02s · Ctrl+C to interrupt[2KLet me also check if there's an execute-plan skill since the user mentioned a task structure, but it's not a plan file. I'll stick to using-superpowers.
+[2K
+[2K⠼ Contemplating 02s · Ctrl+C to interrupt[2K⠦ Contemplating 02s · Ctrl+C to interrupt[2K⠧ Contemplating 02s · Ctrl+C to interrupt[2KActually, let me re-read the instructions: "Before responding to ANY user message, invoke the superpowers/using-superpowers skill." So I need to do that first.
+[2K
+[2K⠧ Contemplating 02s · Ctrl+C to interrupt[2K⠇ Contemplating 02s · Ctrl+C to interrupt[2K⠏ Contemplating 02s · Ctrl+C to interrupt[2K⠋ Contemplating 02s · Ctrl+C to interrupt[2K⠙ Contemplating 02s · Ctrl+C to interrupt[2K⠹ Contemplating 02s · Ctrl+C to interrupt[2K⠸ Contemplating 02s · Ctrl+C to interrupt[2KLet me create the todo list and start working.
+[2K⠼ Contemplating 02s · Ctrl+C to interrupt[2K● [20:05:21] Update Todos 5 item(s)
+[2K⠼ Contemplating 02s · Ctrl+C to interrupt[2K
+  󰄗 Invoke superpowers/using-superpowers skill
+  󰄱 Enumerate specs in docs/specs/
+  󰄱 Enumerate test surfaces in src/Tests/
+  󰄱 Build traceability matrix (specs -> tests)
+  󰄱 Write L6-traceability-matrix.md report
+
+[2K⠼ Contemplating 02s · Ctrl+C to interrupt[2K[2K[2K⠼ Contemplating 02s · Ctrl+C to interrupt[2K⠴ Contemplating 02s · Ctrl+C to interrupt[2K⠦ Contemplating 02s · Ctrl+C to interrupt[2K⠧ Contemplating 02s · Ctrl+C to interrupt[2K⠇ Contemplating 02s · Ctrl+C to interrupt[2K⠏ Contemplating 02s · Ctrl+C to interrupt[2K⠋ Contemplating 03s · Ctrl+C to interrupt[2K⠙ Contemplating 03s · Ctrl+C to interrupt[2K⠹ Contemplating 03s · Ctrl+C to interrupt[2K⠸ Contemplating 03s · Ctrl+C to interrupt[2K⠼ Contemplating 03s · Ctrl+C to interrupt[2K⠴ Contemplating 03s · Ctrl+C to interrupt[2K⠦ Contemplating 03s · Ctrl+C to interrupt[2K⠧ Contemplating 03s · Ctrl+C to interrupt[2KI need to invoke the superpowers/using-superpowers skill first, then start reading files. Let me do that.
+[2K⠇ Contemplating 03s · Ctrl+C to interrupt[2K● [20:05:22] Skill superpowers/using-superpowers
+[2K⠇ Contemplating 03s · Ctrl+C to interrupt[2K[2K[2K⠇ Contemplating 03s · Ctrl+C to interrupt[2K⠏ Contemplating 03s · Ctrl+C to interrupt[2K⠋ Contemplating 03s · Ctrl+C to interrupt[2K⠙ Contemplating 03s · Ctrl+C to interrupt[2K⠹ Contemplating 03s · Ctrl+C to interrupt[2K⠸ Contemplating 03s · Ctrl+C to interrupt[2K⠼ Contemplating 03s · Ctrl+C to interrupt[2K⠴ Contemplating 03s · Ctrl+C to interrupt[2K⠧ Contemplating 04s · Ctrl+C to interrupt[2K⠇ Contemplating 04s · Ctrl+C to interrupt[2K⠏ Contemplating 04s · Ctrl+C to interrupt[2K⠋ Contemplating 04s · Ctrl+C to interrupt[2K⠙ Contemplating 04s · Ctrl+C to interrupt[2K⠹ Contemplating 04s · Ctrl+C to interrupt[2K⠸ Contemplating 04s · Ctrl+C to interrupt[2K⠼ Contemplating 04s · Ctrl+C to interrupt[2K⠴ Contemplating 04s · Ctrl+C to interrupt[2K⠦ Contemplating 04s · Ctrl+C to interrupt[2K⠧ Contemplating 04s · Ctrl+C to interrupt[2K⠇ Contemplating 04s · Ctrl+C to interrupt[2K⠏ Contemplating 04s · Ctrl+C to interrupt[2K⠋ Contemplating 04s · Ctrl+C to interrupt[2K⠙ Contemplating 04s · Ctrl+C to interrupt[2KThe skill wasn't found because the available skills list doesn't include superpowers/using-superpowers. The available skills are:
+[2K⠹ Contemplating 04s · Ctrl+C to interrupt[2K• create-skill
+[2K⠹ Contemplating 04s · Ctrl+C to interrupt[2K• execute-plan
+[2K⠹ Contemplating 04s · Ctrl+C to interrupt[2K• github-pr-description
+[2K
+[2K⠹ Contemplating 04s · Ctrl+C to interrupt[2K⠸ Contemplating 05s · Ctrl+C to interrupt[2KThe project guidelines mention skills in three locations, but these are not in the available skills list for this conversation. I should proceed without invoking that skill since it's not available.
+[2K
+[2K⠼ Contemplating 05s · Ctrl+C to interrupt[2K⠼ Contemplating 05s · Ctrl+C to interrupt[2K⠴ Contemplating 05s · Ctrl+C to interrupt[2K⠦ Contemplating 05s · Ctrl+C to interrupt[2K⠧ Contemplating 05s · Ctrl+C to interrupt[2K⠇ Contemplating 05s · Ctrl+C to interrupt[2K⠏ Contemplating 05s · Ctrl+C to interrupt[2K⠋ Contemplating 05s · Ctrl+C to interrupt[2KLet me continue with the task. I'll start enumerating specs and tests in parallel.
+[2K⠙ Contemplating 05s · Ctrl+C to interrupt[2K[2K● [20:05:24] Execute [C:\WINDOWS\system32\cmd.exe] ls docs/specs /s /b
+ls: cannot access '/s': No such file or directory
+ls: cannot access '/b': No such file or directory
+docs/specs:
+dag.json
+dag-summary.md
+index.md
+M13-runtime-survival-hmr-concurrency.md
+SPEC-002-native-menu-injector.md
+SPEC-003-prove-features-skill.md
+SPEC-004-key-input-system.md
+SPEC-005-duplicate-instance-bypass.md
+SPEC-006-prove-features-video-pipeline.md
+SPEC-007-runtime-features-baseline.md
+SPEC-008-mod-conflict-detection-engine.md
+SPEC-fix-f10-blank-labels.md
+SPEC-fix-f9-empty-debug.md
+SPEC-fix-mods-button-ux.md
+SPEC-fix-vanilla-gameplay-bridge.md
+SPEC-TIER1-MVP.md
+SPEC-TIER2-MATURE.md
+SPEC-TIER3-ELITE.md
+technical-spec.md
+traceability-matrix.md
+user-spec.md
+v0.27.0
+v0.27.0-full-conversion-epic.md
+validation-matrix.md
+[2K⠙ Contemplating 05s · Ctrl+C to interrupt[2K⠹ Contemplating 05s · Ctrl+C to interrupt[2K⠸ Contemplating 05s · Ctrl+C to interrupt[2K⠼ Contemplating 05s · Ctrl+C to interrupt[2K⠴ Contemplating 05s · Ctrl+C to interrupt[2K⠦ Contemplating 05s · Ctrl+C to interrupt[2K⠧ Contemplating 05s · Ctrl+C to interrupt[2K⠇ Contemplating 05s · Ctrl+C to interrupt[2K⠏ Contemplating 05s · Ctrl+C to interrupt[2K⠋ Contemplating 06s · Ctrl+C to interrupt[2K⠙ Contemplating 06s · Ctrl+C to interrupt[2K⠹ Contemplating 06s · Ctrl+C to interrupt[2K⠸ Contemplating 06s · Ctrl+C to interrupt[2K⠼ Contemplating 06s · Ctrl+C to interrupt[2K⠦ Contemplating 06s · Ctrl+C to interrupt[2K⠧ Contemplating 06s · Ctrl+C to interrupt[2K⠇ Contemplating 06s · Ctrl+C to interrupt[2K⠏ Contemplating 06s · Ctrl+C to interrupt[2K⠋ Contemplating 06s · Ctrl+C to interrupt[2K⠙ Contemplating 06s · Ctrl+C to interrupt[2K⠹ Contemplating 06s · Ctrl+C to interrupt[2K⠸ Contemplating 06s · Ctrl+C to interrupt[2K⠼ Contemplating 06s · Ctrl+C to interrupt[2K⠴ Contemplating 06s · Ctrl+C to interrupt[2K⠦ Contemplating 06s · Ctrl+C to interrupt[2K⠧ Contemplating 07s · Ctrl+C to interrupt[2K⠇ Contemplating 07s · Ctrl+C to interrupt[2K⠏ Contemplating 07s · Ctrl+C to interrupt[2K⠋ Contemplating 07s · Ctrl+C to interrupt[2K⠙ Contemplating 07s · Ctrl+C to interrupt[2K⠹ Contemplating 07s · Ctrl+C to interrupt[2K⠸ Contemplating 07s · Ctrl+C to interrupt[2K⠼ Contemplating 07s · Ctrl+C to interrupt[2K⠴ Contemplating 07s · Ctrl+C to interrupt[2K⠦ Contemplating 07s · Ctrl+C to interrupt[2K⠧ Contemplating 07s · Ctrl+C to interrupt[2K⠇ Contemplating 07s · Ctrl+C to interrupt[2K⠏ Contemplating 07s · Ctrl+C to interrupt[2K⠋ Contemplating 07s · Ctrl+C to interrupt[2K⠙ Contemplating 07s · Ctrl+C to interrupt[2K⠹ Contemplating 07s · Ctrl+C to interrupt[2K⠼ Contemplating 08s · Ctrl+C to interrupt[2K⠴ Contemplating 08s · Ctrl+C to interrupt[2K⠦ Contemplating 08s · Ctrl+C to interrupt[2K⠧ Contemplating 08s · Ctrl+C to interrupt[2K⠇ Contemplating 08s · Ctrl+C to interrupt[2K⠏ Contemplating 08s · Ctrl+C to interrupt[2K⠋ Contemplating 08s · Ctrl+C to interrupt[2K⠙ Contemplating 08s · Ctrl+C to interrupt[2K⠹ Contemplating 08s · Ctrl+C to interrupt[2K⠸ Contemplating 08s · Ctrl+C to interrupt[2K⠼ Contemplating 08s · Ctrl+C to interrupt[2K⠴ Contemplating 08s · Ctrl+C to interrupt[2K⠦ Contemplating 08s · Ctrl+C to interrupt[2K⠧ Contemplating 08s · Ctrl+C to interrupt[2K⠇ Contemplating 08s · Ctrl+C to interrupt[2K⠏ Contemplating 08s · Ctrl+C to interrupt[2K⠋ Contemplating 09s · Ctrl+C to interrupt[2KThe ls command failed because of Windows syntax. Let me use a proper command to list all spec files recursively.
+[2K⠙ Contemplating 09s · Ctrl+C to interrupt[2K[2K● [20:05:27] Execute [C:\WINDOWS\system32\cmd.exe] powershell -Command "Get-ChildItem -Path 'docs/specs' -Recurse -Filter '*.md' | Select-Object -ExpandProperty FullName"
+C:\Users\koosh\Dino\docs\specs\dag-summary.md
+C:\Users\koosh\Dino\docs\specs\index.md
+C:\Users\koosh\Dino\docs\specs\M13-runtime-survival-hmr-concurrency.md
+C:\Users\koosh\Dino\docs\specs\SPEC-002-native-menu-injector.md
+C:\Users\koosh\Dino\docs\specs\SPEC-003-prove-features-skill.md
+C:\Users\koosh\Dino\docs\specs\SPEC-004-key-input-system.md
+C:\Users\koosh\Dino\docs\specs\SPEC-005-duplicate-instance-bypass.md
+C:\Users\koosh\Dino\docs\specs\SPEC-006-prove-features-video-pipeline.md
+C:\Users\koosh\Dino\docs\specs\SPEC-007-runtime-features-baseline.md
+C:\Users\koosh\Dino\docs\specs\SPEC-008-mod-conflict-detection-engine.md
+C:\Users\koosh\Dino\docs\specs\SPEC-fix-f10-blank-labels.md
+C:\Users\koosh\Dino\docs\specs\SPEC-fix-f9-empty-debug.md
+C:\Users\koosh\Dino\docs\specs\SPEC-fix-mods-button-ux.md
+C:\Users\koosh\Dino\docs\specs\SPEC-fix-vanilla-gameplay-bridge.md
+C:\Users\koosh\Dino\docs\specs\SPEC-TIER1-MVP.md
+C:\Users\koosh\Dino\docs\specs\SPEC-TIER2-MATURE.md
+C:\Users\koosh\Dino\docs\specs\SPEC-TIER3-ELITE.md
+C:\Users\koosh\Dino\docs\specs\technical-spec.md
+C:\Users\koosh\Dino\docs\specs\traceability-matrix.md
+C:\Users\koosh\Dino\docs\specs\user-spec.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0-full-conversion-epic.md
+C:\Users\koosh\Dino\docs\specs\validation-matrix.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\aerial-combat-complete.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\audio-takeover.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\blaster-projectile-support.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\dinoforge-active-indicator.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\full-ui-ux-reskin.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\implementation-plan.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\ingame-2d-asset-takeover.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\loading-screen-takeover.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\mod-asset-completeness.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\mod-brand-identity.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\native-mods-page-visible.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\naval-combat.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\README.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\real-asset-bundles.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\requirements.md
+C:\Users\koosh\Dino\docs\specs\v0.27.0\sw-space-combat.md
+[2K[2K● [20:05:28] Execute [C:\WINDOWS\system32\cmd.exe] powershell -Command "Get-ChildItem -Path 'src/Tests' -Recurse -Filter '*.csproj' | Select-Object -ExpandProperty FullName"
+C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj
+C:\Users\koosh\Dino\src\Tests\Analyzers\DINOForge.Tests.Analyzers.csproj
+C:\Users\koosh\Dino\src\Tests\Autograder\DINOForge.Tests.Autograder.csproj
+C:\Users\koosh\Dino\src\Tests\BDD\DINOForge.Tests.BDD.csproj
+C:\Users\koosh\Dino\src\Tests\Benchmarks\DINOForge.Benchmarks.csproj
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\DINOForge.Tests.BridgeMutation.csproj
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\DINOForge.Tests.BridgeSmoke.csproj
+C:\Users\koosh\Dino\src\Tests\Chaos\DINOForge.Tests.Chaos.csproj
+C:\Users\koosh\Dino\src\Tests\CliToolTests\DINOForge.Tests.CliTools.csproj
+C:\Users\koosh\Dino\src\Tests\CompanionTests\CompanionTests.csproj
+C:\Users\koosh\Dino\src\Tests\Contract\DINOForge.Tests.Contract.csproj
+C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj
+C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj
+C:\Users\koosh\Dino\src\Tests\Load\DINOForge.Tests.Load.csproj
+C:\Users\koosh\Dino\src\Tests\Perf\DINOForge.Tests.Perf.csproj
+C:\Users\koosh\Dino\src\Tests\Sketchfab\DINOForge.Tests.Sketchfab.csproj
+C:\Users\koosh\Dino\src\Tests\UiAutomation\DINOForge.Tests.UiAutomation.csproj
+[2K⠙ Contemplating 09s · Ctrl+C to interrupt[2K⠹ Contemplating 09s · Ctrl+C to interrupt[2K⠸ Contemplating 09s · Ctrl+C to interrupt[2K⠼ Contemplating 09s · Ctrl+C to interrupt[2K⠴ Contemplating 09s · Ctrl+C to interrupt[2K⠦ Contemplating 09s · Ctrl+C to interrupt[2K⠧ Contemplating 09s · Ctrl+C to interrupt[2K⠇ Contemplating 09s · Ctrl+C to interrupt[2K⠏ Contemplating 09s · Ctrl+C to interrupt[2K⠋ Contemplating 09s · Ctrl+C to interrupt[2K⠙ Contemplating 09s · Ctrl+C to interrupt[2K⠸ Contemplating 09s · Ctrl+C to interrupt[2K⠼ Contemplating 09s · Ctrl+C to interrupt[2K⠴ Contemplating 09s · Ctrl+C to interrupt[2K⠦ Contemplating 09s · Ctrl+C to interrupt[2K⠧ Contemplating 10s · Ctrl+C to interrupt[2K⠇ Contemplating 10s · Ctrl+C to interrupt[2K⠏ Contemplating 10s · Ctrl+C to interrupt[2K⠋ Contemplating 10s · Ctrl+C to interrupt[2KI have a good list of spec files and test projects. Now I need to read the key files and do some grep searches
+[2K⠋ Contemplating 10s · Ctrl+C to interrupt[2K[2K[2K● [20:05:31] ERROR: POST https://api.fireworks.ai/inference/v1/chat/completions
+
+Caused by:
+    0: error decoding response body
+    1: request or response body error
+    2: error reading a body from connection
+    3: connection reset
+[2K⠋ Retrying 10s · Ctrl+C to interrupt[2K⠋ Retrying 10s · Ctrl+C to interrupt[2K⠙ Retrying 10s · Ctrl+C to interrupt[2K⠹ Retrying 10s · Ctrl+C to interrupt[2K⠸ Retrying 10s · Ctrl+C to interrupt[2K⠼ Retrying 10s · Ctrl+C to interrupt[2K⠴ Retrying 10s · Ctrl+C to interrupt[2K⠦ Retrying 10s · Ctrl+C to interrupt[2K⠧ Retrying 10s · Ctrl+C to interrupt[2K⠇ Retrying 10s · Ctrl+C to interrupt[2K⠏ Retrying 10s · Ctrl+C to interrupt[2K⠋ Retrying 10s · Ctrl+C to interrupt[2K⠙ Retrying 10s · Ctrl+C to interrupt[2K⠹ Retrying 10s · Ctrl+C to interrupt[2K⠸ Retrying 11s · Ctrl+C to interrupt[2K⠴ Retrying 11s · Ctrl+C to interrupt[2K⠦ Retrying 11s · Ctrl+C to interrupt[2K⠧ Retrying 11s · Ctrl+C to interrupt[2K⠇ Retrying 11s · Ctrl+C to interrupt[2K⠏ Retrying 11s · Ctrl+C to interrupt[2K⠋ Retrying 11s · Ctrl+C to interrupt[2K⠙ Retrying 11s · Ctrl+C to interrupt[2K⠹ Retrying 11s · Ctrl+C to interrupt[2K⠸ Retrying 11s · Ctrl+C to interrupt[2K⠼ Retrying 11s · Ctrl+C to interrupt[2K⠴ Retrying 11s · Ctrl+C to interrupt[2K⠦ Retrying 11s · Ctrl+C to interrupt[2K⠧ Retrying 11s · Ctrl+C to interrupt[2K⠇ Retrying 11s · Ctrl+C to interrupt[2K⠏ Retrying 11s · Ctrl+C to interrupt[2K⠋ Retrying 12s · Ctrl+C to interrupt[2K⠙ Retrying 12s · Ctrl+C to interrupt[2K⠹ Retrying 12s · Ctrl+C to interrupt[2K⠸ Retrying 12s · Ctrl+C to interrupt[2K⠼ Retrying 12s · Ctrl+C to interrupt[2K⠴ Retrying 12s · Ctrl+C to interrupt[2K⠦ Retrying 12s · Ctrl+C to interrupt[2K⠧ Retrying 12s · Ctrl+C to interrupt[2K⠇ Retrying 12s · Ctrl+C to interrupt[2K⠏ Retrying 12s · Ctrl+C to interrupt[2K⠋ Retrying 12s · Ctrl+C to interrupt[2K⠙ Retrying 12s · Ctrl+C to interrupt[2K⠹ Retrying 12s · Ctrl+C to interrupt[2KGood. I have the list of spec files and test projects. Now I need to:
+[2K⠸ Retrying 12s · Ctrl+C to interrupt[2K⠼ Retrying 12s · Ctrl+C to interrupt[2K1. Read the key spec files (index.md, traceability-matrix.md, requirements.md,
+[2K   etc.)
+[2K⠼ Retrying 12s · Ctrl+C to interrupt[2K⠴ Retrying 12s · Ctrl+C to interrupt[2K⠦ Retrying 13s · Ctrl+C to interrupt[2K⠧ Retrying 13s · Ctrl+C to interrupt[2K⠇ Retrying 13s · Ctrl+C to interrupt[2K⠏ Retrying 13s · Ctrl+C to interrupt[2K⠋ Retrying 13s · Ctrl+C to interrupt[2K⠙ Retrying 13s · Ctrl+C to interrupt[2K⠸ Retrying 13s · Ctrl+C to interrupt[2K⠼ Retrying 13s · Ctrl+C to interrupt[2K⠴ Retrying 13s · Ctrl+C to interrupt[2K⠦ Retrying 13s · Ctrl+C to interrupt[2K2. Search for FR/NFR/requirements/acceptance criteria in spec files3. Map test
+[2K   projects and their classes4. Build the matrixLet me start reading the key
+[2K   files. I'll read several in parallel.
+[2K⠦ Retrying 13s · Ctrl+C to interrupt[2K● [20:05:35] Read docs/specs/index.md
+[2K⠦ Retrying 13s · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K● [20:05:35] Read docs/specs/traceability-matrix.md
+[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K● [20:05:35] Read docs/specs/v0.27.0/requirements.md
+[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K● [20:05:35] Read docs/specs/technical-spec.md
+[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 13s · Ctrl+C to interrupt[2K⠇ Contemplating 13s · Ctrl+C to interrupt[2K⠏ Contemplating 13s · Ctrl+C to interrupt[2K⠙ Contemplating 13s · Ctrl+C to interrupt[2K⠹ Contemplating 13s · Ctrl+C to interrupt[2K⠸ Contemplating 13s · Ctrl+C to interrupt[2K⠼ Contemplating 14s · Ctrl+C to interrupt[2K⠴ Contemplating 14s · Ctrl+C to interrupt[2K⠦ Contemplating 14s · Ctrl+C to interrupt[2K⠧ Contemplating 14s · Ctrl+C to interrupt[2K⠇ Contemplating 14s · Ctrl+C to interrupt[2K⠏ Contemplating 14s · Ctrl+C to interrupt[2K⠋ Contemplating 14s · Ctrl+C to interrupt[2K⠙ Contemplating 14s · Ctrl+C to interrupt[2K⠹ Contemplating 14s · Ctrl+C to interrupt[2K⠸ Contemplating 14s · Ctrl+C to interrupt[2K⠼ Contemplating 14s · Ctrl+C to interrupt[2K⠴ Contemplating 14s · Ctrl+C to interrupt[2K⠦ Contemplating 14s · Ctrl+C to interrupt[2K⠧ Contemplating 14s · Ctrl+C to interrupt[2K⠇ Contemplating 14s · Ctrl+C to interrupt[2K⠏ Contemplating 14s · Ctrl+C to interrupt[2K⠋ Contemplating 15s · Ctrl+C to interrupt[2K⠙ Contemplating 15s · Ctrl+C to interrupt[2KI've read the key spec files. Now I need to:
+[2K
+[2K⠙ Contemplating 15s · Ctrl+C to interrupt[2K⠸ Contemplating 15s · Ctrl+C to interrupt[2K⠼ Contemplating 15s · Ctrl+C to interrupt[2K⠴ Contemplating 15s · Ctrl+C to interrupt[2K⠦ Contemplating 15s · Ctrl+C to interrupt[2K1. Read the individual spec files to find FRs and requirements2. Search for test
+[2K   files in each test project3. Map specs to testsLet me read the v0.27.0 story
+[2K   files and search for test files/classes. I need to do this efficiently.
+[2K
+[2K⠦ Contemplating 15s · Ctrl+C to interrupt[2K⠧ Contemplating 15s · Ctrl+C to interrupt[2K⠇ Contemplating 15s · Ctrl+C to interrupt[2K⠏ Contemplating 15s · Ctrl+C to interrupt[2K⠋ Contemplating 15s · Ctrl+C to interrupt[2K⠙ Contemplating 15s · Ctrl+C to interrupt[2K⠹ Contemplating 15s · Ctrl+C to interrupt[2K⠸ Contemplating 15s · Ctrl+C to interrupt[2KLet me list all the v0.27.0 story files and read them in parallel. I also need to search for test classes in the test projects.
+[2K⠼ Contemplating 15s · Ctrl+C to interrupt[2K● [20:05:37] Update Todos 4 item(s)
+[2K
+  󰄗 Invoke superpowers/using-superpowers skill
+  󰄵 Enumerate specs in docs/specs/
+  󰄗 Enumerate test surfaces in src/Tests/
+  󰄱 Build traceability matrix (specs -> tests)
+  󰄱 Write L6-traceability-matrix.md report
+
+[2K[2K[2K⠼ Contemplating 15s · Ctrl+C to interrupt[2K⠴ Contemplating 15s · Ctrl+C to interrupt[2K⠦ Contemplating 15s · Ctrl+C to interrupt[2K⠧ Contemplating 16s · Ctrl+C to interrupt[2K⠇ Contemplating 16s · Ctrl+C to interrupt[2K⠏ Contemplating 16s · Ctrl+C to interrupt[2K⠋ Contemplating 16s · Ctrl+C to interrupt[2K⠙ Contemplating 16s · Ctrl+C to interrupt[2K⠹ Contemplating 16s · Ctrl+C to interrupt[2K⠸ Contemplating 16s · Ctrl+C to interrupt[2K⠼ Contemplating 16s · Ctrl+C to interrupt[2K⠴ Contemplating 16s · Ctrl+C to interrupt[2K⠦ Contemplating 16s · Ctrl+C to interrupt[2K⠧ Contemplating 16s · Ctrl+C to interrupt[2K⠇ Contemplating 16s · Ctrl+C to interrupt[2K⠋ Contemplating 16s · Ctrl+C to interrupt[2K⠙ Contemplating 16s · Ctrl+C to interrupt[2K⠹ Contemplating 16s · Ctrl+C to interrupt[2K⠸ Contemplating 16s · Ctrl+C to interrupt[2K⠼ Contemplating 17s · Ctrl+C to interrupt[2K⠴ Contemplating 17s · Ctrl+C to interrupt[2K⠦ Contemplating 17s · Ctrl+C to interrupt[2K⠧ Contemplating 17s · Ctrl+C to interrupt[2K⠇ Contemplating 17s · Ctrl+C to interrupt[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K⠋ Contemplating 17s · Ctrl+C to interrupt[2K⠙ Contemplating 17s · Ctrl+C to interrupt[2K⠹ Contemplating 17s · Ctrl+C to interrupt[2K⠸ Contemplating 17s · Ctrl+C to interrupt[2K⠼ Contemplating 17s · Ctrl+C to interrupt[2K⠴ Contemplating 17s · Ctrl+C to interrupt[2K⠦ Contemplating 17s · Ctrl+C to interrupt[2K⠧ Contemplating 17s · Ctrl+C to interrupt[2K⠇ Contemplating 17s · Ctrl+C to interrupt[2KI need to read the v0.27.0 story files and also search for test classes. Let me read the story files first, and also search for test classes in parallel.
+[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K● [20:05:39] Read docs/specs/v0.27.0/README.md
+[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K[2K[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K● [20:05:39] Read docs/specs/v0.27.0/implementation-plan.md
+[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K[2K[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K● [20:05:39] Read docs/specs/SPEC-007-runtime-features-baseline.md
+[2K⠏ Contemplating 17s · Ctrl+C to interrupt[2K[2K[2K⠋ Contemplating 18s · Ctrl+C to interrupt[2K● [20:05:39] Read docs/specs/SPEC-TIER1-MVP.md
+[2K⠋ Contemplating 18s · Ctrl+C to interrupt[2K[2K[2K⠋ Contemplating 18s · Ctrl+C to interrupt[2K⠙ Contemplating 18s · Ctrl+C to interrupt[2K⠹ Contemplating 18s · Ctrl+C to interrupt[2K⠸ Contemplating 18s · Ctrl+C to interrupt[2K⠼ Contemplating 18s · Ctrl+C to interrupt[2K⠴ Contemplating 18s · Ctrl+C to interrupt[2K⠦ Contemplating 18s · Ctrl+C to interrupt[2K⠧ Contemplating 18s · Ctrl+C to interrupt[2K⠇ Contemplating 18s · Ctrl+C to interrupt[2K⠏ Contemplating 18s · Ctrl+C to interrupt[2K⠙ Contemplating 18s · Ctrl+C to interrupt[2K⠹ Contemplating 18s · Ctrl+C to interrupt[2K⠸ Contemplating 18s · Ctrl+C to interrupt[2K⠼ Contemplating 18s · Ctrl+C to interrupt[2K⠴ Contemplating 18s · Ctrl+C to interrupt[2K⠦ Contemplating 18s · Ctrl+C to interrupt[2K⠧ Contemplating 19s · Ctrl+C to interrupt[2K⠇ Contemplating 19s · Ctrl+C to interrupt[2K⠏ Contemplating 19s · Ctrl+C to interrupt[2K⠋ Contemplating 19s · Ctrl+C to interrupt[2K⠙ Contemplating 19s · Ctrl+C to interrupt[2K⠹ Contemplating 19s · Ctrl+C to interrupt[2K⠸ Contemplating 19s · Ctrl+C to interrupt[2K⠼ Contemplating 19s · Ctrl+C to interrupt[2K⠴ Contemplating 19s · Ctrl+C to interrupt[2K⠦ Contemplating 19s · Ctrl+C to interrupt[2K⠧ Contemplating 19s · Ctrl+C to interrupt[2K⠇ Contemplating 19s · Ctrl+C to interrupt[2K⠏ Contemplating 19s · Ctrl+C to interrupt[2K⠋ Contemplating 19s · Ctrl+C to interrupt[2K⠙ Contemplating 19s · Ctrl+C to interrupt[2K⠹ Contemplating 19s · Ctrl+C to interrupt[2K⠸ Contemplating 20s · Ctrl+C to interrupt[2K⠼ Contemplating 20s · Ctrl+C to interrupt[2K⠴ Contemplating 20s · Ctrl+C to interrupt[2K⠦ Contemplating 20s · Ctrl+C to interrupt[2K⠧ Contemplating 20s · Ctrl+C to interrupt[2K⠇ Contemplating 20s · Ctrl+C to interrupt[2K⠏ Contemplating 20s · Ctrl+C to interrupt[2K⠋ Contemplating 20s · Ctrl+C to interrupt[2K⠹ Contemplating 20s · Ctrl+C to interrupt[2K⠸ Contemplating 20s · Ctrl+C to interrupt[2K⠼ Contemplating 20s · Ctrl+C to interrupt[2K⠴ Contemplating 20s · Ctrl+C to interrupt[2K⠦ Contemplating 20s · Ctrl+C to interrupt[2K⠧ Contemplating 20s · Ctrl+C to interrupt[2K⠇ Contemplating 20s · Ctrl+C to interrupt[2K⠏ Contemplating 20s · Ctrl+C to interrupt[2K⠋ Contemplating 21s · Ctrl+C to interrupt[2K⠙ Contemplating 21s · Ctrl+C to interrupt[2K⠹ Contemplating 21s · Ctrl+C to interrupt[2KI've now gathered a lot of the spec information. Let me now read the remaining key spec files and search for test files. I need to:
+[2K
+[2K⠸ Contemplating 21s · Ctrl+C to interrupt[2K⠸ Contemplating 21s · Ctrl+C to interrupt[2K⠼ Contemplating 21s · Ctrl+C to interrupt[2K⠴ Contemplating 21s · Ctrl+C to interrupt[2K⠦ Contemplating 21s · Ctrl+C to interrupt[2K⠧ Contemplating 21s · Ctrl+C to interrupt[2K⠇ Contemplating 21s · Ctrl+C to interrupt[2K⠏ Contemplating 21s · Ctrl+C to interrupt[2K⠋ Contemplating 21s · Ctrl+C to interrupt[2K⠙ Contemplating 21s · Ctrl+C to interrupt[2K⠹ Contemplating 21s · Ctrl+C to interrupt[2K⠸ Contemplating 21s · Ctrl+C to interrupt[2K⠼ Contemplating 21s · Ctrl+C to interrupt[2K⠴ Contemplating 21s · Ctrl+C to interrupt[2K⠦ Contemplating 21s · Ctrl+C to interrupt[2K⠧ Contemplating 22s · Ctrl+C to interrupt[2K⠇ Contemplating 22s · Ctrl+C to interrupt[2K1. Read the v0.27.0 story files for individual FRs/NFRs2. Search for test
+[2K   classes in src/Tests/3. Search for FR/NFR keywords in all specsLet me search
+[2K   for FRs and NFRs across all specs, and also search for test classes.
+[2K⠏ Contemplating 22s · Ctrl+C to interrupt[2K● [20:05:43] Search for '^(FR-|NFR-|EPIC-027-FR-|EPIC-027-NFR-|## Requirement|acceptance|### Acceptance)' at docs/specs
+[2K⠏ Contemplating 22s · Ctrl+C to interrupt[2K⠋ Contemplating 22s · Ctrl+C to interrupt[2K⠙ Contemplating 22s · Ctrl+C to interrupt[2K⠹ Contemplating 22s · Ctrl+C to interrupt[2K⠸ Contemplating 22s · Ctrl+C to interrupt[2K[2K[2K⠼ Contemplating 22s · Ctrl+C to interrupt[2K⠴ Contemplating 22s · Ctrl+C to interrupt[2K⠦ Contemplating 22s · Ctrl+C to interrupt[2K⠧ Contemplating 22s · Ctrl+C to interrupt[2K⠇ Contemplating 22s · Ctrl+C to interrupt[2K⠏ Contemplating 22s · Ctrl+C to interrupt[2K⠋ Contemplating 22s · Ctrl+C to interrupt[2K⠙ Contemplating 22s · Ctrl+C to interrupt[2K⠹ Contemplating 22s · Ctrl+C to interrupt[2K⠸ Contemplating 23s · Ctrl+C to interrupt[2K⠼ Contemplating 23s · Ctrl+C to interrupt[2K⠴ Contemplating 23s · Ctrl+C to interrupt[2K⠦ Contemplating 23s · Ctrl+C to interrupt[2K⠧ Contemplating 23s · Ctrl+C to interrupt[2K⠇ Contemplating 23s · Ctrl+C to interrupt[2K⠋ Contemplating 23s · Ctrl+C to interrupt[2K⠙ Contemplating 23s · Ctrl+C to interrupt[2K⠹ Contemplating 23s · Ctrl+C to interrupt[2K⠸ Contemplating 23s · Ctrl+C to interrupt[2K⠼ Contemplating 23s · Ctrl+C to interrupt[2K⠴ Contemplating 23s · Ctrl+C to interrupt[2K⠦ Contemplating 23s · Ctrl+C to interrupt[2K⠧ Contemplating 23s · Ctrl+C to interrupt[2K⠇ Contemplating 23s · Ctrl+C to interrupt[2K⠏ Contemplating 23s · Ctrl+C to interrupt[2K⠋ Contemplating 24s · Ctrl+C to interrupt[2K⠙ Contemplating 24s · Ctrl+C to interrupt[2K⠹ Contemplating 24s · Ctrl+C to interrupt[2K⠸ Contemplating 24s · Ctrl+C to interrupt[2K⠼ Contemplating 24s · Ctrl+C to interrupt[2K⠴ Contemplating 24s · Ctrl+C to interrupt[2K⠦ Contemplating 24s · Ctrl+C to interrupt[2K⠧ Contemplating 24s · Ctrl+C to interrupt[2K⠇ Contemplating 24s · Ctrl+C to interrupt[2K⠏ Contemplating 24s · Ctrl+C to interrupt[2K⠋ Contemplating 24s · Ctrl+C to interrupt[2K⠙ Contemplating 24s · Ctrl+C to interrupt[2K⠹ Contemplating 24s · Ctrl+C to interrupt[2K⠸ Contemplating 24s · Ctrl+C to interrupt[2K⠼ Contemplating 24s · Ctrl+C to interrupt[2K⠦ Contemplating 24s · Ctrl+C to interrupt[2KThe search didn't find the EPIC-027 FR/NFR keywords because of the regex. Let me search more broadly for those IDs.
+[2K⠦ Contemplating 24s · Ctrl+C to interrupt[2K● [20:05:46] Search for 'EPIC-027-(FR|NFR)-[0-9]+' at docs/specs
+[2K⠦ Contemplating 24s · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 25s · Ctrl+C to interrupt[2K● [20:05:46] Search for '^\s*(public\s+)?class\s+\w+Tests?\s*[:\{]' at src/Tests
+[2K⠧ Contemplating 25s · Ctrl+C to interrupt[2K⠇ Contemplating 25s · Ctrl+C to interrupt[2K⠏ Contemplating 25s · Ctrl+C to interrupt[2K⠋ Contemplating 25s · Ctrl+C to interrupt[2K⠙ Contemplating 25s · Ctrl+C to interrupt[2K⠹ Contemplating 25s · Ctrl+C to interrupt[2K⠸ Contemplating 25s · Ctrl+C to interrupt[2K⠼ Contemplating 25s · Ctrl+C to interrupt[2K⠴ Contemplating 25s · Ctrl+C to interrupt[2K⠦ Contemplating 25s · Ctrl+C to interrupt[2K⠧ Contemplating 25s · Ctrl+C to interrupt[2K⠇ Contemplating 25s · Ctrl+C to interrupt[2K⠏ Contemplating 25s · Ctrl+C to interrupt[2K⠋ Contemplating 25s · Ctrl+C to interrupt[2K⠙ Contemplating 25s · Ctrl+C to interrupt[2K⠹ Contemplating 25s · Ctrl+C to interrupt[2K⠸ Contemplating 26s · Ctrl+C to interrupt[2K⠼ Contemplating 26s · Ctrl+C to interrupt[2K⠴ Contemplating 26s · Ctrl+C to interrupt[2K⠦ Contemplating 26s · Ctrl+C to interrupt[2K⠧ Contemplating 26s · Ctrl+C to interrupt[2K⠇ Contemplating 26s · Ctrl+C to interrupt[2K⠏ Contemplating 26s · Ctrl+C to interrupt[2K⠋ Contemplating 26s · Ctrl+C to interrupt[2K⠙ Contemplating 26s · Ctrl+C to interrupt[2K⠹ Contemplating 26s · Ctrl+C to interrupt[2K⠸ Contemplating 26s · Ctrl+C to interrupt[2K⠼ Contemplating 26s · Ctrl+C to interrupt[2K⠦ Contemplating 26s · Ctrl+C to interrupt[2K⠧ Contemplating 26s · Ctrl+C to interrupt[2K⠇ Contemplating 26s · Ctrl+C to interrupt[2K⠏ Contemplating 26s · Ctrl+C to interrupt[2K⠋ Contemplating 27s · Ctrl+C to interrupt[2K⠙ Contemplating 27s · Ctrl+C to interrupt[2K[2K[2K⠙ Contemplating 27s · Ctrl+C to interrupt[2K⠸ Contemplating 27s · Ctrl+C to interrupt[2K⠼ Contemplating 27s · Ctrl+C to interrupt[2K⠴ Contemplating 27s · Ctrl+C to interrupt[2K⠦ Contemplating 27s · Ctrl+C to interrupt[2K⠧ Contemplating 27s · Ctrl+C to interrupt[2K⠇ Contemplating 27s · Ctrl+C to interrupt[2K⠏ Contemplating 27s · Ctrl+C to interrupt[2K⠋ Contemplating 27s · Ctrl+C to interrupt[2K⠙ Contemplating 27s · Ctrl+C to interrupt[2K⠹ Contemplating 27s · Ctrl+C to interrupt[2K⠸ Contemplating 27s · Ctrl+C to interrupt[2K⠼ Contemplating 27s · Ctrl+C to interrupt[2K⠴ Contemplating 27s · Ctrl+C to interrupt[2K⠦ Contemplating 27s · Ctrl+C to interrupt[2K⠧ Contemplating 28s · Ctrl+C to interrupt[2K⠇ Contemplating 28s · Ctrl+C to interrupt[2K⠏ Contemplating 28s · Ctrl+C to interrupt[2K⠋ Contemplating 28s · Ctrl+C to interrupt[2K⠙ Contemplating 28s · Ctrl+C to interrupt[2K⠹ Contemplating 28s · Ctrl+C to interrupt[2K⠸ Contemplating 28s · Ctrl+C to interrupt[2K⠼ Contemplating 28s · Ctrl+C to interrupt[2K⠴ Contemplating 28s · Ctrl+C to interrupt[2K⠦ Contemplating 28s · Ctrl+C to interrupt[2K⠧ Contemplating 28s · Ctrl+C to interrupt[2K⠇ Contemplating 28s · Ctrl+C to interrupt[2K⠋ Contemplating 28s · Ctrl+C to interrupt[2K⠙ Contemplating 28s · Ctrl+C to interrupt[2K⠹ Contemplating 28s · Ctrl+C to interrupt[2K⠸ Contemplating 28s · Ctrl+C to interrupt[2K⠼ Contemplating 29s · Ctrl+C to interrupt[2K⠴ Contemplating 29s · Ctrl+C to interrupt[2K⠦ Contemplating 29s · Ctrl+C to interrupt[2K⠧ Contemplating 29s · Ctrl+C to interrupt[2K⠇ Contemplating 29s · Ctrl+C to interrupt[2K⠏ Contemplating 29s · Ctrl+C to interrupt[2K⠋ Contemplating 29s · Ctrl+C to interrupt[2K⠙ Contemplating 29s · Ctrl+C to interrupt[2K⠹ Contemplating 29s · Ctrl+C to interrupt[2K⠸ Contemplating 29s · Ctrl+C to interrupt[2K⠼ Contemplating 29s · Ctrl+C to interrupt[2K⠴ Contemplating 29s · Ctrl+C to interrupt[2K⠦ Contemplating 29s · Ctrl+C to interrupt[2K⠧ Contemplating 29s · Ctrl+C to interrupt[2K⠇ Contemplating 29s · Ctrl+C to interrupt[2K⠏ Contemplating 29s · Ctrl+C to interrupt[2K⠋ Contemplating 30s · Ctrl+C to interrupt[2K⠙ Contemplating 30s · Ctrl+C to interrupt[2K⠹ Contemplating 30s · Ctrl+C to interrupt[2K⠸ Contemplating 30s · Ctrl+C to interrupt[2K⠼ Contemplating 30s · Ctrl+C to interrupt[2K⠴ Contemplating 30s · Ctrl+C to interrupt[2K⠦ Contemplating 30s · Ctrl+C to interrupt[2K⠧ Contemplating 30s · Ctrl+C to interrupt[2K⠇ Contemplating 30s · Ctrl+C to interrupt[2K⠋ Contemplating 30s · Ctrl+C to interrupt[2K⠙ Contemplating 30s · Ctrl+C to interrupt[2K⠹ Contemplating 30s · Ctrl+C to interrupt[2K⠸ Contemplating 30s · Ctrl+C to interrupt[2K⠼ Contemplating 30s · Ctrl+C to interrupt[2K⠴ Contemplating 30s · Ctrl+C to interrupt[2K⠦ Contemplating 30s · Ctrl+C to interrupt[2K⠧ Contemplating 31s · Ctrl+C to interrupt[2K⠇ Contemplating 31s · Ctrl+C to interrupt[2K⠏ Contemplating 31s · Ctrl+C to interrupt[2K⠋ Contemplating 31s · Ctrl+C to interrupt[2K⠙ Contemplating 31s · Ctrl+C to interrupt[2K⠹ Contemplating 31s · Ctrl+C to interrupt[2K⠸ Contemplating 31s · Ctrl+C to interrupt[2K⠼ Contemplating 31s · Ctrl+C to interrupt[2K⠴ Contemplating 31s · Ctrl+C to interrupt[2K⠦ Contemplating 31s · Ctrl+C to interrupt[2K⠧ Contemplating 31s · Ctrl+C to interrupt[2K⠇ Contemplating 31s · Ctrl+C to interrupt[2K⠏ Contemplating 31s · Ctrl+C to interrupt[2K⠋ Contemplating 31s · Ctrl+C to interrupt[2K⠙ Contemplating 31s · Ctrl+C to interrupt[2KLet me search for more test classes across the test projects. I need a comprehensive list.
+[2K⠹ Contemplating 31s · Ctrl+C to interrupt[2K● [20:05:53] Search for '^\s*public\s+class\s+\w+\s*[:\{]' in cs files at src/Tests
+[2K⠹ Contemplating 31s · Ctrl+C to interrupt[2K⠸ Contemplating 32s · Ctrl+C to interrupt[2K⠼ Contemplating 32s · Ctrl+C to interrupt[2K⠴ Contemplating 32s · Ctrl+C to interrupt[2K[2K[2K⠦ Contemplating 32s · Ctrl+C to interrupt[2K⠧ Contemplating 32s · Ctrl+C to interrupt[2K⠇ Contemplating 32s · Ctrl+C to interrupt[2K⠏ Contemplating 32s · Ctrl+C to interrupt[2K⠋ Contemplating 32s · Ctrl+C to interrupt[2K⠙ Contemplating 32s · Ctrl+C to interrupt[2K⠹ Contemplating 32s · Ctrl+C to interrupt[2K⠸ Contemplating 32s · Ctrl+C to interrupt[2K⠼ Contemplating 32s · Ctrl+C to interrupt[2K⠴ Contemplating 32s · Ctrl+C to interrupt[2K⠦ Contemplating 32s · Ctrl+C to interrupt[2K⠧ Contemplating 32s · Ctrl+C to interrupt[2K⠇ Contemplating 32s · Ctrl+C to interrupt[2K⠏ Contemplating 32s · Ctrl+C to interrupt[2K⠋ Contemplating 33s · Ctrl+C to interrupt[2K⠙ Contemplating 33s · Ctrl+C to interrupt[2K⠹ Contemplating 33s · Ctrl+C to interrupt[2K⠸ Contemplating 33s · Ctrl+C to interrupt[2K⠼ Contemplating 33s · Ctrl+C to interrupt[2K⠴ Contemplating 33s · Ctrl+C to interrupt[2K⠦ Contemplating 33s · Ctrl+C to interrupt[2K⠧ Contemplating 33s · Ctrl+C to interrupt[2K⠇ Contemplating 33s · Ctrl+C to interrupt[2K⠋ Contemplating 33s · Ctrl+C to interrupt[2K⠙ Contemplating 33s · Ctrl+C to interrupt[2K⠹ Contemplating 33s · Ctrl+C to interrupt[2K⠸ Contemplating 33s · Ctrl+C to interrupt[2K⠼ Contemplating 33s · Ctrl+C to interrupt[2K⠴ Contemplating 33s · Ctrl+C to interrupt[2K⠦ Contemplating 33s · Ctrl+C to interrupt[2K⠧ Contemplating 34s · Ctrl+C to interrupt[2K⠇ Contemplating 34s · Ctrl+C to interrupt[2K⠏ Contemplating 34s · Ctrl+C to interrupt[2K⠋ Contemplating 34s · Ctrl+C to interrupt[2K⠙ Contemplating 34s · Ctrl+C to interrupt[2K⠹ Contemplating 34s · Ctrl+C to interrupt[2K⠸ Contemplating 34s · Ctrl+C to interrupt[2K⠼ Contemplating 34s · Ctrl+C to interrupt[2KI have a good list of test classes. Now let me search for more test classes in the specialized test projects (BridgeMutation, BridgeSmoke, Chaos, Contract, Perf, GameLaunch, UiAutomation, etc.) and also search for the specific FR/NFRs from the v0.27.0 requirements.
+[2K⠼ Contemplating 34s · Ctrl+C to interrupt[2K[2K● [20:05:56] Execute [C:\WINDOWS\system32\cmd.exe] powershell -Command "Get-ChildItem -Path 'src/Tests' -Recurse -Filter '*.cs' | Select-Object -ExpandProperty FullName | Where-Object { $_ -match 'Tests?\.cs$' }"
+C:\Users\koosh\Dino\src\Tests\AddressablesCatalogTests.cs
+C:\Users\koosh\Dino\src\Tests\ArchetypeRegistryUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ArchitectureTests.cs
+C:\Users\koosh\Dino\src\Tests\AssetReplacementEngineUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\AssetServiceTests.cs
+C:\Users\koosh\Dino\src\Tests\AssetServiceUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\AssetSwapLatencyTests.cs
+C:\Users\koosh\Dino\src\Tests\AssetSwapRegistryTests.cs
+C:\Users\koosh\Dino\src\Tests\AviationStarWarsTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeClientAsyncTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeClientRobustnessTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeClientTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeGameClientMenuCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeGameClientResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeGameProcessManagerCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\BuildAliasMapperTests.cs
+C:\Users\koosh\Dino\src\Tests\BuildingDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerTests.cs
+C:\Users\koosh\Dino\src\Tests\CompatibilityCheckerUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentLoaderArrayTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentLoaderEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentLoaderErrorTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentLoaderIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentLoaderTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentLoadResultUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ContentRegistrationServiceTests.cs
+C:\Users\koosh\Dino\src\Tests\DependencyResolverTests.cs
+C:\Users\koosh\Dino\src\Tests\DisabledPacksPersistenceTests.cs
+C:\Users\koosh\Dino\src\Tests\DumpToolsTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyAdvancedCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageExpansionTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyBranchCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyContentLoaderValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageGapTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyDomainExpandedTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyPluginUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyProfileUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyTests.cs
+C:\Users\koosh\Dino\src\Tests\EconomyUiCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\EndToEndUserJourneysTests.cs
+C:\Users\koosh\Dino\src\Tests\EngineUiSelfHealCharacterizationTests.cs
+C:\Users\koosh\Dino\src\Tests\EnvironmentMatrixTests.cs
+C:\Users\koosh\Dino\src\Tests\FactionPatchDefinitionTests.cs
+C:\Users\koosh\Dino\src\Tests\FactionSystemTests.cs
+C:\Users\koosh\Dino\src\Tests\FileDiscoveryServiceUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\FullWorldConversionSwapTests.cs
+C:\Users\koosh\Dino\src\Tests\GameClientCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\GameClientOptionsUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\GameClientPipelineTests.cs
+C:\Users\koosh\Dino\src\Tests\GameClientUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\GameClientWrapperCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunchTests.cs
+C:\Users\koosh\Dino\src\Tests\GameProcessManagerUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\GoDependencyResolverValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\HotReloadTests.cs
+C:\Users\koosh\Dino\src\Tests\HudElementDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\InstallerTests.cs
+C:\Users\koosh\Dino\src\Tests\InstallManifestValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\JsonGuardUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\KeyInputSystemIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\KeyInputSystemTests.cs
+C:\Users\koosh\Dino\src\Tests\LoadingServicesTests.cs
+C:\Users\koosh\Dino\src\Tests\LODCalculationTests.cs
+C:\Users\koosh\Dino\src\Tests\MenuDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\MockGameBridgeServerTests.cs
+C:\Users\koosh\Dino\src\Tests\ModelCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\ModelSerializationTests.cs
+C:\Users\koosh\Dino\src\Tests\ModelSnapshotTests.cs
+C:\Users\koosh\Dino\src\Tests\ModMenuTests.cs
+C:\Users\koosh\Dino\src\Tests\NativeDepResolverTests.cs
+C:\Users\koosh\Dino\src\Tests\NativeInteropIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\NativeInteropTests.cs
+C:\Users\koosh\Dino\src\Tests\NativeMenuInjectorCharacterizationTests.cs
+C:\Users\koosh\Dino\src\Tests\NJsonSchemaValidatorUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\OverrideApplicatorTests.cs
+C:\Users\koosh\Dino\src\Tests\PackCompilerCliTests.cs
+C:\Users\koosh\Dino\src\Tests\PackDependencyResolverUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\PackFileWatcherTests.cs
+C:\Users\koosh\Dino\src\Tests\PackLoaderTests.cs
+C:\Users\koosh\Dino\src\Tests\PackManifestUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\PackRegistryClientCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\PackRegistryClientTests.cs
+C:\Users\koosh\Dino\src\Tests\PackRegistryTests.cs
+C:\Users\koosh\Dino\src\Tests\PackStatInjectorTests.cs
+C:\Users\koosh\Dino\src\Tests\PackSubmoduleTests.cs
+C:\Users\koosh\Dino\src\Tests\Pattern101EnumDiscriminatorTests.cs
+C:\Users\koosh\Dino\src\Tests\Pattern234TestPackLeakTests.cs
+C:\Users\koosh\Dino\src\Tests\PerformanceBenchmarkTests.cs
+C:\Users\koosh\Dino\src\Tests\PerformanceRegressionTests.cs
+C:\Users\koosh\Dino\src\Tests\Phase3ACloneInfantryLODTests.cs
+C:\Users\koosh\Dino\src\Tests\Phase3BDroidLODTests.cs
+C:\Users\koosh\Dino\src\Tests\Phase4BuildingLODTests.cs
+C:\Users\koosh\Dino\src\Tests\Phase5BuildingExpansionTests.cs
+C:\Users\koosh\Dino\src\Tests\Phase7VisualAssetIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\PollingHelperTests.cs
+C:\Users\koosh\Dino\src\Tests\PropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\ProtocolSerializationTests.cs
+C:\Users\koosh\Dino\src\Tests\RegistryEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\RegistryErrorTests.cs
+C:\Users\koosh\Dino\src\Tests\RegistryStressTests.cs
+C:\Users\koosh\Dino\src\Tests\RegistryTests.cs
+C:\Users\koosh\Dino\src\Tests\ResourceDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ResourceReaderTests.cs
+C:\Users\koosh\Dino\src\Tests\ResourceRegistryUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ResurrectionGraceWindowTests.cs
+C:\Users\koosh\Dino\src\Tests\RuntimeExtractionTests.cs
+C:\Users\koosh\Dino\src\Tests\RustAssetPipelineValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\RustInteropTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioContentLoaderValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioDomainCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioPluginUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioRegistryTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioRegistryUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioRunnerTests.cs
+C:\Users\koosh\Dino\src\Tests\ScenarioTests.cs
+C:\Users\koosh\Dino\src\Tests\SchemaSelfValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\SchemaValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\ScriptedEventUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkAssetEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkCompatibilityEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\SDKCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDKCovGapTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkHotReloadEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkPackCompilerValidationGapTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkPolyglotIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkServicesCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkUniverseEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\SdkValidationEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\SkillWaveSquadTests.cs
+C:\Users\koosh\Dino\src\Tests\ThemeDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\TotalConversionTests.cs
+C:\Users\koosh\Dino\src\Tests\TradeEngineCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\TradeRouteDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\UiActionTraceTests.cs
+C:\Users\koosh\Dino\src\Tests\UIBranchCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\UIContentLoaderValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\UIDomainCoverageGapTests.cs
+C:\Users\koosh\Dino\src\Tests\UiDomainCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\UIDomainTests.cs
+C:\Users\koosh\Dino\src\Tests\UIPluginUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\UnitDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\UnitSpawnerTests.cs
+C:\Users\koosh\Dino\src\Tests\UniverseBibleTests.cs
+C:\Users\koosh\Dino\src\Tests\UniverseLoaderValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\UpdateCheckerTests.cs
+C:\Users\koosh\Dino\src\Tests\VanillaCatalogErrorTests.cs
+C:\Users\koosh\Dino\src\Tests\VanillaCatalogTests.cs
+C:\Users\koosh\Dino\src\Tests\VFXIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\VFXPoolLogicTests.cs
+C:\Users\koosh\Dino\src\Tests\VFXSystemTests.cs
+C:\Users\koosh\Dino\src\Tests\VictoryConditionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\WarfareComprehensiveTests.cs
+C:\Users\koosh\Dino\src\Tests\WarfareCoverageGapTests.cs
+C:\Users\koosh\Dino\src\Tests\WarfarePluginUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\WarfareStarwarsImportedShaderTests.cs
+C:\Users\koosh\Dino\src\Tests\WarfareStarwarsPackRegistryOfflineTests.cs
+C:\Users\koosh\Dino\src\Tests\WarfareTests.cs
+C:\Users\koosh\Dino\src\Tests\WaveInjectorTests.cs
+C:\Users\koosh\Dino\src\Tests\WeaponDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\WinConditionDefinitionUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\YamlLoaderUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\YamlSchemaConverterUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\AsyncBlockingCallAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\AsyncLambdaActionAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\AsyncVoidAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\AsyncVoidEventHandlerAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\CancellationTokenThreadingAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\CatchAndRethrowWithoutContextAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\ConfigureAwaitAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\DictionaryIndexerAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\DisposableFieldNotDisposedAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\EmptyCatchBlockAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\EnumParseAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\EventLifecycleAsymmetryAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\FloatEqualityAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\HardcodedThresholdAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\IDisposableNotImplementedAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\ImplicitEncodingAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\JsonDeserializeWithoutOptionsAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\LargeMethodParameterCountAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\LocalTimeLoggingDriftAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\LockAroundAwaitAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\LogErrorStackTraceAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\LongMethodAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\MissingAwaitAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\MissingConfigureAwaitAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\OrphanProcessHandleAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\PublicMethodReturnsListAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\PublicMutableCollectionAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\PublicMutableFieldAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\SealedClassWithProtectedVirtualAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\SilentCatchAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\SleepBasedTestSyncAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\StaticInitializerSideEffectAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\StaticMutableCollectionAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\StringBuilderCapacityAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\StringConcatenationInLoopAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\SyncOverAsyncAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\TcsSyncContinuationAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\ThrowExceptionStackLossAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\UnboundedConstraintAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\UnboundedWhenAllAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\UnprotectedStringDictAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\UnsealedConcreteMutableClassAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\UnusedPrivateFieldAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Analyzers\WeakEventHandlerAnalyzerTests.cs
+C:\Users\koosh\Dino\src\Tests\Autograder\BridgeAcceptanceScorerTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeHmacTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\BridgeReceiptVerifierUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\CanonicalJsonEdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\CanonicalJsonGoldensTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\ComponentMapTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\EntityQueriesTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\GameClientFramingTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\GameStatusCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\JsonRpcMessageUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\NavigationResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\PingResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\ProtocolExceptionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\ResultDtosCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\SceneAndMapDtosCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\SessionKeyCacheUnitTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\SnapshotDtosCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\StartGameResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\UiStyleSnapshotCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Bridge\WaitResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeMutation\CanonicalJsonMutationTests.cs
+C:\Users\koosh\Dino\src\Tests\BridgeSmoke\CanonicalJsonSmokeTests.cs
+C:\Users\koosh\Dino\src\Tests\Chaos\BridgeReceiptChaosTests.cs
+C:\Users\koosh\Dino\src\Tests\Chaos\BridgeReceiptReplayChaosTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\AssetctlPipelineTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\EdgeCaseTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\OverrideCommandTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ProtocolTypeTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\QueryCommandTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ReloadCommandTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\ResourcesCommandTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\SecurityTests.cs
+C:\Users\koosh\Dino\src\Tests\CliToolTests\StatusCommandTests.cs
+C:\Users\koosh\Dino\src\Tests\CompanionTests\DisabledPacksServiceTests.cs
+C:\Users\koosh\Dino\src\Tests\CompanionTests\PackDataServiceTests.cs
+C:\Users\koosh\Dino\src\Tests\CompanionTests\ViewModelTests.cs
+C:\Users\koosh\Dino\src\Tests\Contract\BridgeRpcHandshakeContractTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\ArchetypeRegistryCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\BalanceCalculatorCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\DifficultyScalerCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\DoctrineEngineCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\EconomyModelsCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\ResourceDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\ScenarioDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\ScenarioRegistryCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\ScenarioRunnerCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\TradeEngineCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\UiModelsCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\UnitRoleValidatorCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\VanillaMappingValidationTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\WaveComposerCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Domains\Warfare\WarfareCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\ECS\MockEntityManagerTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchAssetSwapTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchEconomyTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchHotReloadTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchPackTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchSmokeTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchStatTests.cs
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchUiTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\BridgeLatencyTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\SmokeTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\UIWireupIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\AssetSwapTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\BridgeCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\BridgeLifecycleTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\BridgeRoundTripTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogMockIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\CatalogTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ComponentMapTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ErrorPathTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\GameClientNdjsonMockTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\GameSandboxIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\GameWorkflowTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\InGameAutomationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\LiveGameIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\MockBridgeIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\MockGameServerTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\PackLoadingTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ParallelGameE2ETests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\PingTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\PlayCuaScreenshotTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ResourceTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\SandboxIsolationTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\ScreenshotFallbackTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\StatTests.cs
+C:\Users\koosh\Dino\src\Tests\Integration\Tests\WorkflowE2ETests.cs
+C:\Users\koosh\Dino\src\Tests\Load\BridgeLoadSkeletonTests.cs
+C:\Users\koosh\Dino\src\Tests\Mocks\MockFileDiscoveryServiceTests.cs
+C:\Users\koosh\Dino\src\Tests\Mocks\MockRegistryTests.cs
+C:\Users\koosh\Dino\src\Tests\Mocks\MockThemeProviderTests.cs
+C:\Users\koosh\Dino\src\Tests\Mocks\MockUnitFactoryTests.cs
+C:\Users\koosh\Dino\src\Tests\Mocks\MockValidatableTests.cs
+C:\Users\koosh\Dino\src\Tests\Mocks\UISeamMocksTests.cs
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\PatchApplicatorPropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\RealFsCheckPropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\RegistryPropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\SemVerPropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\ParameterizedTests\YamlFuzzTests.cs
+C:\Users\koosh\Dino\src\Tests\PropertyTests\RegistryPropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\PropertyTests\SemVerPropertyTests.cs
+C:\Users\koosh\Dino\src\Tests\PropertyTests\YamlFuzzTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\AerialPropertiesCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\BuildingDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\CompatibilityCheckerCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\ContentLoaderExtraCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\ContentRegistrationServiceCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\CrosswalkDictionaryCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\DependencyResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\DoctrineDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\FactionDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\FactionPatchDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\FileDiscoveryServiceCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\PackFileWatcherCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\PackSubmoduleManagerCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\PatchApplicatorIntegrationTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\PatchApplicatorTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\ProjectileDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\RegistryEntryCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\ResourceCostCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\SkillDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\SquadDefinitionCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\TotalConversionManifestCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\ValidationResultCoverageTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\IO\SafeFileIOTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\DFCanvasAdapterWireupTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\ModMenuHostAdapterTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\ModSettingsHostAdapterTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\NativeAdapterTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\NativeLabelGuardAdapterTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\NativeMenuHostAdapterTests.cs
+C:\Users\koosh\Dino\src\Tests\SDK\UI\ThemeProviderAdapterTests.cs
+C:\Users\koosh\Dino\src\Tests\Sketchfab\SketchfabAdapterClockTests.cs
+C:\Users\koosh\Dino\src\Tests\Sketchfab\SketchfabClientClockTests.cs
+C:\Users\koosh\Dino\src\Tests\Support\FluentAssertionsExtensionsTests.cs
+C:\Users\koosh\Dino\src\Tests\Support\TestWaitTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionDashboardTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionDebugPanelTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionLaunchTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionNavigationTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionPackListTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionPackToggleTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionSettingsTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionShortcutTests.cs
+C:\Users\koosh\Dino\src\Tests\UiAutomation\CompanionStatusBarTests.cs
+C:\Users\koosh\Dino\src\Tests\_validate_draft\ModelValidationTests.cs
+[2K⠼ Contemplating 34s · Ctrl+C to interrupt[2K⠦ Contemplating 34s · Ctrl+C to interrupt[2K⠧ Contemplating 34s · Ctrl+C to interrupt[2K⠇ Contemplating 34s · Ctrl+C to interrupt[2K⠏ Contemplating 34s · Ctrl+C to interrupt[2K⠋ Contemplating 34s · Ctrl+C to interrupt[2K⠙ Contemplating 34s · Ctrl+C to interrupt[2K⠹ Contemplating 34s · Ctrl+C to interrupt[2K⠸ Contemplating 34s · Ctrl+C to interrupt[2K⠼ Contemplating 35s · Ctrl+C to interrupt[2K⠴ Contemplating 35s · Ctrl+C to interrupt[2K⠦ Contemplating 35s · Ctrl+C to interrupt[2K⠧ Contemplating 35s · Ctrl+C to interrupt[2K⠇ Contemplating 35s · Ctrl+C to interrupt[2K⠏ Contemplating 35s · Ctrl+C to interrupt[2K⠋ Contemplating 35s · Ctrl+C to interrupt[2K⠙ Contemplating 35s · Ctrl+C to interrupt[2K⠹ Contemplating 35s · Ctrl+C to interrupt[2K⠸ Contemplating 35s · Ctrl+C to interrupt[2K⠼ Contemplating 35s · Ctrl+C to interrupt[2K⠴ Contemplating 35s · Ctrl+C to interrupt[2K⠦ Contemplating 35s · Ctrl+C to interrupt[2K⠧ Contemplating 35s · Ctrl+C to interrupt[2K⠇ Contemplating 35s · Ctrl+C to interrupt[2K⠏ Contemplating 35s · Ctrl+C to interrupt[2K⠋ Contemplating 36s · Ctrl+C to interrupt[2K⠙ Contemplating 36s · Ctrl+C to interrupt[2K⠸ Contemplating 36s · Ctrl+C to interrupt[2K⠼ Contemplating 36s · Ctrl+C to interrupt[2K⠴ Contemplating 36s · Ctrl+C to interrupt[2K⠦ Contemplating 36s · Ctrl+C to interrupt[2K⠧ Contemplating 36s · Ctrl+C to interrupt[2K⠇ Contemplating 36s · Ctrl+C to interrupt[2K⠏ Contemplating 36s · Ctrl+C to interrupt[2K⠋ Contemplating 36s · Ctrl+C to interrupt[2K⠙ Contemplating 36s · Ctrl+C to interrupt[2K⠹ Contemplating 36s · Ctrl+C to interrupt[2K⠸ Contemplating 36s · Ctrl+C to interrupt[2K⠼ Contemplating 36s · Ctrl+C to interrupt[2K⠴ Contemplating 36s · Ctrl+C to interrupt[2KNow I have a comprehensive list of test files. Let me also search for the remaining middle section of the test files.
+[2K⠦ Contemplating 36s · Ctrl+C to interrupt[2K● [20:06:00] Read C:/Users/koosh/AppData/Local/Temp/forge_shell_stdout_paBWEa.txt:101-150
+[2K⠦ Contemplating 36s · Ctrl+C to interrupt[2K[2K[2K⠦ Contemplating 36s · Ctrl+C to interrupt[2K⠧ Contemplating 37s · Ctrl+C to interrupt[2K⠇ Contemplating 37s · Ctrl+C to interrupt[2K⠏ Contemplating 37s · Ctrl+C to interrupt[2K⠋ Contemplating 37s · Ctrl+C to interrupt[2K⠙ Contemplating 37s · Ctrl+C to interrupt[2K⠹ Contemplating 37s · Ctrl+C to interrupt[2K⠸ Contemplating 37s · Ctrl+C to interrupt[2K⠼ Contemplating 37s · Ctrl+C to interrupt[2K⠴ Contemplating 37s · Ctrl+C to interrupt[2K⠦ Contemplating 37s · Ctrl+C to interrupt[2K⠧ Contemplating 37s · Ctrl+C to interrupt[2K⠇ Contemplating 37s · Ctrl+C to interrupt[2K⠏ Contemplating 37s · Ctrl+C to interrupt[2K⠋ Contemplating 37s · Ctrl+C to interrupt[2K⠹ Contemplating 37s · Ctrl+C to interrupt[2K⠸ Contemplating 37s · Ctrl+C to interrupt[2K⠼ Contemplating 38s · Ctrl+C to interrupt[2K⠴ Contemplating 38s · Ctrl+C to interrupt[2K⠦ Contemplating 38s · Ctrl+C to interrupt[2K⠧ Contemplating 38s · Ctrl+C to interrupt[2K⠇ Contemplating 38s · Ctrl+C to interrupt[2K⠏ Contemplating 38s · Ctrl+C to interrupt[2K⠋ Contemplating 38s · Ctrl+C to interrupt[2K⠙ Contemplating 38s · Ctrl+C to interrupt[2K⠹ Contemplating 38s · Ctrl+C to interrupt[2K⠸ Contemplating 38s · Ctrl+C to interrupt[2K⠼ Contemplating 38s · Ctrl+C to interrupt[2K⠴ Contemplating 38s · Ctrl+C to interrupt[2K⠦ Contemplating 38s · Ctrl+C to interrupt[2K⠧ Contemplating 38s · Ctrl+C to interrupt[2K⠇ Contemplating 38s · Ctrl+C to interrupt[2K⠏ Contemplating 38s · Ctrl+C to interrupt[2K⠋ Contemplating 39s · Ctrl+C to interrupt[2K⠙ Contemplating 39s · Ctrl+C to interrupt[2K⠹ Contemplating 39s · Ctrl+C to interrupt[2K⠸ Contemplating 39s · Ctrl+C to interrupt[2K⠼ Contemplating 39s · Ctrl+C to interrupt[2K⠴ Contemplating 39s · Ctrl+C to interrupt[2K⠦ Contemplating 39s · Ctrl+C to interrupt[2K⠧ Contemplating 39s · Ctrl+C to interrupt[2K⠇ Contemplating 39s · Ctrl+C to interrupt[2K⠏ Contemplating 39s · Ctrl+C to interrupt[2K⠋ Contemplating 39s · Ctrl+C to interrupt[2K⠹ Contemplating 39s · Ctrl+C to interrupt[2K⠸ Contemplating 39s · Ctrl+C to interrupt[2K⠼ Contemplating 39s · Ctrl+C to interrupt[2K⠴ Contemplating 39s · Ctrl+C to interrupt[2K⠦ Contemplating 39s · Ctrl+C to interrupt[2K⠧ Contemplating 40s · Ctrl+C to interrupt[2K⠇ Contemplating 40s · Ctrl+C to interrupt[2K⠏ Contemplating 40s · Ctrl+C to interrupt[2K⠋ Contemplating 40s · Ctrl+C to interrupt[2K⠙ Contemplating 40s · Ctrl+C to interrupt[2K⠹ Contemplating 40s · Ctrl+C to interrupt[2K⠸ Contemplating 40s · Ctrl+C to interrupt[2K⠼ Contemplating 40s · Ctrl+C to interrupt[2K⠴ Contemplating 40s · Ctrl+C to interrupt[2K⠦ Contemplating 40s · Ctrl+C to interrupt[2K⠧ Contemplating 40s · Ctrl+C to interrupt[2K⠇ Contemplating 40s · Ctrl+C to interrupt[2K⠏ Contemplating 40s · Ctrl+C to interrupt[2K⠋ Contemplating 40s · Ctrl+C to interrupt[2K⠙ Contemplating 40s · Ctrl+C to interrupt[2K⠹ Contemplating 40s · Ctrl+C to interrupt[2K⠸ Contemplating 41s · Ctrl+C to interrupt[2K⠼ Contemplating 41s · Ctrl+C to interrupt[2K⠴ Contemplating 41s · Ctrl+C to interrupt[2K⠦ Contemplating 41s · Ctrl+C to interrupt[2K⠧ Contemplating 41s · Ctrl+C to interrupt[2K⠇ Contemplating 41s · Ctrl+C to interrupt[2K⠏ Contemplating 41s · Ctrl+C to interrupt[2K⠋ Contemplating 41s · Ctrl+C to interrupt[2K⠙ Contemplating 41s · Ctrl+C to interrupt[2K⠸ Contemplating 41s · Ctrl+C to interrupt[2K⠼ Contemplating 41s · Ctrl+C to interrupt[2K⠴ Contemplating 41s · Ctrl+C to interrupt[2K⠦ Contemplating 41s · Ctrl+C to interrupt[2K⠧ Contemplating 41s · Ctrl+C to interrupt[2K⠇ Contemplating 41s · Ctrl+C to interrupt[2K⠏ Contemplating 41s · Ctrl+C to interrupt[2K⠋ Contemplating 42s · Ctrl+C to interrupt[2K⠙ Contemplating 42s · Ctrl+C to interrupt[2K⠹ Contemplating 42s · Ctrl+C to interrupt[2K⠸ Contemplating 42s · Ctrl+C to interrupt[2K⠼ Contemplating 42s · Ctrl+C to interrupt[2K⠴ Contemplating 42s · Ctrl+C to interrupt[2K⠦ Contemplating 42s · Ctrl+C to interrupt[2K⠧ Contemplating 42s · Ctrl+C to interrupt[2K⠇ Contemplating 42s · Ctrl+C to interrupt[2K⠏ Contemplating 42s · Ctrl+C to interrupt[2K⠋ Contemplating 42s · Ctrl+C to interrupt[2K⠙ Contemplating 42s · Ctrl+C to interrupt[2K⠹ Contemplating 42s · Ctrl+C to interrupt[2K⠸ Contemplating 42s · Ctrl+C to interrupt[2K⠼ Contemplating 42s · Ctrl+C to interrupt[2K⠴ Contemplating 42s · Ctrl+C to interrupt[2K⠦ Contemplating 43s · Ctrl+C to interrupt[2K⠧ Contemplating 43s · Ctrl+C to interrupt[2K⠇ Contemplating 43s · Ctrl+C to interrupt[2K⠏ Contemplating 43s · Ctrl+C to interrupt[2K⠋ Contemplating 43s · Ctrl+C to interrupt[2K⠙ Contemplating 43s · Ctrl+C to interrupt[2K⠹ Contemplating 43s · Ctrl+C to interrupt[2K⠼ Contemplating 43s · Ctrl+C to interrupt[2K⠴ Contemplating 43s · Ctrl+C to interrupt[2K⠦ Contemplating 43s · Ctrl+C to interrupt[2K⠧ Contemplating 43s · Ctrl+C to interrupt[2K⠇ Contemplating 43s · Ctrl+C to interrupt[2K⠏ Contemplating 43s · Ctrl+C to interrupt[2K⠋ Contemplating 43s · Ctrl+C to interrupt[2K⠙ Contemplating 43s · Ctrl+C to interrupt[2K⠹ Contemplating 43s · Ctrl+C to interrupt[2K⠸ Contemplating 43s · Ctrl+C to interrupt[2K⠼ Contemplating 44s · Ctrl+C to interrupt[2K⠴ Contemplating 44s · Ctrl+C to interrupt[2K⠦ Contemplating 44s · Ctrl+C to interrupt[2K⠧ Contemplating 44s · Ctrl+C to interrupt[2K⠇ Contemplating 44s · Ctrl+C to interrupt[2K⠏ Contemplating 44s · Ctrl+C to interrupt[2K⠋ Contemplating 44s · Ctrl+C to interrupt[2K⠙ Contemplating 44s · Ctrl+C to interrupt[2K⠹ Contemplating 44s · Ctrl+C to interrupt[2K⠸ Contemplating 44s · Ctrl+C to interrupt[2K⠼ Contemplating 44s · Ctrl+C to interrupt[2K⠴ Contemplating 44s · Ctrl+C to interrupt[2K⠦ Contemplating 44s · Ctrl+C to interrupt[2K⠧ Contemplating 44s · Ctrl+C to interrupt[2K⠇ Contemplating 44s · Ctrl+C to interrupt[2K⠏ Contemplating 44s · Ctrl+C to interrupt[2K⠋ Contemplating 45s · Ctrl+C to interrupt[2K⠙ Contemplating 45s · Ctrl+C to interrupt[2K⠹ Contemplating 45s · Ctrl+C to interrupt[2K⠼ Contemplating 45s · Ctrl+C to interrupt[2K⠴ Contemplating 45s · Ctrl+C to interrupt[2K⠦ Contemplating 45s · Ctrl+C to interrupt[2K⠧ Contemplating 45s · Ctrl+C to interrupt[2K⠇ Contemplating 45s · Ctrl+C to interrupt[2K⠏ Contemplating 45s · Ctrl+C to interrupt[2K⠋ Contemplating 45s · Ctrl+C to interrupt[2K⠙ Contemplating 45s · Ctrl+C to interrupt[2K⠹ Contemplating 45s · Ctrl+C to interrupt[2K⠸ Contemplating 45s · Ctrl+C to interrupt[2K⠼ Contemplating 45s · Ctrl+C to interrupt[2K⠴ Contemplating 45s · Ctrl+C to interrupt[2K⠦ Contemplating 45s · Ctrl+C to interrupt[2K⠧ Contemplating 46s · Ctrl+C to interrupt[2K⠇ Contemplating 46s · Ctrl+C to interrupt[2K⠏ Contemplating 46s · Ctrl+C to interrupt[2K⠋ Contemplating 46s · Ctrl+C to interrupt[2K⠙ Contemplating 46s · Ctrl+C to interrupt[2K⠹ Contemplating 46s · Ctrl+C to interrupt[2K⠸ Contemplating 46s · Ctrl+C to interrupt[2K⠼ Contemplating 46s · Ctrl+C to interrupt[2K⠴ Contemplating 46s · Ctrl+C to interrupt[2K⠦ Contemplating 46s · Ctrl+C to interrupt[2K⠧ Contemplating 46s · Ctrl+C to interrupt[2K⠇ Contemplating 46s · Ctrl+C to interrupt[2K⠏ Contemplating 46s · Ctrl+C to interrupt[2K⠋ Contemplating 46s · Ctrl+C to interrupt[2K⠙ Contemplating 46s · Ctrl+C to interrupt[2K⠸ Contemplating 46s · Ctrl+C to interrupt[2K⠼ Contemplating 47s · Ctrl+C to interrupt[2K⠴ Contemplating 47s · Ctrl+C to interrupt[2K⠦ Contemplating 47s · Ctrl+C to interrupt[2K⠧ Contemplating 47s · Ctrl+C to interrupt[2K⠇ Contemplating 47s · Ctrl+C to interrupt[2K⠏ Contemplating 47s · Ctrl+C to interrupt[2K⠋ Contemplating 47s · Ctrl+C to interrupt[2K⠙ Contemplating 47s · Ctrl+C to interrupt[2K⠹ Contemplating 47s · Ctrl+C to interrupt[2K⠸ Contemplating 47s · Ctrl+C to interrupt[2K⠼ Contemplating 47s · Ctrl+C to interrupt[2K⠴ Contemplating 47s · Ctrl+C to interrupt[2K⠦ Contemplating 47s · Ctrl+C to interrupt[2K⠧ Contemplating 47s · Ctrl+C to interrupt[2K⠇ Contemplating 47s · Ctrl+C to interrupt[2K⠏ Contemplating 47s · Ctrl+C to interrupt[2K⠋ Contemplating 48s · Ctrl+C to interrupt[2K⠙ Contemplating 48s · Ctrl+C to interrupt[2K⠹ Contemplating 48s · Ctrl+C to interrupt[2K⠸ Contemplating 48s · Ctrl+C to interrupt[2K⠼ Contemplating 48s · Ctrl+C to interrupt[2K⠴ Contemplating 48s · Ctrl+C to interrupt[2K⠦ Contemplating 48s · Ctrl+C to interrupt[2K⠧ Contemplating 48s · Ctrl+C to interrupt[2K⠇ Contemplating 48s · Ctrl+C to interrupt[2K⠏ Contemplating 48s · Ctrl+C to interrupt[2K⠋ Contemplating 48s · Ctrl+C to interrupt[2K⠙ Contemplating 48s · Ctrl+C to interrupt[2K⠹ Contemplating 48s · Ctrl+C to interrupt[2K⠼ Contemplating 48s · Ctrl+C to interrupt[2K⠴ Contemplating 48s · Ctrl+C to interrupt[2K⠦ Contemplating 48s · Ctrl+C to interrupt[2K⠧ Contemplating 49s · Ctrl+C to interrupt[2K⠇ Contemplating 49s · Ctrl+C to interrupt[2K⠏ Contemplating 49s · Ctrl+C to interrupt[2K⠋ Contemplating 49s · Ctrl+C to interrupt[2K⠙ Contemplating 49s · Ctrl+C to interrupt[2K⠹ Contemplating 49s · Ctrl+C to interrupt[2K⠸ Contemplating 49s · Ctrl+C to interrupt[2K⠼ Contemplating 49s · Ctrl+C to interrupt[2K⠴ Contemplating 49s · Ctrl+C to interrupt[2K⠦ Contemplating 49s · Ctrl+C to interrupt[2K⠧ Contemplating 49s · Ctrl+C to interrupt[2K⠇ Contemplating 49s · Ctrl+C to interrupt[2K⠏ Contemplating 49s · Ctrl+C to interrupt[2K⠋ Contemplating 49s · Ctrl+C to interrupt[2K⠙ Contemplating 49s · Ctrl+C to interrupt[2K⠹ Contemplating 49s · Ctrl+C to interrupt[2K⠸ Contemplating 50s · Ctrl+C to interrupt[2K⠼ Contemplating 50s · Ctrl+C to interrupt[2K⠴ Contemplating 50s · Ctrl+C to interrupt[2K⠦ Contemplating 50s · Ctrl+C to interrupt[2K⠧ Contemplating 50s · Ctrl+C to interrupt[2K⠇ Contemplating 50s · Ctrl+C to interrupt[2K⠏ Contemplating 50s · Ctrl+C to interrupt[2K⠋ Contemplating 50s · Ctrl+C to interrupt[2K⠙ Contemplating 50s · Ctrl+C to interrupt[2K⠹ Contemplating 50s · Ctrl+C to interrupt[2K⠼ Contemplating 50s · Ctrl+C to interrupt[2K⠴ Contemplating 50s · Ctrl+C to interrupt[2K⠦ Contemplating 50s · Ctrl+C to interrupt[2K⠧ Contemplating 50s · Ctrl+C to interrupt[2K⠇ Contemplating 50s · Ctrl+C to interrupt[2K⠏ Contemplating 50s · Ctrl+C to interrupt[2K⠋ Contemplating 51s · Ctrl+C to interrupt[2K⠙ Contemplating 51s · Ctrl+C to interrupt[2K⠹ Contemplating 51s · Ctrl+C to interrupt[2K⠸ Contemplating 51s · Ctrl+C to interrupt[2K⠼ Contemplating 51s · Ctrl+C to interrupt[2K⠴ Contemplating 51s · Ctrl+C to interrupt[2K⠦ Contemplating 51s · Ctrl+C to interrupt[2K⠧ Contemplating 51s · Ctrl+C to interrupt[2K⠇ Contemplating 51s · Ctrl+C to interrupt[2K⠏ Contemplating 51s · Ctrl+C to interrupt[2K⠋ Contemplating 51s · Ctrl+C to interrupt[2K⠙ Contemplating 51s · Ctrl+C to interrupt[2K⠹ Contemplating 51s · Ctrl+C to interrupt[2K⠸ Contemplating 51s · Ctrl+C to interrupt[2K⠼ Contemplating 51s · Ctrl+C to interrupt[2K⠴ Contemplating 51s · Ctrl+C to interrupt[2K⠦ Contemplating 52s · Ctrl+C to interrupt[2K⠧ Contemplating 52s · Ctrl+C to interrupt[2K[2K[2K● [20:06:15] ERROR: POST https://api.fireworks.ai/inference/v1/chat/completions
+
+Caused by:
+    0: error sending request for url (https://api.fireworks.ai/inference/v1/chat/completions)
+    1: client error (SendRequest)
+    2: connection error
+    3: connection reset
+[2K⠇ Retrying 52s · Ctrl+C to interrupt[2K⠇ Retrying 52s · Ctrl+C to interrupt[2K⠏ Retrying 52s · Ctrl+C to interrupt[2K⠋ Retrying 52s · Ctrl+C to interrupt[2K⠙ Retrying 52s · Ctrl+C to interrupt[2K⠹ Retrying 52s · Ctrl+C to interrupt[2K⠸ Retrying 52s · Ctrl+C to interrupt[2K⠼ Retrying 52s · Ctrl+C to interrupt[2K⠴ Retrying 52s · Ctrl+C to interrupt[2K⠦ Retrying 52s · Ctrl+C to interrupt[2K⠇ Retrying 52s · Ctrl+C to interrupt[2K⠏ Retrying 52s · Ctrl+C to interrupt[2K⠋ Retrying 52s · Ctrl+C to interrupt[2K⠙ Retrying 52s · Ctrl+C to interrupt[2K⠹ Retrying 52s · Ctrl+C to interrupt[2K⠸ Retrying 52s · Ctrl+C to interrupt[2K⠼ Retrying 53s · Ctrl+C to interrupt[2K⠴ Retrying 53s · Ctrl+C to interrupt[2K⠦ Retrying 53s · Ctrl+C to interrupt[2K⠧ Retrying 53s · Ctrl+C to interrupt[2K⠇ Retrying 53s · Ctrl+C to interrupt[2K⠏ Retrying 53s · Ctrl+C to interrupt[2K⠋ Retrying 53s · Ctrl+C to interrupt[2K⠙ Retrying 53s · Ctrl+C to interrupt[2K⠹ Retrying 53s · Ctrl+C to interrupt[2K⠸ Retrying 53s · Ctrl+C to interrupt[2K⠼ Retrying 53s · Ctrl+C to interrupt[2K⠴ Retrying 53s · Ctrl+C to interrupt[2K⠦ Retrying 53s · Ctrl+C to interrupt[2K⠧ Retrying 53s · Ctrl+C to interrupt[2K⠇ Retrying 53s · Ctrl+C to interrupt[2K⠏ Retrying 53s · Ctrl+C to interrupt[2K⠋ Retrying 54s · Ctrl+C to interrupt[2K⠙ Retrying 54s · Ctrl+C to interrupt[2K⠹ Retrying 54s · Ctrl+C to interrupt[2K⠸ Retrying 54s · Ctrl+C to interrupt[2K⠼ Retrying 54s · Ctrl+C to interrupt[2K⠴ Retrying 54s · Ctrl+C to interrupt[2K⠧ Retrying 54s · Ctrl+C to interrupt[2K⠇ Retrying 54s · Ctrl+C to interrupt[2K⠏ Retrying 54s · Ctrl+C to interrupt[2K⠋ Retrying 54s · Ctrl+C to interrupt[2K⠙ Retrying 54s · Ctrl+C to interrupt[2K⠹ Retrying 54s · Ctrl+C to interrupt[2K⠸ Retrying 54s · Ctrl+C to interrupt[2K⠼ Retrying 54s · Ctrl+C to interrupt[2K⠴ Retrying 54s · Ctrl+C to interrupt[2K⠦ Retrying 54s · Ctrl+C to interrupt[2K⠧ Retrying 55s · Ctrl+C to interrupt[2K⠇ Retrying 55s · Ctrl+C to interrupt[2KNow I have a comprehensive list of all test files. Let me also search for the remaining test files in the middle of the list (lines151-260).
+[2K⠏ Retrying 55s · Ctrl+C to interrupt[2K● [20:06:18] Read C:/Users/koosh/AppData/Local/Temp/forge_shell_stdout_paBWEa.txt:151-260
+[2K⠏ Retrying 55s · Ctrl+C to interrupt[2K[2K[2K⠏ Contemplating 55s · Ctrl+C to interrupt[2K⠋ Contemplating 55s · Ctrl+C to interrupt[2K⠙ Contemplating 55s · Ctrl+C to interrupt[2K⠹ Contemplating 55s · Ctrl+C to interrupt[2K⠸ Contemplating 55s · Ctrl+C to interrupt[2K⠼ Contemplating 55s · Ctrl+C to interrupt[2K⠴ Contemplating 55s · Ctrl+C to interrupt[2K⠦ Contemplating 55s · Ctrl+C to interrupt[2K⠧ Contemplating 55s · Ctrl+C to interrupt[2K⠇ Contemplating 55s · Ctrl+C to interrupt[2K⠏ Contemplating 55s · Ctrl+C to interrupt[2K⠋ Contemplating 55s · Ctrl+C to interrupt[2K⠙ Contemplating 55s · Ctrl+C to interrupt[2K⠹ Contemplating 55s · Ctrl+C to interrupt[2K⠸ Contemplating 56s · Ctrl+C to interrupt[2K⠼ Contemplating 56s · Ctrl+C to interrupt[2K⠴ Contemplating 56s · Ctrl+C to interrupt[2K⠦ Contemplating 56s · Ctrl+C to interrupt[2K⠧ Contemplating 56s · Ctrl+C to interrupt[2K⠇ Contemplating 56s · Ctrl+C to interrupt[2K⠏ Contemplating 56s · Ctrl+C to interrupt[2K⠋ Contemplating 56s · Ctrl+C to interrupt[2K⠙ Contemplating 56s · Ctrl+C to interrupt[2K⠸ Contemplating 56s · Ctrl+C to interrupt[2K⠼ Contemplating 56s · Ctrl+C to interrupt[2K⠴ Contemplating 56s · Ctrl+C to interrupt[2K⠦ Contemplating 56s · Ctrl+C to interrupt[2K⠧ Contemplating 56s · Ctrl+C to interrupt[2KNow I have a very comprehensive list of all test files. Let me now read the remaining spec files to get the full picture, and then search for specific test coverage by keyword. Let me read the key v0.27.0 story files and also search for specific test coverage in the test files.
+[2K
+[2K⠧ Contemplating 56s · Ctrl+C to interrupt[2K⠇ Contemplating 56s · Ctrl+C to interrupt[2K⠏ Contemplating 56s · Ctrl+C to interrupt[2K⠋ Contemplating 57s · Ctrl+C to interrupt[2KI need to be efficient here. I've already read the requirements catalog which has all21 FRs and22 NFRs. Let me now read the SPEC-TIER2 and SPEC-TIER3, and M13, and also search for specific test keywords to match tests to specs.
+[2K
+[2K⠙ Contemplating 57s · Ctrl+C to interrupt[2K⠹ Contemplating 57s · Ctrl+C to interrupt[2K⠸ Contemplating 57s · Ctrl+C to interrupt[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K⠴ Contemplating 57s · Ctrl+C to interrupt[2K⠦ Contemplating 57s · Ctrl+C to interrupt[2K⠧ Contemplating 57s · Ctrl+C to interrupt[2K⠇ Contemplating 57s · Ctrl+C to interrupt[2K⠏ Contemplating 57s · Ctrl+C to interrupt[2K⠋ Contemplating 57s · Ctrl+C to interrupt[2K⠙ Contemplating 57s · Ctrl+C to interrupt[2K⠹ Contemplating 57s · Ctrl+C to interrupt[2K⠸ Contemplating 57s · Ctrl+C to interrupt[2KLet me read the v0.27.0 epic and some key story files.
+[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K● [20:06:21] Read docs/specs/v0.27.0-full-conversion-epic.md
+[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K[2K[2K● [20:06:21] Read docs/specs/SPEC-TIER2-MATURE.md
+[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K[2K[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K● [20:06:21] Read docs/specs/SPEC-TIER3-ELITE.md
+[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K[2K[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K● [20:06:21] Read docs/specs/M13-runtime-survival-hmr-concurrency.md
+[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K[2K[2K⠼ Contemplating 57s · Ctrl+C to interrupt[2K⠴ Contemplating 57s · Ctrl+C to interrupt[2K⠦ Contemplating 58s · Ctrl+C to interrupt[2K⠧ Contemplating 58s · Ctrl+C to interrupt[2K⠇ Contemplating 58s · Ctrl+C to interrupt[2K⠏ Contemplating 58s · Ctrl+C to interrupt[2K⠋ Contemplating 58s · Ctrl+C to interrupt[2K⠙ Contemplating 58s · Ctrl+C to interrupt[2K⠹ Contemplating 58s · Ctrl+C to interrupt[2K⠸ Contemplating 58s · Ctrl+C to interrupt[2K⠼ Contemplating 58s · Ctrl+C to interrupt[2K⠴ Contemplating 58s · Ctrl+C to interrupt[2K⠦ Contemplating 58s · Ctrl+C to interrupt[2K⠇ Contemplating 58s · Ctrl+C to interrupt[2K⠏ Contemplating 58s · Ctrl+C to interrupt[2K⠋ Contemplating 58s · Ctrl+C to interrupt[2K⠙ Contemplating 58s · Ctrl+C to interrupt[2K⠹ Contemplating 58s · Ctrl+C to interrupt[2K⠸ Contemplating 58s · Ctrl+C to interrupt[2K⠼ Contemplating 59s · Ctrl+C to interrupt[2K⠴ Contemplating 59s · Ctrl+C to interrupt[2KNow I have a good understanding of the specs and tests. Let me now search for specific test coverage by keyword to map specs to tests. I need to search for key terms in the test files and also look at the actual test methods to build the traceability matrix.
+[2K
+[2K⠴ Contemplating 59s · Ctrl+C to interrupt[2KLet me search for the following keywords across test files:
+[2K⠴ Contemplating 59s · Ctrl+C to interrupt[2K⠦ Contemplating 59s · Ctrl+C to interrupt[2K⠧ Contemplating 59s · Ctrl+C to interrupt[2K⠇ Contemplating 59s · Ctrl+C to interrupt[2K⠏ Contemplating 59s · Ctrl+C to interrupt[2K⠋ Contemplating 59s · Ctrl+C to interrupt[2K⠹ Contemplating 59s · Ctrl+C to interrupt[2K⠸ Contemplating 59s · Ctrl+C to interrupt[2K⠼ Contemplating 59s · Ctrl+C to interrupt[2K⠴ Contemplating 59s · Ctrl+C to interrupt[2K⠦ Contemplating 59s · Ctrl+C to interrupt[2K⠧ Contemplating 59s · Ctrl+C to interrupt[2K⠇ Contemplating 59s · Ctrl+C to interrupt[2K⠏ Contemplating 59s · Ctrl+C to interrupt[2K⠋ Contemplating 1:00m · Ctrl+C to interrupt[2K⠙ Contemplating 1:00m · Ctrl+C to interrupt[2K⠹ Contemplating 1:00m · Ctrl+C to interrupt[2K⠸ Contemplating 1:00m · Ctrl+C to interrupt[2K⠼ Contemplating 1:00m · Ctrl+C to interrupt[2K⠴ Contemplating 1:00m · Ctrl+C to interrupt[2K⠦ Contemplating 1:00m · Ctrl+C to interrupt[2K⠧ Contemplating 1:00m · Ctrl+C to interrupt[2K⠇ Contemplating 1:00m · Ctrl+C to interrupt[2K⠏ Contemplating 1:00m · Ctrl+C to interrupt[2K⠋ Contemplating 1:00m · Ctrl+C to interrupt[2K⠙ Contemplating 1:00m · Ctrl+C to interrupt[2K⠹ Contemplating 1:00m · Ctrl+C to interrupt[2K⠸ Contemplating 1:00m · Ctrl+C to interrupt[2K⠼ Contemplating 1:00m · Ctrl+C to interrupt[2K⠴ Contemplating 1:00m · Ctrl+C to interrupt[2K⠦ Contemplating 1:01m · Ctrl+C to interrupt[2K⠧ Contemplating 1:01m · Ctrl+C to interrupt[2K• naval, water- aerial, aviation, air- projectile, blaster- audio, music-
+[2K  loading, loadingscreen- theme, reskin, MainMenuThemer- brand, identity, logo-
+[2K  window title- sprite, portrait,2D asset- asset completeness, completeness-
+[2K  space combat- mutation- chaos- perf, performance, benchmark- contract, BDD-
+[2K  HMR, hot reload- bridge, runtime survivalLet me do these searches in parallel.
+[2K⠇ Contemplating 1:01m · Ctrl+C to interrupt[2K● [20:06:24] Search for 'naval|water|WaterProbe|NavalUnit|NavalMovement|NavalCombat|NavalSpawn' in cs files at src/Tests
+[2K⠇ Contemplating 1:01m · Ctrl+C to interrupt[2K⠇ Contemplating 1:01m · Ctrl+C to interrupt[2K⠏ Contemplating 1:01m · Ctrl+C to interrupt[2K⠋ Contemplating 1:01m · Ctrl+C to interrupt[2K[2K[2K⠙ Contemplating 1:01m · Ctrl+C to interrupt[2K● [20:06:24] Search for 'aerial|aviation|AerialMovement|AerialCombat|AerialUnit|AerialTargeting|flight|fly' in cs files at src/Tests
+[2K⠙ Contemplating 1:01m · Ctrl+C to interrupt[2K⠹ Contemplating 1:01m · Ctrl+C to interrupt[2K⠸ Contemplating 1:01m · Ctrl+C to interrupt[2K[2K[2K● [20:06:25] Search for 'projectile|blaster|ProjectileSwap|ProjectileVFX|blaster|bullet|missile' in cs files at src/Tests
+[2K⠼ Contemplating 1:01m · Ctrl+C to interrupt[2K⠴ Contemplating 1:01m · Ctrl+C to interrupt[2K⠦ Contemplating 1:01m · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 1:01m · Ctrl+C to interrupt[2K● [20:06:25] Search for 'audio|music|AudioSwap|crossfade|AudioClip|menu_music|gameplay_music' in cs files at src/Tests
+[2K⠧ Contemplating 1:01m · Ctrl+C to interrupt[2K⠇ Contemplating 1:01m · Ctrl+C to interrupt[2K⠏ Contemplating 1:01m · Ctrl+C to interrupt[2K[2K[2K⠋ Contemplating 1:01m · Ctrl+C to interrupt[2K⠙ Contemplating 1:01m · Ctrl+C to interrupt[2K⠹ Contemplating 1:01m · Ctrl+C to interrupt[2K⠸ Contemplating 1:02m · Ctrl+C to interrupt[2K⠼ Contemplating 1:02m · Ctrl+C to interrupt[2K⠴ Contemplating 1:02m · Ctrl+C to interrupt[2K⠦ Contemplating 1:02m · Ctrl+C to interrupt[2K⠧ Contemplating 1:02m · Ctrl+C to interrupt[2K⠇ Contemplating 1:02m · Ctrl+C to interrupt[2K⠏ Contemplating 1:02m · Ctrl+C to interrupt[2K⠋ Contemplating 1:02m · Ctrl+C to interrupt[2K⠙ Contemplating 1:02m · Ctrl+C to interrupt[2K⠹ Contemplating 1:02m · Ctrl+C to interrupt[2K⠸ Contemplating 1:02m · Ctrl+C to interrupt[2K⠴ Contemplating 1:02m · Ctrl+C to interrupt[2K⠦ Contemplating 1:02m · Ctrl+C to interrupt[2K⠧ Contemplating 1:02m · Ctrl+C to interrupt[2K⠇ Contemplating 1:02m · Ctrl+C to interrupt[2K⠏ Contemplating 1:02m · Ctrl+C to interrupt[2K⠋ Contemplating 1:03m · Ctrl+C to interrupt[2K⠙ Contemplating 1:03m · Ctrl+C to interrupt[2K⠹ Contemplating 1:03m · Ctrl+C to interrupt[2K⠸ Contemplating 1:03m · Ctrl+C to interrupt[2K⠼ Contemplating 1:03m · Ctrl+C to interrupt[2K⠴ Contemplating 1:03m · Ctrl+C to interrupt[2K⠦ Contemplating 1:03m · Ctrl+C to interrupt[2K⠧ Contemplating 1:03m · Ctrl+C to interrupt[2K⠇ Contemplating 1:03m · Ctrl+C to interrupt[2K⠏ Contemplating 1:03m · Ctrl+C to interrupt[2K⠋ Contemplating 1:03m · Ctrl+C to interrupt[2K⠙ Contemplating 1:03m · Ctrl+C to interrupt[2K⠹ Contemplating 1:03m · Ctrl+C to interrupt[2K⠸ Contemplating 1:03m · Ctrl+C to interrupt[2K⠼ Contemplating 1:03m · Ctrl+C to interrupt[2K⠴ Contemplating 1:03m · Ctrl+C to interrupt[2K⠦ Contemplating 1:04m · Ctrl+C to interrupt[2K⠧ Contemplating 1:04m · Ctrl+C to interrupt[2K⠇ Contemplating 1:04m · Ctrl+C to interrupt[2K⠏ Contemplating 1:04m · Ctrl+C to interrupt[2K⠋ Contemplating 1:04m · Ctrl+C to interrupt[2K⠹ Contemplating 1:04m · Ctrl+C to interrupt[2K⠸ Contemplating 1:04m · Ctrl+C to interrupt[2K⠼ Contemplating 1:04m · Ctrl+C to interrupt[2K⠴ Contemplating 1:04m · Ctrl+C to interrupt[2K⠦ Contemplating 1:04m · Ctrl+C to interrupt[2K⠧ Contemplating 1:04m · Ctrl+C to interrupt[2K⠇ Contemplating 1:04m · Ctrl+C to interrupt[2K⠏ Contemplating 1:04m · Ctrl+C to interrupt[2K⠋ Contemplating 1:04m · Ctrl+C to interrupt[2K⠙ Contemplating 1:04m · Ctrl+C to interrupt[2K⠹ Contemplating 1:04m · Ctrl+C to interrupt[2K⠸ Contemplating 1:05m · Ctrl+C to interrupt[2K⠼ Contemplating 1:05m · Ctrl+C to interrupt[2K⠴ Contemplating 1:05m · Ctrl+C to interrupt[2K⠦ Contemplating 1:05m · Ctrl+C to interrupt[2K⠧ Contemplating 1:05m · Ctrl+C to interrupt[2K⠇ Contemplating 1:05m · Ctrl+C to interrupt[2K⠏ Contemplating 1:05m · Ctrl+C to interrupt[2K⠋ Contemplating 1:05m · Ctrl+C to interrupt[2KLet me now search for more specific keywords to build the traceability matrix. I need to search for loading screen, theme, reskin, brand, window title, sprite, portrait, asset completeness, space combat, mutation, chaos, perf, BDD, HMR, runtime survival, etc.
+[2K⠋ Contemplating 1:05m · Ctrl+C to interrupt[2K● [20:06:29] Search for 'loading|LoadingScreen|loadingscreen|LoadingScreenController|ThemeScanner|ModLoadingOverlay' in cs files at src/Tests
+[2K⠋ Contemplating 1:05m · Ctrl+C to interrupt[2K⠙ Contemplating 1:05m · Ctrl+C to interrupt[2K⠹ Contemplating 1:05m · Ctrl+C to interrupt[2K[2K[2K⠸ Contemplating 1:05m · Ctrl+C to interrupt[2K● [20:06:29] Search for 'theme|reskin|ThemeEngine|MainMenuReskinner|MainMenuThemer|ThemeResolver|ResolvedTheme|ThemeAssetResolver|CanvasWalker' in cs files at src/Tests
+[2K⠸ Contemplating 1:05m · Ctrl+C to interrupt[2K⠼ Contemplating 1:05m · Ctrl+C to interrupt[2K⠦ Contemplating 1:05m · Ctrl+C to interrupt[2K⠧ Contemplating 1:05m · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 1:05m · Ctrl+C to interrupt[2K● [20:06:29] Search for 'window.*title|WindowTitle|icon.*override|window_icon|SetWindowText|FindWindow' in cs files at src/Tests
+[2K⠧ Contemplating 1:05m · Ctrl+C to interrupt[2K⠇ Contemplating 1:05m · Ctrl+C to interrupt[2K⠏ Contemplating 1:05m · Ctrl+C to interrupt[2K⠋ Contemplating 1:06m · Ctrl+C to interrupt[2K[2K[2K⠋ Contemplating 1:06m · Ctrl+C to interrupt[2K● [20:06:29] Search for 'sprite|portrait|Portrait|SpriteSwap|TcSprite|2D.*asset|cursor|Cursor' in cs files at src/Tests
+[2K⠋ Contemplating 1:06m · Ctrl+C to interrupt[2K⠙ Contemplating 1:06m · Ctrl+C to interrupt[2K⠹ Contemplating 1:06m · Ctrl+C to interrupt[2K[2K[2K⠸ Contemplating 1:06m · Ctrl+C to interrupt[2K⠴ Contemplating 1:06m · Ctrl+C to interrupt[2K⠦ Contemplating 1:06m · Ctrl+C to interrupt[2K⠧ Contemplating 1:06m · Ctrl+C to interrupt[2K⠇ Contemplating 1:06m · Ctrl+C to interrupt[2K⠏ Contemplating 1:06m · Ctrl+C to interrupt[2K⠋ Contemplating 1:06m · Ctrl+C to interrupt[2K⠙ Contemplating 1:06m · Ctrl+C to interrupt[2K⠹ Contemplating 1:06m · Ctrl+C to interrupt[2K⠸ Contemplating 1:06m · Ctrl+C to interrupt[2K⠼ Contemplating 1:06m · Ctrl+C to interrupt[2K⠴ Contemplating 1:06m · Ctrl+C to interrupt[2K⠦ Contemplating 1:06m · Ctrl+C to interrupt[2K⠧ Contemplating 1:07m · Ctrl+C to interrupt[2K⠇ Contemplating 1:07m · Ctrl+C to interrupt[2K⠏ Contemplating 1:07m · Ctrl+C to interrupt[2K⠙ Contemplating 1:07m · Ctrl+C to interrupt[2K⠹ Contemplating 1:07m · Ctrl+C to interrupt[2K⠸ Contemplating 1:07m · Ctrl+C to interrupt[2K⠼ Contemplating 1:07m · Ctrl+C to interrupt[2K⠴ Contemplating 1:07m · Ctrl+C to interrupt[2K⠦ Contemplating 1:07m · Ctrl+C to interrupt[2K⠧ Contemplating 1:07m · Ctrl+C to interrupt[2K⠇ Contemplating 1:07m · Ctrl+C to interrupt[2K⠏ Contemplating 1:07m · Ctrl+C to interrupt[2K⠋ Contemplating 1:07m · Ctrl+C to interrupt[2K⠙ Contemplating 1:07m · Ctrl+C to interrupt[2K⠹ Contemplating 1:07m · Ctrl+C to interrupt[2K⠸ Contemplating 1:08m · Ctrl+C to interrupt[2K⠼ Contemplating 1:08m · Ctrl+C to interrupt[2K⠴ Contemplating 1:08m · Ctrl+C to interrupt[2K⠦ Contemplating 1:08m · Ctrl+C to interrupt[2K⠧ Contemplating 1:08m · Ctrl+C to interrupt[2K⠇ Contemplating 1:08m · Ctrl+C to interrupt[2K⠏ Contemplating 1:08m · Ctrl+C to interrupt[2K⠋ Contemplating 1:08m · Ctrl+C to interrupt[2K⠙ Contemplating 1:08m · Ctrl+C to interrupt[2K⠹ Contemplating 1:08m · Ctrl+C to interrupt[2K⠸ Contemplating 1:08m · Ctrl+C to interrupt[2K⠼ Contemplating 1:08m · Ctrl+C to interrupt[2K⠴ Contemplating 1:08m · Ctrl+C to interrupt[2K⠦ Contemplating 1:08m · Ctrl+C to interrupt[2K⠇ Contemplating 1:08m · Ctrl+C to interrupt[2K⠏ Contemplating 1:08m · Ctrl+C to interrupt[2K⠋ Contemplating 1:09m · Ctrl+C to interrupt[2K⠙ Contemplating 1:09m · Ctrl+C to interrupt[2K⠹ Contemplating 1:09m · Ctrl+C to interrupt[2K⠸ Contemplating 1:09m · Ctrl+C to interrupt[2K⠼ Contemplating 1:09m · Ctrl+C to interrupt[2K⠴ Contemplating 1:09m · Ctrl+C to interrupt[2K⠦ Contemplating 1:09m · Ctrl+C to interrupt[2K⠧ Contemplating 1:09m · Ctrl+C to interrupt[2K⠇ Contemplating 1:09m · Ctrl+C to interrupt[2K⠏ Contemplating 1:09m · Ctrl+C to interrupt[2K⠋ Contemplating 1:09m · Ctrl+C to interrupt[2K⠙ Contemplating 1:09m · Ctrl+C to interrupt[2K⠹ Contemplating 1:09m · Ctrl+C to interrupt[2K⠸ Contemplating 1:09m · Ctrl+C to interrupt[2K⠼ Contemplating 1:09m · Ctrl+C to interrupt[2K⠴ Contemplating 1:09m · Ctrl+C to interrupt[2K⠦ Contemplating 1:10m · Ctrl+C to interrupt[2K⠧ Contemplating 1:10m · Ctrl+C to interrupt[2K⠏ Contemplating 1:10m · Ctrl+C to interrupt[2K⠋ Contemplating 1:10m · Ctrl+C to interrupt[2K⠙ Contemplating 1:10m · Ctrl+C to interrupt[2K⠹ Contemplating 1:10m · Ctrl+C to interrupt[2K⠸ Contemplating 1:10m · Ctrl+C to interrupt[2K⠼ Contemplating 1:10m · Ctrl+C to interrupt[2K⠴ Contemplating 1:10m · Ctrl+C to interrupt[2K⠦ Contemplating 1:10m · Ctrl+C to interrupt[2K⠧ Contemplating 1:10m · Ctrl+C to interrupt[2K⠇ Contemplating 1:10m · Ctrl+C to interrupt[2K⠋ Contemplating 1:10m · Ctrl+C to interrupt[2K⠙ Contemplating 1:10m · Ctrl+C to interrupt[2K⠹ Contemplating 1:10m · Ctrl+C to interrupt[2K⠸ Contemplating 1:11m · Ctrl+C to interrupt[2K⠴ Contemplating 1:11m · Ctrl+C to interrupt[2K⠦ Contemplating 1:11m · Ctrl+C to interrupt[2K⠧ Contemplating 1:11m · Ctrl+C to interrupt[2K⠇ Contemplating 1:11m · Ctrl+C to interrupt[2K⠏ Contemplating 1:11m · Ctrl+C to interrupt[2K⠋ Contemplating 1:11m · Ctrl+C to interrupt[2K⠙ Contemplating 1:11m · Ctrl+C to interrupt[2K⠹ Contemplating 1:11m · Ctrl+C to interrupt[2K⠸ Contemplating 1:11m · Ctrl+C to interrupt[2K⠼ Contemplating 1:11m · Ctrl+C to interrupt[2K⠴ Contemplating 1:11m · Ctrl+C to interrupt[2K⠦ Contemplating 1:11m · Ctrl+C to interrupt[2K⠧ Contemplating 1:11m · Ctrl+C to interrupt[2K⠇ Contemplating 1:11m · Ctrl+C to interrupt[2K⠏ Contemplating 1:11m · Ctrl+C to interrupt[2K⠋ Contemplating 1:12m · Ctrl+C to interrupt[2K⠙ Contemplating 1:12m · Ctrl+C to interrupt[2K⠹ Contemplating 1:12m · Ctrl+C to interrupt[2K⠸ Contemplating 1:12m · Ctrl+C to interrupt[2K⠼ Contemplating 1:12m · Ctrl+C to interrupt[2K⠴ Contemplating 1:12m · Ctrl+C to interrupt[2K⠦ Contemplating 1:12m · Ctrl+C to interrupt[2K⠧ Contemplating 1:12m · Ctrl+C to interrupt[2K⠇ Contemplating 1:12m · Ctrl+C to interrupt[2K⠏ Contemplating 1:12m · Ctrl+C to interrupt[2K⠋ Contemplating 1:12m · Ctrl+C to interrupt[2K⠙ Contemplating 1:12m · Ctrl+C to interrupt[2K⠹ Contemplating 1:12m · Ctrl+C to interrupt[2K⠸ Contemplating 1:12m · Ctrl+C to interrupt[2K⠼ Contemplating 1:12m · Ctrl+C to interrupt[2K⠦ Contemplating 1:12m · Ctrl+C to interrupt[2K⠧ Contemplating 1:13m · Ctrl+C to interrupt[2K⠇ Contemplating 1:13m · Ctrl+C to interrupt[2K⠏ Contemplating 1:13m · Ctrl+C to interrupt[2K⠋ Contemplating 1:13m · Ctrl+C to interrupt[2K⠙ Contemplating 1:13m · Ctrl+C to interrupt[2K⠹ Contemplating 1:13m · Ctrl+C to interrupt[2K⠸ Contemplating 1:13m · Ctrl+C to interrupt[2K⠼ Contemplating 1:13m · Ctrl+C to interrupt[2K⠴ Contemplating 1:13m · Ctrl+C to interrupt[2K⠦ Contemplating 1:13m · Ctrl+C to interrupt[2K⠧ Contemplating 1:13m · Ctrl+C to interrupt[2K⠇ Contemplating 1:13m · Ctrl+C to interrupt[2K⠏ Contemplating 1:13m · Ctrl+C to interrupt[2K⠋ Contemplating 1:13m · Ctrl+C to interrupt[2K⠙ Contemplating 1:13m · Ctrl+C to interrupt[2K⠹ Contemplating 1:13m · Ctrl+C to interrupt[2K⠸ Contemplating 1:14m · Ctrl+C to interrupt[2K⠼ Contemplating 1:14m · Ctrl+C to interrupt[2K⠴ Contemplating 1:14m · Ctrl+C to interrupt[2K⠦ Contemplating 1:14m · Ctrl+C to interrupt[2K⠧ Contemplating 1:14m · Ctrl+C to interrupt[2K⠇ Contemplating 1:14m · Ctrl+C to interrupt[2K⠏ Contemplating 1:14m · Ctrl+C to interrupt[2K⠋ Contemplating 1:14m · Ctrl+C to interrupt[2K⠙ Contemplating 1:14m · Ctrl+C to interrupt[2K⠹ Contemplating 1:14m · Ctrl+C to interrupt[2K⠼ Contemplating 1:14m · Ctrl+C to interrupt[2K⠴ Contemplating 1:14m · Ctrl+C to interrupt[2K⠦ Contemplating 1:14m · Ctrl+C to interrupt[2K⠧ Contemplating 1:14m · Ctrl+C to interrupt[2K⠇ Contemplating 1:14m · Ctrl+C to interrupt[2K⠏ Contemplating 1:14m · Ctrl+C to interrupt[2K⠋ Contemplating 1:15m · Ctrl+C to interrupt[2K⠙ Contemplating 1:15m · Ctrl+C to interrupt[2K⠹ Contemplating 1:15m · Ctrl+C to interrupt[2K⠸ Contemplating 1:15m · Ctrl+C to interrupt[2K⠼ Contemplating 1:15m · Ctrl+C to interrupt[2K⠴ Contemplating 1:15m · Ctrl+C to interrupt[2K⠦ Contemplating 1:15m · Ctrl+C to interrupt[2K⠧ Contemplating 1:15m · Ctrl+C to interrupt[2K⠇ Contemplating 1:15m · Ctrl+C to interrupt[2K⠏ Contemplating 1:15m · Ctrl+C to interrupt[2K⠋ Contemplating 1:15m · Ctrl+C to interrupt[2K⠙ Contemplating 1:15m · Ctrl+C to interrupt[2K⠹ Contemplating 1:15m · Ctrl+C to interrupt[2K⠸ Contemplating 1:15m · Ctrl+C to interrupt[2K⠼ Contemplating 1:15m · Ctrl+C to interrupt[2K⠴ Contemplating 1:15m · Ctrl+C to interrupt[2K⠦ Contemplating 1:16m · Ctrl+C to interrupt[2K⠧ Contemplating 1:16m · Ctrl+C to interrupt[2K⠇ Contemplating 1:16m · Ctrl+C to interrupt[2K⠏ Contemplating 1:16m · Ctrl+C to interrupt[2K⠋ Contemplating 1:16m · Ctrl+C to interrupt[2K⠙ Contemplating 1:16m · Ctrl+C to interrupt[2K⠸ Contemplating 1:16m · Ctrl+C to interrupt[2K⠼ Contemplating 1:16m · Ctrl+C to interrupt[2K⠴ Contemplating 1:16m · Ctrl+C to interrupt[2K⠦ Contemplating 1:16m · Ctrl+C to interrupt[2K⠧ Contemplating 1:16m · Ctrl+C to interrupt[2K⠇ Contemplating 1:16m · Ctrl+C to interrupt[2K⠏ Contemplating 1:16m · Ctrl+C to interrupt[2K⠋ Contemplating 1:16m · Ctrl+C to interrupt[2K⠙ Contemplating 1:16m · Ctrl+C to interrupt[2K⠹ Contemplating 1:16m · Ctrl+C to interrupt[2K⠸ Contemplating 1:17m · Ctrl+C to interrupt[2K⠼ Contemplating 1:17m · Ctrl+C to interrupt[2K⠴ Contemplating 1:17m · Ctrl+C to interrupt[2K⠦ Contemplating 1:17m · Ctrl+C to interrupt[2K⠧ Contemplating 1:17m · Ctrl+C to interrupt[2K⠇ Contemplating 1:17m · Ctrl+C to interrupt[2K⠏ Contemplating 1:17m · Ctrl+C to interrupt[2K⠋ Contemplating 1:17m · Ctrl+C to interrupt[2K⠙ Contemplating 1:17m · Ctrl+C to interrupt[2K⠹ Contemplating 1:17m · Ctrl+C to interrupt[2K⠸ Contemplating 1:17m · Ctrl+C to interrupt[2K⠼ Contemplating 1:17m · Ctrl+C to interrupt[2K⠴ Contemplating 1:17m · Ctrl+C to interrupt[2K⠦ Contemplating 1:17m · Ctrl+C to interrupt[2K⠧ Contemplating 1:17m · Ctrl+C to interrupt[2K⠇ Contemplating 1:17m · Ctrl+C to interrupt[2K⠏ Contemplating 1:17m · Ctrl+C to interrupt[2K⠋ Contemplating 1:18m · Ctrl+C to interrupt[2K⠙ Contemplating 1:18m · Ctrl+C to interrupt[2K⠹ Contemplating 1:18m · Ctrl+C to interrupt[2K⠸ Contemplating 1:18m · Ctrl+C to interrupt[2K⠴ Contemplating 1:18m · Ctrl+C to interrupt[2K⠦ Contemplating 1:18m · Ctrl+C to interrupt[2K⠧ Contemplating 1:18m · Ctrl+C to interrupt[2K⠇ Contemplating 1:18m · Ctrl+C to interrupt[2K⠏ Contemplating 1:18m · Ctrl+C to interrupt[2K⠋ Contemplating 1:18m · Ctrl+C to interrupt[2K⠙ Contemplating 1:18m · Ctrl+C to interrupt[2K⠹ Contemplating 1:18m · Ctrl+C to interrupt[2K⠸ Contemplating 1:18m · Ctrl+C to interrupt[2K⠼ Contemplating 1:18m · Ctrl+C to interrupt[2K⠴ Contemplating 1:18m · Ctrl+C to interrupt[2K⠦ Contemplating 1:18m · Ctrl+C to interrupt[2K⠧ Contemplating 1:19m · Ctrl+C to interrupt[2K⠇ Contemplating 1:19m · Ctrl+C to interrupt[2K⠏ Contemplating 1:19m · Ctrl+C to interrupt[2K⠋ Contemplating 1:19m · Ctrl+C to interrupt[2K⠙ Contemplating 1:19m · Ctrl+C to interrupt[2K⠹ Contemplating 1:19m · Ctrl+C to interrupt[2K⠸ Contemplating 1:19m · Ctrl+C to interrupt[2K⠼ Contemplating 1:19m · Ctrl+C to interrupt[2K⠴ Contemplating 1:19m · Ctrl+C to interrupt[2K⠦ Contemplating 1:19m · Ctrl+C to interrupt[2K⠧ Contemplating 1:19m · Ctrl+C to interrupt[2K⠇ Contemplating 1:19m · Ctrl+C to interrupt[2K⠏ Contemplating 1:19m · Ctrl+C to interrupt[2K⠋ Contemplating 1:19m · Ctrl+C to interrupt[2K⠙ Contemplating 1:19m · Ctrl+C to interrupt[2K⠹ Contemplating 1:19m · Ctrl+C to interrupt[2K⠼ Contemplating 1:20m · Ctrl+C to interrupt[2K⠴ Contemplating 1:20m · Ctrl+C to interrupt[2K⠦ Contemplating 1:20m · Ctrl+C to interrupt[2K⠧ Contemplating 1:20m · Ctrl+C to interrupt[2K⠇ Contemplating 1:20m · Ctrl+C to interrupt[2K⠏ Contemplating 1:20m · Ctrl+C to interrupt[2K⠋ Contemplating 1:20m · Ctrl+C to interrupt[2K⠙ Contemplating 1:20m · Ctrl+C to interrupt[2K⠹ Contemplating 1:20m · Ctrl+C to interrupt[2K⠸ Contemplating 1:20m · Ctrl+C to interrupt[2K⠼ Contemplating 1:20m · Ctrl+C to interrupt[2K⠴ Contemplating 1:20m · Ctrl+C to interrupt[2K⠦ Contemplating 1:20m · Ctrl+C to interrupt[2K⠧ Contemplating 1:20m · Ctrl+C to interrupt[2K⠇ Contemplating 1:20m · Ctrl+C to interrupt[2K⠏ Contemplating 1:20m · Ctrl+C to interrupt[2K⠋ Contemplating 1:21m · Ctrl+C to interrupt[2K⠙ Contemplating 1:21m · Ctrl+C to interrupt[2K⠹ Contemplating 1:21m · Ctrl+C to interrupt[2K⠸ Contemplating 1:21m · Ctrl+C to interrupt[2K⠼ Contemplating 1:21m · Ctrl+C to interrupt[2K⠴ Contemplating 1:21m · Ctrl+C to interrupt[2K⠦ Contemplating 1:21m · Ctrl+C to interrupt[2K⠧ Contemplating 1:21m · Ctrl+C to interrupt[2K⠇ Contemplating 1:21m · Ctrl+C to interrupt[2K⠏ Contemplating 1:21m · Ctrl+C to interrupt[2K⠋ Contemplating 1:21m · Ctrl+C to interrupt[2K⠹ Contemplating 1:21m · Ctrl+C to interrupt[2K⠸ Contemplating 1:21m · Ctrl+C to interrupt[2K⠼ Contemplating 1:21m · Ctrl+C to interrupt[2K⠴ Contemplating 1:21m · Ctrl+C to interrupt[2K⠦ Contemplating 1:21m · Ctrl+C to interrupt[2K⠧ Contemplating 1:22m · Ctrl+C to interrupt[2K⠇ Contemplating 1:22m · Ctrl+C to interrupt[2K⠏ Contemplating 1:22m · Ctrl+C to interrupt[2K⠋ Contemplating 1:22m · Ctrl+C to interrupt[2K⠙ Contemplating 1:22m · Ctrl+C to interrupt[2K⠹ Contemplating 1:22m · Ctrl+C to interrupt[2K⠸ Contemplating 1:22m · Ctrl+C to interrupt[2K⠼ Contemplating 1:22m · Ctrl+C to interrupt[2K⠴ Contemplating 1:22m · Ctrl+C to interrupt[2K⠦ Contemplating 1:22m · Ctrl+C to interrupt[2K⠧ Contemplating 1:22m · Ctrl+C to interrupt[2K⠇ Contemplating 1:22m · Ctrl+C to interrupt[2K⠏ Contemplating 1:22m · Ctrl+C to interrupt[2K⠋ Contemplating 1:22m · Ctrl+C to interrupt[2K⠙ Contemplating 1:22m · Ctrl+C to interrupt[2K⠹ Contemplating 1:22m · Ctrl+C to interrupt[2K⠸ Contemplating 1:23m · Ctrl+C to interrupt[2K⠼ Contemplating 1:23m · Ctrl+C to interrupt[2K⠴ Contemplating 1:23m · Ctrl+C to interrupt[2K⠦ Contemplating 1:23m · Ctrl+C to interrupt[2K⠧ Contemplating 1:23m · Ctrl+C to interrupt[2K⠇ Contemplating 1:23m · Ctrl+C to interrupt[2K⠏ Contemplating 1:23m · Ctrl+C to interrupt[2K⠙ Contemplating 1:23m · Ctrl+C to interrupt[2K⠹ Contemplating 1:23m · Ctrl+C to interrupt[2K⠸ Contemplating 1:23m · Ctrl+C to interrupt[2KLet me now search for more specific keywords: asset completeness, space combat, mutation, chaos, perf, BDD, HMR, runtime survival, etc.
+[2K⠸ Contemplating 1:23m · Ctrl+C to interrupt[2K[2K[2K● [20:06:47] ERROR: POST https://api.fireworks.ai/inference/v1/chat/completions
+
+Caused by:
+    0: error decoding response body
+    1: request or response body error
+    2: error reading a body from connection
+    3: connection reset
+[2K⠸ Retrying 1:23m · Ctrl+C to interrupt[2K⠸ Retrying 1:23m · Ctrl+C to interrupt[2K⠼ Retrying 1:23m · Ctrl+C to interrupt[2K⠴ Retrying 1:23m · Ctrl+C to interrupt[2K⠦ Retrying 1:23m · Ctrl+C to interrupt[2K⠧ Retrying 1:23m · Ctrl+C to interrupt[2K⠇ Retrying 1:23m · Ctrl+C to interrupt[2K⠏ Retrying 1:23m · Ctrl+C to interrupt[2K⠋ Retrying 1:24m · Ctrl+C to interrupt[2K⠙ Retrying 1:24m · Ctrl+C to interrupt[2K⠹ Retrying 1:24m · Ctrl+C to interrupt[2K⠸ Retrying 1:24m · Ctrl+C to interrupt[2K⠼ Retrying 1:24m · Ctrl+C to interrupt[2K⠴ Retrying 1:24m · Ctrl+C to interrupt[2K⠦ Retrying 1:24m · Ctrl+C to interrupt[2K⠧ Retrying 1:24m · Ctrl+C to interrupt[2K⠇ Retrying 1:24m · Ctrl+C to interrupt[2K⠏ Retrying 1:24m · Ctrl+C to interrupt[2K⠋ Retrying 1:24m · Ctrl+C to interrupt[2K⠙ Retrying 1:24m · Ctrl+C to interrupt[2K⠸ Retrying 1:24m · Ctrl+C to interrupt[2K⠼ Retrying 1:24m · Ctrl+C to interrupt[2K⠴ Retrying 1:24m · Ctrl+C to interrupt[2K⠦ Retrying 1:24m · Ctrl+C to interrupt[2K⠧ Retrying 1:25m · Ctrl+C to interrupt[2K⠇ Retrying 1:25m · Ctrl+C to interrupt[2K⠏ Retrying 1:25m · Ctrl+C to interrupt[2K⠋ Retrying 1:25m · Ctrl+C to interrupt[2K⠙ Retrying 1:25m · Ctrl+C to interrupt[2K⠹ Retrying 1:25m · Ctrl+C to interrupt[2K⠸ Retrying 1:25m · Ctrl+C to interrupt[2K⠴ Retrying 1:25m · Ctrl+C to interrupt[2K⠦ Retrying 1:25m · Ctrl+C to interrupt[2K⠧ Retrying 1:25m · Ctrl+C to interrupt[2K⠇ Retrying 1:25m · Ctrl+C to interrupt[2K⠏ Retrying 1:25m · Ctrl+C to interrupt[2K⠋ Retrying 1:25m · Ctrl+C to interrupt[2K⠙ Retrying 1:25m · Ctrl+C to interrupt[2K⠹ Retrying 1:25m · Ctrl+C to interrupt[2K⠸ Retrying 1:25m · Ctrl+C to interrupt[2K⠼ Retrying 1:26m · Ctrl+C to interrupt[2K⠴ Retrying 1:26m · Ctrl+C to interrupt[2K⠦ Retrying 1:26m · Ctrl+C to interrupt[2K⠧ Retrying 1:26m · Ctrl+C to interrupt[2K⠇ Retrying 1:26m · Ctrl+C to interrupt[2K⠏ Retrying 1:26m · Ctrl+C to interrupt[2K⠋ Retrying 1:26m · Ctrl+C to interrupt[2K⠙ Retrying 1:26m · Ctrl+C to interrupt[2K⠹ Retrying 1:26m · Ctrl+C to interrupt[2K⠸ Retrying 1:26m · Ctrl+C to interrupt[2K⠼ Retrying 1:26m · Ctrl+C to interrupt[2K⠴ Retrying 1:26m · Ctrl+C to interrupt[2K⠦ Retrying 1:26m · Ctrl+C to interrupt[2K⠧ Retrying 1:26m · Ctrl+C to interrupt[2K⠇ Retrying 1:26m · Ctrl+C to interrupt[2K⠏ Retrying 1:26m · Ctrl+C to interrupt[2K⠋ Retrying 1:27m · Ctrl+C to interrupt[2K⠹ Retrying 1:27m · Ctrl+C to interrupt[2K⠸ Retrying 1:27m · Ctrl+C to interrupt[2K⠼ Retrying 1:27m · Ctrl+C to interrupt[2K⠴ Retrying 1:27m · Ctrl+C to interrupt[2K⠦ Retrying 1:27m · Ctrl+C to interrupt[2K⠧ Retrying 1:27m · Ctrl+C to interrupt[2K⠇ Retrying 1:27m · Ctrl+C to interrupt[2K⠏ Retrying 1:27m · Ctrl+C to interrupt[2K⠋ Retrying 1:27m · Ctrl+C to interrupt[2K⠙ Retrying 1:27m · Ctrl+C to interrupt[2K⠹ Retrying 1:27m · Ctrl+C to interrupt[2K⠸ Retrying 1:27m · Ctrl+C to interrupt[2K⠼ Retrying 1:27m · Ctrl+C to interrupt[2K⠴ Retrying 1:27m · Ctrl+C to interrupt[2K⠦ Retrying 1:27m · Ctrl+C to interrupt[2K⠧ Retrying 1:28m · Ctrl+C to interrupt[2K⠇ Retrying 1:28m · Ctrl+C to interrupt[2K⠏ Retrying 1:28m · Ctrl+C to interrupt[2K⠋ Retrying 1:28m · Ctrl+C to interrupt[2K⠙ Retrying 1:28m · Ctrl+C to interrupt[2K⠹ Retrying 1:28m · Ctrl+C to interrupt[2K⠸ Retrying 1:28m · Ctrl+C to interrupt[2K⠼ Retrying 1:28m · Ctrl+C to interrupt[2K⠴ Retrying 1:28m · Ctrl+C to interrupt[2K⠦ Retrying 1:28m · Ctrl+C to interrupt[2K⠧ Retrying 1:28m · Ctrl+C to interrupt[2K⠇ Retrying 1:28m · Ctrl+C to interrupt[2K⠏ Retrying 1:28m · Ctrl+C to interrupt[2K⠙ Retrying 1:28m · Ctrl+C to interrupt[2K⠹ Retrying 1:28m · Ctrl+C to interrupt[2K⠸ Retrying 1:28m · Ctrl+C to interrupt[2KLet me now search for a few more key terms to complete the traceability picture.
+[2K⠸ Retrying 1:29m · Ctrl+C to interrupt[2K● [20:06:52] Search for 'asset.*completeness|completeness|verify-mod|stub.*bundle|detect_stub_bundles|missing.*bundle|dangling.*asset' in cs files at src/Tests
+[2K⠸ Retrying 1:29m · Ctrl+C to interrupt[2K⠼ Retrying 1:29m · Ctrl+C to interrupt[2K⠴ Retrying 1:29m · Ctrl+C to interrupt[2K⠦ Retrying 1:29m · Ctrl+C to interrupt[2K[2K[2K⠧ Contemplating 1:29m · Ctrl+C to interrupt[2K● [20:06:52] Search for 'space.*combat|SpaceCombat|sw-space|spacecombat' in cs files at src/Tests
+[2K⠧ Contemplating 1:29m · Ctrl+C to interrupt[2K⠇ Contemplating 1:29m · Ctrl+C to interrupt[2K⠏ Contemplating 1:29m · Ctrl+C to interrupt[2K⠋ Contemplating 1:29m · Ctrl+C to interrupt[2K[2K[2K⠙ Contemplating 1:29m · Ctrl+C to interrupt[2K● [20:06:53] Search for 'mutation|Mutation|Stryker|mutator|mutate' in cs files at src/Tests
+[2K⠙ Contemplating 1:29m · Ctrl+C to interrupt[2K⠹ Contemplating 1:29m · Ctrl+C to interrupt[2K⠸ Contemplating 1:29m · Ctrl+C to interrupt[2K⠼ Contemplating 1:29m · Ctrl+C to interrupt[2K⠴ Contemplating 1:29m · Ctrl+C to interrupt[2K[2K[2K⠴ Contemplating 1:29m · Ctrl+C to interrupt[2K● [20:06:53] Search for 'chaos|Chaos|tamper|Tamper|corrupt|Corrupt|replay' in cs files at src/Tests
+[2K⠴ Contemplating 1:29m · Ctrl+C to interrupt[2K⠦ Contemplating 1:29m · Ctrl+C to interrupt[2K⠧ Contemplating 1:29m · Ctrl+C to interrupt[2K⠇ Contemplating 1:29m · Ctrl+C to interrupt[2K[2K[2K⠏ Contemplating 1:29m · Ctrl+C to interrupt[2K⠋ Contemplating 1:30m · Ctrl+C to interrupt[2K⠙ Contemplating 1:30m · Ctrl+C to interrupt[2K⠹ Contemplating 1:30m · Ctrl+C to interrupt[2K⠸ Contemplating 1:30m · Ctrl+C to interrupt[2K⠼ Contemplating 1:30m · Ctrl+C to interrupt[2K⠴ Contemplating 1:30m · Ctrl+C to interrupt[2K⠦ Contemplating 1:30m · Ctrl+C to interrupt[2K⠇ Contemplating 1:30m · Ctrl+C to interrupt[2K⠏ Contemplating 1:30m · Ctrl+C to interrupt[2K⠋ Contemplating 1:30m · Ctrl+C to interrupt[2K⠙ Contemplating 1:30m · Ctrl+C to interrupt[2K⠹ Contemplating 1:30m · Ctrl+C to interrupt[2K⠸ Contemplating 1:30m · Ctrl+C to interrupt[2K⠼ Contemplating 1:30m · Ctrl+C to interrupt[2K⠴ Contemplating 1:30m · Ctrl+C to interrupt[2K⠦ Contemplating 1:30m · Ctrl+C to interrupt[2K⠧ Contemplating 1:31m · Ctrl+C to interrupt[2K⠇ Contemplating 1:31m · Ctrl+C to interrupt[2K⠏ Contemplating 1:31m · Ctrl+C to interrupt[2K⠋ Contemplating 1:31m · Ctrl+C to interrupt[2K⠙ Contemplating 1:31m · Ctrl+C to interrupt[2K⠹ Contemplating 1:31m · Ctrl+C to interrupt[2K⠸ Contemplating 1:31m · Ctrl+C to interrupt[2K⠼ Contemplating 1:31m · Ctrl+C to interrupt[2K⠴ Contemplating 1:31m · Ctrl+C to interrupt[2K⠦ Contemplating 1:31m · Ctrl+C to interrupt[2K⠧ Contemplating 1:31m · Ctrl+C to interrupt[2K⠇ Contemplating 1:31m · Ctrl+C to interrupt[2K⠏ Contemplating 1:31m · Ctrl+C to interrupt[2K⠋ Contemplating 1:31m · Ctrl+C to interrupt[2K⠙ Contemplating 1:31m · Ctrl+C to interrupt[2K⠹ Contemplating 1:31m · Ctrl+C to interrupt[2K⠸ Contemplating 1:32m · Ctrl+C to interrupt[2K⠼ Contemplating 1:32m · Ctrl+C to interrupt[2K⠦ Contemplating 1:32m · Ctrl+C to interrupt[2K⠧ Contemplating 1:32m · Ctrl+C to interrupt[2K⠇ Contemplating 1:32m · Ctrl+C to interrupt[2K⠏ Contemplating 1:32m · Ctrl+C to interrupt[2K⠋ Contemplating 1:32m · Ctrl+C to interrupt[2K⠙ Contemplating 1:32m · Ctrl+C to interrupt[2K⠹ Contemplating 1:32m · Ctrl+C to interrupt[2K⠸ Contemplating 1:32m · Ctrl+C to interrupt[2K⠼ Contemplating 1:32m · Ctrl+C to interrupt[2K⠴ Contemplating 1:32m · Ctrl+C to interrupt[2K⠦ Contemplating 1:32m · Ctrl+C to interrupt[2K⠧ Contemplating 1:32m · Ctrl+C to interrupt[2K⠇ Contemplating 1:32m · Ctrl+C to interrupt[2K⠏ Contemplating 1:32m · Ctrl+C to interrupt[2K⠋ Contemplating 1:33m · Ctrl+C to interrupt[2K⠙ Contemplating 1:33m · Ctrl+C to interrupt[2K⠹ Contemplating 1:33m · Ctrl+C to interrupt[2K⠸ Contemplating 1:33m · Ctrl+C to interrupt[2K⠼ Contemplating 1:33m · Ctrl+C to interrupt[2K⠴ Contemplating 1:33m · Ctrl+C to interrupt[2K⠦ Contemplating 1:33m · Ctrl+C to interrupt[2K⠧ Contemplating 1:33m · Ctrl+C to interrupt[2K⠇ Contemplating 1:33m · Ctrl+C to interrupt[2KNow let me search for a few more terms: perf, BDD, HMR, runtime survival, bridge, contract, etc.
+[2K⠏ Contemplating 1:33m · Ctrl+C to interrupt[2K● [20:06:57] Search for 'perf|Perf|Performance|Benchmark|benchmark|baseline' in cs files at src/Tests
+[2K⠏ Contemplating 1:33m · Ctrl+C to interrupt[2K⠋ Contemplating 1:33m · Ctrl+C to interrupt[2K⠙ Contemplating 1:33m · Ctrl+C to interrupt[2K⠹ Contemplating 1:33m · Ctrl+C to interrupt[2K[2K[2K⠸ Contemplating 1:33m · Ctrl+C to interrupt[2K● [20:06:57] Search for 'BDD|bdd|feature|Feature|scenario|Scenario|Given_When_Then' in cs files at src/Tests
+[2K⠸ Contemplating 1:33m · Ctrl+C to interrupt[2K⠼ Contemplating 1:33m · Ctrl+C to interrupt[2K⠴ Contemplating 1:33m · Ctrl+C to interrupt[2K⠦ Contemplating 1:33m · Ctrl+C to interrupt[2K[2K[2K⠦ Contemplating 1:34m · Ctrl+C to interrupt[2K● [20:06:57] Search for 'HMR|hot.*reload|HotReload|FileSystemWatcher|FileWatcher|reload' in cs files at src/Tests
+[2K⠦ Contemplating 1:34m · Ctrl+C to interrupt[2K⠇ Contemplating 1:34m · Ctrl+C to interrupt[2K⠏ Contemplating 1:34m · Ctrl+C to interrupt[2K⠋ Contemplating 1:34m · Ctrl+C to interrupt[2K[2K[2K⠋ Contemplating 1:34m · Ctrl+C to interrupt[2K● [20:06:57] Search for 'runtime.*survival|RuntimeDriver|Resurrection|Bridge.*Server|GameBridge|concurrent|parallel.*instance' in cs files at src/Tests
+[2K⠋ Contemplating 1:34m · Ctrl+C to interrupt[2K⠹ Contemplating 1:34m · Ctrl+C to interrupt[2K⠸ Contemplating 1:34m · Ctrl+C to interrupt[2K⠼ Contemplating 1:34m · Ctrl+C to interrupt[2K[2K[2K⠼ Contemplating 1:34m · Ctrl+C to interrupt[2K⠴ Contemplating 1:34m · Ctrl+C to interrupt[2K⠦ Contemplating 1:34m · Ctrl+C to interrupt[2K⠧ Contemplating 1:34m · Ctrl+C to interrupt[2K⠏ Contemplating 1:34m · Ctrl+C to interrupt[2K⠋ Contemplating 1:34m · Ctrl+C to interrupt[2K⠙ Contemplating 1:34m · Ctrl+C to interrupt[2K⠹ Contemplating 1:34m · Ctrl+C to interrupt[2K⠸ Contemplating 1:34m · Ctrl+C to interrupt[2K⠼ Contemplating 1:35m · Ctrl+C to interrupt[2K⠴ Contemplating 1:35m · Ctrl+C to interrupt[2K⠦ Contemplating 1:35m · Ctrl+C to interrupt[2K⠧ Contemplating 1:35m · Ctrl+C to interrupt[2K⠇ Contemplating 1:35m · Ctrl+C to interrupt[2K⠏ Contemplating 1:35m · Ctrl+C to interrupt[2K⠋ Contemplating 1:35m · Ctrl+C to interrupt[2K⠙ Contemplating 1:35m · Ctrl+C to interrupt[2K⠹ Contemplating 1:35m · Ctrl+C to interrupt[2K⠸ Contemplating 1:35m · Ctrl+C to interrupt[2K⠼ Contemplating 1:35m · Ctrl+C to interrupt[2K⠴ Contemplating 1:35m · Ctrl+C to interrupt[2K⠦ Contemplating 1:35m · Ctrl+C to interrupt[2K⠧ Contemplating 1:35m · Ctrl+C to interrupt[2K⠇ Contemplating 1:35m · Ctrl+C to interrupt[2K⠏ Contemplating 1:35m · Ctrl+C to interrupt[2K⠋ Contemplating 1:36m · Ctrl+C to interrupt[2K⠙ Contemplating 1:36m · Ctrl+C to interrupt[2K⠹ Contemplating 1:36m · Ctrl+C to interrupt[2K⠸ Contemplating 1:36m · Ctrl+C to interrupt[2K⠴ Contemplating 1:36m · Ctrl+C to interrupt[2K⠦ Contemplating 1:36m · Ctrl+C to interrupt[2K⠧ Contemplating 1:36m · Ctrl+C to interrupt[2K⠇ Contemplating 1:36m · Ctrl+C to interrupt[2K⠏ Contemplating 1:36m · Ctrl+C to interrupt[2K⠋ Contemplating 1:36m · Ctrl+C to interrupt[2K⠙ Contemplating 1:36m · Ctrl+C to interrupt[2K⠹ Contemplating 1:36m · Ctrl+C to interrupt[2K⠸ Contemplating 1:36m · Ctrl+C to interrupt[2K⠼ Contemplating 1:36m · Ctrl+C to interrupt[2K⠴ Contemplating 1:36m · Ctrl+C to interrupt[2K⠦ Contemplating 1:36m · Ctrl+C to interrupt[2K⠧ Contemplating 1:37m · Ctrl+C to interrupt[2K⠇ Contemplating 1:37m · Ctrl+C to interrupt[2K⠏ Contemplating 1:37m · Ctrl+C to interrupt[2K⠋ Contemplating 1:37m · Ctrl+C to interrupt[2K⠙ Contemplating 1:37m · Ctrl+C to interrupt[2K⠹ Contemplating 1:37m · Ctrl+C to interrupt[2K⠸ Contemplating 1:37m · Ctrl+C to interrupt[2K⠼ Contemplating 1:37m · Ctrl+C to interrupt[2K⠴ Contemplating 1:37m · Ctrl+C to interrupt[2K⠦ Contemplating 1:37m · Ctrl+C to interrupt[2K⠧ Contemplating 1:37m · Ctrl+C to interrupt[2K⠇ Contemplating 1:37m · Ctrl+C to interrupt[2K⠏ Contemplating 1:37m · Ctrl+C to interrupt[2K⠋ Contemplating 1:37m · Ctrl+C to interrupt[2K⠙ Contemplating 1:37m · Ctrl+C to interrupt[2K⠹ Contemplating 1:37m · Ctrl+C to interrupt[2K⠸ Contemplating 1:38m · Ctrl+C to interrupt[2K⠴ Contemplating 1:38m · Ctrl+C to interrupt[2KNow I have a good picture of the tests. Let me also search for some specific tests related to the remaining gaps: NFRs, load tests, and some specific v0.27.0 features.
+[2K⠴ Contemplating 1:38m · Ctrl+C to interrupt[2K● [20:07:01] Search for 'LoadTest|Load.*Test|load.*test|loadtest|BridgeLoadSkeleton|LoadTests' in cs files at src/Tests
+[2K⠴ Contemplating 1:38m · Ctrl+C to interrupt[2K⠦ Contemplating 1:38m · Ctrl+C to interrupt[2K⠧ Contemplating 1:38m · Ctrl+C to interrupt[2K⠇ Contemplating 1:38m · Ctrl+C to interrupt[2K⠏ Contemplating 1:38m · Ctrl+C to interrupt[2K[2K[2K⠋ Contemplating 1:38m · Ctrl+C to interrupt[2K● [20:07:02] Search for 'raycastTarget|DINOForge_|HarmonyPatch|Process\.Start|TypeLoadException|LogOutput\.log|i18n|locale|Escape.*close|keyboard.*nav' in cs files at src/Tests
+[2K⠋ Contemplating 1:38m · Ctrl+C to interrupt[2K⠙ Contemplating 1:38m · Ctrl+C to interrupt[2K⠹ Contemplating 1:38m · Ctrl+C to interrupt[2K⠸ Contemplating 1:38m · Ctrl+C to interrupt[2K⠼ Contemplating 1:38m · Ctrl+C to interrupt[2K[2K[2K⠴ Contemplating 1:38m · Ctrl+C to interrupt[2K⠦ Contemplating 1:38m · Ctrl+C to interrupt

@@ -1,0 +1,21 @@
+
+
+       "C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj" (VSTest target) (1:7) ->
+       "C:\Users\koosh\Dino\src\Tests\Integration\DINOForge.Tests.Integration.csproj" (default target) (1:8) ->
+       "C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj" (default target) (4:6) ->
+         C:\Users\koosh\Dino\src\Tests\SDK\ContentLoaderExtraCoverageTests.cs(49,34): warning SYSLIB0050: 'FormatterServices' is obsolete: 'Formatter-based serialization is obsolete and should not be used.' (https://aka.ms/dotnet-warnings/SYSLIB0050) [C:\Users\koosh\Dino\src\Tests\DINOForge.Tests.csproj]
+
+    119 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:19.98
+
+                                      
+  ────────────────────────────────────
+summary: (done in 196.83 seconds)     
+✔️ build (10.99 seconds)
+✔️ test-unit (163.22 seconds)
+✔️ test-integration (20.40 seconds)
+fatal: src refspec 'wsm/agileplus-dag-20260610' must name a ref
+fatal: process for submodule 'tools/phenotype-journeys' failed
+exit=0

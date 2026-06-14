@@ -26,4 +26,16 @@ Caveat: many are "salvage pre-capacity-death" wip snapshots from 2026-05-31 — 
 
 ## Already done
 - 12 already-merged REMOTE branches deleted (remote heads 41→22).
-- Cleanup commit 1a552447 (gitignore guards + session docs) — pushing now (lands on remote branch).
+- Cleanup commit 1a552447 + L1 (99 dirty, CI-green) landed on remote (HEAD 76099bf7 verified).
+
+## L4 MERGE RESULTS (2026-06-13)
+**8/12 merged CLEAN onto HEAD** (no-ff): naval, brickalyzer, cursor-cfg, bldicons, uicensus, sw-tmp-font, loadingscreen, modern. HEAD → 9672fe75. Gate running.
+
+**3 CONFLICTED** (aborted, need manual resolution):
+- feat/icons-20260601 → `src/Runtime/UI/MainMenuThemer.cs` (content)
+- feat/cursors-20260601 → `src/Runtime/Plugin.cs` (content)
+- feat/rigging-optimizer-20260531 → `docs/sessions/rigging-optimizer-pipeline-20260531.md` + `packs/warfare-starwars/assets/tools/blender_rig_and_decimate.py` (add/add)
+
+**1 NOT YET ATTEMPTED**: feat/sw-building-bundles-20260531 (163 files — last, after conflicts resolved).
+
+Next: gate+push the 8 clean → then resolve 3 conflicts individually (Plugin.cs/MainMenuThemer.cs are core — careful manual merge, prefer HEAD's structure + graft branch's unique additions) → then sw-building-bundles → ONE PR to main → git branch -d all 12.

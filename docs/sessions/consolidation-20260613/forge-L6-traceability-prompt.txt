@@ -1,0 +1,17 @@
+You are a read-mostly audit agent in repo C:/Users/koosh/Dino. Produce an E2E spec→test TRACEABILITY MATRIX. This is ANALYSIS — do NOT build, do NOT run tests, do NOT git commit/push. Just read files and write ONE markdown report.
+
+GOAL: For every intended spec/requirement, determine whether it has machine validation (a test) and cite it.
+
+STEPS (read-only):
+1. Enumerate specs: list docs/specs/*.md and docs/specs/**/*.md and any FR/NFR catalog (grep for "FR-", "NFR-", "## Requirement", "acceptance" in docs/specs/). Also read docs/specs/index.md and docs/specs/traceability-matrix.md if present.
+2. Enumerate test surfaces: list test projects under src/Tests/ (DINOForge.Tests, Integration, Autograder, BDD, Chaos, Contract, Perf, BridgeMutation, BridgeSmoke, ParameterizedTests). For each, note what area it covers (grep class/namespace names).
+3. Build the matrix: for each spec/FR, find the test(s) that validate it (match by feature keyword: naval, aerial, swap, pack-load, loadingscreen, MainMenuThemer, projectile, faction, etc.). Mark: COVERED (cite test file::class), PARTIAL, or GAP (no test).
+4. Summarize: total specs, % covered, the concrete GAP list (specs with no machine validation) as the actionable backlog.
+
+OUTPUT: write docs/sessions/consolidation-20260613/L6-traceability-matrix.md with:
+- A table: | Spec/FR | Intent (1 line) | Validating test(s) | Status (COVERED/PARTIAL/GAP) |
+- Coverage summary (X/Y covered, Z gaps).
+- Prioritized GAP backlog (top 10 specs lacking tests).
+Then echo: L6-TRACE-DONE.
+
+Keep it bounded — if there are >40 specs, cover the top 40 by importance (runtime/swap/pack/domain first, docs/meta last). Do not edit any source or test files.

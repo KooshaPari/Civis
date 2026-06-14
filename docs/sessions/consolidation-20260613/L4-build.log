@@ -1,0 +1,21 @@
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(803,9): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(877,37): warning DF0111: Catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, "context"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch. [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(878,37): warning DF0111: Catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, "context"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch. [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(879,35): warning DF0111: Catch block silently swallows exception. Log via `catch (Exception ex) {{ _logger.LogWarning(ex, "context"); }}`, document with `// safe-swallow: <reason>`, or remove the try/catch. [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(257,30): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(179,33): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(192,17): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Bridge\Client\GameClient.cs(210,17): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Bridge\Client\DINOForge.Bridge.Client.csproj]
+C:\Users\koosh\Dino\src\Domains\Warfare\WarfareContentLoader.cs(255,17): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj]
+C:\Users\koosh\Dino\src\Domains\Warfare\WarfareContentLoader.cs(183,17): warning DF0114: CancellationToken is not threaded to inner async call [C:\Users\koosh\Dino\src\Domains\Warfare\DINOForge.Domains.Warfare.csproj]
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchOverlayTests.cs(46,19): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj]
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs(60,44): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj]
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs(119,15): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj]
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs(151,35): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj]
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs(246,38): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj]
+C:\Users\koosh\Dino\src\Tests\GameLaunch\GameLaunchNativeMenuTests.cs(273,15): warning CS8602: Dereference of a possibly null reference. [C:\Users\koosh\Dino\src\Tests\GameLaunch\DINOForge.Tests.GameLaunch.csproj]
+    110 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:11.81
+exit=0

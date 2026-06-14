@@ -1,0 +1,20 @@
+./grade.sh --fast
+========================================
+  GRADE — Dino
+  Stack: node
+  Mode:  fast
+========================================
+  [PASS] install
+  [FAIL] build
+  [FAIL] test-unit
+  [FAIL] lint
+  [FAIL] fmt
+  [FAIL] typecheck
+  [FAIL] audit
+
+========================================
+  SCORE: 1 / 13 (7%)
+  GRADE: F
+========================================
+error: Recipe `grade` failed on line 150 with exit code 1
+GRADE_EXIT=1

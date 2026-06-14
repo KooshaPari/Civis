@@ -13,13 +13,20 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Schema version for the RON law DB.
 pub const SCHEMA_VERSION: u32 = 0;
+
+/// Embedded canonical law database shipped with the game (mod-friendly RON source).
+pub const DEFAULT_LAW_RON: &str = include_str!("../laws/default.ron");
+
+/// Filename for per-mod law overlays inside each mod directory.
+pub const MOD_LAW_FILENAME: &str = "laws.ron";
 
 /// Kinds of law the DB recognises.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -92,6 +99,12 @@ pub enum ValidationError {
     /// RON parsing failed.
     #[error("RON parse error: {0}")]
     RonParse(String),
+    /// Dependency graph contains a cycle.
+    #[error("cyclic dependency detected among laws")]
+    CyclicDependency,
+    /// I/O error reading a law file from disk.
+    #[error("failed to read law file: {0}")]
+    Io(String),
 }
 
 impl LawDb {
@@ -99,6 +112,54 @@ impl LawDb {
     /// [`LawDb::validate`] separately.
     pub fn load_ron(s: &str) -> Result<Self, ValidationError> {
         ron::from_str(s).map_err(|e| ValidationError::RonParse(e.to_string()))
+    }
+
+    /// Load a RON law database from a filesystem path (mods / data dir).
+    pub fn load_path(path: &Path) -> Result<Self, ValidationError> {
+        let s = std::fs::read_to_string(path).map_err(|e| ValidationError::Io(e.to_string()))?;
+        Self::load_ron(&s)
+    }
+
+    /// Parse and validate the embedded [`DEFAULT_LAW_RON`] canon database.
+    pub fn default_canon() -> Result<Self, ValidationError> {
+        let db = Self::load_ron(DEFAULT_LAW_RON)?;
+        db.validate().map_err(|mut errs| errs.remove(0))?;
+        Ok(db)
+    }
+
+    /// Load embedded canon, then merge validated `mods/*/laws.ron` overlays (if present).
+    pub fn load_with_mod_overlays(mods_dir: &Path) -> Result<Self, ValidationError> {
+        let mut db = Self::default_canon()?;
+        let entries = match std::fs::read_dir(mods_dir) {
+            Ok(entries) => entries,
+            Err(_) => return Ok(db),
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let law_path = path.join(MOD_LAW_FILENAME);
+            if !law_path.is_file() {
+                continue;
+            }
+            let overlay = Self::load_path(&law_path)?;
+            db = db.merge_overlay(overlay);
+        }
+        db.validate().map_err(|mut errs| errs.remove(0))?;
+        Ok(db)
+    }
+
+    /// Overlay `other` onto `self`: laws with the same `id` are replaced; new ids append.
+    pub fn merge_overlay(mut self, other: Self) -> Self {
+        for law in other.laws {
+            if let Some(existing) = self.laws.iter_mut().find(|entry| entry.id == law.id) {
+                *existing = law;
+            } else {
+                self.laws.push(law);
+            }
+        }
+        self
     }
 
     /// Run all validation passes. Returns the full list of errors found.
@@ -152,9 +213,67 @@ impl LawDb {
         self.laws.iter().find(|l| l.id == id)
     }
 
-    /// Laws unlocked at era `era` or earlier.
+    /// Laws whose `era_min` is at or before `era` (ignores dependency closure).
     pub fn unlocked_at_era(&self, era: u16) -> impl Iterator<Item = &Law> {
         self.laws.iter().filter(move |l| l.era_min <= era)
+    }
+
+    /// Laws unlockable at `era`: satisfies `era_min` and all dependencies are also unlockable.
+    pub fn unlockable_at_era(&self, era: u16) -> Vec<&Law> {
+        let mut unlocked_ids: BTreeSet<String> = BTreeSet::new();
+        loop {
+            let mut changed = false;
+            for law in &self.laws {
+                if unlocked_ids.contains(&law.id) || law.era_min > era {
+                    continue;
+                }
+                if law
+                    .dependencies
+                    .iter()
+                    .all(|dep| unlocked_ids.contains(dep))
+                {
+                    unlocked_ids.insert(law.id.clone());
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        self.laws
+            .iter()
+            .filter(|law| unlocked_ids.contains(&law.id))
+            .collect()
+    }
+
+    /// Topological dependency order (file order tie-break). Errors on cycles.
+    pub fn dependency_order(&self) -> Result<Vec<&str>, ValidationError> {
+        let mut order = Vec::with_capacity(self.laws.len());
+        let mut placed: HashSet<&str> = HashSet::new();
+        loop {
+            let mut progressed = false;
+            for law in &self.laws {
+                if placed.contains(law.id.as_str()) {
+                    continue;
+                }
+                if law
+                    .dependencies
+                    .iter()
+                    .all(|dep| placed.contains(dep.as_str()))
+                {
+                    order.push(law.id.as_str());
+                    placed.insert(law.id.as_str());
+                    progressed = true;
+                }
+            }
+            if !progressed {
+                break;
+            }
+        }
+        if order.len() != self.laws.len() {
+            return Err(ValidationError::CyclicDependency);
+        }
+        Ok(order)
     }
 }
 
@@ -340,6 +459,124 @@ mod tests {
             laws: vec![],
         };
         assert!(db.get("anything").is_none());
+    }
+
+    /// FR-CIV-LAWS-006 — dependency-aware era unlock excludes laws waiting on prereqs.
+    #[test]
+    fn unlockable_at_era_respects_dependencies() {
+        let db = LawDb {
+            version: 0,
+            laws: vec![
+                Law {
+                    id: "base".into(),
+                    kind: LawKind::Conservation,
+                    era_min: 0,
+                    inputs: vec![],
+                    outputs: vec![],
+                    losses: vec![],
+                    dependencies: vec![],
+                },
+                Law {
+                    id: "early_child".into(),
+                    kind: LawKind::Material,
+                    era_min: 0,
+                    inputs: vec![],
+                    outputs: vec![],
+                    losses: vec![],
+                    dependencies: vec!["late_parent".into()],
+                },
+                Law {
+                    id: "late_parent".into(),
+                    kind: LawKind::Conservation,
+                    era_min: 5,
+                    inputs: vec![],
+                    outputs: vec![],
+                    losses: vec![],
+                    dependencies: vec![],
+                },
+            ],
+        };
+        let era_3: Vec<_> = db
+            .unlockable_at_era(3)
+            .into_iter()
+            .map(|law| law.id.as_str())
+            .collect();
+        assert_eq!(era_3, vec!["base"]);
+        let era_5: Vec<_> = db
+            .unlockable_at_era(5)
+            .into_iter()
+            .map(|law| law.id.as_str())
+            .collect();
+        assert_eq!(era_5, vec!["base", "early_child", "late_parent"]);
+    }
+
+    /// FR-CIV-LAWS-006 — era unlock graph returns dependency-respecting order.
+    #[test]
+    fn dependency_order_respects_prereqs() {
+        let db = LawDb::load_ron(sample_ron()).expect("parse");
+        let order = db.dependency_order().expect("acyclic");
+        assert_eq!(order, vec!["mass_conservation", "steel", "fusion_power"]);
+    }
+
+    /// FR-CIV-LAWS-007 — mod overlay merge replaces laws by id.
+    #[test]
+    fn merge_overlay_replaces_by_id() {
+        let base = LawDb::load_ron(sample_ron()).expect("parse");
+        let overlay = LawDb {
+            version: 0,
+            laws: vec![Law {
+                id: "steel".into(),
+                kind: LawKind::Material,
+                era_min: 6,
+                inputs: vec!["iron_ore".into()],
+                outputs: vec!["steel_ingot".into()],
+                losses: vec![],
+                dependencies: vec!["mass_conservation".into()],
+            }],
+        };
+        let merged = base.merge_overlay(overlay);
+        assert_eq!(merged.get("steel").expect("steel").era_min, 6);
+        assert_eq!(merged.laws.len(), 3);
+    }
+
+    /// FR-CIV-LAWS-008 — embedded default RON loads and validates.
+    #[test]
+    fn default_canon_loads_embedded_ron() {
+        let db = LawDb::default_canon().expect("default canon");
+        assert_eq!(db.laws.len(), 3);
+        assert!(db.get("mass_conservation").is_some());
+    }
+
+    /// FR-CIV-LAWS-009 — mod directory loader merges child `laws.ron` overlays.
+    #[test]
+    fn load_with_mod_overlays_merges_child_laws_ron() {
+        let temp =
+            std::env::temp_dir().join(format!("civ-laws-mod-overlay-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(temp.join("example-mod")).expect("mod dir");
+        std::fs::write(
+            temp.join("example-mod").join(MOD_LAW_FILENAME),
+            r#"(
+                version: 0,
+                laws: [
+                    (
+                        id: "policy_audit_trail",
+                        kind: Conservation,
+                        era_min: 2,
+                        inputs: [],
+                        outputs: [],
+                        losses: [],
+                        dependencies: ["mass_conservation"],
+                    ),
+                ],
+            )"#,
+        )
+        .expect("write overlay");
+
+        let db = LawDb::load_with_mod_overlays(&temp).expect("load with overlays");
+        assert_eq!(db.laws.len(), 4);
+        assert!(db.get("policy_audit_trail").is_some());
+        let _ = std::fs::remove_dir_all(&temp);
     }
 }
 

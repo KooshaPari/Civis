@@ -61,6 +61,10 @@ local-packages/
 .claude/worktrees/
 coverage-results-*/
 .tmp-push-*/
+# Session-log/prompt artifacts under docs/sessions/ — transient agent run output, not content.
+# Curated *.md reports stay tracked; raw *.log + *-prompt.txt are ignored to avoid gate churn.
+docs/sessions/**/*.log
+docs/sessions/**/*-prompt.txt
 
 # Large binary source asset archives (extract locally, don't ship in repo)
 packs/**/assets/source/**/*.zip

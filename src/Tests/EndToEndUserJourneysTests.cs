@@ -188,9 +188,13 @@ units:
         var loader = new PackLoader();
         var initial = await loader.LoadPacksFromDirectoryAsync(_tempPackDir);
 
-        // Simulate file change detection
-        var lastModified = File.GetLastWriteTime(unitsYamlPath);
-        await Task.Delay(100); // Ensure time difference
+        // Simulate file change detection. Pin both timestamps explicitly instead of sleeping to
+        // force a wall-clock gap (Pattern #108): a blind Task.Delay is flaky on filesystems with
+        // coarse mtime resolution and needlessly slow. Setting the mtimes makes the "modification
+        // yields a later timestamp" invariant deterministic and instant.
+        var lastModified = DateTime.UtcNow.AddSeconds(-1);
+        File.SetLastWriteTimeUtc(unitsYamlPath, lastModified);
+
         await File.WriteAllTextAsync(unitsYamlPath, @"
 units:
   - id: soldier
@@ -198,10 +202,11 @@ units:
     stats:
       hp: 200
 ");
-        var newLastModified = File.GetLastWriteTime(unitsYamlPath);
+        var newLastModified = DateTime.UtcNow;
+        File.SetLastWriteTimeUtc(unitsYamlPath, newLastModified);
 
-        // ASSERT: File watcher should detect change
-        newLastModified.Should().BeAfter(lastModified, "file was modified");
+        // ASSERT: a modification advances the file's last-write timestamp.
+        File.GetLastWriteTimeUtc(unitsYamlPath).Should().BeAfter(lastModified, "file was modified");
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

@@ -366,10 +366,7 @@ impl MaterialSeedManifest {
     /// succeeds because the exemplar covers every matid by definition.
     /// `Primitive` mode returns an override when one exists and the
     /// [`ManifestError::NoEntryForMaterial`] error otherwise.
-    pub fn resolve(
-        &self,
-        matid: MaterialId,
-    ) -> Result<Option<&MaterialOverride>, ManifestError> {
+    pub fn resolve(&self, matid: MaterialId) -> Result<Option<&MaterialOverride>, ManifestError> {
         match self.mode {
             MaterialMode::Canonical => {
                 if self.per_matid_overrides.contains_key(&matid) {
@@ -809,9 +806,7 @@ impl GreedyAtlasPlan {
                 array_layer: layer,
             },
         );
-        self.slices
-            .get(&matid)
-            .expect("slice was just inserted")
+        self.slices.get(&matid).expect("slice was just inserted")
     }
 
     /// Look up the array layer for `matid`, or `None` if the plan does not
@@ -945,10 +940,7 @@ mod tests {
             "https://ambientcg.com/view?id=Grass005",
             "",
         );
-        assert_eq!(
-            missing_attester,
-            Err(AttestationError::EmptyAttestedBy)
-        );
+        assert_eq!(missing_attester, Err(AttestationError::EmptyAttestedBy));
     }
 
     /// FR-CIV-PBR-001 — `with_content_sha256` attaches a content hash for
@@ -1034,7 +1026,9 @@ mod tests {
         let resolved = manifest.resolve(crate::material::SAND);
         assert_eq!(
             resolved,
-            Err(ManifestError::CanonicalRejectsOverrides(crate::material::SAND))
+            Err(ManifestError::CanonicalRejectsOverrides(
+                crate::material::SAND
+            ))
         );
     }
 
@@ -1052,8 +1046,7 @@ mod tests {
                 ..Default::default()
             },
         );
-        let manifest =
-            MaterialSeedManifest::primitive("civis_ground_v1", overrides);
+        let manifest = MaterialSeedManifest::primitive("civis_ground_v1", overrides);
 
         let hit = manifest.resolve(crate::material::SAND).expect("hit");
         let hit = hit.expect("primitive manifest has an override for SAND");
@@ -1136,10 +1129,7 @@ mod tests {
             policy: MissingTexturePolicy::Auto,
             flavour: BuildFlavour::Player,
         };
-        assert_eq!(
-            missing_player.action(),
-            RuntimeAction::FlatTintWithWarning
-        );
+        assert_eq!(missing_player.action(), RuntimeAction::FlatTintWithWarning);
     }
 
     // -- FR-CIV-PBR-002 -----------------------------------------------
@@ -1214,10 +1204,7 @@ mod tests {
         plan.insert(TriplanarLayer::new(MaterialId(7), ch.clone(), 0.5));
         plan.insert(TriplanarLayer::new(MaterialId(2), ch.clone(), 0.5));
         plan.insert(TriplanarLayer::new(MaterialId(5), ch, 0.5));
-        let ids: Vec<u16> = plan
-            .iter_ordered()
-            .map(|(m, _)| m.0)
-            .collect();
+        let ids: Vec<u16> = plan.iter_ordered().map(|(m, _)| m.0).collect();
         assert_eq!(ids, vec![2, 5, 7]);
     }
 
@@ -1262,10 +1249,7 @@ mod tests {
         let mut plan = TriplanarSplatPlan::new();
         let ch_min = TextureChannelMap::minimal("a", "n");
         plan.insert(TriplanarLayer::new(MaterialId(1), ch_min, 1.0));
-        assert!(
-            !plan.is_complete(),
-            "minimal channel map is not complete"
-        );
+        assert!(!plan.is_complete(), "minimal channel map is not complete");
 
         // Replace the layer with a complete one; plan is now complete.
         let ch_full = TextureChannelMap::standalone("a", "n", "mr", "ao");
@@ -1316,14 +1300,8 @@ mod tests {
         assert_eq!(p.data, ColorSpace::Linear);
         assert_eq!(p.for_channel(PbrChannel::Albedo), ColorSpace::Srgb);
         assert_eq!(p.for_channel(PbrChannel::Normal), ColorSpace::Linear);
-        assert_eq!(
-            p.for_channel(PbrChannel::Metallic),
-            ColorSpace::Linear
-        );
-        assert_eq!(
-            p.for_channel(PbrChannel::Roughness),
-            ColorSpace::Linear
-        );
+        assert_eq!(p.for_channel(PbrChannel::Metallic), ColorSpace::Linear);
+        assert_eq!(p.for_channel(PbrChannel::Roughness), ColorSpace::Linear);
         assert_eq!(
             p.for_channel(PbrChannel::AmbientOcclusion),
             ColorSpace::Linear

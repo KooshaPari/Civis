@@ -104,9 +104,18 @@ impl Iterator for ChunkOffsetIter {
         }
         let t = self.current_tick;
         let coord = ChunkCoord {
-            cx: self.anchor.cx.saturating_add(self.vx.saturating_mul(t as i32)),
-            cy: self.anchor.cy.saturating_add(self.vy.saturating_mul(t as i32)),
-            cz: self.anchor.cz.saturating_add(self.vz.saturating_mul(t as i32)),
+            cx: self
+                .anchor
+                .cx
+                .saturating_add(self.vx.saturating_mul(t as i32)),
+            cy: self
+                .anchor
+                .cy
+                .saturating_add(self.vy.saturating_mul(t as i32)),
+            cz: self
+                .anchor
+                .cz
+                .saturating_add(self.vz.saturating_mul(t as i32)),
         };
         self.current_tick += 1;
         Some((t, coord))
@@ -318,7 +327,11 @@ mod tests {
     #[test]
     fn velocity_iter_saturates_on_overflow() {
         // saturating_add protects against panics on extreme coords.
-        let v = VelocityChunksPerTick { x: i32::MAX, y: 0, z: 0 };
+        let v = VelocityChunksPerTick {
+            x: i32::MAX,
+            y: 0,
+            z: 0,
+        };
         let items: Vec<(u32, ChunkCoord)> = v.into_iter_chunks(coord(0, 0, 0), 2).collect();
         assert_eq!(items[0].1.cx, i32::MAX);
         assert_eq!(items[1].1.cx, i32::MAX); // saturates
@@ -422,7 +435,11 @@ mod tests {
         let v = VelocityChunksPerTick { x: 1, y: 0, z: 0 };
         let a = prefetch_set(coord(0, 0, 0), v, &policy, 4);
         let b = prefetch_set(coord(10_000, 0, -5_000), v, &policy, 4);
-        assert_eq!(a.len(), b.len(), "far-apart anchors should yield the same set size");
+        assert_eq!(
+            a.len(),
+            b.len(),
+            "far-apart anchors should yield the same set size"
+        );
         // The relative offset between the two sets is exactly the
         // anchor delta — verify by subtracting.
         let delta = coord(10_000, 0, -5_000);

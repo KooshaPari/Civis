@@ -121,6 +121,26 @@ mod tests {
     }
 
     #[test]
+    fn entropy_uniform_vs_peaked() {
+        // Uniform 8-bin entropy = log2(8) = 3 bits; peaked (Dirac) = 0 bits.
+        let uniform = Histogram::uniform(8, 100);
+        let peaked = Histogram::dirac(8, 3, 100);
+        let uniform_bits = ShannonEntropy.compute_bits(&uniform);
+        let peaked_bits = ShannonEntropy.compute_bits(&peaked);
+        approx(uniform_bits, 3.0);
+        approx(peaked_bits, 0.0);
+        assert!(
+            uniform_bits > peaked_bits,
+            "uniform entropy ({}) must exceed peaked entropy ({})",
+            uniform_bits,
+            peaked_bits
+        );
+        // Normalised: uniform → 1.0, peaked → 0.0.
+        approx(ShannonEntropy.compute_normalised(&uniform), 1.0);
+        approx(ShannonEntropy.compute_normalised(&peaked), 0.0);
+    }
+
+    #[test]
     fn dirac_is_zero() {
         let h = Histogram::dirac(16, 5, 1000);
         let bits = ShannonEntropy.compute_bits(&h);

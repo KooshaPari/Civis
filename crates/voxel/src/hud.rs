@@ -276,9 +276,11 @@ impl TechNode {
     /// `true` when every prerequisite is `Researched`.
     #[must_use]
     pub fn prerequisites_met(&self, tree: &TechTree) -> bool {
-        self.prerequisites
-            .iter()
-            .all(|p| tree.nodes.get(p).is_some_and(|n| n.status == TechStatus::Researched))
+        self.prerequisites.iter().all(|p| {
+            tree.nodes
+                .get(p)
+                .is_some_and(|n| n.status == TechStatus::Researched)
+        })
     }
 
     /// `true` when the node is researchable *right now* (i.e. `Available`
@@ -356,10 +358,7 @@ impl TechTree {
     /// Mark a node as `InProgress` (queue research). Fails if the node is
     /// unknown or not currently queueable.
     pub fn queue(&mut self, id: &str) -> Result<&mut Self, TechTreeError> {
-        let can = self
-            .nodes
-            .get(id)
-            .is_some_and(|n| n.can_queue(self));
+        let can = self.nodes.get(id).is_some_and(|n| n.can_queue(self));
         if !can {
             return Err(TechTreeError::NotQueueable(id.to_string()));
         }
@@ -733,7 +732,11 @@ mod tests {
     #[test]
     fn fr_hub_001_tool_palette_set_selected_respects_availability() {
         let mut p = ToolPalette::new();
-        p.insert(ToolEntry::new("build_road", "Build Road", ToolCategory::Build));
+        p.insert(ToolEntry::new(
+            "build_road",
+            "Build Road",
+            ToolCategory::Build,
+        ));
         p.insert(
             ToolEntry::new("build_castle", "Build Castle", ToolCategory::Build)
                 .with_tier(3)
@@ -751,12 +754,8 @@ mod tests {
     #[test]
     fn fr_hub_001_refresh_for_tier_enables_and_drops_selection() {
         let mut p = ToolPalette::new();
-        p.insert(
-            ToolEntry::new("build_road", "Road", ToolCategory::Build).with_tier(1),
-        );
-        p.insert(
-            ToolEntry::new("build_castle", "Castle", ToolCategory::Build).with_tier(3),
-        );
+        p.insert(ToolEntry::new("build_road", "Road", ToolCategory::Build).with_tier(1));
+        p.insert(ToolEntry::new("build_castle", "Castle", ToolCategory::Build).with_tier(3));
         // At tier 0 only tier-0 entries would be enabled; both are > tier 0
         // so the initial refresh_for_tier(0) disables both. Re-selecting a
         // disabled tool must fail.
@@ -845,10 +844,14 @@ mod tests {
     fn fr_hub_003_diplomacy_panel_ron_round_trip() {
         let mut p = DiplomacyPanel::new();
         p.insert(
-            TreatySlot::new("a", "A").with_fsm(DiplomacyFsm::Allied).with_influence(0.75),
+            TreatySlot::new("a", "A")
+                .with_fsm(DiplomacyFsm::Allied)
+                .with_influence(0.75),
         );
         p.insert(
-            TreatySlot::new("b", "B").with_fsm(DiplomacyFsm::AtWar).with_influence(0.1),
+            TreatySlot::new("b", "B")
+                .with_fsm(DiplomacyFsm::AtWar)
+                .with_influence(0.1),
         );
         let encoded = ron::to_string(&p).expect("serialize");
         let decoded: DiplomacyPanel = ron::from_str(&encoded).expect("deserialize");
@@ -862,8 +865,18 @@ mod tests {
     #[test]
     fn fr_hub_004_event_feed_dedupes_by_id() {
         let mut f = EventFeed::new();
-        f.insert(EventFeedItem::new("evt-1", 10, EventSeverity::Info, "Hello"));
-        f.insert(EventFeedItem::new("evt-1", 99, EventSeverity::Critical, "Replaced"));
+        f.insert(EventFeedItem::new(
+            "evt-1",
+            10,
+            EventSeverity::Info,
+            "Hello",
+        ));
+        f.insert(EventFeedItem::new(
+            "evt-1",
+            99,
+            EventSeverity::Critical,
+            "Replaced",
+        ));
         assert_eq!(f.items.len(), 1);
         // The second insert wins (replace, not append).
         assert_eq!(f.items["evt-1"].severity, EventSeverity::Critical);

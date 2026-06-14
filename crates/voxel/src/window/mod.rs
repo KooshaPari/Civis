@@ -362,14 +362,22 @@ impl std::error::Error for PolicyError {}
 /// divide by zero.
 #[must_use]
 pub const fn ring_distance(coord: ChunkCoord, anchor: ChunkCoord, vy_weight: u8) -> u32 {
-    let w = if vy_weight == 0 { 1u32 } else { vy_weight as u32 };
+    let w = if vy_weight == 0 {
+        1u32
+    } else {
+        vy_weight as u32
+    };
     let dx = (coord.cx - anchor.cx).unsigned_abs();
     let dz = (coord.cz - anchor.cz).unsigned_abs();
     let dy = (coord.cy - anchor.cy).unsigned_abs() * w;
     // Manual max-of-three so this stays `const fn` (u32::max isn't
     // const-stable on stable Rust as of 1.96 — see rust-lang/rust#143874).
     let m = if dx > dz { dx } else { dz };
-    if m > dy { m } else { dy }
+    if m > dy {
+        m
+    } else {
+        dy
+    }
 }
 
 /// Eviction comparator. Returns an ordering key: chunks with **smaller**
@@ -496,8 +504,8 @@ mod tests {
         let s2 = policy.classify(a, anchor);
         assert_eq!(s1, s2);
         assert_eq!(s1, ChunkState::Unloaded); // ring=3 > mesh_ring=1 + seam=1
-        // Re-check the boundary: ring=2 (= mesh_ring+1) is in the
-        // seam band; ring=3 is past it.
+                                              // Re-check the boundary: ring=2 (= mesh_ring+1) is in the
+                                              // seam band; ring=3 is past it.
         let ring2 = coord(0, 1, 0); // dy=1*vy_weight=2 → ring 2
         assert_eq!(
             policy.classify(ring2, anchor),
@@ -662,14 +670,21 @@ mod tests {
         let anchor = coord(10_000, 5_000, -12_000);
         let probe = coord(3_211, 4_212, -3_213);
         let anchor_2 = coord(-9_000, -4_500, 15_000);
-        let probe_2 = coord(anchor_2.cx + 3_211, anchor_2.cy + 4_212, anchor_2.cz - 3_213);
+        let probe_2 = coord(
+            anchor_2.cx + 3_211,
+            anchor_2.cy + 4_212,
+            anchor_2.cz - 3_213,
+        );
 
         // Same relative offset from far-apart anchors yields same ring band.
         assert_eq!(
             policy.classify(probe, anchor),
             policy.classify(probe_2, anchor_2)
         );
-        assert_eq!(policy.sim_cohort(probe, anchor), policy.sim_cohort(probe_2, anchor_2));
+        assert_eq!(
+            policy.sim_cohort(probe, anchor),
+            policy.sim_cohort(probe_2, anchor_2)
+        );
         assert_eq!(
             policy.in_prefetch_cone(probe, anchor, [32, 0, 0]),
             policy.in_prefetch_cone(probe_2, anchor_2, [32, 0, 0])
@@ -695,9 +710,7 @@ mod tests {
         );
         assert_eq!(
             policy.classify(seam_chunk, anchor),
-            ChunkState::Fading {
-                ticks_remaining: 2
-            },
+            ChunkState::Fading { ticks_remaining: 2 },
             "ring=2 should be fading seam band with fade_ticks set"
         );
         assert_eq!(
@@ -755,7 +768,7 @@ mod tests {
         };
         let anchor = coord(0, 0, 0);
         let forward = [128, 0, 0]; // +X, Q7
-        // East chunks (ring 2-3, in front): in cone.
+                                   // East chunks (ring 2-3, in front): in cone.
         assert!(policy.in_prefetch_cone(coord(3, 0, 0), anchor, forward));
         // West chunks: out of cone.
         assert!(!policy.in_prefetch_cone(coord(-3, 0, 0), anchor, forward));

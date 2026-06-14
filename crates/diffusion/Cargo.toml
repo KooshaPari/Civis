@@ -13,4 +13,4 @@ tracing = "0.1"
 # dep on civ-agents. Agents depend on diffusion, not the other way around.
 
 [dev-dependencies]
-proptest = "1.4"
+proptest = "1.11"

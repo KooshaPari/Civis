@@ -143,3 +143,8 @@ mutation-test:
 # Run mutation testing on a specific project
 mutation-test-project project:
     ./scripts/mutation-test.ps1 -Project {{project}}
+
+# Fleet-wide grading engine (invoked by lefthook pre-push `grade`). Delegates to grade.sh.
+# --fast keeps the pre-push gate quick (skips heavy fuzz/mutation/perf checks).
+grade:
+    ./grade.sh --fast

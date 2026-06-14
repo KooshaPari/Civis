@@ -1,0 +1,22 @@
+You are a build-and-commit triage agent working in the git repo C:/Users/koosh/Dino on branch wsm/agileplus-dag-20260610. Your job is LAYER 1 of a consolidation: triage 107 dirty working-tree files into clean commits, gated by a Release build.
+
+HARD RULES (violation = failure):
+- NEVER use: git stash, --no-verify, LEFTHOOK=0, git push --force, git reset --hard, rm/del/Remove-Item (use Recycle Bin if deletion needed, but you should NOT need to delete).
+- NEVER create git worktrees. NEVER touch the .agileplus/ directory or anything under agileplus-specs/ except to git-add them as-is (AgilePlus is read-only, swarmed by other agents).
+- Do NOT push. Do NOT open PRs. Layer 1 is local commits only.
+- Respect lefthook on commit (let it run; if a commit hook fails, FIX the root cause and retry, do not bypass).
+
+STEPS:
+1. Run: dotnet build src/DINOForge.sln -c Release  (capture full output to docs/sessions/consolidation-20260613/L1-build.log). Note exit code.
+2. IF BUILD GREEN (exit 0):
+   a. Stage the tracked-modified (M) files in logical groups and commit them with clear conventional-commit messages grouped by subsystem (e.g. runtime-bridge, sdk, tests, docs, tooling). Use multiple commits, one per coherent group.
+   b. Stage untracked (??) files: commit docs/sessions/*.md + docs/proof/*.md + docs/agents/ as a "docs(sessions): consolidation agent reports" commit. Commit .agileplus/ + agileplus-specs/ as-is in a separate "chore(agileplus): snapshot specs" commit. Group any source/test untracked files with their subsystem.
+   c. End with a clean working tree (git status --short empty).
+3. IF BUILD BROKEN (exit != 0):
+   a. Identify which dirty files are implicated in the compile errors (parse L1-build.log for file paths in error lines).
+   b. Create branch holding/dirty-broken-20260613 from HEAD, move ONLY the broken-implicated files' changes there via a commit on that branch (git checkout holding/dirty-broken-20260613; commit those files; git checkout wsm/agileplus-dag-20260610). Use git restore/checkout of specific paths — NEVER git stash.
+   c. On the main working branch, commit all the remaining GREEN files in logical groups as in step 2.
+   d. Re-run dotnet build src/DINOForge.sln -c Release to confirm the remaining tree is green; log to L1-build-after.log.
+4. Append signing-off: end every commit message body with the line: Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+REPORT: Write docs/sessions/consolidation-20260613/layer01-report.md with: build result (green/broken), list of commits made (sha + subject), any files quarantined to holding branch + why, final git status (should be clean), and the final HEAD sha. Then echo: L1-DONE-<HEAD-sha>.

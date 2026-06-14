@@ -1,0 +1,107 @@
+ M .coverage
+ M coverage.json
+ M docs/qa/mutation-testing-status.md
+ M docs/screenshots/prove-features-validation/VALIDATION_SUMMARY.md
+ M docs/sessions/INDEX.md
+ M docs/specs/index.md
+ M scripts/mutation-test.ps1
+ M src/Analyzers/packages.lock.json
+ M src/Bridge/Protocol/packages.lock.json
+ M src/DINOForge.CI.sln
+ M src/DINOForge.sln
+ M src/Runtime/Aviation/AerialMovementSystem.cs
+ M src/Runtime/Aviation/AerialSpawnSystem.cs
+ M src/Runtime/Aviation/AerialTargetingSystem.cs
+ M src/Runtime/Bridge/AssetSwapSystem.cs
+ M src/Runtime/Bridge/BuildMenuInjectionSystem.cs
+ M src/Runtime/Bridge/BuildingDestructionVFXSystem.cs
+ M src/Runtime/Bridge/FactionSystem.cs
+ M src/Runtime/Bridge/KeyInputSystem.cs
+ M src/Runtime/Bridge/PackUnitSpawner.cs
+ M src/Runtime/Bridge/ProjectileMeshSwapSystem.cs
+ M src/Runtime/Bridge/ProjectileVFXSystem.cs
+ M src/Runtime/Bridge/StatModifierSystem.cs
+ M src/Runtime/Bridge/UnitDeathVFXSystem.cs
+ M src/Runtime/Bridge/WaveInjector.cs
+ M src/Runtime/DumpSystem.cs
+ M src/Runtime/packages.lock.json
+ M src/SDK/Assets/AssetService.cs
+ M src/SDK/ContentLoader.cs
+ M src/SDK/ContentRegistrationService.cs
+ M src/SDK/packages.lock.json
+ M src/Tests/Bridge/BridgeReceiptVerifierUnitTests.cs
+ M src/Tests/DINOForge.Tests.csproj
+ M src/Tests/Integration/GameTestRunner.cs
+ M src/Tests/Integration/Tests/GameSandboxIntegrationTests.cs
+ M src/Tests/Integration/Tests/ParallelGameE2ETests.cs
+ M src/Tests/PackStatInjectorTests.cs
+ M src/Tests/e2e/vlm_judge.py
+ M src/Tests/packages.lock.json
+ M src/Tools/DinoforgeMcp/dinoforge_mcp/external_judge.py
+ M src/Tools/DinoforgeMcp/tests/test_external_judge.py
+ M test-results.xml
+ M tools/phenotype-journeys
+?? .agileplus/
+?? agileplus-specs/spec-002-native-menu-button-injection/research.md
+?? docs/agents/
+?? docs/proof/autograder-scorecard.md
+?? docs/sessions/autograder-bridge-20260608.md
+?? docs/sessions/autograder-ci-wire-20260608.md
+?? docs/sessions/autograder-spec-shape-20260608.md
+?? docs/sessions/bdd-autograder-build-unblock-20260608.md
+?? docs/sessions/bdd-feature-add-20260608.md
+?? docs/sessions/bdd-regression-bridge-20260608.md
+?? docs/sessions/bdd-skeleton-20260608.md
+?? docs/sessions/chaos-second-test-20260608.md
+?? docs/sessions/chaos-test-add-20260608.md
+?? docs/sessions/chaos-tests-green-20260608.md
+?? docs/sessions/consolidation-20260613/
+?? docs/sessions/contract-test-add-20260608.md
+?? docs/sessions/coverage-bridge-push-2-20260608.md
+?? docs/sessions/coverage-bridge-push-20260608.md
+?? docs/sessions/coverage-bridge-push-3-20260608.md
+?? docs/sessions/coverage-bridge-push-4-20260608.md
+?? docs/sessions/coverage-current-measure-20260608.md
+?? docs/sessions/coverage-rerun-20260608.md
+?? docs/sessions/forge-audits/_pkg_raw.tsv
+?? docs/sessions/forge-audits/audit-deadcode.log
+?? docs/sessions/forge-audits/audit-docdrift.log
+?? docs/sessions/forge-audits/audit-pkgdeps.log
+?? docs/sessions/forge-audits/audit-todos.log
+?? docs/sessions/forge-audits/coverage-targets-20260610.md
+?? docs/sessions/forge-audits/f-cov-targets.log
+?? docs/sessions/forge-audits/f-flaky-audit.log
+?? docs/sessions/forge-audits/f-pkg.log
+?? docs/sessions/forge-audits/f-pkgtfm.log
+?? docs/sessions/forge-audits/f-stubs.log
+?? docs/sessions/forge-audits/f-todos.log
+?? docs/sessions/forge-audits/todo-inventory.md
+?? docs/sessions/load-test-skeleton-20260608.md
+?? docs/sessions/mutation-bridge-2-20260608.md
+?? docs/sessions/mutation-bridge-20260608.md
+?? docs/sessions/mutation-bridge-3-20260608.md
+?? docs/sessions/mutation-bridge-4-20260608.md
+?? docs/sessions/mutation-smoke-run-20260608.md
+?? docs/sessions/perf-baseline-20260608.md
+?? docs/sessions/spec-tier1-mvp-20260608.md
+?? docs/sessions/spec-tier2-mature-20260608.md
+?? docs/sessions/spec-tier3-elite-20260608.md
+?? docs/sessions/tier1-scoring-wire-20260608.md
+?? docs/specs/SPEC-TIER1-MVP.md
+?? docs/specs/SPEC-TIER2-MATURE.md
+?? docs/specs/SPEC-TIER3-ELITE.md
+?? markers.txt
+?? scripts/workstream_helper.py
+?? src/Tests/Autograder/
+?? src/Tests/BDD/
+?? src/Tests/Bridge/UiStyleSnapshotCoverageTests.cs
+?? src/Tests/BridgeMutation/
+?? src/Tests/BridgeSmoke/
+?? src/Tests/Chaos/
+?? src/Tests/Contract/
+?? src/Tests/Perf/
+?? src/Tests/SDK/PackSubmoduleManagerCoverageTests.cs
+?? src/Tests/e2e/test_vlm_judge_cli.py
+?? src/Tools/DinoforgeMcp/dinoforge_mcp/acceptance_contract_engine.py
+?? src/Tools/DinoforgeMcp/tests/test_acceptance_contract_engine.py
+?? stryker-smoke-config.json

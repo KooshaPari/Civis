@@ -59,6 +59,8 @@ release-staging/
 local-packages/
 *.sha256
 .claude/worktrees/
+coverage-results-*/
+.tmp-push-*/
 
 # Large binary source asset archives (extract locally, don't ship in repo)
 packs/**/assets/source/**/*.zip

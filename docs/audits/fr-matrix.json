@@ -1968,8 +1968,13 @@
         "docs/design/civ-ai-crate.md:39",
         "docs/design/civ-ai-crate.md:157"
       ],
-      "test_refs": [],
-      "status": "CODE-ONLY-no-spec"
+      "test_refs": [
+        "crates/ai/src/cache.rs:66",
+        "crates/ai/src/cache.rs:80",
+        "crates/ai/src/cache.rs:92",
+        "crates/ai/src/cache.rs:110"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "FR-CIV-AI-008",
@@ -2008,8 +2013,12 @@
         "docs/design/civ-ai-crate.md:42",
         "docs/design/civ-ai-crate.md:234"
       ],
-      "test_refs": [],
-      "status": "CODE-ONLY-no-spec"
+      "test_refs": [
+        "crates/ai/src/config.rs:72",
+        "crates/ai/src/config.rs:85",
+        "crates/ai/src/config.rs:149"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "FR-CIV-AI-011",
@@ -11255,8 +11264,13 @@
         "docs/guides/voxel-emergent-vision-and-migration.md:94",
         "docs/guides/voxel-emergent-vision-and-migration.md:124"
       ],
-      "test_refs": [],
-      "status": "CODE-ONLY-no-spec"
+      "test_refs": [
+        "crates/voxel/src/worldgen.rs:543",
+        "crates/voxel/src/worldgen.rs:556",
+        "crates/voxel/src/worldgen.rs:571",
+        "crates/voxel/src/worldgen.rs:591"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "FR-CIV-VOXEL-022",

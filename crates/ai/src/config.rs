@@ -63,3 +63,106 @@ impl AiConfig {
 fn env_or(key: &str, default: String) -> String {
     std::env::var(key).unwrap_or(default)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// FR-CIV-AI-010 — `AiConfig` defaults are stable and non-empty where required.
+    #[test]
+    fn defaults_are_stable() {
+        let d = AiConfig::default();
+        assert_eq!(d.narrator_model, "qwen2.5-1.5b-instruct");
+        assert_eq!(d.embed_model, "all-MiniLM-L6-v2");
+        assert_eq!(d.max_concurrent_gen, 2);
+        assert_eq!(d.gen_token_budget, 600);
+        assert!(!d.enable_cloud);
+        assert_eq!(d.ollama_url, "http://localhost:11434");
+        assert_eq!(d.local_model_path, None);
+    }
+
+    /// FR-CIV-AI-010 — `from_env` table: each env variable overrides its default.
+    #[test]
+    fn from_env_honors_each_key() {
+        let keys = [
+            "CIVAI_LOCAL_MODEL_PATH",
+            "CIVAI_NARRATOR_MODEL",
+            "CIVAI_EMBED_MODEL",
+            "CIVAI_MAX_CONCURRENT_GEN",
+            "CIVAI_GEN_TOKEN_BUDGET",
+            "CIVAI_ENABLE_CLOUD",
+            "CIVAI_OLLAMA_URL",
+        ];
+        let saved: Vec<(&str, Option<String>)> =
+            keys.iter().map(|k| (*k, std::env::var(k).ok())).collect();
+        for k in &keys {
+            std::env::remove_var(k);
+        }
+
+        // All missing -> defaults.
+        let defaults = AiConfig::default();
+        assert_eq!(AiConfig::from_env(), defaults);
+
+        // Override each key in turn.
+        std::env::set_var("CIVAI_NARRATOR_MODEL", "custom-narrator");
+        assert_eq!(AiConfig::from_env().narrator_model, "custom-narrator");
+        std::env::remove_var("CIVAI_NARRATOR_MODEL");
+
+        std::env::set_var("CIVAI_EMBED_MODEL", "custom-embed");
+        assert_eq!(AiConfig::from_env().embed_model, "custom-embed");
+        std::env::remove_var("CIVAI_EMBED_MODEL");
+
+        std::env::set_var("CIVAI_MAX_CONCURRENT_GEN", "7");
+        assert_eq!(AiConfig::from_env().max_concurrent_gen, 7);
+        std::env::remove_var("CIVAI_MAX_CONCURRENT_GEN");
+
+        std::env::set_var("CIVAI_GEN_TOKEN_BUDGET", "1024");
+        assert_eq!(AiConfig::from_env().gen_token_budget, 1024);
+        std::env::remove_var("CIVAI_GEN_TOKEN_BUDGET");
+
+        std::env::set_var("CIVAI_ENABLE_CLOUD", "1");
+        assert!(AiConfig::from_env().enable_cloud);
+        std::env::remove_var("CIVAI_ENABLE_CLOUD");
+
+        std::env::set_var("CIVAI_OLLAMA_URL", "http://ollama.local:11434");
+        assert_eq!(AiConfig::from_env().ollama_url, "http://ollama.local:11434");
+        std::env::remove_var("CIVAI_OLLAMA_URL");
+
+        std::env::set_var("CIVAI_LOCAL_MODEL_PATH", "/models/model.gguf");
+        assert_eq!(
+            AiConfig::from_env().local_model_path,
+            Some("/models/model.gguf".to_string())
+        );
+        std::env::remove_var("CIVAI_LOCAL_MODEL_PATH");
+
+        // Restore.
+        for (k, v) in &saved {
+            match v {
+                Some(val) => std::env::set_var(k, val),
+                None => std::env::remove_var(k),
+            }
+        }
+    }
+
+    /// FR-CIV-AI-010 — malformed integer env vars fall back to defaults.
+    #[test]
+    fn from_env_ignores_malformed_integers() {
+        let backup_max = std::env::var("CIVAI_MAX_CONCURRENT_GEN").ok();
+        let backup_budget = std::env::var("CIVAI_GEN_TOKEN_BUDGET").ok();
+
+        std::env::set_var("CIVAI_MAX_CONCURRENT_GEN", "not_a_number");
+        std::env::set_var("CIVAI_GEN_TOKEN_BUDGET", "also_bad");
+        let cfg = AiConfig::from_env();
+        assert_eq!(cfg.max_concurrent_gen, 2);
+        assert_eq!(cfg.gen_token_budget, 600);
+
+        match backup_max {
+            Some(v) => std::env::set_var("CIVAI_MAX_CONCURRENT_GEN", v),
+            None => std::env::remove_var("CIVAI_MAX_CONCURRENT_GEN"),
+        }
+        match backup_budget {
+            Some(v) => std::env::set_var("CIVAI_GEN_TOKEN_BUDGET", v),
+            None => std::env::remove_var("CIVAI_GEN_TOKEN_BUDGET"),
+        }
+    }
+}

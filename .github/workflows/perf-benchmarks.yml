@@ -5,6 +5,13 @@ on:
     # Run nightly at 2 AM UTC (10 PM EDT)
     - cron: '0 2 * * *'
   workflow_dispatch:
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 jobs:
   benchmark:

@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+set -euo pipefail
 #
 # build-telemetry-view.sh — Generates a self-contained HTML telemetry viewer from DINOForge metrics
 #

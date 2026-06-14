@@ -12,9 +12,6 @@ on:
         description: PR number to merge (e.g. 221)
         required: true
         type: number
-
-permissions:
-  contents: write
   pull-requests: write
   checks: read
 
@@ -100,3 +97,10 @@ jobs:
             } catch (err) {
               core.setFailed(`Merge failed: ${err.message}`);
             }
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+

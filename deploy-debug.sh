@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 # Deploy debug version of DINOForge.Runtime.dll
 
 SRC="C:/Users/koosh/Dino/src/Runtime/bin/Debug/netstandard2.0/DINOForge.Runtime.dll"

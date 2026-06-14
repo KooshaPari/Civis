@@ -5,6 +5,13 @@ on:
   schedule:
     # Every Monday at 05:00 UTC (after ui-automation.yml at 04:00)
     - cron: "0 5 * * 1"
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 permissions: {}
 
@@ -24,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
@@ -73,7 +80,7 @@ jobs:
           pwsh -ExecutionPolicy Bypass -File scripts/game/prove-features-gate.ps1 -RequireGame
 
       - name: Upload test results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         if: always()
         with:
           name: game-launch-results
@@ -81,7 +88,7 @@ jobs:
           retention-days: 14
 
       - name: Upload in-game UI test results (from BepInEx log)
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         if: always()
         with:
           name: overlay-ui-results

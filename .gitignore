@@ -105,6 +105,7 @@ scripts/game/desktop/
 
 # Test coverage output
 coverage/
+.grade-reports/
 
 # Python bytecode cache
 __pycache__/
@@ -150,3 +151,6 @@ myeasylog.log
 # Stray worktree artifact directories at repo root (agent worktree copy artifacts)
 UserskooshDino.*
 tools/phenotype-journeys/
+
+# Rust build artifacts (added 2026-06-08)
+target/

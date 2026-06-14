@@ -1,4 +1,11 @@
 name: logerror-no-stack
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 # Pattern #96 detection gate — fails CI when a C# log call drops the
 # exception stack trace (e.g. ``LogError($"...{ex.Message}")`` or
@@ -27,10 +34,6 @@ on:
       - "docs/qa/logerror-no-stack-allowlist.txt"
       - ".github/workflows/logerror-no-stack.yml"
   workflow_dispatch:
-
-permissions:
-  contents: read
-
 jobs:
   logerror-no-stack-check:
     name: Pattern #96 logerror-no-stack
@@ -38,10 +41,10 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v-latest
         with:
           python-version: "3.12"
 
@@ -53,7 +56,7 @@ jobs:
 
       - name: Upload report on failure
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         with:
           name: logerror-no-stack-report
           path: docs/qa/logerror-no-stack-report.json

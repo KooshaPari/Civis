@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 # Headless Automation Verification Script
 # Validates that DINOForge can run automated game tests without manual game launches
 

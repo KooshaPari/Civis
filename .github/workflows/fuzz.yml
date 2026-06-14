@@ -1,19 +1,22 @@
 name: Nightly Fuzz
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
   schedule:
     - cron: '0 2 * * *'  # 2am UTC nightly
   workflow_dispatch:
-
-permissions:
-  contents: read
-
 jobs:
   property-tests:
     name: FsCheck Property Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
         with:
@@ -52,7 +55,7 @@ jobs:
 
       - name: Upload property test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         with:
           name: property-test-results
           path: TestResults/Property/
@@ -61,7 +64,7 @@ jobs:
     name: Fuzz Target Smoke Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # v4.0.0
         with:
@@ -100,7 +103,7 @@ jobs:
 
       - name: Upload fuzz smoke test results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v-latest
         with:
           name: fuzz-smoke-results
           path: TestResults/FuzzSmoke/
@@ -109,7 +112,7 @@ jobs:
     name: Validate Fuzz Corpus Files
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
 
       - name: Check corpus files exist
         run: |

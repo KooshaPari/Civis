@@ -2,6 +2,8 @@
 
 Implements the [phenotype-infra journey-traceability standard](https://github.com/kooshapari/phenotype-infra/blob/main/docs/governance/journey-traceability-standard.md) for the DINOForge mod platform workspace.
 
+> **Note:** This file lives at `docs/journeys/traceability.md` (next to `manifests/`) to avoid clobber churn with tooling that targets `docs/operations/journey-traceability.md`.
+
 ## Traceability Model
 
 Every developer-facing or operator-facing flow in DINOForge should be traceable across:

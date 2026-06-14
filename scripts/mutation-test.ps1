@@ -7,17 +7,18 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$strykerVersion = "3.13.1"
 
 Write-Host "=== DINOForge Mutation Testing ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if Stryker.NET is installed
-$strykerPath = dotnet tool show -g dotnet-stryker 2>$null
+# Check if Stryker.NET is installed at the pinned version
+Write-Host "Ensuring Stryker.NET $strykerVersion is installed..." -ForegroundColor Yellow
+dotnet tool update -g dotnet-stryker --version $strykerVersion
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Installing Stryker.NET..." -ForegroundColor Yellow
-    dotnet tool install -g dotnet-stryker
+    dotnet tool install -g dotnet-stryker --version $strykerVersion
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: Failed to install Stryker.NET" -ForegroundColor Red
+        Write-Host "ERROR: Failed to install Stryker.NET $strykerVersion" -ForegroundColor Red
         exit 1
     }
 }

@@ -60,6 +60,25 @@ class JudgeReceipt:
         """Convert to JSON-serializable dict."""
         return asdict(self)
 
+    def to_autograder_dict(self) -> dict[str, Any]:
+        """Return the spec-shaped autograder payload.
+
+        The autograder contract expects snake_case keys and a stable top-level shape:
+        tier, score, pass, gaps, evidence.
+        """
+        return {
+            "tier": self.model,
+            "score": self.confidence if self.confidence is not None else 0.0,
+            "pass": self.verdict == "pass",
+            "gaps": [] if self.verdict == "pass" else [self.verdict],
+            "evidence": {
+                "model_version": self.model_version,
+                "prompt": self.prompt,
+                "screenshot_sha256": self.screenshot_sha256,
+                "raw_response": self.raw_response,
+            },
+        }
+
 
 class KimiJudgeTier:
     """

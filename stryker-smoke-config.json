@@ -1,0 +1,21 @@
+{
+  "stryker-config": {
+    "project": "src/Bridge/Protocol/DINOForge.Bridge.Protocol.csproj",
+    "test-projects": ["src/Tests/BridgeSmoke/DINOForge.Tests.BridgeSmoke.csproj"],
+    "target-framework": "net8.0",
+    "test-runner": "vstest",
+    "reporters": ["json", "progress"],
+    "thresholds": {
+      "high": 0,
+      "low": 0,
+      "break": 0
+    },
+    "mutation-level": "Standard",
+    "since": {
+      "enabled": false
+    },
+    "report-file-name": "mutation-smoke",
+    "ignore-mutations": ["String", "Linq"],
+    "mutate": ["src/Bridge/Protocol/CanonicalJson.cs"]
+  }
+}

@@ -187,6 +187,44 @@ class TestReceiptPersisted:
         finally:
             test_screenshot.unlink()
 
+    def test_receipt_exports_spec_shaped_autograder_payload(self, monkeypatch):
+        """Autograder payload should use snake_case keys required by the spec."""
+        judge = KimiJudgeTier(api_key="test-key")
+
+        mock_response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "VERDICT: pass\nCONFIDENCE: 0.91"
+                    }
+                }
+            ]
+        }
+
+        def mock_call(image_base64, media_type, prompt):
+            return "pass", 0.91, mock_response
+
+        judge._call_api = mock_call
+        judge._persist = lambda receipt: Path("/dev/null")
+
+        test_screenshot = Path(__file__).parent / "dummy-spec-shape.png"
+        test_screenshot.write_bytes(b"fake PNG")
+
+        try:
+            receipt = judge.judge(test_screenshot, "Validate the menu is visible")
+            payload = receipt.to_autograder_dict()
+
+            assert set(payload) == {"tier", "score", "pass", "gaps", "evidence"}
+            assert payload["tier"] == "moonshot"
+            assert payload["score"] == pytest.approx(0.91)
+            assert payload["pass"] is True
+            assert payload["gaps"] == []
+            assert payload["evidence"]["prompt"] == "Validate the menu is visible"
+            assert payload["evidence"]["raw_response"] == mock_response
+            assert payload["evidence"]["screenshot_sha256"]
+        finally:
+            test_screenshot.unlink()
+
 
 class TestVerdictParsing:
     """Test verdict extraction from Moonshot responses."""

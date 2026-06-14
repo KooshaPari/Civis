@@ -1,0 +1,43 @@
+src\Domains\UI\UIValidator.cs:69:            // TODO(#844-followup): cross-cutting theme reference checks
+src\Tools\Cli\Commands\CacheCommand.cs:82:            // TODO (v0.26.0): Scan BepInEx/dinoforge_pack_cache directory
+src\Tools\Cli\Commands\CacheCommand.cs:127:                // TODO: Read oldest/newest from assets.db
+src\Tools\Cli\Commands\CacheCommand.cs:179:            // TODO (v0.26.0): Scan all packs, identify least-recently-used assets
+src\Tools\Cli\Commands\CacheCommand.cs:212:                    // TODO: Check access time from assets.db; only delete if unused > threshold
+src\Tools\Cli\Commands\CacheCommand.cs:243:                // TODO: Read user input and confirm
+src\Tools\Cli\Commands\CacheCommand.cs:285:            // TODO (v0.26.0): Implement full prefetch flow
+src\Tools\Cli\Commands\CacheCommand.cs:341:            // TODO (v0.26.0): Delete entire BepInEx/dinoforge_pack_cache/{pack_id}/
+src\Tools\Cli\Commands\CacheCommand.cs:361:                // TODO: Read user input
+src\SDK\Validation\YamlSchemaConverter.cs:26:        /// See: https://github.com/aaubry/YamlDotNet/issues/XXX (Windows CLR static init ordering)
+src\Runtime\UI\LoadingScreenController.cs:93:        // EPIC-027 BUG B: when no real pack/scene progress has been reported yet we run an
+src\Runtime\UI\LoadingScreenController.cs:109:        // pack-load — that was the reported "fake static skeleton" symptom (BUG B).
+src\Runtime\UI\LoadingScreenController.cs:300:            // overlay — preventing the native DINO loader from flashing through (BUG B).
+src\Runtime\UI\LoadingScreenController.cs:395:                // frozen as a static skeleton (BUG B). A pending fade (load done) snaps to 100%.
+src\SDK\Assets\AssetCdnCatalog.cs:124:        /// TODO (v0.26.0): Parse YAML manifest file and populate _assets dictionary.
+src\SDK\Assets\AssetCdnCatalog.cs:132:            // TODO: Parse YAML, extract pack_id, pack_version, asset_cdn config
+src\SDK\Assets\AssetCdnCatalog.cs:168:                // TODO (v0.26.0): Validate URL structure (https://, no path traversal)
+src\SDK\Assets\AssetCdnCatalog.cs:185:            // TODO (v0.26.0): Resolve BepInEx directory from RuntimeContext
+src\SDK\Assets\AssetCdnCatalog.cs:229:        /// TODO (v0.26.0): Scan dinoforge_pack_cache directory and SQLite assets.db
+src\SDK\Assets\AssetCdnCatalog.cs:239:                    TotalCacheBytes = 0L,  // TODO: scan filesystem
+src\SDK\Assets\AssetCdnCatalog.cs:241:                    CachedAssetCount = 0,  // TODO: count from assets.db
+src\SDK\Assets\AssetCdnCatalog.cs:243:                    EstimatedHitRate = 0.0,  // TODO: calculate from access logs
+src\SDK\Assets\AssetCdnCatalog.cs:244:                    OldestEntryAge = TimeSpan.Zero,  // TODO: from cache metadata
+src\SDK\Assets\AssetCdnCache.cs:36:        // TODO (v0.26.0): Replace with SQLite assets.db for persistent cache metadata
+src\SDK\Assets\AssetCdnCache.cs:42:        /// TODO: Move to SQLite assets.db
+src\SDK\Assets\AssetCdnCache.cs:104:            // TODO (v0.26.0): Load existing cache metadata from assets.db
+src\SDK\Assets\AssetCdnCache.cs:119:        /// TODO (v0.26.0): Implement actual HTTP download using HttpClient.
+src\SDK\Assets\AssetCdnCache.cs:161:                    // TODO (v0.26.0): Verify SHA256 on disk matches expected
+src\SDK\Assets\AssetCdnCache.cs:174:            // TODO (v0.26.0): Download from cdnUrl using HttpClient
+src\SDK\Assets\AssetCdnCache.cs:245:        /// TODO (v0.26.0): Delete cache directory recursively using safe Windows API.
+src\SDK\Assets\AssetCdnCache.cs:275:        /// TODO (v0.26.0): Implement full eviction logic.
+src\SDK\Assets\AssetCdnCache.cs:292:                // TODO: Implement eviction
+src\SDK\Assets\AssetCdnCache.cs:321:        /// TODO (v0.26.0): Integrate into download + cache write flow.
+src\Runtime\Bridge\ProjectileMeshSwapSystem.cs:53:        // BUG A fix (#101): DINO's Unity 2021.3 EntityManager has both
+src\Runtime\Bridge\ProjectileMeshSwapSystem.cs:182:            // BUG A fix (#101): pass TypeIndex (int) when the bound overload is (Entity, int).
+src\Runtime\Bridge\ProjectileMeshSwapSystem.cs:304:            // BUG A fix (#101): record whether the bound overload takes an int TypeIndex.
+src\Runtime\Bridge\PackStatMappings.cs:47:                // VanillaMappingToMeshSubstrings (BUG B fix #101). Do NOT assume null here means
+src\Runtime\UI\Adapters\NativeMenuHostAdapter.cs:97:            // TODO(#NNN-followup-iter145, M11.5 / WI-004a): when NativeMainMenuModMenu.CanUseNativeScreen
+src\Runtime\UI\Adapters\NativeMenuHostAdapter.cs:109:            // TODO(#NNN-followup-iter145, M11.5 / WI-004a): mirror Register's wire-up — drop the screen from
+src\Runtime\UI\Adapters\ModButtonInjectorAdapter.cs:168:            // TODO(#NNN-followup-iter145, M11.5 / WI-004b): when NativeMenuInjector routes through this seam,
+src\Runtime\UI\Adapters\HudElementRendererAdapter.cs:181:        /// drain on canvas-ready (see TODO(#NNN-followup-iter145): canvas-ready drain).
+src\Runtime\UI\Adapters\NativeLabelGuardAdapter.cs:41:            // TODO(#NNN-followup-iter145): when UiGridHarmonyPatch is refactored for multi-label support,
+src\Runtime\UI\Adapters\NativeLabelGuardAdapter.cs:53:            // TODO(#NNN-followup-iter145): ModsButtonTextPatch is currently single-label, install-once.

@@ -613,7 +613,9 @@ impl LodRingPlan {
     /// `(2 * mesh_ring + 1)`.
     #[must_use]
     pub const fn inner_side_chunks(&self) -> u32 {
-        (self.policy.mesh_ring as u32).saturating_mul(2).saturating_add(1)
+        (self.policy.mesh_ring as u32)
+            .saturating_mul(2)
+            .saturating_add(1)
     }
 
     /// The seam band count (chunks in `Seam` role) per side.
@@ -881,10 +883,7 @@ impl SimLodAggregator {
         if inputs.is_empty() {
             return None;
         }
-        let max_mass = inputs
-            .iter()
-            .map(|c| c.mass.abs())
-            .fold(0.0_f32, f32::max);
+        let max_mass = inputs.iter().map(|c| c.mass.abs()).fold(0.0_f32, f32::max);
         let len = inputs.len() as f32;
         Some(len * f32::EPSILON * max_mass)
     }
@@ -1008,7 +1007,7 @@ mod tests {
     #[test]
     fn fr_civ_scale_002_bounded_rejects_out_of_extent() {
         let budget = ExtentBudget::SMALL; // side=256, half=128
-        // In-bounds: |x|, |y|, |z| < 128
+                                          // In-bounds: |x|, |y|, |z| < 128
         assert!(budget.validate(coord(0, 0, 0)).is_ok());
         assert!(budget.validate(coord(127, -127, 50)).is_ok());
         // Out-of-bounds: |x| = 128 is past the half-open extent.
@@ -1132,9 +1131,21 @@ mod tests {
     fn fr_civ_scale_004_fold_is_order_independent() {
         let agg = SimLodAggregator::DEFAULT;
         let a = [
-            CohortTotals { mass: 1.0, agents: 2.0, chunks: 4 },
-            CohortTotals { mass: 2.0, agents: 1.0, chunks: 3 },
-            CohortTotals { mass: 3.0, agents: 3.0, chunks: 2 },
+            CohortTotals {
+                mass: 1.0,
+                agents: 2.0,
+                chunks: 4,
+            },
+            CohortTotals {
+                mass: 2.0,
+                agents: 1.0,
+                chunks: 3,
+            },
+            CohortTotals {
+                mass: 3.0,
+                agents: 3.0,
+                chunks: 2,
+            },
         ];
         // Permute and re-fold.
         let b = [a[2], a[0], a[1]];
@@ -1159,9 +1170,21 @@ mod tests {
     #[test]
     fn fr_civ_scale_004_mass_divergence_bound_matches_f32_eps() {
         let inputs = [
-            CohortTotals { mass: 1.0, agents: 0.0, chunks: 1 },
-            CohortTotals { mass: 2.0, agents: 0.0, chunks: 1 },
-            CohortTotals { mass: 3.0, agents: 0.0, chunks: 1 },
+            CohortTotals {
+                mass: 1.0,
+                agents: 0.0,
+                chunks: 1,
+            },
+            CohortTotals {
+                mass: 2.0,
+                agents: 0.0,
+                chunks: 1,
+            },
+            CohortTotals {
+                mass: 3.0,
+                agents: 0.0,
+                chunks: 1,
+            },
         ];
         let bound = SimLodAggregator::mass_divergence_bound(&inputs).unwrap();
         // max_mass = 3.0; len = 3; expected = 3 * EPSILON * 3.0
@@ -1181,8 +1204,16 @@ mod tests {
         // Inputs designed to lose precision in the wrong order:
         // large + tiny vs tiny + large.
         let ascending = [
-            CohortTotals { mass: 1.0e-6, agents: 0.0, chunks: 1 },
-            CohortTotals { mass: 1.0e6, agents: 0.0, chunks: 1 },
+            CohortTotals {
+                mass: 1.0e-6,
+                agents: 0.0,
+                chunks: 1,
+            },
+            CohortTotals {
+                mass: 1.0e6,
+                agents: 0.0,
+                chunks: 1,
+            },
         ];
         let descending = [ascending[1], ascending[0]];
         // `fold_sorted` is the public stable path; it sums in input
@@ -1194,7 +1225,7 @@ mod tests {
         // bits may differ by 1 ULP. The test asserts that the
         // aggregator does NOT re-sort: the gestalts can differ.
         let _ = (a, b); // the determinism contract is "same order → same bits"
-        // `fold` (the sort-canonicalising path) does the same total:
+                        // `fold` (the sort-canonicalising path) does the same total:
         assert_eq!(agg.fold(&ascending), agg.fold(&descending));
     }
 
@@ -1246,6 +1277,9 @@ mod tests {
         // Far chunks evict first — the budget's worst case (125
         // chunks) never includes the far chunk unless the active
         // window grows past the MVP.
-        assert!(far < near, "far must evict before near under the MVP budget");
+        assert!(
+            far < near,
+            "far must evict before near under the MVP budget"
+        );
     }
 }

@@ -749,7 +749,9 @@ fn heat_conduction_pass(
             min_conduct = min_conduct.min(f32::from(def.heat_conduct));
         }
         for dir in 0..6 {
-            if let Some((nx, ny, nz, _, nt)) = read_neighbor_scratch(scratch, x, y, z, dir, boundary) {
+            if let Some((nx, ny, nz, _, nt)) =
+                read_neighbor_scratch(scratch, x, y, z, dir, boundary)
+            {
                 if !is_air_like(scratch.cells[scratch.index(nx, ny, nz).unwrap()], reg) {
                     let neigh_def = reg.get(scratch.cells[scratch.index(nx, ny, nz).unwrap()]);
                     if let Some(d) = neigh_def {
@@ -860,7 +862,9 @@ fn evaporation_pass(
         if id == STEAM {
             let mut cold_neighbor = false;
             for dir in 0..6 {
-                if let Some((_, _, _, _, nt)) = read_neighbor_scratch(scratch, x, y, z, dir, boundary) {
+                if let Some((_, _, _, _, nt)) =
+                    read_neighbor_scratch(scratch, x, y, z, dir, boundary)
+                {
                     if nt < 0 {
                         cold_neighbor = true;
                     }
@@ -983,8 +987,11 @@ fn boundary_flux_pass(
                     None => continue,
                 };
                 let id = grid.cells[idx];
-                let is_fluid = phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas;
-                if x == 0 && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum && is_fluid
+                let is_fluid =
+                    phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas;
+                if x == 0
+                    && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum
+                    && is_fluid
                 {
                     grid.cells[idx] = AIR;
                     grid.temperatures[idx] = boundary.ambient_temp;
@@ -998,7 +1005,9 @@ fn boundary_flux_pass(
                     grid.temperatures[idx] = boundary.ambient_temp;
                     grid.saturation[idx] = 0;
                 }
-                if y == 0 && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum && is_fluid
+                if y == 0
+                    && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum
+                    && is_fluid
                 {
                     grid.cells[idx] = AIR;
                     grid.temperatures[idx] = boundary.ambient_temp;
@@ -1012,7 +1021,9 @@ fn boundary_flux_pass(
                     grid.temperatures[idx] = boundary.ambient_temp;
                     grid.saturation[idx] = 0;
                 }
-                if z == 0 && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum && is_fluid
+                if z == 0
+                    && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum
+                    && is_fluid
                 {
                     grid.cells[idx] = AIR;
                     grid.temperatures[idx] = boundary.ambient_temp;
@@ -1177,10 +1188,7 @@ fn step_with_parity(
         // changed. Compute it once and stash on the grid — the diff is bounded
         // by `dirty_chunks.len() * 4096` worst case, but breaks out per chunk
         // on the first divergent cell, so a single voxel flip = 1 chunk.
-        grid.last_changed_chunks = grid
-            .chunks_changed_from(&before)
-            .into_iter()
-            .collect();
+        grid.last_changed_chunks = grid.chunks_changed_from(&before).into_iter().collect();
         let counts = before.chunk_counts();
         let mut next = HashSet::new();
         for chunk in before.dirty_chunks.iter().copied() {
@@ -1890,7 +1898,7 @@ mod tests {
     /// the whole grid walk.
     #[test]
     fn step_world_static_world_emits_no_chunks() {
-        use crate::{FIXED_SCALE, WorldCoord};
+        use crate::{WorldCoord, FIXED_SCALE};
         let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
         // Fill the volume with STONE (Solid/immobile). `mark_mobile_chunks`
         // walks every cell looking for Liquid/Powder/Gas — finds none — so
@@ -1936,7 +1944,7 @@ mod tests {
     /// under gravity).
     #[test]
     fn step_world_single_voxel_chunks_bounded() {
-        use crate::{FIXED_SCALE, WorldCoord};
+        use crate::{WorldCoord, FIXED_SCALE};
         let mut world: VoxelWorld<MaterialId> = VoxelWorld::new(FIXED_SCALE);
         // Bounds: 2x2x2 voxels in a single 16³ chunk (chunk (0,0,0)). The
         // water voxel sits at (1, 1, 1) with air below it; gravity will swap

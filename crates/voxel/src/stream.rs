@@ -8,7 +8,7 @@
 //!   from the world seed via a deterministic per-chunk [`WorldGen`]. They never need to
 //!   touch disk — eviction just drops them.
 //! - **Disk-backed cache**: chunks that have been *edited* (dirty) are serialised to a
-//!   [`ChunkStore`] on eviction and reloaded on demand. Disk is the bound, not compute.
+//!   [`ChunkStorePort`] on eviction and reloaded on demand. Disk is the bound, not compute.
 //! - **LRU active set**: [`StreamingWorld`] tracks an LRU of loaded chunks and evicts the
 //!   coldest when over the RAM budget.
 //! - **Distance-tiered LOD**: [`StreamingWorld::lod_for`] reuses the kernel
@@ -105,14 +105,22 @@ pub struct StreamStats {
     pub dropped_evictions: u64,
 }
 
-/// Disk-backed store for *edited* chunks. Clean chunks never reach here.
+/// Port trait for chunk storage adapters.
+/// The domain (`StreamingWorld`) depends on this trait, not on concrete I/O.
+pub trait ChunkStorePort: Send + Sync {
+    fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()>;
+    fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>>;
+    fn contains(&self, coord: ChunkCoord) -> bool;
+}
+
+/// Filesystem-backed store for *edited* chunks. Clean chunks never reach here.
 ///
 /// Serialisation is via the kernel's `serde` derives on [`Chunk`].
-pub struct ChunkStore {
+pub struct FsChunkStore {
     dir: PathBuf,
 }
 
-impl ChunkStore {
+impl FsChunkStore {
     /// Open (creating if needed) a store rooted at `dir`.
     pub fn open(dir: PathBuf) -> std::io::Result<Self> {
         fs::create_dir_all(&dir)?;
@@ -124,16 +132,15 @@ impl ChunkStore {
         self.dir
             .join(format!("{}_{}_{}.chunk", coord.cx, coord.cy, coord.cz))
     }
+}
 
-    /// Persist an edited chunk. Overwrites any previous version.
-    pub fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
+impl ChunkStorePort for FsChunkStore {
+    fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
         let bytes =
             bincode::serialize(chunk).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         fs::write(self.path_for(coord), bytes)
     }
-
-    /// Load a previously persisted chunk, or `None` if absent.
-    pub fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>> {
+    fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>> {
         let path = self.path_for(coord);
         let bytes = match fs::read(path) {
             Ok(bytes) => bytes,
@@ -144,9 +151,7 @@ impl ChunkStore {
             bincode::deserialize(&bytes).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         Ok(Some(chunk))
     }
-
-    /// True if `coord` has a persisted (edited) version.
-    pub fn contains(&self, coord: ChunkCoord) -> bool {
+    fn contains(&self, coord: ChunkCoord) -> bool {
         self.path_for(coord).exists()
     }
 }
@@ -161,7 +166,7 @@ pub struct StreamingWorld<G: WorldGen> {
     resident: HashMap<ChunkCoord, Resident>,
     /// LRU order: front = coldest, back = hottest. Holds the same keys as `resident`.
     lru: std::collections::VecDeque<ChunkCoord>,
-    store: Option<ChunkStore>,
+    store: Option<Box<dyn ChunkStorePort>>,
     stats: StreamStats,
 }
 
@@ -171,17 +176,31 @@ struct Resident {
 }
 
 impl<G: WorldGen> StreamingWorld<G> {
-    /// Construct a streaming world. Opens the disk cache if `cfg.disk_dir` is set.
-    pub fn new(cfg: StreamConfig, gen: G) -> std::io::Result<Self> {
-        let store = cfg.disk_dir.clone().map(ChunkStore::open).transpose()?;
-        Ok(Self {
+    /// Construct a streaming world with an explicit store adapter.
+    pub fn new_with_store(
+        cfg: StreamConfig,
+        gen: G,
+        store: Option<Box<dyn ChunkStorePort>>,
+    ) -> Self {
+        Self {
             cfg,
             gen,
             resident: HashMap::new(),
             lru: VecDeque::new(),
             store,
             stats: StreamStats::default(),
-        })
+        }
+    }
+
+    /// Construct a streaming world. Opens the disk cache if `cfg.disk_dir` is set.
+    pub fn new(cfg: StreamConfig, gen: G) -> std::io::Result<Self> {
+        let store = cfg
+            .disk_dir
+            .clone()
+            .map(FsChunkStore::open)
+            .transpose()?
+            .map(|s| Box::new(s) as Box<dyn ChunkStorePort>);
+        Ok(Self::new_with_store(cfg, gen, store))
     }
 
     /// Number of voxels along one side of the world for the configured scale and a

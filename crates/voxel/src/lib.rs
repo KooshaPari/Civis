@@ -40,18 +40,17 @@ pub mod stream;
 pub mod window;
 pub mod worldgen;
 
-pub use material_pbr::{
-    AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
-    GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
-    MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
-    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction,
-    SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION, TextureChannelMap, TriplanarLayer,
-    TriplanarSplatPlan,
-};
 pub use hud::{
     DiplomacyFsm, DiplomacyPanel, EventFeed, EventFeedItem, EventSeverity, MenuKind, MenuStack,
     MenuStackError, TechNode, TechTree, TechTreeError, ToolEntry, ToolPalette, ToolPaletteError,
     TreatySlot, HUB_PALETTE_SCHEMA_VERSION, HUB_TECH_SCHEMA_VERSION,
+};
+pub use material_pbr::{
+    AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
+    GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
+    MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
+    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction, TextureChannelMap,
+    TriplanarLayer, TriplanarSplatPlan, SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
 };
 
 pub use scale_budget::{
@@ -59,15 +58,16 @@ pub use scale_budget::{
     MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
 };
 pub use stream::{
-    ChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE, CHUNK_EDGE_I32,
+    ChunkStorePort, FsChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE,
+    CHUNK_EDGE_I32,
 };
 pub use window::io::{IoContract, MaterializedSnapshot, IO_CONTRACT_VERSION};
 pub use window::plan::{
-    prefetch_set, ChunkOffsetIter, ScaleReport, VelocityChunksPerTick, P99_SAMPLE_CAP,
-    DEFAULT_PREFETCH_TICKS,
+    prefetch_set, ChunkOffsetIter, ScaleReport, VelocityChunksPerTick, DEFAULT_PREFETCH_TICKS,
+    P99_SAMPLE_CAP,
 };
-pub use window::{ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy, ring_distance};
 pub use window::ring_iter::RingIter;
+pub use window::{ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy};
 pub use worldgen::HeightFieldGen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can

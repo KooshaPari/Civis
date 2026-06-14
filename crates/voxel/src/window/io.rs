@@ -1,6 +1,6 @@
 //! Shared chunk IO contracts + save snapshot for the streaming window.
 //!
-//! Lifts the [`crate::stream::ChunkStore`] disk contract to a
+//! Lifts the [`crate::stream::FsChunkStore`] disk contract to a
 //! versioned, serialisable manifest that downstream clients (Bevy,
 //! Godot, Unreal) can negotiate against without depending on the
 //! kernel's internal `bincode` shape. Three types, all `Copy`-able
@@ -17,7 +17,7 @@
 //!   Implements FR-CIV-SCALE-007.
 //!
 //! Pure data — no `fs`, no `std::io`. The streaming layer wires the
-//! bytes to disk via [`crate::stream::ChunkStore`]; these types are
+//! bytes to disk via [`crate::stream::FsChunkStore`]; these types are
 //! the *contract*, not the transport.
 
 #![forbid(unsafe_code)]
@@ -107,9 +107,9 @@ impl IoContract {
 /// reconstructs the same rings.
 ///
 /// The snapshot is **pure data** (no chunk bytes — the chunk bytes
-/// live in the [`crate::stream::ChunkStore`]). The save loader is
+/// live in the [`crate::stream::FsChunkStore`]). The save loader is
 /// expected to read the snapshot header first, then open a
-/// `ChunkStore` rooted at the snapshot's `disk_dir_name` to fetch
+/// `FsChunkStore` rooted at the snapshot's `disk_dir_name` to fetch
 /// the actual voxel payloads in a second pass.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MaterializedSnapshot {
@@ -131,7 +131,7 @@ pub struct MaterializedSnapshot {
     pub chunks: Vec<IoContract>,
     /// Logical name of the directory the chunk bytes were stored
     /// under (relative to the save root). The save loader resolves
-    /// this against the save root to open a [`crate::stream::ChunkStore`].
+    /// this against the save root to open a [`crate::stream::FsChunkStore`].
     /// Kept short and machine-friendly (e.g. `"chunks"`).
     pub disk_dir_name: String,
 }

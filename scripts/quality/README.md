@@ -1,6 +1,17 @@
 # Quality manifest (local-first CI)
 
-Cloud CI (`quality.yml`) only runs `verify-quality-manifest.sh` — no Rust, Node, or Unreal on the runner. Developers attest gates locally via lefthook `pre-push` → `emit-quality-manifest.ps1` / `.sh`.
+Cloud CI (`quality.yml` + `pr-governance-gate`) only runs `verify-quality-manifest.sh` on `ubuntu-latest` — no Rust, Node, or Unreal on the runner. Developers attest gates locally via lefthook `pre-push` → `emit-quality-manifest.ps1` / `.sh`.
+
+**Do not hand-edit** `.ci/quality-manifest.json`. Refresh with:
+
+```powershell
+lefthook install
+lefthook run pre-push
+git add .ci/quality-manifest.json
+git commit -m "chore(ci): refresh quality manifest"
+```
+
+The manifest records a `git_sha` (HEAD or HEAD^) and a blake2b `manifest_hash` over gate statuses. Cloud verify checks out the PR branch tip and rejects stale or tampered manifests.
 
 ## Gate tiers
 

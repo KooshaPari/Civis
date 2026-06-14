@@ -30,60 +30,10 @@
 
 #![allow(dead_code)] // Phase 1 scaffold — consumers land in a follow-up PR.
 
-#[cfg(feature = "bevy")]
-use bevy::mesh::MeshVertexBufferLayoutRef;
 #[cfg(feature = "pbr-textures")]
 use bevy::pbr::StandardMaterial;
-#[cfg(feature = "bevy")]
-use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey, MaterialPlugin};
-#[cfg(feature = "bevy")]
+#[cfg(feature = "pbr-textures")]
 use bevy::prelude::*;
-#[cfg(feature = "bevy")]
-use bevy::reflect::TypePath;
-#[cfg(feature = "bevy")]
-use bevy::render::render_resource::{AsBindGroup, ShaderType, SpecializedMeshPipelineError};
-#[cfg(feature = "bevy")]
-use bevy::shader::ShaderRef;
-#[cfg(feature = "bevy")]
-use std::collections::HashMap;
-
-#[cfg(feature = "bevy")]
-pub mod texture_load {
-    use super::Biome;
-    use bevy::asset::Handle;
-    use bevy::image::ImageLoaderSettings;
-    use bevy::prelude::*;
-
-    /// sRGB albedo / base-color maps.
-    #[must_use]
-    pub fn load_albedo(asset_server: &AssetServer, path: impl Into<String>) -> Handle<Image> {
-        let path: String = path.into();
-        asset_server.load_with_settings(path, |s: &mut ImageLoaderSettings| {
-            s.is_srgb = true;
-        })
-    }
-
-    /// Linear data maps: normal, metallic-roughness, occlusion, height.
-    #[must_use]
-    pub fn load_linear_map(asset_server: &AssetServer, path: impl Into<String>) -> Handle<Image> {
-        let path: String = path.into();
-        asset_server.load_with_settings(path, |s: &mut ImageLoaderSettings| {
-            s.is_srgb = false;
-        })
-    }
-
-    /// Albedo + normal paths for a [`Biome`] slug under `assets/textures/`.
-    #[must_use]
-    pub fn biome_albedo_path(biome: Biome) -> String {
-        format!("textures/{}/albedo.jpg", biome.slug())
-    }
-
-    /// Albedo + normal paths for a [`Biome`] slug under `assets/textures/`.
-    #[must_use]
-    pub fn biome_normal_path(biome: Biome) -> String {
-        format!("textures/{}/normal.jpg", biome.slug())
-    }
-}
 
 /// Number of biome materials managed by the Phase-1 loader.
 pub const BIOME_COUNT: usize = 6;
@@ -158,38 +108,6 @@ impl Biome {
             Biome::ForestFloor => [0.12, 0.34, 0.12],
             Biome::RockCliff => [0.50, 0.50, 0.52],
             Biome::SnowPure => [0.97, 0.97, 0.97],
-        }
-    }
-
-    /// Per-biome surface PBR `(perceptual_roughness, reflectance, metallic)`
-    /// from `docs/design/lighting-biomes-art.md` §4.2. Replaces the old uniform
-    /// `0.95 / 0.18` block (the flat-RGB bug). Keeps a ≥0.40 roughness spread
-    /// across the set so shiny families (Snow `0.45`) read against the matte
-    /// ones (Forest `0.95`). Reflectance is the wet/dry knob; all ground is
-    /// dielectric (metallic `0.0`).
-    #[must_use]
-    pub const fn surface_pbr(self) -> (f32, f32, f32) {
-        match self {
-            Biome::SandBeach => (0.65, 0.42, 0.0), // wet shore
-            Biome::DirtGround => (0.90, 0.18, 0.0),
-            Biome::GrassField => (0.88, 0.25, 0.0),
-            Biome::ForestFloor => (0.95, 0.18, 0.0), // flattest / most matte
-            Biome::RockCliff => (0.78, 0.35, 0.0),
-            Biome::SnowPure => (0.45, 0.55, 0.0), // shiniest / brightest
-        }
-    }
-
-    /// Per-biome `base_color` tint (sRGB) from §4.2, multiplied over the albedo
-    /// texture. Near-white-warm so the texture dominates; tint nudges mood.
-    #[must_use]
-    pub const fn tint_srgb(self) -> [f32; 3] {
-        match self {
-            Biome::SandBeach => [0.788, 0.722, 0.478], // #C9B87A wet shore
-            Biome::DirtGround => [0.478, 0.369, 0.220], // #7A5E38 packed
-            Biome::GrassField => [0.290, 0.604, 0.239], // #4A9A3D
-            Biome::ForestFloor => [0.122, 0.341, 0.122], // #1F571F canopy floor
-            Biome::RockCliff => [0.424, 0.439, 0.455], // #6C7074
-            Biome::SnowPure => [0.941, 0.965, 1.000],  // #F0F6FF
         }
     }
 
@@ -301,17 +219,16 @@ mod loader {
             let occlusion: Handle<Image> =
                 texture_load::load_linear_map(&asset_server, &paths.occlusion);
 
-            let [r, g, b] = biome.tint_srgb();
-            let (roughness, reflectance, metallic) = biome.surface_pbr();
+            let [r, g, b] = biome.fallback_srgb();
             materials.add(StandardMaterial {
                 base_color: Color::srgb(r, g, b),
                 base_color_texture: Some(albedo),
                 normal_map_texture: Some(normal),
-                perceptual_roughness: roughness,
+                perceptual_roughness: 0.95,
                 metallic_roughness_texture: Some(metallic_roughness),
                 occlusion_texture: Some(occlusion),
-                metallic,
-                reflectance,
+                metallic: 0.0,
+                reflectance: 0.18,
                 ..Default::default()
             })
         });
@@ -377,215 +294,4 @@ mod tests {
         assert_eq!(texture_load::biome_albedo_path(Biome::SandBeach), "textures/sand_beach/albedo.jpg");
         assert_eq!(texture_load::biome_normal_path(Biome::SandBeach), "textures/sand_beach/normal.jpg");
     }
-}
-
-#[cfg(feature = "bevy")]
-use civ_voxel::material::{
-    ASH, BEDROCK, CLAY, DIRT, GRANITE, GRAVEL, MUD, PACKED_DIRT, PLANT, SALT, SAND, SNOW, STONE,
-    WOOD,
-};
-#[cfg(feature = "bevy")]
-use civ_voxel::MaterialId;
-
-#[cfg(feature = "bevy")]
-const TRI_SHADER: &str = "shaders/voxel_triplanar.wgsl";
-#[cfg(feature = "bevy")]
-const TRI_SCALE: f32 = 0.22;
-
-#[cfg(feature = "bevy")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TerrainTextureLayer {
-    Sand,
-    Dirt,
-    Grass,
-    Forest,
-    Rock,
-    Snow,
-}
-
-#[cfg(feature = "bevy")]
-impl TerrainTextureLayer {
-    const ALL: [Self; 6] = [
-        Self::Sand,
-        Self::Dirt,
-        Self::Grass,
-        Self::Forest,
-        Self::Rock,
-        Self::Snow,
-    ];
-
-    #[must_use]
-    pub const fn biome(self) -> Biome {
-        match self {
-            Self::Sand => Biome::SandBeach,
-            Self::Dirt => Biome::DirtGround,
-            Self::Grass => Biome::GrassField,
-            Self::Forest => Biome::ForestFloor,
-            Self::Rock => Biome::RockCliff,
-            Self::Snow => Biome::SnowPure,
-        }
-    }
-}
-
-#[cfg(feature = "bevy")]
-#[must_use]
-pub fn terrain_layer_for_material(id: MaterialId) -> Option<TerrainTextureLayer> {
-    match id {
-        SAND | SALT => Some(TerrainTextureLayer::Sand),
-        DIRT | MUD | CLAY | GRAVEL | PACKED_DIRT | ASH => Some(TerrainTextureLayer::Dirt),
-        PLANT => Some(TerrainTextureLayer::Grass),
-        WOOD => Some(TerrainTextureLayer::Forest),
-        STONE | GRANITE | BEDROCK => Some(TerrainTextureLayer::Rock),
-        SNOW => Some(TerrainTextureLayer::Snow),
-        _ => None,
-    }
-}
-
-#[cfg(feature = "bevy")]
-#[derive(Clone, Copy, Default, ShaderType, Debug)]
-pub struct TriplanarParams {
-    pub scale: f32,
-    pub normal_strength: f32,
-    pub perceptual_roughness: f32,
-    pub metallic: f32,
-    pub reflectance: f32,
-    /// `1.0` = flat vertex-color only (LOD / fallback); `0.0` = full triplanar.
-    pub vertex_color_blend: f32,
-    pub sun_strength: f32,
-    pub ambient: f32,
-    pub light_dir: Vec3,
-}
-
-#[cfg(feature = "bevy")]
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub struct VoxelTriplanarMaterial {
-    #[uniform(0)]
-    pub params: TriplanarParams,
-    #[texture(1)]
-    #[sampler(2)]
-    pub albedo: Handle<Image>,
-    #[texture(3)]
-    #[sampler(4)]
-    pub normal_map: Handle<Image>,
-    pub alpha_mode: AlphaMode,
-}
-
-#[cfg(feature = "bevy")]
-impl Material for VoxelTriplanarMaterial {
-    fn fragment_shader() -> ShaderRef {
-        TRI_SHADER.into()
-    }
-
-    fn alpha_mode(&self) -> AlphaMode {
-        self.alpha_mode
-    }
-
-    fn specialize(
-        _pipeline: &MaterialPipeline,
-        descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayoutRef,
-        _key: MaterialPipelineKey<Self>,
-    ) -> Result<(), SpecializedMeshPipelineError> {
-        descriptor.primitive.cull_mode = None;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "bevy")]
-#[derive(Resource)]
-pub struct VoxelPbrBank {
-    layers: [LayerTextures; 6],
-    cache: HashMap<MaterialId, Handle<VoxelTriplanarMaterial>>,
-}
-
-#[cfg(feature = "bevy")]
-#[derive(Clone)]
-struct LayerTextures {
-    albedo: Handle<Image>,
-    normal: Handle<Image>,
-}
-
-#[cfg(feature = "bevy")]
-impl VoxelPbrBank {
-    /// Drop cached handles when the voxel world is regenerated.
-    pub fn clear_cache(&mut self) {
-        self.cache.clear();
-    }
-
-    /// Cached triplanar material for a terrain voxel, if mapped.
-    pub fn material_for(
-        &mut self,
-        id: MaterialId,
-        assets: &mut bevy::asset::Assets<VoxelTriplanarMaterial>,
-    ) -> Option<Handle<VoxelTriplanarMaterial>> {
-        if let Some(h) = self.cache.get(&id) {
-            return Some(h.clone());
-        }
-        let layer = terrain_layer_for_material(id)?;
-        let handle = assets.add(self.build_material(layer));
-        self.cache.insert(id, handle.clone());
-        Some(handle)
-    }
-
-    fn build_material(&self, layer: TerrainTextureLayer) -> VoxelTriplanarMaterial {
-        let idx = layer_index(layer);
-        let biome = layer.biome();
-        let (roughness, reflectance, metallic) = biome.surface_pbr();
-        VoxelTriplanarMaterial {
-            params: TriplanarParams {
-                scale: TRI_SCALE,
-                normal_strength: 0.85,
-                perceptual_roughness: roughness,
-                metallic,
-                reflectance,
-                vertex_color_blend: 0.0,
-                sun_strength: 0.72,
-                ambient: 0.28,
-                light_dir: Vec3::new(0.35, 0.85, 0.38).normalize(),
-            },
-            albedo: self.layers[idx].albedo.clone(),
-            normal_map: self.layers[idx].normal.clone(),
-            alpha_mode: AlphaMode::Opaque,
-        }
-    }
-}
-
-#[cfg(feature = "bevy")]
-fn layer_index(layer: TerrainTextureLayer) -> usize {
-    TerrainTextureLayer::ALL
-        .iter()
-        .position(|&l| l == layer)
-        .unwrap_or(0)
-}
-
-#[cfg(feature = "bevy")]
-pub struct VoxelTriplanarPlugin;
-
-#[cfg(feature = "bevy")]
-impl Plugin for VoxelTriplanarPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<VoxelTriplanarMaterial>::default())
-            .add_systems(Startup, load_voxel_pbr_bank);
-    }
-}
-
-#[cfg(feature = "bevy")]
-fn load_voxel_pbr_bank(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let layers = std::array::from_fn(|i| {
-        let biome = TerrainTextureLayer::ALL[i].biome();
-        LayerTextures {
-            albedo: texture_load::load_albedo(
-                &asset_server,
-                &texture_load::biome_albedo_path(biome),
-            ),
-            normal: texture_load::load_linear_map(
-                &asset_server,
-                &texture_load::biome_normal_path(biome),
-            ),
-        }
-    });
-    commands.insert_resource(VoxelPbrBank {
-        layers,
-        cache: HashMap::new(),
-    });
 }

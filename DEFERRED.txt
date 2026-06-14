@@ -1,0 +1,9 @@
+# DEFERRED.txt - p-w1 recovery
+# Generated: 2026-06-13
+# Status: All recovered crates compiled successfully - no deferred items.
+# Workspace: GREEN (cargo check passed with warnings only)
+# Recovered crates:
+#   - civ-bevy-ref (clients/bevy-ref)
+#   - civ-protocol-3d (crates/protocol-3d)
+#   - civ-server (crates/server)
+# No API-drift blockers requiring checkout.

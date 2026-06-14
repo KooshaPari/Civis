@@ -8,17 +8,18 @@
 //! - **Building diffs** — `BuildingGraph` mutations tagged with provenance
 //!   (procedural vs freehand).
 //! - **Agent appearance** — per-civilian wardrobe / tools state updates.
+//! - **Climate** — per-tick deterministic planet climate + weather-grid snapshot.
 //!
 //! This crate ships the wire-format types, a versioning gate, and a minimal
 //! length-prefixed binary envelope (`encode_frame3d_binary` / `decode_frame3d_binary`).
 //! Full zstd-compressed production framing and WebSocket attach land in
 //! `civ-server` once the schema stabilises.
 //!
-//! **Tick batch coalescing:** the server sends three separate `F3D0` frames per
-//! tick (voxel, building, agent) rather than one length-prefixed batch blob.
+//! **Tick batch coalescing:** the server sends separate `F3D0` frames per
+//! tick (voxel, building, agent, climate) rather than one length-prefixed batch blob.
 //! Clients already decode individual frames; merging them would require a new
 //! magic/batch envelope and break existing decoders for a small WebSocket
-//! framing win (3 headers ≈ 27 bytes vs 1).
+//! framing win (4 headers ≈ 36 bytes vs 1).
 //!
 //! See `docs/development-guide/fr-3d-additions.md` for `FR-CIV-PROTO3D-*`.
 
@@ -217,9 +218,10 @@ pub enum Government3d {
 }
 
 /// A single faction state payload for the 3D wire protocol.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct FactionStateEntry {
     /// Stable faction id from the simulation ECS.
+    #[serde(default)]
     pub id: u32,
     /// Current era index.
     #[serde(default)]
@@ -310,12 +312,7 @@ pub struct BattleEvent3d {
 /// A disaster event in the wire-level event feed.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DisasterEvent3d {
-    /// Disaster kind or label.
-    ///
-    /// Renamed to `disaster_kind` to avoid clashing with the
-    /// `EventFeedMessage3d` tagged-enum tag (`#[serde(tag = "kind")]`); the
-    /// serializer would otherwise emit two `kind` fields per disaster
-    /// message.
+    /// Disaster kind or label (not `kind` — collides with [`EventFeedMessage3d`] tag).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub disaster_kind: String,
     /// Optional disaster severity.
@@ -418,21 +415,6 @@ fn default_agent_scale() -> f32 {
     1.0
 }
 
-/// Climate broadcast for one tick. Carries the planetary day/year/moon/tide
-/// phase plus the per-region weather grid so 3D clients can drive sky,
-/// lighting, and ambient effects without re-running the simulation.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ClimateFrame {
-    /// Server tick at which the climate was sampled.
-    pub tick: u64,
-    /// Planetary phase snapshot.
-    pub climate: civ_planet::Climate,
-    /// One weather cell per region, in the same region-id space used by the
-    /// `GeologyMap` / `RegionBiome` wire types.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub weather: Vec<civ_planet::WeatherCell>,
-}
-
 /// Discriminated union of all 3D-extension protocol frames. The existing Civis
 /// protocol carries this inside its binary-frame envelope.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -449,10 +431,6 @@ pub enum Frame3d {
     FactionState(FactionStateFrame),
     /// Event-feed batch for one tick.
     EventFeed(EventFeedFrame),
-    /// Climate broadcast for one tick (planetary phase + per-region weather).
-    /// Distinct from the other batch frames because it ticks on its own cadence
-    /// (driven by the planet sim) and carries a different per-tick payload shape.
-    Climate(ClimateFrame),
 }
 
 impl Frame3d {
@@ -466,7 +444,6 @@ impl Frame3d {
             Self::CivilianState(f) => f.tick,
             Self::FactionState(f) => f.tick,
             Self::EventFeed(f) => f.tick,
-            Self::Climate(f) => f.tick,
         }
     }
 }
@@ -506,7 +483,6 @@ enum Frame3dKind {
     CivilianState = 3,
     FactionState = 4,
     EventFeed = 5,
-    Climate = 6,
 }
 
 impl Frame3dKind {
@@ -518,7 +494,6 @@ impl Frame3dKind {
             Frame3d::CivilianState(_) => Self::CivilianState,
             Frame3d::FactionState(_) => Self::FactionState,
             Frame3d::EventFeed(_) => Self::EventFeed,
-            Frame3d::Climate(_) => Self::Climate,
         }
     }
 }
@@ -582,340 +557,6 @@ pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError
 
     serde_json::from_slice(&bytes[FRAME3D_BINARY_HEADER_LEN..])
         .map_err(|err| Frame3dBinaryError::InvalidPayload(err.to_string()))
-}
-
-// ===================================================================
-// Agents stream — efficient per-agent id + position for thousands of
-// agents. See FR-CIV-PROTO3D-014..017.
-// ===================================================================
-
-/// Grid step in meters used by the agents-stream quantization. 0.25 m (25 cm)
-/// is finer than typical civilian leg-length (~0.8 m) and gives ±8.19 km of
-/// positional reach from the stream origin in each axis before an i16 cell
-/// would overflow.
-///
-/// Rationale: at 0.25 m the per-cell error is at most `GRID_STEP_M / 2 = 0.125 m`,
-/// which is below the per-frame visible jitter of a walking civilian mesh
-/// (the human eye cannot reliably detect sub-decimeter offsets at the camera
-/// distances used by the 3D clients). Doubling the resolution to 0.125 m would
-/// halve the range; halving it to 0.5 m would push the visible jitter close to
-/// the leg-length boundary.
-pub const GRID_STEP_M: f32 = 0.25;
-
-/// 4-byte magic for the parallel `AgentStream` envelope. Distinct from
-/// `FRAME3D_BINARY_MAGIC` so legacy decoders that do not understand it can
-/// skip the frame on magic mismatch (the Civis WebSocket binary dispatcher
-/// already drops unknown magics as a no-op).
-pub const AGENT_STREAM_MAGIC: &[u8; 4] = b"F3AS";
-
-/// Current wire-version of the `AgentStream` envelope. Bumped on any
-/// wire-incompatible change. Decoders must reject frames whose version
-/// exceeds their highest supported version.
-pub const AGENT_STREAM_VERSION: u8 = 1;
-
-/// Capability / mode flag bits carried in the `AgentStream` header.
-///
-/// Bit 0 — [`AgentStreamMode::Full`]: each entry is a fresh id + absolute
-/// quantized cell from the stream origin. Cheap to encode/decode, tolerant
-/// of dropped frames (client just refills on the next full snapshot). This
-/// is the default mode the server ships while agent counts are in the
-/// hundreds.
-///
-/// Bit 1 — [`AgentStreamMode::Delta`]: each entry carries an id + a signed
-/// cell delta from the previous tick. Implemented as a future optimization
-/// once the scale law actually pushes agent counts into the thousands (see
-/// the PR alternatives discussion for the threshold rationale).
-///
-/// Bits 2..7 — reserved, must be zero on the wire; decoders ignore them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct AgentStreamFlags(pub u8);
-
-impl AgentStreamFlags {
-    /// Build a `FullSnapshot` flag byte (bit 0 set).
-    #[must_use]
-    pub const fn full_snapshot() -> Self {
-        Self(0b0000_0001)
-    }
-
-    /// Build a `DeltaSnapshot` flag byte (bit 1 set).
-    #[must_use]
-    pub const fn delta_snapshot() -> Self {
-        Self(0b0000_0010)
-    }
-
-    /// Returns the wire-level mode.
-    #[must_use]
-    pub const fn mode(self) -> AgentStreamMode {
-        match self.0 & 0b0000_0011 {
-            0b01 => AgentStreamMode::Full,
-            0b10 => AgentStreamMode::Delta,
-            // Reserved / unknown bits fall back to FullSnapshot so old
-            // clients that have never seen a mode byte still get a useful
-            // frame.
-            _ => AgentStreamMode::Full,
-        }
-    }
-}
-
-/// Stream-mode selector derived from the flag bits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AgentStreamMode {
-    /// Each entry is a full id + absolute quantized cell.
-    Full,
-    /// Each entry is id + signed delta cell from the previous tick.
-    /// Reserved for the follow-up delta PR; the v1 envelope accepts the
-    /// flag bit but rejects the payload with [`AgentStreamBinaryError::UnsupportedMode`].
-    Delta,
-}
-
-/// Header for the parallel `AgentStream` envelope.
-///
-/// Wire layout (big-endian):
-///
-/// ```text
-///   0..4   magic        "F3AS"
-///   4      version      u8   (must equal AGENT_STREAM_VERSION)
-///   5      flags        u8   (see [`AgentStreamFlags`])
-///   6..10  agent_count  u32
-///   10..18 tick         u64
-///   18..22 origin_x     i32  (cell count offset for absolute coords)
-///   22..26 origin_y     i32
-///   26..30 origin_z     i32
-/// ```
-///
-/// `agent_count * 10` entry bytes follow. In `FullSnapshot` mode each entry
-/// is `{ id: u32, cell_x: i16, cell_y: i16, cell_z: i16 }`. In `DeltaSnapshot`
-/// mode the same layout is reused for `{ id: u32, dcell_x: i16, dcell_y: i16, dcell_z: i16 }`
-/// (signed deltas).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AgentStreamHeader {
-    /// Server tick at which the snapshot was produced.
-    pub tick: u64,
-    /// Number of [`AgentStreamEntry`] records that follow.
-    pub agent_count: u32,
-    /// Mode / capability flags.
-    pub flags: AgentStreamFlags,
-    /// Cell-grid origin used to bias absolute cell coordinates (see
-    /// [`encode_agent_stream_binary`]). Stored as raw i32 cell counts so
-    /// the origin is itself a 25 cm-aligned cell index.
-    pub origin: GridOriginI32,
-}
-
-/// Three-axis cell-grid origin stored as raw i32 cell counts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct GridOriginI32 {
-    /// X origin (cells).
-    pub x: i32,
-    /// Y origin (cells).
-    pub y: i32,
-    /// Z origin (cells).
-    pub z: i32,
-}
-
-/// One agent entry inside an `AgentStream` envelope.
-///
-/// In `Full` mode the cell components are the absolute position
-/// `(agent_world - origin) / GRID_STEP_M`, signed i16, and the renderer
-/// reverses the transform. In `Delta` mode they are signed i16 deltas
-/// from the previous tick (reserved — see [`AgentStreamMode::Delta`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AgentStreamEntry {
-    /// Stable entity id from the simulation ECS. u32 keeps the entry at
-    /// 10 bytes; Civis civilian ids fit comfortably under 2^32 across
-    /// the foreseeable scale law.
-    pub id: u32,
-    /// Quantized cell X (absolute in `Full` mode, delta in `Delta` mode).
-    pub cell_x: i16,
-    /// Quantized cell Y.
-    pub cell_y: i16,
-    /// Quantized cell Z.
-    pub cell_z: i16,
-}
-
-/// Decoded `AgentStream` payload as returned to clients.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AgentStream {
-    /// Parsed header.
-    pub header: AgentStreamHeader,
-    /// Per-agent entries (length always equals `header.agent_count`).
-    pub entries: Vec<AgentStreamEntry>,
-}
-
-const AGENT_STREAM_HEADER_LEN: usize = 30;
-const AGENT_STREAM_ENTRY_LEN: usize = 10;
-const AGENT_STREAM_MAX_AGENTS: u32 = 65_536;
-
-/// Errors raised by `AgentStream` binary encode / decode.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AgentStreamBinaryError {
-    /// Magic bytes do not match [`AGENT_STREAM_MAGIC`].
-    BadMagic,
-    /// Buffer is shorter than the fixed header.
-    TooShort,
-    /// Header version is not supported by this decoder.
-    UnsupportedVersion(u8),
-    /// Mode flag is reserved (delta is accepted by the flag parser but
-    /// the v1 decoder refuses the payload).
-    UnsupportedMode(AgentStreamMode),
-    /// Declared agent count would not fit the buffer.
-    LengthMismatch {
-        /// Expected byte length.
-        expected: usize,
-        /// Actual byte length.
-        actual: usize,
-    },
-    /// A cell coordinate would not round-trip through the i16 grid given
-    /// the configured origin + step.
-    CellOutOfRange {
-        /// Agent id whose cell overflowed.
-        agent_id: u32,
-        /// Axis (`0` = X, `1` = Y, `2` = Z).
-        axis: u8,
-    },
-}
-
-/// Quantize a world-space meter offset into a signed i16 cell index
-/// relative to a cell-grid origin.
-///
-/// Returns `None` when the world offset cannot be expressed in i16 cells
-/// at the current `GRID_STEP_M`. Callers should treat that as a
-/// `CellOutOfRange` encode error.
-#[must_use]
-pub fn quantize_axis(world_m: f32, origin_cells: i32) -> Option<i16> {
-    let cells = (world_m / GRID_STEP_M).round() + origin_cells as f32;
-    if !cells.is_finite() {
-        return None;
-    }
-    // Saturate instead of overflowing on the encode side so a single bad
-    // agent cannot abort the whole stream — but we still want the encoder
-    // to flag it for diagnostics.
-    if cells > i16::MAX as f32 || cells < i16::MIN as f32 {
-        return None;
-    }
-    Some(cells as i16)
-}
-
-/// Dequantize a signed i16 cell index back to a world-space meter offset.
-#[must_use]
-pub fn dequantize_axis(cell: i16, origin_cells: i32) -> f32 {
-    (cell as i32 - origin_cells) as f32 * GRID_STEP_M
-}
-
-/// Encode an `AgentStream` to its wire bytes (`F3AS || version || flags || ...`).
-///
-/// Quantization is bounded by `i16::MIN..=i16::MAX` cells (≈ ±8.19 km per
-/// axis at the default `GRID_STEP_M`). Callers needing a wider envelope
-/// should re-center the `origin` (the server can split a single tick
-/// across multiple streams for a continent-scale world).
-pub fn encode_agent_stream_binary(stream: &AgentStream) -> Result<Vec<u8>, AgentStreamBinaryError> {
-    if stream.entries.len() as u64 != u64::from(stream.header.agent_count) {
-        return Err(AgentStreamBinaryError::LengthMismatch {
-            expected: stream.header.agent_count as usize * AGENT_STREAM_ENTRY_LEN,
-            actual: stream.entries.len() * AGENT_STREAM_ENTRY_LEN,
-        });
-    }
-    if stream.header.agent_count > AGENT_STREAM_MAX_AGENTS {
-        return Err(AgentStreamBinaryError::LengthMismatch {
-            expected: AGENT_STREAM_MAX_AGENTS as usize * AGENT_STREAM_ENTRY_LEN,
-            actual: stream.entries.len() * AGENT_STREAM_ENTRY_LEN,
-        });
-    }
-    // Per-entry cells are i16 by construction (see [`AgentStreamEntry`]);
-    // the encoder cannot produce an out-of-range value. Callers converting
-    // world-meters to cells should use [`quantize_axis`] so they get a
-    // `None` before passing a stale number into the stream.
-
-    let total = AGENT_STREAM_HEADER_LEN + stream.entries.len() * AGENT_STREAM_ENTRY_LEN;
-    let mut out = Vec::with_capacity(total);
-    out.extend_from_slice(AGENT_STREAM_MAGIC);
-    out.push(AGENT_STREAM_VERSION);
-    out.push(stream.header.flags.0);
-    out.extend_from_slice(&stream.header.agent_count.to_be_bytes());
-    out.extend_from_slice(&stream.header.tick.to_be_bytes());
-    out.extend_from_slice(&stream.header.origin.x.to_be_bytes());
-    out.extend_from_slice(&stream.header.origin.y.to_be_bytes());
-    out.extend_from_slice(&stream.header.origin.z.to_be_bytes());
-
-    for entry in &stream.entries {
-        out.extend_from_slice(&entry.id.to_be_bytes());
-        out.extend_from_slice(&entry.cell_x.to_be_bytes());
-        out.extend_from_slice(&entry.cell_y.to_be_bytes());
-        out.extend_from_slice(&entry.cell_z.to_be_bytes());
-    }
-    debug_assert_eq!(out.len(), total);
-    Ok(out)
-}
-
-/// Decode an `AgentStream` envelope previously produced by
-/// [`encode_agent_stream_binary`].
-pub fn decode_agent_stream_binary(bytes: &[u8]) -> Result<AgentStream, AgentStreamBinaryError> {
-    if bytes.len() < AGENT_STREAM_HEADER_LEN {
-        return Err(AgentStreamBinaryError::TooShort);
-    }
-    if &bytes[..4] != AGENT_STREAM_MAGIC {
-        return Err(AgentStreamBinaryError::BadMagic);
-    }
-    let version = bytes[4];
-    if version != AGENT_STREAM_VERSION {
-        return Err(AgentStreamBinaryError::UnsupportedVersion(version));
-    }
-    let flags = AgentStreamFlags(bytes[5]);
-    let mode = flags.mode();
-    if mode == AgentStreamMode::Delta {
-        return Err(AgentStreamBinaryError::UnsupportedMode(mode));
-    }
-    let agent_count = u32::from_be_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]);
-    let expected = AGENT_STREAM_HEADER_LEN
-        .checked_add(agent_count as usize * AGENT_STREAM_ENTRY_LEN)
-        .ok_or(AgentStreamBinaryError::LengthMismatch {
-            expected: 0,
-            actual: bytes.len(),
-        })?;
-    if bytes.len() != expected {
-        return Err(AgentStreamBinaryError::LengthMismatch {
-            expected,
-            actual: bytes.len(),
-        });
-    }
-
-    let tick = u64::from_be_bytes([
-        bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15], bytes[16], bytes[17],
-    ]);
-    let origin = GridOriginI32 {
-        x: i32::from_be_bytes([bytes[18], bytes[19], bytes[20], bytes[21]]),
-        y: i32::from_be_bytes([bytes[22], bytes[23], bytes[24], bytes[25]]),
-        z: i32::from_be_bytes([bytes[26], bytes[27], bytes[28], bytes[29]]),
-    };
-
-    let header = AgentStreamHeader {
-        tick,
-        agent_count,
-        flags,
-        origin,
-    };
-
-    let mut entries = Vec::with_capacity(agent_count as usize);
-    let mut cursor = AGENT_STREAM_HEADER_LEN;
-    for _ in 0..agent_count {
-        let id = u32::from_be_bytes([
-            bytes[cursor],
-            bytes[cursor + 1],
-            bytes[cursor + 2],
-            bytes[cursor + 3],
-        ]);
-        let cell_x = i16::from_be_bytes([bytes[cursor + 4], bytes[cursor + 5]]);
-        let cell_y = i16::from_be_bytes([bytes[cursor + 6], bytes[cursor + 7]]);
-        let cell_z = i16::from_be_bytes([bytes[cursor + 8], bytes[cursor + 9]]);
-        entries.push(AgentStreamEntry {
-            id,
-            cell_x,
-            cell_y,
-            cell_z,
-        });
-        cursor += AGENT_STREAM_ENTRY_LEN;
-    }
-
-    Ok(AgentStream { header, entries })
 }
 
 #[cfg(test)]
@@ -1214,6 +855,104 @@ mod tests {
         let with_scale = r#"{"agent_id":3,"era":1,"wardrobe":0,"tools":0,"scale":1.25}"#;
         let scaled: AgentAppearanceUpdate = serde_json::from_str(with_scale).expect("deserialize");
         assert!((scaled.scale - 1.25).abs() < f32::EPSILON);
+    }
+
+    /// FR-CIV-PROTO3D-014 — every `Frame3d` variant round-trips through the F3D0 envelope.
+    #[test]
+    fn frame_bundle_binary_roundtrip_all_kinds() {
+        let frames = sample_all_frame3d_kinds();
+        for (idx, frame) in frames.iter().enumerate() {
+            let bytes = encode_frame3d_binary(frame).unwrap_or_else(|err| {
+                panic!("encode frame kind index {idx}: {err:?}");
+            });
+            assert!(
+                bytes.starts_with(FRAME3D_BINARY_MAGIC),
+                "frame kind index {idx} missing F3D0 magic"
+            );
+            let back = decode_frame3d_binary(&bytes).unwrap_or_else(|err| {
+                panic!("decode frame kind index {idx}: {err:?}");
+            });
+            assert_eq!(back, *frame, "frame kind index {idx}");
+        }
+    }
+
+    fn sample_all_frame3d_kinds() -> [Frame3d; 6] {
+        [
+            Frame3d::VoxelDelta(VoxelDeltaFrame {
+                tick: 60,
+                deltas: vec![VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: ChunkId(3),
+                        write_seq: WriteSeq(2),
+                    },
+                    voxels: vec![MaterialId(1); 16],
+                }],
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 61,
+                provenance: BuildingProvenance::Freehand,
+                buildings: vec![BuildingDiffEntry {
+                    id: 9,
+                    kind: BuildingKind3d::Temple,
+                    tier: 2,
+                    position: WorldXZ { x: 4.0, z: 8.0 },
+                }],
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 62,
+                updates: vec![AgentAppearanceUpdate {
+                    agent_id: 5,
+                    era: 2,
+                    wardrobe: MaterialId(3),
+                    tools: MaterialId(4),
+                    scale: 1.1,
+                    position: Some(WorldXZ { x: 1.0, z: 2.0 }),
+                }],
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 63,
+                civilians: vec![CivilianStateEntry {
+                    id: 11,
+                    needs: CivilianNeeds3d {
+                        food: 0.5,
+                        shelter: 0.6,
+                        safety: 0.7,
+                        social: 0.4,
+                        rest: 0.8,
+                    },
+                    profession: "smith".to_string(),
+                    genome_summary: GenomeSummary3d {
+                        summary: "sturdy".to_string(),
+                        lineage: "line-b".to_string(),
+                        traits: vec!["strong".to_string()],
+                    },
+                    species: "human".to_string(),
+                    health: 0.9,
+                }],
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 64,
+                factions: vec![FactionStateEntry {
+                    id: 2,
+                    era: 3,
+                    government: Government3d::Republic,
+                    treasury: FactionTreasury3d {
+                        amount: 500.0,
+                        currency: "civ".to_string(),
+                    },
+                }],
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 65,
+                events: vec![EventFeedMessage3d::Birth(BirthEvent3d {
+                    entity_id: 20,
+                    faction_id: 2,
+                    species: "human".to_string(),
+                    position: Some(WorldXZ { x: 5.0, z: 6.0 }),
+                })],
+            }),
+        ]
     }
 
     /// Covers FR-CIV-PROTO3D-005 — corrupt magic is rejected.

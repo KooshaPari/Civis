@@ -6,52 +6,21 @@ use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_agents::Civilian as AgentCivilian;
 use civ_engine::Building;
-use std::collections::HashMap;
 
 use crate::camera::CameraRig;
-#[cfg(feature = "egui")]
-use crate::info_views::{cluster_color, InfoViewRegistry};
-#[cfg(feature = "egui")]
-use crate::map2d::MapView;
 use crate::sim_bridge::SimState;
-use crate::terrain::{color_for_height, terrain_height, WORLD_SIZE};
+use crate::terrain::WORLD_SIZE;
 use crate::AttachMode;
 
-fn civilian_faction_id(civilian: &AgentCivilian) -> u32 {
-    match civilian.alignment {
-        civ_agents::Alignment::Faction(faction) => faction,
-        _ => 0,
-    }
-}
-
-/// Minimap side length in UI pixels. Enlarged 1.8x (was 200) so the right-side
-/// holocron map reads as a prominent command-deck element, per user request.
-pub const MINIMAP_SIZE: f32 = 360.0;
-/// Minimap inset from the viewport edge (px).
-pub const MINIMAP_INSET: f32 = 8.0;
+/// Minimap side length in UI pixels.
+pub const MINIMAP_SIZE: f32 = 200.0;
+const MINIMAP_INSET: f32 = 8.0;
 const MINIMAP_WORLD_MIN: f32 = 0.0;
 const MINIMAP_WORLD_MAX: f32 = 256.0;
 const MINIMAP_CIVILIAN_DOT: f32 = 4.0;
 const MINIMAP_BUILDING_DOT: f32 = 5.0;
-const MINIMAP_CLUSTER_DOT: f32 = 11.0;
 const MINIMAP_TEXTURE_SIZE: u32 = 256;
 const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
-/// Resolution of the painted top-down terrain base texture (square).
-const TERRAIN_TEX_SIZE: u32 = 128;
-
-// ---------------------------------------------------------------------------
-// Theme — mirror `ui_theme` palette as Bevy colors so the minimap frame matches
-// the rest of the HUD. `ui_theme` exposes `egui::Color32` constants which are
-// not usable on Bevy UI nodes, so we re-express the same sRGB values here.
-// ---------------------------------------------------------------------------
-
-/// Glass panel fill (`ui_theme::DECK_GLASS` — `#1a1e24` @ ~68%).
-const THEME_PANEL: Color = Color::srgba(0.102, 0.118, 0.141, 0.68);
-/// Inner hairline (`ui_theme::KC_DIVIDER` @ ~55%).
-#[allow(dead_code)]
-const THEME_BORDER: Color = Color::srgba(0.122, 0.137, 0.161, 0.55);
-/// Teal holo rim (`ui_theme::KC_ACCENT` `#7ebab5`).
-const THEME_HOLO: Color = Color::srgb(0.494, 0.729, 0.710);
 
 #[derive(Resource, Clone)]
 struct MinimapRenderTarget {
@@ -61,21 +30,8 @@ struct MinimapRenderTarget {
 #[derive(Component)]
 pub struct MinimapRoot;
 
-/// The painted terrain base layer (material colors); sits beneath the live
-/// render-target image and the marker overlay.
-#[derive(Component)]
-pub struct MinimapTerrain;
-
 #[derive(Component)]
 pub struct MinimapDot;
-
-/// Translucent full-panel tint that matches the active info-view overlay.
-#[derive(Component)]
-pub struct MinimapOverlayTint;
-
-/// The camera-viewport rectangle drawn over the minimap.
-#[derive(Component)]
-pub struct MinimapViewport;
 
 #[derive(Component)]
 pub struct MinimapCamera;
@@ -89,81 +45,8 @@ impl Plugin for MinimapPlugin {
             Startup,
             (setup_minimap_render_target, setup_minimap).chain(),
         )
-        .add_systems(
-            Update,
-            (sync_minimap_viewport, teleport_camera_from_minimap),
-        );
-        #[cfg(feature = "egui")]
-        app.add_systems(
-            Update,
-            (
-                sync_minimap_visibility,
-                sync_minimap_dots,
-                sync_overlay_tint,
-            ),
-        );
+        .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap));
     }
-}
-
-/// Hide the minimap UI whenever the world is not in-game (main menu / setup /
-/// loading) so the title screen renders clean. The minimap is Bevy UI (not
-/// egui), so it is gated by toggling [`Visibility`] on [`MinimapRoot`] rather
-/// than a `run_if` on a draw system.
-#[cfg(feature = "egui")]
-fn sync_minimap_visibility(
-    mode: Res<crate::menus::GameUiMode>,
-    map_view: Res<MapView>,
-    mut root: Query<&mut Visibility, With<MinimapRoot>>,
-) {
-    use crate::menus::GameUiMode;
-    let want = if matches!(*mode, GameUiMode::Playing | GameUiMode::Paused) && !map_view.active {
-        Visibility::Inherited
-    } else {
-        Visibility::Hidden
-    };
-    for mut vis in &mut root {
-        if *vis != want {
-            *vis = want;
-            info!("[minimap] visibility -> {:?} (mode={:?})", want, *mode);
-        }
-    }
-}
-
-/// Paint a CPU top-down texture of terrain material colors (water/sand/grass/
-/// rock/snow via `terrain::color_for_height`). Used as the minimap base layer so
-/// the map reads as terrain even before the live render camera produces a frame.
-fn build_terrain_texture(images: &mut Assets<Image>) -> Handle<Image> {
-    let size = TERRAIN_TEX_SIZE;
-    let mut data = vec![0u8; (size * size * 4) as usize];
-    let span = MINIMAP_WORLD_MAX - MINIMAP_WORLD_MIN;
-    for py in 0..size {
-        for px in 0..size {
-            // Texture row 0 is the top (north); world Z grows downward (south).
-            let wx = MINIMAP_WORLD_MIN + (px as f32 + 0.5) / size as f32 * span;
-            let wz = MINIMAP_WORLD_MIN + (py as f32 + 0.5) / size as f32 * span;
-            let h = terrain_height(wx, wz);
-            let c = color_for_height(h);
-            let i = ((py * size + px) * 4) as usize;
-            // BGRA channel order for Bgra8UnormSrgb.
-            data[i] = (c[2] * 255.0) as u8;
-            data[i + 1] = (c[1] * 255.0) as u8;
-            data[i + 2] = (c[0] * 255.0) as u8;
-            data[i + 3] = 255;
-        }
-    }
-    let extent = Extent3d {
-        width: size,
-        height: size,
-        depth_or_array_layers: 1,
-    };
-    let image = Image::new(
-        extent,
-        TextureDimension::D2,
-        data,
-        TextureFormat::Bgra8UnormSrgb,
-        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-    );
-    images.add(image)
 }
 
 fn setup_minimap_render_target(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
@@ -207,14 +90,8 @@ fn setup_minimap_render_target(mut commands: Commands, mut images: ResMut<Assets
     ));
 }
 
-fn setup_minimap(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-    minimap_target: Res<MinimapRenderTarget>,
-) {
-    let terrain_tex = build_terrain_texture(&mut images);
-
-    let root = commands
+fn setup_minimap(mut commands: Commands, minimap_target: Res<MinimapRenderTarget>) {
+    commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
@@ -222,82 +99,27 @@ fn setup_minimap(
                 bottom: Val::Px(MINIMAP_INSET),
                 width: Val::Px(MINIMAP_SIZE),
                 height: Val::Px(MINIMAP_SIZE),
-                border: UiRect::all(Val::Px(1.5)),
-                border_radius: BorderRadius::all(Val::Px(12.0)),
+                border: UiRect::all(Val::Px(1.0)),
                 overflow: Overflow::clip(),
                 ..default()
             },
-            BackgroundColor(THEME_PANEL),
-            BorderColor::all(THEME_HOLO),
+            BackgroundColor(Color::srgba(0.02, 0.04, 0.06, 0.94)),
+            BorderColor::all(Color::srgba(0.35, 0.42, 0.50, 0.75)),
             Interaction::default(),
             RelativeCursorPosition::default(),
             FocusPolicy::Pass,
             MinimapRoot,
         ))
         .with_children(|parent| {
-            // Base layer: painted terrain material colors.
             parent.spawn((
-                ImageNode::new(terrain_tex),
+                ImageNode::new(minimap_target.image.clone()),
                 Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     ..default()
                 },
-                MinimapTerrain,
-                FocusPolicy::Pass,
             ));
-            // Live layer: the orthographic render-camera frame, blended on top.
-            parent.spawn((
-                ImageNode::new(minimap_target.image.clone())
-                    .with_color(Color::srgba(1.0, 1.0, 1.0, 0.85)),
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                FocusPolicy::Pass,
-            ));
-            // Overlay tint: matches the active info-view (hidden when off).
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                BackgroundColor(Color::NONE),
-                MinimapOverlayTint,
-                FocusPolicy::Pass,
-            ));
-            // Camera viewport rectangle (positioned each frame).
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    border: UiRect::all(Val::Px(1.5)),
-                    ..default()
-                },
-                BackgroundColor(Color::NONE),
-                BorderColor::all(THEME_HOLO),
-                MinimapViewport,
-                FocusPolicy::Pass,
-            ));
-        })
-        .id();
-    // Diagnostic: prove the holocron minimap root node spawned at the expected
-    // size + anchor so a headless capture can confirm it exists (vs hidden /
-    // zero-size / behind the 3D).
-    info!(
-        "[minimap] spawned root={:?} size={}px inset={}px anchor=bottom-right",
-        root, MINIMAP_SIZE, MINIMAP_INSET
-    );
+        });
 }
 
 fn world_to_minimap_uv(position: Vec3) -> Vec2 {
@@ -315,8 +137,7 @@ fn minimap_uv_to_world(uv: Vec2) -> Vec3 {
 }
 
 fn civilian_color(civilian: &AgentCivilian) -> Color {
-    let faction = civilian_faction_id(civilian);
-    let hue = (faction as f32 * 85.0) % 360.0;
+    let hue = (civilian.faction as f32 * 85.0) % 360.0;
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
@@ -336,7 +157,6 @@ fn world_position_for_building(building: &Building) -> Vec3 {
     Vec3::new(building.position.x as f32, 0.0, building.position.y as f32)
 }
 
-#[cfg(feature = "egui")]
 fn sync_minimap_dots(
     attach: Res<AttachMode>,
     sim: Res<SimState>,
@@ -359,10 +179,6 @@ fn sync_minimap_dots(
         return;
     };
 
-    // Accumulate per-faction centroids while we lay down civilian dots so we can
-    // draw a cluster / settlement marker at each faction's centre of mass.
-    let mut cluster_acc: HashMap<u32, (Vec2, u32)> = HashMap::new();
-
     commands.entity(root).with_children(|parent| {
         for (_, (civilian, position)) in sim
             .0
@@ -371,11 +187,6 @@ fn sync_minimap_dots(
             .iter()
         {
             let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
-            let entry = cluster_acc
-                .entry(civilian_faction_id(civilian))
-                .or_insert((Vec2::ZERO, 0));
-            entry.0 += uv;
-            entry.1 += 1;
             parent.spawn((
                 Node {
                     position_type: PositionType::Absolute,
@@ -409,125 +220,26 @@ fn sync_minimap_dots(
                 FocusPolicy::Pass,
             ));
         }
-
-        // Settlement / cluster markers: a ringed dot at each faction centroid,
-        // tinted with the shared cluster palette so it matches the Territory
-        // info-view.
-        for (faction, (sum, count)) in cluster_acc {
-            if count < 3 {
-                continue; // ignore lone wanderers; only mark real clusters.
-            }
-            let centroid = sum / count as f32;
-            let rgb = cluster_color(faction);
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(centroid.x * MINIMAP_SIZE - MINIMAP_CLUSTER_DOT * 0.5),
-                    top: Val::Px(centroid.y * MINIMAP_SIZE - MINIMAP_CLUSTER_DOT * 0.5),
-                    width: Val::Px(MINIMAP_CLUSTER_DOT),
-                    height: Val::Px(MINIMAP_CLUSTER_DOT),
-                    border: UiRect::all(Val::Px(1.5)),
-                    border_radius: BorderRadius::MAX,
-                    ..default()
-                },
-                BackgroundColor(Color::srgba(rgb[0], rgb[1], rgb[2], 0.45)),
-                BorderColor::all(Color::srgb(rgb[0], rgb[1], rgb[2])),
-                MinimapDot,
-                FocusPolicy::Pass,
-            ));
-        }
     });
-}
-
-/// Position + size the camera viewport rectangle from the main camera rig.
-///
-/// Approximates the on-ground footprint of the orbit camera as a box centred on
-/// `rig.target`, sized from the orbit distance, then projects it to minimap UV.
-fn sync_minimap_viewport(
-    rig: Res<CameraRig>,
-    mut viewport: Query<&mut Node, With<MinimapViewport>>,
-) {
-    let Ok(mut node) = viewport.single_mut() else {
-        return;
-    };
-    // Footprint half-extent grows with stand-off distance (rough heuristic).
-    let half = (rig.distance * 0.30).clamp(12.0, MINIMAP_WORLD_MAX * 0.5);
-    let center = Vec3::new(rig.target.x, 0.0, rig.target.z);
-    let min_uv = world_to_minimap_uv(center - Vec3::new(half, 0.0, half));
-    let max_uv = world_to_minimap_uv(center + Vec3::new(half, 0.0, half));
-    let left = min_uv.x.min(max_uv.x) * MINIMAP_SIZE;
-    let top = min_uv.y.min(max_uv.y) * MINIMAP_SIZE;
-    let w = (min_uv.x.max(max_uv.x) - min_uv.x.min(max_uv.x)) * MINIMAP_SIZE;
-    let h = (min_uv.y.max(max_uv.y) - min_uv.y.min(max_uv.y)) * MINIMAP_SIZE;
-    node.left = Val::Px(left);
-    node.top = Val::Px(top);
-    node.width = Val::Px(w.max(2.0));
-    node.height = Val::Px(h.max(2.0));
-}
-
-/// Tint the whole minimap to match the active info-view overlay (or clear it).
-///
-/// Reads the active overlay's legend mid-stop colour as a representative tint.
-/// Degrades gracefully: if no overlay is active (or the resource is absent) the
-/// tint is fully transparent.
-#[cfg(feature = "egui")]
-fn sync_overlay_tint(
-    registry: Option<Res<InfoViewRegistry>>,
-    mut tint: Query<&mut BackgroundColor, With<MinimapOverlayTint>>,
-) {
-    let Ok(mut bg) = tint.single_mut() else {
-        return;
-    };
-    let color = registry
-        .as_deref()
-        .and_then(InfoViewRegistry::active_overlay)
-        .map(|overlay| {
-            // Use the legend midpoint as the representative overlay colour; the
-            // Territory overlay has an empty legend, so fall back to accent.
-            let rgb = overlay
-                .legend
-                .get(overlay.legend.len() / 2)
-                .map(|s| s.rgb)
-                .unwrap_or([0.337, 0.800, 0.949]);
-            Color::srgba(rgb[0], rgb[1], rgb[2], 0.22)
-        })
-        .unwrap_or(Color::NONE);
-    bg.0 = color;
 }
 
 fn teleport_camera_from_minimap(
     mouse: Res<ButtonInput<MouseButton>>,
     panel: Query<&RelativeCursorPosition, With<MinimapRoot>>,
     mut rig: ResMut<CameraRig>,
-    #[cfg(feature = "egui")] mut egui_ctx: bevy_egui::EguiContexts,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
-    // If egui owns the pointer (e.g. a HUD button was clicked), do not teleport.
-    #[cfg(feature = "egui")]
-    if let Ok(ctx) = egui_ctx.ctx_mut() {
-        if ctx.wants_pointer_input() {
-            return;
-        }
-    }
-
     let Ok(cursor) = panel.single() else {
         return;
     };
-
-    // `normalized` is Some only when the cursor is over the node, but its
-    // values can still be outside [0,1] if the node has overflow:visible.
-    // Guard explicitly so clicks near (but outside) the bezel don't fire.
     let Some(normalized) = cursor.normalized else {
         return;
     };
-    if normalized.x < 0.0 || normalized.x > 1.0 || normalized.y < 0.0 || normalized.y > 1.0 {
-        return;
-    }
 
     let world = minimap_uv_to_world(normalized);
-    rig.target.x = world.x.clamp(MINIMAP_WORLD_MIN, MINIMAP_WORLD_MAX);
-    rig.target.z = world.z.clamp(MINIMAP_WORLD_MIN, MINIMAP_WORLD_MAX);
+    rig.target.x = world.x;
+    rig.target.z = world.z;
 }

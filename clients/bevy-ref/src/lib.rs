@@ -14,37 +14,19 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "bevy")]
-pub mod animation;
-#[cfg(feature = "bevy")]
 pub mod atmosphere;
-#[cfg(all(feature = "bevy", feature = "audio"))]
-pub mod audio;
 #[cfg(feature = "bevy")]
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
-#[cfg(feature = "bevy")]
-pub mod disaster_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod game_laws;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod holo_minimap;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod info_views;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod inspect;
-#[cfg(all(feature = "bevy", feature = "gi"))]
-pub mod lighting_gi;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
@@ -59,11 +41,7 @@ pub mod live_pick;
 pub mod live_scene;
 #[cfg(feature = "bevy")]
 pub mod live_stream;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod map2d;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
-#[cfg(feature = "bevy")]
+#[cfg(feature = "pbr-textures")]
 pub mod materials;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
@@ -73,48 +51,14 @@ pub mod minimap;
 pub mod native_backend;
 #[cfg(feature = "bevy")]
 pub mod native_renderer;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(feature = "bevy")]
-pub mod post_fx;
-#[cfg(all(feature = "bevy", feature = "voxel"))]
-pub mod scene_dump;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod settings_ui;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
-#[cfg(feature = "bevy")]
-pub mod skybox;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
-pub mod terraform_brush;
-#[cfg(feature = "bevy")]
 pub mod terrain;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod tool_categories;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_cluster;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
-#[cfg(all(feature = "bevy", feature = "vfx"))]
-pub mod vfx;
-#[cfg(feature = "voxel")]
-pub mod voxel_sim;
-#[cfg(feature = "voxel")]
-pub mod voxel_smooth_mesher;
-/// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
-/// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
-#[cfg(feature = "voxel_stream")]
-pub mod voxel_stream;
-#[cfg(feature = "voxel")]
-pub mod voxel_triplanar;
-#[cfg(feature = "bevy")]
-pub mod window_icon;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
@@ -257,7 +201,7 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct LiveHudSnapshot {
     /// WebSocket session state from the reconnecting client.
     pub connection: WsConnectionState,
@@ -275,12 +219,20 @@ pub struct LiveHudSnapshot {
     pub building_count: usize,
     /// Streamed building-graph parcel entities in the live scene.
     pub graph_parcel_count: usize,
+    /// Civilians tracked from `Frame3d::CivilianState` wire frames.
+    pub civilian_count: usize,
+    /// Factions tracked from `Frame3d::FactionState` wire frames.
+    pub faction_count: usize,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
     pub focused_chunk: Option<ChunkId>,
     /// Streamed agent/building/graph selection from viewport pick, if any.
     pub selected_live: Option<SelectedLiveEntity>,
+    /// Most recent event-feed line for HUD overlay (`civ-bevy-window`, no egui).
+    pub last_event: Option<String>,
+    /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
+    pub pick_detail: Option<String>,
 }
 
 impl LiveHudSnapshot {
@@ -291,11 +243,15 @@ impl LiveHudSnapshot {
         agents: usize,
         buildings: usize,
         graph_parcels: usize,
+        civilians: usize,
+        factions: usize,
     ) {
         self.chunk_count = chunks;
         self.agent_count = agents;
         self.building_count = buildings;
         self.graph_parcel_count = graph_parcels;
+        self.civilian_count = civilians;
+        self.faction_count = factions;
     }
 
     /// Format a single-line overlay string suitable for Bevy UI or CI log checks.
@@ -311,12 +267,14 @@ impl LiveHudSnapshot {
             .map(|value| value.to_string())
             .unwrap_or_else(|| "—".to_string());
         let mut line = format!(
-            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{}",
+            "FPS: {:.0} | tick: {tick} | {status} | C:{} A:{} B:{} G:{} | P:{} F:{}",
             self.fps,
             self.chunk_count,
             self.agent_count,
             self.building_count,
-            self.graph_parcel_count
+            self.graph_parcel_count,
+            self.civilian_count,
+            self.faction_count,
         );
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
@@ -326,6 +284,12 @@ impl LiveHudSnapshot {
         }
         if let Some(selection) = self.selected_live {
             line.push_str(&format!(" | {}", format_live_selection(selection)));
+        }
+        if let Some(event) = &self.last_event {
+            line.push_str(&format!(" | evt: {event}"));
+        }
+        if let Some(detail) = &self.pick_detail {
+            line.push_str(&format!(" | {detail}"));
         }
         line
     }
@@ -677,8 +641,8 @@ pub fn chunk_to_minimap_uv(chunk_id: ChunkId, bounds: MinimapBounds) -> [f32; 2]
 /// Map world XZ (metres) into normalised minimap UV within `bounds`.
 #[must_use]
 pub fn world_xz_to_minimap_uv(x: f32, z: f32, bounds: MinimapBounds) -> [f32; 2] {
-    let cx = (x / VOXEL_CHUNK_EDGE as f32).floor() as i32;
-    let cz = (z / VOXEL_CHUNK_EDGE as f32).floor() as i32;
+    let cx = (x / VOXEL_CHUNK_EDGE).floor() as i32;
+    let cz = (z / VOXEL_CHUNK_EDGE).floor() as i32;
     world_chunk_grid_to_minimap_uv(cx, cz, bounds)
 }
 
@@ -872,6 +836,8 @@ mod tests {
             agent_count: 5,
             building_count: 2,
             graph_parcel_count: 1,
+            civilian_count: 12,
+            faction_count: 2,
             ..Default::default()
         }
         .format_overlay();
@@ -882,6 +848,8 @@ mod tests {
         assert!(line.contains("A:5"));
         assert!(line.contains("B:2"));
         assert!(line.contains("G:1"));
+        assert!(line.contains("P:12"));
+        assert!(line.contains("F:2"));
     }
 
     #[test]
@@ -957,6 +925,32 @@ mod tests {
         }
         .format_overlay();
         assert!(line.contains("sel: graph #11"));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_last_event_suffix() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(9),
+            fps: 60.0,
+            last_event: Some("Entity #3 died (faction 1)".to_string()),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("| evt: Entity #3 died (faction 1)"));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_pick_detail_suffix() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            pick_detail: Some("Ada | Farmer | 87%".to_string()),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("| Ada | Farmer | 87%"));
     }
 
     #[test]
@@ -1295,6 +1289,92 @@ mod tests {
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         assert_eq!(parse_ws_payload(&bytes).expect("binary-first"), frame);
+    }
+
+    /// FR-CIV-BEVY-035 — `parse_ws_payload` decodes F3D0 binary for all six `Frame3d` kinds.
+    #[test]
+    fn parse_ws_payload_decodes_all_frame_kinds() {
+        use civ_protocol_3d::{
+            encode_frame3d_binary, AgentAppearanceFrame, AgentAppearanceUpdate, BuildingDiffEntry,
+            BuildingDiffFrame, BuildingKind3d, BuildingProvenance, CivilianNeeds3d,
+            CivilianStateEntry, CivilianStateFrame, EventFeedFrame, EventFeedMessage3d,
+            FactionStateEntry, FactionStateFrame, FactionTreasury3d, Frame3d, Government3d,
+            TechEvent3d, VoxelChunkDelta, VoxelDeltaFrame, WorldXZ,
+        };
+        use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};
+
+        let frames = [
+            Frame3d::VoxelDelta(VoxelDeltaFrame {
+                tick: 1,
+                deltas: vec![VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: ChunkId(1),
+                        write_seq: WriteSeq(1),
+                    },
+                    voxels: vec![MaterialId(0); 4],
+                }],
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 2,
+                provenance: BuildingProvenance::Procedural,
+                buildings: vec![BuildingDiffEntry {
+                    id: 1,
+                    kind: BuildingKind3d::House,
+                    tier: 0,
+                    position: WorldXZ { x: 0.0, z: 0.0 },
+                }],
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 3,
+                updates: vec![AgentAppearanceUpdate {
+                    agent_id: 1,
+                    era: 0,
+                    wardrobe: MaterialId(0),
+                    tools: MaterialId(0),
+                    scale: 1.0,
+                    position: None,
+                }],
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 4,
+                civilians: vec![CivilianStateEntry {
+                    id: 1,
+                    needs: CivilianNeeds3d::default(),
+                    profession: String::new(),
+                    genome_summary: Default::default(),
+                    species: String::new(),
+                    health: 1.0,
+                }],
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 5,
+                factions: vec![FactionStateEntry {
+                    id: 1,
+                    era: 0,
+                    government: Government3d::Unknown,
+                    treasury: FactionTreasury3d::default(),
+                }],
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 6,
+                events: vec![EventFeedMessage3d::Tech(TechEvent3d {
+                    faction_id: 1,
+                    era: 1,
+                    tech: "wheel".to_string(),
+                })],
+            }),
+        ];
+
+        for frame in frames {
+            let bytes = encode_frame3d_binary(&frame).expect("encode");
+            assert_eq!(parse_ws_payload(&bytes).expect("binary decode"), frame);
+            let json = serde_json::to_string(&frame).expect("json");
+            assert_eq!(
+                parse_ws_payload(json.as_bytes()).expect("text decode"),
+                frame
+            );
+        }
     }
 
     /// FR-CIV-BEVY-003 — F3D0 binary `Frame3d` payloads round-trip without a live socket.

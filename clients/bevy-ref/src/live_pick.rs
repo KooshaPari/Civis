@@ -323,6 +323,21 @@ mod tests {
     }
 
     #[test]
+    fn building_marker_half_extents_match_cuboid_mesh() {
+        let half = building_marker_half_extents();
+        assert_eq!(half, [1.0, 1.25, 1.0]);
+    }
+
+    #[test]
+    fn ray_aabb_hit_rejects_box_behind_ray_origin() {
+        let origin = [0.0, 0.0, 5.0];
+        let direction = [0.0, 0.0, 1.0];
+        let centre = [0.0, 0.0, 0.0];
+        let half = [1.0, 1.0, 1.0];
+        assert!(ray_aabb_hit_distance(origin, direction, centre, half).is_none());
+    }
+
+    #[test]
     fn pick_live_entity_rejects_zero_direction() {
         assert!(
             pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[]).is_none()

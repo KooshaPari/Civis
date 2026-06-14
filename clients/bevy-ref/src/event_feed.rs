@@ -16,10 +16,13 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-use crate::ui_theme::{
-    self, apply_theme, frame_e1, panel_finish, ACCENT, DIM, PANEL_FILL, RADIUS_SM, SURFACE, TEXT,
-    TEXT_LOW,
-};
+// ---------------------------------------------------------------------------
+// Palette (mirrors game_ui.rs dark-glassmorphism constants)
+// ---------------------------------------------------------------------------
+
+const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
+const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -61,13 +64,13 @@ impl EventKind {
     /// Primary accent colour for this event kind.
     pub fn color(&self) -> egui::Color32 {
         match self {
-            Self::Birth => ui_theme::OK,
-            Self::Death => ui_theme::DANGER.gamma_multiply(0.75),
+            Self::Birth => egui::Color32::from_rgb(100, 210, 120),
+            Self::Death => egui::Color32::from_rgb(160, 90, 90),
             Self::Tech => ACCENT,
-            Self::Battle => ui_theme::DANGER,
-            Self::Diplomacy => ui_theme::AMBER,
-            Self::Disaster => ui_theme::WARN,
-            Self::System => ui_theme::TEXT_MID,
+            Self::Battle => egui::Color32::from_rgb(220, 70, 70),
+            Self::Diplomacy => egui::Color32::from_rgb(230, 190, 70),
+            Self::Disaster => egui::Color32::from_rgb(230, 130, 40),
+            Self::System => egui::Color32::from_rgb(140, 170, 210),
         }
     }
 }
@@ -169,10 +172,7 @@ impl Plugin for EventFeedPlugin {
         app.init_resource::<EventFeed>()
             .init_resource::<EventLogOpen>()
             .add_systems(Update, age_events)
-            .add_systems(
-                EguiPrimaryContextPass,
-                draw_event_feed.run_if(crate::menus::in_game),
-            );
+            .add_systems(EguiPrimaryContextPass, draw_event_feed);
     }
 }
 
@@ -205,7 +205,6 @@ pub fn draw_event_feed(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    apply_theme(ctx);
 
     draw_toasts(ctx, &feed);
 
@@ -249,15 +248,20 @@ fn toast_card(ui: &mut egui::Ui, ev: &GameEvent) {
     let alpha_frac = 1.0 - (ev.age / TOAST_LIFETIME).clamp(0.0, 1.0);
     let alpha = (alpha_frac * 235.0) as u8;
 
-    let fill = PANEL_FILL.gamma_multiply((alpha.saturating_add(30) as f32) / 255.0);
+    let fill = egui::Color32::from_rgba_premultiplied(17, 20, 31, alpha.saturating_add(30));
     let kind_color = ev.kind.color();
-    let text_color = TEXT.gamma_multiply(alpha as f32 / 255.0);
-    let accent_color = kind_color.gamma_multiply(alpha as f32 / 255.0);
+    let text_color = egui::Color32::from_rgba_unmultiplied(220, 225, 235, alpha);
+    let accent_color = egui::Color32::from_rgba_unmultiplied(
+        kind_color.r(),
+        kind_color.g(),
+        kind_color.b(),
+        alpha,
+    );
 
     egui::Frame::NONE
         .fill(fill)
         .stroke(egui::Stroke::new(1.0, accent_color.gamma_multiply(0.6)))
-        .corner_radius(egui::CornerRadius::same(RADIUS_SM))
+        .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(egui::Margin::symmetric(10, 6))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -268,7 +272,6 @@ fn toast_card(ui: &mut egui::Ui, ev: &GameEvent) {
                 );
                 ui.label(egui::RichText::new(&ev.text).color(text_color).size(13.0));
             });
-            panel_finish(ui.painter(), ui.min_rect(), RADIUS_SM, false, false);
         });
 }
 
@@ -279,11 +282,17 @@ fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLo
         .open(&mut open)
         .resizable(true)
         .default_size([360.0, 420.0])
-        .frame(frame_e1(egui::Margin::same(12)))
+        .frame(
+            egui::Frame::NONE
+                .fill(PANEL_FILL)
+                .stroke(egui::Stroke::new(1.0, ACCENT.gamma_multiply(0.4)))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::same(12)),
+        )
         .show(ctx, |ui| {
             ui.label(
                 egui::RichText::new(format!("{} events", feed.events.len()))
-                    .color(TEXT_LOW)
+                    .color(egui::Color32::from_rgb(150, 158, 178))
                     .small(),
             );
             ui.add_space(4.0);
@@ -302,20 +311,18 @@ fn draw_log_window(ctx: &egui::Context, feed: &EventFeed, log_open: &mut EventLo
 fn log_row(ui: &mut egui::Ui, ev: &GameEvent) {
     let color = ev.kind.color();
     egui::Frame::NONE
-        .fill(SURFACE)
-        .stroke(egui::Stroke::new(1.0, ui_theme::DECK_BORDER))
-        .corner_radius(egui::CornerRadius::same(RADIUS_SM))
+        .fill(CHIP_FILL)
+        .corner_radius(egui::CornerRadius::same(6))
         .inner_margin(egui::Margin::symmetric(8, 4))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(ev.kind.emoji()).color(color).size(14.0));
-                ui.label(egui::RichText::new(&ev.text).color(TEXT).size(13.0));
+                ui.label(egui::RichText::new(&ev.text).size(13.0));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
                         egui::RichText::new(format!("{:.0}s", ev.age))
-                            .color(DIM)
-                            .small()
-                            .monospace(),
+                            .color(egui::Color32::from_rgb(100, 108, 128))
+                            .small(),
                     );
                 });
             });

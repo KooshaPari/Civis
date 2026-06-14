@@ -11,15 +11,13 @@
 #![warn(missing_docs)]
 
 mod allocation;
-mod allocator;
-pub mod chains;
 mod institution;
 mod market;
 pub mod stocks;
 
 pub use allocation::{
-    allocate_by_priority, AllocationEngine, CapitalistAllocator, JouleAllocator, PlannedAllocator,
-    PriorityTier,
+    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
+    JouleAllocator, PlannedAllocator, PriorityTier,
 };
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
@@ -71,10 +69,6 @@ pub struct EconomyState {
     /// Institution accounts and posting log (CIV-0100 §3d stub).
     #[serde(default)]
     pub institutions: InstitutionLedger,
-    /// Allocation substrate (CIV-002 P1 allocator slice). Order books live
-    /// here; cleared trades are recorded through the institution ledger.
-    #[serde(default)]
-    pub allocator: Allocator,
     /// Budget at the previous [`step`] boundary (tick-close reconciliation).
     #[serde(default)]
     last_step_budget_joules: i64,
@@ -185,27 +179,11 @@ pub fn verify_ledger_conservation(state: &EconomyState) -> Result<(), LedgerInva
     Ok(())
 }
 
-/// Advance one economy tick. Runs the institution stub pass, clears the
-/// allocator's order book, appends a tick-close bookkeeping entry when the
-/// budget changed since the previous step, then advances [`EconomyState::tick`]
-/// by exactly 1. The allocator's `clear` does not advance the tick itself —
-/// this function is the single tick driver.
+/// Advance one economy tick. Runs the institution stub pass, appends a tick-close
+/// bookkeeping entry when the budget changed since the previous step, then advances
+/// [`EconomyState::tick`].
 pub fn step(state: &mut EconomyState) {
     step_institutions(state);
-
-    // Deterministic auction: order book matches, balanced institution
-    // transfers are posted for every cleared trade. The allocator never
-    // touches the macro joule budget — only the institution layer — so
-    // macro conservation is unaffected.
-    //
-    // We swap the allocator and institutions out to avoid the borrow
-    // checker complaining about overlapping `&mut` borrows of distinct
-    // fields of the same `EconomyState`.
-    let mut allocator = std::mem::take(&mut state.allocator);
-    let mut institutions = std::mem::take(&mut state.institutions);
-    let _trades = allocator.clear(state, &mut institutions);
-    state.allocator = allocator;
-    state.institutions = institutions;
 
     if state.energy_budget_joules != state.last_step_budget_joules {
         let delta = state.last_step_budget_joules - state.energy_budget_joules;
@@ -221,13 +199,11 @@ mod tests {
     use super::*;
 
     /// CIV-0100 — schema version is exposed for persistence / replay alignment.
-    /// Covers FR-ECO-001.
     #[test]
     fn schema_version_present() {
         assert_eq!(SCHEMA_VERSION, 1);
     }
 
-    /// Covers FR-ECO-002.
     #[test]
     fn drain_energy_budget_records_ledger_entry() {
         let mut state = EconomyState::with_energy_budget(100);
@@ -241,7 +217,6 @@ mod tests {
         assert_eq!(entry.account, ACCOUNT_CONSUMPTION);
     }
 
-    /// Covers FR-ECO-003.
     /// Conservation: aggregate joule budget never goes negative after drain.
     #[test]
     fn drain_energy_budget_clamps_at_zero() {
@@ -299,158 +274,5 @@ mod tests {
                 max_len: 2,
             })
         );
-    }
-
-    /// CIV-002 P1 allocator slice: `step` runs the auction, posts balanced
-    /// institution transfers, and conserves total joule budget end-to-end.
-    /// Covers FR-ECON-001.
-    #[test]
-    fn step_integrates_allocator_with_conservation() {
-        use crate::{Bid, INSTITUTION_MARKET, INSTITUTION_TREASURY, Offer};
-
-        let mut state = EconomyState::with_energy_budget(2_000);
-        // Seed the institution ledger (market + treasury accounts) so we can
-        // post to it. Mirrors what `step` would do lazily on the first tick.
-        crate::institution::step_institutions(&mut state);
-        // Fund both institutions so trades can clear.
-        let mut ledger = state.institutions.clone();
-        ledger
-            .post(
-                &mut state,
-                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
-                LedgerSide::Institution(INSTITUTION_TREASURY),
-                1_000,
-            )
-            .unwrap();
-        state.institutions = ledger;
-        let mut ledger = state.institutions.clone();
-        ledger
-            .post(
-                &mut state,
-                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
-                LedgerSide::Institution(INSTITUTION_MARKET),
-                1_000,
-            )
-            .unwrap();
-        state.institutions = ledger;
-
-        // Post a crossing pair: treasury bids 5 units of food at 120, market
-        // offers 5 at 80 → mid-point 100.
-        let mut allocator = std::mem::take(&mut state.allocator);
-        allocator
-            .post_bid(Bid {
-                id: 0,
-                bidder: INSTITUTION_TREASURY,
-                good: "food".to_string(),
-                quantity: 5,
-                price: 120,
-            })
-            .unwrap();
-        allocator
-            .post_offer(Offer {
-                id: 0,
-                offerer: INSTITUTION_MARKET,
-                good: "food".to_string(),
-                quantity: 5,
-                price: 80,
-            })
-            .unwrap();
-        state.allocator = allocator;
-
-        let macro_before = state.energy_budget_joules;
-        step(&mut state);
-
-        // After one step: tick=1, the trade posted a 500-unit transfer from
-        // treasury → market, both institution balances are non-negative, the
-        // macro joule budget is unchanged by the auction itself.
-        assert_eq!(state.tick, 1);
-        assert!(state.institutions.institution_balance(INSTITUTION_TREASURY) >= 0);
-        assert!(state.institutions.institution_balance(INSTITUTION_MARKET) >= 0);
-        assert_eq!(state.energy_budget_joules, macro_before);
-        state
-            .institutions
-            .verify_conservation()
-            .expect("conservation after allocator integration");
-    }
-
-    /// Property: across N consecutive `step` calls, the macro joule budget
-    /// plus the sum of institution joule balances is invariant (no joules
-    /// created or destroyed by the allocator). This is the heart of
-    /// FR-ECON-002.
-    #[test]
-    fn step_conserves_total_joules_across_many_ticks() {
-        use crate::{Bid, Offer, INSTITUTION_MARKET, INSTITUTION_TREASURY};
-
-        let mut state = EconomyState::with_energy_budget(20_000);
-        // Seed the institution ledger and distribute starting joules across
-        // both institutions and the macro budget in a known ratio so we can
-        // detect any leak.
-        crate::institution::step_institutions(&mut state);
-        let mut ledger = state.institutions.clone();
-        ledger
-            .post(
-                &mut state,
-                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
-                LedgerSide::Institution(INSTITUTION_TREASURY),
-                5_000,
-            )
-            .unwrap();
-        state.institutions = ledger;
-        let mut ledger = state.institutions.clone();
-        ledger
-            .post(
-                &mut state,
-                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
-                LedgerSide::Institution(INSTITUTION_MARKET),
-                5_000,
-            )
-            .unwrap();
-        state.institutions = ledger;
-        // Macro budget now 10_000, treasury 5_000, market 5_000 → 20_000 total.
-        let total_before: i64 = state.energy_budget_joules
-            + state.institutions.institution_balance(INSTITUTION_TREASURY)
-            + state.institutions.institution_balance(INSTITUTION_MARKET);
-
-        // Post a small order book that will partially clear and partially
-        // ration across multiple ticks.
-        let mut allocator = std::mem::take(&mut state.allocator);
-        for i in 0..4 {
-            allocator
-                .post_bid(Bid {
-                    id: 0,
-                    bidder: INSTITUTION_TREASURY,
-                    good: "food".to_string(),
-                    quantity: 3 + i,
-                    price: 150 - i * 20,
-                })
-                .unwrap();
-            allocator
-                .post_offer(Offer {
-                    id: 0,
-                    offerer: INSTITUTION_MARKET,
-                    good: "food".to_string(),
-                    quantity: 2 + i,
-                    price: 80 + i * 10,
-                })
-                .unwrap();
-        }
-        state.allocator = allocator;
-
-        for _ in 0..10 {
-            step(&mut state);
-            let total: i64 = state.energy_budget_joules
-                + state.institutions.institution_balance(INSTITUTION_TREASURY)
-                + state.institutions.institution_balance(INSTITUTION_MARKET);
-            assert_eq!(total, total_before, "joules leaked during economy step");
-            assert!(state.energy_budget_joules >= 0, "macro budget went negative");
-            assert!(
-                state.institutions.institution_balance(INSTITUTION_TREASURY) >= 0,
-                "treasury went negative"
-            );
-            assert!(
-                state.institutions.institution_balance(INSTITUTION_MARKET) >= 0,
-                "market went negative"
-            );
-        }
     }
 }

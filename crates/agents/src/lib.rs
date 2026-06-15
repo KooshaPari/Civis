@@ -57,7 +57,30 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Schema version. Bumped on breaking changes.
-pub const SCHEMA_VERSION: &str = "0.1.0-stub";
+pub const SCHEMA_VERSION: &str = "0.1.0";
+
+/// Minimum number of positive social ties required to form a new faction.
+/// A "positive" tie is one with affinity >= FRIEND_AFFINITY_THRESHOLD or
+/// kinship >= KIN_THRESHOLD.
+pub const FORM_FACTION_COHESION: usize = 3;
+
+/// Minimum number of existing ties to current faction members required to join
+/// an existing faction.
+pub const JOIN_FACTION_ACCEPTANCE: usize = 2;
+
+/// Affinity floor above which a cooperative tie counts as "positive" for
+/// faction cohesion. A single cooperative interaction (affinity > 0) qualifies;
+/// hostile ties (affinity <= 0) do not.
+pub const FRIEND_AFFINITY_THRESHOLD: f32 = 0.0;
+
+/// Kinship threshold above which a tie is considered "kin" for faction
+/// formation/joining purposes.
+pub const KIN_THRESHOLD: f32 = 0.5;
+
+/// Returns true if the tie is positive (cooperative or kin) for faction cohesion.
+fn is_positive_tie(tie: &Tie) -> bool {
+    tie.affinity > FRIEND_AFFINITY_THRESHOLD || tie.kinship >= KIN_THRESHOLD
+}
 
 /// Which CC0 glTF rig the Bevy client should render for this agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -111,20 +134,42 @@ impl Alignment {
         Self::OtherEntity(entity_id)
     }
 
-    /// Attempt to form a new faction with this agent as founder.
+    /// Attempt to form a new faction with this agent as founder (FR-CIV-EMERGENCE-001).
     ///
-    /// TODO(FR-CIV-EMERGENCE): replace with emergent settlement conditions and
-    /// faction seed generation once full politics rollout begins.
-    pub fn form_faction(self, _new_faction_id: u32) -> Self {
-        Self::Faction(_new_faction_id)
+    /// Formation is gated on emergent social cohesion: the founder must hold at
+    /// least [`FORM_FACTION_COHESION`] positive ties (cooperative or kin). Below
+    /// that, no faction coalesces and the alignment is left unchanged.
+    pub fn form_faction(self, graph: &SocialGraph, new_faction_id: u32, _founder_id: u64) -> Self {
+        let cohesion = graph.ties.iter().filter(|tie| is_positive_tie(tie)).count();
+        if cohesion >= FORM_FACTION_COHESION {
+            Self::Faction(new_faction_id)
+        } else {
+            self
+        }
     }
 
-    /// Attempt to join an existing faction.
+    /// Attempt to join an existing faction (FR-CIV-EMERGENCE-002).
     ///
-    /// TODO(FR-CIV-EMERGENCE): add social acceptance / coercion gating before
-    /// actually setting this field.
-    pub fn join_faction(self, _faction_id: u32) -> Self {
-        Self::Faction(_faction_id)
+    /// Joining is gated on social acceptance: the joiner must hold at least
+    /// [`JOIN_FACTION_ACCEPTANCE`] positive ties to current `members` of the
+    /// target faction. Ties to non-members and hostile ties do not count.
+    pub fn join_faction(
+        self,
+        graph: &SocialGraph,
+        faction_id: u32,
+        _agent_id: u64,
+        members: &[u64],
+    ) -> Self {
+        let acceptance = graph
+            .ties
+            .iter()
+            .filter(|tie| members.contains(&tie.other) && is_positive_tie(tie))
+            .count();
+        if acceptance >= JOIN_FACTION_ACCEPTANCE {
+            Self::Faction(faction_id)
+        } else {
+            self
+        }
     }
 }
 
@@ -1274,6 +1319,174 @@ mod tests {
             );
         }
         assert_eq!(infer_alignment_for_spawn(&world, 0.5, 0.5), Alignment::None);
+    }
+
+    /// Covers FR-CIV-EMERGENCE-001 — form_faction succeeds only when the founder
+    /// has at least [`FORM_FACTION_COHESION`] positive social ties
+    /// (e.g. affinity >= FRIEND_AFFINITY_THRESHOLD or kinship >= KIN_THRESHOLD).
+    /// Below the threshold, alignment is left unchanged.
+    #[test]
+    fn form_faction_requires_cohesion_threshold() {
+        let mut graph = SocialGraph::default();
+        // Zero ties → no cohesion → cannot form a faction.
+        assert_eq!(
+            Alignment::None.form_faction(&graph, 1, 42),
+            Alignment::None
+        );
+
+        // Add FORM_FACTION_COHESION - 1 positive ties — still under threshold.
+        for i in 0..(FORM_FACTION_COHESION - 1) as u64 {
+            apply_social_event(
+                &mut graph,
+                SocialEvent {
+                    a: 42,
+                    b: 100 + i,
+                    kind: Interaction::Cooperated { benefit: 1.0 },
+                    tick: 1,
+                },
+            );
+        }
+        assert_eq!(
+            Alignment::None.form_faction(&graph, 1, 42),
+            Alignment::None
+        );
+
+        // Push the count to the cohesion threshold — faction is formed.
+        apply_social_event(
+            &mut graph,
+            SocialEvent {
+                a: 42,
+                b: 999,
+                kind: Interaction::Cooperated { benefit: 1.0 },
+                tick: 1,
+            },
+        );
+        assert_eq!(
+            Alignment::None.form_faction(&graph, 7, 42),
+            Alignment::with_faction(7)
+        );
+    }
+
+    /// Covers FR-CIV-EMERGENCE-001 — `kin`-tagged ties also count toward the
+    /// cohesion threshold (kinship is a strong bond).
+    #[test]
+    fn form_faction_kin_ties_count_toward_cohesion() {
+        let mut graph = SocialGraph::default();
+        for i in 0..FORM_FACTION_COHESION as u64 {
+            apply_social_event(
+                &mut graph,
+                SocialEvent {
+                    a: 42,
+                    b: 200 + i,
+                    kind: Interaction::Kin,
+                    tick: 1,
+                },
+            );
+        }
+        assert_eq!(
+            Alignment::None.form_faction(&graph, 3, 42),
+            Alignment::with_faction(3)
+        );
+    }
+
+    /// Covers FR-CIV-EMERGENCE-002 — join_faction succeeds only when the joiner
+    /// has at least [`JOIN_FACTION_ACCEPTANCE`] existing ties to current members
+    /// of the target faction. Without those ties, the join is rejected and the
+    /// alignment is left unchanged.
+    #[test]
+    fn join_faction_requires_acceptance_ties() {
+        let mut graph = SocialGraph::default();
+
+        // Faction membership set: {100, 101, 102, 103} (ids of current members).
+        let members = [100u64, 101, 102, 103];
+        // No ties yet → no acceptance → cannot join.
+        assert_eq!(
+            Alignment::None.join_faction(&graph, 5, 42, &members),
+            Alignment::None
+        );
+
+        // Add JOIN_FACTION_ACCEPTANCE - 1 ties — still under threshold.
+        for i in 0..(JOIN_FACTION_ACCEPTANCE - 1) as u64 {
+            apply_social_event(
+                &mut graph,
+                SocialEvent {
+                    a: 42,
+                    b: 100 + i,
+                    kind: Interaction::Cooperated { benefit: 1.0 },
+                    tick: 1,
+                },
+            );
+        }
+        assert_eq!(
+            Alignment::None.join_faction(&graph, 5, 42, &members),
+            Alignment::None
+        );
+
+        // Add the final tie — acceptance threshold met → can join.
+        apply_social_event(
+            &mut graph,
+            SocialEvent {
+                a: 42,
+                b: 100 + (JOIN_FACTION_ACCEPTANCE - 1) as u64,
+                kind: Interaction::Cooperated { benefit: 1.0 },
+                tick: 1,
+            },
+        );
+        assert_eq!(
+            Alignment::None.join_faction(&graph, 5, 42, &members),
+            Alignment::with_faction(5)
+        );
+    }
+
+    /// Covers FR-CIV-EMERGENCE-002 — a tie to a non-member does not count
+    /// toward the acceptance threshold.
+    #[test]
+    fn join_faction_ties_to_non_members_do_not_count() {
+        let mut graph = SocialGraph::default();
+        let members = [100u64, 101];
+
+        // Add many ties, but only to non-members.
+        for i in 0..(JOIN_FACTION_ACCEPTANCE + 2) as u64 {
+            apply_social_event(
+                &mut graph,
+                SocialEvent {
+                    a: 42,
+                    b: 900 + i,
+                    kind: Interaction::Cooperated { benefit: 1.0 },
+                    tick: 1,
+                },
+            );
+        }
+        assert_eq!(
+            Alignment::None.join_faction(&graph, 5, 42, &members),
+            Alignment::None
+        );
+    }
+
+    /// Covers FR-CIV-EMERGENCE-002 — a hostile tie to a member does not count
+    /// toward the acceptance threshold (negative affinity is a rival, not a
+    /// social acceptance signal).
+    #[test]
+    fn join_faction_hostile_ties_do_not_count() {
+        let mut graph = SocialGraph::default();
+        let members = [100u64, 101, 102, 103, 104];
+
+        // Defection pushes affinity deeply negative — no acceptance.
+        for &m in &members {
+            apply_social_event(
+                &mut graph,
+                SocialEvent {
+                    a: 42,
+                    b: m,
+                    kind: Interaction::Defected { harm: 1.0 },
+                    tick: 1,
+                },
+            );
+        }
+        assert_eq!(
+            Alignment::None.join_faction(&graph, 5, 42, &members),
+            Alignment::None
+        );
     }
 
     /// Covers FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.

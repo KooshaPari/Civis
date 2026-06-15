@@ -2089,7 +2089,10 @@ impl Simulation {
         } else {
             treasury_b - treasury_a
         };
-        let kind = if disparity >= Fixed::from_num(10_000) {
+        // Shared faith binds society: collective belief raises the disparity a
+        // faction pair will tolerate before fighting (belief -> diplomacy).
+        let conflict_threshold = Fixed::from_num(diplomacy_conflict_threshold(self.belief()));
+        let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
         } else {
             DiplomacyKind::TradeAgreement
@@ -2323,6 +2326,25 @@ const FOOD_SCARCITY_BASELINE: i64 = 1_000;
 fn food_scarcity_birth_factor(food_price: i64) -> f64 {
     let price = food_price.max(FOOD_SCARCITY_BASELINE);
     (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
+}
+
+/// Wealth-disparity (in whole currency units) at which two factions clash when
+/// they share no faith. Above this gap the have-nots turn on the haves.
+const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+/// Belief units required to raise the conflict threshold by one currency unit.
+const BELIEF_PEACE_DIVISOR: u64 = 50;
+/// Cap on the belief-driven peace bonus: shared faith can at most double a
+/// society's tolerance for inequality — it never makes conflict impossible.
+const BELIEF_PEACE_CAP: i64 = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): collective belief binds
+/// a society, so shared faith raises the wealth-disparity a faction pair will
+/// tolerate before fighting. Returns the conflict threshold (currency units) as
+/// a non-decreasing function of `belief`, bounded at `2x` the faithless base so
+/// conflict always remains reachable.
+fn diplomacy_conflict_threshold(belief: u64) -> i64 {
+    let bonus = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
+    DIPLOMACY_BASE_CONFLICT_THRESHOLD + bonus
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -2629,6 +2651,36 @@ mod tests {
             sim.state.population >= before.saturating_sub(sim.last_deaths.len() as u64),
             "scarcity coupling must not subtract from population beyond natural deaths"
         );
+    }
+
+    /// FR-CIV-0100 §3 — with no shared faith the conflict threshold is the base.
+    #[test]
+    fn diplomacy_threshold_is_base_without_belief() {
+        assert_eq!(
+            diplomacy_conflict_threshold(0),
+            DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
+    }
+
+    /// Collective belief raises the disparity factions tolerate before fighting,
+    /// and the peace bonus is monotonic non-decreasing in belief.
+    #[test]
+    fn diplomacy_threshold_rises_with_belief() {
+        let low = diplomacy_conflict_threshold(5_000);
+        let high = diplomacy_conflict_threshold(500_000);
+        assert!(low > DIPLOMACY_BASE_CONFLICT_THRESHOLD, "faith buys peace");
+        assert!(high >= low, "more faith never lowers tolerance");
+    }
+
+    /// The peace bonus is capped at 2x the base, so conflict is always reachable.
+    #[test]
+    fn diplomacy_threshold_caps_at_double_base() {
+        let saturated = diplomacy_conflict_threshold(u64::MAX);
+        assert_eq!(
+            saturated,
+            DIPLOMACY_BASE_CONFLICT_THRESHOLD + BELIEF_PEACE_CAP
+        );
+        assert!(saturated <= 2 * DIPLOMACY_BASE_CONFLICT_THRESHOLD);
     }
 
     #[test]

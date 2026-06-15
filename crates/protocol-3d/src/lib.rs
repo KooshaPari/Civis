@@ -493,6 +493,15 @@ pub fn map_build_provenance(provenance: civ_build::BuildingProvenance) -> Buildi
 /// 4-byte magic identifying civ-protocol-3d binary frames (CIV-0200 partial).
 pub const FRAME3D_BINARY_MAGIC: &[u8; 4] = b"F3D0";
 
+/// Returns `true` if `payload` begins with [`FRAME3D_BINARY_MAGIC`], i.e. it is a
+/// civ-protocol-3d binary frame rather than a JSON or legacy payload. Cheap prefix
+/// check used by the live-attach path to route bytes to [`decode_frame3d_binary`].
+#[must_use]
+pub fn is_frame3d_binary(payload: &[u8]) -> bool {
+    payload.len() >= FRAME3D_BINARY_MAGIC.len()
+        && &payload[..FRAME3D_BINARY_MAGIC.len()] == FRAME3D_BINARY_MAGIC.as_slice()
+}
+
 /// Header size: magic (4) + kind tag (1) + payload length (4, big-endian).
 const FRAME3D_BINARY_HEADER_LEN: usize = 9;
 

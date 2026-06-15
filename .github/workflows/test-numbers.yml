@@ -1,0 +1,29 @@
+name: Test Numbers
+# Free (public repo, ubuntu) authoritative test + coverage run, bypassing the
+# fmt/clippy hygiene gates so the workspace test pass-count + coverage % are
+# measurable independently of lint debt.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/sim-emergence-batch]
+
+jobs:
+  test-numbers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: cargo test --workspace
+        run: |
+          set -o pipefail
+          cargo test --workspace --no-fail-fast 2>&1 | tee test.log || true
+          echo "===== TEST RESULT SUMMARY ====="
+          grep -E "test result:" test.log || echo "no test-result lines"
+          awk '/test result:/{for(i=1;i<=NF;i++){if($i=="passed;")p+=$(i-1);if($i=="failed;")f+=$(i-1);if($i=="ignored;")g+=$(i-1)}} END{printf "TOTAL PASSED=%d FAILED=%d IGNORED=%d\n",p,f,g}' test.log
+      - name: coverage (llvm-cov)
+        run: |
+          cargo install cargo-llvm-cov --locked || true
+          cargo llvm-cov --workspace --summary-only 2>&1 | tail -40 || echo "coverage-failed"

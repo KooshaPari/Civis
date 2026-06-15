@@ -1,66 +1,27 @@
-//! FR-CORE-004 — Seeded stochastic phase with RNG draw replay logging.
+//! FR-CORE-004 — Seeded stochastic RNG-draw replay logging.
 //!
-//! Covers the acceptance criteria from `FUNCTIONAL_REQUIREMENTS.md`:
-//!   * RNG draw events are recorded in the replay log
-//!   * Same seed → identical stochastic event sequences
+//! STATUS: SUPERSEDED. The original acceptance criteria required a seeded,
+//! bit-deterministic RNG with per-draw `ReplayEvent::RngDraw` logging
+//! (`Simulation::draw_rng_bool`) so that `same seed -> identical event
+//! sequence`. That determinism mandate was intentionally dropped (real,
+//! non-seeded randomness is now welcome), and the `draw_rng_bool` method +
+//! `ReplayEvent::RngDraw` variant were removed accordingly.
+//!
+//! These tests previously asserted the removed behaviour and therefore could
+//! not compile, which blocked the entire `civ-engine` test target from
+//! building. They are retired here pending a product decision on whether to
+//! reinstate RNG-draw *logging* (compatible with non-deterministic RNG) atop
+//! the surviving `ReplayLog`. Reinstating logging-only would restore the first
+//! acceptance criterion without the dropped determinism guarantee.
+//!
+//! Tracking: FR-CORE-004 (superseded by the no-determinism decision). When a
+//! replacement logging API lands, re-add a test that asserts a draw is recorded
+//! in `Simulation::replay_log()` without asserting seed-identical sequences.
 
-use civ_engine::{ReplayEvent, Simulation};
-
-/// FR-CORE-004 — a recorded boolean RNG draw emits a `RngDraw` event.
+/// Compile-time placeholder so the (re-enabled) test target builds while
+/// FR-CORE-004's logging API is re-decided. Intentionally trivial.
 #[test]
-fn fr_core_004_rng_draw_event_recorded() {
-    let mut sim = Simulation::with_seed(42);
-    let result = sim.draw_rng_bool(0.5);
-    let draws: Vec<_> = sim
-        .replay_log()
-        .events
-        .iter()
-        .filter(|e| matches!(e, ReplayEvent::RngDraw { .. }))
-        .collect();
-    assert_eq!(draws.len(), 1, "exactly one RngDraw event recorded");
-    if let ReplayEvent::RngDraw { tick, probability, result: r } = draws[0] {
-        assert_eq!(*tick, 0, "draw recorded at tick 0");
-        assert_eq!(*probability, 0.5, "probability preserved");
-        assert_eq!(*r, result, "result matches returned value");
-    } else {
-        panic!("expected RngDraw variant");
-    }
-}
-
-/// FR-CORE-004 — property test: same seed + same tick count → identical
-/// stochastic event sequences in the replay log.
-#[test]
-fn fr_core_004_same_seed_same_stochastic_sequence() {
-    let mut a = Simulation::with_seed(2024);
-    let mut b = Simulation::with_seed(2024);
-
-    // Run enough ticks to hit both birth_window (every 200) and diplomacy (every 500).
-    for _ in 0..600 {
-        a.tick();
-        b.tick();
-    }
-
-    let draws_a: Vec<_> = a
-        .replay_log()
-        .events
-        .iter()
-        .filter(|e| matches!(e, ReplayEvent::RngDraw { .. }))
-        .cloned()
-        .collect();
-    let draws_b: Vec<_> = b
-        .replay_log()
-        .events
-        .iter()
-        .filter(|e| matches!(e, ReplayEvent::RngDraw { .. }))
-        .cloned()
-        .collect();
-
-    assert!(
-        !draws_a.is_empty(),
-        "at least one RngDraw should be recorded after 600 ticks"
-    );
-    assert_eq!(
-        draws_a, draws_b,
-        "same seed must produce identical rng_draw sequences"
-    );
+fn fr_core_004_superseded_by_no_determinism_decision() {
+    // No assertion: the determinism-replay contract this file covered was
+    // retired. See module docs for the reinstatement path.
 }

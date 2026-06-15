@@ -386,7 +386,7 @@ pub struct Simulation {
     rng: SimRng,
     planet: PlanetConfig,
     moon: MoonConfig,
-    climate: Climate,
+    pub(crate) climate: Climate,
     pending_damage: Vec<DamageEvent>,
     tick_modulo_compact: u64,
     building_graph: BuildingGraph,
@@ -399,13 +399,9 @@ pub struct Simulation {
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
-    /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
-    /// structures + tactical combat impacts. Drained per tick by
-    /// [`Simulation::phase_voxel`].
+    /// 3D voxel substrate (Civis 3D extension).
     voxel: VoxelWorld<MaterialId>,
-    /// Voxel dirty events produced during the most recent tick. Consumers
-    /// (renderer protocol bridge, replay log) read this each tick; it resets
-    /// at the start of every [`Simulation::tick`].
+    /// Voxel dirty events produced during the most recent tick.
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
     /// Per-soldier damage pulses from the most recent tactics phase (FR-CIV-TACTICS-024).
@@ -414,18 +410,15 @@ pub struct Simulation {
     last_tick_engagements: Vec<CombatEngagement>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
-    /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick (linear
-    /// cell index + value in `[0, 100]`). Cleared at the start of every tick
-    /// and repopulated by [`Simulation::phase_voxel_ca`] so a downstream
-    /// emergence phase (life / ecology) can seed the first cells.
+    /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick.
     last_tick_abiogenesis_sites: Vec<civ_voxel::fluid_ca::AbiogenesisSuitability>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
-    /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
+    /// Scenario economy policy.
     pub economy_policy: PolicyInput,
-    /// Macro economy state (`civ-economy`); synced with `WorldState::energy_budget_joules` each tick.
+    /// Macro economy state.
     pub economy_state: EconomyState,
-    /// Per-good clearing prices (`civ-economy`); advanced in [`phase_economy`].
+    /// Per-good clearing prices.
     pub market_state: MarketState,
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
@@ -435,12 +428,11 @@ pub struct Simulation {
     pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
-    /// Coastal water columns whose water-level voxel shifts with the tide
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
-    weather_grid: Vec<WeatherCell>,
+    pub(crate) weather_grid: Vec<WeatherCell>,
     /// Per-cluster (emergent settlement) resource stocks, maintained by
     /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
     /// `ClusterId`; iteration order is deterministic (`BTreeMap`).

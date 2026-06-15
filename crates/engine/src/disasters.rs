@@ -218,7 +218,7 @@ mod tests {
     use super::*;
     use civ_agents::{Alignment, Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
     use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
-    use civ_planet::{Climate, WeatherKind};
+    use civ_planet::{Climate, WeatherCell, WeatherKind};
 
     fn seeded_sim() -> Simulation {
         let sim = Simulation::with_seed(7);

@@ -2146,7 +2146,17 @@ impl Simulation {
         // falls below (surplus). Carrying capacity itself grows with research
         // tier, so tech advances FEED BACK into cheaper staples (research →
         // economy coupling).
-        let demand = self.state.population.min(i64::MAX as u64) as i64;
+        // Wealthy factions bid up staple demand on top of raw population
+        // (faction prosperity -> market coupling; diplomacy already moves these
+        // treasuries, so diplomacy -> treasury -> market demand chains through).
+        let faction_wealth: i64 = self
+            .state
+            .faction_treasury
+            .values()
+            .map(|t| (t.raw / crate::SCALE).max(0))
+            .sum();
+        let population = self.state.population.min(i64::MAX as u64) as i64;
+        let demand = population.saturating_add(faction_wealth);
         let supply = self.carrying_capacity();
         self.market_state.apply_pressure("food", demand, supply);
         self.market_state.apply_pressure("energy", demand, supply);
@@ -2967,6 +2977,28 @@ mod tests {
         assert!(
             sim.carrying_capacity() > base_capacity,
             "research should raise carrying capacity"
+        );
+    }
+
+    /// FR-CIV-0100 §3d — wealthy factions bid up staple demand vs poor factions
+    /// at equal population (faction prosperity → market coupling).
+    #[test]
+    fn faction_wealth_drives_market_demand() {
+        let mut rich = Simulation::with_seed(7);
+        let mut poor = Simulation::with_seed(7);
+        rich.state.tick = 2;
+        poor.state.tick = 2;
+        for v in rich.state.faction_treasury.values_mut() {
+            *v = Fixed::from_num(1_000_000);
+        }
+        for v in poor.state.faction_treasury.values_mut() {
+            *v = Fixed::from_num(0);
+        }
+        rich.phase_economy();
+        poor.phase_economy();
+        assert!(
+            rich.market_state.prices()["food"] >= poor.market_state.prices()["food"],
+            "wealthier factions should not yield cheaper staples"
         );
     }
 

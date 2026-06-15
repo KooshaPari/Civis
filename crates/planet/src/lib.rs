@@ -9,7 +9,7 @@
 pub mod geology;
 pub use geology::{BiomeKind, GeologyMap, RegionBiome};
 pub mod weather;
-pub use weather::{compute_weather, WeatherCell};
+pub use weather::{compute_weather, SeasonKind, WeatherCell, WeatherKind};
 
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;

@@ -204,3 +204,53 @@ pub(crate) fn tick_military(
     }
     damage_events
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `seed_voxels` writes its starter block without panicking.
+    #[test]
+    fn seed_voxels_runs() {
+        let mut sim = Simulation::with_seed(1);
+        seed_voxels(&mut sim);
+    }
+
+    /// `seed_military` spawns 5 soldiers per faction, all at full strength with
+    /// in-bounds coordinates.
+    #[test]
+    fn seed_military_spawns_five_per_faction() {
+        let mut sim = Simulation::with_seed(42);
+        let terrain = Terrain::generate(42);
+        let mut units = Vec::new();
+        seed_military(&mut sim, &terrain, &mut units);
+
+        let faction_count = factions(sim.state.tick).len();
+        assert_eq!(units.len(), faction_count * 5);
+        assert!(units.iter().all(|u| u.unit_type == "Soldier"));
+        assert!(units.iter().all(|u| (u.strength - 1.0).abs() < f32::EPSILON));
+        assert!(
+            units
+                .iter()
+                .all(|u| (0.01..=0.99).contains(&u.x) && (0.01..=0.99).contains(&u.y)),
+            "unit coordinates must be clamped in-bounds"
+        );
+    }
+
+    /// With no Conflict diplomacy events (a fresh, un-ticked sim) `tick_military`
+    /// is a no-op: no damage pulses and unit strengths are untouched.
+    #[test]
+    fn tick_military_is_inert_without_conflict() {
+        let mut sim = Simulation::with_seed(42);
+        let terrain = Terrain::generate(42);
+        let mut units = Vec::new();
+        seed_military(&mut sim, &terrain, &mut units);
+
+        let pulses = tick_military(&mut sim, &terrain, &mut units);
+        assert!(pulses.is_empty(), "no conflict => no damage pulses");
+        assert!(
+            units.iter().all(|u| (u.strength - 1.0).abs() < f32::EPSILON),
+            "strengths unchanged when there is no conflict"
+        );
+    }
+}

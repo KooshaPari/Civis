@@ -5,7 +5,7 @@ name: Test Numbers
 on:
   workflow_dispatch:
   push:
-    branches: [feat/sim-emergence-batch]
+    branches: [feat/sim-emergence-batch, feat/civis-platform]
 
 jobs:
   tests:

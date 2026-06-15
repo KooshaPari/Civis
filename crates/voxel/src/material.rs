@@ -1061,4 +1061,19 @@ mod tests {
             assert_eq!(fetched.phase, def.phase);
         }
     }
+
+    /// `MaterialRegistry::new` wraps an arbitrary static slice (the const ctor
+    /// behind `standard`), and an empty registry resolves nothing.
+    #[test]
+    fn new_wraps_arbitrary_slice_and_empty_registry_is_inert() {
+        let std_materials = MaterialRegistry::standard().materials();
+        let registry = MaterialRegistry::new(std_materials);
+        assert_eq!(registry.materials().len(), std_materials.len());
+        assert_eq!(registry.get(AIR).map(|m| m.id), Some(AIR));
+
+        let empty = MaterialRegistry::new(&[]);
+        assert!(empty.materials().is_empty());
+        assert!(empty.get(AIR).is_none());
+        assert!(empty.by_name("Water").is_none());
+    }
 }

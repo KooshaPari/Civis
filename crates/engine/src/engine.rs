@@ -2121,7 +2121,8 @@ impl Simulation {
         };
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
-        let conflict_threshold = Fixed::from_num(diplomacy_conflict_threshold(self.belief()));
+        let conflict_threshold =
+            Fixed::from_num(diplomacy_conflict_threshold(self.belief(), self.unrest()));
         let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
         } else {
@@ -2386,15 +2387,24 @@ const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a
 /// society's tolerance for inequality — it never makes conflict impossible.
 const BELIEF_PEACE_CAP: i64 = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+/// Unrest units required to erode the conflict threshold by one currency unit.
+const UNREST_WAR_DIVISOR: u64 = 50;
+/// Cap on how much unrest can erode the threshold (currency units).
+const UNREST_WAR_CAP: i64 = 8_000;
+/// Floor on the conflict threshold: even a furious, faithless society still
+/// needs SOME wealth disparity to go to war — discontent alone is not casus belli.
+const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
 
-/// Downward-causation policy (FR-CIV-0100 §3 emergence): collective belief binds
-/// a society, so shared faith raises the wealth-disparity a faction pair will
-/// tolerate before fighting. Returns the conflict threshold (currency units) as
-/// a non-decreasing function of `belief`, bounded at `2x` the faithless base so
-/// conflict always remains reachable.
-fn diplomacy_conflict_threshold(belief: u64) -> i64 {
-    let bonus = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
-    DIPLOMACY_BASE_CONFLICT_THRESHOLD + bonus
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): collective belief and
+/// societal unrest pull diplomacy in opposite directions. Shared faith RAISES
+/// the wealth-disparity a faction pair tolerates before fighting (peace);
+/// unrest LOWERS it (internal discontent spills into external aggression). The
+/// threshold is bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` so conflict
+/// always needs some disparity, and above at `2x` base so peace is never absolute.
+fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
+    let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
+    let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
+    (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -2703,11 +2713,11 @@ mod tests {
         );
     }
 
-    /// FR-CIV-0100 §3 — with no shared faith the conflict threshold is the base.
+    /// FR-CIV-0100 §3 — with no shared faith and no unrest the threshold is base.
     #[test]
     fn diplomacy_threshold_is_base_without_belief() {
         assert_eq!(
-            diplomacy_conflict_threshold(0),
+            diplomacy_conflict_threshold(0, 0),
             DIPLOMACY_BASE_CONFLICT_THRESHOLD
         );
     }
@@ -2716,8 +2726,8 @@ mod tests {
     /// and the peace bonus is monotonic non-decreasing in belief.
     #[test]
     fn diplomacy_threshold_rises_with_belief() {
-        let low = diplomacy_conflict_threshold(5_000);
-        let high = diplomacy_conflict_threshold(500_000);
+        let low = diplomacy_conflict_threshold(5_000, 0);
+        let high = diplomacy_conflict_threshold(500_000, 0);
         assert!(low > DIPLOMACY_BASE_CONFLICT_THRESHOLD, "faith buys peace");
         assert!(high >= low, "more faith never lowers tolerance");
     }
@@ -2725,12 +2735,42 @@ mod tests {
     /// The peace bonus is capped at 2x the base, so conflict is always reachable.
     #[test]
     fn diplomacy_threshold_caps_at_double_base() {
-        let saturated = diplomacy_conflict_threshold(u64::MAX);
+        let saturated = diplomacy_conflict_threshold(u64::MAX, 0);
         assert_eq!(
             saturated,
             DIPLOMACY_BASE_CONFLICT_THRESHOLD + BELIEF_PEACE_CAP
         );
         assert!(saturated <= 2 * DIPLOMACY_BASE_CONFLICT_THRESHOLD);
+    }
+
+    /// Unrest erodes the threshold (discontent breeds war), opposing belief, and
+    /// the erosion is monotonic non-increasing in unrest.
+    #[test]
+    fn diplomacy_threshold_falls_with_unrest() {
+        let calm = diplomacy_conflict_threshold(0, 0);
+        let tense = diplomacy_conflict_threshold(0, 5_000);
+        let furious = diplomacy_conflict_threshold(0, 500_000);
+        assert!(tense < calm, "unrest lowers the war threshold");
+        assert!(furious <= tense, "more unrest never raises tolerance");
+    }
+
+    /// Even infinite unrest leaves a positive floor — discontent alone is not
+    /// casus belli; some wealth disparity is still required.
+    #[test]
+    fn diplomacy_threshold_floors_under_extreme_unrest() {
+        let floored = diplomacy_conflict_threshold(0, u64::MAX);
+        assert_eq!(floored, DIPLOMACY_MIN_CONFLICT_THRESHOLD);
+        assert!(floored > 0, "war always needs some disparity");
+    }
+
+    /// Belief and unrest oppose: equal pressure on both sides nets out near base.
+    #[test]
+    fn diplomacy_belief_and_unrest_oppose() {
+        // 5_000 belief -> +100 peace; 5_000 unrest -> -100 war; net ~ base.
+        assert_eq!(
+            diplomacy_conflict_threshold(5_000, 5_000),
+            DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
     }
 
     /// FR-CIV-0100 §3 — at/below baseline food price unrest decays (negative delta).

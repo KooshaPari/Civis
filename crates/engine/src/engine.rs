@@ -2216,6 +2216,8 @@ impl Simulation {
     }
 
     fn tick_trade_routes(&mut self) {
+        // Societal unrest throttles all commerce this tick (computed once).
+        let unrest_factor = unrest_trade_factor(self.state.unrest);
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
                 continue;
@@ -2241,7 +2243,8 @@ impl Simulation {
                 .get(&route.to_faction)
                 .map(|r| resource_amount(r, resource))
                 .unwrap_or(Fixed::ZERO);
-            let boosted = route.volume * trade_volume_multiplier(available, to_stock);
+            let boosted =
+                route.volume * trade_volume_multiplier(available, to_stock) * unrest_factor;
             let quantity = boosted.min(available);
             {
                 let from_resources = self
@@ -2426,6 +2429,22 @@ fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
     let gap = (from_stock - to_stock).max(Fixed::ZERO);
     let normalized = (gap / Fixed::from_num(TRADE_GAP_SCALE)).min(Fixed::from_num(1));
     Fixed::from_num(1) + normalized
+}
+
+/// Floor (per-mille) below which unrest cannot throttle trade — even a society
+/// in turmoil keeps half its commerce moving.
+const UNREST_TRADE_FLOOR_PERMILLE: i64 = 500;
+/// Units of standing unrest that throttle trade by one per-mille.
+const UNREST_PER_TRADE_PERMILLE: u64 = 4;
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): societal unrest
+/// disrupts commerce. Returns a trade-volume factor in `[0.5, 1.0]` — `1.0`
+/// when calm, declining as unrest rises but floored at half so trade never
+/// stops entirely. Makes unrest act on BOTH diplomacy (war) and the economy.
+fn unrest_trade_factor(unrest: u64) -> Fixed {
+    let max_drop = (1_000 - UNREST_TRADE_FLOOR_PERMILLE) as u64;
+    let drop = (unrest / UNREST_PER_TRADE_PERMILLE).min(max_drop) as i64;
+    Fixed::from_num(1_000 - drop) / Fixed::from_num(1_000)
 }
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when
@@ -2905,6 +2924,23 @@ mod tests {
         let calm_belief = calm.belief();
         calm.phase_unrest();
         assert_eq!(calm.belief(), calm_belief, "contentment breeds no faith");
+    }
+
+    /// FR-CIV-0100 §3 — a calm society trades at full volume; unrest throttles
+    /// commerce monotonically down to a 0.5 floor (never stops entirely).
+    #[test]
+    fn unrest_trade_factor_throttles_to_half_floor() {
+        assert_eq!(unrest_trade_factor(0), Fixed::from_num(1));
+        let mild = unrest_trade_factor(400);
+        let heavy = unrest_trade_factor(1_600);
+        assert!(mild < Fixed::from_num(1), "unrest reduces trade");
+        assert!(heavy < mild, "more unrest reduces trade further");
+        assert!(
+            heavy >= Fixed::from_num(1) / Fixed::from_num(2),
+            "trade never drops below the 0.5 floor"
+        );
+        // An extreme unrest saturates exactly at the floor.
+        assert_eq!(unrest_trade_factor(u64::MAX), Fixed::from_num(1) / Fixed::from_num(2));
     }
 
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).

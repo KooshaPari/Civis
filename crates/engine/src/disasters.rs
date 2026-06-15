@@ -114,10 +114,10 @@ impl Simulation {
 /// Fire-suppression technology raises the temperature required to ignite a
 /// wildfire: each research tier adds this many fixed-point milli-°C to the
 /// ignition threshold.
-const WILDFIRE_RESEARCH_MITIGATION_FP: i64 = 2_000; // +2 °C per tier
+const WILDFIRE_RESEARCH_MITIGATION_FP: u64 = 2_000; // +2 °C per tier
 /// Cap on research mitigation so even an advanced civilisation can still burn
 /// under sufficiently extreme heat — disasters are damped, never abolished.
-const WILDFIRE_RESEARCH_MITIGATION_CAP_FP: i64 = 20_000; // +20 °C max
+const WILDFIRE_RESEARCH_MITIGATION_CAP_FP: u64 = 20_000; // +20 °C max
 
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// nature. Returns the effective wildfire ignition temperature given the base
@@ -125,9 +125,11 @@ const WILDFIRE_RESEARCH_MITIGATION_CAP_FP: i64 = 20_000; // +20 °C max
 /// raw physical threshold; higher tiers raise it (bounded), so wildfires become
 /// rarer as technology advances — never impossible.
 fn wildfire_ignition_temp_fp(base_fp: i32, research_tier: u64) -> i32 {
-    let bonus = (research_tier as i64)
+    // Arithmetic in u64 (the tier's natural type) so a huge tier saturates to
+    // the cap instead of wrapping negative via an `as i64` cast.
+    let bonus = research_tier
         .saturating_mul(WILDFIRE_RESEARCH_MITIGATION_FP)
-        .min(WILDFIRE_RESEARCH_MITIGATION_CAP_FP);
+        .min(WILDFIRE_RESEARCH_MITIGATION_CAP_FP) as i64;
     (base_fp as i64).saturating_add(bonus) as i32
 }
 

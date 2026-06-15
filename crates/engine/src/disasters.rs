@@ -51,24 +51,37 @@ impl Simulation {
         const WILDFIRE_TEMP_FP: i32 = 40_000; // 40 °C
         /// ...and at/below this precipitation (fixed-point mm) — dry fuel.
         const WILDFIRE_PRECIP_FP: i32 = 200;
+        /// Quake onset: tidal stress above this magnitude (lunar tide offset)...
+        const QUAKE_TIDE_THRESHOLD: f32 = 0.9;
+        /// ...co-located with a tectonically-active latitude (fixed-point deg).
+        const QUAKE_LATITUDE_FP: i32 = 40_000;
 
-        // Collect ignition sites first so the immutable weather borrow is
-        // released before we mutate the simulation via trigger_disaster.
-        let ignitions: Vec<WorldCoord> = self
-            .weather_grid
-            .iter()
-            .filter(|cell| {
-                cell.temp_c_fp >= WILDFIRE_TEMP_FP && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP
-            })
-            .map(|cell| WorldCoord {
+        // Collect onset sites first so the immutable weather borrow is released
+        // before we mutate the simulation via trigger_disaster. Disasters emerge
+        // from physical state: heat+drought -> wildfire; tidal stress at a
+        // tectonic latitude -> quake.
+        let tidal_stress = self.climate.tide_offset.abs();
+        let mut wildfires = Vec::new();
+        let mut quakes = Vec::new();
+        for cell in &self.weather_grid {
+            let pos = WorldCoord {
                 x: i64::from(cell.region_id),
                 y: 0,
                 z: 0,
-            })
-            .collect();
+            };
+            if cell.temp_c_fp >= WILDFIRE_TEMP_FP && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP {
+                wildfires.push(pos);
+            }
+            if tidal_stress >= QUAKE_TIDE_THRESHOLD && cell.latitude_fp.abs() >= QUAKE_LATITUDE_FP {
+                quakes.push(pos);
+            }
+        }
 
-        for pos in ignitions {
+        for pos in wildfires {
             trigger_disaster(self, DisasterKind::Wildfire, pos);
+        }
+        for pos in quakes {
+            trigger_disaster(self, DisasterKind::Quake, pos);
         }
     }
 }

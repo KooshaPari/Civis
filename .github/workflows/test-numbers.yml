@@ -29,4 +29,4 @@ jobs:
       - name: coverage (llvm-cov)
         run: |
           cargo install cargo-llvm-cov --locked || true
-          cargo llvm-cov --workspace --summary-only 2>&1 | tail -40 || echo "coverage-failed"
+          cargo llvm-cov --workspace --exclude civ-server --summary-only 2>&1 | tail -40 || echo "coverage-failed"

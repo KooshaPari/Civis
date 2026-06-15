@@ -23,19 +23,19 @@
 //!  tests, so a future batch may also add a `tests/`-directory entry for
 //!  the HUD `settlement_count` projection.)
 
+use civ_engine::format_mod_error_event_json;
+use civ_engine::hash_chain::hash_hex;
 use civ_engine::lod::{
     aggregate_strategic, operational_hex_snapshot, project_zoom, should_tick_entity_with_policy,
     HexCellSnapshot, LodPolicy, ZoomLevel,
 };
-use civ_engine::scenario::{load_scenario, baseline_scenario_path, ScenarioError};
+use civ_engine::scenario::{baseline_scenario_path, load_scenario, ScenarioError};
 use civ_engine::{
     chain_root_from_ticks, combat_event_bytes, decode_civreplay, encode_civreplay, load_civreplay,
     save_civreplay, tick_event_bytes, tick_hash, ModLoadedRecord, ModUnloadedRecord, ReplayError,
     ReplayEvent, ReplayLog, Scenario, ScenarioMilitary, Simulation, GENESIS, HASH_LEN,
     SCENARIO_SCHEMA_VERSION,
 };
-use civ_engine::hash_chain::hash_hex;
-use civ_engine::format_mod_error_event_json;
 use civ_save_db::format_session_saved_event_json;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
@@ -116,7 +116,10 @@ fn fr_lod_004_operational_hex_data_visible() {
     for tick in 0_u64..64 {
         let cold = should_tick_entity_with_policy(tick, civ_engine::LodTier::Cold, policy);
         let hot = should_tick_entity_with_policy(tick, civ_engine::LodTier::Hot, policy);
-        assert!(hot, "Hot tier must tick every simulation tick (got false at {tick})");
+        assert!(
+            hot,
+            "Hot tier must tick every simulation tick (got false at {tick})"
+        );
         if cold {
             assert!(hot, "Cold-sync tick {tick} must also be a Hot tick");
         }
@@ -139,7 +142,10 @@ fn fr_core_005_tick_hash_emitted() {
     let root_after_one = sim
         .hash_chain_root()
         .expect("tick 1 should emit a BLAKE3 chain root");
-    assert_ne!(root_after_one, GENESIS, "BLAKE3 chain root must move off genesis");
+    assert_ne!(
+        root_after_one, GENESIS,
+        "BLAKE3 chain root must move off genesis"
+    );
 
     // Single-tick root matches `chain_root_from_ticks([1])`.
     let expected_single = chain_root_from_ticks([1_u64]).expect("non-empty");
@@ -147,7 +153,9 @@ fn fr_core_005_tick_hash_emitted() {
 
     // Hex form is 64 lowercase characters (BLAKE3 default length).
     assert_eq!(hash_hex(&root_after_one).len(), 64);
-    assert!(hash_hex(&root_after_one).chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    assert!(hash_hex(&root_after_one)
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
 }
 
 // ---------------------------------------------------------------- FR-CORE-006
@@ -342,7 +350,11 @@ fn fr_save_002_save_events_emitted() {
     let mut log = ReplayLog::default();
     log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
     let at_tick = log.session_saved_bus_at_tick(42);
-    assert_eq!(at_tick.len(), 1, "exactly one session.saved event at tick 42");
+    assert_eq!(
+        at_tick.len(),
+        1,
+        "exactly one session.saved event at tick 42"
+    );
     let v: serde_json::Value = serde_json::from_str(&at_tick[0]).expect("json");
     assert_eq!(v["event_type"], "session.saved.v1");
     assert_eq!(v["slot"], "slot-1");
@@ -370,7 +382,10 @@ fn fr_api_001_baseline_yaml_parses() {
     assert_eq!(scenario.military.engage_range_grid, Some(10));
     assert_eq!(
         scenario.mods,
-        vec!["mods/example-policy".to_string(), "mods/example-economic".to_string()]
+        vec![
+            "mods/example-policy".to_string(),
+            "mods/example-economic".to_string()
+        ]
     );
     assert_eq!(
         scenario.seeds,
@@ -394,8 +409,8 @@ scarcity_multiplier: 1.0
 "#;
     let path = std::path::Path::new("<test>");
     let de = serde_yaml::Deserializer::from_str(yaml);
-    let scenario: Scenario = serde_path_to_error::deserialize(de)
-        .expect("yaml deserializes structurally");
+    let scenario: Scenario =
+        serde_path_to_error::deserialize(de).expect("yaml deserializes structurally");
     match scenario.validate(path) {
         Ok(()) => {}
         Err(ScenarioError::Validation { .. }) => return, // also acceptable

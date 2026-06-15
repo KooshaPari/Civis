@@ -1448,10 +1448,7 @@ impl Simulation {
     /// `MaterialRegistry::standard()` in production. `grid` may be a borrowed
     /// CA grid from a Bevy / Godot resident window; when `None` we skip
     /// (cheap path: emergence layer uses a synthetic distribution).
-    pub fn phase_voxel_ca(
-        &mut self,
-        grid: Option<&civ_voxel::fluid_ca::CaGrid>,
-    ) {
+    pub fn phase_voxel_ca(&mut self, grid: Option<&civ_voxel::fluid_ca::CaGrid>) {
         self.last_tick_abiogenesis_sites.clear();
         let Some(grid) = grid else { return };
         for &chunk in &grid.dirty_chunks() {
@@ -1475,12 +1472,13 @@ impl Simulation {
             for z in z0..z1 {
                 for y in y0..y1 {
                     for x in x0..x1 {
-                        let Some(idx) = grid.index(x, y, z) else { continue };
+                        let Some(idx) = grid.index(x, y, z) else {
+                            continue;
+                        };
                         let mat = grid.cells[idx];
                         let t = grid.temperatures[idx];
                         let sat = grid.saturation[idx];
-                        let s =
-                            civ_voxel::fluid_ca::AbiogenesisSuitability::from_cell(mat, t, sat);
+                        let s = civ_voxel::fluid_ca::AbiogenesisSuitability::from_cell(mat, t, sat);
                         if s.is_viable() {
                             self.last_tick_abiogenesis_sites.push(s);
                         }
@@ -3144,7 +3142,7 @@ mod tests {
                 } if *shooter_id != 0 && *target_id != 0
             )
         }));
-}
+    }
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
     #[test]
     fn push_damage_records_damage_event() {

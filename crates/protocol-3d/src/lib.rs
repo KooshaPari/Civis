@@ -586,7 +586,8 @@ pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError
 
 /// Returns `true` if `bytes` starts with [`FRAME3D_BINARY_MAGIC`].
 pub fn is_frame3d_binary(bytes: &[u8]) -> bool {
-    bytes.len() >= FRAME3D_BINARY_MAGIC.len() && &bytes[..FRAME3D_BINARY_MAGIC.len()] == FRAME3D_BINARY_MAGIC
+    bytes.len() >= FRAME3D_BINARY_MAGIC.len()
+        && &bytes[..FRAME3D_BINARY_MAGIC.len()] == FRAME3D_BINARY_MAGIC
 }
 
 // ===================================================================
@@ -1247,11 +1248,7 @@ mod tests {
     /// decoder returns the same payload (identity round-trip).
     #[test]
     fn agent_stream_roundtrip_identity() {
-        let origin = GridOriginI32 {
-            x: 0,
-            y: 0,
-            z: 0,
-        };
+        let origin = GridOriginI32 { x: 0, y: 0, z: 0 };
         let stream = AgentStream {
             header: AgentStreamHeader {
                 tick: 1_234_567,
@@ -1306,7 +1303,15 @@ mod tests {
     fn agent_stream_roundtrip_property() {
         let cases: Vec<(u32, Vec<AgentStreamEntry>)> = vec![
             (0, vec![]),
-            (1, vec![AgentStreamEntry { id: 0, cell_x: 0, cell_y: 0, cell_z: 0 }]),
+            (
+                1,
+                vec![AgentStreamEntry {
+                    id: 0,
+                    cell_x: 0,
+                    cell_y: 0,
+                    cell_z: 0,
+                }],
+            ),
             (
                 3,
                 (0..3)
@@ -1417,7 +1422,9 @@ mod tests {
         bytes.extend_from_slice(&[0u8; 12]); // origin
         assert_eq!(
             decode_agent_stream_binary(&bytes),
-            Err(AgentStreamBinaryError::UnsupportedMode(AgentStreamMode::Delta))
+            Err(AgentStreamBinaryError::UnsupportedMode(
+                AgentStreamMode::Delta
+            ))
         );
     }
 

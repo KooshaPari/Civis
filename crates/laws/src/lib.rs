@@ -432,7 +432,10 @@ mod tests {
         assert_eq!(steel.unwrap().id, "steel");
 
         // Missing law
-        assert!(db.get("nonexistent").is_none(), "expected None for missing id");
+        assert!(
+            db.get("nonexistent").is_none(),
+            "expected None for missing id"
+        );
     }
 
     /// FR-CIV-LAWS-006 — `LawDb::get` returns the correct law when multiple
@@ -579,5 +582,3 @@ mod tests {
         let _ = std::fs::remove_dir_all(&temp);
     }
 }
-
-

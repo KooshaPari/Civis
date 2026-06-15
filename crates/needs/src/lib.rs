@@ -1006,4 +1006,3 @@ mod tests {
         assert_eq!(needs.health, 0.0);
     }
 }
-

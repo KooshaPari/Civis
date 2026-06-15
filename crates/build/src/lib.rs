@@ -101,7 +101,14 @@ impl CultureEraWealthVector {
     /// Stable quantized wealth bucket in the fixed range `0..=15`.
     #[must_use]
     pub const fn wealth_bucket(self) -> u8 {
-        { let capped = if self.wealth / 8_192 > 15 { 15 } else { self.wealth / 8_192 }; capped as u8 }
+        {
+            let capped = if self.wealth / 8_192 > 15 {
+                15
+            } else {
+                self.wealth / 8_192
+            };
+            capped as u8
+        }
     }
 }
 
@@ -225,7 +232,13 @@ impl Allocator {
         mode: ArchitectureMode,
         primitive_tile_set_id: Option<u16>,
     ) -> Option<u16> {
-        pick_tile_set(vector, demand_signals, tile_sets, mode, primitive_tile_set_id)
+        pick_tile_set(
+            vector,
+            demand_signals,
+            tile_sets,
+            mode,
+            primitive_tile_set_id,
+        )
     }
 }
 
@@ -385,7 +398,9 @@ pub fn resolve_tile_set<'a>(
 
     if let Some(candidate) = tile_sets
         .iter()
-        .filter(|tile_set| tile_set.era <= vector.era && tile_set.wealth_bucket == vector.wealth_bucket())
+        .filter(|tile_set| {
+            tile_set.era <= vector.era && tile_set.wealth_bucket == vector.wealth_bucket()
+        })
         .filter(|tile_set| tile_set.culture == vector.culture)
         .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
     {
@@ -413,7 +428,8 @@ pub fn parcel_template_score(
     vector: &CultureEraWealthVector,
     tile_set: &TileSetProfile,
 ) -> u64 {
-    let demand_signal_sum = ((demand_signals.residential + demand_signals.commercial
+    let demand_signal_sum = ((demand_signals.residential
+        + demand_signals.commercial
         + demand_signals.industrial
         + demand_signals.civic)
         * 1000.0)
@@ -981,8 +997,14 @@ mod tests {
         let second = parcel_template_score(&demands, &vector, &tile_sets[3]);
 
         assert_eq!(first, second);
-        let selected = pick_tile_set(&vector, &demands, &tile_sets, ArchitectureMode::Canonical, None)
-            .expect("canonical mode should select a tile-set");
+        let selected = pick_tile_set(
+            &vector,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        )
+        .expect("canonical mode should select a tile-set");
         assert_eq!(selected, 4);
     }
 
@@ -1031,8 +1053,20 @@ mod tests {
 
         let mut histogram = BTreeMap::new();
         let styles = [
-            facade_for_vector(&vector_a, &demands, &tile_sets, ArchitectureMode::Canonical, None),
-            facade_for_vector(&vector_b, &demands, &tile_sets, ArchitectureMode::Canonical, None),
+            facade_for_vector(
+                &vector_a,
+                &demands,
+                &tile_sets,
+                ArchitectureMode::Canonical,
+                None,
+            ),
+            facade_for_vector(
+                &vector_b,
+                &demands,
+                &tile_sets,
+                ArchitectureMode::Canonical,
+                None,
+            ),
         ];
 
         for style in styles {
@@ -1043,4 +1077,3 @@ mod tests {
         assert_eq!(total_unique, 2);
     }
 }
-

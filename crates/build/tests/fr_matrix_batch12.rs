@@ -2,8 +2,8 @@
 
 use civ_build::{
     adjacency_weights_for_vector, default_facade_for_era, facade_for_vector, pick_tile_set,
-    resolve_tile_set, Allocator, BuildingGraph, BuildingId, BuildingProvenance, CultureEraWealthVector,
-    DemandSignals, FacadeStyle, Parcel, ParcelKind, TileSetProfile,
+    resolve_tile_set, Allocator, BuildingGraph, BuildingId, BuildingProvenance,
+    CultureEraWealthVector, DemandSignals, FacadeStyle, Parcel, ParcelKind, TileSetProfile,
 };
 use civ_voxel::{MaterialId, WorldCoord};
 use ron::{from_str, to_string};
@@ -71,7 +71,11 @@ fn signals() -> DemandSignals {
 /// Covers FR-API-002.
 #[test]
 fn fr_api_002_schema_version_has_three_segments() {
-    let mut parts = civ_build::SCHEMA_VERSION.split('-').next().unwrap().split('.');
+    let mut parts = civ_build::SCHEMA_VERSION
+        .split('-')
+        .next()
+        .unwrap()
+        .split('.');
     assert_eq!(parts.next(), Some("0"));
     assert_eq!(parts.count(), 2);
 }
@@ -128,7 +132,10 @@ fn fr_civ_act_001_default_provenance_tag_exists() {
     };
     graph.insert_parcel(parcel);
     graph.set_provenance(BuildingId(1), BuildingProvenance::Procedural);
-    assert_eq!(graph.provenance.get(&BuildingId(1)), Some(&BuildingProvenance::Procedural));
+    assert_eq!(
+        graph.provenance.get(&BuildingId(1)),
+        Some(&BuildingProvenance::Procedural)
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -392,8 +399,12 @@ fn fr_civ_bio_001_round_trip_parcel_facade() {
             size: [2, 3, 4],
             era_min: 3,
         }],
-        facades: [(BuildingId(99), default_facade_for_era(3))].into_iter().collect(),
-        provenance: [(BuildingId(99), BuildingProvenance::Freehand)].into_iter().collect(),
+        facades: [(BuildingId(99), default_facade_for_era(3))]
+            .into_iter()
+            .collect(),
+        provenance: [(BuildingId(99), BuildingProvenance::Freehand)]
+            .into_iter()
+            .collect(),
     };
     let encoded = to_string(&graph).expect("serialize graph");
     let decoded: BuildingGraph = from_str(&encoded).expect("deserialize graph");
@@ -490,7 +501,10 @@ fn fr_civ_build_001_default_provenance_roundtrip() {
     graph.set_provenance(id, BuildingProvenance::Procedural);
     let encoded = to_string(&graph).expect("serialize graph");
     let decoded: BuildingGraph = from_str(&encoded).expect("deserialize graph");
-    assert_eq!(decoded.provenance.get(&id), Some(&BuildingProvenance::Procedural));
+    assert_eq!(
+        decoded.provenance.get(&id),
+        Some(&BuildingProvenance::Procedural)
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -638,8 +652,13 @@ fn fr_civ_climate_001_resolve_prefers_culture_match() {
     let vector = CultureEraWealthVector::new(7, 2, 16_000);
     let _demand = signals();
 
-    let selected = resolve_tile_set(&vector, &tiles, civ_build::ArchitectureMode::Canonical, None)
-        .expect("expected fallback set");
+    let selected = resolve_tile_set(
+        &vector,
+        &tiles,
+        civ_build::ArchitectureMode::Canonical,
+        None,
+    )
+    .expect("expected fallback set");
     assert_eq!(selected.culture, vector.culture);
 
     let candidate = resolve_tile_set(
@@ -662,7 +681,13 @@ fn fr_civ_climate_002_adjacency_weights_returned() {
     let vector = CultureEraWealthVector::new(7, 2, 16_000);
     let demand = signals();
     let tiles = tile_sets();
-    let weights = adjacency_weights_for_vector(&vector, &demand, &tiles, civ_build::ArchitectureMode::Primitive, Some(10));
+    let weights = adjacency_weights_for_vector(
+        &vector,
+        &demand,
+        &tiles,
+        civ_build::ArchitectureMode::Primitive,
+        Some(10),
+    );
     assert!(!weights.is_empty());
     assert_eq!(weights.get(&11), Some(&1));
 }

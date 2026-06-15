@@ -57,7 +57,10 @@ async fn initial_simulation(saves_dir: &std::path::Path, autoload: bool) -> Simu
             return Simulation::default();
         }
     }) else {
-        tracing::info!(?saves_dir, "CIV_AUTOLOAD enabled but no saves found; starting from Simulation::default()");
+        tracing::info!(
+            ?saves_dir,
+            "CIV_AUTOLOAD enabled but no saves found; starting from Simulation::default()"
+        );
         return Simulation::default();
     };
 

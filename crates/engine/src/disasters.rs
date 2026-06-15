@@ -277,48 +277,52 @@ mod tests {
     #[test]
     fn phase_disasters_triggers_wildfire_on_high_heat_low_moisture() {
         let mut sim = Simulation::with_seed(42);
-        
+
         // Set up extreme environmental conditions that should trigger wildfire
         // High temperature, low moisture, stormy weather
         sim.climate = Climate {
             tick: 1000,
-            day_phase: 0.5, // midday heat
+            day_phase: 0.5,  // midday heat
             year_phase: 0.3, // summer
             moon_phase: 0.0,
             tide_offset: 0.0,
         };
-        
+
         // Create weather with extreme heat and storm conditions
         sim.weather_grid = vec![WeatherCell {
             region_id: 0,
             latitude_fp: 0, // equator
             season: civ_planet::SeasonKind::Summer,
             kind: WeatherKind::Storm,
-            temp_c_fp: 45_000, // 45°C - extreme heat
-            precip_mm_fp: 50, // low precipitation
+            temp_c_fp: 45_000,        // 45°C - extreme heat
+            precip_mm_fp: 50,         // low precipitation
             storm_intensity_fp: 3000, // high storm intensity
         }];
-        
+
         // Advance tick so disaster can be triggered
         sim.state.tick = 1000;
-        
+
         // Call phase_disasters - should trigger wildfire under these conditions
         sim.phase_disasters();
-        
+
         // Verify that a disaster was triggered by checking if terrain was modified
         // Wildfires should create LAVA/STEAM patterns
         let origin = WorldCoord { x: 0, y: 0, z: 0 };
-        let has_wildfire_effects = sim.voxel().read(origin) == LAVA || sim.voxel().read(origin) == STEAM;
-        
+        let has_wildfire_effects =
+            sim.voxel().read(origin) == LAVA || sim.voxel().read(origin) == STEAM;
+
         // This should eventually be true once implementation is complete
-        assert!(has_wildfire_effects, "Wildfire should be triggered under extreme heat/storm conditions");
+        assert!(
+            has_wildfire_effects,
+            "Wildfire should be triggered under extreme heat/storm conditions"
+        );
     }
 
     /// Test that phase_disasters remains quiescent when conditions are normal
     #[test]
     fn phase_disasters_quiescent_under_normal_conditions() {
         let mut sim = Simulation::with_seed(42);
-        
+
         // Set up normal environmental conditions
         sim.climate = Climate {
             tick: 1000,
@@ -327,45 +331,49 @@ mod tests {
             moon_phase: 0.0,
             tide_offset: 0.0,
         };
-        
+
         // Normal weather conditions
         sim.weather_grid = vec![WeatherCell {
             region_id: 0,
             latitude_fp: 30_000, // temperate zone
             season: civ_planet::SeasonKind::Autumn,
             kind: WeatherKind::Clear,
-            temp_c_fp: 18_000, // 18°C - mild temperature
-            precip_mm_fp: 500, // moderate precipitation
+            temp_c_fp: 18_000,       // 18°C - mild temperature
+            precip_mm_fp: 500,       // moderate precipitation
             storm_intensity_fp: 200, // low storm intensity
         }];
-        
+
         sim.state.tick = 1000;
-        
+
         // Store original voxel state
         let origin = WorldCoord { x: 0, y: 0, z: 0 };
         let original_material = sim.voxel().read(origin);
-        
+
         // Call phase_disasters - should NOT trigger disasters under normal conditions
         sim.phase_disasters();
-        
+
         // Verify terrain remains unchanged (no disaster triggered)
-        assert_eq!(sim.voxel().read(origin), original_material, "No disaster should be triggered under normal conditions");
+        assert_eq!(
+            sim.voxel().read(origin),
+            original_material,
+            "No disaster should be triggered under normal conditions"
+        );
     }
 
     /// Test that phase_disasters triggers quake under tectonic stress conditions
     #[test]
     fn phase_disasters_triggers_quake_on_tectonic_stress() {
         let mut sim = Simulation::with_seed(123);
-        
+
         // Simulate tectonic stress through extreme climate patterns that could indicate geological instability
         sim.climate = Climate {
             tick: 2000,
-            day_phase: 0.0, // transition period
+            day_phase: 0.0,   // transition period
             year_phase: 0.25, // spring equinox - potential stress period
-            moon_phase: 0.5, // full moon - maximum tidal forces
+            moon_phase: 0.5,  // full moon - maximum tidal forces
             tide_offset: 1.0, // extreme tide
         };
-        
+
         // Create weather patterns that could correlate with geological stress
         sim.weather_grid = vec![WeatherCell {
             region_id: 0,
@@ -376,17 +384,21 @@ mod tests {
             precip_mm_fp: 300,
             storm_intensity_fp: 1500, // moderate but with pressure fronts
         }];
-        
+
         sim.state.tick = 2000;
-        
+
         // Call phase_disasters - should potentially trigger quake under these conditions
         sim.phase_disasters();
-        
+
         // Quakes create GRAVEL/STONE patterns
         let origin = WorldCoord { x: 0, y: 0, z: 0 };
-        let has_quake_effects = sim.voxel().read(origin) == GRAVEL || sim.voxel().read(origin) == STONE;
-        
+        let has_quake_effects =
+            sim.voxel().read(origin) == GRAVEL || sim.voxel().read(origin) == STONE;
+
         // This should eventually be true once implementation is complete
-        assert!(has_quake_effects, "Quake should be triggered under tectonic stress conditions");
+        assert!(
+            has_quake_effects,
+            "Quake should be triggered under tectonic stress conditions"
+        );
     }
 }

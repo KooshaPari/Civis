@@ -161,7 +161,10 @@ impl ServiceGrid {
         kind: ServiceKind,
     ) -> Result<&GridCell, ServiceGridError> {
         let key = coord_key(coord);
-        let cell = self.cells.entry(key).or_insert_with(|| GridCell::new(coord, std::iter::empty()));
+        let cell = self
+            .cells
+            .entry(key)
+            .or_insert_with(|| GridCell::new(coord, std::iter::empty()));
         if !cell.kinds.insert(kind) {
             // Source already present — no-op. Surfacing the same state is
             // the only sane behaviour: we don't want to "promote" an
@@ -281,7 +284,10 @@ fn coord_key(c: WorldCoord) -> (i64, i64, i64) {
 
 #[inline]
 fn chebyshev(a: WorldCoord, b: WorldCoord) -> i64 {
-    (a.x - b.x).abs().max((a.y - b.y).abs()).max((a.z - b.z).abs())
+    (a.x - b.x)
+        .abs()
+        .max((a.y - b.y).abs())
+        .max((a.z - b.z).abs())
 }
 
 // ---------------------------------------------------------------------------

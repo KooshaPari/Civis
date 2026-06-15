@@ -402,14 +402,16 @@ fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceF
         .world
         .query::<(&AgentCivilian, &Wardrobe, &Tools)>()
         .iter()
-        .map(|(_entity, (civilian, wardrobe, tools))| AgentAppearanceUpdate {
-            agent_id: civilian.id,
-            era: wardrobe.era,
-            wardrobe: wardrobe.material,
-            tools: tools.material,
-            scale: 1.0,
-            position: None,
-        })
+        .map(
+            |(_entity, (civilian, wardrobe, tools))| AgentAppearanceUpdate {
+                agent_id: civilian.id,
+                era: wardrobe.era,
+                wardrobe: wardrobe.material,
+                tools: tools.material,
+                scale: 1.0,
+                position: None,
+            },
+        )
         .collect();
     AgentAppearanceFrame { tick, updates }
 }
@@ -496,10 +498,13 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                 profession,
                 genome_summary: GenomeSummary3d {
                     summary: format!("era-{}", wardrobe.era),
-                    lineage: format!("faction-{}", match civilian.alignment {
-                        civ_agents::Alignment::Faction(id) => id,
-                        _ =>0,
-                    }),
+                    lineage: format!(
+                        "faction-{}",
+                        match civilian.alignment {
+                            civ_agents::Alignment::Faction(id) => id,
+                            _ => 0,
+                        }
+                    ),
                     traits: Vec::new(),
                 },
                 species: "human".to_string(),
@@ -739,8 +744,15 @@ async fn apply_dispatch_effect(
         } => {
             let mut sim = state.sim.lock().await;
             let mut rng = sim.rng_mut().clone();
-            let entity =
-                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, civ_agents::Alignment::Faction(faction), x, y, civ_agents::ActorVisualKind::Humanoid, &mut rng);
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                civ_agents::Alignment::Faction(faction),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }

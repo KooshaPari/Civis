@@ -162,5 +162,4 @@ mod tests {
         assert!(report.hard_rejections.is_empty());
         scan_wasm_determinism(&wasm).expect("non-sqrt float allowed in default mode");
     }
-
 }

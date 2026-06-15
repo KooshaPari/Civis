@@ -14,9 +14,8 @@ use civ_agents::{
     Civilian, ClusterMember, Interaction, Needs, Psyche, SocialEvent, SocialGraph,
 };
 use civ_genetics::{
-    example_seed_set, sentience::{
-        evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold,
-    },
+    example_seed_set,
+    sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
     spawn_genome, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
@@ -714,7 +713,9 @@ impl Simulation {
         let resolved: PathBuf = if path.is_absolute() {
             path.to_path_buf()
         } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../").join(path)
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../")
+                .join(path)
         };
         match std::fs::read_to_string(&resolved) {
             Err(e) => {
@@ -761,8 +762,10 @@ impl Simulation {
                 self.emergence.push_feed(
                     self.state.tick,
                     "seed_unknown",
-                    format!("active seed id {sid} not in library; keeping {:?}",
-                        self.emergence.active_seed_id),
+                    format!(
+                        "active seed id {sid} not in library; keeping {:?}",
+                        self.emergence.active_seed_id
+                    ),
                     None,
                 );
                 return;

@@ -201,4 +201,3 @@ mod tests {
         assert_eq!(a.tide_offset.to_bits(), b.tide_offset.to_bits());
     }
 }
-

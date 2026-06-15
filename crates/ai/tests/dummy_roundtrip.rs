@@ -207,7 +207,10 @@ async fn fr_civ_llm_004_provider_operations_enforce_allowed_use_matrix() {
 
     let provider = GenerateOnlyProvider;
     let req = GenRequest::from_prompt("policy tone sample");
-    let out = provider.generate(&req).await.expect("generate should be allowed");
+    let out = provider
+        .generate(&req)
+        .await
+        .expect("generate should be allowed");
     assert_eq!(out.text, "policy tone sample");
     let err = provider
         .embed(&EmbedRequest {

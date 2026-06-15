@@ -211,9 +211,15 @@ impl BedWeights {
     /// `true` if every slot is in `[0.0, SLOT_CAP]` and finite.
     /// Used by the settings guard.
     pub fn is_well_formed(self) -> bool {
-        [self.wind, self.water, self.forest, self.wildlife, self.weather]
-            .iter()
-            .all(|v| v.is_finite() && (0.0..=Self::SLOT_CAP).contains(v))
+        [
+            self.wind,
+            self.water,
+            self.forest,
+            self.wildlife,
+            self.weather,
+        ]
+        .iter()
+        .all(|v| v.is_finite() && (0.0..=Self::SLOT_CAP).contains(v))
     }
 
     /// Build the per-tick weight vector from a camera footprint.
@@ -247,12 +253,12 @@ impl BedWeights {
 
         // Wildlife is additive. Day + non-winter + grass-or-forest
         // presence → lit. Silenced in Winter per audio-direction §1.
-        let wildlife_raw = if !footprint.is_winter && footprint.is_daytime
+        let wildlife_raw = if !footprint.is_winter
+            && footprint.is_daytime
             && (footprint.grass > 0 || footprint.forest > 0)
         {
             // Scale 0..1 by the share of grass+forest in the footprint.
-            let bio_share =
-                (footprint.grass + footprint.forest) as f32 / total;
+            let bio_share = (footprint.grass + footprint.forest) as f32 / total;
             bio_share.clamp(0.0, 1.0)
         } else {
             0.0

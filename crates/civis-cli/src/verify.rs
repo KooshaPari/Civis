@@ -173,10 +173,7 @@ fn trigger_screenshot(
         .observe(save_to_disk(request.path.clone()));
 }
 
-fn watch_capturing(
-    mut commands: Commands,
-    capturing: Query<Entity, With<Capturing>>,
-) {
+fn watch_capturing(mut commands: Commands, capturing: Query<Entity, With<Capturing>>) {
     for entity in &capturing {
         commands.entity(entity).despawn();
     }

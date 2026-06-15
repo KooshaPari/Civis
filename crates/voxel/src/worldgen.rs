@@ -547,7 +547,11 @@ mod tests {
             base_voxel_m: 1.0,
             sea_level_m: 16.0,
         };
-        let chunk = gen.generate(phenotype_voxel::ChunkCoord { cx: 0, cy: 0, cz: 0 });
+        let chunk = gen.generate(phenotype_voxel::ChunkCoord {
+            cx: 0,
+            cy: 0,
+            cz: 0,
+        });
         assert_eq!(chunk.voxels.len(), CHUNK_VOXELS);
     }
 
@@ -560,7 +564,11 @@ mod tests {
             base_voxel_m: 0.5,
             sea_level_m: 8.0,
         };
-        let coord = phenotype_voxel::ChunkCoord { cx: 1, cy: -2, cz: 3 };
+        let coord = phenotype_voxel::ChunkCoord {
+            cx: 1,
+            cy: -2,
+            cz: 3,
+        };
         let a = gen.generate(coord);
         let b = gen.generate(coord);
         assert_eq!(a.voxels, b.voxels);
@@ -570,7 +578,11 @@ mod tests {
     #[test]
     fn height_field_gen_differs_across_seeds() {
         use crate::stream::WorldGen;
-        let coord = phenotype_voxel::ChunkCoord { cx: 0, cy: 0, cz: 0 };
+        let coord = phenotype_voxel::ChunkCoord {
+            cx: 0,
+            cy: 0,
+            cz: 0,
+        };
         let a = HeightFieldGen {
             seed: 1,
             base_voxel_m: 1.0,
@@ -595,7 +607,11 @@ mod tests {
             base_voxel_m: 1.0,
             sea_level_m: 10.0,
         };
-        let chunk = gen.generate(phenotype_voxel::ChunkCoord { cx: 0, cy: 0, cz: 0 });
+        let chunk = gen.generate(phenotype_voxel::ChunkCoord {
+            cx: 0,
+            cy: 0,
+            cz: 0,
+        });
         let solids = chunk.voxels.iter().filter(|v| v.0 == 1).count();
         let airs = chunk.voxels.iter().filter(|v| v.0 == 0).count();
         assert!(solids > 0, "chunk should contain solid voxels");

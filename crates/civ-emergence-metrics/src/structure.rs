@@ -289,10 +289,7 @@ mod tests {
         let data = [1u8, 0, 0, 1];
         let g = Grid::new(2, 2, 1, &data).expect("2×2×1");
         let s = StructureCount.evaluate(&g, |&v| v > 0);
-        assert_eq!(
-            s.count, 2,
-            "6-connectivity must NOT merge diagonal corners"
-        );
+        assert_eq!(s.count, 2, "6-connectivity must NOT merge diagonal corners");
     }
 
     #[test]

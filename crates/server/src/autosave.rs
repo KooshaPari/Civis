@@ -102,9 +102,7 @@ pub async fn run_autosave_once(ctx: &AutosaveContext) -> Result<AutosaveResult, 
         sim.state.tick
     };
 
-    let byte_size = std::fs::metadata(&path)
-        .map(|meta| meta.len())
-        .unwrap_or(0);
+    let byte_size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
 
     let save_id = ctx
         .save_db
@@ -196,10 +194,10 @@ mod tests {
 
     impl EnvVarScope {
         fn set(key: &'static str, value: impl AsRef<str>) -> Self {
-        let _lock = AUTOSAVE_ENV_MUTEX
-            .get_or_init(|| StdMutex::new(()))
-            .lock()
-            .expect("env lock poisoned");
+            let _lock = AUTOSAVE_ENV_MUTEX
+                .get_or_init(|| StdMutex::new(()))
+                .lock()
+                .expect("env lock poisoned");
             let previous = std::env::var(key).ok();
             unsafe {
                 std::env::set_var(key, value.as_ref());
@@ -259,7 +257,10 @@ mod tests {
 
     #[test]
     fn filename_is_zero_padded_for_sort() {
-        assert_eq!(autosave_filename_for_tick(0), "autosave-00000000000000000000");
+        assert_eq!(
+            autosave_filename_for_tick(0),
+            "autosave-00000000000000000000"
+        );
         assert_eq!(
             autosave_filename_for_tick(1_234_567),
             "autosave-00000000000001234567"

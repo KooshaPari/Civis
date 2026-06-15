@@ -239,9 +239,10 @@ pub fn register_render<R: NameResolver + ?Sized>(
             // outputs for the same rumor.
             let seed = match register {
                 Register::Narrative => rumor.origin_epoch.0.wrapping_add(rumor.event_id.0),
-                Register::Sacred => {
-                    rumor.origin_epoch.0.wrapping_add(rumor.event_id.0 ^ 0xC0FFEE)
-                }
+                Register::Sacred => rumor
+                    .origin_epoch
+                    .0
+                    .wrapping_add(rumor.event_id.0 ^ 0xC0FFEE),
                 Register::Formal => 0, // unreachable
             };
             let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -838,12 +839,7 @@ mod tests {
             deity_sphere: Some("war"),
         };
         let mut rng = StdRng::seed_from_u64(42);
-        let rumor = retell(
-            &historian,
-            &base_rumor(),
-            &[LegendEntityId(99)],
-            &mut rng,
-        );
+        let rumor = retell(&historian, &base_rumor(), &[LegendEntityId(99)], &mut rng);
         assert!(rumor.salience.is_finite());
         assert!((0.0..=1.0).contains(&rumor.salience));
 
@@ -890,8 +886,20 @@ mod tests {
         let formal = register_render(&rumor, Register::Formal, &historian, &resolver);
         assert!(formal.starts_with("[FORMAL]"), "formal prose: {}", formal);
         // Formal MUST NOT mix in tracery verbs reserved for the narrative surface.
-        for verb in ["witnessed", "recorded", "recounted", "hailed", "lamented", "remembered"] {
-            assert!(!formal.contains(verb), "formal prose leaked tracery verb '{}': {}", verb, formal);
+        for verb in [
+            "witnessed",
+            "recorded",
+            "recounted",
+            "hailed",
+            "lamented",
+            "remembered",
+        ] {
+            assert!(
+                !formal.contains(verb),
+                "formal prose leaked tracery verb '{}': {}",
+                verb,
+                formal
+            );
         }
         // Formal MUST NOT carry the treaty hand-off marker; treaty text is a
         // distinct downstream consumer of formal prose, not the prose itself.
@@ -905,7 +913,10 @@ mod tests {
         // Sacred register: distinct from narrative and formal.
         let sacred = register_render(&rumor, Register::Sacred, &historian, &resolver);
         assert!(!sacred.starts_with("[FORMAL]"));
-        assert_ne!(narrative, sacred, "narrative and sacred must diverge for the same rumor+seed family");
+        assert_ne!(
+            narrative, sacred,
+            "narrative and sacred must diverge for the same rumor+seed family"
+        );
     }
 
     // --- FR-CIV-LEGENDS-008: NameRef from language drift --------------------
@@ -948,7 +959,12 @@ mod tests {
         // prefix to keep the rule text parseable while still being
         // recognisably a synthetic id.)
         let default_resolver = DefaultNameResolver;
-        let prose_default = register_render(&base_rumor(), Register::Narrative, &historian, &default_resolver);
+        let prose_default = register_render(
+            &base_rumor(),
+            Register::Narrative,
+            &historian,
+            &default_resolver,
+        );
         assert!(!prose_default.contains("Ash-Veined Tsar"));
         assert!(prose_default.contains("entity:12"));
     }

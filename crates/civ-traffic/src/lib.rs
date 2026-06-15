@@ -33,8 +33,7 @@ pub mod grid;
 pub mod lane;
 
 pub use grid::{
-    CellState, GridCell, ServiceGrid, ServiceGridError, ServiceKind,
-    SERVICE_GRID_SCHEMA_VERSION,
+    CellState, GridCell, ServiceGrid, ServiceGridError, ServiceKind, SERVICE_GRID_SCHEMA_VERSION,
 };
 
 /// Marker version of this crate's public schema (replay/save guard).

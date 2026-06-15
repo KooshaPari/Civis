@@ -223,7 +223,11 @@ impl ConcessionStateMachine {
 
     /// Propose a new concession level. Levels must be monotonic non-decreasing
     /// until the round budget is exhausted.
-    pub fn propose(&mut self, proposer: PolityId, concession_level: u8) -> Result<(), ConcessionError> {
+    pub fn propose(
+        &mut self,
+        proposer: PolityId,
+        concession_level: u8,
+    ) -> Result<(), ConcessionError> {
         if self.resolved {
             return Err(ConcessionError::AlreadyResolved);
         }
@@ -503,10 +507,7 @@ pub fn update_trust_score(
 }
 
 /// Select war goals from current relation and deterministic rule set.
-pub fn select_war_goal(
-    standing: i32,
-    source: DecisionSource,
-) -> Result<WarGoal, DecisionError> {
+pub fn select_war_goal(standing: i32, source: DecisionSource) -> Result<WarGoal, DecisionError> {
     if source == DecisionSource::Llm {
         return Err(DecisionError::LlmDisallowed {
             action: "war-goal selection",
@@ -604,7 +605,9 @@ impl DiplomacyConfig {
             return Err(ConfigError::NegativeStandingMax(self.standing_max));
         }
         if self.hostile_threshold > 0 {
-            return Err(ConfigError::HostileThresholdPositive(self.hostile_threshold));
+            return Err(ConfigError::HostileThresholdPositive(
+                self.hostile_threshold,
+            ));
         }
         if self.allied_threshold < 0 {
             return Err(ConfigError::AlliedThresholdNegative(self.allied_threshold));
@@ -729,7 +732,9 @@ impl DiplomacyState {
             let new_standing = if rel.standing > 0 {
                 (i64::from(rel.standing) - decay).max(0).min(i64::from(max)) as i32
             } else if rel.standing < 0 {
-                (i64::from(rel.standing) + decay).min(0).max(-i64::from(max)) as i32
+                (i64::from(rel.standing) + decay)
+                    .min(0)
+                    .max(-i64::from(max)) as i32
             } else {
                 0
             };
@@ -781,7 +786,12 @@ impl DiplomacyState {
                     // sides" semantics — both observers read the same value.
                     self.bump(attacker, defender, -magnitude, tick);
                 }
-                InteractionEvent::Gesture { from, to, delta, tick } => {
+                InteractionEvent::Gesture {
+                    from,
+                    to,
+                    delta,
+                    tick,
+                } => {
                     if from == to {
                         continue;
                     }
@@ -1093,10 +1103,7 @@ mod tests {
             s.decay(t);
         }
         assert_eq!(s.get(a(1), a(2)).unwrap().standing, 0);
-        assert_eq!(
-            s.get(a(1), a(2)).unwrap().stance(&cfg()),
-            Stance::Neutral
-        );
+        assert_eq!(s.get(a(1), a(2)).unwrap().stance(&cfg()), Stance::Neutral);
     }
 
     #[test]
@@ -1308,7 +1315,9 @@ mod tests {
     fn fr_civ_diplo_006_blocks_llm_treaty_acceptance_decision() {
         assert!(matches!(
             decide_treaty_acceptance(0, DecisionSource::Llm),
-            Err(DecisionError::LlmDisallowed { action: "treaty acceptance" })
+            Err(DecisionError::LlmDisallowed {
+                action: "treaty acceptance"
+            })
         ));
         assert!(decide_treaty_acceptance(0, DecisionSource::RuleEngine).is_ok());
     }
@@ -1318,11 +1327,15 @@ mod tests {
     fn fr_civ_diplo_006_blocks_llm_trust_and_war_goal_decisions() {
         assert!(matches!(
             update_trust_score(10, -3, DecisionSource::Llm),
-            Err(DecisionError::LlmDisallowed { action: "trust updates" })
+            Err(DecisionError::LlmDisallowed {
+                action: "trust updates"
+            })
         ));
         assert!(matches!(
             select_war_goal(-20, DecisionSource::Llm),
-            Err(DecisionError::LlmDisallowed { action: "war-goal selection" })
+            Err(DecisionError::LlmDisallowed {
+                action: "war-goal selection"
+            })
         ));
     }
 
@@ -1490,8 +1503,8 @@ mod tests {
             (-1, 0, WarGoal::Limited),
             (-9, 0, WarGoal::Limited),
             (-10, 0, WarGoal::Total),
-            (-50, 9_999, WarGoal::Total),     // -50 hits floor but exhaustion < cap
-            (-49, 10_000, WarGoal::Total),    // standing just above floor
+            (-50, 9_999, WarGoal::Total), // -50 hits floor but exhaustion < cap
+            (-49, 10_000, WarGoal::Total), // standing just above floor
             (-50, 10_000, WarGoal::Surrender), // boundary: both crossed
             (-100, 20_000, WarGoal::Surrender),
             (i32::MIN, u32::MAX, WarGoal::Surrender),
@@ -1505,7 +1518,10 @@ mod tests {
                 DecisionSource::RuleEngine,
             )
             .expect("rule engine");
-            assert_eq!(goal, expected, "standing={standing} exhaustion={exhaustion}");
+            assert_eq!(
+                goal, expected,
+                "standing={standing} exhaustion={exhaustion}"
+            );
         }
     }
 
@@ -1545,7 +1561,9 @@ mod tests {
     fn fr_civ_diplo_008_select_war_goal_v2_blocks_llm() {
         assert!(matches!(
             select_war_goal_v2(-20, WarExhaustion(0), -50, 10_000, DecisionSource::Llm),
-            Err(DecisionError::LlmDisallowed { action: "war-goal selection" })
+            Err(DecisionError::LlmDisallowed {
+                action: "war-goal selection"
+            })
         ));
     }
 

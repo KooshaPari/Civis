@@ -1,18 +1,21 @@
 use std::time::Duration;
 
-use clap::Parser;
 use civis_cli::census::{
     build_sim_status_request, decode_response, validate_sim_status, CensusConfig, CensusError,
     SimStatusResult,
 };
 use civis_cli::config::{census_config_from_env, load_dotenv};
+use clap::Parser;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug, Parser)]
-#[command(name = "civis-census", about = "Query sim.status over the civ-server JSON-RPC WS bridge")]
+#[command(
+    name = "civis-census",
+    about = "Query sim.status over the civ-server JSON-RPC WS bridge"
+)]
 struct Args {
     /// Override the WebSocket host (default $CIV_WS_HOST or 127.0.0.1).
     #[arg(long)]
@@ -106,19 +109,18 @@ async fn census_call(
     request_frame: &str,
     request_timeout: Duration,
 ) -> Result<String, CensusCallError> {
-    let connect = tokio_tungstenite::connect_async(url)
-        .await
-        .map_err(|err| CensusCallError::Connect {
-            url: url.to_string(),
-            source: err,
-        })?;
+    let connect =
+        tokio_tungstenite::connect_async(url)
+            .await
+            .map_err(|err| CensusCallError::Connect {
+                url: url.to_string(),
+                source: err,
+            })?;
     let (mut ws, _response) = connect;
 
     ws.send(Message::Text(request_frame.to_string()))
         .await
-        .map_err(|err| CensusCallError::Send {
-            source: err,
-        })?;
+        .map_err(|err| CensusCallError::Send { source: err })?;
 
     let frame = timeout(request_timeout, ws.next())
         .await
@@ -131,9 +133,9 @@ async fn census_call(
 
     let text = match frame {
         Message::Text(text) => text,
-        Message::Binary(bytes) => String::from_utf8(bytes).map_err(|err| CensusCallError::Decode {
-            source: err,
-        })?,
+        Message::Binary(bytes) => {
+            String::from_utf8(bytes).map_err(|err| CensusCallError::Decode { source: err })?
+        }
         Message::Close(_) => return Err(CensusCallError::Closed),
         other => {
             return Err(CensusCallError::UnexpectedFrame {
@@ -195,6 +197,8 @@ enum CensusCallError {
 
 impl From<CensusError> for CensusCallError {
     fn from(err: CensusError) -> Self {
-        CensusCallError::UnexpectedFrame { kind: format!("{err:?}") }
+        CensusCallError::UnexpectedFrame {
+            kind: format!("{err:?}"),
+        }
     }
 }

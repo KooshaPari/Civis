@@ -166,8 +166,7 @@ pub(crate) fn enforce_autosave_ring(dir: &Path) {
         return;
     }
     autosaves.sort_by(|a, b| {
-        b.2
-            .cmp(&a.2)
+        b.2.cmp(&a.2)
             .then_with(|| b.1.cmp(&a.1))
             .then_with(|| b.0.cmp(&a.0))
     });

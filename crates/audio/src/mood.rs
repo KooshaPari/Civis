@@ -246,11 +246,7 @@ impl ScoreCadence {
     /// applied on a `fired=true` step only — between firings, the
     /// stored mood drifts toward the new input so a long pause
     /// doesn't snap on resume.
-    pub fn step(
-        &mut self,
-        raw_mood: MoodVector,
-        dt: f32,
-    ) -> (MoodVector, StemMix, bool) {
+    pub fn step(&mut self, raw_mood: MoodVector, dt: f32) -> (MoodVector, StemMix, bool) {
         self.elapsed = (self.elapsed + dt.max(0.0)).max(0.0);
         let period = self.period_s.max(0.001);
         if self.elapsed < period {
@@ -264,7 +260,7 @@ impl ScoreCadence {
             growth: raw_mood.growth,         // across successive
             tension: raw_mood.tension,       // raw_mood calls;
             wonder: raw_mood.wonder,         // the client supplies
-        };                                  // a smoothed input.
+        }; // a smoothed input.
         let _ = s; // smoothed is the new current; client may compare
                    // against a prior call's `smoothed` to compute a
                    // delta. We keep the type seam honest.
@@ -405,23 +401,47 @@ mod tests {
     #[test]
     fn fr_audio_004_mood_to_stems_is_monotonic_per_axis() {
         // prosperity: monotone up
-        let lo = StemMix::from_mood(&MoodVector { prosperity: 0.1, ..MoodVector::ZERO });
-        let hi = StemMix::from_mood(&MoodVector { prosperity: 0.9, ..MoodVector::ZERO });
+        let lo = StemMix::from_mood(&MoodVector {
+            prosperity: 0.1,
+            ..MoodVector::ZERO
+        });
+        let hi = StemMix::from_mood(&MoodVector {
+            prosperity: 0.9,
+            ..MoodVector::ZERO
+        });
         assert!(hi.base > lo.base);
 
         // growth: monotone up
-        let lo = StemMix::from_mood(&MoodVector { growth: 0.1, ..MoodVector::ZERO });
-        let hi = StemMix::from_mood(&MoodVector { growth: 0.9, ..MoodVector::ZERO });
+        let lo = StemMix::from_mood(&MoodVector {
+            growth: 0.1,
+            ..MoodVector::ZERO
+        });
+        let hi = StemMix::from_mood(&MoodVector {
+            growth: 0.9,
+            ..MoodVector::ZERO
+        });
         assert!(hi.rhythm > lo.rhythm);
 
         // tension: monotone up
-        let lo = StemMix::from_mood(&MoodVector { tension: 0.1, ..MoodVector::ZERO });
-        let hi = StemMix::from_mood(&MoodVector { tension: 0.9, ..MoodVector::ZERO });
+        let lo = StemMix::from_mood(&MoodVector {
+            tension: 0.1,
+            ..MoodVector::ZERO
+        });
+        let hi = StemMix::from_mood(&MoodVector {
+            tension: 0.9,
+            ..MoodVector::ZERO
+        });
         assert!(hi.tension > lo.tension);
 
         // wonder: monotone up
-        let lo = StemMix::from_mood(&MoodVector { wonder: 0.1, ..MoodVector::ZERO });
-        let hi = StemMix::from_mood(&MoodVector { wonder: 0.9, ..MoodVector::ZERO });
+        let lo = StemMix::from_mood(&MoodVector {
+            wonder: 0.1,
+            ..MoodVector::ZERO
+        });
+        let hi = StemMix::from_mood(&MoodVector {
+            wonder: 0.9,
+            ..MoodVector::ZERO
+        });
         assert!(hi.lead > lo.lead);
 
         // Cadence period is in the audio-direction 2–4 s band by default.

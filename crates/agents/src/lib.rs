@@ -1329,10 +1329,7 @@ mod tests {
     fn form_faction_requires_cohesion_threshold() {
         let mut graph = SocialGraph::default();
         // Zero ties → no cohesion → cannot form a faction.
-        assert_eq!(
-            Alignment::None.form_faction(&graph, 1, 42),
-            Alignment::None
-        );
+        assert_eq!(Alignment::None.form_faction(&graph, 1, 42), Alignment::None);
 
         // Add FORM_FACTION_COHESION - 1 positive ties — still under threshold.
         for i in 0..(FORM_FACTION_COHESION - 1) as u64 {
@@ -1346,10 +1343,7 @@ mod tests {
                 },
             );
         }
-        assert_eq!(
-            Alignment::None.form_faction(&graph, 1, 42),
-            Alignment::None
-        );
+        assert_eq!(Alignment::None.form_faction(&graph, 1, 42), Alignment::None);
 
         // Push the count to the cohesion threshold — faction is formed.
         apply_social_event(

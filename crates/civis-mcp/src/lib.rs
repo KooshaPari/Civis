@@ -164,7 +164,6 @@ pub fn census_sim_status(
 /// Resolve the [`CensusConfig`] from environment, plus the URL string the
 /// MCP tool should echo back to the operator.
 pub fn census_config_with_url() -> CensusConfig {
-    
     census_config_from_env()
 }
 

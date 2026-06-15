@@ -16,8 +16,8 @@
 
 use civ_mod_host::{
     example_economic_mod_dir, example_policy_mod_dir, format_mod_loaded_event,
-    format_mod_loaded_event_json, format_mod_unloaded_event_json, ModBrowserEntry, ModHost, ModType,
-    ModStatus, ModUnloadedRecord, MOD_GUEST_STATE_VERSION,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, ModBrowserEntry, ModHost,
+    ModStatus, ModType, ModUnloadedRecord, MOD_GUEST_STATE_VERSION,
 };
 use civ_save_db::{format_session_saved_event_json, SaveDb, SessionSaveRecord};
 
@@ -76,8 +76,14 @@ fn fr_civ_tactics_058_guest_state_save_version_constant_is_stable() {
 fn fr_civ_tactics_059_example_mod_dirs_resolve_to_real_paths() {
     let policy = example_policy_mod_dir();
     let economic = example_economic_mod_dir();
-    assert!(policy.is_dir(), "example-policy mod dir missing at {policy:?}");
-    assert!(economic.is_dir(), "example-economic mod dir missing at {economic:?}");
+    assert!(
+        policy.is_dir(),
+        "example-policy mod dir missing at {policy:?}"
+    );
+    assert!(
+        economic.is_dir(),
+        "example-economic mod dir missing at {economic:?}"
+    );
     // Both must contain a manifest the host can load (this is the contract
     // that the `mod-package-all` recipe relies on).
     assert!(policy.join("manifest.toml").is_file());
@@ -114,8 +120,10 @@ fn fr_civ_tactics_060_guest_state_round_trip_is_lossless() {
 #[test]
 fn fr_civ_tactics_062_browser_entries_reflect_installed_mods() {
     let mut host = ModHost::new();
-    host.load_manifest_dir(example_policy_mod_dir()).expect("policy");
-    host.load_manifest_dir(example_economic_mod_dir()).expect("economic");
+    host.load_manifest_dir(example_policy_mod_dir())
+        .expect("policy");
+    host.load_manifest_dir(example_economic_mod_dir())
+        .expect("economic");
     let entries: Vec<ModBrowserEntry> = host.browser_entries();
     assert_eq!(entries.len(), 2);
     let ids: Vec<&str> = entries.iter().map(|e| e.id.as_str()).collect();
@@ -144,7 +152,8 @@ fn fr_civ_tactics_064_civmod_archive_loader_rejects_unsafe_paths() {
         let file = std::fs::File::create(&archive_path).expect("create archive");
         let mut zip = zip::ZipWriter::new(file);
         let opts = zip::write::SimpleFileOptions::default();
-        zip.start_file("manifest.toml", opts).expect("start manifest");
+        zip.start_file("manifest.toml", opts)
+            .expect("start manifest");
         std::io::Write::write_all(
             &mut zip,
             b"[mod]\nid = \"x\"\nname = \"x\"\nversion = \"0.0.1\"\napi_version = \"1\"\nmod_type = \"policy\"\nauthor = \"t\"\ndescription = \"d\"\n[dependencies]\ncivlab-api = \">=1.0.0, <2.0.0\"\n[permissions]\nwrite_policy = true\n",
@@ -167,7 +176,8 @@ fn fr_civ_tactics_064_civmod_archive_loader_rejects_unsafe_paths() {
 #[test]
 fn fr_civ_tactics_067_loaded_event_json_has_required_keys() {
     let mut host = ModHost::new();
-    host.load_manifest_dir(example_policy_mod_dir()).expect("load");
+    host.load_manifest_dir(example_policy_mod_dir())
+        .expect("load");
     let record = &host.loaded_records()[0];
     let json = format_mod_loaded_event_json(record);
     let value: serde_json::Value = serde_json::from_str(&json).expect("parse");
@@ -220,8 +230,10 @@ fn fr_civ_tactics_069_save_db_session_index_round_trips() {
 #[test]
 fn fr_civ_tactics_070_mod_registry_preserves_load_order() {
     let mut host = ModHost::new();
-    host.load_manifest_dir(example_policy_mod_dir()).expect("policy");
-    host.load_manifest_dir(example_economic_mod_dir()).expect("economic");
+    host.load_manifest_dir(example_policy_mod_dir())
+        .expect("policy");
+    host.load_manifest_dir(example_economic_mod_dir())
+        .expect("economic");
     let mods = host.registry().mods();
     assert_eq!(mods.len(), 2);
     // Load order is deterministic: policy first, then economic.
@@ -280,7 +292,8 @@ fn fr_civ_tactics_063_unload_event_json_envelope() {
 #[test]
 fn fr_mod_001_load_mod_records_stable_id() {
     let mut host = ModHost::new();
-    host.load_manifest_dir(example_policy_mod_dir()).expect("load");
+    host.load_manifest_dir(example_policy_mod_dir())
+        .expect("load");
     let record = &host.loaded_records()[0];
     assert_eq!(record.mod_id, "example-policy");
     assert!(!record.mod_name.is_empty());
@@ -321,12 +334,19 @@ write_policy = true
 "#,
     )
     .expect("write manifest");
-    std::fs::write(dir.path().join("mod.wasm"), wat::parse_str(WAT).expect("wat")).expect("write wasm");
+    std::fs::write(
+        dir.path().join("mod.wasm"),
+        wat::parse_str(WAT).expect("wat"),
+    )
+    .expect("write wasm");
 
     let mut host = ModHost::new();
     host.load_manifest_dir(dir.path()).expect("load mod");
     let lines = host.tick(1);
-    assert!(lines.iter().any(|line| line.contains("mod.error.v1")), "{lines:?}");
+    assert!(
+        lines.iter().any(|line| line.contains("mod.error.v1")),
+        "{lines:?}"
+    );
 }
 
 /// Covers FR-MOD-003.
@@ -365,18 +385,32 @@ write_policy = true
 "#,
     )
     .expect("write manifest");
-    std::fs::write(dir.path().join("mod.wasm"), wat::parse_str(WAT).expect("wat")).expect("write wasm");
+    std::fs::write(
+        dir.path().join("mod.wasm"),
+        wat::parse_str(WAT).expect("wat"),
+    )
+    .expect("write wasm");
 
     let mut host = ModHost::new();
     host.load_manifest_dir(dir.path()).expect("load");
     let _ = host.tick(9);
-    assert_eq!(host.guest_memory_snapshot("mod-state-demo").first().copied(), Some(77));
+    assert_eq!(
+        host.guest_memory_snapshot("mod-state-demo")
+            .first()
+            .copied(),
+        Some(77)
+    );
 
     let save = host.export_guest_state();
     assert_eq!(save.memories.len(), 1);
     let mut next = ModHost::new();
     next.import_guest_state(&save).expect("import");
-    assert_eq!(next.guest_memory_snapshot("mod-state-demo").first().copied(), Some(77));
+    assert_eq!(
+        next.guest_memory_snapshot("mod-state-demo")
+            .first()
+            .copied(),
+        Some(77)
+    );
 }
 
 /// Covers FR-MOD-005.
@@ -429,8 +463,10 @@ civlab-api = ">=1.0.0, <2.0.0"
     .expect("write manifest");
 
     let mut host = ModHost::new();
-    host.load_manifest_dir(policy_dir.path()).expect("load policy");
-    host.load_manifest_dir(event_dir.path()).expect("load event");
+    host.load_manifest_dir(policy_dir.path())
+        .expect("load policy");
+    host.load_manifest_dir(event_dir.path())
+        .expect("load event");
 
     let policy_entry = host
         .mods()

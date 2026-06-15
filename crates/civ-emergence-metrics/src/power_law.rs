@@ -159,7 +159,11 @@ mod tests {
         let h = Histogram::from_counts(counts);
         let r = PowerLawFit.compute_rank_frequency(&h);
         approx(r.alpha, 1.0);
-        assert!(r.r_squared > 0.98, "Zipf data should have R² > 0.98, got {}", r.r_squared);
+        assert!(
+            r.r_squared > 0.98,
+            "Zipf data should have R² > 0.98, got {}",
+            r.r_squared
+        );
     }
 
     #[test]

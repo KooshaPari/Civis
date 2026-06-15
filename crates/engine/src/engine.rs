@@ -1092,6 +1092,23 @@ impl Simulation {
         self.state.research_progress
     }
 
+    /// Research tier reached — each tier is 100k accumulated research effort.
+    /// Higher tiers feed back into gameplay (e.g. carrying capacity).
+    #[must_use]
+    pub fn research_tier(&self) -> u64 {
+        self.state.research_progress / 100_000
+    }
+
+    /// Effective carrying capacity: a baseline plus a bonus per research tier.
+    /// Tech raises how many people the land sustains, which eases staple prices
+    /// in [`Simulation::phase_economy`] (research → economy coupling).
+    fn carrying_capacity(&self) -> i64 {
+        const POP_BASELINE: i64 = 1_000_000;
+        const CAPACITY_PER_TIER: i64 = 200_000;
+        let tier = self.research_tier().min(i64::MAX as u64) as i64;
+        POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER)
+    }
+
     /// Accumulated faith/belief, generated each tick by [`Simulation::phase_belief`]
     /// from the worshipping population and spent on divine powers.
     #[must_use]
@@ -2124,14 +2141,15 @@ impl Simulation {
         self.market_state.step(self.state.tick);
 
         // Emergent pricing (FR-CIV-0100 §3d): the living population is demand
-        // pressure measured against a carrying-capacity baseline. Staple prices
-        // rise as population outgrows the baseline (scarcity) and ease as it
-        // falls below (surplus) — prices EMERGE from population dynamics rather
-        // than a scripted curve.
-        const POP_BASELINE: i64 = 1_000_000;
+        // pressure measured against the carrying capacity (supply). Staple
+        // prices rise as population outgrows capacity (scarcity) and ease as it
+        // falls below (surplus). Carrying capacity itself grows with research
+        // tier, so tech advances FEED BACK into cheaper staples (research →
+        // economy coupling).
         let demand = self.state.population.min(i64::MAX as u64) as i64;
-        self.market_state.apply_pressure("food", demand, POP_BASELINE);
-        self.market_state.apply_pressure("energy", demand, POP_BASELINE);
+        let supply = self.carrying_capacity();
+        self.market_state.apply_pressure("food", demand, supply);
+        self.market_state.apply_pressure("energy", demand, supply);
     }
 
     fn tick_trade_routes(&mut self) {
@@ -2935,6 +2953,21 @@ mod tests {
         assert_eq!(sim.belief(), 100, "failed invoke leaves belief untouched");
         assert!(sim.try_invoke_divine_power(80), "can afford 80");
         assert_eq!(sim.belief(), 20, "cost deducted on success");
+    }
+
+    /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with
+    /// accumulated research (research → economy coupling / downward causation).
+    #[test]
+    fn research_tier_and_capacity_grow_with_progress() {
+        let mut sim = Simulation::with_seed(7);
+        assert_eq!(sim.research_tier(), 0);
+        let base_capacity = sim.carrying_capacity();
+        sim.state.research_progress = 350_000;
+        assert_eq!(sim.research_tier(), 3);
+        assert!(
+            sim.carrying_capacity() > base_capacity,
+            "research should raise carrying capacity"
+        );
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.

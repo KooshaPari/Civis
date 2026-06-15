@@ -394,12 +394,24 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
         "expected speed_multiplier in snapshot result after sim.set_speed"
     );
     let snap = sim.lock().await.snapshot();
-    assert_eq!(
-        response
-            .pointer("/result/market_prices/food")
-            .and_then(|v| v.as_i64()),
-        snap.market_prices.get("food").copied(),
-        "expected food price in market_prices"
+    // The food price EMERGES from live supply/demand pressure (faction wealth +
+    // population vs carrying capacity) and so moves every tick. The WS response
+    // is captured at one tick and this snapshot at a later one, so an exact
+    // cross-tick equality is racy by construction. Assert the field is present
+    // and a valid clearing price (>= 1) in both reads instead.
+    let response_food = response
+        .pointer("/result/market_prices/food")
+        .and_then(|v| v.as_i64());
+    assert!(
+        response_food.is_some_and(|p| p >= 1),
+        "expected a positive food price in market_prices, got {response_food:?}"
+    );
+    assert!(
+        snap.market_prices
+            .get("food")
+            .copied()
+            .is_some_and(|p| p >= 1),
+        "expected a positive food price in sim snapshot"
     );
     assert_eq!(
         response

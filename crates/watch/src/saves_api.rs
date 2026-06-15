@@ -436,3 +436,63 @@ pub(crate) async fn list_saves_handler(
     });
     Ok(Json(entries))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_rejects_empty_and_path_traversal() {
+        assert!(sanitize_save_filename("").is_err());
+        assert!(sanitize_save_filename("   ").is_err());
+        assert!(sanitize_save_filename("a/b").is_err());
+        assert!(sanitize_save_filename("a\\b").is_err());
+        assert!(sanitize_save_filename("..").is_err());
+        assert!(sanitize_save_filename("../etc").is_err());
+    }
+
+    #[test]
+    fn sanitize_trims_and_strips_known_extensions() {
+        assert_eq!(sanitize_save_filename("  game  ").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civreplay").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civsave").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civsave.zst").unwrap(), "game");
+        // No known extension is left intact.
+        assert_eq!(sanitize_save_filename("game.txt").unwrap(), "game.txt");
+    }
+
+    #[test]
+    fn save_paths_use_sanitized_name_and_correct_extension() {
+        let dir = Path::new("/tmp/saves");
+        assert_eq!(
+            save_path(dir, "game.civsave.zst").unwrap(),
+            dir.join("game.civsave.zst")
+        );
+        assert_eq!(
+            legacy_replay_path(dir, "game.civreplay").unwrap(),
+            dir.join("game.civreplay")
+        );
+        assert!(save_path(dir, "../escape").is_err());
+    }
+
+    #[test]
+    fn production_slot_validation_matches_known_slots() {
+        assert!(validate_production_slot("slot-1").is_ok());
+        assert!(validate_production_slot("slot-5").is_ok());
+        assert!(validate_production_slot("slot-6").is_err());
+        assert!(validate_production_slot("autosave").is_err());
+    }
+
+    #[test]
+    fn save_type_and_autosave_classification() {
+        assert_eq!(save_type_for_name("slot-1"), "slot");
+        assert_eq!(save_type_for_name("autosave"), "auto");
+        assert_eq!(save_type_for_name("autosave-7"), "auto");
+        assert_eq!(save_type_for_name("my-manual-save"), "manual");
+
+        assert!(is_autosave_name("autosave"));
+        assert!(is_autosave_name("autosave-7"));
+        assert!(!is_autosave_name("slot-1"));
+        assert!(!is_autosave_name("my-manual-save"));
+    }
+}

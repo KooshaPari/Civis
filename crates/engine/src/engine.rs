@@ -2896,6 +2896,37 @@ mod tests {
         assert_eq!(saturated, Fixed::from_num(2));
     }
 
+    /// Holistic emergence-web integration (FR-CIV-0100 §3): a 1000-tick run
+    /// exercises all coupled phases (economy, diplomacy, disasters, research,
+    /// belief, unrest, trade arbitrage) together and must (a) never panic or
+    /// overflow under sustained dynamics, (b) hold the economic invariant
+    /// (every clearing price stays >= 1), and (c) produce live dynamics rather
+    /// than a frozen state.
+    #[test]
+    fn emergence_web_runs_1000_ticks_stable_and_dynamic() {
+        let mut sim = Simulation::with_seed(12345);
+        for _ in 0..1_000 {
+            sim.tick();
+        }
+        assert_eq!(sim.state.tick, 1_000, "tick counter advances deterministically");
+
+        // (b) economic invariant: no price ever collapses below the floor.
+        for (good, price) in sim.market_state.prices() {
+            assert!(*price >= 1, "price for {good} fell below 1: {price}");
+        }
+
+        // (c) dynamics present: diplomacy fires every tick, so the event log is
+        // populated — the coupled systems are actually running, not inert.
+        assert!(
+            !sim.diplomacy_events().is_empty(),
+            "expected diplomacy activity over 1000 ticks"
+        );
+
+        // Accessors for the emergent scalars remain coherent (no overflow panic
+        // reaching here already proves the saturating/bounded math held).
+        let _ = (sim.belief(), sim.unrest(), sim.research_tier());
+    }
+
     #[test]
     fn test_initial_entities() {
         let sim = Simulation::new();

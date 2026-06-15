@@ -24,7 +24,7 @@
 //! can pass `None` to get pure algorithmic drift.
 
 use crate::{Dna, DnaClass};
-use rand::{Rng, RngCore, SeedableRng};
+use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 

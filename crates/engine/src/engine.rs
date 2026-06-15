@@ -2056,6 +2056,16 @@ impl Simulation {
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+
+        // Emergent pricing (FR-CIV-0100 §3d): the living population is demand
+        // pressure measured against a carrying-capacity baseline. Staple prices
+        // rise as population outgrows the baseline (scarcity) and ease as it
+        // falls below (surplus) — prices EMERGE from population dynamics rather
+        // than a scripted curve.
+        const POP_BASELINE: i64 = 1_000_000;
+        let demand = self.state.population.min(i64::MAX as u64) as i64;
+        self.market_state.apply_pressure("food", demand, POP_BASELINE);
+        self.market_state.apply_pressure("energy", demand, POP_BASELINE);
     }
 
     fn tick_trade_routes(&mut self) {

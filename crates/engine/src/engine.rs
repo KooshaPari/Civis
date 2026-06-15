@@ -313,6 +313,12 @@ pub struct WorldState {
     /// saves loadable.
     #[serde(default)]
     pub unrest: u64,
+    /// Accumulated social cohesion — the strength of the shared social fabric.
+    /// EMERGES from collective belief (shared faith binds) and frays under
+    /// unrest (disorder loosens bonds). A stabilising counterweight to unrest.
+    /// `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub cohesion: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -334,6 +340,7 @@ impl Default for WorldState {
             research_progress: 0,
             belief: 0,
             unrest: 0,
+            cohesion: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1130,6 +1137,14 @@ impl Simulation {
         self.state.unrest
     }
 
+    /// Accumulated social cohesion, generated each tick by
+    /// [`Simulation::phase_cohesion`] from belief minus unrest. Higher means a
+    /// stronger shared social fabric.
+    #[must_use]
+    pub fn cohesion(&self) -> u64 {
+        self.state.cohesion
+    }
+
     /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
     /// and deducts the cost when enough faith has accumulated; returns `false`
     /// and leaves belief untouched otherwise (FR-CIV-EMERGENCE divine-powers).
@@ -1275,6 +1290,7 @@ impl Simulation {
         self.phase_research();
         self.phase_belief();
         self.phase_unrest();
+        self.phase_cohesion();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1635,6 +1651,16 @@ impl Simulation {
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
+    }
+
+    /// Social-cohesion phase (FR-CIV-0100 §3 emergence). The shared social fabric
+    /// EMERGES from the balance of collective belief (shared faith binds) and
+    /// unrest (disorder frays bonds): cohesion accrues when faith outweighs
+    /// discontent and decays when discontent dominates. Runs after `phase_unrest`
+    /// so it sees the current tick's unrest. Floored at zero.
+    fn phase_cohesion(&mut self) {
+        let delta = cohesion_delta(self.state.belief, self.state.unrest);
+        self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2415,6 +2441,21 @@ fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
     (rise / divisor).max(1)
 }
 
+/// Belief units that contribute one unit of cohesion growth per tick.
+const COHESION_BELIEF_DIVISOR: u64 = 200;
+/// Unrest units that fray one unit of cohesion per tick.
+const COHESION_UNREST_DIVISOR: u64 = 50;
+
+/// Emergence policy (FR-CIV-0100 §3): the social fabric's per-tick change is the
+/// balance of belief (binds, scaled gently) against unrest (frays, scaled
+/// harder, so disorder erodes cohesion faster than faith builds it). Returns a
+/// signed delta; the caller floors the running total at zero.
+fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
+    let bind = (belief / COHESION_BELIEF_DIVISOR) as i64;
+    let fray = (unrest / COHESION_UNREST_DIVISOR) as i64;
+    bind - fray
+}
+
 /// Surplus differential (resource units) at/above which a route ships its full
 /// boosted volume.
 const TRADE_GAP_SCALE: i64 = 100;
@@ -2877,6 +2918,18 @@ mod tests {
         assert_eq!(research_unrest_mitigation(40, u64::MAX), 4);
         // Decay (negative delta) passes through untouched.
         assert_eq!(research_unrest_mitigation(-10, 9), -10);
+    }
+
+    /// FR-CIV-0100 §3 — cohesion grows when belief outweighs unrest and frays
+    /// when unrest dominates; balanced pressure nets near zero.
+    #[test]
+    fn cohesion_delta_balances_belief_against_unrest() {
+        assert!(cohesion_delta(10_000, 0) > 0, "faith builds the social fabric");
+        assert!(cohesion_delta(0, 10_000) < 0, "unrest frays it");
+        assert_eq!(cohesion_delta(0, 0), 0, "no pressure, no change");
+        // Unrest frays harder than belief binds (smaller divisor), so equal
+        // belief and unrest net negative.
+        assert!(cohesion_delta(1_000, 1_000) < 0, "disorder erodes faster than faith builds");
     }
 
     /// phase_unrest floors unrest at zero: a content populace under cheap food

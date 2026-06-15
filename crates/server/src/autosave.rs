@@ -181,6 +181,7 @@ pub fn spawn_autosave_loop(
 mod tests {
     use super::*;
     use std::path::Path;
+    use std::sync::Mutex as StdMutex;
     use std::sync::OnceLock;
     use tempfile::tempdir;
 

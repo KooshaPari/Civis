@@ -658,6 +658,9 @@ fn gas_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usi
     }
 }
 
+// Retained for the in-progress neighbour-sampling refactor of the CA passes;
+// not yet wired into the active step path.
+#[allow(dead_code)]
 fn read_neighbor(
     grid: &CaGrid,
     x: usize,

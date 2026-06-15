@@ -1,14 +1,28 @@
 name: Test Numbers
-# Free (public repo, ubuntu) authoritative test + coverage run, bypassing the
-# fmt/clippy hygiene gates so the workspace test pass-count + coverage % are
-# measurable independently of lint debt.
+# Free (public repo, ubuntu) authoritative test + coverage. Split into two
+# PARALLEL jobs so the workspace pass-count surfaces fast (~6 min) instead of
+# waiting behind the coverage step's second instrumented build.
 on:
   workflow_dispatch:
   push:
     branches: [feat/sim-emergence-batch]
 
 jobs:
-  test-numbers:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test --workspace
+        run: |
+          set -o pipefail
+          cargo test --workspace --no-fail-fast 2>&1 | tee test.log || true
+          echo "===== TEST RESULT SUMMARY ====="
+          grep -E "test result:" test.log || echo "no test-result lines"
+          awk '/test result:/{for(i=1;i<=NF;i++){if($i=="passed;")p+=$(i-1);if($i=="failed;")f+=$(i-1);if($i=="ignored;")g+=$(i-1)}} END{printf "TOTAL PASSED=%d FAILED=%d IGNORED=%d\n",p,f,g}' test.log
+
+  coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -16,16 +30,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
-      - name: cargo test --workspace
-        run: |
-          set -o pipefail
-          # civ-server excluded: pre-existing main breakage (StdMutex unimported +
-          # Frame3d::Climate match arms never added after the variant was introduced).
-          # Tracked separately; this measures the ~20 compiling crates.
-          cargo test --workspace --no-fail-fast 2>&1 | tee test.log || true
-          echo "===== TEST RESULT SUMMARY ====="
-          grep -E "test result:" test.log || echo "no test-result lines"
-          awk '/test result:/{for(i=1;i<=NF;i++){if($i=="passed;")p+=$(i-1);if($i=="failed;")f+=$(i-1);if($i=="ignored;")g+=$(i-1)}} END{printf "TOTAL PASSED=%d FAILED=%d IGNORED=%d\n",p,f,g}' test.log
       - name: coverage (llvm-cov)
         run: |
           cargo install cargo-llvm-cov --locked || true

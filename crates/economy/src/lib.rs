@@ -11,6 +11,7 @@
 #![warn(missing_docs)]
 
 mod allocation;
+mod allocator;
 mod institution;
 mod market;
 pub mod stocks;
@@ -23,6 +24,9 @@ pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
+};
+pub use allocator::{
+    Allocator, Bid, CancelledOrder, ClearedTrade, GoodId, Offer, OrderId,
 };
 pub use market::MarketState;
 pub use stocks::{

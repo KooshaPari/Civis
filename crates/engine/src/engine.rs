@@ -1630,7 +1630,8 @@ impl Simulation {
             .get("food")
             .copied()
             .unwrap_or(FOOD_SCARCITY_BASELINE);
-        let delta = unrest_delta(food_price);
+        // Research mitigates the scarcity-driven rise (research -> calmer society).
+        let delta = research_unrest_mitigation(unrest_delta(food_price), self.research_tier());
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -2397,6 +2398,20 @@ fn unrest_delta(food_price: i64) -> i64 {
     }
 }
 
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
+/// unrest — advanced food logistics (storage, distribution) blunt the
+/// scarcity-driven rise. Only the positive (rising) part is damped; decay is
+/// untouched. The mitigation is bounded (tier capped at 9 → at most a 10x
+/// reduction) and floored at 1, so technology calms a society but never makes
+/// it immune to hardship. Returns the research-adjusted unrest delta.
+fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
+    if rise <= 0 {
+        return rise;
+    }
+    let divisor = 1 + research_tier.min(9) as i64;
+    (rise / divisor).max(1)
+}
+
 /// Surplus differential (resource units) at/above which a route ships its full
 /// boosted volume.
 const TRADE_GAP_SCALE: i64 = 100;
@@ -2822,6 +2837,27 @@ mod tests {
         assert!(mild > 0, "any scarcity raises unrest");
         assert!(severe >= mild, "more scarcity never lowers the rise");
         assert!(severe <= 50, "single-tick rise is capped");
+    }
+
+    /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer
+    /// advanced society), monotonic in tier, but never below 1; decay untouched.
+    #[test]
+    fn research_unrest_mitigation_damps_rise_floored_at_one() {
+        let raw = 40;
+        assert_eq!(
+            research_unrest_mitigation(raw, 0),
+            raw,
+            "tier 0 leaves the rise unchanged"
+        );
+        let tier3 = research_unrest_mitigation(raw, 3);
+        let tier9 = research_unrest_mitigation(raw, 9);
+        assert!(tier3 < raw, "research calms unrest");
+        assert!(tier9 <= tier3, "more research never raises unrest");
+        assert!(tier9 >= 1, "research never fully eliminates hardship");
+        // The mitigation is bounded: an absurd tier can't push the rise below 1.
+        assert_eq!(research_unrest_mitigation(40, u64::MAX), 4);
+        // Decay (negative delta) passes through untouched.
+        assert_eq!(research_unrest_mitigation(-10, 9), -10);
     }
 
     /// phase_unrest floors unrest at zero: a content populace under cheap food

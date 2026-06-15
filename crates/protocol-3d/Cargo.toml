@@ -17,4 +17,4 @@ civ-agents = { path = "../agents" }
 civ-planet = { path = "../planet" }
 
 [dev-dependencies]
-proptest = "1.4"
+proptest = "1.11"

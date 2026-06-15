@@ -291,11 +291,11 @@ mod tests {
         // doesn't persist verbatim. The round-trip contract is the
         // **persisted** state surface: `state` + cached HUD/tally fields
         // (last_settlement_count, last_life_deaths) + replay log + voxel writes.
-        // NOTE: the underlying `Fixed` serde impl is lossy (f64 round-trip) so
-        // exact treasury equality is not guaranteed; the test only asserts the
-        // tallies, replay, and `state.tick` round-trip cleanly. A stricter
-        // assertion is a TODO once `Fixed` switches to i64 serde.
+        // FR-CORE-010 / FR-SAVE-003: Fixed now serializes as i64 (raw) so
+        // treasury and resource fields round-trip losslessly.
         assert_eq!(loaded.state.tick, sim.state.tick);
+        assert_eq!(loaded.state.faction_treasury, sim.state.faction_treasury);
+        assert_eq!(loaded.state.faction_resources, sim.state.faction_resources);
         assert_eq!(loaded.last_settlement_count, sim.last_settlement_count);
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);
         assert_eq!(*loaded.replay_log(), *sim.replay_log());

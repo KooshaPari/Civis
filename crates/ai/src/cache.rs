@@ -56,3 +56,62 @@ impl<V> AiCache<V> {
         self.entries.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// FR-CIV-AI-007 — `AiCache` insert/get round-trips for multiple generic types.
+    #[test]
+    fn cache_insert_get_roundtrip() {
+        let mut cache: AiCache<String> = AiCache::new();
+        assert!(cache.is_empty());
+        assert_eq!(cache.len(), 0);
+
+        cache.insert(b"key1", "value1".into());
+        assert!(!cache.is_empty());
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.get(b"key1"), Some(&"value1".to_string()));
+        assert!(cache.contains_key(b"key1"));
+        assert!(!cache.contains_key(b"missing"));
+    }
+
+    /// FR-CIV-AI-007 — overwriting a key updates the value without growing len.
+    #[test]
+    fn cache_overwrite_updates_value() {
+        let mut cache: AiCache<u32> = AiCache::new();
+        cache.insert(b"k", 1);
+        assert_eq!(cache.get(b"k"), Some(&1));
+        cache.insert(b"k", 2);
+        assert_eq!(cache.get(b"k"), Some(&2));
+        assert_eq!(cache.len(), 1);
+    }
+
+    /// FR-CIV-AI-007 — multiple independent keys coexist.
+    #[test]
+    fn cache_multiple_keys_independent() {
+        let mut cache: AiCache<i32> = AiCache::new();
+        let cases: Vec<(&[u8], i32)> = vec![
+            (b"a", 1),
+            (b"b", 2),
+            (b"c", 3),
+        ];
+        for (k, v) in &cases {
+            cache.insert(k, *v);
+        }
+        assert_eq!(cache.len(), 3);
+        for (k, v) in &cases {
+            assert_eq!(cache.get(k), Some(v));
+        }
+    }
+
+    /// FR-CIV-AI-007 — cloned cache shares entries but mutations are isolated.
+    #[test]
+    fn cache_clone_shares_data() {
+        let mut cache: AiCache<String> = AiCache::new();
+        cache.insert(b"x", "hello".into());
+        let cloned = cache.clone();
+        assert_eq!(cloned.get(b"x"), Some(&"hello".to_string()));
+        assert_eq!(cloned.len(), 1);
+    }
+}

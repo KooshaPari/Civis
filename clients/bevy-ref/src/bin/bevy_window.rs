@@ -19,7 +19,9 @@ use civ_bevy_ref::{
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_voxel_delta_frame, default_stream_meshes, AgentLabelConfig, LiveAgentTag,
+        apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
+        AgentLabelConfig, LiveAgentTag,
         LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes,
         LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
@@ -179,6 +181,7 @@ fn main() {
                 apply_live_frames,
                 apply_spectator_meta,
                 sync_live_hud_stats,
+                sync_live_pick_detail,
                 update_live_focus,
                 follow_live_orbit_focus,
                 sync_chunk_debug_render,
@@ -208,16 +211,29 @@ fn apply_spectator_meta(
     }
 }
 
+fn sync_live_pick_detail(
+    selection: Res<LiveSelection>,
+    scene: Res<LiveStreamScene>,
+    mut hud: ResMut<HudState>,
+) {
+    hud.snapshot.pick_detail =
+        civ_bevy_ref::live_stream::format_live_pick_hud_line(selection.0, &scene);
+}
+
 fn sync_live_hud_stats(
     bridge: Res<LiveBridge>,
     scene: Res<LiveStreamScene>,
     mut hud: ResMut<HudState>,
 ) {
+    let civilians = civ_bevy_ref::live_stream::civilian_hud_count(&scene);
+    let factions = civ_bevy_ref::live_stream::faction_hud_count(&scene);
     hud.snapshot.sync_scene_counts(
         scene.chunks.len(),
         scene.agents.len(),
         scene.buildings.len(),
         scene.graph_parcels.len(),
+        civilians,
+        factions,
     );
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
         hud.snapshot.ws_rtt_ms = Some(rtt);
@@ -449,10 +465,18 @@ fn apply_live_frames(
                 assets.as_ref(),
                 building,
             ),
-            Frame3d::CivilianState(_)
-            | Frame3d::FactionState(_)
-            | Frame3d::EventFeed(_)
-            | Frame3d::Climate(_) => {}
+            Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
+            Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
+            Frame3d::EventFeed(ref event_frame) => {
+                for msg in &event_frame.events {
+                    info!(
+                        "event feed (tick {}): {}",
+                        event_frame.tick,
+                        format_event_feed_message(msg),
+                    );
+                }
+                push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
+            }
         }
     }
 }

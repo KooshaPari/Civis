@@ -68,5 +68,5 @@ civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }
-proptest = "1.4"
+proptest = "1.11"
 tempfile = "3"

@@ -13,4 +13,4 @@ rand_chacha = "0.3"
 civ-genetics = { path = "../genetics" }
 
 [dev-dependencies]
-proptest = "1.4"
+proptest = "1.11"

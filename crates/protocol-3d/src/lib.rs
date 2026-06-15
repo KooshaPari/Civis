@@ -593,6 +593,11 @@ pub fn decode_frame3d_binary(bytes: &[u8]) -> Result<Frame3d, Frame3dBinaryError
         .map_err(|err| Frame3dBinaryError::InvalidPayload(err.to_string()))
 }
 
+/// Returns `true` if `bytes` starts with [`FRAME3D_BINARY_MAGIC`].
+pub fn is_frame3d_binary(bytes: &[u8]) -> bool {
+    bytes.len() >= FRAME3D_BINARY_MAGIC.len() && &bytes[..FRAME3D_BINARY_MAGIC.len()] == FRAME3D_BINARY_MAGIC
+}
+
 // ===================================================================
 // Agents stream — efficient per-agent id + position for thousands of
 // agents. See FR-CIV-PROTO3D-014..017.

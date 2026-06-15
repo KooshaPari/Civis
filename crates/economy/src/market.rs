@@ -73,6 +73,21 @@ pub fn clearing_price(supply: f64, demand: f64) -> f64 {
     demand / effective_supply
 }
 
+/// Emergent numeraire (markets phase 2): the good with the highest trade
+/// liquidity becomes money — but only if its liquidity clears `threshold`. No
+/// good is hardcoded as money; the money good EMERGES from observed trade
+/// (charter). Returns the index of the chosen good, or `None` when nothing is
+/// liquid enough. Deterministic for equal-liquidity ties (lowest index wins).
+#[must_use]
+pub fn emergent_numeraire(liquidity: &[f64], threshold: f64) -> Option<usize> {
+    liquidity
+        .iter()
+        .enumerate()
+        .filter(|(_, &l)| l >= threshold)
+        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(i, _)| i)
+}
+
 #[cfg(test)]
 fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
     for &tick in ticks {
@@ -84,6 +99,17 @@ fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
 mod tests {
     use super::*;
     use proptest::prelude::*;
+
+    #[test]
+    fn emergent_numeraire_picks_most_liquid_above_threshold() {
+        // Highest liquidity above threshold becomes money.
+        assert_eq!(emergent_numeraire(&[1.0, 9.0, 3.0], 2.0), Some(1));
+        // Nothing clears the threshold -> no emergent money.
+        assert_eq!(emergent_numeraire(&[1.0, 1.5], 2.0), None);
+        // Deterministic for repeated calls.
+        let l = [5.0, 5.0, 5.0];
+        assert_eq!(emergent_numeraire(&l, 1.0), emergent_numeraire(&l, 1.0));
+    }
 
     #[test]
     fn step_updates_exactly_one_price_from_tick() {

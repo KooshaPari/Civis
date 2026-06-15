@@ -41,6 +41,25 @@ pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoor
 }
 
 impl Simulation {
+    /// Invoke a divine disaster: spend `cost` belief to call down `kind` at
+    /// `pos`. Returns `true` and triggers the disaster when enough faith has
+    /// accumulated; returns `false` and does nothing otherwise. This is the
+    /// player-facing divine power that closes the
+    /// disasters → belief → divine-intervention loop (FR-CIV-EMERGENCE).
+    pub fn invoke_divine_disaster(
+        &mut self,
+        kind: DisasterKind,
+        pos: WorldCoord,
+        cost: u64,
+    ) -> bool {
+        if self.try_invoke_divine_power(cost) {
+            trigger_disaster(self, kind, pos);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Phase hook for disaster systems (FR-CIV-0100 §2).
     ///
     /// Disasters EMERGE from environmental state rather than being scripted:
@@ -250,6 +269,26 @@ mod tests {
             sim.belief() > before,
             "a disaster should raise belief (fear breeds faith)"
         );
+    }
+
+    /// FR-CIV-EMERGENCE — a divine disaster spends belief and smites the terrain.
+    #[test]
+    fn invoke_divine_disaster_spends_belief_and_smites() {
+        let mut sim = seeded_sim();
+        sim.add_belief(1_000);
+        let target = WorldCoord { x: 0, y: 0, z: 0 };
+        assert!(sim.invoke_divine_disaster(DisasterKind::Quake, target, 500));
+        assert!(matches!(sim.voxel().read(target), GRAVEL | STONE));
+    }
+
+    /// FR-CIV-EMERGENCE — without enough faith, no smite and no belief is spent.
+    #[test]
+    fn invoke_divine_disaster_requires_faith() {
+        let mut sim = seeded_sim();
+        let before = sim.belief();
+        let target = WorldCoord { x: 0, y: 0, z: 0 };
+        assert!(!sim.invoke_divine_disaster(DisasterKind::Quake, target, 1_000_000));
+        assert_eq!(sim.belief(), before, "no faith, no smite, no spend");
     }
 
     #[test]

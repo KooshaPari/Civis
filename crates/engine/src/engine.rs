@@ -301,6 +301,12 @@ pub struct WorldState {
     /// `.civsave` files loadable.
     #[serde(default)]
     pub research_progress: u64,
+    /// Accumulated faith/belief (divine-powers economy). Emerges from the
+    /// worshipping population each tick and is spent to invoke divine powers
+    /// (e.g. triggering a disaster). `#[serde(default)]` keeps older saves
+    /// loadable.
+    #[serde(default)]
+    pub belief: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -320,6 +326,7 @@ impl Default for WorldState {
             tick: 0,
             population: 1_000_000,
             research_progress: 0,
+            belief: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1085,6 +1092,25 @@ impl Simulation {
         self.state.research_progress
     }
 
+    /// Accumulated faith/belief, generated each tick by [`Simulation::phase_belief`]
+    /// from the worshipping population and spent on divine powers.
+    #[must_use]
+    pub fn belief(&self) -> u64 {
+        self.state.belief
+    }
+
+    /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
+    /// and deducts the cost when enough faith has accumulated; returns `false`
+    /// and leaves belief untouched otherwise (FR-CIV-EMERGENCE divine-powers).
+    pub fn try_invoke_divine_power(&mut self, cost: u64) -> bool {
+        if self.state.belief >= cost {
+            self.state.belief -= cost;
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -1210,6 +1236,7 @@ impl Simulation {
         self.phase_life();
         self.phase_emergence();
         self.phase_research();
+        self.phase_belief();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1534,6 +1561,17 @@ impl Simulation {
         const RESEARCH_POP_DIVISOR: u64 = 1_000;
         let contribution = self.state.population / RESEARCH_POP_DIVISOR;
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
+    }
+
+    /// Faith phase (divine-powers economy, FR-CIV-EMERGENCE). The worshipping
+    /// population generates `belief` each tick; belief is the resource spent via
+    /// [`Simulation::try_invoke_divine_power`] to invoke divine interventions.
+    /// Pure, deterministic function of `population`.
+    fn phase_belief(&mut self) {
+        /// People required to generate one unit of belief per tick.
+        const BELIEF_POP_DIVISOR: u64 = 2_000;
+        let worship = self.state.population / BELIEF_POP_DIVISOR;
+        self.state.belief = self.state.belief.saturating_add(worship);
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2863,6 +2901,34 @@ mod tests {
             sim.diplomacy_events().last().expect("a diplomacy event").kind,
             DiplomacyKind::TradeAgreement
         );
+    }
+
+    /// FR-CIV-EMERGENCE — belief accrues from the worshipping population over ticks.
+    #[test]
+    fn phase_belief_accrues_from_population() {
+        let mut sim = Simulation::with_seed(7);
+        let before = sim.belief();
+
+        for _ in 0..50 {
+            sim.tick();
+        }
+
+        assert!(
+            sim.belief() > before,
+            "belief should accrue from a worshipping population"
+        );
+    }
+
+    /// FR-CIV-EMERGENCE — a divine power spends belief only when affordable;
+    /// a failed invocation leaves belief untouched.
+    #[test]
+    fn try_invoke_divine_power_gates_on_belief() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.belief = 100;
+        assert!(!sim.try_invoke_divine_power(200), "cannot afford 200");
+        assert_eq!(sim.belief(), 100, "failed invoke leaves belief untouched");
+        assert!(sim.try_invoke_divine_power(80), "can afford 80");
+        assert_eq!(sim.belief(), 20, "cost deducted on success");
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.

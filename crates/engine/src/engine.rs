@@ -2232,7 +2232,16 @@ impl Simulation {
                 continue;
             }
 
-            let quantity = route.volume.min(available);
+            // Arbitrage: a route from a surplus exporter to a scarce importer
+            // ships more (bounded 2x). Read the importer stock before transfer.
+            let to_stock = self
+                .state
+                .faction_resources
+                .get(&route.to_faction)
+                .map(|r| resource_amount(r, resource))
+                .unwrap_or(Fixed::ZERO);
+            let boosted = route.volume * trade_volume_multiplier(available, to_stock);
+            let quantity = boosted.min(available);
             {
                 let from_resources = self
                     .state
@@ -2386,6 +2395,22 @@ fn unrest_delta(food_price: i64) -> i64 {
     } else {
         -DECAY
     }
+}
+
+/// Surplus differential (resource units) at/above which a route ships its full
+/// boosted volume.
+const TRADE_GAP_SCALE: i64 = 100;
+
+/// Arbitrage policy (FR-CIV-0100 §3 emergence): trade volume scales with the
+/// surplus gap between exporter and importer — a well-stocked source feeding a
+/// scarce destination ships MORE. Returns a multiplier in `[1.0, 2.0]`, bounded
+/// at 2x so the price↔volume↔treasury↔demand loop self-limits rather than
+/// running away (design-layer criticality bound). No boost when the source is
+/// not in surplus relative to the destination.
+fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
+    let gap = (from_stock - to_stock).max(Fixed::ZERO);
+    let normalized = (gap / Fixed::from_num(TRADE_GAP_SCALE)).min(Fixed::from_num(1));
+    Fixed::from_num(1) + normalized
 }
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when
@@ -2844,6 +2869,31 @@ mod tests {
         let calm_belief = calm.belief();
         calm.phase_unrest();
         assert_eq!(calm.belief(), calm_belief, "contentment breeds no faith");
+    }
+
+    /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).
+    #[test]
+    fn trade_volume_multiplier_is_unity_without_gap() {
+        let m = trade_volume_multiplier(Fixed::from_num(50), Fixed::from_num(50));
+        assert_eq!(m, Fixed::from_num(1));
+        // Source scarcer than destination: still no boost (floored at 1x).
+        let reverse = trade_volume_multiplier(Fixed::from_num(10), Fixed::from_num(80));
+        assert_eq!(reverse, Fixed::from_num(1));
+    }
+
+    /// A surplus exporter feeding a scarce importer ships more, monotonically,
+    /// capped at 2x so the arbitrage loop self-limits.
+    #[test]
+    fn trade_volume_multiplier_scales_with_surplus_capped_at_2x() {
+        let small = trade_volume_multiplier(Fixed::from_num(60), Fixed::from_num(50));
+        let large = trade_volume_multiplier(Fixed::from_num(200), Fixed::from_num(50));
+        assert!(small > Fixed::from_num(1), "any surplus gap boosts volume");
+        assert!(large >= small, "bigger gap never ships less");
+        assert!(large <= Fixed::from_num(2), "boost is capped at 2x");
+        // A gap >= TRADE_GAP_SCALE saturates the multiplier exactly at 2x.
+        let saturated =
+            trade_volume_multiplier(Fixed::from_num(TRADE_GAP_SCALE + 50), Fixed::ZERO);
+        assert_eq!(saturated, Fixed::from_num(2));
     }
 
     #[test]

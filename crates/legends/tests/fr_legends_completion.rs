@@ -48,8 +48,8 @@ fn fr_legends_001_historical_event_record_and_no_outcome_authoring() {
     );
     let resolved = vec![(LegendEntityId(7), Role::Leader)];
     let he = HistoricalEvent::from_raw(&raw, &resolved, Epoch(0));
-    assert_eq!(
-        he.authored_outcome, true,
+    assert!(
+        he.authored_outcome,
         "producer events are not engine-authored"
     );
     assert!(!he.is_engine_authored());
@@ -76,7 +76,7 @@ fn fr_legends_001_historical_event_record_and_no_outcome_authoring() {
     // guarantee).
     let promo = HistoricalEvent::engine_promotion(0, Epoch(0), None, LegendEntityId(99));
     assert!(promo.is_engine_authored());
-    assert_eq!(promo.authored_outcome, false);
+    assert!(!promo.authored_outcome);
     assert_eq!(promo.kind, EventKind::Promotion);
     assert_eq!(promo.raw_magnitude, 0.0);
 

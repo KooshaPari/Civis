@@ -498,8 +498,8 @@ impl LodRingPlan {
     /// the renderer `Inner` (ring 0..=mesh_ring) + `Seam` (ring
     /// mesh_ring+1) + `Outer` (ring mesh_ring+1) + `Frozen` (ring
     /// > mesh_ring+1). The seam band has width `seam_chunks` (default
-    /// 1), so with `mesh_ring=1, seam_chunks=1, coarse_render_ring=2`
-    /// the layout is:
+    /// > 1), so with `mesh_ring=1, seam_chunks=1, coarse_render_ring=2`
+    /// > the layout is:
     ///
     /// - ring 0..=1: `Inner`
     /// - ring 2:    `Seam` (weight = `(2*1 - 2) / 1` etc., see [`Self::seam_blend`])
@@ -509,7 +509,7 @@ impl LodRingPlan {
         // `+ 1` because at least one outer ring is needed to make the
         // seam meaningful. With `coarse_render_ring == mesh_ring` the
         // seam band is degenerate.
-        let crr = (policy.mesh_ring as u8).saturating_add(1);
+        let crr = policy.mesh_ring.saturating_add(1);
         Self {
             policy,
             coarse_render_ring: crr,

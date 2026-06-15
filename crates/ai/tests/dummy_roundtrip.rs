@@ -158,7 +158,7 @@ fn fr_civ_llm_002_cache_key_changes_when_prompt_or_model_shift() {
     assert_ne!(key_first, custom.cache_key());
     cache.insert(&key_first, "v1".to_string());
     assert_eq!(cache.get(&key_first), Some(&"v1".to_string()));
-    assert!(cache.len() > 0);
+    assert!(!cache.is_empty());
 }
 
 #[test]

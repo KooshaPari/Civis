@@ -269,6 +269,7 @@ pub enum MaterialMode {
 
 /// A single per-`MaterialId` override used in `Primitive` mode.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct MaterialOverride {
     /// Subset of the PBR maps this override wants to provide. Empty means
     /// "use the exemplar for this slot". The engine adapter never synthesises
@@ -286,17 +287,6 @@ pub struct MaterialOverride {
     pub tint_srgb: Option<[f32; 3]>,
 }
 
-impl Default for MaterialOverride {
-    fn default() -> Self {
-        Self {
-            albedo_path: None,
-            normal_path: None,
-            orm_path: None,
-            perceptual_roughness: None,
-            tint_srgb: None,
-        }
-    }
-}
 
 /// Errors that [`MaterialSeedManifest::resolve`] can return.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -522,6 +512,7 @@ pub enum PbrChannel {
 /// slots and the engine binds them individually, satisfying
 /// `FR-CIV-PBR-002`'s "ORM sources MAY fan into both without repack" clause.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TextureChannelMap {
     /// Asset path for the albedo texture (sRGB on disk). `None` means the
     /// material has no albedo (rare; used for emissive-only decals).
@@ -540,18 +531,6 @@ pub struct TextureChannelMap {
     pub orm_path: Option<String>,
 }
 
-impl Default for TextureChannelMap {
-    fn default() -> Self {
-        // Empty default — every slot is explicit. Callers compose.
-        Self {
-            albedo_path: None,
-            normal_path: None,
-            mr_path: None,
-            ao_path: None,
-            orm_path: None,
-        }
-    }
-}
 
 impl TextureChannelMap {
     /// Construct a minimal channel map with only an albedo + normal. Used
@@ -1265,9 +1244,9 @@ mod tests {
     #[test]
     fn fr_pbr_004_greedy_atlas_allocates_strictly_increasing_layers() {
         let mut plan = GreedyAtlasPlan::new();
-        let a = plan.allocate(MaterialId(10)).clone();
-        let b = plan.allocate(MaterialId(20)).clone();
-        let c = plan.allocate(MaterialId(30)).clone();
+        let a = *plan.allocate(MaterialId(10));
+        let b = *plan.allocate(MaterialId(20));
+        let c = *plan.allocate(MaterialId(30));
         assert_eq!(a.array_layer, 0);
         assert_eq!(b.array_layer, 1);
         assert_eq!(c.array_layer, 2);

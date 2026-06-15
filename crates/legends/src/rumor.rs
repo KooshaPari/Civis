@@ -58,8 +58,10 @@ impl Ocean {
 /// rumor mill never crosses registers — the choice is explicit at the call
 /// site, never inferred from the prose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum Register {
     /// Storytelling register — embellishment + tracery + prose cache.
+    #[default]
     Narrative,
     /// Treaty / law / chronicle register — no embellishment, no tracery.
     Formal,
@@ -67,11 +69,6 @@ pub enum Register {
     Sacred,
 }
 
-impl Default for Register {
-    fn default() -> Self {
-        Register::Narrative
-    }
-}
 
 /// Resolves a `NameRef` to a display name (FR-CIV-LEGENDS-008). The legends
 /// engine does NOT own a name store — the `ai-rnd` crate is the source of
@@ -383,7 +380,7 @@ fn render_with_rng<R: Rng + ?Sized>(rumor: &Rumor, rng: &mut R) -> String {
 fn collect_adjectives(rumor: &Rumor) -> String {
     let mut adjectives = vec!["heroic", "cursed", "vast", "treacherous"];
     for tag in rumor.tags.iter() {
-        if !adjectives.iter().any(|a| *a == tag.as_str()) {
+        if !adjectives.contains(&tag.as_str()) {
             adjectives.push(tag.as_str());
         }
     }
@@ -535,7 +532,7 @@ impl RumorMill {
         }
 
         self.rumors
-            .sort_by(|a, b| a.origin_epoch.0.cmp(&b.origin_epoch.0));
+            .sort_by_key(|a| a.origin_epoch.0);
         let keep = self.rumors.len() - RUMOR_LIMIT;
         self.rumors.drain(0..keep);
     }

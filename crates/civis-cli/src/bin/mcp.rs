@@ -79,7 +79,7 @@ fn main() -> io::Result<()> {
     load_dotenv();
     let stdin = io::stdin();
     let mut stdout = io::stdout().lock();
-    let mut lines = stdin.lock().lines();
+    let lines = stdin.lock().lines();
 
     for line in lines {
         let line = line?;

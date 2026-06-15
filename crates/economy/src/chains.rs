@@ -424,7 +424,7 @@ mod tests {
                 0,
             ),
         )]);
-        let before = stocks.clone();
+        let _before = stocks.clone();
         let report = step_chains(&mut stocks, &book);
 
         assert_eq!(report.outcomes.len(), 1);
@@ -556,7 +556,7 @@ mod tests {
                 0,
             ),
         )]);
-        let before = stocks.clone();
+        let _before = stocks.clone();
         let report = step_chains(&mut stocks, &book);
 
         assert!(report.outcomes[0].fired);

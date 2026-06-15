@@ -274,7 +274,7 @@ impl SfxCoalescer {
                 volume: (gain * global_scale).clamp(0.0, 1.0),
             })
             .collect();
-        output.sort_by(|a, b| a.kind.cmp(&b.kind));
+        output.sort_by_key(|a| a.kind);
 
         // Reset the per-kind counter for the next step.
         self.per_kind_count.clear();

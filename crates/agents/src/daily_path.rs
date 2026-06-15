@@ -338,7 +338,7 @@ mod tests {
         registry.add(Poi {
             id: 10,
             kind: PoiKind::FoodSource,
-            pos: pos(1 * FIXED_SCALE, 0, 0),
+            pos: pos(FIXED_SCALE, 0, 0),
             capacity: 1,
         });
         registry.add(Poi {

@@ -9,8 +9,6 @@ use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::material::{AIR, GRAVEL, ICE, LAVA, STEAM, STONE, WATER};
 use civ_voxel::WorldCoord;
 
-#[cfg(test)]
-use civ_voxel::MaterialId;
 use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
@@ -229,13 +227,13 @@ fn hit_agents(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use civ_agents::{Alignment, Civilian, LodTier, Position3d, Tools, Velocity, Wardrobe};
+    use civ_agents::{Alignment, Civilian, LodTier, Position3d};
     use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
     use civ_planet::{Climate, WeatherCell, WeatherKind};
 
     fn seeded_sim() -> Simulation {
-        let sim = Simulation::with_seed(7);
-        sim
+        
+        Simulation::with_seed(7)
     }
 
     #[test]

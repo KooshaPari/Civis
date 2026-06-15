@@ -466,7 +466,7 @@ pub fn pick_tile_set(
                     && candidate.wealth_bucket == vector.wealth_bucket()
             })
             .max_by_key(|candidate| parcel_template_score(demand_signals, vector, candidate))
-            .or_else(|| Some(tile_set))
+            .or(Some(tile_set))
             .map(|candidate| candidate.id);
     }
 

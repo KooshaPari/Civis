@@ -268,8 +268,7 @@ pub enum MaterialMode {
 }
 
 /// A single per-`MaterialId` override used in `Primitive` mode.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MaterialOverride {
     /// Subset of the PBR maps this override wants to provide. Empty means
     /// "use the exemplar for this slot". The engine adapter never synthesises
@@ -286,7 +285,6 @@ pub struct MaterialOverride {
     /// identity. RGB is sRGB on disk but stored as `f32` here for blending.
     pub tint_srgb: Option<[f32; 3]>,
 }
-
 
 /// Errors that [`MaterialSeedManifest::resolve`] can return.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -511,8 +509,7 @@ pub enum PbrChannel {
 /// provided an `OrmCombined` file, we still read R/G/B into the three separate
 /// slots and the engine binds them individually, satisfying
 /// `FR-CIV-PBR-002`'s "ORM sources MAY fan into both without repack" clause.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct TextureChannelMap {
     /// Asset path for the albedo texture (sRGB on disk). `None` means the
     /// material has no albedo (rare; used for emissive-only decals).
@@ -530,7 +527,6 @@ pub struct TextureChannelMap {
     /// adapter picks the most-specific one available.
     pub orm_path: Option<String>,
 }
-
 
 impl TextureChannelMap {
     /// Construct a minimal channel map with only an albedo + normal. Used

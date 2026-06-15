@@ -107,8 +107,7 @@ pub struct Civilian {
 }
 
 /// Emergent political/social alignment for a civilian.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum Alignment {
     /// Civilian has not aligned yet.
     #[default]
@@ -118,7 +117,6 @@ pub enum Alignment {
     /// Civilian aligns to another life-framework entity by id.
     OtherEntity(u64),
 }
-
 
 impl Alignment {
     /// Construct an explicit faction alignment.

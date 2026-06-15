@@ -27,9 +27,8 @@ use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
     AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
     CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
-    EventFeedFrame,
-    EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d, Frame3d,
-    GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
+    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
+    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};

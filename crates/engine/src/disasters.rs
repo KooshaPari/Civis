@@ -232,7 +232,6 @@ mod tests {
     use civ_planet::{Climate, WeatherCell, WeatherKind};
 
     fn seeded_sim() -> Simulation {
-        
         Simulation::with_seed(7)
     }
 

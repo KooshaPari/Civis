@@ -57,8 +57,7 @@ impl Ocean {
 /// reserved for treaty / law / chronicle text (see `crates/diplomacy`); the
 /// rumor mill never crosses registers — the choice is explicit at the call
 /// site, never inferred from the prose.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Register {
     /// Storytelling register — embellishment + tracery + prose cache.
     #[default]
@@ -68,7 +67,6 @@ pub enum Register {
     /// Sacred register — deity sphere tags surface, no actor-swap.
     Sacred,
 }
-
 
 /// Resolves a `NameRef` to a display name (FR-CIV-LEGENDS-008). The legends
 /// engine does NOT own a name store — the `ai-rnd` crate is the source of
@@ -531,8 +529,7 @@ impl RumorMill {
             return;
         }
 
-        self.rumors
-            .sort_by_key(|a| a.origin_epoch.0);
+        self.rumors.sort_by_key(|a| a.origin_epoch.0);
         let keep = self.rumors.len() - RUMOR_LIMIT;
         self.rumors.drain(0..keep);
     }

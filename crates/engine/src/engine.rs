@@ -295,6 +295,12 @@ pub enum UnitType {
 pub struct WorldState {
     pub tick: u64,
     pub population: u64,
+    /// Accumulated research effort (FR-CIV-0200 research). Emerges from the
+    /// living population each tick and gates emergent tech advancement in
+    /// [`Simulation::phase_research`]. `#[serde(default)]` keeps older
+    /// `.civsave` files loadable.
+    #[serde(default)]
+    pub research_progress: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -313,6 +319,7 @@ impl Default for WorldState {
         Self {
             tick: 0,
             population: 1_000_000,
+            research_progress: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1071,6 +1078,13 @@ impl Simulation {
         &self.research_cache
     }
 
+    /// Accumulated emergent research effort (FR-CIV-0200), advanced each tick by
+    /// [`Simulation::phase_research`] in proportion to the living population.
+    #[must_use]
+    pub fn research_progress(&self) -> u64 {
+        self.state.research_progress
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -1195,6 +1209,7 @@ impl Simulation {
         self.phase_disasters();
         self.phase_life();
         self.phase_emergence();
+        self.phase_research();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1507,6 +1522,18 @@ impl Simulation {
         if self.state.tick % self.tick_modulo_compact == 0 {
             self.voxel.compact();
         }
+    }
+
+    /// Research phase (FR-CIV-0200) — research advances emergently from the
+    /// living population rather than on a scripted schedule. Each tick the
+    /// population contributes research effort proportional to its size; the
+    /// accumulated `research_progress` is the substrate downstream tech-unlock
+    /// logic draws on. Pure, deterministic function of `population`.
+    fn phase_research(&mut self) {
+        /// People required to produce one unit of research effort per tick.
+        const RESEARCH_POP_DIVISOR: u64 = 1_000;
+        let contribution = self.state.population / RESEARCH_POP_DIVISOR;
+        self.state.research_progress = self.state.research_progress.saturating_add(contribution);
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2741,6 +2768,34 @@ mod tests {
         }
 
         assert!(sim.building_graph().parcels.len() > before);
+    }
+
+    /// FR-CIV-0200 — research progress accrues emergently from the living
+    /// population over ticks (phase_research is wired into the tick loop).
+    #[test]
+    fn phase_research_accrues_from_population() {
+        let mut sim = Simulation::with_seed(7);
+        let before = sim.research_progress();
+
+        for _ in 0..50 {
+            sim.tick();
+        }
+
+        assert!(
+            sim.research_progress() > before,
+            "research_progress should grow from a living population over ticks"
+        );
+    }
+
+    /// FR-CIV-0200 — with no population, research makes no progress (emergent,
+    /// not scripted).
+    #[test]
+    fn phase_research_quiescent_without_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 0;
+        let before = sim.research_progress();
+        sim.phase_research();
+        assert_eq!(sim.research_progress(), before, "no people, no research");
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.

@@ -1883,7 +1883,16 @@ impl Simulation {
         let population = count_civilians(&self.world) as f64;
         let max_pop = self.state.population.max(1) as f64;
         let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
-        let birth_chance = 0.003 * (1.0 - overcrowding_factor);
+        // Emergent downward causation: food-market scarcity damps the birth rate
+        // (research -> carrying-capacity -> economy -> population loop).
+        let food_price = self
+            .market_state
+            .prices()
+            .get("food")
+            .copied()
+            .unwrap_or(FOOD_SCARCITY_BASELINE);
+        let birth_chance =
+            0.003 * (1.0 - overcrowding_factor) * food_scarcity_birth_factor(food_price);
         let birth_window = self.state.tick % 200 == 0;
         let mut dead = Vec::new();
         let mut births = Vec::new();
@@ -2295,6 +2304,27 @@ impl Simulation {
     }
 }
 
+/// Baseline food clearing price (cents) at which births are unaffected by
+/// scarcity. Matches `MarketState::default()`'s food price.
+const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+
+/// Downward-causation policy (FR-CIV-0100 emergence): scarcity in the food
+/// market damps the birth rate, closing the research -> carrying-capacity ->
+/// economy -> population loop. Returns a multiplier in `(0.0, 1.0]` applied to
+/// the per-tick birth chance.
+///
+/// At or below the baseline price (abundance) the factor is `1.0` — surplus
+/// does NOT boost births above the natural rate (conservative; abundance is
+/// already expressed via the ECS food-needs path). As the price rises above
+/// baseline the factor falls as `baseline / price`, so a 2x price halves the
+/// birth chance. The factor never reaches zero, so a starving society can still
+/// recover, and it only ever scales births DOWN — population is never reduced
+/// by this coupling.
+fn food_scarcity_birth_factor(food_price: i64) -> f64 {
+    let price = food_price.max(FOOD_SCARCITY_BASELINE);
+    (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
+}
+
 fn route_resource(goods: &str) -> ResourceType {
     match goods {
         "grain" => ResourceType::Food,
@@ -2557,6 +2587,47 @@ mod tests {
         assert_ne!(
             sim.market_state.prices, initial,
             "expected at least one market price to change after {N} ticks"
+        );
+    }
+
+    /// FR-CIV-0100 emergence — at the baseline food price births are unaffected.
+    #[test]
+    fn food_scarcity_birth_factor_is_unity_at_baseline() {
+        assert_eq!(food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE), 1.0);
+    }
+
+    /// Surplus (price below baseline) does NOT boost births above the natural
+    /// rate — the factor is clamped at 1.0.
+    #[test]
+    fn food_scarcity_birth_factor_caps_at_unity_under_surplus() {
+        assert_eq!(food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE / 4), 1.0);
+        assert_eq!(food_scarcity_birth_factor(1), 1.0);
+    }
+
+    /// Scarcity (price above baseline) damps births: a 2x price halves the rate,
+    /// and the factor is strictly decreasing as price climbs — but never zero.
+    #[test]
+    fn food_scarcity_birth_factor_damps_under_scarcity() {
+        let double = food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE * 2);
+        assert!((double - 0.5).abs() < 1e-9, "2x price should halve births");
+        let quad = food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE * 4);
+        assert!(quad < double, "higher price must damp births further");
+        assert!(quad > 0.0, "the birth factor must never reach zero");
+    }
+
+    /// The coupling only ever scales births DOWN, so an expensive-food tick can
+    /// never reduce the standing population relative to the start of the tick.
+    #[test]
+    fn food_scarcity_never_reduces_standing_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.market_state
+            .prices
+            .insert("food".to_string(), FOOD_SCARCITY_BASELINE * 8);
+        let before = sim.state.population;
+        sim.tick();
+        assert!(
+            sim.state.population >= before.saturating_sub(sim.last_deaths.len() as u64),
+            "scarcity coupling must not subtract from population beyond natural deaths"
         );
     }
 

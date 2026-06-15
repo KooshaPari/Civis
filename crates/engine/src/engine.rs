@@ -48,6 +48,7 @@ use super::Fixed;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
+use crate::emergence_metrics::EmergenceSample;
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
@@ -413,6 +414,10 @@ pub struct Simulation {
     /// Per-faction-pair grievance accumulator with exponential decay (CIV-007 §2.2).
     pub grief_accumulator: GriefAccumulator,
     next_civilian_id: u64,
+    /// Most recent emergence-dashboard sample (FR-CIV-EMERG-*), refreshed every
+    /// [`emergence_metrics::EMERGENCE_SAMPLE_INTERVAL`] ticks. `None` before the
+    /// first sample tick. Read via [`Simulation::last_emergence_sample`].
+    pub(crate) emergence_sample: Option<EmergenceSample>,
     research_cache: ResearchCache,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
@@ -700,6 +705,7 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(42),
+            emergence_sample: None,
         }
     }
 
@@ -726,6 +732,7 @@ impl Simulation {
             state,
             world,
             rng,
+            emergence_sample: None,
             planet,
             moon,
             climate,
@@ -1236,6 +1243,18 @@ impl Simulation {
     /// Mutable borrow of the replay log (tests and integrity tooling).
     pub fn replay_log_mut(&mut self) -> &mut ReplayLog {
         &mut self.replay_log
+    }
+
+    /// Draw a reproducible boolean from the simulation RNG with the given
+    /// `probability` of `true` (clamped to `0.0..=1.0`), recording a
+    /// [`ReplayEvent::RngDraw`] so replays reproduce the stochastic decision
+    /// (FR-CORE-004). Same seed → identical draw sequence tick-for-tick.
+    pub fn draw_rng_bool(&mut self, probability: f64) -> bool {
+        let p = probability.clamp(0.0, 1.0);
+        let result = self.rng.gen_bool(p);
+        let tick = self.state.tick;
+        self.replay_log.record_rng_draw(tick, probability, result);
+        result
     }
 
     /// `mod.loaded.v1` JSON payloads recorded on the replay bus (FR-MOD-004 partial).

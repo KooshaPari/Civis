@@ -40,6 +40,14 @@ pub struct Scenario {
     /// Optional military cadence and combat tuning (FR-CIV-TACTICS-050).
     #[serde(default)]
     pub military: ScenarioMilitary,
+    /// Canonical seed-pack paths loaded for this scenario (content model: named
+    /// races + raw-organism primitive). Empty when the scenario ships no seeds.
+    #[serde(default)]
+    pub seeds: Vec<String>,
+    /// Active seed identity selected at load (e.g. `"raw_organism"`); `None`
+    /// leaves seed selection to runtime defaults. FR-MATRIX scenario seeding.
+    #[serde(default)]
+    pub active_seed: Option<String>,
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -284,6 +292,8 @@ mod tests {
             fog_vision_radius: Some(6),
             fog_grid_size: 32,
             military: ScenarioMilitary::default(),
+            seeds: Vec::new(),
+            active_seed: None,
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -308,6 +318,8 @@ mod tests {
                 war_cadence_ticks: Some(32),
                 engage_range_grid: Some(12),
             },
+            seeds: Vec::new(),
+            active_seed: None,
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -410,6 +422,8 @@ mods:
             fog_vision_radius: None,
             fog_grid_size: default_fog_grid_size(),
             military: ScenarioMilitary::default(),
+            seeds: Vec::new(),
+            active_seed: None,
         };
 
         let mut zero_scarcity = base.clone();

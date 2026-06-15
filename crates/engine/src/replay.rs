@@ -48,6 +48,23 @@ pub enum ReplayEvent {
     },
     /// End-of-tick marker.
     Tick { tick: u64 },
+    /// Emergence-dashboard sample emitted on a sample tick (`emergence_metrics.v1`,
+    /// FR-CIV-EMERG-003). Five normalised dashboard tiles recorded for replay parity.
+    EmergenceMetrics {
+        tick: u64,
+        cluster_entropy: f32,
+        ideology_homophily: f32,
+        sentience_fraction: f32,
+        psyche_stability: f32,
+        diplomacy_tension: f32,
+    },
+    /// A recorded boolean RNG draw (FR-CORE-004) — keeps stochastic decisions
+    /// reproducible across replays. `result` is the drawn boolean for `probability`.
+    RngDraw {
+        tick: u64,
+        probability: f64,
+        result: bool,
+    },
     /// Mod manifest registered (`mod.loaded.v1`, FR-MOD-004).
     ModLoaded {
         tick: u64,
@@ -190,6 +207,36 @@ impl ReplayLog {
     /// Record a damage event.
     pub fn record_damage(&mut self, tick: u64, event: DamageEvent) {
         self.events.push(ReplayEvent::Damage { tick, event });
+    }
+
+    /// Record an emergence-dashboard sample (`emergence_metrics.v1`, FR-CIV-EMERG-003).
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_emergence_metrics(
+        &mut self,
+        tick: u64,
+        cluster_entropy: f32,
+        ideology_homophily: f32,
+        sentience_fraction: f32,
+        psyche_stability: f32,
+        diplomacy_tension: f32,
+    ) {
+        self.events.push(ReplayEvent::EmergenceMetrics {
+            tick,
+            cluster_entropy,
+            ideology_homophily,
+            sentience_fraction,
+            psyche_stability,
+            diplomacy_tension,
+        });
+    }
+
+    /// Record a boolean RNG draw (FR-CORE-004) for replay reproducibility.
+    pub fn record_rng_draw(&mut self, tick: u64, probability: f64, result: bool) {
+        self.events.push(ReplayEvent::RngDraw {
+            tick,
+            probability,
+            result,
+        });
     }
 
     /// Record a per-soldier combat engagement.
@@ -580,6 +627,9 @@ impl ReplayLog {
                 ReplayEvent::ModUnloaded { .. } => {}
                 ReplayEvent::SessionSaved { .. } => {}
                 ReplayEvent::ModPermissionViolation { .. } => {}
+                // Informational markers — no world-state mutation on replay.
+                ReplayEvent::EmergenceMetrics { .. } => {}
+                ReplayEvent::RngDraw { .. } => {}
             }
         }
         Ok(())

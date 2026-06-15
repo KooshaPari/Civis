@@ -34,6 +34,10 @@ pub enum DisasterKind {
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
 pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
     apply_disaster(sim, kind, pos);
+    // Fear breeds faith: a disaster drives the surviving population to worship,
+    // raising belief (emergent disasters -> faith coupling, FR-CIV-EMERGENCE).
+    const DISASTER_FAITH_GAIN: u64 = 50;
+    sim.add_belief(DISASTER_FAITH_GAIN);
 }
 
 impl Simulation {
@@ -233,6 +237,19 @@ mod tests {
 
     fn seeded_sim() -> Simulation {
         Simulation::with_seed(7)
+    }
+
+    /// FR-CIV-EMERGENCE — a disaster raises belief (fear breeds faith): the
+    /// disasters system feeds the divine-powers economy (downward causation).
+    #[test]
+    fn disaster_raises_belief_fear_breeds_faith() {
+        let mut sim = seeded_sim();
+        let before = sim.belief();
+        trigger_disaster(&mut sim, DisasterKind::Quake, WorldCoord { x: 0, y: 0, z: 0 });
+        assert!(
+            sim.belief() > before,
+            "a disaster should raise belief (fear breeds faith)"
+        );
     }
 
     #[test]

@@ -1111,6 +1111,12 @@ impl Simulation {
         }
     }
 
+    /// Add `amount` to accumulated belief. Used by cross-module systems (e.g.
+    /// disasters: fear breeds faith) to feed the divine-powers economy.
+    pub(crate) fn add_belief(&mut self, amount: u64) {
+        self.state.belief = self.state.belief.saturating_add(amount);
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }

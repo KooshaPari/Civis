@@ -82,6 +82,10 @@ impl Simulation {
         // from physical state: heat+drought -> wildfire; tidal stress at a
         // tectonic latitude -> quake.
         let tidal_stress = self.climate.tide_offset.abs();
+        // Research mitigates nature: fire-suppression tech raises the ignition
+        // threshold (research -> fewer disasters). Computed before the weather
+        // borrow so the immutable grow iteration holds no `&self` method call.
+        let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
         for cell in &self.weather_grid {
@@ -90,7 +94,7 @@ impl Simulation {
                 y: 0,
                 z: 0,
             };
-            if cell.temp_c_fp >= WILDFIRE_TEMP_FP && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP {
+            if cell.temp_c_fp >= wildfire_temp_threshold && cell.precip_mm_fp <= WILDFIRE_PRECIP_FP {
                 wildfires.push(pos);
             }
             if tidal_stress >= QUAKE_TIDE_THRESHOLD && cell.latitude_fp.abs() >= QUAKE_LATITUDE_FP {
@@ -105,6 +109,26 @@ impl Simulation {
             trigger_disaster(self, DisasterKind::Quake, pos);
         }
     }
+}
+
+/// Fire-suppression technology raises the temperature required to ignite a
+/// wildfire: each research tier adds this many fixed-point milli-°C to the
+/// ignition threshold.
+const WILDFIRE_RESEARCH_MITIGATION_FP: i64 = 2_000; // +2 °C per tier
+/// Cap on research mitigation so even an advanced civilisation can still burn
+/// under sufficiently extreme heat — disasters are damped, never abolished.
+const WILDFIRE_RESEARCH_MITIGATION_CAP_FP: i64 = 20_000; // +20 °C max
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
+/// nature. Returns the effective wildfire ignition temperature given the base
+/// physical threshold and the civilisation's research tier. At tier 0 it is the
+/// raw physical threshold; higher tiers raise it (bounded), so wildfires become
+/// rarer as technology advances — never impossible.
+fn wildfire_ignition_temp_fp(base_fp: i32, research_tier: u64) -> i32 {
+    let bonus = (research_tier as i64)
+        .saturating_mul(WILDFIRE_RESEARCH_MITIGATION_FP)
+        .min(WILDFIRE_RESEARCH_MITIGATION_CAP_FP);
+    (base_fp as i64).saturating_add(bonus) as i32
 }
 
 fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
@@ -336,6 +360,35 @@ mod tests {
     fn phase_hook_is_callable() {
         let mut sim = Simulation::with_seed(1);
         sim.phase_disasters();
+    }
+
+    /// FR-CIV-0100 §3 — at research tier 0 the wildfire ignition threshold is
+    /// the raw physical value (no mitigation).
+    #[test]
+    fn wildfire_ignition_unmitigated_at_tier_zero() {
+        assert_eq!(wildfire_ignition_temp_fp(40_000, 0), 40_000);
+    }
+
+    /// Research raises the ignition threshold, and the effect is monotonic
+    /// non-decreasing in tier (technology makes wildfires rarer).
+    #[test]
+    fn wildfire_ignition_rises_with_research() {
+        let base = wildfire_ignition_temp_fp(40_000, 0);
+        let low = wildfire_ignition_temp_fp(40_000, 3);
+        let high = wildfire_ignition_temp_fp(40_000, 100);
+        assert!(low > base, "research must raise the ignition threshold");
+        assert!(high >= low, "more research never lowers the threshold");
+    }
+
+    /// Mitigation is capped, so extreme heat can still ignite an advanced
+    /// civilisation — disasters are damped, never abolished.
+    #[test]
+    fn wildfire_ignition_mitigation_is_capped() {
+        let saturated = wildfire_ignition_temp_fp(40_000, u64::MAX);
+        assert_eq!(
+            saturated,
+            40_000 + WILDFIRE_RESEARCH_MITIGATION_CAP_FP as i32
+        );
     }
 
     /// Test that phase_disasters triggers wildfire when environmental conditions exceed thresholds

@@ -1210,6 +1210,7 @@ fn assert_six_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
             Frame3d::CivilianState(_) => has_civilian = true,
             Frame3d::FactionState(_) => has_faction = true,
             Frame3d::EventFeed(_) => has_event = true,
+            Frame3d::Climate(_) => {}
         }
     }
     assert!(has_voxel && has_building && has_agent && has_civilian && has_faction && has_event);

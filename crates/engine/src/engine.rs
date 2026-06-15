@@ -958,6 +958,13 @@ impl Simulation {
         &self.climate
     }
 
+    /// Borrow the per-region weather grid updated by the planet phase
+    /// (FR-CIV-PLANET-030). Exposed so the WebSocket bridge can stream a
+    /// `Frame3d::Climate` snapshot each tick.
+    pub fn weather_grid(&self) -> &[WeatherCell] {
+        &self.weather_grid
+    }
+
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
         self.replay_log.record_damage(self.state.tick, event);

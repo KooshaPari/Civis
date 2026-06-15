@@ -413,12 +413,21 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
             .is_some_and(|p| p >= 1),
         "expected a positive food price in sim snapshot"
     );
-    assert_eq!(
-        response
-            .pointer("/result/market_prices/energy")
-            .and_then(|v| v.as_i64()),
-        snap.market_prices.get("energy").copied(),
-        "expected energy price in market_prices"
+    // Energy, like food, emerges from live supply/demand pressure and moves
+    // every tick, so the cross-tick equality is racy. Assert present + positive.
+    let response_energy = response
+        .pointer("/result/market_prices/energy")
+        .and_then(|v| v.as_i64());
+    assert!(
+        response_energy.is_some_and(|p| p >= 1),
+        "expected a positive energy price in market_prices, got {response_energy:?}"
+    );
+    assert!(
+        snap.market_prices
+            .get("energy")
+            .copied()
+            .is_some_and(|p| p >= 1),
+        "expected a positive energy price in sim snapshot"
     );
 
     let civ_pins = response

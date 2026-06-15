@@ -1997,10 +1997,32 @@ impl Simulation {
         }
         let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
         let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
-            DiplomacyKind::TradeAgreement
+        // Consume an rng draw to keep the replay sequence stable, but let the
+        // OUTCOME EMERGE from faction wealth rather than a coin flip: a large
+        // treasury disparity breeds conflict (have-nots clash with haves);
+        // near-peers find it cheaper to trade (FR-CIV-0100 §3).
+        let _entropy = self.rng.gen_bool(0.6);
+        let treasury_a = self
+            .state
+            .faction_treasury
+            .get(&a)
+            .copied()
+            .unwrap_or_default();
+        let treasury_b = self
+            .state
+            .faction_treasury
+            .get(&b)
+            .copied()
+            .unwrap_or_default();
+        let disparity = if treasury_a >= treasury_b {
+            treasury_a - treasury_b
         } else {
+            treasury_b - treasury_a
+        };
+        let kind = if disparity >= Fixed::from_num(10_000) {
             DiplomacyKind::Conflict
+        } else {
+            DiplomacyKind::TradeAgreement
         };
         match kind {
             DiplomacyKind::TradeAgreement => {
@@ -2806,6 +2828,41 @@ mod tests {
         let before = sim.research_progress();
         sim.phase_research();
         assert_eq!(sim.research_progress(), before, "no people, no research");
+    }
+
+    /// FR-CIV-0100 §3 — diplomacy emerges from wealth: a large treasury disparity
+    /// between the paired factions yields Conflict, not a coin flip.
+    #[test]
+    fn phase_diplomacy_emerges_conflict_from_wealth_disparity() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500; // a diplomacy cadence tick
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(100_000));
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict
+        );
+    }
+
+    /// FR-CIV-0100 §3 — near-peer factions (small disparity) trade rather than fight.
+    #[test]
+    fn phase_diplomacy_emerges_trade_among_peers() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(5_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(5_000));
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement
+        );
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.

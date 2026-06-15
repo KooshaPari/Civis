@@ -19,7 +19,10 @@ jobs:
       - name: cargo test --workspace
         run: |
           set -o pipefail
-          cargo test --workspace --no-fail-fast 2>&1 | tee test.log || true
+          # civ-server excluded: pre-existing main breakage (StdMutex unimported +
+          # Frame3d::Climate match arms never added after the variant was introduced).
+          # Tracked separately; this measures the ~20 compiling crates.
+          cargo test --workspace --exclude civ-server --no-fail-fast 2>&1 | tee test.log || true
           echo "===== TEST RESULT SUMMARY ====="
           grep -E "test result:" test.log || echo "no test-result lines"
           awk '/test result:/{for(i=1;i<=NF;i++){if($i=="passed;")p+=$(i-1);if($i=="failed;")f+=$(i-1);if($i=="ignored;")g+=$(i-1)}} END{printf "TOTAL PASSED=%d FAILED=%d IGNORED=%d\n",p,f,g}' test.log

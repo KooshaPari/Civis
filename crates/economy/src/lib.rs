@@ -28,7 +28,7 @@ pub use institution::{
 pub use allocator::{
     Allocator, Bid, CancelledOrder, ClearedTrade, GoodId, Offer, OrderId,
 };
-pub use market::MarketState;
+pub use market::{clearing_price, MarketState};
 pub use stocks::{
     apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
     Good, ProductionProfile, Stocks, TradeOffer, GOODS,

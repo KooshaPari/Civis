@@ -55,6 +55,24 @@ fn deterministic_price_delta(tick: u64, good: &str) -> i64 {
     (mix % 13) as i64 + 1
 }
 
+/// Pure emergent clearing price from local scarcity — Phase 1.
+///
+/// Returns `demand / (supply + 1)` so that price strictly rises as
+/// demand-to-supply scarcity increases. No hardcoded price table:
+/// the price *emerges* from the ratio itself (charter: price emerges).
+///
+/// - `supply` — available stock quantity (clamped to ≥ 0 internally).
+/// - `demand` — unmet need / willingness-to-pay pressure (≥ 0).
+///
+/// Deterministic: identical inputs always produce identical output.
+pub fn clearing_price(supply: f64, demand: f64) -> f64 {
+    if demand <= 0.0 {
+        return 0.0;
+    }
+    let effective_supply = supply.max(0.0) + 1.0;
+    demand / effective_supply
+}
+
 #[cfg(test)]
 fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
     for &tick in ticks {
@@ -118,6 +136,37 @@ mod tests {
             market.prices["water"],
             before["water"] + deterministic_price_delta(tick, "water")
         );
+    }
+
+    /// Phase 1 — emergent clearing price from scarcity.
+    /// (1) Price rises when scarcity rises. (2) Deterministic (same inputs → same output).
+    #[test]
+    fn clearing_price_rises_with_scarcity_and_is_deterministic() {
+        // Scarcity: low supply, high demand → high price.
+        let scarce = clearing_price(1.0, 100.0);
+        let abundant = clearing_price(100.0, 100.0);
+        assert!(
+            scarce > abundant,
+            "scarce price {scarce} must exceed abundant price {abundant}"
+        );
+
+        // More demand at same supply → higher price.
+        let low_demand = clearing_price(10.0, 20.0);
+        let high_demand = clearing_price(10.0, 80.0);
+        assert!(
+            high_demand > low_demand,
+            "high-demand price {high_demand} must exceed low-demand price {low_demand}"
+        );
+
+        // Zero demand → zero price.
+        assert_eq!(clearing_price(50.0, 0.0), 0.0);
+        assert_eq!(clearing_price(0.0, 0.0), 0.0);
+
+        // Negative supply is clamped to zero.
+        assert_eq!(clearing_price(-10.0, 10.0), clearing_price(0.0, 10.0));
+
+        // Determinism: identical inputs → identical output.
+        assert_eq!(clearing_price(7.0, 42.0), clearing_price(7.0, 42.0));
     }
 
     proptest! {

@@ -1044,7 +1044,9 @@ mod tests {
                 Phase::Powder => assert!(def.is_powder() && flags == 1),
                 Phase::Liquid => assert!(def.is_liquid() && flags == 1),
                 Phase::Gas => assert!(def.is_gas() && flags == 1),
-                Phase::Solid => assert_eq!(flags, 0, "solid matches no powder/liquid/gas flag"),
+                Phase::Solid | Phase::Empty => {
+                    assert_eq!(flags, 0, "solid/empty matches no powder/liquid/gas flag")
+                }
             }
         }
     }

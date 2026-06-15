@@ -307,6 +307,12 @@ pub struct WorldState {
     /// loadable.
     #[serde(default)]
     pub belief: u64,
+    /// Accumulated societal unrest (0 = content). EMERGES from food-market
+    /// scarcity: a high clearing price drives it up, abundance lets it decay.
+    /// Distinct from per-unit military `morale`. `#[serde(default)]` keeps older
+    /// saves loadable.
+    #[serde(default)]
+    pub unrest: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -327,6 +333,7 @@ impl Default for WorldState {
             population: 1_000_000,
             research_progress: 0,
             belief: 0,
+            unrest: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1116,6 +1123,13 @@ impl Simulation {
         self.state.belief
     }
 
+    /// Accumulated societal unrest, driven by food-market scarcity each tick by
+    /// [`Simulation::phase_unrest`]. Zero means a content populace.
+    #[must_use]
+    pub fn unrest(&self) -> u64 {
+        self.state.unrest
+    }
+
     /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
     /// and deducts the cost when enough faith has accumulated; returns `false`
     /// and leaves belief untouched otherwise (FR-CIV-EMERGENCE divine-powers).
@@ -1260,6 +1274,7 @@ impl Simulation {
         self.phase_emergence();
         self.phase_research();
         self.phase_belief();
+        self.phase_unrest();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1595,6 +1610,21 @@ impl Simulation {
         const BELIEF_POP_DIVISOR: u64 = 2_000;
         let worship = self.state.population / BELIEF_POP_DIVISOR;
         self.state.belief = self.state.belief.saturating_add(worship);
+    }
+
+    /// Social-unrest phase (FR-CIV-0100 §3 emergence). Unrest EMERGES from the
+    /// food market: a clearing price above baseline (scarcity) drives it up in
+    /// proportion to the shortfall; abundance lets it decay toward contentment.
+    /// Runs after `phase_economy` so the food price is current.
+    fn phase_unrest(&mut self) {
+        let food_price = self
+            .market_state
+            .prices()
+            .get("food")
+            .copied()
+            .unwrap_or(FOOD_SCARCITY_BASELINE);
+        let delta = unrest_delta(food_price);
+        self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2328,6 +2358,26 @@ fn food_scarcity_birth_factor(food_price: i64) -> f64 {
     (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
 }
 
+/// Per-tick change in societal unrest from food-market scarcity (FR-CIV-0100 §3
+/// emergence). Above the baseline price unrest rises in proportion to the
+/// shortfall (bounded per tick so it walks rather than jumps); at or below
+/// baseline it decays toward contentment by a fixed step. The caller floors the
+/// running total at zero.
+fn unrest_delta(food_price: i64) -> i64 {
+    /// Largest single-tick rise, so a price spike can't instantly max unrest.
+    const MAX_RISE: i64 = 50;
+    /// Cents of shortfall that map to one unit of unrest rise.
+    const CENTS_PER_UNREST: i64 = 20;
+    /// Fixed decay applied each tick of abundance.
+    const DECAY: i64 = 10;
+    let scarcity = food_price - FOOD_SCARCITY_BASELINE;
+    if scarcity > 0 {
+        (scarcity / CENTS_PER_UNREST).clamp(1, MAX_RISE)
+    } else {
+        -DECAY
+    }
+}
+
 /// Wealth-disparity (in whole currency units) at which two factions clash when
 /// they share no faith. Above this gap the have-nots turn on the haves.
 const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
@@ -2681,6 +2731,46 @@ mod tests {
             DIPLOMACY_BASE_CONFLICT_THRESHOLD + BELIEF_PEACE_CAP
         );
         assert!(saturated <= 2 * DIPLOMACY_BASE_CONFLICT_THRESHOLD);
+    }
+
+    /// FR-CIV-0100 §3 — at/below baseline food price unrest decays (negative delta).
+    #[test]
+    fn unrest_delta_decays_under_abundance() {
+        assert!(unrest_delta(FOOD_SCARCITY_BASELINE) < 0);
+        assert!(unrest_delta(FOOD_SCARCITY_BASELINE / 2) < 0);
+    }
+
+    /// Scarcity drives unrest up, bounded per tick, and monotonic in shortfall.
+    #[test]
+    fn unrest_delta_rises_with_scarcity() {
+        let mild = unrest_delta(FOOD_SCARCITY_BASELINE + 100);
+        let severe = unrest_delta(FOOD_SCARCITY_BASELINE + 10_000);
+        assert!(mild > 0, "any scarcity raises unrest");
+        assert!(severe >= mild, "more scarcity never lowers the rise");
+        assert!(severe <= 50, "single-tick rise is capped");
+    }
+
+    /// phase_unrest floors unrest at zero: a content populace under cheap food
+    /// never goes negative.
+    #[test]
+    fn phase_unrest_floors_at_zero() {
+        let mut sim = Simulation::with_seed(1);
+        assert_eq!(sim.unrest(), 0);
+        sim.phase_unrest();
+        assert_eq!(sim.unrest(), 0, "abundance keeps a calm society at zero");
+    }
+
+    /// Sustained scarcity accumulates unrest above zero.
+    #[test]
+    fn phase_unrest_accumulates_under_scarcity() {
+        let mut sim = Simulation::with_seed(1);
+        sim.market_state
+            .prices
+            .insert("food".to_string(), FOOD_SCARCITY_BASELINE + 4_000);
+        for _ in 0..5 {
+            sim.phase_unrest();
+        }
+        assert!(sim.unrest() > 0, "persistent scarcity breeds unrest");
     }
 
     #[test]

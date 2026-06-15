@@ -10,8 +10,10 @@ use civ_agents::{
 };
 use civ_agents::{
     diplomacy::{DiplomacyMatrix, DiplomacySignal, GriefAccumulator, RelationKind},
-    ClusterId,
+    ClusterId, Interaction, SocialEvent, SocialGraph,
 };
+use civ_agents::psyche::tick_maturity;
+use civ_agents::social::should_reproduce;
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
@@ -427,11 +429,6 @@ pub struct Simulation {
     last_tick_engagements: Vec<CombatEngagement>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
-    /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick (linear
-    /// cell index + value in `[0, 100]`). Cleared at the start of every tick
-    /// and repopulated by [`Simulation::phase_voxel_ca`] so a downstream
-    /// emergence phase (life / ecology) can seed the first cells.
-    last_tick_abiogenesis_sites: Vec<civ_voxel::fluid_ca::AbiogenesisSuitability>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -468,12 +465,6 @@ pub struct Simulation {
     pub(crate) last_life_deaths: u32,
     /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
     pub(crate) emergence: crate::emergence::EmergenceState,
-    /// Latest emergence-metrics sample (civ-emergence-metrics). Updated by
-    /// [`crate::emergence_metrics::sample_emergence`] on every 50-tick
-    /// boundary (5 s at 100 ms tick). `None` before the first sample
-    /// boundary (ticks 0..49). Surfaced over JSON-RPC `sim.emergence`
-    /// (stacked on PR #350).
-    pub(crate) emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -696,7 +687,6 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
-            last_tick_abiogenesis_sites: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -710,7 +700,6 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(42),
-            emergence_sample: None,
         }
     }
 
@@ -764,7 +753,6 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
-            last_tick_abiogenesis_sites: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -778,7 +766,6 @@ impl Simulation {
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(seed),
-            emergence_sample: None,
         }
     }
 
@@ -1175,27 +1162,29 @@ impl Simulation {
 
     /// Advance simulation by one tick.
     ///
-    /// Uses `None` for emergence sampling source, so the engine's
-    /// `VoxelWorld` continues to feed samplers in non-standalone contexts.
-    ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
     /// transition only; server command intake and client broadcast live outside this
     /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
     pub fn tick(&mut self) {
-        self.tick_with_emergence_source(None);
+        self.run_tick(None);
     }
 
-    /// Advance simulation by one tick, with an optional override for emergence
-    /// sampling input.
-    ///
-    /// `emergence_ca_grid` is used only for metric collection in standalone
-    /// modes that maintain terrain in the `bevy-ref` CA layer (e.g.
-    /// `civ_voxel::fluid_ca::CaGrid`) and keeps the standard engine substrate
-    /// path unchanged.
-    pub fn tick_with_emergence_source(
-        &mut self,
-        emergence_ca_grid: Option<&civ_voxel::fluid_ca::CaGrid>,
-    ) {
+    /// Like [`tick`](Self::tick) but records per-phase wall-clock timing into a
+    /// [`TickProfile`](crate::perf::TickProfile) for tick-budget enforcement
+    /// (FR-CORE-007). The timing path is observability only and never touches
+    /// simulation state, so `tick` and `tick_profiled` produce identical worlds
+    /// for identical inputs — the profile is purely a side-channel.
+    pub fn tick_profiled(&mut self) -> crate::perf::TickProfile {
+        let mut profile = crate::perf::TickProfile::default();
+        self.run_tick(Some(&mut profile));
+        profile
+    }
+
+    /// Shared tick body. When `profile` is `Some`, each phase is wall-clock
+    /// timed and recorded; when `None`, phases run with zero overhead (the
+    /// deterministic production path). Single phase list so the two entry points
+    /// can never drift.
+    fn run_tick(&mut self, mut profile: Option<&mut crate::perf::TickProfile>) {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
@@ -1221,24 +1210,15 @@ impl Simulation {
         phase!("economy", self.phase_economy());
         phase!("planet", self.phase_planet());
         self.diplomacy_events.clear();
-        self.phase_diplomacy();
-        self.phase_tactics();
-        self.phase_voxel();
-        self.phase_compact();
-        self.phase_buildings();
-        self.phase_diffusion();
-        self.phase_disasters();
-        self.phase_life();
-        self.phase_emergence();
-        // PR #350 stack: run the civ-emergence-metrics sampler on the
-        // 50-tick boundary. The sampler internally no-ops on
-        // non-boundary ticks so the cost on every other tick is just
-        // one modulo + one branch.
-        if let Some(grid) = emergence_ca_grid {
-            self.sample_emergence_with_ca_grid(grid);
-        } else {
-            self.sample_emergence();
-        }
+        phase!("diplomacy", self.phase_diplomacy());
+        phase!("tactics", self.phase_tactics());
+        phase!("voxel", self.phase_voxel());
+        phase!("compact", self.phase_compact());
+        phase!("buildings", self.phase_buildings());
+        phase!("diffusion", self.phase_diffusion());
+        phase!("disasters", self.phase_disasters());
+        phase!("life", self.phase_life());
+        phase!("emergence", self.phase_emergence());
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -1410,6 +1390,11 @@ impl Simulation {
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
     fn phase_tactics(&mut self) {
         self.last_tick_voxel_damage_count = 0;
+        // CIV-006 (FR-CIV-WAR-003): combat damage inflicts population casualties.
+        // A mechanical/physical consequence (blast footprint · energy → deaths), so
+        // it is hardcoded rather than emergent. Stacks additively with lifecycle
+        // deaths booked in `phase_life`.
+        let mut combat_casualties: u64 = 0;
         let scale = FIXED_SCALE as f32;
         for event in self.pending_damage.drain(..) {
             let x = (event.center.x as f32 / scale).clamp(0.0, 1.0);
@@ -1426,6 +1411,12 @@ impl Simulation {
                 });
             }
             self.last_tick_voxel_damage_count += apply_damage(&mut self.voxel, &event);
+            combat_casualties =
+                combat_casualties.saturating_add(u64::from(event.estimated_casualties()));
+        }
+        // Deduct combat deaths from the living population (floored at zero).
+        if combat_casualties > 0 {
+            self.state.population = self.state.population.saturating_sub(combat_casualties);
         }
 
         const DOCTRINE_EVOLVE_MODULO: u64 = 64;
@@ -1478,65 +1469,6 @@ impl Simulation {
     /// ordering.
     fn phase_voxel(&mut self) {
         self.last_tick_voxel_events = self.voxel.drain_dirty();
-    }
-
-    /// FR-CIV-CA-009: CA-driven abiogenesis scan. Walks the active
-    /// `dirty_chunks` set on the CA grid (the same set `phase_voxel` would
-    /// step) and scores every cell with [`civ_voxel::fluid_ca::AbiogenesisSuitability`].
-    /// The result is stashed in `last_tick_abiogenesis_sites` for the
-    /// downstream emergence phase to consume.
-    ///
-    /// `reg` is the material registry used to look up solvent scoring; pass
-    /// `MaterialRegistry::standard()` in production. `grid` may be a borrowed
-    /// CA grid from a Bevy / Godot resident window; when `None` we skip
-    /// (cheap path: emergence layer uses a synthetic distribution).
-    pub fn phase_voxel_ca(
-        &mut self,
-        grid: Option<&civ_voxel::fluid_ca::CaGrid>,
-    ) {
-        self.last_tick_abiogenesis_sites.clear();
-        let Some(grid) = grid else { return };
-        for &chunk in &grid.dirty_chunks() {
-            // Re-derive the chunk's cell-span in (x, y, z). Each 16³ leaf is
-            // enumerated, but the trailing leaf on each axis may be short —
-            // clamp via `min(dims[axis])`.
-            let counts = grid.chunk_counts();
-            if counts[0] == 0 || counts[1] == 0 || counts[2] == 0 {
-                break;
-            }
-            let cx = chunk % counts[0];
-            let rem = chunk - cx;
-            let cy = rem / counts[0] % counts[1];
-            let cz = rem / (counts[0] * counts[1]);
-            let x0 = cx * 16;
-            let y0 = cy * 16;
-            let z0 = cz * 16;
-            let x1 = (x0 + 16).min(grid.dims[0]);
-            let y1 = (y0 + 16).min(grid.dims[1]);
-            let z1 = (z0 + 16).min(grid.dims[2]);
-            for z in z0..z1 {
-                for y in y0..y1 {
-                    for x in x0..x1 {
-                        let Some(idx) = grid.index(x, y, z) else { continue };
-                        let mat = grid.cells[idx];
-                        let t = grid.temperatures[idx];
-                        let sat = grid.saturation[idx];
-                        let s =
-                            civ_voxel::fluid_ca::AbiogenesisSuitability::from_cell(mat, t, sat);
-                        if s.is_viable() {
-                            self.last_tick_abiogenesis_sites.push(s);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// FR-CIV-CA-009 — borrow the abiogenesis sites produced by
-    /// [`Simulation::phase_voxel_ca`]. Cleared at the start of the next
-    /// `phase_voxel_ca` call.
-    pub fn last_tick_abiogenesis_sites(&self) -> &[civ_voxel::fluid_ca::AbiogenesisSuitability] {
-        &self.last_tick_abiogenesis_sites
     }
 
     /// Compact the voxel world periodically.
@@ -2618,8 +2550,26 @@ mod tests {
         assert_eq!(sim.state.tick, 1);
     }
 
-    /// Covers FR-CORE-001.
-    /// Each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
+    /// FR-CORE-007 — `tick_profiled` records every phase and advances the tick
+    /// exactly like `tick` (the profile is a side-channel, not sim state).
+    #[test]
+    fn tick_profiled_records_all_phases() {
+        let mut sim = Simulation::with_seed(1);
+        let profile = sim.tick_profiled();
+        assert_eq!(sim.state.tick, 1, "tick_profiled advances the tick");
+        // 14 phases run through the `phase!` macro.
+        assert_eq!(profile.phases.len(), 14, "all phases recorded");
+        // Total is the sum of recorded phases.
+        let sum: u64 = profile.phases.iter().map(|&(_, m)| m).sum();
+        assert_eq!(profile.total_micros, sum);
+        // Phase names are present and stable.
+        let names: Vec<&str> = profile.phases.iter().map(|&(n, _)| n).collect();
+        assert_eq!(names[0], "production");
+        assert!(names.contains(&"economy"));
+        assert_eq!(names[names.len() - 1], "emergence");
+    }
+
+    /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
     #[test]
     fn fr_core_001_single_tick_event_per_tick() {
         use crate::invariants::check_tick_invariants;
@@ -2772,8 +2722,7 @@ mod tests {
         assert_eq!(sim1.state.population, sim2.state.population);
     }
 
-    /// Covers FR-CIV-LIFE-001, FR-CIV-LIFE-003, FR-CIV-LIFE-010, and FR-CIV-LIFE-030.
-    /// phase_life attaches life-sim needs to agents and
+    /// FR-CIV-LIFE-001/030 — phase_life attaches life-sim needs to agents and
     /// the snapshot surfaces emergent settlement state for the HUD.
     #[test]
     fn phase_life_attaches_needs_and_exposes_settlements() {
@@ -2799,8 +2748,7 @@ mod tests {
         assert_eq!(snap.settlement_count, sim.settlement_count());
     }
 
-    /// Covers FR-CIV-LIFE-030.
-    /// Emergent settlement clustering is deterministic across
+    /// FR-CIV-LIFE-030 — emergent settlement clustering is deterministic across
     /// two same-seed simulations (replay-safe).
     #[test]
     fn phase_life_clustering_is_deterministic() {
@@ -2814,7 +2762,6 @@ mod tests {
         assert_eq!(a.cluster_stocks(), b.cluster_stocks());
     }
 
-    /// Covers FR-CIV-PLANET-010.
     /// FR-CIV-ENGINE-INT-001 — climate is recomputed every tick and matches
     /// `compute_climate` directly.
     #[test]
@@ -2874,8 +2821,6 @@ mod tests {
         }
     }
 
-    /// Covers FR-CIV-PLANET-020.
-    /// Covers FR-CIV-VOXEL-002.
     /// FR-CIV-PLANET-020 — `apply_tide_offset` shifts a registered coastal
     /// water-level voxel deterministically as the tide cycles, and the shift
     /// is symmetric around the registered sea-level baseline within tight
@@ -2984,8 +2929,7 @@ mod tests {
         );
     }
 
-    /// Covers FR-CIV-TACTICS-010.
-    /// Doctrine GA advances on a fixed tick cadence.
+    /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
     #[test]
     fn phase_tactics_evolve_doctrine_on_cadence() {
         let mut sim = Simulation::with_seed(42);
@@ -3032,6 +2976,46 @@ mod tests {
             "removal count exceeded chunk total: {removed}"
         );
         assert!(sim.pending_damage.is_empty());
+    }
+
+    /// CIV-006 / FR-CIV-WAR-003 — combat damage deducts personnel casualties
+    /// from the living population (blast footprint · energy → deaths).
+    #[test]
+    fn phase_tactics_combat_casualties_reduce_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 1000;
+        // r=4, energy=200 → footprint 3·16=48, casualties = 48·200/256 = 37.
+        let event = DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 4,
+            energy: 200,
+        };
+        let expected = event.estimated_casualties() as u64;
+        assert_eq!(expected, 37, "casualty model drifted");
+        sim.push_damage(event);
+
+        sim.phase_tactics();
+
+        assert_eq!(
+            sim.state.population,
+            1000 - expected,
+            "combat casualties must reduce population"
+        );
+        assert!(sim.pending_damage.is_empty(), "damage events drained");
+    }
+
+    /// CIV-006 — population deduction is floored at zero (never underflows).
+    #[test]
+    fn phase_tactics_casualties_floor_population_at_zero() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 5;
+        sim.push_damage(DamageEvent {
+            center: WorldCoord { x: 8, y: 8, z: 8 },
+            radius_voxels: 12,
+            energy: 10_000,
+        });
+        sim.phase_tactics();
+        assert_eq!(sim.state.population, 0, "population floors at zero");
     }
 
     /// FR-CIV-ENGINE-INT-003 — compact runs every 64 ticks and the uniform
@@ -3328,8 +3312,7 @@ mod tests {
         ));
     }
 
-    /// Covers FR-CIV-PLANET-060, FR-CIV-TACTICS-041.
-    /// Combat events extend the replay hash chain.
+    /// FR-CIV-TACTICS-041 — combat events extend the replay hash chain.
     #[test]
     fn combat_events_extend_replay_hash_chain() {
         let event = DamageEvent {
@@ -3345,8 +3328,7 @@ mod tests {
         assert_ne!(log.running_hash, after_tick);
     }
 
-    /// Covers FR-CIV-TACTICS-025.
-    /// Replay log restores queued combat damage events.
+    /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
     #[test]
     fn replay_combat_events_restore_pending_damage() {
         let event = DamageEvent {
@@ -3368,8 +3350,7 @@ mod tests {
         assert_eq!(replayed.state.tick, 16);
     }
 
-    /// Covers FR-CIV-TACTICS-025-.
-    /// Replay combat events drain to the same voxel state as live ticks.
+    /// FR-CIV-TACTICS-025-int2 — replay combat events drain to the same voxel state as live ticks.
     #[test]
     fn replay_combat_drains_to_same_voxel_state_as_live() {
         let seed = 12;
@@ -3404,8 +3385,7 @@ mod tests {
         assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
     }
 
-    /// Covers FR-CIV-TACTICS-025 and FR-CIV-TACTICS-025-.
-    /// Same seed reproduces identical combat replay markers.
+    /// FR-CIV-TACTICS-025-int3 — same seed reproduces identical combat replay markers.
     #[test]
     fn replay_combat_log_deterministic_for_seed_rerun() {
         let seed = 5;
@@ -3448,11 +3428,7 @@ mod tests {
         assert_eq!(combat_a, combat_b);
     }
 
-    /// Covers FR-CIV-TACTICS-025.
-    /// Covers FR-CIV-TACTICS-032.
-    /// Covers FR-CIV-TACTICS-035.
-    /// FR-CIV-WAR-020 — war replay and live state share combat markers through shared snapshots.
-    /// War-bridge engagements append ReplayEvent::Combat.
+    /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
         let mut sim = Simulation::with_seed(1);
@@ -3469,7 +3445,8 @@ mod tests {
                 } if *shooter_id != 0 && *target_id != 0
             )
         }));
-}
+    }
+
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
     #[test]
     fn push_damage_records_damage_event() {
@@ -3520,8 +3497,7 @@ mod tests {
         }
     }
 
-    /// Covers FR-REPLAY-001.
-    /// `.civreplay` save/load restores simulation tick after N ticks.
+    /// FR-REPLAY-001 — `.civreplay` save/load restores simulation tick after N ticks.
     #[test]
     fn civreplay_save_load_restores_tick_after_ticks() {
         const N: u64 = 17;
@@ -3592,9 +3568,10 @@ mod tests {
         );
     }
 
-    /// Covers FR-CIV-TACTICS-024.
+    /// FR-CIV-TACTICS-024 — snapshot.damage_events reflects combat pulses from
+    /// the most recent tick.
     #[test]
-    fn fr_civ_tactics_024_snapshot_damage_events_reflect_last_tick_pulses() {
+    fn snapshot_damage_events_reflects_last_tick_pulses() {
         let mut sim = Simulation::with_seed(6);
         // Advance to a war-bridge cadence boundary (cadence = 16).
         for _ in 0..16 {
@@ -3606,8 +3583,6 @@ mod tests {
         assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
     }
 
-    /// Covers FR-CIV-PLANET-030.
-    /// Covers FR-CIV-PLANET-040.
     /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
     /// year phase (summer equatorial > winter equatorial) and results are
     /// deterministic across re-runs.
@@ -3702,5 +3677,258 @@ mod tests {
         let granted = civ_economy::allocate_by_priority(&CapitalistAllocator, 0, &tiers);
         assert_eq!(granted.iter().sum::<i64>(), 0);
         assert!(granted.iter().all(|&g| g == 0));
+    }
+
+    // ── CIV-007 Emergent Diplomacy behavior tests ────────────────────────────
+
+    /// CIV-007 — sustained combat engagements push the relation score negative
+    /// (war→grievance→r falls feedback).
+    #[test]
+    fn diplomacy_war_drives_score_negative() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(0);
+        let b = ClusterId(1);
+
+        // Inject pure combat-grievance signal for 30 ticks.
+        let mut last_score = 0.0_f32;
+        for _ in 0..30 {
+            let outcome = matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: 1.0,
+                    ..Default::default()
+                },
+            );
+            last_score = outcome.score;
+        }
+
+        assert!(
+            last_score < -0.60,
+            "30 ticks of grievance should push score into War territory, got {last_score}"
+        );
+        assert_eq!(
+            matrix.relation(a, b),
+            RelationKind::War,
+            "score {last_score} should map to War"
+        );
+    }
+
+    /// CIV-007 — resource scarcity (high competition) raises rivalry between
+    /// factions without any explicit combat.
+    #[test]
+    fn diplomacy_resource_scarcity_raises_rivalry() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal, RelationKind};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(10);
+        let b = ClusterId(20);
+
+        for _ in 0..20 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    resource_competition: 1.0,
+                    proximity: 0.8,
+                    ..Default::default()
+                },
+            );
+        }
+
+        let record = matrix.record(a, b).expect("record present");
+        assert!(
+            record.score <= -0.20,
+            "resource + proximity should push into Rivalry or War, got {}",
+            record.score
+        );
+        let kind = matrix.relation(a, b);
+        assert!(
+            matches!(kind, RelationKind::Rivalry | RelationKind::War),
+            "expected Rivalry or War, got {kind:?}"
+        );
+    }
+
+    /// CIV-007 — sustained war followed by halted engagements → score recovers
+    /// toward neutral (attrition + exhaustion: grievance decays, score drifts up).
+    #[test]
+    fn diplomacy_war_attrition_exhaustion_recovers() {
+        use civ_agents::diplomacy::{GriefAccumulator, DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let mut grief = GriefAccumulator::new();
+        let a = ClusterId(3);
+        let b = ClusterId(4);
+
+        // Phase 1: sustained war (50 ticks of grievance engagements).
+        for _ in 0..50 {
+            grief.add_engagement(3, 4);
+            grief.tick_decay();
+            let g = grief.get(3, 4);
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: g,
+                    ..Default::default()
+                },
+            );
+        }
+        let war_score = matrix.record(a, b).expect("record").score;
+        assert!(war_score < -0.20, "should be at least Rivalry after war phase, got {war_score}");
+
+        // Phase 2: engagements stop — only grievance decay, no new signals.
+        // Score should drift upward (toward zero) over 200 ticks.
+        for _ in 0..200 {
+            grief.tick_decay();
+            let g = grief.get(3, 4);
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: g,
+                    ..Default::default()
+                },
+            );
+        }
+        let recovery_score = matrix.record(a, b).expect("record").score;
+        assert!(
+            recovery_score > war_score,
+            "score should recover after engagements stop: war={war_score}, recovery={recovery_score}"
+        );
+    }
+
+    /// CIV-007 — zero-input (no signals) leaves score stable at initial 0.0.
+    #[test]
+    fn diplomacy_zero_input_leaves_score_stable() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(5);
+        let b = ClusterId(6);
+
+        // Neutral start — apply zero-signal 100 times.
+        for _ in 0..100 {
+            matrix.apply_signal(a, b, DiplomacySignal::default());
+        }
+
+        let record = matrix.record(a, b).expect("record");
+        assert!(
+            record.score.abs() < 1e-5,
+            "zero-input should leave score stable at ~0.0, got {}",
+            record.score
+        );
+    }
+
+    /// CIV-007 — score is always clamped to [-1.0, 1.0] under extreme inputs.
+    #[test]
+    fn diplomacy_score_clamped_under_extremes() {
+        use civ_agents::diplomacy::{DiplomacyMatrix, DiplomacySignal};
+        use civ_agents::ClusterId;
+
+        let mut matrix = DiplomacyMatrix::new();
+        let a = ClusterId(7);
+        let b = ClusterId(8);
+
+        // Extreme positive push.
+        for _ in 0..200 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    trade_volume: 100.0,
+                    need_complementarity: 100.0,
+                    ..Default::default()
+                },
+            );
+        }
+        let score = matrix.record(a, b).expect("record").score;
+        assert!((-1.0..=1.0).contains(&score), "score must stay in [-1,1], got {score}");
+        assert!((score - 1.0).abs() < 1e-4, "extreme positive should saturate at 1.0, got {score}");
+
+        // Reset and extreme negative push.
+        let mut matrix2 = DiplomacyMatrix::new();
+        for _ in 0..200 {
+            matrix2.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    combat_grievance: 100.0,
+                    resource_competition: 100.0,
+                    scarcity_pressure: 100.0,
+                    ..Default::default()
+                },
+            );
+        }
+        let score2 = matrix2.record(a, b).expect("record").score;
+        assert!((-1.0..=1.0).contains(&score2), "score must stay in [-1,1], got {score2}");
+        assert!((score2 + 1.0).abs() < 1e-4, "extreme negative should saturate at -1.0, got {score2}");
+    }
+
+    /// CIV-007 — phase_diplomacy runs every tick (not gated on tick%500).
+    #[test]
+    fn phase_diplomacy_runs_every_tick() {
+        let mut sim = Simulation::with_seed(42);
+        // After one tick the matrix should have records for all 3 faction pairs.
+        sim.tick();
+        let snapshot = sim.diplomacy_matrix.snapshot();
+        assert_eq!(
+            snapshot.len(),
+            3,
+            "all 3 faction pairs should have a relation record after one tick"
+        );
+    }
+
+    /// CIV-007 — trust entropy is in the valid [0, log2(5)] range.
+    #[test]
+    fn diplomacy_trust_entropy_in_valid_range() {
+        let mut sim = Simulation::with_seed(7);
+        for _ in 0..50 {
+            sim.tick();
+        }
+        let h = sim.diplomacy_trust_entropy();
+        assert!(
+            (0.0..=2.33).contains(&h),
+            "trust entropy must be in [0, log2(5)≈2.32], got {h}"
+        );
+    }
+
+    /// CIV-007 — GriefAccumulator decays correctly and grievance accumulates.
+    #[test]
+    fn grief_accumulator_decays_and_accumulates() {
+        use civ_agents::diplomacy::GriefAccumulator;
+
+        let mut grief = GriefAccumulator::new();
+
+        // Add engagements and verify accumulation.
+        grief.add_engagement(0, 1);
+        grief.add_engagement(0, 1);
+        let after_add = grief.get(0, 1);
+        assert!(
+            after_add > 0.0,
+            "grievance should be positive after engagements, got {after_add}"
+        );
+
+        // Decay should reduce the value.
+        let before = grief.get(0, 1);
+        grief.tick_decay();
+        let after = grief.get(0, 1);
+        assert!(after < before, "decay should reduce grievance: before={before}, after={after}");
+
+        // Many decay ticks should approach zero.
+        for _ in 0..1000 {
+            grief.tick_decay();
+        }
+        let near_zero = grief.get(0, 1);
+        assert!(
+            near_zero < 1e-4,
+            "grievance should decay near zero after 1000 ticks, got {near_zero}"
+        );
     }
 }

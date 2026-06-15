@@ -13,7 +13,6 @@
 
 pub mod disasters;
 pub mod emergence;
-pub mod emergence_metrics;
 pub mod engine;
 pub mod hash_chain;
 pub mod integrity;
@@ -21,6 +20,7 @@ pub mod invariants;
 pub mod io;
 pub mod lod;
 pub mod metrics;
+pub mod perf;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;

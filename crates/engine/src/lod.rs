@@ -91,7 +91,7 @@ pub fn project_zoom(state_tick: u64, zoom: ZoomLevel) -> (u64, ZoomLevel) {
 mod tests {
     use super::*;
 
-    /// Covers FR-LOD-001.
+    /// FR-LOD-001 — strategic and operational zoom levels are defined.
     #[test]
     fn two_levels_defined() {
         let levels = [ZoomLevel::Strategic, ZoomLevel::Operational];
@@ -99,14 +99,14 @@ mod tests {
         assert_ne!(levels[0], levels[1]);
     }
 
-    /// Covers FR-LOD-002.
+    /// FR-LOD-002 — strategic view aggregates district data.
     #[test]
     fn strategic_aggregation() {
         assert_eq!(aggregate_strategic(&[100, 200, 50]), 350);
         assert_eq!(aggregate_strategic(&[]), 0);
     }
 
-    /// Covers FR-LOD-003.
+    /// FR-LOD-003 — zoom transitions do not alter simulation tick state.
     #[test]
     fn transition_no_state_mutation() {
         let tick = 42_u64;
@@ -116,7 +116,7 @@ mod tests {
         assert_eq!(operational_tick, tick);
     }
 
-    /// Covers FR-LOD-004.
+    /// FR-LOD-004 — operational view exposes hex-cell resource and population data.
     #[test]
     fn operational_hex_data_visible() {
         let cell = operational_hex_snapshot(12, 500);

@@ -46,11 +46,11 @@ use std::time::Instant;
 
 use civ_agents::{ClusterMember, Mood, Psyche};
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
-use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
 use civ_emergence_metrics::shannon::ShannonEntropy;
+use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
 use civ_emergence_metrics::Histogram;
-use civ_voxel::{MaterialId, VoxelWorld, CHUNK_EDGE};
 use civ_voxel::{fluid_ca::CaGrid, material::AIR};
+use civ_voxel::{MaterialId, VoxelWorld, CHUNK_EDGE};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{DiplomacyKind, Simulation};
@@ -174,18 +174,17 @@ impl Simulation {
         self.sample_emergence_with_source(Some(grid))
     }
 
-    fn sample_emergence_with_source(
-        &mut self,
-        source: Option<&CaGrid>,
-    ) -> bool {
+    fn sample_emergence_with_source(&mut self, source: Option<&CaGrid>) -> bool {
         let tick = self.state.tick;
         if tick == 0 || tick % EMERGENCE_SAMPLE_INTERVAL != 0 {
             return false;
         }
 
         let started = Instant::now();
-        let (histogram, struct_summary) = source
-            .map_or_else(|| sample_from_voxel_world(self.voxel()), sample_from_ca_grid);
+        let (histogram, struct_summary) = source.map_or_else(
+            || sample_from_voxel_world(self.voxel()),
+            sample_from_ca_grid,
+        );
         let shannon = ShannonEntropy::new();
         let entropy_bits = shannon.compute_bits(&histogram);
         let entropy_norm = shannon.compute_normalised(&histogram);
@@ -297,7 +296,10 @@ fn sample_from_voxel_world(
 
 fn sample_from_ca_grid(grid: &CaGrid) -> (Histogram, Option<ComponentSummary>) {
     if grid.dims.contains(&0) {
-        return (Histogram::from_counts(vec![0; MATERIAL_HISTOGRAM_BINS]), None);
+        return (
+            Histogram::from_counts(vec![0; MATERIAL_HISTOGRAM_BINS]),
+            None,
+        );
     }
 
     let mut bins = vec![0u64; MATERIAL_HISTOGRAM_BINS];
@@ -408,7 +410,12 @@ fn compute_dashboard(sim: &Simulation) -> EmergenceDashboard {
     //    `Psyche` simply don't contribute to the ideology sample.)
     let mut ideologies: Vec<f32> = Vec::new();
     for (_, psyche) in sim.world.query::<&Psyche>().iter() {
-        let v = psyche.beliefs.first().copied().unwrap_or(0.0).clamp(-1.0, 1.0);
+        let v = psyche
+            .beliefs
+            .first()
+            .copied()
+            .unwrap_or(0.0)
+            .clamp(-1.0, 1.0);
         ideologies.push(v);
     }
 
@@ -539,7 +546,10 @@ mod tests {
 
         assert_eq!(histogram.bins()[7], (CHUNK_EDGE as u64).pow(3));
         let entropy = ShannonEntropy::new().compute_bits(&histogram);
-        assert!(entropy.abs() < 1e-6, "Dirac entropy must be 0, got {entropy}");
+        assert!(
+            entropy.abs() < 1e-6,
+            "Dirac entropy must be 0, got {entropy}"
+        );
 
         let summary = summary.expect("one dense chunk present");
         assert_eq!(summary.count, 1);
@@ -589,11 +599,7 @@ mod tests {
         sim.state.tick = EMERGENCE_SAMPLE_INTERVAL;
         // Snapshot the pre-existing civilian count — the default
         // sim spawns a baseline population we don't author.
-        let pre_civilians = sim
-            .world
-            .query::<&Civilian>()
-            .iter()
-            .count() as u32;
+        let pre_civilians = sim.world.query::<&Civilian>().iter().count() as u32;
 
         // Build a small population across two clusters with mixed
         // beliefs and mood valence. 5 agents in cluster 1, 3 in
@@ -616,11 +622,16 @@ mod tests {
                     alignment: Alignment::None,
                     age: 20,
                 },
-                ClusterMember { cluster: ClusterId(cluster) },
+                ClusterMember {
+                    cluster: ClusterId(cluster),
+                },
                 Psyche {
                     drives: [belief, 0.0, 0.0, 0.0],
                     temperament: civ_agents::Temperament::neutral(),
-                    mood: Mood { valence: mood_v, arousal: 0.0 },
+                    mood: Mood {
+                        valence: mood_v,
+                        arousal: 0.0,
+                    },
                     beliefs: [belief, 0.0, 0.0, 0.0],
                     maturity: 0.5,
                 },
@@ -712,11 +723,16 @@ mod tests {
                         alignment: Alignment::None,
                         age: 20,
                     },
-                    ClusterMember { cluster: ClusterId(cluster) },
+                    ClusterMember {
+                        cluster: ClusterId(cluster),
+                    },
                     Psyche {
                         drives: [belief, 0.0, 0.0, 0.0],
                         temperament: civ_agents::Temperament::neutral(),
-                        mood: Mood { valence: mood_v, arousal: 0.0 },
+                        mood: Mood {
+                            valence: mood_v,
+                            arousal: 0.0,
+                        },
                         beliefs: [belief, 0.0, 0.0, 0.0],
                         maturity: 0.5,
                     },
@@ -732,9 +748,18 @@ mod tests {
         let sa = a.last_emergence_sample().unwrap();
         let sb = b.last_emergence_sample().unwrap();
         assert_eq!(sa.dashboard.cluster_entropy, sb.dashboard.cluster_entropy);
-        assert_eq!(sa.dashboard.ideology_homophily, sb.dashboard.ideology_homophily);
-        assert_eq!(sa.dashboard.sentience_fraction, sb.dashboard.sentience_fraction);
+        assert_eq!(
+            sa.dashboard.ideology_homophily,
+            sb.dashboard.ideology_homophily
+        );
+        assert_eq!(
+            sa.dashboard.sentience_fraction,
+            sb.dashboard.sentience_fraction
+        );
         assert_eq!(sa.dashboard.psyche_stability, sb.dashboard.psyche_stability);
-        assert_eq!(sa.dashboard.diplomacy_tension, sb.dashboard.diplomacy_tension);
+        assert_eq!(
+            sa.dashboard.diplomacy_tension,
+            sb.dashboard.diplomacy_tension
+        );
     }
 }

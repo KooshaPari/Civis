@@ -115,13 +115,19 @@ impl UiSoundBudget {
     /// A `UiSoundBudget` with the default 4 plays-per-tick cap.
     #[must_use]
     pub const fn with_default() -> Self {
-        Self { remaining: 4, max: 4 }
+        Self {
+            remaining: 4,
+            max: 4,
+        }
     }
 
     /// Custom budget (tests).
     #[must_use]
     pub const fn with_max(max: u32) -> Self {
-        Self { remaining: max, max }
+        Self {
+            remaining: max,
+            max,
+        }
     }
 
     /// Remaining budget. Exposed for HUD readouts.

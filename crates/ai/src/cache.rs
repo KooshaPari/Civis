@@ -91,11 +91,7 @@ mod tests {
     #[test]
     fn cache_multiple_keys_independent() {
         let mut cache: AiCache<i32> = AiCache::new();
-        let cases: Vec<(&[u8], i32)> = vec![
-            (b"a", 1),
-            (b"b", 2),
-            (b"c", 3),
-        ];
+        let cases: Vec<(&[u8], i32)> = vec![(b"a", 1), (b"b", 2), (b"c", 3)];
         for (k, v) in &cases {
             cache.insert(k, *v);
         }

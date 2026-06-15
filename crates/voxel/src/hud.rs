@@ -709,6 +709,12 @@ impl MenuStack {
     pub fn len(&self) -> usize {
         self.stack.len()
     }
+
+    /// Whether the menu stack is empty (no menus open).
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
 }
 
 impl Default for MenuStack {

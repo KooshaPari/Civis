@@ -11,9 +11,9 @@
 //! - FR-ECON-003
 
 use civ_economy::{
-    apply_trade, drain_energy_budget, propose_trade, step_stocks, step, verify_ledger_conservation,
-    Allocator, Bid, EconomyState, Good, INSTITUTION_MARKET, INSTITUTION_TREASURY,
-    ProductionProfile as Profile, Stocks, Offer, ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET, LedgerSide,
+    apply_trade, drain_energy_budget, propose_trade, step, step_stocks, verify_ledger_conservation,
+    Allocator, Bid, EconomyState, Good, LedgerSide, Offer, ProductionProfile as Profile, Stocks,
+    ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET, INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
 
 use civ_economy::step_institutions;
@@ -172,7 +172,10 @@ fn green_fr_econ_001_step_posts_budget_delta_entry() {
 
     assert_eq!(state.tick, 1);
     assert_eq!(state.ledger.len(), 2);
-    assert_eq!(state.ledger.last().expect("closing entry").account, ACCOUNT_ENERGY_BUDGET);
+    assert_eq!(
+        state.ledger.last().expect("closing entry").account,
+        ACCOUNT_ENERGY_BUDGET
+    );
     verify_ledger_conservation(&state).expect("ledger conservation after economy step");
 }
 
@@ -217,7 +220,9 @@ fn green_fr_econ_002_clear_crossing_orders_posts_balanced_transfer() {
     assert_eq!(ledger.institution_balance(INSTITUTION_TREASURY), 2_600);
     assert_eq!(ledger.institution_balance(INSTITUTION_MARKET), 3_400);
     assert_eq!(economy.energy_budget_joules, 4_000);
-    ledger.verify_conservation().expect("institution conservation");
+    ledger
+        .verify_conservation()
+        .expect("institution conservation");
 }
 
 /// FR-ECON-002 — when no bids cross, remaining demand is rationed over supply and
@@ -257,7 +262,9 @@ fn green_fr_econ_002_clear_rationing_does_not_exceed_supply() {
     assert_eq!(trade.offerer, INSTITUTION_MARKET);
     assert_eq!(allocator.bid_count(), 1);
     assert_eq!(allocator.offer_count(), 0);
-    ledger.verify_conservation().expect("institution conservation");
+    ledger
+        .verify_conservation()
+        .expect("institution conservation");
 }
 
 // ---------------------------------------------------------------------------
@@ -295,7 +302,10 @@ fn green_fr_econ_003_allocator_cancels_orders() {
     assert_eq!(offer_id, 1);
 
     let cancelled = allocator.cancel(offer_id);
-    assert!(matches!(cancelled, Some(civ_economy::CancelledOrder::Offer(_))));
+    assert!(matches!(
+        cancelled,
+        Some(civ_economy::CancelledOrder::Offer(_))
+    ));
     assert_eq!(allocator.offer_count(), 0);
 
     let remaining = allocator.cancel(999);

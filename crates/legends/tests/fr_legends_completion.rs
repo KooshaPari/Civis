@@ -48,14 +48,20 @@ fn fr_legends_001_historical_event_record_and_no_outcome_authoring() {
     );
     let resolved = vec![(LegendEntityId(7), Role::Leader)];
     let he = HistoricalEvent::from_raw(&raw, &resolved, Epoch(0));
-    assert_eq!(he.authored_outcome, true, "producer events are not engine-authored");
+    assert!(
+        he.authored_outcome,
+        "producer events are not engine-authored"
+    );
     assert!(!he.is_engine_authored());
     assert_eq!(he.source, SourceCrate::Tactics);
     assert_eq!(he.kind, EventKind::WarDeclared);
     assert_eq!(he.epoch, Epoch(0));
     assert_eq!(he.tick, 0);
     assert_eq!(he.raw_magnitude, 0.9);
-    assert!(he.participants.iter().any(|(e, r)| *e == LegendEntityId(7) && *r == Role::Leader));
+    assert!(he
+        .participants
+        .iter()
+        .any(|(e, r)| *e == LegendEntityId(7) && *r == Role::Leader));
 
     // 2. Round-trip serialization — bus-shaped, structured (FR-CIV-LEGENDS-001
     // says "structured HistoricalEvent records"; serde round-trip is the
@@ -70,7 +76,7 @@ fn fr_legends_001_historical_event_record_and_no_outcome_authoring() {
     // guarantee).
     let promo = HistoricalEvent::engine_promotion(0, Epoch(0), None, LegendEntityId(99));
     assert!(promo.is_engine_authored());
-    assert_eq!(promo.authored_outcome, false);
+    assert!(!promo.authored_outcome);
     assert_eq!(promo.kind, EventKind::Promotion);
     assert_eq!(promo.raw_magnitude, 0.0);
 
@@ -128,14 +134,12 @@ fn fr_legends_001_ingest_pipeline_does_not_bump_significance_via_promotion() {
     // Find it via the public saga_of. (Some heroes may have been pruned by
     // the decay; the structural guarantee is what we test — the Promotion
     // event in the graph itself has magnitude=0.)
-    let promo_event = g
-        .saga_of(hero)
-        .and_then(|saga| {
-            saga.events
-                .iter()
-                .find(|ev| ev.kind == EventKind::Promotion)
-                .cloned()
-        });
+    let promo_event = g.saga_of(hero).and_then(|saga| {
+        saga.events
+            .iter()
+            .find(|ev| ev.kind == EventKind::Promotion)
+            .cloned()
+    });
     if let Some(promo_event) = promo_event {
         assert_eq!(promo_event.magnitude, 0.0);
     }
@@ -150,11 +154,7 @@ fn fr_legends_001_ingest_pipeline_does_not_bump_significance_via_promotion() {
 /// are not in the historian's witness set.
 #[test]
 fn fr_legends_002_chronicle_from_witnessed_subset_only() {
-    let witnessed = [
-        LegendEventId(1),
-        LegendEventId(2),
-        LegendEventId(3),
-    ];
+    let witnessed = [LegendEventId(1), LegendEventId(2), LegendEventId(3)];
     let entries = vec![
         ChronicleEntry {
             event_id: LegendEventId(1),
@@ -225,10 +225,7 @@ fn fr_legends_002_chronicle_retold_is_structural_copy() {
     // Entries are structurally identical (no embellishment, no swap).
     assert_eq!(retold.entries.len(), original.entries.len());
     assert_eq!(retold.entries[0].event_id, original.entries[0].event_id);
-    assert_eq!(
-        retold.entries[0].magnitude,
-        original.entries[0].magnitude
-    );
+    assert_eq!(retold.entries[0].magnitude, original.entries[0].magnitude);
     assert_eq!(retold.entries[0].subject, original.entries[0].subject);
 }
 
@@ -400,7 +397,10 @@ fn fr_legends_006_gap_detector_logs_and_reports_reason() {
         .iter()
         .find(|r| r.source == SourceCrate::Tactics)
         .unwrap();
-    assert!(tactics_gap.reason.contains("Tactics"), "reason names the producer");
+    assert!(
+        tactics_gap.reason.contains("Tactics"),
+        "reason names the producer"
+    );
     assert!(
         tactics_gap.reason.contains("0..10"),
         "reason names the silent-epoch range"

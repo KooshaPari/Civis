@@ -658,6 +658,9 @@ fn gas_step(grid: &mut CaGrid, reg: MaterialRegistry, x: usize, y: usize, z: usi
     }
 }
 
+// Retained for the in-progress neighbour-sampling refactor of the CA passes;
+// not yet wired into the active step path.
+#[allow(dead_code)]
 fn read_neighbor(
     grid: &CaGrid,
     x: usize,
@@ -1955,9 +1958,9 @@ mod tests {
             max: [2, 2, 2],
         };
         let drop_pos = WorldCoord {
-            x: 1 * FIXED_SCALE,
-            y: 1 * FIXED_SCALE,
-            z: 1 * FIXED_SCALE,
+            x: FIXED_SCALE,
+            y: FIXED_SCALE,
+            z: FIXED_SCALE,
         };
         let _ = world.write(drop_pos, WATER);
         // Drain the seed event so we measure only the CA's writes.
@@ -2021,13 +2024,13 @@ mod tests {
         g.set_with_temp(0, 1, 0, SAND, 20);
         g.set_with_temp(1, 1, 0, ICE, -5);
         // Pre-refresh: the scratch is AIR/0/0 (its allocated default).
-        let mut pre = g.scratch_view();
+        let pre = g.scratch_view();
         assert_eq!(pre.get(1, 0, 0), AIR, "scratch must start cleared");
         assert_eq!(pre.temperatures[g.index(1, 0, 0).unwrap()], 0);
         g.restore_scratch(pre);
         // Refresh + read-through.
         g.refresh_scratch();
-        let mut post = g.scratch_view();
+        let post = g.scratch_view();
         assert_eq!(post.get(0, 0, 0), STONE);
         assert_eq!(post.get(1, 0, 0), WATER);
         assert_eq!(post.get(0, 1, 0), SAND);

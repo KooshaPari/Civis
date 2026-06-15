@@ -90,7 +90,10 @@ impl Recipe {
         duration_ticks: u32,
         joule_yield: i64,
     ) -> Self {
-        assert!(duration_ticks >= 1, "recipe duration must be at least 1 tick");
+        assert!(
+            duration_ticks >= 1,
+            "recipe duration must be at least 1 tick"
+        );
         inputs.sort();
         outputs.sort();
         // Defensive: drop any leg whose quantity is 0 so downstream
@@ -135,11 +138,7 @@ impl ChainBook {
     }
 
     /// Add a recipe that mints value (positive `joule_yield`).
-    pub fn add_joule_recipe(
-        &mut self,
-        name: impl Into<String>,
-        recipe: Recipe,
-    ) -> bool {
+    pub fn add_joule_recipe(&mut self, name: impl Into<String>, recipe: Recipe) -> bool {
         self.add(name, recipe)
     }
 
@@ -337,10 +336,7 @@ pub enum ChainConservationError {
 /// [`verify_conservation`](ChainStepReport::verify_conservation) and
 /// [`verify_reserve_reshuffle`](ChainStepReport::verify_reserve_reshuffle)
 /// methods are the canonical ways for callers to assert conservation.
-pub fn step_chains(
-    stocks: &mut crate::stocks::Stocks,
-    book: &ChainBook,
-) -> ChainStepReport {
+pub fn step_chains(stocks: &mut crate::stocks::Stocks, book: &ChainBook) -> ChainStepReport {
     let mut outcomes: Vec<ChainStepOutcome> = Vec::with_capacity(book.len());
     let mut joule_added: i64 = 0;
 
@@ -428,7 +424,7 @@ mod tests {
                 0,
             ),
         )]);
-        let before = stocks.clone();
+        let _before = stocks.clone();
         let report = step_chains(&mut stocks, &book);
 
         assert_eq!(report.outcomes.len(), 1);
@@ -560,7 +556,7 @@ mod tests {
                 0,
             ),
         )]);
-        let before = stocks.clone();
+        let _before = stocks.clone();
         let report = step_chains(&mut stocks, &book);
 
         assert!(report.outcomes[0].fired);

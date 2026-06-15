@@ -115,7 +115,10 @@ pub fn compute_pixel_stats(samples: &[SampleRgb]) -> PixelStats {
         if s.is_near_black(8) {
             near_black += 1;
         }
-        if s.is_gray() {
+        // "Gray" means a grayscale mid-tone (R==G==B); near-black samples are
+        // counted by `percent_near_black` instead, so they are excluded here to
+        // keep the two metrics disjoint (pure black is not a gray mid-tone).
+        if s.is_gray() && !s.is_near_black(8) {
             gray += 1;
         } else if let Some(bucket) = s.hue_bucket() {
             hues.insert(bucket);
@@ -185,7 +188,10 @@ mod tests {
         ];
         let stats = compute_pixel_stats(&samples);
         assert_eq!(stats.samples, 5);
-        assert!((stats.percent_gray - 40.0).abs() < f32::EPSILON);
+        // (0,0,0) is near-black (counted by percent_near_black), so only the
+        // (12,12,12) mid-tone counts as gray: 1/5 = 20%. The two metrics are
+        // disjoint (see compute_pixel_stats).
+        assert!((stats.percent_gray - 20.0).abs() < f32::EPSILON);
         assert!((stats.percent_near_black - 20.0).abs() < f32::EPSILON);
         assert_eq!(stats.distinct_hue_count, 3);
     }

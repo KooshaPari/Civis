@@ -230,9 +230,11 @@ impl SfxCoalescer {
     /// 5. Reset the per-kind counter.
     pub fn drain(&mut self, mut requests: Vec<SfxRequest>) -> SfxQueue {
         requests.sort_by(|a, b| {
-            a.kind
-                .cmp(&b.kind)
-                .then_with(|| a.volume.partial_cmp(&b.volume).unwrap_or(std::cmp::Ordering::Equal))
+            a.kind.cmp(&b.kind).then_with(|| {
+                a.volume
+                    .partial_cmp(&b.volume)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
         });
 
         // Per-kind coalesce: sum accepted volumes, clamp to 1.0.
@@ -240,7 +242,11 @@ impl SfxCoalescer {
         let mut coalesced_count: u32 = 0;
 
         for req in requests {
-            let cap = if req.kind.is_ui() { 1 } else { self.per_kind_cap };
+            let cap = if req.kind.is_ui() {
+                1
+            } else {
+                self.per_kind_cap
+            };
             let entry = per_kind.entry(req.kind).or_insert((0, 0.0));
             if entry.0 < cap {
                 entry.0 += 1;
@@ -268,7 +274,7 @@ impl SfxCoalescer {
                 volume: (gain * global_scale).clamp(0.0, 1.0),
             })
             .collect();
-        output.sort_by(|a, b| a.kind.cmp(&b.kind));
+        output.sort_by_key(|a| a.kind);
 
         // Reset the per-kind counter for the next step.
         self.per_kind_count.clear();

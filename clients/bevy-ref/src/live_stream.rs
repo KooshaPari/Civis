@@ -316,11 +316,7 @@ pub fn push_event_feed_to_hud_summary(
     if frame.events.is_empty() {
         return;
     }
-    let formatted: Vec<String> = frame
-        .events
-        .iter()
-        .map(format_event_feed_message)
-        .collect();
+    let formatted: Vec<String> = frame.events.iter().map(format_event_feed_message).collect();
     let summary = match formatted.len() {
         1 => formatted[0].clone(),
         n => formatted[n.saturating_sub(2)..].join(" · "),

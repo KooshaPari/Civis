@@ -1260,8 +1260,11 @@ write_policy = false
             "#,
         )
         .expect("econ manifest");
-        std::fs::write(econ_dir.join(MOD_WASM_NAME), wat::parse_str(ECON_WAT).expect("wat"))
-            .expect("econ wasm");
+        std::fs::write(
+            econ_dir.join(MOD_WASM_NAME),
+            wat::parse_str(ECON_WAT).expect("wat"),
+        )
+        .expect("econ wasm");
 
         std::fs::write(
             policy_dir.join("manifest.toml"),
@@ -1290,10 +1293,14 @@ write_policy = false
         .expect("policy wasm");
 
         let mut host = ModHost::new();
-        host.load_manifest_dir(&econ_dir).expect("load economic mod");
-        host.load_manifest_dir(&policy_dir).expect("load policy mod");
+        host.load_manifest_dir(&econ_dir)
+            .expect("load economic mod");
+        host.load_manifest_dir(&policy_dir)
+            .expect("load policy mod");
         let lines = host.economy_tick(4);
-        assert!(lines.iter().any(|line| line.contains("mod:econ-demo:wasm_economy_tick:tick=4:code=19")));
+        assert!(lines
+            .iter()
+            .any(|line| line.contains("mod:econ-demo:wasm_economy_tick:tick=4:code=19")));
         assert!(!lines.iter().any(|line| line.contains("mod:policy-demo")));
     }
 
@@ -1344,15 +1351,24 @@ write_policy = false
             "#,
         )
         .expect("manifest");
-        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT).expect("wat"))
-            .expect("wasm");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT).expect("wat"),
+        )
+        .expect("wasm");
 
         let mut host = ModHost::new();
         host.load_manifest_dir(dir.path()).expect("load");
         let _ = host.economy_tick(1);
-        assert_eq!(host.guest_memory_snapshot("mem-econ").first().copied(), Some(55));
+        assert_eq!(
+            host.guest_memory_snapshot("mem-econ").first().copied(),
+            Some(55)
+        );
         let _ = host.economy_tick(2);
-        assert_eq!(host.guest_memory_snapshot("mem-econ").first().copied(), Some(55));
+        assert_eq!(
+            host.guest_memory_snapshot("mem-econ").first().copied(),
+            Some(55)
+        );
     }
 
     /// Covers FR-CIV-TACTICS-054.
@@ -1388,8 +1404,11 @@ write_policy = false
             "#,
         )
         .expect("manifest");
-        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT).expect("wat"))
-            .expect("wasm");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT).expect("wat"),
+        )
+        .expect("wasm");
 
         let mut host = ModHost::new();
         host.load_manifest_dir(dir.path()).expect("load");
@@ -1432,8 +1451,11 @@ write_policy = false
             "#,
         )
         .expect("manifest");
-        std::fs::write(dir.path().join(MOD_WASM_NAME), wat::parse_str(WAT).expect("wat"))
-            .expect("wasm");
+        std::fs::write(
+            dir.path().join(MOD_WASM_NAME),
+            wat::parse_str(WAT).expect("wat"),
+        )
+        .expect("wasm");
 
         let mut host = ModHost::new();
         host.load_manifest_dir(dir.path()).expect("load");

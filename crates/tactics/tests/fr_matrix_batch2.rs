@@ -4,17 +4,10 @@
 //! scanner can attribute FR IDs directly to test references.
 
 use civ_tactics::{
-    score_doctrine_fitness, FactionEngagementStats,
-    apply_damage,
-    tick_operational_movement, OperationalMovementConfig,
-    formation_offsets, FormationKind,
-    line_of_sight,
-    bfs_next_step,
-    WarBridge,
-    WarBridgeConfig,
-    MilitaryUnitSample,
-    tick_war_bridge,
-    Doctrine, DoctrineLibrary, SCHEMA_VERSION, evolve_doctrine,
+    apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, line_of_sight,
+    score_doctrine_fitness, tick_operational_movement, tick_war_bridge, Doctrine, DoctrineLibrary,
+    FactionEngagementStats, FormationKind, MilitaryUnitSample, OperationalMovementConfig,
+    WarBridge, WarBridgeConfig, SCHEMA_VERSION,
 };
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
 use rand::SeedableRng;
@@ -234,7 +227,10 @@ fn green_fr_civ_tactics_024_engages_opposite_factions() {
     );
 
     assert_eq!(engagements.len(), 2);
-    let ids = engagements.iter().map(|engagement| (engagement.shooter_id, engagement.target_id)).collect::<Vec<_>>();
+    let ids = engagements
+        .iter()
+        .map(|engagement| (engagement.shooter_id, engagement.target_id))
+        .collect::<Vec<_>>();
     assert!(ids.contains(&(10, 20)));
     assert!(ids.contains(&(20, 10)));
 }

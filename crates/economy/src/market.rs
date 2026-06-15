@@ -44,6 +44,21 @@ impl MarketState {
             *price = price.saturating_add(delta);
         }
     }
+
+    /// Nudge a good's clearing price toward supply/demand equilibrium
+    /// (FR-CIV-0100 §3d). The price EMERGES from the imbalance between `demand`
+    /// and `supply` rather than a scripted curve: it rises when demand exceeds
+    /// supply, falls when supply exceeds demand, and never drops below 1.
+    /// The per-application move is capped so prices walk toward equilibrium.
+    pub fn apply_pressure(&mut self, good: &str, demand: i64, supply: i64) {
+        /// Maximum price move per application (cents).
+        const MAX_DELTA: i64 = 8;
+        if let Some(price) = self.prices.get_mut(good) {
+            let imbalance = demand.saturating_sub(supply);
+            let delta = imbalance.clamp(-MAX_DELTA, MAX_DELTA);
+            *price = (*price + delta).max(1);
+        }
+    }
 }
 
 /// Integer-only price delta from tick and good id (replay-stable).
@@ -118,6 +133,34 @@ mod tests {
             market.prices["water"],
             before["water"] + deterministic_price_delta(tick, "water")
         );
+    }
+
+    /// FR-CIV-0100 §3d — price rises when demand exceeds supply (emergent).
+    #[test]
+    fn apply_pressure_raises_price_when_demand_exceeds_supply() {
+        let mut market = MarketState::default();
+        let before = market.prices["food"];
+        market.apply_pressure("food", 1_000, 100);
+        assert!(market.prices["food"] > before);
+    }
+
+    /// FR-CIV-0100 §3d — price falls when supply exceeds demand.
+    #[test]
+    fn apply_pressure_lowers_price_when_supply_exceeds_demand() {
+        let mut market = MarketState::default();
+        let before = market.prices["food"];
+        market.apply_pressure("food", 100, 1_000);
+        assert!(market.prices["food"] < before);
+    }
+
+    /// FR-CIV-0100 §3d — price never drops below 1 even under huge surplus.
+    #[test]
+    fn apply_pressure_floors_price_at_one() {
+        let mut market = MarketState {
+            prices: BTreeMap::from([("food".to_string(), 1)]),
+        };
+        market.apply_pressure("food", 0, 1_000_000);
+        assert_eq!(market.prices["food"], 1);
     }
 
     proptest! {

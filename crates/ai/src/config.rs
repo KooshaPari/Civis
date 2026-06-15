@@ -67,6 +67,12 @@ fn env_or(key: &str, default: String) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    /// Serializes tests that mutate process-global `CIVAI_*` env vars so they do
+    /// not race under cargo's parallel test runner (which shares one process per
+    /// test binary).
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     /// FR-CIV-AI-010 — `AiConfig` defaults are stable and non-empty where required.
     #[test]
@@ -84,6 +90,7 @@ mod tests {
     /// FR-CIV-AI-010 — `from_env` table: each env variable overrides its default.
     #[test]
     fn from_env_honors_each_key() {
+        let _env = ENV_LOCK.lock().unwrap_or_else(|poison| poison.into_inner());
         let keys = [
             "CIVAI_LOCAL_MODEL_PATH",
             "CIVAI_NARRATOR_MODEL",
@@ -147,6 +154,7 @@ mod tests {
     /// FR-CIV-AI-010 — malformed integer env vars fall back to defaults.
     #[test]
     fn from_env_ignores_malformed_integers() {
+        let _env = ENV_LOCK.lock().unwrap_or_else(|poison| poison.into_inner());
         let backup_max = std::env::var("CIVAI_MAX_CONCURRENT_GEN").ok();
         let backup_budget = std::env::var("CIVAI_GEN_TOKEN_BUDGET").ok();
 

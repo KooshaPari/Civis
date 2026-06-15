@@ -93,10 +93,22 @@ impl DuckingTween {
     #[must_use]
     pub const fn for_reason(reason: DuckingReason) -> Self {
         match reason {
-            DuckingReason::Disaster => Self { tween_ms: 250, target_level: 0.4 },
-            DuckingReason::Milestone => Self { tween_ms: 350, target_level: 0.4 },
-            DuckingReason::UiModal => Self { tween_ms: 300, target_level: 0.4 },
-            DuckingReason::CombatSwell => Self { tween_ms: 200, target_level: 0.4 },
+            DuckingReason::Disaster => Self {
+                tween_ms: 250,
+                target_level: 0.4,
+            },
+            DuckingReason::Milestone => Self {
+                tween_ms: 350,
+                target_level: 0.4,
+            },
+            DuckingReason::UiModal => Self {
+                tween_ms: 300,
+                target_level: 0.4,
+            },
+            DuckingReason::CombatSwell => Self {
+                tween_ms: 200,
+                target_level: 0.4,
+            },
         }
     }
 
@@ -118,7 +130,10 @@ impl DuckingTween {
         } else {
             target_level
         };
-        Self { tween_ms: ms, target_level: lvl }
+        Self {
+            tween_ms: ms,
+            target_level: lvl,
+        }
     }
 }
 
@@ -171,11 +186,7 @@ impl DuckingScheduler {
     /// no-op (the original tween keeps running) — duck stacking is
     /// by reason, not by call count. This matches the audio
     /// pillar: "the foreground reads clearly" but never ramp-clips.
-    pub fn apply(
-        &mut self,
-        reason: DuckingReason,
-        pre_duck_level: f32,
-    ) -> DuckingTween {
+    pub fn apply(&mut self, reason: DuckingReason, pre_duck_level: f32) -> DuckingTween {
         if self.active[reason as usize].is_none() {
             self.active[reason as usize] = Some(DuckState {
                 tween: DuckingTween::for_reason(reason),
@@ -194,7 +205,10 @@ impl DuckingScheduler {
         pre_duck_level: f32,
         tween: DuckingTween,
     ) -> DuckingTween {
-        self.active[reason as usize] = Some(DuckState { tween, pre_duck_level });
+        self.active[reason as usize] = Some(DuckState {
+            tween,
+            pre_duck_level,
+        });
         tween
     }
 
@@ -205,7 +219,13 @@ impl DuckingScheduler {
     pub fn restore(&mut self, reason: DuckingReason) -> Option<(f32, DuckingTween)> {
         self.active[reason as usize].take().map(|state| {
             // The pre-duck level is the restore target.
-            (state.pre_duck_level, DuckingTween { tween_ms: 200, target_level: state.pre_duck_level.clamp(0.0, 1.0) })
+            (
+                state.pre_duck_level,
+                DuckingTween {
+                    tween_ms: 200,
+                    target_level: state.pre_duck_level.clamp(0.0, 1.0),
+                },
+            )
         })
     }
 
@@ -218,8 +238,7 @@ impl DuckingScheduler {
             .iter()
             .flatten()
             .map(|s| s.tween.target_level)
-            .fold(None, |acc, lvl| Some(acc.map_or(lvl, |a: f32| a.min(lvl)))
-        )
+            .fold(None, |acc, lvl| Some(acc.map_or(lvl, |a: f32| a.min(lvl))))
     }
 
     /// Number of active ducks (for HUD / debug).
@@ -306,11 +325,7 @@ mod tests {
     fn concurrent_ducks_layer_and_loudest_wins() {
         let mut s = DuckingScheduler::new();
         s.apply(DuckingReason::Disaster, 1.0);
-        s.apply_with_tween(
-            DuckingReason::UiModal,
-            1.0,
-            DuckingTween::custom(200, 0.2),
-        );
+        s.apply_with_tween(DuckingReason::UiModal, 1.0, DuckingTween::custom(200, 0.2));
         // The loudest (lowest target_level) wins.
         assert!((s.effective_target().unwrap() - 0.2).abs() < 1e-5);
         // Restoring UiModal leaves Disaster active.

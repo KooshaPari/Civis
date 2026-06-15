@@ -268,7 +268,7 @@ pub enum MaterialMode {
 }
 
 /// A single per-`MaterialId` override used in `Primitive` mode.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MaterialOverride {
     /// Subset of the PBR maps this override wants to provide. Empty means
     /// "use the exemplar for this slot". The engine adapter never synthesises
@@ -284,18 +284,6 @@ pub struct MaterialOverride {
     /// Per-matid tint multiplied with the exemplar albedo. `None` is
     /// identity. RGB is sRGB on disk but stored as `f32` here for blending.
     pub tint_srgb: Option<[f32; 3]>,
-}
-
-impl Default for MaterialOverride {
-    fn default() -> Self {
-        Self {
-            albedo_path: None,
-            normal_path: None,
-            orm_path: None,
-            perceptual_roughness: None,
-            tint_srgb: None,
-        }
-    }
 }
 
 /// Errors that [`MaterialSeedManifest::resolve`] can return.
@@ -521,7 +509,7 @@ pub enum PbrChannel {
 /// provided an `OrmCombined` file, we still read R/G/B into the three separate
 /// slots and the engine binds them individually, satisfying
 /// `FR-CIV-PBR-002`'s "ORM sources MAY fan into both without repack" clause.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct TextureChannelMap {
     /// Asset path for the albedo texture (sRGB on disk). `None` means the
     /// material has no albedo (rare; used for emissive-only decals).
@@ -538,19 +526,6 @@ pub struct TextureChannelMap {
     /// set in addition to `mr_path`/`ao_path` as a redundant source; the
     /// adapter picks the most-specific one available.
     pub orm_path: Option<String>,
-}
-
-impl Default for TextureChannelMap {
-    fn default() -> Self {
-        // Empty default — every slot is explicit. Callers compose.
-        Self {
-            albedo_path: None,
-            normal_path: None,
-            mr_path: None,
-            ao_path: None,
-            orm_path: None,
-        }
-    }
 }
 
 impl TextureChannelMap {
@@ -1265,9 +1240,9 @@ mod tests {
     #[test]
     fn fr_pbr_004_greedy_atlas_allocates_strictly_increasing_layers() {
         let mut plan = GreedyAtlasPlan::new();
-        let a = plan.allocate(MaterialId(10)).clone();
-        let b = plan.allocate(MaterialId(20)).clone();
-        let c = plan.allocate(MaterialId(30)).clone();
+        let a = *plan.allocate(MaterialId(10));
+        let b = *plan.allocate(MaterialId(20));
+        let c = *plan.allocate(MaterialId(30));
         assert_eq!(a.array_layer, 0);
         assert_eq!(b.array_layer, 1);
         assert_eq!(c.array_layer, 2);

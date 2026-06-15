@@ -10,8 +10,7 @@ use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{ServerCapabilities, ServerInfo},
     schemars::JsonSchema,
-    tool, tool_handler, tool_router,
-    Json,
+    tool, tool_handler, tool_router, Json,
 };
 use serde::{Deserialize, Serialize};
 
@@ -126,9 +125,9 @@ impl CivisMcpServer {
             use civis_cli::verify::{run_verify as cli_run_verify, VerifyOptions, BEVY_VERSION};
 
             let options = VerifyOptions {
-                output_path: PathBuf::from(out.unwrap_or_else(|| {
-                    "target/verify-frames/frame-0.png".to_string()
-                })),
+                output_path: PathBuf::from(
+                    out.unwrap_or_else(|| "target/verify-frames/frame-0.png".to_string()),
+                ),
                 settle_frames: settle_frames.unwrap_or(60),
                 width: width.unwrap_or(640),
                 height: height.unwrap_or(360),
@@ -185,7 +184,11 @@ impl CivisMcpServer {
     )]
     async fn civis_census(
         &self,
-        Parameters(CensusArgs { host, port, timeout_ms }): Parameters<CensusArgs>,
+        Parameters(CensusArgs {
+            host,
+            port,
+            timeout_ms,
+        }): Parameters<CensusArgs>,
     ) -> Result<Json<CensusResult>, String> {
         let mut config = crate::census_config_with_url();
         if let Some(host) = host {
@@ -198,8 +201,8 @@ impl CivisMcpServer {
             config.timeout_ms = timeout_ms;
         }
         let url = config.ws_url();
-        let status = crate::census_sim_status(&config)
-            .map_err(|err| format!("civis_census: {err}"))?;
+        let status =
+            crate::census_sim_status(&config).map_err(|err| format!("civis_census: {err}"))?;
         Ok(Json(CensusResult {
             url,
             tick: status.tick,

@@ -148,9 +148,7 @@ impl Allocator {
         if let Some(bid) = self.bids.remove(&id) {
             return Some(CancelledOrder::Bid(bid));
         }
-        self.offers
-            .remove(&id)
-            .map(CancelledOrder::Offer)
+        self.offers.remove(&id).map(CancelledOrder::Offer)
     }
 
     /// Number of live buy orders.
@@ -342,11 +340,8 @@ impl Allocator {
                         }
                     }
                     let offerer = offerer.unwrap_or(INSTITUTION_MARKET);
-                    let clearing_price = best_unmatched_price_for_good(
-                        &self.bids,
-                        &self.offers,
-                        good,
-                    );
+                    let clearing_price =
+                        best_unmatched_price_for_good(&self.bids, &self.offers, good);
                     let trade = ClearedTrade {
                         tick,
                         good: good.clone(),
@@ -659,10 +654,10 @@ mod tests {
         let t = &trades[0];
         assert!(t.rationed);
         assert_eq!(t.quantity, 4); // supply was the binding constraint
-        // best_bid = 50, best_ask = 100; book did not cross so rationing
-        // phase fires with clearing price = (50 + 100) / 2 = 75. This is
-        // the emergent price signal that converges downward in future ticks
-        // as agents learn to post better prices.
+                                   // best_bid = 50, best_ask = 100; book did not cross so rationing
+                                   // phase fires with clearing price = (50 + 100) / 2 = 75. This is
+                                   // the emergent price signal that converges downward in future ticks
+                                   // as agents learn to post better prices.
         assert_eq!(t.price, 75);
         assert!(t.price >= 0);
         ledger.verify_conservation().expect("conservation");

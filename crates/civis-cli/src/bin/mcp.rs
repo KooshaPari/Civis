@@ -79,7 +79,7 @@ fn main() -> io::Result<()> {
     load_dotenv();
     let stdin = io::stdin();
     let mut stdout = io::stdout().lock();
-    let mut lines = stdin.lock().lines();
+    let lines = stdin.lock().lines();
 
     for line in lines {
         let line = line?;
@@ -178,12 +178,7 @@ fn pixels_tool(params: &Value) -> Result<Value, String> {
             return Err("indexed PNGs are not supported".to_string());
         }
     };
-    let samples = sample_rgb_grid(
-        frame.width as usize,
-        frame.height as usize,
-        grid,
-        &data,
-    );
+    let samples = sample_rgb_grid(frame.width as usize, frame.height as usize, grid, &data);
     let stats = compute_pixel_stats(&samples);
     Ok(json!({ "path": path, "grid": grid, "stats": stats }))
 }

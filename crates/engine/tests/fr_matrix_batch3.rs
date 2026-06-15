@@ -3,14 +3,15 @@
 //! Each test references its FR code explicitly so the audit scanner can
 //! associate this batch with IMPL-NO-TEST matrix rows.
 
+use civ_engine::replay_format::MAGIC;
 use civ_engine::{
-    aggregate_strategic, baseline_scenario_path, chain_root_from_ticks, decode_civreplay, encode_civreplay,
-    format_mod_error_event_json, hash_hex, hash_chain::GENESIS, load_civreplay, load_scenario, save_civreplay,
-    HashChainState, HexCellSnapshot, ModLoadedRecord, ModUnloadedRecord, project_zoom, operational_hex_snapshot,
-    ReplayError, ReplayLog, SCENARIO_SCHEMA_VERSION, Simulation, tick_event_bytes, tick_hash, ZoomLevel,
+    aggregate_strategic, baseline_scenario_path, chain_root_from_ticks, decode_civreplay,
+    encode_civreplay, format_mod_error_event_json, hash_chain::GENESIS, hash_hex, load_civreplay,
+    load_scenario, operational_hex_snapshot, project_zoom, save_civreplay, tick_event_bytes,
+    tick_hash, HashChainState, HexCellSnapshot, ModLoadedRecord, ModUnloadedRecord, ReplayError,
+    ReplayLog, Simulation, ZoomLevel, SCENARIO_SCHEMA_VERSION,
 };
 use civ_save_db::format_session_saved_event_json;
-use civ_engine::replay_format::MAGIC;
 use civ_tactics::DamageEvent;
 use civ_voxel::{MaterialId, WorldCoord};
 use tempfile::NamedTempFile;
@@ -37,8 +38,14 @@ fn fr_lod_002_aggregates_strategic_regions() {
 #[test]
 fn fr_lod_003_project_zoom_is_view_only() {
     for tick in [0_u64, 1, 7, 64] {
-        assert_eq!(project_zoom(tick, ZoomLevel::Strategic), (tick, ZoomLevel::Strategic));
-        assert_eq!(project_zoom(tick, ZoomLevel::Operational), (tick, ZoomLevel::Operational));
+        assert_eq!(
+            project_zoom(tick, ZoomLevel::Strategic),
+            (tick, ZoomLevel::Strategic)
+        );
+        assert_eq!(
+            project_zoom(tick, ZoomLevel::Operational),
+            (tick, ZoomLevel::Operational)
+        );
     }
 }
 
@@ -60,7 +67,10 @@ fn fr_core_005_tick_hash_is_emitted() {
     sim.tick();
     let root = sim.hash_chain_root().expect("tick should emit hash root");
     assert_ne!(root, GENESIS);
-    assert_eq!(root, chain_root_from_ticks([1_u64]).expect("single tick root"));
+    assert_eq!(
+        root,
+        chain_root_from_ticks([1_u64]).expect("single tick root")
+    );
     assert_eq!(hash_hex(&root).len(), 64);
 }
 
@@ -74,7 +84,10 @@ fn fr_core_006_chain_is_append_only() {
         sim.tick();
         let root = sim.hash_chain_root().expect("root present");
         assert_ne!(root, prev);
-        assert_eq!(root, chain_root_from_ticks(1..=expected).expect("prefix hash root"));
+        assert_eq!(
+            root,
+            chain_root_from_ticks(1..=expected).expect("prefix hash root")
+        );
         prev = root;
     }
 
@@ -114,7 +127,10 @@ fn fr_replay_001_roundtrips_and_detects_tamper() {
     let header_len = MAGIC.len() + 4 + 4;
     let mut bad = bytes.clone();
     bad[header_len] ^= 0x01;
-    assert!(matches!(decode_civreplay(&bad), Err(ReplayError::ChecksumMismatch)));
+    assert!(matches!(
+        decode_civreplay(&bad),
+        Err(ReplayError::ChecksumMismatch)
+    ));
 }
 
 // FR-MOD-004
@@ -137,7 +153,8 @@ fn fr_mod_004_reports_mod_loaded_and_unloaded_events() {
 
     let loaded = log.mod_loaded_bus_events();
     assert_eq!(loaded.len(), 1);
-    let payload = serde_json::from_str::<serde_json::Value>(&loaded[0]).expect("mod.loaded payload");
+    let payload =
+        serde_json::from_str::<serde_json::Value>(&loaded[0]).expect("mod.loaded payload");
     assert_eq!(payload["event"], "mod.loaded.v1");
     assert_eq!(payload["mod_id"], "example-policy");
     assert_eq!(payload["tick"], 3);

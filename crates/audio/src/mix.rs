@@ -122,7 +122,11 @@ impl AudioMix {
             self.effective_gain(bus)
         } else {
             // Master itself is a pass-through; the mute is its toggle.
-            if self.master_mute { 0.0 } else { 1.0 }
+            if self.master_mute {
+                0.0
+            } else {
+                1.0
+            }
         }
     }
 }

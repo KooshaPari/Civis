@@ -1016,4 +1016,49 @@ mod tests {
         assert_eq!(registry.materials().len(), 41);
         assert!(registry.by_name("LAVA").is_none());
     }
+
+    /// `get` returns `None` for an id past the end of the registry table.
+    #[test]
+    fn get_is_none_for_out_of_range_id() {
+        let registry = MaterialRegistry::standard();
+        let past_end = MaterialId(registry.materials().len() as u16 + 5);
+        assert!(registry.get(past_end).is_none());
+    }
+
+    /// `by_name` is exact-match: an unknown name yields `None`.
+    #[test]
+    fn by_name_is_none_for_unknown() {
+        let registry = MaterialRegistry::standard();
+        assert!(registry.by_name("unobtanium").is_none());
+        assert!(registry.by_name("").is_none());
+    }
+
+    /// The phase predicates are mutually exclusive and agree with the `phase`
+    /// field for every material in the standard registry (data-driven invariant).
+    #[test]
+    fn phase_predicates_agree_with_phase_for_all_materials() {
+        for def in MaterialRegistry::standard().materials() {
+            let flags =
+                [def.is_powder(), def.is_liquid(), def.is_gas()].iter().filter(|b| **b).count();
+            match def.phase {
+                Phase::Powder => assert!(def.is_powder() && flags == 1),
+                Phase::Liquid => assert!(def.is_liquid() && flags == 1),
+                Phase::Gas => assert!(def.is_gas() && flags == 1),
+                Phase::Solid | Phase::Empty => {
+                    assert_eq!(flags, 0, "solid/empty matches no powder/liquid/gas flag")
+                }
+            }
+        }
+    }
+
+    /// Every material is retrievable by its own id, and the id round-trips.
+    #[test]
+    fn every_material_round_trips_by_id() {
+        let registry = MaterialRegistry::standard();
+        for def in registry.materials() {
+            let fetched = registry.get(def.id).expect("material retrievable by its id");
+            assert_eq!(fetched.id, def.id);
+            assert_eq!(fetched.phase, def.phase);
+        }
+    }
 }

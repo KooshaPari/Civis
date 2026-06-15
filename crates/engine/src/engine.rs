@@ -295,6 +295,24 @@ pub enum UnitType {
 pub struct WorldState {
     pub tick: u64,
     pub population: u64,
+    /// Accumulated research effort (FR-CIV-0200 research). Emerges from the
+    /// living population each tick and gates emergent tech advancement in
+    /// [`Simulation::phase_research`]. `#[serde(default)]` keeps older
+    /// `.civsave` files loadable.
+    #[serde(default)]
+    pub research_progress: u64,
+    /// Accumulated faith/belief (divine-powers economy). Emerges from the
+    /// worshipping population each tick and is spent to invoke divine powers
+    /// (e.g. triggering a disaster). `#[serde(default)]` keeps older saves
+    /// loadable.
+    #[serde(default)]
+    pub belief: u64,
+    /// Accumulated societal unrest (0 = content). EMERGES from food-market
+    /// scarcity: a high clearing price drives it up, abundance lets it decay.
+    /// Distinct from per-unit military `morale`. `#[serde(default)]` keeps older
+    /// saves loadable.
+    #[serde(default)]
+    pub unrest: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -313,6 +331,9 @@ impl Default for WorldState {
         Self {
             tick: 0,
             population: 1_000_000,
+            research_progress: 0,
+            belief: 0,
+            unrest: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -386,7 +407,7 @@ pub struct Simulation {
     rng: SimRng,
     planet: PlanetConfig,
     moon: MoonConfig,
-    climate: Climate,
+    pub(crate) climate: Climate,
     pending_damage: Vec<DamageEvent>,
     tick_modulo_compact: u64,
     building_graph: BuildingGraph,
@@ -399,13 +420,9 @@ pub struct Simulation {
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
-    /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
-    /// structures + tactical combat impacts. Drained per tick by
-    /// [`Simulation::phase_voxel`].
+    /// 3D voxel substrate (Civis 3D extension).
     voxel: VoxelWorld<MaterialId>,
-    /// Voxel dirty events produced during the most recent tick. Consumers
-    /// (renderer protocol bridge, replay log) read this each tick; it resets
-    /// at the start of every [`Simulation::tick`].
+    /// Voxel dirty events produced during the most recent tick.
     last_tick_voxel_events: Vec<DirtyChunkEvent>,
     last_tick_voxel_damage_count: usize,
     /// Per-soldier damage pulses from the most recent tactics phase (FR-CIV-TACTICS-024).
@@ -414,18 +431,15 @@ pub struct Simulation {
     last_tick_engagements: Vec<CombatEngagement>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
-    /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick (linear
-    /// cell index + value in `[0, 100]`). Cleared at the start of every tick
-    /// and repopulated by [`Simulation::phase_voxel_ca`] so a downstream
-    /// emergence phase (life / ecology) can seed the first cells.
+    /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick.
     last_tick_abiogenesis_sites: Vec<civ_voxel::fluid_ca::AbiogenesisSuitability>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
-    /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
+    /// Scenario economy policy.
     pub economy_policy: PolicyInput,
-    /// Macro economy state (`civ-economy`); synced with `WorldState::energy_budget_joules` each tick.
+    /// Macro economy state.
     pub economy_state: EconomyState,
-    /// Per-good clearing prices (`civ-economy`); advanced in [`phase_economy`].
+    /// Per-good clearing prices.
     pub market_state: MarketState,
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
@@ -435,12 +449,11 @@ pub struct Simulation {
     pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
-    /// Coastal water columns whose water-level voxel shifts with the tide
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
-    weather_grid: Vec<WeatherCell>,
+    pub(crate) weather_grid: Vec<WeatherCell>,
     /// Per-cluster (emergent settlement) resource stocks, maintained by
     /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
     /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
@@ -966,6 +979,13 @@ impl Simulation {
         &self.climate
     }
 
+    /// Borrow the per-region weather grid updated by the planet phase
+    /// (FR-CIV-PLANET-030). Exposed so the WebSocket bridge can stream a
+    /// `Frame3d::Climate` snapshot each tick.
+    pub fn weather_grid(&self) -> &[WeatherCell] {
+        &self.weather_grid
+    }
+
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
         self.replay_log.record_damage(self.state.tick, event);
@@ -1070,6 +1090,62 @@ impl Simulation {
     /// Borrow the research cache.
     pub fn research_cache(&self) -> &ResearchCache {
         &self.research_cache
+    }
+
+    /// Accumulated emergent research effort (FR-CIV-0200), advanced each tick by
+    /// [`Simulation::phase_research`] in proportion to the living population.
+    #[must_use]
+    pub fn research_progress(&self) -> u64 {
+        self.state.research_progress
+    }
+
+    /// Research tier reached — each tier is 100k accumulated research effort.
+    /// Higher tiers feed back into gameplay (e.g. carrying capacity).
+    #[must_use]
+    pub fn research_tier(&self) -> u64 {
+        self.state.research_progress / 100_000
+    }
+
+    /// Effective carrying capacity: a baseline plus a bonus per research tier.
+    /// Tech raises how many people the land sustains, which eases staple prices
+    /// in [`Simulation::phase_economy`] (research → economy coupling).
+    fn carrying_capacity(&self) -> i64 {
+        const POP_BASELINE: i64 = 1_000_000;
+        const CAPACITY_PER_TIER: i64 = 200_000;
+        let tier = self.research_tier().min(i64::MAX as u64) as i64;
+        POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER)
+    }
+
+    /// Accumulated faith/belief, generated each tick by [`Simulation::phase_belief`]
+    /// from the worshipping population and spent on divine powers.
+    #[must_use]
+    pub fn belief(&self) -> u64 {
+        self.state.belief
+    }
+
+    /// Accumulated societal unrest, driven by food-market scarcity each tick by
+    /// [`Simulation::phase_unrest`]. Zero means a content populace.
+    #[must_use]
+    pub fn unrest(&self) -> u64 {
+        self.state.unrest
+    }
+
+    /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
+    /// and deducts the cost when enough faith has accumulated; returns `false`
+    /// and leaves belief untouched otherwise (FR-CIV-EMERGENCE divine-powers).
+    pub fn try_invoke_divine_power(&mut self, cost: u64) -> bool {
+        if self.state.belief >= cost {
+            self.state.belief -= cost;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Add `amount` to accumulated belief. Used by cross-module systems (e.g.
+    /// disasters: fear breeds faith) to feed the divine-powers economy.
+    pub(crate) fn add_belief(&mut self, amount: u64) {
+        self.state.belief = self.state.belief.saturating_add(amount);
     }
 
     pub fn last_births(&self) -> &[PopulationEvent] {
@@ -1196,6 +1272,9 @@ impl Simulation {
         self.phase_disasters();
         self.phase_life();
         self.phase_emergence();
+        self.phase_research();
+        self.phase_belief();
+        self.phase_unrest();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1456,10 +1535,7 @@ impl Simulation {
     /// `MaterialRegistry::standard()` in production. `grid` may be a borrowed
     /// CA grid from a Bevy / Godot resident window; when `None` we skip
     /// (cheap path: emergence layer uses a synthetic distribution).
-    pub fn phase_voxel_ca(
-        &mut self,
-        grid: Option<&civ_voxel::fluid_ca::CaGrid>,
-    ) {
+    pub fn phase_voxel_ca(&mut self, grid: Option<&civ_voxel::fluid_ca::CaGrid>) {
         self.last_tick_abiogenesis_sites.clear();
         let Some(grid) = grid else { return };
         for &chunk in &grid.dirty_chunks() {
@@ -1483,12 +1559,13 @@ impl Simulation {
             for z in z0..z1 {
                 for y in y0..y1 {
                     for x in x0..x1 {
-                        let Some(idx) = grid.index(x, y, z) else { continue };
+                        let Some(idx) = grid.index(x, y, z) else {
+                            continue;
+                        };
                         let mat = grid.cells[idx];
                         let t = grid.temperatures[idx];
                         let sat = grid.saturation[idx];
-                        let s =
-                            civ_voxel::fluid_ca::AbiogenesisSuitability::from_cell(mat, t, sat);
+                        let s = civ_voxel::fluid_ca::AbiogenesisSuitability::from_cell(mat, t, sat);
                         if s.is_viable() {
                             self.last_tick_abiogenesis_sites.push(s);
                         }
@@ -1510,6 +1587,54 @@ impl Simulation {
         if self.state.tick % self.tick_modulo_compact == 0 {
             self.voxel.compact();
         }
+    }
+
+    /// Research phase (FR-CIV-0200) — research advances emergently from the
+    /// living population rather than on a scripted schedule. Each tick the
+    /// population contributes research effort proportional to its size; the
+    /// accumulated `research_progress` is the substrate downstream tech-unlock
+    /// logic draws on. Pure, deterministic function of `population`.
+    fn phase_research(&mut self) {
+        /// People required to produce one unit of research effort per tick.
+        const RESEARCH_POP_DIVISOR: u64 = 1_000;
+        let contribution = self.state.population / RESEARCH_POP_DIVISOR;
+        self.state.research_progress = self.state.research_progress.saturating_add(contribution);
+    }
+
+    /// Faith phase (divine-powers economy, FR-CIV-EMERGENCE). The worshipping
+    /// population generates `belief` each tick; belief is the resource spent via
+    /// [`Simulation::try_invoke_divine_power`] to invoke divine interventions.
+    /// Pure, deterministic function of `population`.
+    fn phase_belief(&mut self) {
+        /// People required to generate one unit of belief per tick.
+        const BELIEF_POP_DIVISOR: u64 = 2_000;
+        let worship = self.state.population / BELIEF_POP_DIVISOR;
+        self.state.belief = self.state.belief.saturating_add(worship);
+    }
+
+    /// Social-unrest phase (FR-CIV-0100 §3 emergence). Unrest EMERGES from the
+    /// food market: a clearing price above baseline (scarcity) drives it up in
+    /// proportion to the shortfall; abundance lets it decay toward contentment.
+    /// Runs after `phase_economy` so the food price is current.
+    ///
+    /// Hardship also drives people to faith: a fraction of standing unrest feeds
+    /// `belief` each tick. This is a STABILISING negative-feedback arm — the
+    /// faith unrest breeds raises the diplomacy war-threshold that unrest itself
+    /// lowers, nudging the system toward edge-of-chaos rather than runaway war.
+    fn phase_unrest(&mut self) {
+        /// Units of standing unrest that generate one unit of belief per tick.
+        const UNREST_FAITH_DIVISOR: u64 = 100;
+        let food_price = self
+            .market_state
+            .prices()
+            .get("food")
+            .copied()
+            .unwrap_or(FOOD_SCARCITY_BASELINE);
+        // Research mitigates the scarcity-driven rise (research -> calmer society).
+        let delta = research_unrest_mitigation(unrest_delta(food_price), self.research_tier());
+        self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
+        let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
+        self.add_belief(faith_from_hardship);
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -1798,7 +1923,16 @@ impl Simulation {
         let population = count_civilians(&self.world) as f64;
         let max_pop = self.state.population.max(1) as f64;
         let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
-        let birth_chance = 0.003 * (1.0 - overcrowding_factor);
+        // Emergent downward causation: food-market scarcity damps the birth rate
+        // (research -> carrying-capacity -> economy -> population loop).
+        let food_price = self
+            .market_state
+            .prices()
+            .get("food")
+            .copied()
+            .unwrap_or(FOOD_SCARCITY_BASELINE);
+        let birth_chance =
+            0.003 * (1.0 - overcrowding_factor) * food_scarcity_birth_factor(food_price);
         let birth_window = self.state.tick % 200 == 0;
         let mut dead = Vec::new();
         let mut births = Vec::new();
@@ -1973,10 +2107,36 @@ impl Simulation {
         }
         let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
         let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
-            DiplomacyKind::TradeAgreement
+        // Consume an rng draw to keep the replay sequence stable, but let the
+        // OUTCOME EMERGE from faction wealth rather than a coin flip: a large
+        // treasury disparity breeds conflict (have-nots clash with haves);
+        // near-peers find it cheaper to trade (FR-CIV-0100 §3).
+        let _entropy = self.rng.gen_bool(0.6);
+        let treasury_a = self
+            .state
+            .faction_treasury
+            .get(&a)
+            .copied()
+            .unwrap_or_default();
+        let treasury_b = self
+            .state
+            .faction_treasury
+            .get(&b)
+            .copied()
+            .unwrap_or_default();
+        let disparity = if treasury_a >= treasury_b {
+            treasury_a - treasury_b
         } else {
+            treasury_b - treasury_a
+        };
+        // Shared faith binds society: collective belief raises the disparity a
+        // faction pair will tolerate before fighting (belief -> diplomacy).
+        let conflict_threshold =
+            Fixed::from_num(diplomacy_conflict_threshold(self.belief(), self.unrest()));
+        let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
+        } else {
+            DiplomacyKind::TradeAgreement
         };
         match kind {
             DiplomacyKind::TradeAgreement => {
@@ -2032,6 +2192,27 @@ impl Simulation {
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.tick_trade_routes();
         self.market_state.step(self.state.tick);
+
+        // Emergent pricing (FR-CIV-0100 §3d): the living population is demand
+        // pressure measured against the carrying capacity (supply). Staple
+        // prices rise as population outgrows capacity (scarcity) and ease as it
+        // falls below (surplus). Carrying capacity itself grows with research
+        // tier, so tech advances FEED BACK into cheaper staples (research →
+        // economy coupling).
+        // Wealthy factions bid up staple demand on top of raw population
+        // (faction prosperity -> market coupling; diplomacy already moves these
+        // treasuries, so diplomacy -> treasury -> market demand chains through).
+        let faction_wealth: i64 = self
+            .state
+            .faction_treasury
+            .values()
+            .map(|t| (t.raw / crate::SCALE).max(0))
+            .sum();
+        let population = self.state.population.min(i64::MAX as u64) as i64;
+        let demand = population.saturating_add(faction_wealth);
+        let supply = self.carrying_capacity();
+        self.market_state.apply_pressure("food", demand, supply);
+        self.market_state.apply_pressure("energy", demand, supply);
     }
 
     fn tick_trade_routes(&mut self) {
@@ -2052,7 +2233,16 @@ impl Simulation {
                 continue;
             }
 
-            let quantity = route.volume.min(available);
+            // Arbitrage: a route from a surplus exporter to a scarce importer
+            // ships more (bounded 2x). Read the importer stock before transfer.
+            let to_stock = self
+                .state
+                .faction_resources
+                .get(&route.to_faction)
+                .map(|r| resource_amount(r, resource))
+                .unwrap_or(Fixed::ZERO);
+            let boosted = route.volume * trade_volume_multiplier(available, to_stock);
+            let quantity = boosted.min(available);
             {
                 let from_resources = self
                     .state
@@ -2165,6 +2355,105 @@ impl Simulation {
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
     }
+}
+
+/// Baseline food clearing price (cents) at which births are unaffected by
+/// scarcity. Matches `MarketState::default()`'s food price.
+const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+
+/// Downward-causation policy (FR-CIV-0100 emergence): scarcity in the food
+/// market damps the birth rate, closing the research -> carrying-capacity ->
+/// economy -> population loop. Returns a multiplier in `(0.0, 1.0]` applied to
+/// the per-tick birth chance.
+///
+/// At or below the baseline price (abundance) the factor is `1.0` — surplus
+/// does NOT boost births above the natural rate (conservative; abundance is
+/// already expressed via the ECS food-needs path). As the price rises above
+/// baseline the factor falls as `baseline / price`, so a 2x price halves the
+/// birth chance. The factor never reaches zero, so a starving society can still
+/// recover, and it only ever scales births DOWN — population is never reduced
+/// by this coupling.
+fn food_scarcity_birth_factor(food_price: i64) -> f64 {
+    let price = food_price.max(FOOD_SCARCITY_BASELINE);
+    (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
+}
+
+/// Per-tick change in societal unrest from food-market scarcity (FR-CIV-0100 §3
+/// emergence). Above the baseline price unrest rises in proportion to the
+/// shortfall (bounded per tick so it walks rather than jumps); at or below
+/// baseline it decays toward contentment by a fixed step. The caller floors the
+/// running total at zero.
+fn unrest_delta(food_price: i64) -> i64 {
+    /// Largest single-tick rise, so a price spike can't instantly max unrest.
+    const MAX_RISE: i64 = 50;
+    /// Cents of shortfall that map to one unit of unrest rise.
+    const CENTS_PER_UNREST: i64 = 20;
+    /// Fixed decay applied each tick of abundance.
+    const DECAY: i64 = 10;
+    let scarcity = food_price - FOOD_SCARCITY_BASELINE;
+    if scarcity > 0 {
+        (scarcity / CENTS_PER_UNREST).clamp(1, MAX_RISE)
+    } else {
+        -DECAY
+    }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
+/// unrest — advanced food logistics (storage, distribution) blunt the
+/// scarcity-driven rise. Only the positive (rising) part is damped; decay is
+/// untouched. The mitigation is bounded (tier capped at 9 → at most a 10x
+/// reduction) and floored at 1, so technology calms a society but never makes
+/// it immune to hardship. Returns the research-adjusted unrest delta.
+fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
+    if rise <= 0 {
+        return rise;
+    }
+    let divisor = 1 + research_tier.min(9) as i64;
+    (rise / divisor).max(1)
+}
+
+/// Surplus differential (resource units) at/above which a route ships its full
+/// boosted volume.
+const TRADE_GAP_SCALE: i64 = 100;
+
+/// Arbitrage policy (FR-CIV-0100 §3 emergence): trade volume scales with the
+/// surplus gap between exporter and importer — a well-stocked source feeding a
+/// scarce destination ships MORE. Returns a multiplier in `[1.0, 2.0]`, bounded
+/// at 2x so the price↔volume↔treasury↔demand loop self-limits rather than
+/// running away (design-layer criticality bound). No boost when the source is
+/// not in surplus relative to the destination.
+fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
+    let gap = (from_stock - to_stock).max(Fixed::ZERO);
+    let normalized = (gap / Fixed::from_num(TRADE_GAP_SCALE)).min(Fixed::from_num(1));
+    Fixed::from_num(1) + normalized
+}
+
+/// Wealth-disparity (in whole currency units) at which two factions clash when
+/// they share no faith. Above this gap the have-nots turn on the haves.
+const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+/// Belief units required to raise the conflict threshold by one currency unit.
+const BELIEF_PEACE_DIVISOR: u64 = 50;
+/// Cap on the belief-driven peace bonus: shared faith can at most double a
+/// society's tolerance for inequality — it never makes conflict impossible.
+const BELIEF_PEACE_CAP: i64 = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+/// Unrest units required to erode the conflict threshold by one currency unit.
+const UNREST_WAR_DIVISOR: u64 = 50;
+/// Cap on how much unrest can erode the threshold (currency units).
+const UNREST_WAR_CAP: i64 = 8_000;
+/// Floor on the conflict threshold: even a furious, faithless society still
+/// needs SOME wealth disparity to go to war — discontent alone is not casus belli.
+const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): collective belief and
+/// societal unrest pull diplomacy in opposite directions. Shared faith RAISES
+/// the wealth-disparity a faction pair tolerates before fighting (peace);
+/// unrest LOWERS it (internal discontent spills into external aggression). The
+/// threshold is bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` so conflict
+/// always needs some disparity, and above at `2x` base so peace is never absolute.
+fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
+    let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
+    let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
+    (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -2430,6 +2719,248 @@ mod tests {
             sim.market_state.prices, initial,
             "expected at least one market price to change after {N} ticks"
         );
+    }
+
+    /// FR-CIV-0100 emergence — at the baseline food price births are unaffected.
+    #[test]
+    fn food_scarcity_birth_factor_is_unity_at_baseline() {
+        assert_eq!(food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE), 1.0);
+    }
+
+    /// Surplus (price below baseline) does NOT boost births above the natural
+    /// rate — the factor is clamped at 1.0.
+    #[test]
+    fn food_scarcity_birth_factor_caps_at_unity_under_surplus() {
+        assert_eq!(food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE / 4), 1.0);
+        assert_eq!(food_scarcity_birth_factor(1), 1.0);
+    }
+
+    /// Scarcity (price above baseline) damps births: a 2x price halves the rate,
+    /// and the factor is strictly decreasing as price climbs — but never zero.
+    #[test]
+    fn food_scarcity_birth_factor_damps_under_scarcity() {
+        let double = food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE * 2);
+        assert!((double - 0.5).abs() < 1e-9, "2x price should halve births");
+        let quad = food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE * 4);
+        assert!(quad < double, "higher price must damp births further");
+        assert!(quad > 0.0, "the birth factor must never reach zero");
+    }
+
+    /// The coupling only ever scales births DOWN, so an expensive-food tick can
+    /// never reduce the standing population relative to the start of the tick.
+    #[test]
+    fn food_scarcity_never_reduces_standing_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.market_state
+            .prices
+            .insert("food".to_string(), FOOD_SCARCITY_BASELINE * 8);
+        let before = sim.state.population;
+        sim.tick();
+        assert!(
+            sim.state.population >= before.saturating_sub(sim.last_deaths.len() as u64),
+            "scarcity coupling must not subtract from population beyond natural deaths"
+        );
+    }
+
+    /// FR-CIV-0100 §3 — with no shared faith and no unrest the threshold is base.
+    #[test]
+    fn diplomacy_threshold_is_base_without_belief() {
+        assert_eq!(
+            diplomacy_conflict_threshold(0, 0),
+            DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
+    }
+
+    /// Collective belief raises the disparity factions tolerate before fighting,
+    /// and the peace bonus is monotonic non-decreasing in belief.
+    #[test]
+    fn diplomacy_threshold_rises_with_belief() {
+        let low = diplomacy_conflict_threshold(5_000, 0);
+        let high = diplomacy_conflict_threshold(500_000, 0);
+        assert!(low > DIPLOMACY_BASE_CONFLICT_THRESHOLD, "faith buys peace");
+        assert!(high >= low, "more faith never lowers tolerance");
+    }
+
+    /// The peace bonus is capped at 2x the base, so conflict is always reachable.
+    #[test]
+    fn diplomacy_threshold_caps_at_double_base() {
+        let saturated = diplomacy_conflict_threshold(u64::MAX, 0);
+        assert_eq!(
+            saturated,
+            DIPLOMACY_BASE_CONFLICT_THRESHOLD + BELIEF_PEACE_CAP
+        );
+        assert!(saturated <= 2 * DIPLOMACY_BASE_CONFLICT_THRESHOLD);
+    }
+
+    /// Unrest erodes the threshold (discontent breeds war), opposing belief, and
+    /// the erosion is monotonic non-increasing in unrest.
+    #[test]
+    fn diplomacy_threshold_falls_with_unrest() {
+        let calm = diplomacy_conflict_threshold(0, 0);
+        let tense = diplomacy_conflict_threshold(0, 5_000);
+        let furious = diplomacy_conflict_threshold(0, 500_000);
+        assert!(tense < calm, "unrest lowers the war threshold");
+        assert!(furious <= tense, "more unrest never raises tolerance");
+    }
+
+    /// Even infinite unrest leaves a positive floor — discontent alone is not
+    /// casus belli; some wealth disparity is still required.
+    #[test]
+    fn diplomacy_threshold_floors_under_extreme_unrest() {
+        let floored = diplomacy_conflict_threshold(0, u64::MAX);
+        assert_eq!(floored, DIPLOMACY_MIN_CONFLICT_THRESHOLD);
+        assert!(floored > 0, "war always needs some disparity");
+    }
+
+    /// Belief and unrest oppose: equal pressure on both sides nets out near base.
+    #[test]
+    fn diplomacy_belief_and_unrest_oppose() {
+        // 5_000 belief -> +100 peace; 5_000 unrest -> -100 war; net ~ base.
+        assert_eq!(
+            diplomacy_conflict_threshold(5_000, 5_000),
+            DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
+    }
+
+    /// FR-CIV-0100 §3 — at/below baseline food price unrest decays (negative delta).
+    #[test]
+    fn unrest_delta_decays_under_abundance() {
+        assert!(unrest_delta(FOOD_SCARCITY_BASELINE) < 0);
+        assert!(unrest_delta(FOOD_SCARCITY_BASELINE / 2) < 0);
+    }
+
+    /// Scarcity drives unrest up, bounded per tick, and monotonic in shortfall.
+    #[test]
+    fn unrest_delta_rises_with_scarcity() {
+        let mild = unrest_delta(FOOD_SCARCITY_BASELINE + 100);
+        let severe = unrest_delta(FOOD_SCARCITY_BASELINE + 10_000);
+        assert!(mild > 0, "any scarcity raises unrest");
+        assert!(severe >= mild, "more scarcity never lowers the rise");
+        assert!(severe <= 50, "single-tick rise is capped");
+    }
+
+    /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer
+    /// advanced society), monotonic in tier, but never below 1; decay untouched.
+    #[test]
+    fn research_unrest_mitigation_damps_rise_floored_at_one() {
+        let raw = 40;
+        assert_eq!(
+            research_unrest_mitigation(raw, 0),
+            raw,
+            "tier 0 leaves the rise unchanged"
+        );
+        let tier3 = research_unrest_mitigation(raw, 3);
+        let tier9 = research_unrest_mitigation(raw, 9);
+        assert!(tier3 < raw, "research calms unrest");
+        assert!(tier9 <= tier3, "more research never raises unrest");
+        assert!(tier9 >= 1, "research never fully eliminates hardship");
+        // The mitigation is bounded: an absurd tier can't push the rise below 1.
+        assert_eq!(research_unrest_mitigation(40, u64::MAX), 4);
+        // Decay (negative delta) passes through untouched.
+        assert_eq!(research_unrest_mitigation(-10, 9), -10);
+    }
+
+    /// phase_unrest floors unrest at zero: a content populace under cheap food
+    /// never goes negative.
+    #[test]
+    fn phase_unrest_floors_at_zero() {
+        let mut sim = Simulation::with_seed(1);
+        assert_eq!(sim.unrest(), 0);
+        sim.phase_unrest();
+        assert_eq!(sim.unrest(), 0, "abundance keeps a calm society at zero");
+    }
+
+    /// Sustained scarcity accumulates unrest above zero.
+    #[test]
+    fn phase_unrest_accumulates_under_scarcity() {
+        let mut sim = Simulation::with_seed(1);
+        sim.market_state
+            .prices
+            .insert("food".to_string(), FOOD_SCARCITY_BASELINE + 4_000);
+        for _ in 0..5 {
+            sim.phase_unrest();
+        }
+        assert!(sim.unrest() > 0, "persistent scarcity breeds unrest");
+    }
+
+    /// Hardship drives faith: standing unrest feeds belief each tick (the
+    /// stabilising negative-feedback arm). A calm, well-fed society does not.
+    #[test]
+    fn phase_unrest_feeds_belief_under_hardship() {
+        let mut sim = Simulation::with_seed(1);
+        sim.market_state
+            .prices
+            .insert("food".to_string(), FOOD_SCARCITY_BASELINE + 6_000);
+        let belief_before = sim.belief();
+        for _ in 0..20 {
+            sim.phase_unrest();
+        }
+        assert!(
+            sim.belief() > belief_before,
+            "sustained hardship should breed faith"
+        );
+
+        // A calm society (cheap food, zero unrest) breeds no hardship-faith.
+        let mut calm = Simulation::with_seed(1);
+        let calm_belief = calm.belief();
+        calm.phase_unrest();
+        assert_eq!(calm.belief(), calm_belief, "contentment breeds no faith");
+    }
+
+    /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).
+    #[test]
+    fn trade_volume_multiplier_is_unity_without_gap() {
+        let m = trade_volume_multiplier(Fixed::from_num(50), Fixed::from_num(50));
+        assert_eq!(m, Fixed::from_num(1));
+        // Source scarcer than destination: still no boost (floored at 1x).
+        let reverse = trade_volume_multiplier(Fixed::from_num(10), Fixed::from_num(80));
+        assert_eq!(reverse, Fixed::from_num(1));
+    }
+
+    /// A surplus exporter feeding a scarce importer ships more, monotonically,
+    /// capped at 2x so the arbitrage loop self-limits.
+    #[test]
+    fn trade_volume_multiplier_scales_with_surplus_capped_at_2x() {
+        let small = trade_volume_multiplier(Fixed::from_num(60), Fixed::from_num(50));
+        let large = trade_volume_multiplier(Fixed::from_num(200), Fixed::from_num(50));
+        assert!(small > Fixed::from_num(1), "any surplus gap boosts volume");
+        assert!(large >= small, "bigger gap never ships less");
+        assert!(large <= Fixed::from_num(2), "boost is capped at 2x");
+        // A gap >= TRADE_GAP_SCALE saturates the multiplier exactly at 2x.
+        let saturated =
+            trade_volume_multiplier(Fixed::from_num(TRADE_GAP_SCALE + 50), Fixed::ZERO);
+        assert_eq!(saturated, Fixed::from_num(2));
+    }
+
+    /// Holistic emergence-web integration (FR-CIV-0100 §3): a 1000-tick run
+    /// exercises all coupled phases (economy, diplomacy, disasters, research,
+    /// belief, unrest, trade arbitrage) together and must (a) never panic or
+    /// overflow under sustained dynamics, (b) hold the economic invariant
+    /// (every clearing price stays >= 1), and (c) produce live dynamics rather
+    /// than a frozen state.
+    #[test]
+    fn emergence_web_runs_1000_ticks_stable_and_dynamic() {
+        let mut sim = Simulation::with_seed(12345);
+        for _ in 0..1_000 {
+            sim.tick();
+        }
+        assert_eq!(sim.state.tick, 1_000, "tick counter advances deterministically");
+
+        // (b) economic invariant: no price ever collapses below the floor.
+        for (good, price) in sim.market_state.prices() {
+            assert!(*price >= 1, "price for {good} fell below 1: {price}");
+        }
+
+        // (c) dynamics present: diplomacy fires every tick, so the event log is
+        // populated — the coupled systems are actually running, not inert.
+        assert!(
+            !sim.diplomacy_events().is_empty(),
+            "expected diplomacy activity over 1000 ticks"
+        );
+
+        // Accessors for the emergent scalars remain coherent (no overflow panic
+        // reaching here already proves the saturating/bounded math held).
+        let _ = (sim.belief(), sim.unrest(), sim.research_tier());
     }
 
     #[test]
@@ -2744,6 +3275,134 @@ mod tests {
         }
 
         assert!(sim.building_graph().parcels.len() > before);
+    }
+
+    /// FR-CIV-0200 — research progress accrues emergently from the living
+    /// population over ticks (phase_research is wired into the tick loop).
+    #[test]
+    fn phase_research_accrues_from_population() {
+        let mut sim = Simulation::with_seed(7);
+        let before = sim.research_progress();
+
+        for _ in 0..50 {
+            sim.tick();
+        }
+
+        assert!(
+            sim.research_progress() > before,
+            "research_progress should grow from a living population over ticks"
+        );
+    }
+
+    /// FR-CIV-0200 — with no population, research makes no progress (emergent,
+    /// not scripted).
+    #[test]
+    fn phase_research_quiescent_without_population() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.population = 0;
+        let before = sim.research_progress();
+        sim.phase_research();
+        assert_eq!(sim.research_progress(), before, "no people, no research");
+    }
+
+    /// FR-CIV-0100 §3 — diplomacy emerges from wealth: a large treasury disparity
+    /// between the paired factions yields Conflict, not a coin flip.
+    #[test]
+    fn phase_diplomacy_emerges_conflict_from_wealth_disparity() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500; // a diplomacy cadence tick
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(100_000));
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict
+        );
+    }
+
+    /// FR-CIV-0100 §3 — near-peer factions (small disparity) trade rather than fight.
+    #[test]
+    fn phase_diplomacy_emerges_trade_among_peers() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(5_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(5_000));
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement
+        );
+    }
+
+    /// FR-CIV-EMERGENCE — belief accrues from the worshipping population over ticks.
+    #[test]
+    fn phase_belief_accrues_from_population() {
+        let mut sim = Simulation::with_seed(7);
+        let before = sim.belief();
+
+        for _ in 0..50 {
+            sim.tick();
+        }
+
+        assert!(
+            sim.belief() > before,
+            "belief should accrue from a worshipping population"
+        );
+    }
+
+    /// FR-CIV-EMERGENCE — a divine power spends belief only when affordable;
+    /// a failed invocation leaves belief untouched.
+    #[test]
+    fn try_invoke_divine_power_gates_on_belief() {
+        let mut sim = Simulation::with_seed(7);
+        sim.state.belief = 100;
+        assert!(!sim.try_invoke_divine_power(200), "cannot afford 200");
+        assert_eq!(sim.belief(), 100, "failed invoke leaves belief untouched");
+        assert!(sim.try_invoke_divine_power(80), "can afford 80");
+        assert_eq!(sim.belief(), 20, "cost deducted on success");
+    }
+
+    /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with
+    /// accumulated research (research → economy coupling / downward causation).
+    #[test]
+    fn research_tier_and_capacity_grow_with_progress() {
+        let mut sim = Simulation::with_seed(7);
+        assert_eq!(sim.research_tier(), 0);
+        let base_capacity = sim.carrying_capacity();
+        sim.state.research_progress = 350_000;
+        assert_eq!(sim.research_tier(), 3);
+        assert!(
+            sim.carrying_capacity() > base_capacity,
+            "research should raise carrying capacity"
+        );
+    }
+
+    /// FR-CIV-0100 §3d — wealthy factions bid up staple demand vs poor factions
+    /// at equal population (faction prosperity → market coupling).
+    #[test]
+    fn faction_wealth_drives_market_demand() {
+        let mut rich = Simulation::with_seed(7);
+        let mut poor = Simulation::with_seed(7);
+        rich.state.tick = 2;
+        poor.state.tick = 2;
+        for v in rich.state.faction_treasury.values_mut() {
+            *v = Fixed::from_num(1_000_000);
+        }
+        for v in poor.state.faction_treasury.values_mut() {
+            *v = Fixed::from_num(0);
+        }
+        rich.phase_economy();
+        poor.phase_economy();
+        assert!(
+            rich.market_state.prices()["food"] >= poor.market_state.prices()["food"],
+            "wealthier factions should not yield cheaper staples"
+        );
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.
@@ -3152,7 +3811,7 @@ mod tests {
                 } if *shooter_id != 0 && *target_id != 0
             )
         }));
-}
+    }
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
     #[test]
     fn push_damage_records_damage_event() {

@@ -16,25 +16,12 @@
 //! - FR-CIV-TACTICS-037
 
 use civ_tactics::{
-    astar_path_with_blocked,
-    bfs_next_step_with_blocked,
-    evolve_doctrine,
-    formation_offsets,
-    line_of_sight,
-    score_doctrine_fitness,
-    tick_war_bridge,
-    Doctrine,
-    DoctrineLibrary,
-    Facing,
-    FactionEngagementStats,
-    FormationKind,
-    MilitaryUnitSample,
-    WarBridge,
-    WarBridgeConfig,
+    astar_path_with_blocked, bfs_next_step_with_blocked, evolve_doctrine, formation_offsets,
+    line_of_sight, score_doctrine_fitness, tick_war_bridge, DamageEvent, Doctrine, DoctrineLibrary,
+    Facing, FactionEngagementStats, FormationKind, MilitaryUnitSample, WarBridge, WarBridgeConfig,
     SCHEMA_VERSION,
-    DamageEvent,
 };
-use civ_voxel::{MaterialId, WorldCoord, VoxelWorld};
+use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
@@ -89,11 +76,7 @@ fn fr_civ_tactics_000_schema_version_is_semver_like() {
 fn fr_civ_tactics_001_apply_damage_erosion() {
     let mut world = world_for_damage();
     let event = DamageEvent {
-        center: WorldCoord {
-            x: 0,
-            y: 0,
-            z: 0,
-        },
+        center: WorldCoord { x: 0, y: 0, z: 0 },
         radius_voxels: 2,
         energy: 99,
     };
@@ -135,16 +118,8 @@ fn fr_civ_tactics_010_evolve_doctrine_is_deterministic() {
 #[test]
 fn fr_civ_tactics_020_los_respects_solid_blockers() {
     let mut world = empty_world();
-    let from = WorldCoord {
-        x: 0,
-        y: 0,
-        z: 0,
-    };
-    let to = WorldCoord {
-        x: 8,
-        y: 0,
-        z: 0,
-    };
+    let from = WorldCoord { x: 0, y: 0, z: 0 };
+    let to = WorldCoord { x: 8, y: 0, z: 0 };
     assert!(line_of_sight(&world, from, to));
     for x in 1..8 {
         world.write(
@@ -164,7 +139,10 @@ fn fr_civ_tactics_020_los_respects_solid_blockers() {
 #[test]
 fn fr_civ_tactics_021_formation_offsets_are_centered_for_lines() {
     assert_eq!(formation_offsets(FormationKind::Line, 1), vec![(0, 0)]);
-    assert_eq!(formation_offsets(FormationKind::Line, 4), vec![(0, -1), (0, 0), (0, 1), (0, 2)]);
+    assert_eq!(
+        formation_offsets(FormationKind::Line, 4),
+        vec![(0, -1), (0, 0), (0, 1), (0, 2)]
+    );
 }
 
 // ---------------------------------------------------------------- FR-CIV-TACTICS-022
@@ -172,10 +150,7 @@ fn fr_civ_tactics_021_formation_offsets_are_centered_for_lines() {
 #[test]
 fn fr_civ_tactics_022_war_bridge_resolves_engagements_by_cadence() {
     let world = empty_world();
-    let units = vec![
-        unit(101, 0, 0, 0),
-        unit(102, 1, 3, 0),
-    ];
+    let units = vec![unit(101, 0, 0, 0), unit(102, 1, 3, 0)];
     let config = WarBridgeConfig {
         cadence_ticks: 4,
         ..WarBridgeConfig::default()

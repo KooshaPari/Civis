@@ -216,10 +216,7 @@ mod tests {
     fn volume_is_unit_for_simple_triggers_and_clamps_for_scaled() {
         assert!((SfxTrigger::Birth.volume() - 1.0).abs() < f32::EPSILON);
         assert!((SfxTrigger::Tech.volume() - 1.0).abs() < f32::EPSILON);
-        assert!(
-            (SfxTrigger::Battle { intensity: 0.42 }.volume() - 0.42).abs()
-                < f32::EPSILON
-        );
+        assert!((SfxTrigger::Battle { intensity: 0.42 }.volume() - 0.42).abs() < f32::EPSILON);
         // Out-of-range clamps to the unit range.
         assert!(SfxTrigger::Battle { intensity: 1.5 }.volume() <= 1.0);
         assert!(SfxTrigger::Battle { intensity: -0.5 }.volume() >= 0.0);
@@ -276,8 +273,7 @@ mod tests {
     fn fr_audio_005_event_triggers_route_to_sfx_requests() {
         // (1) Birth storm — many triggers, each yields a single
         // Birth-kind request at unit volume.
-        let birth_storm: Vec<SfxTrigger> =
-            (0..200).map(|_| SfxTrigger::Birth).collect();
+        let birth_storm: Vec<SfxTrigger> = (0..200).map(|_| SfxTrigger::Birth).collect();
         let reqs = triggers_to_sfx_requests(&birth_storm);
         assert_eq!(reqs.len(), 200);
         assert!(reqs.iter().all(|r| r.kind == SfxKind::Birth));

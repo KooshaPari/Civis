@@ -151,7 +151,10 @@ pub fn ideology_homophily(ideologies: &[f32], bin_width: f32) -> f32 {
     if total == 0 {
         return 0.0;
     }
-    let max_share: f32 = counts.iter().map(|&c| c as f32 / total as f32).fold(0.0_f32, f32::max);
+    let max_share: f32 = counts
+        .iter()
+        .map(|&c| c as f32 / total as f32)
+        .fold(0.0_f32, f32::max);
     max_share
 }
 
@@ -218,8 +221,7 @@ pub fn diplomacy_tension(pair_scores: &[f32]) -> f32 {
     if pair_scores.is_empty() {
         return 0.0;
     }
-    let mean_abs: f32 =
-        pair_scores.iter().map(|v| v.abs()).sum::<f32>() / pair_scores.len() as f32;
+    let mean_abs: f32 = pair_scores.iter().map(|v| v.abs()).sum::<f32>() / pair_scores.len() as f32;
     mean_abs.clamp(0.0, 1.0)
 }
 
@@ -303,7 +305,10 @@ mod tests {
         // Should not panic; the function falls back to bin_width = 0.2.
         let v = vec![0.0_f32; 5];
         let h = ideology_homophily(&v, 0.0);
-        assert!(h > 0.99, "all-zero ideologies should be homophilous, got {h}");
+        assert!(
+            h > 0.99,
+            "all-zero ideologies should be homophilous, got {h}"
+        );
     }
 
     // ---- sentience_fraction ----
@@ -406,11 +411,12 @@ mod tests {
         //   -0.9 → bin 0; -0.7 → bin 1; 0.1 → bin 5; 0.2 → bin 6
         // → 4 bins × 1 agent each, max share = 1/4 = 0.25.
         let d = EmergenceDashboard::compute(
-            &[3, 3],                  // cluster_sizes
-            &[-0.9, -0.7, 0.1, 0.2],  // ideologies
-            1, 2,                     // sentient, total
-            &[-1.0, 0.0, 1.0],        // mood_valences
-            &[0.7, -0.9],             // diplomacy scores
+            &[3, 3],                 // cluster_sizes
+            &[-0.9, -0.7, 0.1, 0.2], // ideologies
+            1,
+            2,                 // sentient, total
+            &[-1.0, 0.0, 1.0], // mood_valences
+            &[0.7, -0.9],      // diplomacy scores
         );
         // Two equal clusters → uniform → entropy = 1.0.
         approx(d.cluster_entropy, 1.0);

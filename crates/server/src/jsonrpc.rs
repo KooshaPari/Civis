@@ -2036,8 +2036,8 @@ mod tests {
     /// distinguish "no data" from "entropy is exactly zero".
     #[test]
     fn dispatch_sim_emergence_returns_null_sample_before_first_boundary() {
-        let req = parse_request(r#"{"jsonrpc":"2.0","id":51,"method":"sim.emergence"}"#)
-            .expect("parse");
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":51,"method":"sim.emergence"}"#).expect("parse");
         let plan = dispatch_request(
             req,
             DispatchContext {

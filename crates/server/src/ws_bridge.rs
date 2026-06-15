@@ -26,9 +26,9 @@ use civ_engine::{
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
     AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
-    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, DeathEvent3d, EventFeedFrame,
-    EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d, Frame3d,
-    GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
+    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
+    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
+    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
@@ -49,7 +49,7 @@ use crate::{
 };
 
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
-pub const FRAME_BUNDLE_LEN: usize = 6;
+pub const FRAME_BUNDLE_LEN: usize = 7;
 
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -402,14 +402,16 @@ fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceF
         .world
         .query::<(&AgentCivilian, &Wardrobe, &Tools)>()
         .iter()
-        .map(|(_entity, (civilian, wardrobe, tools))| AgentAppearanceUpdate {
-            agent_id: civilian.id,
-            era: wardrobe.era,
-            wardrobe: wardrobe.material,
-            tools: tools.material,
-            scale: 1.0,
-            position: None,
-        })
+        .map(
+            |(_entity, (civilian, wardrobe, tools))| AgentAppearanceUpdate {
+                agent_id: civilian.id,
+                era: wardrobe.era,
+                wardrobe: wardrobe.material,
+                tools: tools.material,
+                scale: 1.0,
+                position: None,
+            },
+        )
         .collect();
     AgentAppearanceFrame { tick, updates }
 }
@@ -496,10 +498,13 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                 profession,
                 genome_summary: GenomeSummary3d {
                     summary: format!("era-{}", wardrobe.era),
-                    lineage: format!("faction-{}", match civilian.alignment {
-                        civ_agents::Alignment::Faction(id) => id,
-                        _ =>0,
-                    }),
+                    lineage: format!(
+                        "faction-{}",
+                        match civilian.alignment {
+                            civ_agents::Alignment::Faction(id) => id,
+                            _ => 0,
+                        }
+                    ),
                     traits: Vec::new(),
                 },
                 species: "human".to_string(),
@@ -661,6 +666,11 @@ fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], S
         Frame3d::CivilianState(build_civilian_state_frame(sim, tick)),
         Frame3d::FactionState(build_faction_state_frame(sim, tick)),
         Frame3d::EventFeed(build_event_feed_frame(sim, tick)),
+        Frame3d::Climate(ClimateFrame {
+            tick,
+            climate: *sim.climate(),
+            weather: sim.weather_grid().to_vec(),
+        }),
     ])
 }
 
@@ -739,8 +749,15 @@ async fn apply_dispatch_effect(
         } => {
             let mut sim = state.sim.lock().await;
             let mut rng = sim.rng_mut().clone();
-            let entity =
-                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, civ_agents::Alignment::Faction(faction), x, y, civ_agents::ActorVisualKind::Humanoid, &mut rng);
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                civ_agents::Alignment::Faction(faction),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }
@@ -1118,6 +1135,11 @@ mod tests {
                 tick: 1,
                 events: Vec::new(),
             }),
+            Frame3d::Climate(ClimateFrame {
+                tick: 1,
+                climate: *Simulation::with_seed(1).climate(),
+                weather: Vec::new(),
+            }),
         ]
     }
 
@@ -1135,6 +1157,7 @@ mod tests {
                 Frame3d::CivilianState(_) => 3,
                 Frame3d::FactionState(_) => 4,
                 Frame3d::EventFeed(_) => 5,
+                Frame3d::Climate(_) => 6,
             };
             kinds[idx] = true;
         }

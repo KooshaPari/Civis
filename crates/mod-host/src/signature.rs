@@ -94,5 +94,4 @@ mod tests {
     fn pubkey_hex(bytes: &[u8; 32]) -> String {
         bytes.iter().map(|b| format!("{b:02x}")).collect()
     }
-
 }

@@ -255,7 +255,8 @@ pub fn save_category_for_name(name: &str) -> SaveSlotCategory {
 /// unlikely path where the platform reports a pre-epoch mtime).
 #[must_use]
 pub fn mtime_unix_seconds(mtime: SystemTime) -> u64 {
-    mtime.duration_since(SystemTime::UNIX_EPOCH)
+    mtime
+        .duration_since(SystemTime::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0)
 }
@@ -265,10 +266,7 @@ pub fn mtime_unix_seconds(mtime: SystemTime) -> u64 {
 /// `now` is taken as a parameter so tests can pin time without sleeping.
 #[must_use]
 pub fn age_label_for_mtime(mtime: SystemTime, now: SystemTime) -> SaveAgeLabel {
-    let age = now
-        .duration_since(mtime)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let age = now.duration_since(mtime).map(|d| d.as_secs()).unwrap_or(0);
     SaveAgeLabel::from_seconds(age)
 }
 
@@ -353,8 +351,7 @@ pub fn most_recent_save_path(dir: &Path) -> Result<Option<PathBuf>, std::io::Err
         best = match best {
             None => Some(candidate),
             Some(current) => {
-                if candidate.2 < current.2
-                    || (candidate.2 == current.2 && candidate.1 > current.1)
+                if candidate.2 < current.2 || (candidate.2 == current.2 && candidate.1 > current.1)
                 {
                     Some(candidate)
                 } else {
@@ -513,10 +510,7 @@ mod tests {
             SaveAgeLabel::MinutesAgo
         );
         // 1h..24h → HoursAgo
-        assert_eq!(
-            SaveAgeLabel::from_seconds(60 * 60),
-            SaveAgeLabel::HoursAgo
-        );
+        assert_eq!(SaveAgeLabel::from_seconds(60 * 60), SaveAgeLabel::HoursAgo);
         assert_eq!(
             SaveAgeLabel::from_seconds(24 * 60 * 60 - 1),
             SaveAgeLabel::HoursAgo
@@ -535,10 +529,7 @@ mod tests {
             SaveAgeLabel::from_seconds(7 * 24 * 60 * 60),
             SaveAgeLabel::WeeksAgo
         );
-        assert_eq!(
-            SaveAgeLabel::from_seconds(u64::MAX),
-            SaveAgeLabel::WeeksAgo
-        );
+        assert_eq!(SaveAgeLabel::from_seconds(u64::MAX), SaveAgeLabel::WeeksAgo);
     }
 
     /// FR-CIV-SAVE-001.
@@ -596,21 +587,38 @@ mod tests {
         // All three rows must have a byte size and mtime — the browser UI
         // depends on them for the panel rendering.
         for entry in &entries {
-            assert!(entry.byte_size.is_some(), "byte_size missing for {}", entry.name);
-            assert!(entry.mtime_unix.is_some(), "mtime_unix missing for {}", entry.name);
+            assert!(
+                entry.byte_size.is_some(),
+                "byte_size missing for {}",
+                entry.name
+            );
+            assert!(
+                entry.mtime_unix.is_some(),
+                "mtime_unix missing for {}",
+                entry.name
+            );
             // `now` is the test's wall clock, the save was just written,
             // so the age_label must be JustNow.
             assert_eq!(entry.age_label, SaveAgeLabel::JustNow);
         }
 
         // Category mapping.
-        let slot = entries.iter().find(|e| e.name == "slot-1").expect("slot row");
+        let slot = entries
+            .iter()
+            .find(|e| e.name == "slot-1")
+            .expect("slot row");
         assert_eq!(slot.category, SaveSlotCategory::Slot);
         assert_eq!(slot.save_type, "slot");
-        let auto = entries.iter().find(|e| e.name.starts_with("autosave")).expect("auto row");
+        let auto = entries
+            .iter()
+            .find(|e| e.name.starts_with("autosave"))
+            .expect("auto row");
         assert_eq!(auto.category, SaveSlotCategory::Auto);
         assert_eq!(auto.save_type, "auto");
-        let manual = entries.iter().find(|e| e.name == "quick-save").expect("manual row");
+        let manual = entries
+            .iter()
+            .find(|e| e.name == "quick-save")
+            .expect("manual row");
         assert_eq!(manual.category, SaveSlotCategory::Manual);
         assert_eq!(manual.save_type, "manual");
     }

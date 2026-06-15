@@ -596,10 +596,7 @@ impl SagaGraph {
                 source: src,
                 last_seen_epoch: last,
                 now_epoch: now,
-                reason: format!(
-                    "no {:?} events for epoch {}..{}",
-                    src, last.0, now.0
-                ),
+                reason: format!("no {:?} events for epoch {}..{}", src, last.0, now.0),
             })
             .collect()
     }
@@ -627,11 +624,7 @@ impl SagaGraph {
             let src = e.sim_ref.map(|s| s.source);
             let now = self.cur_epoch;
             if let Some(src) = src {
-                if self
-                    .detect_gaps(now)
-                    .iter()
-                    .any(|(s, _)| *s == src)
-                {
+                if self.detect_gaps(now).iter().any(|(s, _)| *s == src) {
                     return Some(EmptySagaReason::ProducerGap {
                         source: src,
                         reason: format!("producer {:?} is silent as of epoch {}", src, now.0),

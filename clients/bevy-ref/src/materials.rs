@@ -291,7 +291,13 @@ mod tests {
 
     #[test]
     fn fr_civ_pbr_006_texture_maps_are_color_space_partitioned() {
-        assert_eq!(texture_load::biome_albedo_path(Biome::SandBeach), "textures/sand_beach/albedo.jpg");
-        assert_eq!(texture_load::biome_normal_path(Biome::SandBeach), "textures/sand_beach/normal.jpg");
+        assert_eq!(
+            texture_load::biome_albedo_path(Biome::SandBeach),
+            "textures/sand_beach/albedo.jpg"
+        );
+        assert_eq!(
+            texture_load::biome_normal_path(Biome::SandBeach),
+            "textures/sand_beach/normal.jpg"
+        );
     }
 }

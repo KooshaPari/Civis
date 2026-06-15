@@ -24,7 +24,7 @@
 //! can pass `None` to get pure algorithmic drift.
 
 use crate::{Dna, DnaClass};
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
@@ -270,11 +270,7 @@ pub fn mutate_with_divergence(
 /// * `None` → falls back to a fully random genome of the class's expected
 ///   length (the substrate's "raw-organism primitive" mode).
 #[must_use]
-pub fn spawn_genome(
-    rng: &mut ChaCha8Rng,
-    class: &DnaClass,
-    seed: Option<&SeedDefinition>,
-) -> Dna {
+pub fn spawn_genome(rng: &mut ChaCha8Rng, class: &DnaClass, seed: Option<&SeedDefinition>) -> Dna {
     match seed {
         Some(s) => {
             let dna = s.base_dna();
@@ -375,7 +371,8 @@ mod tests {
         let set = example_seed_set();
         assert!(set.version >= 1);
         for s in &set.seeds {
-            s.validate().unwrap_or_else(|e| panic!("seed {} failed: {e}", s.id));
+            s.validate()
+                .unwrap_or_else(|e| panic!("seed {} failed: {e}", s.id));
         }
     }
 

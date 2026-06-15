@@ -158,7 +158,7 @@ fn fr_civ_llm_002_cache_key_changes_when_prompt_or_model_shift() {
     assert_ne!(key_first, custom.cache_key());
     cache.insert(&key_first, "v1".to_string());
     assert_eq!(cache.get(&key_first), Some(&"v1".to_string()));
-    assert!(cache.len() > 0);
+    assert!(!cache.is_empty());
 }
 
 #[test]
@@ -207,7 +207,10 @@ async fn fr_civ_llm_004_provider_operations_enforce_allowed_use_matrix() {
 
     let provider = GenerateOnlyProvider;
     let req = GenRequest::from_prompt("policy tone sample");
-    let out = provider.generate(&req).await.expect("generate should be allowed");
+    let out = provider
+        .generate(&req)
+        .await
+        .expect("generate should be allowed");
     assert_eq!(out.text, "policy tone sample");
     let err = provider
         .embed(&EmbedRequest {

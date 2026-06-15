@@ -915,3 +915,81 @@ pub(crate) fn noise_offset(seed: u64, lane: u64) -> f32 {
 pub(crate) fn wrap01(value: f32) -> f32 {
     value.rem_euclid(1.0)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn season_from_year_phase_partitions_the_year() {
+        assert_eq!(season_from_year_phase(0.0), "Spring");
+        assert_eq!(season_from_year_phase(0.24), "Spring");
+        assert_eq!(season_from_year_phase(0.25), "Summer");
+        assert_eq!(season_from_year_phase(0.49), "Summer");
+        assert_eq!(season_from_year_phase(0.5), "Autumn");
+        assert_eq!(season_from_year_phase(0.74), "Autumn");
+        assert_eq!(season_from_year_phase(0.75), "Winter");
+        assert_eq!(season_from_year_phase(1.0), "Winter");
+    }
+
+    #[test]
+    fn season_wind_bias_is_defined_per_season_and_zero_otherwise() {
+        assert_eq!(season_wind_bias("Spring"), 1.0);
+        assert_eq!(season_wind_bias("Summer"), 0.4);
+        assert_eq!(season_wind_bias("Autumn"), 1.2);
+        assert_eq!(season_wind_bias("Winter"), 1.6);
+        assert_eq!(season_wind_bias("nonsense"), 0.0);
+    }
+
+    #[test]
+    fn precipitation_matches_season_and_temperature() {
+        assert_eq!(precipitation_from_weather("Winter", -2.0), "snow");
+        assert_eq!(precipitation_from_weather("Winter", 3.0), "none");
+        assert_eq!(precipitation_from_weather("Spring", 5.0), "rain");
+        assert_eq!(precipitation_from_weather("Summer", 30.0), "none");
+    }
+
+    #[test]
+    fn hash01_is_always_in_unit_interval() {
+        for v in [0.0_f32, 1.0, -3.5, 12.9898, 100.0, -0.0001] {
+            let h = hash01(v);
+            assert!((0.0..1.0).contains(&h), "hash01({v}) = {h} out of [0,1)");
+        }
+    }
+
+    #[test]
+    fn wrap01_maps_any_real_into_unit_interval() {
+        for v in [0.0_f32, 0.5, 1.0, 1.25, -0.25, -3.75, 42.6] {
+            let w = wrap01(v);
+            assert!((0.0..1.0).contains(&w), "wrap01({v}) = {w} out of [0,1)");
+        }
+    }
+
+    #[test]
+    fn noise_offset_is_deterministic_and_bounded() {
+        // Same (seed, lane) -> same output; magnitude within +/-0.05.
+        assert_eq!(noise_offset(42, 0), noise_offset(42, 0));
+        assert_ne!(noise_offset(42, 0), noise_offset(43, 0));
+        for (s, l) in [(0_u64, 0_u64), (1, 1), (999, 7), (u64::MAX, 3)] {
+            let n = noise_offset(s, l);
+            assert!(n.abs() <= 0.05 + f32::EPSILON, "noise_offset({s},{l}) = {n}");
+        }
+    }
+
+    #[test]
+    fn temperature_from_year_phase_stays_in_physical_band() {
+        // 11 +/- 17 -> roughly [-6, 28] across the year.
+        for i in 0..=100 {
+            let t = temperature_from_year_phase(i as f32 / 100.0);
+            assert!((-6.5..=28.5).contains(&t), "temp {t} out of band");
+        }
+    }
+
+    #[test]
+    fn faction_for_point_always_resolves_to_a_faction() {
+        // factions(0) is non-empty, so every point maps to a nearest faction.
+        assert!(faction_for_point(0.5, 0.5).is_some());
+        assert!(faction_for_point(0.0, 0.0).is_some());
+        assert!(faction_for_point(1.0, 1.0).is_some());
+    }
+}

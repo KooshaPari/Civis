@@ -30,7 +30,7 @@ pub use military_phase::MilitaryPhaseConfig;
 pub use movement::{
     operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
 };
-pub use operational::{NoopOperationalLayer, OperationalLayer};
+pub use operational::{NoopOperationalLayer, OperationalCombatResolver, OperationalLayer, UnitCombatStats};
 pub use pathfinding::{
     astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked,
 };

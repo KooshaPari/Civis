@@ -1616,7 +1616,14 @@ impl Simulation {
     /// food market: a clearing price above baseline (scarcity) drives it up in
     /// proportion to the shortfall; abundance lets it decay toward contentment.
     /// Runs after `phase_economy` so the food price is current.
+    ///
+    /// Hardship also drives people to faith: a fraction of standing unrest feeds
+    /// `belief` each tick. This is a STABILISING negative-feedback arm — the
+    /// faith unrest breeds raises the diplomacy war-threshold that unrest itself
+    /// lowers, nudging the system toward edge-of-chaos rather than runaway war.
     fn phase_unrest(&mut self) {
+        /// Units of standing unrest that generate one unit of belief per tick.
+        const UNREST_FAITH_DIVISOR: u64 = 100;
         let food_price = self
             .market_state
             .prices()
@@ -1625,6 +1632,8 @@ impl Simulation {
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         let delta = unrest_delta(food_price);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
+        let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
+        self.add_belief(faith_from_hardship);
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2811,6 +2820,30 @@ mod tests {
             sim.phase_unrest();
         }
         assert!(sim.unrest() > 0, "persistent scarcity breeds unrest");
+    }
+
+    /// Hardship drives faith: standing unrest feeds belief each tick (the
+    /// stabilising negative-feedback arm). A calm, well-fed society does not.
+    #[test]
+    fn phase_unrest_feeds_belief_under_hardship() {
+        let mut sim = Simulation::with_seed(1);
+        sim.market_state
+            .prices
+            .insert("food".to_string(), FOOD_SCARCITY_BASELINE + 6_000);
+        let belief_before = sim.belief();
+        for _ in 0..20 {
+            sim.phase_unrest();
+        }
+        assert!(
+            sim.belief() > belief_before,
+            "sustained hardship should breed faith"
+        );
+
+        // A calm society (cheap food, zero unrest) breeds no hardship-faith.
+        let mut calm = Simulation::with_seed(1);
+        let calm_belief = calm.belief();
+        calm.phase_unrest();
+        assert_eq!(calm.belief(), calm_belief, "contentment breeds no faith");
     }
 
     #[test]

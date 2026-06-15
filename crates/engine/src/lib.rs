@@ -13,6 +13,7 @@
 
 pub mod disasters;
 pub mod emergence;
+pub mod emergence_metrics;
 pub mod engine;
 pub mod hash_chain;
 pub mod integrity;

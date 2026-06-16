@@ -3595,6 +3595,26 @@ fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
     (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
 }
 
+/// Peace bonus from pairwise cultural similarity (N2 — culture → diplomacy).
+///
+/// Culturally similar factions tolerate more treasury disparity before conflict;
+/// divergent pairs add zero bonus (neutral default).
+fn diplomacy_culture_threshold_bias(
+    cultures: &BTreeMap<u64, CultureProfile>,
+    faction_a: u32,
+    faction_b: u32,
+) -> i64 {
+    let Some(pa) = cultures.get(&u64::from(faction_a)) else {
+        return 0;
+    };
+    let Some(pb) = cultures.get(&u64::from(faction_b)) else {
+        return 0;
+    };
+    let distance = cultural_distance(pa.traits, pb.traits);
+    let similarity = 1.0 - distance;
+    (similarity * CULTURE_PEACE_SPAN).round() as i64
+}
+
 /// Scales every stored relation toward neutral without overshooting zero.
 ///
 /// [`DiplomacyMatrix`] has no native decay; calibrated `apply_signal` calls

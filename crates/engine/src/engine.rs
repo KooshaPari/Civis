@@ -5,8 +5,9 @@
 use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
-    Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
-    PoiKind, PoiRegistry, Position3d, Psyche, Tools, Wardrobe,
+    Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
+    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
+    Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
@@ -383,6 +384,11 @@ pub struct WorldState {
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
+    /// Pairwise faction relations in `[-1.0, 1.0]` (alliance .. rivalry). EMERGES from
+    /// trade/conflict history in [`Simulation::phase_diplomacy`] and biases future
+    /// diplomacy thresholds. `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub faction_relations: DiplomacyMatrix,
     pub resources: Resources,
 }
 
@@ -465,6 +471,7 @@ impl Default for WorldState {
                     volume: Fixed::from_num(8),
                 },
             ],
+            faction_relations: DiplomacyMatrix::default(),
             resources: Resources::default(),
         }
     }
@@ -1215,6 +1222,17 @@ impl Simulation {
     #[must_use]
     pub fn cohesion(&self) -> u64 {
         self.state.cohesion
+    }
+
+    /// Pairwise faction relation score in `[-1.0, 1.0]` (positive = alliance,
+    /// negative = rivalry). Returns `0.0` when no history exists for the pair.
+    #[must_use]
+    pub fn faction_relation(&self, a: u32, b: u32) -> f32 {
+        self.state
+            .faction_relations
+            .record(ClusterId(u64::from(a)), ClusterId(u64::from(b)))
+            .map(|record| record.score)
+            .unwrap_or(0.0)
     }
 
     /// Persistent dispossessed underclass share (per-mille, 0..=1000), updated
@@ -2459,13 +2477,24 @@ impl Simulation {
         };
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
-        let conflict_threshold =
-            Fixed::from_num(diplomacy_conflict_threshold(self.belief().saturating_add(self.cohesion()), self.unrest()));
+        // Emergent pairwise relations further bias the threshold: allies tolerate
+        // more disparity, rivals clash sooner (FR-CIV-0100 multi-polity emergence).
+        let relation = self.faction_relation(a, b);
+        let base_threshold = diplomacy_conflict_threshold(
+            self.belief().saturating_add(self.cohesion()),
+            self.unrest(),
+        );
+        let conflict_threshold = Fixed::from_num(
+            (base_threshold + diplomacy_relation_threshold_bias(relation))
+                .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
+        );
         let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
         } else {
             DiplomacyKind::TradeAgreement
         };
+        let cluster_a = ClusterId(u64::from(a));
+        let cluster_b = ClusterId(u64::from(b));
         match kind {
             DiplomacyKind::TradeAgreement => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -2474,6 +2503,14 @@ impl Simulation {
                 if let Some(v) = self.state.faction_treasury.get_mut(&b) {
                     *v += Fixed::from_num(100);
                 }
+                self.state.faction_relations.apply_signal(
+                    cluster_a,
+                    cluster_b,
+                    DiplomacySignal {
+                        trade_volume: FACTION_TRADE_RELATION_SIGNAL,
+                        ..Default::default()
+                    },
+                );
             }
             DiplomacyKind::Conflict => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -2482,6 +2519,14 @@ impl Simulation {
                 if let Some(v) = self.state.faction_treasury.get_mut(&b) {
                     *v -= Fixed::from_num(50);
                 }
+                self.state.faction_relations.apply_signal(
+                    cluster_a,
+                    cluster_b,
+                    DiplomacySignal {
+                        resource_competition: FACTION_CONFLICT_RELATION_SIGNAL,
+                        ..Default::default()
+                    },
+                );
             }
             DiplomacyKind::Peace => {}
         }
@@ -3070,6 +3115,12 @@ fn cohesion_trade_factor(cohesion: u64) -> Fixed {
 /// Wealth-disparity (in whole currency units) at which two factions clash when
 /// they share no faith. Above this gap the have-nots turn on the haves.
 const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+/// Trade-agreement relation drift (+0.05) via [`DiplomacyMatrix`] trade channel.
+const FACTION_TRADE_RELATION_SIGNAL: f32 = 0.05 / 0.08;
+/// Conflict relation drift (-0.1) via [`DiplomacyMatrix`] competition channel.
+const FACTION_CONFLICT_RELATION_SIGNAL: f32 = 0.1 / 0.12;
+/// Max threshold shift from a saturated pairwise relation score (`±1.0`).
+const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 /// Belief units required to raise the conflict threshold by one currency unit.
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a
@@ -3093,6 +3144,11 @@ fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
     let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
     let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
     (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
+}
+
+/// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
+fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
+    (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -4414,6 +4470,88 @@ mod tests {
         assert_eq!(
             sim.diplomacy_events().last().expect("a diplomacy event").kind,
             DiplomacyKind::TradeAgreement
+        );
+    }
+
+    /// FR-CIV-0100 — repeated peer trade builds a positive emergent relation.
+    #[test]
+    fn faction_relations_build_from_diplomacy() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[0];
+        let b = ids[1];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(5_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(5_000));
+
+        for round in 0..8 {
+            sim.state.tick = 500 + u64::from(round) * 500;
+            sim.phase_diplomacy();
+        }
+
+        assert!(
+            sim.faction_relation(a, b) > 0.0,
+            "peer trade history should raise the pair relation above neutral"
+        );
+    }
+
+    /// FR-CIV-0100 — allied factions tolerate wealth disparity that would otherwise conflict.
+    #[test]
+    fn allies_tolerate_disparity() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(12_000));
+        sim.state.faction_relations.apply_signal(
+            ClusterId(u64::from(a)),
+            ClusterId(u64::from(b)),
+            DiplomacySignal {
+                trade_volume: 12.5,
+                ..Default::default()
+            },
+        );
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement,
+            "allies should tolerate disparity that exceeds the base conflict threshold"
+        );
+    }
+
+    /// FR-CIV-0100 — rival factions clash at disparities peers would trade through.
+    #[test]
+    fn rivals_clash_sooner() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(4_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(10_000));
+        sim.state.faction_relations.apply_signal(
+            ClusterId(u64::from(a)),
+            ClusterId(u64::from(b)),
+            DiplomacySignal {
+                resource_competition: 8.34,
+                ..Default::default()
+            },
+        );
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict,
+            "rivals should fight at a disparity below the base conflict threshold"
         );
     }
 

@@ -324,6 +324,12 @@ pub struct WorldState {
     /// saves loadable.
     #[serde(default)]
     pub tech_unlocks: u64,
+    /// Persistent dispossessed underclass share (per-mille, 0..=1000). EMERGES
+    /// from sustained wealth inequality with hysteresis via
+    /// [`Simulation::phase_stratification`]. Distinct from the instantaneous
+    /// [`inequality_unrest`] term. `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub dispossessed_permille: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -347,6 +353,7 @@ impl Default for WorldState {
             unrest: 0,
             cohesion: 0,
             tech_unlocks: 0,
+            dispossessed_permille: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1156,6 +1163,13 @@ impl Simulation {
         self.state.cohesion
     }
 
+    /// Persistent dispossessed underclass share (per-mille, 0..=1000), updated
+    /// each tick by [`Simulation::phase_stratification`].
+    #[must_use]
+    pub fn dispossessed_permille(&self) -> u64 {
+        self.state.dispossessed_permille
+    }
+
     /// Discrete technology unlocks reached so far (irreversible bitmask).
     #[must_use]
     pub fn tech_unlocks(&self) -> u64 {
@@ -1315,6 +1329,7 @@ impl Simulation {
         self.phase_belief();
         self.phase_unrest();
         self.phase_cohesion();
+        self.phase_stratification();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1687,7 +1702,8 @@ impl Simulation {
         let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion)
             + energy_scarcity_unrest(self.state.energy_budget_joules)
             + overcrowding_unrest(self.state.population, self.carrying_capacity())
-            + inequality_unrest(treasury_spread);
+            + inequality_unrest(treasury_spread)
+            + dispossession_unrest(self.state.dispossessed_permille);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -1701,6 +1717,18 @@ impl Simulation {
     fn phase_cohesion(&mut self) {
         let delta = cohesion_delta(self.state.belief, self.state.unrest);
         self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
+    }
+
+    /// Social-stratification phase (FR-CIV-0100 §3 emergence). A persistent
+    /// dispossessed underclass share EMERGES from sustained wealth inequality,
+    /// moving slowly toward its equilibrium (hysteresis) so class structure
+    /// persists rather than tracking the gap instantly. Runs after
+    /// `phase_cohesion` so cohesion can erode the target. Clamped to [0, 1000].
+    fn phase_stratification(&mut self) {
+        let treasury_spread = faction_treasury_spread(&self.state.faction_treasury);
+        let target = dispossession_target_permille(treasury_spread, self.state.cohesion);
+        self.state.dispossessed_permille =
+            dispossession_step(self.state.dispossessed_permille, target);
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2568,6 +2596,32 @@ fn inequality_unrest(treasury_spread: i64) -> i64 {
     (treasury_spread / SPREAD_PER_UNREST).clamp(0, MAX_INEQUALITY_UNREST)
 }
 
+/// The dispossessed share (per-mille) that a society TENDS TOWARD given its
+/// wealth gap and social fabric: inequality pushes it up, cohesion pulls it
+/// down. Clamped to [0, 1000].
+fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
+    const SPREAD_PER_PERMILLE: i64 = 200; // currency-units of gap per +1 permille
+    let from_inequality = (treasury_spread.max(0) / SPREAD_PER_PERMILLE) as u64;
+    let from_cohesion = cohesion / 5_000; // cohesion erodes dispossession
+    from_inequality.saturating_sub(from_cohesion).min(1_000)
+}
+
+/// One sticky step of the dispossessed share toward its target (max 5 permille
+/// per tick), so the class structure persists rather than tracking instantly.
+fn dispossession_step(current: u64, target: u64) -> u64 {
+    const MAX_STEP: u64 = 5;
+    if target > current {
+        (current + MAX_STEP.min(target - current)).min(1_000)
+    } else {
+        current - MAX_STEP.min(current - target)
+    }
+}
+
+/// A large dispossessed underclass adds unrest, scaled by its share, capped.
+fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
+    (dispossessed_permille / 40).min(25) as i64
+}
+
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// unrest — advanced food logistics (storage, distribution) blunt the
 /// scarcity-driven rise. Only the positive (rising) part is damped; decay is
@@ -3129,6 +3183,35 @@ mod tests {
         assert_eq!(inequality_unrest(0), 0);
         assert_eq!(inequality_unrest(4_000), 2);
         assert_eq!(inequality_unrest(1_000_000), 25, "capped per tick");
+    }
+
+    /// FR-CIV-0100 §3 — dispossession target rises with inequality, falls with cohesion.
+    #[test]
+    fn dispossession_target_rises_with_inequality_falls_with_cohesion() {
+        let high_gap = dispossession_target_permille(20_000, 0);
+        let no_gap = dispossession_target_permille(0, 0);
+        assert!(high_gap > no_gap, "inequality pushes dispossession up");
+        let cohesive = dispossession_target_permille(20_000, 10_000_000);
+        assert!(cohesive < high_gap, "cohesion erodes dispossession");
+        assert!(high_gap <= 1_000);
+        assert!(cohesive <= 1_000);
+        assert!(no_gap <= 1_000);
+    }
+
+    /// FR-CIV-0100 §3 — dispossessed share moves at most 5 permille per tick.
+    #[test]
+    fn dispossession_step_is_sticky() {
+        assert_eq!(dispossession_step(0, 1_000), 5);
+        assert_eq!(dispossession_step(100, 0), 95);
+        assert_eq!(dispossession_step(50, 50), 50);
+    }
+
+    /// FR-CIV-0100 §3 — dispossession unrest scales with share and caps at 25.
+    #[test]
+    fn dispossession_unrest_scales_and_caps() {
+        assert_eq!(dispossession_unrest(0), 0);
+        assert!(dispossession_unrest(400) > 0);
+        assert!(dispossession_unrest(1_000) <= 25);
     }
 
     /// faction_treasury_spread is the richest-minus-poorest gap (0 when empty).

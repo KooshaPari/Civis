@@ -665,4 +665,35 @@ mod tests {
         let err = list_saves_browser(&missing).expect_err("missing dir should error");
         assert_eq!(err.code, error_code::INTERNAL_ERROR);
     }
+
+    #[test]
+    fn save_type_for_name_classifies() {
+        assert_eq!(save_type_for_name("slot-1"), "slot");
+        assert_eq!(save_type_for_name("autosave"), "auto");
+        assert_eq!(save_type_for_name("autosave-3"), "auto");
+        assert_eq!(save_type_for_name("my-game"), "manual");
+    }
+
+    #[test]
+    fn save_archive_path_builds_and_rejects() {
+        use std::path::Path;
+        let dir = Path::new("/tmp/saves");
+        let p = save_archive_path(dir, "mygame").expect("ok");
+        assert!(p.to_string_lossy().ends_with("mygame.civsave.zst"));
+        assert!(save_archive_path(dir, "").is_err());
+        assert!(save_archive_path(dir, "../escape").is_err());
+        assert!(save_archive_path(dir, "a/b").is_err());
+    }
+
+    #[test]
+    fn parse_slot_name_params_extracts_and_validates() {
+        use serde_json::json;
+        let ok = parse_slot_name_params(Some(&json!({"slot_name":"slot-1"})));
+        assert!(ok.is_ok());
+        assert_eq!(ok.unwrap(), "slot-1");
+        assert!(parse_slot_name_params(None).is_err());
+        assert!(parse_slot_name_params(Some(&json!({}))).is_err());
+        assert!(parse_slot_name_params(Some(&json!({"slot_name":""}))).is_err());
+        assert!(parse_slot_name_params(Some(&json!({"slot_name":"bogus-slot"}))).is_err());
+    }
 }

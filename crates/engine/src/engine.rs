@@ -4612,18 +4612,25 @@ mod tests {
         sim.state.belief = 0;
         sim.state.cohesion = 0;
         sim.state.unrest = 0;
-        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
-        let a = ids[500 % ids.len()];
-        let b = ids[(500 + 1) % ids.len()];
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let a = faction_ids[500 % faction_ids.len()];
+        let b = faction_ids[(500 + 1) % faction_ids.len()];
         sim.state.faction_treasury.insert(a, Fixed::from_num(0));
         sim.state.faction_treasury.insert(b, Fixed::from_num(12_000));
-        sim.state.faction_relations.apply_signal(
-            ClusterId(u64::from(a)),
-            ClusterId(u64::from(b)),
-            DiplomacySignal {
-                trade_volume: 12.5,
-                ..Default::default()
-            },
+        for _ in 0..30 {
+            sim.state.faction_relations.apply_signal(
+                ClusterId(u64::from(a)),
+                ClusterId(u64::from(b)),
+                DiplomacySignal {
+                    trade_volume: 12.5,
+                    ..Default::default()
+                },
+            );
+        }
+        assert!(
+            sim.faction_relation(a, b) > 0.5,
+            "allied pair should have a strongly positive relation before diplomacy"
         );
         sim.phase_diplomacy();
         assert_eq!(
@@ -4641,18 +4648,25 @@ mod tests {
         sim.state.belief = 0;
         sim.state.cohesion = 0;
         sim.state.unrest = 0;
-        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
-        let a = ids[500 % ids.len()];
-        let b = ids[(500 + 1) % ids.len()];
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let a = faction_ids[500 % faction_ids.len()];
+        let b = faction_ids[(500 + 1) % faction_ids.len()];
         sim.state.faction_treasury.insert(a, Fixed::from_num(4_000));
         sim.state.faction_treasury.insert(b, Fixed::from_num(10_000));
-        sim.state.faction_relations.apply_signal(
-            ClusterId(u64::from(a)),
-            ClusterId(u64::from(b)),
-            DiplomacySignal {
-                resource_competition: 8.34,
-                ..Default::default()
-            },
+        for _ in 0..30 {
+            sim.state.faction_relations.apply_signal(
+                ClusterId(u64::from(a)),
+                ClusterId(u64::from(b)),
+                DiplomacySignal {
+                    resource_competition: 8.34,
+                    ..Default::default()
+                },
+            );
+        }
+        assert!(
+            sim.faction_relation(a, b) < -0.5,
+            "rival pair should have a strongly negative relation before diplomacy"
         );
         sim.phase_diplomacy();
         assert_eq!(

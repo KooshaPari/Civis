@@ -1648,7 +1648,7 @@ impl Simulation {
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         // Research mitigates the scarcity-driven rise (research -> calmer society).
         // Cohesion damps the remaining rise (cohesion -> calmer society), closing the loop.
-        let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion);
+        let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion) + energy_scarcity_unrest(self.state.energy_budget_joules);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -2429,6 +2429,19 @@ fn unrest_delta(food_price: i64) -> i64 {
     }
 }
 
+/// Downward-causation policy (FR-CIV-0100 §3): energy depletion breeds unrest.
+/// A fully-drained energy budget (blackout) adds a fixed unrest increment this
+/// tick; a solvent budget adds none. An acute shock that bypasses the gradual
+/// food-scarcity damping.
+fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
+    const BLACKOUT_UNREST: i64 = 15;
+    if energy_budget <= Fixed::ZERO {
+        BLACKOUT_UNREST
+    } else {
+        0
+    }
+}
+
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// unrest — advanced food logistics (storage, distribution) blunt the
 /// scarcity-driven rise. Only the positive (rising) part is damped; decay is
@@ -2953,6 +2966,14 @@ mod tests {
         assert!(mild > 0, "any scarcity raises unrest");
         assert!(severe >= mild, "more scarcity never lowers the rise");
         assert!(severe <= 50, "single-tick rise is capped");
+    }
+
+    /// FR-CIV-0100 §3 — a drained energy budget (blackout) adds unrest; a solvent one does not.
+    #[test]
+    fn energy_scarcity_adds_unrest_only_on_blackout() {
+        assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
+        assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
+        assert!(energy_scarcity_unrest(Fixed::from_num(-5)) > 0);
     }
 
     /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer

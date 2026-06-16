@@ -1697,12 +1697,19 @@ impl Simulation {
     fn phase_belief(&mut self) {
         /// People required to generate one unit of belief per tick.
         const BELIEF_POP_DIVISOR: u64 = 2_000;
+        /// Belief fades without renewal: a small proportional decay gives a dynamic
+        /// equilibrium (worship inflow vs decay) instead of unbounded growth.
+        const BELIEF_DECAY_DIVISOR: u64 = 500;
         let worship = self.state.population / BELIEF_POP_DIVISOR;
         self.state.belief = self.state.belief.saturating_add(worship);
         self.state.belief = self
             .state
             .belief
             .saturating_add(self.state.temple_level as u64);
+        self.state.belief = self
+            .state
+            .belief
+            .saturating_sub(self.state.belief / BELIEF_DECAY_DIVISOR);
     }
 
     /// Social-unrest phase (FR-CIV-0100 §3 emergence). Unrest EMERGES from the
@@ -1745,8 +1752,15 @@ impl Simulation {
     /// discontent and decays when discontent dominates. Runs after `phase_unrest`
     /// so it sees the current tick's unrest. Floored at zero.
     fn phase_cohesion(&mut self) {
+        /// Cohesion frays without reinforcement: proportional decay yields a
+        /// dynamic equilibrium (belief bind vs unrest fray vs decay).
+        const COHESION_DECAY_DIVISOR: u64 = 500;
         let delta = cohesion_delta(self.state.belief, self.state.unrest);
         self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
+        self.state.cohesion = self
+            .state
+            .cohesion
+            .saturating_sub(self.state.cohesion / COHESION_DECAY_DIVISOR);
     }
 
     /// Social-stratification phase (FR-CIV-0100 §3 emergence). A persistent
@@ -3945,6 +3959,32 @@ mod tests {
         assert!(
             sim.belief() > before,
             "belief should accrue from a worshipping population"
+        );
+    }
+
+    /// FR-CIV-EMERGENCE — proportional decay prevents unbounded belief growth.
+    #[test]
+    fn belief_decays_toward_equilibrium() {
+        let mut sim = Simulation::new();
+        sim.add_belief(1_000_000);
+        sim.phase_belief();
+        assert!(
+            sim.belief() < 1_000_000,
+            "decay applied; worship/temple inflow is small at default"
+        );
+    }
+
+    /// FR-CIV-0100 — cohesion decays without reinforcement even when delta is zero.
+    #[test]
+    fn cohesion_decays_without_reinforcement() {
+        let mut sim = Simulation::new();
+        sim.state.cohesion = 1_000_000;
+        sim.state.belief = 0;
+        sim.state.unrest = 0;
+        sim.phase_cohesion();
+        assert!(
+            sim.cohesion() < 1_000_000,
+            "with no belief bind and no unrest fray, only decay acts"
         );
     }
 

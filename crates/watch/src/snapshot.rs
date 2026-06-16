@@ -1068,4 +1068,49 @@ mod tests {
         let r = roads(&b);
         assert!(!r.is_empty());
     }
+
+    #[test]
+    fn wrap01_wraps_into_unit_interval() {
+        assert_eq!(wrap01(0.0), 0.0);
+        assert_eq!(wrap01(0.5), 0.5);
+        assert_eq!(wrap01(1.0), 0.0);
+        assert_eq!(wrap01(1.25), 0.25);
+        let w = wrap01(-0.25);
+        assert!((w - 0.75).abs() < 1e-6);
+        assert!((0.0..1.0).contains(&wrap01(7.3)));
+        assert!((0.0..1.0).contains(&wrap01(-7.3)));
+    }
+
+    #[test]
+    fn noise_offset_is_bounded_and_deterministic() {
+        for (s, l) in [(0u64, 0u64), (1, 0), (42, 3), (u64::MAX, 7)] {
+            let n = noise_offset(s, l);
+            assert!(n > -0.05 && n < 0.05, "noise {} out of band", n);
+        }
+        assert_eq!(noise_offset(123, 4), noise_offset(123, 4));
+    }
+
+    #[test]
+    fn resource_demand_never_negative() {
+        let r = civ_engine::Resources::default();
+        for res in [
+            civ_engine::ResourceType::Food,
+            civ_engine::ResourceType::Wood,
+            civ_engine::ResourceType::Metal,
+            civ_engine::ResourceType::Energy,
+        ] {
+            assert!(resource_demand(&r, res) >= 0.0);
+        }
+    }
+
+    #[test]
+    fn trade_routes_one_per_faction_pair() {
+        let f = factions(0);
+        let routes = trade_routes(&f, 0);
+        assert_eq!(routes.len(), f.len() * (f.len() - 1) / 2);
+        let goods = ["grain", "timber", "ore", "cloth", "salt", "tools"];
+        assert!(routes.iter().all(|r| goods.contains(&r.goods.as_str())));
+        assert!(routes.iter().all(|r| r.from_faction != r.to_faction));
+        assert!(routes.iter().all(|r| r.volume >= 8.0 && r.volume < 24.0));
+    }
 }

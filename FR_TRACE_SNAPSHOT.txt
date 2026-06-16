@@ -1,0 +1,181 @@
+FR/NFR TRACEABILITY SNAPSHOT — Civis Rust Workspace
+Generated: 2026-06-16
+Scope: IDs matching FR-CIV*, FR-CORE*, NFR-*, FR-SIM*
+Impl scan: crates/**/*.rs (non-test = src; test = */tests/*, #[cfg(test)], /// Covers)
+Spec scan: FUNCTIONAL_REQUIREMENTS.md, agileplus-specs/**, docs/traceability/**,
+           docs/reference/non-functional-requirements.md
+Method: read-only grep/classify; no cargo build executed
+
+CLASSIFICATION LEGEND
+  COVERED       — spec + non-test impl in crates + test reference in crates
+  IMPL-NO-TEST  — spec + non-test impl in crates, no test reference
+  SPEC-ONLY     — listed in spec sources, no non-test impl in crates
+  CODE-ONLY-no-spec — impl in crates without spec-source hit (traceability debt)
+
+TOTALS BY BUCKET
+  COVERED:              100
+  IMPL-NO-TEST:         2
+  SPEC-ONLY:            394
+  CODE-ONLY-no-spec:    29
+  UNIQUE IDs (scoped):  525
+
+TOP 20 IMPL-NO-TEST GAPS (ranked by impl reference density)
+------------------------------------------------------------------------
+ 1. FR-CIV-PROTO3D
+    spec:  docs/traceability/fr-3d-matrix.md:188
+    impl:  crates/protocol-3d/src/lib.rs:23
+
+ 2. FR-CIV-WEB-003
+    spec:  docs/traceability/fr-web-matrix.md:26
+    impl:  crates/engine/src/spectator.rs:1
+
+COVERED SAMPLE (first 15 alphabetically)
+------------------------------------------------------------------------
+  FR-CIV-0100  test=crates/engine/src/disasters.rs:375
+  FR-CIV-AUDIO-001  test=crates/audio/src/bus.rs:208
+  FR-CIV-AUDIO-002  test=crates/audio/src/ambient.rs:513
+  FR-CIV-AUDIO-003  test=crates/build/tests/fr_matrix_batch12.rs:187
+  FR-CIV-AUDIO-004  test=crates/audio/src/mood.rs:396
+  FR-CIV-AUDIO-005  test=crates/build/tests/fr_matrix_batch12.rs:198
+  FR-CIV-AUDIO-006  test=crates/audio/src/sfx.rs:475
+  FR-CIV-AUDIO-007  test=crates/build/tests/fr_matrix_batch12.rs:210
+  FR-CIV-AUDIO-008  test=crates/build/tests/fr_matrix_batch12.rs:221
+  FR-CIV-CA-001  test=crates/voxel/src/fluid_ca.rs:1473
+  FR-CIV-CA-008  test=crates/voxel/src/fluid_ca.rs:2011
+  FR-CIV-CA-009  test=crates/voxel/src/fluid_ca.rs:2116
+  FR-CIV-DIPLO-001  test=crates/diplomacy/src/lib.rs:894
+  FR-CIV-DIPLO-002  test=crates/diplomacy/src/lib.rs:916
+  FR-CIV-DIPLO-003  test=crates/diplomacy/src/lib.rs:967
+
+SPEC-ONLY EPIC ROLLUP (prefixes with >=5 SPEC-ONLY IDs)
+------------------------------------------------------------------------
+  FR-CIV-TACTICS: 37
+  FR-CIV: 18
+  FR-CIV-SPECIES: 18
+  FR-CIV-AGENTS: 17
+  FR-CIV-DIFFUSION: 16
+  FR-CIV-RESEARCH: 16
+  FR-CIV-BUILD: 14
+  FR-CIV-LIFE: 12
+  FR-CIV-ENGINE-INT: 10
+  FR-CIV-LANG: 10
+  FR-CIV-LAWS: 10
+  FR-CIV-VERIFY: 10
+  FR-CIV-INFRA: 9
+  FR-CIV-ARCH: 8
+  FR-CIV-PSYCHE: 8
+  FR-CIV-VOXEL: 8
+  FR-CIV-WAR: 8
+  FR-CIV-WEB: 8
+  FR-CORE: 8
+  FR-CIV-CA: 7
+  NFR-CIV-PERF: 7
+  FR-CIV-BEVY: 6
+  FR-CIV-DIPLO: 6
+  FR-CIV-GENETICS: 6
+  FR-CIV-LLM: 6
+  FR-CIV-MCP: 6
+  FR-CIV-PLANET: 6
+  FR-CIV-TERRAIN: 6
+  NFR-CIV-MAINT: 6
+  FR-CIV-ECON: 5
+  FR-CIV-ENGINE-REPLAY: 5
+  FR-CIV-FOG: 5
+
+AGILEPLUS-SPECS CROSS-REF (meta.json requirement tokens in scope)
+------------------------------------------------------------------------
+  FR-CIV-ACT-001: SPEC-ONLY
+  FR-CIV-ACTOR-001: SPEC-ONLY
+  FR-CIV-ACTOR-002: SPEC-ONLY
+  FR-CIV-BEVY-016: SPEC-ONLY
+  FR-CIV-BEVY-022: SPEC-ONLY
+  FR-CIV-BEVY-025: SPEC-ONLY
+  FR-CIV-BIO-001: SPEC-ONLY
+  FR-CIV-BIO-002: SPEC-ONLY
+  FR-CIV-BIO-003: SPEC-ONLY
+  FR-CIV-BUILD-001: SPEC-ONLY
+  FR-CIV-BUILD-002: SPEC-ONLY
+  FR-CIV-BUILD-003: SPEC-ONLY
+  FR-CIV-CA-001: COVERED
+  FR-CIV-CA-002: SPEC-ONLY
+  FR-CIV-CA-003: SPEC-ONLY
+  FR-CIV-CA-004: SPEC-ONLY
+  FR-CIV-CA-005: SPEC-ONLY
+  FR-CIV-CLIENT-GODOT-001: SPEC-ONLY
+  FR-CIV-CLIENT-GODOT-002: SPEC-ONLY
+  FR-CIV-CLIMATE-001: SPEC-ONLY
+  FR-CIV-CLIMATE-002: SPEC-ONLY
+  FR-CIV-CLIMATE-003: SPEC-ONLY
+  FR-CIV-CULT-001: SPEC-ONLY
+  FR-CIV-CULT-002: SPEC-ONLY
+  FR-CIV-CULT-003: SPEC-ONLY
+  FR-CIV-DIPLO-001: COVERED
+  FR-CIV-DIPLO-002: COVERED
+  FR-CIV-DIPLO-003: COVERED
+  FR-CIV-DOMAIN-CTX-CATALOG: NOT-IN-SCAN
+  FR-CIV-DOMAIN-NOUN-DRIFT: NOT-IN-SCAN
+  FR-CIV-ECON-001-MARKET: SPEC-ONLY
+  FR-CIV-ECON-002-JOULE: SPEC-ONLY
+  FR-CIV-ECON-004: SPEC-ONLY
+  FR-CIV-EMERG-001: COVERED
+  FR-CIV-EMERG-002: SPEC-ONLY
+  FR-CIV-EMERG-003: COVERED
+  FR-CIV-EMERG-004: SPEC-ONLY
+  FR-CIV-EMERG-005: SPEC-ONLY
+  FR-CIV-EMERGENCE-001: COVERED
+  FR-CIV-FOG-001: SPEC-ONLY
+  FR-CIV-FOG-002: SPEC-ONLY
+  FR-CIV-FOG-003: SPEC-ONLY
+  FR-CIV-FOG-004: SPEC-ONLY
+  FR-CIV-FOG-005: SPEC-ONLY
+  FR-CIV-GOV-001: COVERED
+  FR-CIV-GOV-002: SPEC-ONLY
+  FR-CIV-HUD-001: COVERED
+  FR-CIV-HUD-002: COVERED
+  FR-CIV-HUD-003: COVERED
+  FR-CIV-HUD-004: COVERED
+  FR-CIV-HUD-005: COVERED
+  FR-CIV-MCP-001: SPEC-ONLY
+  FR-CIV-MCP-002: SPEC-ONLY
+  FR-CIV-MCP-003: SPEC-ONLY
+  FR-CIV-MCP-004: SPEC-ONLY
+  FR-CIV-MCP-005: SPEC-ONLY
+  FR-CIV-MCP-006: SPEC-ONLY
+  FR-CIV-PLANET-020: COVERED
+  FR-CIV-PLANET-030: COVERED
+  FR-CIV-PLANET-060: COVERED
+  FR-CIV-SOCIAL-001: SPEC-ONLY
+  FR-CIV-SOCIAL-002: SPEC-ONLY
+  FR-CIV-TACTICS-100: SPEC-ONLY
+  FR-CIV-TACTICS-101: SPEC-ONLY
+  FR-CIV-TACTICS-102: SPEC-ONLY
+  FR-CIV-TERRAIN-001: SPEC-ONLY
+  FR-CIV-TERRAIN-002: SPEC-ONLY
+  FR-CIV-TERRAIN-003: SPEC-ONLY
+  FR-CIV-TERRAIN-004: SPEC-ONLY
+  FR-CIV-TERRAIN-005: SPEC-ONLY
+  FR-CIV-TERRAIN-006: SPEC-ONLY
+  FR-CIV-UBIQ-LANG-RECONCILE: NOT-IN-SCAN
+  FR-CIV-UX-005: SPEC-ONLY
+  FR-CIV-VERIFY-001: SPEC-ONLY
+  FR-CIV-VERIFY-002: SPEC-ONLY
+  FR-CIV-VERIFY-003: SPEC-ONLY
+  FR-CIV-VERIFY-004: SPEC-ONLY
+  FR-CIV-VERIFY-005: SPEC-ONLY
+  FR-CIV-VERIFY-006: SPEC-ONLY
+  FR-CIV-VERIFY-007: SPEC-ONLY
+  FR-CIV-VERIFY-008: SPEC-ONLY
+  FR-CIV-VERIFY-009: SPEC-ONLY
+  FR-CIV-VERIFY-010: SPEC-ONLY
+  FR-CIV-WAR-001: SPEC-ONLY
+  FR-CIV-WAR-002: SPEC-ONLY
+  FR-CIV-WAR-003: SPEC-ONLY
+  FR-CIV-WAR-004: SPEC-ONLY
+  FR-CIV-XDD-METHODOLOGY-PLAN: NOT-IN-SCAN
+  FR-CORE-001: SPEC-ONLY
+  FR-CORE-002: SPEC-ONLY
+  FR-CORE-003: SPEC-ONLY
+  FR-CORE-004: SPEC-ONLY
+  FR-CORE-005: COVERED
+  FR-CORE-006: COVERED
+  FR-CORE-007: SPEC-ONLY

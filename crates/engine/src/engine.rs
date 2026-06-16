@@ -329,6 +329,11 @@ pub struct WorldState {
     /// saves loadable.
     #[serde(default)]
     pub unrest: u64,
+    /// Per-faction accumulated unrest (0 = content). EMERGES from each faction's
+    /// own wealth/scarcity shadow via [`Simulation::phase_faction_unrest`].
+    /// `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub faction_unrest: HashMap<u32, u64>,
     /// Accumulated social cohesion — the strength of the shared social fabric.
     /// EMERGES from collective belief (shared faith binds) and frays under
     /// unrest (disorder loosens bonds). A stabilising counterweight to unrest.
@@ -400,6 +405,7 @@ impl Default for WorldState {
             research_progress: 0,
             belief: 0,
             unrest: 0,
+            faction_unrest: HashMap::new(),
             cohesion: 0,
             tech_unlocks: 0,
             dispossessed_permille: 0,
@@ -1216,6 +1222,14 @@ impl Simulation {
         self.state.unrest
     }
 
+    /// Per-faction unrest for `faction_id`, driven each tick by
+    /// [`Simulation::phase_faction_unrest`] from that faction's wealth/scarcity
+    /// shadow. Missing factions read as zero (content).
+    #[must_use]
+    pub fn faction_unrest(&self, faction_id: u32) -> u64 {
+        self.state.faction_unrest.get(&faction_id).copied().unwrap_or(0)
+    }
+
     /// Accumulated social cohesion, generated each tick by
     /// [`Simulation::phase_cohesion`] from belief minus unrest. Higher means a
     /// stronger shared social fabric.
@@ -1427,6 +1441,7 @@ impl Simulation {
         self.phase_tech();
         self.phase_belief();
         self.phase_unrest();
+        self.phase_faction_unrest();
         self.phase_cohesion();
         self.phase_social_mood();
         self.phase_stratification();
@@ -1827,6 +1842,32 @@ impl Simulation {
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
+    }
+
+    /// Per-faction unrest phase (FR-CIV-0100 §3 emergence). Each faction's
+    /// unrest EMERGES from its own wealth/scarcity shadow — mirroring global
+    /// food-scarcity unrest but keyed to treasury and food holdings. Runs after
+    /// `phase_unrest` so global and per-polity unrest layers stay ordered.
+    fn phase_faction_unrest(&mut self) {
+        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        for id in faction_ids {
+            let treasury = self
+                .state
+                .faction_treasury
+                .get(&id)
+                .copied()
+                .unwrap_or_default();
+            let resources = self
+                .state
+                .faction_resources
+                .get(&id)
+                .cloned()
+                .unwrap_or_default();
+            let shadow = faction_wealth_scarcity_shadow(treasury, &resources);
+            let delta = faction_unrest_delta_from_shadow(shadow);
+            let entry = self.state.faction_unrest.entry(id).or_insert(0);
+            *entry = (*entry as i64 + delta).max(0) as u64;
+        }
     }
 
     /// Social-cohesion phase (FR-CIV-0100 §3 emergence). The shared social fabric
@@ -2480,9 +2521,10 @@ impl Simulation {
         // Emergent pairwise relations further bias the threshold: allies tolerate
         // more disparity, rivals clash sooner (FR-CIV-0100 multi-polity emergence).
         let relation = self.faction_relation(a, b);
+        let pair_unrest = self.faction_unrest(a).max(self.faction_unrest(b));
         let base_threshold = diplomacy_conflict_threshold(
             self.belief().saturating_add(self.cohesion()),
-            self.unrest(),
+            pair_unrest,
         );
         let conflict_threshold = Fixed::from_num(
             (base_threshold + diplomacy_relation_threshold_bias(relation))
@@ -2818,6 +2860,32 @@ fn unrest_delta(food_price: i64) -> i64 {
     } else {
         -DECAY
     }
+}
+
+/// Effective food-price shadow for one faction's local wealth/scarcity (FR-CIV-0100
+/// §3 emergence). Comfortable treasury and food sit at baseline; shortfall pushes
+/// the shadow above baseline so [`unrest_delta`] accrues faction unrest.
+fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64 {
+    const TREASURY_COMFORT: i64 = 8_000;
+    const FOOD_COMFORT: i64 = 80;
+    const FOOD_WEIGHT: i64 = 50;
+
+    let treasury_i = (treasury.raw / crate::SCALE).max(0);
+    let food_i = (resources.food.raw / crate::SCALE).max(0);
+    let comfort = TREASURY_COMFORT + FOOD_COMFORT * FOOD_WEIGHT;
+    let wealth = treasury_i + food_i * FOOD_WEIGHT;
+
+    if wealth >= comfort {
+        FOOD_SCARCITY_BASELINE
+    } else {
+        FOOD_SCARCITY_BASELINE + (comfort - wealth) / 4
+    }
+}
+
+/// Per-tick faction unrest delta from that faction's wealth/scarcity shadow.
+/// Mirrors global food-scarcity [`unrest_delta`].
+fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
+    unrest_delta(scarcity_shadow)
 }
 
 /// Downward-causation policy (FR-CIV-0100 §3): energy depletion breeds unrest.
@@ -4024,6 +4092,67 @@ mod tests {
             sim.phase_unrest();
         }
         assert!(sim.unrest() > 0, "persistent scarcity breeds unrest");
+    }
+
+    /// A faction in local scarcity accrues per-faction unrest each tick.
+    #[test]
+    fn scarce_faction_accrues_unrest() {
+        let mut sim = Simulation::with_seed(1);
+        let id = 0u32;
+        sim.state.faction_treasury.insert(id, Fixed::from_num(0));
+        sim.state.faction_resources.insert(
+            id,
+            Resources {
+                food: Fixed::from_num(5),
+                ..Resources::default()
+            },
+        );
+        for _ in 0..5 {
+            sim.phase_faction_unrest();
+        }
+        assert!(sim.faction_unrest(id) > 0, "scarce faction breeds unrest");
+    }
+
+    /// A wealthy, well-provisioned faction stays at zero per-faction unrest.
+    #[test]
+    fn wealthy_faction_stays_low_unrest() {
+        let mut sim = Simulation::with_seed(1);
+        let id = 0u32;
+        sim.state.faction_treasury.insert(id, Fixed::from_num(50_000));
+        sim.state.faction_resources.insert(
+            id,
+            Resources {
+                food: Fixed::from_num(200),
+                ..Resources::default()
+            },
+        );
+        for _ in 0..5 {
+            sim.phase_faction_unrest();
+        }
+        assert_eq!(sim.faction_unrest(id), 0, "wealthy faction stays content");
+    }
+
+    /// High per-faction unrest erodes the diplomacy war threshold so a restless
+    /// polity fights at a smaller wealth disparity.
+    #[test]
+    fn high_faction_unrest_lowers_conflict_threshold() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let a = faction_ids[(sim.state.tick as usize) % faction_ids.len()];
+        let b = faction_ids[((sim.state.tick as usize) + 1) % faction_ids.len()];
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.faction_treasury.insert(a, Fixed::from_num(4_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(10_000));
+        sim.state.faction_unrest.insert(a, 500_000);
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict,
+            "high faction unrest should lower the war threshold"
+        );
     }
 
     /// Hardship drives faith: standing unrest feeds belief each tick (the

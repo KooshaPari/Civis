@@ -104,6 +104,15 @@ pub enum ReplayEvent {
         sentience_fraction: f32,
         psyche_stability: f32,
         diplomacy_tension: f32,
+        /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+        #[serde(default)]
+        branching_sigma: f32,
+        /// Normalised edge-of-chaos score for `branching_sigma`.
+        #[serde(default)]
+        branching_sigma_score: f32,
+        /// Charter regime label for `branching_sigma`.
+        #[serde(default)]
+        branching_regime: String,
         /// Reconstructed `emergence_metrics.v1` JSON on the replay
         /// bus (empty for legacy replay logs).
         #[serde(default)]
@@ -438,6 +447,9 @@ impl ReplayLog {
         sentience_fraction: f32,
         psyche_stability: f32,
         diplomacy_tension: f32,
+        branching_sigma: f32,
+        branching_sigma_score: f32,
+        branching_regime: &str,
     ) {
         let bus_json = format_emergence_metrics_event_json(
             tick,
@@ -446,6 +458,9 @@ impl ReplayLog {
             sentience_fraction,
             psyche_stability,
             diplomacy_tension,
+            branching_sigma,
+            branching_sigma_score,
+            branching_regime,
         );
         self.events.push(ReplayEvent::EmergenceMetrics {
             tick,
@@ -454,6 +469,9 @@ impl ReplayLog {
             sentience_fraction,
             psyche_stability,
             diplomacy_tension,
+            branching_sigma,
+            branching_sigma_score,
+            branching_regime: branching_regime.to_string(),
             bus_json,
         });
     }
@@ -479,6 +497,9 @@ impl ReplayLog {
                     sentience_fraction,
                     psyche_stability,
                     diplomacy_tension,
+                    branching_sigma,
+                    branching_sigma_score,
+                    branching_regime,
                     ..
                 } if *event_tick == tick => Some(format_emergence_metrics_event_json(
                     *event_tick,
@@ -487,6 +508,9 @@ impl ReplayLog {
                     *sentience_fraction,
                     *psyche_stability,
                     *diplomacy_tension,
+                    *branching_sigma,
+                    *branching_sigma_score,
+                    branching_regime,
                 )),
                 _ => None,
             })
@@ -709,6 +733,9 @@ fn format_emergence_metrics_event_json(
     sentience_fraction: f32,
     psyche_stability: f32,
     diplomacy_tension: f32,
+    branching_sigma: f32,
+    branching_sigma_score: f32,
+    branching_regime: &str,
 ) -> String {
     serde_json::json!({
         "event": "emergence_metrics.v1",
@@ -719,6 +746,9 @@ fn format_emergence_metrics_event_json(
         "sentience_fraction": sentience_fraction,
         "psyche_stability": psyche_stability,
         "diplomacy_tension": diplomacy_tension,
+        "branching_sigma": branching_sigma,
+        "branching_sigma_score": branching_sigma_score,
+        "branching_regime": branching_regime,
     })
     .to_string()
 }
@@ -768,7 +798,7 @@ mod tests {
     #[test]
     fn emerg_emerg_003_record_emergence_metrics_emits_bus_event() {
         let mut log = ReplayLog::default();
-        log.record_emergence_metrics(50, 0.5, 0.25, 0.0, 1.0, 0.8);
+        log.record_emergence_metrics(50, 0.5, 0.25, 0.0, 1.0, 0.8, 0.95, 0.71, "Edge of chaos (target)");
         let at_tick = log.emergence_metrics_bus_at_tick(50);
         assert_eq!(at_tick.len(), 1);
         assert!(at_tick[0].contains("\"event\":\"emergence_metrics.v1\""));
@@ -799,7 +829,7 @@ mod tests {
         let root_before = log.recompute_running_hash();
         // Record a dashboard event at the boundary; the running_hash
         // must NOT change.
-        log.record_emergence_metrics(50, 0.0, 0.0, 0.0, 1.0, 0.0);
+        log.record_emergence_metrics(50, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, "Subcritical (heat-death risk)");
         let root_after_record = log.recompute_running_hash();
         assert_eq!(
             root_before, root_after_record,

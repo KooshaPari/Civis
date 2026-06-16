@@ -908,3 +908,84 @@ pub(crate) async fn list_remote_mods_handler(
 ) -> Json<Vec<RemoteModEntry>> {
     Json(scan_remote_mod_cache(state.mods_dir.as_ref()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mod_type_label_maps_all_variants() {
+        assert_eq!(mod_type_label(ModType::Policy), "policy");
+        assert_eq!(mod_type_label(ModType::Economic), "economic");
+        assert_eq!(mod_type_label(ModType::Event), "event");
+        assert_eq!(mod_type_label(ModType::Scenario), "scenario");
+    }
+
+    #[test]
+    fn sanitize_mod_filename_accepts_simple_names() {
+        assert_eq!(sanitize_mod_filename("coolmod"), Ok("coolmod".to_string()));
+        assert_eq!(
+            sanitize_mod_filename("coolmod.civmod"),
+            Ok("coolmod".to_string())
+        );
+        assert!(sanitize_mod_filename("").is_err());
+        assert!(sanitize_mod_filename("   ").is_err());
+        assert!(sanitize_mod_filename("../escape").is_err());
+        assert!(sanitize_mod_filename("a/b").is_err());
+        assert!(sanitize_mod_filename(".civmod").is_err());
+    }
+
+    #[test]
+    fn validate_remote_fetch_url_requires_http_or_https() {
+        assert!(validate_remote_fetch_url("https://example.com/mod.zip").is_ok());
+        assert!(validate_remote_fetch_url("http://example.com").is_ok());
+        assert!(validate_remote_fetch_url("").is_err());
+        assert!(validate_remote_fetch_url("ftp://example.com").is_err());
+        assert!(validate_remote_fetch_url("not a url").is_err());
+    }
+
+    #[test]
+    fn sanitize_remote_mod_id_enforces_slug_rules() {
+        assert_eq!(
+            sanitize_remote_mod_id("cool-mod-1"),
+            Ok("cool-mod-1".to_string())
+        );
+        assert!(sanitize_remote_mod_id("").is_err());
+        assert!(sanitize_remote_mod_id("1bad").is_err());
+        assert!(sanitize_remote_mod_id("Bad").is_err());
+        assert!(sanitize_remote_mod_id("has space").is_err());
+        assert!(sanitize_remote_mod_id("a/b").is_err());
+        assert!(sanitize_remote_mod_id("a..b").is_err());
+    }
+
+    #[test]
+    fn url_hash_cache_id_is_deterministic_hex_prefix() {
+        let id = url_hash_cache_id("https://example.com/mod.zip");
+        assert_eq!(id.len(), 16);
+        assert!(id.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(
+            url_hash_cache_id("https://x"),
+            url_hash_cache_id("  https://x  ")
+        );
+        assert_ne!(url_hash_cache_id("https://a"), url_hash_cache_id("https://b"));
+    }
+
+    #[test]
+    fn resolve_remote_cache_id_validates_url_and_resolves_id() {
+        assert!(resolve_remote_cache_id("ftp://x", None).is_err());
+        assert_eq!(
+            resolve_remote_cache_id("https://x", Some("my-mod")).unwrap(),
+            "my-mod"
+        );
+        let auto = resolve_remote_cache_id("https://x", None).unwrap();
+        assert!(auto.starts_with("url-"));
+    }
+
+    #[test]
+    fn is_zip_payload_detects_pk_magic() {
+        assert!(is_zip_payload(b"PK\x03\x04rest"));
+        assert!(!is_zip_payload(b"PK"));
+        assert!(!is_zip_payload(b"NOPE"));
+        assert!(!is_zip_payload(&[]));
+    }
+}

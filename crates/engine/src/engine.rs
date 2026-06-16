@@ -465,23 +465,41 @@ fn hydrate_polities_from_legacy(state: &mut WorldState) {
         .copied()
         .collect();
     for id in ids {
-        let entry = state
-            .polities
-            .entry(id)
-            .or_insert_with(|| PolityMacroState::default_for(id, state));
-        if let Some(name) = state.factions.get(&id) {
-            entry.name.clone_from(name);
+        let name = state.factions.get(&id).cloned();
+        let treasury = state.faction_treasury.get(&id).copied();
+        let resources = state.faction_resources.get(&id).cloned();
+        let unrest = state.faction_unrest.get(&id).copied();
+
+        if !state.polities.contains_key(&id) {
+            state.polities.insert(
+                id,
+                PolityMacroState {
+                    id,
+                    name: name
+                        .clone()
+                        .unwrap_or_else(|| format!("Faction {id}")),
+                    treasury: treasury.unwrap_or_default(),
+                    resources: resources.clone().unwrap_or_default(),
+                    unrest: unrest.unwrap_or(0),
+                    ..PolityMacroState::default()
+                },
+            );
+        }
+
+        let entry = state.polities.get_mut(&id).expect("polity row exists");
+        if let Some(name) = name {
+            entry.name.clone_from(&name);
         } else if entry.name.is_empty() {
             entry.name = format!("Faction {id}");
         }
-        if let Some(treasury) = state.faction_treasury.get(&id) {
-            entry.treasury = *treasury;
+        if let Some(treasury) = treasury {
+            entry.treasury = treasury;
         }
-        if let Some(resources) = state.faction_resources.get(&id) {
-            entry.resources = resources.clone();
+        if let Some(resources) = resources {
+            entry.resources = resources;
         }
-        if let Some(unrest) = state.faction_unrest.get(&id) {
-            entry.unrest = *unrest;
+        if let Some(unrest) = unrest {
+            entry.unrest = unrest;
         }
         entry.id = id;
     }

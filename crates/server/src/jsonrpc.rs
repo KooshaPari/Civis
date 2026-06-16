@@ -2882,4 +2882,59 @@ mod tests {
             Some(error_code::INVALID_PARAMS)
         );
     }
+
+    #[test]
+    fn parse_reset_seed_extracts_u64() {
+        use serde_json::json;
+        assert_eq!(parse_reset_seed(Some(&json!({"seed": 42}))).unwrap(), 42);
+        assert!(parse_reset_seed(None).is_err());
+        assert!(parse_reset_seed(Some(&json!({}))).is_err());
+        assert!(parse_reset_seed(Some(&json!({"seed": "x"}))).is_err());
+    }
+
+    #[test]
+    fn parse_set_speed_params_validates_multiplier() {
+        use serde_json::json;
+        assert_eq!(
+            parse_set_speed_params(Some(&json!({"multiplier": 2}))).unwrap(),
+            2
+        );
+        assert_eq!(
+            parse_set_speed_params(Some(&json!({"multiplier": 0}))).unwrap(),
+            0
+        );
+        assert!(parse_set_speed_params(Some(&json!({"multiplier": 3}))).is_err());
+        assert!(parse_set_speed_params(None).is_err());
+        assert!(parse_set_speed_params(Some(&json!({"multiplier": "x"}))).is_err());
+    }
+
+    #[test]
+    fn parse_role_param_reads_nonempty_role() {
+        use serde_json::json;
+        assert_eq!(
+            parse_role_param(Some(&json!({"role":"operator"}))),
+            Some("operator".to_string())
+        );
+        assert_eq!(parse_role_param(Some(&json!({"role":""}))), None);
+        assert_eq!(parse_role_param(None), None);
+        assert_eq!(parse_role_param(Some(&json!({}))), None);
+    }
+
+    #[test]
+    fn role_allows_operator_enforces_when_required() {
+        use serde_json::json;
+        assert!(role_allows_operator(false, None, None));
+        assert!(role_allows_operator(
+            true,
+            Some(&json!({"role":"operator"})),
+            None
+        ));
+        assert!(role_allows_operator(true, None, Some("operator")));
+        assert!(!role_allows_operator(true, None, None));
+        assert!(!role_allows_operator(
+            true,
+            Some(&json!({"role":"viewer"})),
+            None
+        ));
+    }
 }

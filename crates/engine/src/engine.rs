@@ -4545,7 +4545,7 @@ mod tests {
 
         assert!(
             high_gain > low_gain,
-            "micro trust should boost exporter trade profit (high={high_gain}, low={low_gain})"
+            "micro trust should boost exporter trade profit (high={high_gain:?}, low={low_gain:?})"
         );
     }
 

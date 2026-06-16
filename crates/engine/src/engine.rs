@@ -663,6 +663,18 @@ pub struct Simulation {
     /// Deaths attributed to unmet-need sickness on the most recent life phase
     /// (FR-CIV-LIFE-003); surfaced for the HUD.
     pub(crate) last_life_deaths: u32,
+    /// Position fingerprint from the last `cluster_by_colocation` pass in
+    /// [`Simulation::phase_life`]. When unchanged, all-pairs clustering is
+    /// skipped and cached [`Self::cluster_member_counts`] / [`ClusterMember`]
+    /// components are reused (PERF_OPT #1).
+    life_cluster_position_fingerprint: u64,
+    /// Count of full clustering recomputes in [`Simulation::phase_life`]
+    /// (test-only observability for the clustering skip path).
+    #[cfg(test)]
+    life_clustering_recompute_count: u64,
+    /// When true, always re-run `cluster_by_colocation` (test-only baseline).
+    #[cfg(test)]
+    force_life_cluster_recompute: bool,
     /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
     pub(crate) emergence: crate::emergence::EmergenceState,
     /// Latest emergence-metrics sample (civ-emergence-metrics). Updated by
@@ -878,6 +890,11 @@ impl Simulation {
             cluster_member_counts: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
+            life_cluster_position_fingerprint: 0,
+            #[cfg(test)]
+            life_clustering_recompute_count: 0,
+            #[cfg(test)]
+            force_life_cluster_recompute: false,
             allocator: Allocator::new(42),
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
@@ -945,6 +962,11 @@ impl Simulation {
             cluster_member_counts: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
+            life_cluster_position_fingerprint: 0,
+            #[cfg(test)]
+            life_clustering_recompute_count: 0,
+            #[cfg(test)]
+            force_life_cluster_recompute: false,
             allocator: Allocator::new(seed),
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
@@ -2274,6 +2296,23 @@ impl Simulation {
     /// ChaCha8). No wall-clock or `thread_rng`. Surfaced state (needs, cluster
     /// membership, settlement count, life deaths, cluster stocks) is read by the
     /// sim bridge / HUD.
+    fn life_cluster_position_fingerprint(world: &World) -> u64 {
+        let mut agents: Vec<(u64, i64, i64)> = world
+            .query::<(&AgentCivilian, &Position3d)>()
+            .iter()
+            .map(|(_, (civ, pos))| (civ.id, pos.coord.x, pos.coord.z))
+            .collect();
+        agents.sort_by_key(|(agent_id, _, _)| *agent_id);
+
+        let mut fingerprint = agents.len() as u64;
+        for (agent_id, x, z) in agents {
+            fingerprint = fingerprint
+                .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+                .wrapping_add(agent_id ^ x.rotate_left(17) as u64 ^ z.rotate_left(31) as u64);
+        }
+        fingerprint
+    }
+
     fn phase_life(&mut self) {
         // 1. Ensure every agent carries the life-sim needs + health components.
         let missing: Vec<Entity> = self
@@ -2409,41 +2448,66 @@ impl Simulation {
         self.last_life_deaths = dead.len() as u32;
         self.state.population = self.state.population.saturating_sub(dead.len() as u64);
 
-        // 5. Emergent settlement clustering by co-location.
-        let positions: Vec<(u64, Position3d)> = self
-            .world
-            .query::<(&AgentCivilian, &Position3d)>()
-            .iter()
-            .map(|(_, (civ, pos))| (civ.id, *pos))
-            .collect();
-        let cluster_radius = (0.06 * FIXED_SCALE as f32) as i64;
-        let assignments = cluster_by_colocation(&positions, cluster_radius);
+        // 5. Emergent settlement clustering by co-location. Skip the O(N²)
+        // all-pairs pass when civilian positions are unchanged since the last
+        // recompute (spawn/despawn/movement all change the fingerprint).
+        let fingerprint = Self::life_cluster_position_fingerprint(&self.world);
+        #[cfg(test)]
+        let force_recompute = self.force_life_cluster_recompute;
+        #[cfg(not(test))]
+        let force_recompute = false;
+        let must_recompute_clusters = force_recompute
+            || self.cluster_member_counts.is_empty()
+            || fingerprint != self.life_cluster_position_fingerprint;
 
-        // Map agent id -> entity for component writes.
-        let id_to_entity: HashMap<u64, Entity> = self
-            .world
-            .query::<&AgentCivilian>()
-            .iter()
-            .map(|(e, civ)| (civ.id, e))
-            .collect();
-        let mut cluster_sizes: BTreeMap<u64, u32> = BTreeMap::new();
-        for (agent_id, cluster) in &assignments {
-            *cluster_sizes.entry(cluster.0).or_insert(0) += 1;
-            if let Some(&entity) = id_to_entity.get(agent_id) {
-                let _ = self
-                    .world
-                    .insert_one(entity, ClusterMember { cluster: *cluster });
+        if must_recompute_clusters {
+            #[cfg(test)]
+            {
+                self.life_clustering_recompute_count += 1;
             }
-        }
 
-        // A settlement is an emergent cluster with more than one member.
-        self.last_settlement_count = cluster_sizes.values().filter(|&&n| n > 1).count() as u32;
-        self.cluster_member_counts = cluster_sizes.clone();
+            let positions: Vec<(u64, Position3d)> = self
+                .world
+                .query::<(&AgentCivilian, &Position3d)>()
+                .iter()
+                .map(|(_, (civ, pos))| (civ.id, *pos))
+                .collect();
+            let cluster_radius = (0.06 * FIXED_SCALE as f32) as i64;
+            let assignments = cluster_by_colocation(&positions, cluster_radius);
+
+            // Map agent id -> entity for component writes.
+            let id_to_entity: HashMap<u64, Entity> = self
+                .world
+                .query::<&AgentCivilian>()
+                .iter()
+                .map(|(e, civ)| (civ.id, e))
+                .collect();
+            let mut cluster_sizes: BTreeMap<u64, u32> = BTreeMap::new();
+            for (agent_id, cluster) in &assignments {
+                *cluster_sizes.entry(cluster.0).or_insert(0) += 1;
+                if let Some(&entity) = id_to_entity.get(agent_id) {
+                    let _ = self
+                        .world
+                        .insert_one(entity, ClusterMember { cluster: *cluster });
+                }
+            }
+
+            self.last_settlement_count =
+                cluster_sizes.values().filter(|&&n| n > 1).count() as u32;
+            self.cluster_member_counts = cluster_sizes;
+            self.life_cluster_position_fingerprint = fingerprint;
+        } else {
+            self.last_settlement_count = self
+                .cluster_member_counts
+                .values()
+                .filter(|&&n| n > 1)
+                .count() as u32;
+        }
 
         // 6. Maintain per-cluster (settlement) resource stocks: agents produce
         // into their cluster's shared stock each tick (collective economics).
         let mut next_stocks: BTreeMap<u64, ClusterStocks> = BTreeMap::new();
-        for (cluster_id, size) in &cluster_sizes {
+        for (cluster_id, size) in &self.cluster_member_counts {
             let mut stock = self
                 .cluster_stocks
                 .get(cluster_id)
@@ -4978,6 +5042,81 @@ mod tests {
         }
         assert_eq!(a.settlement_count(), b.settlement_count());
         assert_eq!(a.cluster_stocks(), b.cluster_stocks());
+    }
+
+    fn cluster_assignments_by_agent(sim: &Simulation) -> BTreeMap<u64, u64> {
+        sim.world
+            .query::<(&AgentCivilian, &ClusterMember)>()
+            .iter()
+            .map(|(_, (civ, member))| (civ.id, member.cluster.0))
+            .collect()
+    }
+
+    fn pin_all_civilian_positions(sim: &mut Simulation, pin: WorldCoord) {
+        for (_, (_, pos)) in sim
+            .world
+            .query_mut::<(&AgentCivilian, &mut Position3d)>()
+        {
+            pos.coord = pin;
+        }
+    }
+
+    /// PERF_OPT #1 — cached clustering matches full recompute on a moving population.
+    #[test]
+    fn phase_life_clustering_skip_matches_full_recompute_on_movement() {
+        const TICKS: u32 = 60;
+        let seed = 4242u64;
+
+        let mut cached = Simulation::with_seed(seed);
+        let mut always = Simulation::with_seed(seed);
+        always.force_life_cluster_recompute = true;
+
+        for tick in 0..TICKS {
+            cached.tick();
+            always.tick();
+            assert_eq!(
+                cached.settlement_count(),
+                always.settlement_count(),
+                "settlement_count diverged at tick {tick}"
+            );
+            assert_eq!(
+                cached.cluster_stocks(),
+                always.cluster_stocks(),
+                "cluster_stocks diverged at tick {tick}"
+            );
+            assert_eq!(
+                cluster_assignments_by_agent(&cached),
+                cluster_assignments_by_agent(&always),
+                "cluster assignments diverged at tick {tick}"
+            );
+        }
+    }
+
+    /// PERF_OPT #1 — all-pairs clustering is skipped when no agents move.
+    #[test]
+    fn phase_life_clustering_skipped_when_population_stationary() {
+        let pin = WorldCoord {
+            x: FIXED_SCALE / 2,
+            y: 0,
+            z: FIXED_SCALE / 2,
+        };
+
+        let mut sim = Simulation::with_seed(5150);
+        for _ in 0..5 {
+            pin_all_civilian_positions(&mut sim, pin);
+            sim.tick();
+        }
+        let baseline_recomputes = sim.life_clustering_recompute_count;
+
+        for _ in 0..30 {
+            pin_all_civilian_positions(&mut sim, pin);
+            sim.tick();
+        }
+
+        assert_eq!(
+            sim.life_clustering_recompute_count, baseline_recomputes,
+            "expected clustering to be skipped for a stationary population"
+        );
     }
 
     /// FR-CIV-LIFE-020 — cluster food stocks stay bounded when production is

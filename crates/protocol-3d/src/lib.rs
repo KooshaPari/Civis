@@ -1268,6 +1268,44 @@ mod tests {
         );
     }
 
+    #[test]
+    fn frame3d_binary_round_trips() {
+        let frame = Frame3d::VoxelDelta(VoxelDeltaFrame {
+            tick: 42,
+            deltas: vec![VoxelChunkDelta {
+                event: DirtyChunkEvent {
+                    chunk_id: ChunkId(7),
+                    write_seq: WriteSeq(3),
+                },
+                voxels: vec![MaterialId(0); 16 * 16 * 16],
+            }],
+        });
+        let bytes = encode_frame3d_binary(&frame).expect("encode");
+        assert!(is_frame3d_binary(&bytes));
+        let decoded = decode_frame3d_binary(&bytes).expect("decode");
+        assert_eq!(decoded, frame);
+    }
+
+    #[test]
+    fn is_frame3d_binary_rejects_non_envelope() {
+        assert!(!is_frame3d_binary(b"nope"));
+        assert!(!is_frame3d_binary(&[]));
+        assert!(!is_frame3d_binary(b"xx"));
+    }
+
+    #[test]
+    fn decode_frame3d_binary_rejects_short_and_bad_magic() {
+        assert!(matches!(
+            decode_frame3d_binary(&[0u8; 2]),
+            Err(Frame3dBinaryError::TooShort)
+        ));
+        let buf = vec![0u8; FRAME3D_BINARY_HEADER_LEN + 4];
+        assert!(matches!(
+            decode_frame3d_binary(&buf),
+            Err(Frame3dBinaryError::BadMagic)
+        ));
+    }
+
     // -----------------------------------------------------------
     // FR-CIV-PROTO3D-014..017 — AgentStream parallel envelope.
     // -----------------------------------------------------------

@@ -9,6 +9,7 @@ use civ_agents::{
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
     SocialGraph, Tools, Wardrobe,
 };
+use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
@@ -2735,6 +2736,9 @@ impl Simulation {
         } else {
             treasury_b - treasury_a
         };
+        // N2: read cluster cultures before any mutable diplomacy state borrow.
+        let culture_bias =
+            diplomacy_culture_threshold_bias(&self.emergence.cluster_cultures, a, b);
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
         // Emergent pairwise relations further bias the threshold: allies tolerate
@@ -2746,7 +2750,9 @@ impl Simulation {
             pair_unrest,
         );
         let conflict_threshold = Fixed::from_num(
-            (base_threshold + diplomacy_relation_threshold_bias(relation))
+            (base_threshold
+                + diplomacy_relation_threshold_bias(relation)
+                + culture_bias)
                 .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
         );
         let kind = if disparity >= conflict_threshold {
@@ -3557,6 +3563,8 @@ const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
 const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
 /// Max threshold shift from a saturated pairwise relation score (`±1.0`).
 const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
+/// Max peace bonus from identical pairwise cultural traits (N2 coupling).
+const CULTURE_PEACE_SPAN: f32 = 3_000.0;
 /// Belief units required to raise the conflict threshold by one currency unit.
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a

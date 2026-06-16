@@ -4486,8 +4486,8 @@ mod tests {
         sim.state.faction_treasury.insert(a, Fixed::from_num(5_000));
         sim.state.faction_treasury.insert(b, Fixed::from_num(5_000));
 
-        for round in 0..8 {
-            sim.state.tick = 500 + u64::from(round) * 500;
+        for round in 0..8_u64 {
+            sim.state.tick = 500 + round * 500;
             sim.phase_diplomacy();
         }
 

@@ -377,6 +377,45 @@ mod tests {
     }
 
     #[test]
+    fn from_seed_set_loads_example_seeds() {
+        let set = example_seed_set();
+        let lib = SeedLibrary::from_seed_set(set).expect("valid example set");
+        assert_eq!(lib.len(), 3);
+        let raw = lib.get("raw_organism").expect("raw_organism");
+        let expected = raw_organism_primitive();
+        assert_eq!(raw.divergence, expected.divergence);
+        assert_eq!(raw.genome, expected.genome);
+        assert!(lib.get("human_baseline").is_some());
+        assert!(lib.get("deep_one").is_some());
+    }
+
+    #[test]
+    fn from_seed_set_rejects_duplicate_ids() {
+        let mut set = example_seed_set();
+        set.seeds.push(raw_organism_primitive());
+        let err = SeedLibrary::from_seed_set(set).unwrap_err();
+        assert!(matches!(err, SeedError::DuplicateId(_)));
+    }
+
+    #[test]
+    fn base_dna_clones_seed_genome() {
+        let seed = raw_organism_primitive();
+        let dna = seed.base_dna();
+        assert_eq!(dna.0, seed.genome);
+        assert_eq!(dna.0.len(), seed.dna_length);
+    }
+
+    #[test]
+    fn retain_filters_seeds_by_predicate() {
+        let mut lib = SeedLibrary::from_seed_set(example_seed_set()).expect("load");
+        lib.retain(|id, _| id == "human_baseline" || id == "deep_one");
+        assert_eq!(lib.len(), 2);
+        assert!(lib.get("raw_organism").is_none());
+        assert!(lib.get("human_baseline").is_some());
+        assert!(lib.get("deep_one").is_some());
+    }
+
+    #[test]
     fn example_seed_set_ron_round_trip() {
         let ron_src = ron::to_string(&example_seed_set()).expect("ron serialize");
         let lib = SeedLibrary::from_ron_str(&ron_src).expect("ron parse");

@@ -153,6 +153,19 @@ mod tests {
         assert!(market.prices["food"] < before);
     }
 
+    #[test]
+    fn prices_accessor_returns_same_map_reference() {
+        let mut market = MarketState::default();
+        let ptr_before = market.prices() as *const BTreeMap<String, i64>;
+        market.step(3);
+        market.apply_pressure("food", 500, 100);
+        let ptr_after = market.prices() as *const BTreeMap<String, i64>;
+        assert_eq!(ptr_before, ptr_after);
+        assert_eq!(market.prices().len(), 2);
+        assert_eq!(market.prices().get("food"), market.prices.get("food"));
+        assert_eq!(market.prices().get("energy"), market.prices.get("energy"));
+    }
+
     /// FR-CIV-0100 §3d — price never drops below 1 even under huge surplus.
     #[test]
     fn apply_pressure_floors_price_at_one() {

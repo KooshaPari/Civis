@@ -2010,6 +2010,8 @@ impl Simulation {
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
+    /// Construction debits global wood and metal stockpiles produced by
+    /// [`Simulation::phase_production`]; scarcity throttles expansion.
     fn phase_buildings(&mut self) {
         if self.state.tick % building_cadence(self.research_tier()) != 0 {
             return;
@@ -2023,24 +2025,32 @@ impl Simulation {
             self.state.unrest,
         );
 
-        if [
-            signals.residential,
-            signals.commercial,
-            signals.industrial,
-            signals.civic,
-        ]
-        .iter()
-        .any(|signal| *signal > 0.5)
-        {
-            let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
-            let _ = self.allocator.allocate(
-                &mut self.building_graph,
-                &signals,
-                self.target_era,
-                origin,
-                16,
-            );
+        let pending = building_parcel_count(&signals);
+        if pending == 0 {
+            return;
         }
+        if !building_materials_affordable(
+            self.state.resources.wood,
+            self.state.resources.metal,
+            pending,
+        ) {
+            return;
+        }
+
+        let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
+        let allocated = self.allocator.allocate(
+            &mut self.building_graph,
+            &signals,
+            self.target_era,
+            origin,
+            16,
+        );
+        if allocated.is_empty() {
+            return;
+        }
+        let (wood_cost, metal_cost) = building_material_cost(allocated.len());
+        self.state.resources.wood = self.state.resources.wood.saturating_sub(wood_cost);
+        self.state.resources.metal = self.state.resources.metal.saturating_sub(metal_cost);
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.
@@ -3118,6 +3128,40 @@ fn building_demand_signals(
         industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0),
         civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0),
     }
+}
+
+/// Wood consumed per parcel allocated in [`Simulation::phase_buildings`].
+const BUILDING_WOOD_PER_PARCEL: i64 = 10;
+/// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
+const BUILDING_METAL_PER_PARCEL: i64 = 5;
+
+/// Parcels that would be allocated for saturated demand signals (> 0.5).
+fn building_parcel_count(signals: &DemandSignals) -> usize {
+    [
+        signals.residential,
+        signals.commercial,
+        signals.industrial,
+        signals.civic,
+    ]
+    .iter()
+    .filter(|&&signal| signal > 0.5)
+    .count()
+}
+
+/// Construction material debit for `parcel_count` new parcels.
+fn building_material_cost(parcel_count: usize) -> (Fixed, Fixed) {
+    let n = parcel_count as i64;
+    (
+        Fixed::from_num(BUILDING_WOOD_PER_PARCEL * n),
+        Fixed::from_num(BUILDING_METAL_PER_PARCEL * n),
+    )
+}
+
+/// True when the global stockpile can fund `parcel_count` new parcels.
+/// De-silos `resources.wood` / `resources.metal`, which `phase_production` writes.
+fn building_materials_affordable(wood: Fixed, metal: Fixed, parcel_count: usize) -> bool {
+    let (need_wood, need_metal) = building_material_cost(parcel_count);
+    wood >= need_wood && metal >= need_metal
 }
 
 /// Belief units that contribute one unit of cohesion growth per tick.
@@ -4619,6 +4663,8 @@ mod tests {
     #[test]
     fn phase_buildings_allocates_over_time_when_signals_are_high() {
         let mut sim = Simulation::with_seed(77);
+        sim.state.resources.wood = Fixed::from_num(10_000);
+        sim.state.resources.metal = Fixed::from_num(10_000);
         let before = sim.building_graph().parcels.len();
 
         for _ in 0..200 {
@@ -4626,6 +4672,41 @@ mod tests {
         }
 
         assert!(sim.building_graph().parcels.len() > before);
+    }
+
+    /// FR-CIV-0100 §3 — construction draws down wood/metal; zero stock throttles building.
+    #[test]
+    fn phase_buildings_gated_by_wood_and_metal_stockpile() {
+        let mut sim = Simulation::with_seed(88);
+        sim.state.tick = 16;
+        sim.state.unrest = 500;
+        sim.state.resources.wood = Fixed::ZERO;
+        sim.state.resources.metal = Fixed::ZERO;
+        let before = sim.building_graph().parcels.len();
+        sim.phase_buildings();
+        assert_eq!(
+            sim.building_graph().parcels.len(),
+            before,
+            "zero materials must throttle construction"
+        );
+
+        sim.state.resources.wood = Fixed::from_num(1_000);
+        sim.state.resources.metal = Fixed::from_num(1_000);
+        let wood_before = sim.state.resources.wood;
+        let metal_before = sim.state.resources.metal;
+        sim.phase_buildings();
+        assert!(
+            sim.building_graph().parcels.len() > before,
+            "ample materials must allow construction"
+        );
+        assert!(
+            sim.state.resources.wood < wood_before,
+            "construction must debit wood"
+        );
+        assert!(
+            sim.state.resources.metal < metal_before,
+            "construction must debit metal"
+        );
     }
 
     /// FR-CIV-0200 — research progress accrues emergently from the living

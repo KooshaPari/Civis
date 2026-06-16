@@ -290,6 +290,19 @@ pub enum UnitType {
 // WORLD STATE
 // ============================================================================
 
+/// Dominant economic specialization that EMERGES from the strongest sector
+/// (FR-CIV-0100 §3 emergence). Hysteresis prevents flip-flopping; the active
+/// focus amplifies comparative advantage in production.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum EconomicFocus {
+    #[default]
+    Balanced,
+    Agrarian,
+    Industrial,
+    Sacred,
+    Mercantile,
+}
+
 /// Global world state
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorldState {
@@ -338,6 +351,15 @@ pub struct WorldState {
     /// societal unrest via [`Simulation::phase_institutions`].
     #[serde(default)]
     pub garrison_level: u32,
+    /// Dominant economic focus (FR-CIV-0100 emergence). EMERGES from the
+    /// strongest sector via [`Simulation::phase_economic_focus`], with
+    /// hysteresis so specialization persists.
+    #[serde(default)]
+    pub economic_focus: EconomicFocus,
+    /// Consecutive evaluations the candidate focus has dominated (0..=10).
+    /// Drives hysteresis in [`Simulation::phase_economic_focus`].
+    #[serde(default)]
+    pub focus_pressure: u8,
     /// Notable simulation history (tech breakthroughs, golden/dark ages). EMERGES
     /// from threshold crossings via [`Simulation::phase_chronicle`]. Capped at
     /// [`CHRONICLE_MAX_LEN`]. `#[serde(default)]` keeps older saves loadable.
@@ -375,6 +397,8 @@ impl Default for WorldState {
             dispossessed_permille: 0,
             temple_level: 0,
             garrison_level: 0,
+            economic_focus: EconomicFocus::Balanced,
+            focus_pressure: 0,
             chronicle: Vec::new(),
             chronicle_tech_seen: 0,
             chronicle_age: 0,
@@ -1212,6 +1236,13 @@ impl Simulation {
         self.state.garrison_level
     }
 
+    /// Dominant economic focus, updated each tick by
+    /// [`Simulation::phase_economic_focus`] from sector signals.
+    #[must_use]
+    pub fn economic_focus(&self) -> EconomicFocus {
+        self.state.economic_focus
+    }
+
     /// Discrete technology unlocks reached so far (irreversible bitmask).
     #[must_use]
     pub fn tech_unlocks(&self) -> u64 {
@@ -1379,6 +1410,7 @@ impl Simulation {
         self.phase_cohesion();
         self.phase_stratification();
         self.phase_institutions();
+        self.phase_economic_focus();
         self.phase_chronicle();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
@@ -1824,6 +1856,45 @@ impl Simulation {
         }
     }
 
+    /// Economic specialization phase (FR-CIV-0100 §3 emergence). A dominant
+    /// [`EconomicFocus`] EMERGES from the strongest sector signal, with
+    /// hysteresis so the civilization does not flip-flop each tick. The active
+    /// focus couples back via comparative-advantage bonuses in
+    /// [`Simulation::phase_production`].
+    fn phase_economic_focus(&mut self) {
+        const FOCUS_PRESSURE_THRESHOLD: u8 = 5;
+        const FOCUS_PRESSURE_CAP: u8 = 10;
+
+        let treasury_total = self
+            .state
+            .faction_treasury
+            .values()
+            .map(|t| (t.raw / crate::SCALE).max(0))
+            .sum::<i64>();
+        let food = self.state.resources.food.raw / crate::SCALE;
+        let candidate = candidate_economic_focus(
+            food,
+            self.research_tier(),
+            self.state.belief,
+            treasury_total,
+        );
+
+        if candidate == self.state.economic_focus {
+            self.state.focus_pressure = 0;
+            return;
+        }
+
+        self.state.focus_pressure = self
+            .state
+            .focus_pressure
+            .saturating_add(1)
+            .min(FOCUS_PRESSURE_CAP);
+        if self.state.focus_pressure >= FOCUS_PRESSURE_THRESHOLD {
+            self.state.economic_focus = candidate;
+            self.state.focus_pressure = 0;
+        }
+    }
+
     /// Chronicle phase (FR-CIV-0100 emergence legibility). Records notable history
     /// when tech unlocks advance or society enters a golden/dark age. Deduped via
     /// `chronicle_tech_seen` and `chronicle_age`; length capped at [`CHRONICLE_MAX_LEN`].
@@ -2136,9 +2207,18 @@ impl Simulation {
             }
         }
         let yield_factor = production_yield_factor(self.research_tier());
-        self.state.resources.food += food * yield_factor;
+        let focus_bonus = Fixed::from_num(11) / Fixed::from_num(10);
+        let mut food_out = food * yield_factor;
+        let mut metal_out = metal * yield_factor;
+        if self.state.economic_focus == EconomicFocus::Agrarian {
+            food_out *= focus_bonus;
+        }
+        if self.state.economic_focus == EconomicFocus::Industrial {
+            metal_out *= focus_bonus;
+        }
+        self.state.resources.food += food_out;
         self.state.resources.wood += wood * yield_factor;
-        self.state.resources.metal += metal * yield_factor;
+        self.state.resources.metal += metal_out;
         self.state.resources.energy += energy * yield_factor;
     }
 
@@ -2678,6 +2758,32 @@ fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
         BLACKOUT_UNREST
     } else {
         0
+    }
+}
+
+/// The economic focus a civilization tends toward, from its strongest sector.
+fn candidate_economic_focus(
+    food: i64,
+    research_tier: u64,
+    belief: u64,
+    treasury_total: i64,
+) -> EconomicFocus {
+    let agr = food;
+    let ind = (research_tier as i64) * 50_000;
+    let sac = (belief / 4) as i64;
+    let mer = treasury_total / 4;
+    let max = agr.max(ind).max(sac).max(mer);
+    if max <= 0 {
+        return EconomicFocus::Balanced;
+    }
+    if max == agr {
+        EconomicFocus::Agrarian
+    } else if max == ind {
+        EconomicFocus::Industrial
+    } else if max == sac {
+        EconomicFocus::Sacred
+    } else {
+        EconomicFocus::Mercantile
     }
 }
 
@@ -3414,6 +3520,46 @@ mod tests {
         sim.add_belief(50_000);
         sim.phase_institutions();
         assert!(sim.temple_level() >= 1);
+    }
+
+    /// candidate_economic_focus picks the strongest normalized sector; ties -> Balanced.
+    #[test]
+    fn candidate_focus_picks_strongest() {
+        assert_eq!(
+            candidate_economic_focus(1_000_000, 0, 0, 0),
+            EconomicFocus::Agrarian
+        );
+        assert_eq!(
+            candidate_economic_focus(0, 100, 0, 0),
+            EconomicFocus::Industrial
+        );
+        assert_eq!(candidate_economic_focus(0, 0, 0, 0), EconomicFocus::Balanced);
+    }
+
+    /// phase_economic_focus flips only after sustained dominance (hysteresis).
+    #[test]
+    fn economic_focus_has_hysteresis() {
+        let mut sim = Simulation::with_seed(1);
+        assert_eq!(sim.economic_focus(), EconomicFocus::Balanced);
+        sim.state.resources.food = Fixed::from_raw(1_000_000 * crate::SCALE);
+
+        sim.phase_economic_focus();
+        assert_eq!(
+            sim.economic_focus(),
+            EconomicFocus::Balanced,
+            "focus must not flip on the first evaluation"
+        );
+        assert!(sim.state.focus_pressure > 0);
+
+        for _ in 0..4 {
+            sim.phase_economic_focus();
+        }
+        assert_eq!(
+            sim.economic_focus(),
+            EconomicFocus::Agrarian,
+            "focus commits after the hysteresis threshold"
+        );
+        assert_eq!(sim.state.focus_pressure, 0);
     }
 
     /// FR-CIV-0100 §3 — dispossessed share moves at most 5 permille per tick.

@@ -330,6 +330,14 @@ pub struct WorldState {
     /// [`inequality_unrest`] term. `#[serde(default)]` keeps older saves loadable.
     #[serde(default)]
     pub dispossessed_permille: u64,
+    /// Temple institution level (0..=MAX_INSTITUTION_LEVEL). EMERGES from
+    /// accumulated belief via [`Simulation::phase_institutions`].
+    #[serde(default)]
+    pub temple_level: u32,
+    /// Garrison institution level (0..=MAX_INSTITUTION_LEVEL). EMERGES from
+    /// societal unrest via [`Simulation::phase_institutions`].
+    #[serde(default)]
+    pub garrison_level: u32,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -354,6 +362,8 @@ impl Default for WorldState {
             cohesion: 0,
             tech_unlocks: 0,
             dispossessed_permille: 0,
+            temple_level: 0,
+            garrison_level: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1170,6 +1180,20 @@ impl Simulation {
         self.state.dispossessed_permille
     }
 
+    /// Temple institution level (0..=MAX_INSTITUTION_LEVEL), updated each tick
+    /// by [`Simulation::phase_institutions`] from accumulated belief.
+    #[must_use]
+    pub fn temple_level(&self) -> u32 {
+        self.state.temple_level
+    }
+
+    /// Garrison institution level (0..=MAX_INSTITUTION_LEVEL), updated each
+    /// tick by [`Simulation::phase_institutions`] from societal unrest.
+    #[must_use]
+    pub fn garrison_level(&self) -> u32 {
+        self.state.garrison_level
+    }
+
     /// Discrete technology unlocks reached so far (irreversible bitmask).
     #[must_use]
     pub fn tech_unlocks(&self) -> u64 {
@@ -1330,6 +1354,7 @@ impl Simulation {
         self.phase_unrest();
         self.phase_cohesion();
         self.phase_stratification();
+        self.phase_institutions();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1674,6 +1699,10 @@ impl Simulation {
         const BELIEF_POP_DIVISOR: u64 = 2_000;
         let worship = self.state.population / BELIEF_POP_DIVISOR;
         self.state.belief = self.state.belief.saturating_add(worship);
+        self.state.belief = self
+            .state
+            .belief
+            .saturating_add(self.state.temple_level as u64);
     }
 
     /// Social-unrest phase (FR-CIV-0100 §3 emergence). Unrest EMERGES from the
@@ -1703,7 +1732,8 @@ impl Simulation {
             + energy_scarcity_unrest(self.state.energy_budget_joules)
             + overcrowding_unrest(self.state.population, self.carrying_capacity())
             + inequality_unrest(treasury_spread)
-            + dispossession_unrest(self.state.dispossessed_permille);
+            + dispossession_unrest(self.state.dispossessed_permille)
+            - (self.state.garrison_level as i64 * 2);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -1729,6 +1759,25 @@ impl Simulation {
         let target = dispossession_target_permille(treasury_spread, self.state.cohesion);
         self.state.dispossessed_permille =
             dispossession_step(self.state.dispossessed_permille, target);
+    }
+
+    /// Institution phase (FR-CIV-0100 §3 emergence). Leveled Temple and Garrison
+    /// organizations EMERGE from macro signals (belief and unrest), drain
+    /// treasury upkeep, and couple back via `phase_belief` and `phase_unrest`.
+    /// Growth/decay is gradual (one level per tick) with a criticality cap.
+    fn phase_institutions(&mut self) {
+        let temple_target = institution_target_level(self.state.belief, 5_000);
+        self.state.temple_level =
+            institution_step(self.state.temple_level, temple_target);
+        let garrison_target = institution_target_level(self.state.unrest, 200);
+        self.state.garrison_level =
+            institution_step(self.state.garrison_level, garrison_target);
+        if let Some(treasury) = self.state.faction_treasury.values_mut().next() {
+            let upkeep = Fixed::from_num(
+                (self.state.temple_level + self.state.garrison_level) as i64 * 10,
+            );
+            *treasury = (*treasury - upkeep).max(Fixed::from_num(0));
+        }
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
@@ -2606,6 +2655,27 @@ fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
     from_inequality.saturating_sub(from_cohesion).min(1_000)
 }
 
+/// Max institution level (criticality cap on the belief->temple->belief loop).
+pub const MAX_INSTITUTION_LEVEL: u32 = 5;
+
+/// Institution level that a driver signal supports: one level per THRESHOLD of
+/// the signal, capped at MAX_INSTITUTION_LEVEL.
+fn institution_target_level(signal: u64, per_level: u64) -> u32 {
+    (signal / per_level.max(1)).min(MAX_INSTITUTION_LEVEL as u64) as u32
+}
+
+/// One-step decay toward target (max 1 level change per tick, so growth/decay
+/// is gradual — hysteresis).
+fn institution_step(current: u32, target: u32) -> u32 {
+    if target > current {
+        current + 1
+    } else if target < current {
+        current - 1
+    } else {
+        current
+    }
+}
+
 /// One sticky step of the dispossessed share toward its target (max 5 permille
 /// per tick), so the class structure persists rather than tracking instantly.
 fn dispossession_step(current: u64, target: u64) -> u64 {
@@ -3196,6 +3266,33 @@ mod tests {
         assert!(high_gap <= 1_000);
         assert!(cohesive <= 1_000);
         assert!(no_gap <= 1_000);
+    }
+
+    /// institution_target_level caps at MAX_INSTITUTION_LEVEL.
+    #[test]
+    fn institution_target_level_caps() {
+        assert_eq!(institution_target_level(0, 1_000), 0);
+        assert_eq!(
+            institution_target_level(1_000_000, 5_000),
+            MAX_INSTITUTION_LEVEL
+        );
+    }
+
+    /// institution_step moves at most one level per tick toward the target.
+    #[test]
+    fn institution_step_moves_one() {
+        assert_eq!(institution_step(0, 5), 1);
+        assert_eq!(institution_step(5, 0), 4);
+        assert_eq!(institution_step(3, 3), 3);
+    }
+
+    /// phase_institutions grows the temple when belief is high.
+    #[test]
+    fn phase_institutions_grows_temple_with_belief() {
+        let mut sim = Simulation::with_seed(1);
+        sim.add_belief(50_000);
+        sim.phase_institutions();
+        assert!(sim.temple_level() >= 1);
     }
 
     /// FR-CIV-0100 §3 — dispossessed share moves at most 5 permille per tick.

@@ -1,0 +1,425 @@
+================================================================================
+EMERGENCE COUPLING AUDIT — crates/engine/src/engine.rs (+ disasters.rs, emergence.rs)
+================================================================================
+Date: 2026-06-16
+Scope: READ-ONLY static analysis of tick() phase order and WorldState field coupling.
+Charter ref: docs/guides/emergence-charter.md, docs/traceability/emergent-systems-tracelinks.md
+Method: Manual trace of phase_* impls called from Simulation::tick_with_emergence_source.
+
+NOTE: PHASE_ORDER constant (engine.rs:55) lists only the first 14 phases; tick() also
+runs research→tech→belief→unrest→cohesion→social_mood→stratification→institutions→
+economic_focus→chronicle after emergence. Emergence-metrics sampling follows chronicle.
+
+================================================================================
+1. TICK PHASE ORDER (25 phase_* calls + metrics sampler)
+================================================================================
+
+  #  Phase                    Source file
+ --  -----------------------  -----------------
+  1  phase_production         engine.rs:2224
+  2  phase_citizen_lifecycle  engine.rs:2261
+  3  phase_military           engine.rs:2334
+  4  phase_economy            engine.rs:2553  (+ tick_trade_routes)
+  5  phase_planet             engine.rs:1522
+  6  phase_diplomacy          engine.rs:2444
+  7  phase_tactics            engine.rs:1614
+  8  phase_voxel              engine.rs:1682
+  9  phase_compact            engine.rs:1744
+ 10  phase_buildings          engine.rs:1972
+ 11  phase_diffusion          engine.rs:2006
+ 12  phase_disasters          disasters.rs:70
+ 13  phase_life               engine.rs:2042
+ 14  phase_emergence          emergence.rs:135
+ 15  phase_research           engine.rs:1755
+ 16  phase_tech               engine.rs:1771
+ 17  phase_belief             engine.rs:1779
+ 18  phase_unrest             engine.rs:1806
+ 19  phase_cohesion           engine.rs:1837
+ 20  phase_social_mood        engine.rs:1854
+ 21  phase_stratification     engine.rs:1866
+ 22  phase_institutions       engine.rs:1877
+ 23  phase_economic_focus     engine.rs:1899
+ 24  phase_chronicle          engine.rs:1936
+ --  sample_emergence[_with_ca_grid]  emergence_metrics.rs (read-only metrics)
+
+================================================================================
+2. WorldState FIELD INVENTORY (engine.rs:311-393)
+================================================================================
+
+  tick, population, research_progress, belief, unrest, cohesion, tech_unlocks,
+  dispossessed_permille, temple_level, garrison_level, economic_focus,
+  focus_pressure, chronicle, chronicle_tech_seen, chronicle_age,
+  energy_budget_joules, rng_seed, factions, faction_treasury, faction_resources,
+  trade_routes, faction_relations, resources
+
+Derived each tick (not WorldState fields but consumed by phases):
+  research_tier()      := research_progress / 100_000
+  carrying_capacity()  := f(research_tier, tech_unlocks & IRRIGATION/SANITATION)
+  market_state.prices  := stepped in phase_economy (Simulation field)
+  cluster_stocks       := written in phase_life (Simulation field)
+
+================================================================================
+3. PER-PHASE WorldState READS / WRITES
+================================================================================
+
+Legend: R=read W=write -=none  (ECS/voxel/climate omitted unless they feed back)
+
+phase_production
+  R: research_progress (via research_tier), economic_focus, resources (read buildings via ECS)
+  W: resources.{food, wood, metal, energy}
+
+phase_citizen_lifecycle
+  R: tick, population, resources.food, market_state food price (not WorldState)
+  W: population
+
+phase_military
+  R: tick, cohesion, tech_unlocks, rng_seed
+  W: —
+
+phase_economy (+ tick_trade_routes)
+  R: tick, population, research_progress, tech_unlocks, energy_budget_joules,
+     unrest, cohesion, faction_treasury, faction_resources, trade_routes,
+     faction_relations
+  W: energy_budget_joules, faction_treasury, faction_resources
+
+phase_planet
+  R: tick
+  W: —
+
+phase_diplomacy  (cadence: tick % 500 == 0)
+  R: tick, factions, faction_treasury, belief, cohesion, unrest, faction_relations
+  W: faction_treasury, faction_relations
+
+phase_tactics
+  R: tick, rng_seed
+  W: —
+
+phase_voxel / phase_compact
+  R: tick (compact only)
+  W: —
+
+phase_buildings
+  R: tick, population, research_progress, cohesion, unrest, tech_unlocks (via capacity/tier)
+  W: —
+
+phase_diffusion
+  R: tick, rng_seed
+  W: —
+
+phase_disasters
+  R: research_progress (wildfire mitigation via research_tier)
+  W: belief (via trigger_disaster → add_belief(+50); disasters.rs:35-40)
+
+phase_life
+  R: tick, population, rng_seed
+  W: population
+
+phase_emergence  (MOAT; emergence.rs — no WorldState mutation)
+  R: tick, rng_seed, last_births/last_deaths/diplomacy_events (Simulation buffers)
+  W: —
+
+phase_research
+  R: population, cohesion, tech_unlocks, research_progress (tier), ECS Dna (sentience bonus)
+  W: research_progress
+
+phase_tech
+  R: research_progress (tier)
+  W: tech_unlocks (OR-only, monotonic)
+
+phase_belief
+  R: population, temple_level, belief
+  W: belief  (worship inflow + temple_level − belief/500 decay)
+
+phase_unrest
+  R: unrest, garrison_level, dispossessed_permille, population, energy_budget_joules,
+     faction_treasury, cohesion, research_progress, belief (via add_belief hardship)
+  W: unrest, belief  (hardship faith: +unrest/100 per tick)
+
+phase_cohesion
+  R: belief, unrest, cohesion
+  W: cohesion  (cohesion_delta + cohesion/500 decay)
+
+phase_social_mood
+  R: cohesion
+  W: —  (writes ECS Psyche.mood.valence only)
+
+phase_stratification
+  R: faction_treasury, cohesion, dispossessed_permille
+  W: dispossessed_permille
+
+phase_institutions
+  R: belief, unrest, faction_treasury, temple_level, garrison_level
+  W: temple_level, garrison_level, faction_treasury (poorest faction upkeep)
+
+phase_economic_focus
+  R: resources.food, research_progress, belief, faction_treasury,
+     economic_focus, focus_pressure
+  W: economic_focus, focus_pressure
+
+phase_chronicle
+  R: tick, tech_unlocks, cohesion, belief, unrest, chronicle_tech_seen, chronicle_age
+  W: chronicle, chronicle_tech_seen, chronicle_age
+
+tick() preamble
+  W: tick (+1)
+
+================================================================================
+4. COUPLING GRAPH (WorldState + key Simulation fields)
+================================================================================
+
+Nodes: population, research_progress, tech_unlocks, belief, unrest, cohesion,
+       dispossessed_permille, temple_level, garrison_level, economic_focus,
+       faction_treasury, faction_resources, faction_relations, resources,
+       energy_budget_joules, market_food_price*, cluster_stocks*
+
+Directed edges (source → target via named mechanism):
+
+PHYSICAL / GENOMIC (charter Layer 0 — hardcoded law)
+  climate/weather ──► phase_disasters ──► belief (+50/disaster)
+  research_tier ──► wildfire_ignition_temp_fp (mitigation cap +20°C)
+  ECS Dna ──► sentience_research_bonus ──► research_progress
+
+POPULATION HUB
+  population ──► research_progress (÷1000 pop)
+  population ──► belief (÷2000 pop)
+  population ──► carrying_capacity demand ──► market_food_price
+  population ──► overcrowding_unrest ──► unrest
+  population ◄── food_scarcity_birth_factor ◄── market_food_price (phase_citizen_lifecycle)
+  population ◄── phase_life deaths / citizen_lifecycle births
+
+RESEARCH HUB
+  research_progress ──► tech_unlocks (tier gates)
+  research_progress ──► carrying_capacity (+200k/tier; IRRIGATION +200k; SANITATION +300k)
+  research_tier ──► production_yield_factor (cap 2×)
+  research_tier ──► building_cadence (floor 4 ticks)
+  research_tier ──► research_unrest_mitigation (damp rise, tier cap 9)
+  cohesion ──► cohesion_research_bonus_permille (cap +50%) ──► research_progress
+  tech_unlocks.WRITING ──► +1 research/tick
+  tech_unlocks.GUNPOWDER ──► military morale_recovery +0.01
+
+BELIEF HUB
+  belief ──► cohesion_delta bind (÷200)
+  belief ──► diplomacy_conflict_threshold peace (cap +10k)
+  belief ──► institution_target_level ──► temple_level
+  belief ──► candidate_economic_focus (Sacred sector)
+  temple_level ──► belief (+level/tick)
+  unrest ──► belief hardship (+unrest/100, NO per-tick cap)
+  disasters ──► belief (+50)
+  belief ──► divine spend (try_invoke_divine_power, out of tick loop)
+
+UNREST HUB
+  market_food_price ──► unrest_delta (rise cap 50; decay −10)
+  energy_budget_joules≤0 ──► +15 unrest
+  faction_treasury spread ──► inequality_unrest (cap 25/tick)
+  dispossessed_permille ──► dispossession_unrest (cap 25/tick)
+  overcrowding ──► unrest (cap 30/tick)
+  ECS Psyche misery ──► agent_misery_unrest (cap 30/tick) [1-tick lag: psyche updated in emergence before unrest tail]
+  garrison_level ──► −2×level unrest/tick
+  cohesion ──► cohesion_unrest_damp (rise only, divisor cap 9)
+  research_tier ──► research_unrest_mitigation (rise only)
+  unrest ──► cohesion_delta fray (÷50, 4× faster than belief bind)
+  unrest ──► garrison_target
+  unrest ──► unrest_trade_factor (floor 0.5× volume)
+  unrest ──► diplomacy_conflict_threshold war erosion (cap 8k)
+
+COHESION HUB
+  cohesion ──► cohesion_unrest_damp ──► unrest rise
+  cohesion ──► cohesion_research_bonus ──► research
+  cohesion ──► cohesion_trade_factor (cap +50% volume)
+  cohesion ──► morale_recovery_rate (cap 0.05/tick)
+  cohesion ──► dispossession_target erosion (÷5000)
+  cohesion ──► diplomacy threshold (summed with belief)
+  cohesion ──► building_demand commercial signal
+  cohesion ──► phase_social_mood ──► ECS Psyche valence (cap +0.02/tick)
+  cohesion ──► chronicle golden age threshold
+
+STRATIFICATION / INSTITUTIONS
+  faction_treasury spread + cohesion ──► dispossessed_permille target (cap 1000; step ≤5/tick)
+  dispossessed_permille ──► unrest
+  belief/unrest ──► temple_level/garrison_level (cap 5; ±1/tick)
+  temple+garrison ──► faction_treasury drain (10×combined levels, poorest faction)
+
+ECONOMY / DIPLOMACY
+  faction_treasury ──► market demand (pop + Σ treasuries) ──► food/energy prices
+  faction_treasury spread ──► inequality + stratification
+  diplomacy (500-tick) ──► faction_treasury ±50/±100
+  diplomacy ──► faction_relations.apply_signal
+  faction_relations ──► diplomacy threshold bias (±5000)
+  faction_relations ──► relation_trade_factor
+  trade_routes ──► faction_resources + faction_treasury (profit transfer)
+  unrest + cohesion ──► trade volume multipliers
+  economic_focus.Agrarian/Industrial ──► production +10% (Sacred/Mercantile: no bonus)
+
+OBSERVABILITY-ONLY (no downstream sim edge)
+  chronicle ──► (getter only: chronicle())
+  cluster_stocks ──► (getter only: cluster_stocks())
+  emergence.last_feed / legends graph / civ_ai_decisions ──► HUD/inspect only
+
+================================================================================
+5. (a) POSITIVE-FEEDBACK LOOPS NOT BOUNDED BY DECAY OR CAP
+================================================================================
+
+Bounded loops (OK — have decay, ceiling, per-tick cap, or hysteresis):
+  • belief ↔ temple: belief decay ÷500; temple cap 5; institution ±1/tick
+  • unrest ↔ garrison: garrison max level 5 → max −10 unrest/tick; per-driver rise caps
+  • research → yield/capacity/mitigation: tier-saturated effects (caps at tier 6/9)
+  • cohesion ↔ unrest: cohesion decay ÷500; unrest damp divisors capped
+  • diplomacy threshold: peace cap +10k, war erosion cap 8k, floor 2k
+  • trade volume: arbitrage cap 2×; unrest trade floor 0.5×; cohesion trade cap 1.5×
+  • stratification: target clamp [0,1000]; step ≤5/tick
+  • food scarcity → births: factor ∈ (0,1], never boosts above natural rate
+
+UNBOUNDED or weakly bounded accumulators (risk flags):
+
+  [U1] TOTAL UNREST — no ceiling on state.unrest
+       Drivers can stack every tick (food + energy + overcrowding + inequality +
+       dispossession + agent_misery) while only the *rise* is damped (min ÷1 after
+       cohesion/research damp). Decay path requires food abundance (−10/tick only).
+       Sustained multi-driver hardship → unrest grows without asymptotic cap.
+
+  [U2] TOTAL COHESION — no ceiling on state.cohesion
+       Only floor 0 and proportional decay ÷500. If belief inflow persistently exceeds
+       unrest fray, cohesion accumulates without upper bound (effects saturate via
+       divisors but scalar does not).
+
+  [U3] RESEARCH_PROGRESS — no ceiling on accumulator
+       Tier-derived effects saturate, but research_progress itself is unbounded
+       (linear +population +cohesion bonus forever).
+
+  [U4] UNREST → BELIEF HARDSHIP (+unrest/100) — uncapped inflow
+       Unlike other unrest drivers, faith_from_hardship has no per-tick cap.
+       High unrest injects belief linearly; belief has ÷500 decay but no hard max.
+       Creates belief→cohesion→unrest-damp negative arm, yet belief injection scales
+       with unrest without bound → slow drift to high-belief/high-unrest equilibrium.
+
+  [U5] CLUSTER_STOCKS (phase_life) — unbounded food accumulation
+       Each cluster member adds +1 food/tick to cluster_stocks with NO decay, cap,
+       or consumer. Stocks never feed faction_resources, market supply, or agent needs.
+       Pure integrator — strongest unbounded dead accumulator in the tick loop.
+
+  [U6] INSTITUTION UPKEEP → TREASURY DRAIN → INEQUALITY → UNREST (weak bound)
+       Poorest-faction treasury floored at 0, but spread can widen without bound as
+       rich factions accumulate via trade/diplomacy. No explicit coupling from upkeep
+       back into stratification except via spread→inequality (per-tick cap 25).
+
+================================================================================
+6. (b) DEAD EMERGENCE SILOS — phase output never consumed by sim mechanics
+================================================================================
+
+Confirmed dead or display-only outputs (written but not read by any later phase
+or policy function in the tick DAG):
+
+  [D1] phase_chronicle → chronicle, chronicle_tech_seen, chronicle_age
+       Only exposed via chronicle() getter for UI/serialization. No feedback into
+       economy, diplomacy, agents, or institutions.
+
+  [D2] phase_life → cluster_stocks
+       Accumulates per-settlement food; only cluster_stocks() getter (HUD). Does not
+       affect resources, market_state, faction_resources, or agent LifeNeeds.
+
+  [D3] phase_emergence → EmergenceState cluster_cultures, SocialGraph, agent Psyche.beliefs
+       Culture drift and agent beliefs update ECS only. Macro state.belief is a
+       separate scalar (phase_belief); agent beliefs never aggregate upward.
+       SocialGraph ties do not affect diplomacy, trade, or faction_relations.
+
+  [D4] phase_emergence → legends graph, emergence_feed, civ_ai_decisions
+       Ingest/narration path only (legends charter: "never a generator of outcomes").
+       Saga promotions and civ-ai names do not alter WorldState or phase inputs.
+
+  [D5] phase_tech → TECH_STORAGE, TECH_METALLURGY bits
+       Bits are OR'd into tech_unlocks but no phase reads these flags (unlike
+       IRRIGATION/SANITATION/WRITING/GUNPOWDER). Traceability doc lists this as
+       an open gap.
+
+  [D6] phase_economic_focus → EconomicFocus::Sacred | Mercantile
+       candidate_economic_focus can select these, but phase_production only bonuses
+       Agrarian and Industrial. Sacred/Mercantile are labels without mechanical effect.
+
+  [D7] phase_life → last_settlement_count
+       Metric/HUD only; settlement count does not gate economy, diplomacy, or research.
+
+Partial silo (weak consumption):
+  • phase_emergence sentience_events → research bonus only (sentience_research_bonus,
+    cap +50/tick) — consumed, but cognition does not affect politics/markets directly.
+  • agent_misery_unrest reads Psyche but only after phase_emergence; cohesion uplift
+    in phase_social_mood is downstream of unrest (same-tick macro unrest uses prior psyche).
+
+================================================================================
+7. (c) TOP 5 HIGHEST-LEVERAGE MISSING COUPLINGS (emergence charter)
+================================================================================
+
+Charter requires society/economy/belief/politics to EMERGE with bidirectional
+coupling; hardcode only physical/genomic law. Ranked by leverage × charter gap:
+
+  [M1] AGENT CULTURE/PSYCHE → MACRO SOCIETY (belief, unrest, cohesion, diplomacy)
+       Gap: phase_emergence builds cluster_cultures, Psyche.beliefs, SocialGraph;
+       macro state.belief/unrest/cohesion ignore them. Charter: "Ideology & culture
+       drift across populations" should shape collective behavior.
+       Fix vector: aggregate homophily/ideology dispersion into cohesion_delta,
+       diplomacy threshold, or market trust — close micro↔macro loop.
+
+  [M2] SETTLEMENT CLUSTER_STOCKS → ECONOMY (supply, prices, faction_resources)
+       Gap: phase_life commons accumulate food with no sink; phase_economy market
+       supply uses carrying_capacity only, not settlement production.
+       Charter: "Markets emerge from local resource/scarcity conditions"; settlements
+       are emergent economic units (phase_life comment: "collective economics").
+       Fix vector: cluster_stocks → faction_resources or market apply_pressure supply.
+
+  [M3] TECH_STORAGE / TECH_METALLURGY → PRODUCTION & TRADE
+       Gap: bits set at tier 2/3 but never read (dead tech silo).
+       Charter: technology emerges from research, not enum slots; unlocked capabilities
+       should change material outcomes.
+       Fix vector: STORAGE dampens food price volatility or spoilage; METALLURGY boosts
+       metal yield / industrial building_demand (traceability open gap row).
+
+  [M4] EMERGENT CLUSTER/POLITY IDENTITY → DIPLOMACY & FACTION DYNAMICS
+       Gap: diplomacy uses hardcoded faction:u32 keys + treasury disparity coin-flip
+       structure; ClusterMember from phase_life does not define polity membership.
+       Charter: "Polities emerge from co-location + kinship + culture"; "faction is
+       one possible shape"; membership is cluster overlap NOT faction:u32.
+       Fix vector: derive diplomatic pairs from cluster contact edges / culture distance;
+       let faction_relations emerge from settlement interaction not static ids.
+
+  [M5] INSTITUTION UPKEEP & DISPOSSESSED SHARE → PRODUCTION / LABOR OUTPUT
+       Gap: institution drain hits poorest treasury only; dispossessed_permille feeds
+       unrest but not production_yield or faction_resources.
+       Charter: social stratification should emerge from economic payoff + coercion,
+       feeding back into economy not just unrest scalar.
+       Fix vector: dispossessed_permille scales production_yield_factor or farm output;
+       temple/garrison upkeep widens treasury spread intentionally (traceability
+       candidate: "institution upkeep → faction inequality feedback").
+
+Honorable mention (next tier):
+  • chronicle/legends → institutional memory affecting agent utility AI or diplomacy
+  • economic_focus Sacred/Mercantile mechanical bonuses (worship efficiency, trade margin)
+  • faction_resources ↔ global resources.food bridge (two parallel food economies)
+
+================================================================================
+8. TICK-ORDER COUPLING ANOMALIES (same-tick staleness)
+================================================================================
+
+  • phase_economy runs BEFORE phase_unrest: food prices current for unrest ✓
+  • phase_diplomacy runs BEFORE emergence tail: belief/cohesion/unrest used are
+    PRIOR-tick values for diplomacy threshold (diplomacy at tick%500 only)
+  • phase_production runs BEFORE phase_economic_focus: production uses PRIOR-tick focus
+  • phase_unrest reads Psyche misery BEFORE phase_social_mood uplift (emergence updated
+    psyche earlier same tick; social_mood after unrest — misery→unrest uses emergence psyche,
+    cohesion uplift affects NEXT tick misery)
+  • phase_citizen_lifecycle runs BEFORE phase_economy: births use PRIOR-tick food price
+
+================================================================================
+9. SUMMARY METRICS
+================================================================================
+
+  Phases in tick():           24 phase_* + metrics sampler
+  WorldState fields:          23
+  Fields with write in tick:  18 of 23 (factions, trade_routes, rng_seed, resources.wood
+                              effectively static in loop; rng_seed read-only)
+  Documented coupling edges:  ~45 (see §4)
+  Dead silos (confirmed):     7 (§6 D1–D7)
+  Unbounded accumulators:     6 risk flags (§5 U1–U6)
+  Top missing couplings:      5 (§7 M1–M5)
+
+================================================================================
+END OF AUDIT
+================================================================================

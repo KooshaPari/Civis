@@ -1800,12 +1800,13 @@ impl Simulation {
             return;
         }
 
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
-        };
+        let signals = building_demand_signals(
+            self.state.population,
+            self.carrying_capacity(),
+            self.state.cohesion,
+            self.research_tier(),
+            self.state.unrest,
+        );
 
         if [
             signals.residential,
@@ -2730,6 +2731,25 @@ fn building_cadence(research_tier: u64) -> u64 {
     BASE.saturating_sub(research_tier.saturating_mul(2)).max(FLOOR)
 }
 
+/// Emergent construction demand (FR-CIV-0100 §3): the built environment responds
+/// to society — crowding drives housing, research drives industry, cohesion
+/// drives commerce, unrest drives civic/governance building. Each in [0,1].
+fn building_demand_signals(
+    population: u64,
+    capacity: i64,
+    cohesion: u64,
+    research_tier: u64,
+    unrest: u64,
+) -> DemandSignals {
+    let cap = capacity.max(1) as f32;
+    DemandSignals {
+        residential: ((population as f32) / cap).clamp(0.0, 1.0),
+        commercial: ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0),
+        industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0),
+        civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0),
+    }
+}
+
 /// Belief units that contribute one unit of cohesion growth per tick.
 const COHESION_BELIEF_DIVISOR: u64 = 200;
 /// Unrest units that fray one unit of cohesion per tick.
@@ -3413,6 +3433,21 @@ mod tests {
         assert!(t1 < 16, "research speeds construction");
         assert!(t6 <= t1, "more research never slows it");
         assert_eq!(building_cadence(u64::MAX), 4, "cadence never drops below the floor");
+    }
+
+    /// FR-CIV-0100 §3 — construction demand tracks emergent macro state.
+    #[test]
+    fn building_demand_responds_to_state() {
+        let d = building_demand_signals(0, 1_000, 0, 0, 500);
+        assert!(d.civic > 0.0);
+        let d2 = building_demand_signals(0, 1_000, 0, 5, 0);
+        assert!(d2.industrial > 0.0);
+        for signal in [d.residential, d.commercial, d.industrial, d.civic] {
+            assert!((0.0..=1.0).contains(&signal));
+        }
+        for signal in [d2.residential, d2.commercial, d2.industrial, d2.civic] {
+            assert!((0.0..=1.0).contains(&signal));
+        }
     }
 
     /// FR-CIV-0100 §3 — cohesion grows when belief outweighs unrest and frays

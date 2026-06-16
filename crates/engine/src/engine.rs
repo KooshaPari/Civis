@@ -6,9 +6,11 @@ use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
     Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
-    PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
+    PoiKind, PoiRegistry, Position3d, Psyche, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_genetics::Dna;
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
@@ -1408,6 +1410,7 @@ impl Simulation {
         self.phase_belief();
         self.phase_unrest();
         self.phase_cohesion();
+        self.phase_social_mood();
         self.phase_stratification();
         self.phase_institutions();
         self.phase_economic_focus();
@@ -1740,6 +1743,7 @@ impl Simulation {
         if self.state.tech_unlocks & TECH_WRITING != 0 {
             contribution = contribution.saturating_add(1);
         }
+        contribution = contribution.saturating_add(sentience_research_bonus(&self.world));
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
     }
 
@@ -1797,6 +1801,7 @@ impl Simulation {
         let treasury_spread = faction_treasury_spread(&self.state.faction_treasury);
         let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion)
             + energy_scarcity_unrest(self.state.energy_budget_joules)
+            + agent_misery_unrest(&self.world)
             + overcrowding_unrest(self.state.population, self.carrying_capacity())
             + inequality_unrest(treasury_spread)
             + dispossession_unrest(self.state.dispossessed_permille)
@@ -1821,6 +1826,18 @@ impl Simulation {
             .state
             .cohesion
             .saturating_sub(self.state.cohesion / COHESION_DECAY_DIVISOR);
+    }
+
+    /// Social-mood phase (FR-CIV-0100 §3 emergence). Downward causation: macro
+    /// cohesion lifts individual agent spirits — a cohesive society nudges
+    /// `Psyche::mood.valence` upward, stabilizing the misery→unrest loop with
+    /// negative feedback. Runs after `phase_cohesion` so cohesion is current.
+    /// Uplift is small and bounded (max +0.02/tick; valence clamped to [-1, 1]).
+    fn phase_social_mood(&mut self) {
+        let uplift = (self.state.cohesion as f32 / 2_000_000.0).clamp(0.0, 0.02);
+        for (_, psyche) in self.world.query_mut::<&mut Psyche>() {
+            psyche.mood.valence = (psyche.mood.valence + uplift).clamp(-1.0, 1.0);
+        }
     }
 
     /// Social-stratification phase (FR-CIV-0100 §3 emergence). A persistent
@@ -2761,6 +2778,43 @@ fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
     }
 }
 
+/// Upward causation (FR-CIV-0100 §3): the mean MISERY of agents (negative Psyche
+/// mood valence) adds to societal unrest. Reuses the ECS Psyche component — the
+/// agent emotional layer feeding the macro web. Returns 0..MAX, bounded.
+fn agent_misery_unrest(world: &hecs::World) -> i64 {
+    const MAX_MISERY_UNREST: i64 = 30;
+    let (sum, n) = world
+        .query::<&Psyche>()
+        .iter()
+        .fold((0.0f32, 0u32), |(s, n), (_, p)| (s + (-p.mood.valence).max(0.0), n + 1));
+    if n == 0 {
+        return 0;
+    }
+    let mean_misery = (sum / n as f32).clamp(0.0, 1.0); // 0 = content, 1 = max misery
+    (mean_misery * MAX_MISERY_UNREST as f32) as i64
+}
+
+/// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
+/// research (awakened minds discover faster). Reuses the ECS; returns 0..MAX bonus.
+fn sentience_research_bonus(world: &hecs::World) -> u64 {
+    const MAX_SENTIENCE_RESEARCH: u64 = 50;
+    // Mirrors `EmergenceState::new` sentience profile and threshold.
+    let profile = CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    );
+    let threshold = SentienceThreshold::new(0.72);
+    let (sentient, total) = world.query::<&Dna>().iter().fold((0u32, 0u32), |(s, n), (_, dna)| {
+        let crossed = cognition_score(dna, &profile) >= threshold.minimum_cognition;
+        (s + u32::from(crossed), n + 1)
+    });
+    if total == 0 {
+        return 0;
+    }
+    let fraction = sentient as f32 / total as f32;
+    ((fraction * MAX_SENTIENCE_RESEARCH as f32) as u64).min(MAX_SENTIENCE_RESEARCH)
+}
+
 /// The economic focus a civilization tends toward, from its strongest sector.
 fn candidate_economic_focus(
     food: i64,
@@ -3451,6 +3505,107 @@ mod tests {
         assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
         assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
         assert!(energy_scarcity_unrest(Fixed::from_num(-5)) > 0);
+    }
+
+    /// FR-CIV-0100 §3 — upward causation: mean agent misery (negative Psyche mood valence)
+    /// feeds macro unrest; empty world contributes none.
+    #[test]
+    fn agent_misery_raises_unrest() {
+        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
+
+        let miserable_psyche = Psyche {
+            drives: [0.0; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood {
+                valence: -0.8,
+                arousal: 0.0,
+            },
+            beliefs: [0.0; PSYCHE_DIM],
+            maturity: 0.5,
+        };
+
+        let mut world = World::new();
+        world.spawn((miserable_psyche.clone(),));
+        world.spawn((miserable_psyche,));
+        assert!(
+            agent_misery_unrest(&world) > 0,
+            "miserable agents should raise unrest"
+        );
+
+        let empty = World::new();
+        assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
+    }
+
+    /// FR-CIV-0100 §3 — downward causation: macro cohesion lifts agent mood valence;
+    /// zero cohesion applies no uplift.
+    #[test]
+    fn cohesion_lifts_agent_mood() {
+        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
+
+        let miserable_psyche = Psyche {
+            drives: [0.0; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood {
+                valence: -0.5,
+                arousal: 0.0,
+            },
+            beliefs: [0.0; PSYCHE_DIM],
+            maturity: 0.5,
+        };
+
+        let mut sim = Simulation::new();
+        sim.state.cohesion = 2_000_000;
+        let entity = sim.world.spawn((miserable_psyche.clone(),));
+        sim.phase_social_mood();
+        let lifted = sim.world.get::<&Psyche>(entity).unwrap().mood.valence;
+        assert!(
+            lifted > -0.5,
+            "high cohesion should nudge mood.valence upward (got {lifted})"
+        );
+
+        let mut sim_zero = Simulation::new();
+        sim_zero.state.cohesion = 0;
+        let entity_zero = sim_zero.world.spawn((miserable_psyche,));
+        sim_zero.phase_social_mood();
+        let unchanged = sim_zero
+            .world
+            .get::<&Psyche>(entity_zero)
+            .unwrap()
+            .mood
+            .valence;
+        assert_eq!(
+            unchanged, -0.5,
+            "zero cohesion should leave mood.valence unchanged"
+        );
+    }
+
+    /// FR-CIV-0100 — upward causation: sentient-agent fraction (DNA cognition
+    /// score crossing the sentience threshold) accelerates macro research.
+    #[test]
+    fn sentience_boosts_research() {
+        let sentient_dna = Dna(vec![255; 64]);
+        let dull_dna = Dna(vec![0; 64]);
+
+        let mut world = World::new();
+        world.spawn((sentient_dna.clone(),));
+        world.spawn((sentient_dna,));
+        world.spawn((dull_dna.clone(),));
+        world.spawn((dull_dna,));
+
+        let bonus = sentience_research_bonus(&world);
+        assert!(bonus > 0, "sentient agents should boost research");
+        assert!(bonus <= 50, "bonus capped at MAX_SENTIENCE_RESEARCH");
+
+        let empty = World::new();
+        assert_eq!(sentience_research_bonus(&empty), 0, "empty world = no bonus");
+
+        let mut non_sentient = World::new();
+        non_sentient.spawn((Dna(vec![0; 64]),));
+        assert_eq!(
+            sentience_research_bonus(&non_sentient),
+            0,
+            "no sentient agents = no bonus"
+        );
     }
 
     /// FR-CIV-0100 §3 — overcrowding past carrying capacity breeds unrest, scaled
@@ -4226,11 +4381,18 @@ mod tests {
     fn phase_diplomacy_emerges_conflict_from_wealth_disparity() {
         let mut sim = Simulation::with_seed(5);
         sim.state.tick = 500; // a diplomacy cadence tick
-        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
-        let a = ids[500 % ids.len()];
-        let b = ids[(500 + 1) % ids.len()];
+        // Pin macro scalars at base threshold so wealth disparity alone drives Conflict.
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let a = faction_ids[(sim.state.tick as usize) % faction_ids.len()];
+        let b = faction_ids[((sim.state.tick as usize) + 1) % faction_ids.len()];
+        // Disparity well above max threshold (2× base peace cap) so economy drift
+        // cannot erase it before diplomacy resolves.
         sim.state.faction_treasury.insert(a, Fixed::from_num(0));
-        sim.state.faction_treasury.insert(b, Fixed::from_num(100_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(1_000_000));
         sim.phase_diplomacy();
         assert_eq!(
             sim.diplomacy_events().last().expect("a diplomacy event").kind,

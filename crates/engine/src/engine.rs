@@ -6,7 +6,7 @@ use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
     Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
-    PoiKind, PoiRegistry, Position3d, Tools, Wardrobe,
+    PoiKind, PoiRegistry, Position3d, Psyche, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
@@ -1797,6 +1797,7 @@ impl Simulation {
         let treasury_spread = faction_treasury_spread(&self.state.faction_treasury);
         let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion)
             + energy_scarcity_unrest(self.state.energy_budget_joules)
+            + agent_misery_unrest(&self.world)
             + overcrowding_unrest(self.state.population, self.carrying_capacity())
             + inequality_unrest(treasury_spread)
             + dispossession_unrest(self.state.dispossessed_permille)
@@ -2761,6 +2762,22 @@ fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
     }
 }
 
+/// Upward causation (FR-CIV-0100 §3): the mean MISERY of agents (negative Psyche
+/// mood valence) adds to societal unrest. Reuses the ECS Psyche component — the
+/// agent emotional layer feeding the macro web. Returns 0..MAX, bounded.
+fn agent_misery_unrest(world: &hecs::World) -> i64 {
+    const MAX_MISERY_UNREST: i64 = 30;
+    let (sum, n) = world
+        .query::<&Psyche>()
+        .iter()
+        .fold((0.0f32, 0u32), |(s, n), (_, p)| (s + (-p.mood.valence).max(0.0), n + 1));
+    if n == 0 {
+        return 0;
+    }
+    let mean_misery = (sum / n as f32).clamp(0.0, 1.0); // 0 = content, 1 = max misery
+    (mean_misery * MAX_MISERY_UNREST as f32) as i64
+}
+
 /// The economic focus a civilization tends toward, from its strongest sector.
 fn candidate_economic_focus(
     food: i64,
@@ -3451,6 +3468,35 @@ mod tests {
         assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
         assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
         assert!(energy_scarcity_unrest(Fixed::from_num(-5)) > 0);
+    }
+
+    /// FR-CIV-0100 §3 — upward causation: mean agent misery (negative Psyche mood valence)
+    /// feeds macro unrest; empty world contributes none.
+    #[test]
+    fn agent_misery_raises_unrest() {
+        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
+
+        let miserable_psyche = Psyche {
+            drives: [0.0; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood {
+                valence: -0.8,
+                arousal: 0.0,
+            },
+            beliefs: [0.0; PSYCHE_DIM],
+            maturity: 0.5,
+        };
+
+        let mut world = World::new();
+        world.spawn((miserable_psyche.clone(),));
+        world.spawn((miserable_psyche,));
+        assert!(
+            agent_misery_unrest(&world) > 0,
+            "miserable agents should raise unrest"
+        );
+
+        let empty = World::new();
+        assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
     }
 
     /// FR-CIV-0100 §3 — overcrowding past carrying capacity breeds unrest, scaled

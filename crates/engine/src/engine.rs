@@ -9,6 +9,7 @@ use civ_agents::{
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
     SocialGraph, Tools, Wardrobe,
 };
+use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
@@ -2799,6 +2800,9 @@ impl Simulation {
         } else {
             treasury_b - treasury_a
         };
+        // N2: read cluster cultures before any mutable diplomacy state borrow.
+        let culture_bias =
+            diplomacy_culture_threshold_bias(&self.emergence.cluster_cultures, a, b);
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
         // Emergent pairwise relations further bias the threshold: allies tolerate
@@ -2810,7 +2814,9 @@ impl Simulation {
             pair_unrest,
         );
         let conflict_threshold = Fixed::from_num(
-            (base_threshold + diplomacy_relation_threshold_bias(relation))
+            (base_threshold
+                + diplomacy_relation_threshold_bias(relation)
+                + culture_bias)
                 .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
         );
         let kind = if disparity >= conflict_threshold {
@@ -3655,6 +3661,8 @@ const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
 const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
 /// Max threshold shift from a saturated pairwise relation score (`±1.0`).
 const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
+/// Max peace bonus from identical pairwise cultural traits (N2 coupling).
+const CULTURE_PEACE_SPAN: f32 = 3_000.0;
 /// Belief units required to raise the conflict threshold by one currency unit.
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a
@@ -3683,6 +3691,26 @@ fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
 /// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
 fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
     (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
+}
+
+/// Peace bonus from pairwise cultural similarity (N2 — culture → diplomacy).
+///
+/// Culturally similar factions tolerate more treasury disparity before conflict;
+/// divergent pairs add zero bonus (neutral default).
+fn diplomacy_culture_threshold_bias(
+    cultures: &BTreeMap<u64, CultureProfile>,
+    faction_a: u32,
+    faction_b: u32,
+) -> i64 {
+    let Some(pa) = cultures.get(&u64::from(faction_a)) else {
+        return 0;
+    };
+    let Some(pb) = cultures.get(&u64::from(faction_b)) else {
+        return 0;
+    };
+    let distance = cultural_distance(pa.traits, pb.traits);
+    let similarity = 1.0 - distance;
+    (similarity * CULTURE_PEACE_SPAN).round() as i64
 }
 
 /// Scales every stored relation toward neutral without overshooting zero.
@@ -4108,6 +4136,80 @@ mod tests {
         assert_eq!(
             diplomacy_conflict_threshold(5_000, 5_000),
             DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
+    }
+
+    /// N2 — culture similarity scales the diplomacy peace bonus (`0`, `1500`, `3000`).
+    #[test]
+    fn diplomacy_culture_threshold_bias_scales_with_similarity() {
+        let mut cultures = BTreeMap::new();
+        cultures.insert(0, CultureProfile::new([0.5, 0.5, 0.5, 0.5]));
+        cultures.insert(1, CultureProfile::new([0.5, 0.5, 0.5, 0.5]));
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 3_000);
+
+        cultures.insert(1, CultureProfile::new([0.0, 0.0, 0.0, 0.0]));
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 1_500);
+
+        cultures.insert(1, CultureProfile::new([1.0, 1.0, 1.0, 1.0]));
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 1_500);
+
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 99), 0);
+    }
+
+    /// N2 — culturally similar factions trade at a disparity that triggers conflict
+    /// for culturally distant pairs at the same pinned macro state.
+    #[test]
+    fn similar_cultures_bias_diplomacy_toward_trade() {
+        let mut faction_ids: Vec<u32> = Simulation::with_seed(5)
+            .state
+            .factions
+            .keys()
+            .copied()
+            .collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, 500);
+
+        let pin_diplomacy_drivers = |sim: &mut Simulation| {
+            sim.state.tick = 500;
+            sim.state.belief = 0;
+            sim.state.cohesion = 0;
+            sim.state.faction_unrest.clear();
+            sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+            sim.state.faction_treasury.insert(b, Fixed::from_num(11_000));
+        };
+
+        let mut similar = Simulation::with_seed(5);
+        pin_diplomacy_drivers(&mut similar);
+        similar.emergence.cluster_cultures.insert(
+            u64::from(a),
+            CultureProfile::new([0.5, 0.5, 0.5, 0.5]),
+        );
+        similar.emergence.cluster_cultures.insert(
+            u64::from(b),
+            CultureProfile::new([0.5, 0.5, 0.5, 0.5]),
+        );
+        similar.phase_diplomacy();
+        assert_eq!(
+            similar.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement,
+            "culturally similar factions tolerate disparity before conflict"
+        );
+
+        let mut distant = Simulation::with_seed(5);
+        pin_diplomacy_drivers(&mut distant);
+        distant.emergence.cluster_cultures.insert(
+            u64::from(a),
+            CultureProfile::new([0.0, 0.0, 0.0, 0.0]),
+        );
+        distant.emergence.cluster_cultures.insert(
+            u64::from(b),
+            CultureProfile::new([1.0, 1.0, 1.0, 1.0]),
+        );
+        distant.phase_diplomacy();
+        assert_eq!(
+            distant.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict,
+            "culturally distant factions clash sooner at the same disparity"
         );
     }
 

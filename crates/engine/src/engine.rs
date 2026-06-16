@@ -676,6 +676,14 @@ pub struct Simulation {
     /// When true, always re-run `cluster_by_colocation` (test-only baseline).
     #[cfg(test)]
     force_life_cluster_recompute: bool,
+    /// Civilian agent id → ECS entity map for O(1) emergence lookups (PERF_OPT #2).
+    agent_id_to_entity: BTreeMap<u64, Entity>,
+    /// Linear-scan `agent_entity` invocations (test-only observability).
+    #[cfg(test)]
+    agent_entity_linear_scan_count: std::cell::Cell<u64>,
+    /// When true, `agent_entity` uses the pre-opt linear scan (test-only baseline).
+    #[cfg(test)]
+    force_agent_entity_linear_scan: bool,
     /// MOAT emergence: legends, psyche, culture, social, genetics, civ-ai.
     pub(crate) emergence: crate::emergence::EmergenceState,
     /// Latest emergence-metrics sample (civ-emergence-metrics). Updated by
@@ -875,7 +883,7 @@ impl Simulation {
         let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState::default();
 
-        Self {
+        let mut sim = Self {
             economy_state: economy_state_from_world(&state),
             market_state: MarketState::default(),
             state,
@@ -896,6 +904,11 @@ impl Simulation {
             life_clustering_recompute_count: 0,
             #[cfg(test)]
             force_life_cluster_recompute: false,
+            agent_id_to_entity: BTreeMap::new(),
+            #[cfg(test)]
+            agent_entity_linear_scan_count: std::cell::Cell::new(0),
+            #[cfg(test)]
+            force_agent_entity_linear_scan: false,
             allocator: Allocator::new(42),
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
@@ -927,7 +940,9 @@ impl Simulation {
             emergence: Self::default_emergence_state(42),
             emergence_sample: None,
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
-        }
+        };
+        sim.rebuild_agent_id_index();
+        sim
     }
 
     /// Create simulation with custom seed
@@ -947,7 +962,7 @@ impl Simulation {
             ..Default::default()
         };
 
-        Self {
+        let mut sim = Self {
             economy_state: economy_state_from_world(&state),
             market_state: MarketState::default(),
             state,
@@ -968,6 +983,11 @@ impl Simulation {
             life_clustering_recompute_count: 0,
             #[cfg(test)]
             force_life_cluster_recompute: false,
+            agent_id_to_entity: BTreeMap::new(),
+            #[cfg(test)]
+            agent_entity_linear_scan_count: std::cell::Cell::new(0),
+            #[cfg(test)]
+            force_agent_entity_linear_scan: false,
             allocator: Allocator::new(seed),
             diffusion_params: DiffusionParams::default(),
             target_era: 1,
@@ -999,7 +1019,9 @@ impl Simulation {
             emergence: Self::default_emergence_state(seed),
             emergence_sample: None,
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
-        }
+        };
+        sim.rebuild_agent_id_index();
+        sim
     }
 
     /// Install a single mod at runtime (directory or `.civmod` archive).
@@ -1629,6 +1651,7 @@ impl Simulation {
         self.phase_disasters();
         self.phase_life();
         self.phase_settlement_consumption();
+        self.rebuild_agent_id_index();
         self.phase_emergence();
         self.phase_research();
         self.phase_tech();
@@ -2305,6 +2328,35 @@ impl Simulation {
     /// ChaCha8). No wall-clock or `thread_rng`. Surfaced state (needs, cluster
     /// membership, settlement count, life deaths, cluster stocks) is read by the
     /// sim bridge / HUD.
+    /// Rebuild the civilian id → entity map from the current world (PERF_OPT #2).
+    pub(crate) fn rebuild_agent_id_index(&mut self) {
+        self.agent_id_to_entity.clear();
+        for (entity, civilian) in self.world.query::<&AgentCivilian>().iter() {
+            debug_assert!(
+                !self.agent_id_to_entity.contains_key(&civilian.id),
+                "duplicate civilian id {}",
+                civilian.id
+            );
+            self.agent_id_to_entity.insert(civilian.id, entity);
+        }
+    }
+
+    /// Resolve a civilian agent id to its ECS entity (PERF_OPT #2).
+    pub(crate) fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
+        #[cfg(test)]
+        if self.force_agent_entity_linear_scan {
+            self.agent_entity_linear_scan_count
+                .set(self.agent_entity_linear_scan_count.get() + 1);
+            return self
+                .world
+                .query::<&AgentCivilian>()
+                .iter()
+                .find(|(_, c)| c.id == agent_id)
+                .map(|(e, _)| e);
+        }
+        self.agent_id_to_entity.get(&agent_id).copied()
+    }
+
     fn life_cluster_position_fingerprint(world: &World) -> u64 {
         let mut agents: Vec<(u64, i64, i64)> = world
             .query::<(&AgentCivilian, &Position3d)>()
@@ -5703,6 +5755,105 @@ mod tests {
             sim.life_clustering_recompute_count, baseline_recomputes,
             "expected clustering to be skipped for a stationary population"
         );
+    }
+
+    fn psyche_by_agent(sim: &Simulation) -> BTreeMap<u64, Psyche> {
+        sim.world
+            .query::<(&AgentCivilian, &Psyche)>()
+            .iter()
+            .map(|(_, (c, p))| (c.id, p.clone()))
+            .collect()
+    }
+
+    fn social_graph_by_agent(sim: &Simulation) -> BTreeMap<u64, SocialGraph> {
+        sim.world
+            .query::<(&AgentCivilian, &SocialGraph)>()
+            .iter()
+            .map(|(_, (c, g))| (c.id, g.clone()))
+            .collect()
+    }
+
+    /// PERF_OPT #2 — indexed `agent_entity` matches linear-scan baseline over ticks.
+    #[test]
+    fn agent_id_index_matches_linear_scan_over_ticks() {
+        use civ_tactics::DamageEvent;
+
+        const TICKS: u32 = 200;
+
+        for &seed in &[12345u64, 4242, 777] {
+            let mut indexed = Simulation::with_seed(seed);
+            let mut baseline = Simulation::with_seed(seed);
+            baseline.force_agent_entity_linear_scan = true;
+
+            for tick in 0..TICKS {
+                if tick % 17 == 0 {
+                    let event = DamageEvent {
+                        center: WorldCoord {
+                            x: (tick as i64 % 32) * 1_000_000,
+                            y: 0,
+                            z: 0,
+                        },
+                        radius_voxels: 4,
+                        energy: tick as u32,
+                    };
+                    indexed.push_damage(event.clone());
+                    baseline.push_damage(event);
+                }
+                indexed.tick();
+                baseline.tick();
+
+                assert_eq!(
+                    indexed.state.tick,
+                    baseline.state.tick,
+                    "tick diverged at {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.state.population,
+                    baseline.state.population,
+                    "population diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    psyche_by_agent(&indexed),
+                    psyche_by_agent(&baseline),
+                    "psyche diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    social_graph_by_agent(&indexed),
+                    social_graph_by_agent(&baseline),
+                    "social graph diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.emergence.cluster_cultures,
+                    baseline.emergence.cluster_cultures,
+                    "cluster_cultures diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.emergence.sentient_agents,
+                    baseline.emergence.sentient_agents,
+                    "sentient_agents diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.emergence_feed(),
+                    baseline.emergence_feed(),
+                    "emergence_feed diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.sentience_events(),
+                    baseline.sentience_events(),
+                    "sentience_events diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.settlement_count(),
+                    baseline.settlement_count(),
+                    "settlement_count diverged at tick {tick} (seed {seed})"
+                );
+                assert_eq!(
+                    indexed.cluster_member_counts,
+                    baseline.cluster_member_counts,
+                    "cluster_member_counts diverged at tick {tick} (seed {seed})"
+                );
+            }
+        }
     }
 
     /// FR-CIV-LIFE-020 — cluster food stocks stay bounded when production is

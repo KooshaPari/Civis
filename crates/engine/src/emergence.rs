@@ -317,14 +317,6 @@ impl Simulation {
         }
     }
 
-    fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
-        self.world
-            .query::<&Civilian>()
-            .iter()
-            .find(|(_, c)| c.id == agent_id)
-            .map(|(e, _)| e)
-    }
-
     fn emergence_psyche(&mut self) {
         let tick = self.state.tick;
         let tick_u32 = tick.min(u32::MAX as u64) as u32;

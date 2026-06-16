@@ -3288,8 +3288,11 @@ fn building_demand_signals(
 ) -> DemandSignals {
     let cap = capacity.max(1) as f32;
     let cohesion_signal = ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0);
-    let metal_factor =
+    // Quadratic headroom: demand rolls off faster as stock dips so the cohesion→metal
+    // loop converges to a finite steady state (M* = gate * sqrt(threshold/cohesion)).
+    let linear =
         (metal.to_f64() as f32 / BUILDING_COMMERCIAL_METAL_GATE).clamp(0.0, 1.0);
+    let metal_factor = linear * linear;
     DemandSignals {
         residential: ((population as f32) / cap).clamp(0.0, 1.0),
         commercial: cohesion_signal * metal_factor,
@@ -3303,7 +3306,16 @@ const BUILDING_WOOD_PER_PARCEL: i64 = 10;
 /// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
 const BUILDING_METAL_PER_PARCEL: i64 = 5;
 /// Metal stock at which commercial demand reaches full strength (FR-CIV-0100 FC-3).
+/// With quadratic headroom and max cohesion, steady-state metal is
+/// `gate * sqrt(0.5) + BUILDING_METAL_PER_PARCEL` (discrete parcel overshoot).
 const BUILDING_COMMERCIAL_METAL_GATE: f32 = 500.0;
+const FC3_COMMERCIAL_PARCEL_THRESHOLD: f32 = 0.5;
+
+/// FC-3 metal steady-state ceiling at max cohesion (one parcel debit headroom).
+fn fc3_commercial_metal_steady_ceiling() -> f32 {
+    BUILDING_COMMERCIAL_METAL_GATE * FC3_COMMERCIAL_PARCEL_THRESHOLD.sqrt()
+        + BUILDING_METAL_PER_PARCEL as f32
+}
 
 /// Parcels that would be allocated for saturated demand signals (> 0.5).
 fn building_parcel_count(signals: &DemandSignals) -> usize {
@@ -4354,8 +4366,10 @@ mod tests {
         sim.state.resources.metal = Fixed::from_num(600);
         let metal_start = sim.state.resources.metal;
         let cadence = building_cadence(sim.research_tier());
+        // ~50 cadence steps to drain 600→354 (gate * sqrt(0.5)) at 5 metal/parcel.
+        let steady_ceiling = fc3_commercial_metal_steady_ceiling();
 
-        for tick in 0..500 {
+        for tick in 0..800 {
             sim.state.tick = tick;
             if tick % cadence == 0 {
                 sim.phase_buildings();
@@ -4370,6 +4384,10 @@ mod tests {
             sim.state.resources.metal < metal_start,
             "construction should debit metal while stock is above the gate"
         );
+        assert!(
+            sim.state.resources.metal <= Fixed::from_num(steady_ceiling),
+            "metal must converge to FC-3 steady-state ceiling ({steady_ceiling})"
+        );
         let signals = building_demand_signals(
             sim.state.population,
             sim.carrying_capacity(),
@@ -4379,7 +4397,7 @@ mod tests {
             sim.state.resources.metal,
         );
         assert!(
-            signals.commercial <= 0.5,
+            signals.commercial <= FC3_COMMERCIAL_PARCEL_THRESHOLD,
             "residual metal must throttle commercial demand below parcel threshold"
         );
     }

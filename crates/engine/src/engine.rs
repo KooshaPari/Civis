@@ -9,6 +9,8 @@ use civ_agents::{
     PoiKind, PoiRegistry, Position3d, Psyche, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_genetics::Dna;
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
@@ -1740,6 +1742,7 @@ impl Simulation {
         if self.state.tech_unlocks & TECH_WRITING != 0 {
             contribution = contribution.saturating_add(1);
         }
+        contribution = contribution.saturating_add(sentience_research_bonus(&self.world));
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
     }
 
@@ -2778,6 +2781,27 @@ fn agent_misery_unrest(world: &hecs::World) -> i64 {
     (mean_misery * MAX_MISERY_UNREST as f32) as i64
 }
 
+/// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
+/// research (awakened minds discover faster). Reuses the ECS; returns 0..MAX bonus.
+fn sentience_research_bonus(world: &hecs::World) -> u64 {
+    const MAX_SENTIENCE_RESEARCH: u64 = 50;
+    // Mirrors `EmergenceState::new` sentience profile and threshold.
+    let profile = CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    );
+    let threshold = SentienceThreshold::new(0.72);
+    let (sentient, total) = world.query::<&Dna>().iter().fold((0u32, 0u32), |(s, n), (_, dna)| {
+        let crossed = cognition_score(dna, &profile) >= threshold.minimum_cognition;
+        (s + u32::from(crossed), n + 1)
+    });
+    if total == 0 {
+        return 0;
+    }
+    let fraction = sentient as f32 / total as f32;
+    ((fraction * MAX_SENTIENCE_RESEARCH as f32) as u64).min(MAX_SENTIENCE_RESEARCH)
+}
+
 /// The economic focus a civilization tends toward, from its strongest sector.
 fn candidate_economic_focus(
     food: i64,
@@ -3497,6 +3521,35 @@ mod tests {
 
         let empty = World::new();
         assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
+    }
+
+    /// FR-CIV-0100 — upward causation: sentient-agent fraction (DNA cognition
+    /// score crossing the sentience threshold) accelerates macro research.
+    #[test]
+    fn sentience_boosts_research() {
+        let sentient_dna = Dna(vec![255; 64]);
+        let dull_dna = Dna(vec![0; 64]);
+
+        let mut world = World::new();
+        world.spawn((sentient_dna.clone(),));
+        world.spawn((sentient_dna,));
+        world.spawn((dull_dna.clone(),));
+        world.spawn((dull_dna,));
+
+        let bonus = sentience_research_bonus(&world);
+        assert!(bonus > 0, "sentient agents should boost research");
+        assert!(bonus <= 50, "bonus capped at MAX_SENTIENCE_RESEARCH");
+
+        let empty = World::new();
+        assert_eq!(sentience_research_bonus(&empty), 0, "empty world = no bonus");
+
+        let mut non_sentient = World::new();
+        non_sentient.spawn((Dna(vec![0; 64]),));
+        assert_eq!(
+            sentience_research_bonus(&non_sentient),
+            0,
+            "no sentient agents = no bonus"
+        );
     }
 
     /// FR-CIV-0100 §3 — overcrowding past carrying capacity breeds unrest, scaled

@@ -1879,7 +1879,8 @@ impl Simulation {
         /// Cohesion frays without reinforcement: proportional decay yields a
         /// dynamic equilibrium (belief bind vs unrest fray vs decay).
         const COHESION_DECAY_DIVISOR: u64 = 500;
-        let delta = cohesion_delta(self.state.belief, self.state.unrest);
+        let delta = cohesion_delta(self.state.belief, self.state.unrest)
+            + micro_cohesion_delta(&self.world);
         self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
         self.state.cohesion = self
             .state
@@ -2927,6 +2928,37 @@ fn agent_misery_unrest(world: &hecs::World) -> i64 {
     (mean_misery * MAX_MISERY_UNREST as f32) as i64
 }
 
+/// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
+/// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
+fn micro_cohesion_delta(world: &hecs::World) -> i64 {
+    const MICRO_BIND_CAP: i64 = 12;
+    const MICRO_FRAY_CAP: i64 = 18;
+    const MIN_AGENTS: u32 = 2;
+    const CONSENSUS_SCALE: f32 = 4.0;
+
+    let mut n = 0u32;
+    let mut sum = 0.0f32;
+    let mut sum_sq = 0.0f32;
+    for (_, psyche) in world.query::<&Psyche>() {
+        let x = psyche.beliefs[0];
+        n += 1;
+        sum += x;
+        sum_sq += x * x;
+    }
+
+    if n < MIN_AGENTS {
+        return 0;
+    }
+
+    let n_f = n as f32;
+    let mean = sum / n_f;
+    let var = ((sum_sq / n_f) - mean * mean).max(0.0);
+    let consensus = 1.0 - (CONSENSUS_SCALE * var).clamp(0.0, 1.0);
+    let micro_bind = (consensus * MICRO_BIND_CAP as f32).floor() as i64;
+    let micro_fray = ((1.0 - consensus) * MICRO_FRAY_CAP as f32).floor() as i64;
+    micro_bind - micro_fray
+}
+
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
 /// research (awakened minds discover faster). Reuses the ECS; returns 0..MAX bonus.
 fn sentience_research_bonus(world: &hecs::World) -> u64 {
@@ -3787,6 +3819,65 @@ mod tests {
 
         let empty = World::new();
         assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
+    }
+
+    /// FR-CIV-0100 §3 — upward causation: shared micro ideology binds macro cohesion;
+    /// polarization frays it. Pure-function assertions; no tick RNG.
+    #[test]
+    fn micro_ideology_consensus_biases_cohesion() {
+        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
+
+        fn psyche_with_belief0(b0: f32) -> Psyche {
+            let mut beliefs = [0.5_f32; PSYCHE_DIM];
+            beliefs[0] = b0;
+            Psyche {
+                drives: [0.0; PSYCHE_DIM],
+                temperament: Temperament::neutral(),
+                mood: Mood { valence: 0.0, arousal: 0.0 },
+                beliefs,
+                maturity: 0.5,
+            }
+        }
+
+        fn spawn_ideologies(world: &mut hecs::World, beliefs0: &[f32]) {
+            for &b0 in beliefs0 {
+                world.spawn((psyche_with_belief0(b0),));
+            }
+        }
+
+        // Regression: no Psyche → no micro effect
+        assert_eq!(micro_cohesion_delta(&hecs::World::new()), 0);
+
+        // Guard: single agent → no variance
+        let mut lone = hecs::World::new();
+        lone.spawn((psyche_with_belief0(0.85),));
+        assert_eq!(micro_cohesion_delta(&lone), 0);
+
+        // CONSENSUS: 8 × beliefs[0] = 0.85 → +12
+        let mut consensus = hecs::World::new();
+        spawn_ideologies(&mut consensus, &[0.85; 8]);
+        assert_eq!(
+            micro_cohesion_delta(&consensus),
+            12,
+            "unanimous ideology should max-bind cohesion"
+        );
+
+        // POLARIZED: alternate 0.0 / 1.0 → var=0.25 → -18
+        let mut polarized = hecs::World::new();
+        spawn_ideologies(
+            &mut polarized,
+            &[0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+        );
+        assert_eq!(
+            micro_cohesion_delta(&polarized),
+            -18,
+            "max-spread ideology should max-fray cohesion"
+        );
+
+        assert!(
+            micro_cohesion_delta(&consensus) > micro_cohesion_delta(&polarized),
+            "consensus must bind more than polarization frays"
+        );
     }
 
     /// FR-CIV-0100 §3 — downward causation: macro cohesion lifts agent mood valence;

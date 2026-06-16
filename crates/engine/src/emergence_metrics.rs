@@ -255,8 +255,8 @@ impl Simulation {
     /// Runs after `phase_chronicle` and before `sample_emergence` (charter
     /// §4.5). O(1): integer sums over existing per-tick buffers.
     pub(crate) fn phase_emergence_events_close(&mut self) {
-        let actors = self.count_micro_actor_actions();
-        let descendants = self.count_micro_descendant_actions();
+        let actors = self.micro_actor_action_count();
+        let descendants = self.micro_descendant_action_count();
         let tick = self.state.tick;
         let max_size = self.emergence_branching.max_avalanche_size;
 
@@ -361,24 +361,6 @@ impl Simulation {
             sample.avalanches_closed = self.emergence_branching.ledger.closed_total();
             sample.branching_regime = self.emergence_branching.regime;
         }
-    }
-
-    fn count_micro_actor_actions(&self) -> u32 {
-        let voxel = self.last_tick_voxel_events.len() as u32;
-        let disasters = self.last_tick_voxel_damage_count as u32;
-        let diplomacy = self.diplomacy_events.len() as u32;
-        let unrest = self.emergence_branching.last_tick_unrest_events;
-        let combat = self.last_tick_combat_pulses.len() as u32
-            + self.last_tick_engagements.len() as u32;
-        voxel
-            .saturating_add(disasters)
-            .saturating_add(diplomacy)
-            .saturating_add(unrest)
-            .saturating_add(combat)
-    }
-
-    fn count_micro_descendant_actions(&self) -> u32 {
-        self.count_micro_actor_actions()
     }
 
     /// Record positive unrest micro-activity for the current tick (v1
@@ -1038,9 +1020,11 @@ mod tests {
         sim.phase_emergence_events_close();
         sim.state.tick = 3;
         sim.phase_emergence_events_close();
-        let branching = sim.emergence_branching_state();
-        assert_eq!(branching.ledger.closed_total(), 1);
-        assert!((branching.sigma_bar - 0.9).abs() < 1e-6);
-        assert_eq!(branching.regime, BranchingRegime::SubcriticalTransition);
+        assert_eq!(sim.emergence_branching_state().ledger.closed_total(), 1);
+        assert!((sim.branching_ratio() - 0.9).abs() < 1e-6);
+        assert_eq!(
+            sim.emergence_branching_state().regime,
+            BranchingRegime::SubcriticalTransition
+        );
     }
 }

@@ -1164,6 +1164,41 @@ impl Simulation {
         &self.last_tick_voxel_events
     }
 
+    /// Engagements resolved during the most recent tactics phase.
+    #[must_use]
+    pub fn last_tick_engagements(&self) -> &[CombatEngagement] {
+        &self.last_tick_engagements
+    }
+
+    /// Per-tick micro-actor action count for branching-ratio avalanche seeds
+    /// (charter §3.6). Integer sums over existing per-tick buffers; O(1).
+    #[must_use]
+    pub(crate) fn micro_actor_action_count(&self) -> u32 {
+        let voxel = self.last_tick_voxel_events.len() as u32;
+        let disasters = self.last_tick_voxel_damage_count as u32;
+        let diplomacy = self.diplomacy_events.len() as u32;
+        let unrest = self.emergence_branching.last_tick_unrest_events;
+        let combat = self.last_tick_combat_pulses.len() as u32
+            + self.last_tick_engagements.len() as u32;
+        voxel
+            .saturating_add(disasters)
+            .saturating_add(diplomacy)
+            .saturating_add(unrest)
+            .saturating_add(combat)
+    }
+
+    /// Per-tick micro-descendant action count for branching-ratio closure.
+    #[must_use]
+    pub(crate) fn micro_descendant_action_count(&self) -> u32 {
+        self.micro_actor_action_count()
+    }
+
+    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+    #[must_use]
+    pub fn branching_ratio(&self) -> f32 {
+        self.emergence_branching.sigma_bar
+    }
+
     /// Borrow the building graph.
     pub fn building_graph(&self) -> &BuildingGraph {
         &self.building_graph

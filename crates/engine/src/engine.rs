@@ -1650,9 +1650,13 @@ impl Simulation {
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         // Research mitigates the scarcity-driven rise (research -> calmer society).
         // Cohesion damps the remaining rise (cohesion -> calmer society), closing the loop.
+        // Structural inequality (wealth gap between richest and poorest faction)
+        // breeds class unrest.
+        let treasury_spread = faction_treasury_spread(&self.state.faction_treasury);
         let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion)
             + energy_scarcity_unrest(self.state.energy_budget_joules)
-            + overcrowding_unrest(self.state.population, self.carrying_capacity());
+            + overcrowding_unrest(self.state.population, self.carrying_capacity())
+            + inequality_unrest(treasury_spread);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -2487,6 +2491,32 @@ fn cohesion_research_bonus_permille(cohesion: u64) -> u64 {
     (cohesion / 2_000).min(500)
 }
 
+/// The wealth gap (in whole currency units) between the richest and poorest
+/// faction — an emergent measure of structural inequality across the society.
+fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
+    let mut min = i64::MAX;
+    let mut max = i64::MIN;
+    for t in treasury.values() {
+        let v = t.raw / crate::SCALE;
+        min = min.min(v);
+        max = max.max(v);
+    }
+    if max >= min {
+        max - min
+    } else {
+        0
+    }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): structural inequality breeds class
+/// unrest. A wide wealth gap between factions adds unrest scaled by the gap,
+/// capped per tick. Distinct from scarcity — this is about distribution.
+fn inequality_unrest(treasury_spread: i64) -> i64 {
+    const MAX_INEQUALITY_UNREST: i64 = 25;
+    const SPREAD_PER_UNREST: i64 = 2_000;
+    (treasury_spread / SPREAD_PER_UNREST).clamp(0, MAX_INEQUALITY_UNREST)
+}
+
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// unrest — advanced food logistics (storage, distribution) blunt the
 /// scarcity-driven rise. Only the positive (rising) part is damped; decay is
@@ -3040,6 +3070,24 @@ mod tests {
         assert_eq!(cohesion_research_bonus_permille(0), 0);
         assert!(cohesion_research_bonus_permille(100_000) > 0, "cohesion speeds research");
         assert_eq!(cohesion_research_bonus_permille(10_000_000), 500, "capped at +50%");
+    }
+
+    /// FR-CIV-0100 §3 — inequality breeds unrest, scaled by the wealth gap, capped.
+    #[test]
+    fn inequality_unrest_scales_with_spread_capped() {
+        assert_eq!(inequality_unrest(0), 0);
+        assert_eq!(inequality_unrest(4_000), 2);
+        assert_eq!(inequality_unrest(1_000_000), 25, "capped per tick");
+    }
+
+    /// faction_treasury_spread is the richest-minus-poorest gap (0 when empty).
+    #[test]
+    fn faction_treasury_spread_is_rich_minus_poor() {
+        let mut t = HashMap::new();
+        t.insert(1u32, Fixed::from_num(100));
+        t.insert(2u32, Fixed::from_num(900));
+        assert_eq!(faction_treasury_spread(&t), 800);
+        assert_eq!(faction_treasury_spread(&HashMap::new()), 0);
     }
 
     /// FR-CIV-0100 §3 — research lifts production yield, monotonically, capped at 2x.

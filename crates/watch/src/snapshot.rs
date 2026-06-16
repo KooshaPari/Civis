@@ -919,6 +919,7 @@ pub(crate) fn wrap01(value: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::default_law_db;
 
     #[test]
     fn season_from_year_phase_partitions_the_year() {
@@ -1196,5 +1197,26 @@ mod tests {
         }];
         let events = game_events(&sim, &[], &[], &[], &disasters, &[], &[]);
         assert_eq!(events.iter().filter(|e| e.kind == "disaster").count(), 1);
+    }
+
+    #[test]
+    fn tech_tree_maps_every_law_and_sorts_by_era() {
+        let db = default_law_db();
+        let nodes = tech_tree(&db, 0);
+        assert_eq!(nodes.len(), db.laws.len());
+        assert!(nodes.windows(2).all(|w| w[0].era_min <= w[1].era_min));
+        let kinds = ["Conservation", "Material", "FictionalExtension"];
+        assert!(nodes.iter().all(|n| kinds.contains(&n.kind.as_str())));
+    }
+
+    #[test]
+    fn tech_tree_unlocks_follow_current_era() {
+        let db = default_law_db();
+        let at0 = tech_tree(&db, 0);
+        assert!(at0.iter().all(|n| n.unlocked == (n.era_min == 0)));
+        let at_max = tech_tree(&db, u16::MAX);
+        assert!(at_max.iter().all(|n| n.unlocked));
+        let era5 = tech_tree(&db, 5);
+        assert!(era5.iter().all(|n| n.unlocked == (5u16 >= n.era_min)));
     }
 }

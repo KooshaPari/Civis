@@ -992,4 +992,40 @@ mod tests {
         assert!(faction_for_point(0.0, 0.0).is_some());
         assert!(faction_for_point(1.0, 1.0).is_some());
     }
+
+    #[test]
+    fn snapshot_pure_weather_resource_and_coord_helpers() {
+        assert_eq!(season_from_year_phase(0.0), "Spring");
+        assert_eq!(season_from_year_phase(0.3), "Summer");
+        assert_eq!(season_from_year_phase(0.6), "Autumn");
+        assert_eq!(season_from_year_phase(0.9), "Winter");
+
+        assert_eq!(season_wind_bias("Spring"), 1.0);
+        assert_eq!(season_wind_bias("Summer"), 0.4);
+        assert_eq!(season_wind_bias("Autumn"), 1.2);
+        assert_eq!(season_wind_bias("Winter"), 1.6);
+        assert_eq!(season_wind_bias("Nonsense"), 0.0);
+
+        assert_eq!(precipitation_from_weather("Winter", -5.0), "snow");
+        assert_eq!(precipitation_from_weather("Winter", 5.0), "none");
+        assert_eq!(precipitation_from_weather("Spring", 5.0), "rain");
+        assert_eq!(precipitation_from_weather("Summer", 10.0), "rain");
+        assert_eq!(precipitation_from_weather("Summer", 30.0), "none");
+
+        for v in [0.0_f32, 1.0, 42.5, -3.0] {
+            assert!((0.0..1.0).contains(&hash01(v)), "hash01({v}) out of [0,1)");
+        }
+
+        assert_eq!(normalize_world_coord(0), 0.0);
+        assert_eq!(normalize_world_coord(i64::MAX), 1.0);
+        assert_eq!(normalize_world_coord(-100), 0.0);
+
+        use civ_engine::ResourceType;
+        assert_eq!(route_resource("grain"), ResourceType::Food);
+        assert_eq!(route_resource("timber"), ResourceType::Wood);
+        assert_eq!(route_resource("ore"), ResourceType::Metal);
+        assert_eq!(route_resource("tools"), ResourceType::Metal);
+        assert_eq!(route_resource("cloth"), ResourceType::Energy);
+        assert_eq!(route_resource("unknown"), ResourceType::Food);
+    }
 }

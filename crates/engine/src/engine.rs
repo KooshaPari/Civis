@@ -2211,10 +2211,10 @@ impl Simulation {
         let mut food_out = food * yield_factor;
         let mut metal_out = metal * yield_factor;
         if self.state.economic_focus == EconomicFocus::Agrarian {
-            food_out *= focus_bonus;
+            food_out = food_out * focus_bonus;
         }
         if self.state.economic_focus == EconomicFocus::Industrial {
-            metal_out *= focus_bonus;
+            metal_out = metal_out * focus_bonus;
         }
         self.state.resources.food += food_out;
         self.state.resources.wood += wood * yield_factor;

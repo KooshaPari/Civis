@@ -2245,6 +2245,7 @@ impl Simulation {
     fn tick_trade_routes(&mut self) {
         // Societal unrest throttles all commerce this tick (computed once).
         let unrest_factor = unrest_trade_factor(self.state.unrest);
+        let cohesion_factor = cohesion_trade_factor(self.state.cohesion);
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
                 continue;
@@ -2271,7 +2272,7 @@ impl Simulation {
                 .map(|r| resource_amount(r, resource))
                 .unwrap_or(Fixed::ZERO);
             let boosted =
-                route.volume * trade_volume_multiplier(available, to_stock) * unrest_factor;
+                route.volume * trade_volume_multiplier(available, to_stock) * unrest_factor * cohesion_factor;
             let quantity = boosted.min(available);
             {
                 let from_resources = self
@@ -2497,6 +2498,19 @@ fn unrest_trade_factor(unrest: u64) -> Fixed {
     let max_drop = (1_000 - UNREST_TRADE_FLOOR_PERMILLE) as u64;
     let drop = (unrest / UNREST_PER_TRADE_PERMILLE).min(max_drop) as i64;
     Fixed::from_num(1_000 - drop) / Fixed::from_num(1_000)
+}
+
+/// Cohesion units that lift trade volume by one per-mille (social trust greases commerce).
+const COHESION_PER_TRADE_PERMILLE: u64 = 4;
+/// Cap on cohesion's trade boost (per-mille above 1.0): at most +50% volume.
+const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
+
+/// Downward-causation policy (FR-CIV-0100 §3): a cohesive society trades MORE —
+/// social trust lowers transaction friction. Returns a factor in [1.0, 1.5],
+/// rising with cohesion, capped so the boost can't run away.
+fn cohesion_trade_factor(cohesion: u64) -> Fixed {
+    let boost = (cohesion / COHESION_PER_TRADE_PERMILLE).min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
+    Fixed::from_num(1_000 + boost) / Fixed::from_num(1_000)
 }
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when
@@ -3017,6 +3031,16 @@ mod tests {
         );
         // An extreme unrest saturates exactly at the floor.
         assert_eq!(unrest_trade_factor(u64::MAX), Fixed::from_num(1) / Fixed::from_num(2));
+    }
+
+    #[test]
+    fn cohesion_trade_factor_boosts_to_capped_ceiling() {
+        assert_eq!(cohesion_trade_factor(0), Fixed::from_num(1));
+        let some = cohesion_trade_factor(400);
+        let lots = cohesion_trade_factor(100_000);
+        assert!(some > Fixed::from_num(1));
+        assert!(lots >= some);
+        assert!(lots <= Fixed::from_num(3) / Fixed::from_num(2));
     }
 
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).

@@ -1814,11 +1814,13 @@ impl Simulation {
         let garrison_target = institution_target_level(self.state.unrest, 200);
         self.state.garrison_level =
             institution_step(self.state.garrison_level, garrison_target);
-        if let Some(treasury) = self.state.faction_treasury.values_mut().next() {
-            let upkeep = Fixed::from_num(
-                (self.state.temple_level + self.state.garrison_level) as i64 * 10,
-            );
-            *treasury = (*treasury - upkeep).max(Fixed::from_num(0));
+        if let Some(&min_id) = self.state.faction_treasury.keys().min() {
+            if let Some(treasury) = self.state.faction_treasury.get_mut(&min_id) {
+                let upkeep = Fixed::from_num(
+                    (self.state.temple_level + self.state.garrison_level) as i64 * 10,
+                );
+                *treasury = (*treasury - upkeep).max(Fixed::from_num(0));
+            }
         }
     }
 
@@ -2329,7 +2331,8 @@ impl Simulation {
             return;
         }
         self.diplomacy_events.clear();
-        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
         if faction_ids.len() < 2 {
             return;
         }

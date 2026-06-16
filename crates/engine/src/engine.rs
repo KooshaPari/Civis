@@ -2159,7 +2159,7 @@ impl Simulation {
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
         let conflict_threshold =
-            Fixed::from_num(diplomacy_conflict_threshold(self.belief(), self.unrest()));
+            Fixed::from_num(diplomacy_conflict_threshold(self.belief().saturating_add(self.cohesion()), self.unrest()));
         let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
         } else {
@@ -2904,6 +2904,27 @@ mod tests {
         assert_eq!(
             diplomacy_conflict_threshold(5_000, 5_000),
             DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
+    }
+
+    /// FR-CIV-0100 §3 — a highly cohesive society projects unity: cohesion folds
+    /// into the binding term and raises the war threshold, so a wealth disparity
+    /// that would spark conflict in a fractured society instead yields trade.
+    #[test]
+    fn high_cohesion_biases_diplomacy_toward_peace() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(15_000));
+        sim.state.cohesion = 1_000_000;
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement,
+            "a highly cohesive society tolerates the disparity and trades"
         );
     }
 

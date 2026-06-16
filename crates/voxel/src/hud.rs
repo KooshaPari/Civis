@@ -780,6 +780,12 @@ mod tests {
         assert_eq!(p.selected, None, "selection should drop when locked");
     }
 
+    #[test]
+    fn tool_entry_with_shortcut_sets_key() {
+        let e = ToolEntry::new("build_road", "Road", ToolCategory::Build).with_shortcut('r');
+        assert_eq!(e.shortcut, Some('r'));
+    }
+
     // -- FR-CIV-HUD-002 ------------------------------------------------
 
     /// FR-CIV-HUD-002 — a node stays `Locked` until every prerequisite is
@@ -901,6 +907,14 @@ mod tests {
         assert_eq!(p, decoded);
     }
 
+    #[test]
+    fn diplomacy_panel_get_finds_inserted_slot() {
+        let mut panel = DiplomacyPanel::new();
+        panel.insert(TreatySlot::new("p1", "Polity One"));
+        assert!(panel.get("p1").is_some());
+        assert!(panel.get("absent").is_none());
+    }
+
     // -- FR-CIV-HUD-004 ------------------------------------------------
 
     /// FR-CIV-HUD-004 — `EventFeed::insert` deduplicates by id so a
@@ -951,6 +965,15 @@ mod tests {
         f.insert(EventFeedItem::new("b", 2, EventSeverity::Warning, "b"));
         f.insert(EventFeedItem::new("c", 3, EventSeverity::Critical, "c"));
         assert_eq!(f.highest_severity(), Some(EventSeverity::Critical));
+    }
+
+    #[test]
+    fn event_feed_item_builders_set_body_and_region() {
+        let item = EventFeedItem::new("e1", 10, EventSeverity::Info, "Headline")
+            .with_body("details")
+            .with_region("north");
+        assert_eq!(item.body.as_deref(), Some("details"));
+        assert_eq!(item.region.as_deref(), Some("north"));
     }
 
     // -- FR-CIV-HUD-005 ------------------------------------------------

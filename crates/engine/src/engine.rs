@@ -2026,10 +2026,10 @@ impl Simulation {
 
         let phase_cfg = self.military_phase;
 
+        let morale_recovery = morale_recovery_rate(self.state.cohesion);
         for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
             if unit.morale < Fixed::from_num(1) {
-                unit.morale = (unit.morale + Fixed::from_num(1) / Fixed::from_num(100))
-                    .min(Fixed::from_num(1));
+                unit.morale = (unit.morale + morale_recovery).min(Fixed::from_num(1));
             }
         }
 
@@ -2449,6 +2449,17 @@ fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
 fn production_yield_factor(research_tier: u64) -> Fixed {
     let bonus_permille = research_tier.saturating_mul(100).min(1_000) as i64;
     Fixed::from_num(1_000 + bonus_permille) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): social cohesion speeds military
+/// morale recovery — a unified society's troops rally faster. Returns the
+/// per-tick morale recovery increment, rising with cohesion from a 0.010 base
+/// up to a 0.050 cap.
+fn morale_recovery_rate(cohesion: u64) -> Fixed {
+    const BASE_PERMILLE: i64 = 10;
+    const CAP_PERMILLE: i64 = 50;
+    let bonus = (cohesion / 25_000).min((CAP_PERMILLE - BASE_PERMILLE) as u64) as i64;
+    Fixed::from_num(BASE_PERMILLE + bonus) / Fixed::from_num(1_000)
 }
 
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
@@ -2994,6 +3005,24 @@ mod tests {
         assert!(t1 > Fixed::from_num(1), "research lifts yield");
         assert!(t10 >= t1, "more research never lowers yield");
         assert_eq!(production_yield_factor(100), Fixed::from_num(2), "capped at 2x");
+    }
+
+    /// FR-CIV-0100 §3 — cohesion speeds morale recovery, monotonically, 0.01→0.05 cap.
+    #[test]
+    fn morale_recovery_rate_rises_with_cohesion_capped() {
+        assert_eq!(
+            morale_recovery_rate(0),
+            Fixed::from_num(1) / Fixed::from_num(100)
+        );
+        let some = morale_recovery_rate(500_000);
+        let lots = morale_recovery_rate(10_000_000);
+        assert!(some > morale_recovery_rate(0), "cohesion speeds recovery");
+        assert!(lots >= some, "more cohesion never slows recovery");
+        assert_eq!(
+            lots,
+            Fixed::from_num(5) / Fixed::from_num(100),
+            "recovery rate capped at 0.05"
+        );
     }
 
     /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer

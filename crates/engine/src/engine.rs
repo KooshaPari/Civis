@@ -7,7 +7,7 @@ use civ_agents::{
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
     Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
-    Tools, Wardrobe,
+    SocialGraph, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
@@ -340,6 +340,13 @@ pub struct WorldState {
     /// `#[serde(default)]` keeps older saves loadable.
     #[serde(default)]
     pub cohesion: u64,
+    /// Cached micro social-trust trade bonus (per-mille above 1.0× volume, 0..=250).
+    /// Written at end of [`Simulation::phase_cohesion`] from agent [`SocialGraph`] ties;
+    /// consumed in [`Simulation::tick_trade_routes`] on the **next** tick because
+    /// `phase_economy` precedes `phase_emergence`. `#[serde(default)]` keeps older
+    /// `.civsave` files loadable (missing field → 0, no retroactive trade boost).
+    #[serde(default)]
+    pub micro_trust_permille: u64,
     /// Discrete technology unlocks (irreversible bitmask). EMERGES from research
     /// milestones via [`Simulation::phase_tech`]. `#[serde(default)]` keeps older
     /// saves loadable.
@@ -407,6 +414,7 @@ impl Default for WorldState {
             unrest: 0,
             faction_unrest: HashMap::new(),
             cohesion: 0,
+            micro_trust_permille: 0,
             tech_unlocks: 0,
             dispossessed_permille: 0,
             temple_level: 0,
@@ -1893,6 +1901,7 @@ impl Simulation {
             .state
             .cohesion
             .saturating_sub(self.state.cohesion / COHESION_DECAY_DIVISOR);
+        self.state.micro_trust_permille = micro_social_trust_permille(&self.world);
     }
 
     /// Social-mood phase (FR-CIV-0100 §3 emergence). Downward causation: macro
@@ -2689,7 +2698,8 @@ impl Simulation {
     fn tick_trade_routes(&mut self) {
         // Societal unrest throttles all commerce this tick (computed once).
         let unrest_factor = unrest_trade_factor(self.state.unrest);
-        let cohesion_factor = cohesion_trade_factor(self.state.cohesion);
+        let society_factor =
+            society_trade_factor(self.state.cohesion, self.state.micro_trust_permille);
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
                 continue;
@@ -2721,7 +2731,7 @@ impl Simulation {
             let boosted = route.volume
                 * trade_volume_multiplier(available, to_stock)
                 * unrest_factor
-                * cohesion_factor
+                * society_factor
                 * relation_factor;
             let quantity = boosted.min(available);
             {
@@ -3007,6 +3017,30 @@ fn micro_cohesion_delta(world: &hecs::World) -> i64 {
     let micro_bind = (consensus * MICRO_BIND_CAP as f32).floor() as i64;
     let micro_fray = ((1.0 - consensus) * MICRO_FRAY_CAP as f32).floor() as i64;
     micro_bind - micro_fray
+}
+
+/// Upward causation (FR-CIV-0100 §3): mean positive agent tie trust caches a
+/// trade permille bonus for the next economy tick. Pure `hecs::World` scan.
+fn micro_social_trust_permille(world: &hecs::World) -> u64 {
+    const MICRO_TRUST_SCALE: f32 = 250.0;
+    const MICRO_TRUST_CAP: u64 = 250;
+
+    let mut n = 0u64;
+    let mut sum = 0.0f32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            sum += tie.trust.clamp(0.0, 1.0);
+            n += 1;
+        }
+    }
+
+    if n == 0 {
+        return 0;
+    }
+
+    let trust_mean = sum / n as f32;
+    let raw = (trust_mean * MICRO_TRUST_SCALE).floor() as u64;
+    raw.min(MICRO_TRUST_CAP)
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -3307,13 +3341,26 @@ fn unrest_trade_factor(unrest: u64) -> Fixed {
 const COHESION_PER_TRADE_PERMILLE: u64 = 4;
 /// Cap on cohesion's trade boost (per-mille above 1.0): at most +50% volume.
 const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
+/// Per-mille trade boost from agent tie trust alone.
+const MICRO_TRUST_CAP_PERMILLE: u64 = 250;
+/// Combined macro+micro trade boost cap (cohesion 500 + micro 250).
+const SOCIETY_TRADE_BOOST_CAP_PERMILLE: i64 = 750;
+
+/// Downward-causation policy (FR-CIV-0100 §3): macro cohesion AND cached micro
+/// interpersonal trust lift trade volume. Returns factor in [1.0, 1.75].
+fn society_trade_factor(cohesion: u64, micro_trust_permille: u64) -> Fixed {
+    let cohesion_boost = (cohesion / COHESION_PER_TRADE_PERMILLE)
+        .min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
+    let micro_boost = micro_trust_permille.min(MICRO_TRUST_CAP_PERMILLE) as i64;
+    let total = (cohesion_boost + micro_boost).min(SOCIETY_TRADE_BOOST_CAP_PERMILLE);
+    Fixed::from_num(1_000 + total) / Fixed::from_num(1_000)
+}
 
 /// Downward-causation policy (FR-CIV-0100 §3): a cohesive society trades MORE —
 /// social trust lowers transaction friction. Returns a factor in [1.0, 1.5],
 /// rising with cohesion, capped so the boost can't run away.
 fn cohesion_trade_factor(cohesion: u64) -> Fixed {
-    let boost = (cohesion / COHESION_PER_TRADE_PERMILLE).min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
-    Fixed::from_num(1_000 + boost) / Fixed::from_num(1_000)
+    society_trade_factor(cohesion, 0)
 }
 
 /// Relations bias trade: allies (positive relation) trade more, rivals (negative)
@@ -4389,6 +4436,117 @@ mod tests {
         assert!(some > Fixed::from_num(1));
         assert!(lots >= some);
         assert!(lots <= Fixed::from_num(3) / Fixed::from_num(2));
+    }
+
+    #[test]
+    fn society_trade_factor_stacks_micro_trust_with_cohesion() {
+        assert_eq!(
+            society_trade_factor(400, 0),
+            cohesion_trade_factor(400)
+        );
+        assert_eq!(society_trade_factor(0, 0), Fixed::from_num(1));
+
+        let cohesion_only = society_trade_factor(2_000, 0);
+        let micro_only = society_trade_factor(0, 250);
+        let both = society_trade_factor(2_000, 250);
+
+        assert!(micro_only > Fixed::from_num(1));
+        assert!(both > cohesion_only);
+        assert!(both > micro_only);
+        assert!(both <= Fixed::from_num(1_750) / Fixed::from_num(1_000));
+    }
+
+    /// FR-CIV-0100 §3 — mean positive agent tie trust caches a trade permille bonus.
+    #[test]
+    fn micro_social_trust_permille_aggregates_tie_trust() {
+        use civ_agents::Tie;
+
+        fn graph_with_trusts(trusts: &[f32]) -> SocialGraph {
+            let ties = trusts
+                .iter()
+                .enumerate()
+                .map(|(i, &trust)| Tie {
+                    other: (i + 1) as u64,
+                    kinship: 0.0,
+                    familiarity: 0.5,
+                    affinity: 0.0,
+                    trust,
+                    last_seen: 0,
+                })
+                .collect();
+            SocialGraph { ties }
+        }
+
+        fn spawn_graphs(world: &mut hecs::World, trusts: &[f32]) {
+            world.spawn((graph_with_trusts(trusts),));
+        }
+
+        assert_eq!(micro_social_trust_permille(&hecs::World::new()), 0);
+
+        let mut negative = hecs::World::new();
+        spawn_graphs(&mut negative, &[-1.0; 4]);
+        assert_eq!(micro_social_trust_permille(&negative), 0);
+
+        let mut high = hecs::World::new();
+        spawn_graphs(&mut high, &[1.0; 12]);
+        assert_eq!(
+            micro_social_trust_permille(&high),
+            250,
+            "saturated trust should max the permille cache"
+        );
+
+        let mut mixed = hecs::World::new();
+        spawn_graphs(
+            &mut mixed,
+            &[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        );
+        assert_eq!(micro_social_trust_permille(&mixed), 125);
+
+        assert!(
+            micro_social_trust_permille(&high) > micro_social_trust_permille(&mixed),
+            "denser trust must cache a higher permille"
+        );
+    }
+
+    /// FR-CIV-0100 §3 — cached micro trust permille boosts trade volume when macro
+    /// drivers are pinned.
+    #[test]
+    fn micro_trust_permille_boosts_trade_volume() {
+        let mut sim = Simulation::with_seed(42);
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+
+        let route = sim.state.trade_routes[0].clone();
+        let from = route.from_faction;
+        let to = route.to_faction;
+        let stock = Fixed::from_num(100);
+        sim.state.faction_resources.get_mut(&from).unwrap().food = stock;
+        sim.state.faction_resources.get_mut(&to).unwrap().food = stock;
+
+        let baseline = sim
+            .state
+            .faction_treasury
+            .get(&from)
+            .copied()
+            .unwrap_or(Fixed::ZERO);
+
+        sim.state.micro_trust_permille = 250;
+        sim.tick_trade_routes();
+        let high_gain = sim.state.faction_treasury.get(&from).copied().unwrap_or(Fixed::ZERO)
+            - baseline;
+
+        sim.state.faction_treasury.insert(from, baseline);
+        sim.state.faction_resources.get_mut(&from).unwrap().food = stock;
+        sim.state.faction_resources.get_mut(&to).unwrap().food = stock;
+        sim.state.micro_trust_permille = 0;
+        sim.tick_trade_routes();
+        let low_gain = sim.state.faction_treasury.get(&from).copied().unwrap_or(Fixed::ZERO)
+            - baseline;
+
+        assert!(
+            high_gain > low_gain,
+            "micro trust should boost exporter trade profit (high={high_gain}, low={low_gain})"
+        );
     }
 
     #[test]

@@ -873,4 +873,146 @@ mod tests {
             "saga graph should accumulate nodes"
         );
     }
+
+    fn test_seed_definition(id: &str) -> SeedDefinition {
+        let length = 64usize;
+        SeedDefinition {
+            id: id.to_string(),
+            display_name: id.to_string(),
+            dna_length: length,
+            genome: (0..length as u8).collect(),
+            divergence: 0.5,
+            spawn_biome_affinity: vec![],
+            notes: None,
+        }
+    }
+
+    /// `register_seed_set` merges valid seeds and replaces ids on re-register.
+    #[test]
+    fn register_seed_set_merges_and_replaces_ids() {
+        let mut sim = Simulation::with_seed(1);
+        assert!(sim.seed_library().get("raw_organism").is_some());
+
+        let set_a = SeedSet {
+            version: 1,
+            seeds: vec![
+                test_seed_definition("alpha"),
+                test_seed_definition("beta"),
+            ],
+        };
+        sim.register_seed_set(set_a);
+        assert!(sim.seed_library().get("alpha").is_some());
+        assert!(sim.seed_library().get("beta").is_some());
+        assert!(sim.seed_library().get("raw_organism").is_some());
+
+        let set_b = SeedSet {
+            version: 1,
+            seeds: vec![
+                test_seed_definition("gamma"),
+                test_seed_definition("beta"),
+            ],
+        };
+        sim.register_seed_set(set_b);
+        assert!(sim.seed_library().get("alpha").is_some());
+        assert!(sim.seed_library().get("gamma").is_some());
+        assert!(sim.seed_library().get("beta").is_some());
+        assert!(sim.seed_library().get("raw_organism").is_some());
+    }
+
+    /// `set_active_seed` updates the active id; unknown ids are rejected.
+    #[test]
+    fn set_active_seed_updates_or_rejects_unknown() {
+        let mut sim = Simulation::with_seed(2);
+        sim.set_active_seed(Some("raw_organism".to_string()));
+        assert_eq!(sim.active_seed_id(), Some("raw_organism"));
+
+        let kept = sim.active_seed_id().map(str::to_string);
+        sim.set_active_seed(Some("missing_seed_id".to_string()));
+        assert_eq!(sim.active_seed_id(), kept.as_deref());
+        assert!(
+            sim.emergence_feed()
+                .iter()
+                .any(|e| e.kind == "seed_unknown"),
+            "unknown seed id should emit seed_unknown"
+        );
+
+        sim.set_active_seed(None);
+        assert_eq!(sim.active_seed_id(), None);
+    }
+
+    /// `register_seed_file` loads fixture RON and reports missing paths.
+    #[test]
+    fn register_seed_file_loads_fixture_and_reports_missing() {
+        let mut sim = Simulation::with_seed(3);
+        sim.register_seed_file("scenarios/canonical_seeds.ron");
+        assert!(sim.seed_library().get("human_baseline").is_some());
+        assert!(
+            sim.emergence_feed()
+                .iter()
+                .any(|e| e.kind == "seed_loaded"),
+            "successful load should emit seed_loaded"
+        );
+
+        sim.emergence.last_feed.clear();
+        sim.register_seed_file("scenarios/no_such_seed_file.ron");
+        assert!(
+            sim.emergence_feed()
+                .iter()
+                .any(|e| e.kind == "seed_load_failed"),
+            "missing file should emit seed_load_failed"
+        );
+    }
+
+    /// `agent_social_graph` returns cloned graphs by civilian id.
+    #[test]
+    fn agent_social_graph_returns_graph_for_known_agent() {
+        use civ_agents::Tie;
+
+        let mut sim = Simulation::with_seed(4);
+        let (entity, agent_id) = sim
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .next()
+            .map(|(e, c)| (e, c.id))
+            .expect("civilian");
+        let graph = SocialGraph {
+            ties: vec![Tie::new(42, 1)],
+        };
+        let _ = sim.world.insert(entity, (graph.clone(),));
+
+        assert_eq!(sim.agent_social_graph(agent_id), Some(graph));
+        assert_eq!(sim.agent_social_graph(9_999_999), None);
+    }
+
+    /// `civ_ai_decisions` surfaces naming decisions after sentience crossings.
+    #[test]
+    fn civ_ai_decisions_populated_after_sentience_tick() {
+        let mut sim = Simulation::with_seed(5);
+        sim.emergence.sentience_threshold = SentienceThreshold::new(0.05);
+        sim.tick();
+        let decisions = sim.civ_ai_decisions();
+        assert!(
+            !decisions.is_empty(),
+            "sentience tick should produce civ-ai decisions"
+        );
+        for decision in decisions {
+            assert!(!decision.prompt.is_empty());
+            assert!(!decision.output.is_empty());
+        }
+    }
+
+    /// `sentience_events` records first-time threshold crossings.
+    #[test]
+    fn sentience_events_records_threshold_crossings() {
+        let mut sim = Simulation::with_seed(6);
+        sim.emergence.sentience_threshold = SentienceThreshold::new(0.05);
+        sim.tick();
+        let events = sim.sentience_events();
+        assert!(!events.is_empty(), "low threshold should yield crossings");
+        for event in events {
+            assert!(event.crossed);
+            assert!(event.lineage_id.is_some());
+        }
+    }
 }

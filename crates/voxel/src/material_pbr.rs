@@ -1212,6 +1212,15 @@ mod tests {
         assert_eq!(zero.iter_ordered().count(), 1);
     }
 
+    #[test]
+    fn triplanar_layer_with_world_tile_overrides_default() {
+        let ch = TextureChannelMap::standalone("a", "n", "mr", "ao");
+        let layer = TriplanarLayer::new(MaterialId(1), ch, 0.5);
+        assert_eq!(layer.world_tile, 1.0);
+        let layer2 = layer.with_world_tile(4.0);
+        assert_eq!(layer2.world_tile, 4.0);
+    }
+
     /// FR-CIV-PBR-003 — `is_complete` is `false` for an empty plan and
     /// `true` for a plan whose layers all have a complete channel map.
     #[test]

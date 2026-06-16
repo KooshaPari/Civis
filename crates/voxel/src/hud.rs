@@ -786,6 +786,14 @@ mod tests {
         assert_eq!(e.shortcut, Some('r'));
     }
 
+    #[test]
+    fn tool_palette_is_empty_until_insert() {
+        let mut p = ToolPalette::new();
+        assert!(p.is_empty());
+        p.insert(ToolEntry::new("build_road", "Road", ToolCategory::Build));
+        assert!(!p.is_empty());
+    }
+
     // -- FR-CIV-HUD-002 ------------------------------------------------
 
     /// FR-CIV-HUD-002 — a node stays `Locked` until every prerequisite is

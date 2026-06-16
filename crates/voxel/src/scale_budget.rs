@@ -1237,6 +1237,18 @@ mod tests {
         assert_eq!(SimLodAggregator::SCHEMA_VERSION, 1);
     }
 
+    /// FR-CIV-SCALE-004 — `CohortTotals::is_empty` tracks `chunks == 0`.
+    #[test]
+    fn cohort_totals_is_empty_when_no_chunks() {
+        let t = CohortTotals::EMPTY;
+        assert!(t.is_empty());
+        let non_empty = CohortTotals {
+            chunks: 1,
+            ..CohortTotals::EMPTY
+        };
+        assert!(!non_empty.is_empty());
+    }
+
     // ---- Cross-cutting: scale budget + window policy integration ----
 
     /// Cross-cutting: the MVP budget + the default `WindowPolicy`

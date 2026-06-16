@@ -4873,7 +4873,7 @@ mod tests {
     }
 
     fn pin_all_civilian_positions(sim: &mut Simulation, pin: WorldCoord) {
-        for (_, pos) in sim
+        for (_, (_, pos)) in sim
             .world
             .query_mut::<(&AgentCivilian, &mut Position3d)>()
         {

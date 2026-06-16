@@ -3604,6 +3604,47 @@ mod tests {
         let _ = (sim.belief(), sim.unrest(), sim.research_tier());
     }
 
+    /// Empirical criticality check: over a long run the emergent scalars must stay
+    /// BOUNDED (no overflow/panic, belief/cohesion don't grow without limit thanks
+    /// to decay) yet DYNAMIC (the tech tree progresses; state evolves). Heat-death
+    /// (everything frozen at 0) and explosion (unbounded) both fail this.
+    #[test]
+    fn emergence_stays_bounded_and_dynamic_over_5000_ticks() {
+        let mut sim = Simulation::with_seed(20260615);
+        // Seed a wealth disparity so diplomacy/inequality paths can engage.
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        if ids.len() >= 2 {
+            sim.state.faction_treasury.insert(ids[0], Fixed::from_num(0));
+            sim.state.faction_treasury.insert(ids[1], Fixed::from_num(50_000));
+        }
+        for _ in 0..5_000 {
+            sim.tick();
+        }
+        assert_eq!(sim.state.tick, 5_000);
+        // BOUNDED: belief did not run away to absurd magnitudes (decay holds it).
+        assert!(
+            sim.belief() < 1_000_000_000,
+            "belief must stay bounded by decay"
+        );
+        assert!(
+            sim.cohesion() < 1_000_000_000,
+            "cohesion must stay bounded by decay"
+        );
+        // DYNAMIC: the research-driven tech tree made progress over 5000 ticks.
+        assert!(
+            sim.research_tier() >= 1,
+            "research should advance over a long run"
+        );
+        // Accessors remain coherent (no panic reaching here proves saturating math held).
+        let _ = (
+            sim.unrest(),
+            sim.dispossessed_permille(),
+            sim.temple_level(),
+            sim.garrison_level(),
+            sim.tech_unlocks(),
+        );
+    }
+
     #[test]
     fn test_initial_entities() {
         let sim = Simulation::new();

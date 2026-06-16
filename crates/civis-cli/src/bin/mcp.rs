@@ -196,8 +196,9 @@ async fn census_tool(_params: &Value) -> Result<Value, String> {
     let config: CensusConfig = census_config_from_env();
     let url = config.ws_url();
     let frame = build_sim_status_request(civ_server::jsonrpc::RequestId::Number(1));
-    let connect = tokio_tungstenite::connect_async(&url)
+    let connect = tokio::time::timeout(config.timeout(), tokio_tungstenite::connect_async(&url))
         .await
+        .map_err(|_| format!("timed out connecting to {url}"))?
         .map_err(|err| format!("WS connect {url}: {err}"))?;
     let (mut ws, _response) = connect;
     use futures_util::{SinkExt, StreamExt};

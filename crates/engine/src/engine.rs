@@ -3331,6 +3331,30 @@ mod tests {
         }
     }
 
+    /// Faction pair chosen by [`Simulation::phase_diplomacy`] (sorted ids + tick modulus).
+    fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
+        let idx = tick as usize;
+        let a = faction_ids[idx % faction_ids.len()];
+        let b = faction_ids[(idx + 1) % faction_ids.len()];
+        (a, b)
+    }
+
+    /// Seed a pair relation via the normalized key [`Simulation::faction_relation`] reads.
+    fn seed_faction_pair_relation(
+        matrix: &mut DiplomacyMatrix,
+        a: u32,
+        b: u32,
+        signal: DiplomacySignal,
+        rounds: usize,
+    ) {
+        let cluster_a = ClusterId(u64::from(a));
+        let cluster_b = ClusterId(u64::from(b));
+        for _ in 0..rounds {
+            matrix.apply_signal(cluster_a, cluster_b, signal);
+            matrix.apply_signal(cluster_b, cluster_a, signal);
+        }
+    }
+
     /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
     #[test]
     fn startup_spawns_128_civilians() {
@@ -4614,20 +4638,19 @@ mod tests {
         sim.state.unrest = 0;
         let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
         faction_ids.sort_unstable();
-        let a = faction_ids[500 % faction_ids.len()];
-        let b = faction_ids[(500 + 1) % faction_ids.len()];
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim.state.tick);
         sim.state.faction_treasury.insert(a, Fixed::from_num(0));
         sim.state.faction_treasury.insert(b, Fixed::from_num(12_000));
-        for _ in 0..30 {
-            sim.state.faction_relations.apply_signal(
-                ClusterId(u64::from(a)),
-                ClusterId(u64::from(b)),
-                DiplomacySignal {
-                    trade_volume: 12.5,
-                    ..Default::default()
-                },
-            );
-        }
+        seed_faction_pair_relation(
+            &mut sim.state.faction_relations,
+            a,
+            b,
+            DiplomacySignal {
+                trade_volume: 12.5,
+                ..Default::default()
+            },
+            30,
+        );
         assert!(
             sim.faction_relation(a, b) > 0.5,
             "allied pair should have a strongly positive relation before diplomacy"
@@ -4650,20 +4673,19 @@ mod tests {
         sim.state.unrest = 0;
         let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
         faction_ids.sort_unstable();
-        let a = faction_ids[500 % faction_ids.len()];
-        let b = faction_ids[(500 + 1) % faction_ids.len()];
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim.state.tick);
         sim.state.faction_treasury.insert(a, Fixed::from_num(4_000));
         sim.state.faction_treasury.insert(b, Fixed::from_num(10_000));
-        for _ in 0..30 {
-            sim.state.faction_relations.apply_signal(
-                ClusterId(u64::from(a)),
-                ClusterId(u64::from(b)),
-                DiplomacySignal {
-                    resource_competition: 8.34,
-                    ..Default::default()
-                },
-            );
-        }
+        seed_faction_pair_relation(
+            &mut sim.state.faction_relations,
+            a,
+            b,
+            DiplomacySignal {
+                resource_competition: 8.34,
+                ..Default::default()
+            },
+            30,
+        );
         assert!(
             sim.faction_relation(a, b) < -0.5,
             "rival pair should have a strongly negative relation before diplomacy"

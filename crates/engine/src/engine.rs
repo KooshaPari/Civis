@@ -401,16 +401,12 @@ pub struct WorldState {
     /// diplomacy thresholds. `#[serde(default)]` keeps older saves loadable.
     #[serde(default)]
     pub faction_relations: DiplomacyMatrix,
-    /// Per-polity macro + economy rows (authoritative target; dual-written with legacy
-    /// maps during migration). `BTreeMap` keys iterate in deterministic order.
-    #[serde(default)]
-    pub polities: BTreeMap<u32, PolityMacroState>,
     pub resources: Resources,
 }
 
 impl Default for WorldState {
     fn default() -> Self {
-        let mut state = Self {
+        Self {
             tick: 0,
             population: 1_000_000,
             research_progress: 0,
@@ -490,11 +486,8 @@ impl Default for WorldState {
                 },
             ],
             faction_relations: DiplomacyMatrix::default(),
-            polities: BTreeMap::new(),
             resources: Resources::default(),
-        };
-        hydrate_polities_from_legacy(&mut state);
-        state
+        }
     }
 }
 
@@ -1284,38 +1277,10 @@ impl Simulation {
 
     /// Per-faction unrest for `faction_id`, driven each tick by
     /// [`Simulation::phase_faction_unrest`] from that faction's wealth/scarcity
-    /// shadow. Missing factions read as zero (content). During migration reads
-    /// the max of [`WorldState::polities`] and legacy [`WorldState::faction_unrest`].
+    /// shadow. Missing factions read as zero (content).
     #[must_use]
     pub fn faction_unrest(&self, faction_id: u32) -> u64 {
-        let from_polity = self.state.polities.get(&faction_id).map(|p| p.unrest);
-        let from_legacy = self.state.faction_unrest.get(&faction_id).copied();
-        match (from_polity, from_legacy) {
-            (Some(p), Some(l)) => p.max(l),
-            (Some(p), None) => p,
-            (None, Some(l)) => l,
-            (None, None) => 0,
-        }
-    }
-
-    /// Sorted polity ids from [`WorldState::polities`].
-    #[must_use]
-    pub fn polity_ids(&self) -> impl Iterator<Item = u32> + '_ {
-        self.state.polities.keys().copied()
-    }
-
-    /// Read-only access to a polity row.
-    #[must_use]
-    pub fn polity(&self, id: u32) -> Option<&PolityMacroState> {
-        self.state.polities.get(&id)
-    }
-
-    fn ensure_polity(&mut self, id: u32) -> &mut PolityMacroState {
-        if !self.state.polities.contains_key(&id) {
-            let row = PolityMacroState::default_for(id, &self.state);
-            self.state.polities.insert(id, row);
-        }
-        self.state.polities.get_mut(&id).expect("polity row exists")
+        self.state.faction_unrest.get(&faction_id).copied().unwrap_or(0)
     }
 
     /// Accumulated social cohesion, generated each tick by
@@ -1964,7 +1929,6 @@ impl Simulation {
             }
             let entry = self.state.faction_unrest.entry(id).or_insert(0);
             *entry = (*entry as i64 + delta).max(0) as u64;
-            self.ensure_polity(id).unrest = *entry;
         }
     }
 
@@ -4486,35 +4450,6 @@ mod tests {
         assert!(sim.faction_unrest(id) > 0, "scarce faction breeds unrest");
     }
 
-    /// After faction-unrest ticks, `polities[id].unrest` matches legacy `faction_unrest`.
-    #[test]
-    fn polities_unrest_matches_faction_unrest_after_ticks() {
-        let mut sim = Simulation::with_seed(99);
-        let id = 0u32;
-        sim.state.faction_treasury.insert(id, Fixed::from_num(0));
-        sim.state.faction_resources.insert(
-            id,
-            Resources {
-                food: Fixed::from_num(5),
-                ..Resources::default()
-            },
-        );
-        for _ in 0..5 {
-            sim.phase_faction_unrest();
-        }
-        for (&faction_id, &legacy_unrest) in &sim.state.faction_unrest {
-            let polity_unrest = sim
-                .state
-                .polities
-                .get(&faction_id)
-                .map(|p| p.unrest)
-                .unwrap_or(0);
-            assert_eq!(
-                polity_unrest, legacy_unrest,
-                "polity {faction_id} unrest drifted from legacy map"
-            );
-        }
-    }
 
     /// A wealthy, well-provisioned faction stays at zero per-faction unrest.
     #[test]

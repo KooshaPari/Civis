@@ -1422,6 +1422,7 @@ impl Simulation {
         self.phase_diffusion();
         self.phase_disasters();
         self.phase_life();
+        self.phase_settlement_consumption();
         self.phase_emergence();
         self.phase_research();
         self.phase_tech();
@@ -2218,6 +2219,29 @@ impl Simulation {
             next_stocks.insert(*cluster_id, stock);
         }
         self.cluster_stocks = next_stocks;
+    }
+
+    /// Drains cluster food stocks by per-member consumption (FR-CIV-LIFE-020).
+    ///
+    /// Runs immediately after [`Simulation::phase_life`] so collective production
+    /// cannot integrate without a matching sink.
+    fn phase_settlement_consumption(&mut self) {
+        const FOOD_PER_MEMBER_PER_TICK: i64 = 1;
+
+        let mut cluster_sizes: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *cluster_sizes.entry(member.cluster.0).or_insert(0) += 1;
+        }
+
+        for (cluster_id, size) in cluster_sizes {
+            let Some(stock) = self.cluster_stocks.get_mut(&cluster_id) else {
+                continue;
+            };
+            let consumption = i64::from(size).saturating_mul(FOOD_PER_MEMBER_PER_TICK);
+            let before = stock.get(civ_economy::Good::Food);
+            let after = before.saturating_sub(consumption);
+            stock.add(civ_economy::Good::Food, after - before);
+        }
     }
 
     /// Production phase - buildings produce resources
@@ -4248,6 +4272,47 @@ mod tests {
         }
         assert_eq!(a.settlement_count(), b.settlement_count());
         assert_eq!(a.cluster_stocks(), b.cluster_stocks());
+    }
+
+    /// FR-CIV-LIFE-020 — cluster food stocks stay bounded when production is
+    /// matched by per-member consumption each tick.
+    #[test]
+    fn cluster_stocks_food_stays_bounded_over_populated_cluster_ticks() {
+        use civ_agents::{ActorVisualKind, Alignment};
+        use civ_economy::Good;
+
+        let mut sim = Simulation::with_seed(9001);
+        let mut rng = ChaCha8Rng::seed_from_u64(9001);
+        for i in 0..8 {
+            spawn_civilian_at(
+                &mut sim.world,
+                9_000 + i,
+                Alignment::None,
+                0.5,
+                0.5,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+
+        for _ in 0..500 {
+            sim.tick();
+        }
+
+        assert!(
+            sim.settlement_count() >= 1,
+            "expected at least one multi-member cluster"
+        );
+        let max_food = sim
+            .cluster_stocks()
+            .values()
+            .map(|stock| stock.get(Good::Food))
+            .max()
+            .unwrap_or(0);
+        assert!(
+            max_food <= 64,
+            "cluster food must stay bounded under consumption sink, got {max_food}"
+        );
     }
 
     /// Covers FR-CIV-PLANET-010.

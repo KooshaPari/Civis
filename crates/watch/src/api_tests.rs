@@ -1293,3 +1293,49 @@ async fn post_mods_fetch_and_remote_list_round_trip() {
     let cache_dir = remote_mod_cache_dir(&repo_root().join("mods"), &cache_id);
     let _ = std::fs::remove_dir_all(cache_dir);
 }
+
+/// FR-SAVE-002 (error branch) — `POST /control/save/slot` with a slot id that is
+/// not one of the canonical production slots is rejected with `400 Bad Request`
+/// and an `ok: false` body, before any save is attempted.
+#[tokio::test]
+async fn fr_save_002_post_save_slot_rejects_invalid_slot() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/save/slot")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"slot":"not-a-real-slot"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+/// FR-SAVE-002 (error branch) — `POST /control/load/slot` validates the slot id
+/// the same way: an unknown slot yields `400 Bad Request` with `ok: false` and
+/// never touches the filesystem.
+#[tokio::test]
+async fn fr_save_002_post_load_slot_rejects_invalid_slot() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/load/slot")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"slot":"bogus"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}

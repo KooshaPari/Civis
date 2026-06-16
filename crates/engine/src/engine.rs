@@ -319,6 +319,11 @@ pub struct WorldState {
     /// `#[serde(default)]` keeps older saves loadable.
     #[serde(default)]
     pub cohesion: u64,
+    /// Discrete technology unlocks (irreversible bitmask). EMERGES from research
+    /// milestones via [`Simulation::phase_tech`]. `#[serde(default)]` keeps older
+    /// saves loadable.
+    #[serde(default)]
+    pub tech_unlocks: u64,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -341,6 +346,7 @@ impl Default for WorldState {
             belief: 0,
             unrest: 0,
             cohesion: 0,
+            tech_unlocks: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1119,8 +1125,13 @@ impl Simulation {
     fn carrying_capacity(&self) -> i64 {
         const POP_BASELINE: i64 = 1_000_000;
         const CAPACITY_PER_TIER: i64 = 200_000;
+        const IRRIGATION_BONUS: i64 = 200_000;
         let tier = self.research_tier().min(i64::MAX as u64) as i64;
-        POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER)
+        let mut cap = POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER);
+        if self.state.tech_unlocks & TECH_IRRIGATION != 0 {
+            cap = cap.saturating_add(IRRIGATION_BONUS);
+        }
+        cap
     }
 
     /// Accumulated faith/belief, generated each tick by [`Simulation::phase_belief`]
@@ -1143,6 +1154,18 @@ impl Simulation {
     #[must_use]
     pub fn cohesion(&self) -> u64 {
         self.state.cohesion
+    }
+
+    /// Discrete technology unlocks reached so far (irreversible bitmask).
+    #[must_use]
+    pub fn tech_unlocks(&self) -> u64 {
+        self.state.tech_unlocks
+    }
+
+    /// Whether a specific tech-unlock bit is set.
+    #[must_use]
+    pub fn has_tech(&self, bit: u64) -> bool {
+        self.state.tech_unlocks & bit == bit
     }
 
     /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
@@ -1288,6 +1311,7 @@ impl Simulation {
         self.phase_life();
         self.phase_emergence();
         self.phase_research();
+        self.phase_tech();
         self.phase_belief();
         self.phase_unrest();
         self.phase_cohesion();
@@ -1617,6 +1641,13 @@ impl Simulation {
         let contribution = base
             .saturating_add(base.saturating_mul(cohesion_research_bonus_permille(self.state.cohesion)) / 1_000);
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
+    }
+
+    /// Tech-unlock phase (FR-CIV-0100 §3 emergence). Research milestones
+    /// irreversibly OR discrete capability bits into `tech_unlocks`; bits are
+    /// never cleared once earned.
+    fn phase_tech(&mut self) {
+        self.state.tech_unlocks |= tech_unlocks_for_tier(self.research_tier());
     }
 
     /// Faith phase (divine-powers economy, FR-CIV-EMERGENCE). The worshipping
@@ -2400,6 +2431,26 @@ impl Simulation {
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
 const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+
+/// Tech unlock bits (irreversible, set-only).
+pub const TECH_IRRIGATION: u64 = 1 << 0;
+pub const TECH_STORAGE: u64 = 1 << 1;
+pub const TECH_METALLURGY: u64 = 1 << 2;
+
+/// Discrete tech unlocks reached by a given research tier (set-only bitmask).
+fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
+    let mut bits = 0u64;
+    if research_tier >= 1 {
+        bits |= TECH_IRRIGATION;
+    }
+    if research_tier >= 2 {
+        bits |= TECH_STORAGE;
+    }
+    if research_tier >= 3 {
+        bits |= TECH_METALLURGY;
+    }
+    bits
+}
 
 /// Downward-causation policy (FR-CIV-0100 emergence): scarcity in the food
 /// market damps the birth rate, closing the research -> carrying-capacity ->
@@ -3727,6 +3778,44 @@ mod tests {
         assert_eq!(sim.belief(), 100, "failed invoke leaves belief untouched");
         assert!(sim.try_invoke_divine_power(80), "can afford 80");
         assert_eq!(sim.belief(), 20, "cost deducted on success");
+    }
+
+    /// FR-CIV-0100 — discrete tech unlocks are monotonic in research tier.
+    #[test]
+    fn tech_unlocks_for_tier_is_monotonic() {
+        assert_eq!(tech_unlocks_for_tier(0), 0);
+        assert_eq!(tech_unlocks_for_tier(1), TECH_IRRIGATION);
+        let tier3 = tech_unlocks_for_tier(3);
+        assert!(tier3 & TECH_IRRIGATION != 0);
+        assert!(tier3 & TECH_STORAGE != 0);
+        assert!(tier3 & TECH_METALLURGY != 0);
+        let tier2 = tech_unlocks_for_tier(2);
+        let tier5 = tech_unlocks_for_tier(5);
+        assert_eq!(tier5 & tier2, tier2, "tier 5 is a superset of tier 2");
+    }
+
+    /// FR-CIV-0100 — phase_tech sets unlock bits from tier and never clears them.
+    #[test]
+    fn phase_tech_sets_and_keeps_bits() {
+        let mut sim = Simulation::with_seed(11);
+        sim.state.research_progress = 200_000;
+        sim.phase_tech();
+        assert!(sim.has_tech(TECH_IRRIGATION));
+        assert!(sim.has_tech(TECH_STORAGE));
+        sim.state.research_progress = 0;
+        sim.phase_tech();
+        assert!(sim.has_tech(TECH_IRRIGATION), "bits are monotonic");
+        assert!(sim.has_tech(TECH_STORAGE), "bits are monotonic");
+    }
+
+    /// FR-CIV-0100 — irrigation unlock raises carrying capacity by a flat bonus.
+    #[test]
+    fn irrigation_raises_carrying_capacity() {
+        let mut sim = Simulation::with_seed(13);
+        let without = sim.carrying_capacity();
+        sim.state.tech_unlocks |= TECH_IRRIGATION;
+        let with = sim.carrying_capacity();
+        assert_eq!(with - without, 200_000);
     }
 
     /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with

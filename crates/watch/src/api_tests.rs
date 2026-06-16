@@ -1383,3 +1383,72 @@ async fn fr_save_load_missing_save_is_error() {
 
     assert!(!response.status().is_success());
 }
+
+#[tokio::test]
+async fn post_control_spawn_entity_unknown_kind_is_rejected() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/spawn_entity")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"kind":"bogus-kind","x":0.5,"y":0.5,"faction":0}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+    assert!(json["message"]
+        .as_str()
+        .unwrap_or("")
+        .contains("civilian"));
+}
+
+#[tokio::test]
+async fn post_control_spawn_entity_herd_returns_ok() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/spawn_entity")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"kind":"herd","x":0.3,"y":0.7,"faction":2}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], true);
+}
+
+#[tokio::test]
+async fn post_control_spawn_entity_airport_and_port_return_ok() {
+    for kind in ["airport", "port"] {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/spawn_entity")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"kind":"{kind}","x":0.5,"y":0.5,"faction":0}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+}

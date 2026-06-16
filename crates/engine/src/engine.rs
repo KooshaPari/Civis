@@ -1143,10 +1143,14 @@ impl Simulation {
         const POP_BASELINE: i64 = 1_000_000;
         const CAPACITY_PER_TIER: i64 = 200_000;
         const IRRIGATION_BONUS: i64 = 200_000;
+        const SANITATION_BONUS: i64 = 300_000;
         let tier = self.research_tier().min(i64::MAX as u64) as i64;
         let mut cap = POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER);
         if self.state.tech_unlocks & TECH_IRRIGATION != 0 {
             cap = cap.saturating_add(IRRIGATION_BONUS);
+        }
+        if self.state.tech_unlocks & TECH_SANITATION != 0 {
+            cap = cap.saturating_add(SANITATION_BONUS);
         }
         cap
     }
@@ -1678,8 +1682,11 @@ impl Simulation {
         /// People required to produce one unit of research effort per tick.
         const RESEARCH_POP_DIVISOR: u64 = 1_000;
         let base = self.state.population / RESEARCH_POP_DIVISOR;
-        let contribution = base
+        let mut contribution = base
             .saturating_add(base.saturating_mul(cohesion_research_bonus_permille(self.state.cohesion)) / 1_000);
+        if self.state.tech_unlocks & TECH_WRITING != 0 {
+            contribution = contribution.saturating_add(1);
+        }
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
     }
 
@@ -2157,7 +2164,10 @@ impl Simulation {
 
         let phase_cfg = self.military_phase;
 
-        let morale_recovery = morale_recovery_rate(self.state.cohesion);
+        let mut morale_recovery = morale_recovery_rate(self.state.cohesion);
+        if self.state.tech_unlocks & TECH_GUNPOWDER != 0 {
+            morale_recovery += Fixed::from_num(1) / Fixed::from_num(100);
+        }
         for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
             if unit.morale < Fixed::from_num(1) {
                 unit.morale = (unit.morale + morale_recovery).min(Fixed::from_num(1));
@@ -2528,6 +2538,9 @@ const FOOD_SCARCITY_BASELINE: i64 = 1_000;
 pub const TECH_IRRIGATION: u64 = 1 << 0;
 pub const TECH_STORAGE: u64 = 1 << 1;
 pub const TECH_METALLURGY: u64 = 1 << 2;
+pub const TECH_WRITING: u64 = 1 << 3;
+pub const TECH_SANITATION: u64 = 1 << 4;
+pub const TECH_GUNPOWDER: u64 = 1 << 5;
 
 /// Discrete tech unlocks reached by a given research tier (set-only bitmask).
 fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
@@ -2540,6 +2553,15 @@ fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
     }
     if research_tier >= 3 {
         bits |= TECH_METALLURGY;
+    }
+    if research_tier >= 4 {
+        bits |= TECH_WRITING;
+    }
+    if research_tier >= 5 {
+        bits |= TECH_SANITATION;
+    }
+    if research_tier >= 6 {
+        bits |= TECH_GUNPOWDER;
     }
     bits
 }
@@ -4112,6 +4134,30 @@ mod tests {
         sim.state.tech_unlocks |= TECH_IRRIGATION;
         let with = sim.carrying_capacity();
         assert_eq!(with - without, 200_000);
+    }
+
+    /// FR-CIV-0100 — tech tree extends through tier 6 (Writing, Sanitation, Gunpowder).
+    #[test]
+    fn tech_tree_extends_to_gunpowder() {
+        let tier6 = tech_unlocks_for_tier(6);
+        assert!(tier6 & TECH_IRRIGATION != 0);
+        assert!(tier6 & TECH_STORAGE != 0);
+        assert!(tier6 & TECH_METALLURGY != 0);
+        assert!(tier6 & TECH_WRITING != 0);
+        assert!(tier6 & TECH_SANITATION != 0);
+        assert!(tier6 & TECH_GUNPOWDER != 0);
+        let tier3 = tech_unlocks_for_tier(3);
+        assert_eq!(tier3 & TECH_WRITING, 0);
+    }
+
+    /// FR-CIV-0100 — sanitation unlock raises carrying capacity by a flat bonus.
+    #[test]
+    fn sanitation_adds_more_capacity() {
+        let mut sim = Simulation::with_seed(17);
+        let without = sim.carrying_capacity();
+        sim.state.tech_unlocks |= TECH_SANITATION;
+        let with = sim.carrying_capacity();
+        assert_eq!(with - without, 300_000);
     }
 
     /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with

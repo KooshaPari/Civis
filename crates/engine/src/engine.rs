@@ -306,114 +306,6 @@ pub enum EconomicFocus {
     Mercantile,
 }
 
-/// Stable polity identifier (map key is [`PolityId::0`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct PolityId(pub u32);
-
-/// One polity's macro + economy row. Map key == [`PolityId::0`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PolityMacroState {
-    pub id: PolityId,
-    pub name: String,
-    pub treasury: Fixed,
-    pub resources: Resources,
-    pub belief: u64,
-    pub unrest: u64,
-    pub cohesion: u64,
-    pub research_progress: u64,
-    pub tech_unlocks: u64,
-    pub dispossessed_permille: u64,
-    pub temple_level: u32,
-    pub garrison_level: u32,
-    pub economic_focus: EconomicFocus,
-    pub focus_pressure: u8,
-    pub population: u64,
-    pub legitimacy_milli: i64,
-    pub shadow_influence_index_milli: i64,
-    pub influence_capital: i64,
-    pub governance_integrity_milli: i64,
-}
-
-impl Default for PolityMacroState {
-    fn default() -> Self {
-        Self {
-            id: PolityId(0),
-            name: String::new(),
-            treasury: Fixed::ZERO,
-            resources: Resources::default(),
-            belief: 0,
-            unrest: 0,
-            cohesion: 0,
-            research_progress: 0,
-            tech_unlocks: 0,
-            dispossessed_permille: 0,
-            temple_level: 0,
-            garrison_level: 0,
-            economic_focus: EconomicFocus::Balanced,
-            focus_pressure: 0,
-            population: 0,
-            legitimacy_milli: 0,
-            shadow_influence_index_milli: 0,
-            influence_capital: 0,
-            governance_integrity_milli: 0,
-        }
-    }
-}
-
-impl PolityMacroState {
-    /// Hydrate a row from legacy per-faction maps (Phase 0 migration).
-    pub fn default_for(id: u32, state: &WorldState) -> Self {
-        Self {
-            id: PolityId(id),
-            name: state
-                .factions
-                .get(&id)
-                .cloned()
-                .unwrap_or_else(|| format!("Faction {id}")),
-            treasury: state.faction_treasury.get(&id).copied().unwrap_or_default(),
-            resources: state
-                .faction_resources
-                .get(&id)
-                .cloned()
-                .unwrap_or_default(),
-            unrest: state.faction_unrest.get(&id).copied().unwrap_or(0),
-            ..Self::default()
-        }
-    }
-}
-
-/// Merge legacy per-faction maps into [`WorldState::polities`] (sorted keys).
-pub fn hydrate_polities_from_legacy(state: &mut WorldState) {
-    let mut ids: Vec<u32> = state
-        .factions
-        .keys()
-        .chain(state.faction_treasury.keys())
-        .chain(state.faction_resources.keys())
-        .chain(state.faction_unrest.keys())
-        .copied()
-        .collect();
-    ids.sort_unstable();
-    ids.dedup();
-    for id in ids {
-        let row = state
-            .polities
-            .entry(id)
-            .or_insert_with(|| PolityMacroState::default_for(id, state));
-        if let Some(name) = state.factions.get(&id) {
-            row.name.clone_from(name);
-        }
-        if let Some(&treasury) = state.faction_treasury.get(&id) {
-            row.treasury = treasury;
-        }
-        if let Some(resources) = state.faction_resources.get(&id) {
-            row.resources.clone_from(resources);
-        }
-        if let Some(&unrest) = state.faction_unrest.get(&id) {
-            row.unrest = unrest;
-        }
-    }
-}
-
 /// Global world state
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorldState {
@@ -509,12 +401,16 @@ pub struct WorldState {
     /// diplomacy thresholds. `#[serde(default)]` keeps older saves loadable.
     #[serde(default)]
     pub faction_relations: DiplomacyMatrix,
+    /// Per-polity macro + economy rows (authoritative target; dual-written with legacy
+    /// maps during migration). `BTreeMap` keys iterate in deterministic order.
+    #[serde(default)]
+    pub polities: BTreeMap<u32, PolityMacroState>,
     pub resources: Resources,
 }
 
 impl Default for WorldState {
     fn default() -> Self {
-        Self {
+        let mut state = Self {
             tick: 0,
             population: 1_000_000,
             research_progress: 0,
@@ -594,8 +490,11 @@ impl Default for WorldState {
                 },
             ],
             faction_relations: DiplomacyMatrix::default(),
+            polities: BTreeMap::new(),
             resources: Resources::default(),
-        }
+        };
+        hydrate_polities_from_legacy(&mut state);
+        state
     }
 }
 
@@ -1385,10 +1284,38 @@ impl Simulation {
 
     /// Per-faction unrest for `faction_id`, driven each tick by
     /// [`Simulation::phase_faction_unrest`] from that faction's wealth/scarcity
-    /// shadow. Missing factions read as zero (content).
+    /// shadow. Missing factions read as zero (content). During migration reads
+    /// the max of [`WorldState::polities`] and legacy [`WorldState::faction_unrest`].
     #[must_use]
     pub fn faction_unrest(&self, faction_id: u32) -> u64 {
-        self.state.faction_unrest.get(&faction_id).copied().unwrap_or(0)
+        let from_polity = self.state.polities.get(&faction_id).map(|p| p.unrest);
+        let from_legacy = self.state.faction_unrest.get(&faction_id).copied();
+        match (from_polity, from_legacy) {
+            (Some(p), Some(l)) => p.max(l),
+            (Some(p), None) => p,
+            (None, Some(l)) => l,
+            (None, None) => 0,
+        }
+    }
+
+    /// Sorted polity ids from [`WorldState::polities`].
+    #[must_use]
+    pub fn polity_ids(&self) -> impl Iterator<Item = u32> + '_ {
+        self.state.polities.keys().copied()
+    }
+
+    /// Read-only access to a polity row.
+    #[must_use]
+    pub fn polity(&self, id: u32) -> Option<&PolityMacroState> {
+        self.state.polities.get(&id)
+    }
+
+    fn ensure_polity(&mut self, id: u32) -> &mut PolityMacroState {
+        if !self.state.polities.contains_key(&id) {
+            let row = PolityMacroState::default_for(id, &self.state);
+            self.state.polities.insert(id, row);
+        }
+        self.state.polities.get_mut(&id).expect("polity row exists")
     }
 
     /// Accumulated social cohesion, generated each tick by

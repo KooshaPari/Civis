@@ -2829,6 +2829,13 @@ impl Simulation {
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.tick_trade_routes();
+        // N1 coupling: aggregate settlement commons before any mutable market borrow.
+        let settlement_food_supply: i64 = self
+            .cluster_stocks
+            .values()
+            .map(|stock| stock.get(civ_economy::Good::Food))
+            .fold(0i64, |acc, qty| acc.saturating_add(qty))
+            .saturating_mul(SETTLEMENT_FOOD_MARKET_WEIGHT);
         let food_price_before = self
             .market_state
             .prices()
@@ -2843,6 +2850,8 @@ impl Simulation {
         // falls below (surplus). Carrying capacity itself grows with research
         // tier, so tech advances FEED BACK into cheaper staples (research →
         // economy coupling).
+        // Settlement cluster_stocks (local food commons) add supply beside
+        // carrying capacity (N1: settlement → price → unrest → diplomacy).
         // Wealthy factions bid up staple demand on top of raw population
         // (faction prosperity -> market coupling; diplomacy already moves these
         // treasuries, so diplomacy -> treasury -> market demand chains through).
@@ -2854,15 +2863,22 @@ impl Simulation {
             .sum();
         let population = self.state.population.min(i64::MAX as u64) as i64;
         let demand = population.saturating_add(faction_wealth);
-        let supply = self.carrying_capacity();
-        self.market_state.apply_pressure("food", demand, supply);
+        let food_supply = self
+            .carrying_capacity()
+            .saturating_add(settlement_food_supply);
+        let scaled_demand = demand / FOOD_MARKET_PRESSURE_SCALE;
+        let scaled_food_supply = food_supply / FOOD_MARKET_PRESSURE_SCALE;
+        self.market_state
+            .apply_pressure("food", scaled_demand, scaled_food_supply);
         if self.state.tech_unlocks & TECH_STORAGE != 0 {
             if let Some(price) = self.market_state.prices.get_mut("food") {
                 let delta = *price - food_price_before;
                 *price = food_price_before + delta / 2;
             }
         }
-        self.market_state.apply_pressure("energy", demand, supply);
+        let scaled_energy_supply = self.carrying_capacity() / FOOD_MARKET_PRESSURE_SCALE;
+        self.market_state
+            .apply_pressure("energy", scaled_demand, scaled_energy_supply);
     }
 
     fn tick_trade_routes(&mut self) {
@@ -3016,6 +3032,18 @@ impl Simulation {
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
     }
+
+    #[cfg(test)]
+    pub(crate) fn test_clear_cluster_stocks(&mut self) {
+        self.cluster_stocks.clear();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_cluster_food_stock(&mut self, cluster_id: u64, food: i64) {
+        let mut stock = ClusterStocks::default();
+        stock.add(civ_economy::Good::Food, food);
+        self.cluster_stocks.insert(cluster_id, stock);
+    }
 }
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
@@ -3029,6 +3057,12 @@ const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
 /// accumulator stays bounded (net zero at matched rates; converges toward zero
 /// when strictly greater).
 const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
+/// Market weight for settlement food commons before pressure scaling (N1).
+const SETTLEMENT_FOOD_MARKET_WEIGHT: i64 = 2;
+/// Divisor mapping population-scale demand/supply (and settlement commons) into
+/// the capped per-tick food price step (N1: local abundance must move price
+/// within `MarketState::apply_pressure`'s ±8 cent clamp).
+const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
 
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
@@ -5667,6 +5701,53 @@ mod tests {
         assert!(
             with.state.resources.metal > without.state.resources.metal,
             "metallurgy should boost metal per tick"
+        );
+    }
+
+    /// N1 coupling — abundant settlement cluster_stocks lower staple food price.
+    #[test]
+    fn cluster_stocks_food_lowers_market_price() {
+        const TICKS: u32 = 5;
+        const POPULATION: u64 = 5_000_000;
+        const ABUNDANT_FOOD: i64 = 2_000_000;
+
+        let mut low = Simulation::with_seed(7);
+        let mut high = Simulation::with_seed(7);
+        for sim in [&mut low, &mut high] {
+            sim.state.population = POPULATION;
+            for treasury in sim.state.faction_treasury.values_mut() {
+                *treasury = Fixed::ZERO;
+            }
+        }
+        low.test_clear_cluster_stocks();
+
+        assert_eq!(
+            low.market_state.prices()["food"],
+            high.market_state.prices()["food"],
+            "identical seeds and treasuries should start at the same food price"
+        );
+
+        for _ in 0..TICKS {
+            for sim in [&mut low, &mut high] {
+                sim.state.population = POPULATION;
+                for treasury in sim.state.faction_treasury.values_mut() {
+                    *treasury = Fixed::ZERO;
+                }
+            }
+            // phase_life runs after phase_economy and rebuilds cluster_stocks;
+            // re-apply the only intentional difference before each tick.
+            low.test_clear_cluster_stocks();
+            high.test_clear_cluster_stocks();
+            high.test_set_cluster_food_stock(1, ABUNDANT_FOOD);
+            low.tick();
+            high.tick();
+        }
+
+        assert!(
+            high.market_state.prices()["food"] < low.market_state.prices()["food"],
+            "abundant settlement food commons should lower staple price (high={} low={})",
+            high.market_state.prices()["food"],
+            low.market_state.prices()["food"],
         );
     }
 

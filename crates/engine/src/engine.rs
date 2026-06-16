@@ -1856,7 +1856,10 @@ impl Simulation {
     /// food-scarcity unrest but keyed to treasury and food holdings. Runs after
     /// `phase_unrest` so global and per-polity unrest layers stay ordered.
     fn phase_faction_unrest(&mut self) {
-        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        /// Proportional decay yields a dynamic equilibrium under sustained scarcity.
+        const FACTION_UNREST_DECAY_DIVISOR: u64 = 200;
+        let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
         for id in faction_ids {
             let treasury = self
                 .state
@@ -1874,6 +1877,7 @@ impl Simulation {
             let delta = faction_unrest_delta_from_shadow(shadow);
             let entry = self.state.faction_unrest.entry(id).or_insert(0);
             *entry = (*entry as i64 + delta).max(0) as u64;
+            *entry = entry.saturating_sub(*entry / FACTION_UNREST_DECAY_DIVISOR);
         }
     }
 
@@ -4296,6 +4300,30 @@ mod tests {
             sim.phase_faction_unrest();
         }
         assert!(sim.faction_unrest(id) > 0, "scarce faction breeds unrest");
+    }
+
+    /// Sustained faction scarcity reaches a finite equilibrium thanks to proportional decay.
+    #[test]
+    fn faction_unrest_stays_bounded_under_sustained_scarcity() {
+        let mut sim = Simulation::with_seed(1);
+        let id = 0u32;
+        sim.state.faction_treasury.insert(id, Fixed::from_num(0));
+        sim.state.faction_resources.insert(
+            id,
+            Resources {
+                food: Fixed::from_num(5),
+                ..Resources::default()
+            },
+        );
+        for _ in 0..2_000 {
+            sim.phase_faction_unrest();
+        }
+        let unrest = sim.faction_unrest(id);
+        assert!(unrest > 0, "scarcity still breeds unrest");
+        assert!(
+            unrest < 20_000,
+            "proportional decay must bound faction unrest (got {unrest})"
+        );
     }
 
     /// A wealthy, well-provisioned faction stays at zero per-faction unrest.

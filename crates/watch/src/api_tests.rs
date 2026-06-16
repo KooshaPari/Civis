@@ -1559,6 +1559,8 @@ async fn post_control_mods_publish_rejects_non_mods_source() {
     let json = body_json(response).await;
     assert_eq!(json["ok"], false);
 
+    // `oneshot` consumes the router, so build a fresh app for the second request.
+    let app = test_app();
     let response = app
         .oneshot(
             Request::builder()

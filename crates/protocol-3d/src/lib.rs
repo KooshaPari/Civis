@@ -1502,4 +1502,79 @@ mod tests {
         let err = encode_agent_stream_binary(&stream).expect_err("overflow rejected");
         assert!(matches!(err, AgentStreamBinaryError::LengthMismatch { .. }));
     }
+
+    /// Covers FR-CIV-PROTO3D — epic: all Frame3d variants losslessly round-trip F3D0 binary envelope.
+    #[test]
+    fn fr_civ_proto3d_epic_all_frame3d_variants_f3d0_roundtrip() {
+        const TICK: u64 = 99;
+        let frames: [(u8, Frame3d); 7] = [
+            (
+                Frame3dKind::VoxelDelta as u8,
+                Frame3d::VoxelDelta(VoxelDeltaFrame {
+                    tick: TICK,
+                    deltas: vec![],
+                }),
+            ),
+            (
+                Frame3dKind::BuildingDiff as u8,
+                Frame3d::BuildingDiff(BuildingDiffFrame {
+                    tick: TICK,
+                    provenance: BuildingProvenance::Procedural,
+                    buildings: vec![],
+                    graph: None,
+                }),
+            ),
+            (
+                Frame3dKind::AgentAppearance as u8,
+                Frame3d::AgentAppearance(AgentAppearanceFrame {
+                    tick: TICK,
+                    updates: vec![],
+                }),
+            ),
+            (
+                Frame3dKind::CivilianState as u8,
+                Frame3d::CivilianState(CivilianStateFrame {
+                    tick: TICK,
+                    civilians: vec![],
+                }),
+            ),
+            (
+                Frame3dKind::FactionState as u8,
+                Frame3d::FactionState(FactionStateFrame {
+                    tick: TICK,
+                    factions: vec![],
+                }),
+            ),
+            (
+                Frame3dKind::EventFeed as u8,
+                Frame3d::EventFeed(EventFeedFrame {
+                    tick: TICK,
+                    events: vec![],
+                }),
+            ),
+            (
+                Frame3dKind::Climate as u8,
+                Frame3d::Climate(ClimateFrame {
+                    tick: TICK,
+                    climate: civ_planet::Climate::default(),
+                    weather: vec![],
+                }),
+            ),
+        ];
+
+        for (expected_kind, frame) in frames {
+            assert_eq!(frame.tick(), TICK);
+            let bytes = encode_frame3d_binary(&frame).expect("encode");
+            assert!(is_frame3d_binary(&bytes));
+            assert_eq!(&bytes[0..4], FRAME3D_BINARY_MAGIC);
+            assert_eq!(bytes[4], expected_kind);
+            let back = decode_frame3d_binary(&bytes).expect("decode");
+            assert_eq!(back, frame);
+        }
+
+        assert_eq!(
+            map_build_provenance(civ_build::BuildingProvenance::Procedural),
+            BuildingProvenance::Procedural
+        );
+    }
 }

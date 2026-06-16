@@ -40,7 +40,7 @@ pub struct MoonConfig {
 }
 
 /// Deterministic climate snapshot for a single tick.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Climate {
     /// Simulation tick this climate was derived from.
     pub tick: u64,

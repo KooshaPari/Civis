@@ -1876,6 +1876,40 @@ mod tests {
     }
 
     #[test]
+    fn response_success_and_failure_shape() {
+        use serde_json::json;
+        let ok = JsonRpcResponse::success(RequestId::Null, json!({"v":1}));
+        assert!(ok.result.is_some());
+        assert!(ok.error.is_none());
+        assert_eq!(ok.jsonrpc, JSONRPC_VERSION);
+        let err = JsonRpcError {
+            code: -32603,
+            message: "boom".to_owned(),
+            data: None,
+        };
+        let fail = JsonRpcResponse::failure(RequestId::Null, err);
+        assert!(fail.result.is_none());
+        assert!(fail.error.is_some());
+        assert_eq!(fail.jsonrpc, ok.jsonrpc);
+    }
+
+    #[test]
+    fn parse_error_codes_and_messages() {
+        assert_eq!(JsonRpcParseError::Parse.code(), error_code::PARSE_ERROR);
+        let inv = JsonRpcParseError::InvalidRequest { message: "bad" };
+        assert_eq!(inv.code(), error_code::INVALID_REQUEST);
+        let mnf = JsonRpcParseError::MethodNotFound {
+            method: "sim.nope".to_owned(),
+        };
+        assert_eq!(mnf.code(), error_code::METHOD_NOT_FOUND);
+        assert_eq!(JsonRpcParseError::Parse.message(), "Parse error");
+        assert!(mnf.message().contains("sim.nope"));
+        let e = JsonRpcParseError::Parse.into_error();
+        assert_eq!(e.code, error_code::PARSE_ERROR);
+        assert_eq!(e.message, "Parse error");
+    }
+
+    #[test]
     fn dispatch_sim_status_includes_population_when_available() {
         let req = parse_request(r#"{"jsonrpc":"2.0","id":3,"method":"sim.status","params":{}}"#)
             .expect("parse");

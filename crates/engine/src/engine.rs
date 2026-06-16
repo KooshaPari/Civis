@@ -2713,6 +2713,12 @@ impl Simulation {
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.tick_trade_routes();
+        // N1 coupling: aggregate settlement commons before any mutable market borrow.
+        let settlement_food_supply: i64 = self
+            .cluster_stocks
+            .values()
+            .map(|stock| stock.get(civ_economy::Good::Food))
+            .fold(0i64, |acc, qty| acc.saturating_add(qty));
         let food_price_before = self
             .market_state
             .prices()
@@ -2727,6 +2733,8 @@ impl Simulation {
         // falls below (surplus). Carrying capacity itself grows with research
         // tier, so tech advances FEED BACK into cheaper staples (research →
         // economy coupling).
+        // Settlement cluster_stocks (local food commons) add supply beside
+        // carrying capacity (N1: settlement → price → unrest → diplomacy).
         // Wealthy factions bid up staple demand on top of raw population
         // (faction prosperity -> market coupling; diplomacy already moves these
         // treasuries, so diplomacy -> treasury -> market demand chains through).
@@ -2738,7 +2746,9 @@ impl Simulation {
             .sum();
         let population = self.state.population.min(i64::MAX as u64) as i64;
         let demand = population.saturating_add(faction_wealth);
-        let supply = self.carrying_capacity();
+        let supply = self
+            .carrying_capacity()
+            .saturating_add(settlement_food_supply);
         self.market_state.apply_pressure("food", demand, supply);
         if self.state.tech_unlocks & TECH_STORAGE != 0 {
             if let Some(price) = self.market_state.prices.get_mut("food") {
@@ -5521,6 +5531,31 @@ mod tests {
         assert!(
             with.state.resources.metal > without.state.resources.metal,
             "metallurgy should boost metal per tick"
+        );
+    }
+
+    /// N1 coupling — abundant settlement cluster_stocks lower staple food price.
+    #[test]
+    fn cluster_stocks_food_lowers_market_price() {
+        use civ_economy::Good;
+
+        let mut low = Simulation::with_seed(7);
+        let mut high = Simulation::with_seed(7);
+        for sim in [&mut low, &mut high] {
+            sim.state.tick = 2;
+            sim.state.population = 5_000_000;
+        }
+        let mut abundant = ClusterStocks::default();
+        abundant.add(Good::Food, 2_000_000);
+        high.cluster_stocks.insert(1, abundant);
+
+        let before = low.market_state.prices()["food"];
+        assert_eq!(before, high.market_state.prices()["food"]);
+        low.phase_economy();
+        high.phase_economy();
+        assert!(
+            high.market_state.prices()["food"] < low.market_state.prices()["food"],
+            "abundant settlement food commons should lower staple price"
         );
     }
 

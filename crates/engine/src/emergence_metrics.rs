@@ -45,6 +45,10 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use civ_agents::{ClusterMember, Mood, Psyche};
+use civ_emergence_metrics::branching::{
+    classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger,
+    BranchingRegime, DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
+};
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
@@ -59,6 +63,67 @@ use crate::engine::{DiplomacyKind, Simulation};
 /// (CIV-0100 §3.2). The cadence is intentionally a single constant so
 /// the dashboard polling rate is one easy edit away.
 pub const EMERGENCE_SAMPLE_INTERVAL: u64 = 50;
+
+/// Default fuse for avalanche size (charter §6 / AC-002).
+pub const DEFAULT_MAX_AVALANCHE_SIZE: u64 = 10_000;
+
+/// MT-013: subcritical `σ̄` sustained for this many ticks.
+const SUBCRITICAL_TICK_ALARM: u32 = 100;
+
+/// MT-012: supercritical `σ_a` on this many consecutive closed avalanches.
+const SUPERCRITICAL_AVALANCHE_ALARM: u32 = 10;
+
+/// Open avalanche tracked between seed tick and closure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OpenAvalanche {
+    seed_tick: u64,
+    seed_actors: u32,
+    size: u64,
+    /// Descendants observed on the most recent active tick after seed.
+    last_descendants: u32,
+}
+
+/// Live branching-ratio state on [`Simulation`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct EmergenceBranchingState {
+    /// Ring buffer of closed avalanches.
+    pub ledger: BranchingLedger,
+    /// Avalanche opened on the most recent actor tick, if any.
+    pub open: Option<OpenAvalanche>,
+    /// Rolling window `W` for `σ̄_W`.
+    pub window: usize,
+    /// Fuse: close immediately when `s_a` reaches this size.
+    pub max_avalanche_size: u64,
+    /// Latest rolling-mean `σ̄_W` (updated every tick).
+    pub sigma_bar: f32,
+    /// Normalised edge-of-chaos score (`0..=1`).
+    pub sigma_score: f32,
+    /// Charter regime label for the latest `σ̄_W`.
+    pub regime: BranchingRegime,
+    /// MT-013 consecutive ticks with `σ̄_W < 0.85` (or silence).
+    pub subcritical_tick_streak: u32,
+    /// MT-012 consecutive closed avalanches with `σ_a > 1.0`.
+    pub supercritical_avalanche_streak: u32,
+    /// Positive micro-activity units from societal unrest this tick.
+    pub last_tick_unrest_events: u32,
+}
+
+impl Default for EmergenceBranchingState {
+    fn default() -> Self {
+        Self {
+            ledger: BranchingLedger::with_capacity(DEFAULT_BRANCHING_WINDOW),
+            open: None,
+            window: DEFAULT_BRANCHING_WINDOW,
+            max_avalanche_size: DEFAULT_MAX_AVALANCHE_SIZE,
+            sigma_bar: 0.0,
+            sigma_score: 0.0,
+            regime: BranchingRegime::HeatDeath,
+            subcritical_tick_streak: 0,
+            supercritical_avalanche_streak: 0,
+            last_tick_unrest_events: 0,
+        }
+    }
+}
 
 /// Alphabet size for the material histogram. `MaterialId` is a `u16`
 /// so the true max is 65 535, but the dashboard's tile only needs to
@@ -118,6 +183,16 @@ pub struct EmergenceSample {
     /// `civ-emergence-metrics::dashboard::tests` for the documented
     /// degenerate-state values.
     pub dashboard: EmergenceDashboard,
+    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+    pub branching_sigma: f32,
+    /// Normalised edge-of-chaos score derived from `branching_sigma`.
+    pub branching_sigma_score: f32,
+    /// Rolling window `W` used for `branching_sigma`.
+    pub branching_window: u32,
+    /// Total closed avalanches (monotonic diagnostic counter).
+    pub avalanches_closed: u64,
+    /// Charter regime classification for `branching_sigma`.
+    pub branching_regime: BranchingRegime,
 }
 
 impl Default for EmergenceSample {
@@ -133,6 +208,11 @@ impl Default for EmergenceSample {
             histogram_populated_bins: 0,
             sample_dur_us: 0,
             dashboard: EmergenceDashboard::default(),
+            branching_sigma: 0.0,
+            branching_sigma_score: 0.0,
+            branching_window: DEFAULT_BRANCHING_WINDOW as u32,
+            avalanches_closed: 0,
+            branching_regime: BranchingRegime::HeatDeath,
         }
     }
 }
@@ -154,7 +234,158 @@ impl Simulation {
     /// `sim.emergence` method returns the contents of this value.
     #[must_use]
     pub fn last_emergence_sample(&self) -> Option<EmergenceSample> {
-        self.emergence_sample
+        self.emergence_sample.map(|mut sample| {
+            sample.branching_sigma = self.emergence_branching.sigma_bar;
+            sample.branching_sigma_score = self.emergence_branching.sigma_score;
+            sample.branching_window = self.emergence_branching.window as u32;
+            sample.avalanches_closed = self.emergence_branching.ledger.closed_total();
+            sample.branching_regime = self.emergence_branching.regime;
+            sample
+        })
+    }
+
+    /// Borrow live branching-ratio state (updated every tick).
+    #[must_use]
+    pub fn emergence_branching_state(&self) -> &EmergenceBranchingState {
+        &self.emergence_branching
+    }
+
+    /// Close/open avalanches and refresh `σ̄_W` from per-tick micro-activity.
+    ///
+    /// Runs after `phase_chronicle` and before `sample_emergence` (charter
+    /// §4.5). O(1): integer sums over existing per-tick buffers.
+    pub(crate) fn phase_emergence_events_close(&mut self) {
+        let actors = self.count_micro_actor_actions();
+        let descendants = self.count_micro_descendant_actions();
+        let tick = self.state.tick;
+        let max_size = self.emergence_branching.max_avalanche_size;
+
+        if actors == 0 && descendants == 0 {
+            if let Some(open) = self.emergence_branching.open.take() {
+                let ratio = sigma_a(open.seed_actors, open.last_descendants);
+                self.close_open_avalanche(open, ratio, tick);
+            }
+            self.refresh_branching_metrics(true);
+            return;
+        }
+
+        if let Some(mut open) = self.emergence_branching.open.take() {
+            if tick > open.seed_tick {
+                if descendants > 0 {
+                    open.last_descendants = descendants;
+                }
+                open.size = open.size.saturating_add(u64::from(descendants));
+                let ratio = sigma_a(open.seed_actors, open.last_descendants);
+                let fuse = open.size >= max_size;
+                if descendants == 0 || fuse {
+                    self.close_open_avalanche(open, ratio, tick);
+                } else {
+                    self.emergence_branching.open = Some(open);
+                }
+            } else {
+                self.emergence_branching.open = Some(open);
+            }
+        }
+
+        if actors > 0 && self.emergence_branching.open.is_none() {
+            self.emergence_branching.open = Some(OpenAvalanche {
+                seed_tick: tick,
+                seed_actors: actors,
+                size: u64::from(actors),
+                last_descendants: 0,
+            });
+        }
+
+        self.refresh_branching_metrics(false);
+    }
+
+    fn close_open_avalanche(&mut self, open: OpenAvalanche, ratio: f32, close_tick: u64) {
+        if open.seed_actors > 0 {
+            self.emergence_branching
+                .ledger
+                .push_closed(ratio, open.size, close_tick);
+            if ratio > SIGMA_SUPERCRITICAL {
+                self.emergence_branching.supercritical_avalanche_streak =
+                    self.emergence_branching
+                        .supercritical_avalanche_streak
+                        .saturating_add(1);
+            } else {
+                self.emergence_branching.supercritical_avalanche_streak = 0;
+            }
+        }
+        if open.size >= self.emergence_branching.max_avalanche_size {
+            self.emergence_branching.supercritical_avalanche_streak =
+                SUPERCRITICAL_AVALANCHE_ALARM;
+        }
+    }
+
+    fn refresh_branching_metrics(&mut self, silence: bool) {
+        let window = self.emergence_branching.window;
+        let sigma_bar = rolling_mean_sigma(&self.emergence_branching.ledger, window);
+        self.emergence_branching.sigma_bar = sigma_bar;
+        self.emergence_branching.sigma_score = sigma_score(sigma_bar);
+        self.emergence_branching.regime = classify_regime(sigma_bar);
+
+        let subcritical = sigma_bar < SIGMA_SUBCRITICAL || (silence && self.emergence_branching.ledger.is_empty());
+        self.emergence_branching.subcritical_tick_streak = if subcritical {
+            self.emergence_branching
+                .subcritical_tick_streak
+                .saturating_add(1)
+        } else {
+            0
+        };
+
+        if self.emergence_branching.subcritical_tick_streak >= SUBCRITICAL_TICK_ALARM {
+            tracing::warn!(
+                tick = self.state.tick,
+                sigma_bar,
+                streak = self.emergence_branching.subcritical_tick_streak,
+                "emergence alarm MT-013: sustained subcritical branching ratio"
+            );
+        }
+        if self.emergence_branching.supercritical_avalanche_streak
+            >= SUPERCRITICAL_AVALANCHE_ALARM
+        {
+            tracing::warn!(
+                tick = self.state.tick,
+                sigma_bar,
+                streak = self.emergence_branching.supercritical_avalanche_streak,
+                "emergence alarm MT-012: sustained supercritical branching ratio"
+            );
+        }
+
+        if let Some(sample) = &mut self.emergence_sample {
+            sample.branching_sigma = sigma_bar;
+            sample.branching_sigma_score = self.emergence_branching.sigma_score;
+            sample.branching_window = window as u32;
+            sample.avalanches_closed = self.emergence_branching.ledger.closed_total();
+            sample.branching_regime = self.emergence_branching.regime;
+        }
+    }
+
+    fn count_micro_actor_actions(&self) -> u32 {
+        let voxel = self.last_tick_voxel_events.len() as u32;
+        let disasters = self.last_tick_voxel_damage_count as u32;
+        let diplomacy = self.diplomacy_events.len() as u32;
+        let unrest = self.emergence_branching.last_tick_unrest_events;
+        let combat = self.last_tick_combat_pulses.len() as u32
+            + self.last_tick_engagements.len() as u32;
+        voxel
+            .saturating_add(disasters)
+            .saturating_add(diplomacy)
+            .saturating_add(unrest)
+            .saturating_add(combat)
+    }
+
+    fn count_micro_descendant_actions(&self) -> u32 {
+        self.count_micro_actor_actions()
+    }
+
+    /// Record positive unrest micro-activity for the current tick (v1
+    /// bootstrap: one unit per positive global/faction unrest delta).
+    pub(crate) fn record_unrest_micro_activity(&mut self, units: u32) {
+        self.emergence_branching.last_tick_unrest_events =
+            self.emergence_branching.last_tick_unrest_events.saturating_add(units);
     }
 
     /// Take one emergence sample if the current tick is on a sample
@@ -201,6 +432,7 @@ impl Simulation {
         // iteration on `&ClusterMember` + hecs `query` iteration in
         // insertion order + `diplomacy_events()` already sorted).
         let dashboard = compute_dashboard(self);
+        let branching = &self.emergence_branching;
 
         let sample = EmergenceSample {
             tick,
@@ -213,6 +445,11 @@ impl Simulation {
             histogram_populated_bins,
             sample_dur_us,
             dashboard,
+            branching_sigma: branching.sigma_bar,
+            branching_sigma_score: branching.sigma_score,
+            branching_window: branching.window as u32,
+            avalanches_closed: branching.ledger.closed_total(),
+            branching_regime: branching.regime,
         };
 
         // Single INFO line per sample. The cost budget is ~one log
@@ -231,6 +468,9 @@ impl Simulation {
             sentience_fraction = sample.dashboard.sentience_fraction,
             psyche_stability = sample.dashboard.psyche_stability,
             diplomacy_tension = sample.dashboard.diplomacy_tension,
+            branching_sigma = sample.branching_sigma,
+            branching_sigma_score = sample.branching_sigma_score,
+            branching_regime = ?sample.branching_regime,
             sample_dur_us = sample.sample_dur_us,
             "emergence sample"
         );
@@ -259,6 +499,9 @@ impl Simulation {
             sample.dashboard.sentience_fraction,
             sample.dashboard.psyche_stability,
             sample.dashboard.diplomacy_tension,
+            sample.branching_sigma,
+            sample.branching_sigma_score,
+            sample.branching_regime.label(),
         );
         true
     }
@@ -761,5 +1004,43 @@ mod tests {
             sa.dashboard.diplomacy_tension,
             sb.dashboard.diplomacy_tension
         );
+    }
+
+    /// Charter §3.6: a known closed-avalanche stream yields the
+    /// expected rolling-mean `σ̄` and regime classification.
+    #[test]
+    fn known_event_stream_yields_expected_sigma_bar_and_regime() {
+        use civ_emergence_metrics::branching::{
+            classify_regime, rolling_mean_sigma, sigma_a, BranchingLedger, BranchingRegime,
+        };
+
+        let stream = [(10, 8), (10, 9), (10, 10), (10, 11)];
+        let mut ledger = BranchingLedger::with_capacity(stream.len());
+        for (actors, descendants) in stream {
+            ledger.push_closed(sigma_a(actors, descendants), u64::from(descendants), 0);
+        }
+        let sigma_bar = rolling_mean_sigma(&ledger, stream.len());
+        assert!((sigma_bar - 0.95).abs() < 1e-6, "expected σ̄=0.95, got {sigma_bar}");
+        assert_eq!(classify_regime(sigma_bar), BranchingRegime::EdgeOfChaos);
+        assert_eq!(classify_regime(0.75), BranchingRegime::HeatDeath);
+        assert_eq!(classify_regime(1.15), BranchingRegime::Supercritical);
+    }
+
+    /// Tick-loop wiring: `phase_emergence_events_close` updates live `σ̄`.
+    #[test]
+    fn phase_emergence_events_close_updates_branching_state() {
+        let mut sim = Simulation::with_seed(21);
+        sim.state.tick = 1;
+        sim.record_unrest_micro_activity(10);
+        sim.phase_emergence_events_close();
+        sim.state.tick = 2;
+        sim.record_unrest_micro_activity(9);
+        sim.phase_emergence_events_close();
+        sim.state.tick = 3;
+        sim.phase_emergence_events_close();
+        let branching = sim.emergence_branching_state();
+        assert_eq!(branching.ledger.closed_total(), 1);
+        assert!((branching.sigma_bar - 0.9).abs() < 1e-6);
+        assert_eq!(branching.regime, BranchingRegime::SubcriticalTransition);
     }
 }

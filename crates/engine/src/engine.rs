@@ -555,6 +555,8 @@ pub struct Simulation {
     /// boundary (ticks 0..49). Surfaced over JSON-RPC `sim.emergence`
     /// (stacked on PR #350).
     pub(crate) emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
+    /// Rolling-mean branching ratio ledger and live `σ̄_W` (charter §3.6).
+    pub(crate) emergence_branching: crate::emergence_metrics::EmergenceBranchingState,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -789,6 +791,7 @@ impl Simulation {
             weather_grid,
             emergence: Self::default_emergence_state(42),
             emergence_sample: None,
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
         }
     }
 
@@ -854,6 +857,7 @@ impl Simulation {
             weather_grid,
             emergence: Self::default_emergence_state(seed),
             emergence_sample: None,
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
         }
     }
 
@@ -1420,6 +1424,7 @@ impl Simulation {
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
+        self.emergence_branching.last_tick_unrest_events = 0;
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -1448,6 +1453,7 @@ impl Simulation {
         self.phase_institutions();
         self.phase_economic_focus();
         self.phase_chronicle();
+        self.phase_emergence_events_close();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1839,6 +1845,9 @@ impl Simulation {
             + inequality_unrest(treasury_spread)
             + dispossession_unrest(self.state.dispossessed_permille)
             - (self.state.garrison_level as i64 * 2);
+        if delta > 0 {
+            self.record_unrest_micro_activity(delta.min(i32::MAX as i64) as u32);
+        }
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -1865,6 +1874,9 @@ impl Simulation {
                 .unwrap_or_default();
             let shadow = faction_wealth_scarcity_shadow(treasury, &resources);
             let delta = faction_unrest_delta_from_shadow(shadow);
+            if delta > 0 {
+                self.record_unrest_micro_activity(1);
+            }
             let entry = self.state.faction_unrest.entry(id).or_insert(0);
             *entry = (*entry as i64 + delta).max(0) as u64;
         }

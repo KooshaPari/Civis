@@ -766,6 +766,16 @@ pub struct EmergenceSampleFields {
     /// `sentience_fraction`, `psyche_stability`, `diplomacy_tension`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dashboard: Option<DashboardBlock>,
+    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+    pub branching_sigma: f32,
+    /// Normalised edge-of-chaos score for `branching_sigma`.
+    pub branching_sigma_score: f32,
+    /// Rolling window `W` for `branching_sigma`.
+    pub branching_window: u32,
+    /// Monotonic count of closed avalanches.
+    pub avalanches_closed: u64,
+    /// Charter regime label for `branching_sigma`.
+    pub branching_regime: String,
 }
 
 /// Wire-friendly mirror of
@@ -815,6 +825,11 @@ impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFie
             histogram_populated_bins: s.histogram_populated_bins,
             sample_dur_us: s.sample_dur_us,
             dashboard: Some(DashboardBlock::from(s.dashboard)),
+            branching_sigma: s.branching_sigma,
+            branching_sigma_score: s.branching_sigma_score,
+            branching_window: s.branching_window,
+            avalanches_closed: s.avalanches_closed,
+            branching_regime: s.branching_regime.label().to_string(),
         }
     }
 }
@@ -1931,6 +1946,11 @@ mod tests {
                 psyche_stability: 0.8,
                 diplomacy_tension: 0.1,
             }),
+            branching_sigma: 0.95,
+            branching_sigma_score: 0.71,
+            branching_window: 10,
+            avalanches_closed: 4,
+            branching_regime: "Edge of chaos (target)".to_string(),
         };
         let plan = dispatch_request(
             req,
@@ -1995,6 +2015,11 @@ mod tests {
                 psyche_stability: 0.8,
                 diplomacy_tension: 0.1,
             }),
+            branching_sigma: 0.95,
+            branching_sigma_score: 0.71,
+            branching_window: 10,
+            avalanches_closed: 4,
+            branching_regime: "Edge of chaos (target)".to_string(),
         };
         let plan = dispatch_request(
             req,

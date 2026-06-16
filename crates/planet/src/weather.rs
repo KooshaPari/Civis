@@ -235,4 +235,27 @@ mod tests {
 
         assert_eq!(a, b);
     }
+
+    /// `weather_kind_from` selects each of the four `WeatherKind` variants by its
+    /// storm / temperature / precipitation thresholds (direct branch coverage).
+    #[test]
+    fn weather_kind_from_covers_all_four_variants() {
+        // Storm intensity dominates regardless of temperature/precipitation.
+        assert_eq!(weather_kind_from(20_000, 0, 1_500), WeatherKind::Storm);
+        // Freezing (<=0) with heavy precip (>250) -> Snow.
+        assert_eq!(weather_kind_from(0, 300, 0), WeatherKind::Snow);
+        assert_eq!(weather_kind_from(-5_000, 300, 0), WeatherKind::Snow);
+        // Warm with precip > 200 -> Rain.
+        assert_eq!(weather_kind_from(20_000, 250, 0), WeatherKind::Rain);
+        // Low precipitation -> Clear.
+        assert_eq!(weather_kind_from(20_000, 100, 0), WeatherKind::Clear);
+    }
+
+    /// Sub-zero temperatures add a fixed freezing precipitation bonus; above
+    /// freezing with no moisture there is no precipitation.
+    #[test]
+    fn precipitation_freezing_bonus_applies_below_zero() {
+        assert_eq!(precipitation_from_temp_and_moisture(0, 0, 0), 1_200);
+        assert_eq!(precipitation_from_temp_and_moisture(1, 0, 0), 0);
+    }
 }

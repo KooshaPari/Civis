@@ -1648,7 +1648,9 @@ impl Simulation {
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         // Research mitigates the scarcity-driven rise (research -> calmer society).
         // Cohesion damps the remaining rise (cohesion -> calmer society), closing the loop.
-        let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion) + energy_scarcity_unrest(self.state.energy_budget_joules);
+        let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion)
+            + energy_scarcity_unrest(self.state.energy_budget_joules)
+            + overcrowding_unrest(self.state.population, self.carrying_capacity());
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -2462,6 +2464,20 @@ fn morale_recovery_rate(cohesion: u64) -> Fixed {
     Fixed::from_num(BASE_PERMILLE + bonus) / Fixed::from_num(1_000)
 }
 
+/// Downward-causation policy (FR-CIV-0100 §3): overcrowding breeds unrest
+/// (Malthusian pressure). Population beyond the carrying capacity adds unrest
+/// scaled by the percentage overshoot (10% over => +1), capped per tick. A
+/// third unrest driver alongside food scarcity and energy blackout.
+fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
+    const MAX_OVERCROWD_UNREST: i64 = 30;
+    let cap = capacity.max(1) as u64;
+    if population <= cap {
+        return 0;
+    }
+    let overshoot_pct = ((population - cap).saturating_mul(100) / cap).min(i64::MAX as u64) as i64;
+    (overshoot_pct / 10).clamp(1, MAX_OVERCROWD_UNREST)
+}
+
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// unrest — advanced food logistics (storage, distribution) blunt the
 /// scarcity-driven rise. Only the positive (rising) part is damped; decay is
@@ -2994,6 +3010,19 @@ mod tests {
         assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
         assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
         assert!(energy_scarcity_unrest(Fixed::from_num(-5)) > 0);
+    }
+
+    /// FR-CIV-0100 §3 — overcrowding past carrying capacity breeds unrest, scaled
+    /// by overshoot and capped; at or below capacity it adds none.
+    #[test]
+    fn overcrowding_breeds_unrest_above_capacity() {
+        assert_eq!(overcrowding_unrest(500, 1_000), 0, "under capacity = no unrest");
+        assert_eq!(overcrowding_unrest(1_000, 1_000), 0, "at capacity = no unrest");
+        let mild = overcrowding_unrest(1_100, 1_000);
+        let heavy = overcrowding_unrest(2_000, 1_000);
+        assert!(mild > 0, "overcrowding breeds unrest");
+        assert!(heavy > mild, "more overshoot = more unrest");
+        assert!(overcrowding_unrest(100_000, 1_000) <= 30, "capped per tick");
     }
 
     /// FR-CIV-0100 §3 — research lifts production yield, monotonically, capped at 2x.

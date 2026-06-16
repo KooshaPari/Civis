@@ -1219,4 +1219,19 @@ mod tests {
         let era5 = tech_tree(&db, 5);
         assert!(era5.iter().all(|n| n.unlocked == (5u16 >= n.era_min)));
     }
+
+    #[test]
+    fn sample_civilians_caps_at_eight() {
+        let sim = Simulation::with_seed(7);
+        let sample = sample_civilians(&sim);
+        assert!(sample.len() <= 8, "sample_civilians must take at most 8");
+    }
+
+    #[test]
+    fn civ_pins_are_sorted_by_idx_and_in_bounds() {
+        let sim = Simulation::with_seed(7);
+        let pins = civ_pins(&sim);
+        assert!(pins.windows(2).all(|w| w[0].idx <= w[1].idx));
+        assert!(pins.iter().all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
+    }
 }

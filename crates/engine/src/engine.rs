@@ -4013,6 +4013,80 @@ mod tests {
         );
     }
 
+    /// N2 — culture similarity scales the diplomacy peace bonus (`0`, `1500`, `3000`).
+    #[test]
+    fn diplomacy_culture_threshold_bias_scales_with_similarity() {
+        let mut cultures = BTreeMap::new();
+        cultures.insert(0, CultureProfile::new([0.5, 0.5, 0.5, 0.5]));
+        cultures.insert(1, CultureProfile::new([0.5, 0.5, 0.5, 0.5]));
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 3_000);
+
+        cultures.insert(1, CultureProfile::new([0.0, 0.0, 0.0, 0.0]));
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 1_500);
+
+        cultures.insert(1, CultureProfile::new([1.0, 1.0, 1.0, 1.0]));
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 1_500);
+
+        assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 99), 0);
+    }
+
+    /// N2 — culturally similar factions trade at a disparity that triggers conflict
+    /// for culturally distant pairs at the same pinned macro state.
+    #[test]
+    fn similar_cultures_bias_diplomacy_toward_trade() {
+        let mut faction_ids: Vec<u32> = Simulation::with_seed(5)
+            .state
+            .factions
+            .keys()
+            .copied()
+            .collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, 500);
+
+        let pin_diplomacy_drivers = |sim: &mut Simulation| {
+            sim.state.tick = 500;
+            sim.state.belief = 0;
+            sim.state.cohesion = 0;
+            sim.state.faction_unrest.clear();
+            sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+            sim.state.faction_treasury.insert(b, Fixed::from_num(11_000));
+        };
+
+        let mut similar = Simulation::with_seed(5);
+        pin_diplomacy_drivers(&mut similar);
+        similar.emergence.cluster_cultures.insert(
+            u64::from(a),
+            CultureProfile::new([0.5, 0.5, 0.5, 0.5]),
+        );
+        similar.emergence.cluster_cultures.insert(
+            u64::from(b),
+            CultureProfile::new([0.5, 0.5, 0.5, 0.5]),
+        );
+        similar.phase_diplomacy();
+        assert_eq!(
+            similar.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement,
+            "culturally similar factions tolerate disparity before conflict"
+        );
+
+        let mut distant = Simulation::with_seed(5);
+        pin_diplomacy_drivers(&mut distant);
+        distant.emergence.cluster_cultures.insert(
+            u64::from(a),
+            CultureProfile::new([0.0, 0.0, 0.0, 0.0]),
+        );
+        distant.emergence.cluster_cultures.insert(
+            u64::from(b),
+            CultureProfile::new([1.0, 1.0, 1.0, 1.0]),
+        );
+        distant.phase_diplomacy();
+        assert_eq!(
+            distant.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict,
+            "culturally distant factions clash sooner at the same disparity"
+        );
+    }
+
     /// FR-CIV-0100 §3 — a highly cohesive society projects unity: cohesion folds
     /// into the binding term and raises the war threshold, so a wealth disparity
     /// that would spark conflict in a fractured society instead yields trade.

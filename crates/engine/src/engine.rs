@@ -1410,6 +1410,7 @@ impl Simulation {
         self.phase_belief();
         self.phase_unrest();
         self.phase_cohesion();
+        self.phase_social_mood();
         self.phase_stratification();
         self.phase_institutions();
         self.phase_economic_focus();
@@ -1825,6 +1826,18 @@ impl Simulation {
             .state
             .cohesion
             .saturating_sub(self.state.cohesion / COHESION_DECAY_DIVISOR);
+    }
+
+    /// Social-mood phase (FR-CIV-0100 §3 emergence). Downward causation: macro
+    /// cohesion lifts individual agent spirits — a cohesive society nudges
+    /// `Psyche::mood.valence` upward, stabilizing the misery→unrest loop with
+    /// negative feedback. Runs after `phase_cohesion` so cohesion is current.
+    /// Uplift is small and bounded (max +0.02/tick; valence clamped to [-1, 1]).
+    fn phase_social_mood(&mut self) {
+        let uplift = (self.state.cohesion as f32 / 2_000_000.0).clamp(0.0, 0.02);
+        for (_, psyche) in self.world.query_mut::<&mut Psyche>().iter() {
+            psyche.mood.valence = (psyche.mood.valence + uplift).clamp(-1.0, 1.0);
+        }
     }
 
     /// Social-stratification phase (FR-CIV-0100 §3 emergence). A persistent
@@ -3521,6 +3534,49 @@ mod tests {
 
         let empty = World::new();
         assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
+    }
+
+    /// FR-CIV-0100 §3 — downward causation: macro cohesion lifts agent mood valence;
+    /// zero cohesion applies no uplift.
+    #[test]
+    fn cohesion_lifts_agent_mood() {
+        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
+
+        let miserable_psyche = Psyche {
+            drives: [0.0; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood {
+                valence: -0.5,
+                arousal: 0.0,
+            },
+            beliefs: [0.0; PSYCHE_DIM],
+            maturity: 0.5,
+        };
+
+        let mut sim = Simulation::new();
+        sim.state.cohesion = 2_000_000;
+        let entity = sim.world.spawn((miserable_psyche.clone(),));
+        sim.phase_social_mood();
+        let lifted = sim.world.get::<&Psyche>(entity).unwrap().mood.valence;
+        assert!(
+            lifted > -0.5,
+            "high cohesion should nudge mood.valence upward (got {lifted})"
+        );
+
+        let mut sim_zero = Simulation::new();
+        sim_zero.state.cohesion = 0;
+        let entity_zero = sim_zero.world.spawn((miserable_psyche,));
+        sim_zero.phase_social_mood();
+        let unchanged = sim_zero
+            .world
+            .get::<&Psyche>(entity_zero)
+            .unwrap()
+            .mood
+            .valence;
+        assert_eq!(
+            unchanged, -0.5,
+            "zero cohesion should leave mood.valence unchanged"
+        );
     }
 
     /// FR-CIV-0100 — upward causation: sentient-agent fraction (DNA cognition

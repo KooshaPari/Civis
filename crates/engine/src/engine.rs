@@ -1647,7 +1647,8 @@ impl Simulation {
             .copied()
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         // Research mitigates the scarcity-driven rise (research -> calmer society).
-        let delta = research_unrest_mitigation(unrest_delta(food_price), self.research_tier());
+        // Cohesion damps the remaining rise (cohesion -> calmer society), closing the loop.
+        let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -2456,6 +2457,16 @@ fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
     bind - fray
 }
 
+/// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
+/// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.
+fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
+    if rise <= 0 {
+        return rise;
+    }
+    let divisor = 1 + (cohesion / 200).min(9) as i64;
+    (rise / divisor).max(1)
+}
+
 /// Surplus differential (resource units) at/above which a route ships its full
 /// boosted volume.
 const TRADE_GAP_SCALE: i64 = 100;
@@ -2930,6 +2941,18 @@ mod tests {
         // Unrest frays harder than belief binds (smaller divisor), so equal
         // belief and unrest net negative.
         assert!(cohesion_delta(1_000, 1_000) < 0, "disorder erodes faster than faith builds");
+    }
+
+    #[test]
+    fn cohesion_unrest_damp_calms_high_cohesion_floored_at_one() {
+        let raw = 40;
+        assert_eq!(cohesion_unrest_damp(raw, 0), raw);
+        let some = cohesion_unrest_damp(raw, 400);
+        let lots = cohesion_unrest_damp(raw, 100_000);
+        assert!(some < raw);
+        assert!(lots <= some);
+        assert!(lots >= 1);
+        assert_eq!(cohesion_unrest_damp(-10, 100_000), -10);
     }
 
     /// phase_unrest floors unrest at zero: a content populace under cheap food

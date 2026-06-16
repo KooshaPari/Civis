@@ -1085,7 +1085,9 @@ mod tests {
     fn noise_offset_is_bounded_and_deterministic() {
         for (s, l) in [(0u64, 0u64), (1, 0), (42, 3), (u64::MAX, 7)] {
             let n = noise_offset(s, l);
-            assert!(n > -0.05 && n < 0.05, "noise {} out of band", n);
+            // `unit` is in [0.0, 1.0) so `(unit - 0.5) * 0.10` is in [-0.05, 0.05);
+            // the lower bound is inclusive (seed=lane=0 hashes to exactly -0.05).
+            assert!((-0.05..0.05).contains(&n), "noise {n} out of band");
         }
         assert_eq!(noise_offset(123, 4), noise_offset(123, 4));
     }

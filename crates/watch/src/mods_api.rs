@@ -988,4 +988,31 @@ mod tests {
         assert!(!is_zip_payload(b"NOPE"));
         assert!(!is_zip_payload(&[]));
     }
+
+    #[test]
+    fn resolve_install_source_rejects_empty_and_traversal() {
+        let dir = Path::new("/tmp/nonexistent-mods-dir-xyz");
+        assert!(resolve_install_source("", dir).is_err());
+        assert!(resolve_install_source("   ", dir).is_err());
+        assert!(resolve_install_source("../escape", dir).is_err());
+        assert!(resolve_install_source("mods/../../etc", dir).is_err());
+        assert!(resolve_install_source("definitely-not-a-real-mod-xyz", dir).is_err());
+    }
+
+    #[test]
+    fn resolve_repo_mod_path_validates_prefix_and_traversal() {
+        assert!(resolve_repo_mod_path("").is_err());
+        assert!(resolve_repo_mod_path("   ").is_err());
+        assert!(resolve_repo_mod_path("../escape").is_err());
+        assert!(resolve_repo_mod_path("notmods/foo.civmod").is_err());
+        assert!(resolve_repo_mod_path("mods/definitely-not-real-xyz.civmod").is_err());
+    }
+
+    #[test]
+    fn mod_source_relative_handles_outside_repo_path() {
+        let outside = Path::new("/some/totally/unrelated/path/mod.civmod");
+        let s = mod_source_relative(outside);
+        assert!(!s.is_empty());
+        assert!(s.contains("mod.civmod"));
+    }
 }

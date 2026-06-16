@@ -790,4 +790,329 @@ mod tests {
             Good::Tools => "tools",
         }
     }
+
+    // -------- COVERAGE_TEST_DESIGNS §1–4, §6 --------
+
+    /// COVERAGE §1 — balanced zero-yield reshape passes `verify_reserve_reshuffle`.
+    #[test]
+    fn verify_reserve_reshuffle_ok_on_balanced_zero_yield() {
+        let book = book_with(&[
+            (
+                "mint",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Wood, 1)],
+                    vec![RecipeLeg::new(Good::Tools, 1)],
+                    1,
+                    10,
+                ),
+            ),
+            (
+                "reshape",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Food, 2)],
+                    vec![RecipeLeg::new(Good::Water, 2)],
+                    1,
+                    0,
+                ),
+            ),
+        ]);
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 2);
+        stocks.add(Good::Water, 2);
+        let report = step_chains(&mut stocks, &book);
+        assert!(report.outcomes.iter().any(|o| o.name == "reshape" && o.fired));
+        assert!(report
+            .outcomes
+            .iter()
+            .all(|o| o.name != "mint" || !o.fired));
+        report
+            .verify_conservation(&stocks)
+            .expect("reshape conserves stock non-negativity");
+        report
+            .verify_reserve_reshuffle(&book)
+            .expect("balanced zero-yield reshape is a reserve reshuffle");
+    }
+
+    /// COVERAGE §1 — positive `joule_yield` mint recipe yields `ValueMinted`.
+    #[test]
+    fn verify_reserve_reshuffle_err_on_value_minted() {
+        let book = book_with(&[
+            (
+                "mint",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Wood, 1)],
+                    vec![RecipeLeg::new(Good::Tools, 1)],
+                    1,
+                    10,
+                ),
+            ),
+            (
+                "reshape",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Food, 2)],
+                    vec![RecipeLeg::new(Good::Water, 2)],
+                    1,
+                    0,
+                ),
+            ),
+        ]);
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 2);
+        stocks.add(Good::Water, 2);
+        stocks.add(Good::Wood, 1);
+        let report = step_chains(&mut stocks, &book);
+        assert!(report.outcomes.iter().any(|o| o.name == "mint" && o.fired));
+        let err = report
+            .verify_reserve_reshuffle(&book)
+            .expect_err("mint recipe must fail strict reshuffle check");
+        assert_eq!(
+            err,
+            ChainConservationError::ValueMinted { joule_delta: 10 }
+        );
+    }
+
+    /// COVERAGE §1 — zero-yield imbalanced legs yield `RecipeImbalance` even when
+    /// `verify_conservation` still passes.
+    #[test]
+    fn verify_reserve_reshuffle_err_on_zero_yield_imbalance() {
+        let book = book_with(&[(
+            "imbalance",
+            Recipe::new(
+                vec![RecipeLeg::new(Good::Wood, 2)],
+                vec![RecipeLeg::new(Good::Tools, 1)],
+                1,
+                0,
+            ),
+        )]);
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Wood, 2);
+        let report = step_chains(&mut stocks, &book);
+        report
+            .verify_conservation(&stocks)
+            .expect("imbalanced reshape still keeps stocks non-negative");
+        let err = report
+            .verify_reserve_reshuffle(&book)
+            .expect_err("input/output sum mismatch must fail reshuffle check");
+        assert_eq!(
+            err,
+            ChainConservationError::RecipeImbalance {
+                name: "imbalance".to_string(),
+                in_sum: 2,
+                out_sum: 1,
+            }
+        );
+    }
+
+    /// COVERAGE §2 — `is_noop` inspects `fired` flags only, not `joule_added`.
+    #[test]
+    fn is_noop_follows_fired_predicate() {
+        let empty = ChainStepReport::default();
+        assert!(empty.is_noop());
+
+        let skipped_only = ChainStepReport {
+            outcomes: vec![ChainStepOutcome {
+                name: "skip".to_string(),
+                fired: false,
+                joule_delta: 0,
+            }],
+            joule_added: 0,
+        };
+        assert!(skipped_only.is_noop());
+
+        let mixed = ChainStepReport {
+            outcomes: vec![
+                ChainStepOutcome {
+                    name: "skip".to_string(),
+                    fired: false,
+                    joule_delta: 0,
+                },
+                ChainStepOutcome {
+                    name: "fire".to_string(),
+                    fired: true,
+                    joule_delta: 5,
+                },
+            ],
+            joule_added: 5,
+        };
+        assert!(!mixed.is_noop());
+
+        let malformed = ChainStepReport {
+            outcomes: vec![ChainStepOutcome {
+                name: "ghost".to_string(),
+                fired: false,
+                joule_delta: 99,
+            }],
+            joule_added: 100,
+        };
+        assert!(
+            malformed.is_noop(),
+            "is_noop ignores joule_added and skipped joule_delta"
+        );
+    }
+
+    /// COVERAGE §3 — `is_zero_joule` is vacuously true when nothing fired.
+    #[test]
+    fn is_zero_joule_vacuous_when_nothing_fired() {
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Wood, 1);
+        let book = book_with(&[(
+            "needs_two",
+            Recipe::new(
+                vec![RecipeLeg::new(Good::Wood, 2)],
+                vec![RecipeLeg::new(Good::Tools, 1)],
+                1,
+                50,
+            ),
+        )]);
+        let report = step_chains(&mut stocks, &book);
+        assert!(!report.outcomes[0].fired);
+        assert!(report.is_zero_joule());
+    }
+
+    /// COVERAGE §3 — all fired outcomes with zero delta return true; any non-zero
+    /// fired delta returns false.
+    #[test]
+    fn is_zero_joule_respects_fired_deltas() {
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 2);
+        stocks.add(Good::Water, 2);
+        let zero_book = book_with(&[(
+            "swap",
+            Recipe::new(
+                vec![RecipeLeg::new(Good::Food, 1)],
+                vec![RecipeLeg::new(Good::Water, 1)],
+                1,
+                0,
+            ),
+        )]);
+        let zero_report = step_chains(&mut stocks, &zero_book);
+        assert!(zero_report.is_zero_joule());
+        assert_eq!(zero_report.joule_added, 0);
+
+        let hand_mixed = ChainStepReport {
+            outcomes: vec![
+                ChainStepOutcome {
+                    name: "zero".to_string(),
+                    fired: true,
+                    joule_delta: 0,
+                },
+                ChainStepOutcome {
+                    name: "skip".to_string(),
+                    fired: false,
+                    joule_delta: 999,
+                },
+                ChainStepOutcome {
+                    name: "mint".to_string(),
+                    fired: true,
+                    joule_delta: 5,
+                },
+            ],
+            joule_added: 5,
+        };
+        assert!(!hand_mixed.is_zero_joule());
+    }
+
+    /// COVERAGE §4 — `total_joule_delta` mirrors `joule_added` for `step_chains`
+    /// output including mixed positive and negative yields.
+    #[test]
+    fn total_joule_delta_matches_joule_added_field() {
+        let mut stocks = Stocks::default();
+        stocks.add(Good::Food, 5);
+        stocks.add(Good::Water, 5);
+        stocks.add(Good::Wood, 5);
+        let book = book_with(&[
+            (
+                "destroy",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Wood, 1)],
+                    vec![RecipeLeg::new(Good::Tools, 1)],
+                    1,
+                    -10,
+                ),
+            ),
+            (
+                "mint",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Food, 1)],
+                    vec![RecipeLeg::new(Good::Water, 1)],
+                    1,
+                    50,
+                ),
+            ),
+            (
+                "reshape",
+                Recipe::new(
+                    vec![RecipeLeg::new(Good::Water, 1)],
+                    vec![RecipeLeg::new(Good::Food, 1)],
+                    1,
+                    0,
+                ),
+            ),
+        ]);
+        let report = step_chains(&mut stocks, &book);
+        let fired_sum: i64 = report
+            .outcomes
+            .iter()
+            .filter(|o| o.fired)
+            .map(|o| o.joule_delta)
+            .sum();
+        assert_eq!(fired_sum, 40);
+        assert_eq!(report.joule_added, 40);
+        assert_eq!(report.total_joule_delta(), report.joule_added);
+    }
+
+    /// COVERAGE §4 — empty book / all-skipped report yields zero from both accessors.
+    #[test]
+    fn total_joule_delta_zero_on_empty_or_all_skipped() {
+        let mut stocks = Stocks::default();
+        let empty_report = step_chains(&mut stocks, &ChainBook::new());
+        assert_eq!(empty_report.total_joule_delta(), 0);
+        assert_eq!(empty_report.joule_added, 0);
+
+        stocks.add(Good::Wood, 1);
+        let book = book_with(&[(
+            "short",
+            Recipe::new(
+                vec![RecipeLeg::new(Good::Wood, 2)],
+                vec![RecipeLeg::new(Good::Tools, 1)],
+                1,
+                25,
+            ),
+        )]);
+        let skipped_report = step_chains(&mut stocks, &book);
+        assert!(skipped_report.is_noop());
+        assert_eq!(skipped_report.total_joule_delta(), 0);
+        assert_eq!(skipped_report.joule_added, 0);
+    }
+
+    /// COVERAGE §6 — `add_joule_recipe` round-trips and rejects duplicates.
+    #[test]
+    fn add_joule_recipe_registers_and_rejects_duplicate() {
+        let recipe = Recipe::new(
+            vec![RecipeLeg::new(Good::Wood, 1)],
+            vec![RecipeLeg::new(Good::Tools, 1)],
+            1,
+            25,
+        );
+        let mut book = ChainBook::new();
+        assert!(book.add_joule_recipe("smelter", recipe.clone()));
+        assert_eq!(book.len(), 1);
+        assert_eq!(book.get("smelter"), Some(&recipe));
+        assert!(!book.add_joule_recipe("smelter", recipe));
+        assert_eq!(book.len(), 1);
+    }
+
+    /// COVERAGE §6 — negative `joule_yield` (value destruction) still registers.
+    #[test]
+    fn add_joule_recipe_accepts_negative_yield() {
+        let recipe = Recipe::new(
+            vec![RecipeLeg::new(Good::Food, 1)],
+            vec![RecipeLeg::new(Good::Water, 1)],
+            1,
+            -5,
+        );
+        let mut book = ChainBook::new();
+        assert!(book.add_joule_recipe("spoil", recipe.clone()));
+        assert_eq!(book.get("spoil"), Some(&recipe));
+    }
 }

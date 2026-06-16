@@ -492,6 +492,58 @@ mod tests {
         InstitutionLedger::with_defaults()
     }
 
+    /// COVERAGE §5 — `next_order_id` is peek-only and tracks successful posts.
+    #[test]
+    fn next_order_id_peek_and_rejected_posts_do_not_bump() {
+        let mut alloc = Allocator::new();
+        assert_eq!(alloc.next_order_id(), 0);
+
+        let bid_id = alloc
+            .post_bid(Bid {
+                id: 0,
+                bidder: INSTITUTION_TREASURY,
+                good: "food".to_string(),
+                quantity: 1,
+                price: 100,
+            })
+            .expect("valid bid");
+        assert_eq!(bid_id, 0);
+        assert_eq!(alloc.next_order_id(), 1);
+
+        let offer_id = alloc
+            .post_offer(Offer {
+                id: 0,
+                offerer: INSTITUTION_MARKET,
+                good: "food".to_string(),
+                quantity: 2,
+                price: 80,
+            })
+            .expect("valid offer");
+        assert_eq!(offer_id, 1);
+        assert_eq!(alloc.next_order_id(), 2);
+        assert_eq!(alloc.next_order_id(), 2, "peek must not consume ids");
+
+        assert!(alloc
+            .post_bid(Bid {
+                id: 0,
+                bidder: INSTITUTION_TREASURY,
+                good: "food".to_string(),
+                quantity: -1,
+                price: 100,
+            })
+            .is_none());
+        assert!(alloc
+            .post_offer(Offer {
+                id: 0,
+                offerer: INSTITUTION_MARKET,
+                good: "food".to_string(),
+                quantity: 1,
+                price: -1,
+            })
+            .is_none());
+        assert_eq!(alloc.next_order_id(), 2, "rejected posts must not bump counter");
+    }
+
     #[test]
     fn post_bid_assigns_monotonic_ids() {
         let mut alloc = Allocator::new();

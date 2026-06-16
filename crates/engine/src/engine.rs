@@ -1886,8 +1886,7 @@ impl Simulation {
         /// Cohesion frays without reinforcement: proportional decay yields a
         /// dynamic equilibrium (belief bind vs unrest fray vs decay).
         const COHESION_DECAY_DIVISOR: u64 = 500;
-        let delta = cohesion_delta(self.state.belief, self.state.unrest)
-            + micro_cohesion_delta(&self.world);
+        let delta = cohesion_delta(self.state.belief, self.state.unrest);
         self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
         self.state.cohesion = self
             .state
@@ -2018,8 +2017,6 @@ impl Simulation {
     }
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
-    /// Construction debits global wood and metal stockpiles produced by
-    /// [`Simulation::phase_production`]; scarcity throttles expansion.
     fn phase_buildings(&mut self) {
         if self.state.tick % building_cadence(self.research_tier()) != 0 {
             return;
@@ -2033,32 +2030,24 @@ impl Simulation {
             self.state.unrest,
         );
 
-        let pending = building_parcel_count(&signals);
-        if pending == 0 {
-            return;
+        if [
+            signals.residential,
+            signals.commercial,
+            signals.industrial,
+            signals.civic,
+        ]
+        .iter()
+        .any(|signal| *signal > 0.5)
+        {
+            let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
+            let _ = self.allocator.allocate(
+                &mut self.building_graph,
+                &signals,
+                self.target_era,
+                origin,
+                16,
+            );
         }
-        if !building_materials_affordable(
-            self.state.resources.wood,
-            self.state.resources.metal,
-            pending,
-        ) {
-            return;
-        }
-
-        let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
-        let allocated = self.allocator.allocate(
-            &mut self.building_graph,
-            &signals,
-            self.target_era,
-            origin,
-            16,
-        );
-        if allocated.is_empty() {
-            return;
-        }
-        let (wood_cost, metal_cost) = building_material_cost(allocated.len());
-        self.state.resources.wood = self.state.resources.wood.saturating_sub(wood_cost);
-        self.state.resources.metal = self.state.resources.metal.saturating_sub(metal_cost);
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.
@@ -2966,37 +2955,6 @@ fn agent_misery_unrest(world: &hecs::World) -> i64 {
     (mean_misery * MAX_MISERY_UNREST as f32) as i64
 }
 
-/// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
-/// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
-fn micro_cohesion_delta(world: &hecs::World) -> i64 {
-    const MICRO_BIND_CAP: i64 = 12;
-    const MICRO_FRAY_CAP: i64 = 18;
-    const MIN_AGENTS: u32 = 2;
-    const CONSENSUS_SCALE: f32 = 4.0;
-
-    let mut n = 0u32;
-    let mut sum = 0.0f32;
-    let mut sum_sq = 0.0f32;
-    for (_, psyche) in world.query::<&Psyche>().iter() {
-        let x = psyche.beliefs[0];
-        n += 1;
-        sum += x;
-        sum_sq += x * x;
-    }
-
-    if n < MIN_AGENTS {
-        return 0;
-    }
-
-    let n_f = n as f32;
-    let mean = sum / n_f;
-    let var = ((sum_sq / n_f) - mean * mean).max(0.0);
-    let consensus = 1.0 - (CONSENSUS_SCALE * var).clamp(0.0, 1.0);
-    let micro_bind = (consensus * MICRO_BIND_CAP as f32).floor() as i64;
-    let micro_fray = ((1.0 - consensus) * MICRO_FRAY_CAP as f32).floor() as i64;
-    micro_bind - micro_fray
-}
-
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
 /// research (awakened minds discover faster). Reuses the ECS; returns 0..MAX bonus.
 fn sentience_research_bonus(world: &hecs::World) -> u64 {
@@ -3198,40 +3156,6 @@ fn building_demand_signals(
         industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0),
         civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0),
     }
-}
-
-/// Wood consumed per parcel allocated in [`Simulation::phase_buildings`].
-const BUILDING_WOOD_PER_PARCEL: i64 = 10;
-/// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
-const BUILDING_METAL_PER_PARCEL: i64 = 5;
-
-/// Parcels that would be allocated for saturated demand signals (> 0.5).
-fn building_parcel_count(signals: &DemandSignals) -> usize {
-    [
-        signals.residential,
-        signals.commercial,
-        signals.industrial,
-        signals.civic,
-    ]
-    .iter()
-    .filter(|&&signal| signal > 0.5)
-    .count()
-}
-
-/// Construction material debit for `parcel_count` new parcels.
-fn building_material_cost(parcel_count: usize) -> (Fixed, Fixed) {
-    let n = parcel_count as i64;
-    (
-        Fixed::from_num(BUILDING_WOOD_PER_PARCEL * n),
-        Fixed::from_num(BUILDING_METAL_PER_PARCEL * n),
-    )
-}
-
-/// True when the global stockpile can fund `parcel_count` new parcels.
-/// De-silos `resources.wood` / `resources.metal`, which `phase_production` writes.
-fn building_materials_affordable(wood: Fixed, metal: Fixed, parcel_count: usize) -> bool {
-    let (need_wood, need_metal) = building_material_cost(parcel_count);
-    wood >= need_wood && metal >= need_metal
 }
 
 /// Belief units that contribute one unit of cohesion growth per tick.
@@ -3857,65 +3781,6 @@ mod tests {
 
         let empty = World::new();
         assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
-    }
-
-    /// FR-CIV-0100 §3 — upward causation: shared micro ideology binds macro cohesion;
-    /// polarization frays it. Pure-function assertions; no tick RNG.
-    #[test]
-    fn micro_ideology_consensus_biases_cohesion() {
-        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
-
-        fn psyche_with_belief0(b0: f32) -> Psyche {
-            let mut beliefs = [0.5_f32; PSYCHE_DIM];
-            beliefs[0] = b0;
-            Psyche {
-                drives: [0.0; PSYCHE_DIM],
-                temperament: Temperament::neutral(),
-                mood: Mood { valence: 0.0, arousal: 0.0 },
-                beliefs,
-                maturity: 0.5,
-            }
-        }
-
-        fn spawn_ideologies(world: &mut hecs::World, beliefs0: &[f32]) {
-            for &b0 in beliefs0 {
-                world.spawn((psyche_with_belief0(b0),));
-            }
-        }
-
-        // Regression: no Psyche → no micro effect
-        assert_eq!(micro_cohesion_delta(&hecs::World::new()), 0);
-
-        // Guard: single agent → no variance
-        let mut lone = hecs::World::new();
-        lone.spawn((psyche_with_belief0(0.85),));
-        assert_eq!(micro_cohesion_delta(&lone), 0);
-
-        // CONSENSUS: 8 × beliefs[0] = 0.85 → +12
-        let mut consensus = hecs::World::new();
-        spawn_ideologies(&mut consensus, &[0.85; 8]);
-        assert_eq!(
-            micro_cohesion_delta(&consensus),
-            12,
-            "unanimous ideology should max-bind cohesion"
-        );
-
-        // POLARIZED: alternate 0.0 / 1.0 → var=0.25 → -18
-        let mut polarized = hecs::World::new();
-        spawn_ideologies(
-            &mut polarized,
-            &[0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
-        );
-        assert_eq!(
-            micro_cohesion_delta(&polarized),
-            -18,
-            "max-spread ideology should max-fray cohesion"
-        );
-
-        assert!(
-            micro_cohesion_delta(&consensus) > micro_cohesion_delta(&polarized),
-            "consensus must bind more than polarization frays"
-        );
     }
 
     /// FR-CIV-0100 §3 — downward causation: macro cohesion lifts agent mood valence;
@@ -4856,8 +4721,6 @@ mod tests {
     #[test]
     fn phase_buildings_allocates_over_time_when_signals_are_high() {
         let mut sim = Simulation::with_seed(77);
-        sim.state.resources.wood = Fixed::from_num(10_000);
-        sim.state.resources.metal = Fixed::from_num(10_000);
         let before = sim.building_graph().parcels.len();
 
         for _ in 0..200 {
@@ -4865,41 +4728,6 @@ mod tests {
         }
 
         assert!(sim.building_graph().parcels.len() > before);
-    }
-
-    /// FR-CIV-0100 §3 — construction draws down wood/metal; zero stock throttles building.
-    #[test]
-    fn phase_buildings_gated_by_wood_and_metal_stockpile() {
-        let mut sim = Simulation::with_seed(88);
-        sim.state.tick = 16;
-        sim.state.unrest = 500;
-        sim.state.resources.wood = Fixed::ZERO;
-        sim.state.resources.metal = Fixed::ZERO;
-        let before = sim.building_graph().parcels.len();
-        sim.phase_buildings();
-        assert_eq!(
-            sim.building_graph().parcels.len(),
-            before,
-            "zero materials must throttle construction"
-        );
-
-        sim.state.resources.wood = Fixed::from_num(1_000);
-        sim.state.resources.metal = Fixed::from_num(1_000);
-        let wood_before = sim.state.resources.wood;
-        let metal_before = sim.state.resources.metal;
-        sim.phase_buildings();
-        assert!(
-            sim.building_graph().parcels.len() > before,
-            "ample materials must allow construction"
-        );
-        assert!(
-            sim.state.resources.wood < wood_before,
-            "construction must debit wood"
-        );
-        assert!(
-            sim.state.resources.metal < metal_before,
-            "construction must debit metal"
-        );
     }
 
     /// FR-CIV-0200 — research progress accrues emergently from the living

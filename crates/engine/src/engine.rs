@@ -306,6 +306,114 @@ pub enum EconomicFocus {
     Mercantile,
 }
 
+/// Stable polity identifier (map key is [`PolityId::0`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct PolityId(pub u32);
+
+/// One polity's macro + economy row. Map key == [`PolityId::0`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PolityMacroState {
+    pub id: PolityId,
+    pub name: String,
+    pub treasury: Fixed,
+    pub resources: Resources,
+    pub belief: u64,
+    pub unrest: u64,
+    pub cohesion: u64,
+    pub research_progress: u64,
+    pub tech_unlocks: u64,
+    pub dispossessed_permille: u64,
+    pub temple_level: u32,
+    pub garrison_level: u32,
+    pub economic_focus: EconomicFocus,
+    pub focus_pressure: u8,
+    pub population: u64,
+    pub legitimacy_milli: i64,
+    pub shadow_influence_index_milli: i64,
+    pub influence_capital: i64,
+    pub governance_integrity_milli: i64,
+}
+
+impl Default for PolityMacroState {
+    fn default() -> Self {
+        Self {
+            id: PolityId(0),
+            name: String::new(),
+            treasury: Fixed::ZERO,
+            resources: Resources::default(),
+            belief: 0,
+            unrest: 0,
+            cohesion: 0,
+            research_progress: 0,
+            tech_unlocks: 0,
+            dispossessed_permille: 0,
+            temple_level: 0,
+            garrison_level: 0,
+            economic_focus: EconomicFocus::Balanced,
+            focus_pressure: 0,
+            population: 0,
+            legitimacy_milli: 0,
+            shadow_influence_index_milli: 0,
+            influence_capital: 0,
+            governance_integrity_milli: 0,
+        }
+    }
+}
+
+impl PolityMacroState {
+    /// Hydrate a row from legacy per-faction maps (Phase 0 migration).
+    pub fn default_for(id: u32, state: &WorldState) -> Self {
+        Self {
+            id: PolityId(id),
+            name: state
+                .factions
+                .get(&id)
+                .cloned()
+                .unwrap_or_else(|| format!("Faction {id}")),
+            treasury: state.faction_treasury.get(&id).copied().unwrap_or_default(),
+            resources: state
+                .faction_resources
+                .get(&id)
+                .cloned()
+                .unwrap_or_default(),
+            unrest: state.faction_unrest.get(&id).copied().unwrap_or(0),
+            ..Self::default()
+        }
+    }
+}
+
+/// Merge legacy per-faction maps into [`WorldState::polities`] (sorted keys).
+pub fn hydrate_polities_from_legacy(state: &mut WorldState) {
+    let mut ids: Vec<u32> = state
+        .factions
+        .keys()
+        .chain(state.faction_treasury.keys())
+        .chain(state.faction_resources.keys())
+        .chain(state.faction_unrest.keys())
+        .copied()
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    for id in ids {
+        let row = state
+            .polities
+            .entry(id)
+            .or_insert_with(|| PolityMacroState::default_for(id, state));
+        if let Some(name) = state.factions.get(&id) {
+            row.name.clone_from(name);
+        }
+        if let Some(&treasury) = state.faction_treasury.get(&id) {
+            row.treasury = treasury;
+        }
+        if let Some(resources) = state.faction_resources.get(&id) {
+            row.resources.clone_from(resources);
+        }
+        if let Some(&unrest) = state.faction_unrest.get(&id) {
+            row.unrest = unrest;
+        }
+    }
+}
+
 /// Global world state
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorldState {
@@ -2087,6 +2195,7 @@ impl Simulation {
             self.state.cohesion,
             self.research_tier(),
             self.state.unrest,
+            self.state.resources.metal,
         );
 
         let pending = building_parcel_count(&signals);
@@ -3283,11 +3392,15 @@ fn building_demand_signals(
     cohesion: u64,
     research_tier: u64,
     unrest: u64,
+    metal: Fixed,
 ) -> DemandSignals {
     let cap = capacity.max(1) as f32;
+    let cohesion_signal = ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0);
+    let metal_factor =
+        (metal.to_f64() as f32 / BUILDING_COMMERCIAL_METAL_GATE).clamp(0.0, 1.0);
     DemandSignals {
         residential: ((population as f32) / cap).clamp(0.0, 1.0),
-        commercial: ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0),
+        commercial: cohesion_signal * metal_factor,
         industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0),
         civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0),
     }
@@ -3297,6 +3410,8 @@ fn building_demand_signals(
 const BUILDING_WOOD_PER_PARCEL: i64 = 10;
 /// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
 const BUILDING_METAL_PER_PARCEL: i64 = 5;
+/// Metal stock at which commercial demand reaches full strength (FR-CIV-0100 FC-3).
+const BUILDING_COMMERCIAL_METAL_GATE: f32 = 500.0;
 
 /// Parcels that would be allocated for saturated demand signals (> 0.5).
 fn building_parcel_count(signals: &DemandSignals) -> usize {
@@ -4314,9 +4429,10 @@ mod tests {
     /// FR-CIV-0100 §3 — construction demand tracks emergent macro state.
     #[test]
     fn building_demand_responds_to_state() {
-        let d = building_demand_signals(0, 1_000, 0, 0, 500);
+        let ample_metal = Fixed::from_num(1_000);
+        let d = building_demand_signals(0, 1_000, 0, 0, 500, ample_metal);
         assert!(d.civic > 0.0);
-        let d2 = building_demand_signals(0, 1_000, 0, 5, 0);
+        let d2 = building_demand_signals(0, 1_000, 0, 5, 0, ample_metal);
         assert!(d2.industrial > 0.0);
         for signal in [d.residential, d.commercial, d.industrial, d.civic] {
             assert!((0.0..=1.0).contains(&signal));
@@ -4324,6 +4440,56 @@ mod tests {
         for signal in [d2.residential, d2.commercial, d2.industrial, d2.civic] {
             assert!((0.0..=1.0).contains(&signal));
         }
+        let cohesion = 1_000_000u64;
+        let low_metal = Fixed::from_num(100);
+        let d_low = building_demand_signals(0, 1_000, cohesion, 0, 0, low_metal);
+        let d_high = building_demand_signals(0, 1_000, cohesion, 0, 0, ample_metal);
+        assert!(d_low.commercial < 0.5, "low metal must suppress commercial parcels");
+        assert!(d_high.commercial > 0.5, "ample metal allows commercial parcels");
+        assert_eq!(d_low.residential, d_high.residential);
+        assert_eq!(d_low.industrial, d_high.industrial);
+        assert_eq!(d_low.civic, d_high.civic);
+    }
+
+    /// FR-CIV-0100 FC-3 — commercial demand gated by metal stock; loop cannot run away.
+    #[test]
+    fn fc3_commercial_metal_gate_bounded_over_many_ticks() {
+        let mut sim = Simulation::with_seed(9917);
+        sim.state.cohesion = 1_000_000;
+        sim.state.unrest = 0;
+        sim.state.population = 0;
+        sim.state.resources.wood = Fixed::from_num(10_000);
+        sim.state.resources.metal = Fixed::from_num(600);
+        let metal_start = sim.state.resources.metal;
+        let cadence = building_cadence(sim.research_tier());
+
+        for tick in 0..500 {
+            sim.state.tick = tick;
+            if tick % cadence == 0 {
+                sim.phase_buildings();
+            }
+        }
+
+        assert!(
+            sim.state.resources.metal > Fixed::ZERO,
+            "FC-3 gate must stop commercial drain before metal hits zero"
+        );
+        assert!(
+            sim.state.resources.metal < metal_start,
+            "construction should debit metal while stock is above the gate"
+        );
+        let signals = building_demand_signals(
+            sim.state.population,
+            sim.carrying_capacity(),
+            sim.state.cohesion,
+            sim.research_tier(),
+            sim.state.unrest,
+            sim.state.resources.metal,
+        );
+        assert!(
+            signals.commercial <= 0.5,
+            "residual metal must throttle commercial demand below parcel threshold"
+        );
     }
 
     /// FR-CIV-0100 §3 — cohesion grows when belief outweighs unrest and frays

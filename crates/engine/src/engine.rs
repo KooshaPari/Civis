@@ -2829,8 +2829,8 @@ impl Simulation {
         } else {
             DiplomacyKind::TradeAgreement
         };
-        let cluster_a = ClusterId(u64::from(a));
-        let cluster_b = ClusterId(u64::from(b));
+        let cluster_a = ClusterId(a as u64);
+        let cluster_b = ClusterId(b as u64);
         match kind {
             DiplomacyKind::TradeAgreement => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -4042,8 +4042,8 @@ mod tests {
         signal: DiplomacySignal,
         rounds: usize,
     ) {
-        let cluster_a = ClusterId(u64::from(a));
-        let cluster_b = ClusterId(u64::from(b));
+        let cluster_a = ClusterId(a as u64);
+        let cluster_b = ClusterId(b as u64);
         for _ in 0..rounds {
             matrix.apply_signal(cluster_a, cluster_b, signal);
             matrix.apply_signal(cluster_b, cluster_a, signal);
@@ -4355,7 +4355,7 @@ mod tests {
         for i in 0..4 {
             seed_n3_settlement_agent(
                 &mut contacting,
-                100 + u64::from(i),
+                100 + (i as u64),
                 10,
                 0,
                 base,
@@ -4366,7 +4366,7 @@ mod tests {
         for i in 0..4 {
             seed_n3_settlement_agent(
                 &mut contacting,
-                200 + u64::from(i),
+                200 + (i as u64),
                 20,
                 1,
                 base + contact_offset,
@@ -4390,7 +4390,7 @@ mod tests {
         for i in 0..4 {
             seed_n3_settlement_agent(
                 &mut distant,
-                300 + u64::from(i),
+                300 + (i as u64),
                 30,
                 0,
                 base,
@@ -4401,7 +4401,7 @@ mod tests {
         for i in 0..4 {
             seed_n3_settlement_agent(
                 &mut distant,
-                400 + u64::from(i),
+                400 + (i as u64),
                 40,
                 1,
                 far,

@@ -984,6 +984,31 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 mod tests {
     use super::*;
     use civ_save_db::SessionSaveRecord;
+
+    #[test]
+    fn need_satisfaction_inverts_and_clamps_pressure() {
+        assert_eq!(need_satisfaction(0.0), 1.0); // no pressure -> fully satisfied
+        assert_eq!(need_satisfaction(1.0), 0.0); // full pressure -> unsatisfied
+        assert!((need_satisfaction(0.25) - 0.75).abs() < 1e-6);
+        assert_eq!(need_satisfaction(2.0), 0.0); // over-pressure clamps to 0
+        assert_eq!(need_satisfaction(-1.0), 1.0); // negative pressure clamps to 1
+    }
+
+    #[test]
+    fn tick_broadcast_format_text_binary_flags_are_exclusive_per_variant() {
+        assert!(TickBroadcastFormat::Text.sends_text());
+        assert!(!TickBroadcastFormat::Text.sends_binary());
+        assert!(!TickBroadcastFormat::Binary.sends_text());
+        assert!(TickBroadcastFormat::Binary.sends_binary());
+        assert!(TickBroadcastFormat::Both.sends_text());
+        assert!(TickBroadcastFormat::Both.sends_binary());
+        // `Both` emits both stream sizes; single-format variants emit one.
+        assert_eq!(
+            TickBroadcastFormat::Both.messages_per_tick(),
+            TickBroadcastFormat::Text.messages_per_tick()
+                + TickBroadcastFormat::Binary.messages_per_tick()
+        );
+    }
     use civ_voxel::{MaterialId, WorldCoord};
 
     fn test_app_state(

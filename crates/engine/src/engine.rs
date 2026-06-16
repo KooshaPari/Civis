@@ -2530,6 +2530,10 @@ impl Simulation {
             }
             DiplomacyKind::Peace => {}
         }
+        decay_faction_relations(
+            &mut self.state.faction_relations,
+            FACTION_RELATION_DECAY_FACTOR,
+        );
         self.diplomacy_events.push(DiplomacyEvent {
             tick: self.state.tick,
             faction_a: a,
@@ -3134,6 +3138,12 @@ const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
 const FACTION_TRADE_RELATION_SIGNAL: f32 = 0.05 / 0.08;
 /// Conflict relation drift (-0.1) via [`DiplomacyMatrix`] competition channel.
 const FACTION_CONFLICT_RELATION_SIGNAL: f32 = 0.1 / 0.12;
+/// Per diplomacy phase, unstrengthened relations retain this fraction of magnitude.
+const FACTION_RELATION_DECAY_FACTOR: f32 = 0.98;
+/// Trade drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
+/// Competition drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
 /// Max threshold shift from a saturated pairwise relation score (`±1.0`).
 const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 /// Belief units required to raise the conflict threshold by one currency unit.
@@ -3164,6 +3174,42 @@ fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
 /// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
 fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
     (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
+}
+
+/// Scales every stored relation toward neutral without overshooting zero.
+///
+/// [`DiplomacyMatrix`] has no native decay; calibrated `apply_signal` calls
+/// achieve `score * factor` per pair (FR-CIV-0100 criticality).
+fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
+    let factor = factor.clamp(0.0, 1.0);
+    let pairs = matrix.snapshot();
+    for (a, b, record) in pairs {
+        let score = record.score;
+        if score == 0.0 {
+            continue;
+        }
+        let target = score * factor;
+        let delta = target - score;
+        if delta > 0.0 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    trade_volume: delta / DIPLOMACY_TRADE_DRIFT,
+                    ..Default::default()
+                },
+            );
+        } else {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    resource_competition: (-delta) / DIPLOMACY_COMPETITION_DRIFT,
+                    ..Default::default()
+                },
+            );
+        }
+    }
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -4496,6 +4542,41 @@ mod tests {
         assert_eq!(
             sim.diplomacy_events().last().expect("a diplomacy event").kind,
             DiplomacyKind::TradeAgreement
+        );
+    }
+
+    /// FR-CIV-0100 — alliances and rivalries fade toward neutral without reinforcement.
+    #[test]
+    fn faction_relations_decay_toward_neutral() {
+        let mut sim = Simulation::with_seed(5);
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[0];
+        let b = ids[1];
+        sim.state.faction_relations.apply_signal(
+            ClusterId(u64::from(a)),
+            ClusterId(u64::from(b)),
+            DiplomacySignal {
+                trade_volume: 12.5,
+                ..Default::default()
+            },
+        );
+        let before = sim.faction_relation(a, b).abs();
+        assert!(
+            before > 0.0,
+            "test pair should start with a non-neutral relation"
+        );
+
+        // Ticks 500 and 1000 diplomacy pairs are (2,0) and (1,2) — not (a,b).
+        for tick in [500_u64, 1_000] {
+            sim.state.tick = tick;
+            sim.phase_diplomacy();
+        }
+
+        let after = sim.faction_relation(a, b).abs();
+        assert!(
+            after < before,
+            "relation magnitude should fade toward neutral without reinforcement \
+             (before={before}, after={after})"
         );
     }
 

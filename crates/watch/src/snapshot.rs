@@ -1028,4 +1028,44 @@ mod tests {
         assert_eq!(route_resource("cloth"), ResourceType::Energy);
         assert_eq!(route_resource("unknown"), ResourceType::Food);
     }
+
+    #[test]
+    fn factions_are_four_stable_with_ascending_ids() {
+        let f = factions(0);
+        assert_eq!(f.len(), 4);
+        assert_eq!(f.iter().map(|x| x.id).collect::<Vec<_>>(), vec![0, 1, 2, 3]);
+        assert!(f.iter().all(|x| x.radius > 0.0 && x.radius <= 0.3));
+        assert_eq!(f[0].capital, [0.22, 0.24]);
+        assert!(factions(100_000)[0].radius >= factions(0)[0].radius);
+    }
+
+    #[test]
+    fn faction_for_point_picks_nearest_capital() {
+        assert_eq!(faction_for_point(0.22, 0.24), Some(0));
+        assert_eq!(faction_for_point(0.76, 0.27), Some(1));
+        assert_eq!(faction_for_point(0.27, 0.73), Some(2));
+        assert_eq!(faction_for_point(0.72, 0.74), Some(3));
+        assert!(faction_for_point(0.5, 0.5).is_some());
+    }
+
+    #[test]
+    fn buildings_three_per_faction_with_valid_coords() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        assert_eq!(b.len(), f.len() * 3);
+        assert!(b.iter().all(|x| (0.0..1.0).contains(&x.x) && (0.0..1.0).contains(&x.y)));
+        assert!(b.iter().all(|x| x.faction_id < 4));
+        assert!(b.iter().all(|x| x.occupants == 0));
+        assert!(b
+            .iter()
+            .all(|x| matches!(x.kind, BuildingKind::Residential) == (x.capacity == 4)));
+    }
+
+    #[test]
+    fn roads_connect_same_faction_buildings() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        let r = roads(&b);
+        assert!(!r.is_empty());
+    }
 }

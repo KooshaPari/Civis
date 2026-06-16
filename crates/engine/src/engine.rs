@@ -3025,6 +3025,25 @@ mod tests {
         );
     }
 
+    /// research_tier is research_progress / 100_000 (coverage for the accessor).
+    #[test]
+    fn research_tier_divides_progress() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.research_progress = 250_000;
+        assert_eq!(sim.research_tier(), 2);
+    }
+
+    /// try_invoke_divine_power spends belief only when affordable (coverage).
+    #[test]
+    fn try_invoke_divine_power_spends_belief() {
+        let mut sim = Simulation::with_seed(1);
+        sim.add_belief(100);
+        assert!(sim.try_invoke_divine_power(60));
+        assert_eq!(sim.belief(), 40);
+        assert!(!sim.try_invoke_divine_power(1_000));
+        assert_eq!(sim.belief(), 40);
+    }
+
     /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer
     /// advanced society), monotonic in tier, but never below 1; decay untouched.
     #[test]

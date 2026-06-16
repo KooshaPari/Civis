@@ -35,7 +35,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 
@@ -306,6 +306,51 @@ pub enum EconomicFocus {
     Mercantile,
 }
 
+/// One polity's macro + economy row. Map key equals [`Self::id`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct PolityMacroState {
+    pub id: u32,
+    pub name: String,
+    pub treasury: Fixed,
+    pub resources: Resources,
+    pub belief: u64,
+    pub unrest: u64,
+    pub cohesion: u64,
+    pub research_progress: u64,
+    pub tech_unlocks: u64,
+    pub dispossessed_permille: u64,
+    pub temple_level: u32,
+    pub garrison_level: u32,
+    pub economic_focus: EconomicFocus,
+    pub focus_pressure: u8,
+    pub population: u64,
+    pub legitimacy_milli: i64,
+    pub shadow_influence_index_milli: i64,
+    pub influence_capital: i64,
+    pub governance_integrity_milli: i64,
+}
+
+impl PolityMacroState {
+    fn default_for(id: u32, state: &WorldState) -> Self {
+        Self {
+            id,
+            name: state
+                .factions
+                .get(&id)
+                .cloned()
+                .unwrap_or_else(|| format!("Faction {id}")),
+            treasury: state.faction_treasury.get(&id).copied().unwrap_or_default(),
+            resources: state
+                .faction_resources
+                .get(&id)
+                .cloned()
+                .unwrap_or_default(),
+            unrest: state.faction_unrest.get(&id).copied().unwrap_or(0),
+            ..Self::default()
+        }
+    }
+}
+
 /// Global world state
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorldState {
@@ -401,12 +446,50 @@ pub struct WorldState {
     /// diplomacy thresholds. `#[serde(default)]` keeps older saves loadable.
     #[serde(default)]
     pub faction_relations: DiplomacyMatrix,
+    /// Per-polity macro + economy rows (authoritative target; dual-written with legacy
+    /// maps during migration). `BTreeMap` keys iterate in deterministic order.
+    #[serde(default)]
+    pub polities: BTreeMap<u32, PolityMacroState>,
     pub resources: Resources,
+}
+
+/// Merge legacy per-faction `HashMap`s into [`WorldState::polities`] after deserialize
+/// or [`WorldState::default`].
+fn hydrate_polities_from_legacy(state: &mut WorldState) {
+    let ids: BTreeSet<u32> = state
+        .factions
+        .keys()
+        .chain(state.faction_treasury.keys())
+        .chain(state.faction_resources.keys())
+        .chain(state.faction_unrest.keys())
+        .copied()
+        .collect();
+    for id in ids {
+        let entry = state
+            .polities
+            .entry(id)
+            .or_insert_with(|| PolityMacroState::default_for(id, state));
+        if let Some(name) = state.factions.get(&id) {
+            entry.name.clone_from(name);
+        } else if entry.name.is_empty() {
+            entry.name = format!("Faction {id}");
+        }
+        if let Some(treasury) = state.faction_treasury.get(&id) {
+            entry.treasury = *treasury;
+        }
+        if let Some(resources) = state.faction_resources.get(&id) {
+            entry.resources = resources.clone();
+        }
+        if let Some(unrest) = state.faction_unrest.get(&id) {
+            entry.unrest = *unrest;
+        }
+        entry.id = id;
+    }
 }
 
 impl Default for WorldState {
     fn default() -> Self {
-        Self {
+        let mut state = Self {
             tick: 0,
             population: 1_000_000,
             research_progress: 0,
@@ -486,8 +569,11 @@ impl Default for WorldState {
                 },
             ],
             faction_relations: DiplomacyMatrix::default(),
+            polities: BTreeMap::new(),
             resources: Resources::default(),
-        }
+        };
+        hydrate_polities_from_legacy(&mut state);
+        state
     }
 }
 
@@ -1283,6 +1369,17 @@ impl Simulation {
         self.state.faction_unrest.get(&faction_id).copied().unwrap_or(0)
     }
 
+    fn ensure_polity(&mut self, id: u32) -> &mut PolityMacroState {
+        if !self.state.polities.contains_key(&id) {
+            let row = PolityMacroState::default_for(id, &self.state);
+            self.state.polities.insert(id, row);
+        }
+        self.state
+            .polities
+            .get_mut(&id)
+            .expect("polity row exists")
+    }
+
     /// Accumulated social cohesion, generated each tick by
     /// [`Simulation::phase_cohesion`] from belief minus unrest. Higher means a
     /// stronger shared social fabric.
@@ -1933,6 +2030,7 @@ impl Simulation {
             let entry = self.state.faction_unrest.entry(id).or_insert(0);
             *entry = (*entry as i64 + delta).max(0) as u64;
             *entry = entry.saturating_sub(*entry / FACTION_UNREST_DECAY_DIVISOR);
+            self.ensure_polity(id).unrest = *entry;
         }
     }
 
@@ -4397,6 +4495,36 @@ mod tests {
             sim.phase_faction_unrest();
         }
         assert!(sim.faction_unrest(id) > 0, "scarce faction breeds unrest");
+    }
+
+    /// After faction-unrest ticks, `polities[id].unrest` matches legacy `faction_unrest`.
+    #[test]
+    fn polities_unrest_matches_faction_unrest_after_ticks() {
+        let mut sim = Simulation::with_seed(99);
+        let id = 0u32;
+        sim.state.faction_treasury.insert(id, Fixed::from_num(0));
+        sim.state.faction_resources.insert(
+            id,
+            Resources {
+                food: Fixed::from_num(5),
+                ..Resources::default()
+            },
+        );
+        for _ in 0..5 {
+            sim.phase_faction_unrest();
+        }
+        for (&faction_id, &legacy_unrest) in &sim.state.faction_unrest {
+            let polity_unrest = sim
+                .state
+                .polities
+                .get(&faction_id)
+                .map(|p| p.unrest)
+                .unwrap_or(0);
+            assert_eq!(
+                polity_unrest, legacy_unrest,
+                "polity {faction_id} unrest drifted from legacy map"
+            );
+        }
     }
 
     /// Sustained faction scarcity reaches a finite equilibrium thanks to proportional decay.

@@ -2937,4 +2937,62 @@ mod tests {
             None
         ));
     }
+
+    #[test]
+    fn parse_name_maps_all_known_methods() {
+        assert_eq!(
+            JsonRpcMethod::parse_name("health"),
+            Some(JsonRpcMethod::Health)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.command"),
+            Some(JsonRpcMethod::SimCommand)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.status"),
+            Some(JsonRpcMethod::SimStatus)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.set_speed"),
+            Some(JsonRpcMethod::SimSetSpeed)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.slot"),
+            Some(JsonRpcMethod::SaveSlot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.load"),
+            Some(JsonRpcMethod::LoadSlot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.list"),
+            Some(JsonRpcMethod::SaveList)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.emergence"),
+            Some(JsonRpcMethod::SimEmergence)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.snapshot"),
+            Some(JsonRpcMethod::SimSnapshot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.spawn_entity"),
+            Some(JsonRpcMethod::SimSpawnEntity)
+        );
+        assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
+        assert_eq!(JsonRpcMethod::parse_name(""), None);
+    }
+
+    #[test]
+    fn parse_replay_path_extracts_nonempty() {
+        use serde_json::json;
+        assert_eq!(
+            parse_replay_path(Some(&json!({"path":"saves/x.civreplay"}))).unwrap(),
+            "saves/x.civreplay"
+        );
+        assert!(parse_replay_path(None).is_err());
+        assert!(parse_replay_path(Some(&json!({}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
+    }
 }

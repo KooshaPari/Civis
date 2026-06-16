@@ -5,8 +5,9 @@
 use civ_agents::{
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
-    Activity, Alignment, Civilian as AgentCivilian, ClusterMember, CohortStats, LodTier, Needs,
-    PoiKind, PoiRegistry, Position3d, Psyche, Tools, Wardrobe,
+    Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
+    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
+    Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
@@ -383,6 +384,11 @@ pub struct WorldState {
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
+    /// Pairwise faction relations in `[-1.0, 1.0]` (alliance .. rivalry). EMERGES from
+    /// trade/conflict history in [`Simulation::phase_diplomacy`] and biases future
+    /// diplomacy thresholds. `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub faction_relations: DiplomacyMatrix,
     pub resources: Resources,
 }
 
@@ -465,6 +471,7 @@ impl Default for WorldState {
                     volume: Fixed::from_num(8),
                 },
             ],
+            faction_relations: DiplomacyMatrix::default(),
             resources: Resources::default(),
         }
     }
@@ -1215,6 +1222,17 @@ impl Simulation {
     #[must_use]
     pub fn cohesion(&self) -> u64 {
         self.state.cohesion
+    }
+
+    /// Pairwise faction relation score in `[-1.0, 1.0]` (positive = alliance,
+    /// negative = rivalry). Returns `0.0` when no history exists for the pair.
+    #[must_use]
+    pub fn faction_relation(&self, a: u32, b: u32) -> f32 {
+        self.state
+            .faction_relations
+            .record(ClusterId(u64::from(a)), ClusterId(u64::from(b)))
+            .map(|record| record.score)
+            .unwrap_or(0.0)
     }
 
     /// Persistent dispossessed underclass share (per-mille, 0..=1000), updated
@@ -2459,13 +2477,24 @@ impl Simulation {
         };
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
-        let conflict_threshold =
-            Fixed::from_num(diplomacy_conflict_threshold(self.belief().saturating_add(self.cohesion()), self.unrest()));
+        // Emergent pairwise relations further bias the threshold: allies tolerate
+        // more disparity, rivals clash sooner (FR-CIV-0100 multi-polity emergence).
+        let relation = self.faction_relation(a, b);
+        let base_threshold = diplomacy_conflict_threshold(
+            self.belief().saturating_add(self.cohesion()),
+            self.unrest(),
+        );
+        let conflict_threshold = Fixed::from_num(
+            (base_threshold + diplomacy_relation_threshold_bias(relation))
+                .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
+        );
         let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
         } else {
             DiplomacyKind::TradeAgreement
         };
+        let cluster_a = ClusterId(u64::from(a));
+        let cluster_b = ClusterId(u64::from(b));
         match kind {
             DiplomacyKind::TradeAgreement => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -2474,6 +2503,14 @@ impl Simulation {
                 if let Some(v) = self.state.faction_treasury.get_mut(&b) {
                     *v += Fixed::from_num(100);
                 }
+                self.state.faction_relations.apply_signal(
+                    cluster_a,
+                    cluster_b,
+                    DiplomacySignal {
+                        trade_volume: FACTION_TRADE_RELATION_SIGNAL,
+                        ..Default::default()
+                    },
+                );
             }
             DiplomacyKind::Conflict => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -2482,9 +2519,21 @@ impl Simulation {
                 if let Some(v) = self.state.faction_treasury.get_mut(&b) {
                     *v -= Fixed::from_num(50);
                 }
+                self.state.faction_relations.apply_signal(
+                    cluster_a,
+                    cluster_b,
+                    DiplomacySignal {
+                        resource_competition: FACTION_CONFLICT_RELATION_SIGNAL,
+                        ..Default::default()
+                    },
+                );
             }
             DiplomacyKind::Peace => {}
         }
+        decay_faction_relations(
+            &mut self.state.faction_relations,
+            FACTION_RELATION_DECAY_FACTOR,
+        );
         self.diplomacy_events.push(DiplomacyEvent {
             tick: self.state.tick,
             faction_a: a,
@@ -2552,6 +2601,9 @@ impl Simulation {
                 continue;
             }
 
+            let relation = self.faction_relation(route.from_faction, route.to_faction);
+            let relation_factor = relation_trade_factor(relation);
+
             let resource = route_resource(&route.goods);
             let available = {
                 let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
@@ -2572,8 +2624,11 @@ impl Simulation {
                 .get(&route.to_faction)
                 .map(|r| resource_amount(r, resource))
                 .unwrap_or(Fixed::ZERO);
-            let boosted =
-                route.volume * trade_volume_multiplier(available, to_stock) * unrest_factor * cohesion_factor;
+            let boosted = route.volume
+                * trade_volume_multiplier(available, to_stock)
+                * unrest_factor
+                * cohesion_factor
+                * relation_factor;
             let quantity = boosted.min(available);
             {
                 let from_resources = self
@@ -3067,9 +3122,30 @@ fn cohesion_trade_factor(cohesion: u64) -> Fixed {
     Fixed::from_num(1_000 + boost) / Fixed::from_num(1_000)
 }
 
+/// Relations bias trade: allies (positive relation) trade more, rivals (negative)
+/// less. Returns a factor in [0.5, 1.5] from a relation score in [-1, 1], bounded.
+fn relation_trade_factor(relation: f32) -> Fixed {
+    let r = relation.clamp(-1.0, 1.0);
+    // map [-1,1] to per-mille [500, 1500], then to a Fixed factor in [0.5, 1.5].
+    let permille = (1_000.0 + 500.0 * r) as i64;
+    Fixed::from_num(permille) / Fixed::from_num(1_000)
+}
+
 /// Wealth-disparity (in whole currency units) at which two factions clash when
 /// they share no faith. Above this gap the have-nots turn on the haves.
 const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+/// Trade-agreement relation drift (+0.05) via [`DiplomacyMatrix`] trade channel.
+const FACTION_TRADE_RELATION_SIGNAL: f32 = 0.05 / 0.08;
+/// Conflict relation drift (-0.1) via [`DiplomacyMatrix`] competition channel.
+const FACTION_CONFLICT_RELATION_SIGNAL: f32 = 0.1 / 0.12;
+/// Per diplomacy phase, unstrengthened relations retain this fraction of magnitude.
+const FACTION_RELATION_DECAY_FACTOR: f32 = 0.98;
+/// Trade drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
+/// Competition drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
+/// Max threshold shift from a saturated pairwise relation score (`±1.0`).
+const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 /// Belief units required to raise the conflict threshold by one currency unit.
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a
@@ -3093,6 +3169,47 @@ fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
     let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
     let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
     (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
+}
+
+/// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
+fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
+    (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
+}
+
+/// Scales every stored relation toward neutral without overshooting zero.
+///
+/// [`DiplomacyMatrix`] has no native decay; calibrated `apply_signal` calls
+/// achieve `score * factor` per pair (FR-CIV-0100 criticality).
+fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
+    let factor = factor.clamp(0.0, 1.0);
+    let pairs = matrix.snapshot();
+    for (a, b, record) in pairs {
+        let score = record.score;
+        if score == 0.0 {
+            continue;
+        }
+        let target = score * factor;
+        let delta = target - score;
+        if delta > 0.0 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    trade_volume: delta / DIPLOMACY_TRADE_DRIFT,
+                    ..Default::default()
+                },
+            );
+        } else {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    resource_competition: (-delta) / DIPLOMACY_COMPETITION_DRIFT,
+                    ..Default::default()
+                },
+            );
+        }
+    }
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -3211,6 +3328,30 @@ mod tests {
                     world.write(WorldCoord { x, y, z }, MaterialId(1));
                 }
             }
+        }
+    }
+
+    /// Faction pair chosen by [`Simulation::phase_diplomacy`] (sorted ids + tick modulus).
+    fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
+        let idx = tick as usize;
+        let a = faction_ids[idx % faction_ids.len()];
+        let b = faction_ids[(idx + 1) % faction_ids.len()];
+        (a, b)
+    }
+
+    /// Seed a pair relation via the normalized key [`Simulation::faction_relation`] reads.
+    fn seed_faction_pair_relation(
+        matrix: &mut DiplomacyMatrix,
+        a: u32,
+        b: u32,
+        signal: DiplomacySignal,
+        rounds: usize,
+    ) {
+        let cluster_a = ClusterId(u64::from(a));
+        let cluster_b = ClusterId(u64::from(b));
+        for _ in 0..rounds {
+            matrix.apply_signal(cluster_a, cluster_b, signal);
+            matrix.apply_signal(cluster_b, cluster_a, signal);
         }
     }
 
@@ -3936,6 +4077,17 @@ mod tests {
         assert!(lots <= Fixed::from_num(3) / Fixed::from_num(2));
     }
 
+    #[test]
+    fn relations_bias_trade_volume() {
+        let ally = relation_trade_factor(1.0);
+        let neutral = relation_trade_factor(0.0);
+        let rival = relation_trade_factor(-1.0);
+        assert!(ally > neutral);
+        assert!(neutral > rival);
+        assert!(ally <= Fixed::from_num(3) / Fixed::from_num(2));
+        assert!(rival >= Fixed::from_num(1) / Fixed::from_num(2));
+    }
+
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).
     #[test]
     fn trade_volume_multiplier_is_unity_without_gap() {
@@ -4414,6 +4566,135 @@ mod tests {
         assert_eq!(
             sim.diplomacy_events().last().expect("a diplomacy event").kind,
             DiplomacyKind::TradeAgreement
+        );
+    }
+
+    /// FR-CIV-0100 — alliances and rivalries fade toward neutral without reinforcement.
+    #[test]
+    fn faction_relations_decay_toward_neutral() {
+        let mut sim = Simulation::with_seed(5);
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[0];
+        let b = ids[1];
+        sim.state.faction_relations.apply_signal(
+            ClusterId(u64::from(a)),
+            ClusterId(u64::from(b)),
+            DiplomacySignal {
+                trade_volume: 12.5,
+                ..Default::default()
+            },
+        );
+        let before = sim.faction_relation(a, b).abs();
+        assert!(
+            before > 0.0,
+            "test pair should start with a non-neutral relation"
+        );
+
+        // Ticks 500 and 1000 diplomacy pairs are (2,0) and (1,2) — not (a,b).
+        for tick in [500_u64, 1_000] {
+            sim.state.tick = tick;
+            sim.phase_diplomacy();
+        }
+
+        let after = sim.faction_relation(a, b).abs();
+        assert!(
+            after < before,
+            "relation magnitude should fade toward neutral without reinforcement \
+             (before={before}, after={after})"
+        );
+    }
+
+    /// FR-CIV-0100 — repeated peer trade builds a positive emergent relation.
+    #[test]
+    fn faction_relations_build_from_diplomacy() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[0];
+        let b = ids[1];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(5_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(5_000));
+
+        for round in 0..8_u64 {
+            sim.state.tick = 500 + round * 500;
+            sim.phase_diplomacy();
+        }
+
+        assert!(
+            sim.faction_relation(a, b) > 0.0,
+            "peer trade history should raise the pair relation above neutral"
+        );
+    }
+
+    /// FR-CIV-0100 — allied factions tolerate wealth disparity that would otherwise conflict.
+    #[test]
+    fn allies_tolerate_disparity() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim.state.tick);
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(12_000));
+        seed_faction_pair_relation(
+            &mut sim.state.faction_relations,
+            a,
+            b,
+            DiplomacySignal {
+                trade_volume: 12.5,
+                ..Default::default()
+            },
+            30,
+        );
+        assert!(
+            sim.faction_relation(a, b) > 0.5,
+            "allied pair should have a strongly positive relation before diplomacy"
+        );
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement,
+            "allies should tolerate disparity that exceeds the base conflict threshold"
+        );
+    }
+
+    /// FR-CIV-0100 — rival factions clash at disparities peers would trade through.
+    #[test]
+    fn rivals_clash_sooner() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim.state.tick);
+        sim.state.faction_treasury.insert(a, Fixed::from_num(4_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(10_000));
+        seed_faction_pair_relation(
+            &mut sim.state.faction_relations,
+            a,
+            b,
+            DiplomacySignal {
+                resource_competition: 8.34,
+                ..Default::default()
+            },
+            30,
+        );
+        assert!(
+            sim.faction_relation(a, b) < -0.5,
+            "rival pair should have a strongly negative relation before diplomacy"
+        );
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::Conflict,
+            "rivals should fight at a disparity below the base conflict threshold"
         );
     }
 

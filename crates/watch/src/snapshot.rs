@@ -1115,4 +1115,38 @@ mod tests {
         assert!(routes.iter().all(|r| r.from_faction != r.to_faction));
         assert!(routes.iter().all(|r| r.volume >= 8.0 && r.volume < 24.0));
     }
+
+    #[test]
+    fn disaster_events_are_gated_to_nonzero_kiloticks() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        assert!(disaster_events(0, &f, &b).is_empty());
+        assert!(disaster_events(1, &f, &b).is_empty());
+        assert!(disaster_events(999, &f, &b).is_empty());
+        assert!(disaster_events(1500, &f, &b).is_empty());
+        assert_eq!(disaster_events(1000, &f, &b).len(), 1);
+    }
+
+    #[test]
+    fn disaster_event_is_well_formed_when_fired() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        let kinds = ["Earthquake", "Wildfire", "Flood", "Plague"];
+        for k in 1..=8u64 {
+            let tick = k * 1000;
+            let events = disaster_events(tick, &f, &b);
+            assert_eq!(events.len(), 1, "tick {tick} must fire exactly one disaster");
+            let e = &events[0];
+            assert_eq!(e.tick, tick);
+            assert!(kinds.contains(&e.kind.as_str()), "unexpected kind {}", e.kind);
+            assert!(
+                e.x > 0.0 && e.x < 1.0 && e.y > 0.0 && e.y < 1.0,
+                "coords out of map: {},{}",
+                e.x,
+                e.y
+            );
+            assert!(e.radius > 0.0);
+            assert!((0.0..=1.0).contains(&e.severity));
+        }
+    }
 }

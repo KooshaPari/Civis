@@ -535,6 +535,10 @@ pub struct Simulation {
     /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
     /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Member counts from the latest [`Simulation::phase_life`] clustering pass;
+    /// consumed by [`Simulation::phase_settlement_consumption`] so drains match
+    /// production (FR-CIV-LIFE-020).
+    cluster_member_counts: BTreeMap<u64, u32>,
     /// Number of emergent settlements (multi-member clusters) detected on the
     /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
     pub(crate) last_settlement_count: u32,
@@ -549,6 +553,8 @@ pub struct Simulation {
     /// boundary (ticks 0..49). Surfaced over JSON-RPC `sim.emergence`
     /// (stacked on PR #350).
     pub(crate) emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
+    /// Rolling-mean branching ratio ledger and live `σ̄_W` (charter §3.6).
+    pub(crate) emergence_branching: crate::emergence_metrics::EmergenceBranchingState,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -751,6 +757,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            cluster_member_counts: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(42),
@@ -783,6 +790,7 @@ impl Simulation {
             weather_grid,
             emergence: Self::default_emergence_state(42),
             emergence_sample: None,
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
         }
     }
 
@@ -816,6 +824,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            cluster_member_counts: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(seed),
@@ -848,6 +857,7 @@ impl Simulation {
             weather_grid,
             emergence: Self::default_emergence_state(seed),
             emergence_sample: None,
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
         }
     }
 
@@ -1406,6 +1416,7 @@ impl Simulation {
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
+        self.emergence_branching.last_tick_unrest_events = 0;
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -1434,6 +1445,7 @@ impl Simulation {
         self.phase_institutions();
         self.phase_economic_focus();
         self.phase_chronicle();
+        self.phase_emergence_events_close();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1825,6 +1837,9 @@ impl Simulation {
             + inequality_unrest(treasury_spread)
             + dispossession_unrest(self.state.dispossessed_permille)
             - (self.state.garrison_level as i64 * 2);
+        if delta > 0 {
+            self.record_unrest_micro_activity(delta.min(i32::MAX as i64) as u32);
+        }
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
@@ -2204,6 +2219,7 @@ impl Simulation {
 
         // A settlement is an emergent cluster with more than one member.
         self.last_settlement_count = cluster_sizes.values().filter(|&&n| n > 1).count() as u32;
+        self.cluster_member_counts = cluster_sizes.clone();
 
         // 6. Maintain per-cluster (settlement) resource stocks: agents produce
         // into their cluster's shared stock each tick (collective economics).
@@ -2215,7 +2231,10 @@ impl Simulation {
                 .cloned()
                 .unwrap_or_default();
             // Each member contributes one unit of food per tick to the commons.
-            stock.add(civ_economy::Good::Food, i64::from(*size));
+            stock.add(
+                civ_economy::Good::Food,
+                i64::from(*size).saturating_mul(CLUSTER_FOOD_PRODUCTION_PER_MEMBER),
+            );
             next_stocks.insert(*cluster_id, stock);
         }
         self.cluster_stocks = next_stocks;
@@ -2224,20 +2243,15 @@ impl Simulation {
     /// Drains cluster food stocks by per-member consumption (FR-CIV-LIFE-020).
     ///
     /// Runs immediately after [`Simulation::phase_life`] so collective production
-    /// cannot integrate without a matching sink.
+    /// cannot integrate without a matching sink. Uses the same member counts as
+    /// production (`cluster_member_counts`) rather than re-querying
+    /// [`ClusterMember`], which can lag and leave production unmatched.
     fn phase_settlement_consumption(&mut self) {
-        const FOOD_PER_MEMBER_PER_TICK: i64 = 1;
-
-        let mut cluster_sizes: BTreeMap<u64, u32> = BTreeMap::new();
-        for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_sizes.entry(member.cluster.0).or_insert(0) += 1;
-        }
-
-        for (cluster_id, size) in cluster_sizes {
-            let Some(stock) = self.cluster_stocks.get_mut(&cluster_id) else {
+        for (cluster_id, size) in &self.cluster_member_counts {
+            let Some(stock) = self.cluster_stocks.get_mut(cluster_id) else {
                 continue;
             };
-            let consumption = i64::from(size).saturating_mul(FOOD_PER_MEMBER_PER_TICK);
+            let consumption = i64::from(*size).saturating_mul(CLUSTER_FOOD_CONSUMPTION_PER_MEMBER);
             let before = stock.get(civ_economy::Good::Food);
             let after = before.saturating_sub(consumption);
             stock.add(civ_economy::Good::Food, after - before);
@@ -2770,6 +2784,15 @@ impl Simulation {
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
 const CHRONICLE_MAX_LEN: usize = 200;
+
+/// Food units each cluster member adds to settlement stock per tick in
+/// [`Simulation::phase_life`].
+const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
+/// Food units each cluster member drains per tick in
+/// [`Simulation::phase_settlement_consumption`]. Must be >= production so the
+/// accumulator stays bounded (net zero at matched rates; converges toward zero
+/// when strictly greater).
+const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
 
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
@@ -4278,15 +4301,21 @@ mod tests {
     /// matched by per-member consumption each tick.
     #[test]
     fn cluster_stocks_food_stays_bounded_over_populated_cluster_ticks() {
-        use civ_agents::{ActorVisualKind, Alignment};
+        use civ_agents::{ActorVisualKind, Alignment, Position3d};
         use civ_economy::Good;
+
+        const TEST_COHORT_SIZE: u32 = 8;
+        const TEST_COHORT_MIN_ID: u64 = 9_000;
+        // Steady state: production == consumption per member → net zero. Allow
+        // one tick of surplus per cohort member for birth/death transients.
+        const STEADY_STATE_FOOD_CEILING: i64 = 8 * CLUSTER_FOOD_PRODUCTION_PER_MEMBER;
 
         let mut sim = Simulation::with_seed(9001);
         let mut rng = ChaCha8Rng::seed_from_u64(9001);
-        for i in 0..8 {
+        for i in 0..TEST_COHORT_SIZE {
             spawn_civilian_at(
                 &mut sim.world,
-                9_000 + i,
+                TEST_COHORT_MIN_ID + u64::from(i),
                 Alignment::None,
                 0.5,
                 0.5,
@@ -4295,7 +4324,24 @@ mod tests {
             );
         }
 
+        let pin = WorldCoord {
+            x: FIXED_SCALE / 2,
+            y: 0,
+            z: FIXED_SCALE / 2,
+        };
         for _ in 0..500 {
+            // Keep the test cohort co-located so clustering stays multi-member
+            // despite wander/need-seeking in phase_life.
+            for (_, (civ, pos)) in sim
+                .world
+                .query_mut::<(&AgentCivilian, &mut Position3d)>()
+            {
+                if civ.id >= TEST_COHORT_MIN_ID
+                    && civ.id < TEST_COHORT_MIN_ID + u64::from(TEST_COHORT_SIZE)
+                {
+                    pos.coord = pin;
+                }
+            }
             sim.tick();
         }
 
@@ -4310,7 +4356,7 @@ mod tests {
             .max()
             .unwrap_or(0);
         assert!(
-            max_food <= 64,
+            max_food <= STEADY_STATE_FOOD_CEILING,
             "cluster food must stay bounded under consumption sink, got {max_food}"
         );
     }

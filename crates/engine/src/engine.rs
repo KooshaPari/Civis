@@ -1835,7 +1835,7 @@ impl Simulation {
     /// Uplift is small and bounded (max +0.02/tick; valence clamped to [-1, 1]).
     fn phase_social_mood(&mut self) {
         let uplift = (self.state.cohesion as f32 / 2_000_000.0).clamp(0.0, 0.02);
-        for (_, psyche) in self.world.query_mut::<&mut Psyche>().iter() {
+        for (_, psyche) in self.world.query_mut::<&mut Psyche>() {
             psyche.mood.valence = (psyche.mood.valence + uplift).clamp(-1.0, 1.0);
         }
     }
@@ -4381,11 +4381,18 @@ mod tests {
     fn phase_diplomacy_emerges_conflict_from_wealth_disparity() {
         let mut sim = Simulation::with_seed(5);
         sim.state.tick = 500; // a diplomacy cadence tick
-        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
-        let a = ids[500 % ids.len()];
-        let b = ids[(500 + 1) % ids.len()];
+        // Pin macro scalars at base threshold so wealth disparity alone drives Conflict.
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let a = faction_ids[(sim.state.tick as usize) % faction_ids.len()];
+        let b = faction_ids[((sim.state.tick as usize) + 1) % faction_ids.len()];
+        // Disparity well above max threshold (2× base peace cap) so economy drift
+        // cannot erase it before diplomacy resolves.
         sim.state.faction_treasury.insert(a, Fixed::from_num(0));
-        sim.state.faction_treasury.insert(b, Fixed::from_num(100_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(1_000_000));
         sim.phase_diplomacy();
         assert_eq!(
             sim.diplomacy_events().last().expect("a diplomacy event").kind,

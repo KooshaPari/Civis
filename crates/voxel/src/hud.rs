@@ -831,6 +831,43 @@ mod tests {
         assert!(t.queue("b").is_err());
     }
 
+    #[test]
+    fn tech_node_prerequisites_met_requires_all_researched() {
+        let mut t = TechTree::new();
+        t.insert(TechNode::new("a", "A", 100));
+        t.insert(TechNode::new("b", "B", 200).requires("a"));
+        assert!(!t.nodes["b"].prerequisites_met(&t));
+        assert!(t.nodes["a"].prerequisites_met(&t));
+        t.complete("a").unwrap();
+        assert!(t.nodes["b"].prerequisites_met(&t));
+    }
+
+    #[test]
+    fn tech_node_can_queue_needs_available_and_prereqs() {
+        let mut t = TechTree::new();
+        t.insert(TechNode::new("a", "A", 100));
+        t.insert(TechNode::new("b", "B", 200).requires("a"));
+        t.refresh_statuses();
+        assert!(t.nodes["a"].can_queue(&t));
+        assert!(!t.nodes["b"].can_queue(&t));
+        t.complete("a").unwrap();
+        assert!(t.nodes["b"].can_queue(&t));
+    }
+
+    #[test]
+    fn tech_tree_available_nodes_lists_only_available() {
+        let mut t = TechTree::new();
+        t.insert(TechNode::new("a", "A", 100));
+        t.insert(TechNode::new("b", "B", 200).requires("a"));
+        t.refresh_statuses();
+        let avail: Vec<&str> = t.available_nodes().map(|n| n.id.as_str()).collect();
+        assert!(avail.contains(&"a"));
+        assert!(!avail.contains(&"b"));
+        assert!(t
+            .available_nodes()
+            .all(|n| n.status == TechStatus::Available));
+    }
+
     // -- FR-CIV-HUD-003 ------------------------------------------------
 
     /// FR-CIV-HUD-003 — `TreatySlot::with_influence` clamps out-of-range

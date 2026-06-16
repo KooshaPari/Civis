@@ -582,3 +582,43 @@ pub(crate) struct RemoteModEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) author_pubkey_hex: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `env_u16` falls back to the default when the variable is unset or
+    /// unparsable (no env mutation -> race-free in the parallel test runner).
+    #[test]
+    fn env_u16_defaults_when_var_absent() {
+        // A name no other test or the host environment defines.
+        assert_eq!(env_u16("CIVIS_TEST_ENV_U16_ABSENT_ZZZ", 8080), 8080);
+        assert_eq!(env_u16("CIVIS_TEST_ENV_U16_ABSENT_ZZZ", 0), 0);
+    }
+
+    /// `resolve_session_id` is always a usable, non-empty identifier — a fresh
+    /// UUID when unset, or the configured value — regardless of environment.
+    #[test]
+    fn resolve_session_id_is_non_empty() {
+        assert!(!resolve_session_id().is_empty());
+        // Two unset calls generate distinct UUIDs (no accidental constant).
+        if std::env::var("CIVIS_SESSION_ID").is_err() {
+            assert_ne!(resolve_session_id(), resolve_session_id());
+        }
+    }
+
+    /// `resolve_data_dir` always yields a real path (defaults to `.`).
+    #[test]
+    fn resolve_data_dir_is_a_path() {
+        assert!(!resolve_data_dir().as_os_str().is_empty());
+    }
+
+    /// The fixed production save slots and autosave ring bound are stable.
+    #[test]
+    fn production_slot_table_is_stable() {
+        assert_eq!(PRODUCTION_SLOTS.len(), 5);
+        assert_eq!(PRODUCTION_SLOTS[0], "slot-1");
+        assert_eq!(PRODUCTION_SLOTS[4], "slot-5");
+        assert_eq!(AUTOSAVE_RING_MAX, 10);
+    }
+}

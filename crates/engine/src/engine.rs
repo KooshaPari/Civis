@@ -541,6 +541,10 @@ pub struct Simulation {
     /// [`Simulation::phase_life`] (FR-CIV-LIFE-020). Keyed by emergent
     /// `ClusterId`; iteration order is deterministic (`BTreeMap`).
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    /// Member counts from the latest [`Simulation::phase_life`] clustering pass;
+    /// consumed by [`Simulation::phase_settlement_consumption`] so drains match
+    /// production (FR-CIV-LIFE-020).
+    cluster_member_counts: BTreeMap<u64, u32>,
     /// Number of emergent settlements (multi-member clusters) detected on the
     /// most recent [`Simulation::phase_life`] (FR-CIV-LIFE-030).
     pub(crate) last_settlement_count: u32,
@@ -757,6 +761,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            cluster_member_counts: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(42),
@@ -822,6 +827,7 @@ impl Simulation {
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
             cluster_stocks: BTreeMap::new(),
+            cluster_member_counts: BTreeMap::new(),
             last_life_deaths: 0,
             last_settlement_count: 0,
             allocator: Allocator::new(seed),
@@ -1436,6 +1442,7 @@ impl Simulation {
         self.phase_diffusion();
         self.phase_disasters();
         self.phase_life();
+        self.phase_settlement_consumption();
         self.phase_emergence();
         self.phase_research();
         self.phase_tech();
@@ -1879,7 +1886,8 @@ impl Simulation {
         /// Cohesion frays without reinforcement: proportional decay yields a
         /// dynamic equilibrium (belief bind vs unrest fray vs decay).
         const COHESION_DECAY_DIVISOR: u64 = 500;
-        let delta = cohesion_delta(self.state.belief, self.state.unrest);
+        let delta = cohesion_delta(self.state.belief, self.state.unrest)
+            + micro_cohesion_delta(&self.world);
         self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
         self.state.cohesion = self
             .state
@@ -2254,6 +2262,7 @@ impl Simulation {
 
         // A settlement is an emergent cluster with more than one member.
         self.last_settlement_count = cluster_sizes.values().filter(|&&n| n > 1).count() as u32;
+        self.cluster_member_counts = cluster_sizes.clone();
 
         // 6. Maintain per-cluster (settlement) resource stocks: agents produce
         // into their cluster's shared stock each tick (collective economics).
@@ -2265,10 +2274,31 @@ impl Simulation {
                 .cloned()
                 .unwrap_or_default();
             // Each member contributes one unit of food per tick to the commons.
-            stock.add(civ_economy::Good::Food, i64::from(*size));
+            stock.add(
+                civ_economy::Good::Food,
+                i64::from(*size).saturating_mul(CLUSTER_FOOD_PRODUCTION_PER_MEMBER),
+            );
             next_stocks.insert(*cluster_id, stock);
         }
         self.cluster_stocks = next_stocks;
+    }
+
+    /// Drains cluster food stocks by per-member consumption (FR-CIV-LIFE-020).
+    ///
+    /// Runs immediately after [`Simulation::phase_life`] so collective production
+    /// cannot integrate without a matching sink. Uses the same member counts as
+    /// production (`cluster_member_counts`) rather than re-querying
+    /// [`ClusterMember`], which can lag and leave production unmatched.
+    fn phase_settlement_consumption(&mut self) {
+        for (cluster_id, size) in &self.cluster_member_counts {
+            let Some(stock) = self.cluster_stocks.get_mut(cluster_id) else {
+                continue;
+            };
+            let consumption = i64::from(*size).saturating_mul(CLUSTER_FOOD_CONSUMPTION_PER_MEMBER);
+            let before = stock.get(civ_economy::Good::Food);
+            let after = before.saturating_sub(consumption);
+            stock.add(civ_economy::Good::Food, after - before);
+        }
     }
 
     /// Production phase - buildings produce resources
@@ -2811,6 +2841,15 @@ impl Simulation {
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
 const CHRONICLE_MAX_LEN: usize = 200;
 
+/// Food units each cluster member adds to settlement stock per tick in
+/// [`Simulation::phase_life`].
+const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
+/// Food units each cluster member drains per tick in
+/// [`Simulation::phase_settlement_consumption`]. Must be >= production so the
+/// accumulator stays bounded (net zero at matched rates; converges toward zero
+/// when strictly greater).
+const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
+
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
 const FOOD_SCARCITY_BASELINE: i64 = 1_000;
@@ -2937,6 +2976,37 @@ fn agent_misery_unrest(world: &hecs::World) -> i64 {
     }
     let mean_misery = (sum / n as f32).clamp(0.0, 1.0); // 0 = content, 1 = max misery
     (mean_misery * MAX_MISERY_UNREST as f32) as i64
+}
+
+/// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
+/// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
+fn micro_cohesion_delta(world: &hecs::World) -> i64 {
+    const MICRO_BIND_CAP: i64 = 12;
+    const MICRO_FRAY_CAP: i64 = 18;
+    const MIN_AGENTS: u32 = 2;
+    const CONSENSUS_SCALE: f32 = 4.0;
+
+    let mut n = 0u32;
+    let mut sum = 0.0f32;
+    let mut sum_sq = 0.0f32;
+    for (_, psyche) in world.query::<&Psyche>().iter() {
+        let x = psyche.beliefs[0];
+        n += 1;
+        sum += x;
+        sum_sq += x * x;
+    }
+
+    if n < MIN_AGENTS {
+        return 0;
+    }
+
+    let n_f = n as f32;
+    let mean = sum / n_f;
+    let var = ((sum_sq / n_f) - mean * mean).max(0.0);
+    let consensus = 1.0 - (CONSENSUS_SCALE * var).clamp(0.0, 1.0);
+    let micro_bind = (consensus * MICRO_BIND_CAP as f32).floor() as i64;
+    let micro_fray = ((1.0 - consensus) * MICRO_FRAY_CAP as f32).floor() as i64;
+    micro_bind - micro_fray
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -3801,6 +3871,65 @@ mod tests {
         assert_eq!(agent_misery_unrest(&empty), 0, "no Psyche agents = no misery unrest");
     }
 
+    /// FR-CIV-0100 §3 — upward causation: shared micro ideology binds macro cohesion;
+    /// polarization frays it. Pure-function assertions; no tick RNG.
+    #[test]
+    fn micro_ideology_consensus_biases_cohesion() {
+        use civ_agents::{Mood, PSYCHE_DIM, Temperament};
+
+        fn psyche_with_belief0(b0: f32) -> Psyche {
+            let mut beliefs = [0.5_f32; PSYCHE_DIM];
+            beliefs[0] = b0;
+            Psyche {
+                drives: [0.0; PSYCHE_DIM],
+                temperament: Temperament::neutral(),
+                mood: Mood { valence: 0.0, arousal: 0.0 },
+                beliefs,
+                maturity: 0.5,
+            }
+        }
+
+        fn spawn_ideologies(world: &mut hecs::World, beliefs0: &[f32]) {
+            for &b0 in beliefs0 {
+                world.spawn((psyche_with_belief0(b0),));
+            }
+        }
+
+        // Regression: no Psyche → no micro effect
+        assert_eq!(micro_cohesion_delta(&hecs::World::new()), 0);
+
+        // Guard: single agent → no variance
+        let mut lone = hecs::World::new();
+        lone.spawn((psyche_with_belief0(0.85),));
+        assert_eq!(micro_cohesion_delta(&lone), 0);
+
+        // CONSENSUS: 8 × beliefs[0] = 0.85 → +12
+        let mut consensus = hecs::World::new();
+        spawn_ideologies(&mut consensus, &[0.85; 8]);
+        assert_eq!(
+            micro_cohesion_delta(&consensus),
+            12,
+            "unanimous ideology should max-bind cohesion"
+        );
+
+        // POLARIZED: alternate 0.0 / 1.0 → var=0.25 → -18
+        let mut polarized = hecs::World::new();
+        spawn_ideologies(
+            &mut polarized,
+            &[0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+        );
+        assert_eq!(
+            micro_cohesion_delta(&polarized),
+            -18,
+            "max-spread ideology should max-fray cohesion"
+        );
+
+        assert!(
+            micro_cohesion_delta(&consensus) > micro_cohesion_delta(&polarized),
+            "consensus must bind more than polarization frays"
+        );
+    }
+
     /// FR-CIV-0100 §3 — downward causation: macro cohesion lifts agent mood valence;
     /// zero cohesion applies no uplift.
     #[test]
@@ -4433,6 +4562,70 @@ mod tests {
         }
         assert_eq!(a.settlement_count(), b.settlement_count());
         assert_eq!(a.cluster_stocks(), b.cluster_stocks());
+    }
+
+    /// FR-CIV-LIFE-020 — cluster food stocks stay bounded when production is
+    /// matched by per-member consumption each tick.
+    #[test]
+    fn cluster_stocks_food_stays_bounded_over_populated_cluster_ticks() {
+        use civ_agents::{ActorVisualKind, Alignment, Position3d};
+        use civ_economy::Good;
+
+        const TEST_COHORT_SIZE: u32 = 8;
+        const TEST_COHORT_MIN_ID: u64 = 9_000;
+        // Steady state: production == consumption per member → net zero. Allow
+        // one tick of surplus per cohort member for birth/death transients.
+        const STEADY_STATE_FOOD_CEILING: i64 = 8 * CLUSTER_FOOD_PRODUCTION_PER_MEMBER;
+
+        let mut sim = Simulation::with_seed(9001);
+        let mut rng = ChaCha8Rng::seed_from_u64(9001);
+        for i in 0..TEST_COHORT_SIZE {
+            spawn_civilian_at(
+                &mut sim.world,
+                TEST_COHORT_MIN_ID + u64::from(i),
+                Alignment::None,
+                0.5,
+                0.5,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+
+        let pin = WorldCoord {
+            x: FIXED_SCALE / 2,
+            y: 0,
+            z: FIXED_SCALE / 2,
+        };
+        for _ in 0..500 {
+            // Keep the test cohort co-located so clustering stays multi-member
+            // despite wander/need-seeking in phase_life.
+            for (_, (civ, pos)) in sim
+                .world
+                .query_mut::<(&AgentCivilian, &mut Position3d)>()
+            {
+                if civ.id >= TEST_COHORT_MIN_ID
+                    && civ.id < TEST_COHORT_MIN_ID + u64::from(TEST_COHORT_SIZE)
+                {
+                    pos.coord = pin;
+                }
+            }
+            sim.tick();
+        }
+
+        assert!(
+            sim.settlement_count() >= 1,
+            "expected at least one multi-member cluster"
+        );
+        let max_food = sim
+            .cluster_stocks()
+            .values()
+            .map(|stock| stock.get(Good::Food))
+            .max()
+            .unwrap_or(0);
+        assert!(
+            max_food <= STEADY_STATE_FOOD_CEILING,
+            "cluster food must stay bounded under consumption sink, got {max_food}"
+        );
     }
 
     /// Covers FR-CIV-PLANET-010.

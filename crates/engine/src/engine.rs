@@ -1936,10 +1936,11 @@ impl Simulation {
                 _ => {}
             }
         }
-        self.state.resources.food += food;
-        self.state.resources.wood += wood;
-        self.state.resources.metal += metal;
-        self.state.resources.energy += energy;
+        let yield_factor = production_yield_factor(self.research_tier());
+        self.state.resources.food += food * yield_factor;
+        self.state.resources.wood += wood * yield_factor;
+        self.state.resources.metal += metal * yield_factor;
+        self.state.resources.energy += energy * yield_factor;
     }
 
     /// Citizen lifecycle phase
@@ -2440,6 +2441,14 @@ fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
     } else {
         0
     }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): research raises production yield —
+/// better tools/techniques lift per-building output. +10% per research tier,
+/// capped at +100% (2x). De-silos phase_production, which read no emergent state.
+fn production_yield_factor(research_tier: u64) -> Fixed {
+    let bonus_permille = research_tier.saturating_mul(100).min(1_000) as i64;
+    Fixed::from_num(1_000 + bonus_permille) / Fixed::from_num(1_000)
 }
 
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
@@ -2974,6 +2983,17 @@ mod tests {
         assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
         assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
         assert!(energy_scarcity_unrest(Fixed::from_num(-5)) > 0);
+    }
+
+    /// FR-CIV-0100 §3 — research lifts production yield, monotonically, capped at 2x.
+    #[test]
+    fn production_yield_factor_rises_with_research_capped_at_2x() {
+        assert_eq!(production_yield_factor(0), Fixed::from_num(1));
+        let t1 = production_yield_factor(1);
+        let t10 = production_yield_factor(10);
+        assert!(t1 > Fixed::from_num(1), "research lifts yield");
+        assert!(t10 >= t1, "more research never lowers yield");
+        assert_eq!(production_yield_factor(100), Fixed::from_num(2), "capped at 2x");
     }
 
     /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer

@@ -1487,4 +1487,80 @@ mod tests {
         assert!(should_tick_now(LodTier::Cold, 16));
         assert!(!should_tick_now(LodTier::Cold, 17));
     }
+
+    /// `child_bundle_from_parent` is deterministic with unit velocity and default needs.
+    #[test]
+    fn child_bundle_from_parent_is_deterministic_unit_velocity() {
+        let mut r1 = rng(99);
+        let mut r2 = rng(99);
+        let b1 = child_bundle_from_parent(&mut r1);
+        let b2 = child_bundle_from_parent(&mut r2);
+        assert_eq!(b1.velocity, b2.velocity);
+        let len_sq = b1.velocity.dx * b1.velocity.dx + b1.velocity.dy * b1.velocity.dy;
+        assert!((len_sq - 1.0).abs() < 1e-5);
+        assert_eq!(b1.needs.food, 0.25);
+        assert_eq!(b1.needs.shelter, 0.25);
+        assert_eq!(b1.needs.safety, 0.25);
+        assert_eq!(b1.needs.belonging, 0.25);
+        assert_eq!(b1.wardrobe.era, 0);
+        assert_eq!(b1.tools.era, 0);
+        assert_eq!(b1.lod, LodTier::Hot);
+    }
+
+    /// `spawn_child_near` spawns a newborn hot civilian within the parent offset band.
+    #[test]
+    fn spawn_child_near_spawns_newborn_within_offset_band() {
+        let mut world = World::new();
+        let mut child_rng = rng(42);
+        let entity = spawn_child_near(
+            &mut world,
+            1001,
+            Alignment::with_faction(1),
+            0.5,
+            0.5,
+            &mut child_rng,
+        );
+        let civilian = world.get::<&Civilian>(entity).unwrap();
+        let pos = world.get::<&Position3d>(entity).unwrap();
+        let lod = world.get::<&LodTier>(entity).unwrap();
+        assert_eq!(civilian.age, 0);
+        assert_eq!(*lod, LodTier::Hot);
+        let norm_x = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let norm_z = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        assert!((norm_x - 0.5).abs() <= 0.015 + 1e-4);
+        assert!((norm_z - 0.5).abs() <= 0.015 + 1e-4);
+        assert!((0.01..=0.99).contains(&norm_x));
+        assert!((0.01..=0.99).contains(&norm_z));
+    }
+
+    /// `drift_toward_home` steers toward home when shelter need is high.
+    #[test]
+    fn drift_toward_home_steers_when_shelter_need_high() {
+        let scale = civ_voxel::FIXED_SCALE as f32;
+        let here = Position3d {
+            coord: WorldCoord { x: 0, y: 0, z: 0 },
+        };
+        let home = Position3d {
+            coord: WorldCoord {
+                x: scale as i64,
+                y: 0,
+                z: scale as i64,
+            },
+        };
+        let current = Velocity {
+            dx: 0.3,
+            dy: 0.7,
+        };
+        let steered = drift_toward_home(&here, &home, current, 0.75);
+        let len_sq = steered.dx * steered.dx + steered.dy * steered.dy;
+        assert!((len_sq - 1.0).abs() < 1e-5);
+        assert!(steered.dx > 0.0);
+        assert!(steered.dy > 0.0);
+
+        let unchanged = drift_toward_home(&here, &home, current, 0.5);
+        assert_eq!(unchanged, current);
+
+        let at_home = drift_toward_home(&here, &here, current, 0.9);
+        assert_eq!(at_home, current);
+    }
 }

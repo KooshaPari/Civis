@@ -5998,4 +5998,86 @@ mod tests {
             .count();
         assert_eq!(golden_count, 1);
     }
+
+    /// `tick_with_emergence_source` advances ticks identically; CA grid changes sampling.
+    #[test]
+    fn tick_with_emergence_source_advances_tick_and_differs_on_ca_grid() {
+        use crate::emergence_metrics::EMERGENCE_SAMPLE_INTERVAL;
+        use civ_voxel::fluid_ca::CaGrid;
+        use civ_voxel::CHUNK_EDGE;
+
+        let mut without_ca = Simulation::with_seed(42);
+        let mut with_ca = Simulation::with_seed(42);
+        let mut grid = CaGrid::new([CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE]);
+        for x in 0..4 {
+            for y in 0..4 {
+                for z in 0..4 {
+                    grid.set(x, y, z, MaterialId(3));
+                }
+            }
+        }
+
+        for _ in 0..EMERGENCE_SAMPLE_INTERVAL {
+            without_ca.tick_with_emergence_source(None);
+            with_ca.tick_with_emergence_source(Some(&grid));
+        }
+
+        assert_eq!(without_ca.state.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(with_ca.state.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(without_ca.state.tick, with_ca.state.tick);
+
+        let sample_none = without_ca
+            .last_emergence_sample()
+            .expect("sample at 50-tick boundary");
+        let sample_ca = with_ca
+            .last_emergence_sample()
+            .expect("sample at 50-tick boundary");
+        assert_eq!(sample_none.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(sample_ca.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert!(
+            sample_ca.histogram_total > sample_none.histogram_total,
+            "CA grid should contribute voxels to the emergence histogram"
+        );
+    }
+
+    /// `apply_scenario_military` wires cadence overrides and clamps engage range.
+    #[test]
+    fn apply_scenario_military_wires_overrides_and_clamps_range() {
+        use crate::scenario::ScenarioMilitary;
+
+        let mut sim = Simulation::with_seed(8);
+        let military = ScenarioMilitary {
+            movement_cadence_ticks: Some(8),
+            movement_pulses_per_cadence: Some(3),
+            war_cadence_ticks: Some(32),
+            engage_range_grid: Some(0),
+        };
+        sim.apply_scenario_military(&military);
+        let cfg = sim.military_phase_config();
+        assert_eq!(cfg.movement.cadence_ticks, 8);
+        assert_eq!(cfg.movement_pulses_per_cadence, 3);
+        assert_eq!(cfg.war.cadence_ticks, 32);
+        assert_eq!(cfg.war.engage_range_grid, 1);
+    }
+
+    /// `configure_military_fog` sets vision radius and clamps grid size.
+    #[test]
+    fn configure_military_fog_sets_radius_and_clamps_grid() {
+        let mut sim = Simulation::with_seed(9);
+        sim.configure_military_fog(Some(8), 12);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            Some(8)
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, 16);
+
+        let kept_radius = sim.military_phase_config().war.fog_vision_radius;
+        let kept_grid = sim.military_phase_config().war.fog_grid_size;
+        sim.configure_military_fog(None, 99);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            kept_radius
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, kept_grid);
+    }
 }

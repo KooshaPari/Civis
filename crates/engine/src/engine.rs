@@ -2977,7 +2977,7 @@ fn micro_cohesion_delta(world: &hecs::World) -> i64 {
     let mut n = 0u32;
     let mut sum = 0.0f32;
     let mut sum_sq = 0.0f32;
-    for (_, psyche) in world.query::<&Psyche>() {
+    for (_, psyche) in world.query::<&Psyche>().iter() {
         let x = psyche.beliefs[0];
         n += 1;
         sum += x;

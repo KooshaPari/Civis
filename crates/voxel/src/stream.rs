@@ -477,6 +477,22 @@ mod tests {
         assert!(near.0 <= far.0);
     }
 
+    #[test]
+    fn voxels_per_side_is_monotonic_ceil_division() {
+        let cfg = StreamConfig::default();
+        let w = world(cfg.clone());
+        assert_eq!(w.voxels_per_side(0.0), 0);
+        assert!(w.voxels_per_side(100.0) >= w.voxels_per_side(10.0));
+        assert!(w.voxels_per_side(cfg.base_voxel_m) >= 1);
+    }
+
+    #[test]
+    fn fresh_world_has_no_resident_chunks() {
+        let w = world(StreamConfig::default());
+        assert!(w.resident_coords().is_empty());
+        assert_eq!(w.stats().loaded, 0);
+    }
+
     /// Perf smoke: streaming a large radius (a full active-set page-in) must stay
     /// within a generous per-frame budget. This guards the streaming hot path
     /// against accidental O(n²) regressions; it is intentionally loose so it does

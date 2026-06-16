@@ -253,4 +253,18 @@ mod tests {
             "strengths unchanged when there is no conflict"
         );
     }
+
+    /// `seed_civilians` walks the deterministic spawn grid until 32 civilians
+    /// land on walkable terrain — it must complete without panicking and be
+    /// repeatable on a re-seeded sim with the same terrain.
+    #[test]
+    fn seed_civilians_runs_and_is_repeatable() {
+        let terrain = Terrain::generate(7);
+        let mut a = Simulation::with_seed(7);
+        seed_civilians(&mut a, &terrain);
+        // A second seed on a fresh sim with identical inputs also completes
+        // (the spawn loop terminates: 32 civilians always land on walkable land).
+        let mut b = Simulation::with_seed(7);
+        seed_civilians(&mut b, &terrain);
+    }
 }

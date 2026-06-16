@@ -236,6 +236,34 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    #[test]
+    fn compute_weather_cell_count_and_region_ids() {
+        let cells = compute_weather(&climate(0.3, 0.5), 1234, 9);
+        assert_eq!(cells.len(), 9);
+        for (i, cell) in cells.iter().enumerate() {
+            assert_eq!(cell.region_id, i as u32);
+        }
+        assert_eq!(compute_weather(&climate(0.3, 0.5), 1234, 0).len(), 1);
+    }
+
+    #[test]
+    fn compute_weather_fields_are_clamped() {
+        let cells = compute_weather(&climate(0.9, 0.5), 99_999, 16);
+        assert!(cells.iter().all(|c| (-60_000..=55_000).contains(&c.temp_c_fp)));
+        assert!(cells.iter().all(|c| (0..=20_000).contains(&c.precip_mm_fp)));
+        assert!(cells.iter().all(|c| (0..=10_000).contains(&c.storm_intensity_fp)));
+    }
+
+    #[test]
+    fn compute_weather_shares_one_season_and_is_deterministic() {
+        let c = climate(0.2, 0.7);
+        let a = compute_weather(&c, 42, 12);
+        let b = compute_weather(&c, 42, 12);
+        assert_eq!(a, b);
+        let first_season = a[0].season;
+        assert!(a.iter().all(|cell| cell.season == first_season));
+    }
+
     /// `weather_kind_from` selects each of the four `WeatherKind` variants by its
     /// storm / temperature / precipitation thresholds (direct branch coverage).
     #[test]

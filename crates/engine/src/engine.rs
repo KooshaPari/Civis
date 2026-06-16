@@ -2392,6 +2392,9 @@ impl Simulation {
         if self.state.economic_focus == EconomicFocus::Industrial {
             metal_out = metal_out * focus_bonus;
         }
+        if self.state.tech_unlocks & TECH_METALLURGY != 0 {
+            metal_out = metal_out * focus_bonus;
+        }
         self.state.resources.food += food_out;
         self.state.resources.wood += wood * yield_factor;
         self.state.resources.metal += metal_out;
@@ -5495,6 +5498,30 @@ mod tests {
         let dw = (with.market_state.prices()["food"] - before_w).abs();
         let dwo = (without.market_state.prices()["food"] - before_wo).abs();
         assert!(dw < dwo, "storage should halve food price volatility");
+    }
+
+    /// TECH_METALLURGY raises mine output (advanced smelting boosts metal yield).
+    #[test]
+    fn tech_metallurgy_boosts_metal_yield() {
+        let mut with = Simulation::with_seed(7);
+        let mut without = Simulation::with_seed(7);
+        with.state.tech_unlocks |= TECH_METALLURGY;
+        for s in [&mut with, &mut without] {
+            s.state.resources.metal = Fixed::ZERO;
+            let mine = Building {
+                building_type: BuildingType::Mine,
+                hp: Fixed::from_num(200),
+                max_hp: Fixed::from_num(200),
+                position: Position { x: 3, y: 3 },
+            };
+            let _ = s.world.spawn((mine,));
+        }
+        with.phase_production();
+        without.phase_production();
+        assert!(
+            with.state.resources.metal > without.state.resources.metal,
+            "metallurgy should boost metal per tick"
+        );
     }
 
     /// FR-CIV-0100 §3d — wealthy factions bid up staple demand vs poor factions

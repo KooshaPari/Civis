@@ -2784,8 +2784,13 @@ impl Simulation {
         if faction_ids.len() < 2 {
             return;
         }
-        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
-        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
+        // N3: read settlement cluster layout before any mutable diplomacy state borrow.
+        let (a, b) = diplomacy_pair_from_settlement_overlap(
+            &self.world,
+            &self.cluster_member_counts,
+            &faction_ids,
+            self.state.tick,
+        );
         // Consume an rng draw to keep the replay sequence stable, but let the
         // OUTCOME EMERGE from faction wealth rather than a coin flip: a large
         // treasury disparity breeds conflict (have-nots clash with haves);
@@ -2832,8 +2837,8 @@ impl Simulation {
         } else {
             DiplomacyKind::TradeAgreement
         };
-        let cluster_a = ClusterId(u64::from(a));
-        let cluster_b = ClusterId(u64::from(b));
+        let cluster_a = ClusterId(a as u64);
+        let cluster_b = ClusterId(b as u64);
         match kind {
             DiplomacyKind::TradeAgreement => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -3763,6 +3768,12 @@ const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
 const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
 /// Max peace bonus from identical pairwise cultural traits (N2 coupling).
 const CULTURE_PEACE_SPAN: f32 = 3_000.0;
+/// Minimum members for an emergent settlement (matches `phase_life` HUD filter).
+const SETTLEMENT_MIN_MEMBERS: u32 = 2;
+/// Co-location radius for emergent settlements (matches `phase_life` cluster radius).
+const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
+/// Contact radius between settlement pairs (2× cluster radius).
+const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
 /// Belief units required to raise the conflict threshold by one currency unit.
 const BELIEF_PEACE_DIVISOR: u64 = 50;
 /// Cap on the belief-driven peace bonus: shared faith can at most double a
@@ -3811,6 +3822,153 @@ fn diplomacy_culture_threshold_bias(
     let distance = cultural_distance(pa.traits, pb.traits);
     let similarity = 1.0 - distance;
     (similarity * CULTURE_PEACE_SPAN).round() as i64
+}
+
+/// Dominant explicit faction alignment per multi-member settlement cluster (N3).
+fn settlement_dominant_factions(
+    world: &World,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+) -> BTreeMap<u64, u32> {
+    let mut faction_counts: BTreeMap<u64, BTreeMap<u32, u32>> = BTreeMap::new();
+    for (_, (civ, member)) in world.query::<(&AgentCivilian, &ClusterMember)>().iter() {
+        let cluster_id = member.cluster.0;
+        let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
+        if members < SETTLEMENT_MIN_MEMBERS {
+            continue;
+        }
+        if let Alignment::Faction(faction_id) = civ.alignment {
+            *faction_counts
+                .entry(cluster_id)
+                .or_default()
+                .entry(faction_id)
+                .or_insert(0) += 1;
+        }
+    }
+
+    let mut dominant = BTreeMap::new();
+    for (cluster_id, counts) in faction_counts {
+        let mut best_faction = None;
+        let mut best_count = 0u32;
+        for (&faction_id, &count) in &counts {
+            let replace = match best_faction {
+                None => true,
+                Some(prev) => count > best_count || (count == best_count && faction_id < prev),
+            };
+            if replace {
+                best_faction = Some(faction_id);
+                best_count = count;
+            }
+        }
+        if let Some(faction_id) = best_faction {
+            dominant.insert(cluster_id, faction_id);
+        }
+    }
+    dominant
+}
+
+/// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
+fn settlement_contact_pairs(
+    world: &World,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+    contact_radius_fp: i64,
+) -> BTreeSet<(u64, u64)> {
+    let contact_radius_sq = i128::from(contact_radius_fp) * i128::from(contact_radius_fp);
+    let mut by_cluster: BTreeMap<u64, Vec<(i64, i64)>> = BTreeMap::new();
+    for (_, (member, pos)) in world.query::<(&ClusterMember, &Position3d)>().iter() {
+        let cluster_id = member.cluster.0;
+        let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
+        if members < SETTLEMENT_MIN_MEMBERS {
+            continue;
+        }
+        by_cluster
+            .entry(cluster_id)
+            .or_default()
+            .push((pos.coord.x, pos.coord.z));
+    }
+
+    let cluster_ids: Vec<u64> = by_cluster.keys().copied().collect();
+    let mut contacts = BTreeSet::new();
+    for i in 0..cluster_ids.len() {
+        for j in (i + 1)..cluster_ids.len() {
+            let ca = cluster_ids[i];
+            let cb = cluster_ids[j];
+            let Some(agents_a) = by_cluster.get(&ca) else {
+                continue;
+            };
+            let Some(agents_b) = by_cluster.get(&cb) else {
+                continue;
+            };
+            let in_contact = agents_a.iter().any(|&(ax, az)| {
+                agents_b.iter().any(|&(bx, bz)| {
+                    let dx = i128::from(ax) - i128::from(bx);
+                    let dz = i128::from(az) - i128::from(bz);
+                    dx * dx + dz * dz <= contact_radius_sq
+                })
+            });
+            if in_contact {
+                contacts.insert((ca.min(cb), ca.max(cb)));
+            }
+        }
+    }
+    contacts
+}
+
+/// Faction pairs implied by contacting settlements with different dominant factions (N3).
+fn diplomacy_faction_pairs_from_settlement_contact(
+    dominant: &BTreeMap<u64, u32>,
+    contacts: &BTreeSet<(u64, u64)>,
+) -> Vec<(u32, u32)> {
+    let mut pairs = BTreeSet::new();
+    for &(ca, cb) in contacts {
+        let Some(&fa) = dominant.get(&ca) else {
+            continue;
+        };
+        let Some(&fb) = dominant.get(&cb) else {
+            continue;
+        };
+        if fa != fb {
+            pairs.insert((fa.min(fb), fa.max(fb)));
+        }
+    }
+    pairs.into_iter().collect()
+}
+
+/// Select diplomacy faction pair from settlement contact, then presence, then registry (N3).
+fn diplomacy_pair_from_settlement_overlap(
+    world: &World,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+    registered_factions: &[u32],
+    tick: u64,
+) -> (u32, u32) {
+    let dominant = settlement_dominant_factions(world, cluster_member_counts);
+    let contacts = settlement_contact_pairs(
+        world,
+        cluster_member_counts,
+        SETTLEMENT_CONTACT_RADIUS_FP,
+    );
+    let pairs = diplomacy_faction_pairs_from_settlement_contact(&dominant, &contacts);
+    if !pairs.is_empty() {
+        let idx = (tick as usize / 500) % pairs.len();
+        return pairs[idx];
+    }
+
+    let present: Vec<u32> = dominant
+        .values()
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    if present.len() >= 2 {
+        let idx = tick as usize % present.len();
+        let a = present[idx];
+        let b = present[(idx + 1) % present.len()];
+        return (a, b);
+    }
+
+    let idx = tick as usize;
+    let a = registered_factions[idx % registered_factions.len()];
+    let b = registered_factions[(idx + 1) % registered_factions.len()];
+    (a, b)
 }
 
 /// Scales every stored relation toward neutral without overshooting zero.
@@ -3984,8 +4142,8 @@ mod tests {
         signal: DiplomacySignal,
         rounds: usize,
     ) {
-        let cluster_a = ClusterId(u64::from(a));
-        let cluster_b = ClusterId(u64::from(b));
+        let cluster_a = ClusterId(a as u64);
+        let cluster_b = ClusterId(b as u64);
         for _ in 0..rounds {
             matrix.apply_signal(cluster_a, cluster_b, signal);
             matrix.apply_signal(cluster_b, cluster_a, signal);
@@ -4254,6 +4412,127 @@ mod tests {
         assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 1), 1_500);
 
         assert_eq!(diplomacy_culture_threshold_bias(&cultures, 0, 99), 0);
+    }
+
+    fn seed_n3_settlement_agent(
+        world: &mut World,
+        id: u64,
+        cluster_id: u64,
+        faction: u32,
+        x_fp: i64,
+        z_fp: i64,
+        rng: &mut ChaCha8Rng,
+    ) {
+        use civ_agents::ActorVisualKind;
+        let norm_x = x_fp as f32 / FIXED_SCALE as f32;
+        let norm_z = z_fp as f32 / FIXED_SCALE as f32;
+        let entity = spawn_civilian_at(
+            world,
+            id,
+            Alignment::Faction(faction),
+            norm_x,
+            norm_z,
+            ActorVisualKind::Humanoid,
+            rng,
+        );
+        let _ = world.insert_one(
+            entity,
+            ClusterMember {
+                cluster: ClusterId(cluster_id),
+            },
+        );
+    }
+
+    /// N3 — contacting settlement clusters bias diplomacy pair selection over registry rotation.
+    #[test]
+    fn diplomacy_pair_from_settlement_overlap_prefers_contact() {
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let base = FIXED_SCALE / 2;
+        let contact_offset = SETTLEMENT_CONTACT_RADIUS_FP - 1;
+        let faction_ids = vec![0, 1, 2];
+
+        let mut contacting = World::new();
+        for i in 0..4 {
+            seed_n3_settlement_agent(
+                &mut contacting,
+                100 + (i as u64),
+                10,
+                0,
+                base,
+                base,
+                &mut rng,
+            );
+        }
+        for i in 0..4 {
+            seed_n3_settlement_agent(
+                &mut contacting,
+                200 + (i as u64),
+                20,
+                1,
+                base + contact_offset,
+                base,
+                &mut rng,
+            );
+        }
+        let mut counts = BTreeMap::new();
+        counts.insert(10, 4);
+        counts.insert(20, 4);
+        let (a, b) =
+            diplomacy_pair_from_settlement_overlap(&contacting, &counts, &faction_ids, 500);
+        assert_eq!(
+            (a, b),
+            (0, 1),
+            "contacting settlements should negotiate across dominant factions, not absent faction 2"
+        );
+
+        let mut distant = World::new();
+        let far = base + SETTLEMENT_CONTACT_RADIUS_FP * 4;
+        for i in 0..4 {
+            seed_n3_settlement_agent(
+                &mut distant,
+                300 + (i as u64),
+                30,
+                0,
+                base,
+                base,
+                &mut rng,
+            );
+        }
+        for i in 0..4 {
+            seed_n3_settlement_agent(
+                &mut distant,
+                400 + (i as u64),
+                40,
+                1,
+                far,
+                far,
+                &mut rng,
+            );
+        }
+        let mut distant_counts = BTreeMap::new();
+        distant_counts.insert(30, 4);
+        distant_counts.insert(40, 4);
+        let (da, db) =
+            diplomacy_pair_from_settlement_overlap(&distant, &distant_counts, &faction_ids, 500);
+        assert_eq!(
+            (da, db),
+            (0, 1),
+            "non-contacting settlements with presence should still prefer settlement factions"
+        );
+        assert_ne!(
+            (da, db),
+            diplomacy_faction_pair(&faction_ids, 500),
+            "registry rotation would pick a different pair at tick 500"
+        );
+
+        let empty = World::new();
+        let (la, lb) =
+            diplomacy_pair_from_settlement_overlap(&empty, &BTreeMap::new(), &faction_ids, 500);
+        assert_eq!(
+            (la, lb),
+            diplomacy_faction_pair(&faction_ids, 500),
+            "empty settlement graph must preserve legacy registry rotation"
+        );
     }
 
     /// N2 — culturally similar factions trade at a disparity that triggers conflict

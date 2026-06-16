@@ -1339,3 +1339,47 @@ async fn fr_save_002_post_load_slot_rejects_invalid_slot() {
     let json = body_json(response).await;
     assert_eq!(json["ok"], false);
 }
+
+/// FR-SAVE load (error branch) — `POST /control/load` rejects traversal-style
+/// filenames before touching the filesystem: `save_path` / `sanitize_save_filename`
+/// disallow `/`, `\`, and `..`.
+#[tokio::test]
+async fn fr_save_load_rejects_traversal_filename() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/load")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"filename":"../escape"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+/// FR-SAVE load (error branch) — `POST /control/load` with a valid but missing
+/// name falls through to `legacy_replay_path` and `Simulation::load_replay_from_file`,
+/// which fails with a non-success status when no save archive, folder, or replay exists.
+#[tokio::test]
+async fn fr_save_load_missing_save_is_error() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/load")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"filename":"definitely-does-not-exist-xyz"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert!(!response.status().is_success());
+}

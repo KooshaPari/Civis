@@ -2597,6 +2597,9 @@ impl Simulation {
                 continue;
             }
 
+            let relation = self.faction_relation(route.from_faction, route.to_faction);
+            let relation_factor = relation_trade_factor(relation);
+
             let resource = route_resource(&route.goods);
             let available = {
                 let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
@@ -2617,8 +2620,11 @@ impl Simulation {
                 .get(&route.to_faction)
                 .map(|r| resource_amount(r, resource))
                 .unwrap_or(Fixed::ZERO);
-            let boosted =
-                route.volume * trade_volume_multiplier(available, to_stock) * unrest_factor * cohesion_factor;
+            let boosted = route.volume
+                * trade_volume_multiplier(available, to_stock)
+                * unrest_factor
+                * cohesion_factor
+                * relation_factor;
             let quantity = boosted.min(available);
             {
                 let from_resources = self
@@ -3110,6 +3116,15 @@ const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
 fn cohesion_trade_factor(cohesion: u64) -> Fixed {
     let boost = (cohesion / COHESION_PER_TRADE_PERMILLE).min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
     Fixed::from_num(1_000 + boost) / Fixed::from_num(1_000)
+}
+
+/// Relations bias trade: allies (positive relation) trade more, rivals (negative)
+/// less. Returns a factor in [0.5, 1.5] from a relation score in [-1, 1], bounded.
+fn relation_trade_factor(relation: f32) -> Fixed {
+    let r = relation.clamp(-1.0, 1.0);
+    // map [-1,1] to [0.5, 1.5]
+    let f = 1.0 + 0.5 * r;
+    Fixed::from_num(f)
 }
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when
@@ -3990,6 +4005,17 @@ mod tests {
         assert!(some > Fixed::from_num(1));
         assert!(lots >= some);
         assert!(lots <= Fixed::from_num(3) / Fixed::from_num(2));
+    }
+
+    #[test]
+    fn relations_bias_trade_volume() {
+        let ally = relation_trade_factor(1.0);
+        let neutral = relation_trade_factor(0.0);
+        let rival = relation_trade_factor(-1.0);
+        assert!(ally > neutral);
+        assert!(neutral > rival);
+        assert!(ally <= Fixed::from_num(1.5));
+        assert!(rival >= Fixed::from_num(0.5));
     }
 
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).

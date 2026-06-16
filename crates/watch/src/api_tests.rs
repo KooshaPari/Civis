@@ -1452,3 +1452,41 @@ async fn post_control_spawn_entity_airport_and_port_return_ok() {
         assert_eq!(json["ok"], true);
     }
 }
+
+#[tokio::test]
+async fn post_control_mods_fetch_rejects_unsupported_scheme() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/fetch")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"url":"ftp://example.com/mod.zip"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_fetch_rejects_empty_url() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/fetch")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"url":""}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}

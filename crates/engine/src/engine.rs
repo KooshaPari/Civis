@@ -1666,7 +1666,7 @@ impl Simulation {
 
     /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
     fn phase_buildings(&mut self) {
-        if self.state.tick % 16 != 0 {
+        if self.state.tick % building_cadence(self.research_tier()) != 0 {
             return;
         }
 
@@ -2443,6 +2443,16 @@ fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
     (rise / divisor).max(1)
 }
 
+/// Downward-causation policy (FR-CIV-0100 §3): research accelerates construction.
+/// Each research tier shortens the build cadence (ticks between expansions),
+/// floored so an advanced civilisation never busy-builds every single tick.
+/// De-silos phase_buildings, which previously read no emergent state.
+fn building_cadence(research_tier: u64) -> u64 {
+    const BASE: u64 = 16;
+    const FLOOR: u64 = 4;
+    BASE.saturating_sub(research_tier.saturating_mul(2)).max(FLOOR)
+}
+
 /// Belief units that contribute one unit of cohesion growth per tick.
 const COHESION_BELIEF_DIVISOR: u64 = 200;
 /// Unrest units that fray one unit of cohesion per tick.
@@ -2964,6 +2974,17 @@ mod tests {
         assert_eq!(research_unrest_mitigation(40, u64::MAX), 4);
         // Decay (negative delta) passes through untouched.
         assert_eq!(research_unrest_mitigation(-10, 9), -10);
+    }
+
+    /// FR-CIV-0100 §3 — research shortens the build cadence, monotonically, floored at 4.
+    #[test]
+    fn building_cadence_shortens_with_research_floored() {
+        assert_eq!(building_cadence(0), 16);
+        let t1 = building_cadence(1);
+        let t6 = building_cadence(6);
+        assert!(t1 < 16, "research speeds construction");
+        assert!(t6 <= t1, "more research never slows it");
+        assert_eq!(building_cadence(u64::MAX), 4, "cadence never drops below the floor");
     }
 
     /// FR-CIV-0100 §3 — cohesion grows when belief outweighs unrest and frays

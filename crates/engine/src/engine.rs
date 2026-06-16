@@ -3126,9 +3126,9 @@ fn cohesion_trade_factor(cohesion: u64) -> Fixed {
 /// less. Returns a factor in [0.5, 1.5] from a relation score in [-1, 1], bounded.
 fn relation_trade_factor(relation: f32) -> Fixed {
     let r = relation.clamp(-1.0, 1.0);
-    // map [-1,1] to [0.5, 1.5]
-    let f = 1.0 + 0.5 * r;
-    Fixed::from_num(f)
+    // map [-1,1] to per-mille [500, 1500], then to a Fixed factor in [0.5, 1.5].
+    let permille = (1_000.0 + 500.0 * r) as i64;
+    Fixed::from_num(permille) / Fixed::from_num(1_000)
 }
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when

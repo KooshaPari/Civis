@@ -361,6 +361,11 @@ impl Simulation {
             sample.avalanches_closed = self.emergence_branching.ledger.closed_total();
             sample.branching_regime = self.emergence_branching.regime;
         }
+
+        // Per-tick unrest is consumed here (mirrors `tick_with_emergence_source`
+        // clearing at tick start) so actor/descendant counts do not bleed across
+        // manual multi-tick test steps.
+        self.emergence_branching.last_tick_unrest_events = 0;
     }
 
     /// Record positive unrest micro-activity for the current tick (v1
@@ -1009,6 +1014,14 @@ mod tests {
     }
 
     /// Tick-loop wiring: `phase_emergence_events_close` updates live `σ̄`.
+    ///
+    /// Hand-derived σ̄ for the unrest stream below (charter §3.6):
+    /// - tick 1: `N_actors = 10` seeds one open avalanche;
+    /// - tick 2: `N_descendants = 9` on `t+1` → per-avalanche `σ_a = 9/10 = 0.9`;
+    /// - tick 3: silence (`N_actors = N_descendants = 0`) closes the avalanche;
+    /// - ledger holds one closed entry, `W = 10` →
+    ///   `σ̄_W = (1 / min(10, 1)) · 0.9 = 0.9` ∈ `[0.85, 0.95)` →
+    ///   `SubcriticalTransition`.
     #[test]
     fn phase_emergence_events_close_updates_branching_state() {
         let mut sim = Simulation::with_seed(21);
@@ -1021,7 +1034,11 @@ mod tests {
         sim.state.tick = 3;
         sim.phase_emergence_events_close();
         assert_eq!(sim.emergence_branching_state().ledger.closed_total(), 1);
-        assert!((sim.branching_ratio() - 0.9).abs() < 1e-6);
+        assert!(
+            (sim.branching_ratio() - 0.9).abs() < 1e-6,
+            "σ̄_W hand-derived as 9/10 = 0.9, got {}",
+            sim.branching_ratio()
+        );
         assert_eq!(
             sim.emergence_branching_state().regime,
             BranchingRegime::SubcriticalTransition

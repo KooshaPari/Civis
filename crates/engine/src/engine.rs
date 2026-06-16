@@ -2620,6 +2620,12 @@ impl Simulation {
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.tick_trade_routes();
+        let food_price_before = self
+            .market_state
+            .prices()
+            .get("food")
+            .copied()
+            .unwrap_or(FOOD_SCARCITY_BASELINE);
         self.market_state.step(self.state.tick);
 
         // Emergent pricing (FR-CIV-0100 §3d): the living population is demand
@@ -2641,6 +2647,12 @@ impl Simulation {
         let demand = population.saturating_add(faction_wealth);
         let supply = self.carrying_capacity();
         self.market_state.apply_pressure("food", demand, supply);
+        if self.state.tech_unlocks & TECH_STORAGE != 0 {
+            if let Some(price) = self.market_state.prices.get_mut("food") {
+                let delta = *price - food_price_before;
+                *price = food_price_before + delta / 2;
+            }
+        }
         self.market_state.apply_pressure("energy", demand, supply);
     }
 
@@ -5037,6 +5049,26 @@ mod tests {
             sim.carrying_capacity() > base_capacity,
             "research should raise carrying capacity"
         );
+    }
+
+    /// TECH_STORAGE smooths food-price shocks (advanced logistics damp volatility).
+    #[test]
+    fn tech_storage_smooths_food_price_shocks() {
+        let mut with = Simulation::with_seed(7);
+        let mut without = Simulation::with_seed(7);
+        with.state.tech_unlocks |= TECH_STORAGE;
+        for s in [&mut with, &mut without] {
+            s.state.population = 5_000_000;
+        }
+        let (before_w, before_wo) = (
+            with.market_state.prices()["food"],
+            without.market_state.prices()["food"],
+        );
+        with.phase_economy();
+        without.phase_economy();
+        let dw = (with.market_state.prices()["food"] - before_w).abs();
+        let dwo = (without.market_state.prices()["food"] - before_wo).abs();
+        assert!(dw < dwo, "storage should halve food price volatility");
     }
 
     /// FR-CIV-0100 §3d — wealthy factions bid up staple demand vs poor factions

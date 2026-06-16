@@ -16,11 +16,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test --workspace
         run: |
-          set -o pipefail
-          cargo test --workspace --no-fail-fast 2>&1 | tee test.log || true
+          # Capture cargo's real exit code through the pipe so a COMPILE failure
+          # (which prints zero "test result:" lines) cannot masquerade as green.
+          # A previous `... | tee || true` swallowed E0382-class build breaks and
+          # the TOTAL line read PASSED=0 while the job reported success.
+          cargo test --workspace --no-fail-fast 2>&1 | tee test.log
+          cargo_status=${PIPESTATUS[0]}
           echo "===== TEST RESULT SUMMARY ====="
           grep -E "test result:" test.log || echo "no test-result lines"
           awk '/test result:/{for(i=1;i<=NF;i++){if($i=="passed;")p+=$(i-1);if($i=="failed;")f+=$(i-1);if($i=="ignored;")g+=$(i-1)}} END{printf "TOTAL PASSED=%d FAILED=%d IGNORED=%d\n",p,f,g}' test.log
+          # Fail the step if the workspace did not compile (no test-result lines at
+          # all) or if cargo itself reported failure (test failures / build error).
+          if ! grep -qE "test result:" test.log; then
+            echo "::error::no test-result lines — the workspace failed to compile"
+            exit 1
+          fi
+          exit "$cargo_status"
 
   coverage:
     runs-on: ubuntu-24.04

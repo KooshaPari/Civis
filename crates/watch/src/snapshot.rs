@@ -1234,4 +1234,34 @@ mod tests {
         assert!(pins.windows(2).all(|w| w[0].idx <= w[1].idx));
         assert!(pins.iter().all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
     }
+
+    #[test]
+    fn economy_snapshot_mirrors_factions_and_rates() {
+        use std::collections::HashMap;
+        let sim = Simulation::with_seed(7);
+        let factions = factions(0);
+        let balances: HashMap<u32, f64> = HashMap::new();
+        let econ = economy_snapshot(&sim, &factions, &balances);
+
+        assert_eq!(econ.faction_treasury.len(), factions.len());
+        assert!(econ
+            .faction_treasury
+            .iter()
+            .zip(factions.iter())
+            .all(|(t, f)| t.id == f.id));
+        assert!(econ
+            .faction_treasury
+            .iter()
+            .all(|t| t.trade_balance == 0.0));
+        assert_eq!(econ.production_rates.wood_per_tick, 0.0);
+        assert!((econ.production_rates.energy_per_tick * 1000.0 - econ.energy_budget).abs() < 1e-6);
+        assert!(econ.production_rates.food_per_tick >= 0.0);
+        assert!(econ.production_rates.metal_per_tick >= 0.0);
+        assert!(
+            econ.resources.food.is_finite()
+                && econ.resources.wood.is_finite()
+                && econ.resources.metal.is_finite()
+                && econ.resources.energy.is_finite()
+        );
+    }
 }

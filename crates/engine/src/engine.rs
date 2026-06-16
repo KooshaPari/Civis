@@ -1964,6 +1964,7 @@ impl Simulation {
             }
             let entry = self.state.faction_unrest.entry(id).or_insert(0);
             *entry = (*entry as i64 + delta).max(0) as u64;
+            self.ensure_polity(id).unrest = *entry;
         }
     }
 
@@ -4483,6 +4484,36 @@ mod tests {
             sim.phase_faction_unrest();
         }
         assert!(sim.faction_unrest(id) > 0, "scarce faction breeds unrest");
+    }
+
+    /// After faction-unrest ticks, `polities[id].unrest` matches legacy `faction_unrest`.
+    #[test]
+    fn polities_unrest_matches_faction_unrest_after_ticks() {
+        let mut sim = Simulation::with_seed(99);
+        let id = 0u32;
+        sim.state.faction_treasury.insert(id, Fixed::from_num(0));
+        sim.state.faction_resources.insert(
+            id,
+            Resources {
+                food: Fixed::from_num(5),
+                ..Resources::default()
+            },
+        );
+        for _ in 0..5 {
+            sim.phase_faction_unrest();
+        }
+        for (&faction_id, &legacy_unrest) in &sim.state.faction_unrest {
+            let polity_unrest = sim
+                .state
+                .polities
+                .get(&faction_id)
+                .map(|p| p.unrest)
+                .unwrap_or(0);
+            assert_eq!(
+                polity_unrest, legacy_unrest,
+                "polity {faction_id} unrest drifted from legacy map"
+            );
+        }
     }
 
     /// A wealthy, well-provisioned faction stays at zero per-faction unrest.

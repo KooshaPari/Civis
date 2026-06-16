@@ -338,6 +338,17 @@ pub struct WorldState {
     /// societal unrest via [`Simulation::phase_institutions`].
     #[serde(default)]
     pub garrison_level: u32,
+    /// Notable simulation history (tech breakthroughs, golden/dark ages). EMERGES
+    /// from threshold crossings via [`Simulation::phase_chronicle`]. Capped at
+    /// [`CHRONICLE_MAX_LEN`]. `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub chronicle: Vec<String>,
+    /// Last `tech_unlocks` bitmask recorded in the chronicle (dedup).
+    #[serde(default)]
+    pub chronicle_tech_seen: u64,
+    /// Last recorded age era (0 = normal, 1 = golden, 2 = dark). Dedupes age lines.
+    #[serde(default)]
+    pub chronicle_age: u8,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -364,6 +375,9 @@ impl Default for WorldState {
             dispossessed_permille: 0,
             temple_level: 0,
             garrison_level: 0,
+            chronicle: Vec::new(),
+            chronicle_tech_seen: 0,
+            chronicle_age: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1210,6 +1224,12 @@ impl Simulation {
         self.state.tech_unlocks & bit == bit
     }
 
+    /// Notable simulation history (tech breakthroughs, golden/dark ages).
+    #[must_use]
+    pub fn chronicle(&self) -> &[String] {
+        &self.state.chronicle
+    }
+
     /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
     /// and deducts the cost when enough faith has accumulated; returns `false`
     /// and leaves belief untouched otherwise (FR-CIV-EMERGENCE divine-powers).
@@ -1359,6 +1379,7 @@ impl Simulation {
         self.phase_cohesion();
         self.phase_stratification();
         self.phase_institutions();
+        self.phase_chronicle();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1798,6 +1819,44 @@ impl Simulation {
                 (self.state.temple_level + self.state.garrison_level) as i64 * 10,
             );
             *treasury = (*treasury - upkeep).max(Fixed::from_num(0));
+        }
+    }
+
+    /// Chronicle phase (FR-CIV-0100 emergence legibility). Records notable history
+    /// when tech unlocks advance or society enters a golden/dark age. Deduped via
+    /// `chronicle_tech_seen` and `chronicle_age`; length capped at [`CHRONICLE_MAX_LEN`].
+    fn phase_chronicle(&mut self) {
+        if self.state.tech_unlocks != self.state.chronicle_tech_seen {
+            let new_bits = self.state.tech_unlocks & !self.state.chronicle_tech_seen;
+            if new_bits != 0 {
+                self.state.chronicle.push(format!(
+                    "Tick {}: a technological breakthrough ({:#b})",
+                    self.state.tick, new_bits
+                ));
+            }
+            self.state.chronicle_tech_seen = self.state.tech_unlocks;
+        }
+
+        let target_age = if self.state.cohesion > 50_000 && self.state.belief > 50_000 {
+            1
+        } else if self.state.unrest > 800 {
+            2
+        } else {
+            0
+        };
+        if target_age != self.state.chronicle_age {
+            let line = match target_age {
+                1 => format!("Tick {}: a golden age dawns", self.state.tick),
+                2 => format!("Tick {}: a dark age of unrest begins", self.state.tick),
+                _ => format!("Tick {}: the realm returns to calm", self.state.tick),
+            };
+            self.state.chronicle.push(line);
+            self.state.chronicle_age = target_age;
+        }
+
+        if self.state.chronicle.len() > CHRONICLE_MAX_LEN {
+            let drain = self.state.chronicle.len() - CHRONICLE_MAX_LEN;
+            self.state.chronicle.drain(..drain);
         }
     }
 
@@ -2529,6 +2588,9 @@ impl Simulation {
         &self.cluster_stocks
     }
 }
+
+/// Maximum chronicle history lines retained in [`WorldState::chronicle`].
+const CHRONICLE_MAX_LEN: usize = 200;
 
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
@@ -4864,5 +4926,49 @@ mod tests {
                     .all(|s| !s.is_viable()),
             "stone-only grid must produce zero viable sites"
         );
+    }
+
+    /// FR-CIV-0100 — chronicle records technological breakthroughs when tech bits advance.
+    #[test]
+    fn chronicle_records_tech_breakthroughs() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.research_progress = 200_000;
+        sim.phase_tech();
+        sim.phase_chronicle();
+        assert!(!sim.chronicle().is_empty());
+        assert!(
+            sim.chronicle()
+                .iter()
+                .any(|line| line.contains("technological breakthrough")),
+            "expected a tech breakthrough line"
+        );
+    }
+
+    /// FR-CIV-0100 — chronicle length stays bounded at CHRONICLE_MAX_LEN.
+    #[test]
+    fn chronicle_is_length_capped() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.chronicle = (0..=CHRONICLE_MAX_LEN)
+            .map(|i| format!("filler {i}"))
+            .collect();
+        sim.phase_chronicle();
+        assert!(sim.chronicle().len() <= CHRONICLE_MAX_LEN);
+    }
+
+    /// FR-CIV-0100 — golden-age chronicle lines are deduped via chronicle_age.
+    #[test]
+    fn chronicle_dedups_age() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.cohesion = 60_000;
+        sim.state.belief = 60_000;
+        sim.phase_chronicle();
+        sim.phase_chronicle();
+        assert_eq!(sim.state.chronicle_age, 1);
+        let golden_count = sim
+            .chronicle()
+            .iter()
+            .filter(|line| line.contains("golden age"))
+            .count();
+        assert_eq!(golden_count, 1);
     }
 }

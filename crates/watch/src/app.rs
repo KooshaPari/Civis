@@ -591,9 +591,10 @@ mod tests {
     /// unparsable (no env mutation -> race-free in the parallel test runner).
     #[test]
     fn env_u16_defaults_when_var_absent() {
-        // A name no other test or the host environment defines.
-        assert_eq!(env_u16("CIVIS_TEST_ENV_U16_ABSENT_ZZZ", 8080), 8080);
-        assert_eq!(env_u16("CIVIS_TEST_ENV_U16_ABSENT_ZZZ", 0), 0);
+        // PID-unique key cannot pre-exist in the host environment.
+        let key = format!("CIVIS_TEST_ABSENT_{}", std::process::id());
+        assert_eq!(env_u16(&key, 8080), 8080);
+        assert_eq!(env_u16(&key, 0), 0);
     }
 
     /// `resolve_session_id` is always a usable, non-empty identifier — a fresh

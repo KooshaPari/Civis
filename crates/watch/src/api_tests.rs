@@ -1381,7 +1381,9 @@ async fn fr_save_load_missing_save_is_error() {
         .await
         .unwrap();
 
-    assert!(!response.status().is_success());
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
 }
 
 #[tokio::test]

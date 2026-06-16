@@ -951,6 +951,9 @@ mod tests {
         });
         assert!(xz.x > 0.0, "positive fixed x maps to positive world x");
         assert!(xz.z < 0.0, "negative fixed z maps to negative world z");
+        let scale = civ_voxel::FIXED_SCALE as f32;
+        assert!((xz.x - (1_000_000.0 / scale)).abs() < 1e-3);
+        assert!((xz.z - (-1_000_000.0 / scale)).abs() < 1e-3);
 
         let origin = WorldXZ::from_fixed_coord(&civ_voxel::WorldCoord { x: 0, y: 0, z: 0 });
         assert_eq!(origin.x, 0.0);

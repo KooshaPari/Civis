@@ -1068,6 +1068,21 @@ mod tests {
         let b = buildings(&f, 0);
         let r = roads(&b);
         assert!(!r.is_empty());
+        let faction_at = |x: f32, y: f32| -> Option<u32> {
+            b.iter()
+                .find(|building| building.x == x && building.y == y)
+                .map(|building| building.faction_id)
+        };
+        for road in &r {
+            let from_faction = faction_at(road.from[0], road.from[1])
+                .expect("road.from references a known building");
+            let to_faction = faction_at(road.to[0], road.to[1])
+                .expect("road.to references a known building");
+            assert_eq!(
+                from_faction, to_faction,
+                "road endpoints must belong to the same faction"
+            );
+        }
     }
 
     #[test]

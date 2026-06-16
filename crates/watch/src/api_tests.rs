@@ -1490,3 +1490,87 @@ async fn post_control_mods_fetch_rejects_empty_url() {
     let json = body_json(response).await;
     assert_eq!(json["ok"], false);
 }
+
+#[tokio::test]
+async fn post_control_mods_upload_rejects_traversal_filename() {
+    let body = serde_json::json!({
+        "filename": "../evil.civmod",
+        "data_base64": "",
+    })
+    .to_string();
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/upload")
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_upload_rejects_empty_filename() {
+    let body = serde_json::json!({
+        "filename": "",
+        "data_base64": "",
+    })
+    .to_string();
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/upload")
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_publish_rejects_non_mods_source() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/publish")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    serde_json::json!({ "source": "notmods/whatever.civmod" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/publish")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::json!({ "source": "../escape" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}

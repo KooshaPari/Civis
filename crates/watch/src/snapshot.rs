@@ -1264,4 +1264,34 @@ mod tests {
                 && econ.resources.energy.is_finite()
         );
     }
+
+    #[test]
+    fn housing_snapshot_invariants_hold() {
+        let sim = Simulation::with_seed(7);
+        let factions = factions(0);
+        let mut blds = buildings(&factions, 0);
+        let total_cap: u32 = blds.iter().map(|b| b.capacity).sum();
+        let stats = housing_snapshot(&sim, &mut blds);
+        // capacity is the sum of building capacities:
+        assert_eq!(stats.total_capacity, total_cap);
+        // occupied never exceeds capacity:
+        assert!(stats.occupied <= stats.total_capacity);
+        // occupants assigned across capacity'd buildings sum to `occupied`:
+        let assigned: u32 = blds
+            .iter()
+            .filter(|b| b.capacity > 0)
+            .map(|b| b.occupants)
+            .sum();
+        assert_eq!(assigned, stats.occupied);
+        // zero-capacity buildings hold no occupants:
+        assert!(blds
+            .iter()
+            .filter(|b| b.capacity == 0)
+            .all(|b| b.occupants == 0));
+        // vacancy_rate is a valid fraction (and 0.0 only-if no capacity):
+        assert!((0.0..=1.0).contains(&stats.vacancy_rate));
+        if stats.total_capacity == 0 {
+            assert_eq!(stats.vacancy_rate, 0.0);
+        }
+    }
 }

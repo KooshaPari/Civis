@@ -126,4 +126,41 @@ mod tests {
             "radius_km delta of 1000 km must change the geology map"
         );
     }
+
+    /// FR-CIV-PLANET-040 — the equatorial biome is driven by `axial_tilt_deg`:
+    /// arid (<10°) → Desert, humid (>30°) → Forest, temperate → Plains. Covers
+    /// the three tilt-dependent branches of `seed`.
+    #[test]
+    fn equatorial_biome_follows_axial_tilt() {
+        let (planet, _) = defaults_earthlike();
+
+        let mut arid = planet;
+        arid.axial_tilt_deg = 5; // < 10 -> Desert
+        assert!(
+            GeologyMap::seed(&arid)
+                .regions
+                .iter()
+                .any(|r| r.biome == BiomeKind::Desert),
+            "low axial tilt must yield Desert regions"
+        );
+
+        let mut humid = planet;
+        humid.axial_tilt_deg = 40; // > 30 -> Forest
+        assert!(
+            GeologyMap::seed(&humid)
+                .regions
+                .iter()
+                .any(|r| r.biome == BiomeKind::Forest),
+            "high axial tilt must yield Forest regions"
+        );
+
+        // Earthlike default (23°) is temperate -> Plains at the equator.
+        assert!(
+            GeologyMap::seed(&planet)
+                .regions
+                .iter()
+                .any(|r| r.biome == BiomeKind::Plains),
+            "temperate axial tilt must yield Plains regions"
+        );
+    }
 }

@@ -4060,8 +4060,8 @@ mod tests {
         let rival = relation_trade_factor(-1.0);
         assert!(ally > neutral);
         assert!(neutral > rival);
-        assert!(ally <= Fixed::from_num(1.5));
-        assert!(rival >= Fixed::from_num(0.5));
+        assert!(ally <= Fixed::from_num(3) / Fixed::from_num(2));
+        assert!(rival >= Fixed::from_num(1) / Fixed::from_num(2));
     }
 
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).

@@ -364,6 +364,14 @@ mod tests {
         sim.phase_disasters();
     }
 
+    /// radius_for returns a positive radius per kind, scaled by severity (coverage).
+    #[test]
+    fn radius_for_is_positive_per_kind() {
+        assert!(radius_for(DisasterKind::Meteor) > 0);
+        assert!(radius_for(DisasterKind::Plague) > 0);
+        assert!(radius_for(DisasterKind::Storm) > radius_for(DisasterKind::Plague));
+    }
+
     /// FR-CIV-0100 §3 — at research tier 0 the wildfire ignition threshold is
     /// the raw physical value (no mitigation).
     #[test]

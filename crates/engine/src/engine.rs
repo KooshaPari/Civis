@@ -290,6 +290,19 @@ pub enum UnitType {
 // WORLD STATE
 // ============================================================================
 
+/// Dominant economic specialization that EMERGES from the strongest sector
+/// (FR-CIV-0100 §3 emergence). Hysteresis prevents flip-flopping; the active
+/// focus amplifies comparative advantage in production.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum EconomicFocus {
+    #[default]
+    Balanced,
+    Agrarian,
+    Industrial,
+    Sacred,
+    Mercantile,
+}
+
 /// Global world state
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorldState {
@@ -313,6 +326,51 @@ pub struct WorldState {
     /// saves loadable.
     #[serde(default)]
     pub unrest: u64,
+    /// Accumulated social cohesion — the strength of the shared social fabric.
+    /// EMERGES from collective belief (shared faith binds) and frays under
+    /// unrest (disorder loosens bonds). A stabilising counterweight to unrest.
+    /// `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub cohesion: u64,
+    /// Discrete technology unlocks (irreversible bitmask). EMERGES from research
+    /// milestones via [`Simulation::phase_tech`]. `#[serde(default)]` keeps older
+    /// saves loadable.
+    #[serde(default)]
+    pub tech_unlocks: u64,
+    /// Persistent dispossessed underclass share (per-mille, 0..=1000). EMERGES
+    /// from sustained wealth inequality with hysteresis via
+    /// [`Simulation::phase_stratification`]. Distinct from the instantaneous
+    /// [`inequality_unrest`] term. `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub dispossessed_permille: u64,
+    /// Temple institution level (0..=MAX_INSTITUTION_LEVEL). EMERGES from
+    /// accumulated belief via [`Simulation::phase_institutions`].
+    #[serde(default)]
+    pub temple_level: u32,
+    /// Garrison institution level (0..=MAX_INSTITUTION_LEVEL). EMERGES from
+    /// societal unrest via [`Simulation::phase_institutions`].
+    #[serde(default)]
+    pub garrison_level: u32,
+    /// Dominant economic focus (FR-CIV-0100 emergence). EMERGES from the
+    /// strongest sector via [`Simulation::phase_economic_focus`], with
+    /// hysteresis so specialization persists.
+    #[serde(default)]
+    pub economic_focus: EconomicFocus,
+    /// Consecutive evaluations the candidate focus has dominated (0..=10).
+    /// Drives hysteresis in [`Simulation::phase_economic_focus`].
+    #[serde(default)]
+    pub focus_pressure: u8,
+    /// Notable simulation history (tech breakthroughs, golden/dark ages). EMERGES
+    /// from threshold crossings via [`Simulation::phase_chronicle`]. Capped at
+    /// [`CHRONICLE_MAX_LEN`]. `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub chronicle: Vec<String>,
+    /// Last `tech_unlocks` bitmask recorded in the chronicle (dedup).
+    #[serde(default)]
+    pub chronicle_tech_seen: u64,
+    /// Last recorded age era (0 = normal, 1 = golden, 2 = dark). Dedupes age lines.
+    #[serde(default)]
+    pub chronicle_age: u8,
     pub energy_budget_joules: Fixed,
     pub rng_seed: u64,
     /// Faction ID -> faction name
@@ -334,6 +392,16 @@ impl Default for WorldState {
             research_progress: 0,
             belief: 0,
             unrest: 0,
+            cohesion: 0,
+            tech_unlocks: 0,
+            dispossessed_permille: 0,
+            temple_level: 0,
+            garrison_level: 0,
+            economic_focus: EconomicFocus::Balanced,
+            focus_pressure: 0,
+            chronicle: Vec::new(),
+            chronicle_tech_seen: 0,
+            chronicle_age: 0,
             energy_budget_joules: Fixed::from_num(1_000_000_000_000i64),
             rng_seed: 42,
             factions: HashMap::from([
@@ -1112,8 +1180,17 @@ impl Simulation {
     fn carrying_capacity(&self) -> i64 {
         const POP_BASELINE: i64 = 1_000_000;
         const CAPACITY_PER_TIER: i64 = 200_000;
+        const IRRIGATION_BONUS: i64 = 200_000;
+        const SANITATION_BONUS: i64 = 300_000;
         let tier = self.research_tier().min(i64::MAX as u64) as i64;
-        POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER)
+        let mut cap = POP_BASELINE + tier.saturating_mul(CAPACITY_PER_TIER);
+        if self.state.tech_unlocks & TECH_IRRIGATION != 0 {
+            cap = cap.saturating_add(IRRIGATION_BONUS);
+        }
+        if self.state.tech_unlocks & TECH_SANITATION != 0 {
+            cap = cap.saturating_add(SANITATION_BONUS);
+        }
+        cap
     }
 
     /// Accumulated faith/belief, generated each tick by [`Simulation::phase_belief`]
@@ -1128,6 +1205,60 @@ impl Simulation {
     #[must_use]
     pub fn unrest(&self) -> u64 {
         self.state.unrest
+    }
+
+    /// Accumulated social cohesion, generated each tick by
+    /// [`Simulation::phase_cohesion`] from belief minus unrest. Higher means a
+    /// stronger shared social fabric.
+    #[must_use]
+    pub fn cohesion(&self) -> u64 {
+        self.state.cohesion
+    }
+
+    /// Persistent dispossessed underclass share (per-mille, 0..=1000), updated
+    /// each tick by [`Simulation::phase_stratification`].
+    #[must_use]
+    pub fn dispossessed_permille(&self) -> u64 {
+        self.state.dispossessed_permille
+    }
+
+    /// Temple institution level (0..=MAX_INSTITUTION_LEVEL), updated each tick
+    /// by [`Simulation::phase_institutions`] from accumulated belief.
+    #[must_use]
+    pub fn temple_level(&self) -> u32 {
+        self.state.temple_level
+    }
+
+    /// Garrison institution level (0..=MAX_INSTITUTION_LEVEL), updated each
+    /// tick by [`Simulation::phase_institutions`] from societal unrest.
+    #[must_use]
+    pub fn garrison_level(&self) -> u32 {
+        self.state.garrison_level
+    }
+
+    /// Dominant economic focus, updated each tick by
+    /// [`Simulation::phase_economic_focus`] from sector signals.
+    #[must_use]
+    pub fn economic_focus(&self) -> EconomicFocus {
+        self.state.economic_focus
+    }
+
+    /// Discrete technology unlocks reached so far (irreversible bitmask).
+    #[must_use]
+    pub fn tech_unlocks(&self) -> u64 {
+        self.state.tech_unlocks
+    }
+
+    /// Whether a specific tech-unlock bit is set.
+    #[must_use]
+    pub fn has_tech(&self, bit: u64) -> bool {
+        self.state.tech_unlocks & bit == bit
+    }
+
+    /// Notable simulation history (tech breakthroughs, golden/dark ages).
+    #[must_use]
+    pub fn chronicle(&self) -> &[String] {
+        &self.state.chronicle
     }
 
     /// Attempt to spend `cost` belief to invoke a divine power. Returns `true`
@@ -1273,8 +1404,14 @@ impl Simulation {
         self.phase_life();
         self.phase_emergence();
         self.phase_research();
+        self.phase_tech();
         self.phase_belief();
         self.phase_unrest();
+        self.phase_cohesion();
+        self.phase_stratification();
+        self.phase_institutions();
+        self.phase_economic_focus();
+        self.phase_chronicle();
         // PR #350 stack: run the civ-emergence-metrics sampler on the
         // 50-tick boundary. The sampler internally no-ops on
         // non-boundary ticks so the cost on every other tick is just
@@ -1597,8 +1734,20 @@ impl Simulation {
     fn phase_research(&mut self) {
         /// People required to produce one unit of research effort per tick.
         const RESEARCH_POP_DIVISOR: u64 = 1_000;
-        let contribution = self.state.population / RESEARCH_POP_DIVISOR;
+        let base = self.state.population / RESEARCH_POP_DIVISOR;
+        let mut contribution = base
+            .saturating_add(base.saturating_mul(cohesion_research_bonus_permille(self.state.cohesion)) / 1_000);
+        if self.state.tech_unlocks & TECH_WRITING != 0 {
+            contribution = contribution.saturating_add(1);
+        }
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
+    }
+
+    /// Tech-unlock phase (FR-CIV-0100 §3 emergence). Research milestones
+    /// irreversibly OR discrete capability bits into `tech_unlocks`; bits are
+    /// never cleared once earned.
+    fn phase_tech(&mut self) {
+        self.state.tech_unlocks |= tech_unlocks_for_tier(self.research_tier());
     }
 
     /// Faith phase (divine-powers economy, FR-CIV-EMERGENCE). The worshipping
@@ -1608,8 +1757,19 @@ impl Simulation {
     fn phase_belief(&mut self) {
         /// People required to generate one unit of belief per tick.
         const BELIEF_POP_DIVISOR: u64 = 2_000;
+        /// Belief fades without renewal: a small proportional decay gives a dynamic
+        /// equilibrium (worship inflow vs decay) instead of unbounded growth.
+        const BELIEF_DECAY_DIVISOR: u64 = 500;
         let worship = self.state.population / BELIEF_POP_DIVISOR;
         self.state.belief = self.state.belief.saturating_add(worship);
+        self.state.belief = self
+            .state
+            .belief
+            .saturating_add(self.state.temple_level as u64);
+        self.state.belief = self
+            .state
+            .belief
+            .saturating_sub(self.state.belief / BELIEF_DECAY_DIVISOR);
     }
 
     /// Social-unrest phase (FR-CIV-0100 §3 emergence). Unrest EMERGES from the
@@ -1631,24 +1791,161 @@ impl Simulation {
             .copied()
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         // Research mitigates the scarcity-driven rise (research -> calmer society).
-        let delta = research_unrest_mitigation(unrest_delta(food_price), self.research_tier());
+        // Cohesion damps the remaining rise (cohesion -> calmer society), closing the loop.
+        // Structural inequality (wealth gap between richest and poorest faction)
+        // breeds class unrest.
+        let treasury_spread = faction_treasury_spread(&self.state.faction_treasury);
+        let delta = cohesion_unrest_damp(research_unrest_mitigation(unrest_delta(food_price), self.research_tier()), self.state.cohesion)
+            + energy_scarcity_unrest(self.state.energy_budget_joules)
+            + overcrowding_unrest(self.state.population, self.carrying_capacity())
+            + inequality_unrest(treasury_spread)
+            + dispossession_unrest(self.state.dispossessed_permille)
+            - (self.state.garrison_level as i64 * 2);
         self.state.unrest = (self.state.unrest as i64 + delta).max(0) as u64;
         let faith_from_hardship = self.state.unrest / UNREST_FAITH_DIVISOR;
         self.add_belief(faith_from_hardship);
     }
 
-    /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
-    fn phase_buildings(&mut self) {
-        if self.state.tick % 16 != 0 {
+    /// Social-cohesion phase (FR-CIV-0100 §3 emergence). The shared social fabric
+    /// EMERGES from the balance of collective belief (shared faith binds) and
+    /// unrest (disorder frays bonds): cohesion accrues when faith outweighs
+    /// discontent and decays when discontent dominates. Runs after `phase_unrest`
+    /// so it sees the current tick's unrest. Floored at zero.
+    fn phase_cohesion(&mut self) {
+        /// Cohesion frays without reinforcement: proportional decay yields a
+        /// dynamic equilibrium (belief bind vs unrest fray vs decay).
+        const COHESION_DECAY_DIVISOR: u64 = 500;
+        let delta = cohesion_delta(self.state.belief, self.state.unrest);
+        self.state.cohesion = (self.state.cohesion as i64 + delta).max(0) as u64;
+        self.state.cohesion = self
+            .state
+            .cohesion
+            .saturating_sub(self.state.cohesion / COHESION_DECAY_DIVISOR);
+    }
+
+    /// Social-stratification phase (FR-CIV-0100 §3 emergence). A persistent
+    /// dispossessed underclass share EMERGES from sustained wealth inequality,
+    /// moving slowly toward its equilibrium (hysteresis) so class structure
+    /// persists rather than tracking the gap instantly. Runs after
+    /// `phase_cohesion` so cohesion can erode the target. Clamped to [0, 1000].
+    fn phase_stratification(&mut self) {
+        let treasury_spread = faction_treasury_spread(&self.state.faction_treasury);
+        let target = dispossession_target_permille(treasury_spread, self.state.cohesion);
+        self.state.dispossessed_permille =
+            dispossession_step(self.state.dispossessed_permille, target);
+    }
+
+    /// Institution phase (FR-CIV-0100 §3 emergence). Leveled Temple and Garrison
+    /// organizations EMERGE from macro signals (belief and unrest), drain
+    /// treasury upkeep, and couple back via `phase_belief` and `phase_unrest`.
+    /// Growth/decay is gradual (one level per tick) with a criticality cap.
+    fn phase_institutions(&mut self) {
+        let temple_target = institution_target_level(self.state.belief, 5_000);
+        self.state.temple_level =
+            institution_step(self.state.temple_level, temple_target);
+        let garrison_target = institution_target_level(self.state.unrest, 200);
+        self.state.garrison_level =
+            institution_step(self.state.garrison_level, garrison_target);
+        if let Some(&min_id) = self.state.faction_treasury.keys().min() {
+            if let Some(treasury) = self.state.faction_treasury.get_mut(&min_id) {
+                let upkeep = Fixed::from_num(
+                    (self.state.temple_level + self.state.garrison_level) as i64 * 10,
+                );
+                *treasury = (*treasury - upkeep).max(Fixed::from_num(0));
+            }
+        }
+    }
+
+    /// Economic specialization phase (FR-CIV-0100 §3 emergence). A dominant
+    /// [`EconomicFocus`] EMERGES from the strongest sector signal, with
+    /// hysteresis so the civilization does not flip-flop each tick. The active
+    /// focus couples back via comparative-advantage bonuses in
+    /// [`Simulation::phase_production`].
+    fn phase_economic_focus(&mut self) {
+        const FOCUS_PRESSURE_THRESHOLD: u8 = 5;
+        const FOCUS_PRESSURE_CAP: u8 = 10;
+
+        let treasury_total = self
+            .state
+            .faction_treasury
+            .values()
+            .map(|t| (t.raw / crate::SCALE).max(0))
+            .sum::<i64>();
+        let food = self.state.resources.food.raw / crate::SCALE;
+        let candidate = candidate_economic_focus(
+            food,
+            self.research_tier(),
+            self.state.belief,
+            treasury_total,
+        );
+
+        if candidate == self.state.economic_focus {
+            self.state.focus_pressure = 0;
             return;
         }
 
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
+        self.state.focus_pressure = self
+            .state
+            .focus_pressure
+            .saturating_add(1)
+            .min(FOCUS_PRESSURE_CAP);
+        if self.state.focus_pressure >= FOCUS_PRESSURE_THRESHOLD {
+            self.state.economic_focus = candidate;
+            self.state.focus_pressure = 0;
+        }
+    }
+
+    /// Chronicle phase (FR-CIV-0100 emergence legibility). Records notable history
+    /// when tech unlocks advance or society enters a golden/dark age. Deduped via
+    /// `chronicle_tech_seen` and `chronicle_age`; length capped at [`CHRONICLE_MAX_LEN`].
+    fn phase_chronicle(&mut self) {
+        if self.state.tech_unlocks != self.state.chronicle_tech_seen {
+            let new_bits = self.state.tech_unlocks & !self.state.chronicle_tech_seen;
+            if new_bits != 0 {
+                self.state.chronicle.push(format!(
+                    "Tick {}: a technological breakthrough ({:#b})",
+                    self.state.tick, new_bits
+                ));
+            }
+            self.state.chronicle_tech_seen = self.state.tech_unlocks;
+        }
+
+        let target_age = if self.state.cohesion > 50_000 && self.state.belief > 50_000 {
+            1
+        } else if self.state.unrest > 800 {
+            2
+        } else {
+            0
         };
+        if target_age != self.state.chronicle_age {
+            let line = match target_age {
+                1 => format!("Tick {}: a golden age dawns", self.state.tick),
+                2 => format!("Tick {}: a dark age of unrest begins", self.state.tick),
+                _ => format!("Tick {}: the realm returns to calm", self.state.tick),
+            };
+            self.state.chronicle.push(line);
+            self.state.chronicle_age = target_age;
+        }
+
+        if self.state.chronicle.len() > CHRONICLE_MAX_LEN {
+            let drain = self.state.chronicle.len() - CHRONICLE_MAX_LEN;
+            self.state.chronicle.drain(..drain);
+        }
+    }
+
+    /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
+    fn phase_buildings(&mut self) {
+        if self.state.tick % building_cadence(self.research_tier()) != 0 {
+            return;
+        }
+
+        let signals = building_demand_signals(
+            self.state.population,
+            self.carrying_capacity(),
+            self.state.cohesion,
+            self.research_tier(),
+            self.state.unrest,
+        );
 
         if [
             signals.residential,
@@ -1909,10 +2206,20 @@ impl Simulation {
                 _ => {}
             }
         }
-        self.state.resources.food += food;
-        self.state.resources.wood += wood;
-        self.state.resources.metal += metal;
-        self.state.resources.energy += energy;
+        let yield_factor = production_yield_factor(self.research_tier());
+        let focus_bonus = Fixed::from_num(11) / Fixed::from_num(10);
+        let mut food_out = food * yield_factor;
+        let mut metal_out = metal * yield_factor;
+        if self.state.economic_focus == EconomicFocus::Agrarian {
+            food_out = food_out * focus_bonus;
+        }
+        if self.state.economic_focus == EconomicFocus::Industrial {
+            metal_out = metal_out * focus_bonus;
+        }
+        self.state.resources.food += food_out;
+        self.state.resources.wood += wood * yield_factor;
+        self.state.resources.metal += metal_out;
+        self.state.resources.energy += energy * yield_factor;
     }
 
     /// Citizen lifecycle phase
@@ -1998,10 +2305,13 @@ impl Simulation {
 
         let phase_cfg = self.military_phase;
 
+        let mut morale_recovery = morale_recovery_rate(self.state.cohesion);
+        if self.state.tech_unlocks & TECH_GUNPOWDER != 0 {
+            morale_recovery += Fixed::from_num(1) / Fixed::from_num(100);
+        }
         for (_, unit) in self.world.query::<&mut MilitaryUnit>().iter() {
             if unit.morale < Fixed::from_num(1) {
-                unit.morale = (unit.morale + Fixed::from_num(1) / Fixed::from_num(100))
-                    .min(Fixed::from_num(1));
+                unit.morale = (unit.morale + morale_recovery).min(Fixed::from_num(1));
             }
         }
 
@@ -2101,7 +2411,8 @@ impl Simulation {
             return;
         }
         self.diplomacy_events.clear();
-        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
         if faction_ids.len() < 2 {
             return;
         }
@@ -2132,7 +2443,7 @@ impl Simulation {
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
         let conflict_threshold =
-            Fixed::from_num(diplomacy_conflict_threshold(self.belief(), self.unrest()));
+            Fixed::from_num(diplomacy_conflict_threshold(self.belief().saturating_add(self.cohesion()), self.unrest()));
         let kind = if disparity >= conflict_threshold {
             DiplomacyKind::Conflict
         } else {
@@ -2216,6 +2527,9 @@ impl Simulation {
     }
 
     fn tick_trade_routes(&mut self) {
+        // Societal unrest throttles all commerce this tick (computed once).
+        let unrest_factor = unrest_trade_factor(self.state.unrest);
+        let cohesion_factor = cohesion_trade_factor(self.state.cohesion);
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
                 continue;
@@ -2241,7 +2555,8 @@ impl Simulation {
                 .get(&route.to_faction)
                 .map(|r| resource_amount(r, resource))
                 .unwrap_or(Fixed::ZERO);
-            let boosted = route.volume * trade_volume_multiplier(available, to_stock);
+            let boosted =
+                route.volume * trade_volume_multiplier(available, to_stock) * unrest_factor * cohesion_factor;
             let quantity = boosted.min(available);
             {
                 let from_resources = self
@@ -2357,9 +2672,44 @@ impl Simulation {
     }
 }
 
+/// Maximum chronicle history lines retained in [`WorldState::chronicle`].
+const CHRONICLE_MAX_LEN: usize = 200;
+
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
 const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+
+/// Tech unlock bits (irreversible, set-only).
+pub const TECH_IRRIGATION: u64 = 1 << 0;
+pub const TECH_STORAGE: u64 = 1 << 1;
+pub const TECH_METALLURGY: u64 = 1 << 2;
+pub const TECH_WRITING: u64 = 1 << 3;
+pub const TECH_SANITATION: u64 = 1 << 4;
+pub const TECH_GUNPOWDER: u64 = 1 << 5;
+
+/// Discrete tech unlocks reached by a given research tier (set-only bitmask).
+fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
+    let mut bits = 0u64;
+    if research_tier >= 1 {
+        bits |= TECH_IRRIGATION;
+    }
+    if research_tier >= 2 {
+        bits |= TECH_STORAGE;
+    }
+    if research_tier >= 3 {
+        bits |= TECH_METALLURGY;
+    }
+    if research_tier >= 4 {
+        bits |= TECH_WRITING;
+    }
+    if research_tier >= 5 {
+        bits |= TECH_SANITATION;
+    }
+    if research_tier >= 6 {
+        bits |= TECH_GUNPOWDER;
+    }
+    bits
+}
 
 /// Downward-causation policy (FR-CIV-0100 emergence): scarcity in the food
 /// market damps the birth rate, closing the research -> carrying-capacity ->
@@ -2398,6 +2748,158 @@ fn unrest_delta(food_price: i64) -> i64 {
     }
 }
 
+/// Downward-causation policy (FR-CIV-0100 §3): energy depletion breeds unrest.
+/// A fully-drained energy budget (blackout) adds a fixed unrest increment this
+/// tick; a solvent budget adds none. An acute shock that bypasses the gradual
+/// food-scarcity damping.
+fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
+    const BLACKOUT_UNREST: i64 = 15;
+    if energy_budget <= Fixed::ZERO {
+        BLACKOUT_UNREST
+    } else {
+        0
+    }
+}
+
+/// The economic focus a civilization tends toward, from its strongest sector.
+fn candidate_economic_focus(
+    food: i64,
+    research_tier: u64,
+    belief: u64,
+    treasury_total: i64,
+) -> EconomicFocus {
+    let agr = food;
+    let ind = (research_tier as i64) * 50_000;
+    let sac = (belief / 4) as i64;
+    let mer = treasury_total / 4;
+    let max = agr.max(ind).max(sac).max(mer);
+    if max <= 0 {
+        return EconomicFocus::Balanced;
+    }
+    if max == agr {
+        EconomicFocus::Agrarian
+    } else if max == ind {
+        EconomicFocus::Industrial
+    } else if max == sac {
+        EconomicFocus::Sacred
+    } else {
+        EconomicFocus::Mercantile
+    }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): research raises production yield —
+/// better tools/techniques lift per-building output. +10% per research tier,
+/// capped at +100% (2x). De-silos phase_production, which read no emergent state.
+fn production_yield_factor(research_tier: u64) -> Fixed {
+    let bonus_permille = research_tier.saturating_mul(100).min(1_000) as i64;
+    Fixed::from_num(1_000 + bonus_permille) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): social cohesion speeds military
+/// morale recovery — a unified society's troops rally faster. Returns the
+/// per-tick morale recovery increment, rising with cohesion from a 0.010 base
+/// up to a 0.050 cap.
+fn morale_recovery_rate(cohesion: u64) -> Fixed {
+    const BASE_PERMILLE: i64 = 10;
+    const CAP_PERMILLE: i64 = 50;
+    let bonus = (cohesion / 25_000).min((CAP_PERMILLE - BASE_PERMILLE) as u64) as i64;
+    Fixed::from_num(BASE_PERMILLE + bonus) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): overcrowding breeds unrest
+/// (Malthusian pressure). Population beyond the carrying capacity adds unrest
+/// scaled by the percentage overshoot (10% over => +1), capped per tick. A
+/// third unrest driver alongside food scarcity and energy blackout.
+fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
+    const MAX_OVERCROWD_UNREST: i64 = 30;
+    let cap = capacity.max(1) as u64;
+    if population <= cap {
+        return 0;
+    }
+    let overshoot_pct = ((population - cap).saturating_mul(100) / cap).min(i64::MAX as u64) as i64;
+    (overshoot_pct / 10).clamp(1, MAX_OVERCROWD_UNREST)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): social cohesion accelerates
+/// research — a unified society collaborates. Returns a per-mille bonus to the
+/// per-tick research contribution, up to +50%.
+fn cohesion_research_bonus_permille(cohesion: u64) -> u64 {
+    (cohesion / 2_000).min(500)
+}
+
+/// The wealth gap (in whole currency units) between the richest and poorest
+/// faction — an emergent measure of structural inequality across the society.
+fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
+    let mut min = i64::MAX;
+    let mut max = i64::MIN;
+    for t in treasury.values() {
+        let v = t.raw / crate::SCALE;
+        min = min.min(v);
+        max = max.max(v);
+    }
+    if max >= min {
+        max - min
+    } else {
+        0
+    }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): structural inequality breeds class
+/// unrest. A wide wealth gap between factions adds unrest scaled by the gap,
+/// capped per tick. Distinct from scarcity — this is about distribution.
+fn inequality_unrest(treasury_spread: i64) -> i64 {
+    const MAX_INEQUALITY_UNREST: i64 = 25;
+    const SPREAD_PER_UNREST: i64 = 2_000;
+    (treasury_spread / SPREAD_PER_UNREST).clamp(0, MAX_INEQUALITY_UNREST)
+}
+
+/// The dispossessed share (per-mille) that a society TENDS TOWARD given its
+/// wealth gap and social fabric: inequality pushes it up, cohesion pulls it
+/// down. Clamped to [0, 1000].
+fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
+    const SPREAD_PER_PERMILLE: i64 = 200; // currency-units of gap per +1 permille
+    let from_inequality = (treasury_spread.max(0) / SPREAD_PER_PERMILLE) as u64;
+    let from_cohesion = cohesion / 5_000; // cohesion erodes dispossession
+    from_inequality.saturating_sub(from_cohesion).min(1_000)
+}
+
+/// Max institution level (criticality cap on the belief->temple->belief loop).
+pub const MAX_INSTITUTION_LEVEL: u32 = 5;
+
+/// Institution level that a driver signal supports: one level per THRESHOLD of
+/// the signal, capped at MAX_INSTITUTION_LEVEL.
+fn institution_target_level(signal: u64, per_level: u64) -> u32 {
+    (signal / per_level.max(1)).min(MAX_INSTITUTION_LEVEL as u64) as u32
+}
+
+/// One-step decay toward target (max 1 level change per tick, so growth/decay
+/// is gradual — hysteresis).
+fn institution_step(current: u32, target: u32) -> u32 {
+    if target > current {
+        current + 1
+    } else if target < current {
+        current - 1
+    } else {
+        current
+    }
+}
+
+/// One sticky step of the dispossessed share toward its target (max 5 permille
+/// per tick), so the class structure persists rather than tracking instantly.
+fn dispossession_step(current: u64, target: u64) -> u64 {
+    const MAX_STEP: u64 = 5;
+    if target > current {
+        (current + MAX_STEP.min(target - current)).min(1_000)
+    } else {
+        current - MAX_STEP.min(current - target)
+    }
+}
+
+/// A large dispossessed underclass adds unrest, scaled by its share, capped.
+fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
+    (dispossessed_permille / 40).min(25) as i64
+}
+
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// unrest — advanced food logistics (storage, distribution) blunt the
 /// scarcity-driven rise. Only the positive (rising) part is damped; decay is
@@ -2409,6 +2911,60 @@ fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
         return rise;
     }
     let divisor = 1 + research_tier.min(9) as i64;
+    (rise / divisor).max(1)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): research accelerates construction.
+/// Each research tier shortens the build cadence (ticks between expansions),
+/// floored so an advanced civilisation never busy-builds every single tick.
+/// De-silos phase_buildings, which previously read no emergent state.
+fn building_cadence(research_tier: u64) -> u64 {
+    const BASE: u64 = 16;
+    const FLOOR: u64 = 4;
+    BASE.saturating_sub(research_tier.saturating_mul(2)).max(FLOOR)
+}
+
+/// Emergent construction demand (FR-CIV-0100 §3): the built environment responds
+/// to society — crowding drives housing, research drives industry, cohesion
+/// drives commerce, unrest drives civic/governance building. Each in [0,1].
+fn building_demand_signals(
+    population: u64,
+    capacity: i64,
+    cohesion: u64,
+    research_tier: u64,
+    unrest: u64,
+) -> DemandSignals {
+    let cap = capacity.max(1) as f32;
+    DemandSignals {
+        residential: ((population as f32) / cap).clamp(0.0, 1.0),
+        commercial: ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0),
+        industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0),
+        civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0),
+    }
+}
+
+/// Belief units that contribute one unit of cohesion growth per tick.
+const COHESION_BELIEF_DIVISOR: u64 = 200;
+/// Unrest units that fray one unit of cohesion per tick.
+const COHESION_UNREST_DIVISOR: u64 = 50;
+
+/// Emergence policy (FR-CIV-0100 §3): the social fabric's per-tick change is the
+/// balance of belief (binds, scaled gently) against unrest (frays, scaled
+/// harder, so disorder erodes cohesion faster than faith builds it). Returns a
+/// signed delta; the caller floors the running total at zero.
+fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
+    let bind = (belief / COHESION_BELIEF_DIVISOR) as i64;
+    let fray = (unrest / COHESION_UNREST_DIVISOR) as i64;
+    bind - fray
+}
+
+/// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
+/// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.
+fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
+    if rise <= 0 {
+        return rise;
+    }
+    let divisor = 1 + (cohesion / 200).min(9) as i64;
     (rise / divisor).max(1)
 }
 
@@ -2426,6 +2982,35 @@ fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
     let gap = (from_stock - to_stock).max(Fixed::ZERO);
     let normalized = (gap / Fixed::from_num(TRADE_GAP_SCALE)).min(Fixed::from_num(1));
     Fixed::from_num(1) + normalized
+}
+
+/// Floor (per-mille) below which unrest cannot throttle trade — even a society
+/// in turmoil keeps half its commerce moving.
+const UNREST_TRADE_FLOOR_PERMILLE: i64 = 500;
+/// Units of standing unrest that throttle trade by one per-mille.
+const UNREST_PER_TRADE_PERMILLE: u64 = 4;
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): societal unrest
+/// disrupts commerce. Returns a trade-volume factor in `[0.5, 1.0]` — `1.0`
+/// when calm, declining as unrest rises but floored at half so trade never
+/// stops entirely. Makes unrest act on BOTH diplomacy (war) and the economy.
+fn unrest_trade_factor(unrest: u64) -> Fixed {
+    let max_drop = (1_000 - UNREST_TRADE_FLOOR_PERMILLE) as u64;
+    let drop = (unrest / UNREST_PER_TRADE_PERMILLE).min(max_drop) as i64;
+    Fixed::from_num(1_000 - drop) / Fixed::from_num(1_000)
+}
+
+/// Cohesion units that lift trade volume by one per-mille (social trust greases commerce).
+const COHESION_PER_TRADE_PERMILLE: u64 = 4;
+/// Cap on cohesion's trade boost (per-mille above 1.0): at most +50% volume.
+const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
+
+/// Downward-causation policy (FR-CIV-0100 §3): a cohesive society trades MORE —
+/// social trust lowers transaction friction. Returns a factor in [1.0, 1.5],
+/// rising with cohesion, capped so the boost can't run away.
+fn cohesion_trade_factor(cohesion: u64) -> Fixed {
+    let boost = (cohesion / COHESION_PER_TRADE_PERMILLE).min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
+    Fixed::from_num(1_000 + boost) / Fixed::from_num(1_000)
 }
 
 /// Wealth-disparity (in whole currency units) at which two factions clash when
@@ -2822,6 +3407,27 @@ mod tests {
         );
     }
 
+    /// FR-CIV-0100 §3 — a highly cohesive society projects unity: cohesion folds
+    /// into the binding term and raises the war threshold, so a wealth disparity
+    /// that would spark conflict in a fractured society instead yields trade.
+    #[test]
+    fn high_cohesion_biases_diplomacy_toward_peace() {
+        let mut sim = Simulation::with_seed(5);
+        sim.state.tick = 500;
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        let a = ids[500 % ids.len()];
+        let b = ids[(500 + 1) % ids.len()];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(15_000));
+        sim.state.cohesion = 1_000_000;
+        sim.phase_diplomacy();
+        assert_eq!(
+            sim.diplomacy_events().last().expect("a diplomacy event").kind,
+            DiplomacyKind::TradeAgreement,
+            "a highly cohesive society tolerates the disparity and trades"
+        );
+    }
+
     /// FR-CIV-0100 §3 — at/below baseline food price unrest decays (negative delta).
     #[test]
     fn unrest_delta_decays_under_abundance() {
@@ -2837,6 +3443,197 @@ mod tests {
         assert!(mild > 0, "any scarcity raises unrest");
         assert!(severe >= mild, "more scarcity never lowers the rise");
         assert!(severe <= 50, "single-tick rise is capped");
+    }
+
+    /// FR-CIV-0100 §3 — a drained energy budget (blackout) adds unrest; a solvent one does not.
+    #[test]
+    fn energy_scarcity_adds_unrest_only_on_blackout() {
+        assert_eq!(energy_scarcity_unrest(Fixed::from_num(1_000)), 0);
+        assert_eq!(energy_scarcity_unrest(Fixed::ZERO), 15);
+        assert!(energy_scarcity_unrest(Fixed::from_num(-5)) > 0);
+    }
+
+    /// FR-CIV-0100 §3 — overcrowding past carrying capacity breeds unrest, scaled
+    /// by overshoot and capped; at or below capacity it adds none.
+    #[test]
+    fn overcrowding_breeds_unrest_above_capacity() {
+        assert_eq!(overcrowding_unrest(500, 1_000), 0, "under capacity = no unrest");
+        assert_eq!(overcrowding_unrest(1_000, 1_000), 0, "at capacity = no unrest");
+        let mild = overcrowding_unrest(1_100, 1_000);
+        let heavy = overcrowding_unrest(2_000, 1_000);
+        assert!(mild > 0, "overcrowding breeds unrest");
+        assert!(heavy > mild, "more overshoot = more unrest");
+        assert!(overcrowding_unrest(100_000, 1_000) <= 30, "capped per tick");
+    }
+
+    /// FR-CIV-0100 §3 — cohesion boosts the research contribution, capped at +50%.
+    #[test]
+    fn cohesion_boosts_research_contribution() {
+        assert_eq!(cohesion_research_bonus_permille(0), 0);
+        assert!(cohesion_research_bonus_permille(100_000) > 0, "cohesion speeds research");
+        assert_eq!(cohesion_research_bonus_permille(10_000_000), 500, "capped at +50%");
+    }
+
+    /// FR-CIV-0100 §3 — inequality breeds unrest, scaled by the wealth gap, capped.
+    #[test]
+    fn inequality_unrest_scales_with_spread_capped() {
+        assert_eq!(inequality_unrest(0), 0);
+        assert_eq!(inequality_unrest(4_000), 2);
+        assert_eq!(inequality_unrest(1_000_000), 25, "capped per tick");
+    }
+
+    /// FR-CIV-0100 §3 — dispossession target rises with inequality, falls with cohesion.
+    #[test]
+    fn dispossession_target_rises_with_inequality_falls_with_cohesion() {
+        let high_gap = dispossession_target_permille(20_000, 0);
+        let no_gap = dispossession_target_permille(0, 0);
+        assert!(high_gap > no_gap, "inequality pushes dispossession up");
+        let cohesive = dispossession_target_permille(20_000, 10_000_000);
+        assert!(cohesive < high_gap, "cohesion erodes dispossession");
+        assert!(high_gap <= 1_000);
+        assert!(cohesive <= 1_000);
+        assert!(no_gap <= 1_000);
+    }
+
+    /// institution_target_level caps at MAX_INSTITUTION_LEVEL.
+    #[test]
+    fn institution_target_level_caps() {
+        assert_eq!(institution_target_level(0, 1_000), 0);
+        assert_eq!(
+            institution_target_level(1_000_000, 5_000),
+            MAX_INSTITUTION_LEVEL
+        );
+    }
+
+    /// institution_step moves at most one level per tick toward the target.
+    #[test]
+    fn institution_step_moves_one() {
+        assert_eq!(institution_step(0, 5), 1);
+        assert_eq!(institution_step(5, 0), 4);
+        assert_eq!(institution_step(3, 3), 3);
+    }
+
+    /// phase_institutions grows the temple when belief is high.
+    #[test]
+    fn phase_institutions_grows_temple_with_belief() {
+        let mut sim = Simulation::with_seed(1);
+        sim.add_belief(50_000);
+        sim.phase_institutions();
+        assert!(sim.temple_level() >= 1);
+    }
+
+    /// candidate_economic_focus picks the strongest normalized sector; ties -> Balanced.
+    #[test]
+    fn candidate_focus_picks_strongest() {
+        assert_eq!(
+            candidate_economic_focus(1_000_000, 0, 0, 0),
+            EconomicFocus::Agrarian
+        );
+        assert_eq!(
+            candidate_economic_focus(0, 100, 0, 0),
+            EconomicFocus::Industrial
+        );
+        assert_eq!(candidate_economic_focus(0, 0, 0, 0), EconomicFocus::Balanced);
+    }
+
+    /// phase_economic_focus flips only after sustained dominance (hysteresis).
+    #[test]
+    fn economic_focus_has_hysteresis() {
+        let mut sim = Simulation::with_seed(1);
+        assert_eq!(sim.economic_focus(), EconomicFocus::Balanced);
+        sim.state.resources.food = Fixed::from_raw(1_000_000 * crate::SCALE);
+
+        sim.phase_economic_focus();
+        assert_eq!(
+            sim.economic_focus(),
+            EconomicFocus::Balanced,
+            "focus must not flip on the first evaluation"
+        );
+        assert!(sim.state.focus_pressure > 0);
+
+        for _ in 0..4 {
+            sim.phase_economic_focus();
+        }
+        assert_eq!(
+            sim.economic_focus(),
+            EconomicFocus::Agrarian,
+            "focus commits after the hysteresis threshold"
+        );
+        assert_eq!(sim.state.focus_pressure, 0);
+    }
+
+    /// FR-CIV-0100 §3 — dispossessed share moves at most 5 permille per tick.
+    #[test]
+    fn dispossession_step_is_sticky() {
+        assert_eq!(dispossession_step(0, 1_000), 5);
+        assert_eq!(dispossession_step(100, 0), 95);
+        assert_eq!(dispossession_step(50, 50), 50);
+    }
+
+    /// FR-CIV-0100 §3 — dispossession unrest scales with share and caps at 25.
+    #[test]
+    fn dispossession_unrest_scales_and_caps() {
+        assert_eq!(dispossession_unrest(0), 0);
+        assert!(dispossession_unrest(400) > 0);
+        assert!(dispossession_unrest(1_000) <= 25);
+    }
+
+    /// faction_treasury_spread is the richest-minus-poorest gap (0 when empty).
+    #[test]
+    fn faction_treasury_spread_is_rich_minus_poor() {
+        let mut t = HashMap::new();
+        t.insert(1u32, Fixed::from_num(100));
+        t.insert(2u32, Fixed::from_num(900));
+        assert_eq!(faction_treasury_spread(&t), 800);
+        assert_eq!(faction_treasury_spread(&HashMap::new()), 0);
+    }
+
+    /// FR-CIV-0100 §3 — research lifts production yield, monotonically, capped at 2x.
+    #[test]
+    fn production_yield_factor_rises_with_research_capped_at_2x() {
+        assert_eq!(production_yield_factor(0), Fixed::from_num(1));
+        let t1 = production_yield_factor(1);
+        let t10 = production_yield_factor(10);
+        assert!(t1 > Fixed::from_num(1), "research lifts yield");
+        assert!(t10 >= t1, "more research never lowers yield");
+        assert_eq!(production_yield_factor(100), Fixed::from_num(2), "capped at 2x");
+    }
+
+    /// FR-CIV-0100 §3 — cohesion speeds morale recovery, monotonically, 0.01→0.05 cap.
+    #[test]
+    fn morale_recovery_rate_rises_with_cohesion_capped() {
+        assert_eq!(
+            morale_recovery_rate(0),
+            Fixed::from_num(1) / Fixed::from_num(100)
+        );
+        let some = morale_recovery_rate(500_000);
+        let lots = morale_recovery_rate(10_000_000);
+        assert!(some > morale_recovery_rate(0), "cohesion speeds recovery");
+        assert!(lots >= some, "more cohesion never slows recovery");
+        assert_eq!(
+            lots,
+            Fixed::from_num(5) / Fixed::from_num(100),
+            "recovery rate capped at 0.05"
+        );
+    }
+
+    /// research_tier is research_progress / 100_000 (coverage for the accessor).
+    #[test]
+    fn research_tier_divides_progress() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.research_progress = 250_000;
+        assert_eq!(sim.research_tier(), 2);
+    }
+
+    /// try_invoke_divine_power spends belief only when affordable (coverage).
+    #[test]
+    fn try_invoke_divine_power_spends_belief() {
+        let mut sim = Simulation::with_seed(1);
+        sim.add_belief(100);
+        assert!(sim.try_invoke_divine_power(60));
+        assert_eq!(sim.belief(), 40);
+        assert!(!sim.try_invoke_divine_power(1_000));
+        assert_eq!(sim.belief(), 40);
     }
 
     /// FR-CIV-0100 §3 — research damps the scarcity-driven unrest rise (calmer
@@ -2858,6 +3655,56 @@ mod tests {
         assert_eq!(research_unrest_mitigation(40, u64::MAX), 4);
         // Decay (negative delta) passes through untouched.
         assert_eq!(research_unrest_mitigation(-10, 9), -10);
+    }
+
+    /// FR-CIV-0100 §3 — research shortens the build cadence, monotonically, floored at 4.
+    #[test]
+    fn building_cadence_shortens_with_research_floored() {
+        assert_eq!(building_cadence(0), 16);
+        let t1 = building_cadence(1);
+        let t6 = building_cadence(6);
+        assert!(t1 < 16, "research speeds construction");
+        assert!(t6 <= t1, "more research never slows it");
+        assert_eq!(building_cadence(u64::MAX), 4, "cadence never drops below the floor");
+    }
+
+    /// FR-CIV-0100 §3 — construction demand tracks emergent macro state.
+    #[test]
+    fn building_demand_responds_to_state() {
+        let d = building_demand_signals(0, 1_000, 0, 0, 500);
+        assert!(d.civic > 0.0);
+        let d2 = building_demand_signals(0, 1_000, 0, 5, 0);
+        assert!(d2.industrial > 0.0);
+        for signal in [d.residential, d.commercial, d.industrial, d.civic] {
+            assert!((0.0..=1.0).contains(&signal));
+        }
+        for signal in [d2.residential, d2.commercial, d2.industrial, d2.civic] {
+            assert!((0.0..=1.0).contains(&signal));
+        }
+    }
+
+    /// FR-CIV-0100 §3 — cohesion grows when belief outweighs unrest and frays
+    /// when unrest dominates; balanced pressure nets near zero.
+    #[test]
+    fn cohesion_delta_balances_belief_against_unrest() {
+        assert!(cohesion_delta(10_000, 0) > 0, "faith builds the social fabric");
+        assert!(cohesion_delta(0, 10_000) < 0, "unrest frays it");
+        assert_eq!(cohesion_delta(0, 0), 0, "no pressure, no change");
+        // Unrest frays harder than belief binds (smaller divisor), so equal
+        // belief and unrest net negative.
+        assert!(cohesion_delta(1_000, 1_000) < 0, "disorder erodes faster than faith builds");
+    }
+
+    #[test]
+    fn cohesion_unrest_damp_calms_high_cohesion_floored_at_one() {
+        let raw = 40;
+        assert_eq!(cohesion_unrest_damp(raw, 0), raw);
+        let some = cohesion_unrest_damp(raw, 400);
+        let lots = cohesion_unrest_damp(raw, 100_000);
+        assert!(some < raw);
+        assert!(lots <= some);
+        assert!(lots >= 1);
+        assert_eq!(cohesion_unrest_damp(-10, 100_000), -10);
     }
 
     /// phase_unrest floors unrest at zero: a content populace under cheap food
@@ -2905,6 +3752,33 @@ mod tests {
         let calm_belief = calm.belief();
         calm.phase_unrest();
         assert_eq!(calm.belief(), calm_belief, "contentment breeds no faith");
+    }
+
+    /// FR-CIV-0100 §3 — a calm society trades at full volume; unrest throttles
+    /// commerce monotonically down to a 0.5 floor (never stops entirely).
+    #[test]
+    fn unrest_trade_factor_throttles_to_half_floor() {
+        assert_eq!(unrest_trade_factor(0), Fixed::from_num(1));
+        let mild = unrest_trade_factor(400);
+        let heavy = unrest_trade_factor(1_600);
+        assert!(mild < Fixed::from_num(1), "unrest reduces trade");
+        assert!(heavy < mild, "more unrest reduces trade further");
+        assert!(
+            heavy >= Fixed::from_num(1) / Fixed::from_num(2),
+            "trade never drops below the 0.5 floor"
+        );
+        // An extreme unrest saturates exactly at the floor.
+        assert_eq!(unrest_trade_factor(u64::MAX), Fixed::from_num(1) / Fixed::from_num(2));
+    }
+
+    #[test]
+    fn cohesion_trade_factor_boosts_to_capped_ceiling() {
+        assert_eq!(cohesion_trade_factor(0), Fixed::from_num(1));
+        let some = cohesion_trade_factor(400);
+        let lots = cohesion_trade_factor(100_000);
+        assert!(some > Fixed::from_num(1));
+        assert!(lots >= some);
+        assert!(lots <= Fixed::from_num(3) / Fixed::from_num(2));
     }
 
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).
@@ -2961,6 +3835,47 @@ mod tests {
         // Accessors for the emergent scalars remain coherent (no overflow panic
         // reaching here already proves the saturating/bounded math held).
         let _ = (sim.belief(), sim.unrest(), sim.research_tier());
+    }
+
+    /// Empirical criticality check: over a long run the emergent scalars must stay
+    /// BOUNDED (no overflow/panic, belief/cohesion don't grow without limit thanks
+    /// to decay) yet DYNAMIC (the tech tree progresses; state evolves). Heat-death
+    /// (everything frozen at 0) and explosion (unbounded) both fail this.
+    #[test]
+    fn emergence_stays_bounded_and_dynamic_over_5000_ticks() {
+        let mut sim = Simulation::with_seed(20260615);
+        // Seed a wealth disparity so diplomacy/inequality paths can engage.
+        let ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        if ids.len() >= 2 {
+            sim.state.faction_treasury.insert(ids[0], Fixed::from_num(0));
+            sim.state.faction_treasury.insert(ids[1], Fixed::from_num(50_000));
+        }
+        for _ in 0..5_000 {
+            sim.tick();
+        }
+        assert_eq!(sim.state.tick, 5_000);
+        // BOUNDED: belief did not run away to absurd magnitudes (decay holds it).
+        assert!(
+            sim.belief() < 1_000_000_000,
+            "belief must stay bounded by decay"
+        );
+        assert!(
+            sim.cohesion() < 1_000_000_000,
+            "cohesion must stay bounded by decay"
+        );
+        // DYNAMIC: the research-driven tech tree made progress over 5000 ticks.
+        assert!(
+            sim.research_tier() >= 1,
+            "research should advance over a long run"
+        );
+        // Accessors remain coherent (no panic reaching here proves saturating math held).
+        let _ = (
+            sim.unrest(),
+            sim.dispossessed_permille(),
+            sim.temple_level(),
+            sim.garrison_level(),
+            sim.tech_unlocks(),
+        );
     }
 
     #[test]
@@ -3356,6 +4271,32 @@ mod tests {
         );
     }
 
+    /// FR-CIV-EMERGENCE — proportional decay prevents unbounded belief growth.
+    #[test]
+    fn belief_decays_toward_equilibrium() {
+        let mut sim = Simulation::new();
+        sim.add_belief(1_000_000);
+        sim.phase_belief();
+        assert!(
+            sim.belief() < 1_000_000,
+            "decay applied; worship/temple inflow is small at default"
+        );
+    }
+
+    /// FR-CIV-0100 — cohesion decays without reinforcement even when delta is zero.
+    #[test]
+    fn cohesion_decays_without_reinforcement() {
+        let mut sim = Simulation::new();
+        sim.state.cohesion = 1_000_000;
+        sim.state.belief = 0;
+        sim.state.unrest = 0;
+        sim.phase_cohesion();
+        assert!(
+            sim.cohesion() < 1_000_000,
+            "with no belief bind and no unrest fray, only decay acts"
+        );
+    }
+
     /// FR-CIV-EMERGENCE — a divine power spends belief only when affordable;
     /// a failed invocation leaves belief untouched.
     #[test]
@@ -3366,6 +4307,68 @@ mod tests {
         assert_eq!(sim.belief(), 100, "failed invoke leaves belief untouched");
         assert!(sim.try_invoke_divine_power(80), "can afford 80");
         assert_eq!(sim.belief(), 20, "cost deducted on success");
+    }
+
+    /// FR-CIV-0100 — discrete tech unlocks are monotonic in research tier.
+    #[test]
+    fn tech_unlocks_for_tier_is_monotonic() {
+        assert_eq!(tech_unlocks_for_tier(0), 0);
+        assert_eq!(tech_unlocks_for_tier(1), TECH_IRRIGATION);
+        let tier3 = tech_unlocks_for_tier(3);
+        assert!(tier3 & TECH_IRRIGATION != 0);
+        assert!(tier3 & TECH_STORAGE != 0);
+        assert!(tier3 & TECH_METALLURGY != 0);
+        let tier2 = tech_unlocks_for_tier(2);
+        let tier5 = tech_unlocks_for_tier(5);
+        assert_eq!(tier5 & tier2, tier2, "tier 5 is a superset of tier 2");
+    }
+
+    /// FR-CIV-0100 — phase_tech sets unlock bits from tier and never clears them.
+    #[test]
+    fn phase_tech_sets_and_keeps_bits() {
+        let mut sim = Simulation::with_seed(11);
+        sim.state.research_progress = 200_000;
+        sim.phase_tech();
+        assert!(sim.has_tech(TECH_IRRIGATION));
+        assert!(sim.has_tech(TECH_STORAGE));
+        sim.state.research_progress = 0;
+        sim.phase_tech();
+        assert!(sim.has_tech(TECH_IRRIGATION), "bits are monotonic");
+        assert!(sim.has_tech(TECH_STORAGE), "bits are monotonic");
+    }
+
+    /// FR-CIV-0100 — irrigation unlock raises carrying capacity by a flat bonus.
+    #[test]
+    fn irrigation_raises_carrying_capacity() {
+        let mut sim = Simulation::with_seed(13);
+        let without = sim.carrying_capacity();
+        sim.state.tech_unlocks |= TECH_IRRIGATION;
+        let with = sim.carrying_capacity();
+        assert_eq!(with - without, 200_000);
+    }
+
+    /// FR-CIV-0100 — tech tree extends through tier 6 (Writing, Sanitation, Gunpowder).
+    #[test]
+    fn tech_tree_extends_to_gunpowder() {
+        let tier6 = tech_unlocks_for_tier(6);
+        assert!(tier6 & TECH_IRRIGATION != 0);
+        assert!(tier6 & TECH_STORAGE != 0);
+        assert!(tier6 & TECH_METALLURGY != 0);
+        assert!(tier6 & TECH_WRITING != 0);
+        assert!(tier6 & TECH_SANITATION != 0);
+        assert!(tier6 & TECH_GUNPOWDER != 0);
+        let tier3 = tech_unlocks_for_tier(3);
+        assert_eq!(tier3 & TECH_WRITING, 0);
+    }
+
+    /// FR-CIV-0100 — sanitation unlock raises carrying capacity by a flat bonus.
+    #[test]
+    fn sanitation_adds_more_capacity() {
+        let mut sim = Simulation::with_seed(17);
+        let without = sim.carrying_capacity();
+        sim.state.tech_unlocks |= TECH_SANITATION;
+        let with = sim.carrying_capacity();
+        assert_eq!(with - without, 300_000);
     }
 
     /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with
@@ -4072,5 +5075,49 @@ mod tests {
                     .all(|s| !s.is_viable()),
             "stone-only grid must produce zero viable sites"
         );
+    }
+
+    /// FR-CIV-0100 — chronicle records technological breakthroughs when tech bits advance.
+    #[test]
+    fn chronicle_records_tech_breakthroughs() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.research_progress = 200_000;
+        sim.phase_tech();
+        sim.phase_chronicle();
+        assert!(!sim.chronicle().is_empty());
+        assert!(
+            sim.chronicle()
+                .iter()
+                .any(|line| line.contains("technological breakthrough")),
+            "expected a tech breakthrough line"
+        );
+    }
+
+    /// FR-CIV-0100 — chronicle length stays bounded at CHRONICLE_MAX_LEN.
+    #[test]
+    fn chronicle_is_length_capped() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.chronicle = (0..=CHRONICLE_MAX_LEN)
+            .map(|i| format!("filler {i}"))
+            .collect();
+        sim.phase_chronicle();
+        assert!(sim.chronicle().len() <= CHRONICLE_MAX_LEN);
+    }
+
+    /// FR-CIV-0100 — golden-age chronicle lines are deduped via chronicle_age.
+    #[test]
+    fn chronicle_dedups_age() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.cohesion = 60_000;
+        sim.state.belief = 60_000;
+        sim.phase_chronicle();
+        sim.phase_chronicle();
+        assert_eq!(sim.state.chronicle_age, 1);
+        let golden_count = sim
+            .chronicle()
+            .iter()
+            .filter(|line| line.contains("golden age"))
+            .count();
+        assert_eq!(golden_count, 1);
     }
 }

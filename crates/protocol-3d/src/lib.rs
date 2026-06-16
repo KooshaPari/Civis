@@ -928,6 +928,35 @@ pub fn decode_agent_stream_binary(bytes: &[u8]) -> Result<AgentStream, AgentStre
 mod tests {
     use super::*;
 
+    #[test]
+    fn map_build_provenance_preserves_variant() {
+        assert_eq!(
+            map_build_provenance(civ_build::BuildingProvenance::Procedural),
+            BuildingProvenance::Procedural
+        );
+        assert_eq!(
+            map_build_provenance(civ_build::BuildingProvenance::Freehand),
+            BuildingProvenance::Freehand
+        );
+    }
+
+    #[test]
+    fn world_xz_from_fixed_coord_projects_and_preserves_sign() {
+        // Fixed-point WorldCoord -> Bevy world XZ: divide by FIXED_SCALE,
+        // drop Y, and preserve sign (scale is a positive constant).
+        let xz = WorldXZ::from_fixed_coord(&civ_voxel::WorldCoord {
+            x: 1_000_000,
+            y: 7,
+            z: -1_000_000,
+        });
+        assert!(xz.x > 0.0, "positive fixed x maps to positive world x");
+        assert!(xz.z < 0.0, "negative fixed z maps to negative world z");
+
+        let origin = WorldXZ::from_fixed_coord(&civ_voxel::WorldCoord { x: 0, y: 0, z: 0 });
+        assert_eq!(origin.x, 0.0);
+        assert_eq!(origin.z, 0.0);
+    }
+
     /// Covers FR-CIV-PROTO3D-000 — schema version is exposed.
     #[test]
     fn fr_civ_proto3d_000_schema_version_present() {

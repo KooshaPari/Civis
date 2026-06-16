@@ -1613,7 +1613,9 @@ impl Simulation {
     fn phase_research(&mut self) {
         /// People required to produce one unit of research effort per tick.
         const RESEARCH_POP_DIVISOR: u64 = 1_000;
-        let contribution = self.state.population / RESEARCH_POP_DIVISOR;
+        let base = self.state.population / RESEARCH_POP_DIVISOR;
+        let contribution = base
+            .saturating_add(base.saturating_mul(cohesion_research_bonus_permille(self.state.cohesion)) / 1_000);
         self.state.research_progress = self.state.research_progress.saturating_add(contribution);
     }
 
@@ -2478,6 +2480,13 @@ fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
     (overshoot_pct / 10).clamp(1, MAX_OVERCROWD_UNREST)
 }
 
+/// Downward-causation policy (FR-CIV-0100 §3): social cohesion accelerates
+/// research — a unified society collaborates. Returns a per-mille bonus to the
+/// per-tick research contribution, up to +50%.
+fn cohesion_research_bonus_permille(cohesion: u64) -> u64 {
+    (cohesion / 2_000).min(500)
+}
+
 /// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
 /// unrest — advanced food logistics (storage, distribution) blunt the
 /// scarcity-driven rise. Only the positive (rising) part is damped; decay is
@@ -3023,6 +3032,14 @@ mod tests {
         assert!(mild > 0, "overcrowding breeds unrest");
         assert!(heavy > mild, "more overshoot = more unrest");
         assert!(overcrowding_unrest(100_000, 1_000) <= 30, "capped per tick");
+    }
+
+    /// FR-CIV-0100 §3 — cohesion boosts the research contribution, capped at +50%.
+    #[test]
+    fn cohesion_boosts_research_contribution() {
+        assert_eq!(cohesion_research_bonus_permille(0), 0);
+        assert!(cohesion_research_bonus_permille(100_000) > 0, "cohesion speeds research");
+        assert_eq!(cohesion_research_bonus_permille(10_000_000), 500, "capped at +50%");
     }
 
     /// FR-CIV-0100 §3 — research lifts production yield, monotonically, capped at 2x.

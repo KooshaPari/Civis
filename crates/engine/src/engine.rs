@@ -2224,24 +2224,31 @@ impl Simulation {
             return;
         }
 
+        let wood = self.state.resources.wood;
+        let metal = self.state.resources.metal;
         let signals = building_demand_signals(
             self.state.population,
             self.carrying_capacity(),
             self.state.cohesion,
             self.research_tier(),
             self.state.unrest,
-            self.state.resources.metal,
+            wood,
+            metal,
         );
 
         let pending = building_parcel_count(&signals);
         if pending == 0 {
             return;
         }
-        if !building_materials_affordable(
-            self.state.resources.wood,
-            self.state.resources.metal,
-            pending,
-        ) {
+
+        let affordable = building_affordable_parcel_count(wood, metal);
+        if affordable == 0 {
+            return;
+        }
+        let allow = pending.min(affordable);
+        let signals = building_signals_limited(signals, allow);
+        let to_build = building_parcel_count(&signals);
+        if to_build == 0 || !building_materials_affordable(wood, metal, to_build) {
             return;
         }
 
@@ -3505,29 +3512,36 @@ fn building_cadence(research_tier: u64) -> u64 {
 /// Emergent construction demand (FR-CIV-0100 §3): the built environment responds
 /// to society — crowding drives housing, research drives industry, cohesion
 /// drives commerce, unrest drives civic/governance building. Each in [0,1].
+/// All channels are scaled by wood/metal headroom so construction stops when
+/// stockpiles are depleted (FC-3).
 fn building_demand_signals(
     population: u64,
     capacity: i64,
     cohesion: u64,
     research_tier: u64,
     unrest: u64,
+    wood: Fixed,
     metal: Fixed,
 ) -> DemandSignals {
     let cap = capacity.max(1) as f32;
     let cohesion_signal = ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0);
-    // FC-3: reserve one parcel of metal before scoring availability, then quadratic
-    // roll-off so demand falls below the parcel threshold before the next debit.
-    // Steady state: M* = gate * sqrt(threshold / cohesion_signal) + parcel_metal.
-    let metal_units = metal.to_f64() as f32;
-    let reserve = BUILDING_METAL_PER_PARCEL as f32;
-    let effective = (metal_units - reserve).max(0.0);
-    let linear = (effective / BUILDING_COMMERCIAL_METAL_GATE).clamp(0.0, 1.0);
-    let metal_factor = linear * linear;
+    let wood_permille = building_material_headroom_permille(
+        wood,
+        BUILDING_WOOD_PER_PARCEL,
+        BUILDING_MATERIAL_GATE,
+    );
+    let metal_permille = building_material_headroom_permille(
+        metal,
+        BUILDING_METAL_PER_PARCEL,
+        BUILDING_MATERIAL_GATE,
+    );
+    let material_permille = wood_permille.min(metal_permille);
+    let material_factor = material_permille as f32 / 1000.0;
     DemandSignals {
-        residential: ((population as f32) / cap).clamp(0.0, 1.0),
-        commercial: cohesion_signal * metal_factor,
-        industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0),
-        civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0),
+        residential: ((population as f32) / cap).clamp(0.0, 1.0) * material_factor,
+        commercial: cohesion_signal * material_factor,
+        industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0) * material_factor,
+        civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0) * material_factor,
     }
 }
 
@@ -3535,11 +3549,69 @@ fn building_demand_signals(
 const BUILDING_WOOD_PER_PARCEL: i64 = 10;
 /// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
 const BUILDING_METAL_PER_PARCEL: i64 = 5;
-/// Metal stock at which commercial demand reaches full strength (FR-CIV-0100 FC-3).
-/// With quadratic headroom and parcel reserve, steady-state metal is
-/// `gate * sqrt(threshold / cohesion_signal) + BUILDING_METAL_PER_PARCEL`.
-const BUILDING_COMMERCIAL_METAL_GATE: f32 = 500.0;
+/// Stock level (integer units) at which material headroom reaches full strength.
+const BUILDING_MATERIAL_GATE: i64 = 500;
 const FC3_COMMERCIAL_PARCEL_THRESHOLD: f32 = 0.5;
+
+/// FC-3: reserve one parcel, then quadratic roll-off in permille (0..=1000).
+fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_units: i64) -> u64 {
+    let reserve = Fixed::from_num(reserve_units);
+    let effective = stock.saturating_sub(reserve);
+    if effective.raw <= 0 {
+        return 0;
+    }
+    let gate = Fixed::from_num(gate_units);
+    let linear = ((effective.raw as i128) * 1000 / gate.raw.max(1) as i128).min(1000) as u64;
+    linear.saturating_mul(linear) / 1000
+}
+
+/// Parcels fundable from current wood and metal stockpiles (integer division).
+fn building_affordable_parcel_count(wood: Fixed, metal: Fixed) -> usize {
+    let wood_per = Fixed::from_num(BUILDING_WOOD_PER_PARCEL);
+    let metal_per = Fixed::from_num(BUILDING_METAL_PER_PARCEL);
+    let by_wood = if wood_per.raw > 0 {
+        (wood.raw / wood_per.raw) as usize
+    } else {
+        usize::MAX
+    };
+    let by_metal = if metal_per.raw > 0 {
+        (metal.raw / metal_per.raw) as usize
+    } else {
+        usize::MAX
+    };
+    by_wood.min(by_metal)
+}
+
+/// Keeps the highest-priority saturated signals, zeroing the rest.
+fn building_signals_limited(signals: DemandSignals, max_parcels: usize) -> DemandSignals {
+    let mut active = [
+        (0_u8, signals.residential),
+        (1, signals.commercial),
+        (2, signals.industrial),
+        (3, signals.civic),
+    ]
+    .into_iter()
+    .filter(|(_, strength)| *strength > 0.5)
+    .collect::<Vec<_>>();
+    active.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    active.truncate(max_parcels);
+
+    let mut out = DemandSignals {
+        residential: 0.0,
+        commercial: 0.0,
+        industrial: 0.0,
+        civic: 0.0,
+    };
+    for (kind, strength) in active {
+        match kind {
+            0 => out.residential = strength,
+            1 => out.commercial = strength,
+            2 => out.industrial = strength,
+            _ => out.civic = strength,
+        }
+    }
+    out
+}
 
 /// FC-3 metal steady-state ceiling (integer metal units) for a cohesion level.
 /// Includes two parcel debits of headroom for discrete cadence oscillation.
@@ -3548,7 +3620,7 @@ fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
     if cohesion_signal <= FC3_COMMERCIAL_PARCEL_THRESHOLD {
         return i64::MAX;
     }
-    let m_star = BUILDING_COMMERCIAL_METAL_GATE
+    let m_star = (BUILDING_MATERIAL_GATE as f32)
         * (FC3_COMMERCIAL_PARCEL_THRESHOLD / cohesion_signal).sqrt();
     (m_star + (BUILDING_METAL_PER_PARCEL as f32) * 2.0).ceil() as i64
 }
@@ -4665,10 +4737,11 @@ mod tests {
     /// FR-CIV-0100 §3 — construction demand tracks emergent macro state.
     #[test]
     fn building_demand_responds_to_state() {
+        let ample_wood = Fixed::from_num(1_000);
         let ample_metal = Fixed::from_num(1_000);
-        let d = building_demand_signals(0, 1_000, 0, 0, 500, ample_metal);
+        let d = building_demand_signals(0, 1_000, 0, 0, 500, ample_wood, ample_metal);
         assert!(d.civic > 0.0);
-        let d2 = building_demand_signals(0, 1_000, 0, 5, 0, ample_metal);
+        let d2 = building_demand_signals(0, 1_000, 0, 5, 0, ample_wood, ample_metal);
         assert!(d2.industrial > 0.0);
         for signal in [d.residential, d.commercial, d.industrial, d.civic] {
             assert!((0.0..=1.0).contains(&signal));
@@ -4678,13 +4751,17 @@ mod tests {
         }
         let cohesion = 1_000_000u64;
         let low_metal = Fixed::from_num(100);
-        let d_low = building_demand_signals(0, 1_000, cohesion, 0, 0, low_metal);
-        let d_high = building_demand_signals(0, 1_000, cohesion, 0, 0, ample_metal);
+        let d_low = building_demand_signals(0, 1_000, cohesion, 0, 0, ample_wood, low_metal);
+        let d_high = building_demand_signals(0, 1_000, cohesion, 0, 0, ample_wood, ample_metal);
         assert!(d_low.commercial < 0.5, "low metal must suppress commercial parcels");
         assert!(d_high.commercial > 0.5, "ample metal allows commercial parcels");
-        assert_eq!(d_low.residential, d_high.residential);
-        assert_eq!(d_low.industrial, d_high.industrial);
-        assert_eq!(d_low.civic, d_high.civic);
+        let low_wood = Fixed::from_num(100);
+        let d_low_wood =
+            building_demand_signals(500, 1_000, cohesion, 5, 500, low_wood, ample_metal);
+        assert!(
+            d_low_wood.residential < 0.5,
+            "low wood must suppress residential parcels"
+        );
     }
 
     /// FR-CIV-0100 FC-3 — commercial demand gated by metal stock; loop cannot run away.
@@ -4726,11 +4803,54 @@ mod tests {
             sim.state.cohesion,
             sim.research_tier(),
             sim.state.unrest,
+            sim.state.resources.wood,
             sim.state.resources.metal,
         );
         assert!(
             signals.commercial <= FC3_COMMERCIAL_PARCEL_THRESHOLD,
             "residual metal must throttle commercial demand below parcel threshold"
+        );
+    }
+
+    /// FR-CIV-0100 FC-3 — `building_graph` size plateaus under sustained high cohesion.
+    #[test]
+    fn building_graph_bounded_under_sustained_high_cohesion() {
+        let mut sim = Simulation::with_seed(12026);
+        sim.state.cohesion = 1_000_000;
+        sim.state.unrest = 500;
+        sim.state.population = 500;
+        sim.state.resources.wood = Fixed::from_num(800);
+        sim.state.resources.metal = Fixed::from_num(800);
+        let cadence = building_cadence(sim.research_tier());
+
+        let mut plateau_ticks = 0_u64;
+        let mut last_len = sim.building_graph.parcels.len();
+        let mut peak = last_len;
+
+        for tick in 0..1200_u64 {
+            sim.state.tick = tick;
+            if tick % cadence == 0 {
+                sim.phase_buildings();
+            }
+            let len = sim.building_graph.parcels.len();
+            peak = peak.max(len);
+            if len == last_len {
+                plateau_ticks = plateau_ticks.saturating_add(1);
+            } else {
+                plateau_ticks = 0;
+            }
+            last_len = len;
+        }
+
+        let final_len = sim.building_graph.parcels.len();
+        assert!(final_len > 0, "some construction expected under high cohesion");
+        assert!(
+            final_len < 120,
+            "building_graph must not grow without limit (final={final_len}, peak={peak})"
+        );
+        assert!(
+            plateau_ticks >= 200,
+            "graph size should plateau for many ticks (plateau_ticks={plateau_ticks})"
         );
     }
 

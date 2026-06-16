@@ -1149,4 +1149,52 @@ mod tests {
             assert!((0.0..=1.0).contains(&e.severity));
         }
     }
+
+    #[test]
+    fn game_events_empty_inputs_yield_no_lifecycle_events() {
+        let sim = Simulation::with_seed(7);
+        let events = game_events(&sim, &[], &[], &[], &[], &[], &[]);
+        assert!(
+            events
+                .iter()
+                .all(|e| !["birth", "death", "disaster"].contains(&e.kind.as_str()))
+        );
+    }
+
+    #[test]
+    fn game_events_emits_one_birth_and_one_death() {
+        let sim = Simulation::with_seed(7);
+        let births = vec![PopulationPulse {
+            tick: 5,
+            entity_id: 1,
+            x: 0.22,
+            y: 0.24,
+        }];
+        let deaths = vec![PopulationPulse {
+            tick: 6,
+            entity_id: 2,
+            x: 0.5,
+            y: 0.5,
+        }];
+        let events = game_events(&sim, &births, &deaths, &[], &[], &[], &[]);
+        assert_eq!(events.iter().filter(|e| e.kind == "birth").count(), 1);
+        assert_eq!(events.iter().filter(|e| e.kind == "death").count(), 1);
+        let birth = events.iter().find(|e| e.kind == "birth").unwrap();
+        assert!(birth.faction_id.is_some());
+    }
+
+    #[test]
+    fn game_events_emits_one_disaster_event() {
+        let sim = Simulation::with_seed(7);
+        let disasters = vec![DisasterEvent {
+            tick: 1000,
+            kind: "Earthquake".to_string(),
+            x: 0.5,
+            y: 0.5,
+            radius: 0.18,
+            severity: 0.55,
+        }];
+        let events = game_events(&sim, &[], &[], &[], &disasters, &[], &[]);
+        assert_eq!(events.iter().filter(|e| e.kind == "disaster").count(), 1);
+    }
 }

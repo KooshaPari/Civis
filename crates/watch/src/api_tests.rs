@@ -1576,3 +1576,22 @@ async fn post_control_mods_publish_rejects_non_mods_source() {
     let json = body_json(response).await;
     assert_eq!(json["ok"], false);
 }
+
+#[tokio::test]
+async fn post_control_mods_reload_rejects_unknown_mod() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/reload")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"mod_id":"definitely-not-loaded-xyz"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}

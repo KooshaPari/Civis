@@ -303,6 +303,18 @@ mod tests {
         assert_eq!(stocks.get(Good::Water), 0);
     }
 
+    #[test]
+    fn production_and_consumption_getters_return_profile_rates() {
+        let production = [10i64, 2, 3, 4, 5];
+        let consumption = [1i64, 6, 0, 0, 2];
+        let profile = ProductionProfile::new(production, consumption);
+
+        for (i, good) in GOODS.iter().enumerate() {
+            assert_eq!(profile.production(*good), production[i]);
+            assert_eq!(profile.consumption(*good), consumption[i]);
+        }
+    }
+
     /// FR-CIV-LIFE-021: surplus and deficit signs reflect net flow against stock.
     #[test]
     fn surplus_and_deficit_signs_are_correct() {

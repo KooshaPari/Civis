@@ -3029,4 +3029,43 @@ mod tests {
         assert!(parse_replay_path(Some(&json!({}))).is_err());
         assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
     }
+
+    #[test]
+    fn parse_sim_command_action_maps_noop_tick() {
+        use serde_json::json;
+        assert!(matches!(
+            parse_sim_command_action(Some(&json!({"action":"noop"}))),
+            Some(SimCommandAction::Noop)
+        ));
+        assert!(matches!(
+            parse_sim_command_action(Some(&json!({"action":"tick"}))),
+            Some(SimCommandAction::Tick)
+        ));
+        assert!(parse_sim_command_action(Some(&json!({"action":"bogus"}))).is_none());
+        assert!(parse_sim_command_action(Some(&json!({}))).is_none());
+        assert!(parse_sim_command_action(None).is_none());
+    }
+
+    #[test]
+    fn spawn_entity_kind_wire_labels() {
+        assert_eq!(SpawnEntityKind::Civilian.wire_label(), "civilian");
+        assert_eq!(SpawnEntityKind::Vehicle.wire_label(), "vehicle");
+        assert_eq!(SpawnEntityKind::Airport.wire_label(), "airport");
+        assert_eq!(SpawnEntityKind::Port.wire_label(), "port");
+        assert_eq!(SpawnEntityKind::Hangar.wire_label(), "hangar");
+    }
+
+    #[test]
+    fn set_sim_command_tick_inserts_tick_into_object_result() {
+        use serde_json::json;
+        let mut resp = JsonRpcResponse::success(RequestId::Null, json!({"status":"ok"}));
+        set_sim_command_tick(&mut resp, 99);
+        assert_eq!(
+            resp.result.as_ref().unwrap().get("tick").unwrap(),
+            &json!(99)
+        );
+        let mut resp2 = JsonRpcResponse::success(RequestId::Null, json!("plain-string"));
+        set_sim_command_tick(&mut resp2, 5);
+        assert_eq!(resp2.result.as_ref().unwrap(), &json!("plain-string"));
+    }
 }

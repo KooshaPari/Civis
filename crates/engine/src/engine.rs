@@ -442,6 +442,16 @@ pub struct WorldState {
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
+    /// Sustained [`DiplomacyKind::TradeAgreement`] count per canonical faction pair
+    /// (N4 — diplomacy births emergent routes). `#[serde(default)]` keeps older saves loadable.
+    #[serde(default)]
+    pub faction_trade_agreement_streak: BTreeMap<(u32, u32), u32>,
+    /// Keys of routes born via N4 emergence (not bootstrap triangle). Used for idle decay.
+    #[serde(default)]
+    pub emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
+    /// Consecutive ticks without flow per emergent route key (N4 idle decay).
+    #[serde(default)]
+    pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     /// Pairwise faction relations in `[-1.0, 1.0]` (alliance .. rivalry). EMERGES from
     /// trade/conflict history in [`Simulation::phase_diplomacy`] and biases future
     /// diplomacy thresholds. `#[serde(default)]` keeps older saves loadable.
@@ -587,6 +597,9 @@ impl Default for WorldState {
                     volume: Fixed::from_num(8),
                 },
             ],
+            faction_trade_agreement_streak: BTreeMap::new(),
+            emergent_trade_route_keys: BTreeSet::new(),
+            trade_route_idle_ticks: BTreeMap::new(),
             faction_relations: DiplomacyMatrix::default(),
             polities: BTreeMap::new(),
             resources: Resources::default(),
@@ -2923,8 +2936,42 @@ impl Simulation {
                         ..Default::default()
                     },
                 );
+                reset_trade_agreement_streak(&mut self.state.faction_trade_agreement_streak, a, b);
+                remove_emergent_routes_between(&mut self.state, a, b);
             }
             DiplomacyKind::Peace => {}
+        }
+        if kind == DiplomacyKind::TradeAgreement {
+            record_trade_agreement_streak(&mut self.state.faction_trade_agreement_streak, a, b);
+            // N4: read relation + streak before mutably borrowing trade_routes (E0502).
+            let pair = canonical_faction_pair(a, b);
+            let streak = self
+                .state
+                .faction_trade_agreement_streak
+                .get(&pair)
+                .copied()
+                .unwrap_or(0);
+            let relation = self.faction_relation(a, b);
+            let goods = emergent_route_goods(a);
+            let route_key = (a, b, goods.to_string());
+            let already_exists = self.state.trade_routes.iter().any(|route| {
+                route.from_faction == a && route.to_faction == b && route.goods == goods
+            });
+            let at_cap = self.state.trade_routes.len() >= MAX_TRADE_ROUTES;
+            let should_birth = !at_cap
+                && !already_exists
+                && streak >= TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD
+                && relation >= TRADE_ROUTE_MIN_RELATION;
+            if should_birth {
+                self.state.trade_routes.push(TradeRoute {
+                    from_faction: a,
+                    to_faction: b,
+                    goods: goods.to_string(),
+                    volume: Fixed::from_num(8),
+                });
+                self.state.emergent_trade_route_keys.insert(route_key.clone());
+                self.state.trade_route_idle_ticks.insert(route_key, 0);
+            }
         }
         decay_faction_relations(
             &mut self.state.faction_relations,
@@ -3021,6 +3068,7 @@ impl Simulation {
         let unrest_factor = unrest_trade_factor(self.state.unrest);
         let society_factor =
             society_trade_factor(self.state.cohesion, self.state.micro_trust_permille);
+        let mut flowed_keys: BTreeSet<(u32, u32, String)> = BTreeSet::new();
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
                 continue;
@@ -3055,6 +3103,13 @@ impl Simulation {
                 * society_factor
                 * relation_factor;
             let quantity = boosted.min(available);
+            if quantity > Fixed::ZERO {
+                flowed_keys.insert((
+                    route.from_faction,
+                    route.to_faction,
+                    route.goods.clone(),
+                ));
+            }
             {
                 let from_resources = self
                     .state
@@ -3095,6 +3150,7 @@ impl Simulation {
                 *to_treasury -= profit;
             }
         }
+        decay_idle_emergent_trade_routes(&mut self.state, &flowed_keys);
     }
 
     /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
@@ -4056,6 +4112,97 @@ fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
                 },
             );
         }
+    }
+}
+
+/// Sustained [`DiplomacyKind::TradeAgreement`] events before an emergent route is born.
+const TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD: u32 = 2;
+/// Minimum pairwise relation score required to birth an emergent route.
+const TRADE_ROUTE_MIN_RELATION: f32 = 0.0;
+/// Hard cap on total trade routes (bootstrap + emergent) to bound memory and tick cost.
+const MAX_TRADE_ROUTES: usize = 64;
+/// Ticks without resource flow before an emergent route is removed.
+const TRADE_ROUTE_UNUSED_DECAY_TICKS: u32 = 2_000;
+
+fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
+/// Deterministic goods label from exporter faction id (stable, integer-only).
+fn emergent_route_goods(from: u32) -> &'static str {
+    match from % 3 {
+        0 => "grain",
+        1 => "ore",
+        _ => "cloth",
+    }
+}
+
+fn record_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
+    let pair = canonical_faction_pair(a, b);
+    *streak.entry(pair).or_default() += 1;
+}
+
+fn reset_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
+    streak.remove(&canonical_faction_pair(a, b));
+}
+
+fn remove_emergent_routes_between(state: &mut WorldState, a: u32, b: u32) {
+    let to_remove: Vec<(u32, u32, String)> = state
+        .emergent_trade_route_keys
+        .iter()
+        .filter(|(from, to, _)| {
+            (*from == a && *to == b) || (*from == b && *to == a)
+        })
+        .cloned()
+        .collect();
+    for key in &to_remove {
+        state.emergent_trade_route_keys.remove(key);
+        state.trade_route_idle_ticks.remove(key);
+    }
+    state.trade_routes.retain(|route| {
+        let key = (
+            route.from_faction,
+            route.to_faction,
+            route.goods.clone(),
+        );
+        !to_remove.contains(&key)
+    });
+}
+
+fn decay_idle_emergent_trade_routes(
+    state: &mut WorldState,
+    flowed: &BTreeSet<(u32, u32, String)>,
+) {
+    let emergent: Vec<(u32, u32, String)> = state.emergent_trade_route_keys.iter().cloned().collect();
+    let mut to_remove = Vec::new();
+    for key in emergent {
+        if flowed.contains(&key) {
+            state.trade_route_idle_ticks.insert(key.clone(), 0);
+            continue;
+        }
+        let idle = state.trade_route_idle_ticks.entry(key.clone()).or_insert(0);
+        *idle = idle.saturating_add(1);
+        if *idle >= TRADE_ROUTE_UNUSED_DECAY_TICKS {
+            to_remove.push(key);
+        }
+    }
+    for key in &to_remove {
+        state.emergent_trade_route_keys.remove(key);
+        state.trade_route_idle_ticks.remove(key);
+    }
+    if !to_remove.is_empty() {
+        state.trade_routes.retain(|route| {
+            let key = (
+                route.from_faction,
+                route.to_faction,
+                route.goods.clone(),
+            );
+            !to_remove.contains(&key)
+        });
     }
 }
 
@@ -6332,6 +6479,52 @@ mod tests {
         assert!(
             sim.faction_relation(a, b) > 0.0,
             "peer trade history should raise the pair relation above neutral"
+        );
+    }
+
+    /// N4 — sustained TradeAgreement between two factions births an emergent trade route.
+    #[test]
+    fn sustained_trade_agreement_births_emergent_trade_route() {
+        let mut sim = Simulation::with_seed(42);
+        sim.state.trade_routes.clear();
+        sim.state.belief = 0;
+        sim.state.cohesion = 0;
+        sim.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let a = faction_ids[0];
+        let b = faction_ids[1];
+        sim.state.faction_treasury.insert(a, Fixed::from_num(5_000));
+        sim.state.faction_treasury.insert(b, Fixed::from_num(5_000));
+
+        let init_count = sim.state.trade_routes.len();
+        assert_eq!(init_count, 0, "bootstrap routes cleared for emergence proof");
+
+        // Ticks 1500 and 3000 pair factions (0, 1) with three sorted factions.
+        for tick in [1_500_u64, 3_000_u64] {
+            sim.state.tick = tick;
+            sim.phase_diplomacy();
+        }
+
+        let goods = emergent_route_goods(a);
+        let born = sim.state.trade_routes.iter().any(|route| {
+            route.from_faction == a
+                && route.to_faction == b
+                && route.goods == goods
+                && route.volume > Fixed::ZERO
+        });
+        assert!(
+            born,
+            "sustained TradeAgreement should birth a directed emergent route \
+             (from={a}, to={b}, goods={goods})"
+        );
+        assert!(
+            sim.state.emergent_trade_route_keys.contains(&(a, b, goods.to_string())),
+            "born route should be tracked as emergent"
+        );
+        assert!(
+            sim.state.trade_routes.len() <= MAX_TRADE_ROUTES,
+            "route count must stay bounded"
         );
     }
 

@@ -1539,6 +1539,15 @@ impl Simulation {
         self.state.belief = self.state.belief.saturating_add(amount);
     }
 
+    /// Add `amount` to accumulated cohesion. Signed to match the existing
+    /// `cohesion_delta` contract: positive binds the social fabric, negative
+    /// frays it. Floored at zero so a negative amount can never push the
+    /// field below the natural `phase_cohesion` floor.
+    pub(crate) fn add_cohesion(&mut self, amount: i64) {
+        let next = (self.state.cohesion as i64).saturating_add(amount);
+        self.state.cohesion = next.max(0) as u64;
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -3821,6 +3830,25 @@ fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
     bind - fray
 }
 
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: each lineage crossing the sentience
+/// threshold this tick mints a small bounded pulse of cohesion (shared
+/// identity — "we are the people who woke"). Kept SMALL relative to the
+/// existing cohesion bind/frac inputs so the moment of awakening nudges
+/// the social fabric without dominating it; the per-tick cap mirrors the
+/// spirit of [`crate::emergence`] emergence caps.
+pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
+/// Hard per-tick cap on awakening-driven cohesion nudge (signed i64 so the
+/// existing floored-at-zero cohesion mutator absorbs any overshoot cleanly).
+pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
+/// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The
+/// inner product is clamped to the per-tick cap.
+#[must_use]
+pub(crate) fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
+    let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
+    raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
+}
+
 /// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
 /// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.
 fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
@@ -4410,6 +4438,24 @@ fn saga_belief_gain(promoted_count: usize, significance_sum: f32) -> u64 {
     from_promos.saturating_add(from_sig).min(MAX_SAGA_BELIEF_PER_TICK)
 }
 
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: each lineage crossing the sentience
+/// threshold this tick mints a one-shot pulse of belief (awe at the moment
+/// of becoming sentient). Bounded by per-tick awakening count and a hard
+/// per-tick cap so a sudden speciation burst cannot explode faith
+/// (edge-of-chaos invariant).
+pub(crate) const BELIEF_PER_AWAKENING: u64 = 4;
+/// Hard per-tick cap on awakening-driven belief mint.
+pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: u64 = 20;
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
+/// pulse. Saturating mul keeps the inner product safe; the min() then clamps
+/// to the per-tick cap.
+#[must_use]
+pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
+    (awakenings_this_tick as u64)
+        .saturating_mul(BELIEF_PER_AWAKENING)
+        .min(MAX_AWAKENING_BELIEF_PER_TICK)
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -4417,6 +4463,7 @@ fn saga_belief_gain(promoted_count: usize, significance_sum: f32) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::{awakening_belief_gain, awakening_cohesion_gain};
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};
     use civ_agents::{count_civilians, LodTier, Wardrobe};
@@ -6900,6 +6947,123 @@ mod tests {
             sim.state.belief - before_promoted,
             BELIEF_PER_PROMOTION,
             "saga mint scales with promotion count (sig_sum=0 on empty graph)"
+        );
+    }
+
+    /// FR-CIV-GENETICS / FR-CIV-LEGENDS — N7: `awakening_belief_gain` is
+    /// bounded by the per-tick cap, scales linearly below it, and is zero
+    /// when there are no awakenings.
+    #[test]
+    fn awakening_belief_gain_bounded() {
+        assert_eq!(awakening_belief_gain(0), 0, "no awakening -> no belief");
+        assert_eq!(
+            awakening_belief_gain(2),
+            2 * BELIEF_PER_AWAKENING,
+            "two awakenings -> 2 * BELIEF_PER_AWAKENING"
+        );
+        assert_eq!(
+            awakening_belief_gain(100),
+            MAX_AWAKENING_BELIEF_PER_TICK,
+            "huge awakening burst is capped"
+        );
+        // 5 awakenings * 4 = 20, exactly the cap, so still capped to the cap.
+        assert_eq!(
+            awakening_belief_gain(5),
+            MAX_AWAKENING_BELIEF_PER_TICK,
+            "5 awakenings * 4 == cap, still saturated to cap"
+        );
+    }
+
+    /// FR-CIV-GENETICS / FR-CIV-LEGENDS — N7: a sim with at least one
+    /// sentience awakening fires `apply_awakening_coupling` and ends with
+    /// `state.belief` strictly greater than an identical sim with no
+    /// awakenings. Reuses the same belief-test harness as the saga path.
+    #[test]
+    fn awakening_increases_belief() {
+        use civ_genetics::sentience::{SentienceEvent, SentienceThreshold};
+
+        // No awakenings: last_sentience empty -> no mint.
+        let mut sim_none = Simulation::with_seed(7);
+        sim_none.state.belief = 0;
+        sim_none.emergence.last_sentience.clear();
+        sim_none.emergence.sentience_threshold = SentienceThreshold::new(1.0);
+        let before_none = sim_none.state.belief;
+        sim_none.apply_awakening_coupling();
+        assert_eq!(
+            sim_none.state.belief, before_none,
+            "no awakenings -> no awakening belief mint"
+        );
+
+        // >=1 awakening: inject a synthetic SentienceEvent (matches the wire
+        // path that `emergence_genetics_sentience` populates), then call the
+        // coupling. Belief must strictly increase.
+        let mut sim_woken = Simulation::with_seed(7);
+        sim_woken.state.belief = 0;
+        sim_woken.emergence.last_sentience.clear();
+        sim_woken.emergence.last_sentience.push(SentienceEvent {
+            lineage_id: Some(42),
+            cognition_score: 0.9,
+            threshold: SentienceThreshold::new(0.72),
+            crossed: true,
+        });
+        let before_woken = sim_woken.state.belief;
+        sim_woken.apply_awakening_coupling();
+        assert!(
+            sim_woken.state.belief > before_woken,
+            "a sentience awakening should mint belief (awe -> belief)"
+        );
+        assert_eq!(
+            sim_woken.state.belief - before_woken,
+            BELIEF_PER_AWAKENING,
+            "single awakening mints exactly BELIEF_PER_AWAKENING"
+        );
+        assert!(
+            sim_woken.state.belief > sim_none.state.belief,
+            "woken sim must have strictly more belief than the no-awakening sim"
+        );
+    }
+
+    /// FR-CIV-GENETICS / FR-CIV-LEGENDS — N7: many awakenings in one tick do
+    /// not push cohesion past its per-tick cap. The per-tick cap is the
+    /// design-layer clamp on the awakening-driven cohesion pulse.
+    #[test]
+    fn awakening_cohesion_pulse_bounded() {
+        // Many awakenings at the gain-fn level: clamped to the cap.
+        assert_eq!(
+            awakening_cohesion_gain(0),
+            0,
+            "no awakenings -> no cohesion nudge"
+        );
+        assert_eq!(
+            awakening_cohesion_gain(1_000),
+            MAX_AWAKENING_COHESION_PER_TICK,
+            "huge awakening burst is capped at MAX_AWAKENING_COHESION_PER_TICK"
+        );
+        assert!(
+            awakening_cohesion_gain(3) <= MAX_AWAKENING_COHESION_PER_TICK,
+            "per-tick pulse respects the cap"
+        );
+
+        // End-to-end: a sim with many synthetic awakenings, after coupling,
+        // gains at most MAX_AWAKENING_COHESION_PER_TICK cohesion (starting
+        // from zero), proving the cap holds through `add_cohesion`.
+        use civ_genetics::sentience::{SentienceEvent, SentienceThreshold};
+        let mut sim = Simulation::with_seed(7);
+        sim.state.cohesion = 0;
+        sim.emergence.last_sentience.clear();
+        for i in 0..50 {
+            sim.emergence.last_sentience.push(SentienceEvent {
+                lineage_id: Some(1_000 + i),
+                cognition_score: 0.9,
+                threshold: SentienceThreshold::new(0.72),
+                crossed: true,
+            });
+        }
+        sim.apply_awakening_coupling();
+        assert_eq!(
+            sim.state.cohesion,
+            MAX_AWAKENING_COHESION_PER_TICK as u64,
+            "50 awakenings in one tick -> cohesion rises by exactly the per-tick cap"
         );
     }
 

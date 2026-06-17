@@ -224,7 +224,7 @@ impl Simulation {
             .and_then(|id| self.emergence.seed_library.get(id).cloned());
         // Build a geology map on demand (cheap: pure deterministic arithmetic
         // from PlanetConfig; no RNG, no heap beyond the 16-element Vec).
-        let geology_map = civ_planet::GeologyMap::seed(&self.planet);
+        let geology_map = civ_planet::GeologyMap::seed(self.planet());
 
         // Pass 2: resolve the biome-matched seed and insert Dna components.
         for (entity, id, pos_opt) in agents_needing_dna {

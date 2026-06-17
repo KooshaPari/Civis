@@ -8,19 +8,21 @@
 //! policy ("only pixel numbers + entity counts count as evidence") is enforced
 //! by routing every visual claim through this crate.
 //!
-//! Four subcommands are exported as bins:
+//! Five subcommands are exported as bins:
 //!
 //! | Bin | Purpose | Transport |
 //! |-----|---------|-----------|
 //! | `civis-verify` | Launch a windowed Bevy 0.18 client, wait N ticks, capture frame to PNG | Bevy `Screenshot` entity + `save_to_disk` observer |
 //! | `civis-pixels` | Sample RGB grid points on a PNG, emit JSON statistics (mean RGB, pct near-black, pct gray, distinct hue count) | local file (PNG only) |
 //! | `civis-census` | Query entity counts / sim stats via the WS JSON-RPC bridge | civ-server `ws://host:port/ws` |
-//! | `civis-mcp`   | Thin JSON-RPC server exposing `verify`/`pixels`/`census` as MCP-shaped tools | stdin/stdout newline-delimited JSON |
+//! | `civis-dump`   | Validate/diff `CIVIS_DUMP` scene+sim JSON (render-frame regression) | local JSON file or marker-wrapped stdout |
+//! | `civis-mcp`   | Thin JSON-RPC server exposing harness tools as MCP-shaped `tools/call` | stdin/stdout newline-delimited JSON |
 //!
 //! ## Public layout
 //!
 //! - [`pixels`] — pure pixel-statistics functions (no I/O). Unit-tested on
 //!   synthetic images so the gate is deterministic.
+//! - [`dump`] — pure CIVIS_DUMP JSON parse/validate/diff (no Bevy runtime).
 //! - [`census`] — pure JSON-RPC dispatcher + response struct decoders; no
 //!   network — the bin provides the transport.
 //! - [`verify`] — types only (no Bevy runtime); the bin wires Bevy.
@@ -38,6 +40,7 @@
 
 pub mod census;
 pub mod config;
+pub mod dump;
 pub mod pixels;
 
 #[cfg(feature = "bevy")]

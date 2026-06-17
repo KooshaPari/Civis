@@ -68,6 +68,14 @@ pub fn verify_settle_frames_from_env() -> u32 {
         .unwrap_or(60)
 }
 
+/// Optional override for `civis-dump check --policy` (`headless` | `headful`).
+#[must_use]
+pub fn dump_policy_name_from_env() -> Option<String> {
+    env::var("CIV_DUMP_POLICY")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,6 +1,6 @@
 [package]
 name = "civis-cli"
-description = "Programmatic verification harness for Civis — subcommands verify (Bevy frame capture), pixels (PNG statistics), census (sim snapshot/entity counts over WS JSON-RPC). Gates all future visual claims; agents must not narrate screenshots, only pixel numbers + entity counts count as evidence."
+description = "Programmatic verification harness for Civis — verify (Bevy frame capture), pixels (PNG statistics), census (sim snapshot over WS JSON-RPC), dump (CIVIS_DUMP render-frame regression). Gates visual/scene claims; agents must cite machine numbers not screenshots."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -22,6 +22,10 @@ path = "src/bin/pixels.rs"
 [[bin]]
 name = "civis-census"
 path = "src/bin/census.rs"
+
+[[bin]]
+name = "civis-dump"
+path = "src/bin/dump.rs"
 
 [[bin]]
 name = "civis-mcp"

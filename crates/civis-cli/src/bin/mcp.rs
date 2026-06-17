@@ -26,6 +26,7 @@ use civis_cli::census::{
 };
 use civis_cli::config::{census_config_from_env, load_dotenv};
 use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid};
+use civis_cli::dump::{parse_dump_json, validate_dump, DumpPolicy};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RpcRequest {
@@ -107,6 +108,7 @@ fn handle(req: RpcRequest) -> RpcResponse {
                     { "name": "verify", "description": "Run Bevy frame capture (Bevy feature only). Returns the output path." },
                     { "name": "pixels", "description": "Compute pixel statistics for a PNG file. { path, grid? }" },
                     { "name": "census", "description": "Read sim.status over the civ-server JSON-RPC WS bridge." },
+                    { "name": "dump", "description": "Validate a CIVIS_DUMP JSON file against headless/headful policy. { path, policy? }" },
                 ]
             }),
         ),
@@ -118,6 +120,10 @@ fn handle(req: RpcRequest) -> RpcResponse {
             Some("census") => match block_on(census_tool(&req.params)) {
                 Ok(value) => RpcResponse::success(req.id, value),
                 Err(message) => RpcResponse::failure(req.id, -32603, message),
+            },
+            Some("dump") => match dump_tool(&req.params) {
+                Ok(value) => RpcResponse::success(req.id, value),
+                Err(message) => RpcResponse::failure(req.id, -32602, message),
             },
             Some("verify") => RpcResponse::failure(
                 req.id,
@@ -220,4 +226,27 @@ async fn census_tool(_params: &Value) -> Result<Value, String> {
     let parsed = decode_response(&text).map_err(|err| format!("decode: {err:?}"))?;
     let result = validate_sim_status(&parsed).map_err(|err| format!("validate: {err}"))?;
     serde_json::to_value(result).map_err(|err| format!("serialise: {err}"))
+}
+
+fn dump_tool(params: &Value) -> Result<Value, String> {
+    let path = params
+        .get("arguments")
+        .and_then(|a| a.get("path"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| "missing `path` argument".to_string())?;
+    let policy_name = params
+        .get("arguments")
+        .and_then(|a| a.get("policy"))
+        .and_then(Value::as_str)
+        .unwrap_or("headless");
+    let text = std::fs::read_to_string(path).map_err(|err| format!("read {path}: {err}"))?;
+    let dump = parse_dump_json(&text).map_err(|err| format!("parse: {err}"))?;
+    let policy = DumpPolicy::from_name(policy_name).map_err(|err| format!("policy: {err}"))?;
+    let report = validate_dump(&dump, &policy);
+    Ok(json!({
+        "path": path,
+        "policy": policy_name,
+        "passed": report.passed,
+        "violations": report.violations,
+    }))
 }

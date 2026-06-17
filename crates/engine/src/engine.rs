@@ -1666,6 +1666,11 @@ impl Simulation {
         self.phase_settlement_consumption();
         self.rebuild_agent_id_index();
         self.phase_emergence();
+        // FR-CIV-LEGENDS-001: mint belief from this tick's saga activity
+        // (promoted entities + top-N significance), bounded per tick so a
+        // saga spike cannot explode faith. Runs before `phase_belief` so the
+        // per-tick population/temple inflow sees the updated total.
+        self.apply_saga_belief_gain();
         self.phase_research();
         self.phase_tech();
         self.phase_belief();
@@ -2037,6 +2042,23 @@ impl Simulation {
             .state
             .belief
             .saturating_sub(self.state.belief / BELIEF_DECAY_DIVISOR);
+    }
+
+    /// FR-CIV-LEGENDS-001 — mint belief from this tick's saga significance.
+    /// Called after `phase_emergence` (saga ingest has run) and before
+    /// `phase_belief` so the per-tick population/temple inflow runs on the
+    /// updated total. Additive, bounded by [`MAX_SAGA_BELIEF_PER_TICK`], and
+    /// read-minimal (one pass over the feed + one top-N graph query).
+    pub(crate) fn apply_saga_belief_gain(&mut self) {
+        let promoted_count = self
+            .emergence
+            .last_feed
+            .iter()
+            .filter(|e| e.kind == "legend_promotion")
+            .count();
+        let top = self.emergence.legends.graph.significant(8, None);
+        let sig_sum: f32 = top.iter().map(|e| e.significance.clamp(0.0, 1.0)).sum();
+        self.add_belief(saga_belief_gain(promoted_count, sig_sum));
     }
 
     /// Social-unrest phase (FR-CIV-0100 §3 emergence). Unrest EMERGES from the
@@ -4369,6 +4391,23 @@ pub struct SimulationSnapshot {
     pub settlement_count: u32,
     /// Agents that died of unmet needs this tick — FR-CIV-LIFE-003.
     pub life_deaths_this_tick: u32,
+}
+
+// FR-CIV-LEGENDS-001 — saga significance feeds faith (pure factor, capped).
+/// Belief minted per promoted legend entity (each tick promotes few).
+const BELIEF_PER_PROMOTION: u64 = 3;
+/// Multiplier for the summed top-N significance (each entity in 0..1).
+const BELIEF_SIGNIFICANCE_SCALE: u64 = 5;
+/// Hard per-tick cap so a saga spike cannot explode belief (edge-of-chaos).
+const MAX_SAGA_BELIEF_PER_TICK: u64 = 25;
+
+/// Belief minted per promoted legend + per unit of top-N significance mass.
+/// Bounded by promoted-count (each tick promotes few) and a per-tick cap so
+/// sagas cannot explode belief.
+fn saga_belief_gain(promoted_count: usize, significance_sum: f32) -> u64 {
+    let from_promos = (promoted_count as u64).saturating_mul(BELIEF_PER_PROMOTION);
+    let from_sig = (significance_sum.max(0.0) * BELIEF_SIGNIFICANCE_SCALE as f32) as u64;
+    from_promos.saturating_add(from_sig).min(MAX_SAGA_BELIEF_PER_TICK)
 }
 
 // ============================================================================
@@ -6799,6 +6838,68 @@ mod tests {
         assert!(
             sim.belief() < 1_000_000,
             "decay applied; worship/temple inflow is small at default"
+        );
+    }
+
+    /// FR-CIV-LEGENDS-001 — `saga_belief_gain` is bounded by the per-tick cap
+    /// and zero when there is nothing to mint.
+    #[test]
+    fn saga_belief_gain_bounded_by_cap() {
+        assert_eq!(saga_belief_gain(0, 0.0), 0, "no input -> no belief");
+        assert_eq!(
+            saga_belief_gain(100, 100.0),
+            MAX_SAGA_BELIEF_PER_TICK,
+            "huge input is capped"
+        );
+    }
+
+    /// FR-CIV-LEGENDS-001 — `saga_belief_gain` scales with both inputs.
+    #[test]
+    fn saga_belief_gain_scales_with_promotions() {
+        assert_eq!(saga_belief_gain(2, 0.0), 6, "2 promotions, no significance");
+        assert_eq!(
+            saga_belief_gain(0, 1.0),
+            5,
+            "one max-significance entity -> BELIEF_SIGNIFICANCE_SCALE"
+        );
+    }
+
+    /// FR-CIV-LEGENDS-001 — saga promotions mint belief; a sim with a
+    /// `legend_promotion` feed event strictly increases belief after
+    /// `apply_saga_belief_gain`, while an identical sim with no promotions
+    /// sees no saga contribution. Reuses the belief-test harness seed.
+    #[test]
+    fn saga_promotions_increase_belief_over_ticks() {
+        use crate::emergence::EmergenceFeedEvent;
+        // No saga promotions: empty feed -> no saga belief minted.
+        let mut sim = Simulation::with_seed(7);
+        sim.state.belief = 0;
+        sim.emergence.last_feed.clear();
+        let before_none = sim.state.belief;
+        sim.apply_saga_belief_gain();
+        assert_eq!(
+            sim.state.belief, before_none,
+            "no legend_promotion feed events -> no saga belief mint"
+        );
+
+        // Saga activity that promoted >=1 entity: inject a feed event as if
+        // emergence_legends had produced it this tick, then mint.
+        sim.emergence.last_feed.push(EmergenceFeedEvent {
+            tick: sim.state.tick,
+            kind: "legend_promotion".to_string(),
+            summary: "agent 1 promoted in saga graph (1)".to_string(),
+            agent_id: Some(1),
+        });
+        let before_promoted = sim.state.belief;
+        sim.apply_saga_belief_gain();
+        assert!(
+            sim.state.belief > before_promoted,
+            "a legend_promotion event should mint belief (saga significance -> belief)"
+        );
+        assert_eq!(
+            sim.state.belief - before_promoted,
+            BELIEF_PER_PROMOTION,
+            "saga mint scales with promotion count (sig_sum=0 on empty graph)"
         );
     }
 

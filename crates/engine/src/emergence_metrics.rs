@@ -65,6 +65,9 @@ use crate::engine::{DiplomacyKind, Simulation};
 /// the dashboard polling rate is one easy edit away.
 pub const EMERGENCE_SAMPLE_INTERVAL: u64 = 50;
 
+/// W_nov = 64 ticks — novelty fingerprint window width
+pub const NOVELTY_SAMPLE_INTERVAL: u64 = 64;
+
 /// Default fuse for avalanche size (charter §6 / AC-002).
 pub const DEFAULT_MAX_AVALANCHE_SIZE: u64 = 10_000;
 
@@ -200,6 +203,12 @@ pub struct EmergenceSample {
     /// is non-finite. A true power-law society yields `α ≈ 2..3`.
     #[serde(default)]
     pub power_law_alpha: f32,
+    /// Per-capita rate of novel world configurations in the current W_nov
+    /// window (charter §3.4). Computed as
+    /// `new_configs_in_window / W_nov / total_civilians`.
+    /// `0.0` when the world has stabilised (all configs already seen).
+    #[serde(default)]
+    pub novelty_rate: f32,
 }
 
 impl Default for EmergenceSample {
@@ -221,6 +230,7 @@ impl Default for EmergenceSample {
             avalanches_closed: 0,
             branching_regime: BranchingRegime::HeatDeath,
             power_law_alpha: 0.0,
+            novelty_rate: 0.0,
         }
     }
 }
@@ -429,6 +439,49 @@ impl Simulation {
         let (dashboard, power_law_alpha) = compute_dashboard(self);
         let branching = &self.emergence_branching;
 
+        // §3.4 novelty-rate: build a config fingerprint from stable, cheap fields
+        // and track how many novel fingerprints appear per W_nov window.
+        let novelty_rate = {
+            // Count ActorVisual variants (Humanoid=0, Herd=1) from the ECS.
+            let mut humanoid_count: u32 = 0;
+            let mut herd_count: u32 = 0;
+            for (_, av) in self.world.query::<&civ_agents::ActorVisual>().iter() {
+                match av.0 {
+                    civ_agents::ActorVisualKind::Humanoid => humanoid_count += 1,
+                    civ_agents::ActorVisualKind::Herd => herd_count += 1,
+                }
+            }
+            let actor_visual_counts = [humanoid_count, herd_count];
+            let fp = compute_config_fingerprint(
+                histogram_populated_bins,
+                struct_summary.map(|s| s.count as u32).unwrap_or(0),
+                &actor_visual_counts,
+            );
+
+            // Close the window when W_nov ticks have elapsed, then reset.
+            if tick.saturating_sub(self.emergence.novelty_window_start_tick) >= NOVELTY_SAMPLE_INTERVAL {
+                self.emergence.novelty_window_new = 0;
+                self.emergence.novelty_window_start_tick = tick;
+            }
+
+            if self.emergence.seen_config_hashes.insert(fp) {
+                self.emergence.novelty_window_new += 1;
+            }
+
+            let total_civilians: u32 = self
+                .world
+                .query::<&civ_agents::Civilian>()
+                .iter()
+                .count()
+                .try_into()
+                .unwrap_or(u32::MAX);
+
+            let raw = self.emergence.novelty_window_new as f32
+                / NOVELTY_SAMPLE_INTERVAL as f32
+                / total_civilians.max(1) as f32;
+            if raw.is_finite() { raw } else { 0.0 }
+        };
+
         let sample = EmergenceSample {
             tick,
             entropy_bits,
@@ -446,6 +499,7 @@ impl Simulation {
             avalanches_closed: branching.ledger.closed_total(),
             branching_regime: branching.regime,
             power_law_alpha,
+            novelty_rate,
         };
 
         // Single INFO line per sample. The cost budget is ~one log
@@ -501,6 +555,25 @@ impl Simulation {
         );
         true
     }
+}
+
+/// Compute a deterministic u64 fingerprint of the current world configuration
+/// for the novelty-rate metric (charter §3.4).
+///
+/// Hashes (histogram_populated_bins, structure_count, actor_visual_counts) in a
+/// stable order so two identical world snapshots always yield the same hash.
+fn compute_config_fingerprint(
+    histogram_populated_bins: u32,
+    structure_count: u32,
+    actor_visual_counts: &[u32],
+) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut h = DefaultHasher::new();
+    histogram_populated_bins.hash(&mut h);
+    structure_count.hash(&mut h);
+    actor_visual_counts.hash(&mut h);
+    h.finish()
 }
 
 /// Build (histogram, optional structure summary) from a live voxel
@@ -1135,5 +1208,43 @@ mod tests {
             "Zipf-like cluster distribution must yield alpha > 0, got {}",
             s.power_law_alpha
         );
+    }
+
+    /// §3.4: inserting the same fingerprint multiple times keeps the seen-set
+    /// count at 1 (repeated identical config is never novel after the first).
+    #[test]
+    fn novelty_rate_zero_on_repeated_identical_config() {
+        let fp = compute_config_fingerprint(4, 2, &[10, 3]);
+        let mut seen = std::collections::HashSet::<u64>::new();
+        let mut new_count = 0u32;
+        for _ in 0..5 {
+            if seen.insert(fp) {
+                new_count += 1;
+            }
+        }
+        assert_eq!(seen.len(), 1, "same fingerprint must appear only once in the set");
+        assert_eq!(new_count, 1, "only the first insertion is novel");
+    }
+
+    /// §3.4: distinct fingerprints each increment the seen-set and novelty count.
+    #[test]
+    fn novelty_rate_positive_on_new_configs() {
+        let fps = [
+            compute_config_fingerprint(2, 1, &[5, 0]),
+            compute_config_fingerprint(4, 3, &[8, 2]),
+            compute_config_fingerprint(6, 5, &[12, 4]),
+        ];
+        let mut seen = std::collections::HashSet::<u64>::new();
+        let mut new_count = 0u32;
+        for &fp in &fps {
+            if seen.insert(fp) {
+                new_count += 1;
+            }
+        }
+        assert_eq!(new_count, 3, "three distinct configs must all be novel");
+        let total_civilians: u32 = 10;
+        let raw = new_count as f32 / NOVELTY_SAMPLE_INTERVAL as f32 / total_civilians.max(1) as f32;
+        assert!(raw > 0.0, "novelty_rate must be positive when new configs appear; got {raw}");
+        assert!(raw.is_finite(), "novelty_rate must be finite; got {raw}");
     }
 }

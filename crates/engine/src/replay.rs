@@ -113,6 +113,15 @@ pub enum ReplayEvent {
         /// Charter regime label for `branching_sigma`.
         #[serde(default)]
         branching_regime: String,
+        /// Power-law exponent α for the cluster-size distribution (charter §3.5).
+        #[serde(default)]
+        power_law_alpha: f32,
+        /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
+        #[serde(default)]
+        novelty_rate: f32,
+        /// Normalised mutual information between material and faction distributions.
+        #[serde(default)]
+        mi_material_faction_norm: Option<f32>,
         /// Reconstructed `emergence_metrics.v1` JSON on the replay
         /// bus (empty for legacy replay logs).
         #[serde(default)]
@@ -450,6 +459,9 @@ impl ReplayLog {
         branching_sigma: f32,
         branching_sigma_score: f32,
         branching_regime: &str,
+        power_law_alpha: f32,
+        novelty_rate: f32,
+        mi_material_faction_norm: Option<f32>,
     ) {
         let bus_json = format_emergence_metrics_event_json(
             tick,
@@ -461,6 +473,9 @@ impl ReplayLog {
             branching_sigma,
             branching_sigma_score,
             branching_regime,
+            power_law_alpha,
+            novelty_rate,
+            mi_material_faction_norm,
         );
         self.events.push(ReplayEvent::EmergenceMetrics {
             tick,
@@ -472,6 +487,9 @@ impl ReplayLog {
             branching_sigma,
             branching_sigma_score,
             branching_regime: branching_regime.to_string(),
+            power_law_alpha,
+            novelty_rate,
+            mi_material_faction_norm,
             bus_json,
         });
     }
@@ -500,6 +518,9 @@ impl ReplayLog {
                     branching_sigma,
                     branching_sigma_score,
                     branching_regime,
+                    power_law_alpha,
+                    novelty_rate,
+                    mi_material_faction_norm,
                     ..
                 } if *event_tick == tick => Some(format_emergence_metrics_event_json(
                     *event_tick,
@@ -511,6 +532,9 @@ impl ReplayLog {
                     *branching_sigma,
                     *branching_sigma_score,
                     branching_regime,
+                    *power_law_alpha,
+                    *novelty_rate,
+                    *mi_material_faction_norm,
                 )),
                 _ => None,
             })
@@ -736,6 +760,9 @@ fn format_emergence_metrics_event_json(
     branching_sigma: f32,
     branching_sigma_score: f32,
     branching_regime: &str,
+    power_law_alpha: f32,
+    novelty_rate: f32,
+    mi_material_faction_norm: Option<f32>,
 ) -> String {
     serde_json::json!({
         "event": "emergence_metrics.v1",
@@ -749,6 +776,9 @@ fn format_emergence_metrics_event_json(
         "branching_sigma": branching_sigma,
         "branching_sigma_score": branching_sigma_score,
         "branching_regime": branching_regime,
+        "power_law_alpha": power_law_alpha,
+        "novelty_rate": novelty_rate,
+        "mi_material_faction_norm": mi_material_faction_norm,
     })
     .to_string()
 }
@@ -798,7 +828,7 @@ mod tests {
     #[test]
     fn emerg_emerg_003_record_emergence_metrics_emits_bus_event() {
         let mut log = ReplayLog::default();
-        log.record_emergence_metrics(50, 0.5, 0.25, 0.0, 1.0, 0.8, 0.95, 0.71, "Edge of chaos (target)");
+        log.record_emergence_metrics(50, 0.5, 0.25, 0.0, 1.0, 0.8, 0.95, 0.71, "Edge of chaos (target)", 1.8, 0.003, Some(0.42));
         let at_tick = log.emergence_metrics_bus_at_tick(50);
         assert_eq!(at_tick.len(), 1);
         assert!(at_tick[0].contains("\"event\":\"emergence_metrics.v1\""));
@@ -808,6 +838,38 @@ mod tests {
         assert!(at_tick[0].contains("\"psyche_stability\":1.0"));
         assert!(at_tick[0].contains("\"diplomacy_tension\":0.8"));
         assert_eq!(log.emergence_metrics_event_count(), 1);
+    }
+
+    /// Criticality metrics (power_law_alpha, novelty_rate, mi_material_faction_norm)
+    /// are included in the `emergence_metrics.v1` bus JSON.
+    #[test]
+    fn emergence_metrics_bus_json_contains_criticality_keys() {
+        let mut log = ReplayLog::default();
+        log.record_emergence_metrics(
+            10, 0.3, 0.1, 0.5, 0.9, 0.2,
+            0.95, 0.71, "Edge of chaos (target)",
+            2.1, 0.007, Some(0.55),
+        );
+        let at_tick = log.emergence_metrics_bus_at_tick(10);
+        assert_eq!(at_tick.len(), 1);
+        let json = &at_tick[0];
+        assert!(json.contains("\"power_law_alpha\""), "missing power_law_alpha in bus JSON");
+        assert!(json.contains("\"novelty_rate\""), "missing novelty_rate in bus JSON");
+        assert!(json.contains("\"mi_material_faction_norm\""), "missing mi_material_faction_norm in bus JSON");
+    }
+
+    /// mi_material_faction_norm=None serialises as JSON null.
+    #[test]
+    fn emergence_metrics_bus_json_mi_none_is_null() {
+        let mut log = ReplayLog::default();
+        log.record_emergence_metrics(
+            20, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, "Subcritical (heat-death risk)",
+            0.0, 0.0, None,
+        );
+        let at_tick = log.emergence_metrics_bus_at_tick(20);
+        assert_eq!(at_tick.len(), 1);
+        assert!(at_tick[0].contains("\"mi_material_faction_norm\":null"), "None should serialize as null");
     }
 
     /// FR-CIV-EMERG-003: recording the dashboard block does NOT
@@ -829,7 +891,7 @@ mod tests {
         let root_before = log.recompute_running_hash();
         // Record a dashboard event at the boundary; the running_hash
         // must NOT change.
-        log.record_emergence_metrics(50, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, "Subcritical (heat-death risk)");
+        log.record_emergence_metrics(50, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, "Subcritical (heat-death risk)", 0.0, 0.0, None);
         let root_after_record = log.recompute_running_hash();
         assert_eq!(
             root_before, root_after_record,

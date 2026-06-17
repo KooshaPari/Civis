@@ -617,6 +617,18 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
                 serde_json::to_value(dashboard).unwrap_or(Value::Null),
             );
         }
+        emergence_obj.insert(
+            "power_law_alpha".to_owned(),
+            serde_json::json!(emergence.power_law_alpha),
+        );
+        emergence_obj.insert(
+            "novelty_rate".to_owned(),
+            serde_json::json!(emergence.novelty_rate),
+        );
+        emergence_obj.insert(
+            "mi_material_faction_norm".to_owned(),
+            emergence.mi_material_faction_norm.map_or(Value::Null, |v| serde_json::json!(v)),
+        );
         obj.insert("emergence".to_owned(), Value::Object(emergence_obj));
     }
     Value::Object(obj)
@@ -776,6 +788,15 @@ pub struct EmergenceSampleFields {
     pub avalanches_closed: u64,
     /// Charter regime label for `branching_sigma`.
     pub branching_regime: String,
+    /// Power-law exponent α for the cluster-size distribution (charter §3.5).
+    #[serde(default)]
+    pub power_law_alpha: f32,
+    /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
+    #[serde(default)]
+    pub novelty_rate: f32,
+    /// Normalised mutual information between material and faction distributions.
+    #[serde(default)]
+    pub mi_material_faction_norm: Option<f32>,
 }
 
 /// Wire-friendly mirror of
@@ -830,6 +851,9 @@ impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFie
             branching_window: s.branching_window,
             avalanches_closed: s.avalanches_closed,
             branching_regime: s.branching_regime.label().to_string(),
+            power_law_alpha: s.power_law_alpha,
+            novelty_rate: s.novelty_rate,
+            mi_material_faction_norm: s.mi_material_faction_norm,
         }
     }
 }
@@ -1985,6 +2009,9 @@ mod tests {
             branching_window: 10,
             avalanches_closed: 4,
             branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 0.0,
+            novelty_rate: 0.0,
+            mi_material_faction_norm: None,
         };
         let plan = dispatch_request(
             req,
@@ -2054,6 +2081,9 @@ mod tests {
             branching_window: 10,
             avalanches_closed: 4,
             branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 0.0,
+            novelty_rate: 0.0,
+            mi_material_faction_norm: None,
         };
         let plan = dispatch_request(
             req,
@@ -3067,5 +3097,92 @@ mod tests {
         let mut resp2 = JsonRpcResponse::success(RequestId::Null, json!("plain-string"));
         set_sim_command_tick(&mut resp2, 5);
         assert_eq!(resp2.result.as_ref().unwrap(), &json!("plain-string"));
+    }
+
+    /// Criticality metrics are carried through From<EmergenceSample> for EmergenceSampleFields.
+    #[test]
+    fn emergence_sample_fields_from_carries_criticality_metrics() {
+        use civ_engine::emergence_metrics::EmergenceSample;
+        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_emergence_metrics::branching::BranchingRegime;
+
+        let sample = EmergenceSample {
+            tick: 1,
+            entropy_bits: 0.0,
+            entropy_norm: 0.0,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 0,
+            histogram_populated_bins: 0,
+            sample_dur_us: 0,
+            dashboard: EmergenceDashboard::default(),
+            branching_sigma: 0.0,
+            branching_sigma_score: 0.0,
+            branching_window: 0,
+            avalanches_closed: 0,
+            branching_regime: BranchingRegime::HeatDeath,
+            power_law_alpha: 1.95,
+            novelty_rate: 0.008,
+            mi_material_faction_norm: Some(0.33),
+        };
+        let fields = EmergenceSampleFields::from(sample);
+        assert!((fields.power_law_alpha - 1.95).abs() < 1e-6, "power_law_alpha mismatch");
+        assert!((fields.novelty_rate - 0.008).abs() < 1e-6, "novelty_rate mismatch");
+        assert_eq!(fields.mi_material_faction_norm, Some(0.33));
+    }
+
+    /// snapshot_result_json includes power_law_alpha, novelty_rate, mi_material_faction_norm
+    /// in the emergence block.
+    #[test]
+    fn snapshot_result_json_emergence_contains_criticality_keys() {
+        let emergence = EmergenceSampleFields {
+            tick: 5,
+            entropy_bits: 0.1,
+            entropy_norm: 0.05,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 100,
+            histogram_populated_bins: 3,
+            sample_dur_us: 10,
+            dashboard: None,
+            branching_sigma: 1.0,
+            branching_sigma_score: 0.5,
+            branching_window: 5,
+            avalanches_closed: 2,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 2.1,
+            novelty_rate: 0.005,
+            mi_material_faction_norm: Some(0.42),
+        };
+        let fields = SnapshotFields {
+            tick: 5,
+            population: 0,
+            building_count: 0,
+            energy_budget: None,
+            market_prices: Default::default(),
+            hash_chain_root: None,
+            speed_multiplier: 1,
+            spectator: None,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate { tick: 5, day_phase: 0.0, year_phase: 0.0, moon_phase: 0.0, tide_offset: 0.0 },
+            emergence: Some(emergence),
+        };
+        let json = snapshot_result_json(&fields);
+        let emerg = json.get("emergence").expect("emergence block");
+        assert!(emerg.get("power_law_alpha").is_some(), "missing power_law_alpha");
+        assert!(emerg.get("novelty_rate").is_some(), "missing novelty_rate");
+        assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
+        let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
+        assert!((mi - 0.42).abs() < 1e-5);
     }
 }

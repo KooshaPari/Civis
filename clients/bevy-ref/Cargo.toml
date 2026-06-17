@@ -140,6 +140,10 @@ audio = ["bevy", "dep:bevy_kira_audio"]
 # `bevy_hanabi` + the `vfx` feature together in a single PR (see
 # `docs/development-guide/fr-vfx.md` TBD).
 vfx = []
+# `pbr-textures` — enable PBR texture asset loading (normal/roughness/AO maps) on
+# top of the base material pipeline (src/materials.rs). OFF by default so CI builds
+# stay fast and texture assets are optional. Enable: `--features pbr-textures`.
+pbr-textures = ["bevy"]
 solari = [
     "bevy",
     "bevy/bevy_solari",

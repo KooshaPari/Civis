@@ -4739,15 +4739,23 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
 /// [`aggregate_biome_yield`] (the same helper that scales food *production* in
 /// `phase_production`, FR-CIV-CONTENT-001) — one authoritative biome-yield
 /// model feeds both the production and capacity couplings (superset-merge, no
-/// parallel weight table). A desert/tundra-heavy planet drops the factor toward
-/// 0.1–0.5; a lush forest/plains planet rises toward ~1.5. Returns
-/// [`Fixed::ONE`] (neutral) for an empty map.
+/// parallel weight table).
 ///
-/// This is the bridge in the **biome → carrying_capacity → food prices →
-/// unrest → emergence** chain.
+/// The raw aggregate yield (range `[0.1, 1.5]`) is **blended halfway toward
+/// neutral** (`(1 + raw) / 2`), giving a gentler capacity factor in
+/// `[0.55, 1.25]`. Rationale: per-farm food *production* can swing hard with
+/// terrain, but a region's total human *carrying capacity* is far less
+/// sensitive (trade, fishing, storage, and non-farm sustenance all buffer it),
+/// so an ocean-heavy world should not collapse to 0.4× headroom. The blend
+/// preserves the monotonic lush > harsh signal that drives the
+/// **biome → carrying_capacity → food prices → unrest → emergence** chain while
+/// keeping baseline population dynamics stable. Returns [`Fixed::ONE`]
+/// (neutral) for an empty map.
 pub(crate) fn biome_capacity_factor(map: &GeologyMap) -> Fixed {
     let biomes: Vec<civ_planet::BiomeKind> = map.regions.iter().map(|r| r.biome).collect();
-    aggregate_biome_yield(&biomes)
+    let raw = aggregate_biome_yield(&biomes);
+    // (1 + raw) / 2 — halfway blend toward neutral 1.0.
+    (Fixed::ONE + raw) / Fixed::from_num(2)
 }
 
 // ============================================================================
@@ -7640,15 +7648,15 @@ mod tests {
     // ------------------------------------------------------------------
 
     /// FR-CIV-0410-a — biome_capacity_factor for a default (Earth-like) planet
-    /// is within the clamped band [0.1, 1.5] (the shared aggregate_biome_yield band).
+    /// sits in the blended band [0.55, 1.25] (raw [0.1,1.5] blended halfway to 1.0).
     #[test]
     fn biome_capacity_factor_in_band() {
         let (planet, _moon) = civ_planet::defaults_earthlike();
         let map = GeologyMap::seed(&planet);
         let factor = biome_capacity_factor(&map).to_f64();
         assert!(
-            (0.1..=1.5).contains(&factor),
-            "factor {factor} outside clamped band [0.1, 1.5]"
+            (0.55..=1.25).contains(&factor),
+            "factor {factor} outside blended band [0.55, 1.25]"
         );
     }
 

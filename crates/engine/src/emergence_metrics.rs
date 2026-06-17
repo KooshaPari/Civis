@@ -50,9 +50,10 @@ use civ_emergence_metrics::branching::{
     BranchingRegime, DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
+use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
-use civ_emergence_metrics::Histogram;
+use civ_emergence_metrics::{Histogram, Metric};
 use civ_voxel::{fluid_ca::CaGrid, material::AIR};
 use civ_voxel::{MaterialId, VoxelWorld, CHUNK_EDGE};
 use serde::{Deserialize, Serialize};
@@ -193,6 +194,12 @@ pub struct EmergenceSample {
     pub avalanches_closed: u64,
     /// Charter regime classification for `branching_sigma`.
     pub branching_regime: BranchingRegime,
+    /// Power-law exponent `α` fitted over the per-cluster population
+    /// rank-frequency distribution at this sample tick (charter §3.4).
+    /// `0.0` sentinel when fewer than 3 clusters are present or the fit
+    /// is non-finite. A true power-law society yields `α ≈ 2..3`.
+    #[serde(default)]
+    pub power_law_alpha: f32,
 }
 
 impl Default for EmergenceSample {
@@ -213,6 +220,7 @@ impl Default for EmergenceSample {
             branching_window: DEFAULT_BRANCHING_WINDOW as u32,
             avalanches_closed: 0,
             branching_regime: BranchingRegime::HeatDeath,
+            power_law_alpha: 0.0,
         }
     }
 }
@@ -418,7 +426,7 @@ impl Simulation {
         // because the source slices are deterministic (BTreeMap
         // iteration on `&ClusterMember` + hecs `query` iteration in
         // insertion order + `diplomacy_events()` already sorted).
-        let dashboard = compute_dashboard(self);
+        let (dashboard, power_law_alpha) = compute_dashboard(self);
         let branching = &self.emergence_branching;
 
         let sample = EmergenceSample {
@@ -437,6 +445,7 @@ impl Simulation {
             branching_window: branching.window as u32,
             avalanches_closed: branching.ledger.closed_total(),
             branching_regime: branching.regime,
+            power_law_alpha,
         };
 
         // Single INFO line per sample. The cost budget is ~one log
@@ -623,7 +632,7 @@ fn diplomacy_kind_score(kind: DiplomacyKind) -> f32 {
 /// that those crates' S-curve diffusion operates on. We clamp to
 /// `[-1, 1]` to keep the dashboard's bin mapping stable across the
 /// full `beliefs` range.
-fn compute_dashboard(sim: &Simulation) -> EmergenceDashboard {
+fn compute_dashboard(sim: &Simulation) -> (EmergenceDashboard, f32) {
     // 1. cluster_sizes — fold &ClusterMember into a sorted map of
     //    cluster id → member count. `BTreeMap` keeps iteration
     //    order stable across runs; the engine itself assigns cluster
@@ -633,6 +642,22 @@ fn compute_dashboard(sim: &Simulation) -> EmergenceDashboard {
         *cluster_pop.entry(member.cluster.0).or_insert(0) += 1;
     }
     let cluster_sizes: Vec<u32> = cluster_pop.values().copied().collect();
+
+    // Power-law alpha over the rank-frequency distribution of cluster
+    // sizes (charter §3.4). Sort descending (rank 1 = largest cluster)
+    // and build a histogram whose bin k holds the size of the (k+1)-th
+    // ranked cluster. PowerLawFit treats bins as rank-ordered frequencies
+    // and ignores empty bins, so this directly gives the Zipf-like fit.
+    let power_law_alpha = if cluster_sizes.len() >= 3 {
+        let mut ranked = cluster_sizes.clone();
+        ranked.sort_unstable_by(|a, b| b.cmp(a));
+        let bins: Vec<u64> = ranked.iter().map(|&s| u64::from(s)).collect();
+        let hist = Histogram::from_counts(bins);
+        let a = PowerLawFit.compute(&hist);
+        if a.is_finite() { a } else { 0.0 }
+    } else {
+        0.0
+    };
 
     // 2. ideologies — &Psyche.beliefs[0] per agent, clamped.
     //    (`&Mood` is also iterated so the heuristic holds whether or
@@ -683,14 +708,15 @@ fn compute_dashboard(sim: &Simulation) -> EmergenceDashboard {
         .map(|event| diplomacy_kind_score(event.kind))
         .collect();
 
-    EmergenceDashboard::compute(
+    let dashboard = EmergenceDashboard::compute(
         &cluster_sizes,
         &ideologies,
         sentient_count,
         total_civilians,
         &mood_valences,
         &diplomacy_pair_scores,
-    )
+    );
+    (dashboard, power_law_alpha)
 }
 
 #[cfg(test)]
@@ -1042,6 +1068,72 @@ mod tests {
         assert_eq!(
             sim.emergence_branching_state().regime,
             BranchingRegime::SubcriticalTransition
+        );
+    }
+
+    /// Charter §3.4: fewer than 3 clusters → power_law_alpha sentinel 0.0.
+    #[test]
+    fn power_law_alpha_zero_when_too_few_clusters() {
+        use civ_agents::{Alignment, Civilian, ClusterId};
+        let mut sim = Simulation::with_seed(42);
+        sim.state.tick = EMERGENCE_SAMPLE_INTERVAL;
+        // Spawn only 2 clusters (below the minimum of 3).
+        for (entity, cluster) in [(1u64, 1u64), (2, 1), (3, 2)] {
+            sim.world.spawn((
+                Civilian {
+                    id: entity,
+                    alignment: Alignment::None,
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(cluster),
+                },
+            ));
+        }
+        assert!(sim.sample_emergence());
+        let s = sim.last_emergence_sample().expect("sample cached");
+        assert_eq!(
+            s.power_law_alpha, 0.0,
+            "fewer than 3 clusters must yield sentinel 0.0, got {}",
+            s.power_law_alpha
+        );
+    }
+
+    /// Charter §3.4: ≥3 clusters with varied sizes → power_law_alpha finite and > 0.
+    #[test]
+    fn power_law_alpha_populated_on_distribution() {
+        use civ_agents::{Alignment, Civilian, ClusterId};
+        let mut sim = Simulation::with_seed(43);
+        sim.state.tick = EMERGENCE_SAMPLE_INTERVAL;
+        // Spawn 4 clusters with Zipf-like sizes: 100, 50, 25, 12 members.
+        let cluster_defs: &[(u64, u32)] = &[(1, 100), (2, 50), (3, 25), (4, 12)];
+        let mut entity_id: u64 = 1;
+        for &(cluster_id, count) in cluster_defs {
+            for _ in 0..count {
+                sim.world.spawn((
+                    Civilian {
+                        id: entity_id,
+                        alignment: Alignment::None,
+                        age: 20,
+                    },
+                    ClusterMember {
+                        cluster: ClusterId(cluster_id),
+                    },
+                ));
+                entity_id += 1;
+            }
+        }
+        assert!(sim.sample_emergence());
+        let s = sim.last_emergence_sample().expect("sample cached");
+        assert!(
+            s.power_law_alpha.is_finite(),
+            "power_law_alpha must be finite; got {}",
+            s.power_law_alpha
+        );
+        assert!(
+            s.power_law_alpha > 0.0,
+            "Zipf-like cluster distribution must yield alpha > 0, got {}",
+            s.power_law_alpha
         );
     }
 }

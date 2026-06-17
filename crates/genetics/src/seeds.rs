@@ -308,7 +308,7 @@ pub fn spawn_genome(rng: &mut ChaCha8Rng, class: &DnaClass, seed: Option<&SeedDe
 ///
 /// Add new variants here as the content layer grows; each must have a
 /// matching arm in [`archetype_dna`] and [`archetype_seed`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum NamedSeed {
     /// Ardani — arid-world endurance caste; heat-adapted, high aggression
     /// potential, structured social hierarchy encoded in leading bytes.

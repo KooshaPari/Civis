@@ -270,7 +270,7 @@ mod plugin {
                     |faction| format!("age {} · cluster {}", civ.age, faction),
                 ),
             };
-            if best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
+            if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
             }
         }
@@ -296,7 +296,7 @@ mod plugin {
                 profession: "Structure".to_string(),
                 position: format!("({:.0}, {:.0})", tf.translation().x, tf.translation().z),
             };
-            if best.as_ref().is_none_or(|(bd, _)| d2 < *bd) {
+            if best.as_ref().map_or(true, |(bd, _)| d2 < *bd) {
                 best = Some((d2, det));
             }
         }

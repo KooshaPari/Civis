@@ -805,7 +805,7 @@ fn draw_map_view(
                 for marker in map_markers.iter() {
                     let d2 = marker.screen_pos.distance_sq(pointer);
                     if d2 <= MAP_CLICK_PICK_RADIUS_PX * MAP_CLICK_PICK_RADIUS_PX
-                        && best.is_none_or(|(best_d2, _)| d2 < best_d2)
+                        && best.map_or(true, |(best_d2, _)| d2 < best_d2)
                     {
                         best = Some((d2, *marker));
                     }

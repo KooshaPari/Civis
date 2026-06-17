@@ -534,6 +534,9 @@ impl Simulation {
             branching_sigma = sample.branching_sigma,
             branching_sigma_score = sample.branching_sigma_score,
             branching_regime = ?sample.branching_regime,
+            power_law_alpha = sample.power_law_alpha,
+            novelty_rate = sample.novelty_rate,
+            mi_material_faction = sample.mi_material_faction_norm.unwrap_or(f32::NAN),
             sample_dur_us = sample.sample_dur_us,
             "emergence sample"
         );
@@ -544,9 +547,12 @@ impl Simulation {
         // `entropy=X structures=Y` line to stdout once per sample.
         // The format matches the task brief literally.
         println!(
-            "emergence sample: entropy={:.4} structures={}",
+            "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4}",
             sample.entropy_bits,
             sample.structure_count.unwrap_or(0),
+            sample.power_law_alpha,
+            sample.novelty_rate,
+            sample.mi_material_faction_norm.unwrap_or(f32::NAN),
         );
 
         self.emergence_sample = Some(sample);
@@ -565,6 +571,9 @@ impl Simulation {
             sample.branching_sigma,
             sample.branching_sigma_score,
             sample.branching_regime.label(),
+            sample.power_law_alpha,
+            sample.novelty_rate,
+            sample.mi_material_faction_norm,
         );
         true
     }

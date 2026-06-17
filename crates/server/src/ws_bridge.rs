@@ -1386,6 +1386,7 @@ mod tests {
                 EventFeedMessage3d::Death(_) => {}
                 EventFeedMessage3d::Battle(_) => {}
                 EventFeedMessage3d::Tech(_) => {}
+                EventFeedMessage3d::Disaster(_) => {}
             }
         }
     }

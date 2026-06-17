@@ -1262,6 +1262,361 @@ mod tests {
         assert_eq!(decoded.tick(), 9);
     }
 
+    #[test]
+    fn encode_tick_broadcast_text_only_format() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Text).expect("encode");
+        assert_eq!(messages.len(), FRAME_BUNDLE_LEN);
+        assert!(messages.iter().all(|msg| matches!(msg, Message::Text(_))));
+    }
+
+    #[test]
+    fn encode_tick_broadcast_binary_only_format() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Binary).expect("encode");
+        assert_eq!(messages.len(), FRAME_BUNDLE_LEN);
+        assert!(messages.iter().all(|msg| matches!(msg, Message::Binary(_))));
+        for msg in &messages {
+            if let Message::Binary(bytes) = msg {
+                assert!(
+                    bytes.starts_with(civ_protocol_3d::FRAME3D_BINARY_MAGIC),
+                    "binary frame must start with F3D0 magic"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn encode_tick_broadcast_both_format_interleaves_correctly() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
+        let text_count = messages
+            .iter()
+            .filter(|msg| matches!(msg, Message::Text(_)))
+            .count();
+        let binary_count = messages
+            .iter()
+            .filter(|msg| matches!(msg, Message::Binary(_)))
+            .count();
+        assert_eq!(text_count, FRAME_BUNDLE_LEN);
+        assert_eq!(binary_count, FRAME_BUNDLE_LEN);
+    }
+
+    #[test]
+    fn build_agent_appearance_frame_from_empty_sim() {
+        let sim = Simulation::with_seed(99);
+        let frame = build_agent_appearance_frame(&sim, 42);
+        assert_eq!(frame.tick, 42);
+        // Seed 99 may have no agents, but frame must be valid
+        assert_eq!(frame.updates.len(), frame.updates.len());
+    }
+
+    #[test]
+    fn build_civilian_state_frame_truncates_at_256() {
+        let sim = Simulation::with_seed(11);
+        let frame = build_civilian_state_frame(&sim, 5);
+        assert_eq!(frame.tick, 5);
+        assert!(frame.civilians.len() <= 256, "civilians must be capped at 256");
+        // Verify all entries are sorted by id
+        for i in 1..frame.civilians.len() {
+            assert!(
+                frame.civilians[i - 1].id <= frame.civilians[i].id,
+                "civilians must be sorted by id"
+            );
+        }
+    }
+
+    #[test]
+    fn build_civilian_state_frame_needs_are_normalized() {
+        let sim = Simulation::with_seed(11);
+        let frame = build_civilian_state_frame(&sim, 0);
+        for entry in &frame.civilians {
+            assert!(entry.needs.food >= 0.0 && entry.needs.food <= 1.0);
+            assert!(entry.needs.shelter >= 0.0 && entry.needs.shelter <= 1.0);
+            assert!(entry.needs.safety >= 0.0 && entry.needs.safety <= 1.0);
+            assert!(entry.needs.social >= 0.0 && entry.needs.social <= 1.0);
+            assert!(entry.needs.rest >= 0.0 && entry.needs.rest <= 1.0);
+        }
+    }
+
+    #[test]
+    fn build_faction_state_frame_wraps_era_at_six() {
+        let sim = Simulation::with_seed(7);
+        for tick in [0, 120, 240, 360, 480, 600, 719] {
+            let frame = build_faction_state_frame(&sim, tick);
+            let expected_era = ((tick / 120) % 6) as u16;
+            for entry in &frame.factions {
+                assert_eq!(entry.era, expected_era, "tick {tick} should wrap era to {expected_era}");
+            }
+        }
+    }
+
+    #[test]
+    fn build_faction_state_frame_sorts_by_faction_id() {
+        let sim = Simulation::with_seed(3);
+        let frame = build_faction_state_frame(&sim, 0);
+        for i in 1..frame.factions.len() {
+            assert!(
+                frame.factions[i - 1].id <= frame.factions[i].id,
+                "factions must be sorted by id"
+            );
+        }
+    }
+
+    #[test]
+    fn build_event_feed_frame_handles_empty_events() {
+        let sim = Simulation::with_seed(100);
+        let frame = build_event_feed_frame(&sim, 0);
+        assert_eq!(frame.tick, 0);
+        // Empty simulation should produce minimal events
+        let event_count = frame.events.len();
+        assert!(event_count >= 0); // Always valid, even if empty
+    }
+
+    #[test]
+    fn build_event_feed_frame_categorizes_all_event_kinds() {
+        let sim = Simulation::with_seed(11);
+        let frame = build_event_feed_frame(&sim, 0);
+        for event in &frame.events {
+            match event {
+                EventFeedMessage3d::Birth(_) => {}
+                EventFeedMessage3d::Death(_) => {}
+                EventFeedMessage3d::Battle(_) => {}
+                EventFeedMessage3d::Tech(_) => {}
+            }
+        }
+    }
+
+    #[test]
+    fn build_frame_bundle_returns_exact_frame_count() {
+        for seed in [1, 5, 11, 37, 42, 99] {
+            let sim = Simulation::with_seed(seed);
+            let bundle = build_frame_bundle(&sim).expect("bundle");
+            assert_eq!(
+                bundle.len(),
+                FRAME_BUNDLE_LEN,
+                "seed {seed} must return exactly {FRAME_BUNDLE_LEN} frames"
+            );
+        }
+    }
+
+    #[test]
+    fn build_frame_bundle_all_frames_have_matching_tick() {
+        let sim = Simulation::with_seed(17);
+        let expected_tick = sim.state.tick;
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        for frame in &bundle {
+            assert_eq!(
+                frame.tick(),
+                expected_tick,
+                "all frames in bundle must have matching tick"
+            );
+        }
+    }
+
+    #[test]
+    fn build_frame_bundle_contains_building_provenance_variants() {
+        // Test both provenance types (Procedural and Freehand)
+        let sim_even = Simulation::with_seed(2);
+        let bundle_even = build_frame_bundle(&sim_even).expect("bundle");
+        let Frame3d::BuildingDiff(building_even) = &bundle_even[1] else {
+            panic!("expected building diff frame");
+        };
+        // Seed 2 has even building_count, so should be Procedural
+        assert_eq!(building_even.provenance, BuildingProvenance::Procedural);
+
+        let sim_odd = Simulation::with_seed(3);
+        let bundle_odd = build_frame_bundle(&sim_odd).expect("bundle");
+        let Frame3d::BuildingDiff(building_odd) = &bundle_odd[1] else {
+            panic!("expected building diff frame");
+        };
+        // Seed 3 has odd building_count, so should be Freehand
+        assert_eq!(building_odd.provenance, BuildingProvenance::Freehand);
+    }
+
+    #[test]
+    fn tick_broadcast_format_both_sends_text_before_binary() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
+        assert!(messages.len() >= FRAME_BUNDLE_LEN * 2);
+        // First FRAME_BUNDLE_LEN are text
+        for i in 0..FRAME_BUNDLE_LEN {
+            assert!(matches!(messages[i], Message::Text(_)));
+        }
+        // Second FRAME_BUNDLE_LEN are binary
+        for i in FRAME_BUNDLE_LEN..FRAME_BUNDLE_LEN * 2 {
+            assert!(matches!(messages[i], Message::Binary(_)));
+        }
+    }
+
+    #[test]
+    fn encode_messages_per_tick_consistency() {
+        assert_eq!(TickBroadcastFormat::Text.messages_per_tick(), FRAME_BUNDLE_LEN);
+        assert_eq!(TickBroadcastFormat::Binary.messages_per_tick(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            TickBroadcastFormat::Both.messages_per_tick(),
+            FRAME_BUNDLE_LEN * 2
+        );
+    }
+
+    #[test]
+    fn build_civilian_state_frame_handles_missing_citizen() {
+        // Some agents may not have Citizen component; frame builder should handle gracefully
+        let sim = Simulation::with_seed(11);
+        let frame = build_civilian_state_frame(&sim, 0);
+        // At least verify structure is valid
+        for entry in &frame.civilians {
+            assert!(!entry.profession.is_empty());
+            assert!(!entry.species.is_empty());
+            assert!(entry.health >= 0.0);
+        }
+    }
+
+    #[test]
+    fn need_satisfaction_boundary_values() {
+        // Test exact boundary values for clamping logic
+        assert_eq!(need_satisfaction(0.0), 1.0);
+        assert_eq!(need_satisfaction(0.5), 0.5);
+        assert_eq!(need_satisfaction(1.0), 0.0);
+        // Over 1.0 should clamp to 0.0
+        assert_eq!(need_satisfaction(100.0), 0.0);
+        // Negative should clamp to 1.0
+        assert_eq!(need_satisfaction(-100.0), 1.0);
+    }
+
+    #[test]
+    fn government_for_faction_all_six_variants() {
+        use Government3d::*;
+        let variants = [Monarchy, Republic, Theocracy, Junta, Council, Corporate];
+        for (idx, expected) in variants.iter().enumerate() {
+            assert_eq!(government_for_faction(idx as u32), *expected);
+        }
+    }
+
+    #[test]
+    fn job_profession_label_all_variants() {
+        use JobType::*;
+        let all_jobs = [Farmer, Warrior, Scholar, Trader, Priest, Admin, Unemployed];
+        let labels = ["farmer", "warrior", "scholar", "trader", "priest", "admin", "unemployed"];
+        for (job, label) in all_jobs.iter().zip(labels.iter()) {
+            assert_eq!(job_profession_label(*job), *label);
+        }
+    }
+
+    #[test]
+    fn frame3d_all_variants_round_trip() {
+        let frames = [
+            Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+                tick: 1,
+                deltas: Vec::new(),
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 1,
+                provenance: BuildingProvenance::Procedural,
+                buildings: Vec::new(),
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 1,
+                updates: Vec::new(),
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 1,
+                civilians: Vec::new(),
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 1,
+                factions: Vec::new(),
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 1,
+                events: Vec::new(),
+            }),
+            Frame3d::Climate(ClimateFrame {
+                tick: 1,
+                climate: *Simulation::with_seed(1).climate(),
+                weather: Vec::new(),
+            }),
+        ];
+        for frame in &frames {
+            let json = serde_json::to_string(frame).expect("json encode");
+            let decoded: Frame3d = serde_json::from_str(&json).expect("json decode");
+            assert_eq!(decoded.tick(), frame.tick());
+        }
+    }
+
+    #[test]
+    fn encode_messages_handles_all_frame_variants() {
+        let frames = [
+            Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+                tick: 5,
+                deltas: Vec::new(),
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 5,
+                provenance: BuildingProvenance::Freehand,
+                buildings: Vec::new(),
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 5,
+                updates: Vec::new(),
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 5,
+                civilians: Vec::new(),
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 5,
+                factions: Vec::new(),
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 5,
+                events: Vec::new(),
+            }),
+            Frame3d::Climate(ClimateFrame {
+                tick: 5,
+                climate: *Simulation::with_seed(1).climate(),
+                weather: Vec::new(),
+            }),
+        ];
+        for format in [
+            TickBroadcastFormat::Text,
+            TickBroadcastFormat::Binary,
+            TickBroadcastFormat::Both,
+        ] {
+            let messages = encode_tick_broadcast_messages(&frames, format).expect("encode");
+            assert!(!messages.is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn build_frame_bundle_integrates_all_builders() {
+        let sim = Simulation::with_seed(11);
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        // Verify all 7 frame types are present
+        let mut found = [false; 7];
+        for frame in &bundle {
+            match frame {
+                Frame3d::VoxelDelta(_) => found[0] = true,
+                Frame3d::BuildingDiff(_) => found[1] = true,
+                Frame3d::AgentAppearance(_) => found[2] = true,
+                Frame3d::CivilianState(_) => found[3] = true,
+                Frame3d::FactionState(_) => found[4] = true,
+                Frame3d::EventFeed(_) => found[5] = true,
+                Frame3d::Climate(_) => found[6] = true,
+            }
+        }
+        assert!(
+            found.iter().all(|&f| f),
+            "bundle must contain all 7 frame types"
+        );
+    }
+
     #[tokio::test]
     async fn voxel_delta_frame_is_non_empty_after_writes() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(7)));

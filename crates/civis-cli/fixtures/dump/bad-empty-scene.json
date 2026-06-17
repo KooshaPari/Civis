@@ -1,0 +1,25 @@
+{
+  "sim": null,
+  "voxel": null,
+  "meshes": {
+    "count": 0,
+    "origin_min": null,
+    "origin_max": null
+  },
+  "actors": {
+    "count": 0,
+    "floating": 0,
+    "sample": []
+  },
+  "buildings": {
+    "count": 0,
+    "floating": 0,
+    "sample": []
+  },
+  "animation": {
+    "players": 0,
+    "playing": 0,
+    "t_posed": 0
+  },
+  "total_entities": 4
+}

@@ -139,10 +139,10 @@ fn draw_notifications(mut contexts: EguiContexts, mut notifications_mut: ResMut<
 
     apply_theme(ctx);
 
-    let screen_rect = ctx.content_rect();
+    let content_rect = ctx.content_rect();
     let anchor = egui::pos2(
-        screen_rect.left() + PANEL_MARGIN,
-        screen_rect.bottom() - PANEL_MARGIN,
+        content_rect.left() + PANEL_MARGIN,
+        content_rect.bottom() - PANEL_MARGIN,
     );
 
     let mut dismiss_request = None;

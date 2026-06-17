@@ -2713,9 +2713,15 @@ impl Simulation {
                 _ => {}
             }
         }
+        // FR-CIV-CONTENT-001: collect biomes before any mutable borrow.
+        let biomes: Vec<civ_planet::BiomeKind> = {
+            let geo = civ_planet::GeologyMap::seed(&self.planet);
+            geo.regions.iter().map(|r| r.biome).collect()
+        };
         let yield_factor = production_yield_factor(self.research_tier());
+        let biome_factor = aggregate_biome_yield(&biomes);
         let focus_bonus = Fixed::from_num(11) / Fixed::from_num(10);
-        let mut food_out = food * yield_factor;
+        let mut food_out = food * yield_factor * biome_factor;
         let mut metal_out = metal * yield_factor;
         if self.state.economic_focus == EconomicFocus::Agrarian {
             food_out = food_out * focus_bonus;
@@ -3707,6 +3713,48 @@ fn candidate_economic_focus(
 fn production_yield_factor(research_tier: u64) -> Fixed {
     let bonus_permille = research_tier.saturating_mul(100).min(1_000) as i64;
     Fixed::from_num(1_000 + bonus_permille) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-CONTENT-001): terrain biome modulates food
+/// production — fertile land grows more food, barren land grows less.  The factor
+/// is a pure multiplier on per-farm output; caller multiplies food output by this.
+/// Returns a value in the range [0.1, 1.5] (clamped).
+fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
+    use civ_planet::BiomeKind;
+    match biome {
+        BiomeKind::Rainforest => Fixed::from_num(13) / Fixed::from_num(10),
+        BiomeKind::Wetland    => Fixed::from_num(12) / Fixed::from_num(10),
+        BiomeKind::Grassland  => Fixed::from_num(12) / Fixed::from_num(10),
+        BiomeKind::Plains     => Fixed::from_num(11) / Fixed::from_num(10),
+        BiomeKind::Forest     => Fixed::from_num(9)  / Fixed::from_num(10),
+        BiomeKind::Savanna    => Fixed::from_num(17) / Fixed::from_num(20),
+        BiomeKind::Beach      => Fixed::from_num(8)  / Fixed::from_num(10),
+        BiomeKind::Mountain   => Fixed::from_num(6)  / Fixed::from_num(10),
+        BiomeKind::Taiga      => Fixed::from_num(6)  / Fixed::from_num(10),
+        BiomeKind::Desert     => Fixed::from_num(1)  / Fixed::from_num(2),
+        BiomeKind::Tundra     => Fixed::from_num(9)  / Fixed::from_num(20),
+        BiomeKind::Ocean      => Fixed::from_num(1)  / Fixed::from_num(5),
+        BiomeKind::Glacier    => Fixed::from_num(1)  / Fixed::from_num(10),
+        _                     => Fixed::from_num(1)  / Fixed::from_num(1),
+    }
+}
+
+/// Aggregate biome yield factor over a slice of [`BiomeKind`]s.
+///
+/// Returns the mean `biome_yield_factor` across the slice, clamped to
+/// `[0.1, 1.5]`.  Returns `Fixed::ONE` (neutral) for an empty slice so
+/// callers with no geology data are unaffected.
+fn aggregate_biome_yield(biomes: &[civ_planet::BiomeKind]) -> Fixed {
+    if biomes.is_empty() {
+        return Fixed::from_num(1) / Fixed::from_num(1);
+    }
+    let sum = biomes
+        .iter()
+        .fold(Fixed::ZERO, |acc, &b| acc + biome_yield_factor(b));
+    let mean = sum / Fixed::from_num(biomes.len() as i64);
+    let lo = Fixed::from_num(1) / Fixed::from_num(10);
+    let hi = Fixed::from_num(15) / Fixed::from_num(10);
+    mean.clamp(lo, hi)
 }
 
 /// Downward-causation policy (FR-CIV-0100 §3): social cohesion speeds military
@@ -5513,6 +5561,68 @@ mod tests {
         assert!(t1 > Fixed::from_num(1), "research lifts yield");
         assert!(t10 >= t1, "more research never lowers yield");
         assert_eq!(production_yield_factor(100), Fixed::from_num(2), "capped at 2x");
+    }
+
+    /// FR-CIV-CONTENT-001 — fertile biomes produce more than barren ones.
+    #[test]
+    fn test_biome_yield_factor_ordering() {
+        use civ_planet::BiomeKind;
+        assert!(
+            biome_yield_factor(BiomeKind::Rainforest) > biome_yield_factor(BiomeKind::Desert),
+            "Rainforest yields more than Desert"
+        );
+        assert!(
+            biome_yield_factor(BiomeKind::Desert) > biome_yield_factor(BiomeKind::Glacier),
+            "Desert yields more than Glacier"
+        );
+    }
+
+    /// FR-CIV-CONTENT-001 — all known biome variants produce a factor in [0.1, 1.5].
+    #[test]
+    fn test_biome_yield_factor_clamped() {
+        use civ_planet::BiomeKind;
+        let lo = Fixed::from_num(1) / Fixed::from_num(10);
+        let hi = Fixed::from_num(15) / Fixed::from_num(10);
+        for biome in [
+            BiomeKind::Rainforest,
+            BiomeKind::Wetland,
+            BiomeKind::Grassland,
+            BiomeKind::Plains,
+            BiomeKind::Forest,
+            BiomeKind::Savanna,
+            BiomeKind::Beach,
+            BiomeKind::Mountain,
+            BiomeKind::Taiga,
+            BiomeKind::Desert,
+            BiomeKind::Tundra,
+            BiomeKind::Ocean,
+            BiomeKind::Glacier,
+        ] {
+            let f = biome_yield_factor(biome);
+            assert!(f >= lo, "{biome:?} factor {f:?} below minimum 0.1");
+            assert!(f <= hi, "{biome:?} factor {f:?} above maximum 1.5");
+        }
+    }
+
+    /// FR-CIV-CONTENT-001 — aggregate of mixed biomes stays within clamped bounds.
+    #[test]
+    fn test_aggregate_biome_yield_in_bounds() {
+        use civ_planet::BiomeKind;
+        let biomes = [BiomeKind::Rainforest, BiomeKind::Desert, BiomeKind::Glacier];
+        let agg = aggregate_biome_yield(&biomes);
+        let lo = Fixed::from_num(1) / Fixed::from_num(10);
+        let hi = Fixed::from_num(15) / Fixed::from_num(10);
+        assert!(agg >= lo && agg <= hi, "aggregate {agg:?} out of [0.1, 1.5]");
+    }
+
+    /// FR-CIV-CONTENT-001 — rich biomes dominate barren ones in yield factor.
+    #[test]
+    fn test_rich_biome_gt_barren() {
+        use civ_planet::BiomeKind;
+        assert!(
+            biome_yield_factor(BiomeKind::Rainforest) > biome_yield_factor(BiomeKind::Desert),
+            "Rainforest factor must exceed Desert factor"
+        );
     }
 
     /// FR-CIV-0100 §3 — cohesion speeds morale recovery, monotonically, 0.01→0.05 cap.

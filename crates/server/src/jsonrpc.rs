@@ -70,6 +70,12 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
+    SimSubscribe,
+    /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
+    SimUnsubscribe,
+    /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
+    SimUpdateSubscription,
 }
 
 impl JsonRpcMethod {
@@ -94,6 +100,9 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::SimSubscribe => "sim.subscribe",
+            Self::SimUnsubscribe => "sim.unsubscribe",
+            Self::SimUpdateSubscription => "sim.update_subscription",
         }
     }
 
@@ -118,6 +127,9 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "sim.subscribe" => Some(Self::SimSubscribe),
+            "sim.unsubscribe" => Some(Self::SimUnsubscribe),
+            "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             _ => None,
         }
     }
@@ -3043,6 +3055,18 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("sim.spawn_entity"),
             Some(JsonRpcMethod::SimSpawnEntity)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.subscribe"),
+            Some(JsonRpcMethod::SimSubscribe)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.unsubscribe"),
+            Some(JsonRpcMethod::SimUnsubscribe)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.update_subscription"),
+            Some(JsonRpcMethod::SimUpdateSubscription)
         );
         assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
         assert_eq!(JsonRpcMethod::parse_name(""), None);

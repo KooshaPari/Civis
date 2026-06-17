@@ -4741,21 +4741,25 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
 /// model feeds both the production and capacity couplings (superset-merge, no
 /// parallel weight table).
 ///
-/// The raw aggregate yield (range `[0.1, 1.5]`) is **blended halfway toward
-/// neutral** (`(1 + raw) / 2`), giving a gentler capacity factor in
-/// `[0.55, 1.25]`. Rationale: per-farm food *production* can swing hard with
-/// terrain, but a region's total human *carrying capacity* is far less
-/// sensitive (trade, fishing, storage, and non-farm sustenance all buffer it),
-/// so an ocean-heavy world should not collapse to 0.4× headroom. The blend
-/// preserves the monotonic lush > harsh signal that drives the
-/// **biome → carrying_capacity → food prices → unrest → emergence** chain while
-/// keeping baseline population dynamics stable. Returns [`Fixed::ONE`]
-/// (neutral) for an empty map.
+/// The raw aggregate yield (range `[0.1, 1.5]`) is **blended toward neutral**
+/// and clamped to the narrow band `[0.8, 1.2]`. Rationale: per-farm food
+/// *production* can swing hard with terrain, but a region's total human
+/// *carrying capacity* is far less sensitive (trade, fishing, storage, and
+/// non-farm sustenance all buffer it), so an ocean-heavy world should not
+/// collapse its population headroom — a swing that large destabilises baseline
+/// birth/death dynamics. The narrow band preserves the monotonic lush > harsh
+/// signal that drives the **biome → carrying_capacity → food prices → unrest →
+/// emergence** chain while keeping population cycles intact. Returns
+/// [`Fixed::ONE`] (neutral) for an empty map.
 pub(crate) fn biome_capacity_factor(map: &GeologyMap) -> Fixed {
     let biomes: Vec<civ_planet::BiomeKind> = map.regions.iter().map(|r| r.biome).collect();
     let raw = aggregate_biome_yield(&biomes);
-    // (1 + raw) / 2 — halfway blend toward neutral 1.0.
-    (Fixed::ONE + raw) / Fixed::from_num(2)
+    // Blend halfway toward neutral 1.0, then clamp to a narrow [0.8, 1.2] band
+    // so capacity nudges with terrain without crushing baseline dynamics.
+    let blended = (Fixed::ONE + raw) / Fixed::from_num(2);
+    let lo = Fixed::from_num(8) / Fixed::from_num(10);
+    let hi = Fixed::from_num(12) / Fixed::from_num(10);
+    blended.clamp(lo, hi)
 }
 
 // ============================================================================
@@ -7648,15 +7652,15 @@ mod tests {
     // ------------------------------------------------------------------
 
     /// FR-CIV-0410-a — biome_capacity_factor for a default (Earth-like) planet
-    /// sits in the blended band [0.55, 1.25] (raw [0.1,1.5] blended halfway to 1.0).
+    /// sits in the narrow blended band [0.8, 1.2].
     #[test]
     fn biome_capacity_factor_in_band() {
         let (planet, _moon) = civ_planet::defaults_earthlike();
         let map = GeologyMap::seed(&planet);
         let factor = biome_capacity_factor(&map).to_f64();
         assert!(
-            (0.55..=1.25).contains(&factor),
-            "factor {factor} outside blended band [0.55, 1.25]"
+            (0.8..=1.2).contains(&factor),
+            "factor {factor} outside blended band [0.8, 1.2]"
         );
     }
 

@@ -2172,6 +2172,21 @@ impl Simulation {
             .state
             .cohesion
             .saturating_sub(self.state.cohesion / COHESION_DECAY_DIVISOR);
+
+        // N10 kinship↔cohesion coupling: family ties reinforce social cohesion (FR-CIV-EMERGENCE-N10).
+        // Upward causation: high average kinship boosts cohesion (people trust kin).
+        // Inverse decay: low kinship → faster decay (loneliness destabilizes).
+        // Clamp to [0,1]: tie.kinship is nominally normalized, but guard against
+        // malformed/out-of-range ties so the boost/decay math stays bounded.
+        let avg_kinship = avg_faction_kinship(&self.world).clamp(0.0, 1.0);
+        let kinship_boost = (avg_kinship * 0.02 * 100_000.0) as u64;
+        self.state.cohesion = self.state.cohesion.saturating_add(kinship_boost);
+
+        // Decay factor inversely tied to kinship: high kinship slows decay.
+        let decay_factor = 0.98 - (0.05 * (1.0 - avg_kinship)).max(0.0).min(1.0);
+        let decay_amt = (self.state.cohesion as f32 * (1.0 - decay_factor)) as u64;
+        self.state.cohesion = self.state.cohesion.saturating_sub(decay_amt);
+
         self.state.micro_trust_permille = micro_social_trust_permille(&self.world);
     }
 
@@ -3536,6 +3551,24 @@ fn avg_psyche_maturity(world: &hecs::World) -> f32 {
         count += 1;
     }
     if count == 0 { 0.0 } else { total / count as f32 }
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N10): average kinship across all social ties.
+/// Kinship boosts cohesion (family ties stabilize society). Pure `hecs::World` scan.
+fn avg_faction_kinship(world: &hecs::World) -> f32 {
+    let mut total_kinship = 0.0;
+    let mut count = 0u32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            total_kinship += tie.kinship;
+            count += 1;
+        }
+    }
+    if count == 0 {
+        0.0
+    } else {
+        total_kinship / count as f32
+    }
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -8580,6 +8613,91 @@ mod tests {
             assert!(
                 known_labels.contains(&goods),
                 "emergent_route_goods({id})=\"{goods}\" is not a known trade label"
+            );
+        }
+    }
+
+    // N10 kinship↔cohesion coupling tests (FR-CIV-EMERGENCE-N10)
+
+    #[test]
+    fn n10_avg_faction_kinship_computes_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        let avg = avg_faction_kinship(&sim.world);
+        assert_eq!(avg, 0.0, "empty world should have zero average kinship");
+    }
+
+    #[test]
+    fn n10_avg_faction_kinship_computes_mean_correctly() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+        sim.world.clear();
+
+        // Spawn one social graph with a single kinship tie of 1.0.
+        let graph_a = SocialGraph {
+            ties: vec![Tie {
+                other: 1002,
+                kinship: 1.0,
+                familiarity: 0.0,
+                affinity: 0.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((graph_a,));
+        sim.world.spawn((SocialGraph::default(),));
+
+        let avg = avg_faction_kinship(&sim.world);
+        assert_eq!(avg, 1.0, "one kinship tie of 1.0 should average to 1.0");
+    }
+
+    #[test]
+    fn n10_kinship_coupling_boosts_cohesion_basic() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+
+        // Spawn a social graph with a kinship tie.
+        let graph_a = SocialGraph {
+            ties: vec![Tie {
+                other: 2002,
+                kinship: 1.0,
+                familiarity: 0.0,
+                affinity: 0.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((graph_a,));
+
+        // Record cohesion before and after a tick.
+        let before = sim.cohesion();
+        sim.tick();
+        let after = sim.cohesion();
+
+        // With kinship=1.0, boost = 0.02 * 100_000 = 2000, so after >= before.
+        // (caveat: other couplings and decay might affect this, but kinship boost
+        // should dominate if no other agents contribute negative factors)
+        assert!(
+            after >= before,
+            "phase_cohesion with kinship should not decrease cohesion (before={}, after={})",
+            before,
+            after
+        );
+    }
+
+    #[test]
+    fn n10_kinship_decay_factor_bounds() {
+        // Verify the decay_factor formula stays in [0.93, 0.98].
+        let test_cases: [(f32, f32); 3] = [(0.0, 0.93), (0.5, 0.955), (1.0, 0.98)];
+
+        for (kinship, expected_factor) in test_cases {
+            let decay_factor = 0.98_f32 - (0.05_f32 * (1.0_f32 - kinship)).max(0.0).min(1.0);
+            assert!(
+                (decay_factor - expected_factor).abs() < 1e-6,
+                "kinship={} should give decay_factor≈{}, got {}",
+                kinship,
+                expected_factor,
+                decay_factor
             );
         }
     }

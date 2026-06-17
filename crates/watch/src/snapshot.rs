@@ -1391,4 +1391,33 @@ mod tests {
             [true, true, false]
         );
     }
+
+    #[test]
+    fn roads_classify_kind_and_width_by_distance() {
+        use crate::app::{Building, BuildingKind, RoadKind};
+        // 5 same-faction buildings on the x-axis with consecutive gaps chosen to
+        // land one in each distance bucket: 0.02 (Trail), 0.05 (Dirt),
+        // 0.08 (Paved), 0.15 (Highway). roads() sorts by id and walks windows(2).
+        let xs = [0.0_f32, 0.02, 0.07, 0.15, 0.30];
+        let b: Vec<Building> = xs
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| Building {
+                id: i as u32,
+                x,
+                y: 0.0,
+                kind: BuildingKind::Residential,
+                era: 0,
+                faction_id: 0,
+                occupants: 0,
+                capacity: 0,
+            })
+            .collect();
+        let r = roads(&b);
+        assert_eq!(r.len(), 4);
+        assert!(matches!(r[0].kind, RoadKind::Trail) && (r[0].width - 0.2).abs() < 1e-6);
+        assert!(matches!(r[1].kind, RoadKind::Dirt) && (r[1].width - 0.4).abs() < 1e-6);
+        assert!(matches!(r[2].kind, RoadKind::Paved) && (r[2].width - 0.6).abs() < 1e-6);
+        assert!(matches!(r[3].kind, RoadKind::Highway) && (r[3].width - 1.0).abs() < 1e-6);
+    }
 }

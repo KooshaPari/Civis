@@ -798,8 +798,13 @@ fn propagate_cohort_wardrobe_with_lod(
     tick: u64,
     policy: LodPolicy,
 ) -> CohortStats {
+    // Before: 2×O(A) scans here (pre + post). After: 1×O(A) — post-scan dropped.
+    // Correctness: propagate_wardrobe only promotes (era increases), never demotes,
+    // so currently_at_target_after == pre_count + promoted_this_tick exactly.
+    // currently_at_target is therefore a one-tick-lag snapshot (end-of-previous-tick
+    // value) which is what current_fraction is already computed from.
     let total_civilians = count_civilians(world) as u32;
-    let mut currently_at_target = world
+    let pre_at_target = world
         .query::<&Wardrobe>()
         .iter()
         .filter(|(_, wardrobe)| wardrobe.era >= target_era)
@@ -807,7 +812,7 @@ fn propagate_cohort_wardrobe_with_lod(
     let current_fraction = if total_civilians == 0 {
         0.0
     } else {
-        currently_at_target as f32 / total_civilians as f32
+        pre_at_target as f32 / total_civilians as f32
     };
 
     let mut promoted_this_tick = 0_u32;
@@ -822,11 +827,8 @@ fn propagate_cohort_wardrobe_with_lod(
         }
     }
 
-    currently_at_target = world
-        .query::<&Wardrobe>()
-        .iter()
-        .filter(|(_, wardrobe)| wardrobe.era >= target_era)
-        .count() as u32;
+    // Derive post-tick count arithmetically — avoids a second O(A) ECS scan.
+    let currently_at_target = pre_at_target + promoted_this_tick;
 
     CohortStats {
         promoted_this_tick,
@@ -844,8 +846,11 @@ fn propagate_cohort_tools_with_lod(
     tick: u64,
     policy: LodPolicy,
 ) -> CohortStats {
+    // Before: 2×O(A) scans here (pre + post). After: 1×O(A) — post-scan dropped.
+    // Correctness: propagate_tools only promotes (era increases), never demotes,
+    // so currently_at_target_after == pre_count + promoted_this_tick exactly.
     let total_civilians = count_civilians(world) as u32;
-    let mut currently_at_target = world
+    let pre_at_target = world
         .query::<&Tools>()
         .iter()
         .filter(|(_, tools)| tools.era >= target_era)
@@ -853,7 +858,7 @@ fn propagate_cohort_tools_with_lod(
     let current_fraction = if total_civilians == 0 {
         0.0
     } else {
-        currently_at_target as f32 / total_civilians as f32
+        pre_at_target as f32 / total_civilians as f32
     };
 
     let mut promoted_this_tick = 0_u32;
@@ -868,11 +873,8 @@ fn propagate_cohort_tools_with_lod(
         }
     }
 
-    currently_at_target = world
-        .query::<&Tools>()
-        .iter()
-        .filter(|(_, tools)| tools.era >= target_era)
-        .count() as u32;
+    // Derive post-tick count arithmetically — avoids a second O(A) ECS scan.
+    let currently_at_target = pre_at_target + promoted_this_tick;
 
     CohortStats {
         promoted_this_tick,

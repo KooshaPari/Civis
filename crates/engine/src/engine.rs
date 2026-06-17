@@ -1463,9 +1463,13 @@ impl Simulation {
         if self.state.tech_unlocks & TECH_SANITATION != 0 {
             cap = cap.saturating_add(SANITATION_BONUS);
         }
-        // Apply biome composition multiplier — deterministic, clamped [0.25, 1.5].
+        // Apply biome composition multiplier — deterministic, reuses the same
+        // Fixed-point biome-yield model as food production (clamped [0.1, 1.5]).
+        // `factor` is in [0.1, 1.5]; multiply via the factor's raw fraction to
+        // stay in integer space (cap ~1e6, factor.raw ~1e6, product ~1e12 fits
+        // i128 before the divide).
         let factor = biome_capacity_factor(&GeologyMap::seed(self.planet()));
-        ((cap as f64) * factor as f64) as i64
+        ((cap as i128 * factor.raw as i128) / crate::SCALE as i128) as i64
     }
 
 
@@ -4728,51 +4732,22 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
 // BIOME → FOOD CAPACITY COUPLING  (FR-CIV-0410)
 // ============================================================================
 
-/// Per-biome food-yield weights used by [`biome_capacity_factor`].
+/// Derive a food-yield multiplier from the planet's biome composition for the
+/// **carrying-capacity** coupling (FR-CIV-0410).
 ///
-/// Weights reflect how productive each biome is as a food source:
-/// - **Forest / Plains** — high biological productivity, arable soil.
-/// - **Ocean** — moderate; fishing yields meaningful but not maximal food.
-/// - **Mountain** — limited flat arable land, alpine crops only.
-/// - **Tundra** — permafrost, very short growing season.
-/// - **Desert** — minimal precipitation, near-zero natural food yield.
-/// - **Enriched variants** (Savanna, Grassland, Rainforest, etc.) get
-///   sensible defaults: Savanna/Grassland ≈ Plains, Rainforest ≈ Forest,
-///   Beach/Wetland ≈ Ocean, Taiga ≈ Tundra, Glacier ≈ Desert.
-fn biome_yield_weight(biome: &BiomeKind) -> f32 {
-    match biome {
-        BiomeKind::Forest => 1.3,
-        BiomeKind::Rainforest => 1.3,
-        BiomeKind::Plains => 1.2,
-        BiomeKind::Grassland => 1.2,
-        BiomeKind::Savanna => 1.1,
-        BiomeKind::Ocean => 0.7,
-        BiomeKind::Beach => 0.7,
-        BiomeKind::Wetland => 0.7,
-        BiomeKind::Mountain => 0.8,
-        BiomeKind::Tundra => 0.5,
-        BiomeKind::Taiga => 0.5,
-        BiomeKind::Desert => 0.4,
-        BiomeKind::Glacier => 0.3,
-    }
-}
-
-/// Derive a food-yield multiplier from the planet's biome composition.
+/// This reuses the canonical per-biome weight table and aggregation from
+/// [`aggregate_biome_yield`] (the same helper that scales food *production* in
+/// `phase_production`, FR-CIV-CONTENT-001) — one authoritative biome-yield
+/// model feeds both the production and capacity couplings (superset-merge, no
+/// parallel weight table). A desert/tundra-heavy planet drops the factor toward
+/// 0.1–0.5; a lush forest/plains planet rises toward ~1.5. Returns
+/// [`Fixed::ONE`] (neutral) for an empty map.
 ///
-/// Returns the mean per-region yield weight clamped to `[0.25, 1.5]`.
-/// With a balanced Earth-like map the factor is ~0.9–1.0 (near no-op).
-/// A desert/tundra-heavy planet drops toward 0.4; a lush forest/plains
-/// planet rises toward 1.2–1.3.  Returns `1.0` (neutral) for an empty map.
-///
-/// This function is the bridge in the **biome → carrying_capacity →
-/// food prices → unrest → emergence** chain (FR-CIV-0410).
-pub(crate) fn biome_capacity_factor(map: &GeologyMap) -> f32 {
-    if map.regions.is_empty() {
-        return 1.0;
-    }
-    let sum: f32 = map.regions.iter().map(|r| biome_yield_weight(&r.biome)).sum();
-    let mean = sum / map.regions.len() as f32;
-    mean.clamp(0.25, 1.5)
+/// This is the bridge in the **biome → carrying_capacity → food prices →
+/// unrest → emergence** chain.
+pub(crate) fn biome_capacity_factor(map: &GeologyMap) -> Fixed {
+    let biomes: Vec<civ_planet::BiomeKind> = map.regions.iter().map(|r| r.biome).collect();
+    aggregate_biome_yield(&biomes)
 }
 
 // ============================================================================
@@ -7599,9 +7574,9 @@ mod tests {
         sim.state.tech_unlocks |= TECH_IRRIGATION;
         let with = sim.carrying_capacity();
         let factor = biome_capacity_factor(&GeologyMap::seed(sim.planet()));
-        let expected = (200_000.0_f64 * factor as f64) as i64;
+        let expected = (200_000.0_f64 * factor.to_f64()) as i64;
         assert!(with > without, "irrigation must raise capacity");
-        // `with` and `without` are each rounded independently after the biome
+        // `with` and `without` are each truncated independently after the biome
         // multiply, so the delta can differ from `expected` by at most 1.
         assert!(
             (with - without - expected).abs() <= 1,
@@ -7635,9 +7610,9 @@ mod tests {
         sim.state.tech_unlocks |= TECH_SANITATION;
         let with = sim.carrying_capacity();
         let factor = biome_capacity_factor(&GeologyMap::seed(sim.planet()));
-        let expected = (300_000.0_f64 * factor as f64) as i64;
+        let expected = (300_000.0_f64 * factor.to_f64()) as i64;
         assert!(with > without, "sanitation must raise capacity");
-        // Independent rounding of `with`/`without` allows a ±1 delta drift.
+        // Independent truncation of `with`/`without` allows a ±1 delta drift.
         assert!(
             (with - without - expected).abs() <= 1,
             "delta {} ~= biome-scaled sanitation bonus {expected}",
@@ -7665,19 +7640,15 @@ mod tests {
     // ------------------------------------------------------------------
 
     /// FR-CIV-0410-a — biome_capacity_factor for a default (Earth-like) planet
-    /// is within the clamped band and finite.
+    /// is within the clamped band [0.1, 1.5] (the shared aggregate_biome_yield band).
     #[test]
     fn biome_capacity_factor_in_band() {
         let (planet, _moon) = civ_planet::defaults_earthlike();
         let map = GeologyMap::seed(&planet);
-        let factor = biome_capacity_factor(&map);
+        let factor = biome_capacity_factor(&map).to_f64();
         assert!(
-            factor.is_finite(),
-            "factor must be finite, got {factor}"
-        );
-        assert!(
-            (0.25..=1.5).contains(&factor),
-            "factor {factor} outside clamped band [0.25, 1.5]"
+            (0.1..=1.5).contains(&factor),
+            "factor {factor} outside clamped band [0.1, 1.5]"
         );
     }
 
@@ -7716,7 +7687,7 @@ mod tests {
         let harsh_factor = biome_capacity_factor(&harsh_map);
         assert!(
             harsh_factor < lush_factor,
-            "harsh factor {harsh_factor} should be < lush factor {lush_factor}"
+            "harsh factor {harsh_factor:?} should be < lush factor {lush_factor:?}"
         );
     }
 

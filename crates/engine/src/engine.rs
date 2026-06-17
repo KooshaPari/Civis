@@ -7448,26 +7448,16 @@ mod tests {
         // to cross the promotion threshold (PROMOTION_THRESHOLD = 0.35 per spec).
         let tick_base: u64 = 1;
         // Birth event for entity A (sim_id 1001)
-        sim.emergence.legends.graph.ingest(RawSimEvent {
-            tick: tick_base,
-            source: SourceCrate::Engine,
-            kind: EventKind::Birth,
-            primary: Role::Subject(SimRuntimeId(1001)),
-            secondary: None,
-            magnitude: 1.0,
-            region: None,
-        });
-        // Add many milestone events to drive entity A's significance above threshold.
+        sim.emergence.legends.graph.ingest(
+            RawSimEvent::new(tick_base, EventKind::Birth, SourceCrate::Engine, 1.0)
+                .with_participant(SourceCrate::Engine, SimRuntimeId(1001), Role::Victim),
+        );
+        // Add many Battle events to drive entity A's significance above threshold.
         for t in 2..=60u64 {
-            sim.emergence.legends.graph.ingest(RawSimEvent {
-                tick: t,
-                source: SourceCrate::Engine,
-                kind: EventKind::Milestone,
-                primary: Role::Subject(SimRuntimeId(1001)),
-                secondary: None,
-                magnitude: 1.0,
-                region: None,
-            });
+            sim.emergence.legends.graph.ingest(
+                RawSimEvent::new(t, EventKind::Battle, SourceCrate::Engine, 1.0)
+                    .with_participant(SourceCrate::Engine, SimRuntimeId(1001), Role::Leader),
+            );
         }
         // Drain feed and apply gain so patron logic runs.
         sim.emergence.last_feed.clear();
@@ -7500,25 +7490,15 @@ mod tests {
         let mut sim = Simulation::with_seed(13);
         // Drive a patron into existence the same way as the previous test.
         let tick_base: u64 = 1;
-        sim.emergence.legends.graph.ingest(RawSimEvent {
-            tick: tick_base,
-            source: SourceCrate::Engine,
-            kind: EventKind::Birth,
-            primary: Role::Subject(SimRuntimeId(2001)),
-            secondary: None,
-            magnitude: 1.0,
-            region: None,
-        });
+        sim.emergence.legends.graph.ingest(
+            RawSimEvent::new(tick_base, EventKind::Birth, SourceCrate::Engine, 1.0)
+                .with_participant(SourceCrate::Engine, SimRuntimeId(2001), Role::Victim),
+        );
         for t in 2..=60u64 {
-            sim.emergence.legends.graph.ingest(RawSimEvent {
-                tick: t,
-                source: SourceCrate::Engine,
-                kind: EventKind::Milestone,
-                primary: Role::Subject(SimRuntimeId(2001)),
-                secondary: None,
-                magnitude: 1.0,
-                region: None,
-            });
+            sim.emergence.legends.graph.ingest(
+                RawSimEvent::new(t, EventKind::Battle, SourceCrate::Engine, 1.0)
+                    .with_participant(SourceCrate::Engine, SimRuntimeId(2001), Role::Leader),
+            );
         }
         sim.state.belief = 0;
         sim.emergence.last_feed.clear();

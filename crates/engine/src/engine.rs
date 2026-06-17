@@ -8114,10 +8114,10 @@ mod tests {
         assert_eq!(job_type_for_civilian_id(1_000_000_008), JobType::Farmer);
         // 999_999_999 % 7: 999_999_999 / 7 = 142_857_142 remainder 5 → Admin.
         assert_eq!(job_type_for_civilian_id(999_999_999), JobType::Admin);
-        // 1_000_000_000_000_000_000 % 7 = 6 → Unemployed.
+        // 1_000_000_000_000_000_000 % 7 = 1 → Warrior.
         assert_eq!(
             job_type_for_civilian_id(1_000_000_000_000_000_000),
-            JobType::Unemployed
+            JobType::Warrior
         );
 
         // u64::MAX % 7 == 1 (u64::MAX = 2^64-1 = 2_635_249_153_387_078_802*7 + 1)

@@ -209,6 +209,15 @@ pub struct EmergenceSample {
     /// `0.0` when the world has stabilised (all configs already seen).
     #[serde(default)]
     pub novelty_rate: f32,
+    /// Normalised mutual information I(material; faction) / H(material),
+    /// clamped to [0, 1]. Measures coupling between the voxel-material
+    /// layer and the faction layer.
+    ///
+    /// `None` until faction_id is added to the Citizen struct and wired
+    /// into the sampler; the field is present so downstream consumers can
+    /// forward-compatibly deserialise samples produced by newer engine builds.
+    #[serde(default)]
+    pub mi_material_faction_norm: Option<f32>,
 }
 
 impl Default for EmergenceSample {
@@ -231,6 +240,8 @@ impl Default for EmergenceSample {
             branching_regime: BranchingRegime::HeatDeath,
             power_law_alpha: 0.0,
             novelty_rate: 0.0,
+            // TODO(batch-38): wire (material,faction) pair once faction_id added to Citizen struct (engine.rs:108-114)
+            mi_material_faction_norm: None,
         }
     }
 }
@@ -500,6 +511,8 @@ impl Simulation {
             branching_regime: branching.regime,
             power_law_alpha,
             novelty_rate,
+            // TODO(batch-38): wire (material,faction) pair once faction_id added to Citizen struct (engine.rs:108-114)
+            mi_material_faction_norm: None,
         };
 
         // Single INFO line per sample. The cost budget is ~one log

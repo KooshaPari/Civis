@@ -16,3 +16,4 @@ mods:
 seeds:
   - scenarios/canonical_seeds.ron
 active_seed: raw_organism
+# divergence_override: 0.5  # Optional: overrides the seed's divergence dial (0.0=clone, 1.0=full drift)

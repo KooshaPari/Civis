@@ -236,7 +236,7 @@ impl Scenario {
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
         let mut sim = Simulation::with_seed_and_starting_conditions(
             rng_seed,
-            self.starting_conditions,
+            self.starting_conditions.clone(),
         );
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();

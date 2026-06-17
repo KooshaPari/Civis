@@ -8525,4 +8525,62 @@ mod tests {
             assert!((drift - expected).abs() < 1e-6, "maturity={} drift={}", maturity, drift);
         }
     }
+
+    /// `canonical_faction_pair` always returns the pair in ascending order so
+    /// (a, b) and (b, a) hash to the same BTreeMap key.
+    #[test]
+    fn canonical_faction_pair_orders_ascending() {
+        assert_eq!(canonical_faction_pair(0, 1), (0, 1), "already sorted");
+        assert_eq!(canonical_faction_pair(1, 0), (0, 1), "reversed becomes sorted");
+        assert_eq!(canonical_faction_pair(3, 3), (3, 3), "equal ids stay equal");
+        assert_eq!(canonical_faction_pair(u32::MAX, 0), (0, u32::MAX), "large vs small");
+        for (a, b) in [(2u32, 5), (10, 1), (7, 7), (0, u32::MAX)] {
+            assert_eq!(
+                canonical_faction_pair(a, b),
+                canonical_faction_pair(b, a),
+                "canonical_faction_pair({a},{b}) must be symmetric"
+            );
+        }
+    }
+
+    /// `route_resource` maps known goods labels to the correct ResourceType.
+    /// Unknown goods fall back to Food (documented default).
+    #[test]
+    fn route_resource_maps_known_goods() {
+        assert_eq!(route_resource("grain"), ResourceType::Food, "grain → Food");
+        assert_eq!(route_resource("timber"), ResourceType::Wood, "timber → Wood");
+        assert_eq!(route_resource("ore"), ResourceType::Metal, "ore → Metal");
+        assert_eq!(route_resource("tools"), ResourceType::Metal, "tools → Metal");
+        assert_eq!(route_resource("cloth"), ResourceType::Energy, "cloth → Energy");
+        assert_eq!(route_resource("salt"), ResourceType::Energy, "salt → Energy");
+        assert_eq!(route_resource(""), ResourceType::Food, "empty string → Food (fallback)");
+        assert_eq!(route_resource("unknown"), ResourceType::Food, "unrecognized → Food (fallback)");
+    }
+
+    /// `emergent_route_goods` is deterministic: same faction id → same goods
+    /// label, cycling across the three labels via id % 3.
+    #[test]
+    fn emergent_route_goods_is_deterministic_and_covers_all_labels() {
+        assert_eq!(emergent_route_goods(0), "grain", "id%3==0 → grain");
+        assert_eq!(emergent_route_goods(1), "ore",   "id%3==1 → ore");
+        assert_eq!(emergent_route_goods(2), "cloth", "id%3==2 → cloth");
+        assert_eq!(emergent_route_goods(3), "grain", "id=3 wraps to grain");
+        for id in [0u32, 1, 2, 100, u32::MAX] {
+            assert_eq!(
+                emergent_route_goods(id),
+                emergent_route_goods(id),
+                "emergent_route_goods({id}) must be a pure function of its input"
+            );
+        }
+        // All labels returned by emergent_route_goods must be handled by route_resource
+        // without falling through to the unknown fallback path.
+        let known_labels = ["grain", "ore", "cloth", "timber", "tools", "salt"];
+        for id in 0u32..3 {
+            let goods = emergent_route_goods(id);
+            assert!(
+                known_labels.contains(&goods),
+                "emergent_route_goods({id})=\"{goods}\" is not a known trade label"
+            );
+        }
+    }
 }

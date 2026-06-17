@@ -7587,14 +7587,21 @@ mod tests {
         assert!(sim.has_tech(TECH_STORAGE), "bits are monotonic");
     }
 
-    /// FR-CIV-0100 — irrigation unlock raises carrying capacity by a flat bonus.
+    /// FR-CIV-0100 — irrigation unlock raises carrying capacity by a bonus that
+    /// is further scaled by the planet's biome composition (FR-CIV-0410): the
+    /// raw 200_000 flat bonus is multiplied by `biome_capacity_factor`, so the
+    /// observed delta equals `round(200_000 * factor)`. The capacity still rises
+    /// strictly, and the delta matches the biome-scaled bonus.
     #[test]
     fn irrigation_raises_carrying_capacity() {
         let mut sim = Simulation::with_seed(13);
         let without = sim.carrying_capacity();
         sim.state.tech_unlocks |= TECH_IRRIGATION;
         let with = sim.carrying_capacity();
-        assert_eq!(with - without, 200_000);
+        let factor = biome_capacity_factor(&GeologyMap::seed(sim.planet()));
+        let expected = (200_000.0_f64 * factor as f64) as i64;
+        assert!(with > without, "irrigation must raise capacity");
+        assert_eq!(with - without, expected, "delta = biome-scaled irrigation bonus");
     }
 
     /// FR-CIV-0100 — tech tree extends through tier 6 (Writing, Sanitation, Gunpowder).
@@ -7611,14 +7618,20 @@ mod tests {
         assert_eq!(tier3 & TECH_WRITING, 0);
     }
 
-    /// FR-CIV-0100 — sanitation unlock raises carrying capacity by a flat bonus.
+    /// FR-CIV-0100 — sanitation unlock raises carrying capacity by a bonus that
+    /// is further scaled by the planet's biome composition (FR-CIV-0410): the
+    /// raw 300_000 flat bonus is multiplied by `biome_capacity_factor`, so the
+    /// observed delta equals `round(300_000 * factor)`.
     #[test]
     fn sanitation_adds_more_capacity() {
         let mut sim = Simulation::with_seed(17);
         let without = sim.carrying_capacity();
         sim.state.tech_unlocks |= TECH_SANITATION;
         let with = sim.carrying_capacity();
-        assert_eq!(with - without, 300_000);
+        let factor = biome_capacity_factor(&GeologyMap::seed(sim.planet()));
+        let expected = (300_000.0_f64 * factor as f64) as i64;
+        assert!(with > without, "sanitation must raise capacity");
+        assert_eq!(with - without, expected, "delta = biome-scaled sanitation bonus");
     }
 
     /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with

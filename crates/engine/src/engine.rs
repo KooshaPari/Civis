@@ -2810,6 +2810,16 @@ impl Simulation {
             })
             .collect();
 
+        // PERF_HOTPATH_4 #1 — phase_military O(M²) → O(M+E)
+        // Before: each grid_move / engagement triggered an inner O(M) scan to find the
+        //         target entity → O(M × E) total (≈ O(M²) under sustained combat).
+        // After:  accumulate position patches and HP deltas keyed by entity index, then
+        //         apply all in a single O(M) pass each.  At M=200, E=200: ~40 000 → ~400.
+        // Safety: entities Vec is stable for the lifetime of this phase; indices match
+        //         the ECS query order captured above; entity ids are unique by construction.
+        let mut position_patches: std::collections::HashMap<usize, (i32, i32)> =
+            std::collections::HashMap::new();
+
         for grid_move in tick_operational_movement(
             self.state.tick,
             &phase_cfg.movement,
@@ -2821,13 +2831,22 @@ impl Simulation {
                 sample.grid_x = grid_move.new_grid_x;
                 sample.grid_y = grid_move.new_grid_y;
             }
-            if let Some(target_entity) = entities.get(grid_move.unit_index).copied() {
-                for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
-                    if entity == target_entity {
-                        unit.position.x = grid_move.new_grid_x;
-                        unit.position.y = grid_move.new_grid_y;
-                        break;
-                    }
+            // Accumulate the last position patch per unit index (later patches win,
+            // matching the previous break-on-first-match semantic since entity ids are unique).
+            position_patches.insert(
+                grid_move.unit_index,
+                (grid_move.new_grid_x, grid_move.new_grid_y),
+            );
+        }
+
+        // Single O(M) pass to apply all position patches.
+        if !position_patches.is_empty() {
+            for (idx, (_, unit)) in
+                self.world.query_mut::<&mut MilitaryUnit>().into_iter().enumerate()
+            {
+                if let Some(&(nx, ny)) = position_patches.get(&idx) {
+                    unit.position.x = nx;
+                    unit.position.y = ny;
                 }
             }
         }
@@ -2847,6 +2866,11 @@ impl Simulation {
 
         let hp_loss = Fixed::from_num(config.strength_damage_fixed);
         let scale = FIXED_SCALE as f32;
+
+        // Accumulate total HP damage per unit index before the ECS write pass.
+        let mut hp_patches: std::collections::HashMap<usize, Fixed> =
+            std::collections::HashMap::new();
+
         for engagement in &engagements {
             self.replay_log.record_combat(
                 self.state.tick,
@@ -2854,15 +2878,8 @@ impl Simulation {
                 engagement.target_id,
                 engagement.damage,
             );
-            if let Some(target_entity) = entities.get(engagement.target_index) {
-                for (entity, unit) in self.world.query_mut::<&mut MilitaryUnit>() {
-                    if entity == *target_entity {
-                        unit.hp = (unit.hp - hp_loss).max(Fixed::from_num(0));
-                        unit.strength = unit.hp;
-                        break;
-                    }
-                }
-            }
+            // Accumulate damage; multiple engagements can hit the same target in one tick.
+            *hp_patches.entry(engagement.target_index).or_insert(Fixed::from_num(0)) += hp_loss;
             self.last_tick_combat_pulses.push(CombatDamagePulse {
                 x: (engagement.damage.center.x as f32 / scale).clamp(0.0, 1.0),
                 y: (engagement.damage.center.z as f32 / scale).clamp(0.0, 1.0),
@@ -2870,6 +2887,18 @@ impl Simulation {
                 unit_b: Some(engagement.target_id),
             });
             self.pending_damage.push(engagement.damage);
+        }
+
+        // Single O(M) pass to apply all HP patches (replaces one O(M) scan per engagement).
+        if !hp_patches.is_empty() {
+            for (idx, (_, unit)) in
+                self.world.query_mut::<&mut MilitaryUnit>().into_iter().enumerate()
+            {
+                if let Some(&total_loss) = hp_patches.get(&idx) {
+                    unit.hp = (unit.hp - total_loss).max(Fixed::from_num(0));
+                    unit.strength = unit.hp;
+                }
+            }
         }
 
         let dead: Vec<Entity> = self

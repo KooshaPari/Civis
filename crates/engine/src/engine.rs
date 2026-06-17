@@ -2056,6 +2056,14 @@ impl Simulation {
             .state
             .belief
             .saturating_sub(self.state.belief / BELIEF_DECAY_DIVISOR);
+        // N11 maturity↔belief coupling (FR-CIV-EMERGENCE-N11): elder wisdom stabilizes faith.
+        let avg_maturity = avg_psyche_maturity(&self.world);
+        let belief_stabilizer = (avg_maturity * 5_000.0) as u64;
+        self.state.belief = self.state.belief.saturating_add(belief_stabilizer);
+        // Mature populations resist belief drift; immature populations drift faster.
+        let drift_factor = 0.95 + 0.05 * avg_maturity; // [0.95, 1.0]
+        let drift_loss = (self.state.belief as f32 * (1.0 - drift_factor)) as u64;
+        self.state.belief = self.state.belief.saturating_sub(drift_loss);
     }
 
     /// FR-CIV-LEGENDS-001 — mint belief from this tick's saga significance.
@@ -3516,6 +3524,18 @@ fn micro_social_trust_permille(world: &hecs::World) -> u64 {
     let trust_mean = sum / n as f32;
     let raw = (trust_mean * MICRO_TRUST_SCALE).floor() as u64;
     raw.min(MICRO_TRUST_CAP)
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N11): average psyche maturity across all agents.
+/// Mature populations stabilize belief (wisdom = stability). Pure `hecs::World` scan.
+fn avg_psyche_maturity(world: &hecs::World) -> f32 {
+    let mut total = 0.0;
+    let mut count = 0u32;
+    for (_, psyche) in world.query::<&Psyche>().iter() {
+        total += psyche.maturity;
+        count += 1;
+    }
+    if count == 0 { 0.0 } else { total / count as f32 }
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -8471,5 +8491,38 @@ mod tests {
             DiplomacyKind::Conflict,
             "high-aggression factions should clash at the same disparity"
         );
+    }
+
+    // N11 maturity↔belief coupling tests (FR-CIV-EMERGENCE-N11)
+
+    #[test]
+    fn n11_avg_psyche_maturity_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        assert_eq!(avg_psyche_maturity(&sim.world), 0.0);
+    }
+
+    #[test]
+    fn n11_avg_psyche_maturity_computes_mean() {
+        use civ_agents::{Mood, Psyche, Temperament, PSYCHE_DIM};
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        let psyche = Psyche {
+            drives: [0.5; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood::neutral(),
+            beliefs: [0.5; PSYCHE_DIM],
+            maturity: 1.0,
+        };
+        sim.world.spawn((psyche,));
+        assert_eq!(avg_psyche_maturity(&sim.world), 1.0);
+    }
+
+    #[test]
+    fn n11_drift_factor_bounds() {
+        for (maturity, expected) in [(0.0f32, 0.95f32), (0.5, 0.975), (1.0, 1.0)] {
+            let drift = 0.95 + 0.05 * maturity;
+            assert!((drift - expected).abs() < 1e-6, "maturity={} drift={}", maturity, drift);
+        }
     }
 }

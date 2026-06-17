@@ -3210,6 +3210,9 @@ impl Simulation {
         // N2: read cluster cultures before any mutable diplomacy state borrow.
         let culture_bias =
             diplomacy_culture_threshold_bias(&self.emergence.cluster_cultures, a, b);
+        // RELIGION→DIPLOMACY: read patron before any mutable borrow (avoids E0502).
+        let has_patron = self.patron_deity().is_some();
+        let religion_peace_bonus = religious_unity_peace_bonus(has_patron);
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
         // Emergent pairwise relations further bias the threshold: allies tolerate
@@ -3232,7 +3235,8 @@ impl Simulation {
                 + diplomacy_relation_threshold_bias(relation)
                 + culture_bias
                 - agg_reduction
-                + affinity_bias)
+                + affinity_bias
+                + religion_peace_bonus)
                 .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
         );
         let kind = if disparity >= conflict_threshold {
@@ -3875,6 +3879,31 @@ const N12_AFFINITY_BIAS_SCALE: f32 = 5_000.0;
 /// clamped to `[-1, 1]` so the bias is bounded to `[-5000, 5000]`. Returns i64.
 fn affinity_threshold_bias(avg_affinity: f32) -> i64 {
     (avg_affinity.clamp(-1.0, 1.0) * N12_AFFINITY_BIAS_SCALE) as i64
+}
+
+/// Maximum peace bonus from shared patron veneration (religion → diplomacy coupling).
+const RELIGIOUS_UNITY_PEACE_CAP: i64 = 1_000;
+
+/// RELIGION→DIPLOMACY emergence coupling (FR-CIV-RELIGION-002).
+///
+/// A civilisation that has crystallised a patron deity around a shared legend
+/// figure gains social cohesion that spills into inter-faction tolerance: the
+/// disparity threshold before war is raised by up to
+/// [`RELIGIOUS_UNITY_PEACE_CAP`] currency units.
+///
+/// The bonus is binary (patron present / absent) rather than proportional
+/// because the emergence mechanic already encodes significance in *which*
+/// figure becomes patron; the coupling here is "shared veneration exists" not
+/// "how devout are they".
+///
+/// Called with an immutable copy of `has_patron` (read before any mutable
+/// borrow of `self`) to satisfy the borrow-checker (E0502).
+fn religious_unity_peace_bonus(has_patron: bool) -> i64 {
+    if has_patron {
+        RELIGIOUS_UNITY_PEACE_CAP
+    } else {
+        0
+    }
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -5233,6 +5262,48 @@ mod tests {
         assert_eq!(
             diplomacy_conflict_threshold(5_000, 5_000),
             DIPLOMACY_BASE_CONFLICT_THRESHOLD
+        );
+    }
+
+    // ── RELIGION→DIPLOMACY coupling tests (FR-CIV-RELIGION-002) ──────────────
+
+    /// FR-CIV-RELIGION-002 §1 — bonus is bounded at RELIGIOUS_UNITY_PEACE_CAP
+    /// when a patron is present, and is exactly 0 when absent.
+    #[test]
+    fn test_religious_unity_bonus_bounded() {
+        assert!(
+            religious_unity_peace_bonus(true) <= RELIGIOUS_UNITY_PEACE_CAP,
+            "patron bonus must not exceed the cap"
+        );
+        assert_eq!(
+            religious_unity_peace_bonus(false),
+            0,
+            "no patron => zero bonus"
+        );
+    }
+
+    /// FR-CIV-RELIGION-002 §2 — a patron deity strictly raises the effective
+    /// conflict threshold relative to the no-patron baseline.
+    #[test]
+    fn test_shared_patron_raises_conflict_threshold() {
+        let base = diplomacy_conflict_threshold(0, 0) + religious_unity_peace_bonus(false);
+        let with_patron = diplomacy_conflict_threshold(0, 0) + religious_unity_peace_bonus(true);
+        assert!(
+            with_patron > base,
+            "shared veneration must raise the conflict threshold"
+        );
+    }
+
+    /// FR-CIV-RELIGION-002 §3 — absence of a patron leaves legacy threshold
+    /// identical to the zero-bonus baseline (no regression).
+    #[test]
+    fn test_no_patron_legacy_behavior() {
+        let legacy = diplomacy_conflict_threshold(10_000, 1_000);
+        let no_patron = diplomacy_conflict_threshold(10_000, 1_000)
+            + religious_unity_peace_bonus(false);
+        assert_eq!(
+            no_patron, legacy,
+            "no patron => threshold unchanged from baseline"
         );
     }
 

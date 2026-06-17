@@ -188,6 +188,27 @@ impl BiomeKind {
             BiomeKind::Plains => {
                 matches!(label, "Plains" | "Grassland" | "Savanna" | "Steppe" | "Prairie")
             }
+            BiomeKind::Grassland => {
+                matches!(label, "Grassland" | "Plains" | "Steppe" | "Prairie" | "Meadow")
+            }
+            BiomeKind::Savanna => {
+                matches!(label, "Savanna" | "Grassland" | "Scrubland" | "Drylands")
+            }
+            BiomeKind::Rainforest => {
+                matches!(label, "Rainforest" | "Jungle" | "TropicalForest" | "Forest")
+            }
+            BiomeKind::Taiga => {
+                matches!(label, "Taiga" | "Boreal" | "BorealForest" | "Tundra")
+            }
+            BiomeKind::Wetland => {
+                matches!(label, "Wetland" | "Marsh" | "Swamp" | "Bog" | "Fen")
+            }
+            BiomeKind::Beach => {
+                matches!(label, "Beach" | "Coast" | "Shore" | "Coastal")
+            }
+            BiomeKind::Glacier => {
+                matches!(label, "Glacier" | "Ice" | "Icecap" | "Arctic")
+            }
         }
     }
 }

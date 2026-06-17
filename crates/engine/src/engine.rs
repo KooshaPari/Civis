@@ -2940,11 +2940,15 @@ impl Simulation {
         let agg_a = self.faction_aggression.get(&a).copied().unwrap_or(0.0);
         let agg_b = self.faction_aggression.get(&b).copied().unwrap_or(0.0);
         let agg_reduction = aggression_threshold_reduction((agg_a + agg_b) / 2.0);
+        // N12: collective affinity biases the threshold (goodwill buffers tension,
+        // hostility clashes sooner). avg_affinity in [-1, 1]; bias in [-5000, 5000].
+        let affinity_bias = affinity_threshold_bias(avg_social_affinity(&self.world));
         let conflict_threshold = Fixed::from_num(
             (base_threshold
                 + diplomacy_relation_threshold_bias(relation)
                 + culture_bias
-                - agg_reduction)
+                - agg_reduction
+                + affinity_bias)
                 .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
         );
         let kind = if disparity >= conflict_threshold {
@@ -3536,6 +3540,36 @@ fn avg_psyche_maturity(world: &hecs::World) -> f32 {
         count += 1;
     }
     if count == 0 { 0.0 } else { total / count as f32 }
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N12): average affinity across all social ties.
+/// Positive collective affinity (goodwill) raises the diplomacy conflict threshold;
+/// hostility lowers it. Range [-1, 1]. Pure `hecs::World` scan.
+fn avg_social_affinity(world: &hecs::World) -> f32 {
+    let mut total = 0.0;
+    let mut count = 0u32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            total += tie.affinity;
+            count += 1;
+        }
+    }
+    if count == 0 {
+        0.0
+    } else {
+        (total / count as f32).clamp(-1.0, 1.0)
+    }
+}
+
+/// N12: bias magnitude for the affinity→diplomacy threshold (FR-CIV-EMERGENCE-N12).
+/// `avg_affinity ∈ [-1, 1]` scaled by this yields the threshold bias in `[-5000, 5000]`,
+/// bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` at the combination site.
+const N12_AFFINITY_BIAS_SCALE: f32 = 5_000.0;
+
+/// N12: collective affinity threshold bias. Positive goodwill raises the conflict
+/// threshold (more tolerance before fighting); hostility lowers it. Bounded i64.
+fn affinity_threshold_bias(avg_affinity: f32) -> i64 {
+    (avg_affinity.clamp(-1.0, 1.0) * N12_AFFINITY_BIAS_SCALE) as i64
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -8524,5 +8558,138 @@ mod tests {
             let drift = 0.95 + 0.05 * maturity;
             assert!((drift - expected).abs() < 1e-6, "maturity={} drift={}", maturity, drift);
         }
+    }
+
+    // N12 affinity↔diplomacy coupling tests (FR-CIV-EMERGENCE-N12)
+
+    #[test]
+    fn n12_avg_social_affinity_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        assert_eq!(avg_social_affinity(&sim.world), 0.0);
+    }
+
+    #[test]
+    fn n12_avg_social_affinity_computes_mean_and_clamps() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        // One graph affinity +1.0, one graph affinity -1.0 → mean 0.0.
+        let g_pos = SocialGraph {
+            ties: vec![Tie {
+                other: 1,
+                kinship: 0.0,
+                familiarity: 0.0,
+                affinity: 1.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        let g_neg = SocialGraph {
+            ties: vec![Tie {
+                other: 2,
+                kinship: 0.0,
+                familiarity: 0.0,
+                affinity: -1.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((g_pos,));
+        sim.world.spawn((g_neg,));
+        assert!(avg_social_affinity(&sim.world).abs() < 1e-6);
+    }
+
+    #[test]
+    fn n12_affinity_bias_direction_and_bounds() {
+        // Positive affinity raises threshold; negative lowers it; bounded [-5000, 5000].
+        let pos = affinity_threshold_bias(1.0);
+        let neg = affinity_threshold_bias(-1.0);
+        let zero = affinity_threshold_bias(0.0);
+        assert_eq!(pos, 5_000);
+        assert_eq!(neg, -5_000);
+        assert_eq!(zero, 0);
+        assert!(pos > zero && zero > neg, "goodwill must raise tolerance over hostility");
+        // Out-of-range inputs clamp.
+        assert_eq!(affinity_threshold_bias(2.0), 5_000);
+        assert_eq!(affinity_threshold_bias(-2.0), -5_000);
+    }
+
+    #[test]
+    fn n12_high_affinity_keeps_factions_trading() {
+        use civ_agents::Tie;
+        // Disparity ABOVE the base threshold (would Conflict at neutral affinity),
+        // but strong collective goodwill raises the threshold enough to keep trade.
+        let base = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+        let disparity = base + 2_000; // 12_000: above base, below base + max affinity bias
+
+        // Low-affinity sim: hostile ties → threshold drops → Conflict.
+        let mut sim_low = Simulation::with_seed(5);
+        sim_low.state.tick = 500;
+        sim_low.state.belief = 0;
+        sim_low.state.cohesion = 0;
+        sim_low.state.unrest = 0;
+        for _ in 0..3 {
+            sim_low.world.spawn((SocialGraph {
+                ties: vec![Tie {
+                    other: 9,
+                    kinship: 0.0,
+                    familiarity: 0.0,
+                    affinity: -1.0,
+                    trust: 0.0,
+                    last_seen: 0,
+                }],
+            },));
+        }
+        let mut faction_ids: Vec<u32> = sim_low.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        if faction_ids.len() < 2 {
+            return; // Defensive: need a faction pair; skip if scenario has none.
+        }
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim_low.state.tick);
+        sim_low.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_low
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_low.phase_diplomacy();
+        let low_kind = sim_low.diplomacy_events().last().expect("event").kind;
+
+        // High-affinity sim: goodwill ties → threshold rises → TradeAgreement.
+        let mut sim_high = Simulation::with_seed(5);
+        sim_high.state.tick = 500;
+        sim_high.state.belief = 0;
+        sim_high.state.cohesion = 0;
+        sim_high.state.unrest = 0;
+        for _ in 0..3 {
+            sim_high.world.spawn((SocialGraph {
+                ties: vec![Tie {
+                    other: 9,
+                    kinship: 0.0,
+                    familiarity: 0.0,
+                    affinity: 1.0,
+                    trust: 0.0,
+                    last_seen: 0,
+                }],
+            },));
+        }
+        sim_high.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_high
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_high.phase_diplomacy();
+        let high_kind = sim_high.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            low_kind,
+            DiplomacyKind::Conflict,
+            "hostile populations should clash at disparity above base threshold"
+        );
+        assert_eq!(
+            high_kind,
+            DiplomacyKind::TradeAgreement,
+            "collective goodwill should raise the threshold and keep factions trading"
+        );
     }
 }

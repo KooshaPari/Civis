@@ -162,6 +162,36 @@ pub struct GeologyMap {
     pub regions: Vec<RegionBiome>,
 }
 
+impl BiomeKind {
+    /// Return `true` when the affinity label string from a [`SeedDefinition`]
+    /// is considered a match for this biome archetype.
+    ///
+    /// The comparison is case-sensitive and uses a curated alias table so the
+    /// genetics crate can stay decoupled from `BiomeKind` while scenario
+    /// authors can still use natural names like `"TemperateForest"` or
+    /// `"Grassland"`.
+    #[must_use]
+    pub fn matches_affinity(self, label: &str) -> bool {
+        match self {
+            BiomeKind::Forest => matches!(
+                label,
+                "Forest" | "TemperateForest" | "TropicalForest" | "Jungle"
+            ),
+            BiomeKind::Ocean => matches!(label, "Ocean" | "Tidepool" | "DeepOcean" | "Sea"),
+            BiomeKind::Mountain => {
+                matches!(label, "Mountain" | "Alpine" | "Highland" | "Volcano")
+            }
+            BiomeKind::Desert => matches!(label, "Desert" | "Arid" | "Badlands" | "Dunes"),
+            BiomeKind::Tundra => {
+                matches!(label, "Tundra" | "Arctic" | "Boreal" | "Taiga" | "Permafrost")
+            }
+            BiomeKind::Plains => {
+                matches!(label, "Plains" | "Grassland" | "Savanna" | "Steppe" | "Prairie")
+            }
+        }
+    }
+}
+
 impl GeologyMap {
     /// Derive a deterministic geology map from `planet_config`.
     ///
@@ -216,12 +246,92 @@ impl GeologyMap {
 
         GeologyMap { regions }
     }
+
+    /// Map a normalised horizontal position `(nx, nz) ∈ [0, 1]²` to the
+    /// biome archetype of the region it falls in.
+    ///
+    /// The 16-region grid produced by [`GeologyMap::seed`] is a 1-D latitude
+    /// band (region 0 = south pole, region 15 = north pole) derived entirely
+    /// from the planet's `radius_km` and `axial_tilt_deg`. For the purposes of
+    /// spawn-time biome lookup we map the north–south axis (nz) to the region
+    /// index so equatorial spawns land in equatorial biomes and polar spawns in
+    /// polar biomes. The east–west axis (nx) is ignored here because the 1-D
+    /// band model has no longitudinal variation.
+    ///
+    /// Returns [`BiomeKind::Plains`] when `regions` is empty (defensive).
+    #[must_use]
+    pub fn biome_at_normalized(&self, _nx: f32, nz: f32) -> BiomeKind {
+        if self.regions.is_empty() {
+            return BiomeKind::Plains;
+        }
+        let n = self.regions.len();
+        // Clamp nz to [0, 1] and map to [0, n-1] with rounding.
+        let idx = ((nz.clamp(0.0, 1.0) * (n - 1) as f32).round() as usize).min(n - 1);
+        self.regions[idx].biome
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::defaults_earthlike;
+
+    /// BiomeKind::matches_affinity maps label strings to biome archetypes correctly.
+    #[test]
+    fn biome_affinity_label_bridge() {
+        // Forest matches canonical and alias labels.
+        assert!(BiomeKind::Forest.matches_affinity("Forest"));
+        assert!(BiomeKind::Forest.matches_affinity("TemperateForest"));
+        assert!(BiomeKind::Forest.matches_affinity("TropicalForest"));
+        // Ocean matches ocean / coastal aliases.
+        assert!(BiomeKind::Ocean.matches_affinity("Ocean"));
+        assert!(BiomeKind::Ocean.matches_affinity("Tidepool"));
+        // Cross-biome false.
+        assert!(!BiomeKind::Ocean.matches_affinity("Forest"));
+        assert!(!BiomeKind::Forest.matches_affinity("Ocean"));
+        assert!(!BiomeKind::Mountain.matches_affinity("Desert"));
+        // Other biomes.
+        assert!(BiomeKind::Desert.matches_affinity("Arid"));
+        assert!(BiomeKind::Tundra.matches_affinity("Arctic"));
+        assert!(BiomeKind::Tundra.matches_affinity("Boreal"));
+        assert!(BiomeKind::Plains.matches_affinity("Grassland"));
+        assert!(BiomeKind::Plains.matches_affinity("Savanna"));
+        assert!(BiomeKind::Mountain.matches_affinity("Alpine"));
+        // Unknown label never matches anything.
+        assert!(!BiomeKind::Plains.matches_affinity("Bog"));
+        assert!(!BiomeKind::Desert.matches_affinity(""));
+    }
+
+    /// biome_at_normalized returns polar biomes near edges and equatorial near centre.
+    #[test]
+    fn biome_at_normalized_maps_latitude_to_region() {
+        // Use a planet with high axial tilt so equatorial regions are Forest.
+        let (mut planet, _) = defaults_earthlike();
+        planet.axial_tilt_deg = 40; // > 30 → equatorial Forest
+        let map = GeologyMap::seed(&planet);
+
+        // nz = 0.5 → equatorial → Forest
+        let mid = map.biome_at_normalized(0.0, 0.5);
+        assert_eq!(
+            mid,
+            BiomeKind::Forest,
+            "mid-latitude should be Forest with high axial tilt"
+        );
+
+        // nz = 0.0 → south pole → Tundra or Ocean (depends on radius)
+        let south = map.biome_at_normalized(0.0, 0.0);
+        assert!(
+            south == BiomeKind::Tundra || south == BiomeKind::Ocean,
+            "south pole should be polar, got {south:?}"
+        );
+
+        // nz = 1.0 → north pole → Tundra or Ocean
+        let north = map.biome_at_normalized(0.0, 1.0);
+        assert!(
+            north == BiomeKind::Tundra || north == BiomeKind::Ocean,
+            "north pole should be polar, got {north:?}"
+        );
+    }
 
     /// FR-CIV-PLANET-040 — same PlanetConfig always produces a bit-identical GeologyMap.
     #[test]

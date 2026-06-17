@@ -11,7 +11,8 @@ use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    Alignment, Civilian, ClusterMember, Interaction, Needs, Psyche, SocialEvent, SocialGraph,
+    Alignment, Civilian, ClusterMember, Interaction, Needs, Position3d, Psyche, SocialEvent,
+    SocialGraph,
 };
 use civ_genetics::{
     example_seed_set,
@@ -22,6 +23,8 @@ use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
     SourceCrate,
 };
+use civ_planet::GeologyMap;
+use civ_voxel::FIXED_SCALE;
 use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
 use civ_species::express;
@@ -133,6 +136,45 @@ impl EmergenceState {
     }
 }
 
+/// Choose the best [`SeedDefinition`] for a spawn position based on the biome
+/// that the position maps to via the geology layer.
+///
+/// # Algorithm
+/// 1. Convert `pos.coord.x` / `pos.coord.z` to normalised `[0, 1]` by dividing
+///    by [`FIXED_SCALE`].
+/// 2. Look up the biome archetype via [`GeologyMap::biome_at_normalized`].
+/// 3. Iterate `seed_library` and return the first seed whose
+///    `spawn_biome_affinity` labels contain a match for that biome
+///    (via [`civ_planet::BiomeKind::matches_affinity`]).
+/// 4. If no match is found, return `active_seed` as the fallback.
+///
+/// The fallback keeps the function total: callers never need to special-case
+/// the no-match path.
+fn select_seed_for_position<'a>(
+    seed_library: &'a SeedLibrary,
+    active_seed: Option<&'a SeedDefinition>,
+    geology_map: &GeologyMap,
+    pos: &Position3d,
+) -> Option<&'a SeedDefinition> {
+    let nx = (pos.coord.x as f32) / (FIXED_SCALE as f32);
+    let nz = (pos.coord.z as f32) / (FIXED_SCALE as f32);
+    let biome = geology_map.biome_at_normalized(nx, nz);
+    // Stable iteration order: sort by id so the same world always picks the
+    // same seed on the same biome (HashMap iteration is unordered).
+    let mut candidates: Vec<(&String, &SeedDefinition)> = seed_library.iter().collect();
+    candidates.sort_by(|(a, _), (b, _)| a.cmp(b));
+    for (_, seed) in candidates {
+        if seed
+            .spawn_biome_affinity
+            .iter()
+            .any(|label| biome.matches_affinity(label))
+        {
+            return Some(seed);
+        }
+    }
+    active_seed
+}
+
 impl Simulation {
     pub(crate) fn default_emergence_state(seed: u64) -> EmergenceState {
         EmergenceState::new(seed)
@@ -157,29 +199,52 @@ impl Simulation {
 
     fn emergence_ensure_genomes(&mut self) {
         let len = self.emergence.dna_class.length;
-        // Borrow the active seed once per tick (if any) so we don't hold a
-        // reference into the library while the world is queried.
+
+        // Pass 1: collect agents that still lack a Dna component, together
+        // with their Position3d (if any).  We clone everything out of the ECS
+        // so we can release all borrows before doing the seed lookup and
+        // insert.  This is the two-pass pattern required to satisfy the
+        // borrow-checker: the ECS query immutably borrows `self.world`, and
+        // `world.insert` requires `&mut World`.
+        let agents_needing_dna: Vec<(Entity, u64, Option<Position3d>)> = self
+            .world
+            .query::<(&Civilian, Option<&Position3d>)>()
+            .iter()
+            .filter(|(e, _)| self.world.get::<&Dna>(*e).is_err())
+            .map(|(e, (c, pos))| (e, c.id, pos.copied()))
+            .collect();
+
+        // Clone the active seed and library data we need before the insert
+        // pass so we hold no reference into `self.emergence` while mutating
+        // `self.world`.
         let active_seed: Option<SeedDefinition> = self
             .emergence
             .active_seed_id
             .as_ref()
             .and_then(|id| self.emergence.seed_library.get(id).cloned());
-        let agents: Vec<(Entity, u64)> = self
-            .world
-            .query::<&Civilian>()
-            .iter()
-            .map(|(e, c)| (e, c.id))
-            .collect();
-        for (entity, id) in agents {
-            if self.world.get::<&Dna>(entity).is_ok() {
-                continue;
-            }
+        // Build a geology map on demand (cheap: pure deterministic arithmetic
+        // from PlanetConfig; no RNG, no heap beyond the 16-element Vec).
+        let geology_map = civ_planet::GeologyMap::seed(self.planet());
+
+        // Pass 2: resolve the biome-matched seed and insert Dna components.
+        for (entity, id, pos_opt) in agents_needing_dna {
             let mut local = ChaCha8Rng::seed_from_u64(self.state.rng_seed ^ id);
-            // If the active seed's dna_length doesn't match the class length
-            // (config drift), fall back to a fully random spawn of the
-            // class-correct length. This keeps the spawn path robust to
-            // seed/class mismatches without panicking.
-            let dna = match active_seed.as_ref() {
+
+            // Choose seed: position-matched biome seed first, active seed as
+            // fallback, raw random when neither has the right dna_length.
+            let chosen_seed: Option<SeedDefinition> = if let Some(pos) = pos_opt {
+                select_seed_for_position(
+                    &self.emergence.seed_library,
+                    active_seed.as_ref(),
+                    &geology_map,
+                    &pos,
+                )
+                .cloned()
+            } else {
+                active_seed.clone()
+            };
+
+            let dna = match chosen_seed.as_ref() {
                 Some(seed) if seed.dna_length == len => {
                     spawn_genome(&mut local, &self.emergence.dna_class, Some(seed))
                 }
@@ -1031,6 +1096,77 @@ mod tests {
 
         assert_eq!(sim.agent_social_graph(agent_id), Some(graph));
         assert_eq!(sim.agent_social_graph(9_999_999), None);
+    }
+
+    /// select_seed_for_position picks the biome-matched seed, not the active fallback.
+    #[test]
+    fn seed_selection_picks_biome_match() {
+        use civ_agents::Position3d;
+        use civ_genetics::{SeedDefinition, SeedLibrary, SeedSet};
+        use civ_planet::{defaults_earthlike, GeologyMap};
+        use civ_voxel::{WorldCoord, FIXED_SCALE};
+
+        // Build a planet that has Forest in its equatorial band (axial tilt > 30°).
+        let (mut planet_cfg, _) = defaults_earthlike();
+        planet_cfg.axial_tilt_deg = 40;
+        let geology_map = GeologyMap::seed(&planet_cfg);
+
+        // A mid-latitude (equatorial) position — nz=0.5 → Forest biome.
+        let equatorial_pos = Position3d {
+            coord: WorldCoord {
+                x: (0.5 * FIXED_SCALE as f32) as i64,
+                y: 0,
+                z: (0.5 * FIXED_SCALE as f32) as i64,
+            },
+        };
+
+        // Confirm the biome for this position is Forest.
+        let biome = geology_map.biome_at_normalized(0.5, 0.5);
+        assert_eq!(
+            biome,
+            civ_planet::BiomeKind::Forest,
+            "expected Forest biome at equatorial position with high axial tilt"
+        );
+
+        // Build a seed library with: raw_organism (no affinity) and
+        // human_baseline (TemperateForest affinity).
+        let dna_len: usize = 64;
+        let active_seed = SeedDefinition {
+            id: "raw_organism".to_string(),
+            display_name: "Raw Organism".to_string(),
+            dna_length: dna_len,
+            genome: (0..dna_len as u8).collect(),
+            divergence: 1.0,
+            spawn_biome_affinity: vec![],
+            notes: None,
+        };
+        let forest_seed = SeedDefinition {
+            id: "human_baseline".to_string(),
+            display_name: "Human Baseline".to_string(),
+            dna_length: dna_len,
+            genome: (0..dna_len as u8).map(|i| i.wrapping_mul(7).wrapping_add(13)).collect(),
+            divergence: 0.1,
+            spawn_biome_affinity: vec!["TemperateForest".to_string()],
+            notes: None,
+        };
+        let set = SeedSet {
+            version: 1,
+            seeds: vec![active_seed.clone(), forest_seed.clone()],
+        };
+        let lib = SeedLibrary::from_seed_set(set).expect("valid seed set");
+
+        // select_seed_for_position should prefer the forest seed over the fallback.
+        let chosen = select_seed_for_position(
+            &lib,
+            Some(&active_seed),
+            &geology_map,
+            &equatorial_pos,
+        );
+        assert_eq!(
+            chosen.map(|s| s.id.as_str()),
+            Some("human_baseline"),
+            "equatorial Forest position should pick human_baseline, not raw_organism"
+        );
     }
 
     /// `civ_ai_decisions` surfaces naming decisions after sentience crossings.

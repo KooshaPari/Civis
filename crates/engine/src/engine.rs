@@ -8077,4 +8077,242 @@ mod tests {
         );
         assert_eq!(sim.military_phase_config().war.fog_grid_size, kept_grid);
     }
+
+    // -------------------------------------------------------------------
+    // Coverage-gap closure (COVERAGE_GAPS_4): the three pure policy helpers
+    // below had no direct unit tests prior to this commit. Each test below
+    // is named per the coverage-gap closure plan and bundles all relevant
+    // edge cases from TEST_SPECS_UNTESTED.md into a single `#[test]`.
+    // -------------------------------------------------------------------
+
+    /// `job_type_for_civilian_id` is a total pure function of its `u64`
+    /// input. This test pins the full mod-7 bucket map (including the
+    /// catch-all `_` arm), wrap-around at the modulus, sparse / far-out ids
+    /// resolving to the right bucket via `id % 7`, the `u64::MAX` boundary,
+    /// and the determinism guarantee (same id → same `JobType`, no state).
+    /// FR-CIV-ENGINE spawn-determinism depends on this. (COVERAGE_GAPS_4 row 1.)
+    #[test]
+    fn job_type_for_civilian_id_deterministic_split() {
+        // All seven mod-buckets, including the `_`-arm for remainder 6.
+        assert_eq!(job_type_for_civilian_id(0), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(1), JobType::Warrior);
+        assert_eq!(job_type_for_civilian_id(2), JobType::Scholar);
+        assert_eq!(job_type_for_civilian_id(3), JobType::Trader);
+        assert_eq!(job_type_for_civilian_id(4), JobType::Priest);
+        assert_eq!(job_type_for_civilian_id(5), JobType::Admin);
+        assert_eq!(job_type_for_civilian_id(6), JobType::Unemployed);
+
+        // `id % 7` wraps cleanly: every 7th id resolves to the same JobType.
+        assert_eq!(job_type_for_civilian_id(7), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(14), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(42), JobType::Farmer); // 42 % 7 == 0
+        assert_eq!(job_type_for_civilian_id(13), JobType::Unemployed); // 13 % 7 == 6
+        assert_eq!(job_type_for_civilian_id(20), JobType::Unemployed); // 20 % 7 == 6
+
+        // Sparse / far-out ids resolve to a deterministic bucket.
+        // 1_000_000_008 % 7 == 0 (1_000_000_008 = 142_857_144 * 7) → Farmer.
+        assert_eq!(job_type_for_civilian_id(1_000_000_008), JobType::Farmer);
+        // 999_999_999 % 7: 999_999_999 / 7 = 142_857_142 remainder 5 → Admin.
+        assert_eq!(job_type_for_civilian_id(999_999_999), JobType::Admin);
+        // 1_000_000_000_000_000_000 % 7 = 1 → Warrior.
+        assert_eq!(
+            job_type_for_civilian_id(1_000_000_000_000_000_000),
+            JobType::Warrior
+        );
+
+        // u64::MAX % 7 == 1 (u64::MAX = 2^64-1 = 2_635_249_153_387_078_802*7 + 1)
+        // → Warrior. Confirms totality over the full u64 range, no overflow.
+        assert_eq!(job_type_for_civilian_id(u64::MAX), JobType::Warrior);
+
+        // Determinism: same id → same JobType, no state, no panic.
+        for id in [0u64, 1, 6, 7, 42, 100, 999_999_999, u64::MAX] {
+            assert_eq!(
+                job_type_for_civilian_id(id),
+                job_type_for_civilian_id(id),
+                "job_type_for_civilian_id({id}) must be a pure function of its input"
+            );
+        }
+    }
+
+    /// `faction_wealth_scarcity_shadow` maps (treasury, resources) → shadow
+    /// price used as input to `faction_unrest_delta_from_shadow`. This test
+    /// pins the comfort-threshold branch (≥ 12_000 → baseline), the exact
+    /// `12_000` boundary, the empty-Resources "deep scarcity" extreme
+    /// (wealth = 0 → 4_000), food-only and treasury-only shortfalls, the
+    /// lower floor at `FOOD_SCARCITY_BASELINE`, and the `treasury.raw / SCALE`
+    /// integer-units conversion. (COVERAGE_GAPS_4 row 5.)
+    #[test]
+    fn faction_wealth_scarcity_shadow_edge_cases() {
+        // Comfort branch: wealth >= 12_000 pins shadow to FOOD_SCARCITY_BASELINE.
+        // treasury=100_000, food=10_000 → wealth = 100_000 + 10_000*50 = 600_000.
+        let res = Resources {
+            food: Fixed::from_num(10_000),
+            wood: Fixed::ZERO,
+            metal: Fixed::ZERO,
+            energy: Fixed::ZERO,
+        };
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(100_000), &res),
+            FOOD_SCARCITY_BASELINE
+        );
+
+        // Exact comfort boundary: wealth == 12_000 still pins to baseline
+        // because the function uses `>=`, not strict `>`.
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(12_000), &res),
+            FOOD_SCARCITY_BASELINE
+        );
+
+        // Empty Resources + zero treasury = "deep scarcity": wealth = 0,
+        // shadow = 1_000 + 12_000/4 = 4_000. (No upper clamp inside the
+        // function; this is the maximum shadow reachable in one call.)
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::ZERO, &res),
+            FOOD_SCARCITY_BASELINE + 12_000 / 4,
+            "empty Resources + zero treasury lands at the maximum shadow"
+        );
+
+        // Food-only shortfall: treasury = 0, food = 10 → wealth = 500.
+        // shadow = 1_000 + (12_000 - 500)/4 = 1_000 + 2_875 = 3_875.
+        let res = Resources {
+            food: Fixed::from_num(10),
+            wood: Fixed::ZERO,
+            metal: Fixed::ZERO,
+            energy: Fixed::ZERO,
+        };
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::ZERO, &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 500) / 4
+        );
+
+        // Treasury-only shortfall: treasury = 4_000, food = 0 → wealth = 4_000.
+        // shadow = 1_000 + (12_000 - 4_000)/4 = 3_000.
+        // NOTE: the function does NOT implement a "treasury hedges food"
+        // channel — treasury is additive in the same units as the
+        // food-weighted wealth. This test pins the actual behavior.
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(4_000), &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 4_000) / 4
+        );
+
+        // Lower floor: shadow never falls below FOOD_SCARCITY_BASELINE for
+        // any legal input. The comfort branch pins to it, the shortfall
+        // branch adds to it.
+        let cases: Vec<(i64, Resources)> = vec![
+            (0, Resources::default()),
+            (10_000, Resources::default()),
+            (0, Resources { food: Fixed::from_num(1), ..Resources::default() }),
+            (Fixed::from_num(5_000).raw, Resources::default()),
+            (Fixed::from_num(99_999_999).raw, Resources::default()),
+        ];
+        for (treasury_raw, res) in cases {
+            let treasury = Fixed { raw: treasury_raw };
+            let shadow = faction_wealth_scarcity_shadow(treasury, &res);
+            assert!(
+                shadow >= FOOD_SCARCITY_BASELINE,
+                "shadow ({shadow}) fell below FOOD_SCARCITY_BASELINE ({FOOD_SCARCITY_BASELINE})"
+            );
+        }
+
+        // `treasury.raw / SCALE` is the integer wealth — guards against a
+        // regression that would drop the `/ SCALE` and treat `raw` directly
+        // as a wealth value.
+        // treasury = 5_000 (fixed-point) → treasury_i = 5_000, food_i = 0,
+        // wealth = 5_000 < 12_000 → shortfall: 1_000 + 7_000/4 = 2_750.
+        let res = Resources::default();
+        let treasury = Fixed::from_num(5_000);
+        assert_eq!(
+            faction_wealth_scarcity_shadow(treasury, &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 5_000) / 4
+        );
+    }
+
+    /// `faction_unrest_delta_from_shadow` is a thin pass-through to
+    /// `unrest_delta`. This test pins the sign behavior (shadow ≤ baseline
+    /// → decay `-10`; shadow > baseline → positive rise), the `clamp(1, 50)`
+    /// bounds, the linear scaling with shortfall, the `MAX_RISE = 50`
+    /// ceiling for arbitrarily large shadows (including `i64::MAX`), and
+    /// the wrapper's identity with `unrest_delta` across the full sign
+    /// range. (COVERAGE_GAPS_4 row 6: "clamp at 0" lives in the caller's
+    /// accumulator; the delta itself only knows `-10` and `[1, 50]`.)
+    #[test]
+    fn faction_unrest_delta_from_shadow_sign_and_clamp() {
+        // shadow ≤ baseline → decay -10 (not zero, not positive).
+        for shadow in [0i64, 100, 500, 999] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                -10,
+                "shadow={shadow} (below baseline) must decay by 10"
+            );
+        }
+
+        // At the boundary shadow == baseline the function takes the `else`
+        // branch (scarcity is not > 0) and returns -10, not zero. Pin this
+        // so a future `>=` refactor doesn't silently flip the boundary.
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE),
+            -10
+        );
+
+        // Just above baseline, rise is clamped to a minimum of +1
+        // (clamp(1, MAX_RISE) lower bound kicks in for any scarcity > 0,
+        // even when scarcity / 20 == 0).
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 1),
+            1
+        );
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 19),
+            1
+        );
+
+        // Rise scales linearly with shortfall (scarcity / 20) until it
+        // hits the MAX_RISE ceiling of 50.
+        // shadow = 1_100 → scarcity = 100 → 100/20 = 5
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 100),
+            5
+        );
+        // shadow = 1_400 → scarcity = 400 → 400/20 = 20
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 400),
+            20
+        );
+        // shadow = 2_000 → scarcity = 1_000 → 1_000/20 = 50 (at ceiling)
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 1_000),
+            50
+        );
+
+        // Large shadows still clamp to MAX_RISE = 50. Stops a price spike
+        // from instantly maxing faction unrest.
+        for shadow in [10_000i64, 1_000_000, 1_000_000_000, i64::MAX] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                50,
+                "shadow={shadow} must clamp at MAX_RISE=50"
+            );
+        }
+
+        // Wrapper identity with `unrest_delta` across the full sign range.
+        for shadow in [
+            0i64,
+            FOOD_SCARCITY_BASELINE - 1,
+            FOOD_SCARCITY_BASELINE,
+            FOOD_SCARCITY_BASELINE + 1,
+            FOOD_SCARCITY_BASELINE + 100,
+            FOOD_SCARCITY_BASELINE + 1_000,
+            FOOD_SCARCITY_BASELINE + 100_000,
+            i64::MAX,
+        ] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                unrest_delta(shadow),
+                "wrapper must equal unrest_delta at shadow={shadow}"
+            );
+        }
+    }
 }

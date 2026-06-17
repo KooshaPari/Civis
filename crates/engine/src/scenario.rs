@@ -26,6 +26,18 @@ fn default_quadrant_spread() -> i32 {
     2500
 }
 
+/// One entry in a scenario's weighted seed-mix (FR-CONTENT-SEEDMIX).
+///
+/// The `weight` is relative — only ratios matter, not magnitudes.
+/// Must be > 0 and finite.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SeedWeight {
+    /// Which named-race archetype to sample.
+    pub seed: civ_genetics::NamedSeed,
+    /// Relative spawn weight (must be > 0 and finite).
+    pub weight: f32,
+}
+
 /// Scenario-level starting-population parameters (FR-CONTENT-STARTCOND).
 ///
 /// Controls how many civilian agents are spawned per faction, how many factions
@@ -34,7 +46,7 @@ fn default_quadrant_spread() -> i32 {
 ///
 /// All fields are `#[serde(default)]` so old YAML files without this block
 /// continue to parse and reproduce the previous hardcoded behaviour (32/4/2500).
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ScenarioStartingConditions {
     /// Civilians spawned around each faction capital (default: 32).
     #[serde(default = "default_civilians_per_faction")]
@@ -46,6 +58,14 @@ pub struct ScenarioStartingConditions {
     /// (default: 2500, must be > 0).
     #[serde(default = "default_quadrant_spread")]
     pub quadrant_spread: i32,
+    /// Optional weighted race mix.  When non-empty, each spawned civilian's
+    /// named-race archetype is sampled from this distribution instead of the
+    /// default round-robin Ardani/Velthari/Grundak cycle.
+    ///
+    /// An empty `seed_mix` (the default) reproduces the pre-existing
+    /// round-robin behaviour bit-identically.
+    #[serde(default)]
+    pub seed_mix: Vec<SeedWeight>,
 }
 
 impl Default for ScenarioStartingConditions {
@@ -54,6 +74,7 @@ impl Default for ScenarioStartingConditions {
             civilians_per_faction: default_civilians_per_faction(),
             faction_count: default_faction_count(),
             quadrant_spread: default_quadrant_spread(),
+            seed_mix: Vec::new(),
         }
     }
 }
@@ -295,6 +316,19 @@ impl Scenario {
                 field: "starting_conditions.quadrant_spread",
                 message: "must be > 0".into(),
             });
+        }
+
+        for (i, sw) in self.starting_conditions.seed_mix.iter().enumerate() {
+            if !sw.weight.is_finite() || sw.weight <= 0.0 {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "starting_conditions.seed_mix",
+                    message: format!(
+                        "weight at index {i} must be finite and > 0 (got {})",
+                        sw.weight
+                    ),
+                });
+            }
         }
 
         if let Some(v) = self.military.movement_cadence_ticks {
@@ -831,5 +865,87 @@ starting_conditions:
 
         scenario.validate(Path::new("<test>"))?;
         Ok(scenario)
+    }
+
+    // ── FR-CONTENT-SEEDMIX: scenario seed_mix parsing & validation ───────────
+
+    fn minimal_yaml_with_starting_conditions(extra: &str) -> String {
+        format!(
+            r#"version: 1
+name: test
+tick_start: 0
+population: 1000000
+base_consumption_joules: 5000000000
+scarcity_multiplier: 1.0
+fog_vision_radius: ~
+fog_grid_size: 64
+mods: []
+starting_conditions:
+{extra}
+"#
+        )
+    }
+
+    /// Absent seed_mix yields an empty Vec (serde default).
+    #[test]
+    fn scenario_seed_mix_absent_is_empty_default() {
+        let yaml = minimal_yaml_with_starting_conditions("  civilians_per_faction: 4");
+        let scenario = parse_yaml(&yaml).expect("valid scenario");
+        assert!(
+            scenario.starting_conditions.seed_mix.is_empty(),
+            "absent seed_mix must default to empty Vec"
+        );
+    }
+
+    /// A well-formed seed_mix block parses correctly.
+    #[test]
+    fn scenario_seed_mix_parses_and_validates() {
+        let yaml = minimal_yaml_with_starting_conditions(
+            r#"  civilians_per_faction: 4
+  seed_mix:
+    - seed: Ardani
+      weight: 0.6
+    - seed: Velthari
+      weight: 0.3
+    - seed: Grundak
+      weight: 0.1"#,
+        );
+        let scenario = parse_yaml(&yaml).expect("valid seed_mix should parse");
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 3);
+        assert_eq!(mix[0].seed, civ_genetics::NamedSeed::Ardani);
+        assert!((mix[0].weight - 0.6).abs() < 1e-6);
+        assert_eq!(mix[2].seed, civ_genetics::NamedSeed::Grundak);
+    }
+
+    /// A weight of exactly 0.0 must fail validation.
+    #[test]
+    fn scenario_seed_mix_zero_weight_is_invalid() {
+        let yaml = minimal_yaml_with_starting_conditions(
+            r#"  seed_mix:
+    - seed: Ardani
+      weight: 0.0"#,
+        );
+        // parse_yaml calls validate internally
+        let result = parse_yaml(&yaml);
+        assert!(
+            matches!(result, Err(ScenarioError::Validation { .. })),
+            "weight=0 must yield a Validation error, got: {result:?}"
+        );
+    }
+
+    /// A negative weight must fail validation.
+    #[test]
+    fn scenario_seed_mix_negative_weight_is_invalid() {
+        let yaml = minimal_yaml_with_starting_conditions(
+            r#"  seed_mix:
+    - seed: Velthari
+      weight: -1.0"#,
+        );
+        let result = parse_yaml(&yaml);
+        assert!(
+            matches!(result, Err(ScenarioError::Validation { .. })),
+            "negative weight must yield a Validation error"
+        );
     }
 }

@@ -14,6 +14,8 @@ use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_genetics::{archetype_dna, seed_with_divergence, NamedSeed};
+use crate::scenario::SeedWeight;
+use rand::distributions::WeightedIndex;
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
@@ -160,9 +162,34 @@ pub fn attach_citizen_to_agents(world: &mut World) {
     }
 }
 
+/// Select a [`NamedSeed`] for the given spawn slot.
+///
+/// * When `dist` is `None` (empty `seed_mix`): returns the classic round-robin
+///   Ardani / Velthari / Grundak cycle keyed on `spawn_index % 3`.  The RNG is
+///   **not** advanced, so existing DNA determinism tests remain bit-identical.
+/// * When `dist` is `Some`: samples the pre-built [`WeightedIndex`] and returns
+///   `seed_mix[idx].seed`.
+fn choose_named_seed(
+    seed_mix: &[SeedWeight],
+    dist: Option<&WeightedIndex<f32>>,
+    spawn_index: usize,
+    rng: &mut impl rand::Rng,
+) -> NamedSeed {
+    if let (false, Some(dist)) = (seed_mix.is_empty(), dist) {
+        let idx = rng.sample(dist);
+        seed_mix[idx].seed
+    } else {
+        match spawn_index % 3 {
+            0 => NamedSeed::Ardani,
+            1 => NamedSeed::Velthari,
+            _ => NamedSeed::Grundak,
+        }
+    }
+}
+
 /// Spawn faction civilians using default parameters (32 civilians × 4 factions, spread 2500).
 fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
-    spawn_faction_civilians_configured(world, rng, 32, 4, 2_500);
+    spawn_faction_civilians_configured(world, rng, 32, 4, 2_500, &[]);
 }
 
 /// Spawn faction civilians with scenario-level configuration.
@@ -177,6 +204,7 @@ fn spawn_faction_civilians_configured(
     civilians_per_faction: u32,
     faction_count: u32,
     quadrant_spread: i32,
+    seed_mix: &[SeedWeight],
 ) {
     use std::f32::consts::PI;
 
@@ -185,6 +213,16 @@ fn spawn_faction_civilians_configured(
     // overlap. The legacy 4-quadrant layout used ±7500 with spread=2500,
     // i.e. radius ≈ 7500 = 3 × 2500.
     let ring_radius = (quadrant_spread * 3) as f32;
+
+    // Pre-build the weighted distribution once (outside the loops) so we pay
+    // the O(n) construction cost only once.  `None` when seed_mix is empty →
+    // the helper falls back to the legacy round-robin without advancing the RNG.
+    let weights: Vec<f32> = seed_mix.iter().map(|sw| sw.weight).collect();
+    let dist: Option<WeightedIndex<f32>> = if weights.is_empty() {
+        None
+    } else {
+        WeightedIndex::new(&weights).ok()
+    };
 
     let mut next_civilian_id = 1u64;
     let mut spawn_index: usize = 0;
@@ -208,15 +246,11 @@ fn spawn_faction_civilians_configured(
                 civ_agents::ActorVisualKind::Humanoid,
                 rng,
             );
-            // Assign named-race archetype DNA via the 3-cycle seed assignment.
-            // Cycle: 0 → Ardani, 1 → Velthari, 2 → Grundak.
-            // divergence=0.3 introduces population spread while preserving
-            // the archetype's characteristic genome cluster.
-            let named_seed = match spawn_index % 3 {
-                0 => NamedSeed::Ardani,
-                1 => NamedSeed::Velthari,
-                _ => NamedSeed::Grundak,
-            };
+            // Assign named-race archetype DNA.  When `seed_mix` is provided the
+            // race is sampled from the weighted distribution; otherwise the
+            // classic round-robin (Ardani/Velthari/Grundak) is preserved
+            // bit-identically (no extra RNG advance).
+            let named_seed = choose_named_seed(seed_mix, dist.as_ref(), spawn_index, rng);
             let base = archetype_dna(named_seed);
             let dna = seed_with_divergence(&base, 0.3, rng);
             let _ = world.insert_one(entity, dna);
@@ -1124,6 +1158,7 @@ impl Simulation {
             sc.civilians_per_faction,
             sc.faction_count,
             sc.quadrant_spread,
+            &sc.seed_mix,
         );
         attach_citizen_to_agents(&mut world);
 
@@ -9680,5 +9715,88 @@ mod tests {
             result, archetype,
             "seed_with_divergence with divergence=0.0 must return an exact clone of the archetype"
         );
+    }
+
+    // ── FR-CONTENT-SEEDMIX: choose_named_seed helper unit tests ──────────────
+
+    /// Empty seed_mix must reproduce the classic Ardani/Velthari/Grundak round-robin
+    /// without advancing the RNG (bit-identical default path).
+    #[test]
+    fn choose_named_seed_empty_is_round_robin() {
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(1);
+        let expected = [
+            NamedSeed::Ardani,
+            NamedSeed::Velthari,
+            NamedSeed::Grundak,
+            NamedSeed::Ardani,
+            NamedSeed::Velthari,
+            NamedSeed::Grundak,
+        ];
+        for (i, &exp) in expected.iter().enumerate() {
+            let got = choose_named_seed(&[], None, i, &mut rng);
+            assert_eq!(got, exp, "round-robin mismatch at spawn_index={i}");
+        }
+    }
+
+    /// A 60/30/10 mix should yield Ardani as plurality (~0.6), Grundak as minority (~0.1).
+    #[test]
+    fn choose_named_seed_weighted_distribution() {
+        use crate::scenario::SeedWeight;
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        use rand::distributions::WeightedIndex;
+
+        let seed_mix = vec![
+            SeedWeight { seed: NamedSeed::Ardani, weight: 0.6 },
+            SeedWeight { seed: NamedSeed::Velthari, weight: 0.3 },
+            SeedWeight { seed: NamedSeed::Grundak, weight: 0.1 },
+        ];
+        let weights: Vec<f32> = seed_mix.iter().map(|sw| sw.weight).collect();
+        let dist = WeightedIndex::new(&weights).expect("valid weights");
+
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
+        let n = 2000usize;
+        let mut counts = [0usize; 3];
+        for i in 0..n {
+            let result = choose_named_seed(&seed_mix, Some(&dist), i, &mut rng);
+            match result {
+                NamedSeed::Ardani => counts[0] += 1,
+                NamedSeed::Velthari => counts[1] += 1,
+                NamedSeed::Grundak => counts[2] += 1,
+            }
+        }
+        let ardani_frac = counts[0] as f32 / n as f32;
+        let grundak_frac = counts[2] as f32 / n as f32;
+        assert!(
+            (ardani_frac - 0.6).abs() < 0.08,
+            "Ardani fraction {ardani_frac:.3} not within ±0.08 of 0.6"
+        );
+        assert!(
+            (grundak_frac - 0.1).abs() < 0.05,
+            "Grundak fraction {grundak_frac:.3} not within ±0.05 of 0.1"
+        );
+        // Ardani must be the plurality
+        assert!(counts[0] > counts[1] && counts[0] > counts[2], "Ardani must be plurality");
+    }
+
+    /// A single-entry mix must always yield that one race.
+    #[test]
+    fn choose_named_seed_single_seed_all_that_race() {
+        use crate::scenario::SeedWeight;
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        use rand::distributions::WeightedIndex;
+
+        let seed_mix = vec![SeedWeight { seed: NamedSeed::Velthari, weight: 1.0 }];
+        let weights: Vec<f32> = seed_mix.iter().map(|sw| sw.weight).collect();
+        let dist = WeightedIndex::new(&weights).expect("valid weights");
+
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(7);
+        for i in 0..100 {
+            let result = choose_named_seed(&seed_mix, Some(&dist), i, &mut rng);
+            assert_eq!(result, NamedSeed::Velthari, "expected Velthari at index {i}");
+        }
     }
 }

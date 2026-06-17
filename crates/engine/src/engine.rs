@@ -2099,6 +2099,7 @@ impl Simulation {
             + overcrowding_unrest(self.state.population, self.carrying_capacity())
             + inequality_unrest(treasury_spread)
             + dispossession_unrest(self.state.dispossessed_permille)
+            + commodity_unrest_delta(self.market_state.prices())
             - (self.state.garrison_level as i64 * 2);
         if delta > 0 {
             self.record_unrest_micro_activity(delta.min(i32::MAX as i64) as u32);
@@ -3374,6 +3375,27 @@ fn unrest_delta(food_price: i64) -> i64 {
     } else {
         -DECAY
     }
+}
+
+/// FR-CIV-ECON: scarcity in NON-food commodities adds bounded unrest
+/// (cost-of-living). Food is owned by unrest_delta(); skipped here to avoid
+/// double-counting. Per-tick clamped to [-DECAY, MAX_RISE] — no runaway.
+fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
+    const BASELINE: i64 = 1_000;
+    const CENTS_PER_UNREST: i64 = 40;
+    const MAX_RISE: i64 = 15;
+    const DECAY: i64 = 5;
+    let mut rise: i64 = 0;
+    for (good, &price) in prices {
+        if good == "food" { continue; }
+        let scarcity = price - BASELINE;
+        if scarcity > 0 {
+            rise = rise.saturating_add((scarcity / CENTS_PER_UNREST).min(MAX_RISE));
+        } else {
+            rise = rise.saturating_sub(DECAY);
+        }
+    }
+    rise.clamp(-DECAY, MAX_RISE)
 }
 
 /// Effective food-price shadow for one faction's local wealth/scarcity (FR-CIV-0100
@@ -4983,6 +5005,44 @@ mod tests {
         assert!(mild > 0, "any scarcity raises unrest");
         assert!(severe >= mild, "more scarcity never lowers the rise");
         assert!(severe <= 50, "single-tick rise is capped");
+    }
+
+    /// FR-CIV-ECON: food is excluded from cost-of-living unrest (already owned
+    /// by `unrest_delta`); non-food prices at baseline decay, matching the
+    /// food-abundance arm.
+    #[test]
+    fn commodity_unrest_skips_food() {
+        let with_food: BTreeMap<String, i64> =
+            [("food".to_string(), 5_000i64), ("energy".to_string(), 1_000i64)]
+                .into_iter()
+                .collect();
+        let without_food: BTreeMap<String, i64> =
+            [("energy".to_string(), 1_000i64)].into_iter().collect();
+        assert_eq!(
+            commodity_unrest_delta(&with_food),
+            commodity_unrest_delta(&without_food),
+            "food price must not echo into commodity unrest"
+        );
+    }
+
+    /// FR-CIV-ECON: per-tick rise is capped at MAX_RISE (15) regardless of
+    /// extreme non-food scarcity — prevents runaway cost-of-living shocks.
+    #[test]
+    fn commodity_unrest_caps_rise() {
+        let extreme: BTreeMap<String, i64> =
+            [("energy".to_string(), 100_000i64)].into_iter().collect();
+        let delta = commodity_unrest_delta(&extreme);
+        assert!(delta <= 15, "single-tick rise is capped at MAX_RISE");
+        assert!(delta > 0, "extreme scarcity still raises unrest");
+    }
+
+    /// FR-CIV-ECON: non-food prices below baseline decay unrest (cost-of-living
+    /// relief), mirroring the food-abundance arm of `unrest_delta`.
+    #[test]
+    fn commodity_unrest_decay_when_cheap() {
+        let cheap: BTreeMap<String, i64> =
+            [("energy".to_string(), 500i64)].into_iter().collect();
+        assert!(commodity_unrest_delta(&cheap) < 0);
     }
 
     /// FR-CIV-0100 §3 — a drained energy budget (blackout) adds unrest; a solvent one does not.

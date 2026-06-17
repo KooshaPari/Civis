@@ -725,6 +725,20 @@ pub struct Simulation {
     /// N9: per-faction mean phenotype aggression in [0,1].
     /// Rebuilt each tick by `emergence_genetics_sentience`; ephemeral (not persisted).
     pub(crate) faction_aggression: BTreeMap<u32, f32>,
+    /// PERF: cached aggregate biome-yield factor used by [`Simulation::phase_production`]
+    /// (FR-CIV-CONTENT-001). `GeologyMap::seed(&self.planet)` and
+    /// [`aggregate_biome_yield`] are purely config-derived (no RNG, no tick, no
+    /// external state — verified by `geology_deterministic` in `planet`), so the
+    /// aggregate is identical on every tick. It is computed lazily on first use
+    /// and reused thereafter.
+    ///
+    /// Invalidation: `self.planet` is a private field with no mutation on any
+    /// production code path (it is only reassigned inside `#[cfg(test)]` tests
+    /// that do not depend on biome-derived food), so no runtime invalidation is
+    /// required. `Simulation` is not `Serialize`/`Deserialize`, so this needs no
+    /// `#[serde(skip)]`; like `research_cache`/`agent_id_to_entity` it is a plain
+    /// runtime cache rebuilt from scratch on construction.
+    cached_biome_yield: Option<Fixed>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -974,6 +988,7 @@ impl Simulation {
             emergence_sample: None,
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
             faction_aggression: BTreeMap::new(),
+            cached_biome_yield: None,
         };
         sim.rebuild_agent_id_index();
         sim
@@ -1054,6 +1069,7 @@ impl Simulation {
             emergence_sample: None,
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
             faction_aggression: BTreeMap::new(),
+            cached_biome_yield: None,
         };
         sim.rebuild_agent_id_index();
         sim
@@ -2692,6 +2708,26 @@ impl Simulation {
         }
     }
 
+    /// Returns the aggregate biome-yield factor (FR-CIV-CONTENT-001), computing
+    /// it once on first use and caching it thereafter.
+    ///
+    /// `GeologyMap::seed(&self.planet)` and [`aggregate_biome_yield`] are pure
+    /// functions of the immutable `planet` config, so the result is identical on
+    /// every tick. The cached value is therefore bit-for-bit equal to what the
+    /// previous per-tick recomputation produced.
+    fn biome_yield_factor_cached(&mut self) -> Fixed {
+        if let Some(cached) = self.cached_biome_yield {
+            return cached;
+        }
+        let biomes: Vec<civ_planet::BiomeKind> = {
+            let geo = civ_planet::GeologyMap::seed(&self.planet);
+            geo.regions.iter().map(|r| r.biome).collect()
+        };
+        let factor = aggregate_biome_yield(&biomes);
+        self.cached_biome_yield = Some(factor);
+        factor
+    }
+
     /// Production phase - buildings produce resources
     fn phase_production(&mut self) {
         let mut food = Fixed::ZERO;
@@ -2713,13 +2749,11 @@ impl Simulation {
                 _ => {}
             }
         }
-        // FR-CIV-CONTENT-001: collect biomes before any mutable borrow.
-        let biomes: Vec<civ_planet::BiomeKind> = {
-            let geo = civ_planet::GeologyMap::seed(&self.planet);
-            geo.regions.iter().map(|r| r.biome).collect()
-        };
         let yield_factor = production_yield_factor(self.research_tier());
-        let biome_factor = aggregate_biome_yield(&biomes);
+        // FR-CIV-CONTENT-001 + PERF: the aggregate biome-yield factor is purely
+        // config-derived, so compute it once and reuse the cached value on every
+        // subsequent tick (see `cached_biome_yield`).
+        let biome_factor = self.biome_yield_factor_cached();
         let focus_bonus = Fixed::from_num(11) / Fixed::from_num(10);
         let mut food_out = food * yield_factor * biome_factor;
         let mut metal_out = metal * yield_factor;
@@ -5613,6 +5647,53 @@ mod tests {
         let lo = Fixed::from_num(1) / Fixed::from_num(10);
         let hi = Fixed::from_num(15) / Fixed::from_num(10);
         assert!(agg >= lo && agg <= hi, "aggregate {agg:?} out of [0.1, 1.5]");
+    }
+
+    /// PERF (behavior-preserving) — the cached biome-yield factor equals a fresh
+    /// per-tick recomputation from `GeologyMap::seed(&planet)` for a fixed sim.
+    #[test]
+    fn test_cached_biome_yield_equals_recompute() {
+        let mut sim = Simulation::with_seed(2026);
+
+        // Reference: exactly what phase_production computed pre-cache.
+        let biomes: Vec<civ_planet::BiomeKind> = {
+            let geo = civ_planet::GeologyMap::seed(sim.planet());
+            geo.regions.iter().map(|r| r.biome).collect()
+        };
+        let expected = aggregate_biome_yield(&biomes);
+
+        // First call computes + caches; second call returns the cached value.
+        let first = sim.biome_yield_factor_cached();
+        let second = sim.biome_yield_factor_cached();
+
+        assert_eq!(first, expected, "cached factor must equal fresh recompute");
+        assert_eq!(second, expected, "cache must return the same Fixed");
+        assert_eq!(sim.cached_biome_yield, Some(expected), "field must be populated");
+    }
+
+    /// PERF (behavior-preserving) — food output over N ticks is identical whether
+    /// the biome factor is cached once or recomputed every tick. We compare a
+    /// caching sim against a reference whose cache is invalidated before every
+    /// production phase (forcing the original per-tick path).
+    #[test]
+    fn test_cached_biome_yield_food_identical_over_ticks() {
+        const N: u64 = 50;
+
+        let mut cached = Simulation::with_seed(7);
+        let mut reference = Simulation::with_seed(7);
+
+        for _ in 0..N {
+            // Reference reproduces the pre-cache behavior: recompute every tick.
+            reference.cached_biome_yield = None;
+            reference.phase_production();
+
+            cached.phase_production();
+
+            assert_eq!(
+                cached.state.resources.food, reference.state.resources.food,
+                "food output diverged between cached and per-tick recompute",
+            );
+        }
     }
 
     /// FR-CIV-CONTENT-001 — rich biomes dominate barren ones in yield factor.

@@ -52,7 +52,7 @@ pub mod shannon;
 pub mod structure;
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
-pub const SCHEMA_VERSION: &str = "0.4.0-branching-ratio";
+pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";
 
 /// Common interface implemented by every metric in this crate.
 ///

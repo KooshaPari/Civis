@@ -14,6 +14,7 @@ civ-voxel = { path = "../voxel" }
 civ-build = { path = "../build" }
 civ-agents = { path = "../agents" }
 civ-planet = { path = "../planet" }
+zstd = "0.13"
 
 [dev-dependencies]
 proptest = "1.11"

@@ -486,6 +486,28 @@ impl Simulation {
                 );
             }
         }
+
+        // FR-CIV-GENETICS / FR-CIV-LEGENDS — N7: the moment a lineage crosses
+        // the sentience threshold mints a bounded belief (awe) and cohesion
+        // (shared identity) pulse. Reuses the same per-tick detection that
+        // just populated `last_sentience`; no second world scan. Additive
+        // only, bounded by per-tick caps (edge-of-chaos).
+        self.apply_awakening_coupling();
+    }
+
+    /// FR-CIV-GENETICS / FR-CIV-LEGENDS — N7: mint a bounded belief + cohesion
+    /// pulse from this tick's threshold crossings. Reads
+    /// `self.emergence.last_sentience` (already populated by
+    /// [`Simulation::emergence_genetics_sentience`]) so we never re-scan the
+    /// world. Additive only, bounded by [`MAX_AWAKENING_BELIEF_PER_TICK`] and
+    /// [`MAX_AWAKENING_COHESION_PER_TICK`].
+    pub(crate) fn apply_awakening_coupling(&mut self) {
+        let awakenings = self.emergence.last_sentience.len();
+        if awakenings == 0 {
+            return;
+        }
+        self.add_belief(awakening_belief_gain(awakenings));
+        self.add_cohesion(awakening_cohesion_gain(awakenings));
     }
 
     fn emergence_legends(&mut self) {

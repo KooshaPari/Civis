@@ -1309,4 +1309,50 @@ mod tests {
             assert_eq!(stats.vacancy_rate, 0.0);
         }
     }
+
+    #[test]
+    fn resource_amount_demand_and_adjust_cover_every_resource_arm() {
+        use civ_engine::{Resources, ResourceType};
+        let mut res = Resources {
+            food: fixed_from_f64(100.0),
+            wood: fixed_from_f64(200.0),
+            metal: fixed_from_f64(300.0),
+            energy: fixed_from_f64(400.0),
+        };
+        let arms = [
+            (ResourceType::Food, 100.0),
+            (ResourceType::Wood, 200.0),
+            (ResourceType::Metal, 300.0),
+            (ResourceType::Energy, 400.0),
+        ];
+        for (r, want) in arms {
+            assert!((resource_amount(&res, r) - want).abs() < 1e-6, "amount {r:?}");
+            // demand = max(0, 1000 - amount); all of these are < 1000 so it's positive.
+            assert!((resource_demand(&res, r) - (1000.0 - want)).abs() < 1e-6, "demand {r:?}");
+        }
+
+        // adjust_resource hits each arm; +50 then re-read.
+        for (r, want) in arms {
+            adjust_resource(&mut res, r, 50.0);
+            assert!((resource_amount(&res, r) - (want + 50.0)).abs() < 1e-6, "adjusted {r:?}");
+        }
+
+        // demand clamps to 0 once amount exceeds the 1000 cap.
+        adjust_resource(&mut res, ResourceType::Food, 5000.0);
+        assert_eq!(resource_demand(&res, ResourceType::Food), 0.0);
+    }
+
+    #[test]
+    fn adjust_treasury_updates_present_faction_and_ignores_absent() {
+        use std::collections::HashMap;
+        let mut treasury: HashMap<u32, civ_engine::Fixed> = HashMap::new();
+        treasury.insert(1, fixed_from_f64(100.0));
+
+        adjust_treasury(&mut treasury, 1, 25.0);
+        assert!((treasury[&1].to_f64() - 125.0).abs() < 1e-6);
+
+        // An absent faction is a silent no-op (no insert).
+        adjust_treasury(&mut treasury, 99, 50.0);
+        assert!(!treasury.contains_key(&99));
+    }
 }

@@ -1,4 +1,4 @@
-//! civ-server library — exposes the 3D-extension protocol bridge that consumers
+//! civ-server library - exposes the 3D-extension protocol bridge that consumers
 //! (renderers, replay tools) use to convert `Simulation::last_tick_voxel_events`
 //! into `civ-protocol-3d` frames.
 //!
@@ -9,6 +9,8 @@
 #![warn(missing_docs)]
 
 pub mod jsonrpc;
+pub mod saves;
+pub mod subscription_filter;
 pub mod voxel_frame_builder;
 /// WebSocket bridge and health endpoint for streaming 3D protocol frames.
 pub mod ws_bridge;

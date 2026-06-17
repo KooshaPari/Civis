@@ -9,7 +9,7 @@ use civ_agents::{
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
     SocialGraph, Tools, Wardrobe,
 };
-use civ_agents::culture::{cultural_distance, CultureProfile};
+use civ_agents::culture::{cultural_distance, language_distance, CultureProfile, TraitVector};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
@@ -3068,6 +3068,12 @@ impl Simulation {
         let unrest_factor = unrest_trade_factor(self.state.unrest);
         let society_factor =
             society_trade_factor(self.state.cohesion, self.state.micro_trust_permille);
+        // N5 — language distance imposes per-route friction (computed once).
+        let lang_centroids = faction_language_centroids(
+            &self.emergence.cluster_cultures,
+            &settlement_dominant_factions(&self.world, &self.cluster_member_counts),
+            &self.cluster_member_counts,
+        );
         let mut flowed_keys: BTreeSet<(u32, u32, String)> = BTreeSet::new();
         for route in &self.state.trade_routes {
             if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
@@ -3076,6 +3082,16 @@ impl Simulation {
 
             let relation = self.faction_relation(route.from_faction, route.to_faction);
             let relation_factor = relation_trade_factor(relation);
+            let language_factor = {
+                let distance = match (
+                    lang_centroids.get(&route.from_faction),
+                    lang_centroids.get(&route.to_faction),
+                ) {
+                    (Some(a), Some(b)) => language_distance(*a, *b),
+                    _ => 0.0,
+                };
+                language_trade_factor(distance)
+            };
 
             let resource = route_resource(&route.goods);
             let available = {
@@ -3101,7 +3117,8 @@ impl Simulation {
                 * trade_volume_multiplier(available, to_stock)
                 * unrest_factor
                 * society_factor
-                * relation_factor;
+                * relation_factor
+                * language_factor;
             let quantity = boosted.min(available);
             if quantity > Fixed::ZERO {
                 flowed_keys.insert((
@@ -3859,6 +3876,16 @@ fn relation_trade_factor(relation: f32) -> Fixed {
     Fixed::from_num(permille) / Fixed::from_num(1_000)
 }
 
+/// Max per-mille reduction from language barrier (at distance = 1.0).
+const LANGUAGE_TRADE_PENALTY_PERMILLE: i64 = 500;
+/// Downward-causation (FR-CIV-LANG-001 / FR-CIV-PSYCHE-912): mutually unintelligible
+/// languages impose transaction friction. Returns factor in [0.5, 1.0].
+fn language_trade_factor(distance: f32) -> Fixed {
+    let d = distance.clamp(0.0, 1.0);
+    let permille = 1_000 - (d * LANGUAGE_TRADE_PENALTY_PERMILLE as f32).round() as i64;
+    Fixed::from_num(permille) / Fixed::from_num(1_000)
+}
+
 /// Wealth-disparity (in whole currency units) at which two factions clash when
 /// they share no faith. Above this gap the have-nots turn on the haves.
 const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
@@ -3972,6 +3999,49 @@ fn settlement_dominant_factions(
         }
     }
     dominant
+}
+
+/// Member-weighted per-faction language centroid (FR-CIV-LANG-001 / FR-CIV-PSYCHE-912).
+///
+/// `cluster_cultures` is `BTreeMap<u64, CultureProfile>` keyed by cluster id; each
+/// profile carries a `language: [f32; 4]` vector. `dominant` maps cluster id
+/// (u64) to its dominant faction id (u32) as returned by
+/// [`settlement_dominant_factions`]. `member_counts` is the cluster membership
+/// rollup from `phase_life`. Clusters with fewer than 2 members are ignored so
+/// lone wanderers cannot anchor a faction's centroid.
+fn faction_language_centroids(
+    cultures: &std::collections::BTreeMap<u64, CultureProfile>,
+    dominant: &std::collections::BTreeMap<u64, u32>,
+    member_counts: &std::collections::BTreeMap<u64, u32>,
+) -> std::collections::BTreeMap<u32, [f32; 4]> {
+    let mut sums: std::collections::BTreeMap<u32, ([f32; 4], f32)> = Default::default();
+    for (cluster_id, faction_id) in dominant {
+        let mc = match member_counts.get(cluster_id) {
+            Some(&m) if m >= 2 => m,
+            _ => continue,
+        };
+        let lang = match cultures.get(cluster_id) {
+            Some(c) => c.language,
+            None => continue,
+        };
+        let e = sums.entry(*faction_id).or_insert(([0.0; 4], 0.0));
+        for a in 0..4 {
+            e.0[a] += lang[a] * mc as f32;
+        }
+        e.1 += mc as f32;
+    }
+    sums
+        .into_iter()
+        .map(|(f, (s, w))| {
+            let mut c = [0.0f32; 4];
+            if w > 0.0 {
+                for a in 0..4 {
+                    c[a] = (s[a] / w).clamp(0.0, 1.0);
+                }
+            }
+            (f, c)
+        })
+        .collect()
 }
 
 /// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
@@ -5665,6 +5735,112 @@ mod tests {
         assert!(neutral > rival);
         assert!(ally <= Fixed::from_num(3) / Fixed::from_num(2));
         assert!(rival >= Fixed::from_num(1) / Fixed::from_num(2));
+    }
+
+    /// FR-CIV-LANG-001 / FR-CIV-PSYCHE-912 — `language_trade_factor` endpoints and midpoint.
+    #[test]
+    fn language_trade_factor_scales_with_distance() {
+        assert_eq!(language_trade_factor(0.0), Fixed::from_num(1));
+        assert_eq!(
+            language_trade_factor(1.0),
+            Fixed::from_num(1) / Fixed::from_num(2)
+        );
+        let mid = language_trade_factor(0.5);
+        assert!(mid > Fixed::from_num(1) / Fixed::from_num(2));
+        assert!(mid < Fixed::from_num(1));
+    }
+
+    /// FR-CIV-LANG-001 / FR-CIV-PSYCHE-912 — centroids are member-weighted and
+    /// drop lone-wanderer clusters (member_count < 2).
+    #[test]
+    fn faction_language_centroids_member_weighted() {
+        let mut cultures = BTreeMap::new();
+        cultures.insert(10u64, CultureProfile::new([0.0, 0.0, 0.0, 0.0]));
+        cultures.insert(20u64, CultureProfile::new([1.0, 1.0, 1.0, 1.0]));
+        // 21 is a lone wanderer (1 member) — must be skipped even if it would
+        // tilt the centroid.
+        cultures.insert(21u64, CultureProfile::new([1.0, 1.0, 1.0, 1.0]));
+        let mut dominant = BTreeMap::new();
+        dominant.insert(10u64, 0u32);
+        dominant.insert(20u64, 0u32);
+        dominant.insert(21u64, 0u32);
+        let mut member_counts = BTreeMap::new();
+        member_counts.insert(10u64, 6u32);
+        member_counts.insert(20u64, 2u32);
+        member_counts.insert(21u64, 1u32);
+
+        let centroids = faction_language_centroids(&cultures, &dominant, &member_counts);
+        let c0 = centroids.get(&0).expect("faction 0 centroid present");
+        // Weighted: 6 * [0] + 2 * [1] = 2, total weight = 6+2 = 8 → axis 0 = 0.25.
+        assert!(
+            (c0[0] - 0.25).abs() < 0.01,
+            "centroid axis-0 should be 0.25, got {}",
+            c0[0]
+        );
+        assert!(
+            !centroids.contains_key(&1),
+            "faction 1 absent from centroids"
+        );
+    }
+
+    /// FR-CIV-LANG-001 / FR-CIV-PSYCHE-912 — divergent languages reduce
+    /// bilateral trade-route flow when all other factors are pinned to 1.0.
+    #[test]
+    fn language_barrier_reduces_trade_route_flow() {
+        fn run_case(faction0_lang: [f32; 4], faction1_lang: [f32; 4]) -> Fixed {
+            let mut sim = Simulation::with_seed(42);
+            // Pin macro drivers to neutral: cohesion=0, unrest=0, micro_trust=0.
+            sim.state.cohesion = 0;
+            sim.state.unrest = 0;
+            sim.state.micro_trust_permille = 0;
+            // Force a neutral relation between the route endpoints.
+            let route = sim.state.trade_routes[0].clone();
+            let from = route.from_faction;
+            let to = route.to_faction;
+            // Seed two clusters, one per faction, with >=2 members so they
+            // participate in the dominant-faction rollup.
+            let mut rng = ChaCha8Rng::seed_from_u64(7);
+            for i in 0..3 {
+                seed_n3_settlement_agent(&mut sim.world, 5_000 + i, 100, from, 0, 0, &mut rng);
+                seed_n3_settlement_agent(&mut sim.world, 6_000 + i, 200, to, 100, 100, &mut rng);
+            }
+            sim.cluster_member_counts.insert(100, 3);
+            sim.cluster_member_counts.insert(200, 3);
+            sim.emergence
+                .cluster_cultures
+                .insert(100, CultureProfile::new(faction0_lang));
+            sim.emergence
+                .cluster_cultures
+                .insert(200, CultureProfile::new(faction1_lang));
+
+            let stock = Fixed::from_num(100);
+            sim.state.faction_resources.get_mut(&from).unwrap().food = stock;
+            sim.state.faction_resources.get_mut(&to).unwrap().food = stock;
+            let baseline = sim
+                .state
+                .faction_treasury
+                .get(&from)
+                .copied()
+                .unwrap_or(Fixed::ZERO);
+            sim.tick_trade_routes();
+            sim.state
+                .faction_treasury
+                .get(&from)
+                .copied()
+                .unwrap_or(Fixed::ZERO)
+                - baseline
+        }
+
+        let gain_same = run_case([0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]);
+        let gain_far = run_case([0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]);
+        assert!(
+            gain_same > Fixed::ZERO,
+            "baseline (distance 0) route should flow"
+        );
+        assert!(
+            gain_same > gain_far,
+            "language barrier must reduce trade flow (same={gain_same:?}, far={gain_far:?})"
+        );
     }
 
     /// FR-CIV-0100 §3 — equal stocks (no surplus gap) trade at base volume (1x).

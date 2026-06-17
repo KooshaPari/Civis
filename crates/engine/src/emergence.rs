@@ -76,6 +76,12 @@ pub struct EmergenceState {
     /// Active seed id referenced by the loaded scenario (or `None` to use
     /// raw-organism drift for every spawn).
     pub(crate) active_seed_id: Option<String>,
+    /// Cumulative set of world-configuration fingerprints seen (§3.4 novelty-rate).
+    pub seen_config_hashes: std::collections::HashSet<u64>,
+    /// Count of new (previously-unseen) fingerprints in the current W_nov window.
+    pub novelty_window_new: u32,
+    /// Tick at which the current W_nov window started.
+    pub novelty_window_start_tick: u64,
 }
 
 impl EmergenceState {
@@ -105,6 +111,9 @@ impl EmergenceState {
             sentient_agents: HashSet::new(),
             seed_library,
             active_seed_id: Some("raw_organism".to_string()),
+            seen_config_hashes: std::collections::HashSet::new(),
+            novelty_window_new: 0,
+            novelty_window_start_tick: 0,
         }
     }
 

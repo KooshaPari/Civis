@@ -1355,4 +1355,40 @@ mod tests {
         adjust_treasury(&mut treasury, 99, 50.0);
         assert!(!treasury.contains_key(&99));
     }
+
+    #[test]
+    fn tech_tree_maps_every_law_kind_sorts_by_era_and_flags_unlocked() {
+        // One law per LawKind at ascending eras so every match arm is hit.
+        let db = LawDb::load_ron(
+            r#"(
+                version: 0,
+                laws: [
+                    (id: "mass_conservation", kind: Conservation, era_min: 0,
+                     inputs: [], outputs: [], losses: [], dependencies: []),
+                    (id: "steel", kind: Material, era_min: 4,
+                     inputs: [], outputs: [], losses: [], dependencies: []),
+                    (id: "fusion_power", kind: FictionalExtension, era_min: 9,
+                     inputs: [], outputs: [], losses: [], dependencies: []),
+                ],
+            )"#,
+        )
+        .expect("valid law db");
+
+        let nodes = tech_tree(&db, 5);
+        assert_eq!(nodes.len(), 3);
+        // Sorted by era_min ascending.
+        assert_eq!(
+            nodes.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(),
+            ["mass_conservation", "steel", "fusion_power"]
+        );
+        assert_eq!(
+            nodes.iter().map(|n| n.kind.as_str()).collect::<Vec<_>>(),
+            ["Conservation", "Material", "FictionalExtension"]
+        );
+        // current_era 5 unlocks eras 0 and 4 but not 9.
+        assert_eq!(
+            nodes.iter().map(|n| n.unlocked).collect::<Vec<_>>(),
+            [true, true, false]
+        );
+    }
 }

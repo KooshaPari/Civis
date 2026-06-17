@@ -22,8 +22,8 @@ use civ_needs::{
     tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
 };
 use civ_planet::{
-    compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
-    PlanetConfig, WeatherCell,
+    compute_climate, compute_weather, defaults_earthlike, BiomeKind, Climate, GeologyMap,
+    MoonConfig, PlanetConfig, WeatherCell,
 };
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,

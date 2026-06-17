@@ -7601,7 +7601,13 @@ mod tests {
         let factor = biome_capacity_factor(&GeologyMap::seed(sim.planet()));
         let expected = (200_000.0_f64 * factor as f64) as i64;
         assert!(with > without, "irrigation must raise capacity");
-        assert_eq!(with - without, expected, "delta = biome-scaled irrigation bonus");
+        // `with` and `without` are each rounded independently after the biome
+        // multiply, so the delta can differ from `expected` by at most 1.
+        assert!(
+            (with - without - expected).abs() <= 1,
+            "delta {} ~= biome-scaled irrigation bonus {expected}",
+            with - without
+        );
     }
 
     /// FR-CIV-0100 — tech tree extends through tier 6 (Writing, Sanitation, Gunpowder).
@@ -7631,7 +7637,12 @@ mod tests {
         let factor = biome_capacity_factor(&GeologyMap::seed(sim.planet()));
         let expected = (300_000.0_f64 * factor as f64) as i64;
         assert!(with > without, "sanitation must raise capacity");
-        assert_eq!(with - without, expected, "delta = biome-scaled sanitation bonus");
+        // Independent rounding of `with`/`without` allows a ±1 delta drift.
+        assert!(
+            (with - without - expected).abs() <= 1,
+            "delta {} ~= biome-scaled sanitation bonus {expected}",
+            with - without
+        );
     }
 
     /// FR-CIV-0200 — research tier and the carrying capacity it feeds grow with

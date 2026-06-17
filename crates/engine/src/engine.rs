@@ -4463,6 +4463,7 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::{awakening_belief_gain, awakening_cohesion_gain};
     use crate::lod::{should_tick_entity_with_policy, LodPolicy};
     use crate::replay::{ReplayEvent, ReplayLog};
     use civ_agents::{count_civilians, LodTier, Wardrobe};

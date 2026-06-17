@@ -32,7 +32,7 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-use crate::engine::Simulation;
+use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -9,16 +9,15 @@
 //!   (procedural vs freehand).
 //! - **Agent appearance** — per-civilian wardrobe / tools state updates.
 //!
-//! This crate ships the wire-format types, a versioning gate, and a minimal
-//! length-prefixed binary envelope (`encode_frame3d_binary` / `decode_frame3d_binary`).
-//! Full zstd-compressed production framing and WebSocket attach land in
-//! `civ-server` once the schema stabilises.
+//! This crate ships the wire-format types, a versioning gate, a minimal
+//! length-prefixed binary envelope (`encode_frame3d_binary` / `decode_frame3d_binary`),
+//! and an opt-in per-tick bundle envelope (`encode_frame3d_bundle` / `decode_frame3d_bundle`)
+//! with optional zstd compression (`F3DB` magic).
 //!
-//! **Tick batch coalescing:** the server sends three separate `F3D0` frames per
-//! tick (voxel, building, agent) rather than one length-prefixed batch blob.
-//! Clients already decode individual frames; merging them would require a new
-//! magic/batch envelope and break existing decoders for a small WebSocket
-//! framing win (3 headers ≈ 27 bytes vs 1).
+//! **Tick batch coalescing:** `civ-server` may still emit separate `F3D0` frames per
+//! tick for backward compatibility. Producers that want one WebSocket binary message
+//! per tick can wrap the standard seven-frame bundle in `F3DB`; compression is
+//! opt-in via [`Frame3dBundleEncodeOptions::compress`].
 //!
 //! See `docs/development-guide/fr-3d-additions.md` for `FR-CIV-PROTO3D-*`.
 
@@ -26,6 +25,15 @@
 #![warn(missing_docs)]
 
 use serde::{Deserialize, Serialize};
+
+mod bundle;
+
+pub use bundle::{
+    decode_frame3d_bundle, encode_frame3d_bundle, encode_frame3d_bundle_from_f3d0,
+    is_frame3d_bundle, Frame3dBundle, Frame3dBundleEncodeOptions, Frame3dBundleError,
+    Frame3dBundleFlags, DEFAULT_FRAME3D_BUNDLE_ZSTD_LEVEL, FRAME3D_BUNDLE_MAGIC,
+    FRAME3D_BUNDLE_STANDARD_LEN, FRAME3D_BUNDLE_VERSION,
+};
 
 pub use civ_build::{BuildingGraph, BuildingId, FacadeStyle, Parcel, ParcelKind};
 pub use civ_voxel::{ChunkId, DirtyChunkEvent, MaterialId, WriteSeq};

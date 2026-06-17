@@ -193,6 +193,15 @@ pub struct EmergenceSample {
     pub avalanches_closed: u64,
     /// Charter regime classification for `branching_sigma`.
     pub branching_regime: BranchingRegime,
+    /// Normalised mutual information I(material; faction) / H(material),
+    /// clamped to [0, 1]. Measures coupling between the voxel-material
+    /// layer and the faction layer.
+    ///
+    /// `None` until faction_id is added to the Citizen struct and wired
+    /// into the sampler; the field is present so downstream consumers can
+    /// forward-compatibly deserialise samples produced by newer engine builds.
+    #[serde(default)]
+    pub mi_material_faction_norm: Option<f32>,
 }
 
 impl Default for EmergenceSample {
@@ -213,6 +222,8 @@ impl Default for EmergenceSample {
             branching_window: DEFAULT_BRANCHING_WINDOW as u32,
             avalanches_closed: 0,
             branching_regime: BranchingRegime::HeatDeath,
+            // TODO(batch-38): wire (material,faction) pair once faction_id added to Citizen struct (engine.rs:108-114)
+            mi_material_faction_norm: None,
         }
     }
 }
@@ -437,6 +448,8 @@ impl Simulation {
             branching_window: branching.window as u32,
             avalanches_closed: branching.ledger.closed_total(),
             branching_regime: branching.regime,
+            // TODO(batch-38): wire (material,faction) pair once faction_id added to Citizen struct (engine.rs:108-114)
+            mi_material_faction_norm: None,
         };
 
         // Single INFO line per sample. The cost budget is ~one log

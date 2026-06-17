@@ -9,8 +9,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::PlanetConfig;
 
-/// The six canonical biome archetypes for a planet region.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Canonical biome archetypes for a planet region.
+///
+/// The first six variants (`Ocean`..`Tundra`) are the original geology-seed
+/// archetypes produced by [`GeologyMap::seed`]; they are preserved exactly for
+/// backward compatibility. The remaining variants are the enriched
+/// Whittaker-style biomes produced by [`classify_biome`] from per-cell
+/// elevation / temperature / moisture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BiomeKind {
     /// Open water — radius-derived; large planets have proportionally more ocean.
     Ocean,
@@ -24,6 +30,120 @@ pub enum BiomeKind {
     Desert,
     /// Cold polar or high-altitude terrain.
     Tundra,
+    // ── Enriched Whittaker biomes (additive; produced by `classify_biome`) ──
+    /// Coastal beach — narrow band just above sea level.
+    Beach,
+    /// Tropical dry grassland / scrubland (hot + moderate moisture).
+    Savanna,
+    /// Temperate dry grassland (temperate + low moisture).
+    Grassland,
+    /// Tropical wet forest (hot + high moisture).
+    Rainforest,
+    /// Cold coniferous boreal forest (cold + moisture).
+    Taiga,
+    /// High-altitude permanent ice / snow (high elevation + very cold).
+    Glacier,
+    /// Waterlogged temperate lowland (marsh / bog / swamp).
+    Wetland,
+}
+
+// ── Whittaker classification thresholds ──────────────────────────────────────
+// `classify_biome` takes elevation (normalised 0..1, sea level = 0.0),
+// temperature in °C, and moisture in mm/year.
+
+/// Sea level on the normalised elevation scale; below this is [`BiomeKind::Ocean`].
+const ELEV_SEA_LEVEL: f32 = 0.0;
+/// Upper bound of the coastal [`BiomeKind::Beach`] band.
+const ELEV_BEACH_MAX: f32 = 0.05;
+/// Minimum elevation for a high-altitude cell.
+const ELEV_GLACIER_MIN: f32 = 0.75;
+/// Minimum elevation for a [`BiomeKind::Mountain`] cell.
+const ELEV_MOUNTAIN_MIN: f32 = 0.60;
+
+/// Temperature (°C) above which a cell is "hot".
+const TEMP_HOT: f32 = 20.0;
+/// Temperature (°C) at/above which a cell is "temperate".
+const TEMP_COLD: f32 = 0.0;
+/// Temperature (°C) below which a cell is "very cold" (Tundra / Glacier).
+const TEMP_VERY_COLD: f32 = -5.0;
+
+/// Moisture (mm/year) below which a cell is "dry".
+const MOIST_DRY: f32 = 30.0;
+/// Moisture (mm/year) above which a temperate cell is "moderately wet".
+const MOIST_MODERATE: f32 = 100.0;
+/// Moisture (mm/year) above which a cell is "very wet".
+const MOIST_WET: f32 = 150.0;
+
+/// Fixed-point denominator used by [`crate::weather::WeatherCell`] fields
+/// (`temp_c_fp`, `precip_mm_fp`); divide by this to recover the real unit.
+const FP_SCALE: f32 = 1_000.0;
+
+/// Classify a single cell into a [`BiomeKind`] using Whittaker-style rules.
+///
+/// This is a per-cell complement to [`GeologyMap::seed`] (which assigns coarse
+/// region archetypes from [`PlanetConfig`]). It reuses the same [`BiomeKind`]
+/// enum — superset, not a parallel type.
+///
+/// # Parameters
+/// * `elevation`   — normalised height in `(-∞, 1]`; sea level = `0.0`.
+/// * `temperature` — mean temperature in **°C**.
+/// * `moisture`    — annual precipitation in **mm/year**.
+///
+/// # Rule priority
+/// 1. Elevation overrides: Ocean → Beach → Glacier (cold) → Mountain.
+/// 2. Temperature × moisture grid (hot / temperate / cold / very-cold).
+pub fn classify_biome(elevation: f32, temperature: f32, moisture: f32) -> BiomeKind {
+    // ── 1. Elevation overrides ───────────────────────────────────────────────
+    if elevation < ELEV_SEA_LEVEL {
+        return BiomeKind::Ocean;
+    }
+    if elevation <= ELEV_BEACH_MAX {
+        return BiomeKind::Beach;
+    }
+    if elevation >= ELEV_GLACIER_MIN && temperature <= TEMP_VERY_COLD {
+        return BiomeKind::Glacier;
+    }
+    if elevation >= ELEV_MOUNTAIN_MIN {
+        return BiomeKind::Mountain;
+    }
+
+    // ── 2. Temperature × moisture grid ──────────────────────────────────────
+    if temperature > TEMP_HOT {
+        // Hot band
+        if moisture < MOIST_DRY {
+            BiomeKind::Desert
+        } else if moisture < MOIST_WET {
+            BiomeKind::Savanna
+        } else {
+            BiomeKind::Rainforest
+        }
+    } else if temperature >= TEMP_COLD {
+        // Temperate band (0 °C .. 20 °C]
+        if moisture < MOIST_DRY {
+            BiomeKind::Grassland
+        } else if moisture < MOIST_MODERATE {
+            BiomeKind::Forest
+        } else if moisture >= MOIST_WET {
+            BiomeKind::Wetland
+        } else {
+            BiomeKind::Forest
+        }
+    } else if temperature >= TEMP_VERY_COLD {
+        // Cold band (-5 °C .. 0 °C)
+        BiomeKind::Taiga
+    } else {
+        // Very cold band (< -5 °C)
+        BiomeKind::Tundra
+    }
+}
+
+/// Classify a [`crate::weather::WeatherCell`] at the given normalised
+/// `elevation`, converting its fixed-point `temp_c_fp` / `precip_mm_fp` fields
+/// to real units before delegating to [`classify_biome`].
+pub fn classify_weather_cell(cell: &crate::weather::WeatherCell, elevation: f32) -> BiomeKind {
+    let temperature = cell.temp_c_fp as f32 / FP_SCALE;
+    let moisture = cell.precip_mm_fp as f32 / FP_SCALE;
+    classify_biome(elevation, temperature, moisture)
 }
 
 /// A single region's biome assignment.
@@ -162,5 +282,79 @@ mod tests {
                 .any(|r| r.biome == BiomeKind::Plains),
             "temperate axial tilt must yield Plains regions"
         );
+    }
+
+    // ── Whittaker per-cell classifier (`classify_biome`) ─────────────────────
+
+    /// FR-CIV-PLANET-050 — hot + very wet → Rainforest.
+    #[test]
+    fn classify_rainforest_hot_wet() {
+        assert_eq!(classify_biome(0.3, 28.0, 300.0), BiomeKind::Rainforest);
+        assert_eq!(classify_biome(0.2, 21.0, 160.0), BiomeKind::Rainforest);
+    }
+
+    /// FR-CIV-PLANET-050 — cold + wet → Taiga.
+    #[test]
+    fn classify_taiga_cold_wet() {
+        assert_eq!(classify_biome(0.3, -2.0, 200.0), BiomeKind::Taiga);
+        assert_eq!(classify_biome(0.1, -4.0, 40.0), BiomeKind::Taiga);
+    }
+
+    /// FR-CIV-PLANET-050 — hot + moderate moisture → Savanna.
+    #[test]
+    fn classify_savanna_hot_moderate() {
+        assert_eq!(classify_biome(0.3, 30.0, 80.0), BiomeKind::Savanna);
+        assert_eq!(classify_biome(0.2, 25.0, 149.0), BiomeKind::Savanna);
+    }
+
+    /// FR-CIV-PLANET-050 — high elevation + very cold → Glacier.
+    #[test]
+    fn classify_glacier_high_cold() {
+        assert_eq!(classify_biome(0.80, -10.0, 50.0), BiomeKind::Glacier);
+        assert_eq!(classify_biome(0.75, -5.0, 0.0), BiomeKind::Glacier);
+    }
+
+    /// FR-CIV-PLANET-050 — temperate lowland + very wet → Wetland.
+    #[test]
+    fn classify_wetland_low_wet() {
+        assert_eq!(classify_biome(0.2, 12.0, 200.0), BiomeKind::Wetland);
+        assert_eq!(classify_biome(0.1, 5.0, 150.0), BiomeKind::Wetland);
+    }
+
+    /// FR-CIV-PLANET-050 — the enriched classifier still returns the original
+    /// six archetypes for representative inputs, guaranteeing backward
+    /// compatibility with the pre-enrichment `BiomeKind` set.
+    #[test]
+    fn classify_preserves_original_six() {
+        // Ocean: below sea level.
+        assert_eq!(classify_biome(-0.5, 15.0, 100.0), BiomeKind::Ocean);
+        // Mountain: high (but not glacial-cold) elevation.
+        assert_eq!(classify_biome(0.65, 10.0, 100.0), BiomeKind::Mountain);
+        // Desert: hot + dry lowland.
+        assert_eq!(classify_biome(0.3, 35.0, 10.0), BiomeKind::Desert);
+        // Forest: temperate + moderate moisture.
+        assert_eq!(classify_biome(0.3, 15.0, 60.0), BiomeKind::Forest);
+        // Tundra: very cold lowland.
+        assert_eq!(classify_biome(0.3, -20.0, 10.0), BiomeKind::Tundra);
+        // Plains is still produced by GeologyMap::seed at temperate tilt.
+        let (planet, _) = defaults_earthlike();
+        assert!(GeologyMap::seed(&planet)
+            .regions
+            .iter()
+            .any(|r| r.biome == BiomeKind::Plains));
+    }
+
+    /// FR-CIV-PLANET-050 — at fixed elevation/temperature, rising moisture moves
+    /// a temperate cell Grassland → Forest → Wetland and a hot cell
+    /// Desert → Savanna → Rainforest (moisture monotonicity).
+    #[test]
+    fn classify_moisture_monotonicity() {
+        assert_eq!(classify_biome(0.3, 15.0, 10.0), BiomeKind::Grassland);
+        assert_eq!(classify_biome(0.3, 15.0, 60.0), BiomeKind::Forest);
+        assert_eq!(classify_biome(0.3, 15.0, 200.0), BiomeKind::Wetland);
+
+        assert_eq!(classify_biome(0.3, 25.0, 10.0), BiomeKind::Desert);
+        assert_eq!(classify_biome(0.3, 25.0, 80.0), BiomeKind::Savanna);
+        assert_eq!(classify_biome(0.3, 25.0, 200.0), BiomeKind::Rainforest);
     }
 }

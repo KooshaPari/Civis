@@ -1628,4 +1628,34 @@ mod tests {
             1
         );
     }
+
+    #[test]
+    fn government_for_faction_cycles_through_six_forms_and_wraps() {
+        use Government3d::*;
+        let expected = [Monarchy, Republic, Theocracy, Junta, Council, Corporate];
+        for (id, want) in expected.into_iter().enumerate() {
+            assert_eq!(government_for_faction(id as u32), want, "faction {id}");
+        }
+        // The mapping is mod-6: faction 6 wraps to Monarchy, 7 to Republic, 11 to Corporate.
+        assert_eq!(government_for_faction(6), Monarchy);
+        assert_eq!(government_for_faction(7), Republic);
+        assert_eq!(government_for_faction(11), Corporate);
+    }
+
+    #[test]
+    fn job_profession_label_maps_every_job_variant() {
+        use JobType::*;
+        let cases = [
+            (Farmer, "farmer"),
+            (Warrior, "warrior"),
+            (Scholar, "scholar"),
+            (Trader, "trader"),
+            (Priest, "priest"),
+            (Admin, "admin"),
+            (Unemployed, "unemployed"),
+        ];
+        for (job, label) in cases {
+            assert_eq!(job_profession_label(job), label);
+        }
+    }
 }

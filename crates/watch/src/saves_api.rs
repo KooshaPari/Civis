@@ -468,7 +468,7 @@ mod tests {
         assert_eq!(sanitize_save_filename("game.civsave").unwrap(), "game");
         assert_eq!(
             sanitize_save_filename("a.civreplay.civsave.zst").unwrap(),
-            "a.civreplay.civsave"
+            "a.civreplay"
         );
     }
 

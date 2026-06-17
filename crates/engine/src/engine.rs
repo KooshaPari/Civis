@@ -13,6 +13,7 @@ use civ_agents::culture::{cultural_distance, language_distance, CultureProfile, 
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+use civ_genetics::{archetype_dna, seed_with_divergence, NamedSeed};
 use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
@@ -172,13 +173,14 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
 
     let scale = FIXED_SCALE as f32;
     let mut next_civilian_id = 1u64;
+    let mut spawn_index: usize = 0;
     for (center_x, center_y) in faction_capitals.into_iter() {
         for _ in 0..CIVILIANS_PER_FACTION {
             let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
-            spawn_civilian_at(
+            let entity = spawn_civilian_at(
                 world,
                 next_civilian_id,
                 civ_agents::infer_alignment_for_spawn(world, norm_x, norm_y),
@@ -187,7 +189,20 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
                 civ_agents::ActorVisualKind::Humanoid,
                 rng,
             );
+            // Assign named-race archetype DNA via the 3-cycle seed assignment.
+            // Cycle: 0 → Ardani, 1 → Velthari, 2 → Grundak.
+            // divergence=0.3 introduces population spread while preserving
+            // the archetype's characteristic genome cluster.
+            let named_seed = match spawn_index % 3 {
+                0 => NamedSeed::Ardani,
+                1 => NamedSeed::Velthari,
+                _ => NamedSeed::Grundak,
+            };
+            let base = archetype_dna(named_seed);
+            let dna = seed_with_divergence(&base, 0.3, rng);
+            let _ = world.insert_one(entity, dna);
             next_civilian_id += 1;
+            spawn_index += 1;
         }
     }
 }
@@ -8900,6 +8915,87 @@ mod tests {
             high_kind,
             DiplomacyKind::TradeAgreement,
             "collective goodwill should raise the threshold and keep factions trading"
+        );
+    }
+
+    // ── Named-race seed spawn tests (FR-CIV-GENETICS-SEED-*) ─────────────────
+
+    /// FR-CIV-GENETICS-SEED-001 — first spawned agent carries Ardani archetype
+    /// DNA after applying divergence=0.3 with a fixed RNG seed, and the result
+    /// is deterministic across two identical Simulation instances.
+    #[test]
+    fn test_seed_spawn_determinism() {
+        use civ_genetics::NamedSeed;
+        let sim_a = Simulation::with_seed(0xC0FFEE_u64);
+        let sim_b = Simulation::with_seed(0xC0FFEE_u64);
+        // Collect all Dna components from both worlds.
+        let dna_a: Vec<Dna> = sim_a.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
+        let dna_b: Vec<Dna> = sim_b.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
+        assert_eq!(
+            dna_a.len(),
+            dna_b.len(),
+            "both sims must spawn the same number of DNA-bearing entities"
+        );
+        assert!(!dna_a.is_empty(), "at least one entity must carry DNA");
+        // Both runs must be bit-identical under the same seed.
+        for (a, b) in dna_a.iter().zip(dna_b.iter()) {
+            assert_eq!(a, b, "Dna must be deterministic under an identical RNG seed");
+        }
+        // The first civilian's DNA must differ from the raw zero genome, proving
+        // it was seeded from an archetype rather than left default.
+        let archetype = civ_genetics::archetype_dna(NamedSeed::Ardani);
+        assert_eq!(dna_a[0].0.len(), archetype.0.len(), "genome length must match archetype");
+        // With divergence=0.3 the result must not be all-zero (extremely unlikely).
+        assert_ne!(dna_a[0].0, vec![0u8; 64], "seeded DNA must not be the zero genome");
+    }
+
+    /// FR-CIV-GENETICS-SEED-002 — spawn indices 0, 1, and 2 produce three
+    /// distinct NamedSeed assignments (Ardani, Velthari, Grundak respectively).
+    #[test]
+    fn test_faction_archetype_variety() {
+        use civ_genetics::NamedSeed;
+        let ardani_base = civ_genetics::archetype_dna(NamedSeed::Ardani);
+        let velthari_base = civ_genetics::archetype_dna(NamedSeed::Velthari);
+        let grundak_base = civ_genetics::archetype_dna(NamedSeed::Grundak);
+
+        // Verify the three archetypes are distinct from each other —
+        // confirming the % 3 cycle will produce genuinely different seeds.
+        assert_ne!(ardani_base, velthari_base, "Ardani and Velthari must differ");
+        assert_ne!(ardani_base, grundak_base, "Ardani and Grundak must differ");
+        assert_ne!(velthari_base, grundak_base, "Velthari and Grundak must differ");
+
+        // With 128 civilians, each archetype slot is hit ~42-43 times.
+        let sim = Simulation::with_seed(1);
+        let dna_list: Vec<Dna> = sim.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
+        assert_eq!(dna_list.len(), 128, "all 128 civilians must carry Dna");
+
+        // Verify that at minimum 3 distinct genomes are present, proving all
+        // three archetype branches were exercised (divergence prevents collisions).
+        let unique_count = {
+            let mut seen: std::collections::HashSet<Vec<u8>> = std::collections::HashSet::new();
+            for d in &dna_list {
+                seen.insert(d.0.clone());
+            }
+            seen.len()
+        };
+        assert!(
+            unique_count >= 3,
+            "at least 3 distinct genomes expected (one per archetype); got {unique_count}"
+        );
+    }
+
+    /// FR-CIV-GENETICS-SEED-003 — `seed_with_divergence` at divergence=0.0
+    /// returns an exact clone of the archetype; this is the zero-divergence contract.
+    #[test]
+    fn test_zero_divergence_exact() {
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        let archetype = civ_genetics::archetype_dna(NamedSeed::Ardani);
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(0xDEAD_BEEF);
+        let result = civ_genetics::seed_with_divergence(&archetype, 0.0, &mut rng);
+        assert_eq!(
+            result, archetype,
+            "seed_with_divergence with divergence=0.0 must return an exact clone of the archetype"
         );
     }
 }

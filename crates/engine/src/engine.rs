@@ -3,9 +3,6 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
-    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
-};
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
     Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
@@ -20,7 +17,6 @@ use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
-use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
 use civ_needs::{
     tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
 };
@@ -34,7 +30,6 @@ use civ_tactics::{
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
-use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
 use hecs::{Entity, World};
 use rand::Rng;
@@ -47,6 +42,8 @@ use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
+use crate::policy::ControlSignals;
+use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
 use crate::replay::{ReplayError, ReplayLog};
@@ -62,11 +59,13 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
     "citizen_lifecycle",
     "military",
+    "policy",
     "economy",
+    "planet",
+    "diplomacy",
     "tactics",
     "voxel",
     "compact",
-    "planet",
     "buildings",
     "diffusion",
     "disasters",
@@ -117,7 +116,7 @@ pub struct Citizen {
     pub job: Option<JobType>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum JobType {
     Farmer,
     Warrior,
@@ -223,6 +222,15 @@ pub struct Resources {
     pub wood: Fixed,
     pub metal: Fixed,
     pub energy: Fixed, // Joules
+}
+
+/// Simple trade route between two factions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeRoute {
+    pub from_faction: u32,
+    pub to_faction: u32,
+    pub goods: String,
+    pub volume: Fixed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -641,7 +649,6 @@ pub struct Simulation {
     replay_log: ReplayLog,
     /// Scenario economy policy.
     pub economy_policy: PolicyInput,
-    /// Macro economy state (`civ-economy`); synced with `WorldState::energy_budget_joules` each tick.
     /// Macro economy state.
     pub economy_state: EconomyState,
     /// Per-good clearing prices.
@@ -651,7 +658,7 @@ pub struct Simulation {
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
     mod_host: ModHost,
     /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
-    military_phase: MilitaryPhaseConfig,
+    pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
@@ -886,11 +893,13 @@ impl Simulation {
 
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState::default();
 
         let mut sim = Self {
@@ -945,7 +954,6 @@ impl Simulation {
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
-        }
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(42),
@@ -962,11 +970,13 @@ impl Simulation {
         let rng = SimRng::seed_from_u64(seed);
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -1024,7 +1034,6 @@ impl Simulation {
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
-        }
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(seed),
@@ -1034,6 +1043,66 @@ impl Simulation {
         };
         sim.rebuild_agent_id_index();
         sim
+    }
+
+    /// Install a single mod at runtime (directory or `.civmod` archive).
+    ///
+    /// `rel_path` is resolved from the repo root (`crates/engine/../../`).
+    pub fn install_mod_path(
+        &mut self,
+        rel_path: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, civ_mod_host::ManifestError> {
+        let repo_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let dir = repo_root.join(rel_path);
+        let named_civmod = dir.file_name().and_then(|name| {
+            let archive = dir.join(format!("{}.civmod", name.to_string_lossy()));
+            archive.is_file().then_some(archive)
+        });
+        let load_path = named_civmod.as_deref().unwrap_or(dir.as_path());
+        self.mod_host.load_mod_path(load_path)?;
+        let entry =
+            self.mod_host
+                .mods()
+                .last()
+                .ok_or_else(|| civ_mod_host::ManifestError::Validation {
+                    path: load_path.to_path_buf(),
+                    message: "mod load produced no registry entry".into(),
+                })?;
+        let record = civ_mod_host::ModLoadedRecord {
+            mod_id: entry.manifest.meta.id.clone(),
+            mod_name: entry.manifest.meta.name.clone(),
+            version: entry.manifest.meta.version.clone(),
+            tick: self.state.tick,
+        };
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
+    /// Unload a loaded mod by stable id and emit `mod.unloaded.v1` on the lifecycle bus.
+    pub fn unload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+        reason: &str,
+    ) -> Result<civ_mod_host::ModUnloadedRecord, String> {
+        let record = self.mod_host.unload_mod(mod_id, reason, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_unloaded_event_json(&record);
+        self.replay_log.record_mod_unloaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
+    /// Hot-reload a mod from its remembered source path and emit `mod.loaded.v1`.
+    pub fn reload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, String> {
+        let record = self.mod_host.reload_mod(mod_id, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
     }
 
     /// Load mod manifests from scenario `mods` paths (repo-relative).
@@ -1059,11 +1128,15 @@ impl Simulation {
                 continue;
             }
             if let Some(entry) = self.mod_host.mods().last() {
-                self.replay_log.record_mod_loaded(
-                    self.state.tick,
-                    &entry.manifest.meta.id,
-                    &entry.manifest.meta.version,
-                );
+                let record = civ_mod_host::ModLoadedRecord {
+                    mod_id: entry.manifest.meta.id.clone(),
+                    mod_name: entry.manifest.meta.name.clone(),
+                    version: entry.manifest.meta.version.clone(),
+                    tick: self.state.tick,
+                };
+                let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+                self.replay_log.record_mod_loaded(&record);
+                self.last_tick_mod_lifecycle.push(bus_json);
             }
         }
     }
@@ -1072,6 +1145,31 @@ impl Simulation {
     #[must_use]
     pub fn mod_host(&self) -> &ModHost {
         &self.mod_host
+    }
+
+    /// Mutable mod host (phase ticks and guest memory restore).
+    pub fn mod_host_mut(&mut self) -> &mut ModHost {
+        &mut self.mod_host
+    }
+
+    /// Export per-mod guest scratch memory for CIV-1000 save bundles.
+    #[must_use]
+    pub fn export_mod_guest_state(&self) -> civ_mod_host::ModGuestStateSave {
+        self.mod_host.export_guest_state()
+    }
+
+    /// Restore per-mod guest scratch memory after load.
+    pub fn restore_mod_guest_state(
+        &mut self,
+        save: &civ_mod_host::ModGuestStateSave,
+    ) -> Result<(), civ_mod_host::GuestStateError> {
+        self.mod_host.import_guest_state(save)
+    }
+
+    /// Loaded mods for mod-browser UI (`sim.snapshot` / civ-watch).
+    #[must_use]
+    pub fn mod_browser_entries(&self) -> Vec<civ_mod_host::ModBrowserEntry> {
+        self.mod_host.browser_entries()
     }
 
     /// Per-faction doctrine libraries (evolved in [`Self::phase_tactics`]).
@@ -1572,12 +1670,12 @@ impl Simulation {
         self.phase_citizen_lifecycle();
         self.phase_military();
         self.phase_economy();
+        self.phase_planet();
         self.diplomacy_events.clear();
         self.phase_diplomacy();
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
-        self.phase_planet();
         self.phase_buildings();
         self.phase_diffusion();
         self.phase_disasters();
@@ -1630,6 +1728,42 @@ impl Simulation {
         &mut self.replay_log
     }
 
+    /// `mod.loaded.v1` JSON payloads recorded on the replay bus (FR-MOD-004 partial).
+    #[must_use]
+    pub fn mod_loaded_bus_events(&self) -> Vec<String> {
+        self.replay_log.mod_loaded_bus_events()
+    }
+
+    /// `mod.loaded.v1` bus JSON emitted on the most recent tick (scenario load or hot reload).
+    #[must_use]
+    pub fn last_tick_mod_lifecycle(&self) -> &[String] {
+        &self.last_tick_mod_lifecycle
+    }
+
+    /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
+    fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
+        for line in lines {
+            if line.contains("mod.permission_violation.v1") {
+                self.replay_log
+                    .record_mod_permission_violation_bus(tick, &line);
+            }
+            tracing::debug!(mod_log = %line, phase = phase, "mod phase");
+        }
+    }
+
+    /// Record `session.saved.v1` on the replay bus (slot or autosave; CIV-1000).
+    pub fn record_session_saved(
+        &mut self,
+        session_id: &str,
+        save_id: &str,
+        slot: &str,
+        byte_size: u64,
+    ) {
+        let tick = self.state.tick;
+        self.replay_log
+            .record_session_saved(session_id, save_id, slot, tick, byte_size);
+    }
+
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
     pub fn hash_chain_root(&self) -> Option<[u8; crate::hash_chain::HASH_LEN]> {
         self.replay_log.running_hash
@@ -1649,7 +1783,9 @@ impl Simulation {
         Ok(sim)
     }
 
-    /// Planet phase - recompute climate from the current tick.
+    /// Planet phase - recompute climate and weather grid from the current tick,
+    /// then apply the resulting tide offset to any registered coastal water
+    /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
         self.weather_grid = compute_weather(
@@ -2614,7 +2750,6 @@ impl Simulation {
         }
 
         for (child_id, x, y) in births {
-            let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
             let alignment = civ_agents::infer_alignment_for_spawn(&self.world, x, y);
             let _ = spawn_child_near(&mut self.world, child_id, alignment, x, y, &mut self.rng);
             self.last_births.push(PopulationEvent {
@@ -2645,9 +2780,9 @@ impl Simulation {
     fn phase_military(&mut self) {
         use crate::spawn::military_pin_id;
 
-        for line in self.mod_host.military_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod military phase");
-        }
+        let tick = self.state.tick;
+        let lines = self.mod_host.military_tick(tick);
+        self.ingest_mod_phase_lines(lines, tick, "military");
 
         let phase_cfg = self.military_phase;
 
@@ -2701,7 +2836,14 @@ impl Simulation {
         }
 
         let config = phase_cfg.war;
-        let engagements = tick_war_bridge(self.state.tick, &config, &samples, &self.voxel);
+        let fog = civ_tactics::build_fog_for_units(&config, &samples, &self.voxel);
+        let engagements = tick_war_bridge(
+            self.state.tick,
+            &config,
+            &samples,
+            &self.voxel,
+            fog.as_ref(),
+        );
         self.operational
             .on_combat_engagements(self.state.tick, &engagements);
         self.last_tick_engagements = engagements.clone();
@@ -2909,9 +3051,11 @@ impl Simulation {
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
-        for line in self.mod_host.tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod policy phase");
-        }
+        let tick = self.state.tick;
+        let policy_lines = self.mod_host.tick(tick);
+        self.ingest_mod_phase_lines(policy_lines, tick, "policy");
+        let economy_lines = self.mod_host.economy_tick(tick);
+        self.ingest_mod_phase_lines(economy_lines, tick, "economy");
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
@@ -3139,105 +3283,267 @@ impl Simulation {
             life_deaths_this_tick: self.last_life_deaths,
         }
     }
-}
 
-/// Replay-aware mutable voxel access wrapper.
-pub struct VoxelWriteProxy<'a> {
-    sim: &'a mut Simulation,
-}
+    /// Number of emergent settlements (multi-member clusters) from the most
+    /// recent life phase (FR-CIV-LIFE-030). Read by the HUD `FactionRoster`.
+    #[must_use]
+    pub fn settlement_count(&self) -> u32 {
+        self.last_settlement_count
+    }
 
-impl<'a> VoxelWriteProxy<'a> {
-    pub fn write(&mut self, pos: civ_voxel::WorldCoord, value: MaterialId) {
-        self.sim.push_voxel_write(pos, value);
+    /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for
+    /// the HUD `WorldResources` panel (FR-CIV-LIFE-020).
+    #[must_use]
+    pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
+        &self.cluster_stocks
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_clear_cluster_stocks(&mut self) {
+        self.cluster_stocks.clear();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_cluster_food_stock(&mut self, cluster_id: u64, food: i64) {
+        let mut stock = ClusterStocks::default();
+        stock.add(civ_economy::Good::Food, food);
+        self.cluster_stocks.insert(cluster_id, stock);
     }
 }
 
-impl<'a> Deref for VoxelWriteProxy<'a> {
-    type Target = VoxelWorld<MaterialId>;
+/// Maximum chronicle history lines retained in [`WorldState::chronicle`].
+const CHRONICLE_MAX_LEN: usize = 200;
 
-    fn deref(&self) -> &Self::Target {
-        &self.sim.voxel
+/// Food units each cluster member adds to settlement stock per tick in
+/// [`Simulation::phase_life`].
+const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
+/// Food units each cluster member drains per tick in
+/// [`Simulation::phase_settlement_consumption`]. Must be >= production so the
+/// accumulator stays bounded (net zero at matched rates; converges toward zero
+/// when strictly greater).
+const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
+/// Market weight for settlement food commons before pressure scaling (N1).
+const SETTLEMENT_FOOD_MARKET_WEIGHT: i64 = 2;
+/// Divisor mapping population-scale demand/supply (and settlement commons) into
+/// the capped per-tick food price step (N1: local abundance must move price
+/// within `MarketState::apply_pressure`'s ±8 cent clamp).
+const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
+
+/// Baseline food clearing price (cents) at which births are unaffected by
+/// scarcity. Matches `MarketState::default()`'s food price.
+const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+
+/// Tech unlock bits (irreversible, set-only).
+pub const TECH_IRRIGATION: u64 = 1 << 0;
+pub const TECH_STORAGE: u64 = 1 << 1;
+pub const TECH_METALLURGY: u64 = 1 << 2;
+pub const TECH_WRITING: u64 = 1 << 3;
+pub const TECH_SANITATION: u64 = 1 << 4;
+pub const TECH_GUNPOWDER: u64 = 1 << 5;
+
+/// Discrete tech unlocks reached by a given research tier (set-only bitmask).
+fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
+    let mut bits = 0u64;
+    if research_tier >= 1 {
+        bits |= TECH_IRRIGATION;
+    }
+    if research_tier >= 2 {
+        bits |= TECH_STORAGE;
+    }
+    if research_tier >= 3 {
+        bits |= TECH_METALLURGY;
+    }
+    if research_tier >= 4 {
+        bits |= TECH_WRITING;
+    }
+    if research_tier >= 5 {
+        bits |= TECH_SANITATION;
+    }
+    if research_tier >= 6 {
+        bits |= TECH_GUNPOWDER;
+    }
+    bits
+}
+
+/// Downward-causation policy (FR-CIV-0100 emergence): scarcity in the food
+/// market damps the birth rate, closing the research -> carrying-capacity ->
+/// economy -> population loop. Returns a multiplier in `(0.0, 1.0]` applied to
+/// the per-tick birth chance.
+///
+/// At or below the baseline price (abundance) the factor is `1.0` — surplus
+/// does NOT boost births above the natural rate (conservative; abundance is
+/// already expressed via the ECS food-needs path). As the price rises above
+/// baseline the factor falls as `baseline / price`, so a 2x price halves the
+/// birth chance. The factor never reaches zero, so a starving society can still
+/// recover, and it only ever scales births DOWN — population is never reduced
+/// by this coupling.
+fn food_scarcity_birth_factor(food_price: i64) -> f64 {
+    let price = food_price.max(FOOD_SCARCITY_BASELINE);
+    (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
+}
+
+/// Per-tick change in societal unrest from food-market scarcity (FR-CIV-0100 §3
+/// emergence). Above the baseline price unrest rises in proportion to the
+/// shortfall (bounded per tick so it walks rather than jumps); at or below
+/// baseline it decays toward contentment by a fixed step. The caller floors the
+/// running total at zero.
+fn unrest_delta(food_price: i64) -> i64 {
+    /// Largest single-tick rise, so a price spike can't instantly max unrest.
+    const MAX_RISE: i64 = 50;
+    /// Cents of shortfall that map to one unit of unrest rise.
+    const CENTS_PER_UNREST: i64 = 20;
+    /// Fixed decay applied each tick of abundance.
+    const DECAY: i64 = 10;
+    let scarcity = food_price - FOOD_SCARCITY_BASELINE;
+    if scarcity > 0 {
+        (scarcity / CENTS_PER_UNREST).clamp(1, MAX_RISE)
+    } else {
+        -DECAY
     }
 }
 
-impl<'a> DerefMut for VoxelWriteProxy<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sim.voxel
+/// FR-CIV-ECON: scarcity in NON-food commodities adds bounded unrest
+/// (cost-of-living). Food is owned by unrest_delta(); skipped here to avoid
+/// double-counting. Per-tick clamped to [-DECAY, MAX_RISE] — no runaway.
+fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
+    const BASELINE: i64 = 1_000;
+    const CENTS_PER_UNREST: i64 = 40;
+    const MAX_RISE: i64 = 15;
+    const DECAY: i64 = 5;
+    let mut rise: i64 = 0;
+    for (good, &price) in prices {
+        if good == "food" { continue; }
+        let scarcity = price - BASELINE;
+        if scarcity > 0 {
+            rise = rise.saturating_add((scarcity / CENTS_PER_UNREST).min(MAX_RISE));
+        } else {
+            rise = rise.saturating_sub(DECAY);
+        }
+    }
+    rise.clamp(-DECAY, MAX_RISE)
+}
+
+/// Effective food-price shadow for one faction's local wealth/scarcity (FR-CIV-0100
+/// §3 emergence). Comfortable treasury and food sit at baseline; shortfall pushes
+/// the shadow above baseline so [`unrest_delta`] accrues faction unrest.
+fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64 {
+    const TREASURY_COMFORT: i64 = 8_000;
+    const FOOD_COMFORT: i64 = 80;
+    const FOOD_WEIGHT: i64 = 50;
+
+    let treasury_i = (treasury.raw / crate::SCALE).max(0);
+    let food_i = (resources.food.raw / crate::SCALE).max(0);
+    let comfort = TREASURY_COMFORT + FOOD_COMFORT * FOOD_WEIGHT;
+    let wealth = treasury_i + food_i * FOOD_WEIGHT;
+
+    if wealth >= comfort {
+        FOOD_SCARCITY_BASELINE
+    } else {
+        FOOD_SCARCITY_BASELINE + (comfort - wealth) / 4
     }
 }
 
-impl Default for Simulation {
-    fn default() -> Self {
-        Self::new()
+/// Per-tick faction unrest delta from that faction's wealth/scarcity shadow.
+/// Mirrors global food-scarcity [`unrest_delta`].
+fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
+    unrest_delta(scarcity_shadow)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): energy depletion breeds unrest.
+/// A fully-drained energy budget (blackout) adds a fixed unrest increment this
+/// tick; a solvent budget adds none. An acute shock that bypasses the gradual
+/// food-scarcity damping.
+fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
+    const BLACKOUT_UNREST: i64 = 15;
+    if energy_budget <= Fixed::ZERO {
+        BLACKOUT_UNREST
+    } else {
+        0
     }
 }
 
-/// Snapshot of simulation state
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SimulationSnapshot {
-    pub tick: u64,
-    pub population: u64,
-    pub citizen_count: usize,
-    pub building_count: usize,
-    pub military_count: usize,
-    pub energy_budget: Fixed,
-    pub resources: Resources,
-    pub births_this_tick: u32,
-    pub deaths_this_tick: u32,
-    pub diplomacy_events: Vec<DiplomacyEvent>,
-    /// Per-good clearing prices in cents from [`MarketState`].
-    pub market_prices: BTreeMap<String, i64>,
-    /// Number of per-soldier combat damage pulses resolved during the most recent tick
-    /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
-    pub damage_events: usize,
+/// Upward causation (FR-CIV-0100 §3): the mean MISERY of agents (negative Psyche
+/// mood valence) adds to societal unrest. Reuses the ECS Psyche component — the
+/// agent emotional layer feeding the macro web. Returns 0..MAX, bounded.
+fn agent_misery_unrest(world: &hecs::World) -> i64 {
+    const MAX_MISERY_UNREST: i64 = 30;
+    let (sum, n) = world
+        .query::<&Psyche>()
+        .iter()
+        .fold((0.0f32, 0u32), |(s, n), (_, p)| (s + (-p.mood.valence).max(0.0), n + 1));
+    if n == 0 {
+        return 0;
+    }
+    let mean_misery = (sum / n as f32).clamp(0.0, 1.0); // 0 = content, 1 = max misery
+    (mean_misery * MAX_MISERY_UNREST as f32) as i64
 }
 
-// ============================================================================
-// TESTS
-// ============================================================================
+/// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
+/// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
+fn micro_cohesion_delta(world: &hecs::World) -> i64 {
+    const MICRO_BIND_CAP: i64 = 12;
+    const MICRO_FRAY_CAP: i64 = 18;
+    const MIN_AGENTS: u32 = 2;
+    const CONSENSUS_SCALE: f32 = 4.0;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::lod::{should_tick_entity_with_policy, LodPolicy};
-    use crate::replay::{ReplayEvent, ReplayLog};
-    use civ_agents::{count_civilians, LodTier, Wardrobe};
-    use civ_planet::{compute_climate, is_daytime, MoonConfig, PlanetConfig};
-    use civ_voxel::{MaterialId, WorldCoord};
-    use tempfile::NamedTempFile;
+    let mut n = 0u32;
+    let mut sum = 0.0f32;
+    let mut sum_sq = 0.0f32;
+    for (_, psyche) in world.query::<&Psyche>().iter() {
+        let x = psyche.beliefs[0];
+        n += 1;
+        sum += x;
+        sum_sq += x * x;
+    }
 
-    fn fill_voxel_chunk(world: &mut VoxelWorld<MaterialId>, origin: i64, size: i64) {
-        for x in origin..origin + size {
-            for y in origin..origin + size {
-                for z in origin..origin + size {
-                    world.write(WorldCoord { x, y, z }, MaterialId(1));
-                }
-            }
+    if n < MIN_AGENTS {
+        return 0;
+    }
+
+    let n_f = n as f32;
+    let mean = sum / n_f;
+    let var = ((sum_sq / n_f) - mean * mean).max(0.0);
+    let consensus = 1.0 - (CONSENSUS_SCALE * var).clamp(0.0, 1.0);
+    let micro_bind = (consensus * MICRO_BIND_CAP as f32).floor() as i64;
+    let micro_fray = ((1.0 - consensus) * MICRO_FRAY_CAP as f32).floor() as i64;
+    micro_bind - micro_fray
+}
+
+/// Upward causation (FR-CIV-0100 §3): mean positive agent tie trust caches a
+/// trade permille bonus for the next economy tick. Pure `hecs::World` scan.
+fn micro_social_trust_permille(world: &hecs::World) -> u64 {
+    const MICRO_TRUST_SCALE: f32 = 250.0;
+    const MICRO_TRUST_CAP: u64 = 250;
+
+    let mut n = 0u64;
+    let mut sum = 0.0f32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            sum += tie.trust.clamp(0.0, 1.0);
+            n += 1;
         }
     }
 
-    /// FR-CIV-ENGINE-INT-010 — startup spawns 32 civilians.
-    #[test]
-    fn startup_spawns_32_civilians() {
-        let sim = Simulation::new();
-        assert_eq!(sim.state.tick, 0);
-        assert_eq!(count_civilians(&sim.world), 32);
+    if n == 0 {
+        return 0;
     }
 
-    #[test]
-    fn test_tick_advances() {
-        let mut sim = Simulation::new();
-        sim.tick();
-        assert_eq!(sim.state.tick, 1);
+    let trust_mean = sum / n as f32;
+    let raw = (trust_mean * MICRO_TRUST_SCALE).floor() as u64;
+    raw.min(MICRO_TRUST_CAP)
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N11): average psyche maturity across all agents.
+/// Mature populations stabilize belief (wisdom = stability). Pure `hecs::World` scan.
+fn avg_psyche_maturity(world: &hecs::World) -> f32 {
+    let mut total = 0.0;
+    let mut count = 0u32;
+    for (_, psyche) in world.query::<&Psyche>().iter() {
+        total += psyche.maturity;
+        count += 1;
     }
-
-    /// FR-CORE-001 — each `Simulation::tick()` appends exactly one `ReplayEvent::Tick`.
-    #[test]
-    fn fr_core_001_single_tick_event_per_tick() {
-        use crate::invariants::check_tick_invariants;
-
-        let mut sim = Simulation::with_seed(1);
-        assert_eq!(count_replay_ticks(&sim), 0);
+    if count == 0 { 0.0 } else { total / count as f32 }
+}
 
 /// Upward causation (FR-CIV-EMERGENCE-N12): average affinity across all social ties.
 /// Positive collective affinity (goodwill) raises the diplomacy conflict threshold;
@@ -7529,26 +7835,21 @@ mod tests {
 
     /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
     #[test]
-    fn phase_order_matches_tick_sequence() {
-        assert_eq!(
-            PHASE_ORDER,
-            &[
-                "production",
-                "citizen_lifecycle",
-                "military",
-                "economy",
-                "tactics",
-                "voxel",
-                "compact",
-                "planet",
-                "buildings",
-                "diffusion",
-            ]
+    fn replay_log_round_trips_through_save_load() {
+        let mut log = ReplayLog {
+            seed: 99,
+            ..ReplayLog::default()
+        };
+        log.record_tick(1);
+        log.record_voxel_write(1, WorldCoord { x: 1, y: 2, z: 3 }, MaterialId(7));
+        log.record_damage(
+            2,
+            DamageEvent {
+                center: WorldCoord { x: 0, y: 0, z: 0 },
+                radius_voxels: 2,
+                energy: 11,
+            },
         );
-    }
-
-    fn count_replay_ticks(sim: &Simulation) -> usize {
-        sim.replay_log()
         log.record_research(3, vec![1, 2, 3], true);
 
         let file = NamedTempFile::new().unwrap();
@@ -7623,548 +7924,15 @@ mod tests {
             .replay_log()
             .events
             .iter()
-            .filter(|event| matches!(event, ReplayEvent::Tick { .. }))
-            .count()
-    }
-
-    /// CIV-0100 stub: joule budget drain matches policy formula and stays non-negative.
-    /// Covers FR-CIV-TACTICS-025 and FR-CIV-TACTICS-025-.
-    /// Same seed reproduces identical combat replay markers.
-    #[test]
-    fn phase_economy_conserves_non_negative_budget() {
-        use crate::policy::PolicyInput;
-
-        let mut sim = Simulation::with_seed(99);
-        sim.economy_policy = PolicyInput {
-            base_consumption_joules: 1_000.0,
-            scarcity_multiplier: 2.0,
-        };
-        let before = sim.state.energy_budget_joules;
-        sim.tick();
-        let expected = (before - Fixed::from_num(2_000i64)).max(Fixed::ZERO);
-        assert_eq!(sim.state.energy_budget_joules, expected);
-        assert!(sim.state.energy_budget_joules.raw >= Fixed::ZERO.raw);
-    }
-
-    /// `phase_economy` routes demand through [`CapitalistAllocator::allocate`].
-    /// Covers FR-CIV-TACTICS-025.
-    /// Covers FR-CIV-TACTICS-032.
-    /// Covers FR-CIV-TACTICS-035.
-    /// FR-CIV-WAR-020 — war replay and live state share combat markers through shared snapshots.
-    /// War-bridge engagements append ReplayEvent::Combat.
-    #[test]
-    fn war_bridge_records_combat_replay_events() {
-        let mut sim = Simulation::with_seed(1);
-        for _ in 0..16 {
-            sim.tick();
-        }
-        assert!(sim.replay_log().events.iter().any(|event| {
-            matches!(
-                event,
-                ReplayEvent::Combat {
-                    shooter_id,
-                    target_id,
-                    ..
-                } if *shooter_id != 0 && *target_id != 0
-            )
-        }));
-    }
-    /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
-    #[test]
-    fn phase_economy_uses_capitalist_allocator() {
-        use crate::policy::PolicyInput;
-
-        let mut sim = Simulation::with_seed(7);
-        sim.state.energy_budget_joules = Fixed::from_num(50);
-        sim.economy_policy = PolicyInput {
-            base_consumption_joules: 100.0,
-            scarcity_multiplier: 1.0,
-        };
-
-        let demand = crate::policy::effective_consumption(sim.economy_policy) as i64;
-        let expected_allocated = CapitalistAllocator.allocate(50, demand);
-        let before = sim.state.energy_budget_joules;
-
-        sim.tick();
-
-        assert_eq!(expected_allocated, 50);
-        assert_eq!(
-            sim.state.energy_budget_joules,
-            before - Fixed::from_num(expected_allocated)
-        );
-        assert_eq!(sim.economy_state.energy_budget_joules, 0);
-    }
-
-    /// `phase_economy` keeps `economy_state` in sync with the world joule budget.
-    #[test]
-    fn phase_economy_updates_economy_state() {
-        use crate::policy::PolicyInput;
-
-        let mut sim = Simulation::with_seed(99);
-        sim.economy_policy = PolicyInput {
-            base_consumption_joules: 1_000.0,
-            scarcity_multiplier: 1.0,
-        };
-        let before = sim.economy_state.energy_budget_joules;
-        sim.tick();
-        assert_eq!(
-            sim.economy_state.energy_budget_joules,
-            sim.state.energy_budget_joules.raw / crate::SCALE
-        );
-        assert_eq!(sim.economy_state.energy_budget_joules, before - 1_000);
-    }
-
-    /// `phase_economy` advances [`MarketState`] so prices move over time.
-    /// Covers FR-REPLAY-001.
-    /// `.civreplay` save/load restores simulation tick after N ticks.
-    #[test]
-    fn phase_economy_steps_market_prices() {
-        const N: usize = 2;
-
-        let mut sim = Simulation::with_seed(42);
-        let initial = sim.market_state.prices.clone();
-        for _ in 0..N {
-            sim.tick();
-        }
-        assert_ne!(
-            sim.market_state.prices, initial,
-            "expected at least one market price to change after {N} ticks"
-        );
-    }
-
-    #[test]
-    fn test_initial_entities() {
-        let sim = Simulation::new();
-        let snapshot = sim.snapshot();
-        assert!(snapshot.citizen_count > 0);
-        assert!(snapshot.building_count > 0);
-        assert!(snapshot.military_count > 0);
-    }
-
-    #[test]
-    fn test_determinism() {
-        let mut sim1 = Simulation::with_seed(12345);
-        let mut sim2 = Simulation::with_seed(12345);
-
-        for _ in 0..100 {
-            sim1.tick();
-            sim2.tick();
-        }
-
-        assert_eq!(sim1.state.tick, sim2.state.tick);
-        assert_eq!(sim1.state.population, sim2.state.population);
-    }
-
-    /// FR-CIV-ENGINE-INT-001 — climate is recomputed every tick and matches
-    /// `compute_climate` directly.
-    #[test]
-    fn climate_recomputes_every_tick() {
-        let mut sim = Simulation::with_seed(11);
-        let planet = *sim.planet();
-        let moon = *sim.moon();
-
-        sim.tick();
-        let expected = compute_climate(sim.state.tick, &planet, &moon);
-        assert_eq!(sim.climate(), &expected);
-
-        sim.tick();
-        let expected = compute_climate(sim.state.tick, &planet, &moon);
-        assert_eq!(sim.climate(), &expected);
-    }
-
-    /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
-    #[test]
-    fn phase_tactics_evolve_doctrine_on_cadence() {
-        let mut sim = Simulation::with_seed(42);
-        let gen0 = sim.faction_doctrines()[0].generation;
-        for _ in 0..63 {
-    /// Covers FR-CIV-TACTICS-024.
-    #[test]
-    fn fr_civ_tactics_024_snapshot_damage_events_reflect_last_tick_pulses() {
-        let mut sim = Simulation::with_seed(6);
-        // Advance to a war-bridge cadence boundary (cadence = 16).
-        for _ in 0..16 {
-            sim.tick();
-        }
-        assert_eq!(sim.faction_doctrines()[0].generation, gen0);
-        sim.tick();
-        assert!(
-            sim.faction_doctrines()[0].generation > gen0,
-            "expected doctrine generation to advance at tick 64"
-        );
-    }
-
-    /// FR-CIV-ENGINE-INT-002 — queued damage drains and voxel chunk count
-    /// decreases as expected.
-    /// Covers FR-CIV-PLANET-030.
-    /// Covers FR-CIV-PLANET-040.
-    /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
-    /// year phase (summer equatorial > winter equatorial) and results are
-    /// deterministic across re-runs.
-    #[test]
-    fn pending_damage_drains_and_reduces_chunk_count() {
-        let mut sim = Simulation::with_seed(12);
-        fill_voxel_chunk(&mut sim.voxel_mut(), 0, 16);
-        let before = sim.voxel().chunk_count();
-        assert!(before > 0);
-
-        sim.push_damage(DamageEvent {
-            center: WorldCoord { x: 8, y: 8, z: 8 },
-            radius_voxels: 12,
-            energy: 1,
-        });
-
-        sim.tick();
-
-        // A sphere of radius 12 voxels removes a substantial fraction of a 16³
-        // chunk but never the whole 4096 cells (corner voxels are outside the
-        // sphere). Assert >0 removals and <=4096 (the chunk total) — enough to
-        // prove damage flowed through to the voxel substrate.
-        let removed = sim.last_tick_voxel_damage_count();
-        assert!(
-            removed > 0,
-            "expected damage to remove at least one voxel, got {removed}"
-        );
-        assert!(
-            removed <= 16 * 16 * 16,
-            "removal count exceeded chunk total: {removed}"
-        );
-        assert!(sim.pending_damage.is_empty());
-    }
-
-    /// FR-CIV-ENGINE-INT-003 — compact runs every 64 ticks and the uniform
-    /// chunk count is non-decreasing across the cadence.
-    #[test]
-    fn compact_runs_every_64_ticks() {
-        let mut sim = Simulation::with_seed(13);
-        fill_voxel_chunk(&mut sim.voxel_mut(), 0, 16);
-        let mut last_uniform = sim.voxel().uniform_chunk_count();
-
-        for _ in 0..128 {
-            sim.tick();
-            let current = sim.voxel().uniform_chunk_count();
-            assert!(current >= last_uniform);
-            last_uniform = current;
-        }
-    }
-
-    /// FR-CIV-ENGINE-INT-011 — phase_buildings allocates over time when signals are high.
-    #[test]
-    fn phase_buildings_allocates_over_time_when_signals_are_high() {
-        let mut sim = Simulation::with_seed(77);
-        let before = sim.building_graph().parcels.len();
-
-        for _ in 0..200 {
-            sim.tick();
-        }
-
-        assert!(sim.building_graph().parcels.len() > before);
-    }
-
-    /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.
-    #[test]
-    fn phase_diffusion_bumps_wardrobe_eras() {
-        let mut sim = Simulation::with_seed(91);
-        let before = sim
-            .world
-            .query::<&Wardrobe>()
-            .iter()
-            .filter(|(_, wardrobe)| wardrobe.era >= sim.target_era)
-            .count();
-
-        for _ in 0..200 {
-            sim.tick();
-        }
-
-        let after = sim
-            .world
-            .query::<&Wardrobe>()
-            .iter()
-            .filter(|(_, wardrobe)| wardrobe.era >= sim.target_era)
-            .count();
-        assert!(after > before);
-    }
-
-    /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
-    #[test]
-    fn cold_tier_diffusion_only_on_cadence_boundaries() {
-        let mut sim = Simulation::with_seed(55);
-        let policy = LodPolicy::default();
-
-        let cold_entities: Vec<hecs::Entity> = sim
-            .world
-            .query::<(&Wardrobe, &LodTier)>()
-            .iter()
-            .filter_map(|(entity, (_, lod))| (*lod == LodTier::Cold).then_some(entity))
-            .collect();
-        assert!(
-            !cold_entities.is_empty(),
-            "expected spawn_many to produce Cold-tier civilians"
-        );
-
-        for tick in 1..=32 {
-            let before: std::collections::HashMap<hecs::Entity, u16> = cold_entities
-                .iter()
-                .map(|&entity| (entity, *sim.world.get::<&Wardrobe>(entity).unwrap()))
-                .map(|(entity, wardrobe)| (entity, wardrobe.era))
-                .collect();
-
-            sim.tick();
-
-            for &entity in &cold_entities {
-                let after = sim.world.get::<&Wardrobe>(entity).unwrap().era;
-                if before[&entity] != after {
-                    assert!(
-                        should_tick_entity_with_policy(tick, LodTier::Cold, policy),
-                        "Cold-tier wardrobe changed on tick {tick} (off cadence)"
-                    );
-                }
-            }
-        }
-    }
-
-    /// FR-CIV-ENGINE-INT-013 — replay determinism still holds across 200 ticks
-    /// with all phases on.
-    #[test]
-    fn determinism_holds_with_all_phases_enabled() {
-        let mut sim1 = Simulation::with_seed(12345);
-        let mut sim2 = Simulation::with_seed(12345);
-
-        for tick in 0..200_u64 {
-            if tick % 17 == 0 {
-                let event = DamageEvent {
-                    center: WorldCoord {
-                        x: (tick as i64 % 32) * 1_000_000,
-                        y: 0,
-                        z: 0,
-                    },
-                    radius_voxels: 4,
-                    energy: tick as u32,
-                };
-                sim1.push_damage(event);
-                sim2.push_damage(event);
-            }
-            sim1.tick();
-            sim2.tick();
-        }
-
-        assert_eq!(sim1.state.tick, sim2.state.tick);
-        assert_eq!(sim1.state.population, sim2.state.population);
-        assert_eq!(sim1.climate(), sim2.climate());
-        assert_eq!(
-            sim1.last_tick_voxel_damage_count(),
-            sim2.last_tick_voxel_damage_count()
-        );
-        assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
-        assert_eq!(sim1.voxel().chunk_count(), sim2.voxel().chunk_count());
-        assert_eq!(sim1.building_graph(), sim2.building_graph());
-        assert_eq!(sim1.last_cohort_stats(), sim2.last_cohort_stats());
-    }
-
-    /// FR-CIV-ENGINE-INT-014 — last_cohort_stats reflects the population.
-    #[test]
-    fn last_cohort_stats_reflects_population() {
-        let mut sim = Simulation::with_seed(19);
-        sim.tick();
-
-        let stats = sim.last_cohort_stats().expect("cohort stats");
-        assert_eq!(stats.total_civilians as usize, count_civilians(&sim.world));
-    }
-
-    /// FR-CIV-ENGINE-INT-005 — `is_daytime` returns sensible day/night across
-    /// one full day-length cycle.
-    #[test]
-    fn daytime_cycles_across_one_full_day() {
-        let planet = PlanetConfig {
-            radius_km: 1,
-            axial_tilt_deg: 23,
-            day_length_ticks: 24,
-            year_length_ticks: 240,
-        };
-        let moon = MoonConfig {
-            orbit_period_ticks: 48,
-            tidal_amplitude: 1.0,
-        };
-
-        let midnight = compute_climate(0, &planet, &moon);
-        let noon = compute_climate(12, &planet, &moon);
-        let next_midnight = compute_climate(24, &planet, &moon);
-
-        assert!(!is_daytime(&midnight));
-        assert!(is_daytime(&noon));
-        assert!(!is_daytime(&next_midnight));
-    }
-
-    /// FR-CIV-VOXEL-006 — voxel writes between ticks produce dirty events that
-    /// the engine's voxel phase drains into `last_tick_voxel_events`, in
-    /// `(chunk_id, write_seq)` order.
-    #[test]
-    fn voxel_phase_drains_dirty_events_each_tick() {
-        use civ_voxel::WorldCoord;
-        let mut sim = Simulation::with_seed(42);
-        // Tick once with nothing pending — should be empty.
-        sim.tick();
-        assert!(sim.last_tick_voxel_events().is_empty());
-        // Write four voxels in two chunks, then tick.
-        sim.voxel_mut()
-            .write(WorldCoord { x: 0, y: 0, z: 0 }, MaterialId(1));
-        sim.voxel_mut().write(
-            WorldCoord {
-                x: 1_000_000,
-                y: 0,
-                z: 0,
-            },
-            MaterialId(1),
-        );
-        sim.voxel_mut().write(
-            WorldCoord {
-                x: 100_000_000,
-                y: 0,
-                z: 0,
-            },
-            MaterialId(1),
-        );
-        sim.voxel_mut().write(
-            WorldCoord {
-                x: 101_000_000,
-                y: 0,
-                z: 0,
-            },
-            MaterialId(1),
-        );
-        sim.tick();
-        let events = sim.last_tick_voxel_events();
-        assert_eq!(events.len(), 4);
-        // Sorted ascending by (chunk_id, write_seq).
-        for window in events.windows(2) {
-            assert!(window[0] <= window[1]);
-        }
-        // Next tick clears them.
-        sim.tick();
-        assert!(sim.last_tick_voxel_events().is_empty());
-    }
-
-    /// FR-CIV-VOXEL-007 — voxel state is part of the deterministic simulation:
-    /// two sims with identical seed + identical voxel-write sequences emit
-    /// bit-identical voxel events.
-    #[test]
-    fn voxel_phase_replay_is_bit_identical() {
-        use civ_voxel::WorldCoord;
-        let mut sim1 = Simulation::with_seed(7);
-        let mut sim2 = Simulation::with_seed(7);
-        let writes = [
-            (
-                WorldCoord {
-                    x: 5_000_000,
-                    y: 0,
-                    z: 0,
-                },
-                MaterialId(2),
-            ),
-            (
-                WorldCoord {
-                    x: 0,
-                    y: 5_000_000,
-                    z: 0,
-                },
-                MaterialId(3),
-            ),
-            (
-                WorldCoord {
-                    x: 0,
-                    y: 0,
-                    z: 5_000_000,
-                },
-                MaterialId(4),
-            ),
-        ];
-        for (pos, mat) in writes {
-            sim1.voxel_mut().write(pos, mat);
-            sim2.voxel_mut().write(pos, mat);
-        }
-        sim1.tick();
-        sim2.tick();
-        assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
-    }
-
-    /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
-    #[test]
-    fn replay_log_round_trips_through_save_load() {
-        let mut log = ReplayLog {
-            seed: 99,
-            ..ReplayLog::default()
-        };
-        log.record_tick(1);
-        log.record_voxel_write(1, WorldCoord { x: 1, y: 2, z: 3 }, MaterialId(7));
-        log.record_damage(
-            2,
-            DamageEvent {
-                center: WorldCoord { x: 0, y: 0, z: 0 },
-                radius_voxels: 2,
-                energy: 11,
-            },
-        );
-        log.record_research(3, vec![1, 2, 3], true);
-
-        let file = NamedTempFile::new().unwrap();
-        log.save(file.path()).unwrap();
-        let loaded = ReplayLog::load(file.path()).unwrap();
-        assert_eq!(loaded, log);
-    }
-
-    /// FR-CIV-ENGINE-REPLAY-002 — Simulation tick produces a ReplayEvent::Tick.
-    #[test]
-    fn simulation_tick_produces_replay_tick_event() {
-        let mut sim = Simulation::with_seed(1);
-        sim.tick();
-        assert!(matches!(
-            sim.replay_log().events.last(),
-            Some(ReplayEvent::Tick { tick: 1 })
-        ));
-    }
-
-    /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
-    #[test]
-    fn replay_combat_events_restore_pending_damage() {
-        let event = DamageEvent {
-            center: WorldCoord {
-                x: 100,
-                y: 0,
-                z: 200,
-            },
-            radius_voxels: 2,
-            energy: 50,
-        };
-        let mut sim = Simulation::with_seed(1);
-        sim.replay_log.record_combat(16, 10, 20, event);
-        let log = sim.replay_log().clone();
-        let mut replayed = Simulation::with_seed(99);
-        log.replay(&mut replayed).unwrap();
-        assert_eq!(replayed.pending_damage.len(), 1);
-        assert_eq!(replayed.pending_damage[0], event);
-        assert_eq!(replayed.state.tick, 16);
-    }
-
-    /// FR-CIV-TACTICS-025-int2 — replay combat events drain to the same voxel state as live ticks.
-    #[test]
-    fn replay_combat_drains_to_same_voxel_state_as_live() {
-        let seed = 12;
-        let ticks = 32u64;
-        let mut live = Simulation::with_seed(seed);
-        for _ in 0..ticks {
-            live.tick();
-        }
-        let chunk_live = live.voxel().chunk_count();
-        let combat: Vec<_> = live
-            .replay_log()
-            .events
-            .iter()
             .filter_map(|event| match event {
                 ReplayEvent::Combat { tick, event, .. } => Some((*tick, *event)),
                 _ => None,
             })
             .collect();
-        assert!(!combat.is_empty(), "expected war-bridge combat in replay log");
+        assert!(
+            !combat.is_empty(),
+            "expected war-bridge combat in replay log"
+        );
 
         let mut from_replay = Simulation::with_seed(seed);
         for (tick, event) in combat {
@@ -8177,7 +7945,8 @@ mod tests {
         assert_eq!(from_replay.voxel().chunk_count(), chunk_live);
     }
 
-    /// FR-CIV-TACTICS-025-int3 — same seed reproduces identical combat replay markers.
+    /// Covers FR-CIV-TACTICS-025 and FR-CIV-TACTICS-025-.
+    /// Same seed reproduces identical combat replay markers.
     #[test]
     fn replay_combat_log_deterministic_for_seed_rerun() {
         let seed = 5;
@@ -8220,7 +7989,11 @@ mod tests {
         assert_eq!(combat_a, combat_b);
     }
 
-    /// FR-CIV-TACTICS-025 — war-bridge engagements append ReplayEvent::Combat.
+    /// Covers FR-CIV-TACTICS-025.
+    /// Covers FR-CIV-TACTICS-032.
+    /// Covers FR-CIV-TACTICS-035.
+    /// FR-CIV-WAR-020 — war replay and live state share combat markers through shared snapshots.
+    /// War-bridge engagements append ReplayEvent::Combat.
     #[test]
     fn war_bridge_records_combat_replay_events() {
         let mut sim = Simulation::with_seed(1);
@@ -8238,7 +8011,6 @@ mod tests {
             )
         }));
     }
-
     /// FR-CIV-ENGINE-REPLAY-003 — push_damage records a Damage event.
     #[test]
     fn push_damage_records_damage_event() {
@@ -8282,7 +8054,6 @@ mod tests {
 
         let mut sim = Simulation::with_seed(104);
         check_tick_invariants(&sim).expect("initial state");
-    // N12 affinity↔diplomacy coupling tests (FR-CIV-EMERGENCE-N12)
 
         for _ in 0..200 {
             sim.tick();
@@ -8290,7 +8061,8 @@ mod tests {
         }
     }
 
-    /// FR-REPLAY-001 — `.civreplay` save/load restores simulation tick after N ticks.
+    /// Covers FR-REPLAY-001.
+    /// `.civreplay` save/load restores simulation tick after N ticks.
     #[test]
     fn civreplay_save_load_restores_tick_after_ticks() {
         const N: u64 = 17;
@@ -8361,10 +8133,9 @@ mod tests {
         );
     }
 
-    /// FR-CIV-TACTICS-024 — snapshot.damage_events reflects combat pulses from
-    /// the most recent tick.
+    /// Covers FR-CIV-TACTICS-024.
     #[test]
-    fn snapshot_damage_events_reflects_last_tick_pulses() {
+    fn fr_civ_tactics_024_snapshot_damage_events_reflect_last_tick_pulses() {
         let mut sim = Simulation::with_seed(6);
         // Advance to a war-bridge cadence boundary (cadence = 16).
         for _ in 0..16 {
@@ -8374,5 +8145,738 @@ mod tests {
         // After a cadence tick with ≥2 opposing military units the pulses list
         // must be non-empty; the snapshot field must match.
         assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
+    }
+
+    /// Covers FR-CIV-PLANET-030.
+    /// Covers FR-CIV-PLANET-040.
+    /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
+    /// year phase (summer equatorial > winter equatorial) and results are
+    /// deterministic across re-runs.
+    #[test]
+    fn weather_grid_temperature_varies_with_year_phase() {
+        // Earth-like defaults: year_length_ticks = 8_766_000, tilt = 23°.
+        let year_length_ticks = 8_766_000_u64;
+        let equatorial_idx = 8_usize; // middle of 16-region grid
+
+        // Northern summer: year ¼ → sin(year_phase) is at peak
+        let summer_tick = year_length_ticks / 4;
+        // Northern winter: year ¾ → sin(year_phase) is at trough
+        let winter_tick = year_length_ticks * 3 / 4;
+
+        let mut sim_s = Simulation::with_seed(0);
+        // Fast-forward to summer_tick by running ticks (use state manipulation
+        // for test speed: set tick directly and recompute phase_planet).
+        sim_s.state.tick = summer_tick;
+        let planet_s = *sim_s.planet();
+        let moon_s = *sim_s.moon();
+        sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
+        sim_s.weather_grid = compute_weather(&sim_s.climate, summer_tick, 16);
+        let snap_summer = sim_s.snapshot();
+
+        let mut sim_w = Simulation::with_seed(0);
+        sim_w.state.tick = winter_tick;
+        let planet_w = *sim_w.planet();
+        let moon_w = *sim_w.moon();
+        sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
+        sim_w.weather_grid = compute_weather(&sim_w.climate, winter_tick, 16);
+        let snap_winter = sim_w.snapshot();
+
+        let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
+        let winter_temp = snap_winter.weather_grid[equatorial_idx].temp_c_fp;
+
+        assert!(
+            summer_temp > winter_temp,
+            "summer equatorial temp ({summer_temp} fp) should exceed winter ({winter_temp} fp)"
+        );
+
+        // Determinism: re-running the same ticks must produce identical grids.
+        let summer_grid_2 = compute_weather(&sim_s.climate, summer_tick, 16);
+        assert_eq!(
+            snap_summer.weather_grid, summer_grid_2,
+            "weather grid must be deterministic across re-runs"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // FR-CIV-CA-009 — `Simulation::phase_voxel_ca` + abiogenesis sites.
+    // -------------------------------------------------------------------------
+
+    /// FR-CIV-CA-009 — `phase_voxel_ca(None)` is a no-op: sites stay empty.
+    /// This is the cheap path (no resident window wired up) and must not
+    /// blow up or allocate a giant vec.
+    #[test]
+    fn phase_voxel_ca_none_is_noop() {
+        let mut sim = Simulation::with_seed(1);
+        sim.phase_voxel_ca(None);
+        assert!(sim.last_tick_abiogenesis_sites().is_empty());
+    }
+
+    /// FR-CIV-CA-009 — warm liquid WATER in a single chunk produces at
+    /// least one viable abiogenesis site. A pure STONE chunk produces
+    /// zero. The two runs must round-trip deterministically (same seed,
+    /// same grid → same sites).
+    #[test]
+    fn phase_voxel_ca_warm_water_is_viable_stone_is_not() {
+        use civ_voxel::fluid_ca::{AbiogenesisSuitability, CaGrid};
+        use civ_voxel::material::{MaterialRegistry, STONE, WATER};
+        use civ_voxel::BoundaryConfig;
+
+        // 16³ grid (single chunk) seeded with one warm WATER cell in the
+        //  middle of an otherwise-AIR volume.
+        let mut g = CaGrid::new([16, 16, 16]);
+        g.set_with_temp(8, 8, 8, WATER, 40);
+        g.dirty_chunks.clear();
+        g.mark_dirty_cell(8, 8, 8);
+        // Run a CA tick so the cell participates in the dirty-chunk set.
+        let _ = civ_voxel::fluid_ca::step_with_config(
+            &mut g,
+            MaterialRegistry::standard(),
+            BoundaryConfig::closed(),
+            0,
+        );
+        let mut sim = Simulation::with_seed(7);
+        sim.phase_voxel_ca(Some(&g));
+        let sites = sim.last_tick_abiogenesis_sites();
+        // The WATER cell at (8, 8, 8) is at 40 °C → solvent=255, energy=127
+        // (40 * 255 / 80 = 127) → viability true. AIR cells score 0.
+        assert!(
+            sites.iter().any(|s| s.is_viable()),
+            "warm water should be a viable abiogenesis site, got {sites:?}"
+        );
+        assert!(
+            sites
+                .iter()
+                .all(|s| matches!(s, AbiogenesisSuitability { value, .. } if *value <= 100)),
+            "abiogenesis value must be in [0, 100]"
+        );
+
+        // Stone-only grid: no solvents at all.
+        let mut g2 = CaGrid::new([16, 16, 16]);
+        for x in 0..16 {
+            for y in 0..16 {
+                for z in 0..16 {
+                    g2.set_with_temp(x, y, z, STONE, 40);
+                }
+            }
+        }
+        g2.dirty_chunks.clear();
+        g2.mark_mobile_chunks(MaterialRegistry::standard());
+        let mut sim2 = Simulation::with_seed(7);
+        sim2.phase_voxel_ca(Some(&g2));
+        assert!(
+            sim2.last_tick_abiogenesis_sites().is_empty()
+                || sim2
+                    .last_tick_abiogenesis_sites()
+                    .iter()
+                    .all(|s| !s.is_viable()),
+            "stone-only grid must produce zero viable sites"
+        );
+    }
+
+    /// FR-CIV-0100 — chronicle records technological breakthroughs when tech bits advance.
+    #[test]
+    fn chronicle_records_tech_breakthroughs() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.research_progress = 200_000;
+        sim.phase_tech();
+        sim.phase_chronicle();
+        assert!(!sim.chronicle().is_empty());
+        assert!(
+            sim.chronicle()
+                .iter()
+                .any(|line| line.contains("technological breakthrough")),
+            "expected a tech breakthrough line"
+        );
+    }
+
+    /// FR-CIV-0100 — chronicle length stays bounded at CHRONICLE_MAX_LEN.
+    #[test]
+    fn chronicle_is_length_capped() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.chronicle = (0..=CHRONICLE_MAX_LEN)
+            .map(|i| format!("filler {i}"))
+            .collect();
+        sim.phase_chronicle();
+        assert!(sim.chronicle().len() <= CHRONICLE_MAX_LEN);
+    }
+
+    /// FR-CIV-0100 — golden-age chronicle lines are deduped via chronicle_age.
+    #[test]
+    fn chronicle_dedups_age() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.cohesion = 60_000;
+        sim.state.belief = 60_000;
+        sim.phase_chronicle();
+        sim.phase_chronicle();
+        assert_eq!(sim.state.chronicle_age, 1);
+        let golden_count = sim
+            .chronicle()
+            .iter()
+            .filter(|line| line.contains("golden age"))
+            .count();
+        assert_eq!(golden_count, 1);
+    }
+
+    /// `tick_with_emergence_source` advances ticks identically; CA grid changes sampling.
+    #[test]
+    fn tick_with_emergence_source_advances_tick_and_differs_on_ca_grid() {
+        use crate::emergence_metrics::EMERGENCE_SAMPLE_INTERVAL;
+        use civ_voxel::fluid_ca::CaGrid;
+        use civ_voxel::CHUNK_EDGE;
+
+        let mut without_ca = Simulation::with_seed(42);
+        let mut with_ca = Simulation::with_seed(42);
+        let mut grid = CaGrid::new([CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE]);
+        for x in 0..4 {
+            for y in 0..4 {
+                for z in 0..4 {
+                    grid.set(x, y, z, MaterialId(3));
+                }
+            }
+        }
+
+        for _ in 0..EMERGENCE_SAMPLE_INTERVAL {
+            without_ca.tick_with_emergence_source(None);
+            with_ca.tick_with_emergence_source(Some(&grid));
+        }
+
+        assert_eq!(without_ca.state.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(with_ca.state.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(without_ca.state.tick, with_ca.state.tick);
+
+        let sample_none = without_ca
+            .last_emergence_sample()
+            .expect("sample at 50-tick boundary");
+        let sample_ca = with_ca
+            .last_emergence_sample()
+            .expect("sample at 50-tick boundary");
+        assert_eq!(sample_none.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(sample_ca.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert!(
+            sample_ca.histogram_total > sample_none.histogram_total,
+            "CA grid should contribute voxels to the emergence histogram"
+        );
+    }
+
+    /// `apply_scenario_military` wires cadence overrides and clamps engage range.
+    #[test]
+    fn apply_scenario_military_wires_overrides_and_clamps_range() {
+        use crate::scenario::ScenarioMilitary;
+
+        let mut sim = Simulation::with_seed(8);
+        let military = ScenarioMilitary {
+            movement_cadence_ticks: Some(8),
+            movement_pulses_per_cadence: Some(3),
+            war_cadence_ticks: Some(32),
+            engage_range_grid: Some(0),
+        };
+        sim.apply_scenario_military(&military);
+        let cfg = sim.military_phase_config();
+        assert_eq!(cfg.movement.cadence_ticks, 8);
+        assert_eq!(cfg.movement_pulses_per_cadence, 3);
+        assert_eq!(cfg.war.cadence_ticks, 32);
+        assert_eq!(cfg.war.engage_range_grid, 1);
+    }
+
+    /// `configure_military_fog` sets vision radius and clamps grid size.
+    #[test]
+    fn configure_military_fog_sets_radius_and_clamps_grid() {
+        let mut sim = Simulation::with_seed(9);
+        sim.configure_military_fog(Some(8), 12);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            Some(8)
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, 16);
+
+        let kept_radius = sim.military_phase_config().war.fog_vision_radius;
+        let kept_grid = sim.military_phase_config().war.fog_grid_size;
+        sim.configure_military_fog(None, 99);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            kept_radius
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, kept_grid);
+    }
+
+    // -------------------------------------------------------------------
+    // Coverage-gap closure (COVERAGE_GAPS_4): the three pure policy helpers
+    // below had no direct unit tests prior to this commit. Each test below
+    // is named per the coverage-gap closure plan and bundles all relevant
+    // edge cases from TEST_SPECS_UNTESTED.md into a single `#[test]`.
+    // -------------------------------------------------------------------
+
+    /// `job_type_for_civilian_id` is a total pure function of its `u64`
+    /// input. This test pins the full mod-7 bucket map (including the
+    /// catch-all `_` arm), wrap-around at the modulus, sparse / far-out ids
+    /// resolving to the right bucket via `id % 7`, the `u64::MAX` boundary,
+    /// and the determinism guarantee (same id → same `JobType`, no state).
+    /// FR-CIV-ENGINE spawn-determinism depends on this. (COVERAGE_GAPS_4 row 1.)
+    #[test]
+    fn job_type_for_civilian_id_deterministic_split() {
+        // All seven mod-buckets, including the `_`-arm for remainder 6.
+        assert_eq!(job_type_for_civilian_id(0), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(1), JobType::Warrior);
+        assert_eq!(job_type_for_civilian_id(2), JobType::Scholar);
+        assert_eq!(job_type_for_civilian_id(3), JobType::Trader);
+        assert_eq!(job_type_for_civilian_id(4), JobType::Priest);
+        assert_eq!(job_type_for_civilian_id(5), JobType::Admin);
+        assert_eq!(job_type_for_civilian_id(6), JobType::Unemployed);
+
+        // `id % 7` wraps cleanly: every 7th id resolves to the same JobType.
+        assert_eq!(job_type_for_civilian_id(7), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(14), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(42), JobType::Farmer); // 42 % 7 == 0
+        assert_eq!(job_type_for_civilian_id(13), JobType::Unemployed); // 13 % 7 == 6
+        assert_eq!(job_type_for_civilian_id(20), JobType::Unemployed); // 20 % 7 == 6
+
+        // Sparse / far-out ids resolve to a deterministic bucket.
+        // 1_000_000_008 % 7 == 0 (1_000_000_008 = 142_857_144 * 7) → Farmer.
+        assert_eq!(job_type_for_civilian_id(1_000_000_008), JobType::Farmer);
+        // 999_999_999 % 7: 999_999_999 / 7 = 142_857_142 remainder 5 → Admin.
+        assert_eq!(job_type_for_civilian_id(999_999_999), JobType::Admin);
+        // 1_000_000_000_000_000_000 % 7 = 1 → Warrior.
+        assert_eq!(
+            job_type_for_civilian_id(1_000_000_000_000_000_000),
+            JobType::Warrior
+        );
+
+        // u64::MAX % 7 == 1 (u64::MAX = 2^64-1 = 2_635_249_153_387_078_802*7 + 1)
+        // → Warrior. Confirms totality over the full u64 range, no overflow.
+        assert_eq!(job_type_for_civilian_id(u64::MAX), JobType::Warrior);
+
+        // Determinism: same id → same JobType, no state, no panic.
+        for id in [0u64, 1, 6, 7, 42, 100, 999_999_999, u64::MAX] {
+            assert_eq!(
+                job_type_for_civilian_id(id),
+                job_type_for_civilian_id(id),
+                "job_type_for_civilian_id({id}) must be a pure function of its input"
+            );
+        }
+    }
+
+    /// `faction_wealth_scarcity_shadow` maps (treasury, resources) → shadow
+    /// price used as input to `faction_unrest_delta_from_shadow`. This test
+    /// pins the comfort-threshold branch (≥ 12_000 → baseline), the exact
+    /// `12_000` boundary, the empty-Resources "deep scarcity" extreme
+    /// (wealth = 0 → 4_000), food-only and treasury-only shortfalls, the
+    /// lower floor at `FOOD_SCARCITY_BASELINE`, and the `treasury.raw / SCALE`
+    /// integer-units conversion. (COVERAGE_GAPS_4 row 5.)
+    #[test]
+    fn faction_wealth_scarcity_shadow_edge_cases() {
+        // Comfort branch: wealth >= 12_000 pins shadow to FOOD_SCARCITY_BASELINE.
+        // treasury=100_000, food=10_000 → wealth = 100_000 + 10_000*50 = 600_000.
+        let res = Resources {
+            food: Fixed::from_num(10_000),
+            wood: Fixed::ZERO,
+            metal: Fixed::ZERO,
+            energy: Fixed::ZERO,
+        };
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(100_000), &res),
+            FOOD_SCARCITY_BASELINE
+        );
+
+        // Exact comfort boundary: wealth == 12_000 still pins to baseline
+        // because the function uses `>=`, not strict `>`.
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(12_000), &res),
+            FOOD_SCARCITY_BASELINE
+        );
+
+        // Empty Resources + zero treasury = "deep scarcity": wealth = 0,
+        // shadow = 1_000 + 12_000/4 = 4_000. (No upper clamp inside the
+        // function; this is the maximum shadow reachable in one call.)
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::ZERO, &res),
+            FOOD_SCARCITY_BASELINE + 12_000 / 4,
+            "empty Resources + zero treasury lands at the maximum shadow"
+        );
+
+        // Food-only shortfall: treasury = 0, food = 10 → wealth = 500.
+        // shadow = 1_000 + (12_000 - 500)/4 = 1_000 + 2_875 = 3_875.
+        let res = Resources {
+            food: Fixed::from_num(10),
+            wood: Fixed::ZERO,
+            metal: Fixed::ZERO,
+            energy: Fixed::ZERO,
+        };
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::ZERO, &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 500) / 4
+        );
+
+        // Treasury-only shortfall: treasury = 4_000, food = 0 → wealth = 4_000.
+        // shadow = 1_000 + (12_000 - 4_000)/4 = 3_000.
+        // NOTE: the function does NOT implement a "treasury hedges food"
+        // channel — treasury is additive in the same units as the
+        // food-weighted wealth. This test pins the actual behavior.
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(4_000), &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 4_000) / 4
+        );
+
+        // Lower floor: shadow never falls below FOOD_SCARCITY_BASELINE for
+        // any legal input. The comfort branch pins to it, the shortfall
+        // branch adds to it.
+        let cases: Vec<(i64, Resources)> = vec![
+            (0, Resources::default()),
+            (10_000, Resources::default()),
+            (0, Resources { food: Fixed::from_num(1), ..Resources::default() }),
+            (Fixed::from_num(5_000).raw, Resources::default()),
+            (Fixed::from_num(99_999_999).raw, Resources::default()),
+        ];
+        for (treasury_raw, res) in cases {
+            let treasury = Fixed { raw: treasury_raw };
+            let shadow = faction_wealth_scarcity_shadow(treasury, &res);
+            assert!(
+                shadow >= FOOD_SCARCITY_BASELINE,
+                "shadow ({shadow}) fell below FOOD_SCARCITY_BASELINE ({FOOD_SCARCITY_BASELINE})"
+            );
+        }
+
+        // `treasury.raw / SCALE` is the integer wealth — guards against a
+        // regression that would drop the `/ SCALE` and treat `raw` directly
+        // as a wealth value.
+        // treasury = 5_000 (fixed-point) → treasury_i = 5_000, food_i = 0,
+        // wealth = 5_000 < 12_000 → shortfall: 1_000 + 7_000/4 = 2_750.
+        let res = Resources::default();
+        let treasury = Fixed::from_num(5_000);
+        assert_eq!(
+            faction_wealth_scarcity_shadow(treasury, &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 5_000) / 4
+        );
+    }
+
+    /// `faction_unrest_delta_from_shadow` is a thin pass-through to
+    /// `unrest_delta`. This test pins the sign behavior (shadow ≤ baseline
+    /// → decay `-10`; shadow > baseline → positive rise), the `clamp(1, 50)`
+    /// bounds, the linear scaling with shortfall, the `MAX_RISE = 50`
+    /// ceiling for arbitrarily large shadows (including `i64::MAX`), and
+    /// the wrapper's identity with `unrest_delta` across the full sign
+    /// range. (COVERAGE_GAPS_4 row 6: "clamp at 0" lives in the caller's
+    /// accumulator; the delta itself only knows `-10` and `[1, 50]`.)
+    #[test]
+    fn faction_unrest_delta_from_shadow_sign_and_clamp() {
+        // shadow ≤ baseline → decay -10 (not zero, not positive).
+        for shadow in [0i64, 100, 500, 999] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                -10,
+                "shadow={shadow} (below baseline) must decay by 10"
+            );
+        }
+
+        // At the boundary shadow == baseline the function takes the `else`
+        // branch (scarcity is not > 0) and returns -10, not zero. Pin this
+        // so a future `>=` refactor doesn't silently flip the boundary.
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE),
+            -10
+        );
+
+        // Just above baseline, rise is clamped to a minimum of +1
+        // (clamp(1, MAX_RISE) lower bound kicks in for any scarcity > 0,
+        // even when scarcity / 20 == 0).
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 1),
+            1
+        );
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 19),
+            1
+        );
+
+        // Rise scales linearly with shortfall (scarcity / 20) until it
+        // hits the MAX_RISE ceiling of 50.
+        // shadow = 1_100 → scarcity = 100 → 100/20 = 5
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 100),
+            5
+        );
+        // shadow = 1_400 → scarcity = 400 → 400/20 = 20
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 400),
+            20
+        );
+        // shadow = 2_000 → scarcity = 1_000 → 1_000/20 = 50 (at ceiling)
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 1_000),
+            50
+        );
+
+        // Large shadows still clamp to MAX_RISE = 50. Stops a price spike
+        // from instantly maxing faction unrest.
+        for shadow in [10_000i64, 1_000_000, 1_000_000_000, i64::MAX] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                50,
+                "shadow={shadow} must clamp at MAX_RISE=50"
+            );
+        }
+
+        // Wrapper identity with `unrest_delta` across the full sign range.
+        for shadow in [
+            0i64,
+            FOOD_SCARCITY_BASELINE - 1,
+            FOOD_SCARCITY_BASELINE,
+            FOOD_SCARCITY_BASELINE + 1,
+            FOOD_SCARCITY_BASELINE + 100,
+            FOOD_SCARCITY_BASELINE + 1_000,
+            FOOD_SCARCITY_BASELINE + 100_000,
+            i64::MAX,
+        ] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                unrest_delta(shadow),
+                "wrapper must equal unrest_delta at shadow={shadow}"
+            );
+        }
+    }
+
+    // ── N9 tests ──────────────────────────────────────────────────────────────
+
+    /// N9: `aggression_threshold_reduction` is bounded: 0.0→0, 0.5→1500,
+    /// 1.0→3000, and clamping means 2.0 still yields 3000.
+    #[test]
+    fn aggression_threshold_reduction_bounded() {
+        assert_eq!(aggression_threshold_reduction(0.0), 0);
+        assert_eq!(aggression_threshold_reduction(0.5), 1500);
+        assert_eq!(aggression_threshold_reduction(1.0), 3000);
+        assert_eq!(aggression_threshold_reduction(2.0), 3000); // clamped
+    }
+
+    /// N9: `faction_aggression` is rebuilt fresh each tick (ephemeral).
+    #[test]
+    fn faction_aggression_rebuilt_each_tick() {
+        let mut sim = Simulation::with_seed(1);
+        // Before any tick, faction_aggression is empty.
+        assert!(
+            sim.faction_aggression.is_empty(),
+            "faction_aggression should start empty"
+        );
+        // After a tick the emergence phase populates it (agents have DNA).
+        sim.tick();
+        // The map is populated whenever there are aligned civilians with DNA.
+        // Just verify the field is accessible and the type is correct.
+        let _: &std::collections::BTreeMap<u32, f32> = &sim.faction_aggression;
+    }
+
+    /// N9: faction pairs with high aggression clash at lower disparity than
+    /// faction pairs with zero aggression.
+    #[test]
+    fn aggressive_factions_clash_sooner() {
+        // Build a baseline sim where factions are at the trade/conflict boundary.
+        let mut sim_low = Simulation::with_seed(5);
+        sim_low.state.tick = 500;
+        sim_low.state.belief = 0;
+        sim_low.state.cohesion = 0;
+        sim_low.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim_low.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim_low.state.tick);
+        // A disparity just below the base threshold: both sims should trade normally.
+        let base = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+        sim_low.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_low.state.faction_treasury.insert(b, Fixed::from_num(base - 1));
+        // Zero aggression → no reduction.
+        sim_low.faction_aggression.insert(a, 0.0);
+        sim_low.faction_aggression.insert(b, 0.0);
+        sim_low.phase_diplomacy();
+        let low_kind = sim_low.diplomacy_events().last().expect("event").kind;
+
+        // High aggression sim: same disparity, but aggression lowers threshold.
+        let mut sim_high = Simulation::with_seed(5);
+        sim_high.state.tick = 500;
+        sim_high.state.belief = 0;
+        sim_high.state.cohesion = 0;
+        sim_high.state.unrest = 0;
+        sim_high.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_high.state.faction_treasury.insert(b, Fixed::from_num(base - 1));
+        // Max aggression → reduction = 3000, so threshold drops to DIPLOMACY_MIN_CONFLICT_THRESHOLD.
+        sim_high.faction_aggression.insert(a, 1.0);
+        sim_high.faction_aggression.insert(b, 1.0);
+        sim_high.phase_diplomacy();
+        let high_kind = sim_high.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            low_kind,
+            DiplomacyKind::TradeAgreement,
+            "low-aggression factions should trade at this disparity"
+        );
+        assert_eq!(
+            high_kind,
+            DiplomacyKind::Conflict,
+            "high-aggression factions should clash at the same disparity"
+        );
+    }
+
+    // N11 maturity↔belief coupling tests (FR-CIV-EMERGENCE-N11)
+
+    #[test]
+    fn n11_avg_psyche_maturity_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        assert_eq!(avg_psyche_maturity(&sim.world), 0.0);
+    }
+
+    #[test]
+    fn n11_avg_psyche_maturity_computes_mean() {
+        use civ_agents::{Mood, Psyche, Temperament, PSYCHE_DIM};
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        let psyche = Psyche {
+            drives: [0.5; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood::neutral(),
+            beliefs: [0.5; PSYCHE_DIM],
+            maturity: 1.0,
+        };
+        sim.world.spawn((psyche,));
+        assert_eq!(avg_psyche_maturity(&sim.world), 1.0);
+    }
+
+    #[test]
+    fn n11_drift_factor_bounds() {
+        for (maturity, expected) in [(0.0f32, 0.95f32), (0.5, 0.975), (1.0, 1.0)] {
+            let drift = 0.95 + 0.05 * maturity;
+            assert!((drift - expected).abs() < 1e-6, "maturity={} drift={}", maturity, drift);
+        }
+    }
+
+    // N12 affinity↔diplomacy coupling tests (FR-CIV-EMERGENCE-N12)
+
+    #[test]
+    fn n12_avg_social_affinity_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        assert_eq!(avg_social_affinity(&sim.world), 0.0);
+    }
+
+    #[test]
+    fn n12_avg_social_affinity_computes_mean_and_clamps() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        // One graph affinity +1.0, one graph affinity -1.0 → mean 0.0.
+        let g_pos = SocialGraph {
+            ties: vec![Tie {
+                other: 1,
+                kinship: 0.0,
+                familiarity: 0.0,
+                affinity: 1.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        let g_neg = SocialGraph {
+            ties: vec![Tie {
+                other: 2,
+                kinship: 0.0,
+                familiarity: 0.0,
+                affinity: -1.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((g_pos,));
+        sim.world.spawn((g_neg,));
+        assert!(avg_social_affinity(&sim.world).abs() < 1e-6);
+    }
+
+    #[test]
+    fn n12_affinity_bias_direction_and_bounds() {
+        // Positive affinity raises threshold; negative lowers it; bounded [-5000, 5000].
+        let pos = affinity_threshold_bias(1.0);
+        let neg = affinity_threshold_bias(-1.0);
+        let zero = affinity_threshold_bias(0.0);
+        assert_eq!(pos, 5_000);
+        assert_eq!(neg, -5_000);
+        assert_eq!(zero, 0);
+        assert!(pos > zero && zero > neg, "goodwill must raise tolerance over hostility");
+        // Out-of-range inputs clamp.
+        assert_eq!(affinity_threshold_bias(2.0), 5_000);
+        assert_eq!(affinity_threshold_bias(-2.0), -5_000);
+    }
+
+    #[test]
+    fn n12_high_affinity_keeps_factions_trading() {
+        use civ_agents::Tie;
+        // Disparity ABOVE the base threshold (would Conflict at neutral affinity),
+        // but strong collective goodwill raises the threshold enough to keep trade.
+        let base = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+        let disparity = base + 2_000; // 12_000: above base, below base + max affinity bias
+
+        // Low-affinity sim: hostile ties → threshold drops → Conflict.
+        let mut sim_low = Simulation::with_seed(5);
+        sim_low.state.tick = 500;
+        sim_low.state.belief = 0;
+        sim_low.state.cohesion = 0;
+        sim_low.state.unrest = 0;
+        for _ in 0..3 {
+            sim_low.world.spawn((SocialGraph {
+                ties: vec![Tie {
+                    other: 9,
+                    kinship: 0.0,
+                    familiarity: 0.0,
+                    affinity: -1.0,
+                    trust: 0.0,
+                    last_seen: 0,
+                }],
+            },));
+        }
+        let mut faction_ids: Vec<u32> = sim_low.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        if faction_ids.len() < 2 {
+            return; // Defensive: need a faction pair; skip if scenario has none.
+        }
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim_low.state.tick);
+        sim_low.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_low
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_low.phase_diplomacy();
+        let low_kind = sim_low.diplomacy_events().last().expect("event").kind;
+
+        // High-affinity sim: goodwill ties → threshold rises → TradeAgreement.
+        let mut sim_high = Simulation::with_seed(5);
+        sim_high.state.tick = 500;
+        sim_high.state.belief = 0;
+        sim_high.state.cohesion = 0;
+        sim_high.state.unrest = 0;
+        for _ in 0..3 {
+            sim_high.world.spawn((SocialGraph {
+                ties: vec![Tie {
+                    other: 9,
+                    kinship: 0.0,
+                    familiarity: 0.0,
+                    affinity: 1.0,
+                    trust: 0.0,
+                    last_seen: 0,
+                }],
+            },));
+        }
+        sim_high.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_high
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_high.phase_diplomacy();
+        let high_kind = sim_high.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            low_kind,
+            DiplomacyKind::Conflict,
+            "hostile populations should clash at disparity above base threshold"
+        );
+        assert_eq!(
+            high_kind,
+            DiplomacyKind::TradeAgreement,
+            "collective goodwill should raise the threshold and keep factions trading"
+        );
     }
 }

@@ -5765,13 +5765,13 @@ mod tests {
         dominant.insert(20u64, 0u32);
         dominant.insert(21u64, 0u32);
         let mut member_counts = BTreeMap::new();
-        member_counts.insert(10u64, 3u32);
-        member_counts.insert(20u64, 1u32);
+        member_counts.insert(10u64, 6u32);
+        member_counts.insert(20u64, 2u32);
         member_counts.insert(21u64, 1u32);
 
         let centroids = faction_language_centroids(&cultures, &dominant, &member_counts);
         let c0 = centroids.get(&0).expect("faction 0 centroid present");
-        // Weighted: 3 * [0] + 1 * [1] = 3, total weight = 3+1 = 4 → axis 0 = 0.25.
+        // Weighted: 6 * [0] + 2 * [1] = 2, total weight = 6+2 = 8 → axis 0 = 0.25.
         assert!(
             (c0[0] - 0.25).abs() < 0.01,
             "centroid axis-0 should be 0.25, got {}",

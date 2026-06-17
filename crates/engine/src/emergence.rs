@@ -17,7 +17,8 @@ use civ_agents::{
 use civ_genetics::{
     example_seed_set,
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
+    spawn_genome, spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
+    SeedSet,
 };
 use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
@@ -79,6 +80,10 @@ pub struct EmergenceState {
     /// Active seed id referenced by the loaded scenario (or `None` to use
     /// raw-organism drift for every spawn).
     pub(crate) active_seed_id: Option<String>,
+    /// Scenario-level divergence override (0..1). When `Some(v)`, overrides
+    /// `active_seed.divergence` at every spawn call inside
+    /// [`Simulation::emergence_ensure_genomes`].
+    pub(crate) divergence_override: Option<f32>,
     /// Cumulative set of world-configuration fingerprints seen (§3.4 novelty-rate).
     pub seen_config_hashes: std::collections::HashSet<u64>,
     /// Count of new (previously-unseen) fingerprints in the current W_nov window.
@@ -114,6 +119,7 @@ impl EmergenceState {
             sentient_agents: HashSet::new(),
             seed_library,
             active_seed_id: Some("raw_organism".to_string()),
+            divergence_override: None,
             seen_config_hashes: std::collections::HashSet::new(),
             novelty_window_new: 0,
             novelty_window_start_tick: 0,
@@ -222,6 +228,10 @@ impl Simulation {
             .active_seed_id
             .as_ref()
             .and_then(|id| self.emergence.seed_library.get(id).cloned());
+        // Scenario-level divergence dial: when set, overrides each seed's own
+        // divergence at spawn (snapshot once so we hold no `self.emergence`
+        // borrow during the mutating insert pass).
+        let divergence_override = self.emergence.divergence_override;
         // Build a geology map on demand (cheap: pure deterministic arithmetic
         // from PlanetConfig; no RNG, no heap beyond the 16-element Vec).
         let geology_map = civ_planet::GeologyMap::seed(self.planet());
@@ -246,7 +256,16 @@ impl Simulation {
 
             let dna = match chosen_seed.as_ref() {
                 Some(seed) if seed.dna_length == len => {
-                    spawn_genome(&mut local, &self.emergence.dna_class, Some(seed))
+                    // Use scenario-level override when present; otherwise
+                    // fall through to the seed's own divergence dial.
+                    let effective_divergence =
+                        divergence_override.unwrap_or(seed.divergence);
+                    spawn_genome_with_divergence(
+                        &mut local,
+                        &self.emergence.dna_class,
+                        seed,
+                        effective_divergence,
+                    )
                 }
                 _ => Dna::random(len, &mut local),
             };
@@ -863,6 +882,16 @@ impl Simulation {
                 }
             },
         }
+    }
+
+    /// Set (or clear) the scenario-level divergence override.
+    ///
+    /// `Some(v)` overrides the active seed's own `divergence` at every
+    /// spawn-time DNA sample. `None` restores the seed's own divergence dial.
+    /// The value is defensively clamped to `[0.0, 1.0]`; scenario validation
+    /// already enforces this but callers from outside the load path are safe.
+    pub fn set_divergence_override(&mut self, v: Option<f32>) {
+        self.emergence.divergence_override = v.map(|x| x.clamp(0.0, 1.0));
     }
 
     /// Set the active seed id used for spawn-time DNA. Pass `None` to fall

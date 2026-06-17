@@ -53,6 +53,14 @@ pub struct Scenario {
     pub seeds: Vec<String>,
     #[serde(default)]
     pub active_seed: Option<String>,
+    /// Scenario-level divergence override (0..1). When set, overrides the
+    /// active seed's own `divergence` dial at spawn time.
+    ///
+    /// * `0.0` → all new agents receive an exact clone of the seed genome.
+    /// * `1.0` → full class mutation rate (free drift).
+    /// * Absent / `None` → the seed's own `divergence` field is used.
+    #[serde(default)]
+    pub divergence_override: Option<f32>,
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -171,6 +179,7 @@ impl Scenario {
             sim.register_seed_file(seed_path);
         }
         sim.set_active_seed(self.active_seed);
+        sim.set_divergence_override(self.divergence_override);
         sim
     }
 
@@ -200,6 +209,18 @@ impl Scenario {
                 field: "scarcity_multiplier",
                 message: "must be non-negative".into(),
             });
+        }
+
+        if let Some(v) = self.divergence_override {
+            if !v.is_finite() || !(0.0..=1.0).contains(&v) {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "divergence_override",
+                    message: format!(
+                        "must be in [0, 1] and finite (got {v})"
+                    ),
+                });
+            }
         }
 
         if let Some(v) = self.military.movement_cadence_ticks {
@@ -308,6 +329,7 @@ mod tests {
             military: ScenarioMilitary::default(),
             seeds: vec![],
             active_seed: None,
+            divergence_override: None,
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -335,6 +357,7 @@ mod tests {
             },
             seeds: vec![],
             active_seed: None,
+            divergence_override: None,
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -440,6 +463,7 @@ mods:
             military: ScenarioMilitary::default(),
             seeds: vec![],
             active_seed: None,
+            divergence_override: None,
         };
 
         let mut zero_scarcity = base.clone();
@@ -548,6 +572,63 @@ scarcity_multiplier: 1.0
         assert!(
             message.contains("tick_start"),
             "expected field path in message, got: {message}"
+        );
+    }
+
+    /// `divergence_override` parses from YAML and validates its 0..1 range.
+    #[test]
+    fn scenario_divergence_override_parses_and_validates() {
+        // Valid value: 0.5 should parse and round-trip.
+        let yaml_valid = r#"
+version: 1
+name: div-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+divergence_override: 0.5
+"#;
+        let scenario = parse_yaml(yaml_valid).expect("divergence_override: 0.5 must parse");
+        assert!(
+            (scenario.divergence_override.unwrap() - 0.5).abs() < f32::EPSILON,
+            "divergence_override must round-trip as Some(0.5)"
+        );
+
+        // Out-of-range value: 1.5 must fail validation.
+        let yaml_invalid = r#"
+version: 1
+name: div-test-bad
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+divergence_override: 1.5
+"#;
+        let err = parse_yaml(yaml_invalid).expect_err("divergence_override: 1.5 must fail");
+        assert!(
+            matches!(
+                err,
+                ScenarioError::Validation {
+                    field: "divergence_override",
+                    ..
+                }
+            ),
+            "expected validation error for divergence_override, got {err:?}"
+        );
+
+        // Absent field: must default to None (backward-compatible).
+        let yaml_absent = r#"
+version: 1
+name: div-test-absent
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let scenario_absent = parse_yaml(yaml_absent).expect("absent divergence_override must parse");
+        assert_eq!(
+            scenario_absent.divergence_override, None,
+            "absent divergence_override must default to None"
         );
     }
 

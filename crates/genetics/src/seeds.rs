@@ -259,6 +259,24 @@ pub fn mutate_with_divergence(
     out
 }
 
+/// Sample a new genome from a seed using an *explicit* divergence value
+/// (ignoring `seed.divergence`). This is the canonical low-level call site
+/// when a scenario-level override is in play.
+///
+/// * `divergence = 0.0` → genome is clamped to the seed (no drift).
+/// * `divergence = 1.0` → full class mutation rate applied.
+/// * Intermediate values → linear blend.
+#[must_use]
+pub fn spawn_genome_with_divergence(
+    rng: &mut ChaCha8Rng,
+    class: &DnaClass,
+    seed: &SeedDefinition,
+    divergence: f32,
+) -> Dna {
+    let dna = seed.base_dna();
+    mutate_with_divergence(&dna, rng, class, divergence)
+}
+
 /// Sample a new genome from a seed (or from scratch when `seed` is `None`).
 ///
 /// Behaviour:
@@ -269,13 +287,13 @@ pub fn mutate_with_divergence(
 ///   `effective_mutation_rate(seed)` to the seed.
 /// * `None` → falls back to a fully random genome of the class's expected
 ///   length (the substrate's "raw-organism primitive" mode).
+///
+/// Delegates to [`spawn_genome_with_divergence`] so the logic lives in one
+/// place; existing callers are unaffected.
 #[must_use]
 pub fn spawn_genome(rng: &mut ChaCha8Rng, class: &DnaClass, seed: Option<&SeedDefinition>) -> Dna {
     match seed {
-        Some(s) => {
-            let dna = s.base_dna();
-            mutate_with_divergence(&dna, rng, class, s.divergence)
-        }
+        Some(s) => spawn_genome_with_divergence(rng, class, s, s.divergence),
         None => Dna::random(class.length, rng),
     }
 }
@@ -795,6 +813,35 @@ mod tests {
         assert_eq!(
             clamped, full,
             "divergence > 1.0 must be clamped and produce the same result as 1.0"
+        );
+    }
+
+    #[test]
+    fn spawn_genome_with_divergence_zero_clones_seed() {
+        let mut rng = ChaCha8Rng::seed_from_u64(0xABCD_1234_u64);
+        let class = base_class();
+        let seed = raw_organism_primitive();
+        let dna = spawn_genome_with_divergence(&mut rng, &class, &seed, 0.0);
+        assert_eq!(
+            dna.0, seed.genome,
+            "divergence=0.0 must produce an exact clone of the seed genome"
+        );
+    }
+
+    #[test]
+    fn spawn_genome_with_divergence_one_drifts() {
+        let mut rng = ChaCha8Rng::seed_from_u64(0xFEED_BEEF_u64);
+        let class = base_class();
+        let seed = raw_organism_primitive();
+        let dna = spawn_genome_with_divergence(&mut rng, &class, &seed, 1.0);
+        // With mutation_rate=0.05 and 64 bytes the probability of zero
+        // mutations is (0.95)^64 ≈ 3.6e-2; vanishingly small over this fixed
+        // RNG seed (and in practice we observed a non-trivial number of
+        // flips). The assertion is probabilistic but with a fixed seed it is
+        // deterministic.
+        assert_ne!(
+            dna.0, seed.genome,
+            "divergence=1.0 must produce a drifted genome (not an exact clone)"
         );
     }
 

@@ -18,7 +18,8 @@ pub mod sentience;
 pub use seeds::{
     archetype_dna, archetype_seed, effective_mutation_rate, example_seed_set,
     mutate_with_divergence, raw_organism_primitive, seed_with_divergence, spawn_genome,
-    BiomeAffinity, NamedSeed, SeedDefinition, SeedError, SeedId, SeedLibrary, SeedSet,
+    spawn_genome_with_divergence, BiomeAffinity, NamedSeed, SeedDefinition, SeedError, SeedId,
+    SeedLibrary, SeedSet,
 };
 
 /// Schema version for `civ-genetics`. Bumped on breaking changes.

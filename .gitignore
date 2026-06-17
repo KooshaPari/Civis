@@ -100,3 +100,15 @@ pnpm-debug.log*
 Thumbs.db
 yarn-debug.log*
 yarn-error.log*
+
+# Stray audit/spec .md files at repo root (anchored; README.md and CHANGELOG.md are preserved)
+/N*.md
+/FR_TRACE*.md
+/PERF*.md
+/COVERAGE*.md
+/*_SCOUT.md
+/*_DESIGN.md
+/*_CRITICALITY*.md
+/*_API_FACTS.md
+/*_FACTS.md
+/TEST_SPECS_*.md

@@ -946,8 +946,17 @@ mod tests {
         let mut sim = Simulation::with_seed(42);
         run_ticks(&mut sim, 4);
         let before = sim.legends_graph().node_count();
-        sim.state.resources.food = Fixed::ZERO;
-        run_ticks(&mut sim, 250);
+        // Force sustained famine: zero the food stock BEFORE each tick so
+        // production can't refill it. The starvation death path
+        // (`phase_citizen_lifecycle`) requires `resources.food.raw <= 0`, and
+        // per-tick production would otherwise mask it — biome-modulated food
+        // production (#558) and carrying capacity (#559) make the refilled
+        // amount planet-dependent, so we pin food to zero rather than relying
+        // on a single reset surviving 250 ticks of production.
+        for _ in 0..250 {
+            sim.state.resources.food = Fixed::ZERO;
+            sim.tick();
+        }
         let after = sim.legends_graph().node_count();
         assert!(
             after > before || !sim.emergence_feed().is_empty(),

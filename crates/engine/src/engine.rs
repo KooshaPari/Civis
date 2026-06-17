@@ -2176,7 +2176,9 @@ impl Simulation {
         // N10 kinship↔cohesion coupling: family ties reinforce social cohesion (FR-CIV-EMERGENCE-N10).
         // Upward causation: high average kinship boosts cohesion (people trust kin).
         // Inverse decay: low kinship → faster decay (loneliness destabilizes).
-        let avg_kinship = avg_faction_kinship(&self.world);
+        // Clamp to [0,1]: tie.kinship is nominally normalized, but guard against
+        // malformed/out-of-range ties so the boost/decay math stays bounded.
+        let avg_kinship = avg_faction_kinship(&self.world).clamp(0.0, 1.0);
         let kinship_boost = (avg_kinship * 0.02 * 100_000.0) as u64;
         self.state.cohesion = self.state.cohesion.saturating_add(kinship_boost);
 

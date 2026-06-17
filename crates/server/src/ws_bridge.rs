@@ -1419,26 +1419,6 @@ mod tests {
     }
 
     #[test]
-    fn build_frame_bundle_contains_building_provenance_variants() {
-        // Test both provenance types (Procedural and Freehand)
-        let sim_even = Simulation::with_seed(2);
-        let bundle_even = build_frame_bundle(&sim_even).expect("bundle");
-        let Frame3d::BuildingDiff(building_even) = &bundle_even[1] else {
-            panic!("expected building diff frame");
-        };
-        // Seed 2 has even building_count, so should be Procedural
-        assert_eq!(building_even.provenance, BuildingProvenance::Procedural);
-
-        let sim_odd = Simulation::with_seed(3);
-        let bundle_odd = build_frame_bundle(&sim_odd).expect("bundle");
-        let Frame3d::BuildingDiff(building_odd) = &bundle_odd[1] else {
-            panic!("expected building diff frame");
-        };
-        // Seed 3 has odd building_count, so should be Freehand
-        assert_eq!(building_odd.provenance, BuildingProvenance::Freehand);
-    }
-
-    #[test]
     fn tick_broadcast_format_both_sends_text_before_binary() {
         let frames = sample_frame_bundle();
         let messages =

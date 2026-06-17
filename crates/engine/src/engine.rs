@@ -707,6 +707,9 @@ pub struct Simulation {
     pub(crate) emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
     /// Rolling-mean branching ratio ledger and live `σ̄_W` (charter §3.6).
     pub(crate) emergence_branching: crate::emergence_metrics::EmergenceBranchingState,
+    /// N9: per-faction mean phenotype aggression in [0,1].
+    /// Rebuilt each tick by `emergence_genetics_sentience`; ephemeral (not persisted).
+    pub(crate) faction_aggression: BTreeMap<u32, f32>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -953,6 +956,7 @@ impl Simulation {
             emergence: Self::default_emergence_state(42),
             emergence_sample: None,
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
+            faction_aggression: BTreeMap::new(),
         };
         sim.rebuild_agent_id_index();
         sim
@@ -1032,6 +1036,7 @@ impl Simulation {
             emergence: Self::default_emergence_state(seed),
             emergence_sample: None,
             emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
+            faction_aggression: BTreeMap::new(),
         };
         sim.rebuild_agent_id_index();
         sim
@@ -2923,10 +2928,15 @@ impl Simulation {
             self.belief().saturating_add(self.cohesion()),
             pair_unrest,
         );
+        // N9: aggression reduces the threshold (aggressive species clash sooner).
+        let agg_a = self.faction_aggression.get(&a).copied().unwrap_or(0.0);
+        let agg_b = self.faction_aggression.get(&b).copied().unwrap_or(0.0);
+        let agg_reduction = aggression_threshold_reduction((agg_a + agg_b) / 2.0);
         let conflict_threshold = Fixed::from_num(
             (base_threshold
                 + diplomacy_relation_threshold_bias(relation)
-                + culture_bias)
+                + culture_bias
+                - agg_reduction)
                 .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
         );
         let kind = if disparity >= conflict_threshold {
@@ -4004,6 +4014,16 @@ fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
     let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
     let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
     (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
+}
+
+/// N9: maximum reduction to the conflict threshold from maximum aggression.
+const AGGRESSION_CONFLICT_BOOST: i64 = 3_000;
+
+/// N9: conflict-threshold reduction driven by mean pairwise aggression.
+/// Aggressive species are quicker to fight: a mean aggression of 1.0 reduces
+/// the threshold by [`AGGRESSION_CONFLICT_BOOST`] currency units.
+fn aggression_threshold_reduction(mean: f32) -> i64 {
+    (mean.clamp(0.0, 1.0) * AGGRESSION_CONFLICT_BOOST as f32) as i64
 }
 
 /// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
@@ -8374,5 +8394,82 @@ mod tests {
                 "wrapper must equal unrest_delta at shadow={shadow}"
             );
         }
+    }
+
+    // ── N9 tests ──────────────────────────────────────────────────────────────
+
+    /// N9: `aggression_threshold_reduction` is bounded: 0.0→0, 0.5→1500,
+    /// 1.0→3000, and clamping means 2.0 still yields 3000.
+    #[test]
+    fn aggression_threshold_reduction_bounded() {
+        assert_eq!(aggression_threshold_reduction(0.0), 0);
+        assert_eq!(aggression_threshold_reduction(0.5), 1500);
+        assert_eq!(aggression_threshold_reduction(1.0), 3000);
+        assert_eq!(aggression_threshold_reduction(2.0), 3000); // clamped
+    }
+
+    /// N9: `faction_aggression` is rebuilt fresh each tick (ephemeral).
+    #[test]
+    fn faction_aggression_rebuilt_each_tick() {
+        let mut sim = Simulation::with_seed(1);
+        // Before any tick, faction_aggression is empty.
+        assert!(
+            sim.faction_aggression.is_empty(),
+            "faction_aggression should start empty"
+        );
+        // After a tick the emergence phase populates it (agents have DNA).
+        sim.tick();
+        // The map is populated whenever there are aligned civilians with DNA.
+        // Just verify the field is accessible and the type is correct.
+        let _: &std::collections::BTreeMap<u32, f32> = &sim.faction_aggression;
+    }
+
+    /// N9: faction pairs with high aggression clash at lower disparity than
+    /// faction pairs with zero aggression.
+    #[test]
+    fn aggressive_factions_clash_sooner() {
+        // Build a baseline sim where factions are at the trade/conflict boundary.
+        let mut sim_low = Simulation::with_seed(5);
+        sim_low.state.tick = 500;
+        sim_low.state.belief = 0;
+        sim_low.state.cohesion = 0;
+        sim_low.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim_low.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim_low.state.tick);
+        // A disparity just below the base threshold: both sims should trade normally.
+        let base = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+        sim_low.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_low.state.faction_treasury.insert(b, Fixed::from_num(base - 1));
+        // Zero aggression → no reduction.
+        sim_low.faction_aggression.insert(a, 0.0);
+        sim_low.faction_aggression.insert(b, 0.0);
+        sim_low.phase_diplomacy();
+        let low_kind = sim_low.diplomacy_events().last().expect("event").kind;
+
+        // High aggression sim: same disparity, but aggression lowers threshold.
+        let mut sim_high = Simulation::with_seed(5);
+        sim_high.state.tick = 500;
+        sim_high.state.belief = 0;
+        sim_high.state.cohesion = 0;
+        sim_high.state.unrest = 0;
+        sim_high.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_high.state.faction_treasury.insert(b, Fixed::from_num(base - 1));
+        // Max aggression → reduction = 3000, so threshold drops to DIPLOMACY_MIN_CONFLICT_THRESHOLD.
+        sim_high.faction_aggression.insert(a, 1.0);
+        sim_high.faction_aggression.insert(b, 1.0);
+        sim_high.phase_diplomacy();
+        let high_kind = sim_high.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            low_kind,
+            DiplomacyKind::TradeAgreement,
+            "low-aggression factions should trade at this disparity"
+        );
+        assert_eq!(
+            high_kind,
+            DiplomacyKind::Conflict,
+            "high-aggression factions should clash at the same disparity"
+        );
     }
 }

@@ -1294,4 +1294,52 @@ mod tests {
             "far must evict before near under the MVP budget"
         );
     }
+
+    #[test]
+    fn fr_civ_scale_002_extent_budget_classifies_and_validates() {
+        assert!(ExtentBudget::Unbounded.is_unbounded());
+        assert!(!ExtentBudget::Unbounded.is_bounded());
+        assert!(ExtentBudget::SMALL.is_bounded());
+        assert!(!ExtentBudget::SMALL.is_unbounded());
+
+        // Unbounded accepts any coord.
+        assert!(ExtentBudget::Unbounded.validate(coord(1_000, 0, -5)).is_ok());
+        // Bounded: half-open [-half, +half). side 4 => half 2; +2 is out, -2 is in.
+        let b = ExtentBudget::Bounded { side_chunks: 4 };
+        assert!(b.validate(coord(-2, 0, 1)).is_ok());
+        assert_eq!(
+            b.validate(coord(2, 0, 0)),
+            Err(ExtentError::OutOfExtent { coord: coord(2, 0, 0), side_chunks: 4 })
+        );
+        // Zero side is rejected (would divide-by-zero).
+        assert_eq!(
+            ExtentBudget::Bounded { side_chunks: 0 }.validate(coord(0, 0, 0)),
+            Err(ExtentError::ZeroSide)
+        );
+    }
+
+    #[test]
+    fn fr_civ_scale_002_extent_error_display() {
+        assert_eq!(
+            ExtentError::ZeroSide.to_string(),
+            "ExtentBudget::Bounded side_chunks must be > 0"
+        );
+        let msg =
+            ExtentError::OutOfExtent { coord: coord(3, 4, 5), side_chunks: 8 }.to_string();
+        assert!(msg.contains("(3, 4, 5)") && msg.contains("side_chunks = 8"), "{msg}");
+    }
+
+    #[test]
+    fn fr_civ_scale_003_lod_ring_plan_checked_rejects_coarse_below_mesh() {
+        let policy = WindowPolicy::default(); // mesh_ring == 1
+        // coarse 0 < mesh_ring 1 => error carrying both values.
+        assert_eq!(
+            LodRingPlan::checked(policy, 0),
+            Err(PlanError::CoarseBelowMesh { coarse_render_ring: 0, mesh_ring: policy.mesh_ring })
+        );
+        // coarse == mesh_ring is accepted.
+        assert!(LodRingPlan::checked(policy, policy.mesh_ring).is_ok());
+        let msg = PlanError::CoarseBelowMesh { coarse_render_ring: 0, mesh_ring: 1 }.to_string();
+        assert!(msg.contains('0') && msg.contains('1'), "{msg}");
+    }
 }

@@ -11,7 +11,7 @@ use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    Civilian, ClusterMember, Interaction, Needs, Psyche, SocialEvent, SocialGraph,
+    Alignment, Civilian, ClusterMember, Interaction, Needs, Psyche, SocialEvent, SocialGraph,
 };
 use civ_genetics::{
     example_seed_set,
@@ -463,14 +463,39 @@ impl Simulation {
         let tick = self.state.tick;
         let profile = self.emergence.sentience_profile.clone();
         let threshold = self.emergence.sentience_threshold;
-        let agents: Vec<(u64, Dna)> = self
+        // N9: collect (agent_id, faction_id_opt, dna) so we can build per-faction
+        // mean aggression without a second world scan.
+        let agents: Vec<(u64, Option<u32>, Dna)> = self
             .world
             .query::<(&Civilian, &Dna)>()
             .iter()
-            .map(|(_, (c, d))| (c.id, d.clone()))
+            .map(|(_, (c, d))| {
+                let faction = match c.alignment {
+                    Alignment::Faction(fid) => Some(fid),
+                    _ => None,
+                };
+                (c.id, faction, d.clone())
+            })
             .collect();
 
-        for (agent_id, dna) in agents {
+        // N9: rebuild faction_aggression from this tick's scan.
+        {
+            let mut faction_agg_sum: BTreeMap<u32, (f32, u32)> = BTreeMap::new();
+            for (_, faction_opt, dna) in &agents {
+                if let Some(fid) = faction_opt {
+                    let agg = express(dna).behavior.aggression;
+                    let entry = faction_agg_sum.entry(*fid).or_insert((0.0, 0));
+                    entry.0 += agg;
+                    entry.1 += 1;
+                }
+            }
+            self.faction_aggression = faction_agg_sum
+                .into_iter()
+                .map(|(fid, (sum, count))| (fid, sum / count as f32))
+                .collect();
+        }
+
+        for (agent_id, _faction_opt, dna) in agents {
             let event = evaluate_sentience(Some(agent_id), &dna, &profile, threshold);
             if event.crossed && self.emergence.sentient_agents.insert(agent_id) {
                 self.emergence.last_sentience.push(event.clone());

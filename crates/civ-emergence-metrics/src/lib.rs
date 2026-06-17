@@ -38,18 +38,24 @@
 //!
 //! ## Scope
 //!
-//! The remaining dashboard metrics (power-law fit, novelty rate, mutual
-//! information between sim layers) are scoped for follow-up PRs once the
-//! wiring exists in `civ-server` and `civ-protocol-3d`.
+//! The remaining dashboard metrics (power-law fit, novelty rate) are scoped
+//! for follow-up PRs once the wiring exists in `civ-server` and
+//! `civ-protocol-3d`. Mutual information between sim layers is implemented
+//! in [`mutual_information`].
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 pub mod branching;
 pub mod dashboard;
+pub mod mutual_information;
 pub mod power_law;
 pub mod shannon;
 pub mod structure;
+
+pub use mutual_information::{
+    mutual_information_bits, mutual_information_normalised, JointHistogram,
+};
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";

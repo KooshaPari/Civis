@@ -160,24 +160,43 @@ pub fn attach_citizen_to_agents(world: &mut World) {
     }
 }
 
+/// Spawn faction civilians using default parameters (32 civilians × 4 factions, spread 2500).
 fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
-    const CIVILIANS_PER_FACTION: usize = 32;
-    const QUADRANT_SPREAD: i32 = 2_500;
+    spawn_faction_civilians_configured(world, rng, 32, 4, 2_500);
+}
 
-    let faction_capitals = [
-        (-7_500, 7_500),  // faction 0: NW
-        (7_500, 7_500),   // faction 1: NE
-        (-7_500, -7_500), // faction 2: SW
-        (7_500, -7_500),  // faction 3: SE
-    ];
+/// Spawn faction civilians with scenario-level configuration.
+///
+/// Faction capitals are placed on a procedural ring of radius `quadrant_spread * 3`
+/// so that any `faction_count` is supported without hardcoded quadrant anchors.
+/// For the default 4-faction case the ring approximates the legacy NW/NE/SW/SE
+/// positions (radius ≈ 7500 grid units at the default spread of 2500).
+fn spawn_faction_civilians_configured(
+    world: &mut World,
+    rng: &mut SimRng,
+    civilians_per_faction: u32,
+    faction_count: u32,
+    quadrant_spread: i32,
+) {
+    use std::f32::consts::PI;
 
     let scale = FIXED_SCALE as f32;
+    // Ring radius: place capitals 3× the spread radius apart so they don't
+    // overlap. The legacy 4-quadrant layout used ±7500 with spread=2500,
+    // i.e. radius ≈ 7500 = 3 × 2500.
+    let ring_radius = (quadrant_spread * 3) as f32;
+
     let mut next_civilian_id = 1u64;
     let mut spawn_index: usize = 0;
-    for (center_x, center_y) in faction_capitals.into_iter() {
-        for _ in 0..CIVILIANS_PER_FACTION {
-            let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
-            let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+
+    for k in 0..faction_count as usize {
+        let angle = 2.0 * PI * k as f32 / faction_count as f32;
+        let capital_x = (ring_radius * angle.cos()) as i32;
+        let capital_y = (ring_radius * angle.sin()) as i32;
+
+        for _ in 0..civilians_per_faction {
+            let grid_x = capital_x + rng.gen_range(-quadrant_spread..=quadrant_spread);
+            let grid_z = capital_y + rng.gen_range(-quadrant_spread..=quadrant_spread);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
             let entity = spawn_civilian_at(
@@ -1001,6 +1020,102 @@ impl Simulation {
         Self::spawn_initial_entities(&mut world);
         let mut spawn_rng = rng.clone();
         spawn_faction_civilians(&mut world, &mut spawn_rng);
+        attach_citizen_to_agents(&mut world);
+
+        let (planet, moon) = defaults_earthlike();
+        let climate = compute_climate(0, &planet, &moon);
+        let weather_grid = compute_weather(&climate, 0, 16);
+        let state = WorldState {
+            rng_seed: seed,
+            ..Default::default()
+        };
+
+        let mut sim = Self {
+            economy_state: economy_state_from_world(&state),
+            market_state: MarketState::default(),
+            state,
+            world,
+            rng,
+            planet,
+            moon,
+            climate,
+            pending_damage: Vec::new(),
+            tick_modulo_compact: 64,
+            building_graph: BuildingGraph::new(),
+            cluster_stocks: BTreeMap::new(),
+            cluster_member_counts: BTreeMap::new(),
+            last_life_deaths: 0,
+            last_settlement_count: 0,
+            life_cluster_position_fingerprint: 0,
+            #[cfg(test)]
+            life_clustering_recompute_count: 0,
+            #[cfg(test)]
+            force_life_cluster_recompute: false,
+            agent_id_to_entity: BTreeMap::new(),
+            #[cfg(test)]
+            agent_entity_linear_scan_count: std::cell::Cell::new(0),
+            #[cfg(test)]
+            force_agent_entity_linear_scan: false,
+            allocator: Allocator::new(seed),
+            diffusion_params: DiffusionParams::default(),
+            target_era: 1,
+            last_cohort_stats: None,
+            last_births: Vec::new(),
+            last_deaths: Vec::new(),
+            diplomacy_events: Vec::new(),
+            next_civilian_id: 1_000_000,
+            research_cache: ResearchCache,
+            voxel: VoxelWorld::new(FIXED_SCALE),
+            last_tick_voxel_events: Vec::new(),
+            last_tick_voxel_damage_count: 0,
+            last_tick_combat_pulses: Vec::new(),
+            last_tick_engagements: Vec::new(),
+            last_tick_mod_lifecycle: Vec::new(),
+            last_tick_abiogenesis_sites: Vec::new(),
+            operational: NoopOperationalLayer,
+            replay_log: ReplayLog {
+                seed,
+                ..ReplayLog::default()
+            },
+            economy_policy: DEFAULT_ECONOMY_POLICY,
+            lod_policy: LodPolicy::default(),
+            mod_host: ModHost::new(),
+            military_phase: MilitaryPhaseConfig::default(),
+            faction_doctrines: default_faction_doctrines(),
+            coastal_columns: BTreeMap::new(),
+            weather_grid,
+            emergence: Self::default_emergence_state(seed),
+            emergence_sample: None,
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
+            faction_aggression: BTreeMap::new(),
+            cached_biome_yield: None,
+        };
+        sim.rebuild_agent_id_index();
+        sim
+    }
+
+    /// Create a simulation with a custom seed and explicit starting-population
+    /// parameters from a scenario's [`ScenarioStartingConditions`].
+    ///
+    /// This is the entry point used by [`Scenario::into_simulation`]; it
+    /// delegates to [`spawn_faction_civilians_configured`] instead of the
+    /// default-constant wrapper so faction count and population density are
+    /// fully scenario-controlled.
+    pub fn with_seed_and_starting_conditions(
+        seed: u64,
+        sc: crate::scenario::ScenarioStartingConditions,
+    ) -> Self {
+        let rng = SimRng::seed_from_u64(seed);
+        let mut world = World::new();
+        Self::spawn_initial_entities(&mut world);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians_configured(
+            &mut world,
+            &mut spawn_rng,
+            sc.civilians_per_faction,
+            sc.faction_count,
+            sc.quadrant_spread,
+        );
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();

@@ -16,6 +16,48 @@ fn default_version() -> u32 {
     SCENARIO_SCHEMA_VERSION
 }
 
+fn default_civilians_per_faction() -> u32 {
+    32
+}
+fn default_faction_count() -> u32 {
+    4
+}
+fn default_quadrant_spread() -> i32 {
+    2500
+}
+
+/// Scenario-level starting-population parameters (FR-CONTENT-STARTCOND).
+///
+/// Controls how many civilian agents are spawned per faction, how many factions
+/// are placed, and how far from each faction's capital they are scattered.
+/// Faction capitals are arranged in a procedural ring so any count is supported.
+///
+/// All fields are `#[serde(default)]` so old YAML files without this block
+/// continue to parse and reproduce the previous hardcoded behaviour (32/4/2500).
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ScenarioStartingConditions {
+    /// Civilians spawned around each faction capital (default: 32).
+    #[serde(default = "default_civilians_per_faction")]
+    pub civilians_per_faction: u32,
+    /// Number of faction capitals placed on the ring (default: 4, max: 64).
+    #[serde(default = "default_faction_count")]
+    pub faction_count: u32,
+    /// Half-width of the random jitter box around each capital in grid units
+    /// (default: 2500, must be > 0).
+    #[serde(default = "default_quadrant_spread")]
+    pub quadrant_spread: i32,
+}
+
+impl Default for ScenarioStartingConditions {
+    fn default() -> Self {
+        Self {
+            civilians_per_faction: default_civilians_per_faction(),
+            faction_count: default_faction_count(),
+            quadrant_spread: default_quadrant_spread(),
+        }
+    }
+}
+
 /// Parsed scenario configuration from YAML.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scenario {
@@ -61,6 +103,11 @@ pub struct Scenario {
     /// * Absent / `None` → the seed's own `divergence` field is used.
     #[serde(default)]
     pub divergence_override: Option<f32>,
+    /// Starting-population parameters: civilians per faction, faction count,
+    /// and spatial spread. Defaults reproduce the pre-config hardcoded values
+    /// (32 civilians × 4 factions, 2500 grid-unit spread).
+    #[serde(default)]
+    pub starting_conditions: ScenarioStartingConditions,
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -166,7 +213,10 @@ impl Scenario {
 
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
-        let mut sim = Simulation::with_seed(rng_seed);
+        let mut sim = Simulation::with_seed_and_starting_conditions(
+            rng_seed,
+            self.starting_conditions,
+        );
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
@@ -221,6 +271,30 @@ impl Scenario {
                     ),
                 });
             }
+        }
+
+        if self.starting_conditions.faction_count == 0
+            || self.starting_conditions.faction_count > 64
+        {
+            return Err(ScenarioError::Validation {
+                path,
+                field: "starting_conditions.faction_count",
+                message: "must be in 1..=64".into(),
+            });
+        }
+        if self.starting_conditions.civilians_per_faction > 100_000 {
+            return Err(ScenarioError::Validation {
+                path,
+                field: "starting_conditions.civilians_per_faction",
+                message: "must be <= 100_000".into(),
+            });
+        }
+        if self.starting_conditions.quadrant_spread <= 0 {
+            return Err(ScenarioError::Validation {
+                path,
+                field: "starting_conditions.quadrant_spread",
+                message: "must be > 0".into(),
+            });
         }
 
         if let Some(v) = self.military.movement_cadence_ticks {
@@ -330,6 +404,7 @@ mod tests {
             seeds: vec![],
             active_seed: None,
             divergence_override: None,
+            starting_conditions: ScenarioStartingConditions::default(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -358,6 +433,7 @@ mod tests {
             seeds: vec![],
             active_seed: None,
             divergence_override: None,
+            starting_conditions: ScenarioStartingConditions::default(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -464,6 +540,7 @@ mods:
             seeds: vec![],
             active_seed: None,
             divergence_override: None,
+            starting_conditions: ScenarioStartingConditions::default(),
         };
 
         let mut zero_scarcity = base.clone();
@@ -630,6 +707,109 @@ scarcity_multiplier: 1.0
             scenario_absent.divergence_override, None,
             "absent divergence_override must default to None"
         );
+    }
+
+    // ---- starting_conditions tests (FR-CONTENT-STARTCOND) ----
+
+    #[test]
+    fn scenario_starting_conditions_defaults() {
+        let yaml = r#"
+version: 1
+name: sc-default-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let s = parse_yaml(yaml).unwrap();
+        assert_eq!(s.starting_conditions, ScenarioStartingConditions::default());
+    }
+
+    #[test]
+    fn scenario_starting_conditions_parses() {
+        let yaml = r#"
+version: 1
+name: sc-parse-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  civilians_per_faction: 10
+  faction_count: 6
+  quadrant_spread: 1000
+"#;
+        let s = parse_yaml(yaml).unwrap();
+        assert_eq!(s.starting_conditions.civilians_per_faction, 10);
+        assert_eq!(s.starting_conditions.faction_count, 6);
+        assert_eq!(s.starting_conditions.quadrant_spread, 1000);
+    }
+
+    #[test]
+    fn scenario_starting_conditions_validates_faction_count_zero() {
+        let yaml = r#"
+version: 1
+name: sc-zero-factions
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  faction_count: 0
+"#;
+        let s: Scenario = {
+            let de = serde_yaml::Deserializer::from_str(yaml);
+            serde_path_to_error::deserialize(de).map_err(|err| ScenarioError::Parse {
+                path: PathBuf::from("<test>"),
+                message: err.to_string(),
+            })
+        }
+        .unwrap();
+        assert!(s.validate(Path::new("<test>")).is_err());
+    }
+
+    #[test]
+    fn scenario_starting_conditions_validates_faction_count_too_high() {
+        let yaml = r#"
+version: 1
+name: sc-too-many-factions
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  faction_count: 9999
+"#;
+        let s: Scenario = {
+            let de = serde_yaml::Deserializer::from_str(yaml);
+            serde_path_to_error::deserialize(de).map_err(|err| ScenarioError::Parse {
+                path: PathBuf::from("<test>"),
+                message: err.to_string(),
+            })
+        }
+        .unwrap();
+        assert!(s.validate(Path::new("<test>")).is_err());
+    }
+
+    #[test]
+    fn starting_conditions_spawns_expected_count() {
+        // 2 civilians per faction × 3 factions = 6 civilians
+        let yaml = r#"
+version: 1
+name: sc-spawn-count
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  civilians_per_faction: 2
+  faction_count: 3
+  quadrant_spread: 2500
+"#;
+        let s = parse_yaml(yaml).unwrap();
+        let sim = s.into_simulation(42);
+        let count = civ_agents::count_civilians(&sim.world);
+        assert_eq!(count, 6, "expected 2 civilians × 3 factions = 6");
     }
 
     fn parse_yaml(yaml: &str) -> Result<Scenario, ScenarioError> {

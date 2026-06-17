@@ -45,7 +45,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
+      # Prebuilt binary instead of `cargo install --locked` (which compiles from
+      # crates.io and intermittently dies on a transient registry download —
+      # `SSL_ERROR_SYSCALL` fetching shared_child — leaving `no such command:
+      # llvm-cov` and a silent no-numbers coverage job).
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
       - name: coverage (llvm-cov)
-        run: |
-          cargo install cargo-llvm-cov --locked || true
-          cargo llvm-cov --workspace --summary-only 2>&1 | tail -40 || echo "coverage-failed"
+        run: cargo llvm-cov --workspace --summary-only 2>&1 | tail -40

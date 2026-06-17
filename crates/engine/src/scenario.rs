@@ -396,6 +396,29 @@ pub fn baseline_scenario_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scenarios/baseline.yaml")
 }
 
+/// Path to a named preset scenario YAML under `scenarios/presets/`.
+///
+/// Presets are curated starting configurations that showcase the content knobs
+/// (seed_mix, starting_conditions, divergence_override).  Use [`preset_names`]
+/// to enumerate all available presets.
+pub fn preset_scenario_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scenarios/presets/")
+        .join(format!("{name}.yaml"))
+}
+
+/// The canonical set of curated scenario preset names.
+///
+/// Each name corresponds to a file at `scenarios/presets/<name>.yaml`.
+pub fn preset_names() -> &'static [&'static str] {
+    &[
+        "single-race-ardani",
+        "three-race-balanced",
+        "ardani-dominant",
+        "lush-frontier",
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -946,6 +969,53 @@ starting_conditions:
         assert!(
             matches!(result, Err(ScenarioError::Validation { .. })),
             "negative weight must yield a Validation error"
+        );
+    }
+
+    // ── Preset YAML tests (FR-CONTENT-SEEDMIX / FR-CONTENT-STARTCOND) ────────
+
+    /// Every preset in `preset_names()` must load, validate, and have a
+    /// non-empty name and finite positive weights.
+    #[test]
+    fn all_presets_load_and_validate() {
+        for name in preset_names() {
+            let scenario = load_scenario(preset_scenario_path(name))
+                .unwrap_or_else(|e| panic!("preset {name} failed to load: {e}"));
+            assert!(!scenario.name.is_empty(), "preset {name} has empty name");
+            for sw in &scenario.starting_conditions.seed_mix {
+                assert!(
+                    sw.weight > 0.0 && sw.weight.is_finite(),
+                    "preset {name} has invalid weight {} for seed {:?}",
+                    sw.weight,
+                    sw.seed
+                );
+            }
+        }
+    }
+
+    /// `three-race-balanced` must carry exactly 3 seeds: Ardani, Velthari, Grundak.
+    #[test]
+    fn preset_three_race_balanced_has_three_seeds() {
+        let scenario = load_scenario(preset_scenario_path("three-race-balanced")).unwrap();
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 3, "expected 3 seeds, got {}", mix.len());
+        let seeds: Vec<civ_genetics::NamedSeed> = mix.iter().map(|sw| sw.seed).collect();
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Ardani), "missing Ardani");
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Velthari), "missing Velthari");
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Grundak), "missing Grundak");
+    }
+
+    /// `single-race-ardani` must have exactly 1 seed (Ardani) at weight 1.0.
+    #[test]
+    fn preset_single_race_is_monocultural() {
+        let scenario = load_scenario(preset_scenario_path("single-race-ardani")).unwrap();
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 1, "expected 1 seed, got {}", mix.len());
+        assert_eq!(mix[0].seed, civ_genetics::NamedSeed::Ardani);
+        assert!(
+            (mix[0].weight - 1.0).abs() < f32::EPSILON,
+            "weight should be 1.0, got {}",
+            mix[0].weight
         );
     }
 }

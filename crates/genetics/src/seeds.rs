@@ -280,6 +280,140 @@ pub fn spawn_genome(rng: &mut ChaCha8Rng, class: &DnaClass, seed: Option<&SeedDe
     }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Named-race archetypes (content-model layer)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/// Canonical named races.  Each variant is a distinct biological/cultural
+/// archetype whose genome is hand-curated to produce a characteristic
+/// phenotype cluster *before* emergence diverges the population.
+///
+/// Add new variants here as the content layer grows; each must have a
+/// matching arm in [`archetype_dna`] and [`archetype_seed`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NamedSeed {
+    /// Ardani — arid-world endurance caste; heat-adapted, high aggression
+    /// potential, structured social hierarchy encoded in leading bytes.
+    Ardani,
+    /// Velthari — deep-forest symbiotes; high genetic plasticity (varied
+    /// genome), empathic resonance markers in upper bytes.
+    Velthari,
+    /// Grundak — subterranean lithomorphs; low divergence pressure, dense
+    /// mineral-affinity encoding in mid-range bytes.
+    Grundak,
+}
+
+/// Return the canonical 64-byte [`Dna`] for a named race archetype.
+///
+/// These genomes are *fixed content constants* — they must not be generated
+/// procedurally so scenario designers can rely on them being stable across
+/// engine versions.  Use [`seed_with_divergence`] to introduce population
+/// spread at spawn time.
+#[must_use]
+pub fn archetype_dna(seed: NamedSeed) -> Dna {
+    const LEN: usize = 64;
+    let bytes: Vec<u8> = match seed {
+        // Ardani: ramp × 3, wrapping — compressed high-intensity pattern.
+        // Distinctive in leading bytes (social hierarchy) and tail (heat).
+        NamedSeed::Ardani => (0..LEN as u8)
+            .map(|i| i.wrapping_mul(3).wrapping_add(37))
+            .collect(),
+
+        // Velthari: sinusoidal-like via alternating add/sub — high variance
+        // throughout the genome encodes plasticity.
+        NamedSeed::Velthari => (0..LEN as u8)
+            .enumerate()
+            .map(|(idx, i)| {
+                if idx % 2 == 0 {
+                    i.wrapping_mul(11).wrapping_add(71)
+                } else {
+                    i.wrapping_mul(17).wrapping_sub(13)
+                }
+            })
+            .collect(),
+
+        // Grundak: slowly-stepping ramp × prime — low variance, dense
+        // mid-range values encode mineral affinity.
+        NamedSeed::Grundak => (0..LEN as u8)
+            .map(|i| i.wrapping_mul(2).wrapping_add(128))
+            .collect(),
+    };
+    Dna(bytes)
+}
+
+/// Convenience wrapper: return an archetype as a validated [`SeedDefinition`]
+/// ready for insertion into a [`SeedLibrary`].
+#[must_use]
+pub fn archetype_seed(named: NamedSeed) -> SeedDefinition {
+    let (id, display_name, biomes, divergence, notes) = match named {
+        NamedSeed::Ardani => (
+            "ardani",
+            "Ardani",
+            vec!["Desert".to_string(), "Savanna".to_string()],
+            0.15_f32,
+            "Arid-world endurance caste; low drift, heat-adapted.",
+        ),
+        NamedSeed::Velthari => (
+            "velthari",
+            "Velthari",
+            vec!["DeepForest".to_string(), "Rainforest".to_string()],
+            0.35_f32,
+            "Deep-forest symbiotes; moderate drift, high plasticity.",
+        ),
+        NamedSeed::Grundak => (
+            "grundak",
+            "Grundak",
+            vec!["Cave".to_string(), "Underground".to_string()],
+            0.05_f32,
+            "Subterranean lithomorphs; very low drift, mineral affinity.",
+        ),
+    };
+    let genome = archetype_dna(named).0;
+    let dna_length = genome.len();
+    SeedDefinition {
+        id: id.to_string(),
+        display_name: display_name.to_string(),
+        dna_length,
+        genome,
+        divergence,
+        spawn_biome_affinity: biomes,
+        notes: Some(notes.to_string()),
+    }
+}
+
+/// Produce a new [`Dna`] by interpolating between `base` and a fully-random
+/// genome, controlled by `divergence ∈ [0.0, 1.0]`.
+///
+/// * `divergence = 0.0` → returns `base.clone()` unchanged.
+/// * `divergence = 1.0` → each byte is independently randomised in `[0, 255]`.
+/// * Intermediate values lerp each byte between the base value and a random
+///   target: `out[i] = base[i] + round(divergence * (rand[i] - base[i]))`.
+///
+/// This is a *spawn-time* helper; for per-tick drift use
+/// [`mutate_with_divergence`] instead.
+pub fn seed_with_divergence<R: rand::Rng>(base: &Dna, divergence: f32, rng: &mut R) -> Dna {
+    let divergence = divergence.clamp(0.0, 1.0);
+    if divergence <= 0.0 {
+        return base.clone();
+    }
+    let bytes: Vec<u8> = base
+        .0
+        .iter()
+        .map(|&b| {
+            let rand_byte: u8 = rng.gen();
+            if divergence >= 1.0 {
+                rand_byte
+            } else {
+                let delta = (f32::from(rand_byte) - f32::from(b)) * divergence;
+                // Round to nearest, saturating at u8 bounds.
+                let result = f32::from(b) + delta;
+                result.round().clamp(0.0, 255.0) as u8
+            }
+        })
+        .collect();
+    Dna(bytes)
+}
+
 /// The canonical raw-organism primitive used as the substrate's "no seed"
 /// baseline. Length matches the default [`DnaClass`] in the genetics crate
 /// (64 bytes), with genome `[0, 1, 2, …]` and full divergence.
@@ -593,6 +727,75 @@ mod tests {
         assert!((effective_mutation_rate(&class, -0.5) - 0.0).abs() < f32::EPSILON);
         // Non-finite falls back to class rate.
         assert!((effective_mutation_rate(&class, f32::NAN) - 0.1).abs() < f32::EPSILON);
+    }
+
+    // ── Named-seed + divergence-dial tests ────────────────────────────────────
+
+    #[test]
+    fn test_zero_divergence_returns_archetype() {
+        let archetype = archetype_dna(NamedSeed::Ardani);
+        let mut rng = ChaCha8Rng::seed_from_u64(0xABCD_1234);
+        let result = seed_with_divergence(&archetype, 0.0, &mut rng);
+        assert_eq!(
+            result, archetype,
+            "divergence=0.0 must return an exact clone of the base genome"
+        );
+    }
+
+    #[test]
+    fn test_full_divergence_within_bounds() {
+        let archetype = archetype_dna(NamedSeed::Velthari);
+        let mut rng = ChaCha8Rng::seed_from_u64(0xDEAD_C0DE);
+        let result = seed_with_divergence(&archetype, 1.0, &mut rng);
+        assert_eq!(result.0.len(), archetype.0.len());
+        // Every byte must be a valid u8 — the type guarantees this, but we
+        // also verify that the function preserved genome length.
+        for &byte in &result.0 {
+            assert!(byte <= 255, "byte {byte} out of u8 range");
+        }
+    }
+
+    #[test]
+    fn test_named_seeds_differ() {
+        let ardani = archetype_dna(NamedSeed::Ardani);
+        let velthari = archetype_dna(NamedSeed::Velthari);
+        let grundak = archetype_dna(NamedSeed::Grundak);
+        assert_ne!(
+            ardani, velthari,
+            "Ardani and Velthari archetypes must differ on at least one byte"
+        );
+        assert_ne!(
+            ardani, grundak,
+            "Ardani and Grundak archetypes must differ on at least one byte"
+        );
+        assert_ne!(
+            velthari, grundak,
+            "Velthari and Grundak archetypes must differ on at least one byte"
+        );
+    }
+
+    #[test]
+    fn archetype_seeds_validate() {
+        for named in [NamedSeed::Ardani, NamedSeed::Velthari, NamedSeed::Grundak] {
+            let seed = archetype_seed(named);
+            seed.validate()
+                .unwrap_or_else(|e| panic!("{named:?} archetype_seed failed validation: {e}"));
+        }
+    }
+
+    #[test]
+    fn seed_with_divergence_clamped_above_one_behaves_as_full() {
+        let base = archetype_dna(NamedSeed::Grundak);
+        let mut rng_a = ChaCha8Rng::seed_from_u64(7);
+        let mut rng_b = ChaCha8Rng::seed_from_u64(7);
+        // Values above 1.0 must be clamped to 1.0; with same RNG state the
+        // two calls must produce identical results.
+        let clamped = seed_with_divergence(&base, 1.5, &mut rng_a);
+        let full = seed_with_divergence(&base, 1.0, &mut rng_b);
+        assert_eq!(
+            clamped, full,
+            "divergence > 1.0 must be clamped and produce the same result as 1.0"
+        );
     }
 
     #[test]

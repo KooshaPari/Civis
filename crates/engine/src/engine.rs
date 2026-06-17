@@ -1445,6 +1445,11 @@ impl Simulation {
     /// Effective carrying capacity: a baseline plus a bonus per research tier.
     /// Tech raises how many people the land sustains, which eases staple prices
     /// in [`Simulation::phase_economy`] (research → economy coupling).
+    ///
+    /// The result is further scaled by [`biome_capacity_factor`], so a
+    /// desert-heavy planet has lower food carrying capacity → higher food prices
+    /// → higher unrest → reflected in `branching_sigma` / `diplomacy_tension`
+    /// (biome → emergence coupling, FR-CIV-0410).
     fn carrying_capacity(&self) -> i64 {
         const POP_BASELINE: i64 = 1_000_000;
         const CAPACITY_PER_TIER: i64 = 200_000;
@@ -1458,8 +1463,11 @@ impl Simulation {
         if self.state.tech_unlocks & TECH_SANITATION != 0 {
             cap = cap.saturating_add(SANITATION_BONUS);
         }
-        cap
+        // Apply biome composition multiplier — deterministic, clamped [0.25, 1.5].
+        let factor = biome_capacity_factor(&GeologyMap::seed(self.planet()));
+        ((cap as f64) * factor as f64) as i64
     }
+
 
     /// Accumulated faith/belief, generated each tick by [`Simulation::phase_belief`]
     /// from the worshipping population and spent on divine powers.
@@ -4717,6 +4725,57 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
 }
 
 // ============================================================================
+// BIOME → FOOD CAPACITY COUPLING  (FR-CIV-0410)
+// ============================================================================
+
+/// Per-biome food-yield weights used by [`biome_capacity_factor`].
+///
+/// Weights reflect how productive each biome is as a food source:
+/// - **Forest / Plains** — high biological productivity, arable soil.
+/// - **Ocean** — moderate; fishing yields meaningful but not maximal food.
+/// - **Mountain** — limited flat arable land, alpine crops only.
+/// - **Tundra** — permafrost, very short growing season.
+/// - **Desert** — minimal precipitation, near-zero natural food yield.
+/// - **Enriched variants** (Savanna, Grassland, Rainforest, etc.) get
+///   sensible defaults: Savanna/Grassland ≈ Plains, Rainforest ≈ Forest,
+///   Beach/Wetland ≈ Ocean, Taiga ≈ Tundra, Glacier ≈ Desert.
+fn biome_yield_weight(biome: &BiomeKind) -> f32 {
+    match biome {
+        BiomeKind::Forest => 1.3,
+        BiomeKind::Rainforest => 1.3,
+        BiomeKind::Plains => 1.2,
+        BiomeKind::Grassland => 1.2,
+        BiomeKind::Savanna => 1.1,
+        BiomeKind::Ocean => 0.7,
+        BiomeKind::Beach => 0.7,
+        BiomeKind::Wetland => 0.7,
+        BiomeKind::Mountain => 0.8,
+        BiomeKind::Tundra => 0.5,
+        BiomeKind::Taiga => 0.5,
+        BiomeKind::Desert => 0.4,
+        BiomeKind::Glacier => 0.3,
+    }
+}
+
+/// Derive a food-yield multiplier from the planet's biome composition.
+///
+/// Returns the mean per-region yield weight clamped to `[0.25, 1.5]`.
+/// With a balanced Earth-like map the factor is ~0.9–1.0 (near no-op).
+/// A desert/tundra-heavy planet drops toward 0.4; a lush forest/plains
+/// planet rises toward 1.2–1.3.  Returns `1.0` (neutral) for an empty map.
+///
+/// This function is the bridge in the **biome → carrying_capacity →
+/// food prices → unrest → emergence** chain (FR-CIV-0410).
+pub(crate) fn biome_capacity_factor(map: &GeologyMap) -> f32 {
+    if map.regions.is_empty() {
+        return 1.0;
+    }
+    let sum: f32 = map.regions.iter().map(|r| biome_yield_weight(&r.biome)).sum();
+    let mean = sum / map.regions.len() as f32;
+    mean.clamp(0.25, 1.5)
+}
+
+// ============================================================================
 // TESTS
 // ============================================================================
 
@@ -7574,6 +7633,79 @@ mod tests {
         assert!(
             sim.carrying_capacity() > base_capacity,
             "research should raise carrying capacity"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // FR-CIV-0410 — biome composition modulates food carrying capacity
+    // ------------------------------------------------------------------
+
+    /// FR-CIV-0410-a — biome_capacity_factor for a default (Earth-like) planet
+    /// is within the clamped band and finite.
+    #[test]
+    fn biome_capacity_factor_in_band() {
+        let (planet, _moon) = civ_planet::defaults_earthlike();
+        let map = GeologyMap::seed(&planet);
+        let factor = biome_capacity_factor(&map);
+        assert!(
+            factor.is_finite(),
+            "factor must be finite, got {factor}"
+        );
+        assert!(
+            (0.25..=1.5).contains(&factor),
+            "factor {factor} outside clamped band [0.25, 1.5]"
+        );
+    }
+
+    /// FR-CIV-0410-b — a Desert/Tundra-heavy map yields a strictly lower
+    /// factor than a Forest/Plains-heavy map (biome scarcity ordering).
+    #[test]
+    fn biome_capacity_lowers_for_harsh_planet() {
+        use civ_planet::{BiomeKind, GeologyMap, RegionBiome};
+
+        let lush_map = GeologyMap {
+            regions: (0..16)
+                .map(|i| RegionBiome {
+                    region_id: i,
+                    biome: if i % 2 == 0 {
+                        BiomeKind::Forest
+                    } else {
+                        BiomeKind::Plains
+                    },
+                })
+                .collect(),
+        };
+        let harsh_map = GeologyMap {
+            regions: (0..16)
+                .map(|i| RegionBiome {
+                    region_id: i,
+                    biome: if i % 2 == 0 {
+                        BiomeKind::Desert
+                    } else {
+                        BiomeKind::Tundra
+                    },
+                })
+                .collect(),
+        };
+
+        let lush_factor = biome_capacity_factor(&lush_map);
+        let harsh_factor = biome_capacity_factor(&harsh_map);
+        assert!(
+            harsh_factor < lush_factor,
+            "harsh factor {harsh_factor} should be < lush factor {lush_factor}"
+        );
+    }
+
+    /// FR-CIV-0410-c — carrying_capacity on a default Simulation is finite and > 0
+    /// (sanity that the biome multiply didn't zero-out or overflow capacity).
+    #[test]
+    fn carrying_capacity_respects_biome() {
+        let sim = Simulation::with_seed(42);
+        let cap = sim.carrying_capacity();
+        assert!(cap > 0, "carrying_capacity must be positive, got {cap}");
+        assert!(
+            cap < i64::MAX / 2,
+            "carrying_capacity overflow guard failed: {cap}"
         );
     }
 

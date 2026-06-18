@@ -1402,13 +1402,22 @@ impl Simulation {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
-            if birth_window && civilian.age > 18 && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
-            {
-                let child_id = self.next_civilian_id;
-                self.next_civilian_id += 1;
-                let x = pos.coord.x as f32 / FIXED_SCALE as f32;
-                let y = pos.coord.z as f32 / FIXED_SCALE as f32;
-                births.push((child_id, x, y));
+            if birth_window && civilian.age > 18 {
+                // FR-CORE-004 partial: materialize the draw, then compare against
+                // a threshold derived from the birth chance. Recorded to the
+                // replay log so stochastic birth outcomes can be cross-checked.
+                let draw = self.rng.gen::<u64>();
+                self.replay_log
+                    .record_rng_draw(self.state.tick, "citizen.birth", draw);
+                let threshold = (u64::MAX as f64 * birth_chance.clamp(0.0, 1.0)) as u64;
+                if draw < threshold
+                {
+                    let child_id = self.next_civilian_id;
+                    self.next_civilian_id += 1;
+                    let x = pos.coord.x as f32 / FIXED_SCALE as f32;
+                    let y = pos.coord.z as f32 / FIXED_SCALE as f32;
+                    births.push((child_id, x, y));
+                }
             }
         }
 
@@ -1557,7 +1566,12 @@ impl Simulation {
         }
         let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
         let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
+        // FR-CORE-004 partial: materialize the random u64 before the threshold
+        // check, then record it for replay cross-validation.
+        let draw = self.rng.gen::<u64>();
+        self.replay_log
+            .record_rng_draw(self.state.tick, "diplomacy.kind", draw);
+        let kind = if draw < (u64::MAX / 5).saturating_mul(3) {
             DiplomacyKind::TradeAgreement
         } else {
             DiplomacyKind::Conflict

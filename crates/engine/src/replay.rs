@@ -89,6 +89,17 @@ pub enum ReplayEvent {
         #[serde(default)]
         bus_json: String,
     },
+    /// Stochastic draw from the engine RNG (FR-CORE-004 partial).
+    ///
+    /// Recorded so a replay session can be cross-checked against the same seed.
+    /// `kind` is a stable label (e.g. `"diplomacy.kind"`, `"citizen.birth"`).
+    /// `value` is the materialized `u64` consumed by the draw — comparisons like
+    /// `value < u64::MAX * p` for `gen_bool(p)` are deterministic across runs.
+    RngDraw {
+        tick: u64,
+        kind: String,
+        value: u64,
+    },
 }
 
 /// Persistent replay log.
@@ -538,6 +549,24 @@ impl ReplayLog {
         Ok(log)
     }
 
+    /// Record a stochastic draw (FR-CORE-004 partial).
+    pub fn record_rng_draw(&mut self, tick: u64, kind: &str, value: u64) {
+        self.events.push(ReplayEvent::RngDraw {
+            tick,
+            kind: kind.to_string(),
+            value,
+        });
+    }
+
+    /// Count [`ReplayEvent::RngDraw`] markers in this log.
+    #[must_use]
+    pub fn rng_draw_event_count(&self) -> usize {
+        self.events
+            .iter()
+            .filter(|e| matches!(e, ReplayEvent::RngDraw { .. }))
+            .count()
+    }
+
     /// Count [`ReplayEvent::Combat`] markers in this log.
     #[must_use]
     pub fn combat_event_count(&self) -> usize {
@@ -580,6 +609,7 @@ impl ReplayLog {
                 ReplayEvent::ModUnloaded { .. } => {}
                 ReplayEvent::SessionSaved { .. } => {}
                 ReplayEvent::ModPermissionViolation { .. } => {}
+                ReplayEvent::RngDraw { .. } => {}
             }
         }
         Ok(())
@@ -618,6 +648,31 @@ mod tests {
         let mut log = ReplayLog::default();
         log.record_session_saved("sess-1", "save-abc", "slot-1", 42, 2048);
         assert_eq!(log.session_saved_bus_at_tick(42).len(), 1);
+    }
+
+    #[test]
+    fn rng_draw_records_event_and_counts() {
+        let mut log = ReplayLog::default();
+        log.record_rng_draw(7, "diplomacy.kind", 42);
+        log.record_rng_draw(8, "citizen.birth", 99);
+        assert_eq!(log.rng_draw_event_count(), 2);
+        let draws: Vec<&ReplayEvent> = log
+            .events
+            .iter()
+            .filter(|e| matches!(e, ReplayEvent::RngDraw { .. }))
+            .collect();
+        assert_eq!(draws.len(), 2);
+    }
+
+    #[test]
+    fn rng_draw_round_trips_through_save_load() {
+        let mut log = ReplayLog::default();
+        log.record_rng_draw(11, "diplomacy.kind", 12345);
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        log.save(file.path()).expect("save replay log");
+        let loaded = ReplayLog::load(file.path()).expect("load replay log");
+        assert_eq!(loaded.events, log.events);
+        assert_eq!(loaded.rng_draw_event_count(), 1);
     }
 
     #[test]

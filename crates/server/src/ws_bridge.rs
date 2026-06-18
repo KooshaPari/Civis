@@ -11,7 +11,7 @@ use axum::{
     body::Bytes,
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        Query, State,
     },
     http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
@@ -45,6 +45,7 @@ use crate::{
         DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     saves::save_archive_path,
+    subscription_filter::{SubscriptionFilter, WsConnectQuery},
     voxel_frame_builder::build_voxel_delta_frame,
 };
 
@@ -134,7 +135,22 @@ impl Default for WsBridgeConfig {
     }
 }
 
-type TickBroadcastTx = mpsc::UnboundedSender<Arc<[Message]>>;
+type ClientOutboundTx = mpsc::UnboundedSender<ClientOutbound>;
+
+/// Outbound WebSocket traffic for one connected client.
+enum ClientOutbound {
+    /// Immediate JSON-RPC (or error) text frame.
+    Rpc(Message),
+    /// Shared simulation tick bundle filtered per connection.
+    Tick(Arc<TickBroadcast>),
+}
+
+/// One simulation tick's `Frame3d` bundle shared across connected clients.
+struct TickBroadcast {
+    tick: u64,
+    frames: Arc<[Frame3d]>,
+    encoded: Arc<[Message]>,
+}
 
 fn resolve_session_id() -> String {
     std::env::var("CIVIS_SESSION_ID")
@@ -156,7 +172,7 @@ struct AppState {
     sim: Arc<Mutex<Simulation>>,
     tick: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
-    clients: Arc<Mutex<Vec<TickBroadcastTx>>>,
+    clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
     max_clients: usize,
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
@@ -296,18 +312,28 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(query): Query<WsConnectQuery>,
 ) -> impl IntoResponse {
     let header_role = headers
         .get("x-civis-role")
         .and_then(|value| value.to_str().ok())
         .filter(|role| !role.is_empty())
         .map(str::to_owned);
-    ws.on_upgrade(move |socket| handle_socket(socket, state, header_role))
+    ws.on_upgrade(move |socket| handle_socket(socket, state, header_role, query))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, mut connection_role: Option<String>) {
+async fn handle_socket(
+    socket: WebSocket,
+    state: AppState,
+    mut connection_role: Option<String>,
+    connect_query: WsConnectQuery,
+) {
     let (mut sender, mut receiver) = socket.split();
-    let (tx, mut rx) = mpsc::unbounded_channel::<Arc<[Message]>>();
+    let (tx, mut rx) = mpsc::unbounded_channel::<ClientOutbound>();
+    let subscription_filter = Arc::new(tokio::sync::Mutex::new(
+        SubscriptionFilter::from_connect_query(&connect_query),
+    ));
+    let tick_broadcast_format = state.tick_broadcast_format;
 
     {
         let mut clients = state.clients.lock().await;
@@ -318,11 +344,45 @@ async fn handle_socket(socket: WebSocket, state: AppState, mut connection_role: 
         clients.push(tx.clone());
     }
 
+    let forward_filter = Arc::clone(&subscription_filter);
     let forward = tokio::spawn(async move {
-        while let Some(batch) = rx.recv().await {
-            for msg in batch.iter() {
-                if sender.send(msg.clone()).await.is_err() {
-                    return;
+        while let Some(outbound) = rx.recv().await {
+            match outbound {
+                ClientOutbound::Rpc(msg) => {
+                    if sender.send(msg).await.is_err() {
+                        return;
+                    }
+                }
+                ClientOutbound::Tick(broadcast) => {
+                    let filter = forward_filter.lock().await;
+                    if !filter.is_active() {
+                        for msg in broadcast.encoded.iter() {
+                            if sender.send(msg.clone()).await.is_err() {
+                                return;
+                            }
+                        }
+                        continue;
+                    }
+                    if !filter.should_deliver_tick(broadcast.tick) {
+                        continue;
+                    }
+                    let frames = filter.filter_frames(broadcast.frames.as_ref());
+                    if frames.is_empty() {
+                        continue;
+                    }
+                    let messages =
+                        match encode_tick_broadcast_messages(&frames, tick_broadcast_format) {
+                            Ok(messages) => messages,
+                            Err(err) => {
+                                tracing::error!("tick broadcast encode failed: {err}");
+                                continue;
+                            }
+                        };
+                    for msg in messages {
+                        if sender.send(msg).await.is_err() {
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -331,9 +391,17 @@ async fn handle_socket(socket: WebSocket, state: AppState, mut connection_role: 
     while let Some(msg) = receiver.next().await {
         match msg {
             Ok(Message::Text(text)) => {
-                let response = handle_jsonrpc_text(&text, &state, &mut connection_role).await;
-                let batch: Arc<[Message]> = Arc::from([Message::Text(response)]);
-                if tx.send(batch).is_err() {
+                let response = handle_jsonrpc_text(
+                    &text,
+                    &state,
+                    &mut connection_role,
+                    Arc::clone(&subscription_filter),
+                )
+                .await;
+                if tx
+                    .send(ClientOutbound::Rpc(Message::Text(response)))
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -349,9 +417,15 @@ async fn handle_jsonrpc_text(
     text: &str,
     state: &AppState,
     connection_role: &mut Option<String>,
+    subscription_filter: Arc<tokio::sync::Mutex<SubscriptionFilter>>,
 ) -> String {
     match parse_request(text) {
         Ok(req) => {
+            if let Some(response) =
+                handle_subscription_jsonrpc(&req, state, &subscription_filter).await
+            {
+                return encode_response(&response);
+            }
             if connection_role.is_none() {
                 if let Some(role) = parse_role_param(req.params.as_ref()) {
                     *connection_role = Some(role);
@@ -394,6 +468,32 @@ async fn handle_jsonrpc_text(
             encode_response(&plan.response)
         }
         Err(err) => encode_response(&parse_error_response(text, err)),
+    }
+}
+
+async fn handle_subscription_jsonrpc(
+    req: &crate::jsonrpc::JsonRpcRequest,
+    state: &AppState,
+    subscription_filter: &Arc<tokio::sync::Mutex<SubscriptionFilter>>,
+) -> Option<JsonRpcResponse> {
+    match req.method {
+        JsonRpcMethod::SimSubscribe | JsonRpcMethod::SimUpdateSubscription => {
+            let tick = state.tick.load(Ordering::SeqCst);
+            let mut filter = subscription_filter.lock().await;
+            match filter.apply_subscribe_params(req.params.as_ref(), tick) {
+                Ok(result) => Some(JsonRpcResponse::success(req.id.clone(), result)),
+                Err(error) => Some(JsonRpcResponse::failure(req.id.clone(), error)),
+            }
+        }
+        JsonRpcMethod::SimUnsubscribe => {
+            let mut filter = subscription_filter.lock().await;
+            filter.clear();
+            Some(JsonRpcResponse::success(
+                req.id.clone(),
+                serde_json::json!({ "unsubscribed": true }),
+            ))
+        }
+        _ => None,
     }
 }
 
@@ -958,14 +1058,22 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         let tick = sim.state.tick;
         state.tick.store(tick, Ordering::SeqCst);
         let bundle = build_frame_bundle(&sim)?;
-        Arc::from(
+        let encoded = Arc::from(
             encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
                 .into_boxed_slice(),
-        )
+        );
+        Arc::new(TickBroadcast {
+            tick,
+            frames: Arc::from(bundle),
+            encoded,
+        })
     };
 
     let mut clients = state.clients.lock().await;
-    clients.retain(|tx| tx.send(Arc::clone(&batch)).is_ok());
+    clients.retain(|tx| {
+        tx.send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok()
+    });
     Ok(())
 }
 
@@ -1035,6 +1143,10 @@ mod tests {
             session_id: "test-session".to_string(),
         };
         (dir, state)
+    }
+
+    fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
+        Arc::new(tokio::sync::Mutex::new(SubscriptionFilter::default()))
     }
 
     #[test]
@@ -1635,7 +1747,13 @@ mod tests {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
         let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
-        let text = handle_jsonrpc_text("{not json", &state, &mut connection_role).await;
+        let text = handle_jsonrpc_text(
+            "{not json",
+            &state,
+            &mut connection_role,
+            test_subscription_filter(),
+        )
+        .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("error response json");
         assert_eq!(value.get("jsonrpc").and_then(|v| v.as_str()), Some("2.0"));
         assert_eq!(value.get("id"), Some(&serde_json::Value::Null));
@@ -1658,6 +1776,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":7,"method":"sim.status","params":{}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.status json");
@@ -1700,6 +1819,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":8,"method":"sim.snapshot","params":{}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.snapshot json");
@@ -1740,6 +1860,57 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(4)
         );
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let mut connection_role = None;
+        let filter = test_subscription_filter();
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":11,"method":"sim.subscribe","params":{"frame_kinds":["climate"]}}"#,
+            &state,
+            &mut connection_role,
+            Arc::clone(&filter),
+        )
+        .await;
+        let value: serde_json::Value = serde_json::from_str(&text).expect("subscribe json");
+        assert_eq!(value.pointer("/result/subscribed"), Some(&serde_json::json!(true)));
+        assert_eq!(
+            value.pointer("/result/filter_active"),
+            Some(&serde_json::json!(true))
+        );
+        let bundle = sample_frame_bundle();
+        let guard = filter.lock().await;
+        assert_eq!(guard.filter_frames(&bundle).len(), 1);
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let mut connection_role = None;
+        let filter = test_subscription_filter();
+        let subscribe = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":12,"method":"sim.subscribe","params":{"frame_kinds":["climate"]}}"#,
+            &state,
+            &mut connection_role,
+            Arc::clone(&filter),
+        )
+        .await;
+        assert!(subscribe.contains("\"subscribed\":true"));
+        let unsubscribe = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":13,"method":"sim.unsubscribe","params":{}}"#,
+            &state,
+            &mut connection_role,
+            Arc::clone(&filter),
+        )
+        .await;
+        assert!(unsubscribe.contains("\"unsubscribed\":true"));
+        let guard = filter.lock().await;
+        assert!(!guard.is_active());
+        assert_eq!(guard.filter_frames(&sample_frame_bundle()).len(), FRAME_BUNDLE_LEN);
     }
 
     #[tokio::test]
@@ -1814,6 +1985,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_policy","params":{"scarcity_multiplier":3.0,"base_consumption_joules":500}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("set_policy json");
@@ -1847,6 +2019,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.set_speed","params":{"multiplier":4}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("set_speed json");
@@ -1870,6 +2043,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":8}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let set_value: serde_json::Value = serde_json::from_str(&set_text).expect("set_speed json");
@@ -1881,6 +2055,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":5,"method":"sim.get_speed"}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let get_value: serde_json::Value = serde_json::from_str(&get_text).expect("get_speed json");
@@ -1901,6 +2076,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick","role":"viewer"}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("forbidden json");
@@ -1930,6 +2106,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":70,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("save.slot json");

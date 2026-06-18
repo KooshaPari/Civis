@@ -1967,3 +1967,157 @@ async fn ws_jsonrpc_save_slot_roundtrip() {
         Some(&serde_json::json!("slot"))
     );
 }
+
+/// Opt-in `sub_filter` query limits tick broadcasts to requested `Frame3d` kinds.
+#[tokio::test]
+async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(31)));
+    let addr = spawn_ws_bridge_with_config(
+        sim,
+        WsBridgeConfig {
+            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
+            max_clients: 2,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::Binary,
+            ..Default::default()
+        },
+    )
+    .await;
+    let url = format!("ws://{addr}/ws?sub_filter=climate");
+
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{"multiplier":0}}"#
+                .into(),
+        ))
+        .await
+        .expect("pause ticks");
+    wait_for_jsonrpc_id(&mut socket, 1).await;
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick"}}"#.into(),
+        ))
+        .await
+        .expect("manual tick");
+
+    let mut command_done = false;
+    let mut climate_frames = 0usize;
+    let mut other_frames = 0usize;
+
+    timeout(Duration::from_secs(3), async {
+        while !command_done || climate_frames == 0 {
+            let frame = socket
+                .next()
+                .await
+                .expect("ws stream open")
+                .expect("ws frame");
+            match frame {
+                Message::Text(text) => {
+                    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+                        if value.get("id") == Some(&serde_json::json!(2)) {
+                            command_done = true;
+                        }
+                    }
+                }
+                Message::Binary(bytes) if bytes.starts_with(FRAME3D_BINARY_MAGIC) => {
+                    let decoded = decode_frame3d_binary(&bytes).expect("F3D0 frame");
+                    if matches!(decoded, Frame3d::Climate(_)) {
+                        climate_frames += 1;
+                    } else {
+                        other_frames += 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+    })
+    .await
+    .expect("filtered tick broadcast timeout");
+
+    assert!(command_done, "sim.command should complete");
+    assert_eq!(climate_frames, 1, "expected one climate frame");
+    assert_eq!(other_frames, 0, "filtered client should not receive other kinds");
+}
+
+/// `sim.subscribe` over JSON-RPC applies the same per-connection frame filter.
+#[tokio::test]
+async fn ws_sim_subscribe_limits_tick_broadcast_frames() {
+    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(32)));
+    let addr = spawn_ws_bridge_with_config(
+        sim,
+        WsBridgeConfig {
+            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
+            max_clients: 2,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::Binary,
+            ..Default::default()
+        },
+    )
+    .await;
+    let url = format!("ws://{addr}/ws");
+
+    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.subscribe","params":{"frame_kinds":["event_feed"]}}"#
+                .into(),
+        ))
+        .await
+        .expect("subscribe");
+    wait_for_jsonrpc_id(&mut socket, 1).await;
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":2,"method":"sim.set_speed","params":{"multiplier":0}}"#.into(),
+        ))
+        .await
+        .expect("pause ticks");
+    wait_for_jsonrpc_id(&mut socket, 2).await;
+
+    socket
+        .send(Message::Text(
+            r#"{"jsonrpc":"2.0","id":3,"method":"sim.command","params":{"action":"tick"}}"#.into(),
+        ))
+        .await
+        .expect("manual tick");
+
+    let mut command_done = false;
+    let mut event_frames = 0usize;
+
+    timeout(Duration::from_secs(3), async {
+        while !command_done || event_frames == 0 {
+            let frame = socket
+                .next()
+                .await
+                .expect("ws stream open")
+                .expect("ws frame");
+            match frame {
+                Message::Text(text) => {
+                    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+                        if value.get("id") == Some(&serde_json::json!(3)) {
+                            command_done = true;
+                        }
+                    }
+                }
+                Message::Binary(bytes) if bytes.starts_with(FRAME3D_BINARY_MAGIC) => {
+                    let decoded = decode_frame3d_binary(&bytes).expect("F3D0 frame");
+                    if matches!(decoded, Frame3d::EventFeed(_)) {
+                        event_frames += 1;
+                    } else {
+                        panic!("unexpected filtered frame: {decoded:?}");
+                    }
+                }
+                _ => {}
+            }
+        }
+    })
+    .await
+    .expect("subscribe-filtered tick broadcast timeout");
+
+    assert!(command_done, "sim.command should complete");
+    assert_eq!(event_frames, 1);
+}

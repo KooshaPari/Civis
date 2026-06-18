@@ -146,13 +146,13 @@ impl SubscriptionFilter {
 
     /// Whether this connection requested filtered/decimated delivery.
     #[must_use]
-    pub fn is_active(self) -> bool {
+    pub fn is_active(&self) -> bool {
         self.active
     }
 
     /// Whether a tick broadcast should be delivered on this connection.
     #[must_use]
-    pub fn should_deliver_tick(self, tick: u64) -> bool {
+    pub fn should_deliver_tick(&self, tick: u64) -> bool {
         if !self.active || self.tick_stride <= 1 {
             return true;
         }
@@ -161,7 +161,7 @@ impl SubscriptionFilter {
 
     /// Return the subset of frames allowed by this filter (cloned).
     #[must_use]
-    pub fn filter_frames(self, frames: &[Frame3d]) -> Vec<Frame3d> {
+    pub fn filter_frames(&self, frames: &[Frame3d]) -> Vec<Frame3d> {
         if !self.active {
             return frames.to_vec();
         }

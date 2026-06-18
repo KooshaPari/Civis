@@ -1426,6 +1426,21 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
+        JsonRpcMethod::SimSubscribe
+        | JsonRpcMethod::SimUpdateSubscription
+        | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
+            response: JsonRpcResponse::failure(
+                req.id,
+                JsonRpcError {
+                    code: error_code::INTERNAL_ERROR,
+                    message:
+                        "sim.subscribe/unsubscribe require an active WebSocket connection"
+                            .to_owned(),
+                    data: None,
+                },
+            ),
+            effect: DispatchEffect::None,
+        },
     }
 }
 

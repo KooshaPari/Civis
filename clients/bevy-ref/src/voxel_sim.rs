@@ -140,6 +140,80 @@ mod chunk_exposure_tests {
     }
 }
 
+/// Tests that the blocky (cubic) mesher path no longer emits boundary faces when the
+/// neighboring chunk is solid.  The fix is structural (smooth mesher always used in
+/// Smooth mode), so we verify the *routing* decision: `should_use_smooth_mesh` must
+/// return `true` in Smooth mode regardless of distance, ensuring the apron-aware
+/// smooth path is chosen and no cross-chunk phantom-air seam can form.
+#[cfg(test)]
+mod terrain_fragmentation_tests {
+    use super::{should_use_smooth_mesh, CHUNK_EDGE};
+    use crate::voxel_smooth_mesher::TerrainMesherMode;
+    use civ_voxel::ChunkId;
+
+    /// In Smooth mode, every chunk — near or far — must use the smooth (apron-aware)
+    /// mesher.  This is the core contract that fixes terrain fragmentation (#98):
+    /// the cubic mesher has no neighbor apron and produces seam walls at chunk
+    /// boundaries when adjacent chunks are solid.
+    #[test]
+    fn smooth_mode_always_uses_smooth_mesher_regardless_of_distance() {
+        // Simulate a FAR chunk (beyond the old SMOOTH_CUBIC_FALLBACK_DIST=120.0).
+        // Eye at origin; chunk at cx=20 → chunk-centre ≈ 20*32+16 ≈ 656 units away.
+        let far_chunk = ChunkId(((20u64) << 40) | ((1u64) << 16) | (1u64));
+        let eye_at_origin: Option<[f32; 3]> = Some([0.0, 0.0, 0.0]);
+
+        assert!(
+            should_use_smooth_mesh(far_chunk, eye_at_origin, TerrainMesherMode::Smooth),
+            "far chunk in Smooth mode must still use smooth mesher (fix for #98: \
+             cubic mesher has no neighbor apron → phantom-air seams at chunk boundaries)"
+        );
+    }
+
+    /// In Smooth mode, a near chunk also uses the smooth mesher (unchanged).
+    #[test]
+    fn smooth_mode_near_chunk_uses_smooth_mesher() {
+        let near_chunk = ChunkId(((1u64) << 40) | ((0u64) << 16) | (1u64));
+        let eye_nearby: Option<[f32; 3]> = Some([32.0, 0.0, 32.0]);
+
+        assert!(
+            should_use_smooth_mesh(near_chunk, eye_nearby, TerrainMesherMode::Smooth),
+            "near chunk in Smooth mode must use smooth mesher"
+        );
+    }
+
+    /// In Cubic mode, the cubic mesher is used regardless of distance (unchanged).
+    #[test]
+    fn cubic_mode_uses_cubic_mesher() {
+        let any_chunk = ChunkId(((5u64) << 40) | ((2u64) << 16) | (3u64));
+        assert!(
+            !should_use_smooth_mesh(any_chunk, None, TerrainMesherMode::Cubic),
+            "Cubic mode must keep using cubic mesher"
+        );
+    }
+
+    /// Smooth mode with no camera still returns true (no panic on None eye).
+    #[test]
+    fn smooth_mode_no_camera_uses_smooth_mesher() {
+        let chunk = ChunkId(((3u64) << 40) | ((1u64) << 16) | (2u64));
+        assert!(
+            should_use_smooth_mesh(chunk, None, TerrainMesherMode::Smooth),
+            "smooth mode with no camera must still use smooth mesher"
+        );
+    }
+
+    /// Verify the apron constant: SMOOTH_MESH_PADDED_EDGE must be larger than CHUNK_EDGE
+    /// so the 2-voxel apron actually samples neighbor-chunk voxels.
+    #[test]
+    fn padded_edge_larger_than_chunk_edge() {
+        use crate::voxel_smooth_mesher::SMOOTH_MESH_PADDED_EDGE;
+        assert!(
+            SMOOTH_MESH_PADDED_EDGE > CHUNK_EDGE,
+            "SMOOTH_MESH_PADDED_EDGE ({SMOOTH_MESH_PADDED_EDGE}) must exceed \
+             CHUNK_EDGE ({CHUNK_EDGE}) for the neighbor apron to exist"
+        );
+    }
+}
+
 // Playable MVP surface. 256³ = 4096 chunks meshed SYNCHRONOUSLY on load = a
 // multi-minute main-thread freeze (no async/streamed mesh yet). 96³ = 216
 // chunks loads in ~1-2s and is a genuine ~0.2mi² sandbox. Scale back to 256³
@@ -641,7 +715,7 @@ pub fn step_and_remesh(
     }
 }
 
-/// Slice a 16³ chunk from the dense grid, filling out-of-bounds cells with air.
+/// Slice a 32³ chunk from the dense grid, filling out-of-bounds cells with air.
 #[must_use]
 fn slice_chunk(
     grid: &CaGrid,
@@ -741,6 +815,18 @@ fn split_by_material(buf: &MeshBuffer) -> Vec<(MaterialId, MeshBuffer)> {
     groups.into_iter().collect()
 }
 
+/// Returns `true` when the smooth (Surface Nets) mesher should be used for this chunk.
+///
+/// In `Smooth` mode, ALL chunks use the smooth mesher regardless of distance.
+/// The old distance gate (`chunk_distance_from_camera <= smooth_far_distance`) fell back
+/// to the blocky cubic mesher for FAR chunks, but the cubic mesher has no neighbor apron:
+/// it culls boundary faces against phantom air outside the 32³ window, producing visible
+/// seam walls between adjacent chunks — terrain fragmentation bug #98.
+/// The smooth mesher's 2-voxel apron (`slice_chunk_with_apron`) already handles this
+/// correctly, so we keep it active for all distances in Smooth mode.
+/// `compute_chunk_mesh` (async path) already refused to emit cubic in Smooth mode
+/// (line 1078); this function now makes the sync/CA-remesh path (`spawn_chunk_meshes`)
+/// consistent with that behavior.
 fn should_use_smooth_mesh(
     chunk_id: ChunkId,
     camera_eye: Option<[f32; 3]>,
@@ -748,11 +834,11 @@ fn should_use_smooth_mesh(
 ) -> bool {
     match mode {
         TerrainMesherMode::Cubic => false,
+        // Never emit cubic in Smooth mode — no distance cutover.
+        // See doc-comment above for why the old distance gate caused #98.
         TerrainMesherMode::Smooth => {
-            let Some(eye) = camera_eye else {
-                return true;
-            };
-            chunk_distance_from_camera(chunk_id, eye, CHUNK_EDGE as f32) <= smooth_far_distance()
+            let _ = (chunk_id, camera_eye); // intentionally unused: no distance threshold
+            true
         }
     }
 }

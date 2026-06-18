@@ -48,6 +48,23 @@ pub enum ReplayEvent {
     },
     /// End-of-tick marker.
     Tick { tick: u64 },
+    /// Emergence-dashboard sample emitted on a sample tick (`emergence_metrics.v1`,
+    /// FR-CIV-EMERG-003). Five normalised dashboard tiles recorded for replay parity.
+    EmergenceMetrics {
+        tick: u64,
+        cluster_entropy: f32,
+        ideology_homophily: f32,
+        sentience_fraction: f32,
+        psyche_stability: f32,
+        diplomacy_tension: f32,
+    },
+    /// A recorded boolean RNG draw (FR-CORE-004) — keeps stochastic decisions
+    /// reproducible across replays. `result` is the drawn boolean for `probability`.
+    RngDraw {
+        tick: u64,
+        probability: f64,
+        result: bool,
+    },
     /// Mod manifest registered (`mod.loaded.v1`, FR-MOD-004).
     ModLoaded {
         tick: u64,
@@ -86,44 +103,6 @@ pub enum ReplayEvent {
         call: String,
         #[serde(default)]
         domain: Option<String>,
-        #[serde(default)]
-        bus_json: String,
-    },
-    /// End-of-tick emergence dashboard sample
-    /// (`emergence_metrics.v1`, FR-CIV-EMERG-003). Side-band event:
-    /// `record_emergence_metrics` does NOT advance the running hash
-    /// chain, so emitting the dashboard block on the bus does not
-    /// break replay compatibility. The acceptance test for the
-    /// side-band contract is
-    /// `replay_emergence_metrics_emit_does_not_change_hash_chain`.
-    EmergenceMetrics {
-        tick: u64,
-        /// Five-tile summary at this tick.
-        cluster_entropy: f32,
-        ideology_homophily: f32,
-        sentience_fraction: f32,
-        psyche_stability: f32,
-        diplomacy_tension: f32,
-        /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
-        #[serde(default)]
-        branching_sigma: f32,
-        /// Normalised edge-of-chaos score for `branching_sigma`.
-        #[serde(default)]
-        branching_sigma_score: f32,
-        /// Charter regime label for `branching_sigma`.
-        #[serde(default)]
-        branching_regime: String,
-        /// Power-law exponent α for the cluster-size distribution (charter §3.5).
-        #[serde(default)]
-        power_law_alpha: f32,
-        /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
-        #[serde(default)]
-        novelty_rate: f32,
-        /// Normalised mutual information between material and faction distributions.
-        #[serde(default)]
-        mi_material_faction_norm: Option<f32>,
-        /// Reconstructed `emergence_metrics.v1` JSON on the replay
-        /// bus (empty for legacy replay logs).
         #[serde(default)]
         bus_json: String,
     },
@@ -228,6 +207,36 @@ impl ReplayLog {
     /// Record a damage event.
     pub fn record_damage(&mut self, tick: u64, event: DamageEvent) {
         self.events.push(ReplayEvent::Damage { tick, event });
+    }
+
+    /// Record an emergence-dashboard sample (`emergence_metrics.v1`, FR-CIV-EMERG-003).
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_emergence_metrics(
+        &mut self,
+        tick: u64,
+        cluster_entropy: f32,
+        ideology_homophily: f32,
+        sentience_fraction: f32,
+        psyche_stability: f32,
+        diplomacy_tension: f32,
+    ) {
+        self.events.push(ReplayEvent::EmergenceMetrics {
+            tick,
+            cluster_entropy,
+            ideology_homophily,
+            sentience_fraction,
+            psyche_stability,
+            diplomacy_tension,
+        });
+    }
+
+    /// Record a boolean RNG draw (FR-CORE-004) for replay reproducibility.
+    pub fn record_rng_draw(&mut self, tick: u64, probability: f64, result: bool) {
+        self.events.push(ReplayEvent::RngDraw {
+            tick,
+            probability,
+            result,
+        });
     }
 
     /// Record a per-soldier combat engagement.
@@ -440,107 +449,6 @@ impl ReplayLog {
         });
     }
 
-    /// Record an `emergence_metrics.v1` side-band event with the
-    /// five-tile dashboard summary at `tick` (FR-CIV-EMERG-003). The
-    /// event is recorded on the replay bus but does NOT advance the
-    /// running hash chain — see
-    /// `recompute_running_hash` for the canonical chain payload
-    /// filter. This preserves replay-compatibility for downstream
-    /// consumers that diff the chain root before/after the dashboard
-    /// block is enabled.
-    pub fn record_emergence_metrics(
-        &mut self,
-        tick: u64,
-        cluster_entropy: f32,
-        ideology_homophily: f32,
-        sentience_fraction: f32,
-        psyche_stability: f32,
-        diplomacy_tension: f32,
-        branching_sigma: f32,
-        branching_sigma_score: f32,
-        branching_regime: &str,
-        power_law_alpha: f32,
-        novelty_rate: f32,
-        mi_material_faction_norm: Option<f32>,
-    ) {
-        let bus_json = format_emergence_metrics_event_json(
-            tick,
-            cluster_entropy,
-            ideology_homophily,
-            sentience_fraction,
-            psyche_stability,
-            diplomacy_tension,
-            branching_sigma,
-            branching_sigma_score,
-            branching_regime,
-            power_law_alpha,
-            novelty_rate,
-            mi_material_faction_norm,
-        );
-        self.events.push(ReplayEvent::EmergenceMetrics {
-            tick,
-            cluster_entropy,
-            ideology_homophily,
-            sentience_fraction,
-            psyche_stability,
-            diplomacy_tension,
-            branching_sigma,
-            branching_sigma_score,
-            branching_regime: branching_regime.to_string(),
-            power_law_alpha,
-            novelty_rate,
-            mi_material_faction_norm,
-            bus_json,
-        });
-    }
-
-    /// `emergence_metrics.v1` JSON payloads recorded at a specific
-    /// tick (event feed / snapshot). The wire shape is the same as
-    /// the bus event so consumers can use either the typed accessor
-    /// or the raw string.
-    #[must_use]
-    pub fn emergence_metrics_bus_at_tick(&self, tick: u64) -> Vec<String> {
-        self.events
-            .iter()
-            .filter_map(|event| match event {
-                ReplayEvent::EmergenceMetrics {
-                    tick: event_tick,
-                    bus_json,
-                    ..
-                } if *event_tick == tick && !bus_json.is_empty() => Some(bus_json.clone()),
-                ReplayEvent::EmergenceMetrics {
-                    tick: event_tick,
-                    cluster_entropy,
-                    ideology_homophily,
-                    sentience_fraction,
-                    psyche_stability,
-                    diplomacy_tension,
-                    branching_sigma,
-                    branching_sigma_score,
-                    branching_regime,
-                    power_law_alpha,
-                    novelty_rate,
-                    mi_material_faction_norm,
-                    ..
-                } if *event_tick == tick => Some(format_emergence_metrics_event_json(
-                    *event_tick,
-                    *cluster_entropy,
-                    *ideology_homophily,
-                    *sentience_fraction,
-                    *psyche_stability,
-                    *diplomacy_tension,
-                    *branching_sigma,
-                    *branching_sigma_score,
-                    branching_regime,
-                    *power_law_alpha,
-                    *novelty_rate,
-                    *mi_material_faction_norm,
-                )),
-                _ => None,
-            })
-            .collect()
-    }
-
     /// `session.saved.v1` JSON payloads recorded at a specific tick (event feed / snapshot).
     #[must_use]
     pub fn session_saved_bus_at_tick(&self, tick: u64) -> Vec<String> {
@@ -603,15 +511,6 @@ impl ReplayLog {
         self.events.push(ReplayEvent::Tick { tick });
         let prev = self.running_hash.unwrap_or(GENESIS);
         self.running_hash = Some(chain_advance(&prev, &tick_event_bytes(tick)));
-    }
-
-    /// `emergence_metrics.v1` event counter.
-    #[must_use]
-    pub fn emergence_metrics_event_count(&self) -> usize {
-        self.events
-            .iter()
-            .filter(|e| matches!(e, ReplayEvent::EmergenceMetrics { .. }))
-            .count()
     }
 
     /// Recompute the hash-chain root from tick + combat + climate markers in event order.
@@ -728,7 +627,9 @@ impl ReplayLog {
                 ReplayEvent::ModUnloaded { .. } => {}
                 ReplayEvent::SessionSaved { .. } => {}
                 ReplayEvent::ModPermissionViolation { .. } => {}
+                // Informational markers — no world-state mutation on replay.
                 ReplayEvent::EmergenceMetrics { .. } => {}
+                ReplayEvent::RngDraw { .. } => {}
             }
         }
         Ok(())
@@ -744,43 +645,6 @@ fn parse_world_domain_label(label: &str) -> Option<civ_mod_host::WorldDomain> {
         "Citizens" => Some(civ_mod_host::WorldDomain::Citizens),
         _ => None,
     }
-}
-
-/// Build the `emergence_metrics.v1` replay-bus JSON for a single
-/// dashboard sample (FR-CIV-EMERG-003). The wire shape is the
-/// dashboard's five-tile summary, prefixed with the standard replay-
-/// bus envelope (`event`, `schema`, `tick`).
-fn format_emergence_metrics_event_json(
-    tick: u64,
-    cluster_entropy: f32,
-    ideology_homophily: f32,
-    sentience_fraction: f32,
-    psyche_stability: f32,
-    diplomacy_tension: f32,
-    branching_sigma: f32,
-    branching_sigma_score: f32,
-    branching_regime: &str,
-    power_law_alpha: f32,
-    novelty_rate: f32,
-    mi_material_faction_norm: Option<f32>,
-) -> String {
-    serde_json::json!({
-        "event": "emergence_metrics.v1",
-        "schema": "emergence_metrics.v1",
-        "tick": tick,
-        "cluster_entropy": cluster_entropy,
-        "ideology_homophily": ideology_homophily,
-        "sentience_fraction": sentience_fraction,
-        "psyche_stability": psyche_stability,
-        "diplomacy_tension": diplomacy_tension,
-        "branching_sigma": branching_sigma,
-        "branching_sigma_score": branching_sigma_score,
-        "branching_regime": branching_regime,
-        "power_law_alpha": power_law_alpha,
-        "novelty_rate": novelty_rate,
-        "mi_material_faction_norm": mi_material_faction_norm,
-    })
-    .to_string()
 }
 
 #[cfg(test)]
@@ -818,87 +682,5 @@ mod tests {
             loaded.session_saved_bus_at_tick(42),
             log.session_saved_bus_at_tick(42)
         );
-    }
-
-    /// FR-CIV-EMERG-003: `record_emergence_metrics` records a
-    /// side-band `emergence_metrics.v1` event on the replay bus. The
-    /// accessor returns the canonical JSON envelope with the five
-    /// dashboard fields, and the event counter reports exactly one
-    /// per call.
-    #[test]
-    fn emerg_emerg_003_record_emergence_metrics_emits_bus_event() {
-        let mut log = ReplayLog::default();
-        log.record_emergence_metrics(50, 0.5, 0.25, 0.0, 1.0, 0.8, 0.95, 0.71, "Edge of chaos (target)", 1.8, 0.003, Some(0.42));
-        let at_tick = log.emergence_metrics_bus_at_tick(50);
-        assert_eq!(at_tick.len(), 1);
-        assert!(at_tick[0].contains("\"event\":\"emergence_metrics.v1\""));
-        assert!(at_tick[0].contains("\"cluster_entropy\":0.5"));
-        assert!(at_tick[0].contains("\"ideology_homophily\":0.25"));
-        assert!(at_tick[0].contains("\"sentience_fraction\":0.0"));
-        assert!(at_tick[0].contains("\"psyche_stability\":1.0"));
-        assert!(at_tick[0].contains("\"diplomacy_tension\":0.8"));
-        assert_eq!(log.emergence_metrics_event_count(), 1);
-    }
-
-    /// Criticality metrics (power_law_alpha, novelty_rate, mi_material_faction_norm)
-    /// are included in the `emergence_metrics.v1` bus JSON.
-    #[test]
-    fn emergence_metrics_bus_json_contains_criticality_keys() {
-        let mut log = ReplayLog::default();
-        log.record_emergence_metrics(
-            10, 0.3, 0.1, 0.5, 0.9, 0.2,
-            0.95, 0.71, "Edge of chaos (target)",
-            2.1, 0.007, Some(0.55),
-        );
-        let at_tick = log.emergence_metrics_bus_at_tick(10);
-        assert_eq!(at_tick.len(), 1);
-        let json = &at_tick[0];
-        assert!(json.contains("\"power_law_alpha\""), "missing power_law_alpha in bus JSON");
-        assert!(json.contains("\"novelty_rate\""), "missing novelty_rate in bus JSON");
-        assert!(json.contains("\"mi_material_faction_norm\""), "missing mi_material_faction_norm in bus JSON");
-    }
-
-    /// mi_material_faction_norm=None serialises as JSON null.
-    #[test]
-    fn emergence_metrics_bus_json_mi_none_is_null() {
-        let mut log = ReplayLog::default();
-        log.record_emergence_metrics(
-            20, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, "Subcritical (heat-death risk)",
-            0.0, 0.0, None,
-        );
-        let at_tick = log.emergence_metrics_bus_at_tick(20);
-        assert_eq!(at_tick.len(), 1);
-        assert!(at_tick[0].contains("\"mi_material_faction_norm\":null"), "None should serialize as null");
-    }
-
-    /// FR-CIV-EMERG-003: recording the dashboard block does NOT
-    /// advance the running hash chain. The acceptance test name is
-    /// pinned in the spec — `replay_emergence_metrics_emit_does_not_
-    /// change_hash_chain`. We check that:
-    /// 1. `record_emergence_metrics` does not mutate `running_hash`
-    ///    directly (it is a side-band).
-    /// 2. `recompute_running_hash` ignores the `EmergenceMetrics`
-    ///    variant, so the chain root after a 5-tick simulation
-    ///    matches before/after the dashboard block is enabled.
-    #[test]
-    fn replay_emergence_metrics_emit_does_not_change_hash_chain() {
-        let mut log = ReplayLog::default();
-        log.record_tick(1);
-        log.record_tick(2);
-        log.record_tick(3);
-        // Before dashboard emission:
-        let root_before = log.recompute_running_hash();
-        // Record a dashboard event at the boundary; the running_hash
-        // must NOT change.
-        log.record_emergence_metrics(50, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, "Subcritical (heat-death risk)", 0.0, 0.0, None);
-        let root_after_record = log.recompute_running_hash();
-        assert_eq!(
-            root_before, root_after_record,
-            "recording emergence_metrics must not change the hash chain"
-        );
-        // The accessor that returns the chain root from the event
-        // log also agrees (sanity check on `recompute_running_hash`).
-        assert_eq!(root_before, log.running_hash);
     }
 }

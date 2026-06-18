@@ -14,7 +14,10 @@ mod allocation;
 mod institution;
 mod market;
 
-pub use allocation::{AllocationEngine, CapitalistAllocator};
+pub use allocation::{
+    subsistence_first_allocate, AgentNeed, AllocationOutcome, AllocationEngine, CapitalistAllocator,
+    GoodId, NeedKind,
+};
 pub use institution::{
     step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,

@@ -20,7 +20,7 @@ pub use institution::{
     InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
     INSTITUTION_TREASURY,
 };
-pub use market::MarketState;
+pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
 
 use serde::{Deserialize, Serialize};
 

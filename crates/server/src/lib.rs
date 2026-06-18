@@ -10,9 +10,16 @@
 
 pub mod jsonrpc;
 pub mod saves;
+/// Per-connection subscription filter for tick-broadcast frames
+/// (FR-PROTO-005: region / frame_kinds).
+pub mod subscription_filter;
 pub mod voxel_frame_builder;
 /// WebSocket bridge and health endpoint for streaming 3D protocol frames.
 pub mod ws_bridge;
+
+pub use subscription_filter::{
+    filter_frames, AgentPositionMap, FrameKind, Region, SubscriptionError, SubscriptionFilter,
+};
 
 pub use jsonrpc::{
     dispatch_request, encode_response, error_code, forbidden_operator_role_error,

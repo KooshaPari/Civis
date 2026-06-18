@@ -21,12 +21,20 @@
       "detail": ""
     },
     "civis_3d_verify": {
-      "status": "fail",
-      "detail": "exit 1"
+      "status": "pass",
+      "detail": ""
     },
     "web_test": {
       "status": "pass",
       "detail": ""
+    },
+    "unreal_preflight": {
+      "status": "skip",
+      "detail": "optional UE gate"
+    },
+    "unreal_build": {
+      "status": "skip",
+      "detail": "optional UE gate"
     }
   },
   "manifest_hash": "12c0cde49550392b31b356ce92acb6d365a44a4a39e694d6b8d5a5c33719e9e7",

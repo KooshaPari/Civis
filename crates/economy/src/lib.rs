@@ -218,6 +218,68 @@ pub fn step(state: &mut EconomyState) {
     state.tick = state.tick.saturating_add(1);
 }
 
+/// Post an institution↔institution joule transfer.
+///
+/// Thin convenience wrapper over [`InstitutionLedger::post`] that takes
+/// [`InstitutionId`]s directly (no [`LedgerSide`] plumbing) and returns the
+/// resulting [`InstitutionPosting`] on success. The macro joule budget is
+/// untouched — for macro↔institution transfers, call [`InstitutionLedger::post`]
+/// directly with a [`LedgerSide::Macro`] leg.
+///
+/// Use this from the engine to exercise the institution ledger end-to-end
+/// (e.g. `phase_economy` posting a per-tick treasury→market fee). The
+/// institution ledger is otherwise dormant — [`step`] only seeds defaults.
+pub fn transfer_joules(
+    state: &mut EconomyState,
+    from: InstitutionId,
+    to: InstitutionId,
+    joules: i64,
+) -> Result<InstitutionPosting, InstitutionLedgerError> {
+    if state.institutions.accounts.is_empty() {
+        state.institutions = institution::InstitutionLedger::with_defaults();
+    }
+    // Move the ledger out so we can pass `&mut state` and `&mut self` together
+    // (the underlying `post` borrows both). Same pattern as `step` above.
+    let mut institutions = std::mem::take(&mut state.institutions);
+    let result = institutions.post(
+        state,
+        LedgerSide::Institution(from),
+        LedgerSide::Institution(to),
+        joules,
+    );
+    state.institutions = institutions;
+    result?;
+    Ok(state
+        .institutions
+        .postings
+        .last()
+        .expect("posting was just pushed")
+        .clone())
+}
+
+/// Verify both layers of the economy (macro joule budget + institution ledger)
+/// in a single call. Returns the first violation encountered, macro first.
+pub fn verify_economy_invariants(
+    state: &EconomyState,
+) -> Result<(), EconomyInvariantError> {
+    if let Err(err) = verify_ledger_conservation(state) {
+        return Err(EconomyInvariantError::Macro(err));
+    }
+    if let Err(err) = state.institutions.verify_conservation() {
+        return Err(EconomyInvariantError::Institution(err));
+    }
+    Ok(())
+}
+
+/// Combined macro + institution invariant violation (see [`verify_economy_invariants`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EconomyInvariantError {
+    /// Macro joule budget or macro ledger violation.
+    Macro(LedgerInvariantError),
+    /// Institution ledger violation.
+    Institution(InstitutionLedgerError),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -456,6 +518,104 @@ mod tests {
                 state.institutions.institution_balance(INSTITUTION_MARKET) >= 0,
                 "market went negative"
             );
+        }
+    }
+
+    /// `transfer_joules` is the public institution↔institution transfer API.
+    /// It seeds defaults lazily, debits the source, credits the destination,
+    /// and returns the resulting posting — without touching the macro joule
+    /// budget.
+    #[test]
+    fn transfer_joules_moves_joules_between_institutions() {
+        use crate::institution::InstitutionLedger;
+        let mut state = EconomyState::with_energy_budget(100);
+        // Seed and fund Treasury from the macro budget. Market is lazy-seeded
+        // by `transfer_joules` itself, so we don't pre-fund it.
+        let mut ledger = InstitutionLedger::with_defaults();
+        ledger
+            .post(
+                &mut state,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_TREASURY),
+                100,
+            )
+            .unwrap();
+        state.institutions = ledger;
+
+        // First `transfer_joules` call lazy-seeds defaults. We drain to
+        // verify the path.
+        let macro_before = state.energy_budget_joules;
+        let posting = transfer_joules(&mut state, INSTITUTION_TREASURY, INSTITUTION_MARKET, 40)
+            .expect("transfer");
+        assert_eq!(posting.amount, 40);
+        assert_eq!(
+            posting.debit,
+            LedgerSide::Institution(INSTITUTION_TREASURY)
+        );
+        assert_eq!(posting.credit, LedgerSide::Institution(INSTITUTION_MARKET));
+        assert_eq!(posting.tick, 0);
+        assert_eq!(state.energy_budget_joules, macro_before);
+        assert_eq!(
+            state.institutions.institution_balance(INSTITUTION_TREASURY),
+            60
+        );
+        assert_eq!(
+            state.institutions.institution_balance(INSTITUTION_MARKET),
+            40
+        );
+        verify_economy_invariants(&state).expect("end-to-end conservation");
+    }
+
+    /// `transfer_joules` rejects self-transfers (same institution on both sides).
+    #[test]
+    fn transfer_joules_rejects_self_transfer() {
+        let mut state = EconomyState::with_energy_budget(0);
+        let err = transfer_joules(&mut state, INSTITUTION_TREASURY, INSTITUTION_TREASURY, 10)
+            .expect_err("self-transfer rejected");
+        assert_eq!(
+            err,
+            InstitutionLedgerError::SelfPosting {
+                side: LedgerSide::Institution(INSTITUTION_TREASURY),
+                amount: 10,
+            }
+        );
+        assert!(state.institutions.postings.is_empty());
+    }
+
+    /// `transfer_joules` rejects over-debit (source balance too small).
+    #[test]
+    fn transfer_joules_rejects_overdebit() {
+        let mut state = EconomyState::with_energy_budget(0);
+        // Treasury defaults to 0 — a 10-joule debit must fail.
+        let err = transfer_joules(&mut state, INSTITUTION_TREASURY, INSTITUTION_MARKET, 10)
+            .expect_err("insufficient treasury");
+        assert_eq!(
+            err,
+            InstitutionLedgerError::NegativeInstitutionBalance {
+                id: INSTITUTION_TREASURY,
+                before: 0,
+                requested: 10,
+            }
+        );
+    }
+
+    /// `verify_economy_invariants` reports macro-side violations first, then
+    /// institution-side ones, when both layers are dirty.
+    #[test]
+    fn verify_economy_invariants_reports_macro_violation_first() {
+        let mut state = EconomyState::with_energy_budget(-1);
+        // Hand-craft a self-posting in the institution layer too.
+        state.institutions.postings.push(InstitutionPosting {
+            tick: 0,
+            debit: LedgerSide::Institution(INSTITUTION_TREASURY),
+            credit: LedgerSide::Institution(INSTITUTION_TREASURY),
+            amount: 1,
+        });
+        match verify_economy_invariants(&state) {
+            Err(EconomyInvariantError::Macro(LedgerInvariantError::NegativeBudget { budget })) => {
+                assert_eq!(budget, -1);
+            }
+            other => panic!("expected macro violation, got {other:?}"),
         }
     }
 }

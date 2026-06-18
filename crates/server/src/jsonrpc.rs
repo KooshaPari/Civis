@@ -1087,6 +1087,73 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
+        JsonRpcMethod::SaveSlot => match parse_slot_name_params(req.params.as_ref()) {
+            Ok(slot_name) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "saved": true, "slot_name": slot_name }),
+                ),
+                effect: DispatchEffect::SaveSlot { slot_name },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::LoadSlot => match parse_slot_name_params(req.params.as_ref()) {
+            Ok(slot_name) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "loaded": true, "slot_name": slot_name }),
+                ),
+                effect: DispatchEffect::LoadSlot { slot_name },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::SaveList => match ctx.saves_dir.as_deref() {
+            Some(dir) => match list_saves(dir) {
+                Ok(entries) => DispatchPlan {
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::to_value(entries).unwrap_or(Value::Array(vec![])),
+                    ),
+                    effect: DispatchEffect::None,
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
+                    effect: DispatchEffect::None,
+                },
+            },
+            None => DispatchPlan {
+                response: JsonRpcResponse::failure(
+                    req.id,
+                    JsonRpcError {
+                        code: error_code::INTERNAL_ERROR,
+                        message: "Save directory unavailable".to_owned(),
+                        data: None,
+                    },
+                ),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::SimSubscribe
+        | JsonRpcMethod::SimUpdateSubscription
+        | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
+            response: JsonRpcResponse::failure(
+                req.id,
+                JsonRpcError {
+                    code: error_code::INTERNAL_ERROR,
+                    message:
+                        "sim.subscribe/unsubscribe require an active WebSocket connection"
+                            .to_owned(),
+                    data: None,
+                },
+            ),
+            effect: DispatchEffect::None,
+        },
     }
 }
 

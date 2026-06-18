@@ -174,7 +174,7 @@ impl SubscriptionFilter {
 
     fn subscribe_result(&self, current_tick: u64) -> Value {
         let kinds: Vec<&str> = if self.active {
-            let mut names: Vec<&str> = self.kinds.iter().map(FrameKind::wire_name).collect();
+            let mut names: Vec<&str> = self.kinds.iter().map(|kind| kind.wire_name()).collect();
             names.sort_unstable();
             names
         } else {

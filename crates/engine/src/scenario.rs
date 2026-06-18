@@ -129,6 +129,26 @@ pub struct Scenario {
     /// (32 civilians × 4 factions, 2500 grid-unit spread).
     #[serde(default)]
     pub starting_conditions: ScenarioStartingConditions,
+    /// Per-institution tax rates (FR-ECON-004). Applied each tick in `phase_economy`
+    /// before the consumption drain, debiting `Macro(ACCOUNT_ENERGY_BUDGET)` and
+    /// crediting each named institution.
+    #[serde(default)]
+    pub taxation: ScenarioTaxation,
+}
+
+/// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
+/// `rates_bp` is institution_id → basis-points rate (0..=10_000). Use
+/// [`INSTITUTION_TREASURY`] and [`INSTITUTION_MARKET`] as the canonical
+/// institutions. `per_institution_cap` (if set) clamps any single tick's
+/// collection per institution.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ScenarioTaxation {
+    /// institution_id (e.g. `INSTITUTION_TREASURY`) → basis-points rate.
+    #[serde(default)]
+    pub rates_bp: std::collections::BTreeMap<i64, u32>,
+    /// Single-tick ceiling per institution (joules); `None` means uncapped.
+    #[serde(default)]
+    pub per_institution_cap: Option<i64>,
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -242,6 +262,7 @@ impl Scenario {
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
         sim.apply_scenario_military(&self.military);
+        sim.apply_scenario_taxation(&self.taxation);
         sim.register_mod_stubs(&self.mods);
         // Content seeds: load any referenced RON files into the library and
         // pin the active seed id (FR-CONTENT-MODEL / CIV-008). Unknown ids
@@ -462,6 +483,7 @@ mod tests {
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -598,6 +620,7 @@ mods:
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
         };
 
         let mut zero_scarcity = base.clone();

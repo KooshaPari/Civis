@@ -3026,13 +3026,22 @@ impl Simulation {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
-            if birth_window && civilian.age > 18 && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
-            {
-                let child_id = self.next_civilian_id;
-                self.next_civilian_id += 1;
-                let x = pos.coord.x as f32 / FIXED_SCALE as f32;
-                let y = pos.coord.z as f32 / FIXED_SCALE as f32;
-                births.push((child_id, x, y));
+            if birth_window && civilian.age > 18 {
+                // FR-CORE-004 partial: materialize the draw, then compare against
+                // a threshold derived from the birth chance. Recorded to the
+                // replay log so stochastic birth outcomes can be cross-checked.
+                let draw = self.rng.gen::<u64>();
+                self.replay_log
+                    .record_rng_draw(self.state.tick, "citizen.birth", draw);
+                let threshold = (u64::MAX as f64 * birth_chance.clamp(0.0, 1.0)) as u64;
+                if draw < threshold
+                {
+                    let child_id = self.next_civilian_id;
+                    self.next_civilian_id += 1;
+                    let x = pos.coord.x as f32 / FIXED_SCALE as f32;
+                    let y = pos.coord.z as f32 / FIXED_SCALE as f32;
+                    births.push((child_id, x, y));
+                }
             }
         }
 
@@ -3224,7 +3233,11 @@ impl Simulation {
         // OUTCOME EMERGE from faction wealth rather than a coin flip: a large
         // treasury disparity breeds conflict (have-nots clash with haves);
         // near-peers find it cheaper to trade (FR-CIV-0100 §3).
-        let _entropy = self.rng.gen_bool(0.6);
+        // FR-CORE-004 partial: record the draw to the replay log so the entropy
+        // consumed at this stochastic step is cross-validated on replay.
+        let draw = self.rng.gen::<u64>();
+        self.replay_log
+            .record_rng_draw(self.state.tick, "diplomacy.kind", draw);
         let treasury_a = self
             .state
             .faction_treasury

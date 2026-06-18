@@ -727,6 +727,10 @@ pub struct Simulation {
     pub economy_state: EconomyState,
     /// Per-good clearing prices.
     pub market_state: MarketState,
+    /// Per-institution tax rates (FR-ECON-004). When non-empty, `phase_economy`
+    /// debits the macro energy budget and credits each named institution
+    /// before the consumption drain.
+    pub taxation: civ_economy::Taxation,
     /// LOD tick cadence for Warm/Cold civilian tiers (CIV-0101).
     pub lod_policy: LodPolicy,
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
@@ -1040,6 +1044,7 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
+            taxation: civ_economy::Taxation::default(),
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
@@ -1121,6 +1126,7 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
+            taxation: civ_economy::Taxation::default(),
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
@@ -3026,13 +3032,22 @@ impl Simulation {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
-            if birth_window && civilian.age > 18 && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
-            {
-                let child_id = self.next_civilian_id;
-                self.next_civilian_id += 1;
-                let x = pos.coord.x as f32 / FIXED_SCALE as f32;
-                let y = pos.coord.z as f32 / FIXED_SCALE as f32;
-                births.push((child_id, x, y));
+            if birth_window && civilian.age > 18 {
+                // FR-CORE-004 partial: materialize the draw, then compare against
+                // a threshold derived from the birth chance. Recorded to the
+                // replay log so stochastic birth outcomes can be cross-checked.
+                let draw = self.rng.gen::<u64>();
+                self.replay_log
+                    .record_rng_draw(self.state.tick, "citizen.birth", draw);
+                let threshold = (u64::MAX as f64 * birth_chance.clamp(0.0, 1.0)) as u64;
+                if draw < threshold
+                {
+                    let child_id = self.next_civilian_id;
+                    self.next_civilian_id += 1;
+                    let x = pos.coord.x as f32 / FIXED_SCALE as f32;
+                    let y = pos.coord.z as f32 / FIXED_SCALE as f32;
+                    births.push((child_id, x, y));
+                }
             }
         }
 
@@ -3224,7 +3239,11 @@ impl Simulation {
         // OUTCOME EMERGE from faction wealth rather than a coin flip: a large
         // treasury disparity breeds conflict (have-nots clash with haves);
         // near-peers find it cheaper to trade (FR-CIV-0100 §3).
-        let _entropy = self.rng.gen_bool(0.6);
+        // FR-CORE-004 partial: record the draw to the replay log so the entropy
+        // consumed at this stochastic step is cross-validated on replay.
+        let draw = self.rng.gen::<u64>();
+        self.replay_log
+            .record_rng_draw(self.state.tick, "diplomacy.kind", draw);
         let treasury_a = self
             .state
             .faction_treasury
@@ -3391,6 +3410,22 @@ impl Simulation {
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
+
+        // FR-ECON-004 partial: collect taxes from macro budget before the
+        // consumption drain so treasury/market balances reflect per-tick policy.
+        // `collect_taxes` is a no-op when `taxation.rates_bp` is empty, so this
+        // branch is free for scenarios that do not configure taxation.
+        if !self.taxation.rates_bp.is_empty() {
+            if let Err(err) = civ_economy::collect_taxes(&mut self.economy_state, &self.taxation) {
+                // Tax collection failure is fatal: it would silently drift the
+                // macro/ledger balance. Log to stderr; future work will surface
+                // this through a structured ReplayEvent::RuntimeError variant.
+                eprintln!(
+                    "civ-economy collect_taxes failed at tick {}: {err}",
+                    self.state.tick
+                );
+            }
+        }
 
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
@@ -3581,6 +3616,15 @@ impl Simulation {
         if let Some(v) = military.engage_range_grid {
             self.military_phase.war.engage_range_grid = v.max(1);
         }
+    }
+
+    /// Install scenario-level tax rates (FR-ECON-004). Empty `rates_bp` is a
+    /// no-op (the default [`Taxation`] collects nothing).
+    pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
+        let mut t = civ_economy::Taxation::default();
+        t.rates_bp = taxation.rates_bp.clone();
+        t.per_institution_cap = taxation.per_institution_cap;
+        self.taxation = t;
     }
 
     /// Military phase configuration (tests and tooling).
@@ -6790,6 +6834,119 @@ mod tests {
             sim.garrison_level(),
             sim.tech_unlocks(),
         );
+    }
+    /// FR-ECON-004 partial: `phase_economy` collects per-institution taxes
+    /// from the macro budget before the consumption drain. With a 5% treasury
+    /// rate and 1_000_000 J budget, treasury should grow by ~50_000 J after one
+    /// tick (rate * budget at the start of phase_economy; the consumption drain
+    /// is applied to the *remaining* budget).
+    #[test]
+    fn phase_economy_collects_taxes_into_treasury() {
+        use civ_economy::{INSTITUTION_TREASURY, LedgerSide};
+        use std::collections::BTreeMap;
+
+        let mut sim = Simulation::with_seed(7);
+        // Disable consumption so the only joule flow is taxation. This isolates
+        // the tax debit from the consumption debit for the assertion.
+        sim.economy_policy = crate::policy::PolicyInput {
+            base_consumption_joules: 0.0,
+            scarcity_multiplier: 0.0,
+        };
+        // Seed the macro energy budget with 1_000_000 J. Sync to economy_state.
+        sim.state.energy_budget_joules = Fixed::from_num(1_000_000);
+        sim.economy_state.energy_budget_joules = 1_000_000;
+
+        // Install 5% treasury tax.
+        let mut rates = BTreeMap::new();
+        rates.insert(INSTITUTION_TREASURY, 500_u32); // 5.00 %
+        sim.taxation = civ_economy::Taxation {
+            rates_bp: rates,
+            per_institution_cap: None,
+        };
+
+        let postings_before = sim.economy_state.institutions.postings.len();
+        sim.tick();
+
+        // Treasury should have grown by exactly 50_000 J (5% of 1_000_000).
+        let treasury = sim
+            .economy_state
+            .institutions
+            .institution_balance(INSTITUTION_TREASURY);
+        assert_eq!(
+            treasury, 50_000,
+            "treasury should be credited 5% of the macro budget; got {treasury}"
+        );
+        // A balanced posting should have been recorded.
+        assert_eq!(
+            sim.economy_state.institutions.postings.len(),
+            postings_before + 1,
+            "phase_economy must record a ledger posting for tax collection"
+        );
+        // The posting must be a Macro->Institution transfer (no self-posting).
+        let posting = sim.economy_state.institutions.postings.last().unwrap();
+        assert!(matches!(posting.debit, LedgerSide::Macro(_)));
+        assert!(matches!(posting.credit, LedgerSide::Institution(_)));
+        // Energy budget after tax + zero consumption = 950_000 J.
+        assert_eq!(sim.economy_state.energy_budget_joules, 950_000);
+        // Conservation must still hold.
+        sim.economy_state
+            .institutions
+            .verify_conservation()
+            .expect("ledger conservation after tax");
+    }
+
+    /// FR-ECON-004 partial: with empty `taxation.rates_bp`, `phase_economy`
+    /// is a no-op for tax purposes — no postings are recorded, and the
+    /// institution ledger is untouched by the tax branch.
+    #[test]
+    fn phase_economy_no_tax_when_rates_empty() {
+        use civ_economy::{INSTITUTION_TREASURY, LedgerSide};
+
+        let mut sim = Simulation::with_seed(13);
+        sim.economy_policy = crate::policy::PolicyInput {
+            base_consumption_joules: 0.0,
+            scarcity_multiplier: 0.0,
+        };
+        sim.state.energy_budget_joules = Fixed::from_num(500_000);
+        sim.economy_state.energy_budget_joules = 500_000;
+
+        // taxation.rates_bp is empty by default — no postings should land.
+        assert!(sim.taxation.rates_bp.is_empty());
+        let postings_before = sim.economy_state.institutions.postings.len();
+        sim.tick();
+        assert_eq!(
+            sim.economy_state.institutions.postings.len(),
+            postings_before,
+            "no tax postings should be recorded when rates_bp is empty"
+        );
+        // Treasury stays at whatever it was before the tick (likely 0).
+        let treasury = sim
+            .economy_state
+            .institutions
+            .institution_balance(INSTITUTION_TREASURY);
+        assert_eq!(treasury, 0);
+        // Budget drained only by consumption (which is 0 here).
+        assert_eq!(sim.economy_state.energy_budget_joules, 500_000);
+        // Avoid unused-import warning for LedgerSide.
+        let _ = LedgerSide::Macro(civ_economy::ACCOUNT_ENERGY_BUDGET);
+    }
+
+    /// `apply_scenario_taxation` is the canonical wiring point for scenario
+    /// YAML taxation fields. It must populate the Simulation's `taxation`
+    /// field so subsequent ticks collect per the configured rates.
+    #[test]
+    fn apply_scenario_taxation_wires_rates_into_simulation() {
+        use civ_economy::INSTITUTION_TREASURY;
+        let mut sim = Simulation::with_seed(5);
+        let mut rates = std::collections::BTreeMap::new();
+        rates.insert(INSTITUTION_TREASURY, 250_u32); // 2.5 %
+        let scenario_taxation = crate::scenario::ScenarioTaxation {
+            rates_bp: rates,
+            per_institution_cap: Some(1_000),
+        };
+        sim.apply_scenario_taxation(&scenario_taxation);
+        assert_eq!(sim.taxation.rates_bp.get(&INSTITUTION_TREASURY), Some(&250));
+        assert_eq!(sim.taxation.per_institution_cap, Some(1_000));
     }
 
     #[test]

@@ -3248,6 +3248,17 @@ impl Simulation {
         // RELIGION→DIPLOMACY: read patron before any mutable borrow (avoids E0502).
         let has_patron = self.patron_deity().is_some();
         let religion_peace_bonus = religious_unity_peace_bonus(has_patron);
+        // LANGUAGE→DIPLOMACY: read centroids before any mutable borrow (avoids E0502).
+        let lang_centroids_diplo = faction_language_centroids(
+            &self.emergence.cluster_cultures,
+            &settlement_dominant_factions(&self.world, &self.cluster_member_counts),
+            &self.cluster_member_counts,
+        );
+        let lang_dist_diplo = match (lang_centroids_diplo.get(&a), lang_centroids_diplo.get(&b)) {
+            (Some(ca), Some(cb)) => language_distance(*ca, *cb),
+            _ => 1.0,
+        };
+        let lang_peace_bonus = language_intelligibility_peace_bonus(lang_dist_diplo);
         // Shared faith binds society: collective belief raises the disparity a
         // faction pair will tolerate before fighting (belief -> diplomacy).
         // Emergent pairwise relations further bias the threshold: allies tolerate
@@ -3271,7 +3282,8 @@ impl Simulation {
                 + culture_bias
                 - agg_reduction
                 + affinity_bias
-                + religion_peace_bonus)
+                + religion_peace_bonus
+                + lang_peace_bonus)
                 .max(DIPLOMACY_MIN_CONFLICT_THRESHOLD),
         );
         let kind = if disparity >= conflict_threshold {
@@ -3939,6 +3951,23 @@ fn religious_unity_peace_bonus(has_patron: bool) -> i64 {
     } else {
         0
     }
+}
+
+/// Maximum peace bonus from mutual language intelligibility (language → diplomacy coupling).
+const LANGUAGE_INTELLIGIBILITY_PEACE_CAP: i64 = 1_200;
+
+/// LANGUAGE→DIPLOMACY emergence coupling.
+///
+/// Low language distance (mutually intelligible factions) → positive peace bonus
+/// on the conflict threshold, mirroring the N9/N12/#564 magnitudes.
+/// High distance → 0 bonus (no effect on threshold).
+///
+/// Called with pre-read centroid values (before any mutable borrow of `self`)
+/// to satisfy the borrow-checker (E0502).
+pub fn language_intelligibility_peace_bonus(language_distance: f32) -> i64 {
+    let raw =
+        LANGUAGE_INTELLIGIBILITY_PEACE_CAP as f32 * (1.0 - language_distance.clamp(0.0, 1.0));
+    raw.clamp(0.0, LANGUAGE_INTELLIGIBILITY_PEACE_CAP as f32) as i64
 }
 
 /// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
@@ -9797,6 +9826,36 @@ mod tests {
         for i in 0..100 {
             let result = choose_named_seed(&seed_mix, Some(&dist), i, &mut rng);
             assert_eq!(result, NamedSeed::Velthari, "expected Velthari at index {i}");
+        }
+    }
+
+    // ── LANGUAGE→DIPLOMACY coupling tests ─────────────────────────────────────
+
+    #[cfg(test)]
+    mod language_diplomacy_tests {
+        use super::*;
+
+        #[test]
+        fn bonus_bounded_and_monotonic() {
+            let bonus_close = language_intelligibility_peace_bonus(0.1);
+            let bonus_far = language_intelligibility_peace_bonus(0.9);
+            assert!(bonus_close > bonus_far, "closer language must yield bigger bonus");
+            assert!(bonus_close <= 1200, "bonus must not exceed cap");
+        }
+
+        #[test]
+        fn identical_language_max_bonus_more_peaceful() {
+            let max_bonus = language_intelligibility_peace_bonus(0.0);
+            let no_bonus = language_intelligibility_peace_bonus(1.0);
+            assert_eq!(max_bonus, 1200, "identical language must yield max bonus");
+            assert_eq!(no_bonus, 0, "max distance must yield zero bonus");
+            assert!(max_bonus > no_bonus);
+        }
+
+        #[test]
+        fn missing_language_legacy_threshold_unchanged() {
+            let bonus = language_intelligibility_peace_bonus(1.0);
+            assert_eq!(bonus, 0, "missing language must not alter threshold");
         }
     }
 }

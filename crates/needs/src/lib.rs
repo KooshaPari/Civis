@@ -21,6 +21,10 @@ use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+pub mod lifecycle;
+
+pub use lifecycle::{classify_lifecycle, age_threshold, labor_capacity, LifecycleLabel, LifecycleParams};
+
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0";
 

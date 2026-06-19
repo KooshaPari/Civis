@@ -58,10 +58,10 @@ use civ_agents::ActorVisualKind;
 /// Kept as constants so the fetch-cc0-models script and the loader agree on the
 /// exact filenames.
 pub mod asset_paths {
-    /// Civilian / agent model (KayKit Knight — humanoid).
+    /// Civilian / agent model (townsperson / farmer).
     pub const CIVILIAN: &str = "models/civilian.glb";
-    /// Herd / fauna model (KayKit skeleton minion — unarmed creature).
-    pub const HERD: &str = "models/creature_skeleton_minion.glb";
+    /// Herd / fauna model (quadruped horse).
+    pub const HERD: &str = "models/herd.glb";
     /// Tree / vegetation decoration model.
     pub const TREE: &str = "models/tree.glb";
     /// Generic building model.

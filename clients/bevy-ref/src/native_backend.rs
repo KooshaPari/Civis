@@ -21,7 +21,11 @@ pub fn native_only_backends() -> Backends {
 
     #[cfg(target_os = "windows")]
     {
-        Backends::DX12 | Backends::VULKAN
+        // DX12 Ultimate is the Windows target (DXR + DLSS path). When both DX12 and
+        // Vulkan are enabled, wgpu's adapter search picks Vulkan first on Windows, so
+        // restrict to DX12 to land on the intended backend. Vulkan remains reachable as
+        // an explicit fallback via `CIV_BEVY_BACKEND=vulkan` (it is at RT/DLSS parity).
+        Backends::DX12
     }
     #[cfg(target_os = "macos")]
     {
@@ -129,6 +133,7 @@ mod tests {
     }
 
     #[test]
+    fn native_backends_default_to_dx12_only_on_windows() {
     fn forced_backend_from_var_unset_returns_none() {
         assert_eq!(forced_backend_from_var(None), None);
     }
@@ -164,12 +169,24 @@ mod tests {
     fn native_backends_exclude_browser_webgpu_on_windows() {
         #[cfg(target_os = "windows")]
         {
+            // Windows defaults to DX12 (the DX12 Ultimate target); Vulkan is opt-in via
+            // CIV_BEVY_BACKEND=vulkan. Never GLES/browser-WebGPU in the adapter search.
+            std::env::remove_var(BACKEND_ENV);
             let b = native_only_backends();
             assert!(b.contains(Backends::DX12));
-            assert!(b.contains(Backends::VULKAN));
+            assert!(!b.contains(Backends::VULKAN), "Vulkan is opt-in via env, not default");
             assert!(!b.contains(Backends::BROWSER_WEBGPU));
             assert!(!b.contains(Backends::GL));
         }
+    }
+
+    #[test]
+    fn vulkan_remains_reachable_via_env_override() {
+        // The DX12-only Windows default must not remove the Vulkan escape hatch.
+        assert_eq!(
+            forced_backend_from_var(Some("vulkan".to_string())),
+            Some(Backends::VULKAN)
+        );
     }
 
     #[test]

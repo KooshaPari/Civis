@@ -25,6 +25,10 @@ pub mod diplomacy_ui;
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod graphics_settings;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
@@ -59,6 +63,30 @@ pub mod spawn_tools;
 pub mod tech_tree_ui;
 #[cfg(feature = "bevy")]
 pub mod terrain;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod tool_categories;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_cluster;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_holo;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
+#[cfg(all(feature = "bevy", feature = "vfx"))]
+pub mod vfx;
+#[cfg(all(feature = "bevy", feature = "voxel"))]
+pub mod ocean;
+#[cfg(feature = "voxel")]
+pub mod voxel_sim;
+#[cfg(feature = "voxel")]
+pub mod voxel_smooth_mesher;
+/// Camera-driven chunk-streaming sandbox (`StreamingWorld` + `HeightFieldGen`).
+/// Gated behind `voxel_stream` so it coexists with the dense `voxel_sim` path.
+#[cfg(feature = "voxel_stream")]
+pub mod voxel_stream;
+#[cfg(feature = "voxel")]
+pub mod voxel_triplanar;
+#[cfg(feature = "bevy")]
+pub mod window_icon;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,

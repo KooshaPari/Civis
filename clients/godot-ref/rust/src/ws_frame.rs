@@ -25,7 +25,7 @@ fn frame_kind_tick_json(frame: &Frame3d) -> DecodedWsPacket {
     let kind = match frame {
         Frame3d::VoxelDelta(_) => "VoxelDelta",
         Frame3d::BuildingDiff(_) => "BuildingDiff",
-        Frame3d::AgentAppearance(_) => "AgentAppearance",
+                Frame3d::Climate(_) => "Climate",
         Frame3d::CivilianState(_)
         | Frame3d::FactionState(_)
         | Frame3d::EventFeed(_)

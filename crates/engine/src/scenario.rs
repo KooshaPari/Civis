@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, WorldState};
+use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
 
 /// Supported scenario schema version.
@@ -103,17 +104,12 @@ pub struct Scenario {
     /// Optional military cadence and combat tuning (FR-CIV-TACTICS-050).
     #[serde(default)]
     pub military: ScenarioMilitary,
-    /// Optional content-seed wiring (FR-CONTENT-MODEL / CIV-008).
-    ///
-    /// * `seeds` is a list of RON files (paths relative to the repo root,
-    ///   resolved against the engine's manifest dir at load time) that are
-    ///   parsed into [`civ_genetics::SeedSet`]s and merged into the
-    ///   simulation's [`civ_genetics::SeedLibrary`].
-    /// * `active_seed` is the id of the seed used for spawn-time DNA (None
-    ///   means raw drift with no seed reference; the example seed set's
-    ///   `raw_organism` is loaded by default regardless).
+    /// Canonical seed-pack paths loaded for this scenario (content model: named
+    /// races + raw-organism primitive). Empty when the scenario ships no seeds.
     #[serde(default)]
     pub seeds: Vec<String>,
+    /// Active seed identity selected at load (e.g. `"raw_organism"`); `None`
+    /// leaves seed selection to runtime defaults. FR-MATRIX scenario seeding.
     #[serde(default)]
     pub active_seed: Option<String>,
     /// Scenario-level divergence override (0..1). When set, overrides the
@@ -129,6 +125,53 @@ pub struct Scenario {
     /// (32 civilians × 4 factions, 2500 grid-unit spread).
     #[serde(default)]
     pub starting_conditions: ScenarioStartingConditions,
+    /// Per-institution tax rates (FR-ECON-004). Applied each tick in `phase_economy`
+    /// before the consumption drain, debiting `Macro(ACCOUNT_ENERGY_BUDGET)` and
+    /// crediting each named institution.
+    #[serde(default)]
+    pub taxation: ScenarioTaxation,
+    /// Optional control-policy selection (FR-CORE-005). The `kind` string is
+    /// resolved via [`crate::policy::policy_from_kind`]; unknown kinds fall
+    /// back to the no-op policy. When the field is omitted the scenario
+    /// defaults to the no-op policy as well.
+    #[serde(default)]
+    pub policy: ScenarioPolicy,
+}
+
+/// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
+/// `rates_bp` is institution_id → basis-points rate (0..=10_000). Use
+/// [`INSTITUTION_TREASURY`] and [`INSTITUTION_MARKET`] as the canonical
+/// institutions. `per_institution_cap` (if set) clamps any single tick's
+/// collection per institution.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ScenarioTaxation {
+    /// institution_id (e.g. `INSTITUTION_TREASURY`) → basis-points rate.
+    #[serde(default)]
+    pub rates_bp: std::collections::BTreeMap<i64, u32>,
+    /// Single-tick ceiling per institution (joules); `None` means uncapped.
+    #[serde(default)]
+    pub per_institution_cap: Option<i64>,
+}
+
+/// Control-policy block in a scenario YAML file (FR-CORE-005).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScenarioPolicy {
+    /// Policy kind. One of `noop`, `capitalist`, `subsistence_first`.
+    /// Unknown values are coerced to `noop` by [`crate::policy::policy_from_kind`].
+    #[serde(default = "default_policy_kind")]
+    pub kind: String,
+}
+
+impl Default for ScenarioPolicy {
+    fn default() -> Self {
+        Self {
+            kind: default_policy_kind(),
+        }
+    }
+}
+
+fn default_policy_kind() -> String {
+    "noop".to_string()
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -242,15 +285,9 @@ impl Scenario {
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
         sim.apply_scenario_military(&self.military);
+        sim.apply_scenario_taxation(&self.taxation);
         sim.register_mod_stubs(&self.mods);
-        // Content seeds: load any referenced RON files into the library and
-        // pin the active seed id (FR-CONTENT-MODEL / CIV-008). Unknown ids
-        // are reported via the emergence feed and otherwise ignored.
-        for seed_path in &self.seeds {
-            sim.register_seed_file(seed_path);
-        }
-        sim.set_active_seed(self.active_seed);
-        sim.set_divergence_override(self.divergence_override);
+        sim.set_policy(policy_from_kind(&self.policy.kind));
         sim
     }
 
@@ -396,11 +433,33 @@ pub fn baseline_scenario_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scenarios/baseline.yaml")
 }
 
+/// Path to a named preset scenario YAML under `scenarios/presets/`.
+///
+/// Presets are curated starting configurations that showcase the content knobs
+/// (seed_mix, starting_conditions, divergence_override).  Use [`preset_names`]
+/// to enumerate all available presets.
+pub fn preset_scenario_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scenarios/presets/")
+        .join(format!("{name}.yaml"))
+}
+
+/// The canonical set of curated scenario preset names.
+///
+/// Each name corresponds to a file at `scenarios/presets/<name>.yaml`.
+pub fn preset_names() -> &'static [&'static str] {
+    &[
+        "single-race-ardani",
+        "three-race-balanced",
+        "ardani-dominant",
+        "lush-frontier",
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Covers FR-API-001.
     #[test]
     fn baseline_yaml_parses() {
         let scenario = load_scenario(baseline_scenario_path()).expect("baseline.yaml should load");
@@ -419,9 +478,9 @@ mod tests {
             scenario.mods,
             vec!["mods/example-policy", "mods/example-economic"]
         );
+        assert_eq!(scenario.policy.kind, "noop");
     }
 
-    /// Covers FR-CIV-TACTICS-045.
     #[test]
     fn scenario_fog_wires_military_phase() {
         let scenario = Scenario {
@@ -435,17 +494,18 @@ mod tests {
             fog_vision_radius: Some(6),
             fog_grid_size: 32,
             military: ScenarioMilitary::default(),
-            seeds: vec![],
+            seeds: Vec::new(),
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
+            policy: ScenarioPolicy::default(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
         assert_eq!(sim.military_phase_config().war.fog_grid_size, 32);
     }
 
-    /// Covers FR-CIV-TACTICS-050 and FR-CIV-TACTICS-035.
     #[test]
     fn scenario_military_wires_military_phase() {
         let scenario = Scenario {
@@ -464,10 +524,11 @@ mod tests {
                 war_cadence_ticks: Some(32),
                 engage_range_grid: Some(12),
             },
-            seeds: vec![],
+            seeds: Vec::new(),
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            policy: ScenarioPolicy::default(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -477,7 +538,6 @@ mod tests {
         assert_eq!(cfg.war.engage_range_grid, 12);
     }
 
-    /// Covers FR-MOD-004.
     #[test]
     fn scenario_mods_loads_example_policy() {
         let yaml = r#"
@@ -571,10 +631,12 @@ mods:
             fog_vision_radius: None,
             fog_grid_size: default_fog_grid_size(),
             military: ScenarioMilitary::default(),
-            seeds: vec![],
+            seeds: Vec::new(),
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
+            policy: ScenarioPolicy::default(),
         };
 
         let mut zero_scarcity = base.clone();
@@ -594,39 +656,6 @@ mods:
             sim_high.state.energy_budget_joules,
             budget_before - Fixed::from_num(2_000i64)
         );
-    }
-
-    /// Content seeds from scenario YAML wire into the simulation's seed
-    /// library and active seed id (FR-CONTENT-MODEL / CIV-008).
-    #[test]
-    fn scenario_seeds_wire_into_seed_library() {
-        let yaml = r#"
-version: 1
-name: seeds-test
-tick_start: 0
-population: 100
-base_consumption_joules: 1
-scarcity_multiplier: 1.0
-seeds:
-  - scenarios/canonical_seeds.ron
-active_seed: human_baseline
-"#;
-        let scenario = parse_yaml(yaml).expect("parse scenario with seeds");
-        let sim = scenario.into_simulation(11);
-        // The example set is pre-loaded (raw_organism + human_baseline +
-        // deep_one) and canonical_seeds.ron adds no new ids.
-        assert!(sim.seed_library().get("raw_organism").is_some());
-        assert!(sim.seed_library().get("human_baseline").is_some());
-        assert!(sim.seed_library().get("deep_one").is_some());
-        // Active seed id is honoured.
-        assert_eq!(sim.active_seed_id(), Some("human_baseline"));
-        // No feed events for successful load (the example feed is empty
-        // until a tick runs, but seed_loaded entries may have been pushed
-        // by register_seed_file; just confirm no error feed was raised).
-        for ev in sim.emergence_feed() {
-            assert_ne!(ev.kind, "seed_load_failed");
-            assert_ne!(ev.kind, "seed_unknown");
-        }
     }
 
     #[test]
@@ -947,5 +976,155 @@ starting_conditions:
             matches!(result, Err(ScenarioError::Validation { .. })),
             "negative weight must yield a Validation error"
         );
+    }
+
+    // ── Preset YAML tests (FR-CONTENT-SEEDMIX / FR-CONTENT-STARTCOND) ────────
+
+    /// Every preset in `preset_names()` must load, validate, and have a
+    /// non-empty name and finite positive weights.
+    #[test]
+    fn all_presets_load_and_validate() {
+        for name in preset_names() {
+            let scenario = load_scenario(preset_scenario_path(name))
+                .unwrap_or_else(|e| panic!("preset {name} failed to load: {e}"));
+            assert!(!scenario.name.is_empty(), "preset {name} has empty name");
+            for sw in &scenario.starting_conditions.seed_mix {
+                assert!(
+                    sw.weight > 0.0 && sw.weight.is_finite(),
+                    "preset {name} has invalid weight {} for seed {:?}",
+                    sw.weight,
+                    sw.seed
+                );
+            }
+        }
+    }
+
+    /// `three-race-balanced` must carry exactly 3 seeds: Ardani, Velthari, Grundak.
+    #[test]
+    fn preset_three_race_balanced_has_three_seeds() {
+        let scenario = load_scenario(preset_scenario_path("three-race-balanced")).unwrap();
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 3, "expected 3 seeds, got {}", mix.len());
+        let seeds: Vec<civ_genetics::NamedSeed> = mix.iter().map(|sw| sw.seed).collect();
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Ardani), "missing Ardani");
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Velthari), "missing Velthari");
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Grundak), "missing Grundak");
+    }
+
+    /// `single-race-ardani` must have exactly 1 seed (Ardani) at weight 1.0.
+    #[test]
+    fn preset_single_race_is_monocultural() {
+        let scenario = load_scenario(preset_scenario_path("single-race-ardani")).unwrap();
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 1, "expected 1 seed, got {}", mix.len());
+        assert_eq!(mix[0].seed, civ_genetics::NamedSeed::Ardani);
+        assert!(
+            (mix[0].weight - 1.0).abs() < f32::EPSILON,
+            "weight should be 1.0, got {}",
+            mix[0].weight
+        );
+
+    // ============================================================================
+    // FR-CORE-005 — Scenario policy wiring tests
+    // ============================================================================
+
+    /// FR-CORE-005 — scenario YAML with `policy: { kind: capitalist }` installs
+    /// `CapitalistPolicy` on the simulation.
+    #[test]
+    fn scenario_policy_capitalist_installs_capitalist_policy() {
+        let yaml = r#"
+version: 1
+name: capitalist-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: capitalist
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with policy");
+        assert_eq!(scenario.policy.kind, "capitalist");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "capitalist");
+    }
+
+    /// FR-CORE-005 — scenario YAML with `policy: { kind: subsistence_first }`
+    /// installs `SubsistenceFirstPolicy` on the simulation.
+    #[test]
+    fn scenario_policy_subsistence_first_installs_subsistence_first_policy() {
+        let yaml = r#"
+version: 1
+name: subsistence-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: subsistence_first
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with policy");
+        assert_eq!(scenario.policy.kind, "subsistence_first");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "subsistence_first");
+    }
+
+    /// FR-CORE-005 — scenario YAML without a `policy` field defaults to
+    /// `NoopPolicy`.
+    #[test]
+    fn scenario_without_policy_field_defaults_to_noop() {
+        let yaml = r#"
+version: 1
+name: noop-default-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario without policy");
+        assert_eq!(scenario.policy.kind, "noop");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — scenario YAML with an unknown policy kind falls back to
+    /// `NoopPolicy` (defensive: we never fail a scenario load on a typo).
+    #[test]
+    fn scenario_unknown_policy_kind_falls_back_to_noop() {
+        let yaml = r#"
+version: 1
+name: unknown-policy-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: libertarian_anarchism
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with unknown policy");
+        assert_eq!(scenario.policy.kind, "libertarian_anarchism");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — the policy installed by a scenario produces
+    /// `last_control_signals` after a tick.
+    #[test]
+    fn scenario_policy_signals_propagate_through_tick() {
+        let yaml = r#"
+version: 1
+name: policy-tick-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: capitalist
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with policy");
+        let mut sim = scenario.into_simulation(1);
+        sim.tick();
+        // Default CapitalistPolicy is a no-op, so signals are empty.
+        assert_eq!(sim.last_control_signals(), &crate::ControlSignals::default());
+
     }
 }

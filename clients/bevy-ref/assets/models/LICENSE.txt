@@ -8,8 +8,10 @@ No attribution is legally required; provenance is retained for auditability
 Per-asset provenance
 --------------------
   Canonical slots (loader-named):
-    civilian.glb  KayKit Character Pack: Adventures — "Knight" (human)
-                  Kay Lousberg (https://kaylousberg.com) — CC0 1.0
+    civilian.glb  Quaternius showcase mirror — "Farmer" (townsperson)
+                  — CC0 1.0
+    herd.glb      Quaternius showcase mirror — "Horse" (quadruped)
+                  — CC0 1.0
     building.glb  KayKit Medieval Hexagon Pack — "building_home_A" (house)
                   Kay Lousberg — CC0 1.0  (gltf packed to glb via gltf-pipeline)
     tree.glb      KayKit Medieval Hexagon Pack — "tree_single_A"

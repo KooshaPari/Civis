@@ -23,7 +23,7 @@ fn frame_kind_tick_json(frame: &Frame3d) -> DecodedWsPacket {
     let kind = match frame {
         Frame3d::VoxelDelta(_) => "VoxelDelta",
         Frame3d::BuildingDiff(_) => "BuildingDiff",
-        Frame3d::AgentAppearance(_) => "AgentAppearance",
+                Frame3d::Climate(_) => "Climate",
     };
     let tick = frame.tick();
     let json = serde_json::to_string(frame).unwrap_or_default();

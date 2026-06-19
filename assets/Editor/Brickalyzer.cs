@@ -19,6 +19,7 @@ namespace DINOForge.EditorTools
         private const float DefaultBrickSize = 0.25f;
         private const string OutputSuffix = "_Brickalyzed";
         private const string UrpLitShaderName = "Universal Render Pipeline/Lit";
+        private static Mesh? s_unitCubeMesh;
 
         [MenuItem("Tools/DINOForge/Brickalyzer/Brickalyze Selected Mesh")]
         private static void BrickalyzeSelectedMesh()
@@ -68,6 +69,8 @@ namespace DINOForge.EditorTools
             Bounds bounds = sourceMesh.bounds;
             Vector3 min = bounds.min;
             Vector3 max = bounds.max;
+            Vector3[] vertices = sourceMesh.vertices;
+            int[] triangles = sourceMesh.triangles;
 
             List<CombineInstance> combines = new List<CombineInstance>();
             Mesh cubeMesh = GetUnitCubeMesh();
@@ -86,7 +89,7 @@ namespace DINOForge.EditorTools
                             min.y + (y + 0.5f) * brickSize,
                             min.z + (z + 0.5f) * brickSize);
 
-                        if (!IsFilled(sourceMesh, center))
+                        if (!IsFilled(bounds, vertices, triangles, center))
                         {
                             continue;
                         }
@@ -117,9 +120,9 @@ namespace DINOForge.EditorTools
             return output;
         }
 
-        private static bool IsFilled(Mesh sourceMesh, Vector3 center)
+        private static bool IsFilled(Bounds bounds, Vector3[] vertices, int[] triangles, Vector3 center)
         {
-            if (!sourceMesh.bounds.Contains(center))
+            if (!bounds.Contains(center))
             {
                 return false;
             }
@@ -128,8 +131,6 @@ namespace DINOForge.EditorTools
             Vector3 direction = Vector3.right;
             int hitCount = 0;
 
-            Vector3[] vertices = sourceMesh.vertices;
-            int[] triangles = sourceMesh.triangles;
             for (int i = 0; i < triangles.Length; i += 3)
             {
                 Vector3 a = vertices[triangles[i]];
@@ -213,10 +214,16 @@ namespace DINOForge.EditorTools
 
         private static Mesh GetUnitCubeMesh()
         {
+            if (s_unitCubeMesh != null)
+            {
+                return s_unitCubeMesh;
+            }
+
             GameObject temp = GameObject.CreatePrimitive(PrimitiveType.Cube);
             try
             {
-                return temp.GetComponent<MeshFilter>()!.sharedMesh;
+                s_unitCubeMesh = temp.GetComponent<MeshFilter>()!.sharedMesh;
+                return s_unitCubeMesh;
             }
             finally
             {

@@ -8,7 +8,7 @@ use serde_json::Value;
 /// Decoded WS packet for GDScript (`CivisWsFrame.decode_ws_packet`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodedWsPacket {
-    /// `VoxelDelta` | `BuildingDiff` | `AgentAppearance` | `RpcJson`
+    /// `VoxelDelta` | `BuildingDiff` | `AgentAppearance` | `Climate` | `RpcJson`
     pub kind: String,
     pub tick: u64,
     /// JSON text for `JSON.parse_string` in GDScript.
@@ -24,6 +24,7 @@ fn frame_kind_tick_json(frame: &Frame3d) -> DecodedWsPacket {
         Frame3d::VoxelDelta(_) => "VoxelDelta",
         Frame3d::BuildingDiff(_) => "BuildingDiff",
         Frame3d::AgentAppearance(_) => "AgentAppearance",
+        Frame3d::Climate(_) => "Climate",
     };
     let tick = frame.tick();
     let json = serde_json::to_string(frame).unwrap_or_default();

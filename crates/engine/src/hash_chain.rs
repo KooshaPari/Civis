@@ -172,7 +172,7 @@ pub fn climate_event_bytes(
 mod tests {
     use super::*;
 
-    /// Covers FR-CORE-006 — identical inputs yield identical chain links.
+    /// FR-CORE-006 partial — identical inputs yield identical chain links.
     #[test]
     fn chain_is_deterministic() {
         let event = tick_event_bytes(7);
@@ -209,7 +209,7 @@ mod tests {
         );
     }
 
-    /// Covers FR-CORE-005 — tampering with tick bytes changes the link.
+    /// FR-CORE-005 partial — tampering with tick bytes changes the link.
     #[test]
     fn tamper_changes_hash() {
         let mut event = tick_event_bytes(42);

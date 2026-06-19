@@ -15,10 +15,8 @@ use civ_agents::{
     SocialGraph,
 };
 use civ_genetics::{
-    example_seed_set,
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome, spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
-    SeedSet,
+    Dna, DnaClass,
 };
 use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
@@ -34,7 +32,6 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 
 use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
 
@@ -72,37 +69,11 @@ pub struct EmergenceState {
     pub(crate) sentience_profile: CognitionTraitProfile,
     pub(crate) sentience_threshold: SentienceThreshold,
     pub(crate) sentient_agents: HashSet<u64>,
-    /// Canonical seed library (FR-CONTENT-MODEL / CIV-008). When a `Scenario`
-    /// pins a `seed_ref`, that seed is used as the spawn-time base DNA via
-    /// [`spawn_genome`]; the seed's divergence dial is then used by
-    /// `mutate_with_divergence` to scale per-byte mutation rates.
-    pub(crate) seed_library: SeedLibrary,
-    /// Active seed id referenced by the loaded scenario (or `None` to use
-    /// raw-organism drift for every spawn).
-    pub(crate) active_seed_id: Option<String>,
-    /// Scenario-level divergence override (0..1). When `Some(v)`, overrides
-    /// `active_seed.divergence` at every spawn call inside
-    /// [`Simulation::emergence_ensure_genomes`].
-    pub(crate) divergence_override: Option<f32>,
-    /// Cumulative set of world-configuration fingerprints seen (§3.4 novelty-rate).
-    pub seen_config_hashes: std::collections::HashSet<u64>,
-    /// Count of new (previously-unseen) fingerprints in the current W_nov window.
-    pub novelty_window_new: u32,
-    /// Tick at which the current W_nov window started.
-    pub novelty_window_start_tick: u64,
 }
 
 impl EmergenceState {
     fn new(seed: u64) -> Self {
         let _ = seed;
-        // Pre-seed the library with the canonical example set so a baseline
-        // sim can spawn a raw-organism without a scenario. Scenarios can
-        // override via `register_seed_files` / `set_active_seed`.
-        let mut seed_library = SeedLibrary::new();
-        for s in example_seed_set().seeds {
-            // ignore validation errors here — example set is hand-curated
-            let _ = seed_library.insert(s);
-        }
         EmergenceState {
             legends: LegendsWorker::new(SagaGraph::new(LegendsConfig::default())),
             cluster_cultures: BTreeMap::new(),
@@ -117,12 +88,6 @@ impl EmergenceState {
             ),
             sentience_threshold: SentienceThreshold::new(0.72),
             sentient_agents: HashSet::new(),
-            seed_library,
-            active_seed_id: Some("raw_organism".to_string()),
-            divergence_override: None,
-            seen_config_hashes: std::collections::HashSet::new(),
-            novelty_window_new: 0,
-            novelty_window_start_tick: 0,
         }
     }
 
@@ -205,70 +170,18 @@ impl Simulation {
 
     fn emergence_ensure_genomes(&mut self) {
         let len = self.emergence.dna_class.length;
-
-        // Pass 1: collect agents that still lack a Dna component, together
-        // with their Position3d (if any).  We clone everything out of the ECS
-        // so we can release all borrows before doing the seed lookup and
-        // insert.  This is the two-pass pattern required to satisfy the
-        // borrow-checker: the ECS query immutably borrows `self.world`, and
-        // `world.insert` requires `&mut World`.
-        let agents_needing_dna: Vec<(Entity, u64, Option<Position3d>)> = self
+        let agents: Vec<(Entity, u64)> = self
             .world
-            .query::<(&Civilian, Option<&Position3d>)>()
+            .query::<&Civilian>()
             .iter()
-            .filter(|(e, _)| self.world.get::<&Dna>(*e).is_err())
-            .map(|(e, (c, pos))| (e, c.id, pos.copied()))
+            .map(|(e, c)| (e, c.id))
             .collect();
-
-        // Clone the active seed and library data we need before the insert
-        // pass so we hold no reference into `self.emergence` while mutating
-        // `self.world`.
-        let active_seed: Option<SeedDefinition> = self
-            .emergence
-            .active_seed_id
-            .as_ref()
-            .and_then(|id| self.emergence.seed_library.get(id).cloned());
-        // Scenario-level divergence dial: when set, overrides each seed's own
-        // divergence at spawn (snapshot once so we hold no `self.emergence`
-        // borrow during the mutating insert pass).
-        let divergence_override = self.emergence.divergence_override;
-        // Build a geology map on demand (cheap: pure deterministic arithmetic
-        // from PlanetConfig; no RNG, no heap beyond the 16-element Vec).
-        let geology_map = civ_planet::GeologyMap::seed(self.planet());
-
-        // Pass 2: resolve the biome-matched seed and insert Dna components.
-        for (entity, id, pos_opt) in agents_needing_dna {
+        for (entity, id) in agents {
+            if self.world.get::<&Dna>(entity).is_ok() {
+                continue;
+            }
             let mut local = ChaCha8Rng::seed_from_u64(self.state.rng_seed ^ id);
-
-            // Choose seed: position-matched biome seed first, active seed as
-            // fallback, raw random when neither has the right dna_length.
-            let chosen_seed: Option<SeedDefinition> = if let Some(pos) = pos_opt {
-                select_seed_for_position(
-                    &self.emergence.seed_library,
-                    active_seed.as_ref(),
-                    &geology_map,
-                    &pos,
-                )
-                .cloned()
-            } else {
-                active_seed.clone()
-            };
-
-            let dna = match chosen_seed.as_ref() {
-                Some(seed) if seed.dna_length == len => {
-                    // Use scenario-level override when present; otherwise
-                    // fall through to the seed's own divergence dial.
-                    let effective_divergence =
-                        divergence_override.unwrap_or(seed.divergence);
-                    spawn_genome_with_divergence(
-                        &mut local,
-                        &self.emergence.dna_class,
-                        seed,
-                        effective_divergence,
-                    )
-                }
-                _ => Dna::random(len, &mut local),
-            };
+            let dna = Dna::random(len, &mut local);
             let _ = self.world.insert(entity, (dna,));
         }
     }
@@ -434,7 +347,11 @@ impl Simulation {
                 .0
                 .clone();
             let psyche = psyche_from_dna(&Dna(genome), &profile);
-            let _ = self.world.insert(*entity, (psyche, SocialGraph::default()));
+            let had_social_graph = self.world.get::<&SocialGraph>(*entity).is_ok();
+            let _ = self.world.insert(*entity, (psyche,));
+            if !had_social_graph {
+                let _ = self.world.insert(*entity, (SocialGraph::default(),));
+            }
         }
 
         for (entity, id, cluster) in agents {
@@ -509,14 +426,12 @@ impl Simulation {
                     delta_needs,
                     0.0,
                 );
-                let new_maturity = (maturity + 0.001).min(1.0);
                 let arousal = psyche.mood.arousal;
-                psyche.maturity = new_maturity;
                 nudge_temperament(
                     &mut psyche.temperament,
                     arousal,
                     needs.belonging,
-                    new_maturity,
+                    maturity,
                 );
             }
             let sociability = self
@@ -796,124 +711,6 @@ impl Simulation {
             .get::<&SocialGraph>(entity)
             .ok()
             .map(|g| (*g).clone())
-    }
-
-    /// Borrow the canonical seed library (FR-CONTENT-MODEL). Read-only access
-    /// for inspectors; mutation goes through [`Self::register_seed_file`] or
-    /// [`Self::register_seed_set`].
-    #[must_use]
-    pub fn seed_library(&self) -> &SeedLibrary {
-        &self.emergence.seed_library
-    }
-
-    /// Id of the active seed (used for spawn-time DNA). `None` means raw
-    /// drift with no seed reference.
-    #[must_use]
-    pub fn active_seed_id(&self) -> Option<&str> {
-        self.emergence.active_seed_id.as_deref()
-    }
-
-    /// Install a [`SeedSet`] (in-memory) into the seed library, replacing
-    /// any conflicting ids.
-    pub fn register_seed_set(&mut self, set: SeedSet) {
-        // Drop seeds with the same id to avoid duplicates; keep any
-        // pre-loaded seeds that are not in the new set (e.g. the
-        // example/raw_organism baseline).
-        let new_ids: HashSet<String> = set.seeds.iter().map(|s| s.id.clone()).collect();
-        self.emergence
-            .seed_library
-            .retain(|id, _| !new_ids.contains(id));
-        for s in set.seeds {
-            // Validate before insert; invalid seeds are skipped (logged
-            // via a feed event below).
-            if let Err(e) = self.emergence.seed_library.insert(s.clone()) {
-                self.emergence.push_feed(
-                    self.state.tick,
-                    "seed_rejected",
-                    format!("seed {} rejected: {e}", s.id),
-                    None,
-                );
-            }
-        }
-    }
-
-    /// Load a single `.ron` seed file and merge it into the library. The
-    /// path is resolved against the engine crate's manifest dir
-    /// (CARGO_MANIFEST_DIR) when relative.
-    pub fn register_seed_file(&mut self, path: impl AsRef<Path>) {
-        let path = path.as_ref();
-        let resolved: PathBuf = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../")
-                .join(path)
-        };
-        match std::fs::read_to_string(&resolved) {
-            Err(e) => {
-                self.emergence.push_feed(
-                    self.state.tick,
-                    "seed_load_failed",
-                    format!("could not read seed file {}: {e}", resolved.display()),
-                    None,
-                );
-            }
-            Ok(src) => match SeedLibrary::from_ron_str(&src) {
-                Err(e) => {
-                    self.emergence.push_feed(
-                        self.state.tick,
-                        "seed_load_failed",
-                        format!("seed file {} parse error: {e}", resolved.display()),
-                        None,
-                    );
-                }
-                Ok(lib) => {
-                    for (id, seed) in lib.iter() {
-                        if self.emergence.seed_library.get(id).is_none() {
-                            let _ = self.emergence.seed_library.insert(seed.clone());
-                        }
-                    }
-                    self.emergence.push_feed(
-                        self.state.tick,
-                        "seed_loaded",
-                        format!("loaded seed file {} (n={})", resolved.display(), lib.len()),
-                        None,
-                    );
-                }
-            },
-        }
-    }
-
-    /// Set (or clear) the scenario-level divergence override.
-    ///
-    /// `Some(v)` overrides the active seed's own `divergence` at every
-    /// spawn-time DNA sample. `None` restores the seed's own divergence dial.
-    /// The value is defensively clamped to `[0.0, 1.0]`; scenario validation
-    /// already enforces this but callers from outside the load path are safe.
-    pub fn set_divergence_override(&mut self, v: Option<f32>) {
-        self.emergence.divergence_override = v.map(|x| x.clamp(0.0, 1.0));
-    }
-
-    /// Set the active seed id used for spawn-time DNA. Pass `None` to fall
-    /// back to raw drift.
-    pub fn set_active_seed(&mut self, id: Option<String>) {
-        if let Some(ref sid) = id {
-            if self.emergence.seed_library.get(sid).is_none() {
-                // Unknown seed id is rejected; report and leave the
-                // existing active id in place.
-                self.emergence.push_feed(
-                    self.state.tick,
-                    "seed_unknown",
-                    format!(
-                        "active seed id {sid} not in library; keeping {:?}",
-                        self.emergence.active_seed_id
-                    ),
-                    None,
-                );
-                return;
-            }
-        }
-        self.emergence.active_seed_id = id;
     }
 }
 

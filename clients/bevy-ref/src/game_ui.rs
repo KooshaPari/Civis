@@ -139,6 +139,102 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
+            .init_resource::<ActiveSubTool>()
+            .init_resource::<LeftClusterTab>()
+            // Holocron motion state is intentionally NOT registered here yet —
+            // `step_flyout_motion` exists as `#[allow(dead_code)]` for the
+            // deferred WGSL/3D anim timeline (see the doc comment on
+            // `step_flyout_motion`). Registering `FlyoutMotion` as a resource
+            // now would be a one-line cost, but until a system reads it the
+            // `#[allow(dead_code)]` would also have to be removed from the
+            // resource itself, so we skip both for this PR.
+            // .init_resource::<FlyoutMotion>()
+            // Info Views tab reads this; init defensively (idempotent) so the
+            // HUD never panics if GameUiPlugin runs without InfoViewsPlugin.
+            .init_resource::<crate::info_views::InfoViewRegistry>()
+            .init_resource::<ToolIcons>()
+            .add_systems(Startup, queue_tool_icon_handles)
+            .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
+            // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
+            // `load_tool_icons` registers the PNGs as egui textures and must run
+            // before `draw_game_ui` consumes them. Bevy 0.18 dropped the
+            // `IntoSystemConfigs::chain()` method on 2-element system tuples
+            // (the call resolves to `Curve::chain` instead), so we declare two
+            // named sets and order them via `.before()`. `step_flyout_motion`
+            // lives on Update so the anim ticks every frame the world is
+            // stepping (the HUD itself is gated on `GameUiMode`, but the
+            // motion resource is always present so a player who opens a menu
+            // while a drawer is mid-animation finds it settled next time the
+            // HUD comes back).
+            .add_systems(
+                EguiPrimaryContextPass,
+                // apply_keycap_theme MUST run first: it sets the global egui
+                // Style/Visuals (Keycap Palette + holocron chrome) before any
+                // draw call can consume it. load_tool_icons and draw_game_ui
+                // follow in order.
+                (apply_keycap_theme, load_tool_icons, draw_game_ui).chain(),
+            );
+    }
+}
+
+/// Global egui theme system — runs first in every [`EguiPrimaryContextPass`] frame.
+///
+/// Applies the Phenotype Keycap Palette + holocron command-deck chrome:
+/// - Background: midnight `#090a0c` / `#1a1e24` (GRAPHITE_900) surfaces
+/// - Primary accent: teal `#7ebab5` on edges, selection, and active strokes only
+///   (never as a large fill — "neon-as-signal" rule)
+/// - Holographic glass panels: frosted DECK_GLASS fill + DECK_BORDER rim
+/// - Colored teal rim-glow on focus (not white)
+/// - Rounded corners (8 px buttons, 12 px panels)
+/// - Drop shadows for depth hierarchy
+/// - Montserrat (body), JetBrains Mono (numeric), Bricolage Grotesque (display)
+///
+/// Delegates to [`crate::ui_theme::apply_theme`] which is the canonical
+/// implementation; this system exists purely to give it an explicit, named place
+/// in the Bevy schedule and to separate theming from HUD draw logic.
+fn apply_keycap_theme(mut contexts: EguiContexts) {
+    if let Ok(ctx) = contexts.ctx_mut() {
+        apply_theme(ctx);
+    }
+}
+
+/// Startup: queue each tool-icon PNG on the [`AssetServer`].
+fn queue_tool_icon_handles(mut icons: ResMut<ToolIcons>, asset_server: Res<AssetServer>) {
+    icons.handles = TOOL_ICON_PATHS
+        .iter()
+        .map(|(_, path)| asset_server.load::<Image>(*path))
+        .collect();
+}
+
+/// Register the loaded tool-icon images with egui (once), storing the resulting
+/// [`egui::TextureId`]s in [`ToolIcons`]. No-op after the first successful pass.
+fn load_tool_icons(
+    mut contexts: EguiContexts,
+    mut icons: ResMut<ToolIcons>,
+    asset_server: Res<AssetServer>,
+) {
+    if icons.registered {
+        return;
+    }
+    // Only register once every image has finished loading, so add_image gets a
+    // valid GPU texture rather than a placeholder.
+    let all_loaded = icons
+        .handles
+        .iter()
+        .all(|h| asset_server.is_loaded_with_dependencies(h));
+    if icons.handles.is_empty() || !all_loaded {
+        return;
+    }
+    let handles = icons.handles.clone();
+    for ((key, _), handle) in TOOL_ICON_PATHS.iter().zip(handles) {
+        // egui keeps a strong handle; our `ToolIcons.handles` also retains one so
+        // the image is never unloaded for the lifetime of the app.
+        let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle));
+        icons.ids.insert(key, id);
+    }
+    icons.registered = true;
+}
+
             .add_systems(Update, handle_speed_shortcuts)
             .add_systems(EguiPrimaryContextPass, draw_game_ui);
     }

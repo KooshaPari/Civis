@@ -2,6 +2,9 @@
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+#[cfg(feature = "voxel")]
+use civ_bevy_ref::ocean::OceanPlugin;
 use civ_bevy_ref::{
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
     camera::{camera_input, update_camera, CameraRig},
@@ -73,6 +76,80 @@ fn main() {
         #[cfg(feature = "pbr-textures")]
         app.add_plugins(civ_bevy_ref::materials::BiomeMaterialsPlugin);
     }
+
+    // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::info_views::InfoViewsPlugin);
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::inspect::InspectPlugin);
+
+    // Event-feed / toast notifications.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::notifications::NotificationsPlugin);
+
+    // Terrain sculpting brush (raise/lower/flatten); bevy-only, no egui needed.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::terraform_brush::TerraformBrushPlugin);
+
+    // God-game disaster actions (meteor/flood/quake/storm/wildfire) that mutate
+    // the voxel world; bevy-only, gated systems handle egui/voxel internally.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::disaster_tools::DisasterToolsPlugin);
+
+    // Material brush palette + voxel paint (Powder-Toy-style); bevy+egui.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
+
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
+
+    // Settings / options panel (RON-persisted); bevy+egui.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);
+    // Ambient + SFX audio (feature-gated).
+    #[cfg(feature = "audio")]
+    app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
+    // GPU particle VFX for events (feature-gated).
+    #[cfg(feature = "vfx")]
+    app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
+    // Real-time RT global illumination via bevy_solari (feature-gated).
+    #[cfg(feature = "gi")]
+    app.add_plugins(civ_bevy_ref::lighting_gi::SolariGiPlugin);
+
+    // P-VM-3: real volumetric voxel material world (replaces the heightmap).
+    // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
+    // sandbox owns the world instead of the bounded dense `VoxelSimPlugin`.
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
+    app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
+
+    // OceanPlugin — wraps bevy_water::WaterPlugin.  Gated on `voxel` (which
+    // pulls bevy_water).  Two modes:
+    //
+    // • voxel + voxel_stream  → full mode (OceanPlugin::default): WaterPlugin
+    //   + WaterSettings + wave-plane spawn.  VoxelStreamPlugin does NOT spawn
+    //   a water plane, so OceanPlugin owns the surface here.
+    //
+    // • voxel only (VoxelSimPlugin active) → thin mode (water_plugin_only):
+    //   registers WaterPlugin shader infrastructure but skips the spawn because
+    //   VoxelSimPlugin::spawn_bevy_water_plane already owns the wave surface.
+    #[cfg(all(feature = "voxel", feature = "voxel_stream"))]
+    app.add_plugins(OceanPlugin::default());
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
+    app.add_plugins(OceanPlugin::water_plugin_only());
+
+    // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
+    #[cfg(feature = "voxel_stream")]
+    app.add_plugins(civ_bevy_ref::voxel_stream::VoxelStreamPlugin);
+
+    // CC0 GLTF models: populate GameModels so sim_bridge swaps capsule/cuboid
+    // primitives for real Knight/house scenes (per-asset primitive fallback).
+    #[cfg(feature = "models")]
+    app.add_plugins(civ_bevy_ref::gltf_models::GltfModelsPlugin);
+
+    // Actor rigging: drive glTF skeletal animation from emergent motion so
+    // agents idle / walk / run + face their heading instead of sliding statically.
+    #[cfg(feature = "models")]
+    app.add_plugins(civ_bevy_ref::animation::ActorAnimationPlugin);
 
     if attach_mode == AttachMode::Server {
         app.add_plugins(LiveAttachPlugin);

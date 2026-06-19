@@ -3035,7 +3035,7 @@ dependencies = [
 name = "civ-voxel"
 version = "0.1.0"
 dependencies = [
- "phenotype-voxel",
+ "phenotype-gfx",
  "proptest",
  "serde",
  "tracing",
@@ -7005,13 +7005,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "phenotype-gfx"
+version = "0.1.0"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?branch=chore%2Fabsorb-postfx-2026-06-18#058faf525c6851d8dfaa79c2e9f8d8499ede4a14"
+dependencies = [
+ "phenotype-voxel",
+ "serde",
+]
+
+[[package]]
 name = "phenotype-voxel"
 version = "0.1.0"
-source = "git+https://github.com/KooshaPari/phenotype-voxel.git?rev=0bbd1b7c64e64e7723c42a7417680c23860dfb5a#0bbd1b7c64e64e7723c42a7417680c23860dfb5a"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?branch=chore%2Fabsorb-postfx-2026-06-18#058faf525c6851d8dfaa79c2e9f8d8499ede4a14"
 dependencies = [
  "bytemuck",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

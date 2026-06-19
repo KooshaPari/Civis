@@ -2502,6 +2502,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
+ "zstd",
 ]
 
 [[package]]

@@ -17,8 +17,13 @@ mod market;
 pub mod stocks;
 
 pub use allocation::{
+<<<<<<< HEAD
+    subsistence_first_allocate, AgentNeed, AllocationOutcome, AllocationEngine, CapitalistAllocator,
+    GoodId, NeedKind,
+=======
     allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
     JouleAllocator, PlannedAllocator, PriorityTier,
+>>>>>>> origin/main
 };
 pub use institution::{
     collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,

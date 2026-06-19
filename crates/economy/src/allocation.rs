@@ -1,6 +1,10 @@
 //! Allocation engines (CIV-002 §allocation, FR-ECON-005). Joule/planned regimes
 //! plus consumer priority-tier allocation (subsistence filled before luxury).
 
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Serialize};
+
 /// Pluggable allocation mechanism (capitalist, planned, joule, hybrid).
 pub trait AllocationEngine {
     /// Allocate up to `demand` from `budget` (joules or good units).
@@ -131,6 +135,195 @@ pub fn allocate_with(regime: AllocationRegime, budget: i64, demand: i64) -> i64 
         AllocationRegime::Joule => JouleAllocator.allocate(budget, demand),
     }
 }
+
+// ---------------------------------------------------------------------------
+// FR-ECON-005: Subsistence-first need allocator.
+// ---------------------------------------------------------------------------
+
+/// Numeric good identifier (FR-ECON-005). Integer-friendly: stable across
+/// serialization, replays, and external registry mappings.
+pub type GoodId = u32;
+
+/// One unit of need satisfaction equals this fraction of the agent's total
+/// need. With `SCALE = 10`, an agent with `satisfaction = 0.3` has a deficit
+/// of `0.7` and needs `ceil(0.7 * 10) = 7` units to be fully served.
+///
+/// 10 was chosen so that `f64` deficit values in the common `[0.0, 1.0]`
+/// range map cleanly to a small positive `i64` unit count (0..=10) without
+/// rounding loss for one-decimal satisfactions.
+const SCALE: i64 = 10;
+
+/// Classifies an agent's need: subsistence needs are filled before any
+/// luxury allocation, and unmet subsistence increments the agent's
+/// deprivation counter (FR-ECON-005).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NeedKind {
+    /// Need required to sustain the agent (food, water, shelter, ...).
+    Subsistence,
+    /// Discretionary need served only from leftover stock.
+    Luxury,
+}
+
+/// A single per-agent need statement (FR-ECON-005).
+///
+/// `satisfaction` is a fraction in `[0.0, 1.0]`. Values outside the range are
+/// clamped: `satisfaction >= 1.0` means the need is already met (deficit 0),
+/// `satisfaction <= 0.0` means the agent needs the full `SCALE` units.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct AgentNeed {
+    /// Stable agent identifier.
+    pub agent_id: u32,
+    /// Good that satisfies this need.
+    pub good: GoodId,
+    /// Subsistence vs luxury classification.
+    pub kind: NeedKind,
+    /// Current satisfaction in `[0.0, 1.0]` (clamped on read).
+    pub satisfaction: f64,
+}
+
+impl AgentNeed {
+    /// Deficit in `[0.0, 1.0]` (1.0 minus satisfaction, clamped at 0).
+    fn deficit(&self) -> f64 {
+        debug_assert!(
+            self.satisfaction.is_finite(),
+            "agent {} satisfaction must be finite, got {}",
+            self.agent_id,
+            self.satisfaction,
+        );
+        (1.0 - self.satisfaction).max(0.0)
+    }
+
+    /// Integer unit count needed to fully meet this need (`ceil(deficit *
+    /// SCALE)`), or 0 if the need is already satisfied.
+    fn need_units(&self) -> i64 {
+        let deficit = self.deficit();
+        if deficit <= 0.0 {
+            return 0;
+        }
+        // `deficit` is in [0.0, 1.0] and `SCALE = 10`, so the result is at
+        // most 10. Use `ceil` so a deficit of 0.05 still needs 1 unit.
+        let raw = deficit * SCALE as f64;
+        let clamped = raw.clamp(0.0, SCALE as f64);
+        clamped.ceil() as i64
+    }
+}
+
+/// Result of [`subsistence_first_allocate`] (FR-ECON-005).
+///
+/// All three maps are keyed for stable, deterministic iteration:
+/// * `received` — agent id → integer units received (sum across all needs
+///   for that agent; per-call this is at most one need per agent, but the
+///   type is `BTreeMap` so callers can accumulate across multiple passes).
+/// * `deprivation_counters` — agent id → number of unmet subsistence needs
+///   observed during this call. Luxury needs never increment this counter.
+/// * `unallocated` — good id → integer units of stock remaining after the
+///   pass (always present for goods that appeared in the input stock, even
+///   when the remaining count is 0).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AllocationOutcome {
+    /// Per-agent units received.
+    pub received: BTreeMap<u32, i64>,
+    /// Per-agent count of unmet subsistence needs.
+    pub deprivation_counters: BTreeMap<u32, u32>,
+    /// Per-good leftover stock after allocation.
+    pub unallocated: BTreeMap<GoodId, i64>,
+}
+
+/// Subsistence-first need allocator (FR-ECON-005).
+///
+/// Algorithm:
+/// 1. For each [`AgentNeed`], compute the integer unit deficit
+///    `need_units = ceil((1.0 - satisfaction) * 10)` (clamped to `[0, 10]`).
+/// 2. Sort all needs by `(kind: Subsistence first, deficit desc, agent_id
+///    asc)`. This is the canonical tie-breaker: identical inputs always
+///    produce identical iteration order, so the result is deterministic.
+/// 3. Walk the sorted list once. For each need, hand out
+///    `min(need_units, stock[good])` units of that good (0 if the good is
+///    not in stock). Subtract from `stock` and add to `received[agent_id]`.
+/// 4. If a Subsistence need is unmet (`allocated < need_units`),
+///    `deprivation_counters[agent_id] += 1`. Luxury needs never increment
+///    deprivation.
+/// 5. The remaining `stock` map (one entry per input good) becomes
+///    `outcome.unallocated`.
+///
+/// Properties guaranteed by the implementation:
+/// * **Determinism** — same `(needs, stock)` input always yields an
+///   identical `AllocationOutcome` (BTreeMap iteration + the sort
+///   tie-breaker above are the only sources of order).
+/// * **Conservation** — for every good `g`,
+///   `sum_over_agents(received_agent[g]) + outcome.unallocated[g] ==
+///   input_stock[g]`. No units are created or destroyed.
+/// * **Subsistence first** — all Subsistence needs are processed before
+///   any Luxury need consumes stock.
+/// * **Integer-friendly** — every unit is `i64`; `f64` is used only for
+///   the user's satisfaction input.
+pub fn subsistence_first_allocate(
+    needs: &[AgentNeed],
+    stock: BTreeMap<GoodId, i64>,
+) -> AllocationOutcome {
+    let mut outcome = AllocationOutcome::default();
+    let mut remaining: BTreeMap<GoodId, i64> = stock;
+
+    // Sort by (Subsistence first, deficit desc, agent_id asc). We sort
+    // outside the loop so the algorithm is observably a single pass after
+    // the (deterministic) ordering is fixed.
+    let mut indexed: Vec<(usize, &AgentNeed)> = needs.iter().enumerate().collect();
+    indexed.sort_by(|(idx_a, a), (idx_b, b)| {
+        // Subsistence (0) sorts before Luxury (1). Encode Luxury as the
+        // larger key so `key.cmp(&other)` puts Subsistence first.
+        let kind_key = |n: &AgentNeed| -> u8 {
+            match n.kind {
+                NeedKind::Subsistence => 0,
+                NeedKind::Luxury => 1,
+            }
+        };
+        kind_key(a)
+            .cmp(&kind_key(b))
+            // Higher deficit first.
+            .then_with(|| b.deficit().partial_cmp(&a.deficit()).unwrap_or(std::cmp::Ordering::Equal))
+            // Stable tie-break: lower agent id first.
+            .then_with(|| a.agent_id.cmp(&b.agent_id))
+            // Final fallback to original slice order for full determinism
+            // across two needs with identical (kind, deficit, agent_id)
+            // (impossible if agent_id is unique, but defensive).
+            .then_with(|| idx_a.cmp(idx_b))
+    });
+
+    for (_, need) in indexed {
+        let want = need.need_units();
+        if want == 0 {
+            // Need is already satisfied; record a 0 receipt (for
+            // determinism / audit) but skip the stock lookup.
+            outcome.received.entry(need.agent_id).or_insert(0);
+            continue;
+        }
+
+        let available = remaining.get(&need.good).copied().unwrap_or(0).max(0);
+        let allocated = want.min(available);
+        if allocated > 0 {
+            *remaining.entry(need.good).or_insert(0) -= allocated;
+        }
+        // Always record a receipt (0 included) so callers can assert
+        // `received.get(&agent) == Some(0)` for agents whose need was unmet.
+        *outcome.received.entry(need.agent_id).or_insert(0) += allocated;
+
+        if matches!(need.kind, NeedKind::Subsistence) && allocated < want {
+            *outcome
+                .deprivation_counters
+                .entry(need.agent_id)
+                .or_insert(0) += 1;
+        }
+    }
+
+    // Mirror the input stock keys (including zero remainders) so callers
+    // can assert on per-good leftover without a separate `was_present` map.
+    for (good, units) in &remaining {
+        outcome.unallocated.insert(*good, *units);
+    }
+
+    outcome
+}
+
 
 #[cfg(test)]
 mod tests {

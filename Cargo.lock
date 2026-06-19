@@ -7007,7 +7007,7 @@ dependencies = [
 [[package]]
 name = "phenotype-gfx"
 version = "0.1.0"
-source = "git+https://github.com/KooshaPari/phenotype-gfx.git?branch=chore%2Fabsorb-postfx-2026-06-18#058faf525c6851d8dfaa79c2e9f8d8499ede4a14"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?branch=chore%2Fabsorb-postfx-2026-06-18#158d14d92c616c125bc6a5db1c5c2ede0c4857ba"
 dependencies = [
  "phenotype-voxel",
  "serde",
@@ -7016,7 +7016,7 @@ dependencies = [
 [[package]]
 name = "phenotype-voxel"
 version = "0.1.0"
-source = "git+https://github.com/KooshaPari/phenotype-gfx.git?branch=chore%2Fabsorb-postfx-2026-06-18#058faf525c6851d8dfaa79c2e9f8d8499ede4a14"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?branch=chore%2Fabsorb-postfx-2026-06-18#158d14d92c616c125bc6a5db1c5c2ede0c4857ba"
 dependencies = [
  "bytemuck",
  "serde",

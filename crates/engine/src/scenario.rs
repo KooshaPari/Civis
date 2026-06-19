@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, WorldState};
+use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
 
 /// Supported scenario schema version.
@@ -129,6 +130,12 @@ pub struct Scenario {
     /// crediting each named institution.
     #[serde(default)]
     pub taxation: ScenarioTaxation,
+    /// Optional control-policy selection (FR-CORE-005). The `kind` string is
+    /// resolved via [`crate::policy::policy_from_kind`]; unknown kinds fall
+    /// back to the no-op policy. When the field is omitted the scenario
+    /// defaults to the no-op policy as well.
+    #[serde(default)]
+    pub policy: ScenarioPolicy,
 }
 
 /// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
@@ -144,6 +151,27 @@ pub struct ScenarioTaxation {
     /// Single-tick ceiling per institution (joules); `None` means uncapped.
     #[serde(default)]
     pub per_institution_cap: Option<i64>,
+}
+
+/// Control-policy block in a scenario YAML file (FR-CORE-005).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScenarioPolicy {
+    /// Policy kind. One of `noop`, `capitalist`, `subsistence_first`.
+    /// Unknown values are coerced to `noop` by [`crate::policy::policy_from_kind`].
+    #[serde(default = "default_policy_kind")]
+    pub kind: String,
+}
+
+impl Default for ScenarioPolicy {
+    fn default() -> Self {
+        Self {
+            kind: default_policy_kind(),
+        }
+    }
+}
+
+fn default_policy_kind() -> String {
+    "noop".to_string()
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -259,6 +287,7 @@ impl Scenario {
         sim.apply_scenario_military(&self.military);
         sim.apply_scenario_taxation(&self.taxation);
         sim.register_mod_stubs(&self.mods);
+        sim.set_policy(policy_from_kind(&self.policy.kind));
         sim
     }
 
@@ -449,6 +478,7 @@ mod tests {
             scenario.mods,
             vec!["mods/example-policy", "mods/example-economic"]
         );
+        assert_eq!(scenario.policy.kind, "noop");
     }
 
     #[test]
@@ -469,6 +499,7 @@ mod tests {
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
+            policy: ScenarioPolicy::default(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -497,6 +528,7 @@ mod tests {
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            policy: ScenarioPolicy::default(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -604,6 +636,7 @@ mods:
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
+            policy: ScenarioPolicy::default(),
         };
 
         let mut zero_scarcity = base.clone();
@@ -990,5 +1023,108 @@ starting_conditions:
             "weight should be 1.0, got {}",
             mix[0].weight
         );
+
+    // ============================================================================
+    // FR-CORE-005 — Scenario policy wiring tests
+    // ============================================================================
+
+    /// FR-CORE-005 — scenario YAML with `policy: { kind: capitalist }` installs
+    /// `CapitalistPolicy` on the simulation.
+    #[test]
+    fn scenario_policy_capitalist_installs_capitalist_policy() {
+        let yaml = r#"
+version: 1
+name: capitalist-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: capitalist
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with policy");
+        assert_eq!(scenario.policy.kind, "capitalist");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "capitalist");
+    }
+
+    /// FR-CORE-005 — scenario YAML with `policy: { kind: subsistence_first }`
+    /// installs `SubsistenceFirstPolicy` on the simulation.
+    #[test]
+    fn scenario_policy_subsistence_first_installs_subsistence_first_policy() {
+        let yaml = r#"
+version: 1
+name: subsistence-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: subsistence_first
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with policy");
+        assert_eq!(scenario.policy.kind, "subsistence_first");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "subsistence_first");
+    }
+
+    /// FR-CORE-005 — scenario YAML without a `policy` field defaults to
+    /// `NoopPolicy`.
+    #[test]
+    fn scenario_without_policy_field_defaults_to_noop() {
+        let yaml = r#"
+version: 1
+name: noop-default-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario without policy");
+        assert_eq!(scenario.policy.kind, "noop");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — scenario YAML with an unknown policy kind falls back to
+    /// `NoopPolicy` (defensive: we never fail a scenario load on a typo).
+    #[test]
+    fn scenario_unknown_policy_kind_falls_back_to_noop() {
+        let yaml = r#"
+version: 1
+name: unknown-policy-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: libertarian_anarchism
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with unknown policy");
+        assert_eq!(scenario.policy.kind, "libertarian_anarchism");
+        let sim = scenario.into_simulation(1);
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — the policy installed by a scenario produces
+    /// `last_control_signals` after a tick.
+    #[test]
+    fn scenario_policy_signals_propagate_through_tick() {
+        let yaml = r#"
+version: 1
+name: policy-tick-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+policy:
+  kind: capitalist
+"#;
+        let scenario = parse_yaml(yaml).expect("parse scenario with policy");
+        let mut sim = scenario.into_simulation(1);
+        sim.tick();
+        // Default CapitalistPolicy is a no-op, so signals are empty.
+        assert_eq!(sim.last_control_signals(), &crate::ControlSignals::default());
+
     }
 }

@@ -45,9 +45,9 @@ namespace DINOForge.Tests
         [InlineData("heavy_vehicle",   "Components.SiegeUnit")]
         [InlineData("main_battle_vehicle", "Components.SiegeUnit")]
         // #975 Phase 1 — cims (citizens/workers) and buildings.
-        [InlineData("cims",            "Components.Worker")]
-        [InlineData("worker",          "Components.Worker")]
-        [InlineData("citizen",         "Components.Worker")]
+        [InlineData("cims",            "Components.Citizen")]
+        [InlineData("worker",          "Components.Citizen")]
+        [InlineData("citizen",         "Components.Citizen")]
         [InlineData("building",        "Components.BuildingBase")]
         [InlineData("command",         "Components.BuildingBase")]
         [InlineData("barracks",        "Components.BuildingBase")]

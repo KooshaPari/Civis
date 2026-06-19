@@ -2,9 +2,9 @@
 //!
 //! Part of the Civis 3D extension (`feat/civis-3d-foundation`). The actual storage
 //! (SVO + dense 16³ leaf chunks), deterministic dirty queue, fixed-point coords,
-//! and per-engine `Mesher` trait live in
-//! [`phenotype-voxel`](https://github.com/KooshaPari/phenotype-voxel). This crate
-//! re-exports the kernel and adds Civis-side glue (ECS integration with `civ-engine`,
+//! and per-engine `Mesher` trait live in the
+//! [`phenotype-voxel`](https://github.com/KooshaPari/phenotype-gfx/tree/main/crates/phenotype-voxel)
+//! compat crate on `phenotype-gfx`. This crate re-exports the kernel and adds Civis-side glue
 //! protocol bindings via `civ-protocol-3d`) as it is implemented.
 //!
 //! See:

@@ -18,7 +18,7 @@ permissions:
 jobs:
   pr-governance-gate:
     name: pr-governance-gate
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -30,7 +30,7 @@ jobs:
         run: bash scripts/quality/verify-quality-manifest.sh
 
       - name: Evaluate PR checks (billing bypass)
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d4aab8c21a6b6c375a657fbe2e65754290a2
         with:
           script: |
             const prNumber =
@@ -85,13 +85,10 @@ jobs:
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
             // Only these two jobs are required on PRs in local-first mode.
-            // NOTE: must be an Array (not a Set) — it is consumed via `.some()`
-            // below, which Set does not implement (was crashing the gate with
-            // "requiredOk.some is not a function", failing every PR).
-            const requiredOk = [
+            const requiredOk = new Set([
               /^pr-governance-gate$/i,
               /^quality-manifest/i,
-            ];
+            ]);
 
             // Third-party / legacy optional checks (never block when local-first label is set).
             const optionalBypass = [
@@ -135,12 +132,8 @@ jobs:
                 continue;
               }
               if (node.__typename === "CheckRun") {
-                // A still-running check is not a failure — branch protection's
-                // required-checks list enforces completion before merge. The gate
-                // only flags genuine failures, so don't hard-fail on IN_PROGRESS/
-                // QUEUED/PENDING/WAITING (this races every push, since the gate
-                // fires on `synchronize` while tests/coverage are mid-flight).
                 if (node.status !== "COMPLETED") {
+                  failures.push(`Check '${name}' is still ${node.status}.`);
                   continue;
                 }
                 if (!["SUCCESS", "SKIPPED", "NEUTRAL"].includes(node.conclusion || "")) {

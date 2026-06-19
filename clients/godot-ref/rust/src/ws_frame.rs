@@ -1,7 +1,7 @@
 //! WebSocket payload decode for civ-server attach (F3D0 + JSON-RPC fallback).
 
 use crate::f3d0_mesh::{mesh_chunk_from_material_ids, CHUNK_VOXELS};
-use civ_protocol_3d::{decode_frame3d_binary, is_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
+use civ_protocol_3d::{decode_frame3d_binary, Frame3d, FRAME3D_BINARY_MAGIC};
 use godot::prelude::*;
 use serde_json::Value;
 
@@ -15,21 +15,15 @@ pub struct DecodedWsPacket {
     pub json: String,
 }
 
+fn is_frame3d_binary(bytes: &[u8]) -> bool {
+    bytes.len() >= FRAME3D_BINARY_MAGIC.len() && bytes.starts_with(FRAME3D_BINARY_MAGIC)
+}
+
 fn frame_kind_tick_json(frame: &Frame3d) -> DecodedWsPacket {
-    // Frame3d gained four additional variants (CivilianState, FactionState,
-    // EventFeed, Climate) on the wave-1 branch. The Godot client only renders
-    // the three voxel/building/agent variants as ECS entities, so for the
-    // GDScript surface we report any of the others as a generic "Other" kind
-    // and let GDScript ignore them — keeping the DecodedWsPacket contract
-    // stable while the protocol grows.
     let kind = match frame {
         Frame3d::VoxelDelta(_) => "VoxelDelta",
         Frame3d::BuildingDiff(_) => "BuildingDiff",
                 Frame3d::Climate(_) => "Climate",
-        Frame3d::CivilianState(_)
-        | Frame3d::FactionState(_)
-        | Frame3d::EventFeed(_)
-        | Frame3d::Climate(_) => "Other",
     };
     let tick = frame.tick();
     let json = serde_json::to_string(frame).unwrap_or_default();
@@ -173,8 +167,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode fixture");
         assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));

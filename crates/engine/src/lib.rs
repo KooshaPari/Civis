@@ -21,14 +21,15 @@ pub mod metrics;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
+pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 
 pub use engine::{
-    Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType,
-    MilitaryUnit, PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
-    SimulationSnapshot, UnitType, WorldState,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
+    DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
+    Resources, Simulation, SimulationSnapshot, UnitType, WorldState,
 };
 pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
@@ -36,10 +37,12 @@ pub use spawn::{
 };
 
 pub use civ_mod_host::{
-    format_mod_error_event, format_mod_loaded_event, load_manifest, ModHost, ModLoadedRecord,
-    ModManifest, ModRegistry, ModType,
+    format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
+    ModGuestStateSave, ModHost, ModLoadedRecord, ModManifest, ModRegistry, ModType,
+    ModUnloadedRecord,
 };
-pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
+pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,
@@ -48,7 +51,8 @@ pub use civ_tactics::{
     OperationalLayer, OperationalMovementConfig, WarBridgeConfig,
 };
 pub use hash_chain::{
-    chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
+    chain_advance, chain_root_from_payloads, chain_root_from_ticks, combat_event_bytes, hash_hex,
+    tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
 };
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};
@@ -58,14 +62,21 @@ pub use lod::{
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
 pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{effective_consumption, PolicyInput, DEFAULT_ECONOMY_POLICY};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
+};
 pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
     FORMAT_VERSION, MAGIC,
 };
+pub use save_bundle::{
+    CivSaveBundle, CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID,
+};
 pub use scenario::{
-    baseline_scenario_path, load_scenario, Scenario, ScenarioError, SCENARIO_SCHEMA_VERSION,
+    baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
+    SCENARIO_SCHEMA_VERSION,
 };
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 

@@ -908,3 +908,191 @@ pub(crate) async fn list_remote_mods_handler(
 ) -> Json<Vec<RemoteModEntry>> {
     Json(scan_remote_mod_cache(state.mods_dir.as_ref()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mod_type_label_maps_all_variants() {
+        assert_eq!(mod_type_label(ModType::Policy), "policy");
+        assert_eq!(mod_type_label(ModType::Economic), "economic");
+        assert_eq!(mod_type_label(ModType::Event), "event");
+        assert_eq!(mod_type_label(ModType::Scenario), "scenario");
+    }
+
+    #[test]
+    fn sanitize_mod_filename_accepts_simple_names() {
+        assert_eq!(sanitize_mod_filename("coolmod"), Ok("coolmod".to_string()));
+        assert_eq!(
+            sanitize_mod_filename("coolmod.civmod"),
+            Ok("coolmod".to_string())
+        );
+        assert!(sanitize_mod_filename("").is_err());
+        assert!(sanitize_mod_filename("   ").is_err());
+        assert!(sanitize_mod_filename("../escape").is_err());
+        assert!(sanitize_mod_filename("a/b").is_err());
+        assert!(sanitize_mod_filename(".civmod").is_err());
+    }
+
+    #[test]
+    fn validate_remote_fetch_url_requires_http_or_https() {
+        assert!(validate_remote_fetch_url("https://example.com/mod.zip").is_ok());
+        assert!(validate_remote_fetch_url("http://example.com").is_ok());
+        assert!(validate_remote_fetch_url("").is_err());
+        assert!(validate_remote_fetch_url("ftp://example.com").is_err());
+        assert!(validate_remote_fetch_url("not a url").is_err());
+    }
+
+    #[test]
+    fn sanitize_remote_mod_id_enforces_slug_rules() {
+        assert_eq!(
+            sanitize_remote_mod_id("cool-mod-1"),
+            Ok("cool-mod-1".to_string())
+        );
+        assert!(sanitize_remote_mod_id("").is_err());
+        assert!(sanitize_remote_mod_id("1bad").is_err());
+        assert!(sanitize_remote_mod_id("Bad").is_err());
+        assert!(sanitize_remote_mod_id("has space").is_err());
+        assert!(sanitize_remote_mod_id("a/b").is_err());
+        assert!(sanitize_remote_mod_id("a..b").is_err());
+    }
+
+    #[test]
+    fn url_hash_cache_id_is_deterministic_hex_prefix() {
+        let id = url_hash_cache_id("https://example.com/mod.zip");
+        assert_eq!(id.len(), 16);
+        assert!(id.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(
+            url_hash_cache_id("https://x"),
+            url_hash_cache_id("  https://x  ")
+        );
+        assert_ne!(url_hash_cache_id("https://a"), url_hash_cache_id("https://b"));
+    }
+
+    #[test]
+    fn resolve_remote_cache_id_validates_url_and_resolves_id() {
+        assert!(resolve_remote_cache_id("ftp://x", None).is_err());
+        assert_eq!(
+            resolve_remote_cache_id("https://x", Some("my-mod")).unwrap(),
+            "my-mod"
+        );
+        let auto = resolve_remote_cache_id("https://x", None).unwrap();
+        assert!(auto.starts_with("url-"));
+    }
+
+    #[test]
+    fn is_zip_payload_detects_pk_magic() {
+        assert!(is_zip_payload(b"PK\x03\x04rest"));
+        assert!(!is_zip_payload(b"PK"));
+        assert!(!is_zip_payload(b"NOPE"));
+        assert!(!is_zip_payload(&[]));
+    }
+
+    #[test]
+    fn resolve_install_source_rejects_empty_and_traversal() {
+        let dir = Path::new("/tmp/nonexistent-mods-dir-xyz");
+        assert!(resolve_install_source("", dir).is_err());
+        assert!(resolve_install_source("   ", dir).is_err());
+        assert!(resolve_install_source("../escape", dir).is_err());
+        assert!(resolve_install_source("mods/../../etc", dir).is_err());
+        assert!(resolve_install_source("definitely-not-a-real-mod-xyz", dir).is_err());
+    }
+
+    #[test]
+    fn resolve_repo_mod_path_validates_prefix_and_traversal() {
+        assert!(resolve_repo_mod_path("").is_err());
+        assert!(resolve_repo_mod_path("   ").is_err());
+        assert!(resolve_repo_mod_path("../escape").is_err());
+        assert!(resolve_repo_mod_path("notmods/foo.civmod").is_err());
+        assert!(resolve_repo_mod_path("mods/definitely-not-real-xyz.civmod").is_err());
+    }
+
+    #[test]
+    fn mod_source_relative_handles_outside_repo_path() {
+        let outside = Path::new("/some/totally/unrelated/path/mod.civmod");
+        let s = mod_source_relative(outside);
+        assert!(!s.is_empty());
+        assert!(s.contains("mod.civmod"));
+    }
+
+    // ---- remote-mod registry allow-list validation ----
+
+    fn entry(url_prefix: &str) -> RemoteModRegistryEntry {
+        RemoteModRegistryEntry {
+            url_prefix: url_prefix.to_string(),
+            mod_id: None,
+            require_signature: false,
+            allowed_pubkeys: Vec::new(),
+        }
+    }
+
+    /// A minimal valid manifest; `pubkey` injects an `author_pubkey_hex` line so
+    /// signature/allowlist branches can be exercised.
+    fn manifest(id: &str, pubkey: Option<&str>) -> civ_mod_host::ModManifest {
+        let pk_line = pubkey.map_or(String::new(), |k| format!("author_pubkey_hex = \"{k}\"\n"));
+        let toml = format!(
+            "[mod]\nid = \"{id}\"\nname = \"N\"\nversion = \"0.1.0\"\napi_version = \"1\"\n\
+             mod_type = \"policy\"\nauthor = \"t\"\ndescription = \"d\"\n{pk_line}\n\
+             [dependencies]\ncivlab-api = \">=1.0.0, <2.0.0\"\n\n[permissions]\n"
+        );
+        civ_mod_host::parse_manifest(&toml, Path::new("manifest.toml")).expect("valid manifest")
+    }
+
+    #[test]
+    fn match_registry_entry_uses_trimmed_prefix() {
+        let reg = RemoteModRegistry {
+            require_registry: false,
+            entries: vec![entry("https://trusted.example/")],
+        };
+        assert!(match_registry_entry(&reg, "  https://trusted.example/mod.zip  ").is_some());
+        assert!(match_registry_entry(&reg, "https://evil.example/mod.zip").is_none());
+    }
+
+    #[test]
+    fn validate_remote_fetch_rejects_unlisted_when_required() {
+        let reg = RemoteModRegistry {
+            require_registry: true,
+            entries: vec![entry("https://trusted.example/")],
+        };
+        assert!(validate_remote_fetch_against_registry(&reg, "https://evil.example/m", None).is_err());
+        assert!(validate_remote_fetch_against_registry(&reg, "https://trusted.example/m", None).is_ok());
+    }
+
+    #[test]
+    fn validate_remote_fetch_enforces_mod_id_match() {
+        let mut e = entry("https://trusted.example/");
+        e.mod_id = Some("expected-id".to_string());
+        let reg = RemoteModRegistry { require_registry: false, entries: vec![e] };
+        let url = "https://trusted.example/m";
+        assert!(validate_remote_fetch_against_registry(&reg, url, Some("wrong-id")).is_err());
+        assert!(validate_remote_fetch_against_registry(&reg, url, Some("expected-id")).is_ok());
+        // Unlisted url with require_registry=false matches nothing and is allowed.
+        assert!(matches!(
+            validate_remote_fetch_against_registry(&reg, "https://other.example/m", Some("x")),
+            Ok(None)
+        ));
+    }
+
+    #[test]
+    fn validate_remote_mod_no_entry_is_ok() {
+        assert!(validate_remote_mod_against_registry(None, &manifest("any", None)).is_ok());
+    }
+
+    #[test]
+    fn validate_remote_mod_enforces_id_signature_and_allowlist() {
+        let mut e = entry("https://trusted.example/");
+        e.mod_id = Some("the-mod".to_string());
+        e.require_signature = true;
+        e.allowed_pubkeys = vec!["AABB".to_string()];
+
+        // archive id mismatch
+        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("other", Some("AABB"))).is_err());
+        // signature required but missing
+        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", None)).is_err());
+        // pubkey not in allowlist
+        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", Some("CCDD"))).is_err());
+        // happy path: id matches, signed, pubkey allowed (case-insensitive)
+        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", Some("aabb"))).is_ok());
+    }
+}

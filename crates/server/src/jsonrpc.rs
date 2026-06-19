@@ -67,6 +67,15 @@ pub enum JsonRpcMethod {
     LoadSlot,
     /// List saves in the bridge `saves/` directory (`save.list`, CIV-1000 §13).
     SaveList,
+    /// Read the latest civ-emergence-metrics sample
+    /// (`sim.emergence`, stacked on PR #350; FR dashboard).
+    SimEmergence,
+    /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
+    SimSubscribe,
+    /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
+    SimUnsubscribe,
+    /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
+    SimUpdateSubscription,
 }
 
 impl JsonRpcMethod {
@@ -90,6 +99,10 @@ impl JsonRpcMethod {
             Self::SaveSlot => "save.slot",
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
+            Self::SimEmergence => "sim.emergence",
+            Self::SimSubscribe => "sim.subscribe",
+            Self::SimUnsubscribe => "sim.unsubscribe",
+            Self::SimUpdateSubscription => "sim.update_subscription",
         }
     }
 
@@ -113,6 +126,10 @@ impl JsonRpcMethod {
             "save.slot" => Some(Self::SaveSlot),
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
+            "sim.emergence" => Some(Self::SimEmergence),
+            "sim.subscribe" => Some(Self::SimSubscribe),
+            "sim.unsubscribe" => Some(Self::SimUnsubscribe),
+            "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             _ => None,
         }
     }
@@ -405,6 +422,13 @@ pub struct SnapshotFields {
     pub mod_permission_violations: Vec<String>,
     /// Deterministic planet climate from `phase_planet` (FR-CIV-PLANET-010).
     pub climate: civ_engine::Climate,
+    /// Most recent civ-emergence-metrics sample (FR-CIV-EMERG-003
+    /// surface). `None` on a fresh sim before the first 50-tick
+    /// sample boundary; the bridge copies the same value here as
+    /// `DispatchContext::emergence` so dashboard consumers can poll
+    /// either `sim.emergence` or `sim.snapshot.emergence` without
+    /// missing the dashboard block.
+    pub emergence: Option<EmergenceSampleFields>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -537,6 +561,88 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
         "climate".to_owned(),
         serde_json::to_value(fields.climate).unwrap_or(Value::Null),
     );
+    if let Some(emergence) = &fields.emergence {
+        // `sim.snapshot.emergence` block (FR-CIV-EMERG-003). The five
+        // dashboard fields are hoisted to a nested `dashboard` object
+        // so dashboard clients can read either the flat wire shape
+        // (`result["cluster_entropy"]`) or the nested one
+        // (`result["dashboard"]["cluster_entropy"]`). The flat hoist
+        // keeps PR #350 dashboard clients working; the nested
+        // location is the canonical "all five tiles" handle.
+        let mut emergence_obj = serde_json::Map::new();
+        emergence_obj.insert("tick".to_owned(), serde_json::json!(emergence.tick));
+        emergence_obj.insert(
+            "entropy_bits".to_owned(),
+            serde_json::json!(emergence.entropy_bits),
+        );
+        emergence_obj.insert(
+            "entropy_norm".to_owned(),
+            serde_json::json!(emergence.entropy_norm),
+        );
+        if let Some(count) = emergence.structure_count {
+            emergence_obj.insert("structure_count".to_owned(), serde_json::json!(count));
+        }
+        if let Some(largest) = emergence.structure_largest {
+            emergence_obj.insert("structure_largest".to_owned(), serde_json::json!(largest));
+        }
+        if let Some(foreground) = emergence.structure_foreground {
+            emergence_obj.insert(
+                "structure_foreground".to_owned(),
+                serde_json::json!(foreground),
+            );
+        }
+        emergence_obj.insert(
+            "histogram_total".to_owned(),
+            serde_json::json!(emergence.histogram_total),
+        );
+        emergence_obj.insert(
+            "histogram_populated_bins".to_owned(),
+            serde_json::json!(emergence.histogram_populated_bins),
+        );
+        emergence_obj.insert(
+            "sample_dur_us".to_owned(),
+            serde_json::json!(emergence.sample_dur_us),
+        );
+        if let Some(dashboard) = &emergence.dashboard {
+            emergence_obj.insert(
+                "cluster_entropy".to_owned(),
+                serde_json::json!(dashboard.cluster_entropy),
+            );
+            emergence_obj.insert(
+                "ideology_homophily".to_owned(),
+                serde_json::json!(dashboard.ideology_homophily),
+            );
+            emergence_obj.insert(
+                "sentience_fraction".to_owned(),
+                serde_json::json!(dashboard.sentience_fraction),
+            );
+            emergence_obj.insert(
+                "psyche_stability".to_owned(),
+                serde_json::json!(dashboard.psyche_stability),
+            );
+            emergence_obj.insert(
+                "diplomacy_tension".to_owned(),
+                serde_json::json!(dashboard.diplomacy_tension),
+            );
+            emergence_obj.insert(
+                "dashboard".to_owned(),
+                serde_json::to_value(dashboard).unwrap_or(Value::Null),
+            );
+        }
+        emergence_obj.insert(
+            "power_law_alpha".to_owned(),
+            serde_json::json!(emergence.power_law_alpha),
+        );
+        emergence_obj.insert(
+            "novelty_rate".to_owned(),
+            serde_json::json!(emergence.novelty_rate),
+        );
+        emergence_obj.insert(
+            "mi_material_faction_norm".to_owned(),
+            emergence.mi_material_faction_norm.map_or(Value::Null, |v| serde_json::json!(v)),
+        );
+        obj.insert("emergence".to_owned(), Value::Object(emergence_obj));
+    }
     Value::Object(obj)
 }
 
@@ -621,11 +727,12 @@ pub fn snapshot_fields_from_sim(
             .replay_log()
             .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
+        emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
     }
 }
 
 /// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -641,6 +748,126 @@ pub struct DispatchContext {
     pub connection_role: Option<String>,
     /// Bridge save directory for `save.*` handlers.
     pub saves_dir: Option<PathBuf>,
+    /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
+    /// fresh simulation before the first 50-tick sample boundary.
+    pub emergence: Option<EmergenceSampleFields>,
+}
+
+/// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
+///
+/// Mirrors the engine type but keeps a fixed, transport-friendly
+/// representation (no `f32` precision surprises, all `Option`s for the
+/// "no dense chunks yet" boot state). Emitted by the `sim.emergence`
+/// JSON-RPC method and embedded in `sim.snapshot` for dashboard
+/// consumers that poll the snapshot stream instead.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmergenceSampleFields {
+    /// Engine tick the sample was taken at.
+    pub tick: u64,
+    /// Shannon entropy (bits) over the live material histogram.
+    pub entropy_bits: f32,
+    /// Normalised Shannon entropy (`0..=1`).
+    pub entropy_norm: f32,
+    /// 6-connectivity component count on the first dense chunk.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structure_count: Option<u32>,
+    /// Size (in voxels) of the largest component in the sampled chunk.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structure_largest: Option<u32>,
+    /// Number of foreground voxels in the sampled chunk.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structure_foreground: Option<u32>,
+    /// Total number of voxels accumulated into the histogram.
+    pub histogram_total: u64,
+    /// Number of populated bins in the material histogram.
+    pub histogram_populated_bins: u32,
+    /// Wall-clock duration of the sample, in microseconds.
+    pub sample_dur_us: u64,
+    /// Five-tile dashboard block (FR-CIV-EMERG-001/003). Field is
+    /// `None` only on the (rare) path where the engine sample is
+    /// absent and we still want to emit a non-`null` JSON object;
+    /// the wire shape is `cluster_entropy`, `ideology_homophily`,
+    /// `sentience_fraction`, `psyche_stability`, `diplomacy_tension`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dashboard: Option<DashboardBlock>,
+    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+    pub branching_sigma: f32,
+    /// Normalised edge-of-chaos score for `branching_sigma`.
+    pub branching_sigma_score: f32,
+    /// Rolling window `W` for `branching_sigma`.
+    pub branching_window: u32,
+    /// Monotonic count of closed avalanches.
+    pub avalanches_closed: u64,
+    /// Charter regime label for `branching_sigma`.
+    pub branching_regime: String,
+    /// Power-law exponent α for the cluster-size distribution (charter §3.5).
+    #[serde(default)]
+    pub power_law_alpha: f32,
+    /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
+    #[serde(default)]
+    pub novelty_rate: f32,
+    /// Normalised mutual information between material and faction distributions.
+    #[serde(default)]
+    pub mi_material_faction_norm: Option<f32>,
+}
+
+/// Wire-friendly mirror of
+/// [`civ_emergence_metrics::dashboard::EmergenceDashboard`] for the
+/// `sim.emergence` / `sim.snapshot.emergence` JSON-RPC surface
+/// (FR-CIV-EMERG-003). The struct re-exports the five f32 fields as a
+/// nested object so dashboard clients can read either the flat
+/// `result["cluster_entropy"]` shape *or* the nested
+/// `result["dashboard"]["cluster_entropy"]` shape — both are emitted
+/// by the dispatch for backwards compatibility with PR #350 consumers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DashboardBlock {
+    /// Normalised Shannon entropy over per-cluster population sizes.
+    pub cluster_entropy: f32,
+    /// Homophily index for the ideology distribution.
+    pub ideology_homophily: f32,
+    /// Fraction of agents that have crossed the sentience threshold.
+    pub sentience_fraction: f32,
+    /// Population stability of mood valence.
+    pub psyche_stability: f32,
+    /// Mean absolute tension across the recent diplomacy events.
+    pub diplomacy_tension: f32,
+}
+
+impl From<civ_emergence_metrics::dashboard::EmergenceDashboard> for DashboardBlock {
+    fn from(d: civ_emergence_metrics::dashboard::EmergenceDashboard) -> Self {
+        Self {
+            cluster_entropy: d.cluster_entropy,
+            ideology_homophily: d.ideology_homophily,
+            sentience_fraction: d.sentience_fraction,
+            psyche_stability: d.psyche_stability,
+            diplomacy_tension: d.diplomacy_tension,
+        }
+    }
+}
+
+impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFields {
+    fn from(s: civ_engine::emergence_metrics::EmergenceSample) -> Self {
+        Self {
+            tick: s.tick,
+            entropy_bits: s.entropy_bits,
+            entropy_norm: s.entropy_norm,
+            structure_count: s.structure_count,
+            structure_largest: s.structure_largest,
+            structure_foreground: s.structure_foreground,
+            histogram_total: s.histogram_total,
+            histogram_populated_bins: s.histogram_populated_bins,
+            sample_dur_us: s.sample_dur_us,
+            dashboard: Some(DashboardBlock::from(s.dashboard)),
+            branching_sigma: s.branching_sigma,
+            branching_sigma_score: s.branching_sigma_score,
+            branching_window: s.branching_window,
+            avalanches_closed: s.avalanches_closed,
+            branching_regime: s.branching_regime.label().to_string(),
+            power_law_alpha: s.power_law_alpha,
+            novelty_rate: s.novelty_rate,
+            mi_material_faction_norm: s.mi_material_faction_norm,
+        }
+    }
 }
 
 /// Side effect the WebSocket bridge must apply after building the wire response.
@@ -978,6 +1205,23 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
+        JsonRpcMethod::SimEmergence => {
+            // Latest emergence-metrics sample (civ-emergence-metrics
+            // via `crates/engine::emergence_metrics`). Returns `null`
+            // for the no-sample-yet state (ticks 0..49 on a fresh sim)
+            // so dashboard clients can disambiguate "no data" from
+            // "entropy is exactly zero".
+            let result = match ctx.emergence.as_ref() {
+                Some(sample) => serde_json::to_value(sample).unwrap_or(serde_json::json!({
+                    "tick": ctx.tick,
+                })),
+                None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimSpawnCivilian => {
             if !role_allows_operator(
                 ctx.require_role,
@@ -1181,6 +1425,21 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 ),
                 effect: DispatchEffect::None,
             },
+        },
+        JsonRpcMethod::SimSubscribe
+        | JsonRpcMethod::SimUpdateSubscription
+        | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
+            response: JsonRpcResponse::failure(
+                req.id,
+                JsonRpcError {
+                    code: error_code::INTERNAL_ERROR,
+                    message:
+                        "sim.subscribe/unsubscribe require an active WebSocket connection"
+                            .to_owned(),
+                    data: None,
+                },
+            ),
+            effect: DispatchEffect::None,
         },
     }
 }
@@ -1416,6 +1675,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1450,6 +1710,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(
@@ -1484,6 +1745,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -1507,6 +1769,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1531,6 +1794,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1556,6 +1820,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1581,6 +1846,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1602,6 +1868,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1660,6 +1927,40 @@ mod tests {
     }
 
     #[test]
+    fn response_success_and_failure_shape() {
+        use serde_json::json;
+        let ok = JsonRpcResponse::success(RequestId::Null, json!({"v":1}));
+        assert!(ok.result.is_some());
+        assert!(ok.error.is_none());
+        assert_eq!(ok.jsonrpc, JSONRPC_VERSION);
+        let err = JsonRpcError {
+            code: -32603,
+            message: "boom".to_owned(),
+            data: None,
+        };
+        let fail = JsonRpcResponse::failure(RequestId::Null, err);
+        assert!(fail.result.is_none());
+        assert!(fail.error.is_some());
+        assert_eq!(fail.jsonrpc, ok.jsonrpc);
+    }
+
+    #[test]
+    fn parse_error_codes_and_messages() {
+        assert_eq!(JsonRpcParseError::Parse.code(), error_code::PARSE_ERROR);
+        let inv = JsonRpcParseError::InvalidRequest { message: "bad" };
+        assert_eq!(inv.code(), error_code::INVALID_REQUEST);
+        let mnf = JsonRpcParseError::MethodNotFound {
+            method: "sim.nope".to_owned(),
+        };
+        assert_eq!(mnf.code(), error_code::METHOD_NOT_FOUND);
+        assert_eq!(JsonRpcParseError::Parse.message(), "Parse error");
+        assert!(mnf.message().contains("sim.nope"));
+        let e = JsonRpcParseError::Parse.into_error();
+        assert_eq!(e.code, error_code::PARSE_ERROR);
+        assert_eq!(e.message, "Parse error");
+    }
+
+    #[test]
     fn dispatch_sim_status_includes_population_when_available() {
         let req = parse_request(r#"{"jsonrpc":"2.0","id":3,"method":"sim.status","params":{}}"#)
             .expect("parse");
@@ -1673,6 +1974,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1696,9 +1998,180 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
+    }
+
+    /// `sim.emergence` returns the cached [`EmergenceSampleFields`] when
+    /// the bridge has already populated [`DispatchContext::emergence`]
+    /// (PR #350 stack). The wire contract is a flat JSON object with
+    /// `tick`, `entropy_bits`, `entropy_norm`, and the structure bin
+    /// counts — exactly the shape the dashboard tiles consume.
+    #[test]
+    fn dispatch_sim_emergence_returns_cached_sample() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":50,"method":"sim.emergence","params":{}}"#)
+                .expect("parse");
+        let sample = EmergenceSampleFields {
+            tick: 50,
+            entropy_bits: 0.3472,
+            entropy_norm: 0.0820,
+            structure_count: Some(3),
+            structure_largest: Some(2048),
+            structure_foreground: Some(4096),
+            histogram_total: 4096,
+            histogram_populated_bins: 4,
+            sample_dur_us: 17,
+            dashboard: Some(DashboardBlock {
+                cluster_entropy: 0.97,
+                ideology_homophily: 0.6,
+                sentience_fraction: 0.4,
+                psyche_stability: 0.8,
+                diplomacy_tension: 0.1,
+            }),
+            branching_sigma: 0.95,
+            branching_sigma_score: 0.71,
+            branching_window: 10,
+            avalanches_closed: 4,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 0.0,
+            novelty_rate: 0.0,
+            mi_material_faction_norm: None,
+        };
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 50,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: Some(sample),
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("result");
+        assert_eq!(result["tick"], 50);
+        // f32 round-trips through JSON as a number close to the
+        // original; we assert within a small absolute tolerance
+        // rather than exact equality.
+        let entropy_bits = result["entropy_bits"].as_f64().expect("f64");
+        assert!(
+            (entropy_bits - 0.3472).abs() < 1e-5,
+            "entropy_bits: {entropy_bits}"
+        );
+        let entropy_norm = result["entropy_norm"].as_f64().expect("f64");
+        assert!(
+            (entropy_norm - 0.0820).abs() < 1e-5,
+            "entropy_norm: {entropy_norm}"
+        );
+        assert_eq!(result["structure_count"], 3);
+        assert_eq!(result["structure_largest"], 2048);
+        assert_eq!(result["structure_foreground"], 4096);
+        assert_eq!(result["histogram_total"], 4096);
+        assert_eq!(result["histogram_populated_bins"], 4);
+        assert_eq!(result["sample_dur_us"], 17);
+    }
+
+    /// FR-CIV-EMERG-003: `sim.emergence` JSON-RPC response includes
+    /// the five-tile `dashboard` block with the canonical field
+    /// names. The wire shape is documented in
+    /// `EmergenceSampleFields::dashboard`.
+    #[test]
+    fn emerg_emerg_003_sim_emergence_returns_dashboard_block() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":52,"method":"sim.emergence","params":{}}"#)
+                .expect("parse");
+        let sample = EmergenceSampleFields {
+            tick: 100,
+            entropy_bits: 0.5,
+            entropy_norm: 0.25,
+            structure_count: Some(2),
+            structure_largest: Some(2048),
+            structure_foreground: Some(2048),
+            histogram_total: 4096,
+            histogram_populated_bins: 5,
+            sample_dur_us: 21,
+            dashboard: Some(DashboardBlock {
+                cluster_entropy: 0.97,
+                ideology_homophily: 0.5,
+                sentience_fraction: 0.4,
+                psyche_stability: 0.8,
+                diplomacy_tension: 0.1,
+            }),
+            branching_sigma: 0.95,
+            branching_sigma_score: 0.71,
+            branching_window: 10,
+            avalanches_closed: 4,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 0.0,
+            novelty_rate: 0.0,
+            mi_material_faction_norm: None,
+        };
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 100,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: Some(sample),
+            },
+        );
+        let result = plan.response.result.expect("result");
+        let dashboard = &result["dashboard"];
+        assert!(dashboard.is_object(), "dashboard must be an object");
+        // f32 round-trips through JSON with a small precision loss;
+        // we assert the parsed f64 is close to the input rather than
+        // bit-equal so the test survives cross-platform JSON
+        // number formatting.
+        for (key, expected) in [
+            ("cluster_entropy", 0.97_f64),
+            ("ideology_homophily", 0.5),
+            ("sentience_fraction", 0.4),
+            ("psyche_stability", 0.8),
+            ("diplomacy_tension", 0.1),
+        ] {
+            let value = dashboard[key].as_f64().unwrap_or(f64::NAN);
+            assert!(
+                (value - expected).abs() < 1e-5,
+                "{key}: got {value}, expected {expected}"
+            );
+        }
+    }
+
+    /// `sim.emergence` on a fresh sim (ticks 0..49, no sample yet)
+    /// returns `{ "tick": N, "sample": null }` so dashboard clients can
+    /// distinguish "no data" from "entropy is exactly zero".
+    #[test]
+    fn dispatch_sim_emergence_returns_null_sample_before_first_boundary() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":51,"method":"sim.emergence"}"#).expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 12,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(
+            plan.response.result,
+            Some(serde_json::json!({ "tick": 12, "sample": serde_json::Value::Null }))
+        );
     }
 
     #[test]
@@ -1805,6 +2278,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -1840,6 +2314,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert!(matches!(
@@ -1886,6 +2361,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert!(matches!(
@@ -1952,11 +2428,13 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
+                    emergence: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2021,11 +2499,13 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
+                    emergence: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(
@@ -2095,11 +2575,13 @@ mod tests {
                         moon_phase: 0.0,
                         tide_offset: 0.0,
                     },
+                    emergence: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(
@@ -2140,6 +2622,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(
@@ -2173,6 +2656,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(
@@ -2204,6 +2688,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2228,6 +2713,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2294,6 +2780,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2358,6 +2845,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -2383,6 +2871,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2413,6 +2902,7 @@ mod tests {
                 speed_multiplier: 4,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2422,8 +2912,14 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-SAVE-001.
+    /// Covers FR-CIV-SAVE-002.
+    /// Covers FR-CIV-TACTICS-066.
+    /// FR-CIV-TACTICS-066 — `save.slot` is a JSON-RPC method dispatched on
+    /// the server bridge; the planner emits a `DispatchEffect::SaveSlot`
+    /// with the slot name from the request params.
     #[test]
-    fn dispatch_save_slot_plans_save_effect() {
+    fn dispatch_save_slot_plans_save_effect_fr_save_002() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":30,"method":"save.slot","params":{"slot_name":"slot-2"}}"#,
         )
@@ -2438,6 +2934,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(
@@ -2448,8 +2945,11 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-SAVE-001.
+    /// Covers FR-CIV-SAVE-002.
+    /// Covers FR-CIV-TACTICS-066.
     #[test]
-    fn dispatch_save_slot_rejects_invalid_slot() {
+    fn dispatch_save_slot_rejects_invalid_slot_fr_save_002() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":31,"method":"save.slot","params":{"slot_name":"slot-9"}}"#,
         )
@@ -2464,6 +2964,7 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
+                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2471,5 +2972,256 @@ mod tests {
             plan.response.error.as_ref().map(|e| e.code),
             Some(error_code::INVALID_PARAMS)
         );
+    }
+
+    #[test]
+    fn parse_reset_seed_extracts_u64() {
+        use serde_json::json;
+        assert_eq!(parse_reset_seed(Some(&json!({"seed": 42}))).unwrap(), 42);
+        assert!(parse_reset_seed(None).is_err());
+        assert!(parse_reset_seed(Some(&json!({}))).is_err());
+        assert!(parse_reset_seed(Some(&json!({"seed": "x"}))).is_err());
+    }
+
+    #[test]
+    fn parse_set_speed_params_validates_multiplier() {
+        use serde_json::json;
+        assert_eq!(
+            parse_set_speed_params(Some(&json!({"multiplier": 2}))).unwrap(),
+            2
+        );
+        assert_eq!(
+            parse_set_speed_params(Some(&json!({"multiplier": 0}))).unwrap(),
+            0
+        );
+        assert!(parse_set_speed_params(Some(&json!({"multiplier": 3}))).is_err());
+        assert!(parse_set_speed_params(None).is_err());
+        assert!(parse_set_speed_params(Some(&json!({"multiplier": "x"}))).is_err());
+    }
+
+    #[test]
+    fn parse_role_param_reads_nonempty_role() {
+        use serde_json::json;
+        assert_eq!(
+            parse_role_param(Some(&json!({"role":"operator"}))),
+            Some("operator".to_string())
+        );
+        assert_eq!(parse_role_param(Some(&json!({"role":""}))), None);
+        assert_eq!(parse_role_param(None), None);
+        assert_eq!(parse_role_param(Some(&json!({}))), None);
+    }
+
+    #[test]
+    fn role_allows_operator_enforces_when_required() {
+        use serde_json::json;
+        assert!(role_allows_operator(false, None, None));
+        assert!(role_allows_operator(
+            true,
+            Some(&json!({"role":"operator"})),
+            None
+        ));
+        assert!(role_allows_operator(true, None, Some("operator")));
+        assert!(!role_allows_operator(true, None, None));
+        assert!(!role_allows_operator(
+            true,
+            Some(&json!({"role":"viewer"})),
+            None
+        ));
+    }
+
+    #[test]
+    fn parse_name_maps_all_known_methods() {
+        assert_eq!(
+            JsonRpcMethod::parse_name("health"),
+            Some(JsonRpcMethod::Health)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.command"),
+            Some(JsonRpcMethod::SimCommand)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.status"),
+            Some(JsonRpcMethod::SimStatus)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.set_speed"),
+            Some(JsonRpcMethod::SimSetSpeed)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.slot"),
+            Some(JsonRpcMethod::SaveSlot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.load"),
+            Some(JsonRpcMethod::LoadSlot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.list"),
+            Some(JsonRpcMethod::SaveList)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.emergence"),
+            Some(JsonRpcMethod::SimEmergence)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.snapshot"),
+            Some(JsonRpcMethod::SimSnapshot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.spawn_entity"),
+            Some(JsonRpcMethod::SimSpawnEntity)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.subscribe"),
+            Some(JsonRpcMethod::SimSubscribe)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.unsubscribe"),
+            Some(JsonRpcMethod::SimUnsubscribe)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.update_subscription"),
+            Some(JsonRpcMethod::SimUpdateSubscription)
+        );
+        assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
+        assert_eq!(JsonRpcMethod::parse_name(""), None);
+    }
+
+    #[test]
+    fn parse_replay_path_extracts_nonempty() {
+        use serde_json::json;
+        assert_eq!(
+            parse_replay_path(Some(&json!({"path":"saves/x.civreplay"}))).unwrap(),
+            "saves/x.civreplay"
+        );
+        assert!(parse_replay_path(None).is_err());
+        assert!(parse_replay_path(Some(&json!({}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
+    }
+
+    #[test]
+    fn parse_sim_command_action_maps_noop_tick() {
+        use serde_json::json;
+        assert!(matches!(
+            parse_sim_command_action(Some(&json!({"action":"noop"}))),
+            Some(SimCommandAction::Noop)
+        ));
+        assert!(matches!(
+            parse_sim_command_action(Some(&json!({"action":"tick"}))),
+            Some(SimCommandAction::Tick)
+        ));
+        assert!(parse_sim_command_action(Some(&json!({"action":"bogus"}))).is_none());
+        assert!(parse_sim_command_action(Some(&json!({}))).is_none());
+        assert!(parse_sim_command_action(None).is_none());
+    }
+
+    #[test]
+    fn spawn_entity_kind_wire_labels() {
+        assert_eq!(SpawnEntityKind::Civilian.wire_label(), "civilian");
+        assert_eq!(SpawnEntityKind::Vehicle.wire_label(), "vehicle");
+        assert_eq!(SpawnEntityKind::Airport.wire_label(), "airport");
+        assert_eq!(SpawnEntityKind::Port.wire_label(), "port");
+        assert_eq!(SpawnEntityKind::Hangar.wire_label(), "hangar");
+    }
+
+    #[test]
+    fn set_sim_command_tick_inserts_tick_into_object_result() {
+        use serde_json::json;
+        let mut resp = JsonRpcResponse::success(RequestId::Null, json!({"status":"ok"}));
+        set_sim_command_tick(&mut resp, 99);
+        assert_eq!(
+            resp.result.as_ref().unwrap().get("tick").unwrap(),
+            &json!(99)
+        );
+        let mut resp2 = JsonRpcResponse::success(RequestId::Null, json!("plain-string"));
+        set_sim_command_tick(&mut resp2, 5);
+        assert_eq!(resp2.result.as_ref().unwrap(), &json!("plain-string"));
+    }
+
+    /// Criticality metrics are carried through From<EmergenceSample> for EmergenceSampleFields.
+    #[test]
+    fn emergence_sample_fields_from_carries_criticality_metrics() {
+        use civ_engine::emergence_metrics::EmergenceSample;
+        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_emergence_metrics::branching::BranchingRegime;
+
+        let sample = EmergenceSample {
+            tick: 1,
+            entropy_bits: 0.0,
+            entropy_norm: 0.0,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 0,
+            histogram_populated_bins: 0,
+            sample_dur_us: 0,
+            dashboard: EmergenceDashboard::default(),
+            branching_sigma: 0.0,
+            branching_sigma_score: 0.0,
+            branching_window: 0,
+            avalanches_closed: 0,
+            branching_regime: BranchingRegime::HeatDeath,
+            power_law_alpha: 1.95,
+            novelty_rate: 0.008,
+            mi_material_faction_norm: Some(0.33),
+        };
+        let fields = EmergenceSampleFields::from(sample);
+        assert!((fields.power_law_alpha - 1.95).abs() < 1e-6, "power_law_alpha mismatch");
+        assert!((fields.novelty_rate - 0.008).abs() < 1e-6, "novelty_rate mismatch");
+        assert_eq!(fields.mi_material_faction_norm, Some(0.33));
+    }
+
+    /// snapshot_result_json includes power_law_alpha, novelty_rate, mi_material_faction_norm
+    /// in the emergence block.
+    #[test]
+    fn snapshot_result_json_emergence_contains_criticality_keys() {
+        let emergence = EmergenceSampleFields {
+            tick: 5,
+            entropy_bits: 0.1,
+            entropy_norm: 0.05,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 100,
+            histogram_populated_bins: 3,
+            sample_dur_us: 10,
+            dashboard: None,
+            branching_sigma: 1.0,
+            branching_sigma_score: 0.5,
+            branching_window: 5,
+            avalanches_closed: 2,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 2.1,
+            novelty_rate: 0.005,
+            mi_material_faction_norm: Some(0.42),
+        };
+        let fields = SnapshotFields {
+            tick: 5,
+            population: 0,
+            building_count: 0,
+            energy_budget: None,
+            market_prices: Default::default(),
+            hash_chain_root: None,
+            speed_multiplier: 1,
+            spectator: None,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate { tick: 5, day_phase: 0.0, year_phase: 0.0, moon_phase: 0.0, tide_offset: 0.0 },
+            emergence: Some(emergence),
+        };
+        let json = snapshot_result_json(&fields);
+        let emerg = json.get("emergence").expect("emergence block");
+        assert!(emerg.get("power_law_alpha").is_some(), "missing power_law_alpha");
+        assert!(emerg.get("novelty_rate").is_some(), "missing novelty_rate");
+        assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
+        let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
+        assert!((mi - 0.42).abs() < 1e-5);
     }
 }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Water: liquid drop with wave interior -->
+  <defs>
+    <clipPath id="dropClip">
+      <path d="M24,6 Q36,18 36,28 A12,12 0 0 1 12,28 Q12,18 24,6 Z"/>
+    </clipPath>
+    <linearGradient id="waterFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a5a8a" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0d2a4a" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <!-- drop shape -->
+  <path d="M24,6 Q36,18 36,28 A12,12 0 0 1 12,28 Q12,18 24,6 Z"
+    fill="url(#waterFill)" stroke="#50C8F0" stroke-width="2"/>
+  <!-- wave line inside drop -->
+  <path d="M14,28 Q18,24 22,28 Q26,32 30,28 Q33,25 36,28"
+    fill="none" stroke="#50C8F0" stroke-width="1.5" clip-path="url(#dropClip)" opacity="0.8"/>
+  <!-- glint -->
+  <ellipse cx="19" cy="18" rx="3" ry="2" fill="#50C8F0" opacity="0.35" transform="rotate(-30 19 18)"/>
+</svg>

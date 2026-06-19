@@ -1,0 +1,15 @@
+[package]
+name = "civ-audio"
+description = "CIV-0800 audio substrate: four-tier bus mix, biome-driven ambient beds, mood-driven score stems, SFX coalescing (pure-Rust core, no engine deps)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+
+[dev-dependencies]
+proptest = "1.11"
+serde_json = "1"

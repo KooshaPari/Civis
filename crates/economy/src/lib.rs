@@ -11,16 +11,28 @@
 #![warn(missing_docs)]
 
 mod allocation;
+mod allocator;
 mod institution;
 mod market;
+pub mod stocks;
 
-pub use allocation::{AllocationEngine, CapitalistAllocator};
+pub use allocation::{
+    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime, CapitalistAllocator,
+    JouleAllocator, PlannedAllocator, PriorityTier,
+};
 pub use institution::{
-    step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
-    InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
-    INSTITUTION_TREASURY,
+    collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
+    InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, TaxCollection,
+    Taxation, INSTITUTION_MARKET, INSTITUTION_TREASURY,
+};
+pub use allocator::{
+    Allocator, Bid, CancelledOrder, ClearedTrade, GoodId, Offer, OrderId,
 };
 pub use market::MarketState;
+pub use stocks::{
+    apply_trade, comparative_advantage, deficit, propose_trade, step_stocks, surplus, trade_gain,
+    Good, ProductionProfile, Stocks, TradeOffer, GOODS,
+};
 
 use serde::{Deserialize, Serialize};
 

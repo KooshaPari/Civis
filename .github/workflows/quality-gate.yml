@@ -1,21 +1,35 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# quality-gate.sh is the 9-gate developer-side sweep; the cloud used to run it
+# on every push to main which burnt Rust compile minutes. It is now run locally
+# via `just quality` (see justfile) and attested in `.ci/quality-manifest.json`.
+# This workflow is dispatch-only for the rare "cloud must reproduce" case.
 name: Quality Gate
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
   gate:
-    runs-on: ubuntu-latest
+    # Manual escape hatch: rerun the 9-gate quality-gate.sh on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     continue-on-error: true
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
       - name: Run 9-gate quality system
         env:
           QUALITY_GATE_ALL_FILES: "true"

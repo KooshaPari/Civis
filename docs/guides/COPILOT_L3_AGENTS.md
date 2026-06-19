@@ -200,7 +200,7 @@ CONSTRAINTS:
 ACCEPTANCE CRITERIA:
 ✓ File crates/engine/tests/fr_core_tick_loop.rs exists
 ✓ Test fails: 'error: cannot find struct Simulation'
-✓ Commit: 'test(engine): FR-CIV-0001-TICK failing test'
+✓ Commit: 'test(engine): tick loop failing test'
 
 CONTEXT:
 See docs/specs/CIV-0001-core-simulation-loop.md
@@ -243,7 +243,7 @@ ACCEPTANCE CRITERIA:
 ✓ Test passes: cargo test --package civ-engine test_simulation_tick_increments_turn
 ✓ Clippy clean: cargo clippy --package civ-engine -- -D warnings
 ✓ Code under 20 lines
-✓ Commit: 'feat(engine): FR-CIV-0001-TICK core tick loop'
+✓ Commit: 'feat(engine): core tick loop'
 
 CONTEXT:
 Test already exists in crates/engine/tests/fr_core_tick_loop.rs
@@ -702,4 +702,3 @@ copilot -p "{TASK: ... REQUIREMENTS: ... ACCEPTANCE CRITERIA: ...}" \
   --deny-tool 'shell(git push)' \
   &
 ```
-

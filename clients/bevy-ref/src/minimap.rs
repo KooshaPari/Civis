@@ -1,78 +1,97 @@
+use bevy::asset::RenderAssetUsages;
+use bevy::camera::{ClearColorConfig, RenderTarget, ScalingMode};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
-use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use bevy::ui::widget::ImageNode;
+use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_agents::Civilian as AgentCivilian;
-use civ_engine::{Building, Simulation};
+use civ_engine::Building;
 
+use crate::camera::CameraRig;
 use crate::sim_bridge::SimState;
+use crate::terrain::WORLD_SIZE;
+use crate::AttachMode;
 
 /// Minimap side length in UI pixels.
 pub const MINIMAP_SIZE: f32 = 200.0;
-const MINIMAP_TEXTURE_SIZE: u32 = 512;
 const MINIMAP_INSET: f32 = 8.0;
 const MINIMAP_WORLD_MIN: f32 = 0.0;
 const MINIMAP_WORLD_MAX: f32 = 256.0;
-const MINIMAP_CAMERA_HEIGHT: f32 = 300.0;
 const MINIMAP_CIVILIAN_DOT: f32 = 4.0;
 const MINIMAP_BUILDING_DOT: f32 = 5.0;
+const MINIMAP_TEXTURE_SIZE: u32 = 256;
+const MINIMAP_CAMERA_HEIGHT: f32 = 180.0;
 
-#[derive(Resource)]
-struct MinimapTexture(Handle<Image>);
-
-#[derive(Component)]
-struct MinimapRoot;
-
-#[derive(Component)]
-struct MinimapImage;
+#[derive(Resource, Clone)]
+struct MinimapRenderTarget {
+    image: Handle<Image>,
+}
 
 #[derive(Component)]
-struct MinimapDot;
+pub struct MinimapRoot;
+
+#[derive(Component)]
+pub struct MinimapDot;
+
+#[derive(Component)]
+pub struct MinimapCamera;
 
 /// Plugin that renders a top-down minimap and lets the player click to teleport the main camera.
 pub struct MinimapPlugin;
 
 impl Plugin for MinimapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_minimap)
-            .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap));
+        app.add_systems(
+            Startup,
+            (setup_minimap_render_target, setup_minimap).chain(),
+        )
+        .add_systems(Update, (sync_minimap_dots, teleport_camera_from_minimap));
     }
 }
 
-fn setup_minimap(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-) {
-    let size = Extent3d {
+fn setup_minimap_render_target(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+    let extent = Extent3d {
         width: MINIMAP_TEXTURE_SIZE,
         height: MINIMAP_TEXTURE_SIZE,
         depth_or_array_layers: 1,
     };
     let mut image = Image::new_fill(
-        size,
+        extent,
         TextureDimension::D2,
-        &[8, 16, 24, 255],
-        TextureFormat::Rgba8UnormSrgb,
+        &[24, 32, 40, 255],
+        TextureFormat::Bgra8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
     );
-    image.texture_descriptor.usage =
-        TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::RENDER_ATTACHMENT;
-    let image = images.add(image);
-
-    commands.insert_resource(MinimapTexture(image.clone()));
+    // A camera render target must advertise RENDER_ATTACHMENT; the default
+    // texture usages (TEXTURE_BINDING | COPY_SRC | COPY_DST) are insufficient
+    // and wgpu 27 rejects the color attachment otherwise.
+    image.texture_descriptor.usage |= TextureUsages::RENDER_ATTACHMENT;
+    let handle = images.add(image);
+    commands.insert_resource(MinimapRenderTarget {
+        image: handle.clone(),
+    });
 
     commands.spawn((
-        Camera2d::default(),
+        Camera3d::default(),
         Camera {
-            order: 10,
-            target: image.clone().into(),
-            clear_color: ClearColorConfig::Custom(Color::srgb(0.03, 0.06, 0.09)),
+            order: 1,
+            clear_color: ClearColorConfig::Custom(Color::srgba(0.05, 0.08, 0.12, 1.0)),
             ..default()
         },
-        Transform::from_xyz(128.0, MINIMAP_CAMERA_HEIGHT, 128.0)
-            .looking_at(Vec3::new(128.0, 0.0, 128.0), Vec3::Z),
+        RenderTarget::Image(handle.into()),
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: WORLD_SIZE,
+            },
+            ..OrthographicProjection::default_3d()
+        }),
+        Transform::from_xyz(0.0, MINIMAP_CAMERA_HEIGHT, 0.0).looking_at(Vec3::ZERO, Vec3::NEG_Z),
+        MinimapCamera,
     ));
+}
 
-    let root = commands
+fn setup_minimap(mut commands: Commands, minimap_target: Res<MinimapRenderTarget>) {
+    commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
@@ -91,20 +110,16 @@ fn setup_minimap(
             FocusPolicy::Pass,
             MinimapRoot,
         ))
-        .id();
-
-    commands.entity(root).with_children(|parent| {
-        parent.spawn((
-            ImageNode::new(image),
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
-            MinimapImage,
-            FocusPolicy::Pass,
-        ));
-    });
+        .with_children(|parent| {
+            parent.spawn((
+                ImageNode::new(minimap_target.image.clone()),
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..default()
+                },
+            ));
+        });
 }
 
 fn world_to_minimap_uv(position: Vec3) -> Vec2 {
@@ -126,8 +141,16 @@ fn civilian_color(civilian: &AgentCivilian) -> Color {
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
-fn world_position_for_civilian(civilian: &AgentCivilian, position: &civ_agents::Position3d) -> Vec3 {
-    Vec3::new(position.coord.x as f32, 0.0, position.coord.z as f32)
+fn world_position_for_civilian(
+    _civilian: &AgentCivilian,
+    position: &civ_agents::Position3d,
+) -> Vec3 {
+    let scale = civ_voxel::FIXED_SCALE as f32;
+    Vec3::new(
+        position.coord.x as f32 / scale,
+        0.0,
+        position.coord.z as f32 / scale,
+    )
 }
 
 fn world_position_for_building(building: &Building) -> Vec3 {
@@ -135,11 +158,15 @@ fn world_position_for_building(building: &Building) -> Vec3 {
 }
 
 fn sync_minimap_dots(
+    attach: Res<AttachMode>,
     sim: Res<SimState>,
     mut commands: Commands,
     roots: Query<Entity, With<MinimapRoot>>,
     existing: Query<Entity, With<MinimapDot>>,
 ) {
+    if *attach == AttachMode::Server {
+        return;
+    }
     if !sim.is_changed() {
         return;
     }
@@ -153,7 +180,11 @@ fn sync_minimap_dots(
     };
 
     commands.entity(root).with_children(|parent| {
-        for (_, (civilian, position)) in sim.0.world.query::<(&AgentCivilian, &civ_agents::Position3d)>().iter()
+        for (_, (civilian, position)) in sim
+            .0
+            .world
+            .query::<(&AgentCivilian, &civ_agents::Position3d)>()
+            .iter()
         {
             let uv = world_to_minimap_uv(world_position_for_civilian(civilian, position));
             parent.spawn((
@@ -195,7 +226,7 @@ fn sync_minimap_dots(
 fn teleport_camera_from_minimap(
     mouse: Res<ButtonInput<MouseButton>>,
     panel: Query<&RelativeCursorPosition, With<MinimapRoot>>,
-    mut cameras: Query<&mut Transform, With<Camera3d>>,
+    mut rig: ResMut<CameraRig>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -209,10 +240,6 @@ fn teleport_camera_from_minimap(
     };
 
     let world = minimap_uv_to_world(normalized);
-    let Ok(mut camera) = cameras.single_mut() else {
-        return;
-    };
-
-    camera.translation.x = world.x;
-    camera.translation.z = world.z;
+    rig.target.x = world.x;
+    rig.target.z = world.z;
 }

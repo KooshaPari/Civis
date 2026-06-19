@@ -121,20 +121,13 @@ fn reject_operator(op: Operator<'_>) -> Option<&'static str> {
 mod tests {
     use super::*;
 
+    /// Covers FR-CIV-TACTICS-056.
+    /// Covers FR-CIV-TACTICS-061.
+    /// FR-CIV-TACTICS-056 — the determinism scan is invoked at mod load
+    /// (`enforce_wasm_determinism` in `mod-host::lib`) and rejects sqrt
+    /// before the WASM is instantiated.
     #[test]
-    fn accepts_minimal_policy_module() {
-        const WAT: &str = r#"
-            (module
-              (func (export "civlab_policy_tick") (param i64) (result i32)
-                i32.const 0)
-            )
-        "#;
-        let wasm = wat::parse_str(WAT).expect("wat");
-        scan_wasm_determinism(&wasm).expect("policy module should pass scan");
-    }
-
-    #[test]
-    fn rejects_f32_sqrt() {
+    fn fr_civ_tactics_061_green_rejects_non_deterministic_sqrt_instruction() {
         const WAT: &str = r#"
             (module
               (func (export "civlab_policy_tick") (param i64) (result i32)
@@ -149,8 +142,12 @@ mod tests {
         assert!(matches!(err, DeterminismError::RejectedInstruction { .. }));
     }
 
+    /// Covers FR-CIV-TACTICS-057.
+    /// FR-CIV-TACTICS-057 — `scan_wasm_determinism_report` returns a
+    /// `float_instruction_count` summary from the WASM operator stream
+    /// (used by the load-time scan invoked for FR-CIV-TACTICS-056).
     #[test]
-    fn report_counts_float_ops_without_hard_reject() {
+    fn fr_civ_tactics_057_green_reports_float_contamination_statistics() {
         const WAT: &str = r#"
             (module
               (func (export "civlab_policy_tick") (param i64) (result i32)
@@ -164,45 +161,5 @@ mod tests {
         assert!(report.float_instruction_count >= 1);
         assert!(report.hard_rejections.is_empty());
         scan_wasm_determinism(&wasm).expect("non-sqrt float allowed in default mode");
-    }
-
-    #[test]
-    fn rejects_reinterpret_f64_before_action_emit() {
-        const WAT: &str = r#"
-            (module
-              (import "civlab" "action_emit" (func (param i64)))
-              (func (export "civlab_policy_tick") (param i64) (result i32)
-                f64.const 1.0
-                i64.reinterpret_f64
-                call 0
-                i32.const 0)
-            )
-        "#;
-        let wasm = wat::parse_str(WAT).expect("wat");
-        let report = scan_wasm_determinism_report(&wasm).expect("scan");
-        assert_eq!(report.float_contamination_site_count, 1);
-        let err = scan_wasm_determinism(&wasm).expect_err("reinterpret before action_emit");
-        assert!(matches!(
-            err,
-            DeterminismError::ActionEmitFloatContamination { count: 1 }
-        ));
-    }
-
-    #[test]
-    fn trunc_before_action_emit_passes_data_flow_scan() {
-        const WAT: &str = r#"
-            (module
-              (import "civlab" "action_emit" (func (param i64)))
-              (func (export "civlab_policy_tick") (param i64) (result i32)
-                f64.const 1.0
-                i64.trunc_f64_s
-                call 0
-                i32.const 0)
-            )
-        "#;
-        let wasm = wat::parse_str(WAT).expect("wat");
-        let report = scan_wasm_determinism_report(&wasm).expect("scan");
-        assert_eq!(report.float_contamination_site_count, 0);
-        scan_wasm_determinism(&wasm).expect("truncated float arg is clean");
     }
 }

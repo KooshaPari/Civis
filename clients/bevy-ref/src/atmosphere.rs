@@ -18,6 +18,13 @@ impl Default for DayNightCycle {
     }
 }
 
+impl DayNightCycle {
+    /// Snap presentation phase from a live `sim.snapshot` `is_day` flag.
+    pub fn set_from_is_day(&mut self, is_day: bool) {
+        self.time_of_day = if is_day { 0.75 } else { 0.25 };
+    }
+}
+
 #[derive(Component)]
 pub struct SunLight;
 
@@ -76,7 +83,13 @@ pub fn setup_atmosphere(
 
     commands.spawn((
         WaterSurface,
-        Mesh3d(meshes.add(Mesh::from(bevy::math::primitives::Plane3d::default().mesh().size(256.0, 256.0)))),
+        Mesh3d(
+            meshes.add(Mesh::from(
+                bevy::math::primitives::Plane3d::default()
+                    .mesh()
+                    .size(256.0, 256.0),
+            )),
+        ),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgba(0.16, 0.34, 0.55, 0.78),
             perceptual_roughness: 0.12,
@@ -94,30 +107,33 @@ pub fn setup_atmosphere(
         unlit: true,
         ..default()
     });
-    commands.spawn((StarField, Visibility::Hidden)).with_children(|parent| {
-        for i in 0..STAR_COUNT {
-            let (theta, phi) = star_angles(i as u32);
-            let dir = Vec3::new(
-                theta.cos() * phi.sin(),
-                phi.cos(),
-                theta.sin() * phi.sin(),
-            );
-            parent.spawn((
-                Mesh3d(star_mesh.clone()),
-                MeshMaterial3d(star_material.clone()),
-                Transform::from_translation(dir * STAR_SHELL_RADIUS).with_scale(Vec3::splat(0.75)),
-            ));
-        }
-    });
+    commands
+        .spawn((StarField, Visibility::Hidden))
+        .with_children(|parent| {
+            for i in 0..STAR_COUNT {
+                let (theta, phi) = star_angles(i as u32);
+                let dir = Vec3::new(theta.cos() * phi.sin(), phi.cos(), theta.sin() * phi.sin());
+                parent.spawn((
+                    Mesh3d(star_mesh.clone()),
+                    MeshMaterial3d(star_material.clone()),
+                    Transform::from_translation(dir * STAR_SHELL_RADIUS)
+                        .with_scale(Vec3::splat(0.75)),
+                ));
+            }
+        });
 }
 
 pub fn animate_water(
     time: Res<Time>,
     mut query: Query<&mut Transform, With<WaterSurface>>,
     mut cycle: ResMut<DayNightCycle>,
+    live: Option<Res<crate::live_attach::LiveAttachState>>,
 ) {
-    let delta = time.delta_secs() / DAY_LENGTH_SECONDS;
-    cycle.time_of_day = (cycle.time_of_day + delta).fract();
+    let live_connected = live.map(|state| state.connected).unwrap_or(false);
+    if !live_connected {
+        let delta = time.delta_secs() / DAY_LENGTH_SECONDS;
+        cycle.time_of_day = (cycle.time_of_day + delta).fract();
+    }
     for mut transform in &mut query {
         transform.translation.y = WATER_LEVEL - 0.8 + (time.elapsed_secs() * 1.6).sin() * 0.06;
     }
@@ -126,10 +142,13 @@ pub fn animate_water(
 pub fn update_lighting(
     cycle: Res<DayNightCycle>,
     mut clear_color: ResMut<ClearColor>,
-    mut sun_query: Query<&mut DirectionalLight, With<SunLight>>,
+    mut sun_query: Query<&mut DirectionalLight, (With<SunLight>, Without<MoonLight>)>,
     mut sun_transform_query: Query<&mut Transform, (With<SunLight>, Without<MoonLight>)>,
-    mut moon_query: Query<(&mut DirectionalLight, &mut Transform, &mut Visibility), With<MoonLight>>,
-    mut star_query: Query<&mut Visibility, With<StarField>>,
+    mut moon_query: Query<
+        (&mut DirectionalLight, &mut Transform, &mut Visibility),
+        (With<MoonLight>, Without<SunLight>, Without<StarField>),
+    >,
+    mut star_query: Query<&mut Visibility, (With<StarField>, Without<MoonLight>)>,
 ) {
     let t = cycle.time_of_day;
     let sun_angle = t * TAU - PI * 0.5;
@@ -161,7 +180,11 @@ pub fn update_lighting(
         } else {
             Color::srgb(0.4, 0.5, 0.8).into()
         };
-        sun_light.illuminance = if daylight > 0.1 { 15_000.0 * daylight.max(0.15) } else { 200.0 };
+        sun_light.illuminance = if daylight > 0.1 {
+            15_000.0 * daylight.max(0.15)
+        } else {
+            200.0
+        };
     }
     if let Ok(mut sun_transform) = sun_transform_query.single_mut() {
         *sun_transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir));
@@ -169,7 +192,11 @@ pub fn update_lighting(
 
     if let Ok((mut moon_light, mut moon_transform, mut moon_visibility)) = moon_query.single_mut() {
         let is_night = daylight < 0.1;
-        *moon_visibility = if is_night { Visibility::Visible } else { Visibility::Hidden };
+        *moon_visibility = if is_night {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
         moon_light.color = Color::srgb(0.35, 0.45, 0.75).into();
         moon_light.illuminance = if is_night { 500.0 } else { 0.0 };
         *moon_transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, moon_dir));

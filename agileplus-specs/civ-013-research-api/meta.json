@@ -1,0 +1,21 @@
+{
+  "spec_id": "civ-013",
+  "slug": "civ-013-research-api",
+  "title": "Research API and Scenario System",
+  "status": "active",
+  "type": "feature",
+  "epic": "E5",
+  "fr_ids": [
+    "FR-API-001",
+    "FR-API-002",
+    "FR-API-003",
+    "FR-API-004",
+    "FR-REPLAY-001",
+    "FR-REPLAY-002"
+  ],
+  "created_at": "2026-05-29T00:00:00Z",
+  "updated_at": "2026-05-29T00:00:00Z",
+  "priority": "SHALL",
+  "target_release": "v1",
+  "civ_spec_ref": "CIV-0001-core-simulation-loop.md"
+}

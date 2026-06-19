@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Ore: rough mineral chunk with glowing vein -->
+  <defs>
+    <filter id="oreGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="oreFill" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#4a4858"/>
+      <stop offset="100%" stop-color="#1e1c28"/>
+    </linearGradient>
+  </defs>
+  <!-- ore chunk body (rough polygon) -->
+  <polygon points="12,10 28,6 42,16 44,32 34,44 16,46 6,34 8,18"
+    fill="url(#oreFill)" stroke="#6a6878" stroke-width="2" stroke-linejoin="round"/>
+  <!-- facet lines (dark) -->
+  <line x1="12" y1="10" x2="26" y2="26" stroke="#0a0818" stroke-width="1.5" opacity="0.5"/>
+  <line x1="42" y1="16" x2="26" y2="26" stroke="#0a0818" stroke-width="1.5" opacity="0.5"/>
+  <line x1="44" y1="32" x2="26" y2="26" stroke="#0a0818" stroke-width="1" opacity="0.4"/>
+  <line x1="16" y1="46" x2="26" y2="26" stroke="#0a0818" stroke-width="1" opacity="0.4"/>
+  <!-- glowing vein (cyan) -->
+  <path d="M14,22 Q20,18 26,26 Q32,34 38,30"
+    fill="none" stroke="#50C8F0" stroke-width="2.5" stroke-linecap="round" filter="url(#oreGlow)" opacity="0.9"/>
+  <!-- vein branch -->
+  <path d="M26,26 Q24,30 22,36"
+    fill="none" stroke="#50C8F0" stroke-width="1.5" stroke-linecap="round" filter="url(#oreGlow)" opacity="0.7"/>
+  <!-- gold ore speckle -->
+  <circle cx="20" cy="32" r="2" fill="#E8B84B" filter="url(#oreGlow)" opacity="0.8"/>
+  <circle cx="34" cy="22" r="1.5" fill="#E8B84B" opacity="0.6"/>
+  <!-- glint -->
+  <polygon points="28,8 32,6 30,10" fill="#8a8aaa" opacity="0.5"/>
+</svg>

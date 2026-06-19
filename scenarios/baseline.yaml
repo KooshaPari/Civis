@@ -13,3 +13,5 @@ military:
 mods:
   - mods/example-policy
   - mods/example-economic
+policy:
+  kind: noop

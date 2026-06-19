@@ -11,7 +11,10 @@ pub struct CameraRig {
 impl Default for CameraRig {
     fn default() -> Self {
         Self {
-            target: Vec3::new(128.0, 30.0, 128.0),
+            // Map is centred on the origin (terrain/water span roughly
+            // -WORLD_SIZE/2..WORLD_SIZE/2), so frame the centre, not the old
+            // corner-based (128,30,128) target.
+            target: Vec3::new(0.0, 12.0, 0.0),
             yaw: -0.12,
             pitch: -0.72,
         }
@@ -53,7 +56,9 @@ pub fn camera_input(
     }
 
     if mouse_buttons.pressed(MouseButton::Right) {
-        let delta = mouse_motion.read().fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
+        let delta = mouse_motion
+            .read()
+            .fold(Vec2::ZERO, |acc, ev| acc + ev.delta);
         rig.yaw -= delta.x * 0.003;
         rig.pitch = (rig.pitch - delta.y * 0.003).clamp(-1.45, -0.2);
     } else {
@@ -61,7 +66,10 @@ pub fn camera_input(
     }
 }
 
-pub fn update_camera(mut query: Query<&mut Transform, With<Camera3d>>, rig: Res<CameraRig>) {
+pub fn update_camera(
+    mut query: Query<&mut Transform, (With<Camera3d>, Without<crate::minimap::MinimapCamera>)>,
+    rig: Res<CameraRig>,
+) {
     let distance = 170.0;
     let dir = Vec3::new(
         rig.yaw.sin() * rig.pitch.cos(),

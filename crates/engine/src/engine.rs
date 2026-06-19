@@ -32,6 +32,8 @@ use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
+use crate::policy::ControlSignals;
+use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
 use crate::replay::{ReplayError, ReplayLog};
@@ -47,6 +49,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
     "citizen_lifecycle",
     "military",
+    "policy",
     "economy",
     "planet",
     "diplomacy",
@@ -400,6 +403,13 @@ pub struct Simulation {
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
+    /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
+    /// each tick. Defaults to [`NoopPolicy`]; replaceable via
+    /// [`Self::set_policy`].
+    pub policy: Box<dyn Policy>,
+    /// Most recent control signals emitted by [`Self::policy`] (FR-CORE-005).
+    /// Updated at the end of every `phase_policy` call.
+    pub last_control_signals: ControlSignals,
     /// Macro economy state (`civ-economy`); synced with `WorldState::energy_budget_joules` each tick.
     pub economy_state: EconomyState,
     /// Per-good clearing prices (`civ-economy`); advanced in [`phase_economy`].
@@ -610,6 +620,8 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
+            policy: Box::new(crate::policy::NoopPolicy),
+            last_control_signals: ControlSignals::default(),
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
@@ -670,6 +682,8 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
+            policy: Box::new(crate::policy::NoopPolicy),
+            last_control_signals: ControlSignals::default(),
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
@@ -1013,6 +1027,24 @@ impl Simulation {
         &mut self.rng
     }
 
+    /// Install a new control policy. Replaces the previous policy. The new
+    /// policy will be evaluated at the start of the next `phase_policy` call
+    /// (FR-CORE-005).
+    pub fn set_policy(&mut self, p: Box<dyn Policy>) {
+        self.policy = p;
+    }
+
+    /// Borrow the active control policy.
+    pub fn policy(&self) -> &dyn Policy {
+        self.policy.as_ref()
+    }
+
+    /// Borrow the most recent [`ControlSignals`] emitted by the active policy
+    /// (FR-CORE-005). Updated at the end of every `phase_policy` call.
+    pub fn last_control_signals(&self) -> &ControlSignals {
+        &self.last_control_signals
+    }
+
     /// Advance simulation by one tick.
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
@@ -1028,6 +1060,7 @@ impl Simulation {
         self.phase_production();
         self.phase_citizen_lifecycle();
         self.phase_military();
+        self.phase_policy();
         self.phase_economy();
         self.phase_planet();
         self.diplomacy_events.clear();
@@ -1589,6 +1622,20 @@ impl Simulation {
         });
     }
 
+    /// Policy phase — read the active [`Policy`] for the current tick and
+    /// store the resulting [`ControlSignals`] on
+    /// [`Self::last_control_signals`]. Runs between `phase_military` and
+    /// `phase_economy` so the policy can produce signals (production
+    /// multipliers, allocation weights, tax rates) that downstream phases
+    /// consume (FR-CORE-005).
+    ///
+    /// The default `NoopPolicy` emits [`ControlSignals::default()`] — empty
+    /// maps — so this phase is observationally a no-op until a scenario or
+    /// tool calls [`Self::set_policy`].
+    fn phase_policy(&mut self) {
+        self.last_control_signals = self.policy.evaluate(&self.state);
+    }
+
     /// Economy phase — sync joule budget with `civ-economy`, apply policy drain, step,
     /// and advance market prices.
     ///
@@ -1894,6 +1941,7 @@ mod tests {
                 "production",
                 "citizen_lifecycle",
                 "military",
+                "policy",
                 "economy",
                 "planet",
                 "diplomacy",
@@ -1912,6 +1960,118 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, ReplayEvent::Tick { .. }))
             .count()
+    }
+
+    // ============================================================================
+    // FR-CORE-005 — Policy phase + set_policy tests
+    // ============================================================================
+
+    /// FR-CORE-005 — new simulations start with [`NoopPolicy`] installed and
+    /// `last_control_signals` empty.
+    #[test]
+    fn default_policy_is_noop() {
+        let sim = Simulation::new();
+        assert_eq!(sim.policy().name(), "noop");
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+    }
+
+    /// FR-CORE-005 — `with_seed` constructor also starts with [`NoopPolicy`].
+    #[test]
+    fn with_seed_default_policy_is_noop() {
+        let sim = Simulation::with_seed(42);
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — `set_policy` replaces the active policy.
+    #[test]
+    fn set_policy_replaces_active_policy() {
+        let mut sim = Simulation::new();
+        assert_eq!(sim.policy().name(), "noop");
+
+        sim.set_policy(Box::new(crate::policy::CapitalistPolicy));
+        assert_eq!(sim.policy().name(), "capitalist");
+
+        sim.set_policy(Box::new(crate::policy::SubsistenceFirstPolicy));
+        assert_eq!(sim.policy().name(), "subsistence_first");
+
+        sim.set_policy(Box::new(crate::policy::NoopPolicy));
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — a single `tick()` populates `last_control_signals` from
+    /// the active policy.
+    #[test]
+    fn phase_policy_populates_last_control_signals() {
+        let mut sim = Simulation::new();
+        sim.set_policy(Box::new(crate::policy::CapitalistPolicy));
+        sim.tick();
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+        assert_eq!(sim.last_control_signals().production_multipliers.len(), 0);
+        assert_eq!(sim.last_control_signals().allocation_weights.len(), 0);
+        assert_eq!(sim.last_control_signals().tax_rates.len(), 0);
+    }
+
+    /// FR-CORE-005 — `phase_policy` runs every tick; repeated ticks keep
+    /// `last_control_signals` consistent with the active policy.
+    #[test]
+    fn phase_policy_runs_every_tick() {
+        let mut sim = Simulation::new();
+        for _ in 0..5 {
+            sim.tick();
+        }
+        assert_eq!(sim.state.tick, 5);
+        // Default NoopPolicy produces default signals every tick.
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+    }
+
+    /// FR-CORE-005 — `phase_policy` runs after `phase_military` and before
+    /// `phase_economy` (verified indirectly: `last_control_signals` is
+    /// populated for the same tick `phase_economy` reads `state.energy_budget_joules` from).
+    #[test]
+    fn phase_policy_runs_before_phase_economy() {
+        use crate::policy::CapitalistPolicy;
+
+        let mut sim = Simulation::new();
+        sim.set_policy(Box::new(CapitalistPolicy));
+        // After one tick, last_control_signals reflects the policy at tick 1.
+        sim.tick();
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+        // The default capitalist policy is a no-op, so the economy state
+        // behaves identically to a NoopPolicy run.
+        let mut ref_sim = Simulation::with_seed(42);
+        ref_sim.tick();
+        assert_eq!(ref_sim.state.energy_budget_joules, sim.state.energy_budget_joules);
+    }
+
+    /// FR-CORE-005 — a custom policy that emits non-empty signals is reflected
+    /// on `last_control_signals` after `tick()`. Uses an inline test-only
+    /// policy to avoid modifying the public `policy` module for one test.
+    #[test]
+    fn custom_policy_signals_propagate_to_simulation() {
+        #[derive(Debug)]
+        struct TaxingPolicy;
+        impl Policy for TaxingPolicy {
+            fn evaluate(&self, _state: &WorldState) -> ControlSignals {
+                let mut signals = ControlSignals::default();
+                signals.tax_rates.insert(7, 250); // 2.5%
+                signals
+                    .production_multipliers
+                    .insert("food".to_string(), 1.25);
+                signals
+            }
+            fn name(&self) -> &'static str {
+                "taxing"
+            }
+        }
+
+        let mut sim = Simulation::new();
+        sim.set_policy(Box::new(TaxingPolicy));
+        sim.tick();
+        assert_eq!(sim.last_control_signals().tax_rates.get(&7), Some(&250));
+        assert_eq!(
+            sim.last_control_signals().production_multipliers.get("food"),
+            Some(&1.25)
+        );
     }
 
     /// CIV-0100 stub: joule budget drain matches policy formula and stays non-negative.

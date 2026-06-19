@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Sand: hourglass with flowing granules -->
+  <defs>
+    <linearGradient id="sandFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c8943a"/>
+      <stop offset="100%" stop-color="#8a5c18"/>
+    </linearGradient>
+  </defs>
+  <!-- hourglass outline -->
+  <path d="M10,6 L38,6 L26,24 L38,42 L10,42 L22,24 Z"
+    fill="#0d1628" stroke="#E8B84B" stroke-width="2" stroke-linejoin="round"/>
+  <!-- top half sand fill -->
+  <polygon points="12,8 36,8 24.5,22" fill="url(#sandFill)" opacity="0.7"/>
+  <!-- granule stream in middle -->
+  <line x1="24" y1="22" x2="24" y2="26" stroke="#E8B84B" stroke-width="1.5" stroke-dasharray="1.5 1" opacity="0.9"/>
+  <!-- bottom pile -->
+  <ellipse cx="24" cy="38" rx="10" ry="3" fill="url(#sandFill)" opacity="0.6"/>
+  <!-- falling granule dots -->
+  <circle cx="24" cy="27" r="1.2" fill="#E8B84B" opacity="0.8"/>
+  <circle cx="23" cy="29.5" r="1" fill="#E8B84B" opacity="0.6"/>
+  <circle cx="25" cy="32" r="0.8" fill="#E8B84B" opacity="0.5"/>
+</svg>

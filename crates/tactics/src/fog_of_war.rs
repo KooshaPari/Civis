@@ -166,8 +166,8 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // FR-CIV-TACTICS-040 basic reveal
+    /// Covers FR-CIV-TACTICS-040.
+    /// FR-CIV-TACTICS-040 basic reveal
     // -------------------------------------------------------------------------
 
     /// A unit at (0,0) reveals the tile at its own position.

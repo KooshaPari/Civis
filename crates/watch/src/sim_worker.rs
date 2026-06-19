@@ -102,7 +102,15 @@ pub(crate) fn seed_civilians(sim: &mut Simulation, terrain: &Terrain) {
         if terrain.is_walkable(x, y) {
             let id = 10_000 + spawned;
             let mut rng = sim.rng_mut().clone();
-            let _ = spawn_civilian_at(&mut sim.world, id, (spawned % 4) as u32, x, y, &mut rng);
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                id,
+                civ_agents::Alignment::Faction((spawned % 4) as u32),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             spawned += 1;
         }
@@ -195,4 +203,68 @@ pub(crate) fn tick_military(
         }
     }
     damage_events
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `seed_voxels` writes its starter block without panicking.
+    #[test]
+    fn seed_voxels_runs() {
+        let mut sim = Simulation::with_seed(1);
+        seed_voxels(&mut sim);
+    }
+
+    /// `seed_military` spawns 5 soldiers per faction, all at full strength with
+    /// in-bounds coordinates.
+    #[test]
+    fn seed_military_spawns_five_per_faction() {
+        let mut sim = Simulation::with_seed(42);
+        let terrain = Terrain::generate(42);
+        let mut units = Vec::new();
+        seed_military(&mut sim, &terrain, &mut units);
+
+        let faction_count = factions(sim.state.tick).len();
+        assert_eq!(units.len(), faction_count * 5);
+        assert!(units.iter().all(|u| u.unit_type == "Soldier"));
+        assert!(units.iter().all(|u| (u.strength - 1.0).abs() < f32::EPSILON));
+        assert!(
+            units
+                .iter()
+                .all(|u| (0.01..=0.99).contains(&u.x) && (0.01..=0.99).contains(&u.y)),
+            "unit coordinates must be clamped in-bounds"
+        );
+    }
+
+    /// With no Conflict diplomacy events (a fresh, un-ticked sim) `tick_military`
+    /// is a no-op: no damage pulses and unit strengths are untouched.
+    #[test]
+    fn tick_military_is_inert_without_conflict() {
+        let mut sim = Simulation::with_seed(42);
+        let terrain = Terrain::generate(42);
+        let mut units = Vec::new();
+        seed_military(&mut sim, &terrain, &mut units);
+
+        let pulses = tick_military(&mut sim, &terrain, &mut units);
+        assert!(pulses.is_empty(), "no conflict => no damage pulses");
+        assert!(
+            units.iter().all(|u| (u.strength - 1.0).abs() < f32::EPSILON),
+            "strengths unchanged when there is no conflict"
+        );
+    }
+
+    /// `seed_civilians` walks the deterministic spawn grid until 32 civilians
+    /// land on walkable terrain — it must complete without panicking and be
+    /// repeatable on a re-seeded sim with the same terrain.
+    #[test]
+    fn seed_civilians_runs_and_is_repeatable() {
+        let terrain = Terrain::generate(7);
+        let mut a = Simulation::with_seed(7);
+        seed_civilians(&mut a, &terrain);
+        // A second seed on a fresh sim with identical inputs also completes
+        // (the spawn loop terminates: 32 civilians always land on walkable land).
+        let mut b = Simulation::with_seed(7);
+        seed_civilians(&mut b, &terrain);
+    }
 }

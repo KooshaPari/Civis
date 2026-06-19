@@ -62,7 +62,10 @@ pub use lod::{
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
 pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{effective_consumption, PolicyInput, DEFAULT_ECONOMY_POLICY};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
+};
 pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,

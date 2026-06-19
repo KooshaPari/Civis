@@ -32,6 +32,7 @@ use crate::mods_api::{
 };
 use crate::server::build_api_router;
 use crate::sim_worker::simulation_worker;
+use crate::snapshot::make_snapshot;
 use crate::terrain::{self, Terrain};
 
 fn test_state() -> AppState {
@@ -176,6 +177,32 @@ async fn get_snapshot_returns_null_before_first_tick() {
 }
 
 #[tokio::test]
+async fn make_snapshot_includes_life_sim_state_parity() {
+    let state = test_state();
+    {
+        let mut sim = state.sim.lock().await;
+        sim.tick();
+    }
+
+    let sim = state.sim.lock().await;
+    let snapshot = make_snapshot(
+        &sim,
+        &[],
+        &[],
+        &crate::app::TradeTickSummary::default(),
+        state.speed.load(std::sync::atomic::Ordering::Relaxed),
+        &state.laws,
+        state.target_era.load(std::sync::atomic::Ordering::Relaxed),
+    );
+
+    assert_eq!(snapshot.population, sim.state.population);
+    assert_eq!(snapshot.births_this_tick, sim.last_births().len() as u32);
+    assert_eq!(snapshot.deaths_this_tick, sim.last_deaths().len() as u32);
+    assert_eq!(snapshot.settlement_count, sim.settlement_count());
+    assert_eq!(snapshot.cluster_stocks, sim.cluster_stocks().clone());
+}
+
+#[tokio::test]
 async fn post_control_speed_rejects_invalid_value() {
     let app = test_app();
     let response = app
@@ -233,7 +260,7 @@ async fn post_control_place_voxel_returns_ok() {
 }
 
 #[tokio::test]
-async fn post_control_save_and_load_round_trip() {
+async fn fr_save_004_post_control_save_and_load_round_trip() {
     let app = test_app();
     let save_name = "unit-test-save";
 
@@ -315,7 +342,7 @@ fn autosave_archive_count(dir: &std::path::Path) -> usize {
 }
 
 #[tokio::test]
-async fn post_save_slot_round_trip() {
+async fn fr_save_002_post_save_slot_round_trip() {
     let state = test_state();
     let app = test_app_with_state(state.clone());
 
@@ -391,7 +418,7 @@ async fn post_save_slot_round_trip() {
 }
 
 #[tokio::test]
-async fn autosave_ring_evicts_oldest_beyond_max() {
+async fn fr_save_003_autosave_ring_evicts_oldest_beyond_max() {
     let state = test_state();
     let saves_dir = state.saves_dir.clone();
     let app = test_app_with_state(state.clone());
@@ -1265,4 +1292,308 @@ async fn post_mods_fetch_and_remote_list_round_trip() {
 
     let cache_dir = remote_mod_cache_dir(&repo_root().join("mods"), &cache_id);
     let _ = std::fs::remove_dir_all(cache_dir);
+}
+
+/// FR-SAVE-002 (error branch) — `POST /control/save/slot` with a slot id that is
+/// not one of the canonical production slots is rejected with `400 Bad Request`
+/// and an `ok: false` body, before any save is attempted.
+#[tokio::test]
+async fn fr_save_002_post_save_slot_rejects_invalid_slot() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/save/slot")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"slot":"not-a-real-slot"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+/// FR-SAVE-002 (error branch) — `POST /control/load/slot` validates the slot id
+/// the same way: an unknown slot yields `400 Bad Request` with `ok: false` and
+/// never touches the filesystem.
+#[tokio::test]
+async fn fr_save_002_post_load_slot_rejects_invalid_slot() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/load/slot")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"slot":"bogus"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+/// FR-SAVE load (error branch) — `POST /control/load` rejects traversal-style
+/// filenames before touching the filesystem: `save_path` / `sanitize_save_filename`
+/// disallow `/`, `\`, and `..`.
+#[tokio::test]
+async fn fr_save_load_rejects_traversal_filename() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/load")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"filename":"../escape"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+/// FR-SAVE load (error branch) — `POST /control/load` with a valid but missing
+/// name falls through to `legacy_replay_path` and `Simulation::load_replay_from_file`,
+/// which fails with a non-success status when no save archive, folder, or replay exists.
+#[tokio::test]
+async fn fr_save_load_missing_save_is_error() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/load")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"filename":"definitely-does-not-exist-xyz"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_spawn_entity_unknown_kind_is_rejected() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/spawn_entity")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"kind":"bogus-kind","x":0.5,"y":0.5,"faction":0}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+    assert!(json["message"]
+        .as_str()
+        .unwrap_or("")
+        .contains("civilian"));
+}
+
+#[tokio::test]
+async fn post_control_spawn_entity_herd_returns_ok() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/spawn_entity")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"kind":"herd","x":0.3,"y":0.7,"faction":2}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], true);
+}
+
+#[tokio::test]
+async fn post_control_spawn_entity_airport_and_port_return_ok() {
+    for kind in ["airport", "port"] {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/control/spawn_entity")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"kind":"{kind}","x":0.5,"y":0.5,"faction":0}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let json = body_json(response).await;
+        assert_eq!(json["ok"], true);
+    }
+}
+
+#[tokio::test]
+async fn post_control_mods_fetch_rejects_unsupported_scheme() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/fetch")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"url":"ftp://example.com/mod.zip"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_fetch_rejects_empty_url() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/fetch")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"url":""}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_upload_rejects_traversal_filename() {
+    let body = serde_json::json!({
+        "filename": "../evil.civmod",
+        "data_base64": "",
+    })
+    .to_string();
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/upload")
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_upload_rejects_empty_filename() {
+    let body = serde_json::json!({
+        "filename": "",
+        "data_base64": "",
+    })
+    .to_string();
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/upload")
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_publish_rejects_non_mods_source() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/publish")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    serde_json::json!({ "source": "notmods/whatever.civmod" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+
+    // `oneshot` consumes the router, so build a fresh app for the second request.
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/publish")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::json!({ "source": "../escape" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
+}
+
+#[tokio::test]
+async fn post_control_mods_reload_rejects_unknown_mod() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/control/mods/reload")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"mod_id":"definitely-not-loaded-xyz"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(response).await;
+    assert_eq!(json["ok"], false);
 }

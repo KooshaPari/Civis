@@ -13,7 +13,7 @@ tracing = "0.1"
 # Adaptive graphics kernel shared across Phenotype-org game clients.
 # The dependency is renamed to preserve the existing phenotype_voxel import path
 # while sourcing the absorbed kernel from phenotype-gfx.
-phenotype-voxel = { package = "phenotype-gfx", git = "https://github.com/KooshaPari/phenotype-gfx.git", branch = "chore/absorb-postfx-2026-06-18" }
+phenotype-voxel = { package = "phenotype-gfx", git = "https://github.com/KooshaPari/phenotype-gfx.git" }
 
 [dev-dependencies]
 proptest = "1.4"

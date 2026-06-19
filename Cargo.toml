@@ -9,6 +9,7 @@ members = [
   "crates/economy",
   "crates/species",
   "crates/agents",
+  "crates/ai",
   "crates/diffusion",
   "crates/laws",
   "crates/research",

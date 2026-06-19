@@ -2789,6 +2789,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-ai"
+version = "0.1.0"
+dependencies = [
+ "civ-economy",
+ "serde",
+]
+
+[[package]]
 name = "civ-bevy-ref"
 version = "0.1.0"
 dependencies = [

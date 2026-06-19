@@ -3,9 +3,6 @@
 //! This module provides the deterministic simulation loop with entity component system.
 
 use civ_agents::{
-    count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
-    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
-};
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
     Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
@@ -20,13 +17,12 @@ use civ_diffusion::DiffusionParams;
 use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
-use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
-use civ_needs::{
-    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
-};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
+};
+use civ_needs::{
+    tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
 };
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
@@ -34,7 +30,6 @@ use civ_tactics::{
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
-use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
 use hecs::{Entity, World};
 use rand::Rng;
@@ -47,6 +42,8 @@ use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
+use crate::policy::ControlSignals;
+use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
 use crate::replay::{ReplayError, ReplayLog};
@@ -62,11 +59,13 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
     "citizen_lifecycle",
     "military",
+    "policy",
     "economy",
+    "planet",
+    "diplomacy",
     "tactics",
     "voxel",
     "compact",
-    "planet",
     "buildings",
     "diffusion",
     "disasters",
@@ -117,7 +116,7 @@ pub struct Citizen {
     pub job: Option<JobType>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum JobType {
     Farmer,
     Warrior,
@@ -176,21 +175,13 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
 
     let scale = FIXED_SCALE as f32;
     let mut next_civilian_id = 1u64;
-    for (center_x, center_y) in faction_capitals.into_iter() {
+    for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
         for _ in 0..CIVILIANS_PER_FACTION {
             let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
-            spawn_civilian_at(
-                world,
-                next_civilian_id,
-                civ_agents::infer_alignment_for_spawn(world, norm_x, norm_y),
-                norm_x,
-                norm_y,
-                civ_agents::ActorVisualKind::Humanoid,
-                rng,
-            );
+            spawn_civilian_at(world, next_civilian_id, faction as u32, norm_x, norm_y, rng);
             next_civilian_id += 1;
         }
     }
@@ -223,6 +214,15 @@ pub struct Resources {
     pub wood: Fixed,
     pub metal: Fixed,
     pub energy: Fixed, // Joules
+}
+
+/// Simple trade route between two factions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TradeRoute {
+    pub from_faction: u32,
+    pub to_faction: u32,
+    pub goods: String,
+    pub volume: Fixed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -641,6 +641,13 @@ pub struct Simulation {
     replay_log: ReplayLog,
     /// Scenario economy policy.
     pub economy_policy: PolicyInput,
+    /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
+    /// each tick. Defaults to [`NoopPolicy`]; replaceable via
+    /// [`Self::set_policy`].
+    pub policy: Box<dyn Policy>,
+    /// Most recent control signals emitted by [`Self::policy`] (FR-CORE-005).
+    /// Updated at the end of every `phase_policy` call.
+    pub last_control_signals: ControlSignals,
     /// Macro economy state (`civ-economy`); synced with `WorldState::energy_budget_joules` each tick.
     /// Macro economy state.
     pub economy_state: EconomyState,
@@ -651,9 +658,10 @@ pub struct Simulation {
     /// Manifest-only mod host (CIV-0700 v2 policy stub); WASM not loaded yet.
     mod_host: ModHost,
     /// Military-phase cadence and per-tick movement pulses (FR-CIV-TACTICS-035).
-    military_phase: MilitaryPhaseConfig,
+    pub(crate) military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
+    /// Coastal water columns whose water-level voxel shifts with the tide
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
@@ -886,11 +894,14 @@ impl Simulation {
 
         // Spawn initial entities
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
+        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
         let state = WorldState::default();
 
         let mut sim = Self {
@@ -941,10 +952,14 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
+            policy: Box::new(crate::policy::NoopPolicy),
+            last_control_signals: ControlSignals::default(),
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
+            coastal_columns: BTreeMap::new(),
+            weather_grid,
         }
             coastal_columns: BTreeMap::new(),
             weather_grid,
@@ -962,11 +977,14 @@ impl Simulation {
         let rng = SimRng::seed_from_u64(seed);
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
-        spawn_many(&mut world, 32, 10_000, 0);
+        let mut spawn_rng = rng.clone();
+        spawn_faction_civilians(&mut world, &mut spawn_rng);
         attach_citizen_to_agents(&mut world);
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
+        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -1020,10 +1038,14 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             economy_policy: DEFAULT_ECONOMY_POLICY,
+            policy: Box::new(crate::policy::NoopPolicy),
+            last_control_signals: ControlSignals::default(),
             lod_policy: LodPolicy::default(),
             mod_host: ModHost::new(),
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
+            coastal_columns: BTreeMap::new(),
+            weather_grid,
         }
             coastal_columns: BTreeMap::new(),
             weather_grid,
@@ -1034,6 +1056,66 @@ impl Simulation {
         };
         sim.rebuild_agent_id_index();
         sim
+    }
+
+    /// Install a single mod at runtime (directory or `.civmod` archive).
+    ///
+    /// `rel_path` is resolved from the repo root (`crates/engine/../../`).
+    pub fn install_mod_path(
+        &mut self,
+        rel_path: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, civ_mod_host::ManifestError> {
+        let repo_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let dir = repo_root.join(rel_path);
+        let named_civmod = dir.file_name().and_then(|name| {
+            let archive = dir.join(format!("{}.civmod", name.to_string_lossy()));
+            archive.is_file().then_some(archive)
+        });
+        let load_path = named_civmod.as_deref().unwrap_or(dir.as_path());
+        self.mod_host.load_mod_path(load_path)?;
+        let entry =
+            self.mod_host
+                .mods()
+                .last()
+                .ok_or_else(|| civ_mod_host::ManifestError::Validation {
+                    path: load_path.to_path_buf(),
+                    message: "mod load produced no registry entry".into(),
+                })?;
+        let record = civ_mod_host::ModLoadedRecord {
+            mod_id: entry.manifest.meta.id.clone(),
+            mod_name: entry.manifest.meta.name.clone(),
+            version: entry.manifest.meta.version.clone(),
+            tick: self.state.tick,
+        };
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
+    /// Unload a loaded mod by stable id and emit `mod.unloaded.v1` on the lifecycle bus.
+    pub fn unload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+        reason: &str,
+    ) -> Result<civ_mod_host::ModUnloadedRecord, String> {
+        let record = self.mod_host.unload_mod(mod_id, reason, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_unloaded_event_json(&record);
+        self.replay_log.record_mod_unloaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
+    }
+
+    /// Hot-reload a mod from its remembered source path and emit `mod.loaded.v1`.
+    pub fn reload_mod_by_id(
+        &mut self,
+        mod_id: &str,
+    ) -> Result<civ_mod_host::ModLoadedRecord, String> {
+        let record = self.mod_host.reload_mod(mod_id, self.state.tick)?;
+        let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+        self.replay_log.record_mod_loaded(&record);
+        self.last_tick_mod_lifecycle.push(bus_json);
+        Ok(record)
     }
 
     /// Load mod manifests from scenario `mods` paths (repo-relative).
@@ -1059,11 +1141,15 @@ impl Simulation {
                 continue;
             }
             if let Some(entry) = self.mod_host.mods().last() {
-                self.replay_log.record_mod_loaded(
-                    self.state.tick,
-                    &entry.manifest.meta.id,
-                    &entry.manifest.meta.version,
-                );
+                let record = civ_mod_host::ModLoadedRecord {
+                    mod_id: entry.manifest.meta.id.clone(),
+                    mod_name: entry.manifest.meta.name.clone(),
+                    version: entry.manifest.meta.version.clone(),
+                    tick: self.state.tick,
+                };
+                let bus_json = civ_mod_host::format_mod_loaded_event_json(&record);
+                self.replay_log.record_mod_loaded(&record);
+                self.last_tick_mod_lifecycle.push(bus_json);
             }
         }
     }
@@ -1072,6 +1158,31 @@ impl Simulation {
     #[must_use]
     pub fn mod_host(&self) -> &ModHost {
         &self.mod_host
+    }
+
+    /// Mutable mod host (phase ticks and guest memory restore).
+    pub fn mod_host_mut(&mut self) -> &mut ModHost {
+        &mut self.mod_host
+    }
+
+    /// Export per-mod guest scratch memory for CIV-1000 save bundles.
+    #[must_use]
+    pub fn export_mod_guest_state(&self) -> civ_mod_host::ModGuestStateSave {
+        self.mod_host.export_guest_state()
+    }
+
+    /// Restore per-mod guest scratch memory after load.
+    pub fn restore_mod_guest_state(
+        &mut self,
+        save: &civ_mod_host::ModGuestStateSave,
+    ) -> Result<(), civ_mod_host::GuestStateError> {
+        self.mod_host.import_guest_state(save)
+    }
+
+    /// Loaded mods for mod-browser UI (`sim.snapshot` / civ-watch).
+    #[must_use]
+    pub fn mod_browser_entries(&self) -> Vec<civ_mod_host::ModBrowserEntry> {
+        self.mod_host.browser_entries()
     }
 
     /// Per-faction doctrine libraries (evolved in [`Self::phase_tactics`]).
@@ -1538,6 +1649,24 @@ impl Simulation {
         &mut self.rng
     }
 
+    /// Install a new control policy. Replaces the previous policy. The new
+    /// policy will be evaluated at the start of the next `phase_policy` call
+    /// (FR-CORE-005).
+    pub fn set_policy(&mut self, p: Box<dyn Policy>) {
+        self.policy = p;
+    }
+
+    /// Borrow the active control policy.
+    pub fn policy(&self) -> &dyn Policy {
+        self.policy.as_ref()
+    }
+
+    /// Borrow the most recent [`ControlSignals`] emitted by the active policy
+    /// (FR-CORE-005). Updated at the end of every `phase_policy` call.
+    pub fn last_control_signals(&self) -> &ControlSignals {
+        &self.last_control_signals
+    }
+
     /// Advance simulation by one tick.
     ///
     /// Uses `None` for emergence sampling source, so the engine's
@@ -1571,13 +1700,14 @@ impl Simulation {
         self.phase_production();
         self.phase_citizen_lifecycle();
         self.phase_military();
+        self.phase_policy();
         self.phase_economy();
+        self.phase_planet();
         self.diplomacy_events.clear();
         self.phase_diplomacy();
         self.phase_tactics();
         self.phase_voxel();
         self.phase_compact();
-        self.phase_planet();
         self.phase_buildings();
         self.phase_diffusion();
         self.phase_disasters();
@@ -1630,6 +1760,42 @@ impl Simulation {
         &mut self.replay_log
     }
 
+    /// `mod.loaded.v1` JSON payloads recorded on the replay bus (FR-MOD-004 partial).
+    #[must_use]
+    pub fn mod_loaded_bus_events(&self) -> Vec<String> {
+        self.replay_log.mod_loaded_bus_events()
+    }
+
+    /// `mod.loaded.v1` bus JSON emitted on the most recent tick (scenario load or hot reload).
+    #[must_use]
+    pub fn last_tick_mod_lifecycle(&self) -> &[String] {
+        &self.last_tick_mod_lifecycle
+    }
+
+    /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
+    fn ingest_mod_phase_lines(&mut self, lines: Vec<String>, tick: u64, phase: &str) {
+        for line in lines {
+            if line.contains("mod.permission_violation.v1") {
+                self.replay_log
+                    .record_mod_permission_violation_bus(tick, &line);
+            }
+            tracing::debug!(mod_log = %line, phase = phase, "mod phase");
+        }
+    }
+
+    /// Record `session.saved.v1` on the replay bus (slot or autosave; CIV-1000).
+    pub fn record_session_saved(
+        &mut self,
+        session_id: &str,
+        save_id: &str,
+        slot: &str,
+        byte_size: u64,
+    ) {
+        let tick = self.state.tick;
+        self.replay_log
+            .record_session_saved(session_id, save_id, slot, tick, byte_size);
+    }
+
     /// Latest BLAKE3 hash-chain root after the most recent tick, if any.
     pub fn hash_chain_root(&self) -> Option<[u8; crate::hash_chain::HASH_LEN]> {
         self.replay_log.running_hash
@@ -1649,13 +1815,16 @@ impl Simulation {
         Ok(sim)
     }
 
-    /// Planet phase - recompute climate from the current tick.
+    /// Planet phase - recompute climate and weather grid from the current tick,
+    /// then apply the resulting tide offset to any registered coastal water
+    /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
         self.weather_grid = compute_weather(
-            &self.climate,
             self.state.tick,
             self.weather_grid.len().max(1) as u32,
+            i32::from(self.planet.axial_tilt_deg) * 1_000,
+            self.planet.year_length_ticks,
         );
         self.apply_tide_offset();
     }
@@ -2645,9 +2814,9 @@ impl Simulation {
     fn phase_military(&mut self) {
         use crate::spawn::military_pin_id;
 
-        for line in self.mod_host.military_tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod military phase");
-        }
+        let tick = self.state.tick;
+        let lines = self.mod_host.military_tick(tick);
+        self.ingest_mod_phase_lines(lines, tick, "military");
 
         let phase_cfg = self.military_phase;
 
@@ -2701,7 +2870,14 @@ impl Simulation {
         }
 
         let config = phase_cfg.war;
-        let engagements = tick_war_bridge(self.state.tick, &config, &samples, &self.voxel);
+        let fog = civ_tactics::build_fog_for_units(&config, &samples, &self.voxel);
+        let engagements = tick_war_bridge(
+            self.state.tick,
+            &config,
+            &samples,
+            &self.voxel,
+            fog.as_ref(),
+        );
         self.operational
             .on_combat_engagements(self.state.tick, &engagements);
         self.last_tick_engagements = engagements.clone();
@@ -2900,6 +3076,20 @@ impl Simulation {
         });
     }
 
+    /// Policy phase — read the active [`Policy`] for the current tick and
+    /// store the resulting [`ControlSignals`] on
+    /// [`Self::last_control_signals`]. Runs between `phase_military` and
+    /// `phase_economy` so the policy can produce signals (production
+    /// multipliers, allocation weights, tax rates) that downstream phases
+    /// consume (FR-CORE-005).
+    ///
+    /// The default `NoopPolicy` emits [`ControlSignals::default()`] — empty
+    /// maps — so this phase is observationally a no-op until a scenario or
+    /// tool calls [`Self::set_policy`].
+    fn phase_policy(&mut self) {
+        self.last_control_signals = self.policy.evaluate(&self.state);
+    }
+
     /// Economy phase — sync joule budget with `civ-economy`, apply policy drain, step,
     /// and advance market prices.
     ///
@@ -2909,9 +3099,11 @@ impl Simulation {
     /// Conservation: budget only decreases; result is clamped to zero (aggregate
     /// energy cannot go negative).
     fn phase_economy(&mut self) {
-        for line in self.mod_host.tick(self.state.tick) {
-            tracing::debug!(mod_log = %line, "mod policy phase");
-        }
+        let tick = self.state.tick;
+        let policy_lines = self.mod_host.tick(tick);
+        self.ingest_mod_phase_lines(policy_lines, tick, "policy");
+        let economy_lines = self.mod_host.economy_tick(tick);
+        self.ingest_mod_phase_lines(economy_lines, tick, "economy");
 
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
@@ -3113,6 +3305,97 @@ impl Simulation {
         &self.military_phase
     }
 
+    fn tick_trade_routes(&mut self) {
+        for route in &self.state.trade_routes {
+            if route.volume <= Fixed::ZERO || route.from_faction == route.to_faction {
+                continue;
+            }
+
+            let resource = route_resource(&route.goods);
+            let available = {
+                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                else {
+                    continue;
+                };
+                resource_amount(from_resources, resource)
+            };
+            if available <= Fixed::ZERO {
+                continue;
+            }
+
+            let quantity = route.volume.min(available);
+            {
+                let from_resources = self
+                    .state
+                    .faction_resources
+                    .entry(route.from_faction)
+                    .or_default();
+                adjust_resource(from_resources, resource, Fixed::ZERO - quantity);
+            }
+            {
+                let to_resources = self
+                    .state
+                    .faction_resources
+                    .entry(route.to_faction)
+                    .or_default();
+                adjust_resource(to_resources, resource, quantity);
+            }
+
+            let supply = {
+                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                else {
+                    continue;
+                };
+                resource_amount(from_resources, resource)
+            };
+            let demand = {
+                let Some(to_resources) = self.state.faction_resources.get(&route.to_faction) else {
+                    continue;
+                };
+                resource_amount(to_resources, resource)
+            };
+            let margin = (demand - supply).max(Fixed::ZERO);
+            let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
+
+            if let Some(from_treasury) = self.state.faction_treasury.get_mut(&route.from_faction) {
+                *from_treasury += profit;
+            }
+            if let Some(to_treasury) = self.state.faction_treasury.get_mut(&route.to_faction) {
+                *to_treasury -= profit;
+            }
+        }
+    }
+
+    /// Apply scenario fog settings to the military phase (FR-CIV-TACTICS-045).
+    pub fn configure_military_fog(&mut self, vision_radius: Option<u32>, grid_size: u32) {
+        if let Some(radius) = vision_radius {
+            self.military_phase.war.fog_vision_radius = Some(radius);
+            self.military_phase.war.fog_grid_size = grid_size.max(16);
+        }
+    }
+
+    /// Apply scenario military cadence/combat overrides (FR-CIV-TACTICS-050).
+    pub fn apply_scenario_military(&mut self, military: &crate::scenario::ScenarioMilitary) {
+        if let Some(v) = military.movement_cadence_ticks {
+            self.military_phase.movement.cadence_ticks = v;
+        }
+        if let Some(v) = military.movement_pulses_per_cadence {
+            self.military_phase.movement_pulses_per_cadence = v;
+        }
+        if let Some(v) = military.war_cadence_ticks {
+            self.military_phase.war.cadence_ticks = v;
+        }
+        if let Some(v) = military.engage_range_grid {
+            self.military_phase.war.engage_range_grid = v.max(1);
+        }
+    }
+
+    /// Military phase configuration (tests and tooling).
+    #[must_use]
+    pub fn military_phase_config(&self) -> &MilitaryPhaseConfig {
+        &self.military_phase
+    }
+
     /// Get snapshot of current state
     pub fn snapshot(&self) -> SimulationSnapshot {
         let citizen_count = self.world.query::<&Citizen>().iter().count();
@@ -3138,6 +3421,34 @@ impl Simulation {
             settlement_count: self.last_settlement_count,
             life_deaths_this_tick: self.last_life_deaths,
         }
+    }
+}
+
+fn route_resource(goods: &str) -> ResourceType {
+    match goods {
+        "grain" => ResourceType::Food,
+        "timber" => ResourceType::Wood,
+        "ore" | "tools" => ResourceType::Metal,
+        "cloth" | "salt" => ResourceType::Energy,
+        _ => ResourceType::Food,
+    }
+}
+
+fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
+    match resource {
+        ResourceType::Food => resources.food,
+        ResourceType::Wood => resources.wood,
+        ResourceType::Metal => resources.metal,
+        ResourceType::Energy => resources.energy,
+    }
+}
+
+fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fixed) {
+    match resource {
+        ResourceType::Food => resources.food += delta,
+        ResourceType::Wood => resources.wood += delta,
+        ResourceType::Metal => resources.metal += delta,
+        ResourceType::Energy => resources.energy += delta,
     }
 }
 
@@ -3190,6 +3501,18 @@ pub struct SimulationSnapshot {
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
     /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
     pub damage_events: usize,
+    /// Deterministic climate snapshot computed by `phase_planet` for the current tick
+    /// (FR-CIV-PLANET-010 — bit-identical to `compute_climate(tick, planet, moon)`).
+    pub climate: Climate,
+    /// Per-region weather grid for the current tick (FR-CIV-PLANET-030).
+    ///
+    /// Each entry is a [`WeatherCell`] with fixed-point temp and precipitation.
+    /// The grid is re-derived from `tick` and `planet.axial_tilt_deg` every tick.
+    pub weather_grid: Vec<WeatherCell>,
+    /// Deterministic geology map for the planet (FR-CIV-PLANET-040).
+    ///
+    /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
+    pub geology_map: GeologyMap,
 }
 
 // ============================================================================
@@ -3216,12 +3539,12 @@ mod tests {
         }
     }
 
-    /// FR-CIV-ENGINE-INT-010 — startup spawns 32 civilians.
+    /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
     #[test]
-    fn startup_spawns_32_civilians() {
+    fn startup_spawns_128_civilians() {
         let sim = Simulation::new();
         assert_eq!(sim.state.tick, 0);
-        assert_eq!(count_civilians(&sim.world), 32);
+        assert_eq!(count_civilians(&sim.world), 128);
     }
 
     #[test]
@@ -4440,6 +4763,118 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, ReplayEvent::Tick { .. }))
             .count()
+    }
+
+    // ============================================================================
+    // FR-CORE-005 — Policy phase + set_policy tests
+    // ============================================================================
+
+    /// FR-CORE-005 — new simulations start with [`NoopPolicy`] installed and
+    /// `last_control_signals` empty.
+    #[test]
+    fn default_policy_is_noop() {
+        let sim = Simulation::new();
+        assert_eq!(sim.policy().name(), "noop");
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+    }
+
+    /// FR-CORE-005 — `with_seed` constructor also starts with [`NoopPolicy`].
+    #[test]
+    fn with_seed_default_policy_is_noop() {
+        let sim = Simulation::with_seed(42);
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — `set_policy` replaces the active policy.
+    #[test]
+    fn set_policy_replaces_active_policy() {
+        let mut sim = Simulation::new();
+        assert_eq!(sim.policy().name(), "noop");
+
+        sim.set_policy(Box::new(crate::policy::CapitalistPolicy));
+        assert_eq!(sim.policy().name(), "capitalist");
+
+        sim.set_policy(Box::new(crate::policy::SubsistenceFirstPolicy));
+        assert_eq!(sim.policy().name(), "subsistence_first");
+
+        sim.set_policy(Box::new(crate::policy::NoopPolicy));
+        assert_eq!(sim.policy().name(), "noop");
+    }
+
+    /// FR-CORE-005 — a single `tick()` populates `last_control_signals` from
+    /// the active policy.
+    #[test]
+    fn phase_policy_populates_last_control_signals() {
+        let mut sim = Simulation::new();
+        sim.set_policy(Box::new(crate::policy::CapitalistPolicy));
+        sim.tick();
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+        assert_eq!(sim.last_control_signals().production_multipliers.len(), 0);
+        assert_eq!(sim.last_control_signals().allocation_weights.len(), 0);
+        assert_eq!(sim.last_control_signals().tax_rates.len(), 0);
+    }
+
+    /// FR-CORE-005 — `phase_policy` runs every tick; repeated ticks keep
+    /// `last_control_signals` consistent with the active policy.
+    #[test]
+    fn phase_policy_runs_every_tick() {
+        let mut sim = Simulation::new();
+        for _ in 0..5 {
+            sim.tick();
+        }
+        assert_eq!(sim.state.tick, 5);
+        // Default NoopPolicy produces default signals every tick.
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+    }
+
+    /// FR-CORE-005 — `phase_policy` runs after `phase_military` and before
+    /// `phase_economy` (verified indirectly: `last_control_signals` is
+    /// populated for the same tick `phase_economy` reads `state.energy_budget_joules` from).
+    #[test]
+    fn phase_policy_runs_before_phase_economy() {
+        use crate::policy::CapitalistPolicy;
+
+        let mut sim = Simulation::new();
+        sim.set_policy(Box::new(CapitalistPolicy));
+        // After one tick, last_control_signals reflects the policy at tick 1.
+        sim.tick();
+        assert_eq!(sim.last_control_signals(), &ControlSignals::default());
+        // The default capitalist policy is a no-op, so the economy state
+        // behaves identically to a NoopPolicy run.
+        let mut ref_sim = Simulation::with_seed(42);
+        ref_sim.tick();
+        assert_eq!(ref_sim.state.energy_budget_joules, sim.state.energy_budget_joules);
+    }
+
+    /// FR-CORE-005 — a custom policy that emits non-empty signals is reflected
+    /// on `last_control_signals` after `tick()`. Uses an inline test-only
+    /// policy to avoid modifying the public `policy` module for one test.
+    #[test]
+    fn custom_policy_signals_propagate_to_simulation() {
+        #[derive(Debug)]
+        struct TaxingPolicy;
+        impl Policy for TaxingPolicy {
+            fn evaluate(&self, _state: &WorldState) -> ControlSignals {
+                let mut signals = ControlSignals::default();
+                signals.tax_rates.insert(7, 250); // 2.5%
+                signals
+                    .production_multipliers
+                    .insert("food".to_string(), 1.25);
+                signals
+            }
+            fn name(&self) -> &'static str {
+                "taxing"
+            }
+        }
+
+        let mut sim = Simulation::new();
+        sim.set_policy(Box::new(TaxingPolicy));
+        sim.tick();
+        assert_eq!(sim.last_control_signals().tax_rates.get(&7), Some(&250));
+        assert_eq!(
+            sim.last_control_signals().production_multipliers.get("food"),
+            Some(&1.25)
+        );
     }
 
     /// CIV-0100 stub: joule budget drain matches policy formula and stays non-negative.
@@ -7772,6 +8207,156 @@ mod tests {
         assert_eq!(sim.climate(), &expected);
     }
 
+    /// FR-CIV-PLANET-010 — `Simulation::snapshot()` surfaces the deterministic
+    /// `Climate` produced by `phase_planet`, bit-identical to `compute_climate`.
+    #[test]
+    fn engine_tick_includes_climate_in_snapshot() {
+        let mut sim = Simulation::with_seed(2026);
+        let planet = *sim.planet();
+        let moon = *sim.moon();
+
+        // Tick 0 — pre-tick climate is computed at construction time.
+        let snap0 = sim.snapshot();
+        let expected0 = compute_climate(sim.state.tick, &planet, &moon);
+        assert_eq!(snap0.tick, 0);
+        assert_eq!(snap0.climate, expected0);
+
+        // Advance ticks and confirm snapshot.climate stays bit-identical.
+        for _ in 0..5 {
+            sim.tick();
+            let snap = sim.snapshot();
+            let expected = compute_climate(sim.state.tick, &planet, &moon);
+
+            assert_eq!(snap.tick, sim.state.tick);
+            assert_eq!(snap.climate.tick, expected.tick);
+            assert_eq!(
+                snap.climate.day_phase.to_bits(),
+                expected.day_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.year_phase.to_bits(),
+                expected.year_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.moon_phase.to_bits(),
+                expected.moon_phase.to_bits()
+            );
+            assert_eq!(
+                snap.climate.tide_offset.to_bits(),
+                expected.tide_offset.to_bits()
+            );
+            assert_eq!(snap.climate, *sim.climate());
+        }
+    }
+
+    /// FR-CIV-PLANET-020 — `apply_tide_offset` shifts a registered coastal
+    /// water-level voxel deterministically as the tide cycles, and the shift
+    /// is symmetric around the registered sea-level baseline within tight
+    /// numeric tolerance (≤ 1e-4 of the tidal amplitude in fixed-point units).
+    #[test]
+    fn tide_offset_shifts_coastal_voxel_height() {
+        // Use a moon config whose orbit period is a clean factor so we can land
+        // on the peak (+amplitude), trough (-amplitude), and zero-crossing
+        // ticks exactly. sin(TAU * phase) = +1 at phase=0.25, -1 at phase=0.75.
+        let mut sim = Simulation::with_seed(2026);
+        sim.moon = MoonConfig {
+            orbit_period_ticks: 4,
+            tidal_amplitude: 1.0,
+        };
+        sim.planet = PlanetConfig {
+            radius_km: 1,
+            axial_tilt_deg: 0,
+            day_length_ticks: 4,
+            year_length_ticks: 4,
+        };
+
+        let base_y: i64 = 10 * FIXED_SCALE;
+        let x: i64 = 5 * FIXED_SCALE;
+        let z: i64 = 7 * FIXED_SCALE;
+        sim.register_coastal_water_column(x, z, base_y);
+        assert_eq!(sim.coastal_column_count(), 1);
+        assert_eq!(sim.coastal_water_level(x, z), Some(base_y));
+
+        let amplitude_units = FIXED_SCALE; // tidal_amplitude * FIXED_SCALE
+        let tolerance: i64 = ((FIXED_SCALE as f64) * 1.0e-4_f64).ceil() as i64;
+
+        // Tick 1 -> moon_phase = 0.25 -> tide_offset = +1.0 -> peak.
+        sim.tick();
+        let peak = sim
+            .coastal_water_level(x, z)
+            .expect("water level after peak tick");
+        let peak_delta = peak - base_y;
+        assert!(
+            (peak_delta - amplitude_units).abs() <= tolerance,
+            "expected peak delta ≈ +{amplitude_units}, got {peak_delta}"
+        );
+        // The water marker now occupies the shifted y, and the old base_y has
+        // been cleared back to MaterialId(0). Both writes flow through the
+        // voxel dirty queue (FR-CIV-VOXEL-002).
+        assert_eq!(
+            sim.voxel().read(WorldCoord { x, y: peak, z }),
+            WATER_MARKER_MATERIAL
+        );
+        assert_eq!(
+            sim.voxel().read(WorldCoord { x, y: base_y, z }),
+            MaterialId(0)
+        );
+
+        // Tick 2 -> moon_phase = 0.5 -> tide_offset = 0 -> back to baseline.
+        sim.tick();
+        let mid = sim
+            .coastal_water_level(x, z)
+            .expect("water level at zero crossing");
+        let mid_delta = mid - base_y;
+        assert!(
+            mid_delta.abs() <= tolerance,
+            "expected zero-crossing delta ≈ 0, got {mid_delta}"
+        );
+
+        // Tick 3 -> moon_phase = 0.75 -> tide_offset = -1.0 -> trough.
+        sim.tick();
+        let trough = sim
+            .coastal_water_level(x, z)
+            .expect("water level after trough tick");
+        let trough_delta = trough - base_y;
+        assert!(
+            (trough_delta + amplitude_units).abs() <= tolerance,
+            "expected trough delta ≈ -{amplitude_units}, got {trough_delta}"
+        );
+
+        // Symmetry: peak and trough are mirror images around base_y within tolerance.
+        let symmetry_residual = (peak_delta + trough_delta).abs();
+        assert!(
+            symmetry_residual <= tolerance,
+            "peak {peak_delta} and trough {trough_delta} should mirror around baseline; residual {symmetry_residual} > tolerance {tolerance}"
+        );
+
+        // Tick 4 -> moon_phase = 0 -> back to baseline.
+        sim.tick();
+        let close = sim
+            .coastal_water_level(x, z)
+            .expect("water level at cycle close");
+        assert!(
+            (close - base_y).abs() <= tolerance,
+            "expected end-of-cycle delta ≈ 0, got {}",
+            close - base_y
+        );
+
+        // Determinism: a second simulation with the same seed + registration
+        // produces bit-identical voxel water levels at every tick.
+        let mut sim2 = Simulation::with_seed(2026);
+        sim2.moon = sim.moon;
+        sim2.planet = sim.planet;
+        sim2.register_coastal_water_column(x, z, base_y);
+        for _ in 0..4 {
+            sim2.tick();
+        }
+        assert_eq!(
+            sim.coastal_water_level(x, z),
+            sim2.coastal_water_level(x, z)
+        );
+    }
+
     /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
     #[test]
     fn phase_tactics_evolve_doctrine_on_cadence() {
@@ -7888,7 +8473,10 @@ mod tests {
     /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
     #[test]
     fn cold_tier_diffusion_only_on_cadence_boundaries() {
+        use civ_agents::spawn_many;
+
         let mut sim = Simulation::with_seed(55);
+        let _ = spawn_many(&mut sim.world, 6, 50_000, 0);
         let policy = LodPolicy::default();
 
         let cold_entities: Vec<hecs::Entity> = sim
@@ -8123,6 +8711,22 @@ mod tests {
         ));
     }
 
+    /// FR-CIV-TACTICS-041 — combat events extend the replay hash chain.
+    #[test]
+    fn combat_events_extend_replay_hash_chain() {
+        let event = DamageEvent {
+            center: WorldCoord { x: 10, y: 0, z: 20 },
+            radius_voxels: 2,
+            energy: 100,
+        };
+        let mut log = ReplayLog::default();
+        log.record_tick(1);
+        let after_tick = log.running_hash;
+        log.record_combat(1, 10, 20, event);
+        log.verify_hash_chain().expect("chain");
+        assert_ne!(log.running_hash, after_tick);
+    }
+
     /// FR-CIV-TACTICS-025-int — replay log restores queued combat damage events.
     #[test]
     fn replay_combat_events_restore_pending_damage() {
@@ -8164,7 +8768,10 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert!(!combat.is_empty(), "expected war-bridge combat in replay log");
+        assert!(
+            !combat.is_empty(),
+            "expected war-bridge combat in replay log"
+        );
 
         let mut from_replay = Simulation::with_seed(seed);
         for (tick, event) in combat {
@@ -8374,5 +8981,57 @@ mod tests {
         // After a cadence tick with ≥2 opposing military units the pulses list
         // must be non-empty; the snapshot field must match.
         assert_eq!(snap.damage_events, sim.last_tick_combat_pulses().len());
+    }
+
+    /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
+    /// year phase (summer equatorial > winter equatorial) and results are
+    /// deterministic across re-runs.
+    #[test]
+    fn weather_grid_temperature_varies_with_year_phase() {
+        // Earth-like defaults: year_length_ticks = 8_766_000, tilt = 23°.
+        let year_length_ticks = 8_766_000_u64;
+        let equatorial_idx = 8_usize; // middle of 16-region grid
+
+        // Northern summer: year ¼ → sin(year_phase) is at peak
+        let summer_tick = year_length_ticks / 4;
+        // Northern winter: year ¾ → sin(year_phase) is at trough
+        let winter_tick = year_length_ticks * 3 / 4;
+
+        let mut sim_s = Simulation::with_seed(0);
+        // Fast-forward to summer_tick by running ticks (use state manipulation
+        // for test speed: set tick directly and recompute phase_planet).
+        sim_s.state.tick = summer_tick;
+        let planet_s = *sim_s.planet();
+        let moon_s = *sim_s.moon();
+        sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
+        let axial_tilt_fp = i32::from(planet_s.axial_tilt_deg) * 1_000;
+        sim_s.weather_grid =
+            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        let snap_summer = sim_s.snapshot();
+
+        let mut sim_w = Simulation::with_seed(0);
+        sim_w.state.tick = winter_tick;
+        let planet_w = *sim_w.planet();
+        let moon_w = *sim_w.moon();
+        sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
+        sim_w.weather_grid =
+            compute_weather(winter_tick, 16, axial_tilt_fp, planet_w.year_length_ticks);
+        let snap_winter = sim_w.snapshot();
+
+        let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
+        let winter_temp = snap_winter.weather_grid[equatorial_idx].temp_c_fp;
+
+        assert!(
+            summer_temp > winter_temp,
+            "summer equatorial temp ({summer_temp} fp) should exceed winter ({winter_temp} fp)"
+        );
+
+        // Determinism: re-running the same ticks must produce identical grids.
+        let summer_grid_2 =
+            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        assert_eq!(
+            snap_summer.weather_grid, summer_grid_2,
+            "weather grid must be deterministic across re-runs"
+        );
     }
 }

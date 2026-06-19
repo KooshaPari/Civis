@@ -40,6 +40,29 @@ pub struct Scenario {
     /// Optional military cadence and combat tuning (FR-CIV-TACTICS-050).
     #[serde(default)]
     pub military: ScenarioMilitary,
+<<<<<<< Updated upstream
+=======
+    /// Per-institution tax rates (FR-ECON-004). Applied each tick in `phase_economy`
+    /// before the consumption drain, debiting `Macro(ACCOUNT_ENERGY_BUDGET)` and
+    /// crediting each named institution.
+    #[serde(default)]
+    pub taxation: ScenarioTaxation,
+}
+
+/// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
+/// `rates_bp` is institution_id → basis-points rate (0..=10_000). Use
+/// [`INSTITUTION_TREASURY`] and [`INSTITUTION_MARKET`] as the canonical
+/// institutions. `per_institution_cap` (if set) clamps any single tick's
+/// collection per institution.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ScenarioTaxation {
+    /// institution_id (e.g. `INSTITUTION_TREASURY`) → basis-points rate.
+    #[serde(default)]
+    pub rates_bp: std::collections::BTreeMap<u32, u32>,
+    /// Single-tick ceiling per institution (joules); `None` means uncapped.
+    #[serde(default)]
+    pub per_institution_cap: Option<i64>,
+>>>>>>> Stashed changes
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -308,6 +331,7 @@ mod tests {
                 war_cadence_ticks: Some(32),
                 engage_range_grid: Some(12),
             },
+            taxation: ScenarioTaxation::default(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -466,6 +490,58 @@ scarcity_multiplier: -0.5
                 ..
             }
         ));
+    }
+
+    /// FR-ECON-004: scenario YAML `taxation` block must round-trip through the
+/// loader and reach `into_simulation`. Verifies the BTreeMap<i64, u32>
+/// (institution_id → basis points) shape and the optional per-institution cap.
+    #[test]
+    fn scenario_taxation_round_trips_from_yaml() {
+        use civ_economy::{INSTITUTION_MARKET, INSTITUTION_TREASURY};
+        let yaml = r#"
+version: 1
+name: tax-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+taxation:
+  rates_bp:
+    0: 500   # treasury at 5%
+    1: 250   # market at 2.5%
+  per_institution_cap: 10000
+"#;
+        let scenario = parse_yaml(yaml).expect("parse");
+        assert_eq!(scenario.taxation.rates_bp.get(&INSTITUTION_TREASURY), Some(&500));
+        assert_eq!(scenario.taxation.rates_bp.get(&INSTITUTION_MARKET), Some(&250));
+        assert_eq!(scenario.taxation.per_institution_cap, Some(10_000));
+
+        let sim = scenario.into_simulation(1);
+        assert_eq!(
+            sim.taxation.rates_bp.get(&INSTITUTION_TREASURY),
+            Some(&500)
+        );
+        assert_eq!(sim.taxation.per_institution_cap, Some(10_000));
+    }
+
+    /// FR-ECON-004: when `taxation` is omitted from YAML, the scenario loads
+    /// with an empty `rates_bp` (no tax collection) — no breakage for
+    /// scenarios that pre-date the feature.
+    #[test]
+    fn scenario_taxation_defaults_to_empty_when_absent() {
+        let yaml = r#"
+version: 1
+name: no-tax
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let scenario = parse_yaml(yaml).expect("parse");
+        assert!(scenario.taxation.rates_bp.is_empty());
+        assert_eq!(scenario.taxation.per_institution_cap, None);
+        let sim = scenario.into_simulation(1);
+        assert!(sim.taxation.rates_bp.is_empty());
     }
 
     #[test]

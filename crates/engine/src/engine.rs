@@ -1607,6 +1607,25 @@ impl Simulation {
         self.economy_state.energy_budget_joules =
             self.state.energy_budget_joules.raw / crate::SCALE;
 
+<<<<<<< Updated upstream
+=======
+        // FR-ECON-004 partial: collect taxes from macro budget before the
+        // consumption drain so treasury/market balances reflect per-tick policy.
+        // `collect_taxes` is a no-op when `taxation.rates_bp` is empty, so this
+        // branch is free for scenarios that do not configure taxation.
+        if !self.taxation.rates_bp.is_empty() {
+            if let Err(err) = civ_economy::collect_taxes(&mut self.economy_state, &self.taxation) {
+                // Tax collection failure is fatal: it would silently drift the
+                // macro/ledger balance. Log to stderr; future work will surface
+                // this through a structured ReplayEvent::RuntimeError variant.
+                eprintln!(
+                    "civ-economy collect_taxes failed at tick {}: {:?}",
+                    self.state.tick, err,
+                );
+            }
+        }
+
+>>>>>>> Stashed changes
         let demand = crate::policy::effective_consumption(self.economy_policy) as i64;
         let budget = self.economy_state.energy_budget_joules;
         let allocated = CapitalistAllocator.allocate(budget, demand);

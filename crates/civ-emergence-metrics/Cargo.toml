@@ -1,0 +1,14 @@
+[package]
+name = "civ-emergence-metrics"
+description = "Weak-emergence / criticality metrics for the Civis godgame: power-law fit, Shannon entropy, structure count, novelty rate, coupling MI, branching ratio. Pure deterministic math; no I/O."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# The dashboard block (`EmergenceDashboard`) is a wire-format type that
+# travels through `EmergenceSample` → JSON-RPC `sim.snapshot` →
+# web/Bevy consumers. We need serde derives on the struct; everything
+# else in the crate is pure math and intentionally zero-dep.
+serde = { version = "1.0", features = ["derive"] }

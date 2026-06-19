@@ -1,0 +1,74 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# dev-parity ran fmt+clippy+test on every PR. All of that is now local-first:
+#   - `just civis-3d-verify` covers rust fmt + clippy --all-targets + cargo test
+#   - `just civis-3d-web-check` covers web node --test
+#   - `just civis-3d-mod-check` covers civ-mod-host + civlab-sdk tests
+# The attestation is recorded in `.ci/quality-manifest.json`; this workflow is
+# dispatch-only for the rare "the cloud must reproduce my local" case.
+name: Dev Parity
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
+  rust:
+    # Manual escape hatch: rerun the Rust parity sweep on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - name: Test and lint
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+
+  web:
+    # Manual escape hatch: rerun the web parity sweep on the cloud.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Web checks
+        run: |
+          cd web
+          npm test
+
+  clients:
+    # Manual escape hatch: rerun the godot/bevy reference client tests.
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        include:
+          - name: godot
+            os: ubuntu-latest
+            command: cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
+          - name: bevy
+            os: ubuntu-latest
+            command: cargo build -p civ-bevy-ref --features bevy
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.command }}

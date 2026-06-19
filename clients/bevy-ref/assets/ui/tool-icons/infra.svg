@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- road and bridge topology with junction + suspension overpass -->
+  <g fill="none" stroke="#9AA4B2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8,46 Q20,40 30,38 Q44,35 50,26"/>
+    <path d="M12,14 L52,48"/>
+    <line x1="34" y1="22" x2="50" y2="22"/>
+    <line x1="36" y1="44" x2="56" y2="44"/>
+  </g>
+  <g fill="none" stroke="#7ebab5" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="44" x2="27" y2="31"/>
+    <line x1="27" y1="31" x2="42" y2="31"/>
+    <line x1="42" y1="31" x2="53" y2="22"/>
+    <line x1="18" y1="14" x2="39" y2="14"/>
+    <path d="M39,14 C43,16 48,18 52,18"/>
+    <line x1="50" y1="22" x2="50" y2="44"/>
+    <line x1="42" y1="34" x2="42" y2="44"/>
+    <path d="M50,35 C45,39 40,43 36,44"/>
+  </g>
+</svg>

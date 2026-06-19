@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- meteor + impact burst. Disaster carries the DANGER accent, not neon. -->
+  <g fill="none" stroke="#9AA4B2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="22" cy="22" r="9"/>
+    <line x1="29" y1="29" x2="46" y2="46"/>
+    <line x1="24" y1="33" x2="38" y2="47" stroke-width="2" opacity="0.5"/>
+  </g>
+  <g fill="none" stroke="#F0556B" stroke-width="2.8" stroke-linecap="round">
+    <line x1="46" y1="46" x2="56" y2="40"/>
+    <line x1="46" y1="46" x2="56" y2="52"/>
+    <line x1="46" y1="46" x2="44" y2="58"/>
+  </g>
+</svg>

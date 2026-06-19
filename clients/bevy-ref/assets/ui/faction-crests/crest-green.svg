@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Green faction: The Root Sigil — branching fractal tree totem, organic geometry -->
+  <defs>
+    <filter id="greenGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="greenAmbient" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#27ae60" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#27ae60" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="url(#greenAmbient)"/>
+  <!-- outer ring with breaks for organic feel -->
+  <circle cx="64" cy="64" r="52" fill="none" stroke="#27ae60" stroke-width="2" stroke-dasharray="20 8" opacity="0.45"/>
+  <!-- inner circle base -->
+  <circle cx="64" cy="64" r="34" fill="#050e08" stroke="#27ae60" stroke-width="2.5" opacity="0.8" filter="url(#greenGlow)"/>
+  <!-- main trunk -->
+  <line x1="64" y1="100" x2="64" y2="42" stroke="#27ae60" stroke-width="4" stroke-linecap="round" filter="url(#greenGlow)"/>
+  <!-- level 1 branches -->
+  <line x1="64" y1="68" x2="44" y2="52" stroke="#27ae60" stroke-width="3" stroke-linecap="round" filter="url(#greenGlow)"/>
+  <line x1="64" y1="68" x2="84" y2="52" stroke="#27ae60" stroke-width="3" stroke-linecap="round" filter="url(#greenGlow)"/>
+  <!-- level 2 branches left -->
+  <line x1="44" y1="52" x2="30" y2="42" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <line x1="44" y1="52" x2="46" y2="36" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <!-- level 2 branches right -->
+  <line x1="84" y1="52" x2="98" y2="42" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <line x1="84" y1="52" x2="82" y2="36" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <!-- top branch -->
+  <line x1="64" y1="42" x2="56" y2="28" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="64" y1="42" x2="72" y2="28" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <!-- root mirror below trunk -->
+  <line x1="64" y1="100" x2="48" y2="112" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="64" y1="100" x2="80" y2="112" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="64" y1="100" x2="64" y2="116" stroke="#27ae60" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+  <!-- leaf dots at branch tips -->
+  <circle cx="30" cy="42" r="3.5" fill="#2ecc71" filter="url(#greenGlow)"/>
+  <circle cx="46" cy="36" r="3.5" fill="#2ecc71" filter="url(#greenGlow)"/>
+  <circle cx="98" cy="42" r="3.5" fill="#2ecc71" filter="url(#greenGlow)"/>
+  <circle cx="82" cy="36" r="3.5" fill="#2ecc71" filter="url(#greenGlow)"/>
+  <circle cx="56" cy="28" r="3" fill="#2ecc71" filter="url(#greenGlow)"/>
+  <circle cx="72" cy="28" r="3" fill="#2ecc71" filter="url(#greenGlow)"/>
+  <!-- center node (seed) -->
+  <circle cx="64" cy="68" r="5.5" fill="#27ae60" filter="url(#greenGlow)"/>
+  <circle cx="64" cy="68" r="2.5" fill="#0a1a0a"/>
+</svg>

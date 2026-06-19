@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Ember/Fire: flame. Palette: heat #F56F18 → hot core #FFAA4A. Emits. -->
+  <defs>
+    <filter id="emberGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M24,6 Q33,16 30,24 Q38,22 36,32 A12,12 0 0 1 12,32 Q11,22 18,24 Q14,14 24,6 Z"
+        fill="none" stroke="#F56F18" stroke-width="2.4" stroke-linejoin="round"
+        filter="url(#emberGlow)"/>
+  <path d="M24,20 Q28,26 26,32 A6,6 0 0 1 20,32 Q19,27 24,20 Z"
+        fill="none" stroke="#FFAA4A" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>

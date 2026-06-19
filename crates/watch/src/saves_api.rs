@@ -150,6 +150,9 @@ pub(crate) fn enforce_autosave_ring(dir: &Path) {
         if !stem.starts_with("autosave") {
             continue;
         }
+        let save_tick = CivSaveBundle::read_metadata(&path)
+            .map(|meta| meta.tick)
+            .unwrap_or(0);
         let mtime = entry
             .metadata()
             .ok()
@@ -157,13 +160,17 @@ pub(crate) fn enforce_autosave_ring(dir: &Path) {
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        autosaves.push((path, mtime));
+        autosaves.push((path, mtime, save_tick));
     }
     if autosaves.len() <= AUTOSAVE_RING_MAX {
         return;
     }
-    autosaves.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.0.cmp(&a.0)));
-    for (path, _) in autosaves.into_iter().skip(AUTOSAVE_RING_MAX) {
+    autosaves.sort_by(|a, b| {
+        b.2.cmp(&a.2)
+            .then_with(|| b.1.cmp(&a.1))
+            .then_with(|| b.0.cmp(&a.0))
+    });
+    for (path, _, _) in autosaves.into_iter().skip(AUTOSAVE_RING_MAX) {
         if let Err(err) = std::fs::remove_file(&path) {
             warn!(?path, ?err, "failed to evict autosave from ring");
         }
@@ -421,6 +428,242 @@ pub(crate) async fn list_saves_handler(
                 .and_then(|(_, _, created_at)| created_at.clone()),
         });
     }
-    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    entries.sort_by(|a, b| {
+        b.tick
+            .unwrap_or(0)
+            .cmp(&a.tick.unwrap_or(0))
+            .then_with(|| b.name.cmp(&a.name))
+    });
     Ok(Json(entries))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn sanitize_rejects_empty_and_path_traversal() {
+        assert!(sanitize_save_filename("").is_err());
+        assert!(sanitize_save_filename("   ").is_err());
+        assert!(sanitize_save_filename("a/b").is_err());
+        assert!(sanitize_save_filename("a\\b").is_err());
+        assert!(sanitize_save_filename("..").is_err());
+        assert!(sanitize_save_filename("../etc").is_err());
+    }
+
+    #[test]
+    fn sanitize_trims_and_strips_known_extensions() {
+        assert_eq!(sanitize_save_filename("  game  ").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civreplay").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civsave").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civsave.zst").unwrap(), "game");
+        // No known extension is left intact.
+        assert_eq!(sanitize_save_filename("game.txt").unwrap(), "game.txt");
+    }
+
+    #[test]
+    fn sanitize_handles_chained_extensions() {
+        assert_eq!(sanitize_save_filename("game.civsave.zst").unwrap(), "game");
+        assert_eq!(sanitize_save_filename("game.civsave").unwrap(), "game");
+        assert_eq!(
+            sanitize_save_filename("a.civreplay.civsave.zst").unwrap(),
+            "a.civreplay"
+        );
+    }
+
+    #[test]
+    fn sanitize_edge_cases() {
+        assert!(sanitize_save_filename("/root").is_err());
+        assert!(sanitize_save_filename("\\root").is_err());
+        assert!(sanitize_save_filename("a..b").is_err());
+        assert!(sanitize_save_filename("a/b\\c").is_err());
+    }
+
+    #[test]
+    fn save_paths_use_sanitized_name_and_correct_extension() {
+        let dir = Path::new("/tmp/saves");
+        assert_eq!(
+            save_path(dir, "game.civsave.zst").unwrap(),
+            dir.join("game.civsave.zst")
+        );
+        assert_eq!(
+            legacy_replay_path(dir, "game.civreplay").unwrap(),
+            dir.join("game.civreplay")
+        );
+        assert!(save_path(dir, "../escape").is_err());
+    }
+
+    #[test]
+    fn save_path_sanitizes_before_appending_extension() {
+        let dir = Path::new("/tmp");
+        assert_eq!(
+            save_path(dir, "  myfile.civsave  ").unwrap(),
+            dir.join("myfile.civsave.zst")
+        );
+    }
+
+    #[test]
+    fn legacy_replay_path_sanitizes_input() {
+        let dir = Path::new("/tmp");
+        assert_eq!(
+            legacy_replay_path(dir, "  game.civreplay  ").unwrap(),
+            dir.join("game.civreplay")
+        );
+        assert!(legacy_replay_path(dir, "/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn production_slot_validation_matches_known_slots() {
+        assert!(validate_production_slot("slot-1").is_ok());
+        assert!(validate_production_slot("slot-5").is_ok());
+        assert!(validate_production_slot("slot-6").is_err());
+        assert!(validate_production_slot("autosave").is_err());
+    }
+
+    #[test]
+    fn production_slot_validation_error_message() {
+        let err = validate_production_slot("invalid-slot").unwrap_err();
+        assert!(err.contains("invalid slot"));
+        assert!(err.contains("invalid-slot"));
+    }
+
+    #[test]
+    fn save_type_and_autosave_classification() {
+        assert_eq!(save_type_for_name("slot-1"), "slot");
+        assert_eq!(save_type_for_name("autosave"), "auto");
+        assert_eq!(save_type_for_name("autosave-7"), "auto");
+        assert_eq!(save_type_for_name("my-manual-save"), "manual");
+
+        assert!(is_autosave_name("autosave"));
+        assert!(is_autosave_name("autosave-7"));
+        assert!(!is_autosave_name("slot-1"));
+        assert!(!is_autosave_name("my-manual-save"));
+    }
+
+    #[test]
+    fn save_type_all_production_slots_are_slot_type() {
+        assert_eq!(save_type_for_name("slot-1"), "slot");
+        assert_eq!(save_type_for_name("slot-2"), "slot");
+        assert_eq!(save_type_for_name("slot-3"), "slot");
+        assert_eq!(save_type_for_name("slot-4"), "slot");
+        assert_eq!(save_type_for_name("slot-5"), "slot");
+    }
+
+    #[test]
+    fn is_autosave_with_various_formats() {
+        assert!(is_autosave_name("autosave"));
+        assert!(is_autosave_name("autosave-0"));
+        assert!(is_autosave_name("autosave-999"));
+        assert!(is_autosave_name("autosave-tick-12345"));
+        assert!(!is_autosave_name("autosave_underscore"));
+        assert!(!is_autosave_name("not-autosave"));
+    }
+
+    #[test]
+    fn dir_size_bytes_empty_dir() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        let size = dir_size_bytes(temp_dir.path());
+        assert_eq!(size, 0);
+    }
+
+    #[test]
+    fn dir_size_bytes_single_file() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        let file_path = temp_dir.path().join("test.txt");
+        fs::write(&file_path, b"hello").expect("write");
+
+        let size = dir_size_bytes(temp_dir.path());
+        assert_eq!(size, 5);
+    }
+
+    #[test]
+    fn dir_size_bytes_multiple_files() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        fs::write(temp_dir.path().join("a.txt"), b"hello").expect("write");
+        fs::write(temp_dir.path().join("b.txt"), b"world").expect("write");
+        fs::write(temp_dir.path().join("c.txt"), b"test").expect("write");
+
+        let size = dir_size_bytes(temp_dir.path());
+        assert_eq!(size, 14);
+    }
+
+    #[test]
+    fn dir_size_bytes_nested_dirs() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        let subdir = temp_dir.path().join("sub");
+        fs::create_dir(&subdir).expect("mkdir");
+        fs::write(subdir.join("nested.txt"), b"content").expect("write");
+        fs::write(temp_dir.path().join("root.txt"), b"text").expect("write");
+
+        let size = dir_size_bytes(temp_dir.path());
+        assert_eq!(size, 11);
+    }
+
+    #[test]
+    fn dir_size_bytes_nonexistent_dir() {
+        let size = dir_size_bytes(Path::new("/nonexistent/path/that/does/not/exist"));
+        assert_eq!(size, 0);
+    }
+
+    #[test]
+    fn dir_size_bytes_handles_missing_metadata() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+        fs::write(temp_dir.path().join("file.txt"), b"test").expect("write");
+        let size = dir_size_bytes(temp_dir.path());
+        assert!(size > 0);
+    }
+
+    #[test]
+    fn enforce_autosave_ring_under_limit() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+
+        for i in 0..3 {
+            let filename = format!("autosave-{}.civsave.zst", i);
+            fs::write(temp_dir.path().join(&filename), b"dummy").expect("write");
+        }
+
+        enforce_autosave_ring(temp_dir.path());
+
+        assert_eq!(fs::read_dir(temp_dir.path()).unwrap().count(), 3);
+    }
+
+    #[test]
+    fn enforce_autosave_ring_ignores_non_autosaves() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+
+        fs::write(temp_dir.path().join("slot-1.civsave.zst"), b"slot").expect("write");
+        fs::write(temp_dir.path().join("manual.civsave.zst"), b"manual").expect("write");
+
+        enforce_autosave_ring(temp_dir.path());
+
+        assert_eq!(fs::read_dir(temp_dir.path()).unwrap().count(), 2);
+    }
+
+    #[test]
+    fn enforce_autosave_ring_nonexistent_dir() {
+        enforce_autosave_ring(Path::new("/nonexistent/autosave/dir"));
+    }
+
+    #[test]
+    fn enforce_autosave_ring_ignores_invalid_archives() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+
+        fs::write(temp_dir.path().join("autosave-bad.civsave.zst"), b"not a real archive").expect("write");
+
+        enforce_autosave_ring(temp_dir.path());
+
+        assert_eq!(fs::read_dir(temp_dir.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn enforce_autosave_ring_skips_files_without_name() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir");
+
+        fs::write(temp_dir.path().join("autosave.civsave.zst"), b"test").expect("write");
+
+        enforce_autosave_ring(temp_dir.path());
+
+        assert!(temp_dir.path().join("autosave.civsave.zst").exists());
+    }
 }

@@ -1,0 +1,62 @@
+[package]
+name = "civis-cli"
+description = "Programmatic verification harness for Civis — verify (Bevy frame capture), pixels (PNG statistics), census (sim snapshot over WS JSON-RPC), dump (CIVIS_DUMP render-frame regression). Gates visual/scene claims; agents must cite machine numbers not screenshots."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "civis_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "civis-verify"
+path = "src/bin/verify.rs"
+required-features = ["bevy"]
+
+[[bin]]
+name = "civis-pixels"
+path = "src/bin/pixels.rs"
+
+[[bin]]
+name = "civis-census"
+path = "src/bin/census.rs"
+
+[[bin]]
+name = "civis-dump"
+path = "src/bin/dump.rs"
+
+[[bin]]
+name = "civis-mcp"
+path = "src/bin/mcp.rs"
+
+[dependencies]
+# Always-on: pixel stats + JSON-RPC census + env loading.
+civ-server = { path = "../server" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+dotenvy = "0.15"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "io-util"] }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
+futures-util = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "1"
+# PNG decoder for `civis-pixels`. `image` is the standard crate; we only need
+# the PNG codec (no transitive native-dep baggage like `jpeg-decoder`).
+png = "0.17"
+
+# Bevy behind an opt-in feature so `civis-verify` can launch the windowed
+# renderer and the default `cargo check` stays fast.
+bevy = { version = "0.18", optional = true }
+
+[dev-dependencies]
+proptest = "1.11"
+
+[features]
+# Default empty feature set so `cargo check` stays fast (no Bevy/wgpu build).
+default = []
+# Opt in for the windowed `civis-verify` bin and the `verify` module.
+bevy = ["dep:bevy"]

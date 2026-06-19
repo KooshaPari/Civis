@@ -27,6 +27,49 @@ pub use phenotype_voxel::{
     VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
+pub mod boundary;
+pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
+pub mod fluid_ca;
+pub mod hud;
+pub mod lod;
+pub mod material;
+pub mod material_pbr;
+pub mod reactions;
+pub mod scale_budget;
+pub mod stream;
+pub mod window;
+pub mod worldgen;
+
+pub use hud::{
+    DiplomacyFsm, DiplomacyPanel, EventFeed, EventFeedItem, EventSeverity, MenuKind, MenuStack,
+    MenuStackError, TechNode, TechTree, TechTreeError, ToolEntry, ToolPalette, ToolPaletteError,
+    TreatySlot, HUB_PALETTE_SCHEMA_VERSION, HUB_TECH_SCHEMA_VERSION,
+};
+pub use material_pbr::{
+    AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
+    GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
+    MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
+    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction, TextureChannelMap,
+    TriplanarLayer, TriplanarSplatPlan, SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
+};
+
+pub use scale_budget::{
+    CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
+    MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
+};
+pub use stream::{
+    ChunkStorePort, FsChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE,
+    CHUNK_EDGE_I32,
+};
+pub use window::io::{IoContract, MaterializedSnapshot, IO_CONTRACT_VERSION};
+pub use window::plan::{
+    prefetch_set, ChunkOffsetIter, ScaleReport, VelocityChunksPerTick, DEFAULT_PREFETCH_TICKS,
+    P99_SAMPLE_CAP,
+};
+pub use window::ring_iter::RingIter;
+pub use window::{ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy};
+pub use worldgen::HeightFieldGen;
+
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
@@ -35,6 +78,7 @@ pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 mod stub_tests {
     use super::*;
 
+    /// Covers FR-CIV-VOXEL-000.
     /// FR-CIV-VOXEL-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
@@ -45,6 +89,8 @@ mod stub_tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
+    /// Covers FR-CIV-VOXEL-000.
+    /// Covers FR-CIV-VOXEL-001.
     /// FR-CIV-VOXEL-000 — crate compiles, kernel re-exports resolve.
     #[test]
     fn kernel_reexports_resolve() {
@@ -117,6 +163,7 @@ mod stub_tests {
         assert_eq!(mesh.indices.len(), 54 * 6);
     }
 
+    /// Covers FR-CIV-VOXEL-001.
     /// FR-CIV-VOXEL-001 — adaptive storage: many writes within one 16³ leaf stay
     /// in a single dense chunk through the Civis re-export.
     #[test]
@@ -148,6 +195,7 @@ mod stub_tests {
         );
     }
 
+    /// Covers FR-CIV-VOXEL-002.
     /// FR-CIV-VOXEL-002 — dirty queue drains in `(chunk_id, write_seq)` order.
     #[test]
     fn dirty_queue_deterministic() {
@@ -179,6 +227,7 @@ mod stub_tests {
         }
     }
 
+    /// Covers FR-CIV-VOXEL-003.
     /// FR-CIV-VOXEL-003 — public world coordinates are fixed-point integers.
     #[test]
     fn fixed_point_api() {
@@ -199,6 +248,7 @@ mod stub_tests {
         assert_eq!(FIXED_SCALE, 1_000_000);
     }
 
+    /// Covers FR-CIV-VOXEL-004.
     /// FR-CIV-VOXEL-004 — `VoxelScaleMultiplier` keeps LOD selection scale-invariant.
     #[test]
     fn scale_multiplier_lod() {
@@ -208,6 +258,7 @@ mod stub_tests {
         assert_eq!(lod_a, lod_b);
     }
 
+    /// Covers FR-CIV-VOXEL-010.
     /// FR-CIV-VOXEL-010 — `Mesher` produces a non-empty watertight-style mesh
     /// for a fixed test block through the Civis re-export.
     #[test]

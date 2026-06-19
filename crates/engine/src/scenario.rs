@@ -16,6 +16,69 @@ fn default_version() -> u32 {
     SCENARIO_SCHEMA_VERSION
 }
 
+fn default_civilians_per_faction() -> u32 {
+    32
+}
+fn default_faction_count() -> u32 {
+    4
+}
+fn default_quadrant_spread() -> i32 {
+    2500
+}
+
+/// One entry in a scenario's weighted seed-mix (FR-CONTENT-SEEDMIX).
+///
+/// The `weight` is relative — only ratios matter, not magnitudes.
+/// Must be > 0 and finite.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SeedWeight {
+    /// Which named-race archetype to sample.
+    pub seed: civ_genetics::NamedSeed,
+    /// Relative spawn weight (must be > 0 and finite).
+    pub weight: f32,
+}
+
+/// Scenario-level starting-population parameters (FR-CONTENT-STARTCOND).
+///
+/// Controls how many civilian agents are spawned per faction, how many factions
+/// are placed, and how far from each faction's capital they are scattered.
+/// Faction capitals are arranged in a procedural ring so any count is supported.
+///
+/// All fields are `#[serde(default)]` so old YAML files without this block
+/// continue to parse and reproduce the previous hardcoded behaviour (32/4/2500).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ScenarioStartingConditions {
+    /// Civilians spawned around each faction capital (default: 32).
+    #[serde(default = "default_civilians_per_faction")]
+    pub civilians_per_faction: u32,
+    /// Number of faction capitals placed on the ring (default: 4, max: 64).
+    #[serde(default = "default_faction_count")]
+    pub faction_count: u32,
+    /// Half-width of the random jitter box around each capital in grid units
+    /// (default: 2500, must be > 0).
+    #[serde(default = "default_quadrant_spread")]
+    pub quadrant_spread: i32,
+    /// Optional weighted race mix.  When non-empty, each spawned civilian's
+    /// named-race archetype is sampled from this distribution instead of the
+    /// default round-robin Ardani/Velthari/Grundak cycle.
+    ///
+    /// An empty `seed_mix` (the default) reproduces the pre-existing
+    /// round-robin behaviour bit-identically.
+    #[serde(default)]
+    pub seed_mix: Vec<SeedWeight>,
+}
+
+impl Default for ScenarioStartingConditions {
+    fn default() -> Self {
+        Self {
+            civilians_per_faction: default_civilians_per_faction(),
+            faction_count: default_faction_count(),
+            quadrant_spread: default_quadrant_spread(),
+            seed_mix: Vec::new(),
+        }
+    }
+}
+
 /// Parsed scenario configuration from YAML.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scenario {
@@ -40,6 +103,47 @@ pub struct Scenario {
     /// Optional military cadence and combat tuning (FR-CIV-TACTICS-050).
     #[serde(default)]
     pub military: ScenarioMilitary,
+    /// Canonical seed-pack paths loaded for this scenario (content model: named
+    /// races + raw-organism primitive). Empty when the scenario ships no seeds.
+    #[serde(default)]
+    pub seeds: Vec<String>,
+    /// Active seed identity selected at load (e.g. `"raw_organism"`); `None`
+    /// leaves seed selection to runtime defaults. FR-MATRIX scenario seeding.
+    #[serde(default)]
+    pub active_seed: Option<String>,
+    /// Scenario-level divergence override (0..1). When set, overrides the
+    /// active seed's own `divergence` dial at spawn time.
+    ///
+    /// * `0.0` → all new agents receive an exact clone of the seed genome.
+    /// * `1.0` → full class mutation rate (free drift).
+    /// * Absent / `None` → the seed's own `divergence` field is used.
+    #[serde(default)]
+    pub divergence_override: Option<f32>,
+    /// Starting-population parameters: civilians per faction, faction count,
+    /// and spatial spread. Defaults reproduce the pre-config hardcoded values
+    /// (32 civilians × 4 factions, 2500 grid-unit spread).
+    #[serde(default)]
+    pub starting_conditions: ScenarioStartingConditions,
+    /// Per-institution tax rates (FR-ECON-004). Applied each tick in `phase_economy`
+    /// before the consumption drain, debiting `Macro(ACCOUNT_ENERGY_BUDGET)` and
+    /// crediting each named institution.
+    #[serde(default)]
+    pub taxation: ScenarioTaxation,
+}
+
+/// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
+/// `rates_bp` is institution_id → basis-points rate (0..=10_000). Use
+/// [`INSTITUTION_TREASURY`] and [`INSTITUTION_MARKET`] as the canonical
+/// institutions. `per_institution_cap` (if set) clamps any single tick's
+/// collection per institution.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ScenarioTaxation {
+    /// institution_id (e.g. `INSTITUTION_TREASURY`) → basis-points rate.
+    #[serde(default)]
+    pub rates_bp: std::collections::BTreeMap<i64, u32>,
+    /// Single-tick ceiling per institution (joules); `None` means uncapped.
+    #[serde(default)]
+    pub per_institution_cap: Option<i64>,
 }
 
 fn default_fog_grid_size() -> u32 {
@@ -145,11 +249,15 @@ impl Scenario {
 
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
-        let mut sim = Simulation::with_seed(rng_seed);
+        let mut sim = Simulation::with_seed_and_starting_conditions(
+            rng_seed,
+            self.starting_conditions.clone(),
+        );
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
         sim.apply_scenario_military(&self.military);
+        sim.apply_scenario_taxation(&self.taxation);
         sim.register_mod_stubs(&self.mods);
         sim
     }
@@ -180,6 +288,55 @@ impl Scenario {
                 field: "scarcity_multiplier",
                 message: "must be non-negative".into(),
             });
+        }
+
+        if let Some(v) = self.divergence_override {
+            if !v.is_finite() || !(0.0..=1.0).contains(&v) {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "divergence_override",
+                    message: format!(
+                        "must be in [0, 1] and finite (got {v})"
+                    ),
+                });
+            }
+        }
+
+        if self.starting_conditions.faction_count == 0
+            || self.starting_conditions.faction_count > 64
+        {
+            return Err(ScenarioError::Validation {
+                path,
+                field: "starting_conditions.faction_count",
+                message: "must be in 1..=64".into(),
+            });
+        }
+        if self.starting_conditions.civilians_per_faction > 100_000 {
+            return Err(ScenarioError::Validation {
+                path,
+                field: "starting_conditions.civilians_per_faction",
+                message: "must be <= 100_000".into(),
+            });
+        }
+        if self.starting_conditions.quadrant_spread <= 0 {
+            return Err(ScenarioError::Validation {
+                path,
+                field: "starting_conditions.quadrant_spread",
+                message: "must be > 0".into(),
+            });
+        }
+
+        for (i, sw) in self.starting_conditions.seed_mix.iter().enumerate() {
+            if !sw.weight.is_finite() || sw.weight <= 0.0 {
+                return Err(ScenarioError::Validation {
+                    path,
+                    field: "starting_conditions.seed_mix",
+                    message: format!(
+                        "weight at index {i} must be finite and > 0 (got {})",
+                        sw.weight
+                    ),
+                });
+            }
         }
 
         if let Some(v) = self.military.movement_cadence_ticks {
@@ -247,6 +404,29 @@ pub fn baseline_scenario_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../scenarios/baseline.yaml")
 }
 
+/// Path to a named preset scenario YAML under `scenarios/presets/`.
+///
+/// Presets are curated starting configurations that showcase the content knobs
+/// (seed_mix, starting_conditions, divergence_override).  Use [`preset_names`]
+/// to enumerate all available presets.
+pub fn preset_scenario_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scenarios/presets/")
+        .join(format!("{name}.yaml"))
+}
+
+/// The canonical set of curated scenario preset names.
+///
+/// Each name corresponds to a file at `scenarios/presets/<name>.yaml`.
+pub fn preset_names() -> &'static [&'static str] {
+    &[
+        "single-race-ardani",
+        "three-race-balanced",
+        "ardani-dominant",
+        "lush-frontier",
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,6 +464,11 @@ mod tests {
             fog_vision_radius: Some(6),
             fog_grid_size: 32,
             military: ScenarioMilitary::default(),
+            seeds: Vec::new(),
+            active_seed: None,
+            divergence_override: None,
+            starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -308,6 +493,10 @@ mod tests {
                 war_cadence_ticks: Some(32),
                 engage_range_grid: Some(12),
             },
+            seeds: Vec::new(),
+            active_seed: None,
+            divergence_override: None,
+            starting_conditions: ScenarioStartingConditions::default(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -410,6 +599,11 @@ mods:
             fog_vision_radius: None,
             fog_grid_size: default_fog_grid_size(),
             military: ScenarioMilitary::default(),
+            seeds: Vec::new(),
+            active_seed: None,
+            divergence_override: None,
+            starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
         };
 
         let mut zero_scarcity = base.clone();
@@ -488,6 +682,166 @@ scarcity_multiplier: 1.0
         );
     }
 
+    /// `divergence_override` parses from YAML and validates its 0..1 range.
+    #[test]
+    fn scenario_divergence_override_parses_and_validates() {
+        // Valid value: 0.5 should parse and round-trip.
+        let yaml_valid = r#"
+version: 1
+name: div-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+divergence_override: 0.5
+"#;
+        let scenario = parse_yaml(yaml_valid).expect("divergence_override: 0.5 must parse");
+        assert!(
+            (scenario.divergence_override.unwrap() - 0.5).abs() < f32::EPSILON,
+            "divergence_override must round-trip as Some(0.5)"
+        );
+
+        // Out-of-range value: 1.5 must fail validation.
+        let yaml_invalid = r#"
+version: 1
+name: div-test-bad
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+divergence_override: 1.5
+"#;
+        let err = parse_yaml(yaml_invalid).expect_err("divergence_override: 1.5 must fail");
+        assert!(
+            matches!(
+                err,
+                ScenarioError::Validation {
+                    field: "divergence_override",
+                    ..
+                }
+            ),
+            "expected validation error for divergence_override, got {err:?}"
+        );
+
+        // Absent field: must default to None (backward-compatible).
+        let yaml_absent = r#"
+version: 1
+name: div-test-absent
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let scenario_absent = parse_yaml(yaml_absent).expect("absent divergence_override must parse");
+        assert_eq!(
+            scenario_absent.divergence_override, None,
+            "absent divergence_override must default to None"
+        );
+    }
+
+    // ---- starting_conditions tests (FR-CONTENT-STARTCOND) ----
+
+    #[test]
+    fn scenario_starting_conditions_defaults() {
+        let yaml = r#"
+version: 1
+name: sc-default-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+"#;
+        let s = parse_yaml(yaml).unwrap();
+        assert_eq!(s.starting_conditions, ScenarioStartingConditions::default());
+    }
+
+    #[test]
+    fn scenario_starting_conditions_parses() {
+        let yaml = r#"
+version: 1
+name: sc-parse-test
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  civilians_per_faction: 10
+  faction_count: 6
+  quadrant_spread: 1000
+"#;
+        let s = parse_yaml(yaml).unwrap();
+        assert_eq!(s.starting_conditions.civilians_per_faction, 10);
+        assert_eq!(s.starting_conditions.faction_count, 6);
+        assert_eq!(s.starting_conditions.quadrant_spread, 1000);
+    }
+
+    #[test]
+    fn scenario_starting_conditions_validates_faction_count_zero() {
+        let yaml = r#"
+version: 1
+name: sc-zero-factions
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  faction_count: 0
+"#;
+        let s: Scenario = {
+            let de = serde_yaml::Deserializer::from_str(yaml);
+            serde_path_to_error::deserialize(de).map_err(|err| ScenarioError::Parse {
+                path: PathBuf::from("<test>"),
+                message: err.to_string(),
+            })
+        }
+        .unwrap();
+        assert!(s.validate(Path::new("<test>")).is_err());
+    }
+
+    #[test]
+    fn scenario_starting_conditions_validates_faction_count_too_high() {
+        let yaml = r#"
+version: 1
+name: sc-too-many-factions
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  faction_count: 9999
+"#;
+        let s: Scenario = {
+            let de = serde_yaml::Deserializer::from_str(yaml);
+            serde_path_to_error::deserialize(de).map_err(|err| ScenarioError::Parse {
+                path: PathBuf::from("<test>"),
+                message: err.to_string(),
+            })
+        }
+        .unwrap();
+        assert!(s.validate(Path::new("<test>")).is_err());
+    }
+
+    #[test]
+    fn starting_conditions_spawns_expected_count() {
+        // 2 civilians per faction × 3 factions = 6 civilians
+        let yaml = r#"
+version: 1
+name: sc-spawn-count
+tick_start: 0
+population: 100
+base_consumption_joules: 1
+scarcity_multiplier: 1.0
+starting_conditions:
+  civilians_per_faction: 2
+  faction_count: 3
+  quadrant_spread: 2500
+"#;
+        let s = parse_yaml(yaml).unwrap();
+        let sim = s.into_simulation(42);
+        let count = civ_agents::count_civilians(&sim.world);
+        assert_eq!(count, 6, "expected 2 civilians × 3 factions = 6");
+    }
+
     fn parse_yaml(yaml: &str) -> Result<Scenario, ScenarioError> {
         let scenario: Scenario = {
             let de = serde_yaml::Deserializer::from_str(yaml);
@@ -507,5 +861,134 @@ scarcity_multiplier: 1.0
 
         scenario.validate(Path::new("<test>"))?;
         Ok(scenario)
+    }
+
+    // ── FR-CONTENT-SEEDMIX: scenario seed_mix parsing & validation ───────────
+
+    fn minimal_yaml_with_starting_conditions(extra: &str) -> String {
+        format!(
+            r#"version: 1
+name: test
+tick_start: 0
+population: 1000000
+base_consumption_joules: 5000000000
+scarcity_multiplier: 1.0
+fog_vision_radius: ~
+fog_grid_size: 64
+mods: []
+starting_conditions:
+{extra}
+"#
+        )
+    }
+
+    /// Absent seed_mix yields an empty Vec (serde default).
+    #[test]
+    fn scenario_seed_mix_absent_is_empty_default() {
+        let yaml = minimal_yaml_with_starting_conditions("  civilians_per_faction: 4");
+        let scenario = parse_yaml(&yaml).expect("valid scenario");
+        assert!(
+            scenario.starting_conditions.seed_mix.is_empty(),
+            "absent seed_mix must default to empty Vec"
+        );
+    }
+
+    /// A well-formed seed_mix block parses correctly.
+    #[test]
+    fn scenario_seed_mix_parses_and_validates() {
+        let yaml = minimal_yaml_with_starting_conditions(
+            r#"  civilians_per_faction: 4
+  seed_mix:
+    - seed: Ardani
+      weight: 0.6
+    - seed: Velthari
+      weight: 0.3
+    - seed: Grundak
+      weight: 0.1"#,
+        );
+        let scenario = parse_yaml(&yaml).expect("valid seed_mix should parse");
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 3);
+        assert_eq!(mix[0].seed, civ_genetics::NamedSeed::Ardani);
+        assert!((mix[0].weight - 0.6).abs() < 1e-6);
+        assert_eq!(mix[2].seed, civ_genetics::NamedSeed::Grundak);
+    }
+
+    /// A weight of exactly 0.0 must fail validation.
+    #[test]
+    fn scenario_seed_mix_zero_weight_is_invalid() {
+        let yaml = minimal_yaml_with_starting_conditions(
+            r#"  seed_mix:
+    - seed: Ardani
+      weight: 0.0"#,
+        );
+        // parse_yaml calls validate internally
+        let result = parse_yaml(&yaml);
+        assert!(
+            matches!(result, Err(ScenarioError::Validation { .. })),
+            "weight=0 must yield a Validation error, got: {result:?}"
+        );
+    }
+
+    /// A negative weight must fail validation.
+    #[test]
+    fn scenario_seed_mix_negative_weight_is_invalid() {
+        let yaml = minimal_yaml_with_starting_conditions(
+            r#"  seed_mix:
+    - seed: Velthari
+      weight: -1.0"#,
+        );
+        let result = parse_yaml(&yaml);
+        assert!(
+            matches!(result, Err(ScenarioError::Validation { .. })),
+            "negative weight must yield a Validation error"
+        );
+    }
+
+    // ── Preset YAML tests (FR-CONTENT-SEEDMIX / FR-CONTENT-STARTCOND) ────────
+
+    /// Every preset in `preset_names()` must load, validate, and have a
+    /// non-empty name and finite positive weights.
+    #[test]
+    fn all_presets_load_and_validate() {
+        for name in preset_names() {
+            let scenario = load_scenario(preset_scenario_path(name))
+                .unwrap_or_else(|e| panic!("preset {name} failed to load: {e}"));
+            assert!(!scenario.name.is_empty(), "preset {name} has empty name");
+            for sw in &scenario.starting_conditions.seed_mix {
+                assert!(
+                    sw.weight > 0.0 && sw.weight.is_finite(),
+                    "preset {name} has invalid weight {} for seed {:?}",
+                    sw.weight,
+                    sw.seed
+                );
+            }
+        }
+    }
+
+    /// `three-race-balanced` must carry exactly 3 seeds: Ardani, Velthari, Grundak.
+    #[test]
+    fn preset_three_race_balanced_has_three_seeds() {
+        let scenario = load_scenario(preset_scenario_path("three-race-balanced")).unwrap();
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 3, "expected 3 seeds, got {}", mix.len());
+        let seeds: Vec<civ_genetics::NamedSeed> = mix.iter().map(|sw| sw.seed).collect();
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Ardani), "missing Ardani");
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Velthari), "missing Velthari");
+        assert!(seeds.contains(&civ_genetics::NamedSeed::Grundak), "missing Grundak");
+    }
+
+    /// `single-race-ardani` must have exactly 1 seed (Ardani) at weight 1.0.
+    #[test]
+    fn preset_single_race_is_monocultural() {
+        let scenario = load_scenario(preset_scenario_path("single-race-ardani")).unwrap();
+        let mix = &scenario.starting_conditions.seed_mix;
+        assert_eq!(mix.len(), 1, "expected 1 seed, got {}", mix.len());
+        assert_eq!(mix[0].seed, civ_genetics::NamedSeed::Ardani);
+        assert!(
+            (mix[0].weight - 1.0).abs() < f32::EPSILON,
+            "weight should be 1.0, got {}",
+            mix[0].weight
+        );
     }
 }

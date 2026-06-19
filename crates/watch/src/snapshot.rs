@@ -87,6 +87,8 @@ pub(crate) fn make_snapshot(
         tick_dt_ms,
         current_era,
         population: sim.state.population,
+        settlement_count: sim.settlement_count(),
+        cluster_stocks: sim.cluster_stocks().clone(),
         voxel_dirty_count: events.len(),
         voxel_chunk_count: sim.voxel().chunk_count(),
         sample_civilians,
@@ -912,4 +914,510 @@ pub(crate) fn noise_offset(seed: u64, lane: u64) -> f32 {
 
 pub(crate) fn wrap01(value: f32) -> f32 {
     value.rem_euclid(1.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::default_law_db;
+
+    #[test]
+    fn season_from_year_phase_partitions_the_year() {
+        assert_eq!(season_from_year_phase(0.0), "Spring");
+        assert_eq!(season_from_year_phase(0.24), "Spring");
+        assert_eq!(season_from_year_phase(0.25), "Summer");
+        assert_eq!(season_from_year_phase(0.49), "Summer");
+        assert_eq!(season_from_year_phase(0.5), "Autumn");
+        assert_eq!(season_from_year_phase(0.74), "Autumn");
+        assert_eq!(season_from_year_phase(0.75), "Winter");
+        assert_eq!(season_from_year_phase(1.0), "Winter");
+    }
+
+    #[test]
+    fn season_wind_bias_is_defined_per_season_and_zero_otherwise() {
+        assert_eq!(season_wind_bias("Spring"), 1.0);
+        assert_eq!(season_wind_bias("Summer"), 0.4);
+        assert_eq!(season_wind_bias("Autumn"), 1.2);
+        assert_eq!(season_wind_bias("Winter"), 1.6);
+        assert_eq!(season_wind_bias("nonsense"), 0.0);
+    }
+
+    #[test]
+    fn precipitation_matches_season_and_temperature() {
+        assert_eq!(precipitation_from_weather("Winter", -2.0), "snow");
+        assert_eq!(precipitation_from_weather("Winter", 3.0), "none");
+        assert_eq!(precipitation_from_weather("Spring", 5.0), "rain");
+        assert_eq!(precipitation_from_weather("Summer", 30.0), "none");
+    }
+
+    #[test]
+    fn hash01_is_always_in_unit_interval() {
+        for v in [0.0_f32, 1.0, -3.5, 12.9898, 100.0, -0.0001] {
+            let h = hash01(v);
+            assert!((0.0..1.0).contains(&h), "hash01({v}) = {h} out of [0,1)");
+        }
+    }
+
+    #[test]
+    fn wrap01_maps_any_real_into_unit_interval() {
+        for v in [0.0_f32, 0.5, 1.0, 1.25, -0.25, -3.75, 42.6] {
+            let w = wrap01(v);
+            assert!((0.0..1.0).contains(&w), "wrap01({v}) = {w} out of [0,1)");
+        }
+    }
+
+    #[test]
+    fn noise_offset_is_deterministic_and_bounded() {
+        // Same (seed, lane) -> same output; magnitude within +/-0.05.
+        assert_eq!(noise_offset(42, 0), noise_offset(42, 0));
+        assert_ne!(noise_offset(42, 0), noise_offset(43, 0));
+        for (s, l) in [(0_u64, 0_u64), (1, 1), (999, 7), (u64::MAX, 3)] {
+            let n = noise_offset(s, l);
+            assert!(n.abs() <= 0.05 + f32::EPSILON, "noise_offset({s},{l}) = {n}");
+        }
+    }
+
+    #[test]
+    fn temperature_from_year_phase_stays_in_physical_band() {
+        // 11 +/- 17 -> roughly [-6, 28] across the year.
+        for i in 0..=100 {
+            let t = temperature_from_year_phase(i as f32 / 100.0);
+            assert!((-6.5..=28.5).contains(&t), "temp {t} out of band");
+        }
+    }
+
+    #[test]
+    fn faction_for_point_always_resolves_to_a_faction() {
+        // factions(0) is non-empty, so every point maps to a nearest faction.
+        assert!(faction_for_point(0.5, 0.5).is_some());
+        assert!(faction_for_point(0.0, 0.0).is_some());
+        assert!(faction_for_point(1.0, 1.0).is_some());
+    }
+
+    #[test]
+    fn snapshot_pure_weather_resource_and_coord_helpers() {
+        assert_eq!(season_from_year_phase(0.0), "Spring");
+        assert_eq!(season_from_year_phase(0.3), "Summer");
+        assert_eq!(season_from_year_phase(0.6), "Autumn");
+        assert_eq!(season_from_year_phase(0.9), "Winter");
+
+        assert_eq!(season_wind_bias("Spring"), 1.0);
+        assert_eq!(season_wind_bias("Summer"), 0.4);
+        assert_eq!(season_wind_bias("Autumn"), 1.2);
+        assert_eq!(season_wind_bias("Winter"), 1.6);
+        assert_eq!(season_wind_bias("Nonsense"), 0.0);
+
+        assert_eq!(precipitation_from_weather("Winter", -5.0), "snow");
+        assert_eq!(precipitation_from_weather("Winter", 5.0), "none");
+        assert_eq!(precipitation_from_weather("Spring", 5.0), "rain");
+        assert_eq!(precipitation_from_weather("Summer", 10.0), "rain");
+        assert_eq!(precipitation_from_weather("Summer", 30.0), "none");
+
+        for v in [0.0_f32, 1.0, 42.5, -3.0] {
+            assert!((0.0..1.0).contains(&hash01(v)), "hash01({v}) out of [0,1)");
+        }
+
+        assert_eq!(normalize_world_coord(0), 0.0);
+        assert_eq!(normalize_world_coord(i64::MAX), 1.0);
+        assert_eq!(normalize_world_coord(-100), 0.0);
+
+        use civ_engine::ResourceType;
+        assert_eq!(route_resource("grain"), ResourceType::Food);
+        assert_eq!(route_resource("timber"), ResourceType::Wood);
+        assert_eq!(route_resource("ore"), ResourceType::Metal);
+        assert_eq!(route_resource("tools"), ResourceType::Metal);
+        assert_eq!(route_resource("cloth"), ResourceType::Energy);
+        assert_eq!(route_resource("unknown"), ResourceType::Food);
+    }
+
+    #[test]
+    fn factions_are_four_stable_with_ascending_ids() {
+        let f = factions(0);
+        assert_eq!(f.len(), 4);
+        assert_eq!(f.iter().map(|x| x.id).collect::<Vec<_>>(), vec![0, 1, 2, 3]);
+        assert!(f.iter().all(|x| x.radius > 0.0 && x.radius <= 0.3));
+        assert_eq!(f[0].capital, [0.22, 0.24]);
+        assert!(factions(100_000)[0].radius >= factions(0)[0].radius);
+    }
+
+    #[test]
+    fn faction_for_point_picks_nearest_capital() {
+        assert_eq!(faction_for_point(0.22, 0.24), Some(0));
+        assert_eq!(faction_for_point(0.76, 0.27), Some(1));
+        assert_eq!(faction_for_point(0.27, 0.73), Some(2));
+        assert_eq!(faction_for_point(0.72, 0.74), Some(3));
+        assert!(faction_for_point(0.5, 0.5).is_some());
+    }
+
+    #[test]
+    fn buildings_three_per_faction_with_valid_coords() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        assert_eq!(b.len(), f.len() * 3);
+        assert!(b.iter().all(|x| (0.0..1.0).contains(&x.x) && (0.0..1.0).contains(&x.y)));
+        assert!(b.iter().all(|x| x.faction_id < 4));
+        assert!(b.iter().all(|x| x.occupants == 0));
+        assert!(b
+            .iter()
+            .all(|x| matches!(x.kind, BuildingKind::Residential) == (x.capacity == 4)));
+    }
+
+    #[test]
+    fn roads_connect_same_faction_buildings() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        let r = roads(&b);
+        assert!(!r.is_empty());
+        let faction_at = |x: f32, y: f32| -> Option<u32> {
+            b.iter()
+                .find(|building| building.x == x && building.y == y)
+                .map(|building| building.faction_id)
+        };
+        for road in &r {
+            let from_faction = faction_at(road.from[0], road.from[1])
+                .expect("road.from references a known building");
+            let to_faction = faction_at(road.to[0], road.to[1])
+                .expect("road.to references a known building");
+            assert_eq!(
+                from_faction, to_faction,
+                "road endpoints must belong to the same faction"
+            );
+        }
+    }
+
+    #[test]
+    fn wrap01_wraps_into_unit_interval() {
+        assert_eq!(wrap01(0.0), 0.0);
+        assert_eq!(wrap01(0.5), 0.5);
+        assert_eq!(wrap01(1.0), 0.0);
+        assert_eq!(wrap01(1.25), 0.25);
+        let w = wrap01(-0.25);
+        assert!((w - 0.75).abs() < 1e-6);
+        assert!((0.0..1.0).contains(&wrap01(7.3)));
+        assert!((0.0..1.0).contains(&wrap01(-7.3)));
+    }
+
+    #[test]
+    fn noise_offset_is_bounded_and_deterministic() {
+        for (s, l) in [(0u64, 0u64), (1, 0), (42, 3), (u64::MAX, 7)] {
+            let n = noise_offset(s, l);
+            // `unit` is in [0.0, 1.0) so `(unit - 0.5) * 0.10` is in [-0.05, 0.05);
+            // the lower bound is inclusive (seed=lane=0 hashes to exactly -0.05).
+            assert!((-0.05..0.05).contains(&n), "noise {n} out of band");
+        }
+        assert_eq!(noise_offset(123, 4), noise_offset(123, 4));
+    }
+
+    #[test]
+    fn resource_demand_never_negative() {
+        let r = civ_engine::Resources::default();
+        for res in [
+            civ_engine::ResourceType::Food,
+            civ_engine::ResourceType::Wood,
+            civ_engine::ResourceType::Metal,
+            civ_engine::ResourceType::Energy,
+        ] {
+            assert!(resource_demand(&r, res) >= 0.0);
+        }
+    }
+
+    #[test]
+    fn trade_routes_one_per_faction_pair() {
+        let f = factions(0);
+        let routes = trade_routes(&f, 0);
+        assert_eq!(routes.len(), f.len() * (f.len() - 1) / 2);
+        let goods = ["grain", "timber", "ore", "cloth", "salt", "tools"];
+        assert!(routes.iter().all(|r| goods.contains(&r.goods.as_str())));
+        assert!(routes.iter().all(|r| r.from_faction != r.to_faction));
+        assert!(routes.iter().all(|r| r.volume >= 8.0 && r.volume < 24.0));
+    }
+
+    #[test]
+    fn disaster_events_are_gated_to_nonzero_kiloticks() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        assert!(disaster_events(0, &f, &b).is_empty());
+        assert!(disaster_events(1, &f, &b).is_empty());
+        assert!(disaster_events(999, &f, &b).is_empty());
+        assert!(disaster_events(1500, &f, &b).is_empty());
+        assert_eq!(disaster_events(1000, &f, &b).len(), 1);
+    }
+
+    #[test]
+    fn disaster_event_is_well_formed_when_fired() {
+        let f = factions(0);
+        let b = buildings(&f, 0);
+        let kinds = ["Earthquake", "Wildfire", "Flood", "Plague"];
+        for k in 1..=8u64 {
+            let tick = k * 1000;
+            let events = disaster_events(tick, &f, &b);
+            assert_eq!(events.len(), 1, "tick {tick} must fire exactly one disaster");
+            let e = &events[0];
+            assert_eq!(e.tick, tick);
+            assert!(kinds.contains(&e.kind.as_str()), "unexpected kind {}", e.kind);
+            assert!(
+                e.x > 0.0 && e.x < 1.0 && e.y > 0.0 && e.y < 1.0,
+                "coords out of map: {},{}",
+                e.x,
+                e.y
+            );
+            assert!(e.radius > 0.0);
+            assert!((0.0..=1.0).contains(&e.severity));
+        }
+    }
+
+    #[test]
+    fn game_events_empty_inputs_yield_no_lifecycle_events() {
+        let sim = Simulation::with_seed(7);
+        let events = game_events(&sim, &[], &[], &[], &[], &[], &[]);
+        assert!(
+            events
+                .iter()
+                .all(|e| !["birth", "death", "disaster"].contains(&e.kind.as_str()))
+        );
+    }
+
+    #[test]
+    fn game_events_emits_one_birth_and_one_death() {
+        let sim = Simulation::with_seed(7);
+        let births = vec![PopulationPulse {
+            tick: 5,
+            entity_id: 1,
+            x: 0.22,
+            y: 0.24,
+        }];
+        let deaths = vec![PopulationPulse {
+            tick: 6,
+            entity_id: 2,
+            x: 0.5,
+            y: 0.5,
+        }];
+        let events = game_events(&sim, &births, &deaths, &[], &[], &[], &[]);
+        assert_eq!(events.iter().filter(|e| e.kind == "birth").count(), 1);
+        assert_eq!(events.iter().filter(|e| e.kind == "death").count(), 1);
+        let birth = events.iter().find(|e| e.kind == "birth").unwrap();
+        assert!(birth.faction_id.is_some());
+    }
+
+    #[test]
+    fn game_events_emits_one_disaster_event() {
+        let sim = Simulation::with_seed(7);
+        let disasters = vec![DisasterEvent {
+            tick: 1000,
+            kind: "Earthquake".to_string(),
+            x: 0.5,
+            y: 0.5,
+            radius: 0.18,
+            severity: 0.55,
+        }];
+        let events = game_events(&sim, &[], &[], &[], &disasters, &[], &[]);
+        assert_eq!(events.iter().filter(|e| e.kind == "disaster").count(), 1);
+    }
+
+    #[test]
+    fn tech_tree_maps_every_law_and_sorts_by_era() {
+        let db = default_law_db();
+        let nodes = tech_tree(&db, 0);
+        assert_eq!(nodes.len(), db.laws.len());
+        assert!(nodes.windows(2).all(|w| w[0].era_min <= w[1].era_min));
+        let kinds = ["Conservation", "Material", "FictionalExtension"];
+        assert!(nodes.iter().all(|n| kinds.contains(&n.kind.as_str())));
+    }
+
+    #[test]
+    fn tech_tree_unlocks_follow_current_era() {
+        let db = default_law_db();
+        let at0 = tech_tree(&db, 0);
+        assert!(at0.iter().all(|n| n.unlocked == (n.era_min == 0)));
+        let at_max = tech_tree(&db, u16::MAX);
+        assert!(at_max.iter().all(|n| n.unlocked));
+        let era5 = tech_tree(&db, 5);
+        assert!(era5.iter().all(|n| n.unlocked == (5u16 >= n.era_min)));
+    }
+
+    #[test]
+    fn sample_civilians_caps_at_eight() {
+        let sim = Simulation::with_seed(7);
+        let sample = sample_civilians(&sim);
+        assert!(sample.len() <= 8, "sample_civilians must take at most 8");
+    }
+
+    #[test]
+    fn civ_pins_are_sorted_by_idx_and_in_bounds() {
+        let sim = Simulation::with_seed(7);
+        let pins = civ_pins(&sim);
+        assert!(pins.windows(2).all(|w| w[0].idx <= w[1].idx));
+        assert!(pins.iter().all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
+    }
+
+    #[test]
+    fn economy_snapshot_mirrors_factions_and_rates() {
+        use std::collections::HashMap;
+        let sim = Simulation::with_seed(7);
+        let factions = factions(0);
+        let balances: HashMap<u32, f64> = HashMap::new();
+        let econ = economy_snapshot(&sim, &factions, &balances);
+
+        assert_eq!(econ.faction_treasury.len(), factions.len());
+        assert!(econ
+            .faction_treasury
+            .iter()
+            .zip(factions.iter())
+            .all(|(t, f)| t.id == f.id));
+        assert!(econ
+            .faction_treasury
+            .iter()
+            .all(|t| t.trade_balance == 0.0));
+        assert_eq!(econ.production_rates.wood_per_tick, 0.0);
+        assert!((econ.production_rates.energy_per_tick * 1000.0 - econ.energy_budget).abs() < 1e-6);
+        assert!(econ.production_rates.food_per_tick >= 0.0);
+        assert!(econ.production_rates.metal_per_tick >= 0.0);
+        assert!(
+            econ.resources.food.is_finite()
+                && econ.resources.wood.is_finite()
+                && econ.resources.metal.is_finite()
+                && econ.resources.energy.is_finite()
+        );
+    }
+
+    #[test]
+    fn housing_snapshot_invariants_hold() {
+        let sim = Simulation::with_seed(7);
+        let factions = factions(0);
+        let mut blds = buildings(&factions, 0);
+        let total_cap: u32 = blds.iter().map(|b| b.capacity).sum();
+        let stats = housing_snapshot(&sim, &mut blds);
+        // capacity is the sum of building capacities:
+        assert_eq!(stats.total_capacity, total_cap);
+        // occupied never exceeds capacity:
+        assert!(stats.occupied <= stats.total_capacity);
+        // occupants assigned across capacity'd buildings sum to `occupied`:
+        let assigned: u32 = blds
+            .iter()
+            .filter(|b| b.capacity > 0)
+            .map(|b| b.occupants)
+            .sum();
+        assert_eq!(assigned, stats.occupied);
+        // zero-capacity buildings hold no occupants:
+        assert!(blds
+            .iter()
+            .filter(|b| b.capacity == 0)
+            .all(|b| b.occupants == 0));
+        // vacancy_rate is a valid fraction (and 0.0 only-if no capacity):
+        assert!((0.0..=1.0).contains(&stats.vacancy_rate));
+        if stats.total_capacity == 0 {
+            assert_eq!(stats.vacancy_rate, 0.0);
+        }
+    }
+
+    #[test]
+    fn resource_amount_demand_and_adjust_cover_every_resource_arm() {
+        use civ_engine::{Resources, ResourceType};
+        let mut res = Resources {
+            food: fixed_from_f64(100.0),
+            wood: fixed_from_f64(200.0),
+            metal: fixed_from_f64(300.0),
+            energy: fixed_from_f64(400.0),
+        };
+        let arms = [
+            (ResourceType::Food, 100.0),
+            (ResourceType::Wood, 200.0),
+            (ResourceType::Metal, 300.0),
+            (ResourceType::Energy, 400.0),
+        ];
+        for (r, want) in arms {
+            assert!((resource_amount(&res, r) - want).abs() < 1e-6, "amount {r:?}");
+            // demand = max(0, 1000 - amount); all of these are < 1000 so it's positive.
+            assert!((resource_demand(&res, r) - (1000.0 - want)).abs() < 1e-6, "demand {r:?}");
+        }
+
+        // adjust_resource hits each arm; +50 then re-read.
+        for (r, want) in arms {
+            adjust_resource(&mut res, r, 50.0);
+            assert!((resource_amount(&res, r) - (want + 50.0)).abs() < 1e-6, "adjusted {r:?}");
+        }
+
+        // demand clamps to 0 once amount exceeds the 1000 cap.
+        adjust_resource(&mut res, ResourceType::Food, 5000.0);
+        assert_eq!(resource_demand(&res, ResourceType::Food), 0.0);
+    }
+
+    #[test]
+    fn adjust_treasury_updates_present_faction_and_ignores_absent() {
+        use std::collections::HashMap;
+        let mut treasury: HashMap<u32, civ_engine::Fixed> = HashMap::new();
+        treasury.insert(1, fixed_from_f64(100.0));
+
+        adjust_treasury(&mut treasury, 1, 25.0);
+        assert!((treasury[&1].to_f64() - 125.0).abs() < 1e-6);
+
+        // An absent faction is a silent no-op (no insert).
+        adjust_treasury(&mut treasury, 99, 50.0);
+        assert!(!treasury.contains_key(&99));
+    }
+
+    #[test]
+    fn tech_tree_maps_every_law_kind_sorts_by_era_and_flags_unlocked() {
+        // One law per LawKind at ascending eras so every match arm is hit.
+        let db = LawDb::load_ron(
+            r#"(
+                version: 0,
+                laws: [
+                    (id: "mass_conservation", kind: Conservation, era_min: 0,
+                     inputs: [], outputs: [], losses: [], dependencies: []),
+                    (id: "steel", kind: Material, era_min: 4,
+                     inputs: [], outputs: [], losses: [], dependencies: []),
+                    (id: "fusion_power", kind: FictionalExtension, era_min: 9,
+                     inputs: [], outputs: [], losses: [], dependencies: []),
+                ],
+            )"#,
+        )
+        .expect("valid law db");
+
+        let nodes = tech_tree(&db, 5);
+        assert_eq!(nodes.len(), 3);
+        // Sorted by era_min ascending.
+        assert_eq!(
+            nodes.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(),
+            ["mass_conservation", "steel", "fusion_power"]
+        );
+        assert_eq!(
+            nodes.iter().map(|n| n.kind.as_str()).collect::<Vec<_>>(),
+            ["Conservation", "Material", "FictionalExtension"]
+        );
+        // current_era 5 unlocks eras 0 and 4 but not 9.
+        assert_eq!(
+            nodes.iter().map(|n| n.unlocked).collect::<Vec<_>>(),
+            [true, true, false]
+        );
+    }
+
+    #[test]
+    fn roads_classify_kind_and_width_by_distance() {
+        use crate::app::{Building, BuildingKind, RoadKind};
+        // 5 same-faction buildings on the x-axis with consecutive gaps chosen to
+        // land one in each distance bucket: 0.02 (Trail), 0.05 (Dirt),
+        // 0.08 (Paved), 0.15 (Highway). roads() sorts by id and walks windows(2).
+        let xs = [0.0_f32, 0.02, 0.07, 0.15, 0.30];
+        let b: Vec<Building> = xs
+            .iter()
+            .enumerate()
+            .map(|(i, &x)| Building {
+                id: i as u32,
+                x,
+                y: 0.0,
+                kind: BuildingKind::Residential,
+                era: 0,
+                faction_id: 0,
+                occupants: 0,
+                capacity: 0,
+            })
+            .collect();
+        let r = roads(&b);
+        assert_eq!(r.len(), 4);
+        assert!(matches!(r[0].kind, RoadKind::Trail) && (r[0].width - 0.2).abs() < 1e-6);
+        assert!(matches!(r[1].kind, RoadKind::Dirt) && (r[1].width - 0.4).abs() < 1e-6);
+        assert!(matches!(r[2].kind, RoadKind::Paved) && (r[2].width - 0.6).abs() < 1e-6);
+        assert!(matches!(r[3].kind, RoadKind::Highway) && (r[3].width - 1.0).abs() < 1e-6);
+    }
 }

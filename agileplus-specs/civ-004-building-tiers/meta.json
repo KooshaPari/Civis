@@ -1,0 +1,19 @@
+{
+  "spec_id": "civ-004",
+  "slug": "civ-004-building-tiers",
+  "title": "Building Tiers and Production Chains",
+  "status": "active",
+  "type": "feature",
+  "epic": "E2",
+  "fr_ids": [
+    "FR-ECON-001",
+    "FR-CIV-BUILD-001",
+    "FR-CIV-BUILD-002",
+    "FR-CIV-BUILD-003"
+  ],
+  "created_at": "2026-05-29T00:00:00Z",
+  "updated_at": "2026-05-29T00:00:00Z",
+  "priority": "SHALL",
+  "target_release": "v1",
+  "civ_spec_ref": "CIV-0001-core-simulation-loop.md"
+}

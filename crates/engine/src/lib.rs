@@ -11,6 +11,9 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
+pub mod disasters;
+pub mod emergence;
+pub mod emergence_metrics;
 pub mod engine;
 pub mod hash_chain;
 pub mod integrity;
@@ -18,14 +21,21 @@ pub mod invariants;
 pub mod io;
 pub mod lod;
 pub mod metrics;
+pub mod perf;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
+pub mod save;
 pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 
+pub use civ_agents::culture::CultureProfile;
+pub use civ_agents::{Psyche, SocialGraph};
+pub use civ_genetics::sentience::SentienceEvent;
+pub use disasters::{trigger_disaster, DisasterKind};
+pub use emergence::{CivAiDecision, EmergenceFeedEvent};
 pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
     DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
@@ -179,7 +189,7 @@ impl serde::Serialize for Fixed {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_f64(self.to_f64())
+        serializer.serialize_i64(self.raw)
     }
 }
 
@@ -188,8 +198,8 @@ impl<'de> serde::Deserialize<'de> for Fixed {
     where
         D: serde::Deserializer<'de>,
     {
-        let f = f64::deserialize(deserializer)?;
-        Ok(Fixed::from_num((f * SCALE as f64) as i64))
+        let raw = i64::deserialize(deserializer)?;
+        Ok(Fixed::from_raw(raw))
     }
 }
 
@@ -268,5 +278,15 @@ mod tests {
 
         assert_eq!(r1.tick, r2.tick);
         assert_eq!(r1.energy_budget_joules, r2.energy_budget_joules);
+    }
+
+    /// Covers FR-CORE-010 — Fixed serializes through i64 (raw) so round-trip is lossless.
+    #[test]
+    fn fixed_round_trip_lossless() {
+        let original = Fixed::from_num(123_456_789_012i64);
+        let bytes = bincode::serialize(&original).expect("serialize");
+        let decoded: Fixed = bincode::deserialize(&bytes).expect("deserialize");
+        assert_eq!(original, decoded);
+        assert_eq!(original.raw, decoded.raw);
     }
 }

@@ -1,3 +1,7 @@
+# Local-first: VitePress build+deploy is the only expected push-to-main run.
+# It is narrow (only docs/** + the workflow file + package.json/bun.lock) and
+# fast (~1 min on a warm bun cache). Heavy docs check (Playwright e2e) is
+# local-first via docs-site.yml (dispatch-only).
 name: Pages Deploy
 
 on:
@@ -21,7 +25,8 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: oven-sh/setup-bun@v2
@@ -38,7 +43,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

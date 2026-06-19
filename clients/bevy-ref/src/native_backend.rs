@@ -21,7 +21,11 @@ pub fn native_only_backends() -> Backends {
 
     #[cfg(target_os = "windows")]
     {
-        Backends::DX12 | Backends::VULKAN
+        // DX12 Ultimate is the Windows target (DXR + DLSS path). When both DX12 and
+        // Vulkan are enabled, wgpu's adapter search picks Vulkan first on Windows, so
+        // restrict to DX12 to land on the intended backend. Vulkan remains reachable as
+        // an explicit fallback via `CIV_BEVY_BACKEND=vulkan` (it is at RT/DLSS parity).
+        Backends::DX12
     }
     #[cfg(target_os = "macos")]
     {
@@ -63,15 +67,28 @@ pub fn native_render_plugin() -> RenderPlugin {
 }
 
 fn forced_backend_from_env() -> Option<Backends> {
-    let raw = std::env::var(BACKEND_ENV).ok()?;
+    forced_backend_from_var(std::env::var(BACKEND_ENV).ok())
+}
+
+/// Resolve `CIV_BEVY_BACKEND` from an optional env string (used by [`forced_backend_from_env`] and tests).
+fn forced_backend_from_var(raw: Option<String>) -> Option<Backends> {
+    let raw = raw?;
+    match parse_forced_backend_value(&raw) {
+        Some(backends) => Some(backends),
+        None => {
+            bevy::log::warn!("ignoring {BACKEND_ENV}={raw:?} (expected dx12, vulkan, or metal)");
+            None
+        }
+    }
+}
+
+/// Parse `CIV_BEVY_BACKEND` value (case-insensitive, trimmed). Returns `None` for unknown tokens.
+fn parse_forced_backend_value(raw: &str) -> Option<Backends> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "dx12" | "d3d12" | "directx" => Some(Backends::DX12),
         "vulkan" | "vk" => Some(Backends::VULKAN),
         "metal" => Some(Backends::METAL),
-        _ => {
-            bevy::log::warn!("ignoring {BACKEND_ENV}={raw:?} (expected dx12, vulkan, or metal)");
-            None
-        }
+        _ => None,
     }
 }
 
@@ -79,15 +96,103 @@ fn forced_backend_from_env() -> Option<Backends> {
 mod tests {
     use super::*;
 
+    /// FR-CIV-BEVY-026 — backend env var parsing accepts expected adapter aliases.
+    #[test]
+    fn parse_forced_backend_value_accepts_dx12_aliases() {
+        for raw in ["dx12", "DX12", " d3d12 ", "DirectX"] {
+            assert_eq!(
+                parse_forced_backend_value(raw),
+                Some(Backends::DX12),
+                "raw={raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_forced_backend_value_accepts_vulkan_aliases() {
+        for raw in ["vulkan", "VULKAN", " vk ", "VK"] {
+            assert_eq!(
+                parse_forced_backend_value(raw),
+                Some(Backends::VULKAN),
+                "raw={raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_forced_backend_value_accepts_metal() {
+        assert_eq!(parse_forced_backend_value("metal"), Some(Backends::METAL));
+        assert_eq!(parse_forced_backend_value(" Metal "), Some(Backends::METAL));
+    }
+
+    #[test]
+    fn parse_forced_backend_value_rejects_gles_and_unknown() {
+        for raw in ["", "gles", "gl", "webgpu", "browser_webgpu", "opengl"] {
+            assert_eq!(parse_forced_backend_value(raw), None, "raw={raw:?}");
+        }
+    }
+
+    #[test]
+    fn native_backends_default_to_dx12_only_on_windows() {
+    fn forced_backend_from_var_unset_returns_none() {
+        assert_eq!(forced_backend_from_var(None), None);
+    }
+
+    #[test]
+    fn forced_backend_from_var_accepts_valid_tokens() {
+        assert_eq!(
+            forced_backend_from_var(Some("vulkan".into())),
+            Some(Backends::VULKAN)
+        );
+        assert_eq!(
+            forced_backend_from_var(Some(" DX12 ".into())),
+            Some(Backends::DX12)
+        );
+        assert_eq!(
+            forced_backend_from_var(Some("metal".into())),
+            Some(Backends::METAL)
+        );
+    }
+
+    #[test]
+    fn forced_backend_from_var_rejects_gles_and_unknown() {
+        for raw in ["gles", "webgpu", "not-a-backend"] {
+            assert_eq!(
+                forced_backend_from_var(Some(raw.into())),
+                None,
+                "raw={raw:?}"
+            );
+        }
+    }
+
     #[test]
     fn native_backends_exclude_browser_webgpu_on_windows() {
         #[cfg(target_os = "windows")]
         {
+            // Windows defaults to DX12 (the DX12 Ultimate target); Vulkan is opt-in via
+            // CIV_BEVY_BACKEND=vulkan. Never GLES/browser-WebGPU in the adapter search.
+            std::env::remove_var(BACKEND_ENV);
             let b = native_only_backends();
             assert!(b.contains(Backends::DX12));
-            assert!(b.contains(Backends::VULKAN));
+            assert!(!b.contains(Backends::VULKAN), "Vulkan is opt-in via env, not default");
             assert!(!b.contains(Backends::BROWSER_WEBGPU));
             assert!(!b.contains(Backends::GL));
         }
+    }
+
+    #[test]
+    fn vulkan_remains_reachable_via_env_override() {
+        // The DX12-only Windows default must not remove the Vulkan escape hatch.
+        assert_eq!(
+            forced_backend_from_var(Some("vulkan".to_string())),
+            Some(Backends::VULKAN)
+        );
+    }
+
+    #[test]
+    fn native_wgpu_settings_use_native_only_backends() {
+        let settings = native_wgpu_settings();
+        assert_eq!(settings.backends, Some(native_only_backends()));
+        assert!(settings.features.contains(WgpuFeatures::POLYGON_MODE_LINE));
     }
 }

@@ -368,6 +368,7 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-RESEARCH-000.
     /// FR-CIV-RESEARCH-000 — schema present.
     #[test]
     fn schema_version_present() {
@@ -405,6 +406,7 @@ mod tests {
         assert_eq!(cache.get(key), Some(&card));
     }
 
+    /// Covers FR-CIV-RESEARCH-001.
     /// FR-CIV-RESEARCH-001 — a well-formed card with valid dependencies is
     /// accepted.
     #[test]
@@ -598,6 +600,7 @@ mod tests {
         }
     }
 
+    /// Covers FR-CIV-RESEARCH-002.
     /// FR-CIV-RESEARCH-002 — Canonical replay refuses first `LlmEvent` (ADR-006).
     #[test]
     fn canonical_replay_refuses_llm() {
@@ -613,6 +616,7 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-RESEARCH-003.
     /// FR-CIV-RESEARCH-003 — Hybrid replay on cache miss refuses to advance (ADR-006).
     #[test]
     fn hybrid_cache_miss_refuses() {
@@ -645,5 +649,66 @@ mod tests {
             .expect("card");
 
         assert_eq!(first, second);
+    }
+
+    /// FR-CIV-RESEARCH-004 — `LlmEvent::cache_key` is deterministic and
+    /// byte-composed of `(prompt_hash, input_snapshot_hash, model_id, model_version)`.
+    #[test]
+    fn cache_key_is_deterministic() {
+        let event = sample_llm_event();
+        let first = event.cache_key();
+        let second = event.cache_key();
+        assert_eq!(first, second);
+    }
+
+    /// FR-CIV-RESEARCH-004 — `LlmEvent::cache_key` byte structure matches spec.
+    #[test]
+    fn cache_key_composite_structure() {
+        let event = LlmEvent {
+            seed: 7,
+            prompt_hash: [0x11; 32],
+            model_id: "kimi-test".into(),
+            model_version: "v1".into(),
+            input_snapshot_hash: [0x22; 32],
+            output_hash: [0x33; 32],
+            output: TechCard {
+                id: "tech_x".into(),
+                era: 1,
+                inputs: vec!["a".into()],
+                energy_cost: 1,
+                byproducts: vec!["b".into()],
+                dependencies: vec!["mass_conservation".into()],
+            },
+            tick: 0,
+        };
+        let key = event.cache_key();
+        assert_eq!(key.len(), 32 + 32 + 9 + 2); // prompt_hash + snapshot + model_id + version
+        assert_eq!(&key[0..32], &[0x11; 32]);
+        assert_eq!(&key[32..64], &[0x22; 32]);
+        assert_eq!(&key[64..73], b"kimi-test");
+        assert_eq!(&key[73..75], b"v1");
+    }
+
+    /// FR-CIV-RESEARCH-004 — `LlmEvent::cache_key` changes when any component changes.
+    #[test]
+    fn cache_key_changes_with_component() {
+        let base = sample_llm_event();
+        let base_key = base.cache_key();
+
+        let mut changed_prompt = base.clone();
+        changed_prompt.prompt_hash = [0xFF; 32];
+        assert_ne!(base_key, changed_prompt.cache_key());
+
+        let mut changed_snapshot = base.clone();
+        changed_snapshot.input_snapshot_hash = [0xEE; 32];
+        assert_ne!(base_key, changed_snapshot.cache_key());
+
+        let mut changed_model = base.clone();
+        changed_model.model_id = "other-model".into();
+        assert_ne!(base_key, changed_model.cache_key());
+
+        let mut changed_version = base.clone();
+        changed_version.model_version = "2026-06-15".into();
+        assert_ne!(base_key, changed_version.cache_key());
     }
 }

@@ -251,13 +251,45 @@ mod tests {
         );
     }
 
+    /// Covers FR-CIV-WEB-003.
+    #[test]
+    fn fr_civ_web_003_spectator_view_read_only_and_deterministic() {
+        let sim = Simulation::with_seed(42);
+        let tick_before = sim.state.tick;
+        let pop_before = sim.snapshot().population;
+
+        let view_a = sim.spectator_view();
+        let view_b = sim.spectator_view();
+        let json = serde_json::to_string(&view_a).expect("serialize SpectatorView");
+        let view_json: SpectatorView =
+            serde_json::from_str(&json).expect("deserialize SpectatorView");
+
+        assert!(!view_a.civ_pins.is_empty());
+        assert!(!view_a.factions.is_empty());
+        assert!(!view_a.buildings.is_empty());
+        assert_eq!(view_a, view_b);
+        assert_eq!(view_a, view_json);
+        assert_eq!(sim.state.tick, tick_before);
+        assert_eq!(sim.snapshot().population, pop_before);
+        assert!(view_a.civ_pins.windows(2).all(|w| w[0].idx <= w[1].idx));
+        assert!(view_a.civ_pins.len() <= 256);
+    }
+
     #[test]
     fn civ_pins_reflect_spawned_agent_coordinates() {
         use civ_agents::spawn_civilian_at;
 
         let mut sim = Simulation::with_seed(9);
         let mut rng = sim.rng_mut().clone();
-        let _ = spawn_civilian_at(&mut sim.world, 42_007, 1, 0.4, 0.6, &mut rng);
+        let _ = spawn_civilian_at(
+            &mut sim.world,
+            42_007,
+            civ_agents::Alignment::None,
+            0.4,
+            0.6,
+            civ_agents::ActorVisualKind::Humanoid,
+            &mut rng,
+        );
         *sim.rng_mut() = rng;
         crate::engine::attach_citizen_to_agents(&mut sim.world);
         let pins = civ_pins(&sim);

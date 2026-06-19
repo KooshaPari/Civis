@@ -82,6 +82,7 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-LAWS-000 | Stub. | `crates/laws/` | `laws::schema_version_stub` | implemented |
 | FR-CIV-LAWS-001 | Versioned RON schema loads and round-trips. | `crates/laws/` | `laws::ron_roundtrip` | implemented |
 | FR-CIV-LAWS-002 | Validator rejects extensions missing required fields. | `crates/laws/` | `laws::validator_rejects_incomplete` | implemented |
+| FR-CIV-LAWS-006 | `LawDb::get` returns correct law by id and `None` for missing ids. | `crates/laws/` | `laws::get_*` | implemented |
 
 ---
 
@@ -161,6 +162,16 @@ Status values: `planned` | `in_progress` | `implemented`
 | FR-CIV-TACTICS-075 | `mod.permission_violation.v1` on replay bus + snapshot. | `engine/replay.rs`, `engine.rs`, `civ-watch` | `mod_permission_violation_*` | implemented |
 | FR-CIV-TACTICS-076 | civ-server session-scoped SQLite on `save.slot`. | `civ-save-db`, `server/ws_bridge.rs` | `save.slot` smoke | implemented |
 | FR-CIV-TACTICS-077 | Signed remote mod registry for fetch. | `mods/remote-registry.json`, `civ-watch` | `remote_registry_*` | implemented |
+
+---
+
+## Bevy reference client (FR-CIV-BEVY-*)
+
+| FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
+|---|---|---|---|---|
+| FR-CIV-BEVY-023 | P-W1 kickoff **item 48**: `event_feed` egui toasts + scrollable log on `civ-standalone`; `live_attach` pushes `EventKind::System` on WebSocket `connected` / `reconnecting` / `disconnected`. | `clients/bevy-ref` (`event_feed`, `live_attach`, `standalone`) | `cargo test -p civ-bevy-ref --features bevy,egui --lib event_feed::`, `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
+| FR-CIV-BEVY-024 | P-W1 kickoff **item 49**: `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; in-process sim tick gated while paused (`GameUiMode` / HUD speed `0`). | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone`, `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::` | implemented |
+| FR-CIV-BEVY-026 | P-W1 kickoff **item 51**: document and test native GPU backend selection (`CIV_BEVY_BACKEND`, DX12/Vulkan/Metal; no GLES). | `clients/bevy-ref` (`native_backend`), `clients/bevy-ref/README.md`, `docs/research/wgpu-native-escape-hatches.md` | `cargo test -p civ-bevy-ref --features bevy --lib native_backend`, `just civis-3d-live-smoke` | implemented |
 
 ---
 

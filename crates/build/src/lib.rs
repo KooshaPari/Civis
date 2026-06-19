@@ -76,6 +76,68 @@ pub struct FacadeStyle {
     pub window_density: u8,
 }
 
+/// Vectorized cultural-ecological input used to choose a tile-set family.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct CultureEraWealthVector {
+    /// Culture identifier for style-family lookup.
+    pub culture: u16,
+    /// Era index for style and tile-set filtering.
+    pub era: u16,
+    /// Wealth bucket seed before quantization.
+    pub wealth: u16,
+}
+
+impl CultureEraWealthVector {
+    /// Creates a vector record for architectural styling.
+    #[must_use]
+    pub const fn new(culture: u16, era: u16, wealth: u16) -> Self {
+        Self {
+            culture,
+            era,
+            wealth,
+        }
+    }
+
+    /// Stable quantized wealth bucket in the fixed range `0..=15`.
+    #[must_use]
+    pub const fn wealth_bucket(self) -> u8 {
+        {
+            let capped = if self.wealth / 8_192 > 15 {
+                15
+            } else {
+                self.wealth / 8_192
+            };
+            capped as u8
+        }
+    }
+}
+
+/// A deterministic tile-set profile fed by architectural style vectors.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TileSetProfile {
+    /// Stable tile-set id.
+    pub id: u16,
+    /// Cultural family bound for this tile-set.
+    pub culture: u16,
+    /// Era range floor bound for this tile-set.
+    pub era: u16,
+    /// Wealth bucket used for deterministic lookup.
+    pub wealth_bucket: u8,
+    /// Facade style to apply when this profile is selected.
+    pub facade: FacadeStyle,
+    /// Adjacency weights keyed by neighboring tile-set id.
+    pub adjacency_weights: BTreeMap<u16, u32>,
+}
+
+/// Mode selection for architecture application.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ArchitectureMode {
+    /// Canonical mode uses exemplar tile-sets from culture/era/wealth data.
+    Canonical,
+    /// Primitive mode uses raw tile-set IDs provided by caller.
+    Primitive,
+}
+
 /// Input signals that drive procedural parcel allocation.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct DemandSignals {
@@ -157,6 +219,26 @@ impl Allocator {
         }
 
         allocated
+    }
+
+    /// Selects a tile-set id by vector and allocator mode.
+    ///
+    /// This method intentionally remains deterministic and pure for testability.
+    #[must_use]
+    pub fn select_tile_set_id(
+        vector: &CultureEraWealthVector,
+        demand_signals: &DemandSignals,
+        tile_sets: &[TileSetProfile],
+        mode: ArchitectureMode,
+        primitive_tile_set_id: Option<u16>,
+    ) -> Option<u16> {
+        pick_tile_set(
+            vector,
+            demand_signals,
+            tile_sets,
+            mode,
+            primitive_tile_set_id,
+        )
     }
 }
 
@@ -287,6 +369,149 @@ pub fn default_facade_for_era(era: u16) -> FacadeStyle {
             window_density: 8,
         },
     }
+}
+
+/// Returns the canonical tile-set for the given vector/mode combination.
+#[must_use]
+pub fn resolve_tile_set<'a>(
+    vector: &CultureEraWealthVector,
+    tile_sets: &'a [TileSetProfile],
+    mode: ArchitectureMode,
+    primitive_tile_set_id: Option<u16>,
+) -> Option<&'a TileSetProfile> {
+    match mode {
+        ArchitectureMode::Primitive => {
+            if let Some(tile_set_id) = primitive_tile_set_id {
+                return tile_sets.iter().find(|tile_set| tile_set.id == tile_set_id);
+            }
+
+            if let Some(candidate) = tile_sets
+                .iter()
+                .filter(|tile_set| tile_set.culture == vector.culture)
+                .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
+            {
+                return Some(candidate);
+            }
+        }
+        ArchitectureMode::Canonical => {}
+    }
+
+    if let Some(candidate) = tile_sets
+        .iter()
+        .filter(|tile_set| {
+            tile_set.era <= vector.era && tile_set.wealth_bucket == vector.wealth_bucket()
+        })
+        .filter(|tile_set| tile_set.culture == vector.culture)
+        .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
+    {
+        return Some(candidate);
+    }
+
+    if let Some(candidate) = tile_sets
+        .iter()
+        .filter(|tile_set| tile_set.culture == vector.culture)
+        .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
+    {
+        return Some(candidate);
+    }
+
+    tile_sets
+        .iter()
+        .filter(|tile_set| tile_set.era <= vector.era)
+        .max_by_key(|tile_set| (tile_set.era, tile_set.wealth_bucket, tile_set.id))
+}
+
+/// Computes a deterministic parcel template score for this tile-set family.
+#[must_use]
+pub fn parcel_template_score(
+    demand_signals: &DemandSignals,
+    vector: &CultureEraWealthVector,
+    tile_set: &TileSetProfile,
+) -> u64 {
+    let demand_signal_sum = ((demand_signals.residential
+        + demand_signals.commercial
+        + demand_signals.industrial
+        + demand_signals.civic)
+        * 1000.0)
+        .round() as u64;
+
+    (demand_signal_sum * 131)
+        ^ (u64::from(vector.culture) * 17)
+        ^ (u64::from(vector.era) * 257)
+        ^ (u64::from(vector.wealth_bucket()) * 31)
+        ^ (u64::from(tile_set.era) * 401)
+        ^ (u64::from(tile_set.wealth_bucket) * 19)
+        ^ (u64::from(tile_set.id) * 29)
+}
+
+/// Chooses the highest-scoring tile-set under deterministic constraints.
+#[must_use]
+pub fn pick_tile_set(
+    vector: &CultureEraWealthVector,
+    demand_signals: &DemandSignals,
+    tile_sets: &[TileSetProfile],
+    mode: ArchitectureMode,
+    primitive_tile_set_id: Option<u16>,
+) -> Option<u16> {
+    if let Some(tile_set) = resolve_tile_set(vector, tile_sets, mode, primitive_tile_set_id) {
+        if mode == ArchitectureMode::Primitive {
+            return Some(tile_set.id);
+        }
+
+        return tile_sets
+            .iter()
+            .filter(|candidate| {
+                candidate.culture == tile_set.culture
+                    && candidate.era <= vector.era
+                    && candidate.wealth_bucket == vector.wealth_bucket()
+            })
+            .max_by_key(|candidate| parcel_template_score(demand_signals, vector, candidate))
+            .or(Some(tile_set))
+            .map(|candidate| candidate.id);
+    }
+
+    None
+}
+
+/// Resolves adjacency weights under the requested architecture mode.
+#[must_use]
+pub fn adjacency_weights_for_vector(
+    vector: &CultureEraWealthVector,
+    demand_signals: &DemandSignals,
+    tile_sets: &[TileSetProfile],
+    mode: ArchitectureMode,
+    primitive_tile_set_id: Option<u16>,
+) -> BTreeMap<u16, u32> {
+    pick_tile_set(
+        vector,
+        demand_signals,
+        tile_sets,
+        mode,
+        primitive_tile_set_id,
+    )
+    .and_then(|id| tile_sets.iter().find(|tile_set| tile_set.id == id))
+    .map_or_else(BTreeMap::new, |tile_set| tile_set.adjacency_weights.clone())
+}
+
+/// Resolves facade style under the requested architecture mode.
+#[must_use]
+pub fn facade_for_vector(
+    vector: &CultureEraWealthVector,
+    demand_signals: &DemandSignals,
+    tile_sets: &[TileSetProfile],
+    mode: ArchitectureMode,
+    primitive_tile_set_id: Option<u16>,
+) -> FacadeStyle {
+    pick_tile_set(
+        vector,
+        demand_signals,
+        tile_sets,
+        mode,
+        primitive_tile_set_id,
+    )
+    .and_then(|id| tile_sets.iter().find(|tile_set| tile_set.id == id))
+    .map(|tile_set| tile_set.facade.clone())
+    .unwrap_or_else(|| default_facade_for_era(vector.era))
 }
 
 #[cfg(test)]
@@ -647,5 +872,208 @@ mod tests {
         }
 
         assert!((95..=105).contains(&graph.parcels.len()));
+    }
+
+    fn sample_tile_sets() -> Vec<TileSetProfile> {
+        vec![
+            TileSetProfile {
+                id: 1,
+                culture: 0,
+                era: 1,
+                wealth_bucket: 4,
+                facade: FacadeStyle {
+                    name: "mud-culture-a".to_owned(),
+                    era: 1,
+                    materials: vec![MaterialId(11)],
+                    roof_pitch_deg: 12,
+                    window_density: 1,
+                },
+                adjacency_weights: [(11_u16, 12_u32), (12, 9)].into_iter().collect(),
+            },
+            TileSetProfile {
+                id: 2,
+                culture: 1,
+                era: 1,
+                wealth_bucket: 4,
+                facade: FacadeStyle {
+                    name: "mud-culture-b".to_owned(),
+                    era: 1,
+                    materials: vec![MaterialId(12)],
+                    roof_pitch_deg: 8,
+                    window_density: 2,
+                },
+                adjacency_weights: [(11_u16, 6), (12, 7)].into_iter().collect(),
+            },
+            TileSetProfile {
+                id: 3,
+                culture: 0,
+                era: 4,
+                wealth_bucket: 4,
+                facade: FacadeStyle {
+                    name: "stone-culture-a".to_owned(),
+                    era: 4,
+                    materials: vec![MaterialId(13)],
+                    roof_pitch_deg: 18,
+                    window_density: 3,
+                },
+                adjacency_weights: [(21_u16, 15), (22, 20)].into_iter().collect(),
+            },
+            TileSetProfile {
+                id: 4,
+                culture: 1,
+                era: 4,
+                wealth_bucket: 4,
+                facade: FacadeStyle {
+                    name: "stone-culture-b".to_owned(),
+                    era: 4,
+                    materials: vec![MaterialId(14)],
+                    roof_pitch_deg: 26,
+                    window_density: 4,
+                },
+                adjacency_weights: [(21_u16, 17), (22, 13)].into_iter().collect(),
+            },
+        ]
+    }
+
+    fn sample_demand_signals() -> DemandSignals {
+        DemandSignals {
+            residential: 0.8,
+            commercial: 0.7,
+            industrial: 0.6,
+            civic: 0.5,
+        }
+    }
+
+    /// FR-CIV-ARCH-003 — tile-sets and adjacency weights key on style vector, not a fixed enum.
+    #[test]
+    fn fr_arch_003_tilesets_and_adjacency_use_style_vectors() {
+        let tile_sets = sample_tile_sets();
+        let demands = sample_demand_signals();
+
+        let culture_a = CultureEraWealthVector::new(0, 1, 20_000);
+        let culture_b = CultureEraWealthVector::new(1, 1, 20_000);
+
+        let style_a = facade_for_vector(
+            &culture_a,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        );
+        let style_b = facade_for_vector(
+            &culture_b,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        );
+        let adjacency_a = adjacency_weights_for_vector(
+            &culture_a,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        );
+        let adjacency_b = adjacency_weights_for_vector(
+            &culture_b,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        );
+
+        assert_ne!(style_a.name, style_b.name);
+        assert_ne!(adjacency_a, adjacency_b);
+    }
+
+    /// FR-CIV-ARCH-004 — fixed demand + vector input chooses deterministic template scores.
+    #[test]
+    fn fr_arch_004_template_scoring_is_deterministic() {
+        let tile_sets = sample_tile_sets();
+        let demands = sample_demand_signals();
+        let vector = CultureEraWealthVector::new(1, 4, 20_000);
+
+        let first = parcel_template_score(&demands, &vector, &tile_sets[3]);
+        let second = parcel_template_score(&demands, &vector, &tile_sets[3]);
+
+        assert_eq!(first, second);
+        let selected = pick_tile_set(
+            &vector,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        )
+        .expect("canonical mode should select a tile-set");
+        assert_eq!(selected, 4);
+    }
+
+    /// FR-CIV-ARCH-007 — canonical mode keys by culture/era while primitive honors explicit ids.
+    #[test]
+    fn fr_arch_007_modes_control_facade_resolution() {
+        let tile_sets = sample_tile_sets();
+        let demands = sample_demand_signals();
+        let vector_a = CultureEraWealthVector::new(1, 4, 20_000);
+        let vector_b = CultureEraWealthVector::new(0, 1, 20_000);
+
+        let canonical = facade_for_vector(
+            &vector_a,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        );
+        let primitive = facade_for_vector(
+            &vector_a,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Primitive,
+            Some(1),
+        );
+        let primitive_stable = facade_for_vector(
+            &vector_b,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Primitive,
+            Some(1),
+        );
+
+        assert_eq!(canonical.name, "stone-culture-b");
+        assert_eq!(primitive.name, "mud-culture-a");
+        assert_eq!(primitive, primitive_stable);
+    }
+
+    /// FR-CIV-ARCH-008 — measurable facade histogram tracks culture vector divergence.
+    #[test]
+    fn fr_arch_008_facade_histogram_tracks_culture_vector_divergence() {
+        let tile_sets = sample_tile_sets();
+        let demands = sample_demand_signals();
+        let vector_a = CultureEraWealthVector::new(0, 1, 20_000);
+        let vector_b = CultureEraWealthVector::new(1, 1, 20_000);
+
+        let mut histogram = BTreeMap::new();
+        let styles = [
+            facade_for_vector(
+                &vector_a,
+                &demands,
+                &tile_sets,
+                ArchitectureMode::Canonical,
+                None,
+            ),
+            facade_for_vector(
+                &vector_b,
+                &demands,
+                &tile_sets,
+                ArchitectureMode::Canonical,
+                None,
+            ),
+        ];
+
+        for style in styles {
+            *histogram.entry(style.name).or_insert(0_u32) += 1;
+        }
+
+        let total_unique = histogram.len();
+        assert_eq!(total_unique, 2);
     }
 }

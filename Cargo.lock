@@ -2019,6 +2019,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-climate"
+version = "0.1.0"
+
+[[package]]
 name = "civ-diffusion"
 version = "0.1.0"
 dependencies = [

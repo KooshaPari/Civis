@@ -1,33 +1,57 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "62fb8aa3e7f7e562b9632c75b0ce92fbc689df31",
-  "created_at": "2026-06-18T08:19:42Z",
+  "git_sha": "3ac84fca6f0fc2a718fd1a88470ff393ea1ae95b",
+  "created_at": "2026-06-20T10:57:12Z",
   "runner": {
-    "host": "KOOSHAPARI-DESK",
-    "rust": "manifest-refresh (gates reused)"
+    "host": "unknown",
+    "rust": "rustc 1.95.0 (59807616e 2026-04-14) (Homebrew)"
   },
   "gates": {
     "civis_3d_verify": {
-      "status": "pass",
-      "detail": ""
+      "status": "fail",
+      "detail": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-jsonrpc-catalog.ps1 sh: powershell: command not found error: Recipe `civis-3d-catalog-check` failed on line 69 with exit code 127 "
     },
     "web_test": {
-      "status": "pass",
-      "detail": ""
+      "status": "fail",
+      "detail": "\u001b[34m\u2139 pass 92\u001b[39m \u001b[34m\u2139 fail 1\u001b[39m \u001b[34m\u2139 cancelled 0\u001b[39m \u001b[34m\u2139 skipped 0\u001b[39m \u001b[34m\u2139 todo 0\u001b[39m \u001b[34m\u2139 duration_ms 6527.616916\u001b[39m  \u001b[31m\u2716 failing tests:\u001b[39m  test at tests/theme.test.mjs:31:1 \u001b[31m\u2716 readStoredTheme prefers query, then data-theme, then legacy civis-theme \u001b[90m(1.156291ms)\u001b[39m\u001b[39m   TypeError: storage.getItem is not a function       at readStoredTheme \u001b[90m(file:///Users/kooshapari/CodeProjects/Phenotype/repos/Civis/web/\u001b[39msrc/theme.mjs:34:30\u001b[90m)\u001b[39m       at TestContext.<anonymous> \u001b[90m(file:///Users/kooshapari/CodeProjects/Phenotype/repos/Civis/web/\u001b[39mtests/theme.test.mjs:49:16\u001b[90m)\u001b[39m   \u001b[90m    at Test.runInAsyncScope (node:async_hooks:226:14)\u001b[39m   \u001b[90m    at Test.run (node:internal/test_runner/test:1201:25)\u001b[39m   \u001b[90m    at Test.processPendingSubtests (node:internal/test_runner/test:831:18)\u001b[39m   \u001b[90m    at Test.postRun (node:internal/test_runner/test:1330:19)\u001b[39m   \u001b[90m    at Test.run (node:internal/test_runner/test:1258:12)\u001b[39m   \u001b[90m    at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\u001b[39m "
     },
     "dashboard_typecheck": {
       "status": "pass",
       "detail": ""
     },
-    "unreal_preflight": {
+    "extra_cargo_audit": {
       "status": "skip",
-      "detail": "optional UE gate"
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     },
-    "unreal_build": {
+    "extra_cargo_deny": {
       "status": "skip",
-      "detail": "optional UE gate"
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_machete": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_cargo_semver": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_trufflehog": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_fr_coverage": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_docs_check": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
+    },
+    "extra_security_guard": {
+      "status": "skip",
+      "detail": "CIVIS_QUALITY_EXTRAS not set (opt-in)"
     }
   },
-  "manifest_hash": "12c0cde49550392b31b356ce92acb6d365a44a4a39e694d6b8d5a5c33719e9e7"
+  "manifest_hash": "486f269f9e5e3cbdc39f666d8cf811a5be9457bc047af231bff9ec2752db0314"
 }

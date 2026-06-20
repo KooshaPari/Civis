@@ -32,6 +32,13 @@ audit:
     cargo deny check
     cargo audit
 
+# Standalone cargo-deny gate (mirrors .github/workflows/cargo-deny.yml).
+# Runs `cargo deny check --workspace` so all workspace members are checked,
+# not only the root package. Used by the PR-time CI workflow and by the
+# pre-push lefthook hook.
+deny:
+    cargo deny check --workspace
+
 # Find unused dependencies
 unused:
     cargo machete

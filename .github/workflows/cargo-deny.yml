@@ -1,34 +1,66 @@
-# Local-first: PRs use quality.yml + pr-governance only.
-# Heavy gate (cargo-deny) runs locally via lefthook pre-push and is attested
-# in `.ci/quality-manifest.json`; this workflow is dispatch-only.
+# cargo-deny CI gate for the Civis workspace.
+#
+# Runs on every PR against `main` (and on push to `main`) so that the
+# `deny.toml` policy is enforced before merge. Local pre-push hook runs the
+# same check via `just deny` and stores the result in
+# `.ci/quality-manifest.json`, so this workflow is the canonical cloud-side
+# enforcement.
+#
+# We run with `--workspace` so that every workspace member is checked, not
+# only the default root package.
 name: cargo-deny
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - "deny.toml"
+      - ".github/workflows/cargo-deny.yml"
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-jobs:
-  manifest-verify:
-    name: manifest-verify (cloud)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - name: Verify local quality manifest
-        run: bash scripts/quality/verify-quality-manifest.sh
+# Cancel in-progress runs for the same PR/branch when a new commit lands —
+# keeps the queue short and feedback fast.
+concurrency:
+  group: cargo-deny-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   cargo-deny:
-    # Manual escape hatch: run heavy deny on the runner when explicitly asked.
-    if: github.event_name == 'workflow_dispatch'
+    name: cargo-deny --workspace
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Install Rust toolchain
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-      - name: Run cargo-deny
+        with:
+          toolchain: stable
+      - name: Cache cargo-deny
+        uses: Swatinem/rust-cache@82e0640c10b16e16b3049b531e1771638dca14eb
+        with:
+          workspaces: |
+            ~/.cargo/advisory-db
+            ~/.cargo/registry
+      - name: Run cargo-deny --workspace
         uses: EmbarkStudios/cargo-deny-action@8f84122a46a358a27cb0625d85ad60ab436a1b87
         with:
           rust-version: stable
+          command: check
+          arguments: --workspace
+      - name: Upload deny report on failure
+        if: failure()
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874
+        with:
+          name: cargo-deny-report
+          path: |
+            deny.toml
+            target/deny.log
+          if-no-files-found: ignore

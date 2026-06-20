@@ -1,32 +1,20 @@
-## Summary
-Refresh the README work-state header and 10-block progress bar to reflect the current post-playable phase, and fix multiple stale factual claims.
+## FORGE SESSION: README Refresh (STALE)
 
-## Context
-The README had drifted since the last update on 2026-06-11. Several numbers and descriptions were no longer accurate after the recent wave of merges and the remote-branch audit cleanup.
+**Status: STALE** — The target branch `side/doc-refresh` no longer exists
+on remote or locally. This PR was never created.
 
-## Changes
-- **Date**: bumped to 2026-06-13
-- **Requirement count**: corrected from a stale "135+ / 1221" to the actual matrix-derived count of **113 / 212** traced FRs
-- **Current phase**: replaced vague "BUILD-NEXT 15 slices" with **3D protocol + modding v3 partial**
-- **Test count**: added **750+ tests green** to the state summary
-- **Open PRs**: updated from a stale list of 4 merged PRs to **None**
-- **Rust edition**: fixed from **2024** to **2021** (matches `Cargo.toml`)
-- **Repository structure**: fixed from `src/` to `crates/` with **28 members** (matches `Cargo.toml`)
-- **Progress bar subtitle**: updated to match the new state description
+## Original Summary (preserved for reference)
+Refresh the README work-state header and 10-block progress bar to reflect
+the current post-playable phase, and fix multiple stale factual claims.
 
-## Testing
-```bash
-# Verify the diff is README-only and minimal
-git diff origin/main..side/doc-refresh --stat
-# Should show: README.md | 12 ++++++------
+## Historic Context
+- **Date planned**: 2026-06-13
+- **Requirement count**: 113 / 212 traced FRs
+- **Test count**: 750+ tests green
+- **Why stale**: Branch was never pushed to remote, or was cleaned up
+  during the remote-branch audit. The README changes may have been
+  incorporated through other PRs (the PR was README-only).
 
-# Spot-check the corrected claims
-grep "2026-06-13" README.md
-grep "edition 2021" README.md
-grep "crates/" README.md
-grep "28 members" README.md
-```
-
-## Links
-- Coverage baseline: `docs/audits/coverage-baseline-2026-06-10.md`
-- FR matrices: `docs/traceability/TRACEABILITY_MATRIX.md`, `fr-3d-matrix.md`, `fr-web-matrix.md`
+## Resolution
+- Marked STALE on 2026-06-20
+- No further action needed unless a new `side/doc-refresh` branch is created

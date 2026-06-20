@@ -11,6 +11,7 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
+pub mod command_queue;
 pub mod engine;
 pub mod hash_chain;
 pub mod integrity;

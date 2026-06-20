@@ -19,6 +19,7 @@ members = [
   "crates/civlab-sdk",
   "crates/watch",
   "crates/save-db",
+  "crates/climate",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

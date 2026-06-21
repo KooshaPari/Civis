@@ -531,6 +531,30 @@ impl Default for GameplaySettings {
 }
 
 /// A binding target.
+pub const ACTION_TOGGLE_SETTINGS: &str = "Toggle Settings";
+pub const ACTION_TOGGLE_DIPLOMACY: &str = "Toggle Diplomacy";
+pub const ACTION_TOGGLE_TECH_TREE: &str = "Toggle Tech Tree";
+pub const ACTION_TOGGLE_MAP: &str = "Toggle Map";
+pub const ACTION_PAUSE_SIM: &str = "Pause / Resume Sim";
+pub const ACTION_CYCLE_SIM_SPEED: &str = "Cycle Sim Speed";
+pub const ACTION_SPEED_1X: &str = "Set Speed 1x";
+pub const ACTION_SPEED_2X: &str = "Set Speed 2x";
+pub const ACTION_SPEED_5X: &str = "Set Speed 5x";
+pub const ACTION_SPEED_10X: &str = "Set Speed 10x";
+pub const ACTION_CAMERA_MOVE_FORWARD: &str = "Move Camera Forward";
+pub const ACTION_CAMERA_MOVE_BACKWARD: &str = "Move Camera Backward";
+pub const ACTION_CAMERA_MOVE_RIGHT: &str = "Move Camera Right";
+pub const ACTION_CAMERA_MOVE_LEFT: &str = "Move Camera Left";
+pub const ACTION_CAMERA_RAISE: &str = "Raise Camera";
+pub const ACTION_CAMERA_LOWER: &str = "Lower Camera";
+pub const ACTION_CAMERA_ROTATE: &str = "Rotate Camera";
+pub const ACTION_CAMERA_ZOOM: &str = "Zoom Camera";
+pub const ACTION_CAMERA_RESET: &str = "Reset Camera";
+pub const ACTION_CAMERA_ZOOM_IN: &str = "Zoom Camera In";
+pub const ACTION_CAMERA_ZOOM_OUT: &str = "Zoom Camera Out";
+pub const ACTION_SELECT_OR_PICK: &str = "Select / Inspect";
+pub const ACTION_CLOSE_PANEL: &str = "Close Panel";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyBinding {
     /// Keyboard key binding.
@@ -573,6 +597,30 @@ impl KeyBinding {
                 }
             },
             _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn is_pressed(
+        self,
+        keys: &ButtonInput<KeyCode>,
+        mouse: &ButtonInput<MouseButton>,
+    ) -> bool {
+        match self {
+            Self::Key(key) => keys.pressed(key),
+            Self::Mouse(button) => mouse.pressed(button),
+        }
+    }
+
+    #[inline]
+    pub fn is_just_pressed(
+        self,
+        keys: &ButtonInput<KeyCode>,
+        mouse: &ButtonInput<MouseButton>,
+    ) -> bool {
+        match self {
+            Self::Key(key) => keys.just_pressed(key),
+            Self::Mouse(button) => mouse.just_pressed(button),
         }
     }
 
@@ -752,16 +800,38 @@ impl Keybind {
 /// The default hotkeys shipped with the reference client.
 fn default_keybinds() -> Vec<Keybind> {
     vec![
-        Keybind::new("Toggle Settings", KeyBinding::Key(KeyCode::KeyO)),
-        Keybind::new("Toggle Diplomacy", KeyBinding::Key(KeyCode::KeyG)),
-        Keybind::new("Toggle Tech Tree", KeyBinding::Key(KeyCode::KeyT)),
-        Keybind::new("Pause / Resume Sim", KeyBinding::Key(KeyCode::Space)),
-        Keybind::new("Cycle Sim Speed", KeyBinding::Key(KeyCode::Equal)),
-        Keybind::new("Pan Camera", KeyBinding::Key(KeyCode::KeyW)),
-        Keybind::new("Rotate Camera", KeyBinding::Key(KeyCode::KeyQ)),
-        Keybind::new("Zoom Camera", KeyBinding::Mouse(MouseButton::Middle)),
-        Keybind::new("Select / Inspect", KeyBinding::Mouse(MouseButton::Left)),
-        Keybind::new("Close Panel", KeyBinding::Key(KeyCode::Escape)),
+        Keybind::new(ACTION_TOGGLE_SETTINGS, KeyBinding::Key(KeyCode::KeyO)),
+        Keybind::new(ACTION_TOGGLE_DIPLOMACY, KeyBinding::Key(KeyCode::KeyG)),
+        Keybind::new(ACTION_TOGGLE_TECH_TREE, KeyBinding::Key(KeyCode::KeyT)),
+        Keybind::new(ACTION_TOGGLE_MAP, KeyBinding::Key(KeyCode::KeyM)),
+        Keybind::new(ACTION_PAUSE_SIM, KeyBinding::Key(KeyCode::Space)),
+        Keybind::new(ACTION_CYCLE_SIM_SPEED, KeyBinding::Key(KeyCode::Equal)),
+        Keybind::new(ACTION_SPEED_1X, KeyBinding::Key(KeyCode::Digit1)),
+        Keybind::new(ACTION_SPEED_2X, KeyBinding::Key(KeyCode::Digit2)),
+        Keybind::new(ACTION_SPEED_5X, KeyBinding::Key(KeyCode::Digit3)),
+        Keybind::new(ACTION_SPEED_10X, KeyBinding::Key(KeyCode::Digit4)),
+        Keybind::new(
+            ACTION_CAMERA_MOVE_FORWARD,
+            KeyBinding::Key(KeyCode::KeyW),
+        ),
+        Keybind::new(
+            ACTION_CAMERA_MOVE_BACKWARD,
+            KeyBinding::Key(KeyCode::KeyS),
+        ),
+        Keybind::new(ACTION_CAMERA_MOVE_LEFT, KeyBinding::Key(KeyCode::KeyA)),
+        Keybind::new(
+            ACTION_CAMERA_MOVE_RIGHT,
+            KeyBinding::Key(KeyCode::KeyD),
+        ),
+        Keybind::new(ACTION_CAMERA_RAISE, KeyBinding::Key(KeyCode::Space)),
+        Keybind::new(ACTION_CAMERA_LOWER, KeyBinding::Key(KeyCode::ShiftLeft)),
+        Keybind::new(ACTION_CAMERA_ROTATE, KeyBinding::Mouse(MouseButton::Right)),
+        Keybind::new(ACTION_CAMERA_ZOOM, KeyBinding::Mouse(MouseButton::Middle)),
+        Keybind::new(ACTION_CAMERA_RESET, KeyBinding::Key(KeyCode::KeyR)),
+        Keybind::new(ACTION_CAMERA_ZOOM_IN, KeyBinding::Key(KeyCode::Equal)),
+        Keybind::new(ACTION_CAMERA_ZOOM_OUT, KeyBinding::Key(KeyCode::Minus)),
+        Keybind::new(ACTION_SELECT_OR_PICK, KeyBinding::Mouse(MouseButton::Left)),
+        Keybind::new(ACTION_CLOSE_PANEL, KeyBinding::Key(KeyCode::Escape)),
     ]
 }
 
@@ -881,6 +951,30 @@ impl GameSettings {
             .map(|bind| bind.binding)
     }
 
+    /// Check whether a named action's binding is currently pressed.
+    #[must_use]
+    pub fn action_pressed(
+        &self,
+        action: &str,
+        keys: &ButtonInput<KeyCode>,
+        mouse: &ButtonInput<MouseButton>,
+    ) -> bool {
+        self.key_for(action)
+            .is_some_and(|binding| binding.is_pressed(keys, mouse))
+    }
+
+    /// Check whether a named action's binding is newly pressed this frame.
+    #[must_use]
+    pub fn action_just_pressed(
+        &self,
+        action: &str,
+        keys: &ButtonInput<KeyCode>,
+        mouse: &ButtonInput<MouseButton>,
+    ) -> bool {
+        self.key_for(action)
+            .is_some_and(|binding| binding.is_just_pressed(keys, mouse))
+    }
+
     /// Update an action binding in-place.
     pub fn rebind(&mut self, action: &str, new_binding: KeyBinding) {
         if let Some(bind) = self.keybinds.iter_mut().find(|bind| bind.action == action) {
@@ -940,11 +1034,15 @@ fn open_settings_for_autoshot(
 // Systems
 // ---------------------------------------------------------------------------
 
-fn toggle_settings_panel(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GameSettings>) {
-    if keys.just_pressed(KeyCode::KeyO) {
+fn toggle_settings_panel(
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    mut settings: ResMut<GameSettings>,
+) {
+    if settings.action_just_pressed(ACTION_TOGGLE_SETTINGS, &keys, &mouse_buttons) {
         settings.open = !settings.open;
     }
-    if settings.open && keys.just_pressed(KeyCode::Escape) {
+    if settings.open && settings.action_just_pressed(ACTION_CLOSE_PANEL, &keys, &mouse_buttons) {
         settings.open = false;
         settings.save();
     }
@@ -1307,7 +1405,7 @@ fn controls_tab(
             }
         });
     ui.add_space(4.0);
-    ui.label(egui::RichText::new("TODO: camera.rs and map2d.rs should query GameSettings::key_for() before using hardcoded inputs.").color(ui_theme::DIM).small());
+    ui.label(egui::RichText::new("Configured controls update instantly from the game settings.").color(ui_theme::DIM).small());
     changed
 }
 

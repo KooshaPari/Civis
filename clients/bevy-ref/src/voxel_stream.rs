@@ -49,7 +49,6 @@ pub struct VoxelStreamState {
     lod_policy: LodPolicy,
     material: Handle<StandardMaterial>,
     // Only read by the `tracing` HUD throttle (non-egui build); harmless otherwise.
-    #[cfg_attr(feature = "egui", allow(dead_code))]
     last_hud: f64,
     hud: VoxelHud,
 }

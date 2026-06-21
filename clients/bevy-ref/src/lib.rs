@@ -19,19 +19,27 @@ pub mod atmosphere;
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod faction_hud;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
+#[cfg(all(feature = "bevy", feature = "models"))]
+pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
+#[cfg(all(feature = "bevy", feature = "gi"))]
+pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
+pub mod game_laws;
+pub mod map2d;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
 #[cfg(feature = "bevy")]
@@ -50,6 +58,12 @@ pub mod live_scene;
 pub mod live_stream;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
+#[cfg(feature = "bevy")]
+pub mod post_fx;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod settings_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod menus;
 #[cfg(feature = "bevy")]
@@ -503,27 +517,61 @@ pub fn chunk_id_at_world_pos(pos: [f32; 3], chunk_edge: f32) -> ChunkId {
     encode_chunk_id(cx, cy, cz)
 }
 
-/// Stub raycast: intersect a ray with a horizontal plane and return the chunk at the hit.
+/// Raycast against the procedural terrain surface and return the chunk at the hit.
+#[cfg(feature = "bevy")]
 #[must_use]
-pub fn chunk_raycast_stub(
-    ray_origin: [f32; 3],
-    ray_dir: [f32; 3],
-    plane_y: f32,
-    chunk_edge: f32,
-) -> Option<ChunkId> {
-    if ray_dir[1].abs() < f32::EPSILON {
-        return None;
+pub fn chunk_raycast_terrain(ray_origin: [f32; 3], ray_dir: [f32; 3], chunk_edge: f32) -> Option<ChunkId> {
+    let max_distance = terrain::WORLD_SIZE * 2.0;
+    let step = (chunk_edge * 0.5).max(1.0);
+    let terrain_half = terrain::WORLD_SIZE * 0.5;
+
+    let sample_surface = |pos: [f32; 3]| {
+        terrain::terrain_surface_y(pos[0] + terrain_half, pos[2] + terrain_half)
+    };
+
+    let mut prev_t = 0.0_f32;
+    let mut prev_pos = ray_origin;
+    let mut prev_delta = prev_pos[1] - sample_surface(prev_pos);
+    if prev_delta <= 0.0 {
+        return Some(chunk_id_at_world_pos(prev_pos, chunk_edge));
     }
-    let t = (plane_y - ray_origin[1]) / ray_dir[1];
-    if t <= 0.0 {
-        return None;
+
+    let mut t = step;
+    while t <= max_distance {
+        let pos = [
+            ray_origin[0] + ray_dir[0] * t,
+            ray_origin[1] + ray_dir[1] * t,
+            ray_origin[2] + ray_dir[2] * t,
+        ];
+        let delta = pos[1] - sample_surface(pos);
+        if delta <= 0.0 {
+            let mut lo = prev_t;
+            let mut hi = t;
+            let mut hit = pos;
+            for _ in 0..10 {
+                let mid = (lo + hi) * 0.5;
+                hit = [
+                    ray_origin[0] + ray_dir[0] * mid,
+                    ray_origin[1] + ray_dir[1] * mid,
+                    ray_origin[2] + ray_dir[2] * mid,
+                ];
+                let mid_delta = hit[1] - sample_surface(hit);
+                if mid_delta > 0.0 {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+            return Some(chunk_id_at_world_pos(hit, chunk_edge));
+        }
+        prev_t = t;
+        prev_pos = pos;
+        prev_delta = delta;
+        t += step;
     }
-    let hit = [
-        ray_origin[0] + ray_dir[0] * t,
-        plane_y,
-        ray_origin[2] + ray_dir[2] * t,
-    ];
-    Some(chunk_id_at_world_pos(hit, chunk_edge))
+
+    let _ = (prev_pos, prev_delta);
+    None
 }
 
 /// Resolve a focused chunk for minimap XZ grid selection against loaded chunk ids.
@@ -620,7 +668,7 @@ pub fn agent_color_from_id(agent_id: u64) -> [f32; 3] {
 
 /// Short label for an agent marker (`name` when provided, otherwise `#<id>`).
 #[must_use]
-pub fn agent_label_stub(agent_id: u64, name: Option<&str>) -> String {
+pub fn agent_label_text(agent_id: u64, name: Option<&str>) -> String {
     if let Some(label) = name.map(str::trim).filter(|value| !value.is_empty()) {
         return label.to_string();
     }
@@ -1003,10 +1051,11 @@ mod tests {
     }
 
     #[test]
-    fn chunk_raycast_stub_hits_horizontal_plane() {
-        let origin = [8.0, 16.0, 8.0];
+    #[cfg(feature = "bevy")]
+    fn chunk_raycast_terrain_hits_terrain_surface() {
+        let origin = [0.0, 256.0, 0.0];
         let dir = [0.0, -1.0, 0.0];
-        let chunk = chunk_raycast_stub(origin, dir, 8.0, VOXEL_CHUNK_EDGE).expect("hit");
+        let chunk = chunk_raycast_terrain(origin, dir, VOXEL_CHUNK_EDGE).expect("hit");
         assert_eq!(decode_chunk_id(chunk), (0, 0, 0));
     }
 
@@ -1152,10 +1201,10 @@ mod tests {
     }
 
     #[test]
-    fn agent_label_stub_prefers_name() {
-        assert_eq!(agent_label_stub(7, Some(" Ada ")), "Ada");
-        assert_eq!(agent_label_stub(7, None), "#7");
-        assert_eq!(agent_label_stub(7, Some("   ")), "#7");
+    fn agent_label_text_prefers_name() {
+        assert_eq!(agent_label_text(7, Some(" Ada ")), "Ada");
+        assert_eq!(agent_label_text(7, None), "#7");
+        assert_eq!(agent_label_text(7, Some("   ")), "#7");
     }
 
     #[test]

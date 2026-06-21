@@ -27,6 +27,13 @@ pub(crate) fn env_u16(name: &str, default: u16) -> u16 {
         .unwrap_or(default)
 }
 
+pub(crate) fn env_u64(name: &str, default: u64) -> u64 {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(default)
+}
+
 pub(crate) fn resolve_data_dir() -> PathBuf {
     std::env::var("CIVIS_DATA_DIR")
         .map(PathBuf::from)
@@ -595,6 +602,15 @@ mod tests {
         let key = format!("CIVIS_TEST_ABSENT_{}", std::process::id());
         assert_eq!(env_u16(&key, 8080), 8080);
         assert_eq!(env_u16(&key, 0), 0);
+    }
+
+    /// `env_u64` falls back to the default when the variable is unset or
+    /// unparsable (no env mutation -> race-free in the parallel test runner).
+    #[test]
+    fn env_u64_defaults_when_var_absent() {
+        let key = format!("CIVIS_TEST_ABSENT_{}", std::process::id());
+        assert_eq!(env_u64(&key, 42), 42);
+        assert_eq!(env_u64(&key, 0), 0);
     }
 
     /// `resolve_session_id` is always a usable, non-empty identifier — a fresh

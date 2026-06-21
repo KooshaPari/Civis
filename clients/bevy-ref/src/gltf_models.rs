@@ -288,7 +288,7 @@ fn scene_or_primitive(handle: &Option<Handle<Scene>>) -> ModelOrPrimitive {
 // There is NO release compatible with Bevy 0.18 yet, so the real-sky swap is
 // deferred and the procedural skybox dome (`src/skybox.rs` +
 // `src/atmosphere.rs`) remains the sky. The `atmosphere` cargo feature and the
-// commented `bevy_atmosphere` dep in Cargo.toml are placeholders.
+// commented `bevy_atmosphere` dep in Cargo.toml is a future hook.
 //
 // When an 0.18-compatible release ships (expected ~0.14):
 //   1. Uncomment the dep in Cargo.toml and flip the feature to
@@ -303,11 +303,11 @@ fn scene_or_primitive(handle: &Option<Handle<Scene>>) -> ModelOrPrimitive {
 // The thin wrapper below documents the add without pulling the dep, so callers
 // have a single stable symbol to reference once the feature is enabled.
 
-/// Placeholder wrapper for the future `bevy_atmosphere::plugin::AtmospherePlugin`.
+/// Wrapper for the future `bevy_atmosphere::plugin::AtmospherePlugin`.
 ///
 /// No 0.18-compatible `bevy_atmosphere` exists yet (see the note above), so this
 /// is a documentation anchor only. Once the dep is enabled, the closer should
-/// add the real `AtmospherePlugin` (not this stub) in `standalone.rs`.
+/// add the real `AtmospherePlugin` in `standalone.rs`.
 #[cfg(feature = "atmosphere")]
 #[derive(Default)]
 pub struct AtmospherePlugin2;

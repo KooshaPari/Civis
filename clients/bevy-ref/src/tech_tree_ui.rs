@@ -15,6 +15,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use crate::settings_ui::{GameSettings, ACTION_TOGGLE_TECH_TREE, KeyBinding};
 
 // ---------------------------------------------------------------------------
 // Palette (mirrors game_ui.rs / event_feed.rs dark-glassmorphism constants)
@@ -178,8 +179,17 @@ impl Plugin for TechTreeUiPlugin {
 // ---------------------------------------------------------------------------
 
 /// Map **T** to opening / closing the tech tree overlay.
-pub fn toggle_tech_tree(keys: Res<ButtonInput<KeyCode>>, mut open: ResMut<TechTreeOpen>) {
-    if keys.just_pressed(KeyCode::KeyT) {
+pub fn toggle_tech_tree(
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    settings: Option<Res<GameSettings>>,
+    mut open: ResMut<TechTreeOpen>,
+) {
+    let toggle_binding = settings
+        .as_ref()
+        .and_then(|s| s.key_for(ACTION_TOGGLE_TECH_TREE))
+        .unwrap_or(KeyBinding::Key(KeyCode::KeyT));
+    if toggle_binding.is_just_pressed(&keys, &mouse_buttons) {
         open.0 = !open.0;
     }
 }

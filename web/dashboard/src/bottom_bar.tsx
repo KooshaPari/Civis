@@ -35,6 +35,7 @@ export function BottomBar() {
   const [loadEntries, setLoadEntries] = useState<SaveEntry[]>([]);
   const [loadOpen, setLoadOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<(typeof PRODUCTION_SLOTS)[number]>("slot-1");
+  const [minimapZoom, setMinimapZoom] = useState(1.0);
 
   const runWatchControl = async (path: string, body: object = {}) => {
     try {
@@ -671,12 +672,23 @@ export function BottomBar() {
       <div className="minimap-shell">
         <div className="minimap-head">
           <span>Minimap</span>
-          <strong>{state.snapshot?.factions.length ?? 0} factions</strong>
+          <strong>{state.snapshot?.factions.length ?? 0} factions · {minimapZoom.toFixed(1)}x</strong>
         </div>
+        <label className="slot-picker">
+          Zoom
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.25}
+            value={minimapZoom}
+            onChange={(e) => setMinimapZoom(Number(e.target.value))}
+          />
+        </label>
         <canvas
           ref={miniMapRef}
-          width={160}
-          height={160}
+          width={Math.round(160 * minimapZoom)}
+          height={Math.round(160 * minimapZoom)}
           className="minimap"
           aria-label="Terrain minimap"
           onClick={inspectMinimapCell}

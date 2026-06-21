@@ -2308,6 +2308,7 @@ dependencies = [
  "civ-agents",
  "civ-diplomacy",
  "civ-engine",
+ "civ-laws",
  "civ-protocol-3d",
  "civ-voxel",
  "crossbeam-channel",

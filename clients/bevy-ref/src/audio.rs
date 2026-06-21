@@ -39,7 +39,7 @@
 //! When a file is **absent**, `bevy_kira_audio` logs a missing-asset warning and
 //! the corresponding sound is simply silent — the app stays green and playable.
 //! To ship real audio, drop CC0 `.ogg` files at the paths above (no code change
-//! needed). For a fully procedural placeholder (a generated sine tone instead of
+//! needed). For a fully procedural fallback (a generated sine tone instead of
 //! silence) see the note on [`AudioHandles::resolve`].
 //!
 //! Feature-gated behind the `audio` cargo feature (which implies `bevy`).

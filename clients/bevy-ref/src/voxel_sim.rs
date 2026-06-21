@@ -43,6 +43,11 @@ const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 // pay near-zero render cost. Pegged at 0.25 Hz (1 step per 4 s) while the
 // incremental dirty-chunk meshing path matures (FR-CIV-CA dirty-chunk).
 // Raise toward 2 Hz once incremental remesh lands and is benchmarked stable.
+// CA tick rate. At 256³ each step is a full-grid multi-pass sweep + full
+// remesh, so 12 Hz froze the frame loop. 2 Hz is the throttle until
+// dirty-chunk stepping + incremental remesh work (see FR-CIV-CA dirty-chunk notes).
+// Reduced to 0.25 Hz (1 step per 4s) while CA perf is being optimised.
+// The full-grid dirty-chunk sweep is still expensive with large water coastlines.
 const CA_TICK_HZ: f32 = 0.25;
 const CHUNK_EDGE: usize = 32;
 const RENDER_MAX_DIST: f32 = 160.0;
@@ -220,7 +225,7 @@ mod terrain_fragmentation_tests {
 // multi-minute main-thread freeze (no async/streamed mesh yet). 96³ = 216
 // chunks loads in ~1-2s and is a genuine ~0.2mi² sandbox. Scale back to 256³
 // once worldgen + initial mesh stream over frames (FR-CIV-SCALE async-load
-// TODO) + dirty-chunk CA lands.
+// work) + dirty-chunk CA lands.
 pub const WORLD_DIMS_SMALL: [usize; 3] = [96, 64, 96];
 pub const WORLD_DIMS_MEDIUM: [usize; 3] = [160, 64, 160];
 pub const WORLD_DIMS_LARGE: [usize; 3] = [256, 96, 256];

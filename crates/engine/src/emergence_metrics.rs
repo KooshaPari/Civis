@@ -93,7 +93,7 @@ pub struct EmergenceBranchingState {
     /// Ring buffer of closed avalanches.
     pub ledger: BranchingLedger,
     /// Avalanche opened on the most recent actor tick, if any.
-    pub open: Option<OpenAvalanche>,
+    open: Option<OpenAvalanche>,
     /// Rolling window `W` for `σ̄_W`.
     pub window: usize,
     /// Fuse: close immediately when `s_a` reaches this size.

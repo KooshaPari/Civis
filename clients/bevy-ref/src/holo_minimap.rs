@@ -6,8 +6,8 @@
 //! [`MinimapCamera`]). This module paints the holo-cyan rim, scanlines, and
 //! corner brackets on [`EguiPrimaryContextPass`] aligned to that panel.
 //!
-//! TODO(holohud-3d): Replace this 2.5D egui overlay with a tilted 3D mesh
-//! quad + custom fresnel/emissive shader sampling the minimap render target.
+//! Future holohud-3d work: replace this 2.5D egui overlay with a tilted 3D
+//! mesh quad + custom fresnel/emissive shader sampling the minimap render target.
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};

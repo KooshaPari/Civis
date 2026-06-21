@@ -18,11 +18,12 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
-    agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
-    decode_chunk_id, mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind,
-    SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
+    mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
+    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
 
 /// Chunk edge length in voxels (matches kernel).
@@ -624,7 +625,11 @@ pub fn apply_agent_appearance_frame_with_labels(
                 })
                 .id();
             if labels.enabled {
-                let label = agent_label_stub(update.agent_id, None);
+                let label = scene
+                    .civilian_entries
+                    .get(&update.agent_id)
+                    .map(civilian_display_name)
+                    .unwrap_or_else(|| format!("#{}", update.agent_id));
                 commands.entity(entity).with_children(|parent| {
                     parent.spawn((
                         Text2d::new(label),
@@ -643,6 +648,29 @@ pub fn apply_agent_appearance_frame_with_labels(
             MeshMaterial3d(material_handle),
             transform,
         ));
+    }
+}
+
+/// Refreshes floating agent labels from the latest civilian snapshot.
+#[cfg(feature = "bevy")]
+pub fn sync_agent_labels_from_civilians(
+    scene: Res<LiveStreamScene>,
+    agents: Query<(&LiveAgentTag, &Children)>,
+    mut labels: Query<&mut Text2d, With<LiveAgentLabel>>,
+) {
+    for (agent, children) in &agents {
+        let label = scene
+            .civilian_entries
+            .get(&agent.id)
+            .map(civilian_display_name)
+            .unwrap_or_else(|| format!("#{}", agent.id));
+        for &child in children.iter() {
+            let Ok(mut text) = labels.get_mut(child) else {
+                continue;
+            };
+            *text = Text2d::new(label.clone());
+            break;
+        }
     }
 }
 

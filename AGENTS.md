@@ -20,6 +20,8 @@ Extends Phenotype parent governance. **Authoritative 3D FR matrix:** `docs/trace
 | Unreal CivShow | `.\clients\unreal-show\scripts\build.ps1` (needs UE 5.7 + MSVC) |
 | Unreal PIE prep | `.\scripts\pie-validation.ps1` (starts backends, WS/terrain smoke, prints PIE checklist) |
 
+See [`docs/guides/agent-smoke.md`](docs/guides/agent-smoke.md) for the playable terrain gate breakdown and the full smoke coverage matrix.
+
 ## Attach matrix (do not guess URLs)
 
 See [`docs/guides/client-attach-matrix.md`](docs/guides/client-attach-matrix.md).

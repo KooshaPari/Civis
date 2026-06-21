@@ -1,4 +1,4 @@
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -201,6 +201,9 @@ struct ScenarioSpeedLabel;
 
 #[derive(Component)]
 struct ScenarioPresetLabel;
+
+#[derive(Component)]
+struct ScenarioStartButton;
 
 #[derive(Component)]
 struct ScenarioStartButton;

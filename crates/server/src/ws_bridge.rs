@@ -526,6 +526,134 @@ async fn apply_dispatch_effect(
                 }
             }
         }
+<<<<<<< HEAD
+=======
+        DispatchEffect::SaveSlot { slot_name } => {
+            let path = match save_archive_path(&state.saves_dir, &slot_name) {
+                Ok(path) => path,
+                Err(message) => {
+                    set_replay_io_error(response, message);
+                    return;
+                }
+            };
+            let (save_result, tick) = {
+                let sim = state.sim.lock().await;
+                let tick = sim.state.tick;
+                (CivSaveBundle::save_archive(&path, &sim), tick)
+            };
+            match save_result {
+                Ok(()) => {
+                    let byte_size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+                    let file_path = path.display().to_string();
+                    match state.save_db.record_slot_save(
+                        &state.session_id,
+                        &slot_name,
+                        tick,
+                        &file_path,
+                        byte_size,
+                    ) {
+                        Ok(save_id) => {
+                            let mut sim = state.sim.lock().await;
+                            sim.record_session_saved(
+                                &state.session_id,
+                                &save_id,
+                                &slot_name,
+                                byte_size,
+                            );
+                        }
+                        Err(err) => {
+                            tracing::warn!(?err, "failed to record save metadata in save db");
+                        }
+                    }
+                    if let Some(result) = response.result.as_mut() {
+                        if let Some(obj) = result.as_object_mut() {
+                            obj.insert("tick".to_owned(), serde_json::json!(tick));
+                            obj.insert(
+                                "path".to_owned(),
+                                serde_json::json!(path.display().to_string()),
+                            );
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::error!("save.slot failed: {err}");
+                    set_replay_io_error(response, err.to_string());
+                }
+            }
+        }
+        DispatchEffect::LoadSlot { slot_name } => {
+            let path = match save_archive_path(&state.saves_dir, &slot_name) {
+                Ok(path) => path,
+                Err(message) => {
+                    set_replay_io_error(response, message);
+                    return;
+                }
+            };
+            match CivSaveBundle::load(&path) {
+                Ok(loaded) => {
+                    let tick = loaded.state.tick;
+                    *state.sim.lock().await = loaded;
+                    state.tick.store(tick, Ordering::SeqCst);
+                    if let Some(result) = response.result.as_mut() {
+                        if let Some(obj) = result.as_object_mut() {
+                            obj.insert("tick".to_owned(), serde_json::json!(tick));
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::error!("save.load failed: {err}");
+                    set_replay_io_error(response, err.to_string());
+                }
+            }
+        }
+        DispatchEffect::QueueResearch { tech } => {
+            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
+        }
+        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
+            use civ_engine::disasters::{trigger_disaster, DisasterKind};
+            use civ_voxel::WorldCoord;
+            let mut sim = state.sim.lock().await;
+            let world_w = sim.voxel().width() as f32;
+            let world_d = sim.voxel().depth() as f32;
+            let wx = x.unwrap_or(0.5) * world_w;
+            let wz = y.unwrap_or(0.5) * world_d;
+            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
+            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
+            match action.as_str() {
+                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
+                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
+                "plague" => {
+                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
+                        }
+                    }
+                }
+                "bless" => {
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            *t += credit;
+                        }
+                    }
+                    sim.add_belief(500);
+                }
+                "miracle" => {
+                    sim.add_belief(2000);
+                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                }
+                _ => {}
+            }
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("applied".to_owned(), serde_json::json!(true));
+                }
+            }
+        }
+>>>>>>> c526d8bb (feat(client): in-game event feed panel -- N key toggle, 50-entry rolling log (FR-CIV-CLIENT-005))
     }
 }
 

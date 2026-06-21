@@ -1,4 +1,9 @@
+14:42:22.029254 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
+14:42:22.039254 git.c:476               trace: built-in: git show HEAD:clients/bevy-ref/src/bin/bevy_window.rs
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+14:42:22.195251 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
+14:42:22.207248 git.c:476               trace: built-in: git show 0c190940:clients/bevy-ref/src/bin/bevy_window.rs
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -21,7 +26,7 @@ use civ_bevy_ref::{
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
         sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
@@ -33,11 +38,13 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
+    event_feed::{EventFeed, EventFeedPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
     VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -193,18 +200,23 @@ struct MinimapCache {
     use_focus_bounds: bool,
 }
 
-// Speed multipliers matching ALLOWED_SPEED_MULTIPLIERS in civ-server jsonrpc.rs.
-const SPEED_OPTIONS: &[u32] = &[1, 2, 4, 8];
-
-#[derive(Resource)]
-struct SimSpeedState {
-    multiplier: u32,
-    paused: bool,
-    speed_idx: usize,
+#[derive(Resource, Default)]
+struct MinimapPopup {
+    /// Pending right-click tile coords; None when popup is closed.
+    pending: Option<(i32, i32)>,
 }
 
-impl Default for SimSpeedState {
-    fn default() -> Self { Self { multiplier: 1, paused: false, speed_idx: 0 } }
+#[derive(Resource, Default)]
+struct SimSpeedState {
+    multiplier: u32,
+}
+
+#[derive(Resource)]
+struct EmergencePollTimer(f32);
+impl Default for EmergencePollTimer {
+    fn default() -> Self {
+        Self(0.0)
+    }
 }
 
 #[derive(Component)]
@@ -240,13 +252,16 @@ fn main() {
             LivePickPlugin,
             FactionHudPlugin,
             SaveLoadUiPlugin,
+            EguiPlugin::default(),
+            EventFeedPlugin,
         ))
-        .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
-        .init_resource::<SimSpeedState>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .init_resource::<ScenarioPanel>()
+        .init_resource::<MinimapPopup>()
+        .init_resource::<SimSpeedState>()
+        .init_resource::<EmergencePollTimer>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -260,10 +275,11 @@ fn main() {
         .add_systems(
             Update,
             (
-                speed_control_input,
                 debug_render_input,
                 orbit_camera_input,
                 minimap_click_focus,
+                minimap_popup_ui,
+                poll_emergence,
                 viewport_chunk_raycast,
                 update_orbit_camera_transform,
                 apply_live_frames,
@@ -278,8 +294,7 @@ fn main() {
                 update_hud,
                 update_minimap,
                 update_presentation_lighting,
-            )
-                .run_if(in_state(AppState::InGame)),
+            ),
         )
         .run();
             ),
@@ -701,6 +716,7 @@ fn apply_live_frames(
     assets: Res<LiveStreamMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut feed: ResMut<EventFeed>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -754,6 +770,7 @@ fn apply_live_frames(
                     );
                 }
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
+                apply_event_feed_frame(&mut feed, event_frame.clone());
             }
             Frame3d::Climate(_) => {}
         }
@@ -917,7 +934,6 @@ fn update_orbit_camera_transform(
 fn update_hud(
     time: Res<Time>,
     selection: Res<LiveSelection>,
-    speed: Res<SimSpeedState>,
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
@@ -928,7 +944,6 @@ fn update_hud(
         hud.snapshot.fps * 0.9 + fps * 0.1
     };
     hud.snapshot.selected_live = selection.0;
-    hud.snapshot.speed_multiplier = speed.multiplier;
 
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;
@@ -1164,6 +1179,8 @@ fn minimap_click_focus(
     scene: Res<LiveStreamScene>,
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
+    mut popup: ResMut<MinimapPopup>,
+    bridge: Res<LiveBridge>,
 ) {
     let select_pressed = action_pressed(
         #[cfg(feature = "egui")]
@@ -1174,6 +1191,35 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
+    // Right-click: open inspect popup
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Ok((interaction, cursor)) = panels.single() {
+            if *interaction != Interaction::None {
+                if let Some(normalized) = cursor.normalized {
+                    let uv = inset_minimap_uv_from_cursor(normalized);
+                    let (tx, ty) = if cache.use_focus_bounds {
+                        if let Some(focus) = cache.focus {
+                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                            (x as i32, z as i32)
+                        } else {
+                            (0, 0)
+                        }
+                    } else if let Some(bounds) = cache.bounds {
+                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                        (cx, cz)
+                    } else {
+                        (0, 0)
+                    };
+                    popup.pending = Some((tx, ty));
+                }
+            }
+        }
+        return;
+    }
+    // Suppress unused warning — bridge is available for future left-click RPCs.
+    let _ = &bridge;
+
+    if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
@@ -1293,4 +1339,67 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
+}
+
+fn minimap_popup_ui(
+    mut contexts: EguiContexts,
+    mut popup: ResMut<MinimapPopup>,
+    bridge: Res<LiveBridge>,
+    mut orbit: ResMut<OrbitCamera>,
+    mut hud: ResMut<HudState>,
+    scene: Res<LiveStreamScene>,
+) {
+    let Some((tx, ty)) = popup.pending else {
+        return;
+    };
+    egui::Window::new("Tile Actions")
+        .collapsible(false)
+        .resizable(false)
+        .show(contexts.ctx_mut(), |ui| {
+            ui.label(format!("Tile ({tx}, {ty})"));
+            if ui.button("Inspect tile").clicked() {
+                let json = format!(
+                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
+                );
+                bridge.client.send_rpc(json);
+                popup.pending = None;
+            }
+            if ui.button("Center camera").clicked() {
+                orbit.centre[0] = tx as f32;
+                orbit.centre[2] = ty as f32;
+                let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+                let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
+                hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(
+                    tx / LIVE_CHUNK_EDGE as i32,
+                    ty / LIVE_CHUNK_EDGE as i32,
+                    preferred_cy,
+                    &loaded,
+                ));
+                popup.pending = None;
+            }
+            if ui.button("Cancel").clicked() {
+                popup.pending = None;
+            }
+        });
+}
+
+fn poll_emergence(
+    time: Res<Time>,
+    bridge: Res<LiveBridge>,
+    mut timer: ResMut<EmergencePollTimer>,
+    mut hud: ResMut<HudState>,
+    speed: Res<SimSpeedState>,
+) {
+    hud.snapshot.speed_multiplier = speed.multiplier;
+    // Apply any parsed emergence responses received from the server.
+    for em in bridge.client.poll_emergence() {
+        hud.snapshot.emergence = Some(em);
+    }
+    timer.0 += time.delta_secs();
+    if timer.0 < 10.0 {
+        return;
+    }
+    timer.0 = 0.0;
+    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    bridge.client.send_rpc(json);
 }

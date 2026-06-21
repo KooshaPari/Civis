@@ -70,6 +70,9 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Inspect terrain + faction at a tile coordinate.
+    /// (`sim.inspect_tile`, FR tile-inspector).
+    SimInspectTile,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
@@ -100,6 +103,7 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::SimInspectTile => "sim.inspect_tile",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -127,6 +131,7 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -1217,6 +1222,15 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 })),
                 None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
             };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimInspectTile => {
+            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
+            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let result = serde_json::json!({ "x": x, "y": y, "stub": true });
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,

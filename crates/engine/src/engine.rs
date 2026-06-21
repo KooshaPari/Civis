@@ -947,6 +947,11 @@ impl Simulation {
         &self.research_cache
     }
 
+    /// Mutably borrow the research cache.
+    pub fn research_cache_mut(&mut self) -> &mut ResearchCache {
+        &mut self.research_cache
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }

@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,
@@ -11,6 +11,7 @@ use crate::{
     WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
+use serde_json;
 use futures_util::{SinkExt, StreamExt};
 use tokio::runtime::Builder;
 use tokio_tungstenite::tungstenite::Message;
@@ -88,10 +89,25 @@ impl WsClient {
         atomic_to_state(self.latest_state.load(Ordering::Relaxed))
     }
 
-    /// Send a fire-and-forget JSON-RPC command (e.g. `sim.set_speed`).
+    /// Send a fire-and-forget pre-formatted JSON-RPC command string.
     /// Drops silently if the WebSocket background task has not connected yet.
-    pub fn send_rpc(&self, json: String) {
+    pub fn send_rpc_raw(&self, json: String) {
         let _ = self.cmd_tx.send(json);
+    }
+
+    /// Send a JSON-RPC request over the live WebSocket connection.
+    ///
+    /// The message is queued; the background thread forwards it on the next
+    /// write iteration. Silently drops if the background thread has exited.
+    pub fn send_rpc(&self, method: &str, params: serde_json::Value) {
+        let msg = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        })
+        .to_string();
+        let _ = self.cmd_tx.send(msg);
     }
 }
 

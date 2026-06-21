@@ -2341,10 +2341,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ-climate"
-version = "0.1.0"
-
-[[package]]
 name = "civ-diffusion"
 version = "0.1.0"
 dependencies = [
@@ -2603,7 +2599,7 @@ name = "civ-voxel"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "phenotype-gfx",
+ "phenotype-voxel",
  "proptest",
  "ron 0.8.1",
  "serde",
@@ -4261,9 +4257,6 @@ name = "glam"
 version = "0.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8babf46d4c1c9d92deac9f7be466f76dfc4482b6452fc5024b5e8daf6ffeb3ee"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "glam"
@@ -6277,16 +6270,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "phenotype-gfx"
-version = "0.2.0"
-source = "git+https://github.com/KooshaPari/phenotype-gfx.git#3f7587b18d0fee7da03b2c261cf7a3440c649502"
+name = "phenotype-voxel"
+version = "0.1.0"
 dependencies = [
  "bytemuck",
- "glam 0.29.3",
  "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

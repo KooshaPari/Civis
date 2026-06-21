@@ -1,4 +1,4 @@
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -37,6 +37,7 @@ use civ_bevy_ref::{
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
+use serde_json;
 
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
@@ -68,6 +69,19 @@ enum AppState {
 struct ConnectionOverlay {
     root: Option<Entity>,
 }
+#[derive(Resource, Debug, Clone)]
+struct ScenarioPanel {
+    seed_index: usize,
+    speed_index: usize,
+    preset_index: usize,
+}
+
+impl Default for ScenarioPanel {
+    fn default() -> Self {
+        Self { seed_index: 0, speed_index: 0, preset_index: 0 }
+    }
+}
+
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -178,6 +192,18 @@ impl Default for SimSpeedState {
     fn default() -> Self { Self { multiplier: 1, paused: false, speed_idx: 0 } }
 }
 
+#[derive(Component)]
+struct ScenarioSeedLabel;
+
+#[derive(Component)]
+struct ScenarioSpeedLabel;
+
+#[derive(Component)]
+struct ScenarioPresetLabel;
+
+#[derive(Component)]
+struct ScenarioStartButton;
+
 fn main() {
     App::new()
         .add_plugins((
@@ -200,6 +226,7 @@ fn main() {
         .init_resource::<SimSpeedState>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
+        .init_resource::<ScenarioPanel>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -209,6 +236,7 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
+        .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
             (
@@ -234,6 +262,88 @@ fn main() {
         )
         .run();
 }
+
+fn scenario_panel_input(
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    mut panel: ResMut<ScenarioPanel>,
+    bridge: Res<LiveBridge>,
+    mut seed_labels: Query<&mut Text, (With<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
+    mut speed_labels: Query<&mut Text, (With<ScenarioSpeedLabel>, Without<ScenarioSeedLabel>, Without<ScenarioStartButton>)>,
+    mut preset_labels: Query<&mut Text, (With<ScenarioPresetLabel>, Without<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
+    start_buttons: Query<&Interaction, With<ScenarioStartButton>>,
+) {
+    // Keyboard shortcuts: Left/Right cycle seeds; Up/Down cycle speeds; Enter launches.
+    if keys.just_pressed(KeyCode::ArrowRight) {
+        panel.seed_index = (panel.seed_index + 1) % NAMED_SEEDS.len();
+    }
+    if keys.just_pressed(KeyCode::ArrowLeft) {
+        panel.seed_index = panel.seed_index.checked_sub(1).unwrap_or(NAMED_SEEDS.len() - 1);
+    }
+    if keys.just_pressed(KeyCode::ArrowDown) {
+        panel.speed_index = (panel.speed_index + 1) % SPEED_OPTIONS.len();
+    }
+    if keys.just_pressed(KeyCode::ArrowUp) {
+        panel.speed_index = panel.speed_index.checked_sub(1).unwrap_or(SPEED_OPTIONS.len() - 1);
+    }
+    if keys.just_pressed(KeyCode::KeyP) {
+        panel.preset_index = (panel.preset_index + 1) % PRESET_OPTIONS.len();
+    }
+    if keys.just_pressed(KeyCode::KeyO) {
+        panel.preset_index = panel.preset_index.checked_sub(1).unwrap_or(PRESET_OPTIONS.len() - 1);
+    }
+
+    // Rebuild seed label
+    if let Ok(mut text) = seed_labels.get_single_mut() {
+        let label = NAMED_SEEDS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _))| if i == panel.seed_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Race: {label}"));
+    }
+
+    // Rebuild speed label
+    if let Ok(mut text) = speed_labels.get_single_mut() {
+        let label = SPEED_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _))| if i == panel.speed_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Speed: {label}"));
+    }
+
+    // Rebuild preset label
+    if let Ok(mut text) = preset_labels.get_single_mut() {
+        let label = PRESET_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, name)| if i == panel.preset_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Preset: {label}"));
+    }
+
+    // Launch on button click or Enter key
+    let clicked = start_buttons
+        .get_single()
+        .map(|i| *i == Interaction::Pressed)
+        .unwrap_or(false);
+    if clicked || keys.just_pressed(KeyCode::Enter) {
+        let (_, seed) = NAMED_SEEDS[panel.seed_index];
+        let (_, speed) = SPEED_OPTIONS[panel.speed_index];
+        let preset = PRESET_OPTIONS[panel.preset_index];
+        bridge.client.send_rpc(
+            "sim.load_scenario",
+            serde_json::json!({ "preset": preset, "seed": seed }),
+        );
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
+    }
+}
+
 
 fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
     let ws = bridge.client.latest_connection_state();
@@ -465,7 +575,7 @@ fn speed_control_input(
 
     speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
-    bridge.client.send_rpc(json);
+    bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
 }
 

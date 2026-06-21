@@ -1,4 +1,4 @@
-14:42:40.689244 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
+﻿14:42:40.689244 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
 14:42:40.702245 git.c:476               trace: built-in: git show HEAD:clients/bevy-ref/src/bin/bevy_window.rs
 14:42:22.029254 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
 14:42:22.039254 git.c:476               trace: built-in: git show HEAD:clients/bevy-ref/src/bin/bevy_window.rs
@@ -19,6 +19,7 @@ use civ_bevy_ref::{
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
+    tutorial::TutorialPlugin,
     },
     live_minimap::{
         chunk_centre_world_xz, live_building_dot_color, minimap_bounds_from_keys,
@@ -241,6 +242,7 @@ struct MinimapPopup {
     pending: Option<(i32, i32)>,
 }
 
+            TutorialPlugin,
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,

@@ -34,6 +34,7 @@ pub struct WsClient {
     state_rx: Receiver<WsConnectionState>,
     latest_state: AtomicU32,
     cmd_tx: Sender<String>,
+    outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
 }
 
 impl WsClient {
@@ -47,8 +48,9 @@ impl WsClient {
         let (rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
         let (state_tx, state_rx) = crossbeam_channel::unbounded();
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<String>();
+        let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         thread::spawn(move || {
-            run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, cmd_rx);
+            run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, cmd_rx, outcome_tx);
         });
         Self {
             frame_rx,
@@ -57,6 +59,7 @@ impl WsClient {
             state_rx,
             latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
             cmd_tx,
+            outcome_rx,
         }
     }
 
@@ -87,6 +90,13 @@ impl WsClient {
             self.latest_state.store(state_to_atomic(state), Ordering::Relaxed);
         }
         atomic_to_state(self.latest_state.load(Ordering::Relaxed))
+    }
+
+    #[must_use]
+    pub fn poll_outcome(&self) -> Option<OutcomeHudData> {
+        let mut latest = None;
+        while let Ok(o) = self.outcome_rx.try_recv() { latest = Some(o); }
+        latest
     }
 
     /// Send a fire-and-forget pre-formatted JSON-RPC command string.
@@ -158,6 +168,7 @@ fn run_client(
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
     cmd_rx: Receiver<String>,
+    outcome_tx: Sender<OutcomeHudData>,
 ) {
     let runtime = Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
     runtime.block_on(async move {
@@ -165,7 +176,7 @@ fn run_client(
         publish_state(&state_tx, WsConnectionState::Disconnected);
         loop {
             publish_state(&state_tx, WsConnectionState::Reconnecting);
-            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &cmd_rx).await {
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &cmd_rx, &outcome_tx).await {
                 Ok(()) => { backoff.reset(); }
                 Err(err) => {
                     eprintln!("bevy ws client disconnected: {err}");
@@ -193,6 +204,17 @@ fn record_snapshot_rtt(snapshot_ping: &mut Option<std::time::Instant>, rtt_tx: &
     }
 }
 
+
+fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    if v.get("id").and_then(|i| i.as_i64()) != Some(9003) { return None; }
+    let result = v.get("result")?;
+    Some(OutcomeHudData {
+        tag: result.get("outcome").and_then(|v| v.as_str()).unwrap_or("ongoing").to_owned(),
+        reason: result.get("reason").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
+        tick: result.get("tick").and_then(|v| v.as_u64()).unwrap_or(0),
+    })
+}
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -201,6 +223,7 @@ async fn connect_and_stream(
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
     cmd_rx: &Receiver<String>,
+    outcome_tx: &Sender<OutcomeHudData>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url).await.map_err(|e| e.to_string())?;
     publish_state(state_tx, WsConnectionState::Connected);
@@ -209,6 +232,7 @@ async fn connect_and_stream(
     let mut snapshot_ping = None;
     request_snapshot(&mut write, &mut snapshot_ping).await?;
     let mut last_snapshot = std::time::Instant::now();
+    let mut last_outcome = std::time::Instant::now();
 
     loop {
         // Flush outbound commands (speed/pause RPCs) before blocking on next inbound frame.
@@ -219,6 +243,10 @@ async fn connect_and_stream(
         if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
             request_snapshot(&mut write, &mut snapshot_ping).await?;
             last_snapshot = std::time::Instant::now();
+        }
+        if last_outcome.elapsed() >= Duration::from_secs(OUTCOME_POLL_SECS) {
+            write.send(Message::Text(OUTCOME_RPC.into())).await.map_err(|e| e.to_string())?;
+            last_outcome = std::time::Instant::now();
         }
 
         let msg = match read.next().await {
@@ -231,6 +259,10 @@ async fn connect_and_stream(
                 if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
                     record_snapshot_rtt(&mut snapshot_ping, rtt_tx);
                     if meta_tx.send(meta).is_err() { return Err("bevy meta receiver dropped".into()); }
+                    continue;
+                }
+                if let Some(oc) = parse_outcome_response(&text) {
+                    let _ = outcome_tx.send(oc);
                     continue;
                 }
                 if config.prefer_binary { continue; }

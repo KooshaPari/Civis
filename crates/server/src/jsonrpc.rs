@@ -70,6 +70,10 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Queue a research tech (`sim.queue_research`, FR-CIV-SERVER-003).
+    SimQueueResearch,
+    /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
+    SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
@@ -100,6 +104,8 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::SimQueueResearch => "sim.queue_research",
+            Self::SimTechState => "sim.tech_state",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -127,6 +133,8 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "sim.queue_research" => Some(Self::SimQueueResearch),
+            "sim.tech_state" => Some(Self::SimTechState),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -1678,6 +1686,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1713,6 +1722,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(
@@ -1748,6 +1758,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -1772,6 +1783,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1797,6 +1809,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1823,6 +1836,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1849,6 +1863,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1871,6 +1886,7 @@ mod tests {
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1977,6 +1993,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2001,6 +2018,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -2167,6 +2185,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2281,6 +2300,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -2317,6 +2337,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert!(matches!(
@@ -2364,6 +2385,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert!(matches!(
@@ -2431,12 +2453,14 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                diplomacy_snapshot: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2502,12 +2526,14 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                diplomacy_snapshot: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(
@@ -2578,12 +2604,14 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                diplomacy_snapshot: vec![],
                 }),
                 require_role: false,
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(
@@ -2625,6 +2653,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(
@@ -2659,6 +2688,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(
@@ -2691,6 +2721,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2716,6 +2747,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2783,6 +2815,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2848,6 +2881,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -2874,6 +2908,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2905,6 +2940,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2937,6 +2973,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(
@@ -2967,6 +3004,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+            diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);

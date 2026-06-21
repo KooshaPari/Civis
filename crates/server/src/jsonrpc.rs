@@ -433,6 +433,11 @@ pub struct SnapshotFields {
     /// either `sim.emergence` or `sim.snapshot.emergence` without
     /// missing the dashboard block.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Fully-researched techs (FR-CIV-SERVER-003).
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Currently-researching tech, if any (FR-CIV-SERVER-003).
+    pub in_progress_tech: Option<String>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -755,6 +760,11 @@ pub struct DispatchContext {
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Fully-researched techs (FR-CIV-SERVER-003).
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Currently-researching tech, if any (FR-CIV-SERVER-003).
+    pub in_progress_tech: Option<String>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].

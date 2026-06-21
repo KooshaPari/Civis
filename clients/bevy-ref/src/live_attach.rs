@@ -183,7 +183,7 @@ fn sync_diplomacy_panel_from_scene(
         tick: 0,
         factions: scene.faction_entries.clone(),
     };
-    let population_by_faction = std::collections::HashMap::new();
+    let population_by_faction: std::collections::HashMap<u32, u32> = scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect();
     crate::live_stream::sync_diplomacy_from_faction_frame(
         &mut diplomacy,
         &frame,

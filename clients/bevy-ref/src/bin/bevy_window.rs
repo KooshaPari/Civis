@@ -17,6 +17,7 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
+    save_load_ui::SaveLoadUiPlugin,
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
@@ -220,6 +221,7 @@ fn main() {
             GpuFeaturesPlugin,
             LivePickPlugin,
             FactionHudPlugin,
+            SaveLoadUiPlugin,
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()

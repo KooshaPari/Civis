@@ -23,7 +23,7 @@ use civ_bevy_ref::{
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
         AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag,
         LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling,
@@ -34,6 +34,7 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
+    event_feed::{EventFeed, EventFeedPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
@@ -229,6 +230,7 @@ fn main() {
             FactionHudPlugin,
             SaveLoadUiPlugin,
             EguiPlugin::default(),
+            EventFeedPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -638,6 +640,7 @@ fn apply_live_frames(
     assets: Res<LiveStreamMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut feed: ResMut<EventFeed>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -691,6 +694,7 @@ fn apply_live_frames(
                     );
                 }
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
+                apply_event_feed_frame(&mut feed, event_frame.clone());
             }
         }
     }

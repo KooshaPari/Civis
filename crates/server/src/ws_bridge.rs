@@ -473,6 +473,11 @@ async fn handle_jsonrpc_text(
             } else {
                 vec![]
             };
+            let (research_researched, research_in_progress) = {
+                let sim = state.sim.lock().await;
+                let cache = sim.research_cache();
+                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -485,6 +490,8 @@ async fn handle_jsonrpc_text(
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
                     diplomacy_snapshot,
+                    researched: research_researched,
+                    in_progress_tech: research_in_progress,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

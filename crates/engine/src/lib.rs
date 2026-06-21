@@ -1,4 +1,4 @@
-﻿//! CivLab Deterministic Simulation Engine
+//! CivLab Deterministic Simulation Engine
 //!
 //! Uses fixed-point arithmetic for deterministic simulation results.
 //! Uses i64 with scaling for deterministic calculations.
@@ -25,6 +25,7 @@ pub mod replay;
 pub mod replay_format;
 pub mod save_bundle;
 pub mod scenario;
+pub mod perf;
 pub mod spawn;
 pub mod spectator;
 
@@ -38,6 +39,7 @@ pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
     spawn_military_at, spawn_port_at, unit_type_label,
 };
+pub use perf::{phases_over_budget, tick_over_budget, TickProfile};
 
 pub use civ_mod_host::{
     format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,

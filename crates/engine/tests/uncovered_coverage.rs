@@ -3,6 +3,7 @@
 //! FR-CIV-TEST-005
 
 use civ_engine::{
+    phases_over_budget, tick_over_budget, TickProfile,
     effective_consumption, format_mod_error_event, format_mod_error_event_json,
     format_mod_loaded_event, format_mod_loaded_event_json, format_mod_unloaded_event_json,
     policy_from_kind, CapitalistPolicy, ControlSignals, ModHost, ModLoadedRecord,
@@ -202,4 +203,26 @@ fn test_mod_host_new_is_empty() {
 fn test_mod_host_guest_memory_snapshot_unknown_returns_empty() {
     let host = ModHost::new();
     assert!(host.guest_memory_snapshot("unknown").is_empty());
+}
+
+// ── Perf budget helpers ───────────────────────────────────────────────────────
+
+#[test]
+fn test_phases_over_budget_empty() {
+    let result = phases_over_budget(&[], 16_000u64);
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_tick_over_budget_within() {
+    let mut p = TickProfile::default();
+    p.record("phase_a", 8_000u64);
+    assert!(!tick_over_budget(&p, 16_000u64));
+}
+
+#[test]
+fn test_tick_over_budget_exceeded() {
+    let mut p = TickProfile::default();
+    p.record("phase_a", 20_000u64);
+    assert!(tick_over_budget(&p, 16_000u64));
 }

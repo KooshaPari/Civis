@@ -11,13 +11,10 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
 
-// Palette (mirrors diplomacy_ui.rs / game_ui.rs)
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
+use crate::ui_theme::{ACCENT, DIM, GOLD, GREEN, PANEL_FILL};
+
+// CHIP_FILL: local tint not present in ui_theme (different from GRAPHITE_700)
 const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
-const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);
-const GOLD: egui::Color32 = egui::Color32::from_rgb(240, 200, 90);
 
 // ── Resources ────────────────────────────────────────────────────────────────
 

@@ -77,6 +77,10 @@ pub enum JsonRpcMethod {
     SimInspectTile,
     /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
     SimDiplomacyAction,
+    /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
+    SimQueueResearch,
+    /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
+    SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimPerf,
     SimSubscribe,
@@ -114,6 +118,8 @@ impl JsonRpcMethod {
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimPerf => "sim.perf",
             Self::SimDiplomacyAction => "sim.diplomacy_action",
+            Self::SimQueueResearch => "sim.queue_research",
+            Self::SimTechState => "sim.tech_state",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -146,6 +152,8 @@ impl JsonRpcMethod {
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.perf" => Some(Self::SimPerf),
             "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
+            "sim.queue_research" => Some(Self::SimQueueResearch),
+            "sim.tech_state" => Some(Self::SimTechState),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -1563,6 +1571,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     response: JsonRpcResponse::failure(req.id, JsonRpcError {
                         code: error_code::INVALID_PARAMS,
                         message: "missing 'tech' param".to_owned(),
+                        message: "Missing or empty \"tech\" parameter".to_owned(),
                         data: None,
                     }),
                     effect: DispatchEffect::None,
@@ -1572,6 +1581,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     response: JsonRpcResponse::failure(req.id, JsonRpcError {
                         code: error_code::INVALID_PARAMS,
                         message: format!("unknown tech '{}'; known: {}", tech, KNOWN_TECHS.join(", ")),
+                        message: format!("Unknown tech \"{tech}\"; valid: {}", KNOWN_TECHS.join(", ")),
                         data: None,
                     }),
                     effect: DispatchEffect::None,
@@ -1627,11 +1637,29 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "last_tick_ms": ctx.last_tick_ms,
                     "agent_count": ctx.population.unwrap_or(0) as u32,
                     "ca_steps": 1u32,
+                        "stub": true,
+                    })),
+                    effect: DispatchEffect::None,
+                }
+            }
+        }
+        JsonRpcMethod::SimTechState => {
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, serde_json::json!({
+                    "available": ["pottery", "masonry", "writing", "iron_working",
+                                  "currency", "mathematics", "gunpowder", "printing",
+                                  "banking", "steam_power", "electricity", "railroad"],
+                    "researched": [],
+                    "in_progress": null,
+                    "tick": ctx.tick,
+                    "stub": true,
                 })),
                 effect: DispatchEffect::None,
             }
         }
         JsonRpcMethod::SimSubscribe         | JsonRpcMethod::SimUpdateSubscription
+        JsonRpcMethod::SimSubscribe
+        | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
             response: JsonRpcResponse::failure(
                 req.id,
@@ -3546,6 +3574,10 @@ mod tests {
     }
     #[test]
     fn dispatch_queue_research_valid_tech_accepted() {
+    /// FR-CIV-SERVER-003 — sim.queue_research with a valid tech accepts the request.
+    #[test]
+    fn dispatch_queue_research_valid_tech_accepted() {
+        use serde_json::json;
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.queue_research","params":{"tech":"pottery"}}"#,
         )
@@ -3572,6 +3604,14 @@ mod tests {
         assert_eq!(res["queued"], "pottery");
     }
 
+            },
+        );
+        assert!(plan.response.result.is_some(), "expected success result");
+        let result = plan.response.result.unwrap();
+        assert_eq!(result.get("queued").and_then(|v| v.as_str()), Some("pottery"));
+    }
+
+    /// FR-CIV-SERVER-003 — sim.queue_research with an unknown tech returns INVALID_PARAMS.
     #[test]
     fn dispatch_queue_research_unknown_tech_rejected() {
         let req = parse_request(
@@ -3582,6 +3622,7 @@ mod tests {
             req,
             DispatchContext {
                 tick: 1,
+                tick: 0,
                 population: None,
                 snapshot: None,
                 require_role: false,
@@ -3603,12 +3644,27 @@ mod tests {
     fn dispatch_tech_state_returns_available_list() {
         let req = parse_request(
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state"}"#,
+            },
+        );
+        assert!(plan.response.result.is_none(), "expected error, not success");
+        assert!(plan.response.error.is_some(), "expected error body");
+        let err = plan.response.error.unwrap();
+        assert_eq!(err.code, error_code::INVALID_PARAMS);
+        assert!(err.message.contains("unobtainium") || err.message.contains("Unknown tech"));
+    }
+
+    /// FR-CIV-SERVER-003 — sim.tech_state returns available list and stub flag.
+    #[test]
+    fn dispatch_tech_state_returns_available_list() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state","params":{}}"#,
         )
         .expect("parse");
         let plan = dispatch_request(
             req,
             DispatchContext {
                 tick: 5,
+                tick: 42,
                 population: None,
                 snapshot: None,
                 require_role: false,
@@ -3625,5 +3681,12 @@ mod tests {
         assert!(plan.response.result.is_some());
         let res = plan.response.result.expect("result");
         assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
+            },
+        );
+        assert!(plan.response.result.is_some(), "expected success");
+        let result = plan.response.result.unwrap();
+        let available = result.get("available").expect("available field");
+        assert!(available.is_array(), "available should be an array");
+        assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
     }
 }

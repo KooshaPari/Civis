@@ -115,5 +115,21 @@ godot-test:
 infra-up:
     process-compose up
 
+# CA dirty-chunk benchmark.
+ca-bench:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-dirty-chunk-bench.ps1
+
+# CA dirty-chunk benchmark report.
+ca-report:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-bench-report.ps1
+
+# CA dirty-chunk profiling.
+ca-flamegraph:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-flamegraph.ps1
+
+# CA dirty-chunk perf sweep.
+ca-perf:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-perf.ps1
+
 # Rust gate without cargo-deny (when deny is not installed locally).
 rust-verify: lint test

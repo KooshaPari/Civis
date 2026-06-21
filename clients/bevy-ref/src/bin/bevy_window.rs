@@ -1,14 +1,4 @@
-14:42:40.689244 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
-14:42:40.702245 git.c:476               trace: built-in: git show HEAD:clients/bevy-ref/src/bin/bevy_window.rs
-14:42:22.029254 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
-14:42:22.039254 git.c:476               trace: built-in: git show HEAD:clients/bevy-ref/src/bin/bevy_window.rs
-14:42:40.837772 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
-14:42:40.849774 git.c:476               trace: built-in: git show 2aea17ed:clients/bevy-ref/src/bin/bevy_window.rs
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-14:42:22.195251 exec-cmd.c:266          trace: resolved executable dir: C:/Program Files/Git/mingw64/bin
-14:42:22.207248 git.c:476               trace: built-in: git show 0c190940:clients/bevy-ref/src/bin/bevy_window.rs
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -28,10 +18,12 @@ use civ_bevy_ref::{
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
     save_load_ui::SaveLoadUiPlugin,
+    tutorial::TutorialPlugin,
+    perf_hud::{PerfHudPlugin, PerfMetrics},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
         sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
@@ -43,13 +35,11 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    event_feed::{EventFeed, EventFeedPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
     VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -203,55 +193,20 @@ struct MinimapCache {
     bounds: Option<MinimapBounds>,
     focus: Option<LiveSceneFocus>,
     use_focus_bounds: bool,
-    minimap_mode: MinimapMode,
 }
 
-/// Minimap display mode, cycled with the M key.
-#[derive(Resource, Default, Clone, Copy, PartialEq, Eq)]
-enum MinimapMode {
-    #[default]
-    Terrain,
-    Faction,
-    Population,
-}
-
-impl MinimapMode {
-    fn next(self) -> Self {
-        match self {
-            Self::Terrain => Self::Faction,
-            Self::Faction => Self::Population,
-            Self::Population => Self::Terrain,
-        }
-    }
-    fn label(self) -> &'static str {
-        match self {
-            Self::Terrain => "Terrain",
-            Self::Faction => "Faction",
-            Self::Population => "Pop",
-        }
-    }
-}
-
-#[derive(Component)]
-struct MinimapModeLabel;
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
-}
-
-#[derive(Resource, Default)]
-struct SimSpeedState {
-    multiplier: u32,
-}
+// Speed multipliers matching ALLOWED_SPEED_MULTIPLIERS in civ-server jsonrpc.rs.
+const SPEED_OPTIONS: &[u32] = &[1, 2, 4, 8];
 
 #[derive(Resource)]
-struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
+struct SimSpeedState {
+    multiplier: u32,
+    paused: bool,
+    speed_idx: usize,
+}
+
+impl Default for SimSpeedState {
+    fn default() -> Self { Self { multiplier: 1, paused: false, speed_idx: 0 } }
 }
 
 #[derive(Component)]
@@ -287,17 +242,15 @@ fn main() {
             LivePickPlugin,
             FactionHudPlugin,
             SaveLoadUiPlugin,
-            EguiPlugin::default(),
-            EventFeedPlugin,
+            TutorialPlugin,
+            PerfHudPlugin,
         ))
+        .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
+        .init_resource::<SimSpeedState>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .init_resource::<ScenarioPanel>()
-        .init_resource::<MinimapPopup>()
-        .init_resource::<MinimapMode>()
-        .init_resource::<SimSpeedState>()
-        .init_resource::<EmergencePollTimer>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -307,15 +260,15 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
+        .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
             (
+                speed_control_input,
                 debug_render_input,
                 orbit_camera_input,
                 minimap_click_focus,
-                minimap_popup_ui,
-                poll_emergence,
                 viewport_chunk_raycast,
                 update_orbit_camera_transform,
                 apply_live_frames,
@@ -328,11 +281,10 @@ fn main() {
                 sync_chunk_debug_render,
                 update_chunk_fade,
                 update_hud,
-                toggle_minimap_mode,
-                update_minimap_label,
                 update_minimap,
                 update_presentation_lighting,
-            ),
+            )
+                .run_if(in_state(AppState::InGame)),
         )
         .run();
             ),
@@ -341,6 +293,7 @@ fn main() {
     #[cfg(feature = "egui")]
     {
         app.add_plugins(SettingsPlugin);
+        app.add_plugins(civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin);
     }
 
     #[cfg(feature = "models")]
@@ -442,6 +395,20 @@ fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut n
     let ws = bridge.client.latest_connection_state();
     match (current.get(), ws) {
         (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        (AppState::InGame, WsConnectionState::Reconnecting) | (AppState::InGame, WsConnectionState::Disconnected) => { next.set(AppState::ConnectionLost); }
+        (AppState::ConnectionLost, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        _ => {}
+    }
+}
+
+fn spawn_connecting_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn(Node { position_type: PositionType::Absolute, top: Val::Percent(45.0), left: Val::Percent(0.0), width: Val::Percent(100.0), justify_content: JustifyContent::Center, ..default() }).with_children(|parent| { parent.spawn((Text::new("Connecting to Civis server..."), TextFont::from_font_size(22.0), TextColor(Color::srgb(0.75, 0.85, 1.0)))); }).id();
+    overlay.root = Some(root);
+}
+
+fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn(Node { position_type: PositionType::Absolute, top: Val::Percent(45.0), left: Val::Percent(0.0), width: Val::Percent(100.0), justify_content: JustifyContent::Center, flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: Val::Px(8.0), ..default() }).with_children(|parent| { parent.spawn((Text::new("Connection lost. Retrying..."), TextFont::from_font_size(22.0), TextColor(Color::srgb(1.0, 0.65, 0.35)))); parent.spawn((Text::new("The simulation will resume automatically when the server is reachable."), TextFont::from_font_size(14.0), TextColor(Color::srgb(0.7, 0.7, 0.7)))); }).id();
+    overlay.root = Some(root);
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
@@ -494,6 +461,14 @@ fn sync_live_hud_stats(
     }
 }
 
+
+fn sync_perf_metrics(hud: Res<HudState>, mut metrics: ResMut<PerfMetrics>) {
+    metrics.fps = hud.snapshot.fps;
+    metrics.tick = hud.snapshot.tick.unwrap_or(0);
+    metrics.civilian_count = hud.snapshot.civilian_count;
+    metrics.faction_count = hud.snapshot.faction_count;
+    metrics.tick_ms = hud.snapshot.tick_ms;
+}
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
     !scene.chunks.is_empty()
         || !scene.agents.is_empty()
@@ -637,18 +612,6 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
     commands.insert_resource(MinimapUi { dots, camera_dot });
     commands.insert_resource(MinimapCache::default());
-    commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(4.0),
-            right: Val::Px(8.0),
-            ..default()
-        },
-        Text::new("MAP: Terrain"),
-        TextFont { font_size: 11.0, ..default() },
-        TextColor(Color::srgba(0.5, 0.7, 0.7, 0.8)),
-        MinimapModeLabel,
-    ));
 }
 
 fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRender>) {
@@ -752,7 +715,6 @@ fn apply_live_frames(
     assets: Res<LiveStreamMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut feed: ResMut<EventFeed>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -806,7 +768,6 @@ fn apply_live_frames(
                     );
                 }
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
-                apply_event_feed_frame(&mut feed, event_frame.clone());
             }
             Frame3d::Climate(_) => {}
         }
@@ -970,6 +931,7 @@ fn update_orbit_camera_transform(
 fn update_hud(
     time: Res<Time>,
     selection: Res<LiveSelection>,
+    speed: Res<SimSpeedState>,
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
@@ -980,6 +942,7 @@ fn update_hud(
         hud.snapshot.fps * 0.9 + fps * 0.1
     };
     hud.snapshot.selected_live = selection.0;
+    hud.snapshot.speed_multiplier = speed.multiplier;
 
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;
@@ -999,46 +962,6 @@ fn inset_minimap_uv_from_cursor(normalized: Vec2) -> [f32; 2] {
     ]
 }
 
-/// HSL hash -> Bevy Color for faction minimap dots.
-fn faction_dot_color(faction_id: u32) -> Color {
-    let hue = (faction_id.wrapping_mul(85) % 360) as f32;
-    Color::hsl(hue, 0.7, 0.6)
-}
-
-/// Heat-ramp color for population density (0.0 = none, 1.0 = max).
-fn pop_density_color(density: f32) -> Color {
-    let t = density.clamp(0.0, 1.0);
-    if t < 0.33 {
-        let s = t / 0.33;
-        Color::srgb(s * 0.8, 0.0, 0.0)
-    } else if t < 0.67 {
-        let s = (t - 0.33) / 0.34;
-        Color::srgb(0.8, s * 0.8, 0.0)
-    } else {
-        let s = (t - 0.67) / 0.33;
-        Color::srgb(0.8 + s * 0.2, 0.8 + s * 0.2, s)
-    }
-}
-
-fn toggle_minimap_mode(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut mode: ResMut<MinimapMode>,
-) {
-    if keys.just_pressed(KeyCode::KeyM) {
-        *mode = mode.next();
-    }
-}
-
-fn update_minimap_label(
-    mode: Res<MinimapMode>,
-    mut labels: Query<&mut Text, With<MinimapModeLabel>>,
-) {
-    if !mode.is_changed() { return; }
-    for mut text in &mut labels {
-        *text = Text::new(format!("MAP: {}", mode.label()));
-    }
-}
-
 fn update_minimap(
     mut commands: Commands,
     scene: Res<LiveStreamScene>,
@@ -1047,12 +970,10 @@ fn update_minimap(
     orbit: Res<OrbitCamera>,
     hud: Res<HudState>,
     mut cache: ResMut<MinimapCache>,
-    mode: Res<MinimapMode>,
     children: Query<&Children>,
     mut camera_dot: Query<&mut Node, With<MinimapCameraDot>>,
     agents: Query<&Transform, With<LiveAgentTag>>,
     agents_changed: Query<&Transform, (With<LiveAgentTag>, Changed<Transform>)>,
-    agents_q: Query<(Entity, &Transform), With<LiveAgentTag>>,
     buildings: Query<&Transform, With<LiveBuildingTag>>,
     buildings_changed: Query<&Transform, (With<LiveBuildingTag>, Changed<Transform>)>,
     graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
@@ -1091,7 +1012,6 @@ fn update_minimap(
             node.display = Display::None;
         }
     }
-    let current_mode = *mode;
 
     if keys == cache.chunk_keys
         && agent_count == cache.agent_count
@@ -1100,7 +1020,6 @@ fn update_minimap(
         && use_focus_bounds == cache.use_focus_bounds
         && focus_snapshot == cache.focus
         && !transforms_changed
-        && current_mode == cache.minimap_mode
     {
         return;
     }
@@ -1112,8 +1031,6 @@ fn update_minimap(
     cache.use_focus_bounds = use_focus_bounds;
     cache.focus = focus_snapshot;
     cache.bounds = new_bounds;
-    cache.minimap_mode = current_mode;
-    cache.bounds = minimap_bounds_from_keys(&keys);
 
     for child in children
         .get(minimap.dots)
@@ -1152,41 +1069,16 @@ fn update_minimap(
                 );
             }
 
-            match current_mode {
-                MinimapMode::Terrain => {
-                    for (_, transform) in &agents_q {
-                        let uv = focus_rect.world_to_uv(transform.translation.x, transform.translation.z);
-                        spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, LIVE_MINIMAP_DOT, LIVE_MINIMAP_AGENT_COLOR, false);
-                    }
-                }
-                MinimapMode::Faction => {
-                    for (entity, transform) in &agents_q {
-                        let faction_id = scene.agents.iter()
-                            .find(|(_, &e)| e == entity)
-                            .and_then(|(civ_id, _)| scene.civilian_entries.get(civ_id))
-                            .map(|e| e.faction_id)
-                            .unwrap_or(0);
-                        let color = faction_dot_color(faction_id);
-                        let uv = focus_rect.world_to_uv(transform.translation.x, transform.translation.z);
-                        spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, LIVE_MINIMAP_DOT, color, false);
-                    }
-                }
-                MinimapMode::Population => {
-                    let mut chunk_pop: std::collections::HashMap<(i32, i32), u32> = std::collections::HashMap::new();
-                    for (_, transform) in &agents_q {
-                        let cx = (transform.translation.x / LIVE_CHUNK_EDGE as f32).floor() as i32;
-                        let cz = (transform.translation.z / LIVE_CHUNK_EDGE as f32).floor() as i32;
-                        *chunk_pop.entry((cx, cz)).or_insert(0) += 1;
-                    }
-                    let max_pop = chunk_pop.values().copied().max().unwrap_or(1).max(1) as f32;
-                    for ((cx, cz), count) in &chunk_pop {
-                        let x = (*cx as f32 + 0.5) * LIVE_CHUNK_EDGE as f32;
-                        let z = (*cz as f32 + 0.5) * LIVE_CHUNK_EDGE as f32;
-                        let uv = focus_rect.world_to_uv(x, z);
-                        let color = pop_density_color(*count as f32 / max_pop);
-                        spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, MINIMAP_DOT, color, false);
-                    }
-                }
+            for transform in &agents {
+                let uv = focus_rect.world_to_uv(transform.translation.x, transform.translation.z);
+                spawn_minimap_dot(
+                    parent,
+                    MINIMAP_HUD_LAYOUT,
+                    uv,
+                    LIVE_MINIMAP_DOT,
+                    LIVE_MINIMAP_AGENT_COLOR,
+                    false,
+                );
             }
 
             for transform in &buildings {
@@ -1237,41 +1129,16 @@ fn update_minimap(
             );
         }
 
-        match current_mode {
-            MinimapMode::Terrain => {
-                for (_, transform) in &agents_q {
-                    let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
-                    spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, LIVE_MINIMAP_DOT, LIVE_MINIMAP_AGENT_COLOR, false);
-                }
-            }
-            MinimapMode::Faction => {
-                for (entity, transform) in &agents_q {
-                    let faction_id = scene.agents.iter()
-                        .find(|(_, &e)| e == entity)
-                        .and_then(|(civ_id, _)| scene.civilian_entries.get(civ_id))
-                        .map(|e| e.faction_id)
-                        .unwrap_or(0);
-                    let color = faction_dot_color(faction_id);
-                    let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
-                    spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, LIVE_MINIMAP_DOT, color, false);
-                }
-            }
-            MinimapMode::Population => {
-                let mut chunk_pop: std::collections::HashMap<(i32, i32), u32> = std::collections::HashMap::new();
-                for (_, transform) in &agents_q {
-                    let cx = (transform.translation.x / LIVE_CHUNK_EDGE as f32).floor() as i32;
-                    let cz = (transform.translation.z / LIVE_CHUNK_EDGE as f32).floor() as i32;
-                    *chunk_pop.entry((cx, cz)).or_insert(0) += 1;
-                }
-                let max_pop = chunk_pop.values().copied().max().unwrap_or(1).max(1) as f32;
-                for ((cx, cz), count) in &chunk_pop {
-                    let x = (*cx as f32 + 0.5) * LIVE_CHUNK_EDGE as f32;
-                    let z = (*cz as f32 + 0.5) * LIVE_CHUNK_EDGE as f32;
-                    let uv = world_minimap_uv(x, z, bounds);
-                    let color = pop_density_color(*count as f32 / max_pop);
-                    spawn_minimap_dot(parent, MINIMAP_HUD_LAYOUT, uv, MINIMAP_DOT, color, false);
-                }
-            }
+        for transform in &agents {
+            let uv = world_minimap_uv(transform.translation.x, transform.translation.z, bounds);
+            spawn_minimap_dot(
+                parent,
+                MINIMAP_HUD_LAYOUT,
+                uv,
+                LIVE_MINIMAP_DOT,
+                LIVE_MINIMAP_AGENT_COLOR,
+                false,
+            );
         }
 
         for transform in &buildings {
@@ -1311,8 +1178,6 @@ fn minimap_click_focus(
     scene: Res<LiveStreamScene>,
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
-    mut popup: ResMut<MinimapPopup>,
-    bridge: Res<LiveBridge>,
 ) {
     let select_pressed = action_pressed(
         #[cfg(feature = "egui")]
@@ -1323,35 +1188,6 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-    // Right-click: open inspect popup
-    if mouse.just_pressed(MouseButton::Right) {
-        if let Ok((interaction, cursor)) = panels.single() {
-            if *interaction != Interaction::None {
-                if let Some(normalized) = cursor.normalized {
-                    let uv = inset_minimap_uv_from_cursor(normalized);
-                    let (tx, ty) = if cache.use_focus_bounds {
-                        if let Some(focus) = cache.focus {
-                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                            (x as i32, z as i32)
-                        } else {
-                            (0, 0)
-                        }
-                    } else if let Some(bounds) = cache.bounds {
-                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
-                        (cx, cz)
-                    } else {
-                        (0, 0)
-                    };
-                    popup.pending = Some((tx, ty));
-                }
-            }
-        }
-        return;
-    }
-    // Suppress unused warning — bridge is available for future left-click RPCs.
-    let _ = &bridge;
-
-    if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
@@ -1471,67 +1307,4 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
-}
-
-fn minimap_popup_ui(
-    mut contexts: EguiContexts,
-    mut popup: ResMut<MinimapPopup>,
-    bridge: Res<LiveBridge>,
-    mut orbit: ResMut<OrbitCamera>,
-    mut hud: ResMut<HudState>,
-    scene: Res<LiveStreamScene>,
-) {
-    let Some((tx, ty)) = popup.pending else {
-        return;
-    };
-    egui::Window::new("Tile Actions")
-        .collapsible(false)
-        .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
-            ui.label(format!("Tile ({tx}, {ty})"));
-            if ui.button("Inspect tile").clicked() {
-                let json = format!(
-                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
-                );
-                bridge.client.send_rpc(json);
-                popup.pending = None;
-            }
-            if ui.button("Center camera").clicked() {
-                orbit.centre[0] = tx as f32;
-                orbit.centre[2] = ty as f32;
-                let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
-                let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
-                hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(
-                    tx / LIVE_CHUNK_EDGE as i32,
-                    ty / LIVE_CHUNK_EDGE as i32,
-                    preferred_cy,
-                    &loaded,
-                ));
-                popup.pending = None;
-            }
-            if ui.button("Cancel").clicked() {
-                popup.pending = None;
-            }
-        });
-}
-
-fn poll_emergence(
-    time: Res<Time>,
-    bridge: Res<LiveBridge>,
-    mut timer: ResMut<EmergencePollTimer>,
-    mut hud: ResMut<HudState>,
-    speed: Res<SimSpeedState>,
-) {
-    hud.snapshot.speed_multiplier = speed.multiplier;
-    // Apply any parsed emergence responses received from the server.
-    for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em);
-    }
-    timer.0 += time.delta_secs();
-    if timer.0 < 10.0 {
-        return;
-    }
-    timer.0 = 0.0;
-    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
-    bridge.client.send_rpc(json);
 }

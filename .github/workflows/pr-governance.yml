@@ -85,10 +85,11 @@ jobs:
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
             // Only these two jobs are required on PRs in local-first mode.
-            const requiredOk = new Set([
+            // NOTE: must be Array (not Set) — consumed via .some() which Set lacks.
+            const requiredOk = [
               /^pr-governance-gate$/i,
               /^quality-manifest/i,
-            ]);
+            ];
 
             // Third-party / legacy optional checks (never block when local-first label is set).
             const optionalBypass = [

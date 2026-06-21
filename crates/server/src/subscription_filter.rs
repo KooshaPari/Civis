@@ -44,7 +44,7 @@ impl FrameKind {
     ];
 
     /// Stable wire name for subscribe responses.
-    pub const fn wire_name(self) -> &'static str {
+    pub fn wire_name(&self) -> &'static str {
         match self {
             Self::VoxelDelta => "voxel_delta",
             Self::BuildingDiff => "building_diff",

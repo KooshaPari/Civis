@@ -494,6 +494,17 @@ async fn handle_jsonrpc_text(
                 let cache = sim.research_cache();
                 (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
             };
+            let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
+                let sim = state.sim.lock().await;
+                let outcome = civ_engine::conditions::check_outcome(&sim);
+                Some(crate::jsonrpc::OutcomeFields {
+                    tag: outcome.tag().to_owned(),
+                    reason: outcome.reason().to_owned(),
+                    tick: sim.state.tick,
+                })
+            } else {
+                None
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -512,6 +523,7 @@ async fn handle_jsonrpc_text(
                     diplomacy_snapshot,
                     researched: research_researched,
                     in_progress_tech: research_in_progress,
+                    outcome_fields,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

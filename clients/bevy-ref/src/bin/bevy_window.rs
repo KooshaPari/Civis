@@ -1,6 +1,10 @@
 ﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -88,7 +92,11 @@ enum AppState {
 #[derive(Resource, Default)]
 struct ConnectionOverlay {
     root: Option<Entity>,
+    tick: u32,
 }
+
+#[derive(Component)]
+struct SplashSpinner;
 #[derive(Resource, Debug, Clone)]
 struct ScenarioPanel {
     seed_index: usize,
@@ -202,18 +210,23 @@ struct MinimapCache {
     use_focus_bounds: bool,
 }
 
-// Speed multipliers matching ALLOWED_SPEED_MULTIPLIERS in civ-server jsonrpc.rs.
-const SPEED_OPTIONS: &[u32] = &[1, 2, 4, 8];
-
-#[derive(Resource)]
-struct SimSpeedState {
-    multiplier: u32,
-    paused: bool,
-    speed_idx: usize,
+#[derive(Resource, Default)]
+struct MinimapPopup {
+    /// Pending right-click tile coords; None when popup is closed.
+    pending: Option<(i32, i32)>,
 }
 
-impl Default for SimSpeedState {
-    fn default() -> Self { Self { multiplier: 1, paused: false, speed_idx: 0 } }
+#[derive(Resource, Default)]
+struct SimSpeedState {
+    multiplier: u32,
+}
+
+#[derive(Resource)]
+struct EmergencePollTimer(f32);
+impl Default for EmergencePollTimer {
+    fn default() -> Self {
+        Self(0.0)
+    }
 }
 
 #[derive(Component)]
@@ -276,9 +289,7 @@ fn main() {
             EmergenceDashboardPlugin,
             DiplomacyUiPlugin,
         ))
-        .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
-        .init_resource::<SimSpeedState>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .init_resource::<ScenarioPanel>()
@@ -296,11 +307,11 @@ fn main() {
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
         .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
+        .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
             (
-                speed_control_input,
                 debug_render_input,
                 orbit_camera_input,
                 minimap_click_focus,
@@ -320,8 +331,7 @@ fn main() {
                 update_hud,
                 update_minimap,
                 update_presentation_lighting,
-            )
-                .run_if(in_state(AppState::InGame)),
+            ),
         )
         .run();
             ),
@@ -442,19 +452,98 @@ fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut n
 }
 
 fn spawn_connecting_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    let root = commands.spawn(Node { position_type: PositionType::Absolute, top: Val::Percent(45.0), left: Val::Percent(0.0), width: Val::Percent(100.0), justify_content: JustifyContent::Center, ..default() }).with_children(|parent| { parent.spawn((Text::new("Connecting to Civis server..."), TextFont::from_font_size(22.0), TextColor(Color::srgb(0.75, 0.85, 1.0)))); }).id();
+    let root = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0), left: Val::Px(0.0),
+            width: Val::Percent(100.0), height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(12.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.035, 0.039, 0.047)),
+        ZIndex(100),
+    )).with_children(|p| {
+        p.spawn((
+            Text::new("CIVIS"),
+            TextFont::from_font_size(72.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+        ));
+        p.spawn((
+            Text::new("An Emergent Civilization"),
+            TextFont::from_font_size(20.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.45)),
+        ));
+        p.spawn((
+            Text::new("⠋"),
+            TextFont::from_font_size(28.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+            SplashSpinner,
+        ));
+        p.spawn((
+            Text::new("Connecting to simulation server..."),
+            TextFont::from_font_size(14.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ));
+    }).id();
     overlay.root = Some(root);
+    overlay.tick = 0;
 }
 
 fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    let root = commands.spawn(Node { position_type: PositionType::Absolute, top: Val::Percent(45.0), left: Val::Percent(0.0), width: Val::Percent(100.0), justify_content: JustifyContent::Center, flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: Val::Px(8.0), ..default() }).with_children(|parent| { parent.spawn((Text::new("Connection lost. Retrying..."), TextFont::from_font_size(22.0), TextColor(Color::srgb(1.0, 0.65, 0.35)))); parent.spawn((Text::new("The simulation will resume automatically when the server is reachable."), TextFont::from_font_size(14.0), TextColor(Color::srgb(0.7, 0.7, 0.7)))); }).id();
+    let root = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0), left: Val::Px(0.0),
+            width: Val::Percent(100.0), height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(12.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.18, 0.02, 0.02, 0.92)),
+        ZIndex(100),
+    )).with_children(|p| {
+        p.spawn((
+            Text::new("CIVIS"),
+            TextFont::from_font_size(72.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+        ));
+        p.spawn((
+            Text::new("Connection lost. Retrying..."),
+            TextFont::from_font_size(22.0),
+            TextColor(Color::srgb(1.0, 0.35, 0.35)),
+        ));
+        p.spawn((
+            Text::new("The simulation will resume when the server is reachable."),
+            TextFont::from_font_size(14.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ));
+    }).id();
     overlay.root = Some(root);
+    overlay.tick = 0;
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
     if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
 }
 
+const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+fn animate_splash(
+    mut overlay: ResMut<ConnectionOverlay>,
+    mut spinners: Query<&mut Text, With<SplashSpinner>>,
+) {
+    overlay.tick = overlay.tick.wrapping_add(1);
+    if overlay.tick % 4 != 0 { return; }
+    let frame = SPINNER_FRAMES[((overlay.tick / 4) as usize) % SPINNER_FRAMES.len()];
+    for mut text in &mut spinners {
+        **text = frame.to_string();
+    }
+}
 fn apply_spectator_meta(
     bridge: Res<LiveBridge>,
     mut presentation: ResMut<ScenePresentation>,
@@ -973,7 +1062,6 @@ fn update_orbit_camera_transform(
 fn update_hud(
     time: Res<Time>,
     selection: Res<LiveSelection>,
-    speed: Res<SimSpeedState>,
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
@@ -984,7 +1072,6 @@ fn update_hud(
         hud.snapshot.fps * 0.9 + fps * 0.1
     };
     hud.snapshot.selected_live = selection.0;
-    hud.snapshot.speed_multiplier = speed.multiplier;
 
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;

@@ -510,6 +510,8 @@ async fn handle_jsonrpc_text(
                     outcome_fields,
                     last_tick_ms: 0.0,
                     diplomacy_snapshot,
+                    researched: research_researched,
+                    in_progress_tech: research_in_progress,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

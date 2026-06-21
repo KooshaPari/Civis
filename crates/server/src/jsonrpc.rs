@@ -79,8 +79,10 @@ pub enum JsonRpcMethod {
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
     SimUnsubscribe,
-    /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
+    /// Replace per-connection tick broadcast filter `(`sim.update_subscription`).`
     SimUpdateSubscription,
+    /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
+    SimOutcome,
 }
 
 impl JsonRpcMethod {
@@ -110,6 +112,7 @@ impl JsonRpcMethod {
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
+            Self::SimOutcome => "sim.outcome",
         }
     }
 
@@ -139,6 +142,7 @@ impl JsonRpcMethod {
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
+            "sim.outcome" => Some(Self::SimOutcome),
             _ => None,
         }
     }
@@ -747,6 +751,13 @@ pub fn snapshot_fields_from_sim(
 
 /// Tick and optional snapshot fields passed into dispatch.
 #[derive(Debug, Clone, Default, PartialEq)]
+/// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OutcomeFields {
+    pub tag: String,
+    pub reason: String,
+    pub tick: u64,
+}
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -772,6 +783,9 @@ pub struct DispatchContext {
     /// Fully-researched techs (FR-CIV-SERVER-003).
     /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
+    /// Precomputed game outcome for `sim.outcome` handler (FR-CIV-GAME-001).
+    #[serde(default)]
+    pub outcome_fields: Option<OutcomeFields>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -1558,8 +1572,28 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             })),
             effect: DispatchEffect::None,
         },
-        JsonRpcMethod::SimSubscribe
-        | JsonRpcMethod::SimUpdateSubscription
+        JsonRpcMethod::SimOutcome => {
+            use civ_engine::check_outcome;
+            let outcome_result = {
+                let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
+                // We only have a ctx snapshot; real outcome check needs the live sim.
+                // The ws_bridge populates outcome_fields before dispatch (see below).
+                ctx.outcome_fields.clone().unwrap_or_else(|| crate::jsonrpc::OutcomeFields {
+                    tag: "ongoing".to_owned(),
+                    reason: String::new(),
+                    tick: ctx.tick,
+                })
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, serde_json::json!({
+                    "outcome": outcome_result.tag,
+                    "reason": outcome_result.reason,
+                    "tick": outcome_result.tick,
+                })),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimSubscribe         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
             response: JsonRpcResponse::failure(
                 req.id,

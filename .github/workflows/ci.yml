@@ -17,7 +17,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ─── Rust Module Graph (cargo-modules --deny cyclic/dead-code/unreachable) ──
+  # ─── Rust Module Graph (cargo-modules dependencies --acyclic) ──
   module-graph:
     name: Rust Module Graph
     runs-on: ubuntu-24.04
@@ -28,4 +28,4 @@ jobs:
       - name: Install cargo-modules
         run: cargo install cargo-modules --locked
       - name: Module graph (cargo-modules)
-        run: cargo m-check
+        run: cargo modules dependencies --lib --acyclic

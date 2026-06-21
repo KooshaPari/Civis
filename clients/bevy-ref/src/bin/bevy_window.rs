@@ -1,4 +1,4 @@
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
@@ -242,6 +242,7 @@ struct SimSpeedState {
 }
 
 #[derive(Resource)]
+#[derive(Resource, Default)]
 struct EmergencePollTimer(f32);
 impl Default for EmergencePollTimer {
     fn default() -> Self {
@@ -1432,6 +1433,7 @@ fn poll_emergence(
     for em in bridge.client.poll_emergence() {
         hud.snapshot.emergence = Some(em.clone());
         *emergence_res = em;
+        hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
     if timer.0 < 10.0 {
@@ -1440,4 +1442,5 @@ fn poll_emergence(
     timer.0 = 0.0;
     let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
     bridge.client.send_rpc(json);
+}
 }

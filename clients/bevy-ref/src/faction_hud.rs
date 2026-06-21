@@ -78,6 +78,7 @@ fn draw_faction_hud(
 
     // Counts derived from civilians that are tracked (no per-faction breakdown
     // in the wire protocol yet — civilian_entries lack faction_id).
+    let faction_population = scene.population_by_faction.get(&player.0).copied().unwrap_or(0);
     let total_civilians = scene.civilian_ids.len();
 
     egui::Window::new("Faction")
@@ -128,11 +129,16 @@ fn draw_faction_hud(
             ui.separator();
             ui.add_space(2.0);
 
-            // Population row: total civilian count from live stream (faction breakdown unavailable)
+            // Population row: per-faction count from FactionState frame (FR-CIV-PROTO-001).
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("Population").color(DIM).small());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new(format_count(total_civilians)).strong());
+                    let pop_label = if faction_population > 0 {
+                        format_count(faction_population as usize)
+                    } else {
+                        format!("~{}", format_count(total_civilians))
+                    };
+                    ui.label(egui::RichText::new(pop_label).strong());
                 });
             });
 

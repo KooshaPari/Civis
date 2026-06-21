@@ -122,6 +122,8 @@ pub struct LiveStreamScene {
     pub faction_entries: Vec<civ_protocol_3d::FactionStateEntry>,
     /// Max era from the latest faction state frame (HUD era chip).
     pub faction_era: u16,
+    /// Civilian count per faction id from the latest FactionState frame (FR-CIV-PROTO-001).
+    pub population_by_faction: std::collections::BTreeMap<u32, u32>,
 }
 
 impl Default for LiveStreamScene {
@@ -144,6 +146,7 @@ impl Default for LiveStreamScene {
             factions: HashSet::default(),
             faction_entries: Vec::new(),
             faction_era: 0,
+            population_by_faction: std::collections::BTreeMap::new(),
         }
     }
 }
@@ -172,6 +175,7 @@ pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStat
     scene
         .factions
         .extend(scene.faction_entries.iter().map(|entry| entry.id));
+    scene.population_by_faction = frame.population_by_faction;
 }
 
 /// Maps a `FactionState` wire frame into [`DiplomacyState`] for the egui panel.

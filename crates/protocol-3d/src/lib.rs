@@ -162,6 +162,9 @@ pub struct GenomeSummary3d {
 pub struct CivilianStateEntry {
     /// Stable civilian entity id from the simulation ECS.
     pub id: u64,
+    /// Owning faction id (0 = neutral/unknown). Added in FR-CIV-PROTO-001.
+    #[serde(default)]
+    pub faction_id: u32,
     /// Latest needs snapshot.
     #[serde(default)]
     pub needs: CivilianNeeds3d,
@@ -248,6 +251,9 @@ pub struct FactionStateFrame {
     /// One entry per faction whose state changed.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub factions: Vec<FactionStateEntry>,
+    /// Civilian count per faction id (derived from CivilianState frame, FR-CIV-PROTO-001).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub population_by_faction: std::collections::BTreeMap<u32, u32>,
 }
 
 /// A birth event in the wire-level event feed.

@@ -4,7 +4,7 @@
 
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
 };
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
@@ -167,7 +167,7 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
             let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
-            spawn_civilian_at(world, next_civilian_id, faction as u32, norm_x, norm_y, rng);
+            spawn_civilian_at(world, next_civilian_id, Alignment::Faction(faction as u32), norm_x, norm_y, ActorVisualKind::Humanoid, rng);
             next_civilian_id += 1;
         }
     }
@@ -583,8 +583,7 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
-        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
-        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
+        let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState::default();
 
         Self {
@@ -642,8 +641,7 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
-        let axial_tilt_fp = i32::from(planet.axial_tilt_deg) * 1_000;
-        let weather_grid = compute_weather(0, 16, axial_tilt_fp, planet.year_length_ticks);
+        let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -1149,13 +1147,7 @@ impl Simulation {
     /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
-        let axial_tilt_fp = i32::from(self.planet.axial_tilt_deg) * 1_000;
-        self.weather_grid = compute_weather(
-            self.state.tick,
-            self.weather_grid.len().max(1) as u32,
-            axial_tilt_fp,
-            self.planet.year_length_ticks,
-        );
+        self.weather_grid = compute_weather(&self.climate, self.state.tick, self.weather_grid.len().max(1) as u32);
         self.apply_tide_offset();
     }
 
@@ -1446,7 +1438,7 @@ impl Simulation {
         }
 
         for (child_id, x, y) in births {
-            let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
+            let _ = spawn_child_near(&mut self.world, child_id, Alignment::None, x, y, &mut self.rng);
             self.last_births.push(PopulationEvent {
                 tick: self.state.tick,
                 entity_id: child_id,
@@ -3052,9 +3044,7 @@ mod tests {
         let planet_s = *sim_s.planet();
         let moon_s = *sim_s.moon();
         sim_s.climate = compute_climate(summer_tick, &planet_s, &moon_s);
-        let axial_tilt_fp = i32::from(planet_s.axial_tilt_deg) * 1_000;
-        sim_s.weather_grid =
-            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        sim_s.weather_grid = compute_weather(&sim_s.climate, summer_tick, 16);
         let snap_summer = sim_s.snapshot();
 
         let mut sim_w = Simulation::with_seed(0);
@@ -3062,8 +3052,7 @@ mod tests {
         let planet_w = *sim_w.planet();
         let moon_w = *sim_w.moon();
         sim_w.climate = compute_climate(winter_tick, &planet_w, &moon_w);
-        sim_w.weather_grid =
-            compute_weather(winter_tick, 16, axial_tilt_fp, planet_w.year_length_ticks);
+        sim_w.weather_grid = compute_weather(&sim_w.climate, winter_tick, 16);
         let snap_winter = sim_w.snapshot();
 
         let summer_temp = snap_summer.weather_grid[equatorial_idx].temp_c_fp;
@@ -3075,8 +3064,7 @@ mod tests {
         );
 
         // Determinism: re-running the same ticks must produce identical grids.
-        let summer_grid_2 =
-            compute_weather(summer_tick, 16, axial_tilt_fp, planet_s.year_length_ticks);
+        let summer_grid_2 = compute_weather(&sim_s.climate, summer_tick, 16);
         assert_eq!(
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"

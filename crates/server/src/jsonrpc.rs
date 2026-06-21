@@ -47,6 +47,8 @@ pub enum JsonRpcMethod {
     SimLoadReplay,
     /// Replace the bridge simulation with a fresh seeded instance (`sim.reset`).
     SimReset,
+    /// Load a named preset scenario and start a fresh simulation (`sim.load_scenario`).
+    SimLoadScenario,
     /// Update `Simulation::economy_policy` on the bridge (`sim.set_policy`).
     SimSetPolicy,
     /// Simulation tick speed multiplier (`sim.set_speed`).
@@ -89,6 +91,7 @@ impl JsonRpcMethod {
             Self::SimSaveReplay => "sim.save_replay",
             Self::SimLoadReplay => "sim.load_replay",
             Self::SimReset => "sim.reset",
+            Self::SimLoadScenario => "sim.load_scenario",
             Self::SimSetPolicy => "sim.set_policy",
             Self::SimSetSpeed => "sim.set_speed",
             Self::SimGetSpeed => "sim.get_speed",
@@ -116,6 +119,7 @@ impl JsonRpcMethod {
             "sim.save_replay" => Some(Self::SimSaveReplay),
             "sim.load_replay" => Some(Self::SimLoadReplay),
             "sim.reset" => Some(Self::SimReset),
+            "sim.load_scenario" => Some(Self::SimLoadScenario),
             "sim.set_policy" => Some(Self::SimSetPolicy),
             "sim.set_speed" => Some(Self::SimSetSpeed),
             "sim.get_speed" => Some(Self::SimGetSpeed),
@@ -893,6 +897,13 @@ pub enum DispatchEffect {
         /// RNG/world seed from request params.
         seed: u64,
     },
+    /// Load a named preset and start fresh (`sim.load_scenario`).
+    LoadScenario {
+        /// Name of the preset (e.g. "three-race-balanced").
+        preset: String,
+        /// RNG seed for this run.
+        seed: u64,
+    },
     /// Update `Simulation::economy_policy` (`sim.set_policy`).
     SetPolicy {
         /// Validated scarcity multiplier.
@@ -984,6 +995,36 @@ pub fn encode_response(response: &JsonRpcResponse) -> String {
         r#"{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"Internal error"}}"#
             .to_owned()
     })
+}
+
+/// Parse `sim.load_scenario` params: `{ "preset": String, "seed"?: u64 }`.
+pub fn parse_load_scenario_params(
+    params: Option<&Value>,
+) -> Result<(String, u64), JsonRpcError> {
+    let p = params.ok_or_else(|| JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: r#"Invalid params: expected object with "preset""#.to_owned(),
+        data: None,
+    })?;
+    let preset = p
+        .get("preset")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
+        .ok_or_else(|| JsonRpcError {
+            code: error_code::INVALID_PARAMS,
+            message: r#"Invalid params: expected string "preset""#.to_owned(),
+            data: None,
+        })?;
+    let seed = p
+        .get("seed")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(42)
+        });
+    Ok((preset, seed))
 }
 
 /// Parse `sim.reset` `seed` param.
@@ -1166,7 +1207,21 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
-        JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
+        JsonRpcMethod::SimLoadScenario => {
+            let (preset, seed) = parse_load_scenario_params(req.params.as_ref())
+                .map_err(|e| DispatchPlan {
+                    response: JsonRpcResponse::error(req.id.clone(), e),
+                    effect: DispatchEffect::None,
+                })?;
+            DispatchPlan {
+                response: JsonRpcResponse::ok(
+                    req.id.clone(),
+                    serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
+                ),
+                effect: DispatchEffect::LoadScenario { preset, seed },
+            }
+        }
+                JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
             Ok(policy) => DispatchPlan {
                 response: JsonRpcResponse::success(
                     req.id,

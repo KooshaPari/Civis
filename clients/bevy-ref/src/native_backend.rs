@@ -134,6 +134,18 @@ mod tests {
 
     #[test]
     fn native_backends_default_to_dx12_only_on_windows() {
+        #[cfg(target_os = "windows")]
+        {
+            std::env::remove_var(BACKEND_ENV);
+            let b = native_only_backends();
+            assert!(b.contains(Backends::DX12));
+            assert!(!b.contains(Backends::VULKAN), "Vulkan is opt-in via env, not default");
+            assert!(!b.contains(Backends::BROWSER_WEBGPU));
+            assert!(!b.contains(Backends::GL));
+        }
+    }
+
+    #[test]
     fn forced_backend_from_var_unset_returns_none() {
         assert_eq!(forced_backend_from_var(None), None);
     }

@@ -1,23 +1,24 @@
-//! N-series emergence coupling tests — N1/N2/N3/N4/N7.
+﻿//! N-series emergence coupling tests — N1/N2/N3/N4/N7.
 //!
 //! FR-CIV-TEST-001: five coupling paths with zero dedicated test coverage.
 //!
-//! - N1  settlement stock surplus -> market food price pressure
-//! - N2  cluster cultural distance -> diplomacy threshold signal
-//! - N3  settlement contact -> diplomacy pair emission (>=2 factions)
+//! - N1  settlement stock surplus → market food price pressure
+//! - N2  cluster cultural distance → diplomacy threshold signal
+//! - N3  settlement contact → diplomacy pair emission (≥2 factions)
 //! - N4  trade route resource transfer, overdraft guard, zero-volume inertness
-//! - N7  sentience pipeline stability -- no panic with no / many tick cycles
+//! - N7  sentience pipeline stability — no panic with no / many tick cycles
 
 use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_engine::{Simulation, TradeRoute};
 use fixed::types::I48F16 as Fixed;
 
-// -- N1: market food price responds to stock conditions -------------------
+// ── N1: market food price responds to stock conditions ────────────────────
 
-/// N1 nominal -- food price must remain non-negative under any stock level.
+/// N1 nominal — food price must remain non-negative under any stock level.
 #[test]
 fn n1_food_price_never_negative() {
     let mut sim = Simulation::with_seed(1001);
+    // Zero out faction food to simulate scarcity.
     for res in sim.state.faction_resources.values_mut() {
         res.food = Fixed::ZERO;
     }
@@ -28,7 +29,7 @@ fn n1_food_price_never_negative() {
     assert!(price >= 0, "food price must not go negative, got {price}");
 }
 
-/// N1 boundary -- market must emit a food price entry after ticking (populated).
+/// N1 boundary — market must emit a food price entry after ticking (populated).
 #[test]
 fn n1_market_contains_food_price_after_ticks() {
     let mut sim = Simulation::with_seed(1002);
@@ -41,9 +42,9 @@ fn n1_market_contains_food_price_after_ticks() {
     );
 }
 
-// -- N2: CultureProfile cultural_distance API -----------------------------
+// ── N2: CultureProfile cultural_distance API ──────────────────────────────
 
-/// N2 nominal -- identical culture profiles must have zero distance.
+/// N2 nominal — identical culture profiles must have zero distance.
 #[test]
 fn n2_identical_cultures_have_zero_distance() {
     let v = [0.5_f32, 0.2, 0.9, 0.1];
@@ -56,7 +57,8 @@ fn n2_identical_cultures_have_zero_distance() {
     );
 }
 
-/// N2 boundary -- maximally dissimilar profiles have larger distance than identical.
+/// N2 boundary — maximally dissimilar profiles must have larger distance
+/// than identical ones, so the threshold signal is directional.
 #[test]
 fn n2_dissimilar_cultures_greater_distance_than_identical() {
     let same = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
@@ -72,9 +74,10 @@ fn n2_dissimilar_cultures_greater_distance_than_identical() {
     );
 }
 
-// -- N3: settlement contact -> diplomacy pair emission --------------------
+// ── N3: settlement contact → diplomacy pair emission ─────────────────────
 
-/// N3 nominal -- at least one diplomacy event fires within 3x cadence ticks.
+/// N3 nominal — at least one diplomacy event fires within 3× cadence ticks
+/// (3×500 = 1500) in a default multi-faction sim.
 #[test]
 fn n3_multi_faction_sim_emits_diplomacy_events() {
     let mut sim = Simulation::with_seed(3001);
@@ -86,6 +89,7 @@ fn n3_multi_faction_sim_emits_diplomacy_events() {
         !events.is_empty(),
         "expected diplomacy events after 1500 ticks (3x cadence=500), got 0"
     );
+    // All emitted events must reference factions present in the sim.
     for ev in events {
         assert!(
             sim.state.factions.contains_key(&ev.faction_a),
@@ -100,7 +104,8 @@ fn n3_multi_faction_sim_emits_diplomacy_events() {
     }
 }
 
-/// N3 boundary -- single faction produces no diplomacy events.
+/// N3 boundary — pruning all but one faction prevents diplomacy events
+/// (pair selection requires ≥ 2 factions).
 #[test]
 fn n3_single_faction_emits_no_diplomacy_events() {
     let mut sim = Simulation::with_seed(3002);
@@ -108,6 +113,7 @@ fn n3_single_faction_emits_no_diplomacy_events() {
     sim.state.factions.retain(|&k, _| k == keep);
     sim.state.faction_treasury.retain(|&k, _| k == keep);
     sim.state.faction_resources.retain(|&k, _| k == keep);
+
     for _ in 0..1500 {
         sim.tick();
     }
@@ -117,9 +123,9 @@ fn n3_single_faction_emits_no_diplomacy_events() {
     );
 }
 
-// -- N4: trade route mechanics --------------------------------------------
+// ── N4: trade route mechanics ─────────────────────────────────────────────
 
-/// N4 nominal -- a route transfers food from exporter to importer in one tick.
+/// N4 nominal — a route transfers food from exporter to importer in one tick.
 #[test]
 fn n4_route_transfers_food_to_importer() {
     let mut sim = Simulation::with_seed(4001);
@@ -131,16 +137,18 @@ fn n4_route_transfers_food_to_importer() {
         goods: "grain".to_string(),
         volume: Fixed::from_num(10),
     }];
+
     let food_before = sim.state.faction_resources[&1].food;
     sim.tick();
     let food_after = sim.state.faction_resources[&1].food;
+
     assert!(
         food_after > food_before,
         "importer food must increase after trade route tick: before={food_before}, after={food_after}"
     );
 }
 
-/// N4 boundary -- zero-volume route must not transfer food and must not panic.
+/// N4 boundary — zero-volume route must not transfer food and must not panic.
 #[test]
 fn n4_zero_volume_route_is_inert() {
     let mut sim = Simulation::with_seed(4002);
@@ -152,11 +160,13 @@ fn n4_zero_volume_route_is_inert() {
         volume: Fixed::ZERO,
     }];
     sim.tick();
+    // Route still exists; exporter food must not go negative.
     assert_eq!(sim.state.trade_routes.len(), 1);
     assert_eq!(sim.state.trade_routes[0].volume, Fixed::ZERO);
 }
 
-/// N4 boundary -- exporter food must not go negative when route volume exceeds stock.
+/// N4 boundary — exporter food must not go below zero when route volume
+/// exceeds available stock (min-transfer guard).
 #[test]
 fn n4_route_does_not_overdraft_exporter() {
     let mut sim = Simulation::with_seed(4003);
@@ -175,15 +185,18 @@ fn n4_route_does_not_overdraft_exporter() {
     );
 }
 
-// -- N7: sentience pipeline stability ------------------------------------
+// ── N7: sentience pipeline stability ─────────────────────────────────────
 
-/// N7 nominal -- 5000 ticks must not panic; cluster cultures must be populated.
+/// N7 nominal — running 5000 ticks must not panic, and cluster cultures
+/// must be populated (sentience pipeline executed every tick).
 #[test]
 fn n7_long_tick_run_is_stable_and_populates_cluster_cultures() {
     let mut sim = Simulation::with_seed(7001);
     for _ in 0..5000 {
         sim.tick();
     }
+    // If the sentience / awakening coupling panics, the test fails before here.
+    // Cluster cultures should be populated after many ticks with civilians.
     let cultures = sim.cluster_cultures();
     assert!(
         !cultures.is_empty(),
@@ -191,11 +204,18 @@ fn n7_long_tick_run_is_stable_and_populates_cluster_cultures() {
     );
 }
 
-/// N7 boundary -- tick-0 sim must have empty cluster cultures (no emergence run yet).
+/// N7 boundary — a fresh (tick=0) sim must have an empty last_sentience
+/// (no threshold crossings before any genetic evaluation).
 #[test]
 fn n7_fresh_sim_cluster_cultures_empty_at_tick_zero() {
     let sim = Simulation::with_seed(7002);
-    assert_eq!(sim.state.tick, 0);
+    assert_eq!(
+        sim.state.tick,
+        0,
+        "with_seed must produce a tick-0 simulation"
+    );
+    // cluster_cultures is populated by phase_emergence — at tick 0 it should
+    // be empty because no emergence phase has run yet.
     let cultures = sim.cluster_cultures();
     assert!(
         cultures.is_empty(),
@@ -203,3 +223,4 @@ fn n7_fresh_sim_cluster_cultures_empty_at_tick_zero() {
         cultures.len()
     );
 }
+

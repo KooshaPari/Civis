@@ -73,11 +73,12 @@ struct ConnectionOverlay {
 struct ScenarioPanel {
     seed_index: usize,
     speed_index: usize,
+    preset_index: usize,
 }
 
 impl Default for ScenarioPanel {
     fn default() -> Self {
-        Self { seed_index: 0, speed_index: 0 }
+        Self { seed_index: 0, speed_index: 0, preset_index: 0 }
     }
 }
 
@@ -198,6 +199,9 @@ struct ScenarioSeedLabel;
 struct ScenarioSpeedLabel;
 
 #[derive(Component)]
+struct ScenarioPresetLabel;
+
+#[derive(Component)]
 struct ScenarioStartButton;
 
 fn main() {
@@ -266,6 +270,7 @@ fn scenario_panel_input(
     bridge: Res<LiveBridge>,
     mut seed_labels: Query<&mut Text, (With<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
     mut speed_labels: Query<&mut Text, (With<ScenarioSpeedLabel>, Without<ScenarioSeedLabel>, Without<ScenarioStartButton>)>,
+    mut preset_labels: Query<&mut Text, (With<ScenarioPresetLabel>, Without<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
     start_buttons: Query<&Interaction, With<ScenarioStartButton>>,
 ) {
     // Keyboard shortcuts: Left/Right cycle seeds; Up/Down cycle speeds; Enter launches.
@@ -280,6 +285,12 @@ fn scenario_panel_input(
     }
     if keys.just_pressed(KeyCode::ArrowUp) {
         panel.speed_index = panel.speed_index.checked_sub(1).unwrap_or(SPEED_OPTIONS.len() - 1);
+    }
+    if keys.just_pressed(KeyCode::KeyP) {
+        panel.preset_index = (panel.preset_index + 1) % PRESET_OPTIONS.len();
+    }
+    if keys.just_pressed(KeyCode::KeyO) {
+        panel.preset_index = panel.preset_index.checked_sub(1).unwrap_or(PRESET_OPTIONS.len() - 1);
     }
 
     // Rebuild seed label
@@ -304,6 +315,17 @@ fn scenario_panel_input(
         *text = Text::new(format!("Speed: {label}"));
     }
 
+    // Rebuild preset label
+    if let Ok(mut text) = preset_labels.get_single_mut() {
+        let label = PRESET_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, name)| if i == panel.preset_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Preset: {label}"));
+    }
+
     // Launch on button click or Enter key
     let clicked = start_buttons
         .get_single()
@@ -312,9 +334,13 @@ fn scenario_panel_input(
     if clicked || keys.just_pressed(KeyCode::Enter) {
         let (_, seed) = NAMED_SEEDS[panel.seed_index];
         let (_, speed) = SPEED_OPTIONS[panel.speed_index];
-        bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
+        let preset = PRESET_OPTIONS[panel.preset_index];
+        bridge.client.send_rpc(
+            "sim.load_scenario",
+            serde_json::json!({ "preset": preset, "seed": seed }),
+        );
         bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
-        info!("scenario launch: seed={seed} speed={speed}");
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
     }
 }
 

@@ -17,7 +17,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ─── Rust Module Graph (cargo-modules dependencies --acyclic) ──
+  # ─── Rust Module Graph (cargo-modules --deny cyclic per workspace member) ──
   module-graph:
     name: Rust Module Graph
     runs-on: ubuntu-24.04
@@ -28,4 +28,17 @@ jobs:
       - name: Install cargo-modules
         run: cargo install cargo-modules --locked
       - name: Module graph (cargo-modules)
-        run: cargo modules dependencies --lib --acyclic
+        run: |
+          # cargo-modules does not support --workspace; iterate packages.
+          failed=0
+          while IFS= read -r pkg; do
+            echo "--- checking $pkg ---"
+            if ! cargo m-check --package "$pkg"; then
+              failed=1
+            fi
+          done < <(cargo metadata --no-deps --format-version 1 | python3 -c "
+          import sys, json
+          for p in json.load(sys.stdin)['packages']:
+              print(p['name'])
+          ")
+          exit $failed

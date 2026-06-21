@@ -588,6 +588,10 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                 / 4.0;
             CivilianStateEntry {
                 id: civilian.id,
+                faction_id: match civilian.alignment {
+                    civ_agents::Alignment::Faction(id) => id,
+                    _ => 0,
+                },
                 needs: CivilianNeeds3d {
                     food: need_satisfaction(needs.food),
                     shelter: need_satisfaction(needs.shelter),
@@ -657,7 +661,15 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
         })
         .collect();
     factions.sort_by_key(|entry| entry.id);
-    FactionStateFrame { tick, factions }
+    let mut population_by_faction: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
+    for (_, (civilian, _needs, _wardrobe)) in sim.world.query::<(&civ_agents::Civilian, &civ_agents::Needs, &civ_agents::Wardrobe)>().iter() {
+        let fid = match civilian.alignment {
+            civ_agents::Alignment::Faction(id) => id,
+            _ => 0,
+        };
+        *population_by_faction.entry(fid).or_insert(0) += 1;
+    }
+    FactionStateFrame { tick, factions, population_by_faction }
 }
 
 /// Build event-feed messages for one tick.

@@ -1,4 +1,4 @@
-﻿[STATUS: PLAYABLE ALPHA] [██████████] 95% complete
+<!-- WORK STATE: ACTIVE | ████████████████████░░░░ 99% -->
 
 ---
 

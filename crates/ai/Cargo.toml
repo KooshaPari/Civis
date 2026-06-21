@@ -21,7 +21,7 @@ civ-research = { path = "../research", optional = true, features = ["firepass-ki
 default = []
 # Cloud heavy-reasoning fallback: wraps civ-research::FirepassKimiClient. Opt-in.
 cloud = ["dep:civ-research"]
-# Local in-process SLM (mistral.rs GGUF). Stub in P1 — full model loading is a later phase.
+# Local in-process SLM (mistral.rs GGUF). Stub in P1 -- full model loading is a later phase.
 local = []
 # Embedding provider (fastembed-rs / ort, MiniLM). Stub in P1.
 embed = []
@@ -30,3 +30,4 @@ dev = []
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "macros", "time"] }
+blake3 = "1"

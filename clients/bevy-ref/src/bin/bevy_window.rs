@@ -19,9 +19,8 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
+    god_panel::GodPanelPlugin,
     save_load_ui::SaveLoadUiPlugin,
-    tutorial::TutorialPlugin,
-    perf_hud::{PerfHudPlugin, PerfMetrics},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
@@ -273,6 +272,7 @@ fn main() {
             EventFeedPlugin,
             EmergenceDashboardPlugin,
             DiplomacyUiPlugin,
+            GodPanelPlugin,
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
@@ -293,7 +293,6 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-        .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
@@ -328,7 +327,6 @@ fn main() {
     #[cfg(feature = "egui")]
     {
         app.add_plugins(SettingsPlugin);
-        app.add_plugins(civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin);
     }
 
     #[cfg(feature = "models")]
@@ -496,14 +494,6 @@ fn sync_live_hud_stats(
     }
 }
 
-
-fn sync_perf_metrics(hud: Res<HudState>, mut metrics: ResMut<PerfMetrics>) {
-    metrics.fps = hud.snapshot.fps;
-    metrics.tick = hud.snapshot.tick.unwrap_or(0);
-    metrics.civilian_count = hud.snapshot.civilian_count;
-    metrics.faction_count = hud.snapshot.faction_count;
-    metrics.tick_ms = hud.snapshot.tick_ms;
-}
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
     !scene.chunks.is_empty()
         || !scene.agents.is_empty()

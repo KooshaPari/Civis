@@ -7,6 +7,7 @@ use std::{
 use civ_protocol_3d::Frame3d;
 
 use crate::{
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData, OutcomeHudData, OutcomeHudData,
     parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData, OutcomeHudData,
     parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData,
     WsConnectionState, WsSpectatorMeta,
@@ -40,6 +41,7 @@ pub struct WsClient {
     /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
     outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
+    outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
 }
 
 impl WsClient {
@@ -59,9 +61,11 @@ impl WsClient {
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
+        let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx, outcome_tx));
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
+        let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx));
         Self {
             frame_rx,
@@ -90,7 +94,7 @@ impl WsClient {
     }
 
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
-    /// without holding a reference to the full `WsClient`.
+    /// without holding a reference to the full `WsClient.
     #[must_use]
     pub fn rpc_sender(&self) -> crossbeam_channel::Sender<String> {
         self.send_tx.clone()

@@ -1608,6 +1608,8 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimSubscribe         | JsonRpcMethod::SimUpdateSubscription
+        JsonRpcMethod::SimSubscribe
+        | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
             response: JsonRpcResponse::failure(
                 req.id,

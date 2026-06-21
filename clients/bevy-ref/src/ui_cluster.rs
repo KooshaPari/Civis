@@ -26,7 +26,7 @@ use bevy_egui::egui;
 use crate::tool_categories::{Category, SubTool};
 use crate::ui_theme::{
     liquid_glass_pill, motion_rect, paint_cluster_icon_label, rim_glow_for, DECK_ACCENT,
-    DECK_BORDER, DECK_GLASS, DECK_TEXT, DECK_TEXT_MID, RADIUS_BTN, RADIUS_SM,
+    DECK_TEXT, DECK_TEXT_MID, RADIUS_BTN, RADIUS_SM,
 };
 
 /// Width of one category block-pill in the bottom toolbar cluster.
@@ -184,17 +184,11 @@ fn item_tile(
     let tile_accent = if active { accent } else { DECK_TEXT };
     paint_cluster_icon_label(p, paint_rect, st.icon(), st.label(), lit, tile_accent, None);
     let tip = if inert {
-        format!("{} \u{2014} coming soon", st.label())
+        format!("{} \u{2014} unavailable yet", st.label())
     } else {
         st.label().to_string()
     };
     resp.on_hover_text(tip)
-}
-
-/// Silence unused-import lints for tokens kept for parity with `game_ui` styling.
-#[allow(dead_code)]
-fn _token_anchor() -> [egui::Color32; 2] {
-    [DECK_GLASS, DECK_BORDER]
 }
 
 #[cfg(test)]

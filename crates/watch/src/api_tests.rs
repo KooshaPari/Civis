@@ -35,10 +35,10 @@ use crate::sim_worker::simulation_worker;
 use crate::snapshot::make_snapshot;
 use crate::terrain::{self, Terrain};
 
-fn test_state() -> AppState {
+fn test_state_with_seed(seed: u64) -> AppState {
     let (tx, _) = broadcast::channel::<Snapshot>(64);
-    let sim = Arc::new(Mutex::new(Simulation::with_seed(42)));
-    let terrain = Terrain::generate(42);
+    let sim = Arc::new(Mutex::new(Simulation::with_seed(seed)));
+    let terrain = Terrain::generate(seed);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("time")
@@ -66,8 +66,12 @@ fn test_state() -> AppState {
             .timeout(REMOTE_FETCH_TIMEOUT)
             .redirect(reqwest::redirect::Policy::limited(5))
             .build()
-            .expect("reqwest client"),
+        .expect("reqwest client"),
     }
+}
+
+fn test_state() -> AppState {
+    test_state_with_seed(42)
 }
 
 fn test_app() -> Router {
@@ -118,6 +122,30 @@ async fn get_terrain_returns_heightmap_json() {
     assert_eq!(
         json["biomes"].as_array().expect("biomes array").len(),
         terrain::SIZE * terrain::SIZE,
+    );
+}
+
+#[tokio::test]
+async fn get_terrain_uses_custom_seed() {
+    let app = test_app_with_state(test_state_with_seed(7));
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/terrain")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response
+            .headers()
+            .get(header::ETAG)
+            .expect("etag")
+            .to_str()
+            .unwrap(),
+        format!("\"{:016x}\"", Terrain::generate(7).heights_fingerprint())
     );
 }
 

@@ -3,6 +3,7 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use civ_bevy_ref::{
+    post_fx::PostFxSettings,
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
@@ -10,9 +11,17 @@ use civ_bevy_ref::{
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
     resolve_attach_mode_from_env,
-    terrain::{terrain_height, terrain_mesh, WORLD_SIZE},
+    terrain::{terrain_mesh, WORLD_SIZE},
     AttachMode,
 };
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 
 fn main() {
     let attach_mode = resolve_attach_mode_from_env();
@@ -46,6 +55,7 @@ fn main() {
         // embedded icon on the primary winit window at startup.
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
+        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
         .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
@@ -68,6 +78,25 @@ fn main() {
             Update,
             (camera_input, update_camera, animate_water, update_lighting),
         );
+    #[cfg(feature = "egui")]
+    {
+        app.add_plugins(SettingsPlugin)
+            .add_systems(Startup, sync_post_fx_from_settings)
+            .add_systems(
+                Update,
+                sync_post_fx_from_settings.run_if(resource_changed::<GameSettings>),
+            );
+    }
+
+    #[cfg(feature = "models")]
+    {
+        app.add_plugins((GltfModelsPlugin, ActorAnimationPlugin));
+    }
+
+    #[cfg(feature = "gi")]
+    {
+        app.add_plugins(SolariGiPlugin);
+    }
 
     if attach_mode == AttachMode::Standalone {
         #[cfg(feature = "pbr-textures")]
@@ -79,6 +108,18 @@ fn main() {
     }
 
     app.run();
+}
+
+#[cfg(feature = "egui")]
+fn sync_post_fx_from_settings(
+    settings: Res<GameSettings>,
+    mut post_fx: ResMut<PostFxSettings>,
+) {
+    let graphics = &settings.graphics;
+    post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
+    post_fx.bloom = graphics.bloom;
+    post_fx.ssao = graphics.ambient_occlusion;
+    post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
 }
 
 fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {

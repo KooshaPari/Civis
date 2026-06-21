@@ -9,7 +9,7 @@ use civ_agents::{
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, PoiKind, PoiRegistry, Position3d, Psyche,
     SocialGraph, Tools, Wardrobe,
 };
-use civ_agents::culture::{cultural_distance, language_distance, CultureProfile, TraitVector};
+use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
@@ -24,8 +24,8 @@ use civ_needs::{
     tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
 };
 use civ_planet::{
-    compute_climate, compute_weather, defaults_earthlike, BiomeKind, Climate, GeologyMap,
-    MoonConfig, PlanetConfig, WeatherCell,
+    compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
+    PlanetConfig, WeatherCell,
 };
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
@@ -33,7 +33,10 @@ use civ_tactics::{
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
-use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
+use civ_voxel::{
+    material::WATER,
+    DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE,
+};
 use hecs::{Entity, World};
 use rand::Rng;
 use rand::SeedableRng;
@@ -55,7 +58,6 @@ use crate::replay_format::{load_civreplay, save_civreplay};
 /// CIV-0001 partial — engine-side deterministic transition. Server command intake
 /// and client broadcast are outside this crate. Keep in sync with the calls in
 /// [`Simulation::tick`].
-#[allow(dead_code)]
 pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
     "citizen_lifecycle",
@@ -269,7 +271,7 @@ pub struct Building {
     pub position: Position,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BuildingType {
     Farm,
     Mine,
@@ -804,9 +806,10 @@ pub struct Simulation {
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
-/// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Kept as a small
-/// integer so it is stable across saves and replays.
-pub const WATER_MARKER_MATERIAL: MaterialId = MaterialId(2);
+/// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Reuses the shared
+/// `civ_voxel::material::WATER` constant so the engine, clients, and worldgen
+/// stay on the same source of truth.
+pub const WATER_MARKER_MATERIAL: MaterialId = WATER;
 
 /// A coastal water column registered with the engine. Each column anchors a
 /// single water-marker voxel that shifts vertically with the climate tide
@@ -4045,7 +4048,6 @@ fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
         BiomeKind::Tundra     => Fixed::from_num(9)  / Fixed::from_num(20),
         BiomeKind::Ocean      => Fixed::from_num(1)  / Fixed::from_num(5),
         BiomeKind::Glacier    => Fixed::from_num(1)  / Fixed::from_num(10),
-        _                     => Fixed::from_num(1)  / Fixed::from_num(1),
     }
 }
 
@@ -7163,6 +7165,10 @@ mod tests {
     /// numeric tolerance (≤ 1e-4 of the tidal amplitude in fixed-point units).
     #[test]
     fn tide_offset_shifts_coastal_voxel_height() {
+        use civ_voxel::material::WATER;
+
+        assert_eq!(WATER_MARKER_MATERIAL, WATER);
+
         // Use a moon config whose orbit period is a clean factor so we can land
         // on the peak (+amplitude), trough (-amplitude), and zero-crossing
         // ticks exactly. sin(TAU * phase) = +1 at phase=0.25, -1 at phase=0.75.
@@ -8473,6 +8479,58 @@ mod tests {
         sim1.tick();
         sim2.tick();
         assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
+    }
+
+    /// FR-CIV-CA-005 — identical dirty-chunk voxel setups must replay to the
+    /// same log and voxel state on same-seed reruns.
+    #[test]
+    fn replay_ca_dirty_chunk_bit_identical() {
+        use civ_voxel::material::{SAND, STONE, WATER};
+        use civ_voxel::WorldCoord;
+
+        let mut sim1 = Simulation::with_seed(17);
+        let mut sim2 = Simulation::with_seed(17);
+        let writes = [
+            (
+                WorldCoord {
+                    x: 1_000_000,
+                    y: 0,
+                    z: 0,
+                },
+                WATER,
+            ),
+            (
+                WorldCoord {
+                    x: 16_000_000,
+                    y: 0,
+                    z: 0,
+                },
+                STONE,
+            ),
+            (
+                WorldCoord {
+                    x: 0,
+                    y: 16_000_000,
+                    z: 0,
+                },
+                SAND,
+            ),
+        ];
+
+        for (pos, mat) in writes {
+            sim1.voxel_mut().write(pos, mat);
+            sim2.voxel_mut().write(pos, mat);
+        }
+        let hash_before_1 = sim1.hash_chain_root();
+        let hash_before_2 = sim2.hash_chain_root();
+        assert_eq!(hash_before_1, hash_before_2);
+        sim1.tick();
+        sim2.tick();
+
+        assert_eq!(sim1.replay_log(), sim2.replay_log());
+        assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
+        assert_eq!(sim1.voxel().chunk_count(), sim2.voxel().chunk_count());
+        assert_eq!(sim1.hash_chain_root(), sim2.hash_chain_root());
     }
 
     /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
@@ -9827,6 +9885,33 @@ mod tests {
             let result = choose_named_seed(&seed_mix, Some(&dist), i, &mut rng);
             assert_eq!(result, NamedSeed::Velthari, "expected Velthari at index {i}");
         }
+    }
+
+    /// FR-CIV-014 / emergence-spawn — scenario-controlled faction spawning must
+    /// honor arbitrary faction counts and per-faction civilian counts.
+    #[test]
+    fn scenario_faction_spawn_honors_counts() {
+        use crate::scenario::ScenarioStartingConditions;
+        use civ_agents::{Alignment, Civilian};
+        use std::collections::BTreeMap;
+
+        let sc = ScenarioStartingConditions {
+            civilians_per_faction: 2,
+            faction_count: 5,
+            quadrant_spread: 1,
+            seed_mix: Vec::new(),
+        };
+        let sim = Simulation::with_seed_and_starting_conditions(123, sc);
+
+        let mut counts: BTreeMap<u32, u32> = BTreeMap::new();
+        for (_, civ) in sim.world.query::<&Civilian>().iter() {
+            if let Alignment::Faction(fid) = civ.alignment {
+                *counts.entry(fid).or_insert(0) += 1;
+            }
+        }
+
+        assert_eq!(counts.len(), 5, "expected five factions to be spawned");
+        assert!(counts.values().all(|&count| count == 2));
     }
 
     // ── LANGUAGE→DIPLOMACY coupling tests ─────────────────────────────────────

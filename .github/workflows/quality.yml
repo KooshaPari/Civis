@@ -46,3 +46,14 @@ jobs:
           (cd clients/godot-ref/rust && cargo test)
           (cd web && npm test)
           (cd web/dashboard && bun install --frozen-lockfile && bun run typecheck && bun run build)
+      - name: Run CA dirty-chunk benchmark
+        continue-on-error: true
+        run: cargo bench --bench ca_dirty_chunk
+      - name: Upload CA dirty-chunk criterion artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: criterion-ca-dirty-chunk
+          path: target/criterion
+          if-no-files-found: warn
+          retention-days: 30

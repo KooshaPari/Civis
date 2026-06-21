@@ -104,6 +104,6 @@ is mirrored in `E:/civis-wt-ca-dirty` for fast-iteration.
 
 | Story | Status |
 |-------|--------|
-| E7.1 Profile + per-phase breakdown | Planned |
-| E7.2 Batch scan + lazy percolation + fused fluid/thermo | Planned |
-| E7.3 Bench gate + determinism re-verification | Planned |
+| E7.1 Profile + per-phase breakdown | Partial |
+| E7.2 Batch scan + lazy percolation + fused fluid/thermo | Partial |
+| E7.3 Bench gate + determinism re-verification | Partial |

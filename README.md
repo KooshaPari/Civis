@@ -208,6 +208,9 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS
 | Preview docs | `cd docs && bun run docs:dev` |
 | Web dashboard (L2 authoring default) | `cargo run -p civ-server` + `cargo run -p civ-watch` (terrain) → `cd web/dashboard && npm run dev` → http://127.0.0.1:5173 — `?spectator=1` for read-only |
 | Web tests | `cd web && npm test` |
+| CA dirty-chunk benchmark | `just ca-bench` |
+| CA dirty-chunk flamegraph | `just ca-flamegraph` |
+| CA dirty-chunk perf sweep | `just ca-perf` |
 | Screenshot assets | [`docs/guides/screenshot-automation.md`](docs/guides/screenshot-automation.md) |
 
 All tests must reference a Functional Requirement (FR) per `FUNCTIONAL_REQUIREMENTS.md`.

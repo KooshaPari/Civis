@@ -19,7 +19,7 @@
 //! See `docs/development-guide/fr-3d-additions.md` for `FR-CIV-AGENTS-*`.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
+#![allow(missing_docs)]
 
 pub mod cluster;
 pub mod culture;

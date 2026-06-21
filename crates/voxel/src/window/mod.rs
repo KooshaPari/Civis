@@ -521,6 +521,40 @@ mod tests {
     }
 
     #[test]
+    fn chunk_seam_watertight() {
+        let policy = WindowPolicy {
+            fade_ticks: 2,
+            ..WindowPolicy::default()
+        };
+        let anchor = coord(0, 0, 0);
+
+        let seam_coords = [
+            coord(2, 0, 0),
+            coord(-2, 0, 0),
+            coord(0, 1, 0),  // ring 2 because vy_weight = 2
+            coord(0, -1, 0), // ring 2 because vy_weight = 2
+            coord(0, 0, 2),
+            coord(0, 0, -2),
+        ];
+
+        for seam in seam_coords {
+            assert_eq!(
+                policy.classify(seam, anchor),
+                ChunkState::Fading { ticks_remaining: 2 },
+                "{seam:?} should remain in the seam band"
+            );
+        }
+
+        for face in [coord(1, 0, 0), coord(0, 0, 1), coord(0, 0, -1)] {
+            assert_eq!(policy.classify(face, anchor), ChunkState::Meshed);
+        }
+
+        for outer in [coord(3, 0, 0), coord(0, 2, 0), coord(0, 0, 3)] {
+            assert_eq!(policy.classify(outer, anchor), ChunkState::Unloaded);
+        }
+    }
+
+    #[test]
     fn classify_invariant_under_anchor_translation() {
         // Classify is translation-invariant: shifting both coord and
         // anchor by the same vector gives the same state.

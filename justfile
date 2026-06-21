@@ -100,6 +100,7 @@ civis-3d-verify: civis-3d-catalog-check civis-3d-scenario-check civis-3d-web-che
     # cargo check avoids exe-lock issues on Windows (service binaries stay open).
     # Targeted tests are already run by sub-recipes above.
     cargo check --workspace
+    cargo bench --bench ca_dirty_chunk || true
     cargo clippy --workspace --all-targets -- -D warnings
     cargo fmt --check
 
@@ -285,6 +286,18 @@ deploy:
 # Criterion benchmarks.
 bench:
     cargo bench --workspace
+
+# CA dirty-chunk benchmark.
+ca-bench:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-dirty-chunk-bench.ps1
+
+# CA dirty-chunk profiling.
+ca-flamegraph:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-flamegraph.ps1
+
+# CA dirty-chunk perf sweep.
+ca-perf:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-perf.ps1
 
 # Rust gate without cargo-deny (when deny is not installed locally).
 rust-verify: lint test

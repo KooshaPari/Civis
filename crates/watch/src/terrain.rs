@@ -35,7 +35,6 @@ pub enum Biome {
 
 impl Biome {
     /// Convert this biome to an RGB triplet for the renderer.
-    #[allow(dead_code)]
     pub fn rgb(self) -> [u8; 3] {
         match self {
             Self::DeepWater => [16, 38, 90],

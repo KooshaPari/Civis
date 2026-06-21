@@ -1017,6 +1017,17 @@ mod tests {
         assert!(registry.by_name("LAVA").is_none());
     }
 
+    /// `WATER` is the shared source of truth for the standard registry id/name
+    /// pair used by the clients and worldgen.
+    #[test]
+    fn water_material_id_is_stable_and_named() {
+        let registry = MaterialRegistry::standard();
+        let water = registry.by_name("Water").expect("water");
+
+        assert_eq!(water.id, WATER);
+        assert_eq!(registry.get(WATER).map(|m| m.name), Some("Water"));
+    }
+
     /// `get` returns `None` for an id past the end of the registry table.
     #[test]
     fn get_is_none_for_out_of_range_id() {

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
 use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
-    chunk_fade_complete, chunk_raycast_stub, chunk_to_minimap_uv, focused_chunk_at_grid,
+    chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
@@ -21,8 +21,9 @@ use civ_bevy_ref::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
-        AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag,
-        LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
+        LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
+        StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
     minimap::MinimapRoot,
@@ -31,8 +32,17 @@ use civ_bevy_ref::{
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     ws_client::{WsClient, WsClientConfig},
+    post_fx::PostFxPlugin,
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 
@@ -116,9 +126,13 @@ struct MinimapPanel;
 #[derive(Component)]
 struct MinimapDots;
 
+#[derive(Component)]
+struct MinimapCameraDot;
+
 #[derive(Resource)]
 struct MinimapUi {
     dots: Entity,
+    camera_dot: Entity,
 }
 
 #[derive(Resource)]
@@ -142,15 +156,14 @@ struct MinimapCache {
     agent_count: usize,
     building_count: usize,
     graph_count: usize,
-    camera_chunk: Option<(i32, i32)>,
     bounds: Option<MinimapBounds>,
     focus: Option<LiveSceneFocus>,
     use_focus_bounds: bool,
 }
 
 fn main() {
-    App::new()
-        .add_plugins((
+    let mut app = App::new();
+    app.add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
@@ -161,6 +174,7 @@ fn main() {
                 })
                 .set(native_render_plugin()),
             WireframePlugin::default(),
+            PostFxPlugin,
             GpuFeaturesPlugin,
             LivePickPlugin,
         ))
@@ -179,6 +193,7 @@ fn main() {
                 viewport_chunk_raycast,
                 update_orbit_camera_transform,
                 apply_live_frames,
+                sync_agent_labels_from_civilians.after(apply_live_frames),
                 apply_spectator_meta,
                 sync_live_hud_stats,
                 sync_live_pick_detail,
@@ -190,8 +205,24 @@ fn main() {
                 update_minimap,
                 update_presentation_lighting,
             ),
-        )
-        .run();
+        );
+
+    #[cfg(feature = "egui")]
+    {
+        app.add_plugins(SettingsPlugin);
+    }
+
+    #[cfg(feature = "models")]
+    {
+        app.add_plugins((GltfModelsPlugin, ActorAnimationPlugin));
+    }
+
+    #[cfg(feature = "gi")]
+    {
+        app.add_plugins(SolariGiPlugin);
+    }
+
+    app.run();
 }
 
 fn apply_spectator_meta(
@@ -364,13 +395,50 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         ))
         .id();
     commands.entity(panel).add_child(dots);
-    commands.insert_resource(MinimapUi { dots });
+
+    let camera_dot = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Px(MINIMAP_DOT + 2.0),
+                height: Val::Px(MINIMAP_DOT + 2.0),
+                border_radius: BorderRadius::MAX,
+                ..default()
+            },
+            BackgroundColor(LIVE_MINIMAP_CAMERA_COLOR),
+            FocusPolicy::Pass,
+            MinimapCameraDot,
+        ))
+        .id();
+    commands.entity(panel).add_child(camera_dot);
+
+    commands.insert_resource(MinimapUi { dots, camera_dot });
     commands.insert_resource(MinimapCache::default());
 }
 
 fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRender>) {
     if keys.just_pressed(KeyCode::F3) {
         debug.toggle_wireframe();
+    }
+}
+
+fn action_pressed(
+    #[cfg(feature = "egui")] settings: Option<&GameSettings>,
+    action: &str,
+    default: KeyBinding,
+    keys: &ButtonInput<KeyCode>,
+    mouse_buttons: &ButtonInput<MouseButton>,
+) -> bool {
+    #[cfg(feature = "egui")]
+    {
+        settings
+            .and_then(|s| s.key_for(action))
+            .unwrap_or(default)
+            .is_pressed(keys, mouse_buttons)
+    }
+    #[cfg(not(feature = "egui"))]
+    {
+        default.is_pressed(keys, mouse_buttons)
     }
 }
 
@@ -477,6 +545,7 @@ fn apply_live_frames(
                 }
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
             }
+            Frame3d::Climate(_) => {}
         }
     }
 }
@@ -487,6 +556,8 @@ fn orbit_camera_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut motion_events: MessageReader<MouseMotion>,
     mut scroll_events: MessageReader<MouseWheel>,
+    #[cfg(feature = "egui")]
+    settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
 ) {
@@ -495,7 +566,16 @@ fn orbit_camera_input(
         .map(|interaction| *interaction != Interaction::None)
         .unwrap_or(false);
 
-    if mouse_buttons.pressed(MouseButton::Left) && !minimap_active {
+    let rotate_pressed = action_pressed(
+        #[cfg(feature = "egui")]
+        settings.as_deref(),
+        civ_bevy_ref::settings_ui::ACTION_CAMERA_ROTATE,
+        KeyBinding::Mouse(MouseButton::Left),
+        &keys,
+        &mouse_buttons,
+    );
+
+    if rotate_pressed && !minimap_active {
         for event in motion_events.read() {
             orbit.azimuth -= event.delta.x * ORBIT_DRAG_SENSITIVITY;
             orbit.elevation = (orbit.elevation - event.delta.y * ORBIT_DRAG_SENSITIVITY).clamp(
@@ -515,16 +595,54 @@ fn orbit_camera_input(
         orbit.adjust_distance(-scroll * ORBIT_SCROLL_SENSITIVITY);
     }
 
-    if keys.just_pressed(KeyCode::KeyR) {
+    let reset_pressed = {
+        #[cfg(feature = "egui")]
+        {
+            settings
+                .as_ref()
+                .and_then(|s| s.key_for(civ_bevy_ref::settings_ui::ACTION_CAMERA_RESET))
+                .unwrap_or(KeyBinding::Key(KeyCode::KeyR))
+                .is_just_pressed(&keys, &mouse_buttons)
+        }
+        #[cfg(not(feature = "egui"))]
+        {
+            keys.just_pressed(KeyCode::KeyR)
+        }
+    };
+    if reset_pressed {
         orbit.reset();
     }
 
-    let zoom_in = keys.just_pressed(KeyCode::Equal)
-        || keys.just_pressed(KeyCode::NumpadAdd)
-        || keys.just_pressed(KeyCode::BracketLeft);
-    let zoom_out = keys.just_pressed(KeyCode::Minus)
-        || keys.just_pressed(KeyCode::NumpadSubtract)
-        || keys.just_pressed(KeyCode::BracketRight);
+    let zoom_in = {
+        #[cfg(feature = "egui")]
+        {
+            settings
+                .as_ref()
+                .and_then(|s| s.key_for(civ_bevy_ref::settings_ui::ACTION_CAMERA_ZOOM_IN))
+                .unwrap_or(KeyBinding::Key(KeyCode::Equal))
+                .is_just_pressed(&keys, &mouse_buttons)
+        }
+        #[cfg(not(feature = "egui"))]
+        {
+            keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) || keys.just_pressed(KeyCode::BracketLeft)
+        }
+    };
+    let zoom_out = {
+        #[cfg(feature = "egui")]
+        {
+            settings
+                .as_ref()
+                .and_then(|s| s.key_for(civ_bevy_ref::settings_ui::ACTION_CAMERA_ZOOM_OUT))
+                .unwrap_or(KeyBinding::Key(KeyCode::Minus))
+                .is_just_pressed(&keys, &mouse_buttons)
+        }
+        #[cfg(not(feature = "egui"))]
+        {
+            keys.just_pressed(KeyCode::Minus)
+                || keys.just_pressed(KeyCode::NumpadSubtract)
+                || keys.just_pressed(KeyCode::BracketRight)
+        }
+    };
     if zoom_in {
         orbit.adjust_distance(-ORBIT_KEYBOARD_DISTANCE_STEP);
     }
@@ -535,16 +653,37 @@ fn orbit_camera_input(
     let pan = ORBIT_PAN_SPEED * time.delta_secs();
     let mut right = 0.0;
     let mut forward = 0.0;
-    if keys.pressed(KeyCode::KeyW) {
+    let pan_pressed = |action: &str, fallback: KeyCode| -> bool {
+        #[cfg(feature = "egui")]
+        {
+            settings
+                .as_ref()
+                .and_then(|s| s.key_for(action))
+                .unwrap_or(KeyBinding::Key(fallback))
+                .is_pressed(&keys, &mouse_buttons)
+        }
+        #[cfg(not(feature = "egui"))]
+        {
+            match fallback {
+                KeyCode::KeyW => keys.pressed(KeyCode::KeyW),
+                KeyCode::KeyS => keys.pressed(KeyCode::KeyS),
+                KeyCode::KeyA => keys.pressed(KeyCode::KeyA),
+                KeyCode::KeyD => keys.pressed(KeyCode::KeyD),
+                _ => false,
+            }
+        }
+    };
+
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_FORWARD, KeyCode::KeyW) {
         forward += pan;
     }
-    if keys.pressed(KeyCode::KeyS) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_BACKWARD, KeyCode::KeyS) {
         forward -= pan;
     }
-    if keys.pressed(KeyCode::KeyA) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_LEFT, KeyCode::KeyA) {
         right -= pan;
     }
-    if keys.pressed(KeyCode::KeyD) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_RIGHT, KeyCode::KeyD) {
         right += pan;
     }
     if right != 0.0 || forward != 0.0 {
@@ -606,28 +745,55 @@ fn update_minimap(
     hud: Res<HudState>,
     mut cache: ResMut<MinimapCache>,
     children: Query<&Children>,
+    mut camera_dot: Query<&mut Node, With<MinimapCameraDot>>,
     agents: Query<&Transform, With<LiveAgentTag>>,
+    agents_changed: Query<&Transform, (With<LiveAgentTag>, Changed<Transform>)>,
     buildings: Query<&Transform, With<LiveBuildingTag>>,
+    buildings_changed: Query<&Transform, (With<LiveBuildingTag>, Changed<Transform>)>,
     graph_parcels: Query<&Transform, With<LiveGraphParcelTag>>,
+    graph_parcels_changed: Query<&Transform, (With<LiveGraphParcelTag>, Changed<Transform>)>,
 ) {
     let mut keys: Vec<u64> = scene.chunks.keys().copied().collect();
     keys.sort_unstable();
     let agent_count = scene.agents.len();
     let building_count = scene.buildings.len();
     let graph_count = scene.graph_parcels.len();
-    let cam_cx = (orbit.centre[0] / LIVE_CHUNK_EDGE as f32).floor() as i32;
-    let cam_cz = (orbit.centre[2] / LIVE_CHUNK_EDGE as f32).floor() as i32;
-    let camera_chunk = Some((cam_cx, cam_cz));
+    let transforms_changed = !agents_changed.is_empty()
+        || !buildings_changed.is_empty()
+        || !graph_parcels_changed.is_empty();
     let use_focus_bounds = hud.snapshot.connected && live_stream_has_content(&scene);
     let focus_snapshot = use_focus_bounds.then_some(*focus);
+    let new_bounds = minimap_bounds_from_keys(&keys);
+
+    let camera_uv = if let Some(focus) = focus_snapshot {
+        Some(MinimapFocusRect {
+            centre_x: focus.centre.x,
+            centre_z: focus.centre.z,
+            half_extent: focus.half_extent,
+        })
+        .map(|focus_rect| focus_rect.world_to_uv(orbit.centre[0], orbit.centre[2]))
+    } else {
+        new_bounds.map(|bounds| world_minimap_uv(orbit.centre[0], orbit.centre[2], bounds))
+    };
+
+    if let Ok(mut node) = camera_dot.get_mut(minimap.camera_dot) {
+        if let Some(uv) = camera_uv {
+            let (left, top) = MINIMAP_HUD_LAYOUT.dot_origin(uv, MINIMAP_DOT + 2.0);
+            node.left = Val::Px(left);
+            node.top = Val::Px(top);
+            node.display = Display::Flex;
+        } else {
+            node.display = Display::None;
+        }
+    }
 
     if keys == cache.chunk_keys
         && agent_count == cache.agent_count
         && building_count == cache.building_count
         && graph_count == cache.graph_count
-        && camera_chunk == cache.camera_chunk
         && use_focus_bounds == cache.use_focus_bounds
         && focus_snapshot == cache.focus
+        && !transforms_changed
     {
         return;
     }
@@ -636,10 +802,9 @@ fn update_minimap(
     cache.agent_count = agent_count;
     cache.building_count = building_count;
     cache.graph_count = graph_count;
-    cache.camera_chunk = camera_chunk;
     cache.use_focus_bounds = use_focus_bounds;
     cache.focus = focus_snapshot;
-    cache.bounds = minimap_bounds_from_keys(&keys);
+    cache.bounds = new_bounds;
 
     for child in children
         .get(minimap.dots)
@@ -714,15 +879,6 @@ fn update_minimap(
                 );
             }
 
-            let cam_uv = focus_rect.world_to_uv(orbit.centre[0], orbit.centre[2]);
-            spawn_minimap_dot(
-                parent,
-                MINIMAP_HUD_LAYOUT,
-                cam_uv,
-                MINIMAP_DOT + 2.0,
-                LIVE_MINIMAP_CAMERA_COLOR,
-                false,
-            );
             return;
         }
 
@@ -783,27 +939,29 @@ fn update_minimap(
             );
         }
 
-        let cam_uv = world_minimap_uv(orbit.centre[0], orbit.centre[2], bounds);
-        spawn_minimap_dot(
-            parent,
-            MINIMAP_HUD_LAYOUT,
-            cam_uv,
-            MINIMAP_DOT + 2.0,
-            LIVE_MINIMAP_CAMERA_COLOR,
-            false,
-        );
     });
 }
 
 fn minimap_click_focus(
     mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    #[cfg(feature = "egui")]
+    settings: Option<Res<GameSettings>>,
     panels: Query<(&Interaction, &RelativeCursorPosition), With<MinimapPanel>>,
     cache: Res<MinimapCache>,
     scene: Res<LiveStreamScene>,
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
 ) {
-    if !mouse.just_pressed(MouseButton::Left) {
+    let select_pressed = action_pressed(
+        #[cfg(feature = "egui")]
+        settings.as_deref(),
+        civ_bevy_ref::settings_ui::ACTION_SELECT_OR_PICK,
+        KeyBinding::Mouse(MouseButton::Left),
+        &keys,
+        &mouse,
+    );
+    if !select_pressed {
         return;
     }
 
@@ -850,13 +1008,24 @@ fn minimap_click_focus(
 
 fn viewport_chunk_raycast(
     mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    #[cfg(feature = "egui")]
+    settings: Option<Res<GameSettings>>,
     windows: Query<&Window>,
     cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
-    orbit: Res<OrbitCamera>,
+    _orbit: Res<OrbitCamera>,
     mut hud: ResMut<HudState>,
 ) {
-    if !mouse.just_pressed(MouseButton::Left) {
+    let select_pressed = action_pressed(
+        #[cfg(feature = "egui")]
+        settings.as_deref(),
+        civ_bevy_ref::settings_ui::ACTION_SELECT_OR_PICK,
+        KeyBinding::Mouse(MouseButton::Left),
+        &keys,
+        &mouse,
+    );
+    if !select_pressed {
         return;
     }
 
@@ -883,7 +1052,7 @@ fn viewport_chunk_raycast(
 
     let origin = ray.origin.to_array();
     let direction = ray.direction.to_array();
-    if let Some(chunk) = chunk_raycast_stub(origin, direction, orbit.centre[1], VOXEL_CHUNK_EDGE) {
+    if let Some(chunk) = chunk_raycast_terrain(origin, direction, VOXEL_CHUNK_EDGE) {
         hud.snapshot.focused_chunk = Some(chunk);
     }
 }

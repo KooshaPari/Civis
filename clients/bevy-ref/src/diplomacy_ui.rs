@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
+use crate::settings_ui::{GameSettings, ACTION_TOGGLE_DIPLOMACY, KeyBinding};
 
 // ---------------------------------------------------------------------------
 // Palette (mirrors game_ui.rs)
@@ -230,8 +231,17 @@ impl Plugin for DiplomacyUiPlugin {
 // Systems
 // ---------------------------------------------------------------------------
 
-fn toggle_diplomacy_panel(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<DiplomacyState>) {
-    if keys.just_pressed(KeyCode::KeyG) {
+fn toggle_diplomacy_panel(
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    settings: Option<Res<GameSettings>>,
+    mut state: ResMut<DiplomacyState>,
+) {
+    let toggle_binding = settings
+        .as_ref()
+        .and_then(|s| s.key_for(ACTION_TOGGLE_DIPLOMACY))
+        .unwrap_or(KeyBinding::Key(KeyCode::KeyG));
+    if toggle_binding.is_just_pressed(&keys, &mouse_buttons) {
         state.open = !state.open;
     }
 }

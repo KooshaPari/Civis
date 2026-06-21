@@ -689,17 +689,6 @@ impl DiplomacyState {
         self.relations.get(&Pair::new(a, b))
     }
 
-    /// Mutable access to the relation between `a` and `b`. Used internally
-    /// by tests that want to inspect mutation order without going through
-    /// [`Self::ingest`]. Returns `None` for `a == b` and for untracked pairs.
-    #[allow(dead_code)]
-    pub(crate) fn get_mut(&mut self, a: PolityId, b: PolityId) -> Option<&mut Relation> {
-        if a == b {
-            return None;
-        }
-        self.relations.get_mut(&Pair::new(a, b))
-    }
-
     /// Drain all [`DiplomacyTickEvent`]s accumulated since the last drain.
     /// Call once per tick after [`Self::decay`] + [`Self::ingest`].
     pub fn drain_events(&mut self) -> Vec<DiplomacyTickEvent> {

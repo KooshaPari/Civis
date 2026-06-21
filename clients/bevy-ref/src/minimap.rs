@@ -4,12 +4,14 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use bevy::ui::widget::ImageNode;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
-use civ_agents::Civilian as AgentCivilian;
+use civ_agents::{Civilian as AgentCivilian, Alignment};
 use civ_engine::Building;
 
 use crate::camera::CameraRig;
+use crate::settings_ui::GameSettings;
 use crate::sim_bridge::SimState;
 use crate::terrain::WORLD_SIZE;
+use crate::spawn_tools::select_action_binding;
 use crate::AttachMode;
 
 /// Minimap side length in UI pixels.
@@ -136,8 +138,15 @@ fn minimap_uv_to_world(uv: Vec2) -> Vec3 {
     Vec3::new(x, 0.0, z)
 }
 
+fn civilian_faction_id(civilian: &AgentCivilian) -> Option<u32> {
+    match civilian.alignment {
+        Alignment::Faction(faction) => Some(faction),
+        _ => None,
+    }
+}
+
 fn civilian_color(civilian: &AgentCivilian) -> Color {
-    let hue = (civilian.faction as f32 * 85.0) % 360.0;
+    let hue = civilian_faction_id(civilian).unwrap_or(0) as f32 * 85.0 % 360.0;
     Color::hsla(hue, 0.75, 0.58, 1.0)
 }
 
@@ -146,15 +155,21 @@ fn world_position_for_civilian(
     position: &civ_agents::Position3d,
 ) -> Vec3 {
     let scale = civ_voxel::FIXED_SCALE as f32;
+    let half = MINIMAP_WORLD_MAX * 0.5;
     Vec3::new(
-        position.coord.x as f32 / scale,
+        position.coord.x as f32 / scale * MINIMAP_WORLD_MAX - half,
         0.0,
-        position.coord.z as f32 / scale,
+        position.coord.z as f32 / scale * MINIMAP_WORLD_MAX - half,
     )
 }
 
 fn world_position_for_building(building: &Building) -> Vec3 {
-    Vec3::new(building.position.x as f32, 0.0, building.position.y as f32)
+    let half = MINIMAP_WORLD_MAX * 0.5;
+    Vec3::new(
+        ((building.position.x as f32 + 64.0) / 127.0).clamp(0.0, 1.0) * MINIMAP_WORLD_MAX - half,
+        0.0,
+        ((building.position.y as f32 + 64.0) / 127.0).clamp(0.0, 1.0) * MINIMAP_WORLD_MAX - half,
+    )
 }
 
 fn sync_minimap_dots(
@@ -225,10 +240,14 @@ fn sync_minimap_dots(
 
 fn teleport_camera_from_minimap(
     mouse: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    settings: Option<Res<GameSettings>>,
     panel: Query<&RelativeCursorPosition, With<MinimapRoot>>,
     mut rig: ResMut<CameraRig>,
 ) {
-    if !mouse.just_pressed(MouseButton::Left) {
+    let select_pressed = select_action_binding(settings.as_deref()).is_just_pressed(&keys, &mouse);
+
+    if !select_pressed {
         return;
     }
 

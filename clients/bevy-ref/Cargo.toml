@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 civ-agents = { path = "../../crates/agents" }
+civ-laws = { path = "../../crates/laws", optional = true }
 civ-engine = { path = "../../crates/engine", optional = true }
 # Diplomacy substrate (PR #362 — P4 civ-007 slice): pairwise Relation graph +
 # scalar standing + threshold-crossing events. Pulled in for the Standings
@@ -93,6 +94,7 @@ bevy = [
     "dep:civ-protocol-3d",
     "dep:civ-engine",
     "dep:civ-diplomacy",
+    "dep:civ-laws",
     "dep:rand",
     "dep:rand_chacha",
     "dep:image",

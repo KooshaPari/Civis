@@ -17,7 +17,7 @@ use civ_agents::{
 use civ_genetics::{
     example_seed_set,
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome, spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
+    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
     SeedSet,
 };
 use civ_legends::{
@@ -1205,6 +1205,66 @@ mod tests {
             Some("human_baseline"),
             "equatorial Forest position should pick human_baseline, not raw_organism"
         );
+    }
+
+    /// FR-CIV-014 / map-seed determinism — seed selection must ignore
+    /// insertion order when multiple biome-matching seeds exist.
+    #[test]
+    fn seed_selection_is_deterministic_across_library_ordering() {
+        use civ_agents::Position3d;
+        use civ_genetics::{SeedDefinition, SeedLibrary, SeedSet};
+        use civ_planet::{defaults_earthlike, GeologyMap};
+        use civ_voxel::{WorldCoord, FIXED_SCALE};
+
+        let (mut planet_cfg, _) = defaults_earthlike();
+        planet_cfg.axial_tilt_deg = 40;
+        let geology_map = GeologyMap::seed(&planet_cfg);
+
+        let pos = Position3d {
+            coord: WorldCoord {
+                x: (0.5 * FIXED_SCALE as f32) as i64,
+                y: 0,
+                z: (0.5 * FIXED_SCALE as f32) as i64,
+            },
+        };
+
+        let alpha = SeedDefinition {
+            id: "alpha_seed".to_string(),
+            display_name: "Alpha Seed".to_string(),
+            dna_length: 64,
+            genome: vec![1; 64],
+            divergence: 0.2,
+            spawn_biome_affinity: vec!["TemperateForest".to_string()],
+            notes: None,
+        };
+        let beta = SeedDefinition {
+            id: "beta_seed".to_string(),
+            display_name: "Beta Seed".to_string(),
+            dna_length: 64,
+            genome: vec![2; 64],
+            divergence: 0.2,
+            spawn_biome_affinity: vec!["TemperateForest".to_string()],
+            notes: None,
+        };
+
+        let lib_a = SeedLibrary::from_seed_set(SeedSet {
+            version: 1,
+            seeds: vec![beta.clone(), alpha.clone()],
+        })
+        .expect("valid seed set");
+        let lib_b = SeedLibrary::from_seed_set(SeedSet {
+            version: 1,
+            seeds: vec![alpha.clone(), beta.clone()],
+        })
+        .expect("valid seed set");
+
+        let chosen_a = select_seed_for_position(&lib_a, Some(&alpha), &geology_map, &pos)
+            .map(|seed| seed.id.as_str());
+        let chosen_b = select_seed_for_position(&lib_b, Some(&alpha), &geology_map, &pos)
+            .map(|seed| seed.id.as_str());
+
+        assert_eq!(chosen_a, Some("alpha_seed"));
+        assert_eq!(chosen_b, Some("alpha_seed"));
     }
 
     /// `civ_ai_decisions` surfaces naming decisions after sentience crossings.

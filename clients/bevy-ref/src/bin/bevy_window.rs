@@ -1,4 +1,4 @@
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -49,6 +49,8 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
+use bevy_egui::{egui, EguiContexts};
+use civ_bevy_ref::ui_theme::{ACCENT, DIM};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -223,6 +225,8 @@ struct ScenarioStartButton;
 
 #[derive(Component)]
 struct ScenarioStartButton;
+#[derive(Resource, Default)]
+struct ControlsHelpOpen(bool);
 
 fn main() {
     let mut app = App::new();
@@ -251,6 +255,7 @@ fn main() {
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .init_resource::<ScenarioPanel>()
+        .init_resource::<ControlsHelpOpen>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -267,6 +272,8 @@ fn main() {
             (
                 speed_control_input,
                 debug_render_input,
+                toggle_controls_help,
+                draw_controls_help,
                 orbit_camera_input,
                 minimap_click_focus,
                 viewport_chunk_raycast,
@@ -612,6 +619,19 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
     commands.insert_resource(MinimapUi { dots, camera_dot });
     commands.insert_resource(MinimapCache::default());
+
+    // Passive ? hint label (bottom-right corner).
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(8.0),
+            right: Val::Px(8.0),
+            ..default()
+        },
+        Text::new("? Controls"),
+        TextFont { font_size: 12.0, ..default() },
+        TextColor(Color::srgba(0.5, 0.5, 0.5, 0.6)),
+    ));
 }
 
 fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRender>) {
@@ -1307,4 +1327,52 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
+}
+
+fn toggle_controls_help(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut open: ResMut<ControlsHelpOpen>,
+) {
+    if keys.just_pressed(KeyCode::Slash) {
+        open.0 = !open.0;
+    }
+}
+
+fn draw_controls_help(
+    mut contexts: EguiContexts,
+    open: Res<ControlsHelpOpen>,
+) {
+    if !open.0 {
+        return;
+    }
+    egui::Window::new("Controls")
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-8.0, -8.0))
+        .collapsible(false)
+        .resizable(false)
+        .show(contexts.ctx_mut(), |ui| {
+            let rows: &[(&str, &str)] = &[
+                ("WASD / Arrows", "orbit camera"),
+                ("Scroll", "zoom"),
+                ("R", "reset camera"),
+                ("Space", "pause / resume"),
+                (", / .", "speed down / up"),
+                ("F", "faction HUD"),
+                ("L", "event log"),
+                ("T", "tech tree"),
+                ("E", "emergence dashboard"),
+                ("G", "diplomacy"),
+                ("F5", "save / load"),
+                ("?", "this panel"),
+            ];
+            egui::Grid::new("controls_grid")
+                .num_columns(2)
+                .spacing([12.0, 4.0])
+                .show(ui, |ui| {
+                    for (key, desc) in rows {
+                        ui.label(egui::RichText::new(*key).monospace().color(ACCENT));
+                        ui.label(egui::RichText::new(*desc).color(DIM));
+                        ui.end_row();
+                    }
+                });
+        });
 }

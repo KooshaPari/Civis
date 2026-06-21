@@ -16,13 +16,13 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use crate::settings_ui::{GameSettings, ACTION_TOGGLE_TECH_TREE, KeyBinding};
+use crate::ui_theme::CHIP_FILL;
 
 // ---------------------------------------------------------------------------
 // Palette (mirrors game_ui.rs / event_feed.rs dark-glassmorphism constants)
 // ---------------------------------------------------------------------------
 
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 240);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const LOCKED_DIM: egui::Color32 = egui::Color32::from_rgb(120, 128, 148);
 const TEXT_MAIN: egui::Color32 = egui::Color32::from_rgb(220, 225, 235);

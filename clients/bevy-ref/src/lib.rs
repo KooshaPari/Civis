@@ -84,7 +84,6 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-pub mod civ_history;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -272,6 +271,7 @@ pub struct EmergenceHudData {
     pub branching_regime: String,
 }
 
+<<<<<<< HEAD
 
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default)]
@@ -281,6 +281,8 @@ pub struct OutcomeHudData {
     pub reason: String,
     pub tick: u64,
 }
+=======
+>>>>>>> 8280c7f8 (feat(client): minimap right-click inspect popup + emergence HUD panel (10s poll))
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -317,13 +319,19 @@ pub struct LiveHudSnapshot {
     pub last_event: Option<String>,
     /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
     pub pick_detail: Option<String>,
+<<<<<<< HEAD
     /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
+=======
+>>>>>>> 8280c7f8 (feat(client): minimap right-click inspect popup + emergence HUD panel (10s poll))
     /// Cached emergence metrics from sim.emergence poll (entropy_norm, power_law_alpha, novelty_rate, mi).
     pub emergence: Option<EmergenceHudData>,
     /// Current simulation speed multiplier (0 = paused).
     pub speed_multiplier: u32,
+<<<<<<< HEAD
     /// Server-reported last tick wall-clock duration from sim.perf (FR-CIV-PERF-001).
     pub tick_ms: f64,
+=======
+>>>>>>> 8280c7f8 (feat(client): minimap right-click inspect popup + emergence HUD panel (10s poll))
 }
 
 impl LiveHudSnapshot {

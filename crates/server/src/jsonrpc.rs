@@ -75,6 +75,10 @@ pub enum JsonRpcMethod {
     SimInspectTile,
     /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
     SimDiplomacyAction,
+    /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
+    SimQueueResearch,
+    /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
+    SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
@@ -107,6 +111,8 @@ impl JsonRpcMethod {
             Self::SimEmergence => "sim.emergence",
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimDiplomacyAction => "sim.diplomacy_action",
+            Self::SimQueueResearch => "sim.queue_research",
+            Self::SimTechState => "sim.tech_state",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -136,6 +142,8 @@ impl JsonRpcMethod {
             "sim.emergence" => Some(Self::SimEmergence),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
+            "sim.queue_research" => Some(Self::SimQueueResearch),
+            "sim.tech_state" => Some(Self::SimTechState),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -1464,6 +1472,59 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
+        JsonRpcMethod::SimQueueResearch => {
+            const KNOWN_TECHS: &[&str] = &[
+                "pottery", "masonry", "writing", "iron_working", "currency",
+                "mathematics", "gunpowder", "printing", "banking",
+                "steam_power", "electricity", "railroad",
+            ];
+            let tech = req.params.as_ref()
+                .and_then(|p| p.get("tech"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if tech.is_empty() {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: "Missing or empty \"tech\" parameter".to_owned(),
+                        data: None,
+                    }),
+                    effect: DispatchEffect::None,
+                }
+            } else if !KNOWN_TECHS.contains(&tech) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: format!("Unknown tech \"{tech}\"; valid: {}", KNOWN_TECHS.join(", ")),
+                        data: None,
+                    }),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, serde_json::json!({
+                        "queued": tech,
+                        "tick": ctx.tick,
+                        "stub": true,
+                    })),
+                    effect: DispatchEffect::None,
+                }
+            }
+        }
+        JsonRpcMethod::SimTechState => {
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, serde_json::json!({
+                    "available": ["pottery", "masonry", "writing", "iron_working",
+                                  "currency", "mathematics", "gunpowder", "printing",
+                                  "banking", "steam_power", "electricity", "railroad"],
+                    "researched": [],
+                    "in_progress": null,
+                    "tick": ctx.tick,
+                    "stub": true,
+                })),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
@@ -3261,5 +3322,84 @@ mod tests {
         assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
         let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
         assert!((mi - 0.42).abs() < 1e-5);
+    }
+    /// FR-CIV-SERVER-003 — sim.queue_research with a valid tech accepts the request.
+    #[test]
+    fn dispatch_queue_research_valid_tech_accepted() {
+        use serde_json::json;
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.queue_research","params":{"tech":"pottery"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 10,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+            },
+        );
+        assert!(plan.response.result.is_some(), "expected success result");
+        let result = plan.response.result.unwrap();
+        assert_eq!(result.get("queued").and_then(|v| v.as_str()), Some("pottery"));
+    }
+
+    /// FR-CIV-SERVER-003 — sim.queue_research with an unknown tech returns INVALID_PARAMS.
+    #[test]
+    fn dispatch_queue_research_unknown_tech_rejected() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"sim.queue_research","params":{"tech":"unobtainium"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 0,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+            },
+        );
+        assert!(plan.response.result.is_none(), "expected error, not success");
+        assert!(plan.response.error.is_some(), "expected error body");
+        let err = plan.response.error.unwrap();
+        assert_eq!(err.code, error_code::INVALID_PARAMS);
+        assert!(err.message.contains("unobtainium") || err.message.contains("Unknown tech"));
+    }
+
+    /// FR-CIV-SERVER-003 — sim.tech_state returns available list and stub flag.
+    #[test]
+    fn dispatch_tech_state_returns_available_list() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state","params":{}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 42,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+            },
+        );
+        assert!(plan.response.result.is_some(), "expected success");
+        let result = plan.response.result.unwrap();
+        let available = result.get("available").expect("available field");
+        assert!(available.is_array(), "available should be an array");
+        assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
     }
 }

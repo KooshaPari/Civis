@@ -1,4 +1,4 @@
-//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -2106,6 +2106,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2178,6 +2180,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         let result = plan.response.result.expect("result");

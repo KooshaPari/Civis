@@ -1302,7 +1302,7 @@ mod tests {
     ) -> AppState {
         let saves_dir = PathBuf::from("test-saves");
         let save_db = Arc::new(SaveDb::open_in_memory().expect("open save db"));
-        let state = AppState {
+        AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
@@ -1315,9 +1315,7 @@ mod tests {
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir,
             save_db,
-            session_id: "test-session".to_string(),
-        };
-        state
+            session_id: "test-session".to_string(),`r`n        }
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {

@@ -1,4 +1,4 @@
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -22,7 +22,7 @@ use civ_bevy_ref::{
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
         sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
@@ -34,6 +34,7 @@ use civ_bevy_ref::{
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
+    event_feed::{EventFeed, EventFeedPlugin},
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
     VOXEL_CHUNK_EDGE,
@@ -242,6 +243,8 @@ fn main() {
             FactionHudPlugin,
             SaveLoadUiPlugin,
             GodPanelPlugin,
+            EguiPlugin::default(),
+            EventFeedPlugin,
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
@@ -703,6 +706,7 @@ fn apply_live_frames(
     assets: Res<LiveStreamMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut feed: ResMut<EventFeed>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -756,6 +760,7 @@ fn apply_live_frames(
                     );
                 }
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
+                apply_event_feed_frame(&mut feed, event_frame.clone());
             }
             Frame3d::Climate(_) => {}
         }

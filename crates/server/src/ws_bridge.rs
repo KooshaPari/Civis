@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     net::SocketAddr,
     path::PathBuf,
     sync::{
@@ -467,6 +467,27 @@ async fn handle_jsonrpc_text(
                 })
             } else {
                 None
+            let diplomacy_snapshot = if req.method == JsonRpcMethod::SimDiplomacyState {
+                let sim = state.sim.lock().await;
+                sim.diplomacy_events()
+                    .iter()
+                    .map(|e| {
+                        let status = match e.kind {
+                            civ_engine::DiplomacyKind::Peace => "Peace",
+                            civ_engine::DiplomacyKind::Conflict => "War",
+                            civ_engine::DiplomacyKind::TradeAgreement => "Trade",
+                        };
+                        serde_json::json!({
+                            "tick": e.tick,
+                            "faction_a": e.faction_a,
+                            "faction_b": e.faction_b,
+                            "status": status,
+                            "treaty_active": e.kind == civ_engine::DiplomacyKind::Peace,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                vec![]
             };
             let mut plan = dispatch_request(
                 req,
@@ -483,6 +504,7 @@ async fn handle_jsonrpc_text(
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
+                    diplomacy_snapshot,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

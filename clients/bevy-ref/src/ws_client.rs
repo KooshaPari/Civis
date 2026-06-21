@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,
@@ -7,8 +7,8 @@ use std::{
 use civ_protocol_3d::Frame3d;
 
 use crate::{
-    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsConnectionState,
-    WsSpectatorMeta,
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData, OutcomeHudData,
+    WsConnectionState, WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
 use serde_json;
@@ -34,6 +34,11 @@ pub struct WsClient {
     state_rx: Receiver<WsConnectionState>,
     latest_state: AtomicU32,
     cmd_tx: Sender<String>,
+    /// Channel for outbound JSON-RPC text frames (fire-and-forget).
+    send_tx: Sender<String>,
+    /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
+    emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
+    outcome_rx: crossbeam_channel::Receiver<OutcomeHudData>,
 }
 
 impl WsClient {
@@ -50,6 +55,10 @@ impl WsClient {
         thread::spawn(move || {
             run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, cmd_rx);
         });
+        let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
+        let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
+        let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx, outcome_tx));
         Self {
             frame_rx,
             meta_rx,
@@ -60,11 +69,32 @@ impl WsClient {
         }
     }
 
+            send_tx,
+            emergence_rx,
+            outcome_rx,
+    /// Enqueue an outbound JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
+    pub fn send_rpc(&self, json: String) {
+        let _ = self.send_tx.send(json);
+    /// Drain any parsed `sim.emergence` responses (id=2) from the background thread.
+    #[must_use]
+    pub fn poll_emergence(&self) -> Vec<EmergenceHudData> {
+        let mut out = Vec::new();
+        while let Ok(em) = self.emergence_rx.try_recv() {
+            out.push(em);
+        out
+    /// Drain all currently available frames without blocking the main thread.
     #[must_use]
     pub fn poll(&self) -> Vec<Frame3d> {
         let mut frames = Vec::new();
         while let Ok(frame) = self.frame_rx.try_recv() { frames.push(frame); }
         frames
+    }
+
+    #[must_use]
+    pub fn poll_outcome(&self) -> Option<OutcomeHudData> {
+        let mut latest = None;
+        while let Ok(o) = self.outcome_rx.try_recv() { latest = Some(o); }
+        latest
     }
 
     #[must_use]
@@ -111,6 +141,8 @@ impl WsClient {
     }
 }
 
+const OUTCOME_RPC: &str = "{"jsonrpc":"2.0","id":9003,"method":"sim.outcome","params":{}}";
+const OUTCOME_POLL_SECS: u64 = 30;
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
 const SNAPSHOT_POLL_SECS: u64 = 2;
 
@@ -158,6 +190,9 @@ fn run_client(
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
     cmd_rx: Receiver<String>,
+    send_rx: crossbeam_channel::Receiver<String>,
+    emergence_tx: Sender<EmergenceHudData>,
+    outcome_tx: Sender<OutcomeHudData>,
 ) {
     let runtime = Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
     runtime.block_on(async move {
@@ -167,6 +202,10 @@ fn run_client(
             publish_state(&state_tx, WsConnectionState::Reconnecting);
             match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &cmd_rx).await {
                 Ok(()) => { backoff.reset(); }
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx, &outcome_tx).await {
+                Ok(()) => {
+                    backoff.reset();
+                }
                 Err(err) => {
                     eprintln!("bevy ws client disconnected: {err}");
                     thread::sleep(backoff.next_delay());
@@ -193,6 +232,32 @@ fn record_snapshot_rtt(snapshot_ping: &mut Option<std::time::Instant>, rtt_tx: &
     }
 }
 
+/// Parse a sim.emergence (id=2) JSON-RPC response into `EmergenceHudData`.
+fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    if v.get("id").and_then(|i| i.as_i64()) != Some(2) {
+        return None;
+    }
+    let result = v.get("result")?;
+    Some(EmergenceHudData {
+        entropy_norm: result.get("entropy_norm").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+        power_law_alpha: result.get("power_law_alpha").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+        novelty_rate: result.get("novelty_rate").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+        mi_material_faction_norm: result.get("mi_material_faction_norm").and_then(|v| v.as_f64()).map(|f| f as f32),
+    })
+}
+
+fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    if v.get("id").and_then(|i| i.as_i64()) != Some(9003) { return None; }
+    let result = v.get("result")?;
+    Some(OutcomeHudData {
+        tag: result.get("outcome").and_then(|v| v.as_str()).unwrap_or("ongoing").to_owned(),
+        reason: result.get("reason").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
+        tick: result.get("tick").and_then(|v| v.as_u64()).unwrap_or(0),
+    })
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -201,6 +266,9 @@ async fn connect_and_stream(
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
     cmd_rx: &Receiver<String>,
+    send_rx: &crossbeam_channel::Receiver<String>,
+    emergence_tx: &Sender<EmergenceHudData>,
+    outcome_tx: &Sender<OutcomeHudData>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url).await.map_err(|e| e.to_string())?;
     publish_state(state_tx, WsConnectionState::Connected);
@@ -209,13 +277,25 @@ async fn connect_and_stream(
     let mut snapshot_ping = None;
     request_snapshot(&mut write, &mut snapshot_ping).await?;
     let mut last_snapshot = std::time::Instant::now();
+    let mut last_outcome = std::time::Instant::now();
 
     loop {
         // Flush outbound commands (speed/pause RPCs) before blocking on next inbound frame.
         while let Ok(cmd) = cmd_rx.try_recv() {
             write.send(Message::Text(cmd.into())).await.map_err(|e| e.to_string())?;
+    while let Some(msg) = read.next().await {
+        // Drain any outbound RPC frames queued by Bevy systems.
+        while let Ok(json) = send_rx.try_recv() {
+            write
+                .send(Message::Text(json.into()))
+                .await
+                .map_err(|e| e.to_string())?;
         }
 
+        if last_outcome.elapsed() >= Duration::from_secs(OUTCOME_POLL_SECS) {
+            write.send(Message::Text(OUTCOME_RPC.into())).await.map_err(|e| e.to_string())?;
+            last_outcome = std::time::Instant::now();
+        }
         if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
             request_snapshot(&mut write, &mut snapshot_ping).await?;
             last_snapshot = std::time::Instant::now();
@@ -231,6 +311,20 @@ async fn connect_and_stream(
                 if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
                     record_snapshot_rtt(&mut snapshot_ping, rtt_tx);
                     if meta_tx.send(meta).is_err() { return Err("bevy meta receiver dropped".into()); }
+                    if meta_tx.send(meta).is_err() {
+                        return Err("bevy meta receiver dropped".into());
+                    }
+                    continue;
+                }
+                if let Some(em) = parse_emergence_response(&text) {
+                    let _ = emergence_tx.send(em);
+                    continue;
+                }
+                if let Some(oc) = parse_outcome_response(&text) {
+                    let _ = outcome_tx.send(oc);
+                    continue;
+                }
+                if config.prefer_binary {
                     continue;
                 }
                 if config.prefer_binary { continue; }

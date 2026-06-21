@@ -1690,6 +1690,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1725,6 +1727,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -1760,6 +1764,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -1784,6 +1790,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1809,6 +1817,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1835,6 +1845,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1861,6 +1873,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1883,6 +1897,8 @@ mod tests {
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1989,6 +2005,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2013,6 +2031,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -2179,6 +2199,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2293,6 +2315,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -2329,6 +2353,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert!(matches!(
@@ -2376,6 +2402,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert!(matches!(
@@ -2449,6 +2477,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2520,6 +2550,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2596,6 +2628,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2637,6 +2671,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2671,6 +2707,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2703,6 +2741,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2728,6 +2768,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2795,6 +2837,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2860,6 +2904,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -2886,6 +2932,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2917,6 +2965,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2949,6 +2999,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2979,6 +3031,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);

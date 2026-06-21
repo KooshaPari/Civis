@@ -105,7 +105,7 @@ impl WsClient {
     }
 
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
-    /// without holding a reference to the full `WsClient.
+    /// without holding a reference to the full `WsClient`.
     #[must_use]
     pub fn rpc_sender(&self) -> crossbeam_channel::Sender<String> {
         self.send_tx.clone()

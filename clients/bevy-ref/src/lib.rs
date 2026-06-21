@@ -1,4 +1,4 @@
-﻿//! civ-bevy-ref library surface.
+//! civ-bevy-ref library surface.
 //!
 //! Splits cleanly into two parts:
 //!
@@ -29,6 +29,7 @@ pub mod faction_hud;
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
+pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
@@ -259,6 +260,10 @@ pub struct EmergenceHudData {
     pub novelty_rate: f32,
     /// Normalised mutual information between material and faction distributions.
     pub mi_material_faction_norm: Option<f32>,
+    /// 6-connectivity component count from the sampled chunk (None = not yet sampled).
+    pub structure_count: Option<u32>,
+    /// Charter criticality regime label: "SUBCRITICAL" | "CRITICAL" | "SUPERCRITICAL".
+    pub branching_regime: String,
 }
 
 

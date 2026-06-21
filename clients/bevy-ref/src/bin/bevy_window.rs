@@ -35,6 +35,7 @@ use civ_bevy_ref::{
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
+    emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
     VOXEL_CHUNK_EDGE,
@@ -49,6 +50,7 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
+use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -245,6 +247,7 @@ fn main() {
             GodPanelPlugin,
             EguiPlugin::default(),
             EventFeedPlugin,
+            EmergenceDashboardPlugin,
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
@@ -252,6 +255,8 @@ fn main() {
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .init_resource::<ScenarioPanel>()
+        .init_resource::<EmergencePollTimer>()
+        .init_resource::<EmergenceHudData>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -528,9 +533,9 @@ fn update_presentation_lighting(
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
-    commands.insert_resource(LiveBridge {
-        client: WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default()),
-    });
+    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
+    commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
+    commands.insert_resource(LiveBridge { client: ws_client });
 
     let text = commands
         .spawn((
@@ -1300,4 +1305,69 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
+}
+
+fn minimap_popup_ui(
+    mut contexts: EguiContexts,
+    mut popup: ResMut<MinimapPopup>,
+    bridge: Res<LiveBridge>,
+    mut orbit: ResMut<OrbitCamera>,
+    mut hud: ResMut<HudState>,
+    scene: Res<LiveStreamScene>,
+) {
+    let Some((tx, ty)) = popup.pending else {
+        return;
+    };
+    egui::Window::new("Tile Actions")
+        .collapsible(false)
+        .resizable(false)
+        .show(contexts.ctx_mut(), |ui| {
+            ui.label(format!("Tile ({tx}, {ty})"));
+            if ui.button("Inspect tile").clicked() {
+                let json = format!(
+                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
+                );
+                bridge.client.send_rpc(json);
+                popup.pending = None;
+            }
+            if ui.button("Center camera").clicked() {
+                orbit.centre[0] = tx as f32;
+                orbit.centre[2] = ty as f32;
+                let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+                let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
+                hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(
+                    tx / LIVE_CHUNK_EDGE as i32,
+                    ty / LIVE_CHUNK_EDGE as i32,
+                    preferred_cy,
+                    &loaded,
+                ));
+                popup.pending = None;
+            }
+            if ui.button("Cancel").clicked() {
+                popup.pending = None;
+            }
+        });
+}
+
+fn poll_emergence(
+    time: Res<Time>,
+    bridge: Res<LiveBridge>,
+    mut timer: ResMut<EmergencePollTimer>,
+    mut hud: ResMut<HudState>,
+    speed: Res<SimSpeedState>,
+    mut emergence_res: ResMut<EmergenceHudData>,
+) {
+    hud.snapshot.speed_multiplier = speed.multiplier;
+    // Apply any parsed emergence responses received from the server.
+    for em in bridge.client.poll_emergence() {
+        hud.snapshot.emergence = Some(em.clone());
+        *emergence_res = em;
+    }
+    timer.0 += time.delta_secs();
+    if timer.0 < 10.0 {
+        return;
+    }
+    timer.0 = 0.0;
+    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    bridge.client.send_rpc(json);
 }

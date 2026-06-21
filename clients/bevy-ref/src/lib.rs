@@ -262,6 +262,8 @@ pub struct LiveHudSnapshot {
     pub last_event: Option<String>,
     /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
     pub pick_detail: Option<String>,
+    /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
+    pub speed_multiplier: u32,
 }
 
 impl LiveHudSnapshot {
@@ -307,6 +309,10 @@ impl LiveHudSnapshot {
         );
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
+        }
+        {
+            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
+            line.push_str(&format!(" | spd:{spd}"));
         }
         if let Some(chunk) = self.focused_chunk {
             line.push_str(&format!(" | chunk: {}", chunk.0));

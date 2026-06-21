@@ -439,6 +439,36 @@ fn debug_render_input(keys: Res<ButtonInput<KeyCode>>, mut debug: ResMut<DebugRe
     }
 }
 
+fn speed_control_input(
+    keys: Res<ButtonInput<KeyCode>>,
+    bridge: Res<LiveBridge>,
+    mut speed: ResMut<SimSpeedState>,
+    mut hud: ResMut<HudState>,
+) {
+    let toggle_pause = keys.just_pressed(KeyCode::Space);
+    let speed_up = keys.just_pressed(KeyCode::Period);
+    let speed_down = keys.just_pressed(KeyCode::Comma);
+
+    if !toggle_pause && !speed_up && !speed_down {
+        return;
+    }
+
+    if toggle_pause {
+        speed.paused = !speed.paused;
+    } else if speed_up {
+        speed.speed_idx = (speed.speed_idx + 1).min(SPEED_OPTIONS.len() - 1);
+        speed.paused = false;
+    } else {
+        speed.speed_idx = speed.speed_idx.saturating_sub(1);
+        speed.paused = false;
+    }
+
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
+    let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
+    bridge.client.send_rpc(json);
+    hud.snapshot.speed_multiplier = speed.multiplier;
+}
+
 fn sync_chunk_debug_render(
     debug: Res<DebugRender>,
     mut commands: Commands,
@@ -633,6 +663,7 @@ fn update_orbit_camera_transform(
 fn update_hud(
     time: Res<Time>,
     selection: Res<LiveSelection>,
+    speed: Res<SimSpeedState>,
     mut hud: ResMut<HudState>,
     mut text: Query<&mut Text, With<HudText>>,
 ) {
@@ -643,6 +674,7 @@ fn update_hud(
         hud.snapshot.fps * 0.9 + fps * 0.1
     };
     hud.snapshot.selected_live = selection.0;
+    hud.snapshot.speed_multiplier = speed.multiplier;
 
     let Ok(mut text) = text.get_mut(hud.text) else {
         return;

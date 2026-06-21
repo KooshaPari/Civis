@@ -1367,14 +1367,23 @@ mod tests {
         let budget = ExtentBudget::Bounded { side_chunks: 100 };
         assert_eq!(budget.validate(coord(0, 0, 0)), Ok(()));
         assert_eq!(budget.validate(coord(49, -49, 0)), Ok(()));
-        assert_eq!(ExtentBudget::Unbounded.validate(coord(i32::MAX, i32::MIN, 0)), Ok(()));
+        assert_eq!(
+            ExtentBudget::Unbounded.validate(coord(i32::MAX, i32::MIN, 0)),
+            Ok(())
+        );
     }
 
     #[test]
     fn extent_budget_validate_invalid_min_ge_max_fails() {
         let budget = ExtentBudget::Bounded { side_chunks: 100 };
-        assert!(matches!(budget.validate(coord(50, 0, 0)), Err(ExtentError::OutOfExtent { .. })));
-        assert_eq!(ExtentBudget::Bounded { side_chunks: 0 }.validate(coord(0, 0, 0)), Err(ExtentError::ZeroSide));
+        assert!(matches!(
+            budget.validate(coord(50, 0, 0)),
+            Err(ExtentError::OutOfExtent { .. })
+        ));
+        assert_eq!(
+            ExtentBudget::Bounded { side_chunks: 0 }.validate(coord(0, 0, 0)),
+            Err(ExtentError::ZeroSide)
+        );
     }
 
     // ---- LodRingPlan::role() targeted unit tests ----
@@ -1388,7 +1397,11 @@ mod tests {
 
     #[test]
     fn lod_ring_plan_role_outermost_rendered_ring_is_outer() {
-        let policy = WindowPolicy { mesh_ring: 1, seam_chunks: 1, ..WindowPolicy::default() };
+        let policy = WindowPolicy {
+            mesh_ring: 1,
+            seam_chunks: 1,
+            ..WindowPolicy::default()
+        };
         let plan = LodRingPlan::checked(policy, 3).unwrap();
         let anchor = coord(0, 0, 0);
         assert_eq!(plan.role(coord(3, 0, 0), anchor), RingRole::Outer);
@@ -1399,7 +1412,10 @@ mod tests {
 
     #[test]
     fn lod_ring_plan_seam_blend_seam_ring_weight_in_range() {
-        let policy = WindowPolicy { seam_chunks: 4, ..WindowPolicy::default() };
+        let policy = WindowPolicy {
+            seam_chunks: 4,
+            ..WindowPolicy::default()
+        };
         let plan = LodRingPlan::default_for(policy);
         let w = plan.seam_blend(2);
         assert!(w > 0);

@@ -1097,34 +1097,17 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::QueueResearch { tech } => {
-            state
-                .sim
-                .lock()
-                .await
-                .research_cache_mut()
-                .queued
-                .push_back(tech);
+            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
         }
-        DispatchEffect::GodAction {
-            action,
-            x,
-            y,
-            target_faction,
-            magnitude,
-        } => {
+        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
-            let world = sim.voxel();
-            let world_w = voxel_axis_span(world, |coord| coord.cx);
-            let world_d = voxel_axis_span(world, |coord| coord.cz);
+            let world_w = sim.voxel().width() as f32;
+            let world_d = sim.voxel().depth() as f32;
             let wx = x.unwrap_or(0.5) * world_w;
             let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord {
-                x: wx as i64,
-                y: 0,
-                z: wz as i64,
-            };
+            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
             let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
             match action.as_str() {
                 "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
@@ -1133,7 +1116,7 @@ async fn apply_dispatch_effect(
                     trigger_disaster(&mut sim, DisasterKind::Plague, pos);
                     if let Some(fid) = target_faction {
                         if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num((mag * 500.0_f32) as i64);
+                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
                             *t = (*t - debit).max(civ_engine::Fixed::ZERO);
                         }
                     }
@@ -1141,7 +1124,7 @@ async fn apply_dispatch_effect(
                 "bless" => {
                     if let Some(fid) = target_faction {
                         if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num((mag * 1000.0_f32) as i64);
+                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
                             *t += credit;
                         }
                     }
@@ -1149,10 +1132,8 @@ async fn apply_dispatch_effect(
                 }
                 "miracle" => {
                     sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num((mag * 200.0_f32) as i64);
-                    for t in sim.state.faction_treasury.values_mut() {
-                        *t += boost;
-                    }
+                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
                 }
                 _ => {}
             }

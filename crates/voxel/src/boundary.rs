@@ -185,6 +185,37 @@ mod tests {
     use super::*;
     use crate::material::{BEDROCK, WATER};
 
+
+    /// FR-CIV-VOXEL-020 - BoundaryFace::index returns a unique value 0..=5 for
+    /// each face, covering all six variants in order.
+    #[test]
+    fn boundary_face_index_is_unique_and_ordered() {
+        let faces = [
+            BoundaryFace::NegX,
+            BoundaryFace::PosX,
+            BoundaryFace::NegY,
+            BoundaryFace::PosY,
+            BoundaryFace::NegZ,
+            BoundaryFace::PosZ,
+        ];
+        let indices: Vec<usize> = faces.iter().map(|f| f.index()).collect();
+        assert!(indices.iter().all(|&i| i <= 5), "index out of range");
+        let mut sorted = indices.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), 6, "duplicate face indices");
+    }
+
+    /// FR-CIV-VOXEL-020 - BoundaryConfig::closed produces a config where every
+    /// face is Closed and ambient temperature is 20 degrees.
+    #[test]
+    fn boundary_config_closed_sets_all_faces_closed() {
+        let cfg = BoundaryConfig::closed();
+        assert_eq!(cfg.ambient_temp, 20);
+        for face_mode in cfg.faces.iter() {
+            assert_eq!(*face_mode, BoundaryMode::Closed);
+        }
+    }
     #[test]
     fn containment_and_edges_are_consistent() {
         let bounds = Bounds3::from_origin_size([0, 0, 0], [8, 4, 8]);

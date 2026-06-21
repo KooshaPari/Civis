@@ -1,4 +1,6 @@
 ﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -40,6 +42,7 @@ use civ_bevy_ref::{
     VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
     CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -224,6 +227,25 @@ struct ScenarioStartButton;
 #[derive(Component)]
 struct ScenarioStartButton;
 
+#[derive(Resource, Default)]
+struct MinimapPopup {
+    /// Pending right-click tile coords; None when popup is closed.
+    pending: Option<(i32, i32)>,
+}
+
+#[derive(Resource, Default)]
+struct SimSpeedState {
+    multiplier: u32,
+}
+
+#[derive(Resource)]
+struct EmergencePollTimer(f32);
+impl Default for EmergencePollTimer {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
+
 fn main() {
     let mut app = App::new();
     app.add_plugins((
@@ -244,6 +266,7 @@ fn main() {
             SaveLoadUiPlugin,
             TutorialPlugin,
             PerfHudPlugin,
+            EguiPlugin::default(),
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
@@ -251,6 +274,9 @@ fn main() {
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .init_resource::<ScenarioPanel>()
+        .init_resource::<MinimapPopup>()
+        .init_resource::<SimSpeedState>()
+        .init_resource::<EmergencePollTimer>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -269,6 +295,8 @@ fn main() {
                 debug_render_input,
                 orbit_camera_input,
                 minimap_click_focus,
+                minimap_popup_ui,
+                poll_emergence,
                 viewport_chunk_raycast,
                 update_orbit_camera_transform,
                 apply_live_frames,
@@ -1178,6 +1206,8 @@ fn minimap_click_focus(
     scene: Res<LiveStreamScene>,
     mut orbit: ResMut<OrbitCamera>,
     mut hud: ResMut<HudState>,
+    mut popup: ResMut<MinimapPopup>,
+    bridge: Res<LiveBridge>,
 ) {
     let select_pressed = action_pressed(
         #[cfg(feature = "egui")]
@@ -1188,6 +1218,35 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
+    // Right-click: open inspect popup
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Ok((interaction, cursor)) = panels.single() {
+            if *interaction != Interaction::None {
+                if let Some(normalized) = cursor.normalized {
+                    let uv = inset_minimap_uv_from_cursor(normalized);
+                    let (tx, ty) = if cache.use_focus_bounds {
+                        if let Some(focus) = cache.focus {
+                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                            (x as i32, z as i32)
+                        } else {
+                            (0, 0)
+                        }
+                    } else if let Some(bounds) = cache.bounds {
+                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                        (cx, cz)
+                    } else {
+                        (0, 0)
+                    };
+                    popup.pending = Some((tx, ty));
+                }
+            }
+        }
+        return;
+    }
+    // Suppress unused warning — bridge is available for future left-click RPCs.
+    let _ = &bridge;
+
+    if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
@@ -1307,4 +1366,67 @@ fn update_chunk_fade(
             commands.entity(entity).remove::<LiveChunkFade>();
         }
     }
+}
+
+fn minimap_popup_ui(
+    mut contexts: EguiContexts,
+    mut popup: ResMut<MinimapPopup>,
+    bridge: Res<LiveBridge>,
+    mut orbit: ResMut<OrbitCamera>,
+    mut hud: ResMut<HudState>,
+    scene: Res<LiveStreamScene>,
+) {
+    let Some((tx, ty)) = popup.pending else {
+        return;
+    };
+    egui::Window::new("Tile Actions")
+        .collapsible(false)
+        .resizable(false)
+        .show(contexts.ctx_mut(), |ui| {
+            ui.label(format!("Tile ({tx}, {ty})"));
+            if ui.button("Inspect tile").clicked() {
+                let json = format!(
+                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
+                );
+                bridge.client.send_rpc(json);
+                popup.pending = None;
+            }
+            if ui.button("Center camera").clicked() {
+                orbit.centre[0] = tx as f32;
+                orbit.centre[2] = ty as f32;
+                let preferred_cy = (orbit.centre[1] / LIVE_CHUNK_EDGE as f32).floor() as i32;
+                let loaded: Vec<u64> = scene.chunks.keys().copied().collect();
+                hud.snapshot.focused_chunk = Some(focused_chunk_at_grid(
+                    tx / LIVE_CHUNK_EDGE as i32,
+                    ty / LIVE_CHUNK_EDGE as i32,
+                    preferred_cy,
+                    &loaded,
+                ));
+                popup.pending = None;
+            }
+            if ui.button("Cancel").clicked() {
+                popup.pending = None;
+            }
+        });
+}
+
+fn poll_emergence(
+    time: Res<Time>,
+    bridge: Res<LiveBridge>,
+    mut timer: ResMut<EmergencePollTimer>,
+    mut hud: ResMut<HudState>,
+    speed: Res<SimSpeedState>,
+) {
+    hud.snapshot.speed_multiplier = speed.multiplier;
+    // Apply any parsed emergence responses received from the server.
+    for em in bridge.client.poll_emergence() {
+        hud.snapshot.emergence = Some(em);
+    }
+    timer.0 += time.delta_secs();
+    if timer.0 < 10.0 {
+        return;
+    }
+    timer.0 = 0.0;
+    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    bridge.client.send_rpc(json);
 }

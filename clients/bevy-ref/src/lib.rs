@@ -1,4 +1,4 @@
-﻿//! civ-bevy-ref library surface.
+//! civ-bevy-ref library surface.
 //!
 //! Splits cleanly into two parts:
 //!

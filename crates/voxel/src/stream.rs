@@ -373,6 +373,31 @@ mod tests {
         .expect("world")
     }
 
+
+    /// FR-CIV-VOXEL-022 - edit returns false when the chunk is not resident.
+    #[test]
+    fn edit_returns_false_when_chunk_not_resident() {
+        let mut w = world(StreamConfig::default());
+        let coord = ChunkCoord { cx: 0, cy: 0, cz: 0 };
+        // No load() called: chunk is not resident, edit must return false.
+        let result = w.edit(coord, 0, MaterialId(1));
+        assert!(!result, "edit on unloaded chunk should return false");
+        assert!(w.get(coord).is_none(), "chunk should remain unloaded");
+    }
+
+    /// FR-CIV-VOXEL-022 - edit returns false when idx is out of bounds.
+    #[test]
+    fn edit_returns_false_for_out_of_bounds_idx() {
+        let mut w = world(StreamConfig {
+            active_budget: 4,
+            ..StreamConfig::default()
+        });
+        let coord = ChunkCoord { cx: 0, cy: 0, cz: 0 };
+        w.load(coord).expect("load");
+        // CHUNK_VOXELS = 16^3 = 4096; idx >= 4096 is out of bounds.
+        let result = w.edit(coord, CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE, MaterialId(99));
+        assert!(!result, "edit with idx >= CHUNK_VOXELS should return false");
+    }
     #[test]
     fn region_regen_is_bit_identical_to_reload() {
         let dir = temp_dir("regen");

@@ -319,6 +319,7 @@ impl LiveHudSnapshot {
         if let Some(detail) = &self.pick_detail {
             line.push_str(&format!(" | {detail}"));
         }
+        line.push_str(" | cam: L-drag orbit; wheel/=+/[ in; -/] out; WASD pan; R reset");
         line
     }
 }
@@ -971,6 +972,21 @@ mod tests {
         }
         .format_overlay();
         assert!(line.contains("| Ada | Farmer | 87%"));
+    }
+
+    #[test]
+    fn live_hud_overlay_includes_camera_controls_hint() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("cam: L-drag orbit"));
+        assert!(line.contains("wheel/=+/[ in"));
+        assert!(line.contains("WASD pan"));
+        assert!(line.contains("R reset"));
     }
 
     #[test]

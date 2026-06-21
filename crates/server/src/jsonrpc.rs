@@ -1,4 +1,4 @@
-//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -3402,5 +3402,84 @@ mod tests {
         assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
         let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
         assert!((mi - 0.42).abs() < 1e-5);
+    }
+    #[test]
+    fn dispatch_queue_research_valid_tech_accepted() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.queue_research","params":{"tech":"pottery"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 10,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                diplomacy_snapshot: vec![],
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::QueueResearch { tech: "pottery".to_owned() });
+        let res = plan.response.result.expect("result");
+        assert_eq!(res["queued"], "pottery");
+    }
+
+    #[test]
+    fn dispatch_queue_research_unknown_tech_rejected() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"sim.queue_research","params":{"tech":"unobtainium"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 1,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                diplomacy_snapshot: vec![],
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(plan.response.error.as_ref().map(|e| e.code), Some(error_code::INVALID_PARAMS));
+    }
+
+    #[test]
+    fn dispatch_tech_state_returns_available_list() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state"}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 5,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                diplomacy_snapshot: vec![],
+            },
+        );
+        assert!(plan.response.result.is_some());
+        let res = plan.response.result.expect("result");
+        assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
     }
 }

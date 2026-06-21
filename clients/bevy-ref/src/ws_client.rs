@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,
@@ -8,6 +8,7 @@ use civ_protocol_3d::Frame3d;
 
 use crate::{
     parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData, OutcomeHudData,
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData,
     WsConnectionState, WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
@@ -59,6 +60,7 @@ impl WsClient {
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
         thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx, outcome_tx));
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx));
         Self {
             frame_rx,
             meta_rx,
@@ -203,6 +205,7 @@ fn run_client(
             match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &cmd_rx).await {
                 Ok(()) => { backoff.reset(); }
             match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx, &outcome_tx).await {
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx).await {
                 Ok(()) => {
                     backoff.reset();
                 }

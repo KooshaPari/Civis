@@ -36,11 +36,13 @@ use crate::{bevy_render::mesh_buffer_to_bevy, chunk_distance_from_camera, should
 /// (i.e. the `egui` menu feature is compiled out). With menus present, the
 /// per-world randomized seed from `WorldSetupParams` is always used instead.
 const SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
-// CA tick rate. At 256³ each step is a full-grid multi-pass sweep + full
-// remesh, so 12 Hz froze the frame loop. 2 Hz is the throttle until
-// dirty-chunk stepping + incremental remesh land (see FR-CIV-CA dirty-chunk TODO).
-// Reduced to 0.25 Hz (1 step per 4s) while CA perf is being optimised.
-// The full-grid dirty-chunk sweep is still expensive with large water coastlines.
+// CA tick rate. At 256³ each step is a full-grid multi-pass sweep, so 12 Hz
+// froze the frame loop (full-grid sweep every 83 ms, single-threaded). The
+// step_and_remesh caller already applies a dirty-chunk early-exit
+// (`StepOutcome::changed == false → return before any remesh`) so static worlds
+// pay near-zero render cost. Pegged at 0.25 Hz (1 step per 4 s) while the
+// incremental dirty-chunk meshing path matures (FR-CIV-CA dirty-chunk).
+// Raise toward 2 Hz once incremental remesh lands and is benchmarked stable.
 const CA_TICK_HZ: f32 = 0.25;
 const CHUNK_EDGE: usize = 32;
 const RENDER_MAX_DIST: f32 = 160.0;

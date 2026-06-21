@@ -390,7 +390,7 @@ fn scenario_panel_input(
         info!("scenario launch: preset={preset} seed={seed} speed={speed}");
         bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
         bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
-        info!("scenario launch: seed={seed} speed={speed}");
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
     }
 }
 

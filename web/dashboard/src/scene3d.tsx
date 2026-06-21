@@ -15,7 +15,7 @@ import {
 import { convoyCells, spawnKindUsesConvoy } from "./lib/spawnConvoy";
 import { zoomDistanceFromWheel } from "./lib/zoomMath.mjs";
 import { postControl } from "./control";
-import { useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
+import { isDashboardShortcutTarget, useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
 import {
@@ -1274,11 +1274,7 @@ export function Scene3d() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
-      if (
-        event.target instanceof HTMLElement &&
-        /input|textarea|select/i.test(event.target.tagName)
-      )
-        return;
+      if (isDashboardShortcutTarget(event.target)) return;
       if (event.key >= "1" && event.key <= "5") {
         const faction =
           stateRef.current.snapshot?.factions?.[Number(event.key) - 1];
@@ -1406,6 +1402,10 @@ export function Scene3d() {
 
     let raf = 0;
     const animate = () => {
+      if (document.hidden) {
+        raf = 0;
+        return;
+      }
       raf = window.requestAnimationFrame(animate);
       const snapshot = refs.current.currentSnapshot;
       const terrain = refs.current.activeTerrain;
@@ -1457,6 +1457,18 @@ export function Scene3d() {
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
     };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        if (raf !== 0) {
+          window.cancelAnimationFrame(raf);
+          raf = 0;
+        }
+        return;
+      }
+      if (raf === 0) {
+        animate();
+      }
+    };
 
     const initialize = async () => {
       const terrain = stateRef.current.terrain ?? (await terrainLoader());
@@ -1475,6 +1487,7 @@ export function Scene3d() {
     };
 
     void initialize();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       observer.disconnect();
@@ -1487,6 +1500,7 @@ export function Scene3d() {
       renderer.domElement.removeEventListener("wheel", onWheel);
       clearDragPreview();
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.cancelAnimationFrame(raf);
       controls.dispose();
       terrainGroup.clear();

@@ -56,6 +56,9 @@ pub fn compute_live_scene_focus(
     let mut max_z = f32::MIN;
 
     let mut extend = |x: f32, z: f32| {
+        if !x.is_finite() || !z.is_finite() {
+            return;
+        }
         min_x = min_x.min(x);
         max_x = max_x.max(x);
         min_z = min_z.min(z);
@@ -80,10 +83,17 @@ pub fn compute_live_scene_focus(
         return LiveSceneFocus::default();
     }
 
+    if !min_x.is_finite() || !max_x.is_finite() || !min_z.is_finite() || !max_z.is_finite() {
+        return LiveSceneFocus::default();
+    }
+
     let centre = Vec3::new((min_x + max_x) * 0.5, 0.0, (min_z + max_z) * 0.5);
     let half_extent = ((max_x - min_x).max(max_z - min_z) * 0.55)
         .max(LIVE_FOCUS_MIN_HALF_EXTENT)
         .min(WORLD_SIZE * 0.5);
+    if !centre.x.is_finite() || !centre.z.is_finite() || !half_extent.is_finite() {
+        return LiveSceneFocus::default();
+    }
     LiveSceneFocus {
         centre,
         half_extent,
@@ -93,6 +103,14 @@ pub fn compute_live_scene_focus(
 /// Map world XZ into normalised minimap UV within `focus` bounds (`v` flipped for UI top-left).
 #[must_use]
 pub fn world_to_minimap_uv_focus(position: Vec3, focus: LiveSceneFocus) -> Vec2 {
+    if !position.x.is_finite()
+        || !position.z.is_finite()
+        || !focus.centre.x.is_finite()
+        || !focus.centre.z.is_finite()
+        || !focus.half_extent.is_finite()
+    {
+        return Vec2::ZERO;
+    }
     let min_x = focus.centre.x - focus.half_extent;
     let max_x = focus.centre.x + focus.half_extent;
     let min_z = focus.centre.z - focus.half_extent;
@@ -107,6 +125,14 @@ pub fn world_to_minimap_uv_focus(position: Vec3, focus: LiveSceneFocus) -> Vec2 
 /// Inverse of [`world_to_minimap_uv_focus`]: minimap UV → world XZ.
 #[must_use]
 pub fn minimap_uv_to_world_xz(uv: Vec2, focus: LiveSceneFocus) -> (f32, f32) {
+    if !uv.x.is_finite()
+        || !uv.y.is_finite()
+        || !focus.centre.x.is_finite()
+        || !focus.centre.z.is_finite()
+        || !focus.half_extent.is_finite()
+    {
+        return (focus.centre.x, focus.centre.z);
+    }
     let min_x = focus.centre.x - focus.half_extent;
     let min_z = focus.centre.z - focus.half_extent;
     let span = (focus.half_extent * 2.0).max(f32::EPSILON);
@@ -132,5 +158,21 @@ mod tests {
         let (x, z) = minimap_uv_to_world_xz(uv, focus);
         assert!((x - world.x).abs() < 0.01);
         assert!((z - world.z).abs() < 0.01);
+    }
+
+    #[test]
+    fn minimap_uv_helpers_ignore_non_finite_inputs() {
+        let focus = LiveSceneFocus {
+            centre: Vec3::new(64.0, 0.0, 64.0),
+            half_extent: 48.0,
+        };
+        assert_eq!(
+            world_to_minimap_uv_focus(Vec3::new(f32::NAN, 0.0, 0.0), focus),
+            Vec2::ZERO
+        );
+        assert_eq!(
+            minimap_uv_to_world_xz(Vec2::new(f32::INFINITY, 0.5), focus),
+            (focus.centre.x, focus.centre.z)
+        );
     }
 }

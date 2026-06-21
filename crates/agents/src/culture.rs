@@ -105,7 +105,18 @@ pub fn drift_populations(
     diffusion_rate: f32,
     creole_threshold: f32,
 ) {
+    if profiles.is_empty() {
+        return;
+    }
     let base = profiles.to_vec();
+    if edges.is_empty() {
+        for (idx, profile) in profiles.iter_mut().enumerate() {
+            profile.traits = mutate_traits(rng, base[idx].traits, mutation_rate);
+            profile.language = mutate_traits(rng, base[idx].language, mutation_rate * 0.5);
+            profile.contact = 0.0;
+        }
+        return;
+    }
     let mut incoming: Vec<Vec<(usize, f32)>> = vec![Vec::new(); profiles.len()];
     for edge in edges {
         if edge.from < profiles.len() && edge.to < profiles.len() {

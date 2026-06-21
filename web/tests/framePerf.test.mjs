@@ -15,6 +15,7 @@ import {
   pushFrameSample,
   sparklinePoints,
   sparklineScaleMax,
+  summarizeFrameSamples,
 } from "../src/framePerf.mjs";
 
 test("pushFrameSample keeps the newest cap entries", () => {
@@ -31,6 +32,15 @@ test("frame timing helpers convert ms to fps", () => {
   assert.equal(frameMsToFps(16), 62.5);
   assert.equal(averageFrameMs([10, 20, 30]), 20);
   assert.equal(averageFps([10, 20, 30]), 50);
+});
+
+test("summarizeFrameSamples exposes shared frame-status metrics", () => {
+  const summary = summarizeFrameSamples([16, 20, 24]);
+  assert.equal(summary.count, 3);
+  assert.equal(summary.frameMs, 20);
+  assert.equal(summary.fps, 50);
+  assert.equal(summary.latestMs, 24);
+  assert.equal(summary.latestFps, 1000 / 24);
 });
 
 test("sparklinePoints map oldest-left to newest-right", () => {

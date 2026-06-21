@@ -37,6 +37,10 @@ fn main() {
         .init();
 
     let args = Args::parse();
+    if args.width == 0 || args.height == 0 {
+        eprintln!("civis-verify failed: window width and height must be greater than 0");
+        std::process::exit(2);
+    }
     let out_dir = verify_output_dir_from_env();
     let output_path = args.out.unwrap_or_else(|| out_dir.join("frame-0.png"));
 
@@ -48,6 +52,10 @@ fn main() {
         width: args.width,
         height: args.height,
     };
+    if options.settle_frames == 0 {
+        eprintln!("civis-verify failed: settle_frames must be greater than 0");
+        std::process::exit(2);
+    }
 
     match run_verify(options) {
         Ok(result) => print_result(&result),

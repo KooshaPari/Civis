@@ -843,10 +843,10 @@ fn stance_for(standing: i32, config: &DiplomacyConfig) -> Stance {
 
 /// Convert a `damage.energy` value to a hostility-amplifying bump magnitude.
 ///
-/// 0 energy -> 0 (no substrate change). Otherwise we take `floor(log10(energy))`
-/// + 1 so that even small skirmishes move standing a little, and large
-/// engagements move it a lot — without ever using floats. Clamped to a
-/// sensible range to keep the substrate bounded.
+/// Zero energy returns zero and leaves the substrate unchanged. Nonzero energy
+/// returns `floor(log10(energy)) + 1`, so even small skirmishes move standing a
+/// little and large engagements move it a lot without using floats. The result
+/// is clamped to a sensible range to keep the substrate bounded.
 fn bump_from_energy(energy: u32) -> i32 {
     if energy == 0 {
         return 0;
@@ -1560,6 +1560,7 @@ mod tests {
 
     #[test]
     fn schema_version_is_positive() {
-        assert!(SCHEMA_VERSION >= 1);
+        let version = std::hint::black_box(SCHEMA_VERSION);
+        assert!(version >= 1);
     }
 }

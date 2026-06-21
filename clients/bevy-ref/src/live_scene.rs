@@ -144,6 +144,7 @@ fn apply_live_scene_frames(
             Frame3d::Climate(_) => {}
             #[cfg(not(feature = "egui"))]
             Frame3d::EventFeed(_) => {}
+            Frame3d::Climate(_) => {}
         }
     }
 }

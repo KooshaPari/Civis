@@ -94,7 +94,12 @@ function Invoke-RustShimBuild {
         Pop-Location
     }
 
-    $builtLib = Join-Path $RustShimDir "target\release\$LibName"
+    $metadataJson = & cargo metadata --manifest-path (Join-Path $RustShimDir 'Cargo.toml') --format-version 1 --no-deps
+    if ($LASTEXITCODE -ne 0) {
+        throw "cargo metadata failed with exit code $LASTEXITCODE"
+    }
+    $targetDir = ($metadataJson | ConvertFrom-Json).target_directory
+    $builtLib = Join-Path $targetDir "release\$LibName"
     if (-not (Test-Path -LiteralPath $builtLib)) {
         throw "Expected static library not found: $builtLib"
     }

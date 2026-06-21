@@ -675,7 +675,9 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
         );
         emergence_obj.insert(
             "mi_material_faction_norm".to_owned(),
-            emergence.mi_material_faction_norm.map_or(Value::Null, |v| serde_json::json!(v)),
+            emergence
+                .mi_material_faction_norm
+                .map_or(Value::Null, |v| serde_json::json!(v)),
         );
         obj.insert("emergence".to_owned(), Value::Object(emergence_obj));
     }
@@ -1178,9 +1180,17 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
         .and_then(|p| p.get("path"))
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
+        .filter(|path| {
+            let path = std::path::Path::new(path);
+            path.is_relative()
+                && !path
+                    .components()
+                    .any(|component| matches!(component, std::path::Component::ParentDir))
+        })
         .ok_or(JsonRpcError {
             code: error_code::INVALID_PARAMS,
-            message: "Invalid params: expected non-empty string \"path\"".to_owned(),
+            message: "Invalid params: expected relative replay path without parent segments"
+                .to_owned(),
             data: None,
         })?;
     Ok(path.to_owned())
@@ -1686,9 +1696,8 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 req.id,
                 JsonRpcError {
                     code: error_code::INTERNAL_ERROR,
-                    message:
-                        "sim.subscribe/unsubscribe require an active WebSocket connection"
-                            .to_owned(),
+                    message: "sim.subscribe/unsubscribe require an active WebSocket connection"
+                        .to_owned(),
                     data: None,
                 },
             ),
@@ -1910,6 +1919,17 @@ mod tests {
         .expect("parse");
         assert_eq!(req.method, JsonRpcMethod::SimCommand);
         assert_eq!(req.id, RequestId::String("abc".to_owned()));
+    }
+
+    #[test]
+    fn parse_request_rejects_fractional_or_out_of_range_ids() {
+        for raw in [
+            r#"{"jsonrpc":"2.0","id":1.5,"method":"health"}"#,
+            r#"{"jsonrpc":"2.0","id":9223372036854775808,"method":"health"}"#,
+        ] {
+            let err = parse_request(raw).expect_err("id should be rejected");
+            assert_eq!(err.code(), error_code::INVALID_REQUEST);
+        }
     }
 
     #[test]
@@ -3413,6 +3433,10 @@ mod tests {
             Some(JsonRpcMethod::SimStatus)
         );
         assert_eq!(
+            JsonRpcMethod::parse_name("sim.reset"),
+            Some(JsonRpcMethod::SimReset)
+        );
+        assert_eq!(
             JsonRpcMethod::parse_name("sim.set_speed"),
             Some(JsonRpcMethod::SimSetSpeed)
         );
@@ -3466,6 +3490,8 @@ mod tests {
         assert!(parse_replay_path(None).is_err());
         assert!(parse_replay_path(Some(&json!({}))).is_err());
         assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":"/tmp/x.civreplay"}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":"../x.civreplay"}))).is_err());
     }
 
     #[test]
@@ -3510,9 +3536,9 @@ mod tests {
     /// Criticality metrics are carried through From<EmergenceSample> for EmergenceSampleFields.
     #[test]
     fn emergence_sample_fields_from_carries_criticality_metrics() {
-        use civ_engine::emergence_metrics::EmergenceSample;
-        use civ_emergence_metrics::dashboard::EmergenceDashboard;
         use civ_emergence_metrics::branching::BranchingRegime;
+        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_engine::emergence_metrics::EmergenceSample;
 
         let sample = EmergenceSample {
             tick: 1,
@@ -3535,8 +3561,14 @@ mod tests {
             mi_material_faction_norm: Some(0.33),
         };
         let fields = EmergenceSampleFields::from(sample);
-        assert!((fields.power_law_alpha - 1.95).abs() < 1e-6, "power_law_alpha mismatch");
-        assert!((fields.novelty_rate - 0.008).abs() < 1e-6, "novelty_rate mismatch");
+        assert!(
+            (fields.power_law_alpha - 1.95).abs() < 1e-6,
+            "power_law_alpha mismatch"
+        );
+        assert!(
+            (fields.novelty_rate - 0.008).abs() < 1e-6,
+            "novelty_rate mismatch"
+        );
         assert_eq!(fields.mi_material_faction_norm, Some(0.33));
     }
 
@@ -3582,15 +3614,29 @@ mod tests {
             mod_lifecycle: vec![],
             session_saved: vec![],
             mod_permission_violations: vec![],
-            climate: civ_engine::Climate { tick: 5, day_phase: 0.0, year_phase: 0.0, moon_phase: 0.0, tide_offset: 0.0 },
+            climate: civ_engine::Climate {
+                tick: 5,
+                day_phase: 0.0,
+                year_phase: 0.0,
+                moon_phase: 0.0,
+                tide_offset: 0.0,
+            },
             emergence: Some(emergence),
         };
         let json = snapshot_result_json(&fields);
         let emerg = json.get("emergence").expect("emergence block");
-        assert!(emerg.get("power_law_alpha").is_some(), "missing power_law_alpha");
+        assert!(
+            emerg.get("power_law_alpha").is_some(),
+            "missing power_law_alpha"
+        );
         assert!(emerg.get("novelty_rate").is_some(), "missing novelty_rate");
-        assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
-        let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
+        assert!(
+            emerg.get("mi_material_faction_norm").is_some(),
+            "missing mi_material_faction_norm"
+        );
+        let mi = emerg["mi_material_faction_norm"]
+            .as_f64()
+            .expect("mi_material_faction_norm f64");
         assert!((mi - 0.42).abs() < 1e-5);
     }
     #[test]

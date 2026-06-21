@@ -53,6 +53,11 @@ impl PoiRegistry {
         self.pois.push(poi);
     }
 
+    /// Check whether the registry currently contains any POIs.
+    pub fn is_empty(&self) -> bool {
+        self.pois.is_empty()
+    }
+
     /// Iterate over registered POIs in insertion order.
     pub fn iter(&self) -> impl Iterator<Item = &Poi> {
         self.pois.iter()
@@ -199,9 +204,12 @@ pub fn path_step(from: &Position3d, to: &Position3d, speed_fp: i64) -> Position3
 
     let mut next = Position3d {
         coord: WorldCoord {
-            x: from.coord.x + scale(dx),
-            y: from.coord.y + scale(dy),
-            z: from.coord.z + scale(dz),
+            x: (from.coord.x as i128 + scale(dx) as i128).clamp(i64::MIN as i128, i64::MAX as i128)
+                as i64,
+            y: (from.coord.y as i128 + scale(dy) as i128).clamp(i64::MIN as i128, i64::MAX as i128)
+                as i64,
+            z: (from.coord.z as i128 + scale(dz) as i128).clamp(i64::MIN as i128, i64::MAX as i128)
+                as i64,
         },
     };
 
@@ -401,6 +409,22 @@ mod tests {
         let needs = LifeNeeds::sated();
         let registry = PoiRegistry::default();
         assert!(pick_target(&needs, &registry, &pos(0, 0, 0)).is_none());
+    }
+
+    /// Covers FR-CIV-LIFE-014a — `PoiRegistry::is_empty` tracks inserted POIs.
+    #[test]
+    fn poi_registry_is_empty_tracks_insertions() {
+        let mut registry = PoiRegistry::default();
+        assert!(registry.is_empty());
+
+        registry.add(Poi {
+            id: 1,
+            kind: PoiKind::FoodSource,
+            pos: pos(0, 0, 0),
+            capacity: 1,
+        });
+
+        assert!(!registry.is_empty());
     }
 
     /// Covers FR-CIV-LIFE-015 — satisfied needs prefer idle/wander over seek.

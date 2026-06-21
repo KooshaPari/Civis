@@ -649,7 +649,11 @@ mod tests {
     fn enforce_autosave_ring_ignores_invalid_archives() {
         let temp_dir = tempfile::TempDir::new().expect("temp dir");
 
-        fs::write(temp_dir.path().join("autosave-bad.civsave.zst"), b"not a real archive").expect("write");
+        fs::write(
+            temp_dir.path().join("autosave-bad.civsave.zst"),
+            b"not a real archive",
+        )
+        .expect("write");
 
         enforce_autosave_ring(temp_dir.path());
 

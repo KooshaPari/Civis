@@ -12,8 +12,9 @@
 
 use civ_economy::{
     apply_trade, drain_energy_budget, propose_trade, step, step_stocks, verify_ledger_conservation,
-    Allocator, Bid, EconomyState, Good, LedgerSide, Offer, ProductionProfile as Profile, Stocks,
-    ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET, INSTITUTION_MARKET, INSTITUTION_TREASURY,
+    Allocator, Bid, EconomyState, Good, LedgerEntry, LedgerInvariantError, LedgerSide, Offer,
+    ProductionProfile as Profile, Stocks, ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET,
+    INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
 
 use civ_economy::step_institutions;
@@ -156,10 +157,41 @@ fn green_fr_econ_001_drain_energy_budget_records_balanced_ledger() {
 #[test]
 fn green_fr_econ_001_drain_energy_budget_non_positive_is_noop() {
     let mut state = EconomyState::with_energy_budget(50);
+    state.ledger.push(LedgerEntry {
+        tick: 3,
+        debit: 7,
+        credit: 7,
+        account: ACCOUNT_CONSUMPTION,
+    });
+    let ledger_before = state.ledger.clone();
+
     drain_energy_budget(&mut state, -1);
     drain_energy_budget(&mut state, 0);
+
     assert_eq!(state.energy_budget_joules, 50);
-    assert!(state.ledger.is_empty());
+    assert_eq!(state.ledger, ledger_before);
+}
+
+/// FR-ECON-001 — ledger conservation rejects unbalanced debit/credit legs.
+#[test]
+fn green_fr_econ_001_verify_ledger_conservation_rejects_unbalanced_entry() {
+    let mut state = EconomyState::with_energy_budget(50);
+    state.tick = 1;
+    state.ledger = vec![LedgerEntry {
+        tick: 0,
+        debit: 5,
+        credit: 4,
+        account: ACCOUNT_CONSUMPTION,
+    }];
+
+    assert_eq!(
+        verify_ledger_conservation(&state),
+        Err(LedgerInvariantError::UnbalancedEntry {
+            index: 0,
+            debit: 5,
+            credit: 4,
+        })
+    );
 }
 
 /// FR-ECON-001 — after budget changes in a tick, `step` posts a balancing

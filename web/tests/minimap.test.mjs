@@ -51,6 +51,11 @@ test("minimapUvToChunkGrid clamps to bounds", () => {
   assert.deepEqual(minimapUvToChunkGrid([1, 1], bounds), [4, 5]);
 });
 
+test("minimapUvToChunkGrid coerces non-finite uv to minimum bounds", () => {
+  const bounds = [1, 2, 4, 5];
+  assert.deepEqual(minimapUvToChunkGrid([Number.NaN, Number.POSITIVE_INFINITY], bounds), [1, 2]);
+});
+
 test("minimapBoundsFromKeys returns inclusive XZ bounds", () => {
   const a = Number((1n << 40n) | (0n << 16n) | 2n);
   const b = Number((3n << 40n) | (0n << 16n) | 5n);
@@ -76,4 +81,16 @@ test("noteChunkIds tracks count and last five ids newest-first", () => {
   stats = noteChunkIds(seen, recent, [7]);
   assert.equal(stats.count, 2);
   assert.deepEqual(stats.recentIds, [7, 42]);
+});
+
+test("noteChunkIds clamps invalid recent caps to zero or higher", () => {
+  const seen = new Set([1]);
+  const stats = noteChunkIds(seen, [1], [2], -3);
+  assert.equal(stats.count, 2);
+  assert.deepEqual(stats.recentIds, []);
+});
+
+test("chunkToMinimapUv stays clamped inside the minimap", () => {
+  const uv = chunkToMinimapUv(encodeChunkId(99, 0, 99), [0, 0, 3, 3]);
+  assert.deepEqual(uv, [1, 1]);
 });

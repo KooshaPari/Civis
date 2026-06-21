@@ -172,6 +172,9 @@ struct AppState {
     sim: Arc<Mutex<Simulation>>,
     tick: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
+    tick_batches_sent: Arc<AtomicU64>,
+    tick_messages_sent: Arc<AtomicU64>,
+    ws_client_disconnects: Arc<AtomicU64>,
     clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
     max_clients: usize,
     require_role: bool,
@@ -234,6 +237,9 @@ async fn serve_ws_bridge(
         sim,
         tick: Arc::new(AtomicU64::new(0)),
         speed_multiplier: Arc::new(AtomicU32::new(1)),
+        tick_batches_sent: Arc::new(AtomicU64::new(0)),
+        tick_messages_sent: Arc::new(AtomicU64::new(0)),
+        ws_client_disconnects: Arc::new(AtomicU64::new(0)),
         clients: Arc::new(Mutex::new(Vec::new())),
         max_clients: config.max_clients,
         require_role: config.require_role,
@@ -268,7 +274,28 @@ async fn serve_ws_bridge(
 
 async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
     let tick = state.tick.load(Ordering::SeqCst);
-    (StatusCode::OK, Json(serde_json::json!({ "tick": tick })))
+    let clients = state.clients.lock().await.len();
+    let tick_batches_sent = state.tick_batches_sent.load(Ordering::SeqCst);
+    let tick_messages_sent = state.tick_messages_sent.load(Ordering::SeqCst);
+    let ws_client_disconnects = state.ws_client_disconnects.load(Ordering::SeqCst);
+    tracing::info!(
+        tick,
+        clients,
+        tick_batches_sent,
+        tick_messages_sent,
+        ws_client_disconnects,
+        "ws bridge healthz summary"
+    );
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "tick": tick,
+            "clients": clients,
+            "tick_batches_sent": tick_batches_sent,
+            "tick_messages_sent": tick_messages_sent,
+            "ws_client_disconnects": ws_client_disconnects,
+        })),
+    )
 }
 
 /// Load a `.civreplay` byte buffer into the bridge simulation.
@@ -345,6 +372,7 @@ async fn handle_socket(
     }
 
     let forward_filter = Arc::clone(&subscription_filter);
+    let tick_messages_sent = Arc::clone(&state.tick_messages_sent);
     let forward = tokio::spawn(async move {
         while let Some(outbound) = rx.recv().await {
             match outbound {
@@ -354,12 +382,13 @@ async fn handle_socket(
                     }
                 }
                 ClientOutbound::Tick(broadcast) => {
-                    let filter = forward_filter.lock().await;
+                    let filter = forward_filter.lock().await.clone();
                     if !filter.is_active() {
                         for msg in broadcast.encoded.iter() {
                             if sender.send(msg.clone()).await.is_err() {
                                 return;
                             }
+                            tick_messages_sent.fetch_add(1, Ordering::Relaxed);
                         }
                         continue;
                     }
@@ -382,6 +411,7 @@ async fn handle_socket(
                         if sender.send(msg).await.is_err() {
                             return;
                         }
+                        tick_messages_sent.fetch_add(1, Ordering::Relaxed);
                     }
                 }
             }
@@ -1210,10 +1240,14 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         })
     };
 
+    state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
-        tx.send(ClientOutbound::Tick(Arc::clone(&batch)))
-            .is_ok()
+        let delivered = tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
+        if !delivered {
+            state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
+        }
+        delivered
     });
     Ok(())
 }
@@ -1265,16 +1299,16 @@ mod tests {
         tick: u64,
         speed_multiplier: u32,
         require_role: bool,
-    ) -> (tempfile::TempDir, AppState) {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let saves_dir = dir.path().join("saves");
-        std::fs::create_dir_all(&saves_dir).expect("saves dir");
-        let save_db_path = save_db_path_for_saves_dir(&saves_dir);
-        let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
-        let state = AppState {
+    ) -> AppState {
+        let saves_dir = PathBuf::from("test-saves");
+        let save_db = Arc::new(SaveDb::open_in_memory().expect("open save db"));
+        AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
+            tick_batches_sent: Arc::new(AtomicU64::new(0)),
+            tick_messages_sent: Arc::new(AtomicU64::new(0)),
+            ws_client_disconnects: Arc::new(AtomicU64::new(0)),
             clients: Arc::new(Mutex::new(Vec::new())),
             max_clients: 1,
             require_role,
@@ -1282,8 +1316,7 @@ mod tests {
             saves_dir,
             save_db,
             session_id: "test-session".to_string(),
-        };
-        (dir, state)
+        }
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
@@ -1572,7 +1605,10 @@ mod tests {
         let sim = Simulation::with_seed(11);
         let frame = build_civilian_state_frame(&sim, 5);
         assert_eq!(frame.tick, 5);
-        assert!(frame.civilians.len() <= 256, "civilians must be capped at 256");
+        assert!(
+            frame.civilians.len() <= 256,
+            "civilians must be capped at 256"
+        );
         // Verify all entries are sorted by id
         for i in 1..frame.civilians.len() {
             assert!(
@@ -1602,7 +1638,10 @@ mod tests {
             let frame = build_faction_state_frame(&sim, tick);
             let expected_era = ((tick / 120) % 6) as u16;
             for entry in &frame.factions {
-                assert_eq!(entry.era, expected_era, "tick {tick} should wrap era to {expected_era}");
+                assert_eq!(
+                    entry.era, expected_era,
+                    "tick {tick} should wrap era to {expected_era}"
+                );
             }
         }
     }
@@ -1625,8 +1664,7 @@ mod tests {
         let frame = build_event_feed_frame(&sim, 0);
         assert_eq!(frame.tick, 0);
         // Empty simulation should produce minimal events
-        let event_count = frame.events.len();
-        assert!(event_count >= 0); // Always valid, even if empty
+        assert!(frame.events.is_empty());
     }
 
     #[test]
@@ -1678,19 +1716,29 @@ mod tests {
             encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
         assert!(messages.len() >= FRAME_BUNDLE_LEN * 2);
         // First FRAME_BUNDLE_LEN are text
-        for i in 0..FRAME_BUNDLE_LEN {
-            assert!(matches!(messages[i], Message::Text(_)));
+        for message in messages.iter().take(FRAME_BUNDLE_LEN) {
+            assert!(matches!(message, Message::Text(_)));
         }
         // Second FRAME_BUNDLE_LEN are binary
-        for i in FRAME_BUNDLE_LEN..FRAME_BUNDLE_LEN * 2 {
-            assert!(matches!(messages[i], Message::Binary(_)));
+        for message in messages
+            .iter()
+            .take(FRAME_BUNDLE_LEN * 2)
+            .skip(FRAME_BUNDLE_LEN)
+        {
+            assert!(matches!(message, Message::Binary(_)));
         }
     }
 
     #[test]
     fn encode_messages_per_tick_consistency() {
-        assert_eq!(TickBroadcastFormat::Text.messages_per_tick(), FRAME_BUNDLE_LEN);
-        assert_eq!(TickBroadcastFormat::Binary.messages_per_tick(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            TickBroadcastFormat::Text.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
+        assert_eq!(
+            TickBroadcastFormat::Binary.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
         assert_eq!(
             TickBroadcastFormat::Both.messages_per_tick(),
             FRAME_BUNDLE_LEN * 2
@@ -1735,7 +1783,15 @@ mod tests {
     fn job_profession_label_all_variants() {
         use JobType::*;
         let all_jobs = [Farmer, Warrior, Scholar, Trader, Priest, Admin, Unemployed];
-        let labels = ["farmer", "warrior", "scholar", "trader", "priest", "admin", "unemployed"];
+        let labels = [
+            "farmer",
+            "warrior",
+            "scholar",
+            "trader",
+            "priest",
+            "admin",
+            "unemployed",
+        ];
         for (job, label) in all_jobs.iter().zip(labels.iter()) {
             assert_eq!(job_profession_label(*job), *label);
         }
@@ -1874,7 +1930,7 @@ mod tests {
     async fn frame_bundle_is_deterministic_for_fixed_seed() {
         let make = || async {
             let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
-            let (_dir, state) = test_app_state(sim, 0, 1, false);
+            let state = test_app_state(sim, 0, 1, false);
             tick_once(&state).await.expect("tick");
             state.tick.load(Ordering::SeqCst)
         };
@@ -1886,7 +1942,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_invalid_json_returns_parse_error() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             "{not json",
@@ -1911,7 +1967,7 @@ mod tests {
             let guard = sim.lock().await;
             guard.snapshot().population
         };
-        let (_dir, state) = test_app_state(sim, 5, 1, false);
+        let state = test_app_state(sim, 5, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":7,"method":"sim.status","params":{}}"#,
@@ -1954,7 +2010,7 @@ mod tests {
                     .expect("hash chain root after tick"),
             )
         };
-        let (_dir, state) = test_app_state(sim, 5, 4, false);
+        let state = test_app_state(sim, 5, 4, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":8,"method":"sim.snapshot","params":{}}"#,
@@ -2006,7 +2062,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let text = handle_jsonrpc_text(
@@ -2017,7 +2073,10 @@ mod tests {
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("subscribe json");
-        assert_eq!(value.pointer("/result/subscribed"), Some(&serde_json::json!(true)));
+        assert_eq!(
+            value.pointer("/result/subscribed"),
+            Some(&serde_json::json!(true))
+        );
         assert_eq!(
             value.pointer("/result/filter_active"),
             Some(&serde_json::json!(true))
@@ -2030,7 +2089,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let subscribe = handle_jsonrpc_text(
@@ -2051,15 +2110,25 @@ mod tests {
         assert!(unsubscribe.contains("\"unsubscribed\":true"));
         let guard = filter.lock().await;
         assert!(!guard.is_active());
-        assert_eq!(guard.filter_frames(&sample_frame_bundle()).len(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            guard.filter_frames(&sample_frame_bundle()).len(),
+            FRAME_BUNDLE_LEN
+        );
     }
 
     #[tokio::test]
     async fn healthz_exposes_latest_tick() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(3)));
-        let (_dir, state) = test_app_state(sim, 123, 1, false);
+        let state = test_app_state(sim, 123, 1, false);
         let response = healthz(State(state)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("healthz body");
+        let value: serde_json::Value = serde_json::from_slice(&body).expect("healthz json");
+        assert_eq!(value.get("tick"), Some(&serde_json::json!(123)));
+        assert_eq!(value.get("clients"), Some(&serde_json::json!(0)));
     }
 
     #[tokio::test]
@@ -2072,7 +2141,7 @@ mod tests {
         let expected_tick = source.state.tick;
 
         let sim = Arc::new(Mutex::new(Simulation::with_seed(99)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let response = replay_import(State(state.clone()), bytes.into())
             .await
             .expect("replay import")
@@ -2095,7 +2164,7 @@ mod tests {
     #[tokio::test]
     async fn replay_export_sets_octet_stream_and_attachment_headers() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(31)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let response = replay_export(State(state))
             .await
             .expect("replay export")
@@ -2120,7 +2189,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_policy_updates_simulation_policy() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
+        let state = test_app_state(sim.clone(), 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_policy","params":{"scarcity_multiplier":3.0,"base_consumption_joules":500}}"#,
@@ -2154,7 +2223,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_speed_stores_multiplier() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.set_speed","params":{"multiplier":4}}"#,
@@ -2178,7 +2247,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_get_speed_returns_stored_multiplier() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let set_text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":8}}"#,
@@ -2211,7 +2280,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_command_tick_rejects_wrong_role_when_enforced() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
-        let (_dir, state) = test_app_state(sim, 0, 1, true);
+        let state = test_app_state(sim, 0, 1, true);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick","role":"viewer"}}"#,
@@ -2241,7 +2310,7 @@ mod tests {
             guard.tick();
         }
         let saved_tick = sim.lock().await.state.tick;
-        let (_dir, state) = test_app_state(sim.clone(), saved_tick, 1, false);
+        let state = test_app_state(sim.clone(), saved_tick, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":70,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,

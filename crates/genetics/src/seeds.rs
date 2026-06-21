@@ -499,6 +499,7 @@ pub fn example_seed_set() -> SeedSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
 
     fn base_class() -> DnaClass {
         DnaClass {
@@ -766,11 +767,6 @@ mod tests {
         let mut rng = ChaCha8Rng::seed_from_u64(0xDEAD_C0DE);
         let result = seed_with_divergence(&archetype, 1.0, &mut rng);
         assert_eq!(result.0.len(), archetype.0.len());
-        // Every byte must be a valid u8 — the type guarantees this, but we
-        // also verify that the function preserved genome length.
-        for &byte in &result.0 {
-            assert!(byte <= 255, "byte {byte} out of u8 range");
-        }
     }
 
     #[test]

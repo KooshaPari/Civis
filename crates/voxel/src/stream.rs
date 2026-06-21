@@ -108,8 +108,11 @@ pub struct StreamStats {
 /// Port trait for chunk storage adapters.
 /// The domain (`StreamingWorld`) depends on this trait, not on concrete I/O.
 pub trait ChunkStorePort: Send + Sync {
+    /// Persist an edited chunk at the given coordinate.
     fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()>;
+    /// Load an edited chunk if the store contains one.
     fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>>;
+    /// Return whether an edited chunk exists for the coordinate.
     fn contains(&self, coord: ChunkCoord) -> bool;
 }
 
@@ -220,14 +223,15 @@ impl<G: WorldGen> StreamingWorld<G> {
     /// camera), then evict anything outside the budget. Returns the set actually
     /// resident after the call. Order-independent given the same `coords`.
     pub fn load_set(&mut self, coords: &[ChunkCoord]) -> std::io::Result<()> {
-        if self.cfg.active_budget < coords.len() {
+        let mut ordered = coords.to_vec();
+        ordered.sort_unstable_by_key(|coord| (coord.cx, coord.cy, coord.cz));
+        ordered.dedup();
+        if self.cfg.active_budget < ordered.len() {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
                 "active_budget below requested set",
             ));
         }
-        let mut ordered = coords.to_vec();
-        ordered.sort_unstable_by_key(|coord| (coord.cx, coord.cy, coord.cz));
         for coord in &ordered {
             self.load_no_evict(*coord)?;
         }
@@ -516,6 +520,27 @@ mod tests {
         let w = world(StreamConfig::default());
         assert!(w.resident_coords().is_empty());
         assert_eq!(w.stats().loaded, 0);
+    }
+
+    #[test]
+    fn load_set_accounts_for_duplicate_coords_once() {
+        let a = ChunkCoord {
+            cx: 1,
+            cy: 2,
+            cz: 3,
+        };
+        let b = ChunkCoord {
+            cx: 4,
+            cy: 5,
+            cz: 6,
+        };
+        let mut w = world(StreamConfig {
+            active_budget: 2,
+            ..StreamConfig::default()
+        });
+        w.load_set(&[a, b, a]).expect("deduped working set fits");
+        assert_eq!(w.resident_coords().len(), 2);
+        assert_eq!(w.stats().loaded, 2);
     }
 
     /// Perf smoke: streaming a large radius (a full active-set page-in) must stay

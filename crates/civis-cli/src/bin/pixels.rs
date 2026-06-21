@@ -21,6 +21,9 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+    if args.grid == 0 {
+        return Err("grid must be greater than 0".into());
+    }
     let file = File::open(&args.input)?;
     let decoder = png::Decoder::new(BufReader::new(file));
     let mut reader = decoder.read_info()?;

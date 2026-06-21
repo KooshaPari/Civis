@@ -29,7 +29,7 @@
 //!    survive into the next tick until cancelled or filled (CIV-002 FR-ECON-003
 //!    TTL semantics land in a follow-up slice).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -124,7 +124,7 @@ impl Allocator {
             return None;
         }
         let id = self.next_id;
-        self.next_id = self.next_id.saturating_add(1);
+        self.next_id = self.next_id.checked_add(1)?;
         bid.id = id;
         self.bids.insert(id, bid);
         Some(id)
@@ -137,7 +137,7 @@ impl Allocator {
             return None;
         }
         let id = self.next_id;
-        self.next_id = self.next_id.saturating_add(1);
+        self.next_id = self.next_id.checked_add(1)?;
         offer.id = id;
         self.offers.insert(id, offer);
         Some(id)
@@ -181,18 +181,18 @@ impl Allocator {
 
         // Collect the set of goods present on either side of the book.
         // We then sort and clear each good in turn.
-        let mut goods: BTreeMap<String, ()> = BTreeMap::new();
+        let mut goods: BTreeSet<String> = BTreeSet::new();
         for bid in self.bids.values() {
-            goods.entry(bid.good.clone()).or_insert(());
+            goods.insert(bid.good.clone());
         }
         for offer in self.offers.values() {
-            goods.entry(offer.good.clone()).or_insert(());
+            goods.insert(offer.good.clone());
         }
 
         // Snapshot ids per good; sort by price priority. We then walk the
         // ids and mutate the live `self.bids` / `self.offers` directly.
         // This avoids fighting the borrow checker on `&mut Vec<&mut Bid>`.
-        for good in goods.keys() {
+        for good in &goods {
             // Build ordered id lists by snapshotting bid/offers then sorting.
             let mut bid_ids: Vec<OrderId> = self
                 .bids
@@ -406,7 +406,8 @@ fn best_unmatched_price_for_good(
     if best_bid >= best_ask {
         best_ask
     } else {
-        (best_bid + best_ask) / 2
+        let sum = (best_bid as i128) + (best_ask as i128);
+        (sum / 2).clamp(i64::MIN as i128, i64::MAX as i128) as i64
     }
 }
 
@@ -541,7 +542,11 @@ mod tests {
                 price: -1,
             })
             .is_none());
-        assert_eq!(alloc.next_order_id(), 2, "rejected posts must not bump counter");
+        assert_eq!(
+            alloc.next_order_id(),
+            2,
+            "rejected posts must not bump counter"
+        );
     }
 
     #[test]
@@ -716,6 +721,141 @@ mod tests {
     }
 
     #[test]
+    fn clear_routes_distinct_institutions_through_market_passthrough() {
+        let mut economy = fresh_economy(5_000);
+        let mut ledger = fresh_ledger();
+        ledger.accounts.insert(
+            99,
+            crate::institution::InstitutionAccount {
+                id: 99,
+                kind: crate::institution::InstitutionKind::Market,
+                balance_joules: 0,
+            },
+        );
+        ledger
+            .post(
+                &mut economy,
+                crate::LedgerSide::Macro(crate::ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_TREASURY),
+                2_500,
+            )
+            .unwrap();
+        ledger
+            .post(
+                &mut economy,
+                crate::LedgerSide::Macro(crate::ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(99),
+                2_500,
+            )
+            .unwrap();
+
+        let mut alloc = Allocator::new();
+        alloc
+            .post_bid(Bid {
+                id: 0,
+                bidder: INSTITUTION_TREASURY,
+                good: "food".to_string(),
+                quantity: 3,
+                price: 90,
+            })
+            .unwrap();
+        alloc
+            .post_offer(Offer {
+                id: 0,
+                offerer: 99,
+                good: "food".to_string(),
+                quantity: 3,
+                price: 60,
+            })
+            .unwrap();
+
+        let trades = alloc.clear(&mut economy, &mut ledger);
+        assert_eq!(trades.len(), 1);
+        assert_eq!(trades[0].offerer, 99);
+        assert_eq!(ledger.institution_balance(INSTITUTION_TREASURY), 2_275);
+        assert_eq!(ledger.institution_balance(99), 2_725);
+        assert_eq!(
+            ledger.institution_balance(crate::institution::INSTITUTION_MARKET),
+            0
+        );
+        ledger.verify_conservation().expect("conservation");
+    }
+
+    #[test]
+    fn clear_rationing_splits_across_multiple_bids_deterministically() {
+        let mut economy = fresh_economy(3_000);
+        let mut ledger = fresh_ledger();
+        ledger
+            .post(
+                &mut economy,
+                crate::LedgerSide::Macro(crate::ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_TREASURY),
+                1_000,
+            )
+            .unwrap();
+        ledger
+            .post(
+                &mut economy,
+                crate::LedgerSide::Macro(crate::ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_MARKET),
+                1_000,
+            )
+            .unwrap();
+        ledger.accounts.insert(
+            99,
+            crate::institution::InstitutionAccount {
+                id: 99,
+                kind: crate::institution::InstitutionKind::Market,
+                balance_joules: 0,
+            },
+        );
+        ledger
+            .post(
+                &mut economy,
+                crate::LedgerSide::Macro(crate::ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(99),
+                1_000,
+            )
+            .unwrap();
+
+        let mut alloc = Allocator::new();
+        alloc
+            .post_bid(Bid {
+                id: 0,
+                bidder: INSTITUTION_TREASURY,
+                good: "food".to_string(),
+                quantity: 6,
+                price: 50,
+            })
+            .unwrap();
+        alloc
+            .post_bid(Bid {
+                id: 0,
+                bidder: 99,
+                good: "food".to_string(),
+                quantity: 4,
+                price: 40,
+            })
+            .unwrap();
+        alloc
+            .post_offer(Offer {
+                id: 0,
+                offerer: INSTITUTION_MARKET,
+                good: "food".to_string(),
+                quantity: 5,
+                price: 100,
+            })
+            .unwrap();
+
+        let trades = alloc.clear(&mut economy, &mut ledger);
+        assert_eq!(trades.len(), 2);
+        assert!(trades.iter().all(|t| t.rationed));
+        assert_eq!(trades[0].quantity + trades[1].quantity, 5);
+        assert!(trades[0].quantity >= trades[1].quantity);
+        ledger.verify_conservation().expect("conservation");
+    }
+
+    #[test]
     fn clear_conservation_under_random_order_books() {
         let mut economy = fresh_economy(10_000_000);
         let mut ledger = fresh_ledger();
@@ -806,6 +946,24 @@ mod tests {
         let a = run();
         let b = run();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn post_bid_rejects_order_id_exhaustion_without_mutation() {
+        let mut alloc = Allocator::new();
+        alloc.next_id = OrderId::MAX;
+
+        let bid = Bid {
+            id: 99,
+            bidder: INSTITUTION_TREASURY,
+            good: "food".to_string(),
+            quantity: 1,
+            price: 1,
+        };
+
+        assert_eq!(alloc.post_bid(bid), None);
+        assert_eq!(alloc.bid_count(), 0);
+        assert_eq!(alloc.next_order_id(), OrderId::MAX);
     }
 
     proptest! {

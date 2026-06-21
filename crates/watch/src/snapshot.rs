@@ -973,7 +973,10 @@ mod tests {
         assert_ne!(noise_offset(42, 0), noise_offset(43, 0));
         for (s, l) in [(0_u64, 0_u64), (1, 1), (999, 7), (u64::MAX, 3)] {
             let n = noise_offset(s, l);
-            assert!(n.abs() <= 0.05 + f32::EPSILON, "noise_offset({s},{l}) = {n}");
+            assert!(
+                n.abs() <= 0.05 + f32::EPSILON,
+                "noise_offset({s},{l}) = {n}"
+            );
         }
     }
 
@@ -1054,7 +1057,9 @@ mod tests {
         let f = factions(0);
         let b = buildings(&f, 0);
         assert_eq!(b.len(), f.len() * 3);
-        assert!(b.iter().all(|x| (0.0..1.0).contains(&x.x) && (0.0..1.0).contains(&x.y)));
+        assert!(b
+            .iter()
+            .all(|x| (0.0..1.0).contains(&x.x) && (0.0..1.0).contains(&x.y)));
         assert!(b.iter().all(|x| x.faction_id < 4));
         assert!(b.iter().all(|x| x.occupants == 0));
         assert!(b
@@ -1076,8 +1081,8 @@ mod tests {
         for road in &r {
             let from_faction = faction_at(road.from[0], road.from[1])
                 .expect("road.from references a known building");
-            let to_faction = faction_at(road.to[0], road.to[1])
-                .expect("road.to references a known building");
+            let to_faction =
+                faction_at(road.to[0], road.to[1]).expect("road.to references a known building");
             assert_eq!(
                 from_faction, to_faction,
                 "road endpoints must belong to the same faction"
@@ -1151,10 +1156,18 @@ mod tests {
         for k in 1..=8u64 {
             let tick = k * 1000;
             let events = disaster_events(tick, &f, &b);
-            assert_eq!(events.len(), 1, "tick {tick} must fire exactly one disaster");
+            assert_eq!(
+                events.len(),
+                1,
+                "tick {tick} must fire exactly one disaster"
+            );
             let e = &events[0];
             assert_eq!(e.tick, tick);
-            assert!(kinds.contains(&e.kind.as_str()), "unexpected kind {}", e.kind);
+            assert!(
+                kinds.contains(&e.kind.as_str()),
+                "unexpected kind {}",
+                e.kind
+            );
             assert!(
                 e.x > 0.0 && e.x < 1.0 && e.y > 0.0 && e.y < 1.0,
                 "coords out of map: {},{}",
@@ -1170,11 +1183,9 @@ mod tests {
     fn game_events_empty_inputs_yield_no_lifecycle_events() {
         let sim = Simulation::with_seed(7);
         let events = game_events(&sim, &[], &[], &[], &[], &[], &[]);
-        assert!(
-            events
-                .iter()
-                .all(|e| !["birth", "death", "disaster"].contains(&e.kind.as_str()))
-        );
+        assert!(events
+            .iter()
+            .all(|e| !["birth", "death", "disaster"].contains(&e.kind.as_str())));
     }
 
     #[test]
@@ -1247,7 +1258,9 @@ mod tests {
         let sim = Simulation::with_seed(7);
         let pins = civ_pins(&sim);
         assert!(pins.windows(2).all(|w| w[0].idx <= w[1].idx));
-        assert!(pins.iter().all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
+        assert!(pins
+            .iter()
+            .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)));
     }
 
     #[test]
@@ -1264,10 +1277,7 @@ mod tests {
             .iter()
             .zip(factions.iter())
             .all(|(t, f)| t.id == f.id));
-        assert!(econ
-            .faction_treasury
-            .iter()
-            .all(|t| t.trade_balance == 0.0));
+        assert!(econ.faction_treasury.iter().all(|t| t.trade_balance == 0.0));
         assert_eq!(econ.production_rates.wood_per_tick, 0.0);
         assert!((econ.production_rates.energy_per_tick * 1000.0 - econ.energy_budget).abs() < 1e-6);
         assert!(econ.production_rates.food_per_tick >= 0.0);
@@ -1312,7 +1322,7 @@ mod tests {
 
     #[test]
     fn resource_amount_demand_and_adjust_cover_every_resource_arm() {
-        use civ_engine::{Resources, ResourceType};
+        use civ_engine::{ResourceType, Resources};
         let mut res = Resources {
             food: fixed_from_f64(100.0),
             wood: fixed_from_f64(200.0),
@@ -1326,15 +1336,24 @@ mod tests {
             (ResourceType::Energy, 400.0),
         ];
         for (r, want) in arms {
-            assert!((resource_amount(&res, r) - want).abs() < 1e-6, "amount {r:?}");
+            assert!(
+                (resource_amount(&res, r) - want).abs() < 1e-6,
+                "amount {r:?}"
+            );
             // demand = max(0, 1000 - amount); all of these are < 1000 so it's positive.
-            assert!((resource_demand(&res, r) - (1000.0 - want)).abs() < 1e-6, "demand {r:?}");
+            assert!(
+                (resource_demand(&res, r) - (1000.0 - want)).abs() < 1e-6,
+                "demand {r:?}"
+            );
         }
 
         // adjust_resource hits each arm; +50 then re-read.
         for (r, want) in arms {
             adjust_resource(&mut res, r, 50.0);
-            assert!((resource_amount(&res, r) - (want + 50.0)).abs() < 1e-6, "adjusted {r:?}");
+            assert!(
+                (resource_amount(&res, r) - (want + 50.0)).abs() < 1e-6,
+                "adjusted {r:?}"
+            );
         }
 
         // demand clamps to 0 once amount exceeds the 1000 cap.

@@ -300,6 +300,19 @@ mod tests {
     }
 
     #[test]
+    fn belief_culture_exposure_ignores_non_positive_weights() {
+        let mixed = belief_culture_exposure(&[
+            (-2.0, [1.0, 1.0, 1.0, 1.0]),
+            (0.0, [0.25, 0.25, 0.25, 0.25]),
+            (2.0, [0.8, 0.6, 0.4, 0.2]),
+        ]);
+        let positive_only = belief_culture_exposure(&[(2.0, [0.8, 0.6, 0.4, 0.2])]);
+
+        assert_eq!(mixed, positive_only);
+        assert!(mixed.iter().all(|v| (0.0..=1.0).contains(v)));
+    }
+
+    #[test]
     fn temperament_nudges_but_stays_bounded() {
         let mut temperament = Temperament::neutral();
         nudge_temperament(&mut temperament, 1.0, 0.0, 0.2);

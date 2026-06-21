@@ -46,8 +46,8 @@ use std::time::Instant;
 
 use civ_agents::{Alignment, Civilian, ClusterMember, Mood, Position3d, Psyche};
 use civ_emergence_metrics::branching::{
-    classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger,
-    BranchingRegime, DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
+    classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
+    DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
 use civ_emergence_metrics::dashboard::EmergenceDashboard;
 use civ_emergence_metrics::power_law::PowerLawFit;
@@ -79,7 +79,7 @@ const SUPERCRITICAL_AVALANCHE_ALARM: u32 = 10;
 
 /// Open avalanche tracked between seed tick and closure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct OpenAvalanche {
+pub struct OpenAvalanche {
     seed_tick: u64,
     seed_actors: u32,
     size: u64,
@@ -333,17 +333,16 @@ impl Simulation {
                 .ledger
                 .push_closed(ratio, open.size, close_tick);
             if ratio > SIGMA_SUPERCRITICAL {
-                self.emergence_branching.supercritical_avalanche_streak =
-                    self.emergence_branching
-                        .supercritical_avalanche_streak
-                        .saturating_add(1);
+                self.emergence_branching.supercritical_avalanche_streak = self
+                    .emergence_branching
+                    .supercritical_avalanche_streak
+                    .saturating_add(1);
             } else {
                 self.emergence_branching.supercritical_avalanche_streak = 0;
             }
         }
         if open.size >= self.emergence_branching.max_avalanche_size {
-            self.emergence_branching.supercritical_avalanche_streak =
-                SUPERCRITICAL_AVALANCHE_ALARM;
+            self.emergence_branching.supercritical_avalanche_streak = SUPERCRITICAL_AVALANCHE_ALARM;
         }
     }
 
@@ -354,7 +353,8 @@ impl Simulation {
         self.emergence_branching.sigma_score = sigma_score(sigma_bar);
         self.emergence_branching.regime = classify_regime(sigma_bar);
 
-        let subcritical = sigma_bar < SIGMA_SUBCRITICAL || (silence && self.emergence_branching.ledger.is_empty());
+        let subcritical = sigma_bar < SIGMA_SUBCRITICAL
+            || (silence && self.emergence_branching.ledger.is_empty());
         self.emergence_branching.subcritical_tick_streak = if subcritical {
             self.emergence_branching
                 .subcritical_tick_streak
@@ -371,8 +371,7 @@ impl Simulation {
                 "emergence alarm MT-013: sustained subcritical branching ratio"
             );
         }
-        if self.emergence_branching.supercritical_avalanche_streak
-            >= SUPERCRITICAL_AVALANCHE_ALARM
+        if self.emergence_branching.supercritical_avalanche_streak >= SUPERCRITICAL_AVALANCHE_ALARM
         {
             tracing::warn!(
                 tick = self.state.tick,
@@ -399,8 +398,10 @@ impl Simulation {
     /// Record positive unrest micro-activity for the current tick (v1
     /// bootstrap: one unit per positive global/faction unrest delta).
     pub(crate) fn record_unrest_micro_activity(&mut self, units: u32) {
-        self.emergence_branching.last_tick_unrest_events =
-            self.emergence_branching.last_tick_unrest_events.saturating_add(units);
+        self.emergence_branching.last_tick_unrest_events = self
+            .emergence_branching
+            .last_tick_unrest_events
+            .saturating_add(units);
     }
 
     /// Take one emergence sample if the current tick is on a sample
@@ -469,7 +470,9 @@ impl Simulation {
             );
 
             // Close the window when W_nov ticks have elapsed, then reset.
-            if tick.saturating_sub(self.emergence.novelty_window_start_tick) >= NOVELTY_SAMPLE_INTERVAL {
+            if tick.saturating_sub(self.emergence.novelty_window_start_tick)
+                >= NOVELTY_SAMPLE_INTERVAL
+            {
                 self.emergence.novelty_window_new = 0;
                 self.emergence.novelty_window_start_tick = tick;
             }
@@ -489,8 +492,16 @@ impl Simulation {
             let raw = self.emergence.novelty_window_new as f32
                 / NOVELTY_SAMPLE_INTERVAL as f32
                 / total_civilians.max(1) as f32;
-            if raw.is_finite() { raw } else { 0.0 }
+            if raw.is_finite() {
+                raw
+            } else {
+                0.0
+            }
         };
+        let power_law_alpha = sanitize_emergence_metric(power_law_alpha);
+        let novelty_rate = sanitize_emergence_metric(novelty_rate);
+        let mi_material_faction_norm =
+            compute_material_faction_mi(self).and_then(|value| value.is_finite().then_some(value));
 
         let sample = EmergenceSample {
             tick,
@@ -510,7 +521,7 @@ impl Simulation {
             branching_regime: branching.regime,
             power_law_alpha,
             novelty_rate,
-            mi_material_faction_norm: compute_material_faction_mi(self),
+            mi_material_faction_norm,
         };
 
         // Single INFO line per sample. The cost budget is ~one log
@@ -541,17 +552,9 @@ impl Simulation {
         // The "boot-run logs show emergence numbers" requirement in
         // the PR brief is satisfied by the `tracing::info!` above —
         // but the standard out is friendlier when running `cargo run
-        // -p civ-server` interactively, so mirror a compact
-        // `entropy=X structures=Y` line to stdout once per sample.
-        // The format matches the task brief literally.
-        println!(
-            "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4}",
-            sample.entropy_bits,
-            sample.structure_count.unwrap_or(0),
-            sample.power_law_alpha,
-            sample.novelty_rate,
-            sample.mi_material_faction_norm.unwrap_or(f32::NAN),
-        );
+        // -p civ-server` interactively, so mirror a compact summary
+        // line to stdout once per sample.
+        println!("{}", emergence_sample_stdout_summary(&sample));
 
         self.emergence_sample = Some(sample);
         // FR-CIV-EMERG-003: emit the `emergence_metrics.v1` replay-bus
@@ -574,6 +577,25 @@ impl Simulation {
             sample.mi_material_faction_norm,
         );
         true
+    }
+}
+
+fn emergence_sample_stdout_summary(sample: &EmergenceSample) -> String {
+    format!(
+        "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4}",
+        sample.entropy_bits,
+        sample.structure_count.unwrap_or(0),
+        sample.power_law_alpha,
+        sample.novelty_rate,
+        sample.mi_material_faction_norm.unwrap_or(f32::NAN),
+    )
+}
+
+fn sanitize_emergence_metric(value: f32) -> f32 {
+    if value.is_finite() {
+        value
+    } else {
+        0.0
     }
 }
 
@@ -747,7 +769,11 @@ fn compute_dashboard(sim: &Simulation) -> (EmergenceDashboard, f32) {
         let bins: Vec<u64> = ranked.iter().map(|&s| u64::from(s)).collect();
         let hist = Histogram::from_counts(bins);
         let a = PowerLawFit.compute(&hist);
-        if a.is_finite() { a } else { 0.0 }
+        if a.is_finite() {
+            a
+        } else {
+            0.0
+        }
     } else {
         0.0
     };
@@ -835,7 +861,8 @@ fn compute_material_faction_mi(sim: &Simulation) -> Option<f32> {
     }
 
     // Second pass: fill the joint histogram.
-    let mut joint = civ_emergence_metrics::JointHistogram::new(MATERIAL_HISTOGRAM_BINS, faction_count);
+    let mut joint =
+        civ_emergence_metrics::JointHistogram::new(MATERIAL_HISTOGRAM_BINS, faction_count);
     let mut obs: usize = 0;
     for (_, (civ, pos)) in sim.world.query::<(&Civilian, &Position3d)>().iter() {
         if let Alignment::Faction(fid) = civ.alignment {
@@ -852,7 +879,11 @@ fn compute_material_faction_mi(sim: &Simulation) -> Option<f32> {
     }
 
     let mi = civ_emergence_metrics::mutual_information_normalised(&joint);
-    if mi.is_finite() { Some(mi) } else { None }
+    if mi.is_finite() {
+        Some(mi)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -978,12 +1009,31 @@ mod tests {
         assert_eq!(sim.last_emergence_sample().unwrap().tick, 50);
     }
 
+    /// The stdout mirror is a stable, parseable summary line with a fixed
+    /// field order so boot logs can be grepped deterministically.
+    #[test]
+    fn emergence_sample_stdout_summary_has_stable_field_order() {
+        let sample = EmergenceSample {
+            entropy_bits: 1.25,
+            structure_count: Some(3),
+            power_law_alpha: 2.5,
+            novelty_rate: 0.125,
+            mi_material_faction_norm: Some(0.75),
+            ..EmergenceSample::default()
+        };
+
+        assert_eq!(
+            emergence_sample_stdout_summary(&sample),
+            "emergence sample: entropy=1.2500 structures=3 power_law_alpha=2.5000 novelty_rate=0.125000 mi_material_faction=0.7500"
+        );
+    }
+
     /// FR-CIV-EMERG-001: the sampler computes the five-tile
     /// `EmergenceDashboard` from the live ECS and caches it on the
-    /// `EmergenceSample`. The test inserts a `&Civilian` + `&ClusterMember`
-    /// + `&Psyche` + `&Mood` population, takes one sample, and
-    /// asserts the dashboard block is `Some(_)` with values that
-    /// match the helper crate's output for the same input slices.
+    /// `EmergenceSample`. The test inserts a population with `Civilian`,
+    /// `ClusterMember`, `Psyche`, and `Mood`, takes one sample, and asserts the
+    /// dashboard block is `Some(_)` with values that match the helper crate's
+    /// output for the same input slices.
     #[test]
     fn emerg_emerg_001_dashboard_block_populated_from_ecs() {
         use civ_agents::{Alignment, Civilian, ClusterId};
@@ -1169,7 +1219,10 @@ mod tests {
             ledger.push_closed(sigma_a(actors, descendants), u64::from(descendants), 0);
         }
         let sigma_bar = rolling_mean_sigma(&ledger, stream.len());
-        assert!((sigma_bar - 0.95).abs() < 1e-6, "expected σ̄=0.95, got {sigma_bar}");
+        assert!(
+            (sigma_bar - 0.95).abs() < 1e-6,
+            "expected σ̄=0.95, got {sigma_bar}"
+        );
         assert_eq!(classify_regime(sigma_bar), BranchingRegime::EdgeOfChaos);
         assert_eq!(classify_regime(0.75), BranchingRegime::HeatDeath);
         assert_eq!(classify_regime(1.15), BranchingRegime::Supercritical);
@@ -1285,7 +1338,11 @@ mod tests {
                 new_count += 1;
             }
         }
-        assert_eq!(seen.len(), 1, "same fingerprint must appear only once in the set");
+        assert_eq!(
+            seen.len(),
+            1,
+            "same fingerprint must appear only once in the set"
+        );
         assert_eq!(new_count, 1, "only the first insertion is novel");
     }
 
@@ -1307,7 +1364,10 @@ mod tests {
         assert_eq!(new_count, 3, "three distinct configs must all be novel");
         let total_civilians: u32 = 10;
         let raw = new_count as f32 / NOVELTY_SAMPLE_INTERVAL as f32 / total_civilians.max(1) as f32;
-        assert!(raw > 0.0, "novelty_rate must be positive when new configs appear; got {raw}");
+        assert!(
+            raw > 0.0,
+            "novelty_rate must be positive when new configs appear; got {raw}"
+        );
         assert!(raw.is_finite(), "novelty_rate must be finite; got {raw}");
     }
 
@@ -1383,9 +1443,9 @@ mod tests {
         }
         assert!(sim.sample_emergence());
         let s = sim.last_emergence_sample().expect("sample cached");
-        let mi = s.mi_material_faction_norm.expect(
-            "≥2 factions with ≥8 observations → MI must be Some(_)",
-        );
+        let mi = s
+            .mi_material_faction_norm
+            .expect("≥2 factions with ≥8 observations → MI must be Some(_)");
         assert!(
             mi.is_finite(),
             "mi_material_faction_norm must be finite; got {mi}"

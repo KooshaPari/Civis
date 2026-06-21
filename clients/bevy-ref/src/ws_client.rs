@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,

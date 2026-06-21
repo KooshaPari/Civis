@@ -21,6 +21,7 @@ pub mod camera;
 pub mod decorations;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
+pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -239,6 +240,10 @@ pub struct EmergenceHudData {
     pub novelty_rate: f32,
     /// Normalised mutual information between material and faction distributions.
     pub mi_material_faction_norm: Option<f32>,
+    /// 6-connectivity component count from the sampled chunk (None = not yet sampled).
+    pub structure_count: Option<u32>,
+    /// Charter criticality regime label: "SUBCRITICAL" | "CRITICAL" | "SUPERCRITICAL".
+    pub branching_regime: String,
 }
 
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).

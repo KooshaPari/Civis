@@ -32,9 +32,11 @@ use civ_bevy_ref::{
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
+    emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
+use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 
@@ -186,12 +188,14 @@ fn main() {
             LivePickPlugin,
             EguiPlugin::default(),
             EventFeedPlugin,
+            EmergenceDashboardPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
         .init_resource::<EmergencePollTimer>()
+        .init_resource::<EmergenceHudData>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
@@ -336,9 +340,9 @@ fn update_presentation_lighting(
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
-    commands.insert_resource(LiveBridge {
-        client: WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default()),
-    });
+    let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
+    commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
+    commands.insert_resource(LiveBridge { client: ws_client });
 
     let text = commands
         .spawn((
@@ -1022,11 +1026,13 @@ fn poll_emergence(
     mut timer: ResMut<EmergencePollTimer>,
     mut hud: ResMut<HudState>,
     speed: Res<SimSpeedState>,
+    mut emergence_res: ResMut<EmergenceHudData>,
 ) {
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em);
+        hud.snapshot.emergence = Some(em.clone());
+        *emergence_res = em;
     }
     timer.0 += time.delta_secs();
     if timer.0 < 10.0 {

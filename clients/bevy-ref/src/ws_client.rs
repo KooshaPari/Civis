@@ -75,6 +75,13 @@ impl WsClient {
         let _ = self.send_tx.send(json);
     }
 
+    /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
+    /// without holding a reference to the full `WsClient`.
+    #[must_use]
+    pub fn rpc_sender(&self) -> crossbeam_channel::Sender<String> {
+        self.send_tx.clone()
+    }
+
     /// Drain any parsed `sim.emergence` responses (id=2) from the background thread.
     #[must_use]
     pub fn poll_emergence(&self) -> Vec<EmergenceHudData> {
@@ -244,6 +251,8 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
         power_law_alpha: result.get("power_law_alpha").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
         novelty_rate: result.get("novelty_rate").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
         mi_material_faction_norm: result.get("mi_material_faction_norm").and_then(|v| v.as_f64()).map(|f| f as f32),
+        structure_count: result.get("structure_count").and_then(|v| v.as_u64()).map(|n| n as u32),
+        branching_regime: result.get("branching_regime").and_then(|v| v.as_str()).unwrap_or("SUBCRITICAL").to_owned(),
     })
 }
 

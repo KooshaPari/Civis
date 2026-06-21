@@ -19,6 +19,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 use crate::settings_ui::{GameSettings, ACTION_TOGGLE_DIPLOMACY, KeyBinding};
+use crate::ui_theme::CHIP_FILL;
 
 // ---------------------------------------------------------------------------
 // Outbound RPC bridge
@@ -51,8 +52,6 @@ impl DiplomacyBridge {
 
 /// Dark glass panel fill — identical to `PANEL_FILL` in `game_ui.rs`.
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-/// Chip / cell tint — identical to `CHIP_FILL` in `game_ui.rs`.
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 /// Cyan accent — identical to `ACCENT` in `game_ui.rs`.
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 /// Dimmed label colour — identical to `DIM` in `game_ui.rs`.

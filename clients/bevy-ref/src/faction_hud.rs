@@ -1,4 +1,4 @@
-﻿#![cfg(all(feature = "bevy", feature = "egui"))]
+#![cfg(all(feature = "bevy", feature = "egui"))]
 
 //! Player faction HUD panel — shows the player-owned faction stats (top-left corner).
 //!
@@ -10,10 +10,10 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use crate::live_stream::LiveStreamScene;
+use crate::ui_theme::CHIP_FILL;
 
 // Palette (mirrors diplomacy_ui.rs / game_ui.rs)
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);

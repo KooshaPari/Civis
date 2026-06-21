@@ -38,6 +38,8 @@ use serde::{
 };
 
 use crate::ui_theme;
+#[cfg(feature = "audio")]
+use bevy_kira_audio::prelude::AudioChannel;
 
 const SETTINGS_PATH: &str = "settings.ron";
 
@@ -1009,6 +1011,8 @@ impl Plugin for SettingsPlugin {
             .add_systems(Update, (open_settings_for_autoshot, toggle_settings_panel))
             .add_systems(Update, capture_keybind_input)
             .add_systems(EguiPrimaryContextPass, draw_settings_panel);
+        #[cfg(feature = "audio")]
+        app.add_systems(Update, sync_audio_settings);
     }
 }
 
@@ -1550,7 +1554,44 @@ fn gameplay_tab(ui: &mut egui::Ui, p: &mut GameplaySettings) -> bool {
                 .changed();
         });
     }
+
+    ui.add_space(4.0);
+    ui.separator();
+    ui.label(egui::RichText::new("Sim Speed Presets").color(ui_theme::DIM));
+    ui.horizontal(|ui| {
+        for &spd in &[1u32, 2, 4, 8] {
+            let label = format!("{}x", spd);
+            let active = (p.default_sim_speed - spd as f32).abs() < 0.01;
+            let btn = if active {
+                ui.add(egui::Button::new(egui::RichText::new(&label).color(ui_theme::ACCENT)))
+            } else {
+                ui.button(&label)
+            };
+            if btn.clicked() {
+                p.default_sim_speed = spd as f32;
+                changed = true;
+            }
+        }
+    });
+
     changed
+}
+
+#[cfg(feature = "audio")]
+fn sync_audio_settings(
+    settings: Res<GameSettings>,
+    ambient: Option<Res<AudioChannel<crate::audio::AmbientChannel>>>,
+    sfx_ch: Option<Res<AudioChannel<crate::audio::SfxChannel>>>,
+) {
+    if !settings.is_changed() { return; }
+    if let Some(amb) = ambient {
+        let vol = (settings.audio.master * settings.audio.music) as f64;
+        amb.set_volume(vol);
+    }
+    if let Some(sfx) = sfx_ch {
+        let vol = (settings.audio.master * settings.audio.sfx) as f64;
+        sfx.set_volume(vol);
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
@@ -99,6 +99,7 @@ struct ScenarioPanel {
 impl Default for ScenarioPanel {
     fn default() -> Self {
         Self { seed_index: 0, speed_index: 0, preset_index: 0 }
+        Self { seed_index: 0, speed_index: 0 }
     }
 }
 
@@ -422,6 +423,9 @@ fn scenario_panel_input(
         );
         bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
         info!("scenario launch: preset={preset} seed={seed} speed={speed}");
+        bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        info!("scenario launch: seed={seed} speed={speed}");
     }
 }
 

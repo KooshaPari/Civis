@@ -281,10 +281,15 @@ fn follow_live_orbit_focus(
     orbit.centre[2] += (focus.centre.z - orbit.centre[2]) * alpha;
 }
 
+fn sun_direction_for_day_factor(day_factor: f32) -> Vec3 {
+    let t = day_factor.clamp(0.0, 1.0);
+    Vec3::new(-0.7 + 0.35 * t, -0.95 + 0.55 * t, -0.2 - 0.12 * t).normalize()
+}
+
 fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
-    mut lights: Query<&mut DirectionalLight>,
+    mut lights: Query<(&mut DirectionalLight, &mut Transform)>,
     mut ambient: ResMut<GlobalAmbientLight>,
     mut clear: ResMut<ClearColor>,
 ) {
@@ -293,8 +298,10 @@ fn update_presentation_lighting(
     presentation.day_factor += (target - presentation.day_factor) * step;
 
     let day_factor = presentation.day_factor;
-    for mut light in &mut lights {
+    let sun_dir = sun_direction_for_day_factor(day_factor);
+    for (mut light, mut transform) in &mut lights {
         light.illuminance = 12_000.0 * day_factor;
+        *transform = Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir));
     }
 
     let ambient_rgb = presentation_ambient_color_rgb(day_factor);
@@ -410,6 +417,21 @@ fn sync_chunk_debug_render(
             let fade_elapsed = fade.map(|state| state.elapsed);
             apply_chunk_material(material, CHUNK_BASE_COLOR, debug.wireframe, fade_elapsed);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sun_direction_moves_across_day_cycle() {
+        let night = sun_direction_for_day_factor(0.0);
+        let day = sun_direction_for_day_factor(1.0);
+        assert!(night.y < day.y);
+        assert!(night.z > day.z);
+        assert!((night.length() - 1.0).abs() < 1e-5);
+        assert!((day.length() - 1.0).abs() < 1e-5);
     }
 }
 

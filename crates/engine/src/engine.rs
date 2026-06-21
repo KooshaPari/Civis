@@ -1403,6 +1403,20 @@ impl Simulation {
         self.last_cohort_stats = Some(wardrobe_stats);
     }
 
+    /// Research phase: advance in-progress tech; pop next from queue (FR-CIV-SERVER-003).
+    fn phase_research(&mut self) {
+        if let Some((tech, ref mut ticks_left)) = self.research_cache.in_progress {
+            if *ticks_left == 0 {
+                self.research_cache.researched.push(tech.clone());
+                self.state.research_progress = self.state.research_progress.saturating_add(100_000);
+                self.research_cache.in_progress = self.research_cache.queued.pop_front().map(|t| (t, 100));
+            } else {
+                *ticks_left -= 1;
+            }
+        } else if let Some(next) = self.research_cache.queued.pop_front() {
+            self.research_cache.in_progress = Some((next, 100));
+        }
+    }
     /// Production phase - buildings produce resources
     fn phase_production(&mut self) {
         let mut food = Fixed::ZERO;

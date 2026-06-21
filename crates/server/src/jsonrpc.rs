@@ -751,6 +751,8 @@ pub struct DispatchContext {
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Recent diplomacy events snapshot for `sim.diplomacy_state`.
+    pub diplomacy_snapshot: Vec<serde_json::Value>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].

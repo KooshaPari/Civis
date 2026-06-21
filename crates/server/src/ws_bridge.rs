@@ -1315,7 +1315,8 @@ mod tests {
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir,
             save_db,
-            session_id: "test-session".to_string(),`r`n        }
+            session_id: "test-session".to_string(),
+        }
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {

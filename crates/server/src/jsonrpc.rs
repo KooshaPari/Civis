@@ -79,8 +79,10 @@ pub enum JsonRpcMethod {
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
     SimUnsubscribe,
-    /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
+    /// Replace per-connection tick broadcast filter `(`sim.update_subscription`).`
     SimUpdateSubscription,
+    /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
+    SimOutcome,
 }
 
 impl JsonRpcMethod {
@@ -110,6 +112,7 @@ impl JsonRpcMethod {
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
+            Self::SimOutcome => "sim.outcome",
         }
     }
 
@@ -139,6 +142,7 @@ impl JsonRpcMethod {
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
+            "sim.outcome" => Some(Self::SimOutcome),
             _ => None,
         }
     }

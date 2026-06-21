@@ -80,6 +80,7 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
+pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
 #[cfg(feature = "bevy")]

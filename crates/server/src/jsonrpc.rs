@@ -1,4 +1,4 @@
-//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -82,6 +82,7 @@ pub enum JsonRpcMethod {
     /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
     SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
+    SimGodAction,
     SimPerf,
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
@@ -116,6 +117,7 @@ impl JsonRpcMethod {
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
             Self::SimInspectTile => "sim.inspect_tile",
+            Self::SimGodAction => "sim.god_action",
             Self::SimPerf => "sim.perf",
             Self::SimDiplomacyAction => "sim.diplomacy_action",
             Self::SimQueueResearch => "sim.queue_research",
@@ -150,6 +152,7 @@ impl JsonRpcMethod {
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
+            "sim.god_action" => Some(Self::SimGodAction),
             "sim.perf" => Some(Self::SimPerf),
             "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
             "sim.queue_research" => Some(Self::SimQueueResearch),
@@ -987,6 +990,7 @@ pub enum DispatchEffect {
         entity_seq: u64,
     },
     /// Write one voxel (`sim.place_voxel`).
+    GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
     PlaceVoxel {
         /// World X coordinate.
         x: i64,
@@ -1628,6 +1632,23 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     "tick": outcome_result.tick,
                 })),
                 effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimGodAction => {
+            let params = req.params.as_ref().and_then(|p| p.as_object())
+                .ok_or("sim.god_action requires params object");
+            match params {
+                Err(msg) => DispatchPlan { response: JsonRpcResponse::failure(req.id, JsonRpcError { code: error_code::INVALID_PARAMS, message: msg.to_owned(), data: None }), effect: DispatchEffect::None },
+                Ok(p) => DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, serde_json::json!({ "ok": true, "tick": ctx.tick })),
+                    effect: DispatchEffect::GodAction {
+                        action: p.get("action").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
+                        x: p.get("x").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        y: p.get("y").and_then(|v| v.as_f64()).map(|f| f as f32),
+                        target_faction: p.get("target_faction").and_then(|v| v.as_u64()).map(|f| f as u32),
+                        magnitude: p.get("magnitude").and_then(|v| v.as_f64()).map(|f| f as f32),
+                    },
+                },
             }
         }
         JsonRpcMethod::SimPerf => {

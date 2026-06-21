@@ -15,13 +15,13 @@ use std::collections::VecDeque;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use crate::ui_theme::CHIP_FILL;
 
 // ---------------------------------------------------------------------------
 // Palette (mirrors game_ui.rs dark-glassmorphism constants)
 // ---------------------------------------------------------------------------
 
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 
 // ---------------------------------------------------------------------------

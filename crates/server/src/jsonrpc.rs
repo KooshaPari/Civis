@@ -2196,6 +2196,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2268,6 +2270,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         let result = plan.response.result.expect("result");

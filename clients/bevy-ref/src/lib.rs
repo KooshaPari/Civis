@@ -317,6 +317,7 @@ pub struct LiveHudSnapshot {
     pub last_event: Option<String>,
     /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
     pub pick_detail: Option<String>,
+    /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
     /// Cached emergence metrics from sim.emergence poll (entropy_norm, power_law_alpha, novelty_rate, mi).
     pub emergence: Option<EmergenceHudData>,
     /// Current simulation speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).

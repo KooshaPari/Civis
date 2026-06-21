@@ -107,9 +107,7 @@ impl WsClient {
     #[must_use]
     pub fn poll(&self) -> Vec<Frame3d> {
         let mut frames = Vec::new();
-        while let Ok(frame) = self.frame_rx.try_recv() {
-            frames.push(frame);
-        }
+        while let Ok(frame) = self.frame_rx.try_recv() { frames.push(frame); }
         frames
     }
 

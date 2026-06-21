@@ -1,4 +1,4 @@
-//! Faction Diplomacy panel for the Civis reference client.
+﻿//! Faction Diplomacy panel for the Civis reference client.
 //!
 //! Provides a dark-glassmorphism overlay (matching `game_ui.rs` palette) that
 //! shows all known factions and a symmetric relation matrix. Open / close with
@@ -46,22 +46,13 @@ impl DiplomacyBridge {
 }
 
 // ---------------------------------------------------------------------------
-// Palette (mirrors game_ui.rs)
+// Palette — canonical Keycap tokens from ui_theme; local CHIP_FILL not in ui_theme
 // ---------------------------------------------------------------------------
 
-/// Dark glass panel fill — identical to `PANEL_FILL` in `game_ui.rs`.
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-/// Chip / cell tint — identical to `CHIP_FILL` in `game_ui.rs`.
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
-/// Cyan accent — identical to `ACCENT` in `game_ui.rs`.
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-/// Dimmed label colour — identical to `DIM` in `game_ui.rs`.
-const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
+use crate::ui_theme::{ACCENT, DIM, GOLD, GREEN, PANEL_FILL, RED};
 
-// Relation colour stops
-const GREEN: egui::Color32 = egui::Color32::from_rgb(100, 210, 120);
-const GOLD: egui::Color32 = egui::Color32::from_rgb(240, 200, 90);
-const RED: egui::Color32 = egui::Color32::from_rgb(220, 80, 80);
+// CHIP_FILL: local tint not present in ui_theme (different from GRAPHITE_700)
+const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 
 // ---------------------------------------------------------------------------
 // Data model

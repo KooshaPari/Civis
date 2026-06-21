@@ -124,14 +124,21 @@ impl SubscriptionFilter {
                     .and_then(|v| v.as_u64())
                     .and_then(tick_stride_from_max_framerate)
             });
+        let explicit_id = params.and_then(|p| p.get("subscription_id")).is_some();
         let subscription_id = params
             .and_then(|p| p.get("subscription_id"))
             .and_then(|v| v.as_str())
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_owned)
-            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-        *self = build_filter(kinds.as_deref(), stride, Some(subscription_id));
+            .or_else(|| {
+                if explicit_id {
+                    None
+                } else {
+                    Some(uuid::Uuid::new_v4().to_string())
+                }
+            });
+        *self = build_filter(kinds.as_deref(), stride, subscription_id);
         Ok(self.subscribe_result(current_tick))
     }
 

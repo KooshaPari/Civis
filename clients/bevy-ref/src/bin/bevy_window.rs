@@ -31,7 +31,8 @@ use civ_bevy_ref::{
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
+    VOXEL_CHUNK_EDGE,
 };
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
@@ -52,6 +53,20 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
+
+// FR-CIV-CLIENT-001
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum AppState {
+    #[default]
+    Connecting,
+    InGame,
+    ConnectionLost,
+}
+
+#[derive(Resource, Default)]
+struct ConnectionOverlay {
+    root: Option<Entity>,
+}
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -164,12 +179,19 @@ fn main() {
             GpuFeaturesPlugin,
             LivePickPlugin,
         ))
+        .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
+        .init_resource::<ConnectionOverlay>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, setup)
+        .add_systems(OnEnter(AppState::Connecting), spawn_connecting_overlay)
+        .add_systems(OnExit(AppState::Connecting), despawn_connection_overlay)
+        .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
+        .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
+        .add_systems(Update, drive_app_state)
         .add_systems(
             Update,
             (
@@ -189,9 +211,34 @@ fn main() {
                 update_hud,
                 update_minimap,
                 update_presentation_lighting,
-            ),
+            )
+                .run_if(in_state(AppState::InGame)),
         )
         .run();
+}
+
+fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
+    let ws = bridge.client.latest_connection_state();
+    match (current.get(), ws) {
+        (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        (AppState::InGame, WsConnectionState::Reconnecting) | (AppState::InGame, WsConnectionState::Disconnected) => { next.set(AppState::ConnectionLost); }
+        (AppState::ConnectionLost, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        _ => {}
+    }
+}
+
+fn spawn_connecting_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn(Node { position_type: PositionType::Absolute, top: Val::Percent(45.0), left: Val::Percent(0.0), width: Val::Percent(100.0), justify_content: JustifyContent::Center, ..default() }).with_children(|parent| { parent.spawn((Text::new("Connecting to Civis server..."), TextFont::from_font_size(22.0), TextColor(Color::srgb(0.75, 0.85, 1.0)))); }).id();
+    overlay.root = Some(root);
+}
+
+fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn(Node { position_type: PositionType::Absolute, top: Val::Percent(45.0), left: Val::Percent(0.0), width: Val::Percent(100.0), justify_content: JustifyContent::Center, flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: Val::Px(8.0), ..default() }).with_children(|parent| { parent.spawn((Text::new("Connection lost. Retrying..."), TextFont::from_font_size(22.0), TextColor(Color::srgb(1.0, 0.65, 0.35)))); parent.spawn((Text::new("The simulation will resume automatically when the server is reachable."), TextFont::from_font_size(14.0), TextColor(Color::srgb(0.7, 0.7, 0.7)))); }).id();
+    overlay.root = Some(root);
+}
+
+fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
 }
 
 fn apply_spectator_meta(

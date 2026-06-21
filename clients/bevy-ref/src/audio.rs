@@ -1,47 +1,5 @@
 //! Ambient soundscape + SFX system for the Civis Bevy client.
 //!
-//! [`CivisAudioPlugin`] is self-contained and additive: it inserts an audio
-//! resource set and a small event queue, then drains that queue every frame to
-//! drive playback. Other systems never touch the audio backend directly — they
-//! call [`play_sfx`] (or write a [`SfxEvent`]) and the plugin does the rest.
-//!
-//! ## What it provides
-//! - **Ambient bed** — a looping wind / nature soundscape started at boot on its
-//!   own [`AudioChannel<AmbientChannel>`] so it can be ducked / muted
-//!   independently of one-shot effects.
-//! - **UI click SFX** — [`SfxKind::UiClick`] for button / menu feedback.
-//! - **Event SFX hooks** — [`SfxKind::Birth`], [`SfxKind::Death`],
-//!   [`SfxKind::Disaster`], [`SfxKind::Build`] for simulation events. Wire these
-//!   from `sim_bridge` / `event_feed` by writing a [`SfxEvent`].
-//!
-//! ## Public API for other systems
-//! ```ignore
-//! // From any system with `Commands`/`MessageWriter<SfxEvent>` access:
-//! fn on_birth(mut sfx: MessageWriter<civ_bevy_ref::audio::SfxEvent>) {
-//!     sfx.write(civ_bevy_ref::audio::SfxEvent::new(SfxKind::Birth));
-//! }
-//! ```
-//! [`play_sfx`] is a thin helper for the common `MessageWriter` path.
-//!
-//! ## Audio assets (CC0 drop-in)
-//! This plugin loads its clips from **`assets/audio/`** relative to the client
-//! working directory. The default file names live in [`AudioFiles`]:
-//!
-//! | Slot       | Default path                     | Suggested CC0 source                     |
-//! |------------|----------------------------------|------------------------------------------|
-//! | ambient    | `assets/audio/ambient_wind.ogg`  | freesound.org / kenney.nl nature beds    |
-//! | UI click   | `assets/audio/ui_click.ogg`      | kenney.nl "UI Audio" pack (CC0)          |
-//! | birth      | `assets/audio/birth.ogg`         | kenney.nl "Interface Sounds" (CC0)       |
-//! | death      | `assets/audio/death.ogg`         | kenney.nl / freesound CC0                |
-//! | disaster   | `assets/audio/disaster.ogg`      | freesound.org CC0 (rumble / impact)      |
-//! | build      | `assets/audio/build.ogg`         | kenney.nl "Impact Sounds" (CC0)          |
-//!
-//! When a file is **absent**, `bevy_kira_audio` logs a missing-asset warning and
-//! the corresponding sound is simply silent — the app stays green and playable.
-//! To ship real audio, drop CC0 `.ogg` files at the paths above (no code change
-//! needed). For a fully procedural fallback (a generated sine tone instead of
-//! silence) see the note on [`AudioHandles::resolve`].
-//!
 //! Feature-gated behind the `audio` cargo feature (which implies `bevy`).
 
 #![cfg(feature = "audio")]
@@ -49,7 +7,7 @@
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
-// ── Channels ────────────────────────────────────────────────────────────────
+// -- Channels ----------------------------------------------------------------
 
 /// Dedicated channel for the looping ambient bed (mute / duck independently).
 #[derive(Resource)]
@@ -59,7 +17,7 @@ pub struct AmbientChannel;
 #[derive(Resource)]
 pub struct SfxChannel;
 
-// ── Event kinds ─────────────────────────────────────────────────────────────
+// -- Event kinds -------------------------------------------------------------
 
 /// The catalogue of one-shot sound effects the client can trigger.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -74,11 +32,13 @@ pub enum SfxKind {
     Disaster,
     /// A building was constructed.
     Build,
+    /// A diplomatic act fired.
+    Diplomatic,
+    /// A technology was unlocked.
+    Tech,
 }
 
 /// Bevy message other systems write to trigger a one-shot SFX.
-///
-/// Prefer the [`play_sfx`] helper, which constructs and sends this for you.
 #[derive(Message, Debug, Clone, Copy)]
 pub struct SfxEvent {
     /// Which catalogue entry to play.
@@ -102,34 +62,23 @@ impl SfxEvent {
 }
 
 /// Ergonomic one-liner the rest of the client uses to fire a sound effect.
-///
-/// ```ignore
-/// fn on_button(mut writer: MessageWriter<SfxEvent>) {
-///     play_sfx(&mut writer, SfxKind::UiClick);
-/// }
-/// ```
 pub fn play_sfx(writer: &mut MessageWriter<SfxEvent>, kind: SfxKind) {
     writer.write(SfxEvent::new(kind));
 }
 
-// ── Config + handles ────────────────────────────────────────────────────────
+// -- Config + handles --------------------------------------------------------
 
-/// Where each clip is loaded from under `assets/`. Override before adding the
-/// plugin to point at a different pack.
+/// Where each clip is loaded from under `assets/`.
 #[derive(Resource, Debug, Clone)]
 pub struct AudioFiles {
-    /// Looping ambient bed (wind / nature).
     pub ambient: String,
-    /// UI click.
     pub ui_click: String,
-    /// Agent birth.
     pub birth: String,
-    /// Agent death.
     pub death: String,
-    /// Disaster.
     pub disaster: String,
-    /// Building constructed.
     pub build: String,
+    pub diplomatic: String,
+    pub tech: String,
 }
 
 impl Default for AudioFiles {
@@ -139,8 +88,10 @@ impl Default for AudioFiles {
             ui_click: "audio/ui_click.ogg".to_string(),
             birth: "audio/birth.ogg".to_string(),
             death: "audio/death.ogg".to_string(),
-            disaster: "audio/disaster.ogg".to_string(),
+            disaster: "audio/sfx_disaster.ogg".to_string(),
             build: "audio/build.ogg".to_string(),
+            diplomatic: "audio/sfx_diplomatic.ogg".to_string(),
+            tech: "audio/sfx_tech.ogg".to_string(),
         }
     }
 }
@@ -148,28 +99,18 @@ impl Default for AudioFiles {
 /// Loaded clip handles, populated at startup from [`AudioFiles`].
 #[derive(Resource, Default)]
 pub struct AudioHandles {
-    /// Looping ambient bed.
     pub ambient: Handle<bevy_kira_audio::AudioSource>,
-    /// UI click.
     pub ui_click: Handle<bevy_kira_audio::AudioSource>,
-    /// Agent birth.
     pub birth: Handle<bevy_kira_audio::AudioSource>,
-    /// Agent death.
     pub death: Handle<bevy_kira_audio::AudioSource>,
-    /// Disaster.
     pub disaster: Handle<bevy_kira_audio::AudioSource>,
-    /// Building constructed.
     pub build: Handle<bevy_kira_audio::AudioSource>,
+    pub diplomatic: Handle<bevy_kira_audio::AudioSource>,
+    pub tech: Handle<bevy_kira_audio::AudioSource>,
 }
 
 impl AudioHandles {
     /// Resolve a [`SfxKind`] to its loaded clip handle.
-    ///
-    /// NOTE (procedural placeholder): if you want a *generated tone* instead of
-    /// silence when a CC0 file is missing, build a `kira` `StaticSoundData` from
-    /// a sine sample buffer and register it as an `AudioSource` here, returning
-    /// that handle as the fallback. The asset-file path above is preferred so
-    /// the default keeps zero baked binary data in the repo.
     #[must_use]
     pub fn for_kind(&self, kind: SfxKind) -> Handle<bevy_kira_audio::AudioSource> {
         match kind {
@@ -178,6 +119,8 @@ impl AudioHandles {
             SfxKind::Death => self.death.clone(),
             SfxKind::Disaster => self.disaster.clone(),
             SfxKind::Build => self.build.clone(),
+            SfxKind::Diplomatic => self.diplomatic.clone(),
+            SfxKind::Tech => self.tech.clone(),
         }
     }
 }
@@ -185,12 +128,27 @@ impl AudioHandles {
 /// Startup ambient-bed volume (linear).
 pub const AMBIENT_VOLUME: f32 = 0.35;
 
-// ── Plugin ──────────────────────────────────────────────────────────────────
+/// Runtime audio state -- mute toggle and per-channel volume.
+#[derive(Resource)]
+pub struct AudioState {
+    pub ambient_volume: f32,
+    pub sfx_volume: f32,
+    pub muted: bool,
+}
+
+impl Default for AudioState {
+    fn default() -> Self {
+        Self {
+            ambient_volume: AMBIENT_VOLUME,
+            sfx_volume: 0.7,
+            muted: false,
+        }
+    }
+}
+
+// -- Plugin ------------------------------------------------------------------
 
 /// Ambient soundscape + SFX plugin for the Civis Bevy client.
-///
-/// Named `CivisAudioPlugin` to avoid clashing with Bevy's built-in `AudioPlugin`
-/// and `bevy_kira_audio`'s `AudioPlugin` (which this plugin pulls in for you).
 #[derive(Default)]
 pub struct CivisAudioPlugin;
 
@@ -203,13 +161,13 @@ impl Plugin for CivisAudioPlugin {
             .add_audio_channel::<SfxChannel>()
             .init_resource::<AudioFiles>()
             .init_resource::<AudioHandles>()
+            .init_resource::<AudioState>()
             .add_message::<SfxEvent>()
             .add_systems(Startup, (load_audio, start_ambient).chain())
-            .add_systems(Update, drain_sfx_events);
+            .add_systems(Update, (drain_sfx_events, toggle_mute));
     }
 }
 
-/// Load every clip handle from [`AudioFiles`] (missing files warn, not panic).
 fn load_audio(
     asset_server: Res<AssetServer>,
     files: Res<AudioFiles>,
@@ -221,9 +179,10 @@ fn load_audio(
     handles.death = asset_server.load(files.death.clone());
     handles.disaster = asset_server.load(files.disaster.clone());
     handles.build = asset_server.load(files.build.clone());
+    handles.diplomatic = asset_server.load(files.diplomatic.clone());
+    handles.tech = asset_server.load(files.tech.clone());
 }
 
-/// Kick off the looping ambient bed on the dedicated ambient channel.
 fn start_ambient(channel: Res<AudioChannel<AmbientChannel>>, handles: Res<AudioHandles>) {
     channel
         .play(handles.ambient.clone())
@@ -231,7 +190,6 @@ fn start_ambient(channel: Res<AudioChannel<AmbientChannel>>, handles: Res<AudioH
         .with_volume(AMBIENT_VOLUME);
 }
 
-/// Drain queued [`SfxEvent`]s and play each on the SFX channel.
 fn drain_sfx_events(
     mut events: MessageReader<SfxEvent>,
     channel: Res<AudioChannel<SfxChannel>>,
@@ -242,6 +200,23 @@ fn drain_sfx_events(
             .play(handles.for_kind(event.kind))
             .with_volume(event.volume);
     }
+}
+
+/// Toggle mute on/off with the K key; updates both channel volumes.
+fn toggle_mute(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut state: ResMut<AudioState>,
+    ambient: Res<AudioChannel<AmbientChannel>>,
+    sfx: Res<AudioChannel<SfxChannel>>,
+) {
+    if !keys.just_pressed(KeyCode::KeyK) {
+        return;
+    }
+    state.muted = !state.muted;
+    let ambient_vol = if state.muted { 0.0 } else { state.ambient_volume };
+    let sfx_vol = if state.muted { 0.0 } else { state.sfx_volume };
+    ambient.set_volume(ambient_vol);
+    sfx.set_volume(sfx_vol);
 }
 
 #[cfg(test)]
@@ -267,20 +242,31 @@ mod tests {
         let files = AudioFiles::default();
         assert!(files.ambient.starts_with("audio/"));
         assert!(files.ui_click.ends_with(".ogg"));
+        assert!(files.diplomatic.starts_with("audio/"));
+        assert!(files.tech.starts_with("audio/"));
     }
 
     #[test]
     fn for_kind_maps_each_variant_to_a_handle_slot() {
         let handles = AudioHandles::default();
-        // Distinct match arms compile + each returns a (default/weak) handle.
         for kind in [
             SfxKind::UiClick,
             SfxKind::Birth,
             SfxKind::Death,
             SfxKind::Disaster,
             SfxKind::Build,
+            SfxKind::Diplomatic,
+            SfxKind::Tech,
         ] {
             let _ = handles.for_kind(kind);
         }
+    }
+
+    #[test]
+    fn audio_state_default_is_unmuted() {
+        let state = AudioState::default();
+        assert!(!state.muted);
+        assert!((state.ambient_volume - AMBIENT_VOLUME).abs() < f32::EPSILON);
+        assert!(state.sfx_volume > 0.0);
     }
 }

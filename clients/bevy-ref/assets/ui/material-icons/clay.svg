@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <!-- Clay: thrown pot. Palette: clay earth #9A7054. -->
-  <g fill="none" stroke="#9A7054" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M16,14 Q14,12 24,12 Q34,12 32,14 L30,18 Q40,24 36,36 Q32,44 24,44 Q16,44 12,36 Q8,24 18,18 Z"/>
-    <path d="M14,26 Q24,30 34,26" opacity="0.6" stroke-width="1.8"/>
-  </g>
-</svg>

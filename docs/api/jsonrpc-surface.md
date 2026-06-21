@@ -8,17 +8,13 @@
 
 ---
 
-## Method catalog (21)
+## Method catalog (14)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
 | `health` | — | `{}` or omit | `{ "tick": <u64> }` | [`ws_jsonrpc_health_returns_tick`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.status` | — | `{}` or omit | `{ "tick": <u64> }`; adds `"population"` when bridge has sim | [`ws_jsonrpc_sim_status_returns_tick_and_population`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.snapshot` | — | `{}` or omit | Full snapshot when sim available (see [Snapshot result](#simsnapshot-result)); else `{ "tick", "speed_multiplier" }` | [`ws_jsonrpc_sim_snapshot_returns_snapshot_fields`](../../crates/server/tests/ws_smoke.rs) |
-| `sim.emergence` | — | `{}` or omit | Latest emergence sample when available; else `{ "tick", "sample": null }` | Unit: `sim_emergence_*` in `jsonrpc.rs` |
-| `sim.subscribe` | — | `{ "frame_kinds"? \| "filter"? \| "filter_types"?, "tick_stride"?, "max_framerate_hz"?, "subscription_id"? }` | WebSocket only: `{ "subscribed": true, "subscription_id", "filter_active", "frame_kinds", "tick_stride", "current_tick" }`; plain dispatch returns `-32603` | [`ws_sim_subscribe_limits_tick_broadcast_frames`](../../crates/server/tests/ws_smoke.rs) |
-| `sim.update_subscription` | — | Same as `sim.subscribe` | WebSocket only: replaces the per-connection filter and returns the same shape as `sim.subscribe`; plain dispatch returns `-32603` | Unit: `handle_sim_update_subscription_*` in `ws_bridge.rs` |
-| `sim.unsubscribe` | — | `{}` or omit | WebSocket only: `{ "unsubscribed": true }`; plain dispatch returns `-32603` | Unit: `handle_sim_unsubscribe_*` in `ws_bridge.rs` |
 | `sim.command` | `noop`: —; `tick`: **operator** | `{ "action": "noop" \| "tick", "role"? }` | `noop`: `{ "accepted": true }`; `tick`: `{ "accepted": true, "tick": <u64> }` (tick updated after advance) | `tick`: [`ws_jsonrpc_sim_command_tick_advances_tick`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_command_tick_rejects_missing_role_when_required`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header`](../../crates/server/tests/ws_smoke.rs); F3D0 broadcast: `ws_sim_command_tick_broadcasts_f3d0_*` |
 | `sim.save_replay` | — | `{ "path": <non-empty string> }` | `{ "saved": true, "path": <string> }` | [`ws_jsonrpc_sim_save_and_load_replay_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.load_replay` | — | `{ "path": <non-empty string> }` | `{ "loaded": true, "tick": <u64> }` | [`ws_jsonrpc_sim_save_and_load_replay_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
@@ -30,9 +26,6 @@
 | `sim.spawn_entity` | **operator** | `{ "kind", "x", "y", "faction"? }` — `kind`: `civilian` \| `vehicle` \| `airport` \| `port` \| `hangar` | Dispatch: `{ "accepted": true, "kind": <wire label> }`; bridge adds `ok`, `entity_id` | [`ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.place_voxel` | **operator** | `{ "x", "y", "z": <i64 world>, "material"? }` default `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok": true }` | — (unit: `parse_place_voxel_params_reads_coords` in `jsonrpc.rs`) |
 | `sim.damage` | **operator** | `{ "x", "y", "z": <i64>, "radius"? }` default `8` clamped 1–32, `"energy"?` default `1000` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "queued": true }` (applied next tick) | [`ws_jsonrpc_sim_damage_accepts_event`](../../crates/server/tests/ws_smoke.rs) |
-| `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
-| `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
-| `save.list` | — | `{}` or omit | `[ { "name", "tick", "save_type": "slot" \| "auto" \| "manual" }, … ]` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 
 **Invalid `sim.command` action:** `-32601` `Method not found` (not `-32602`).
 

@@ -9,23 +9,10 @@ publish = false
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
-# Compact, deterministic binary serialisation for the disk-backed dirty-chunk cache.
-bincode = "1.3"
 
 # Adaptive voxel kernel shared across Phenotype-org game clients.
 # Pin the git revision so CI can resolve the same kernel without a sibling checkout.
-phenotype-voxel = { package = "phenotype-voxel", git = "https://github.com/KooshaPari/phenotype-voxel", rev = "a4d115898c0db4afe77074fe51a302b1c09d4478" }
+phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-voxel.git", rev = "0bbd1b7c64e64e7723c42a7417680c23860dfb5a" }
 
 [dev-dependencies]
-criterion = { version = "=0.5.1", features = ["html_reports"] }
-proptest = "1.11"
-# Used by the PBR substrate unit tests to round-trip attestation manifests.
-serde_json = "1"
-# Used by the PBR / HUD substrate unit tests to round-trip plans and
-# panel state through RON (the laws + civ-traffic crates already standardise
-# on RON for replay/save formats).
-ron = "0.8"
-
-[[bench]]
-name = "ca_dirty_chunk"
-harness = false
+proptest = "1.4"

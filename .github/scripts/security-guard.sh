@@ -15,20 +15,12 @@ else
 fi
 
 echo "[security-guard] Running ggshield secret scan"
-# ggshield exit-code contract (verified against ggshield >=1.x):
-#   0 — clean scan, no incidents
-#   1 — scan ran and found incidents (secrets detected)        -> MUST fail the hook
-#   2 — scan errored (bad config, network, parse failure, etc.) -> MUST fail the hook
-#   3 — unauthenticated / no GITGUARDIAN_API_KEY               -> treat as skip so
-#                                                                  local dev commits
-#                                                                  aren't blocked
-# Critically, exit 1 is NOT an auth failure — it is "secrets found". Treating it
-# as a skip would let pre-commit pass while the hook printed "skipping" — exactly
-# the failure mode Bugbot flagged. Only exit 3 may short-circuit the hook.
+# ggshield exits 3 when unauthenticated (no GITGUARDIAN_API_KEY / no local token).
+# Treat that as a skip so local dev commits are not blocked when the key is absent.
 if ! "${GGSHIELD[@]}" secret scan pre-commit; then
   exit_code=$?
   if [ "$exit_code" -eq 3 ]; then
-    echo "[security-guard] ggshield not authenticated (exit $exit_code) — skipping secret scan. Set GITGUARDIAN_API_KEY to enable." >&2
+    echo "[security-guard] ggshield not authenticated (exit 3) — skipping secret scan. Set GITGUARDIAN_API_KEY to enable." >&2
   else
     echo "[security-guard] ggshield secret scan failed with exit code $exit_code" >&2
     exit "$exit_code"

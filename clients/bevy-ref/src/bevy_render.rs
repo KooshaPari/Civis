@@ -1,4 +1,4 @@
-//! Bevy 0.18 renderer for `civ-voxel` worlds.
+//! Bevy 0.14 renderer for `civ-voxel` worlds.
 //!
 //! Behind the `bevy` feature flag so the default workspace build stays cheap.
 //! Run with:
@@ -11,11 +11,9 @@
 //! `MeshBuffer` chunks via PBR. Per-tick streaming + voxel-delta integration
 //! land in a follow-up PR once the protocol bridge is wired.
 
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology};
-use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
-use civ_voxel::material::WATER;
+use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy::render::render_asset::RenderAssetUsages;
 
 use crate::{
     chunk_fade_alpha, chunk_fade_color, chunk_fade_complete, presentation_ambient_brightness,
@@ -101,7 +99,6 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     let camera = CameraTarget::default();
     let eye = camera.orbit_position();
     let centre = Vec3::from_array(camera.centre);
-    let sun_dir = Vec3::new(-0.4, -0.8, -0.3).normalize();
 
     let day_factor = 1.0_f32;
     let clear_rgb = presentation_clear_color_rgb(day_factor);
@@ -111,34 +108,25 @@ pub fn spawn_default_scene(commands: &mut Commands) {
         clear_rgb[1],
         clear_rgb[2],
     )));
-    commands.insert_resource(GlobalAmbientLight {
+    commands.insert_resource(AmbientLight {
         color: Color::srgb(ambient_rgb[0], ambient_rgb[1], ambient_rgb[2]),
         brightness: presentation_ambient_brightness(day_factor),
-        affects_lightmapped_meshes: true,
     });
 
     // Sun light — offset from the camera azimuth so voxels pick up depth.
     commands.spawn((
         DirectionalLight {
-            illuminance: 12_000.0,
+            illuminance: 10_000.0,
             shadows_enabled: true,
             ..default()
         },
-        Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir)),
+        Transform::from_xyz(eye[0] + 12.0, eye[1] + 20.0, eye[2] + 8.0).looking_at(centre, Vec3::Y),
     ));
 
-    let mut cam = commands.spawn((
+    commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
     ));
-    // Marker so `crate::map2d` can locate the *main* perspective camera
-    // (distinct from the minimap `Camera3d`) and toggle its `is_active`
-    // when the 2D map view fades in. Without this, the live 3D scene
-    // bleeds through the alpha-faded basemap. Only attached under `egui`
-    // because the marker type lives in the egui-gated `map2d` module.
-    #[cfg(feature = "egui")]
-    cam.insert(crate::map2d::MainSceneCamera);
-    let _ = cam;
 }
 
 /// Spawn a voxel mesh entity with a basic stone-coloured PBR material.
@@ -154,6 +142,7 @@ pub fn spawn_voxel_mesh(
     if !crate::should_render_chunk(chunk_id, camera_eye, max_dist) {
         return;
     }
+    let _lod = crate::mesh_lod_level(max_dist);
     let handle = meshes.add(mesh_buffer_to_bevy(buf));
     let material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.72, 0.69, 0.62),
@@ -161,7 +150,11 @@ pub fn spawn_voxel_mesh(
         metallic: 0.0,
         ..default()
     });
-    commands.spawn((Mesh3d(handle), MeshMaterial3d(material)));
+    commands.spawn(PbrBundle {
+        mesh: handle,
+        material,
+        ..default()
+    });
 }
 
 #[cfg(test)]
@@ -200,25 +193,25 @@ mod tests {
                     position: [0.0, 0.0, 0.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [0.0, 0.0],
-                    material: WATER,
+                    material: crate::MaterialId(1),
                 },
                 crate::MeshVertex {
                     position: [1.0, 0.0, 0.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [1.0, 0.0],
-                    material: WATER,
+                    material: crate::MaterialId(1),
                 },
                 crate::MeshVertex {
                     position: [1.0, 0.0, 1.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [1.0, 1.0],
-                    material: WATER,
+                    material: crate::MaterialId(1),
                 },
                 crate::MeshVertex {
                     position: [0.0, 0.0, 1.0],
                     normal: [0.0, 1.0, 0.0],
                     uv: [0.0, 1.0],
-                    material: WATER,
+                    material: crate::MaterialId(1),
                 },
             ],
             indices: vec![0, 1, 2, 0, 2, 3],

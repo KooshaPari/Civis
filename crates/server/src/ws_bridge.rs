@@ -462,6 +462,9 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
+                    diplomacy_snapshot: vec![],
+                    researched: vec![],
+                    in_progress_tech: None,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

@@ -2958,4 +2958,84 @@ mod tests {
         let water_exists = count(&g, WATER) > 0 || g.get(0, 0, 0) == AIR;
         assert!(water_exists);
     }
+
+    // ---- CaGrid::index() ----
+
+    /// In-bounds coordinate returns the correct flat row-major index.
+    /// For a [4, 5, 6] grid: index(x, y, z) = x + y*4 + z*4*5.
+    #[test]
+    fn ca_grid_index_in_bounds_returns_correct_flat_index() {
+        let g = CaGrid::new([4, 5, 6]);
+        assert_eq!(g.index(0, 0, 0), Some(0));
+        assert_eq!(g.index(3, 0, 0), Some(3));
+        assert_eq!(g.index(0, 2, 0), Some(8)); // 0 + 2*4 = 8
+        assert_eq!(g.index(0, 0, 1), Some(20)); // 0 + 0 + 1*4*5 = 20
+        assert_eq!(g.index(1, 2, 3), Some(1 + 2 * 4 + 3 * 4 * 5)); // 69
+    }
+
+    /// Out-of-bounds coordinates return None.
+    #[test]
+    fn ca_grid_index_out_of_bounds_returns_none() {
+        let g = CaGrid::new([4, 5, 6]);
+        assert_eq!(g.index(4, 0, 0), None);
+        assert_eq!(g.index(0, 5, 0), None);
+        assert_eq!(g.index(0, 0, 6), None);
+        assert_eq!(g.index(usize::MAX, 0, 0), None);
+    }
+
+    // ---- CaGrid::chunk_counts() ----
+
+    /// chunk_counts returns ceiling-division per axis using chunk side 16.
+    #[test]
+    fn ca_grid_chunk_counts_ceiling_division() {
+        let g = CaGrid::new([32, 16, 48]);
+        assert_eq!(g.chunk_counts(), [2, 1, 3]);
+        let g2 = CaGrid::new([1, 17, 31]);
+        assert_eq!(g2.chunk_counts(), [1, 2, 2]);
+    }
+
+    // ---- CaGrid::mark_dirty_cell() ----
+
+    /// A cell marked dirty appears in dirty_chunks().
+    #[test]
+    fn ca_grid_mark_dirty_cell_sets_chunk_dirty() {
+        let mut g = CaGrid::new([32, 32, 32]);
+        g.dirty_chunks.clear();
+        assert!(g.dirty_chunks().is_empty());
+        g.mark_dirty_cell(0, 0, 0);
+        let dirty = g.dirty_chunks();
+        assert!(!dirty.is_empty());
+        assert!(dirty.contains(&0));
+    }
+
+    // ---- AbiogenesisSuitability::from_cell() ----
+
+    /// WATER at warm temperature in the viable band is a viable seed.
+    #[test]
+    fn abiogenesis_water_solvent_warm_is_viable() {
+        let s = AbiogenesisSuitability::from_cell(WATER, 40, 0);
+        assert_eq!(s.solvent, 255);
+        assert!(s.energy > 0);
+        assert!(s.is_viable());
+    }
+
+    /// A cell with no liquid solvent (e.g. AIR) is not viable.
+    #[test]
+    fn abiogenesis_no_liquid_not_viable() {
+        let s = AbiogenesisSuitability::from_cell(AIR, 40, 128);
+        assert_eq!(s.solvent, 0);
+        assert_eq!(s.value, 0);
+        assert!(!s.is_viable());
+    }
+
+    /// Extreme temperatures yield zero energy even with perfect solvent.
+    #[test]
+    fn abiogenesis_extreme_temps_score_zero_energy() {
+        let cold = AbiogenesisSuitability::from_cell(WATER, 0, 128);
+        assert_eq!(cold.energy, 0);
+        assert!(!cold.is_viable());
+        let hot = AbiogenesisSuitability::from_cell(WATER, 80, 128);
+        assert_eq!(hot.energy, 0);
+        assert!(!hot.is_viable());
+    }
 }

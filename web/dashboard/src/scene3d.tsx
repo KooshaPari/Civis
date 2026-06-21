@@ -1407,6 +1407,10 @@ export function Scene3d() {
 
     let raf = 0;
     const animate = () => {
+      if (document.hidden) {
+        raf = 0;
+        return;
+      }
       raf = window.requestAnimationFrame(animate);
       const snapshot = refs.current.currentSnapshot;
       const terrain = refs.current.activeTerrain;
@@ -1458,6 +1462,18 @@ export function Scene3d() {
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
     };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        if (raf !== 0) {
+          window.cancelAnimationFrame(raf);
+          raf = 0;
+        }
+        return;
+      }
+      if (raf === 0) {
+        animate();
+      }
+    };
 
     const initialize = async () => {
       const terrain = stateRef.current.terrain ?? (await terrainLoader());
@@ -1476,6 +1492,7 @@ export function Scene3d() {
     };
 
     void initialize();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       observer.disconnect();
@@ -1488,6 +1505,7 @@ export function Scene3d() {
       renderer.domElement.removeEventListener("wheel", onWheel);
       clearDragPreview();
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.cancelAnimationFrame(raf);
       controls.dispose();
       terrainGroup.clear();

@@ -585,14 +585,6 @@ impl ReplayLog {
         Ok(log)
     }
 
-    /// Record a stochastic draw (FR-CORE-004 partial).
-    pub fn record_rng_draw(&mut self, tick: u64, kind: &str, value: u64) {
-        self.events.push(ReplayEvent::RngDraw {
-            tick,
-            kind: kind.to_string(),
-            value,
-        });
-    }
 
     /// Count [`ReplayEvent::RngDraw`] markers in this log.
     #[must_use]

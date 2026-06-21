@@ -11,6 +11,7 @@ use crate::{
     WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
+use serde_json;
 use futures_util::{SinkExt, StreamExt};
 use tokio::runtime::Builder;
 use tokio_tungstenite::tungstenite::Message;
@@ -38,6 +39,7 @@ pub struct WsClient {
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
     latest_state: AtomicU32,
+    cmd_tx: Sender<String>,
 }
 
 impl WsClient {
@@ -52,13 +54,15 @@ impl WsClient {
         let (meta_tx, meta_rx) = crossbeam_channel::unbounded();
         let (rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
         let (state_tx, state_rx) = crossbeam_channel::unbounded();
-        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx));
+        let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<String>();
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, cmd_rx));
         Self {
             frame_rx,
             meta_rx,
             rtt_rx,
             state_rx,
             latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
+            cmd_tx,
         }
     }
 
@@ -102,6 +106,21 @@ impl WsClient {
         atomic_to_state(self.latest_state.load(Ordering::Relaxed))
     }
 }
+
+    /// Send a JSON-RPC request over the live WebSocket connection.
+    ///
+    /// The message is queued; the background thread forwards it on the next
+    /// write iteration. Silently drops if the background thread has exited.
+    pub fn send_rpc(&self, method: &str, params: serde_json::Value) {
+        let msg = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        })
+        .to_string();
+        let _ = self.cmd_tx.send(msg);
+    }
 
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
 const SNAPSHOT_POLL_SECS: u64 = 2;
@@ -161,6 +180,7 @@ fn run_client(
     meta_tx: Sender<WsSpectatorMeta>,
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
+    cmd_rx: crossbeam_channel::Receiver<String>,
 ) {
     let runtime = Builder::new_multi_thread()
         .enable_all()
@@ -171,7 +191,7 @@ fn run_client(
         publish_state(&state_tx, WsConnectionState::Disconnected);
         loop {
             publish_state(&state_tx, WsConnectionState::Reconnecting);
-            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx).await {
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &cmd_rx).await {
                 Ok(()) => {
                     backoff.reset();
                 }
@@ -214,6 +234,7 @@ async fn connect_and_stream(
     meta_tx: &Sender<WsSpectatorMeta>,
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
+    cmd_rx: &crossbeam_channel::Receiver<String>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
@@ -228,6 +249,10 @@ async fn connect_and_stream(
     let mut last_snapshot = std::time::Instant::now();
 
     while let Some(msg) = read.next().await {
+        // Forward any queued outbound RPC commands (fire-and-forget).
+        while let Ok(cmd) = cmd_rx.try_recv() {
+            let _ = write.send(Message::Text(cmd.into())).await;
+        }
         if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
             request_snapshot(&mut write, &mut snapshot_ping).await?;
             last_snapshot = std::time::Instant::now();

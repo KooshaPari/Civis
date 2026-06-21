@@ -964,6 +964,11 @@ impl Simulation {
         &self.diplomacy_events
     }
 
+    /// Inject a player-issued diplomacy event without advancing the tick.
+    pub fn push_diplomacy_event(&mut self, event: DiplomacyEvent) {
+        self.diplomacy_events.push(event);
+    }
+
     /// Spawn initial world entities
     fn spawn_initial_entities(world: &mut World) {
         // Create initial citizens

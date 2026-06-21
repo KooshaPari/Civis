@@ -945,6 +945,11 @@ impl Simulation {
         &self.research_cache
     }
 
+    /// Mutably borrow the research cache.
+    pub fn research_cache_mut(&mut self) -> &mut ResearchCache {
+        &mut self.research_cache
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -955,6 +960,11 @@ impl Simulation {
 
     pub fn diplomacy_events(&self) -> &[DiplomacyEvent] {
         &self.diplomacy_events
+    }
+
+    /// Inject a player-issued diplomacy event without advancing the tick.
+    pub fn push_diplomacy_event(&mut self, event: DiplomacyEvent) {
+        self.diplomacy_events.push(event);
     }
 
     /// Spawn initial world entities

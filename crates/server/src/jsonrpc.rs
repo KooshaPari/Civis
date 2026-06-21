@@ -72,6 +72,9 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Inspect terrain + faction at a tile coordinate.
+    /// (`sim.inspect_tile`, FR tile-inspector).
+    SimInspectTile,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
@@ -103,6 +106,7 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::SimInspectTile => "sim.inspect_tile",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -131,6 +135,7 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -755,6 +760,11 @@ pub struct DispatchContext {
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
+    pub in_progress_tech: Option<String>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -1277,6 +1287,15 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimInspectTile => {
+            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
+            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let result = serde_json::json!({ "x": x, "y": y, "stub": true });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimSpawnCivilian => {
             if !role_allows_operator(
                 ctx.require_role,
@@ -1480,6 +1499,57 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 ),
                 effect: DispatchEffect::None,
             },
+        },
+        JsonRpcMethod::SimQueueResearch => {
+            const KNOWN_TECHS: &[&str] = &[
+                "pottery", "masonry", "writing", "iron_working", "currency",
+                "mathematics", "gunpowder", "printing", "banking",
+                "steam_power", "electricity", "railroad",
+            ];
+            let tech = req.params.as_ref()
+                .and_then(|p| p.get("tech"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if tech.is_empty() {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: "missing 'tech' param".to_owned(),
+                        data: None,
+                    }),
+                    effect: DispatchEffect::None,
+                }
+            } else if !KNOWN_TECHS.contains(&tech) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: format!("unknown tech '{}'; known: {}", tech, KNOWN_TECHS.join(", ")),
+                        data: None,
+                    }),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, serde_json::json!({
+                        "queued": tech,
+                        "tick": ctx.tick,
+                    })),
+                    effect: DispatchEffect::QueueResearch { tech: tech.to_owned() },
+                }
+            }
+        }
+        JsonRpcMethod::SimTechState => DispatchPlan {
+            response: JsonRpcResponse::success(req.id, serde_json::json!({
+                "available": [
+                    "pottery", "masonry", "writing", "iron_working", "currency",
+                    "mathematics", "gunpowder", "printing", "banking",
+                    "steam_power", "electricity", "railroad",
+                ],
+                "researched": ctx.researched,
+                "in_progress": ctx.in_progress_tech,
+                "tick": ctx.tick,
+            })),
+            effect: DispatchEffect::None,
         },
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
@@ -1731,6 +1801,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1766,6 +1838,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -1801,6 +1875,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -1825,6 +1901,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1850,6 +1928,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1876,6 +1956,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1902,6 +1984,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1924,6 +2008,8 @@ mod tests {
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2030,6 +2116,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2054,6 +2142,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -2220,6 +2310,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2334,6 +2426,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -2370,6 +2464,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert!(matches!(
@@ -2417,6 +2513,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert!(matches!(
@@ -2490,6 +2588,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2561,6 +2661,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2637,6 +2739,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2678,6 +2782,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2712,6 +2818,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -2744,6 +2852,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2769,6 +2879,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2836,6 +2948,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2901,6 +3015,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -2927,6 +3043,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2958,6 +3076,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2990,6 +3110,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(
@@ -3020,6 +3142,8 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);

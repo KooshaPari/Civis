@@ -451,6 +451,33 @@ async fn handle_jsonrpc_text(
                 }
                 _ => (None, None),
             };
+            let diplomacy_snapshot = if req.method == JsonRpcMethod::SimDiplomacyState {
+                let sim = state.sim.lock().await;
+                sim.diplomacy_events()
+                    .iter()
+                    .map(|e| {
+                        let status = match e.kind {
+                            civ_engine::DiplomacyKind::Peace => "Peace",
+                            civ_engine::DiplomacyKind::Conflict => "War",
+                            civ_engine::DiplomacyKind::TradeAgreement => "Trade",
+                        };
+                        serde_json::json!({
+                            "tick": e.tick,
+                            "faction_a": e.faction_a,
+                            "faction_b": e.faction_b,
+                            "status": status,
+                            "treaty_active": e.kind == civ_engine::DiplomacyKind::Peace,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                vec![]
+            };
+            let (research_researched, research_in_progress) = {
+                let sim = state.sim.lock().await;
+                let cache = sim.research_cache();
+                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -462,6 +489,9 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
+                    diplomacy_snapshot,
+                    researched: research_researched,
+                    in_progress_tech: research_in_progress,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -1029,6 +1059,9 @@ async fn apply_dispatch_effect(
                     set_replay_io_error(response, err.to_string());
                 }
             }
+        }
+        DispatchEffect::QueueResearch { tech } => {
+            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
         }
     }
 }

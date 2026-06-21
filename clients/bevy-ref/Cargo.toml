@@ -168,7 +168,7 @@ gi = [
 [[bin]]
 name = "civ-bevy-window"
 path = "src/bin/bevy_window.rs"
-required-features = ["bevy"]
+required-features = ["bevy", "egui"]
 
 [[bin]]
 name = "civ-standalone"

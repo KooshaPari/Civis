@@ -3597,6 +3597,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::QueueResearch { tech: "pottery".to_owned() });
@@ -3634,6 +3635,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                diplomacy_snapshot: vec![],
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3676,6 +3678,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                diplomacy_snapshot: vec![],
             },
         );
         assert!(plan.response.result.is_some());

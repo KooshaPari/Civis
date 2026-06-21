@@ -1,4 +1,4 @@
-﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

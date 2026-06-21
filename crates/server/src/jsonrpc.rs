@@ -1,4 +1,4 @@
-﻿//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
+//! JSON-RPC 2.0 request/response types for the CIV-0200 WebSocket protocol.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -438,6 +438,11 @@ pub struct SnapshotFields {
     /// either `sim.emergence` or `sim.snapshot.emergence` without
     /// missing the dashboard block.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Fully-researched techs (FR-CIV-SERVER-003).
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Currently-researching tech, if any (FR-CIV-SERVER-003).
+    pub in_progress_tech: Option<String>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -764,6 +769,8 @@ pub struct DispatchContext {
     #[serde(default)]
     pub researched: Vec<String>,
     /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
+    /// Fully-researched techs (FR-CIV-SERVER-003).
+    /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
 }
 

@@ -1,3 +1,4 @@
+# retrigger: 2026-06-21T12:31
 # Local-first merge gate (Phenotype / agileplus pattern).
 # Heavy quality runs locally via lefthook pre-push; cloud CI only verifies the
 # committed `.ci/quality-manifest.json` attestation (see quality.yml).
@@ -30,7 +31,7 @@ jobs:
         run: bash scripts/quality/verify-quality-manifest.sh
 
       - name: Evaluate PR checks (billing bypass)
-        uses: actions/github-script@60a0d4aab8c21a6b6c375a657fbe2e65754290a2
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const prNumber =
@@ -85,10 +86,11 @@ jobs:
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
             // Only these two jobs are required on PRs in local-first mode.
-            const requiredOk = new Set([
+            // NOTE: must be Array (not Set) — consumed via .some() which Set lacks.
+            const requiredOk = [
               /^pr-governance-gate$/i,
               /^quality-manifest/i,
-            ]);
+            ];
 
             // Third-party / legacy optional checks (never block when local-first label is set).
             const optionalBypass = [

@@ -60,8 +60,21 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "diffusion",
 ];
 
+use std::collections::VecDeque;
+
+/// Active research state (FR-CIV-SERVER-003).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResearchCache;
+pub struct ResearchCache {
+    /// Techs queued for research, in order.
+    #[serde(default)]
+    pub queued: VecDeque<String>,
+    /// Fully-researched techs.
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Currently-researching tech + ticks remaining.
+    #[serde(default)]
+    pub in_progress: Option<(String, u32)>,
+}
 
 /// Seeded RNG for reproducible simulation
 pub type SimRng = ChaCha8Rng;
@@ -291,6 +304,9 @@ pub struct WorldState {
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
     pub resources: Resources,
+    /// Accumulated research points; divided by 100_000 gives the tech tier.
+    #[serde(default)]
+    pub research_progress: u64,
 }
 
 impl Default for WorldState {
@@ -947,6 +963,11 @@ impl Simulation {
         &self.research_cache
     }
 
+    /// Current tech tier: research points / 100_000.
+    pub fn research_tier(&self) -> u64 {
+        self.state.research_progress / 100_000
+    }
+
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -1070,6 +1091,7 @@ impl Simulation {
         self.phase_compact();
         self.phase_buildings();
         self.phase_diffusion();
+        self.phase_research();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

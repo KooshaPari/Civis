@@ -7,8 +7,8 @@ use std::{
 use civ_protocol_3d::Frame3d;
 
 use crate::{
-    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, WsConnectionState,
-    WsSpectatorMeta,
+    parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData,
+    WsConnectionState, WsSpectatorMeta,
 };
 use crossbeam_channel::{Receiver, Sender};
 use futures_util::{SinkExt, StreamExt};
@@ -38,6 +38,10 @@ pub struct WsClient {
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
     latest_state: AtomicU32,
+    /// Channel for outbound JSON-RPC text frames (fire-and-forget).
+    send_tx: Sender<String>,
+    /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
+    emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
 }
 
 impl WsClient {
@@ -52,14 +56,33 @@ impl WsClient {
         let (meta_tx, meta_rx) = crossbeam_channel::unbounded();
         let (rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
         let (state_tx, state_rx) = crossbeam_channel::unbounded();
-        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx));
+        let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
+        let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx));
         Self {
             frame_rx,
             meta_rx,
             rtt_rx,
             state_rx,
             latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
+            send_tx,
+            emergence_rx,
         }
+    }
+
+    /// Enqueue an outbound JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
+    pub fn send_rpc(&self, json: String) {
+        let _ = self.send_tx.send(json);
+    }
+
+    /// Drain any parsed `sim.emergence` responses (id=2) from the background thread.
+    #[must_use]
+    pub fn poll_emergence(&self) -> Vec<EmergenceHudData> {
+        let mut out = Vec::new();
+        while let Ok(em) = self.emergence_rx.try_recv() {
+            out.push(em);
+        }
+        out
     }
 
     /// Drain all currently available frames without blocking the main thread.
@@ -161,6 +184,8 @@ fn run_client(
     meta_tx: Sender<WsSpectatorMeta>,
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
+    send_rx: crossbeam_channel::Receiver<String>,
+    emergence_tx: Sender<EmergenceHudData>,
 ) {
     let runtime = Builder::new_multi_thread()
         .enable_all()
@@ -171,7 +196,7 @@ fn run_client(
         publish_state(&state_tx, WsConnectionState::Disconnected);
         loop {
             publish_state(&state_tx, WsConnectionState::Reconnecting);
-            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx).await {
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx).await {
                 Ok(()) => {
                     backoff.reset();
                 }
@@ -207,6 +232,21 @@ fn record_snapshot_rtt(snapshot_ping: &mut Option<std::time::Instant>, rtt_tx: &
     }
 }
 
+/// Parse a sim.emergence (id=2) JSON-RPC response into `EmergenceHudData`.
+fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    if v.get("id").and_then(|i| i.as_i64()) != Some(2) {
+        return None;
+    }
+    let result = v.get("result")?;
+    Some(EmergenceHudData {
+        entropy_norm: result.get("entropy_norm").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+        power_law_alpha: result.get("power_law_alpha").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+        novelty_rate: result.get("novelty_rate").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+        mi_material_faction_norm: result.get("mi_material_faction_norm").and_then(|v| v.as_f64()).map(|f| f as f32),
+    })
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -214,6 +254,8 @@ async fn connect_and_stream(
     meta_tx: &Sender<WsSpectatorMeta>,
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
+    send_rx: &crossbeam_channel::Receiver<String>,
+    emergence_tx: &Sender<EmergenceHudData>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url)
         .await
@@ -228,6 +270,14 @@ async fn connect_and_stream(
     let mut last_snapshot = std::time::Instant::now();
 
     while let Some(msg) = read.next().await {
+        // Drain any outbound RPC frames queued by Bevy systems.
+        while let Ok(json) = send_rx.try_recv() {
+            write
+                .send(Message::Text(json.into()))
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+
         if last_snapshot.elapsed() >= Duration::from_secs(SNAPSHOT_POLL_SECS) {
             request_snapshot(&mut write, &mut snapshot_ping).await?;
             last_snapshot = std::time::Instant::now();
@@ -241,6 +291,10 @@ async fn connect_and_stream(
                     if meta_tx.send(meta).is_err() {
                         return Err("bevy meta receiver dropped".into());
                     }
+                    continue;
+                }
+                if let Some(em) = parse_emergence_response(&text) {
+                    let _ = emergence_tx.send(em);
                     continue;
                 }
                 if config.prefer_binary {

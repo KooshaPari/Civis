@@ -277,9 +277,7 @@ impl Scenario {
 
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
-        let mut sim = Simulation::with_seed_and_starting_conditions(
-            rng_seed,
-            self.starting_conditions.clone(),
+        let mut sim = Simulation::with_seed(rng_seed);
         );
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
@@ -1023,6 +1021,7 @@ starting_conditions:
             "weight should be 1.0, got {}",
             mix[0].weight
         );
+    }
 
     // ============================================================================
     // FR-CORE-005 — Scenario policy wiring tests

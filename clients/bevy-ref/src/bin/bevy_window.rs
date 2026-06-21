@@ -219,6 +219,9 @@ struct ScenarioPresetLabel;
 #[derive(Component)]
 struct ScenarioStartButton;
 
+#[derive(Component)]
+struct ScenarioStartButton;
+
 fn main() {
     let mut app = App::new();
     app.add_plugins((

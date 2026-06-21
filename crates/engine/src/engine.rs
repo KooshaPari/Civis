@@ -1,4 +1,4 @@
-//! CivLab Simulation Engine - Core Tick Loop with ECS
+﻿//! CivLab Simulation Engine - Core Tick Loop with ECS
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
@@ -610,7 +610,7 @@ impl Simulation {
             last_deaths: Vec::new(),
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
-            research_cache: ResearchCache,
+            research_cache: ResearchCache::default(),
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -671,7 +671,7 @@ impl Simulation {
             last_deaths: Vec::new(),
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
-            research_cache: ResearchCache,
+            research_cache: ResearchCache::default(),
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,

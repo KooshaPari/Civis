@@ -21,7 +21,7 @@ use axum::{
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    DiplomacyKind, JobType, Simulation,
+    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -819,6 +819,26 @@ async fn apply_dispatch_effect(
         DispatchEffect::ResetSimulation { seed } => {
             *state.sim.lock().await = Simulation::with_seed(seed);
             state.tick.store(0, Ordering::SeqCst);
+        }
+        DispatchEffect::LoadScenario { preset, seed } => {
+            match load_scenario(preset_scenario_path(&preset)) {
+                Ok(scenario) => {
+                    *state.sim.lock().await = scenario.into_simulation(seed);
+                    state.tick.store(0, Ordering::SeqCst);
+                    tracing::info!(%preset, seed, "loaded scenario preset");
+                }
+                Err(err) => {
+                    tracing::error!(%preset, ?err, "sim.load_scenario failed");
+                    *response = civ_server::jsonrpc::JsonRpcResponse::error(
+                        response.id.clone(),
+                        civ_server::jsonrpc::JsonRpcError {
+                            code: civ_server::jsonrpc::error_code::INTERNAL_ERROR,
+                            message: format!("failed to load preset {preset:?}: {err}"),
+                            data: None,
+                        },
+                    );
+                }
+            }
         }
         DispatchEffect::SetPolicy {
             scarcity_multiplier,

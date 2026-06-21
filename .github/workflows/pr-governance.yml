@@ -118,6 +118,7 @@ jobs:
               /^SonarCloud/i,
               /^Cursor Bugbot/i,
               /^CodeRabbit$/i,
+              /^Rust Module Graph$/i,
             ];
 
             const contexts =

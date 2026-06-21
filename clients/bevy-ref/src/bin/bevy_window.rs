@@ -16,6 +16,7 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
+    faction_hud::{FactionHudPlugin, PlayerFactionId},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
@@ -163,6 +164,20 @@ struct MinimapCache {
     use_focus_bounds: bool,
 }
 
+// Speed multipliers matching ALLOWED_SPEED_MULTIPLIERS in civ-server jsonrpc.rs.
+const SPEED_OPTIONS: &[u32] = &[1, 2, 4, 8];
+
+#[derive(Resource)]
+struct SimSpeedState {
+    multiplier: u32,
+    paused: bool,
+    speed_idx: usize,
+}
+
+impl Default for SimSpeedState {
+    fn default() -> Self { Self { multiplier: 1, paused: false, speed_idx: 0 } }
+}
+
 fn main() {
     App::new()
         .add_plugins((
@@ -178,9 +193,11 @@ fn main() {
             WireframePlugin::default(),
             GpuFeaturesPlugin,
             LivePickPlugin,
+            FactionHudPlugin,
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
+        .init_resource::<SimSpeedState>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
         .insert_resource(ScenePresentation::default())
@@ -195,6 +212,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                speed_control_input,
                 debug_render_input,
                 orbit_camera_input,
                 minimap_click_focus,

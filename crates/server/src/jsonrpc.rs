@@ -1440,6 +1440,57 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
+        JsonRpcMethod::SimQueueResearch => {
+            const KNOWN_TECHS: &[&str] = &[
+                "pottery", "masonry", "writing", "iron_working", "currency",
+                "mathematics", "gunpowder", "printing", "banking",
+                "steam_power", "electricity", "railroad",
+            ];
+            let tech = req.params.as_ref()
+                .and_then(|p| p.get("tech"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if tech.is_empty() {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: "missing 'tech' param".to_owned(),
+                        data: None,
+                    }),
+                    effect: DispatchEffect::None,
+                }
+            } else if !KNOWN_TECHS.contains(&tech) {
+                DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, JsonRpcError {
+                        code: error_code::INVALID_PARAMS,
+                        message: format!("unknown tech '{}'; known: {}", tech, KNOWN_TECHS.join(", ")),
+                        data: None,
+                    }),
+                    effect: DispatchEffect::None,
+                }
+            } else {
+                DispatchPlan {
+                    response: JsonRpcResponse::success(req.id, serde_json::json!({
+                        "queued": tech,
+                        "tick": ctx.tick,
+                    })),
+                    effect: DispatchEffect::QueueResearch { tech: tech.to_owned() },
+                }
+            }
+        }
+        JsonRpcMethod::SimTechState => DispatchPlan {
+            response: JsonRpcResponse::success(req.id, serde_json::json!({
+                "available": [
+                    "pottery", "masonry", "writing", "iron_working", "currency",
+                    "mathematics", "gunpowder", "printing", "banking",
+                    "steam_power", "electricity", "railroad",
+                ],
+                "researched": ctx.researched,
+                "in_progress": ctx.in_progress_tech,
+                "tick": ctx.tick,
+            })),
+            effect: DispatchEffect::None,
+        },
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {

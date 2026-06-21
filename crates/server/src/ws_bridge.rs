@@ -2063,7 +2063,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let text = handle_jsonrpc_text(
@@ -2090,7 +2090,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
-        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let state = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let subscribe = handle_jsonrpc_text(

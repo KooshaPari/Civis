@@ -288,6 +288,8 @@ fn main() {
             EmergenceDashboardPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
+            EguiPlugin::default(),
+            EventFeedPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()

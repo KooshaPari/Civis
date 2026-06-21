@@ -244,6 +244,20 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     Some(WsSpectatorMeta { is_day, tick })
 }
 
+/// Subset of sim.emergence fields shown in the HUD.
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+pub struct EmergenceHudData {
+    /// Normalised Shannon entropy (`0..=1`).
+    pub entropy_norm: f32,
+    /// Power-law exponent alpha for cluster-size distribution.
+    pub power_law_alpha: f32,
+    /// Novel config fingerprints per window per civilian.
+    pub novelty_rate: f32,
+    /// Normalised mutual information between material and faction distributions.
+    pub mi_material_faction_norm: Option<f32>,
+}
+
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -279,6 +293,9 @@ pub struct LiveHudSnapshot {
     /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
     pub pick_detail: Option<String>,
     /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
+    /// Cached emergence metrics from sim.emergence poll (entropy_norm, power_law_alpha, novelty_rate, mi).
+    pub emergence: Option<EmergenceHudData>,
+    /// Current simulation speed multiplier (0 = paused).
     pub speed_multiplier: u32,
 }
 
@@ -341,6 +358,19 @@ impl LiveHudSnapshot {
         }
         if let Some(detail) = &self.pick_detail {
             line.push_str(&format!(" | {detail}"));
+        }
+        {
+            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
+            line.push_str(&format!(" | spd:{spd}"));
+        }
+        if let Some(em) = &self.emergence {
+            line.push_str(&format!(
+                " | ent:{:.2} \u{03b1}:{:.2} nov:{:.3}",
+                em.entropy_norm, em.power_law_alpha, em.novelty_rate
+            ));
+            if let Some(mi) = em.mi_material_faction_norm {
+                line.push_str(&format!(" MI:{:.2}", mi));
+            }
         }
         line
     }

@@ -267,6 +267,7 @@ pub struct EmergenceHudData {
     pub branching_regime: String,
 }
 
+
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
@@ -379,15 +380,8 @@ impl LiveHudSnapshot {
             line.push_str(&format!(" | {detail}"));
         }
         {
-            let spd = if self.speed_multiplier == 0 {
-                "PAUSED".to_string()
-            } else {
-                format!("{}x", self.speed_multiplier)
-            };
+            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
             line.push_str(&format!(" | spd:{spd}"));
-        }
-        if self.tick_ms > 0.0 {
-            line.push_str(&format!(" | tick_ms:{:.0}", self.tick_ms));
         }
         if let Some(em) = &self.emergence {
             line.push_str(&format!(

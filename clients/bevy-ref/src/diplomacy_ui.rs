@@ -13,11 +13,37 @@
 //! ```
 
 use std::collections::HashMap;
+use crossbeam_channel::Sender;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use civ_protocol_3d::{FactionStateEntry, FactionStateFrame, Government3d};
 use crate::settings_ui::{GameSettings, ACTION_TOGGLE_DIPLOMACY, KeyBinding};
+
+// ---------------------------------------------------------------------------
+// Outbound RPC bridge
+// ---------------------------------------------------------------------------
+
+/// Bevy resource wrapping a cloned RPC sender so the diplomacy panel can fire
+/// JSON-RPC frames without importing the binary-crate `LiveBridge` type.
+///
+/// Insert from `bevy_window.rs` setup: `commands.insert_resource(DiplomacyBridge::new(bridge.client.rpc_sender()));`
+#[derive(Resource)]
+pub struct DiplomacyBridge {
+    sender: Sender<String>,
+}
+
+impl DiplomacyBridge {
+    /// Wrap a cloned outbound sender from `WsClient::rpc_sender()`  .
+    pub fn new(sender: Sender<String>) -> Self {
+        Self { sender }
+    }
+
+    /// Enqueue a JSON-RPC text frame (fire-and-forget; drops if disconnected).
+    pub fn send_rpc(&self, json: String) {
+        let _ = self.sender.send(json);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Palette (mirrors game_ui.rs)
@@ -85,6 +111,8 @@ pub struct DiplomacyState {
     pub relations: Vec<Vec<i8>>,
     /// Whether the panel is currently visible.
     pub open: bool,
+    /// Faction pending war-declaration confirmation (two-click guard).
+    pub pending_war_target: Option<u32>,
 }
 
 impl Default for DiplomacyState {
@@ -93,6 +121,7 @@ impl Default for DiplomacyState {
             factions: Vec::new(),
             relations: Vec::new(),
             open: false,
+            pending_war_target: None,
         }
     }
 }
@@ -130,6 +159,7 @@ impl DiplomacyState {
             factions,
             relations,
             open: true,
+            pending_war_target: None,
         }
     }
 }
@@ -151,6 +181,7 @@ pub fn diplomacy_state_from_faction_frame(
         factions,
         relations,
         open: false,
+        pending_war_target: None,
     }
 }
 
@@ -246,7 +277,7 @@ fn toggle_diplomacy_panel(
     }
 }
 
-fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyState>) {
+fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyState>, bridge: Option<Res<DiplomacyBridge>>) {
     let Ok(ctx) = contexts.ctx_mut() else { return };
 
     if !state.open {
@@ -280,7 +311,7 @@ fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyS
                     ui.add_space(4.0);
                     ui.separator();
                     ui.add_space(4.0);
-                    faction_list_ui(ui, &state.factions);
+                    faction_list_ui(ui, &mut state, bridge.as_deref());
                 });
 
                 ui.add_space(12.0);
@@ -311,9 +342,9 @@ fn draw_diplomacy_panel(mut contexts: EguiContexts, mut state: ResMut<DiplomacyS
 // Sub-UI helpers
 // ---------------------------------------------------------------------------
 
-/// Renders the faction list: colour swatch + name + population.
-fn faction_list_ui(ui: &mut egui::Ui, factions: &[DipFaction]) {
-    for faction in factions {
+/// Renders the faction list: colour swatch + name + population + action buttons.
+fn faction_list_ui(ui: &mut egui::Ui, state: &mut DiplomacyState, bridge: Option<&DiplomacyBridge>) {
+    for faction in state.factions.clone() {
         ui.horizontal(|ui| {
             color_swatch(ui, faction.egui_color());
             ui.label(egui::RichText::new(&faction.name).strong());
@@ -324,6 +355,45 @@ fn faction_list_ui(ui: &mut egui::Ui, factions: &[DipFaction]) {
                         .small(),
                 );
             });
+        });
+        ui.horizontal(|ui| {
+            if ui.small_button("Propose Treaty").clicked() {
+                if let Some(b) = bridge {
+                    let json = format!(
+                        r#"{{"jsonrpc":"2.0","id":10,"method":"sim.diplomacy_action","params":{{"action":"propose_treaty","target_faction":{}}}}"#,
+                        faction.id
+                    );
+                    b.send_rpc(json);
+                }
+            }
+            let war_label = if state.pending_war_target == Some(faction.id) {
+                "Confirm War?"
+            } else {
+                "Declare War"
+            };
+            if ui.small_button(war_label).clicked() {
+                if state.pending_war_target == Some(faction.id) {
+                    if let Some(b) = bridge {
+                        let json = format!(
+                            r#"{{"jsonrpc":"2.0","id":11,"method":"sim.diplomacy_action","params":{{"action":"declare_war","target_faction":{}}}}"#,
+                            faction.id
+                        );
+                        b.send_rpc(json);
+                    }
+                    state.pending_war_target = None;
+                } else {
+                    state.pending_war_target = Some(faction.id);
+                }
+            }
+            if ui.small_button("Offer Trade").clicked() {
+                if let Some(b) = bridge {
+                    let json = format!(
+                        r#"{{"jsonrpc":"2.0","id":12,"method":"sim.diplomacy_action","params":{{"action":"offer_trade","target_faction":{},"amount":100}}}"#,
+                        faction.id
+                    );
+                    b.send_rpc(json);
+                }
+            }
         });
         ui.add_space(2.0);
     }

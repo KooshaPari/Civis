@@ -75,6 +75,8 @@ pub enum JsonRpcMethod {
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
+    /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
+    SimDiplomacyAction,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimPerf,
     SimSubscribe,
@@ -111,6 +113,7 @@ impl JsonRpcMethod {
             Self::SimEmergence => "sim.emergence",
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimPerf => "sim.perf",
+            Self::SimDiplomacyAction => "sim.diplomacy_action",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -142,6 +145,7 @@ impl JsonRpcMethod {
             "sim.emergence" => Some(Self::SimEmergence),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.perf" => Some(Self::SimPerf),
+            "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -1315,6 +1319,26 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
             let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
             let result = serde_json::json!({ "x": x, "y": y, "stub": true });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimDiplomacyAction => {
+            let action = req.params.as_ref()
+                .and_then(|p| p.get("action"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let target = req.params.as_ref()
+                .and_then(|p| p.get("target_faction"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let result = serde_json::json!({
+                "action": action,
+                "target_faction": target,
+                "stub": true,
+                "tick": ctx.tick,
+            });
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,

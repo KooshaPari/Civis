@@ -272,6 +272,7 @@ fn main() {
             EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
+            DiplomacyUiPlugin,
         ))
         .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()

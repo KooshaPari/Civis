@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     sync::atomic::{AtomicU32, Ordering},
     thread,
     time::Duration,
@@ -66,7 +66,7 @@ impl WsClient {
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
-        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx));
+        thread::spawn(move || run_client(url, config, frame_tx, meta_tx, rtt_tx, state_tx, send_rx, emergence_tx, outcome_tx));
         Self {
             frame_rx,
             meta_rx,
@@ -80,11 +80,13 @@ impl WsClient {
             send_tx,
             emergence_rx,
             outcome_rx,
+            outcome_rx,
     /// Enqueue an outbound JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
     pub fn send_rpc(&self, json: String) {
         let _ = self.send_tx.send(json);
             send_tx,
             emergence_rx,
+            outcome_rx,
         }
     }
 
@@ -109,6 +111,13 @@ impl WsClient {
         out
         }
         out
+    }
+
+    #[must_use]
+    pub fn poll_outcome(&self) -> Option<OutcomeHudData> {
+        let mut latest = None;
+        while let Ok(o) = self.outcome_rx.try_recv() { latest = Some(o); }
+        latest
     }
 
     /// Drain all currently available frames without blocking the main thread.
@@ -172,6 +181,8 @@ impl WsClient {
 
 const OUTCOME_RPC: &str = "{"jsonrpc":"2.0","id":9003,"method":"sim.outcome","params":{}}";
 const OUTCOME_POLL_SECS: u64 = 30;
+const OUTCOME_RPC: &str = "{"jsonrpc":"2.0","id":9003,"method":"sim.outcome","params":{}}";
+const OUTCOME_POLL_SECS: u64 = 30;
 const SNAPSHOT_RPC: &str = r#"{"jsonrpc":"2.0","id":9001,"method":"sim.snapshot","params":{}}"#;
 const SNAPSHOT_POLL_SECS: u64 = 2;
 
@@ -224,6 +235,7 @@ fn run_client(
     outcome_tx: Sender<OutcomeHudData>,
     send_rx: crossbeam_channel::Receiver<String>,
     emergence_tx: Sender<EmergenceHudData>,
+    outcome_tx: Sender<OutcomeHudData>,
 ) {
     let runtime = Builder::new_multi_thread().enable_all().build().expect("tokio runtime");
     runtime.block_on(async move {
@@ -234,7 +246,7 @@ fn run_client(
             match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &cmd_rx).await {
                 Ok(()) => { backoff.reset(); }
             match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx, &outcome_tx).await {
-            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx).await {
+            match connect_and_stream(&url, config, &frame_tx, &meta_tx, &rtt_tx, &state_tx, &send_rx, &emergence_tx, &outcome_tx).await {
                 Ok(()) => {
                     backoff.reset();
                 }
@@ -292,6 +304,17 @@ fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
     })
 }
 
+fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    if v.get("id").and_then(|i| i.as_i64()) != Some(9003) { return None; }
+    let result = v.get("result")?;
+    Some(OutcomeHudData {
+        tag: result.get("outcome").and_then(|v| v.as_str()).unwrap_or("ongoing").to_owned(),
+        reason: result.get("reason").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
+        tick: result.get("tick").and_then(|v| v.as_u64()).unwrap_or(0),
+    })
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -305,6 +328,7 @@ async fn connect_and_stream(
     outcome_tx: &Sender<OutcomeHudData>,
     send_rx: &crossbeam_channel::Receiver<String>,
     emergence_tx: &Sender<EmergenceHudData>,
+    outcome_tx: &Sender<OutcomeHudData>,
 ) -> Result<(), String> {
     let (ws, _) = tokio_tungstenite::connect_async(url).await.map_err(|e| e.to_string())?;
     publish_state(state_tx, WsConnectionState::Connected);
@@ -313,6 +337,7 @@ async fn connect_and_stream(
     let mut snapshot_ping = None;
     request_snapshot(&mut write, &mut snapshot_ping).await?;
     let mut last_snapshot = std::time::Instant::now();
+    let mut last_outcome = std::time::Instant::now();
     let mut last_outcome = std::time::Instant::now();
 
     loop {
@@ -328,6 +353,10 @@ async fn connect_and_stream(
                 .map_err(|e| e.to_string())?;
         }
 
+        if last_outcome.elapsed() >= Duration::from_secs(OUTCOME_POLL_SECS) {
+            write.send(Message::Text(OUTCOME_RPC.into())).await.map_err(|e| e.to_string())?;
+            last_outcome = std::time::Instant::now();
+        }
         if last_outcome.elapsed() >= Duration::from_secs(OUTCOME_POLL_SECS) {
             write.send(Message::Text(OUTCOME_RPC.into())).await.map_err(|e| e.to_string())?;
             last_outcome = std::time::Instant::now();
@@ -354,6 +383,10 @@ async fn connect_and_stream(
                 }
                 if let Some(em) = parse_emergence_response(&text) {
                     let _ = emergence_tx.send(em);
+                    continue;
+                }
+                if let Some(oc) = parse_outcome_response(&text) {
+                    let _ = outcome_tx.send(oc);
                     continue;
                 }
                 if let Some(oc) = parse_outcome_response(&text) {

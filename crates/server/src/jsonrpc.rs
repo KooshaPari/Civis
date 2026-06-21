@@ -78,6 +78,11 @@ pub enum JsonRpcMethod {
     SimUnsubscribe,
     /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
     SimUpdateSubscription,
+    /// Client-initiated diplomacy action: propose_treaty / declare_war / offer_trade
+    /// (`sim.diplomacy_action`, FR-CIV-SERVER-004).
+    SimDiplomacyAction,
+    /// Read current faction-pair diplomacy relations (`sim.diplomacy_state`).
+    SimDiplomacyState,
 }
 
 impl JsonRpcMethod {
@@ -106,6 +111,8 @@ impl JsonRpcMethod {
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
+            Self::SimDiplomacyAction => "sim.diplomacy_action",
+            Self::SimDiplomacyState => "sim.diplomacy_state",
         }
     }
 
@@ -134,6 +141,8 @@ impl JsonRpcMethod {
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
+            "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
+            "sim.diplomacy_state" => Some(Self::SimDiplomacyState),
             _ => None,
         }
     }
@@ -955,6 +964,17 @@ pub enum DispatchEffect {
     ApplyDamage {
         /// Damage event applied on next tactics phase (replay-logged).
         event: civ_engine::DamageEvent,
+    },
+    /// Apply a diplomacy action between two factions (`sim.diplomacy_action`, FR-CIV-SERVER-004).
+    DiplomacyAction {
+        /// "propose_treaty" | "declare_war" | "offer_trade"
+        action: String,
+        /// Initiating faction id.
+        source_faction: u32,
+        /// Target faction id.
+        target_faction: u32,
+        /// Trade amount (used only for offer_trade).
+        amount: u32,
     },
     /// Write a production slot archive (`save.slot`).
     SaveSlot {

@@ -790,9 +790,15 @@ fn parse_health_fraction(raw: &str) -> Option<f32> {
     }
     if let Some(pct) = s.strip_suffix('%') {
         let v: f32 = pct.trim().parse().ok()?;
+        if !v.is_finite() {
+            return None;
+        }
         return Some((v / 100.0).clamp(0.0, 1.0));
     }
     let v: f32 = s.parse().ok()?;
+    if !v.is_finite() {
+        return None;
+    }
     if (0.0..=1.0).contains(&v) {
         Some(v)
     } else if (0.0..=100.0).contains(&v) {

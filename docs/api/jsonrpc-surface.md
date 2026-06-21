@@ -8,13 +8,17 @@
 
 ---
 
-## Method catalog (17)
+## Method catalog (21)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
 | `health` | — | `{}` or omit | `{ "tick": <u64> }` | [`ws_jsonrpc_health_returns_tick`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.status` | — | `{}` or omit | `{ "tick": <u64> }`; adds `"population"` when bridge has sim | [`ws_jsonrpc_sim_status_returns_tick_and_population`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.snapshot` | — | `{}` or omit | Full snapshot when sim available (see [Snapshot result](#simsnapshot-result)); else `{ "tick", "speed_multiplier" }` | [`ws_jsonrpc_sim_snapshot_returns_snapshot_fields`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.emergence` | — | `{}` or omit | Latest emergence sample when available; else `{ "tick", "sample": null }` | Unit: `sim_emergence_*` in `jsonrpc.rs` |
+| `sim.subscribe` | — | `{ "frame_kinds"? \| "filter"? \| "filter_types"?, "tick_stride"?, "max_framerate_hz"?, "subscription_id"? }` | WebSocket only: `{ "subscribed": true, "subscription_id", "filter_active", "frame_kinds", "tick_stride", "current_tick" }`; plain dispatch returns `-32603` | [`ws_sim_subscribe_limits_tick_broadcast_frames`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.update_subscription` | — | Same as `sim.subscribe` | WebSocket only: replaces the per-connection filter and returns the same shape as `sim.subscribe`; plain dispatch returns `-32603` | Unit: `handle_sim_update_subscription_*` in `ws_bridge.rs` |
+| `sim.unsubscribe` | — | `{}` or omit | WebSocket only: `{ "unsubscribed": true }`; plain dispatch returns `-32603` | Unit: `handle_sim_unsubscribe_*` in `ws_bridge.rs` |
 | `sim.command` | `noop`: —; `tick`: **operator** | `{ "action": "noop" \| "tick", "role"? }` | `noop`: `{ "accepted": true }`; `tick`: `{ "accepted": true, "tick": <u64> }` (tick updated after advance) | `tick`: [`ws_jsonrpc_sim_command_tick_advances_tick`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_command_tick_rejects_missing_role_when_required`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header`](../../crates/server/tests/ws_smoke.rs); F3D0 broadcast: `ws_sim_command_tick_broadcasts_f3d0_*` |
 | `sim.save_replay` | — | `{ "path": <non-empty string> }` | `{ "saved": true, "path": <string> }` | [`ws_jsonrpc_sim_save_and_load_replay_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.load_replay` | — | `{ "path": <non-empty string> }` | `{ "loaded": true, "tick": <u64> }` | [`ws_jsonrpc_sim_save_and_load_replay_roundtrip`](../../crates/server/tests/ws_smoke.rs) |

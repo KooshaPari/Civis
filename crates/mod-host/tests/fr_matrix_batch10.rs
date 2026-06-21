@@ -53,7 +53,8 @@ fn fr_civ_tactics_038_invoke_military_tick_returns_export_code() {
 /// equivalent of the on-disk folder (and is what `civ-server` reads back).
 #[test]
 fn fr_civ_tactics_058_guest_state_save_version_constant_is_stable() {
-    assert!(MOD_GUEST_STATE_VERSION >= 1);
+    let version = std::hint::black_box(MOD_GUEST_STATE_VERSION);
+    assert!(version >= 1);
     // Round-trip a save bundle to ensure the constant corresponds to a
     // parseable schema (the on-disk `.civsave/` folder uses the same
     // versioned schema header).

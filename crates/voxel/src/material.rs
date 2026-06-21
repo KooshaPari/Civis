@@ -1049,8 +1049,10 @@ mod tests {
     #[test]
     fn phase_predicates_agree_with_phase_for_all_materials() {
         for def in MaterialRegistry::standard().materials() {
-            let flags =
-                [def.is_powder(), def.is_liquid(), def.is_gas()].iter().filter(|b| **b).count();
+            let flags = [def.is_powder(), def.is_liquid(), def.is_gas()]
+                .iter()
+                .filter(|b| **b)
+                .count();
             match def.phase {
                 Phase::Powder => assert!(def.is_powder() && flags == 1),
                 Phase::Liquid => assert!(def.is_liquid() && flags == 1),
@@ -1067,7 +1069,9 @@ mod tests {
     fn every_material_round_trips_by_id() {
         let registry = MaterialRegistry::standard();
         for def in registry.materials() {
-            let fetched = registry.get(def.id).expect("material retrievable by its id");
+            let fetched = registry
+                .get(def.id)
+                .expect("material retrievable by its id");
             assert_eq!(fetched.id, def.id);
             assert_eq!(fetched.phase, def.phase);
         }

@@ -36,6 +36,19 @@ export function averageFps(samples) {
   return frameMsToFps(averageFrameMs(samples));
 }
 
+export function summarizeFrameSamples(samples) {
+  const count = samples.length;
+  const frameMs = averageFrameMs(samples);
+  const latestMs = count ? samples[count - 1] : 0;
+  return {
+    fps: frameMsToFps(frameMs),
+    frameMs,
+    count,
+    latestMs,
+    latestFps: frameMsToFps(latestMs),
+  };
+}
+
 /** @param {number[]} samples */
 export function maxFrameMs(samples) {
   if (!samples.length) return 0;

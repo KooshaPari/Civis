@@ -13,6 +13,6 @@ crate-type = ["cdylib"]
 civ-engine = { path = "../../../crates/engine" }
 civ-protocol-3d = { path = "../../../crates/protocol-3d" }
 civ-voxel = { path = "../../../crates/voxel" }
-godot = "0.4"
+godot = { version = "0.4", default-features = false, features = ["lazy-function-tables"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

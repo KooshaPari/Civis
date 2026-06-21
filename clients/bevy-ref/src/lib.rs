@@ -14,6 +14,8 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "bevy")]
+pub mod animation;
+#[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
 pub mod camera;
@@ -44,6 +46,8 @@ pub mod game_laws;
 pub mod map2d;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
+#[cfg(feature = "bevy")]
+pub mod info_views;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
@@ -678,7 +682,7 @@ pub const CHUNK_FADE_DURATION_SECS: f32 = 0.3;
 /// [`CHUNK_FADE_DURATION_SECS`]).
 #[must_use]
 pub fn chunk_fade_alpha(elapsed_secs: f32) -> f32 {
-    if elapsed_secs <= 0.0 {
+    if !elapsed_secs.is_finite() || elapsed_secs <= 0.0 {
         0.0
     } else if elapsed_secs >= CHUNK_FADE_DURATION_SECS {
         1.0
@@ -690,7 +694,7 @@ pub fn chunk_fade_alpha(elapsed_secs: f32) -> f32 {
 /// Returns true once the chunk fade-in has reached full opacity.
 #[must_use]
 pub fn chunk_fade_complete(elapsed_secs: f32) -> bool {
-    elapsed_secs >= CHUNK_FADE_DURATION_SECS
+    elapsed_secs.is_finite() && elapsed_secs >= CHUNK_FADE_DURATION_SECS
 }
 
 /// Apply a fade alpha to an opaque sRGB triple (preserves RGB, sets alpha).
@@ -1237,6 +1241,14 @@ mod tests {
         assert_eq!(rgba[1], 0.69);
         assert_eq!(rgba[2], 0.62);
         assert_eq!(rgba[3], 0.4);
+    }
+
+    #[test]
+    fn chunk_fade_helpers_ignore_non_finite_elapsed() {
+        assert_eq!(chunk_fade_alpha(f32::NAN), 0.0);
+        assert!(!chunk_fade_complete(f32::NAN));
+        assert_eq!(chunk_fade_alpha(f32::INFINITY), 0.0);
+        assert!(!chunk_fade_complete(f32::INFINITY));
     }
 
     #[test]

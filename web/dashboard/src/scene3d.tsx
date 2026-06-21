@@ -15,7 +15,7 @@ import {
 import { convoyCells, spawnKindUsesConvoy } from "./lib/spawnConvoy";
 import { zoomDistanceFromWheel } from "./lib/zoomMath.mjs";
 import { postControl } from "./control";
-import { useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
+import { isDashboardShortcutTarget, useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { jsonRpcCall, normalizeServerSnapshot } from "./lib/civisServer";
 import {
@@ -1274,11 +1274,7 @@ export function Scene3d() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
-      if (
-        event.target instanceof HTMLElement &&
-        /input|textarea|select/i.test(event.target.tagName)
-      )
-        return;
+      if (isDashboardShortcutTarget(event.target)) return;
       if (event.key >= "1" && event.key <= "5") {
         const faction =
           stateRef.current.snapshot?.factions?.[Number(event.key) - 1];

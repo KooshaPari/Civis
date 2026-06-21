@@ -148,7 +148,8 @@ pub fn encode_frame3d_bundle_from_f3d0(
 ) -> Result<Vec<u8>, Frame3dBundleError> {
     let frame_count = u8::try_from(frame_count).map_err(|_| Frame3dBundleError::LengthMismatch)?;
     let (flags, payload, uncompressed_len) = maybe_compress(inner, options)?;
-    let payload_len = u32::try_from(payload.len()).map_err(|_| Frame3dBundleError::LengthMismatch)?;
+    let payload_len =
+        u32::try_from(payload.len()).map_err(|_| Frame3dBundleError::LengthMismatch)?;
     let uncompressed_len =
         u32::try_from(uncompressed_len).map_err(|_| Frame3dBundleError::LengthMismatch)?;
 
@@ -182,7 +183,8 @@ pub fn decode_frame3d_bundle(bytes: &[u8]) -> Result<Frame3dBundle, Frame3dBundl
         bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13],
     ]);
     let frame_count = bytes[14];
-    let uncompressed_len = u32::from_be_bytes([bytes[15], bytes[16], bytes[17], bytes[18]]) as usize;
+    let uncompressed_len =
+        u32::from_be_bytes([bytes[15], bytes[16], bytes[17], bytes[18]]) as usize;
     let payload_len = u32::from_be_bytes([bytes[19], bytes[20], bytes[21], bytes[22]]) as usize;
     let expected = FRAME3D_BUNDLE_HEADER_LEN
         .checked_add(payload_len)
@@ -295,8 +297,8 @@ fn parse_f3d0_payload(payload: &[u8]) -> Result<Vec<Frame3d>, Frame3dBundleError
                 Frame3dBinaryError::BadMagic,
             ));
         }
-        let len = u32::from_be_bytes([remaining[5], remaining[6], remaining[7], remaining[8]])
-            as usize;
+        let len =
+            u32::from_be_bytes([remaining[5], remaining[6], remaining[7], remaining[8]]) as usize;
         let frame_len = FRAME3D_BINARY_HEADER_LEN
             .checked_add(len)
             .ok_or(Frame3dBundleError::LengthMismatch)?;
@@ -317,8 +319,8 @@ fn parse_f3d0_payload(payload: &[u8]) -> Result<Vec<Frame3d>, Frame3dBundleError
 mod tests {
     use super::*;
     use crate::{
-        AgentAppearanceFrame, BuildingDiffFrame, BuildingProvenance, ClimateFrame,
-        EventFeedFrame, FactionStateFrame, Frame3d, VoxelDeltaFrame,
+        AgentAppearanceFrame, BuildingDiffFrame, BuildingProvenance, ClimateFrame, EventFeedFrame,
+        FactionStateFrame, Frame3d, VoxelDeltaFrame,
     };
 
     fn sample_frames(tick: u64) -> Vec<Frame3d> {
@@ -360,8 +362,8 @@ mod tests {
     #[test]
     fn frame3d_bundle_uncompressed_roundtrip() {
         let frames = sample_frames(42);
-        let bytes = encode_frame3d_bundle(&frames, &Frame3dBundleEncodeOptions::default())
-            .expect("encode");
+        let bytes =
+            encode_frame3d_bundle(&frames, &Frame3dBundleEncodeOptions::default()).expect("encode");
         assert!(is_frame3d_bundle(&bytes));
         assert_eq!(bytes[5], Frame3dBundleFlags::uncompressed().0);
         let back = decode_frame3d_bundle(&bytes).expect("decode");
@@ -409,7 +411,10 @@ mod tests {
             .iter()
             .map(|frame| encode_frame3d_binary(frame).expect("f3d0"))
             .collect();
-        let concatenated: Vec<u8> = inner.iter().flat_map(|bytes| bytes.iter().copied()).collect();
+        let concatenated: Vec<u8> = inner
+            .iter()
+            .flat_map(|bytes| bytes.iter().copied())
+            .collect();
         let from_f3d0 = encode_frame3d_bundle_from_f3d0(
             11,
             frames.len(),
@@ -417,8 +422,8 @@ mod tests {
             &Frame3dBundleEncodeOptions::default(),
         )
         .expect("from f3d0");
-        let full = encode_frame3d_bundle(&frames, &Frame3dBundleEncodeOptions::default())
-            .expect("full");
+        let full =
+            encode_frame3d_bundle(&frames, &Frame3dBundleEncodeOptions::default()).expect("full");
         assert_eq!(from_f3d0, full);
     }
 

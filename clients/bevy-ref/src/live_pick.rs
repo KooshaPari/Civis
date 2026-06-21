@@ -66,6 +66,17 @@ pub fn ray_aabb_hit_distance(
     centre: [f32; 3],
     half_extents: [f32; 3],
 ) -> Option<f32> {
+    if !origin
+        .iter()
+        .chain(direction.iter())
+        .all(|value| value.is_finite())
+        || !centre
+            .iter()
+            .chain(half_extents.iter())
+            .all(|value| value.is_finite())
+    {
+        return None;
+    }
     let mut t_min = f32::NEG_INFINITY;
     let mut t_max = f32::INFINITY;
 
@@ -117,7 +128,7 @@ pub fn pick_live_entity_along_ray(
 ) -> Option<SelectedLiveEntity> {
     let dir_len_sq =
         direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2];
-    if dir_len_sq < f32::EPSILON {
+    if !dir_len_sq.is_finite() || dir_len_sq < f32::EPSILON {
         return None;
     }
     let inv_len = dir_len_sq.sqrt().recip();
@@ -139,6 +150,9 @@ pub fn pick_live_entity_along_ray(
     };
 
     for &(id, centre, scale) in agents {
+        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
+            continue;
+        }
         let half = [
             agent_half[0] * scale.x,
             agent_half[1] * scale.y,
@@ -156,6 +170,9 @@ pub fn pick_live_entity_along_ray(
     }
 
     for &(id, centre, scale) in buildings {
+        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
+            continue;
+        }
         let half = [
             building_half[0] * scale.x,
             building_half[1] * scale.y,
@@ -173,6 +190,9 @@ pub fn pick_live_entity_along_ray(
     }
 
     for &(id, centre, scale) in graph_parcels {
+        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
+            continue;
+        }
         let half = [
             building_half[0] * scale.x,
             building_half[1] * scale.y,
@@ -451,5 +471,24 @@ mod tests {
         assert!(
             pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[]).is_none()
         );
+    }
+
+    #[test]
+    fn pick_live_entity_rejects_non_finite_hits() {
+        assert!(ray_aabb_hit_distance(
+            [0.0, 0.0, f32::NAN],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0]
+        )
+        .is_none());
+        assert!(pick_live_entity_along_ray(
+            [0.0, 0.0, 0.0],
+            [f32::INFINITY, 0.0, 1.0],
+            &[],
+            &[],
+            &[]
+        )
+        .is_none());
     }
 }

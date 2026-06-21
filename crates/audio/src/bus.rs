@@ -182,8 +182,10 @@ mod tests {
         bad.ambient = f32::NAN;
         assert!(!bad.is_well_formed());
 
-        let mut bad = BusLevels::default();
-        bad.sfx = 1.5;
+        let bad = BusLevels {
+            sfx: 1.5,
+            ..Default::default()
+        };
         assert!(!bad.is_well_formed());
     }
 

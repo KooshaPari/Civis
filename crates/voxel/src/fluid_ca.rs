@@ -2406,7 +2406,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 5, BoundaryConfig::closed(), 0);
         // Gas should spread horizontally away from blocked top.
         let steam_count = count(&g, STEAM);
-        assert!(steam_count >= 1, "steam must exist, got count {steam_count}");
+        assert!(
+            steam_count >= 1,
+            "steam must exist, got count {steam_count}"
+        );
     }
 
     /// Covers snow as powder — SNOW is Phase::Powder (not Solid) so it follows
@@ -2433,7 +2436,8 @@ mod tests {
         step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
         let result = g.get(0, 0, 0);
         assert_eq!(
-            result, crate::material::FIRE,
+            result,
+            crate::material::FIRE,
             "LAVA at boiling point must boil to FIRE, got {result:?}"
         );
     }
@@ -2477,7 +2481,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 5, BoundaryConfig::closed(), 0);
         // Steam should still exist somewhere after movement (gas step exercises the branch).
         let steam_count = count(&g, STEAM);
-        assert!(steam_count >= 1, "steam must still exist after gas_step, count={steam_count}");
+        assert!(
+            steam_count >= 1,
+            "steam must still exist after gas_step, count={steam_count}"
+        );
     }
 
     /// Covers percolation water removal when field_capacity exceeded.
@@ -2550,7 +2557,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 5, boundary, 0);
         // Inflow should populate the grid from both x faces.
         let water_count = count(&g, WATER);
-        assert!(water_count > 0, "inflow must create water, got {water_count}");
+        assert!(
+            water_count > 0,
+            "inflow must create water, got {water_count}"
+        );
     }
 
     /// Covers integer_cube_root edge cases (0, 1, large values).
@@ -2590,7 +2600,6 @@ mod tests {
     /// Covers AbiogenesisSuitability boundary: exactly 10 viability threshold.
     #[test]
     fn abiogenesis_viability_threshold() {
-        let mut t = 0;
         let mut found_viable_low = false;
         for temp in 1..80 {
             let s = AbiogenesisSuitability::from_cell(WATER, temp, 255);
@@ -2604,7 +2613,7 @@ mod tests {
             }
         }
         // We should find at least some cells near the boundary.
-        assert!(found_viable_low || true, "sanity: viability range coverage");
+        assert!(found_viable_low, "sanity: viability range coverage");
     }
 
     /// Covers scratch_view get_out_of_bounds fallback.
@@ -2625,7 +2634,10 @@ mod tests {
         g.mark_dirty_cell(16, 8, 8); // Mark chunk 1, center cell
         let indices = g.dirty_cell_indices();
         let boundary_idx = g.index(15, 8, 8).unwrap(); // Halo cell from chunk 0
-        assert!(indices.contains(&boundary_idx), "halo must include neighbors");
+        assert!(
+            indices.contains(&boundary_idx),
+            "halo must include neighbors"
+        );
     }
 
     /// Covers chunks_changed_from with mismatched grid sizes.
@@ -2634,7 +2646,10 @@ mod tests {
         let g1 = CaGrid::new([16, 16, 16]);
         let g2 = CaGrid::new([32, 16, 16]); // Different size
         let changed = g2.chunks_changed_from(&g1);
-        assert!(changed.is_empty(), "mismatched grids return empty change list");
+        assert!(
+            changed.is_empty(),
+            "mismatched grids return empty change list"
+        );
     }
 
     /// Covers dirty_owned_cell_indices with halo exclusion.
@@ -2667,7 +2682,10 @@ mod tests {
         let mut g2 = CaGrid::new([1, 1, 1]);
         g2.set(0, 0, 0, WATER);
         let changed = g2.chunks_changed_from(&g1);
-        assert!(changed.is_empty(), "zero-dim grid returns empty change list");
+        assert!(
+            changed.is_empty(),
+            "zero-dim grid returns empty change list"
+        );
     }
 
     /// Covers mark_dirty_cell with zero dimensions.
@@ -2815,8 +2833,6 @@ mod tests {
         );
         let _ = world.drain_dirty();
         settle_world(&mut world, FIXED_SCALE, bounds, reg(), 5);
-        // Water should settle; grid should be stable.
-        assert!(true, "settle_world completed without panic");
     }
 
     /// Covers heat_conduction with air (zero conduct).
@@ -2828,8 +2844,6 @@ mod tests {
         g.mark_dirty_cell(0, 0, 0);
         g.mark_dirty_cell(1, 0, 0);
         step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
-        // Air conducts poorly; temps may not converge quickly.
-        assert!(true, "heat conduction on air completes");
     }
 
     /// Covers phase_transition with unknown material (skipped).
@@ -2887,7 +2901,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
         // Water should have transitioned to STEAM (phase_transition_pass, boiling_point=100).
         let result = g.get(0, 0, 0);
-        assert_eq!(result, STEAM, "WATER at 150°C must become STEAM via phase transition");
+        assert_eq!(
+            result, STEAM,
+            "WATER at 150°C must become STEAM via phase transition"
+        );
     }
 
     /// Covers salt_water boiling path.
@@ -2911,7 +2928,8 @@ mod tests {
         step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
         let result = g.get(0, 0, 0);
         assert_eq!(
-            result, crate::material::FIRE,
+            result,
+            crate::material::FIRE,
             "MOLTEN_METAL at boiling point must boil to FIRE"
         );
     }

@@ -190,9 +190,29 @@ pub fn infer_alignment_for_spawn(world: &World, x: f32, y: f32) -> Alignment {
     counts
         .into_iter()
         .filter(|(alignment, _)| *alignment != Alignment::None)
-        .max_by_key(|(_, count)| *count)
-        .map(|(alignment, _)| alignment)
-        .unwrap_or(Alignment::None)
+        .fold(
+            (Alignment::None, 0usize),
+            |(best_alignment, best_count), (alignment, count)| {
+                if count > best_count
+                    || (count == best_count && alignment_precedes(alignment, best_alignment))
+                {
+                    (alignment, count)
+                } else {
+                    (best_alignment, best_count)
+                }
+            },
+        )
+        .0
+}
+
+fn alignment_precedes(lhs: Alignment, rhs: Alignment) -> bool {
+    match (lhs, rhs) {
+        (Alignment::Faction(a), Alignment::Faction(b)) => a < b,
+        (Alignment::Faction(_), Alignment::OtherEntity(_) | Alignment::None) => true,
+        (Alignment::OtherEntity(a), Alignment::OtherEntity(b)) => a < b,
+        (Alignment::OtherEntity(_), Alignment::None) => true,
+        _ => false,
+    }
 }
 
 /// Wardrobe state. The `era` is the civilian's currently worn-tech era;
@@ -1316,6 +1336,38 @@ mod tests {
         assert_eq!(infer_alignment_for_spawn(&world, 0.5, 0.5), Alignment::None);
     }
 
+    /// Covers deterministic tie-breaking when multiple aligned clusters are
+    /// equally close to the spawn point.
+    #[test]
+    fn infer_alignment_for_spawn_breaks_ties_deterministically() {
+        let mut world = World::new();
+        let mut rng = rng(7);
+
+        spawn_civilian_at(
+            &mut world,
+            500,
+            Alignment::with_faction(2),
+            0.5,
+            0.5,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+        spawn_civilian_at(
+            &mut world,
+            501,
+            Alignment::with_faction(1),
+            0.5,
+            0.5,
+            ActorVisualKind::Humanoid,
+            &mut rng,
+        );
+
+        assert_eq!(
+            infer_alignment_for_spawn(&world, 0.5, 0.5),
+            Alignment::with_faction(1)
+        );
+    }
+
     /// Covers FR-CIV-EMERGENCE-001 — form_faction succeeds only when the founder
     /// has at least [`FORM_FACTION_COHESION`] positive social ties
     /// (e.g. affinity >= FRIEND_AFFINITY_THRESHOLD or kinship >= KIN_THRESHOLD).
@@ -1547,10 +1599,7 @@ mod tests {
                 z: scale as i64,
             },
         };
-        let current = Velocity {
-            dx: 0.3,
-            dy: 0.7,
-        };
+        let current = Velocity { dx: 0.3, dy: 0.7 };
         let steered = drift_toward_home(&here, &home, current, 0.75);
         let len_sq = steered.dx * steered.dx + steered.dy * steered.dy;
         assert!((len_sq - 1.0).abs() < 1e-5);

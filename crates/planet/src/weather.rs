@@ -58,8 +58,6 @@ pub struct WeatherCell {
     pub storm_intensity_fp: i32,
 }
 
-/// Compute deterministic weather cells for all regions using climate and tick phase.
-
 fn sin_fp(angle_fp: i64) -> i32 {
     let radians =
         (angle_fp.rem_euclid(FULL_TURN_FP) as f64 / FULL_TURN_FP as f64) * std::f64::consts::TAU;
@@ -249,9 +247,13 @@ mod tests {
     #[test]
     fn compute_weather_fields_are_clamped() {
         let cells = compute_weather(&climate(0.9, 0.5), 99_999, 16);
-        assert!(cells.iter().all(|c| (-60_000..=55_000).contains(&c.temp_c_fp)));
+        assert!(cells
+            .iter()
+            .all(|c| (-60_000..=55_000).contains(&c.temp_c_fp)));
         assert!(cells.iter().all(|c| (0..=20_000).contains(&c.precip_mm_fp)));
-        assert!(cells.iter().all(|c| (0..=10_000).contains(&c.storm_intensity_fp)));
+        assert!(cells
+            .iter()
+            .all(|c| (0..=10_000).contains(&c.storm_intensity_fp)));
     }
 
     #[test]

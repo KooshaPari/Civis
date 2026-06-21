@@ -12,10 +12,15 @@
 #![forbid(unsafe_code)]
 #![allow(missing_docs)]
 
+/// Building and recipe registration contracts.
 pub mod building;
+/// Simulation event hook contracts.
 pub mod events;
+/// Mod manifest loading and schema types.
 pub mod manifest;
+/// Custom material registration contracts.
 pub mod material;
+/// In-memory mod registry.
 pub mod registry;
 
 pub use building::{

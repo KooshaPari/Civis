@@ -599,7 +599,13 @@ pub fn apply_agent_appearance_frame_with_labels(
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
+        if !x.is_finite() || !z.is_finite() || !scale.is_finite() {
+            continue;
+        }
         let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
+        if !y.is_finite() {
+            continue;
+        }
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -710,6 +716,9 @@ pub fn apply_building_diff_frame(
 
     for entry in buildings {
         let (base_color, emissive, roughness) = building_material_style(entry.kind, provenance);
+        if !entry.position.x.is_finite() || !entry.position.z.is_finite() {
+            continue;
+        }
         let material_handle = scene
             .building_materials
             .entry(entry.id)
@@ -734,6 +743,9 @@ pub fn apply_building_diff_frame(
             entry.position.z,
             BUILDING_GROUND_Y,
         );
+        if !ground.is_finite() {
+            continue;
+        }
         let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
         let entity = *scene
             .buildings

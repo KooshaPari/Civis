@@ -9,6 +9,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
+use crate::ui_theme::CHIP_FILL;
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
@@ -138,8 +139,6 @@ fn speed_value_matches(actual: f32, expected: f32) -> bool {
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 /// Glassmorphism panel fill (premultiplied for `const` construction; alpha ~235).
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-/// Slightly lighter fill used for chips and inactive tool buttons.
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 /// Dimmed label color for inspector field names.
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 

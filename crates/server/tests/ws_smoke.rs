@@ -1771,6 +1771,11 @@ async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
                         Some(&serde_json::json!(true)),
                         "spawn_entity kind={kind}"
                     );
+                    assert_eq!(
+                        value.pointer("/result/kind"),
+                        Some(&serde_json::json!(kind)),
+                        "spawn_entity kind echo for {kind}"
+                    );
                     assert!(
                         value
                             .pointer("/result/entity_id")

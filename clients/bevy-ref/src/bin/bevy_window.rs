@@ -289,6 +289,8 @@ fn main() {
             civ_bevy_ref::AgentNeedsPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
+            EguiPlugin::default(),
+            EventFeedPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()

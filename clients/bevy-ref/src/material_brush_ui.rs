@@ -39,9 +39,10 @@
 use bevy::prelude::*;
 
 use bevy_egui::egui;
-use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, AIR};
+use civ_voxel::material::{MaterialDef, MaterialRegistry, Phase, AIR, WATER};
 use civ_voxel::MaterialId;
 
+use crate::spawn_tools::select_action_binding;
 use crate::ui_theme;
 
 /// Player-facing material families shown as collapsible sections in the palette.
@@ -199,13 +200,13 @@ pub struct SelectedMaterial {
 impl Default for SelectedMaterial {
     fn default() -> Self {
         // Default to the first non-air material in the registry so the brush is
-        // immediately useful; fall back to id 1 (Water in the standard set).
+        // immediately useful; fall back to `WATER` in the standard set.
         let material = MaterialRegistry::standard()
             .materials()
             .iter()
             .find(|m| !matches!(m.phase, Phase::Empty) && m.id.0 != 0)
             .map(|m| m.id)
-            .unwrap_or(MaterialId(1));
+            .unwrap_or(WATER);
         Self {
             material,
             mode: MaterialPaintMode::Replace,
@@ -672,13 +673,16 @@ fn material_swatch(
 #[cfg(feature = "voxel")]
 fn paint_into_voxel_grid(
     buttons: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    settings: Option<Res<crate::settings_ui::GameSettings>>,
     armed: Res<MaterialPaintArmed>,
     selected: Res<SelectedMaterial>,
     marker: Res<crate::spawn_tools::CursorMarker>,
     over_ui: Res<crate::spawn_tools::PointerOverUi>,
     mut sim: ResMut<crate::voxel_sim::VoxelSimState>,
 ) {
-    if !armed.0 || over_ui.0 || !buttons.pressed(MouseButton::Left) {
+    let paint_pressed = select_action_binding(settings.as_deref()).is_pressed(&keys, &buttons);
+    if !armed.0 || over_ui.0 || !paint_pressed {
         return;
     }
     let Some(centre) = marker.position else {

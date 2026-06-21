@@ -28,8 +28,6 @@
 //!     });
 //! ```
 
-#![allow(dead_code)] // Phase 1 scaffold — consumers land in a follow-up PR.
-
 #[cfg(feature = "pbr-textures")]
 use bevy::pbr::StandardMaterial;
 #[cfg(feature = "pbr-textures")]

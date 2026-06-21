@@ -103,4 +103,22 @@ mod tests {
         let expected = terrain_surface_y(64.0, 128.0) + offset;
         assert!((y - expected).abs() < 0.01);
     }
+
+    #[test]
+    fn chunk_seam_watertight() {
+        let mut left = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut right = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        left[voxel_index(15, 2, 8)] = MaterialId(1);
+        right[voxel_index(0, 5, 8)] = MaterialId(1);
+
+        let mut cache = ChunkVoxelCache::new();
+        cache.insert(encode_chunk_id(0, 0, 0), left);
+        cache.insert(encode_chunk_id(1, 0, 0), right);
+
+        let left_surface = live_voxel_surface_y(&cache, 15.5, 8.5).expect("left surface");
+        let right_surface = live_voxel_surface_y(&cache, 16.5, 8.5).expect("right surface");
+
+        assert_eq!(left_surface, 3.0);
+        assert_eq!(right_surface, 6.0);
+    }
 }

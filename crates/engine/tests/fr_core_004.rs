@@ -18,8 +18,8 @@
 //! replacement logging API lands, re-add a test that asserts a draw is recorded
 //! in `Simulation::replay_log()` without asserting seed-identical sequences.
 
-/// Compile-time placeholder so the (re-enabled) test target builds while
-/// FR-CORE-004's logging API is re-decided. Intentionally trivial.
+/// Minimal sentinel so the re-enabled test target keeps compiling while
+/// FR-CORE-004's logging API is re-decided.
 #[test]
 fn fr_core_004_superseded_by_no_determinism_decision() {
     // No assertion: the determinism-replay contract this file covered was

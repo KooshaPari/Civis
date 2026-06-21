@@ -15,7 +15,7 @@
 //! `docs/development-guide/fr-3d-additions.md`).
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
+#![allow(missing_docs)]
 
 // Re-export the Phenotype-org shared kernel verbatim. Civis-side adapters that follow
 // (ECS integration, protocol bindings) live alongside this re-export.

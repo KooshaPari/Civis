@@ -3,9 +3,11 @@
 //! This module owns the click-to-terrain hit test, active tool state, cursor
 //! marker, and local selection/destruction behavior.
 
+use bevy::input::mouse::MouseWheel;
 use bevy::math::primitives::Circle;
 use bevy::prelude::*;
 
+use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
 use crate::terrain::{terrain_height, WORLD_SIZE};
 
 /// Tool palette used by the authoring UI.
@@ -43,6 +45,53 @@ impl Default for ActiveTool {
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SelectedEntity(pub Option<Entity>);
 
+/// Building type spawned by the building tool.
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BuildingSpawnKind {
+    /// Civic hub / city center.
+    #[default]
+    CityCenter,
+    /// Trade port / market.
+    Market,
+    /// Military hangar / barracks.
+    Barracks,
+}
+
+impl BuildingSpawnKind {
+    /// Advance to the next building type in the build palette.
+    pub const fn next(self) -> Self {
+        match self {
+            Self::CityCenter => Self::Market,
+            Self::Market => Self::Barracks,
+            Self::Barracks => Self::CityCenter,
+        }
+    }
+
+    /// Move to the previous building type in the build palette.
+    pub const fn prev(self) -> Self {
+        match self {
+            Self::CityCenter => Self::Barracks,
+            Self::Market => Self::CityCenter,
+            Self::Barracks => Self::Market,
+        }
+    }
+
+    /// Human-readable label for the current building type.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::CityCenter => "City Center",
+            Self::Market => "Market",
+            Self::Barracks => "Barracks",
+        }
+    }
+}
+
+pub(crate) fn select_action_binding(settings: Option<&GameSettings>) -> KeyBinding {
+    settings
+        .and_then(|s| s.key_for(ACTION_SELECT_OR_PICK))
+        .unwrap_or(KeyBinding::Mouse(MouseButton::Left))
+}
+
 /// Cursor state for the terrain hit marker.
 #[derive(Resource, Debug, Default, Clone, Copy)]
 pub struct CursorMarker {
@@ -64,6 +113,8 @@ pub struct SpawnCivilianRequest {
 pub struct SpawnBuildingRequest {
     /// World-space click position.
     pub position: Vec3,
+    /// Selected building kind.
+    pub kind: BuildingSpawnKind,
 }
 
 /// Request to select the entity nearest the clicked point.
@@ -86,6 +137,7 @@ pub struct SpawnToolsPlugin;
 impl Plugin for SpawnToolsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ActiveTool>()
+            .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
             .add_message::<SpawnCivilianRequest>()
@@ -171,14 +223,37 @@ fn update_cursor_marker(
 
 fn handle_spawn_tool_clicks(
     buttons: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut mouse_wheel: MessageReader<MouseWheel>,
+    settings: Option<Res<GameSettings>>,
     active: Res<ActiveTool>,
+    mut building_kind: ResMut<BuildingSpawnKind>,
     marker: Res<CursorMarker>,
     mut spawn_civilian: MessageWriter<SpawnCivilianRequest>,
     mut spawn_building: MessageWriter<SpawnBuildingRequest>,
     mut select_entity: MessageWriter<SelectEntityRequest>,
     mut destroy_entity: MessageWriter<DestroyEntityRequest>,
 ) {
-    if !buttons.just_pressed(MouseButton::Left) {
+    for event in mouse_wheel.read() {
+        if active.tool != SpawnTool::SpawnBuilding {
+            continue;
+        }
+
+        if event.y > 0.0 {
+            *building_kind = building_kind.prev();
+        } else if event.y < 0.0 {
+            *building_kind = building_kind.next();
+        }
+    }
+
+    if active.tool == SpawnTool::SpawnBuilding && buttons.just_pressed(MouseButton::Right) {
+        *building_kind = building_kind.next();
+        return;
+    }
+
+    let select_pressed =
+        select_action_binding(settings.as_deref()).is_just_pressed(&keys, &buttons);
+    if !select_pressed {
         return;
     }
     let Some(position) = marker.position else {
@@ -193,7 +268,10 @@ fn handle_spawn_tool_clicks(
             spawn_civilian.write(SpawnCivilianRequest { position });
         }
         SpawnTool::SpawnBuilding => {
-            spawn_building.write(SpawnBuildingRequest { position });
+            spawn_building.write(SpawnBuildingRequest {
+                position,
+                kind: *building_kind,
+            });
         }
         SpawnTool::Terraform => {}
         SpawnTool::Destroy => {
@@ -318,6 +396,19 @@ mod tests {
     #[test]
     fn active_tool_defaults_to_select() {
         assert_eq!(ActiveTool::default().tool, SpawnTool::Select);
+    }
+
+    #[test]
+    fn building_spawn_kind_cycles_and_labels() {
+        assert_eq!(BuildingSpawnKind::CityCenter.label(), "City Center");
+        assert_eq!(BuildingSpawnKind::Market.label(), "Market");
+        assert_eq!(BuildingSpawnKind::Barracks.label(), "Barracks");
+        assert_eq!(BuildingSpawnKind::CityCenter.next(), BuildingSpawnKind::Market);
+        assert_eq!(BuildingSpawnKind::Market.next(), BuildingSpawnKind::Barracks);
+        assert_eq!(BuildingSpawnKind::Barracks.next(), BuildingSpawnKind::CityCenter);
+        assert_eq!(BuildingSpawnKind::CityCenter.prev(), BuildingSpawnKind::Barracks);
+        assert_eq!(BuildingSpawnKind::Market.prev(), BuildingSpawnKind::CityCenter);
+        assert_eq!(BuildingSpawnKind::Barracks.prev(), BuildingSpawnKind::Market);
     }
 
     #[test]

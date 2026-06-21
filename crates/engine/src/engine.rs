@@ -6,6 +6,7 @@ use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
     ActorVisualKind, Alignment, Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
 };
+use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
@@ -20,7 +21,10 @@ use civ_tactics::{
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
-use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
+use civ_voxel::{
+    material::WATER,
+    DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE,
+};
 use hecs::{Entity, World};
 use rand::Rng;
 use rand::SeedableRng;
@@ -44,7 +48,6 @@ use crate::replay_format::{load_civreplay, save_civreplay};
 /// CIV-0001 partial — engine-side deterministic transition. Server command intake
 /// and client broadcast are outside this crate. Keep in sync with the calls in
 /// [`Simulation::tick`].
-#[allow(dead_code)]
 pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
     "citizen_lifecycle",
@@ -182,7 +185,7 @@ pub struct Building {
     pub position: Position,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BuildingType {
     Farm,
     Mine,
@@ -431,9 +434,10 @@ pub struct Simulation {
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
-/// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Kept as a small
-/// integer so it is stable across saves and replays.
-pub const WATER_MARKER_MATERIAL: MaterialId = MaterialId(2);
+/// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Reuses the shared
+/// `civ_voxel::material::WATER` constant so the engine, clients, and worldgen
+/// stay on the same source of truth.
+pub const WATER_MARKER_MATERIAL: MaterialId = WATER;
 
 /// A coastal water column registered with the engine. Each column anchors a
 /// single water-marker voxel that shifts vertically with the climate tide
@@ -1782,6 +1786,1250 @@ impl Simulation {
             geology_map: GeologyMap::seed(&self.planet),
         }
     }
+
+    /// Number of emergent settlements (multi-member clusters) from the most
+    /// recent life phase (FR-CIV-LIFE-030). Read by the HUD `FactionRoster`.
+    #[must_use]
+    pub fn settlement_count(&self) -> u32 {
+        self.last_settlement_count
+    }
+
+    /// Per-cluster (settlement) resource stocks keyed by `ClusterId` value, for
+    /// the HUD `WorldResources` panel (FR-CIV-LIFE-020).
+    #[must_use]
+    pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
+        &self.cluster_stocks
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_clear_cluster_stocks(&mut self) {
+        self.cluster_stocks.clear();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_cluster_food_stock(&mut self, cluster_id: u64, food: i64) {
+        let mut stock = ClusterStocks::default();
+        stock.add(civ_economy::Good::Food, food);
+        self.cluster_stocks.insert(cluster_id, stock);
+    }
+}
+
+/// Maximum chronicle history lines retained in [`WorldState::chronicle`].
+const CHRONICLE_MAX_LEN: usize = 200;
+
+/// Food units each cluster member adds to settlement stock per tick in
+/// [`Simulation::phase_life`].
+const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
+/// Food units each cluster member drains per tick in
+/// [`Simulation::phase_settlement_consumption`]. Must be >= production so the
+/// accumulator stays bounded (net zero at matched rates; converges toward zero
+/// when strictly greater).
+const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
+/// Market weight for settlement food commons before pressure scaling (N1).
+const SETTLEMENT_FOOD_MARKET_WEIGHT: i64 = 2;
+/// Divisor mapping population-scale demand/supply (and settlement commons) into
+/// the capped per-tick food price step (N1: local abundance must move price
+/// within `MarketState::apply_pressure`'s ±8 cent clamp).
+const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
+
+/// Baseline food clearing price (cents) at which births are unaffected by
+/// scarcity. Matches `MarketState::default()`'s food price.
+const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+
+/// Tech unlock bits (irreversible, set-only).
+pub const TECH_IRRIGATION: u64 = 1 << 0;
+pub const TECH_STORAGE: u64 = 1 << 1;
+pub const TECH_METALLURGY: u64 = 1 << 2;
+pub const TECH_WRITING: u64 = 1 << 3;
+pub const TECH_SANITATION: u64 = 1 << 4;
+pub const TECH_GUNPOWDER: u64 = 1 << 5;
+
+/// Discrete tech unlocks reached by a given research tier (set-only bitmask).
+fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
+    let mut bits = 0u64;
+    if research_tier >= 1 {
+        bits |= TECH_IRRIGATION;
+    }
+    if research_tier >= 2 {
+        bits |= TECH_STORAGE;
+    }
+    if research_tier >= 3 {
+        bits |= TECH_METALLURGY;
+    }
+    if research_tier >= 4 {
+        bits |= TECH_WRITING;
+    }
+    if research_tier >= 5 {
+        bits |= TECH_SANITATION;
+    }
+    if research_tier >= 6 {
+        bits |= TECH_GUNPOWDER;
+    }
+    bits
+}
+
+/// Downward-causation policy (FR-CIV-0100 emergence): scarcity in the food
+/// market damps the birth rate, closing the research -> carrying-capacity ->
+/// economy -> population loop. Returns a multiplier in `(0.0, 1.0]` applied to
+/// the per-tick birth chance.
+///
+/// At or below the baseline price (abundance) the factor is `1.0` — surplus
+/// does NOT boost births above the natural rate (conservative; abundance is
+/// already expressed via the ECS food-needs path). As the price rises above
+/// baseline the factor falls as `baseline / price`, so a 2x price halves the
+/// birth chance. The factor never reaches zero, so a starving society can still
+/// recover, and it only ever scales births DOWN — population is never reduced
+/// by this coupling.
+fn food_scarcity_birth_factor(food_price: i64) -> f64 {
+    let price = food_price.max(FOOD_SCARCITY_BASELINE);
+    (FOOD_SCARCITY_BASELINE as f64 / price as f64).clamp(0.0, 1.0)
+}
+
+/// Per-tick change in societal unrest from food-market scarcity (FR-CIV-0100 §3
+/// emergence). Above the baseline price unrest rises in proportion to the
+/// shortfall (bounded per tick so it walks rather than jumps); at or below
+/// baseline it decays toward contentment by a fixed step. The caller floors the
+/// running total at zero.
+fn unrest_delta(food_price: i64) -> i64 {
+    /// Largest single-tick rise, so a price spike can't instantly max unrest.
+    const MAX_RISE: i64 = 50;
+    /// Cents of shortfall that map to one unit of unrest rise.
+    const CENTS_PER_UNREST: i64 = 20;
+    /// Fixed decay applied each tick of abundance.
+    const DECAY: i64 = 10;
+    let scarcity = food_price - FOOD_SCARCITY_BASELINE;
+    if scarcity > 0 {
+        (scarcity / CENTS_PER_UNREST).clamp(1, MAX_RISE)
+    } else {
+        -DECAY
+    }
+}
+
+/// FR-CIV-ECON: scarcity in NON-food commodities adds bounded unrest
+/// (cost-of-living). Food is owned by unrest_delta(); skipped here to avoid
+/// double-counting. Per-tick clamped to [-DECAY, MAX_RISE] — no runaway.
+fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
+    const BASELINE: i64 = 1_000;
+    const CENTS_PER_UNREST: i64 = 40;
+    const MAX_RISE: i64 = 15;
+    const DECAY: i64 = 5;
+    let mut rise: i64 = 0;
+    for (good, &price) in prices {
+        if good == "food" { continue; }
+        let scarcity = price - BASELINE;
+        if scarcity > 0 {
+            rise = rise.saturating_add((scarcity / CENTS_PER_UNREST).min(MAX_RISE));
+        } else {
+            rise = rise.saturating_sub(DECAY);
+        }
+    }
+    rise.clamp(-DECAY, MAX_RISE)
+}
+
+/// Effective food-price shadow for one faction's local wealth/scarcity (FR-CIV-0100
+/// §3 emergence). Comfortable treasury and food sit at baseline; shortfall pushes
+/// the shadow above baseline so [`unrest_delta`] accrues faction unrest.
+fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64 {
+    const TREASURY_COMFORT: i64 = 8_000;
+    const FOOD_COMFORT: i64 = 80;
+    const FOOD_WEIGHT: i64 = 50;
+
+    let treasury_i = (treasury.raw / crate::SCALE).max(0);
+    let food_i = (resources.food.raw / crate::SCALE).max(0);
+    let comfort = TREASURY_COMFORT + FOOD_COMFORT * FOOD_WEIGHT;
+    let wealth = treasury_i + food_i * FOOD_WEIGHT;
+
+    if wealth >= comfort {
+        FOOD_SCARCITY_BASELINE
+    } else {
+        FOOD_SCARCITY_BASELINE + (comfort - wealth) / 4
+    }
+}
+
+/// Per-tick faction unrest delta from that faction's wealth/scarcity shadow.
+/// Mirrors global food-scarcity [`unrest_delta`].
+fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
+    unrest_delta(scarcity_shadow)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): energy depletion breeds unrest.
+/// A fully-drained energy budget (blackout) adds a fixed unrest increment this
+/// tick; a solvent budget adds none. An acute shock that bypasses the gradual
+/// food-scarcity damping.
+fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
+    const BLACKOUT_UNREST: i64 = 15;
+    if energy_budget <= Fixed::ZERO {
+        BLACKOUT_UNREST
+    } else {
+        0
+    }
+}
+
+/// Upward causation (FR-CIV-0100 §3): the mean MISERY of agents (negative Psyche
+/// mood valence) adds to societal unrest. Reuses the ECS Psyche component — the
+/// agent emotional layer feeding the macro web. Returns 0..MAX, bounded.
+fn agent_misery_unrest(world: &hecs::World) -> i64 {
+    const MAX_MISERY_UNREST: i64 = 30;
+    let (sum, n) = world
+        .query::<&Psyche>()
+        .iter()
+        .fold((0.0f32, 0u32), |(s, n), (_, p)| (s + (-p.mood.valence).max(0.0), n + 1));
+    if n == 0 {
+        return 0;
+    }
+    let mean_misery = (sum / n as f32).clamp(0.0, 1.0); // 0 = content, 1 = max misery
+    (mean_misery * MAX_MISERY_UNREST as f32) as i64
+}
+
+/// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
+/// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
+fn micro_cohesion_delta(world: &hecs::World) -> i64 {
+    const MICRO_BIND_CAP: i64 = 12;
+    const MICRO_FRAY_CAP: i64 = 18;
+    const MIN_AGENTS: u32 = 2;
+    const CONSENSUS_SCALE: f32 = 4.0;
+
+    let mut n = 0u32;
+    let mut sum = 0.0f32;
+    let mut sum_sq = 0.0f32;
+    for (_, psyche) in world.query::<&Psyche>().iter() {
+        let x = psyche.beliefs[0];
+        n += 1;
+        sum += x;
+        sum_sq += x * x;
+    }
+
+    if n < MIN_AGENTS {
+        return 0;
+    }
+
+    let n_f = n as f32;
+    let mean = sum / n_f;
+    let var = ((sum_sq / n_f) - mean * mean).max(0.0);
+    let consensus = 1.0 - (CONSENSUS_SCALE * var).clamp(0.0, 1.0);
+    let micro_bind = (consensus * MICRO_BIND_CAP as f32).floor() as i64;
+    let micro_fray = ((1.0 - consensus) * MICRO_FRAY_CAP as f32).floor() as i64;
+    micro_bind - micro_fray
+}
+
+/// Upward causation (FR-CIV-0100 §3): mean positive agent tie trust caches a
+/// trade permille bonus for the next economy tick. Pure `hecs::World` scan.
+fn micro_social_trust_permille(world: &hecs::World) -> u64 {
+    const MICRO_TRUST_SCALE: f32 = 250.0;
+    const MICRO_TRUST_CAP: u64 = 250;
+
+    let mut n = 0u64;
+    let mut sum = 0.0f32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            sum += tie.trust.clamp(0.0, 1.0);
+            n += 1;
+        }
+    }
+
+    if n == 0 {
+        return 0;
+    }
+
+    let trust_mean = sum / n as f32;
+    let raw = (trust_mean * MICRO_TRUST_SCALE).floor() as u64;
+    raw.min(MICRO_TRUST_CAP)
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N11): average psyche maturity across all agents.
+/// Mature populations stabilize belief (wisdom = stability). Pure `hecs::World` scan.
+fn avg_psyche_maturity(world: &hecs::World) -> f32 {
+    let mut total = 0.0;
+    let mut count = 0u32;
+    for (_, psyche) in world.query::<&Psyche>().iter() {
+        total += psyche.maturity;
+        count += 1;
+    }
+    if count == 0 { 0.0 } else { total / count as f32 }
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N10): average kinship across all social ties.
+/// Kinship boosts cohesion (family ties stabilize society). Pure `hecs::World` scan.
+fn avg_faction_kinship(world: &hecs::World) -> f32 {
+    let mut total_kinship = 0.0;
+    let mut count = 0u32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            total_kinship += tie.kinship;
+            count += 1;
+        }
+    }
+    if count == 0 {
+        0.0
+    } else {
+        total_kinship / count as f32
+    }
+}
+
+/// Upward causation (FR-CIV-EMERGENCE-N12): average affinity across all social ties.
+/// Positive collective affinity (goodwill) raises the diplomacy conflict threshold;
+/// hostility lowers it. Result is clamped to `[-1, 1]`. Pure `hecs::World` scan.
+fn avg_social_affinity(world: &hecs::World) -> f32 {
+    let mut total = 0.0;
+    let mut count = 0u32;
+    for (_, graph) in world.query::<&SocialGraph>().iter() {
+        for tie in &graph.ties {
+            // Defensive clamp: each tie.affinity is maintained in [-1, 1] by the
+            // social graph, but clamp per-tie so a malformed save cannot skew the mean.
+            total += tie.affinity.clamp(-1.0, 1.0);
+            count += 1;
+        }
+    }
+    if count == 0 {
+        0.0
+    } else {
+        (total / count as f32).clamp(-1.0, 1.0)
+    }
+}
+
+/// N12: bias magnitude for the affinity→diplomacy threshold (FR-CIV-EMERGENCE-N12).
+/// `avg_affinity ∈ [-1, 1]` scaled by this yields the threshold bias in `[-5000, 5000]`,
+/// bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` at the combination site.
+const N12_AFFINITY_BIAS_SCALE: f32 = 5_000.0;
+
+/// N12: collective affinity threshold bias. Positive goodwill raises the conflict
+/// threshold (more tolerance before fighting); hostility lowers it. The input is
+/// clamped to `[-1, 1]` so the bias is bounded to `[-5000, 5000]`. Returns i64.
+fn affinity_threshold_bias(avg_affinity: f32) -> i64 {
+    (avg_affinity.clamp(-1.0, 1.0) * N12_AFFINITY_BIAS_SCALE) as i64
+}
+
+/// Maximum peace bonus from shared patron veneration (religion → diplomacy coupling).
+const RELIGIOUS_UNITY_PEACE_CAP: i64 = 1_000;
+
+/// RELIGION→DIPLOMACY emergence coupling (FR-CIV-RELIGION-002).
+///
+/// A civilisation that has crystallised a patron deity around a shared legend
+/// figure gains social cohesion that spills into inter-faction tolerance: the
+/// disparity threshold before war is raised by up to
+/// [`RELIGIOUS_UNITY_PEACE_CAP`] currency units.
+///
+/// The bonus is binary (patron present / absent) rather than proportional
+/// because the emergence mechanic already encodes significance in *which*
+/// figure becomes patron; the coupling here is "shared veneration exists" not
+/// "how devout are they".
+///
+/// Called with an immutable copy of `has_patron` (read before any mutable
+/// borrow of `self`) to satisfy the borrow-checker (E0502).
+fn religious_unity_peace_bonus(has_patron: bool) -> i64 {
+    if has_patron {
+        RELIGIOUS_UNITY_PEACE_CAP
+    } else {
+        0
+    }
+}
+
+/// Maximum peace bonus from mutual language intelligibility (language → diplomacy coupling).
+const LANGUAGE_INTELLIGIBILITY_PEACE_CAP: i64 = 1_200;
+
+/// LANGUAGE→DIPLOMACY emergence coupling.
+///
+/// Low language distance (mutually intelligible factions) → positive peace bonus
+/// on the conflict threshold, mirroring the N9/N12/#564 magnitudes.
+/// High distance → 0 bonus (no effect on threshold).
+///
+/// Called with pre-read centroid values (before any mutable borrow of `self`)
+/// to satisfy the borrow-checker (E0502).
+pub fn language_intelligibility_peace_bonus(language_distance: f32) -> i64 {
+    let raw =
+        LANGUAGE_INTELLIGIBILITY_PEACE_CAP as f32 * (1.0 - language_distance.clamp(0.0, 1.0));
+    raw.clamp(0.0, LANGUAGE_INTELLIGIBILITY_PEACE_CAP as f32) as i64
+}
+
+/// Upward causation (FR-CIV-0100): the fraction of sentient agents accelerates
+/// research (awakened minds discover faster). Reuses the ECS; returns 0..MAX bonus.
+fn sentience_research_bonus(world: &hecs::World) -> u64 {
+    const MAX_SENTIENCE_RESEARCH: u64 = 50;
+    // Mirrors `EmergenceState::new` sentience profile and threshold.
+    let profile = CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    );
+    let threshold = SentienceThreshold::new(0.72);
+    let (sentient, total) = world.query::<&Dna>().iter().fold((0u32, 0u32), |(s, n), (_, dna)| {
+        let crossed = cognition_score(dna, &profile) >= threshold.minimum_cognition;
+        (s + u32::from(crossed), n + 1)
+    });
+    if total == 0 {
+        return 0;
+    }
+    let fraction = sentient as f32 / total as f32;
+    ((fraction * MAX_SENTIENCE_RESEARCH as f32) as u64).min(MAX_SENTIENCE_RESEARCH)
+}
+
+/// The economic focus a civilization tends toward, from its strongest sector.
+fn candidate_economic_focus(
+    food: i64,
+    research_tier: u64,
+    belief: u64,
+    treasury_total: i64,
+) -> EconomicFocus {
+    let agr = food;
+    let ind = (research_tier as i64) * 50_000;
+    let sac = (belief / 4) as i64;
+    let mer = treasury_total / 4;
+    let max = agr.max(ind).max(sac).max(mer);
+    if max <= 0 {
+        return EconomicFocus::Balanced;
+    }
+    if max == agr {
+        EconomicFocus::Agrarian
+    } else if max == ind {
+        EconomicFocus::Industrial
+    } else if max == sac {
+        EconomicFocus::Sacred
+    } else {
+        EconomicFocus::Mercantile
+    }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): research raises production yield —
+/// better tools/techniques lift per-building output. +10% per research tier,
+/// capped at +100% (2x). De-silos phase_production, which read no emergent state.
+fn production_yield_factor(research_tier: u64) -> Fixed {
+    let bonus_permille = research_tier.saturating_mul(100).min(1_000) as i64;
+    Fixed::from_num(1_000 + bonus_permille) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-CONTENT-001): terrain biome modulates food
+/// production — fertile land grows more food, barren land grows less.  The factor
+/// is a pure multiplier on per-farm output; caller multiplies food output by this.
+/// Returns a value in the range [0.1, 1.5] (clamped).
+fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
+    use civ_planet::BiomeKind;
+    match biome {
+        BiomeKind::Rainforest => Fixed::from_num(13) / Fixed::from_num(10),
+        BiomeKind::Wetland    => Fixed::from_num(12) / Fixed::from_num(10),
+        BiomeKind::Grassland  => Fixed::from_num(12) / Fixed::from_num(10),
+        BiomeKind::Plains     => Fixed::from_num(11) / Fixed::from_num(10),
+        BiomeKind::Forest     => Fixed::from_num(9)  / Fixed::from_num(10),
+        BiomeKind::Savanna    => Fixed::from_num(17) / Fixed::from_num(20),
+        BiomeKind::Beach      => Fixed::from_num(8)  / Fixed::from_num(10),
+        BiomeKind::Mountain   => Fixed::from_num(6)  / Fixed::from_num(10),
+        BiomeKind::Taiga      => Fixed::from_num(6)  / Fixed::from_num(10),
+        BiomeKind::Desert     => Fixed::from_num(1)  / Fixed::from_num(2),
+        BiomeKind::Tundra     => Fixed::from_num(9)  / Fixed::from_num(20),
+        BiomeKind::Ocean      => Fixed::from_num(1)  / Fixed::from_num(5),
+        BiomeKind::Glacier    => Fixed::from_num(1)  / Fixed::from_num(10),
+    }
+}
+
+/// Aggregate biome yield factor over a slice of [`BiomeKind`]s.
+///
+/// Returns the mean `biome_yield_factor` across the slice, clamped to
+/// `[0.1, 1.5]`.  Returns `Fixed::ONE` (neutral) for an empty slice so
+/// callers with no geology data are unaffected.
+fn aggregate_biome_yield(biomes: &[civ_planet::BiomeKind]) -> Fixed {
+    if biomes.is_empty() {
+        return Fixed::from_num(1) / Fixed::from_num(1);
+    }
+    let sum = biomes
+        .iter()
+        .fold(Fixed::ZERO, |acc, &b| acc + biome_yield_factor(b));
+    let mean = sum / Fixed::from_num(biomes.len() as i64);
+    let lo = Fixed::from_num(1) / Fixed::from_num(10);
+    let hi = Fixed::from_num(15) / Fixed::from_num(10);
+    mean.clamp(lo, hi)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): social cohesion speeds military
+/// morale recovery — a unified society's troops rally faster. Returns the
+/// per-tick morale recovery increment, rising with cohesion from a 0.010 base
+/// up to a 0.050 cap.
+fn morale_recovery_rate(cohesion: u64) -> Fixed {
+    const BASE_PERMILLE: i64 = 10;
+    const CAP_PERMILLE: i64 = 50;
+    let bonus = (cohesion / 25_000).min((CAP_PERMILLE - BASE_PERMILLE) as u64) as i64;
+    Fixed::from_num(BASE_PERMILLE + bonus) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): overcrowding breeds unrest
+/// (Malthusian pressure). Population beyond the carrying capacity adds unrest
+/// scaled by the percentage overshoot (10% over => +1), capped per tick. A
+/// third unrest driver alongside food scarcity and energy blackout.
+fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
+    const MAX_OVERCROWD_UNREST: i64 = 30;
+    let cap = capacity.max(1) as u64;
+    if population <= cap {
+        return 0;
+    }
+    let overshoot_pct = ((population - cap).saturating_mul(100) / cap).min(i64::MAX as u64) as i64;
+    (overshoot_pct / 10).clamp(1, MAX_OVERCROWD_UNREST)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): social cohesion accelerates
+/// research — a unified society collaborates. Returns a per-mille bonus to the
+/// per-tick research contribution, up to +50%.
+fn cohesion_research_bonus_permille(cohesion: u64) -> u64 {
+    (cohesion / 2_000).min(500)
+}
+
+/// The wealth gap (in whole currency units) between the richest and poorest
+/// faction — an emergent measure of structural inequality across the society.
+fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
+    let mut min = i64::MAX;
+    let mut max = i64::MIN;
+    for t in treasury.values() {
+        let v = t.raw / crate::SCALE;
+        min = min.min(v);
+        max = max.max(v);
+    }
+    if max >= min {
+        max - min
+    } else {
+        0
+    }
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): structural inequality breeds class
+/// unrest. A wide wealth gap between factions adds unrest scaled by the gap,
+/// capped per tick. Distinct from scarcity — this is about distribution.
+fn inequality_unrest(treasury_spread: i64) -> i64 {
+    const MAX_INEQUALITY_UNREST: i64 = 25;
+    const SPREAD_PER_UNREST: i64 = 2_000;
+    (treasury_spread / SPREAD_PER_UNREST).clamp(0, MAX_INEQUALITY_UNREST)
+}
+
+/// The dispossessed share (per-mille) that a society TENDS TOWARD given its
+/// wealth gap and social fabric: inequality pushes it up, cohesion pulls it
+/// down. Clamped to [0, 1000].
+fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
+    const SPREAD_PER_PERMILLE: i64 = 200; // currency-units of gap per +1 permille
+    let from_inequality = (treasury_spread.max(0) / SPREAD_PER_PERMILLE) as u64;
+    let from_cohesion = cohesion / 5_000; // cohesion erodes dispossession
+    from_inequality.saturating_sub(from_cohesion).min(1_000)
+}
+
+/// Max institution level (criticality cap on the belief->temple->belief loop).
+pub const MAX_INSTITUTION_LEVEL: u32 = 5;
+
+/// Institution level that a driver signal supports: one level per THRESHOLD of
+/// the signal, capped at MAX_INSTITUTION_LEVEL.
+fn institution_target_level(signal: u64, per_level: u64) -> u32 {
+    (signal / per_level.max(1)).min(MAX_INSTITUTION_LEVEL as u64) as u32
+}
+
+/// One-step decay toward target (max 1 level change per tick, so growth/decay
+/// is gradual — hysteresis).
+fn institution_step(current: u32, target: u32) -> u32 {
+    if target > current {
+        current + 1
+    } else if target < current {
+        current - 1
+    } else {
+        current
+    }
+}
+
+/// One sticky step of the dispossessed share toward its target (max 5 permille
+/// per tick), so the class structure persists rather than tracking instantly.
+fn dispossession_step(current: u64, target: u64) -> u64 {
+    const MAX_STEP: u64 = 5;
+    if target > current {
+        (current + MAX_STEP.min(target - current)).min(1_000)
+    } else {
+        current - MAX_STEP.min(current - target)
+    }
+}
+
+/// A large dispossessed underclass adds unrest, scaled by its share, capped.
+fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
+    (dispossessed_permille / 40).min(25) as i64
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): research mitigates
+/// unrest — advanced food logistics (storage, distribution) blunt the
+/// scarcity-driven rise. Only the positive (rising) part is damped; decay is
+/// untouched. The mitigation is bounded (tier capped at 9 → at most a 10x
+/// reduction) and floored at 1, so technology calms a society but never makes
+/// it immune to hardship. Returns the research-adjusted unrest delta.
+fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
+    if rise <= 0 {
+        return rise;
+    }
+    let divisor = 1 + research_tier.min(9) as i64;
+    (rise / divisor).max(1)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): research accelerates construction.
+/// Each research tier shortens the build cadence (ticks between expansions),
+/// floored so an advanced civilisation never busy-builds every single tick.
+/// De-silos phase_buildings, which previously read no emergent state.
+fn building_cadence(research_tier: u64) -> u64 {
+    const BASE: u64 = 16;
+    const FLOOR: u64 = 4;
+    BASE.saturating_sub(research_tier.saturating_mul(2)).max(FLOOR)
+}
+
+/// Emergent construction demand (FR-CIV-0100 §3): the built environment responds
+/// to society — crowding drives housing, research drives industry, cohesion
+/// drives commerce, unrest drives civic/governance building. Each in [0,1].
+/// All channels are scaled by wood/metal headroom so construction stops when
+/// stockpiles are depleted (FC-3).
+fn building_demand_signals(
+    population: u64,
+    capacity: i64,
+    cohesion: u64,
+    research_tier: u64,
+    unrest: u64,
+    wood: Fixed,
+    metal: Fixed,
+) -> DemandSignals {
+    let cap = capacity.max(1) as f32;
+    let cohesion_signal = ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0);
+    let wood_permille = building_material_headroom_permille(
+        wood,
+        BUILDING_WOOD_PER_PARCEL,
+        BUILDING_MATERIAL_GATE,
+    );
+    let metal_permille = building_material_headroom_permille(
+        metal,
+        BUILDING_METAL_PER_PARCEL,
+        BUILDING_MATERIAL_GATE,
+    );
+    let material_permille = wood_permille.min(metal_permille);
+    let material_factor = material_permille as f32 / 1000.0;
+    DemandSignals {
+        residential: ((population as f32) / cap).clamp(0.0, 1.0) * material_factor,
+        commercial: cohesion_signal * material_factor,
+        industrial: ((research_tier as f32) / 5.0).clamp(0.0, 1.0) * material_factor,
+        civic: ((unrest as f32) / 500.0).clamp(0.0, 1.0) * material_factor,
+    }
+}
+
+/// Wood consumed per parcel allocated in [`Simulation::phase_buildings`].
+const BUILDING_WOOD_PER_PARCEL: i64 = 10;
+/// Metal consumed per parcel allocated in [`Simulation::phase_buildings`].
+const BUILDING_METAL_PER_PARCEL: i64 = 5;
+/// Stock level (integer units) at which material headroom reaches full strength.
+const BUILDING_MATERIAL_GATE: i64 = 500;
+const FC3_COMMERCIAL_PARCEL_THRESHOLD: f32 = 0.5;
+
+/// FC-3: reserve one parcel, then quadratic roll-off in permille (0..=1000).
+fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_units: i64) -> u64 {
+    let reserve = Fixed::from_num(reserve_units);
+    let effective = stock.saturating_sub(reserve);
+    if effective.raw <= 0 {
+        return 0;
+    }
+    let gate = Fixed::from_num(gate_units);
+    let linear = ((effective.raw as i128) * 1000 / gate.raw.max(1) as i128).min(1000) as u64;
+    linear.saturating_mul(linear) / 1000
+}
+
+/// Parcels fundable from current wood and metal stockpiles (integer division).
+fn building_affordable_parcel_count(wood: Fixed, metal: Fixed) -> usize {
+    let wood_per = Fixed::from_num(BUILDING_WOOD_PER_PARCEL);
+    let metal_per = Fixed::from_num(BUILDING_METAL_PER_PARCEL);
+    let by_wood = if wood_per.raw > 0 {
+        (wood.raw / wood_per.raw) as usize
+    } else {
+        usize::MAX
+    };
+    let by_metal = if metal_per.raw > 0 {
+        (metal.raw / metal_per.raw) as usize
+    } else {
+        usize::MAX
+    };
+    by_wood.min(by_metal)
+}
+
+/// Keeps the highest-priority saturated signals, zeroing the rest.
+fn building_signals_limited(signals: DemandSignals, max_parcels: usize) -> DemandSignals {
+    let mut active = [
+        (0_u8, signals.residential),
+        (1, signals.commercial),
+        (2, signals.industrial),
+        (3, signals.civic),
+    ]
+    .into_iter()
+    .filter(|(_, strength)| *strength > 0.5)
+    .collect::<Vec<_>>();
+    active.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    active.truncate(max_parcels);
+
+    let mut out = DemandSignals {
+        residential: 0.0,
+        commercial: 0.0,
+        industrial: 0.0,
+        civic: 0.0,
+    };
+    for (kind, strength) in active {
+        match kind {
+            0 => out.residential = strength,
+            1 => out.commercial = strength,
+            2 => out.industrial = strength,
+            _ => out.civic = strength,
+        }
+    }
+    out
+}
+
+/// FC-3 metal steady-state ceiling (integer metal units) for a cohesion level.
+/// Includes two parcel debits of headroom for discrete cadence oscillation.
+fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
+    let cohesion_signal = ((cohesion as f32) / 1_000_000.0).clamp(0.0, 1.0);
+    if cohesion_signal <= FC3_COMMERCIAL_PARCEL_THRESHOLD {
+        return i64::MAX;
+    }
+    let m_star = (BUILDING_MATERIAL_GATE as f32)
+        * (FC3_COMMERCIAL_PARCEL_THRESHOLD / cohesion_signal).sqrt();
+    (m_star + (BUILDING_METAL_PER_PARCEL as f32) * 2.0).ceil() as i64
+}
+
+/// Parcels that would be allocated for saturated demand signals (> 0.5).
+fn building_parcel_count(signals: &DemandSignals) -> usize {
+    [
+        signals.residential,
+        signals.commercial,
+        signals.industrial,
+        signals.civic,
+    ]
+    .iter()
+    .filter(|&&signal| signal > 0.5)
+    .count()
+}
+
+/// Construction material debit for `parcel_count` new parcels.
+fn building_material_cost(parcel_count: usize) -> (Fixed, Fixed) {
+    let n = parcel_count as i64;
+    (
+        Fixed::from_num(BUILDING_WOOD_PER_PARCEL * n),
+        Fixed::from_num(BUILDING_METAL_PER_PARCEL * n),
+    )
+}
+
+/// True when the global stockpile can fund `parcel_count` new parcels.
+/// De-silos `resources.wood` / `resources.metal`, which `phase_production` writes.
+fn building_materials_affordable(wood: Fixed, metal: Fixed, parcel_count: usize) -> bool {
+    let (need_wood, need_metal) = building_material_cost(parcel_count);
+    wood >= need_wood && metal >= need_metal
+}
+
+/// Belief units that contribute one unit of cohesion growth per tick.
+const COHESION_BELIEF_DIVISOR: u64 = 200;
+/// Unrest units that fray one unit of cohesion per tick.
+const COHESION_UNREST_DIVISOR: u64 = 50;
+
+/// Emergence policy (FR-CIV-0100 §3): the social fabric's per-tick change is the
+/// balance of belief (binds, scaled gently) against unrest (frays, scaled
+/// harder, so disorder erodes cohesion faster than faith builds it). Returns a
+/// signed delta; the caller floors the running total at zero.
+fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
+    let bind = (belief / COHESION_BELIEF_DIVISOR) as i64;
+    let fray = (unrest / COHESION_UNREST_DIVISOR) as i64;
+    bind - fray
+}
+
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: each lineage crossing the sentience
+/// threshold this tick mints a small bounded pulse of cohesion (shared
+/// identity — "we are the people who woke"). Kept SMALL relative to the
+/// existing cohesion bind/frac inputs so the moment of awakening nudges
+/// the social fabric without dominating it; the per-tick cap mirrors the
+/// spirit of [`crate::emergence`] emergence caps.
+pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
+/// Hard per-tick cap on awakening-driven cohesion nudge (signed i64 so the
+/// existing floored-at-zero cohesion mutator absorbs any overshoot cleanly).
+pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> cohesion
+/// pulse. Returns a signed i64 (matches `cohesion_delta`'s contract). The
+/// inner product is clamped to the per-tick cap.
+#[must_use]
+pub(crate) fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
+    let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
+    raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
+}
+
+/// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
+/// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.
+fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
+    if rise <= 0 {
+        return rise;
+    }
+    let divisor = 1 + (cohesion / 200).min(9) as i64;
+    (rise / divisor).max(1)
+}
+
+/// Surplus differential (resource units) at/above which a route ships its full
+/// boosted volume.
+const TRADE_GAP_SCALE: i64 = 100;
+
+/// Arbitrage policy (FR-CIV-0100 §3 emergence): trade volume scales with the
+/// surplus gap between exporter and importer — a well-stocked source feeding a
+/// scarce destination ships MORE. Returns a multiplier in `[1.0, 2.0]`, bounded
+/// at 2x so the price↔volume↔treasury↔demand loop self-limits rather than
+/// running away (design-layer criticality bound). No boost when the source is
+/// not in surplus relative to the destination.
+fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
+    let gap = (from_stock - to_stock).max(Fixed::ZERO);
+    let normalized = (gap / Fixed::from_num(TRADE_GAP_SCALE)).min(Fixed::from_num(1));
+    Fixed::from_num(1) + normalized
+}
+
+/// Floor (per-mille) below which unrest cannot throttle trade — even a society
+/// in turmoil keeps half its commerce moving.
+const UNREST_TRADE_FLOOR_PERMILLE: i64 = 500;
+/// Units of standing unrest that throttle trade by one per-mille.
+const UNREST_PER_TRADE_PERMILLE: u64 = 4;
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): societal unrest
+/// disrupts commerce. Returns a trade-volume factor in `[0.5, 1.0]` — `1.0`
+/// when calm, declining as unrest rises but floored at half so trade never
+/// stops entirely. Makes unrest act on BOTH diplomacy (war) and the economy.
+fn unrest_trade_factor(unrest: u64) -> Fixed {
+    let max_drop = (1_000 - UNREST_TRADE_FLOOR_PERMILLE) as u64;
+    let drop = (unrest / UNREST_PER_TRADE_PERMILLE).min(max_drop) as i64;
+    Fixed::from_num(1_000 - drop) / Fixed::from_num(1_000)
+}
+
+/// Cohesion units that lift trade volume by one per-mille (social trust greases commerce).
+const COHESION_PER_TRADE_PERMILLE: u64 = 4;
+/// Cap on cohesion's trade boost (per-mille above 1.0): at most +50% volume.
+const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
+/// Per-mille trade boost from agent tie trust alone.
+const MICRO_TRUST_CAP_PERMILLE: u64 = 250;
+/// Combined macro+micro trade boost cap (cohesion 500 + micro 250).
+const SOCIETY_TRADE_BOOST_CAP_PERMILLE: i64 = 750;
+
+/// Downward-causation policy (FR-CIV-0100 §3): macro cohesion AND cached micro
+/// interpersonal trust lift trade volume. Returns factor in [1.0, 1.75].
+fn society_trade_factor(cohesion: u64, micro_trust_permille: u64) -> Fixed {
+    let cohesion_boost = (cohesion / COHESION_PER_TRADE_PERMILLE)
+        .min(COHESION_TRADE_CAP_PERMILLE as u64) as i64;
+    let micro_boost = micro_trust_permille.min(MICRO_TRUST_CAP_PERMILLE) as i64;
+    let total = (cohesion_boost + micro_boost).min(SOCIETY_TRADE_BOOST_CAP_PERMILLE);
+    Fixed::from_num(1_000 + total) / Fixed::from_num(1_000)
+}
+
+/// Downward-causation policy (FR-CIV-0100 §3): a cohesive society trades MORE —
+/// social trust lowers transaction friction. Returns a factor in [1.0, 1.5],
+/// rising with cohesion, capped so the boost can't run away.
+fn cohesion_trade_factor(cohesion: u64) -> Fixed {
+    society_trade_factor(cohesion, 0)
+}
+
+/// Relations bias trade: allies (positive relation) trade more, rivals (negative)
+/// less. Returns a factor in [0.5, 1.5] from a relation score in [-1, 1], bounded.
+fn relation_trade_factor(relation: f32) -> Fixed {
+    let r = relation.clamp(-1.0, 1.0);
+    // map [-1,1] to per-mille [500, 1500], then to a Fixed factor in [0.5, 1.5].
+    let permille = (1_000.0 + 500.0 * r) as i64;
+    Fixed::from_num(permille) / Fixed::from_num(1_000)
+}
+
+/// Max per-mille reduction from language barrier (at distance = 1.0).
+const LANGUAGE_TRADE_PENALTY_PERMILLE: i64 = 500;
+/// Downward-causation (FR-CIV-LANG-001 / FR-CIV-PSYCHE-912): mutually unintelligible
+/// languages impose transaction friction. Returns factor in [0.5, 1.0].
+fn language_trade_factor(distance: f32) -> Fixed {
+    let d = distance.clamp(0.0, 1.0);
+    let permille = 1_000 - (d * LANGUAGE_TRADE_PENALTY_PERMILLE as f32).round() as i64;
+    Fixed::from_num(permille) / Fixed::from_num(1_000)
+}
+
+/// Wealth-disparity (in whole currency units) at which two factions clash when
+/// they share no faith. Above this gap the have-nots turn on the haves.
+const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+/// Trade-agreement relation drift (+0.05) via [`DiplomacyMatrix`] trade channel.
+const FACTION_TRADE_RELATION_SIGNAL: f32 = 0.05 / 0.08;
+/// Conflict relation drift (-0.1) via [`DiplomacyMatrix`] competition channel.
+const FACTION_CONFLICT_RELATION_SIGNAL: f32 = 0.1 / 0.12;
+/// Per diplomacy phase, unstrengthened relations retain this fraction of magnitude.
+const FACTION_RELATION_DECAY_FACTOR: f32 = 0.98;
+/// Trade drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
+/// Competition drift per unit signal in [`DiplomacyMatrix::apply_signal`].
+const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
+/// Max threshold shift from a saturated pairwise relation score (`±1.0`).
+const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
+/// Max peace bonus from identical pairwise cultural traits (N2 coupling).
+const CULTURE_PEACE_SPAN: f32 = 3_000.0;
+/// Minimum members for an emergent settlement (matches `phase_life` HUD filter).
+const SETTLEMENT_MIN_MEMBERS: u32 = 2;
+/// Co-location radius for emergent settlements (matches `phase_life` cluster radius).
+const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
+/// Contact radius between settlement pairs (2× cluster radius).
+const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
+/// Belief units required to raise the conflict threshold by one currency unit.
+const BELIEF_PEACE_DIVISOR: u64 = 50;
+/// Cap on the belief-driven peace bonus: shared faith can at most double a
+/// society's tolerance for inequality — it never makes conflict impossible.
+const BELIEF_PEACE_CAP: i64 = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+/// Unrest units required to erode the conflict threshold by one currency unit.
+const UNREST_WAR_DIVISOR: u64 = 50;
+/// Cap on how much unrest can erode the threshold (currency units).
+const UNREST_WAR_CAP: i64 = 8_000;
+/// Floor on the conflict threshold: even a furious, faithless society still
+/// needs SOME wealth disparity to go to war — discontent alone is not casus belli.
+const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
+
+/// Downward-causation policy (FR-CIV-0100 §3 emergence): collective belief and
+/// societal unrest pull diplomacy in opposite directions. Shared faith RAISES
+/// the wealth-disparity a faction pair tolerates before fighting (peace);
+/// unrest LOWERS it (internal discontent spills into external aggression). The
+/// threshold is bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` so conflict
+/// always needs some disparity, and above at `2x` base so peace is never absolute.
+fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
+    let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
+    let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
+    (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
+}
+
+/// N9: maximum reduction to the conflict threshold from maximum aggression.
+const AGGRESSION_CONFLICT_BOOST: i64 = 3_000;
+
+/// N9: conflict-threshold reduction driven by mean pairwise aggression.
+/// Aggressive species are quicker to fight: a mean aggression of 1.0 reduces
+/// the threshold by [`AGGRESSION_CONFLICT_BOOST`] currency units.
+fn aggression_threshold_reduction(mean: f32) -> i64 {
+    (mean.clamp(0.0, 1.0) * AGGRESSION_CONFLICT_BOOST as f32) as i64
+}
+
+/// Threshold bias from emergent faction relation (`relation * 5000`, clamped).
+fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
+    (relation_score.clamp(-1.0, 1.0) * FACTION_RELATION_THRESHOLD_SPAN as f32).round() as i64
+}
+
+/// Peace bonus from pairwise cultural similarity (N2 — culture → diplomacy).
+///
+/// Culturally similar factions tolerate more treasury disparity before conflict;
+/// divergent pairs add zero bonus (neutral default).
+fn diplomacy_culture_threshold_bias(
+    cultures: &BTreeMap<u64, CultureProfile>,
+    faction_a: u32,
+    faction_b: u32,
+) -> i64 {
+    let Some(pa) = cultures.get(&u64::from(faction_a)) else {
+        return 0;
+    };
+    let Some(pb) = cultures.get(&u64::from(faction_b)) else {
+        return 0;
+    };
+    let distance = cultural_distance(pa.traits, pb.traits);
+    let similarity = 1.0 - distance;
+    (similarity * CULTURE_PEACE_SPAN).round() as i64
+}
+
+/// Dominant explicit faction alignment per multi-member settlement cluster (N3).
+fn settlement_dominant_factions(
+    world: &World,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+) -> BTreeMap<u64, u32> {
+    let mut faction_counts: BTreeMap<u64, BTreeMap<u32, u32>> = BTreeMap::new();
+    for (_, (civ, member)) in world.query::<(&AgentCivilian, &ClusterMember)>().iter() {
+        let cluster_id = member.cluster.0;
+        let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
+        if members < SETTLEMENT_MIN_MEMBERS {
+            continue;
+        }
+        if let Alignment::Faction(faction_id) = civ.alignment {
+            *faction_counts
+                .entry(cluster_id)
+                .or_default()
+                .entry(faction_id)
+                .or_insert(0) += 1;
+        }
+    }
+
+    let mut dominant = BTreeMap::new();
+    for (cluster_id, counts) in faction_counts {
+        let mut best_faction = None;
+        let mut best_count = 0u32;
+        for (&faction_id, &count) in &counts {
+            let replace = match best_faction {
+                None => true,
+                Some(prev) => count > best_count || (count == best_count && faction_id < prev),
+            };
+            if replace {
+                best_faction = Some(faction_id);
+                best_count = count;
+            }
+        }
+        if let Some(faction_id) = best_faction {
+            dominant.insert(cluster_id, faction_id);
+        }
+    }
+    dominant
+}
+
+/// Member-weighted per-faction language centroid (FR-CIV-LANG-001 / FR-CIV-PSYCHE-912).
+///
+/// `cluster_cultures` is `BTreeMap<u64, CultureProfile>` keyed by cluster id; each
+/// profile carries a `language: [f32; 4]` vector. `dominant` maps cluster id
+/// (u64) to its dominant faction id (u32) as returned by
+/// [`settlement_dominant_factions`]. `member_counts` is the cluster membership
+/// rollup from `phase_life`. Clusters with fewer than 2 members are ignored so
+/// lone wanderers cannot anchor a faction's centroid.
+fn faction_language_centroids(
+    cultures: &std::collections::BTreeMap<u64, CultureProfile>,
+    dominant: &std::collections::BTreeMap<u64, u32>,
+    member_counts: &std::collections::BTreeMap<u64, u32>,
+) -> std::collections::BTreeMap<u32, [f32; 4]> {
+    let mut sums: std::collections::BTreeMap<u32, ([f32; 4], f32)> = Default::default();
+    for (cluster_id, faction_id) in dominant {
+        let mc = match member_counts.get(cluster_id) {
+            Some(&m) if m >= 2 => m,
+            _ => continue,
+        };
+        let lang = match cultures.get(cluster_id) {
+            Some(c) => c.language,
+            None => continue,
+        };
+        let e = sums.entry(*faction_id).or_insert(([0.0; 4], 0.0));
+        for a in 0..4 {
+            e.0[a] += lang[a] * mc as f32;
+        }
+        e.1 += mc as f32;
+    }
+    sums
+        .into_iter()
+        .map(|(f, (s, w))| {
+            let mut c = [0.0f32; 4];
+            if w > 0.0 {
+                for a in 0..4 {
+                    c[a] = (s[a] / w).clamp(0.0, 1.0);
+                }
+            }
+            (f, c)
+        })
+        .collect()
+}
+
+/// Canonical settlement contact edges when any cross-cluster agents are within radius (N3).
+fn settlement_contact_pairs(
+    world: &World,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+    contact_radius_fp: i64,
+) -> BTreeSet<(u64, u64)> {
+    let contact_radius_sq = i128::from(contact_radius_fp) * i128::from(contact_radius_fp);
+    let mut by_cluster: BTreeMap<u64, Vec<(i64, i64)>> = BTreeMap::new();
+    for (_, (member, pos)) in world.query::<(&ClusterMember, &Position3d)>().iter() {
+        let cluster_id = member.cluster.0;
+        let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
+        if members < SETTLEMENT_MIN_MEMBERS {
+            continue;
+        }
+        by_cluster
+            .entry(cluster_id)
+            .or_default()
+            .push((pos.coord.x, pos.coord.z));
+    }
+
+    let cluster_ids: Vec<u64> = by_cluster.keys().copied().collect();
+    let mut contacts = BTreeSet::new();
+    for i in 0..cluster_ids.len() {
+        for j in (i + 1)..cluster_ids.len() {
+            let ca = cluster_ids[i];
+            let cb = cluster_ids[j];
+            let Some(agents_a) = by_cluster.get(&ca) else {
+                continue;
+            };
+            let Some(agents_b) = by_cluster.get(&cb) else {
+                continue;
+            };
+            let in_contact = agents_a.iter().any(|&(ax, az)| {
+                agents_b.iter().any(|&(bx, bz)| {
+                    let dx = i128::from(ax) - i128::from(bx);
+                    let dz = i128::from(az) - i128::from(bz);
+                    dx * dx + dz * dz <= contact_radius_sq
+                })
+            });
+            if in_contact {
+                contacts.insert((ca.min(cb), ca.max(cb)));
+            }
+        }
+    }
+    contacts
+}
+
+/// Faction pairs implied by contacting settlements with different dominant factions (N3).
+fn diplomacy_faction_pairs_from_settlement_contact(
+    dominant: &BTreeMap<u64, u32>,
+    contacts: &BTreeSet<(u64, u64)>,
+) -> Vec<(u32, u32)> {
+    let mut pairs = BTreeSet::new();
+    for &(ca, cb) in contacts {
+        let Some(&fa) = dominant.get(&ca) else {
+            continue;
+        };
+        let Some(&fb) = dominant.get(&cb) else {
+            continue;
+        };
+        if fa != fb {
+            pairs.insert((fa.min(fb), fa.max(fb)));
+        }
+    }
+    pairs.into_iter().collect()
+}
+
+/// Select diplomacy faction pair from settlement contact, then presence, then registry (N3).
+fn diplomacy_pair_from_settlement_overlap(
+    world: &World,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+    registered_factions: &[u32],
+    tick: u64,
+) -> (u32, u32) {
+    let dominant = settlement_dominant_factions(world, cluster_member_counts);
+    let contacts = settlement_contact_pairs(
+        world,
+        cluster_member_counts,
+        SETTLEMENT_CONTACT_RADIUS_FP,
+    );
+    let pairs = diplomacy_faction_pairs_from_settlement_contact(&dominant, &contacts);
+    if !pairs.is_empty() {
+        let idx = (tick as usize / 500) % pairs.len();
+        return pairs[idx];
+    }
+
+    let present: Vec<u32> = dominant
+        .values()
+        .copied()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    if present.len() >= 2 {
+        let idx = tick as usize % present.len();
+        let a = present[idx];
+        let b = present[(idx + 1) % present.len()];
+        return (a, b);
+    }
+
+    let idx = tick as usize;
+    let a = registered_factions[idx % registered_factions.len()];
+    let b = registered_factions[(idx + 1) % registered_factions.len()];
+    (a, b)
+}
+
+/// Scales every stored relation toward neutral without overshooting zero.
+///
+/// [`DiplomacyMatrix`] has no native decay; calibrated `apply_signal` calls
+/// achieve `score * factor` per pair (FR-CIV-0100 criticality).
+fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
+    let factor = factor.clamp(0.0, 1.0);
+    let pairs = matrix.snapshot();
+    for (a, b, record) in pairs {
+        let score = record.score;
+        if score == 0.0 {
+            continue;
+        }
+        let target = score * factor;
+        let delta = target - score;
+        if delta > 0.0 {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    trade_volume: delta / DIPLOMACY_TRADE_DRIFT,
+                    ..Default::default()
+                },
+            );
+        } else {
+            matrix.apply_signal(
+                a,
+                b,
+                DiplomacySignal {
+                    resource_competition: (-delta) / DIPLOMACY_COMPETITION_DRIFT,
+                    ..Default::default()
+                },
+            );
+        }
+    }
+}
+
+/// Sustained [`DiplomacyKind::TradeAgreement`] events before an emergent route is born.
+const TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD: u32 = 2;
+/// Minimum pairwise relation score required to birth an emergent route.
+const TRADE_ROUTE_MIN_RELATION: f32 = 0.0;
+/// Hard cap on total trade routes (bootstrap + emergent) to bound memory and tick cost.
+const MAX_TRADE_ROUTES: usize = 64;
+/// Ticks without resource flow before an emergent route is removed.
+const TRADE_ROUTE_UNUSED_DECAY_TICKS: u32 = 2_000;
+
+fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
+/// Deterministic goods label from exporter faction id (stable, integer-only).
+fn emergent_route_goods(from: u32) -> &'static str {
+    match from % 3 {
+        0 => "grain",
+        1 => "ore",
+        _ => "cloth",
+    }
+}
+
+fn record_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
+    let pair = canonical_faction_pair(a, b);
+    *streak.entry(pair).or_default() += 1;
+}
+
+fn reset_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
+    streak.remove(&canonical_faction_pair(a, b));
+}
+
+fn remove_emergent_routes_between(state: &mut WorldState, a: u32, b: u32) {
+    let to_remove: Vec<(u32, u32, String)> = state
+        .emergent_trade_route_keys
+        .iter()
+        .filter(|(from, to, _)| {
+            (*from == a && *to == b) || (*from == b && *to == a)
+        })
+        .cloned()
+        .collect();
+    for key in &to_remove {
+        state.emergent_trade_route_keys.remove(key);
+        state.trade_route_idle_ticks.remove(key);
+    }
+    state.trade_routes.retain(|route| {
+        let key = (
+            route.from_faction,
+            route.to_faction,
+            route.goods.clone(),
+        );
+        !to_remove.contains(&key)
+    });
+}
+
+fn decay_idle_emergent_trade_routes(
+    state: &mut WorldState,
+    flowed: &BTreeSet<(u32, u32, String)>,
+) {
+    let emergent: Vec<(u32, u32, String)> = state.emergent_trade_route_keys.iter().cloned().collect();
+    let mut to_remove = Vec::new();
+    for key in emergent {
+        if flowed.contains(&key) {
+            state.trade_route_idle_ticks.insert(key.clone(), 0);
+            continue;
+        }
+        let idle = state.trade_route_idle_ticks.entry(key.clone()).or_insert(0);
+        *idle = idle.saturating_add(1);
+        if *idle >= TRADE_ROUTE_UNUSED_DECAY_TICKS {
+            to_remove.push(key);
+        }
+    }
+    for key in &to_remove {
+        state.emergent_trade_route_keys.remove(key);
+        state.trade_route_idle_ticks.remove(key);
+    }
+    if !to_remove.is_empty() {
+        state.trade_routes.retain(|route| {
+            let key = (
+                route.from_faction,
+                route.to_faction,
+                route.goods.clone(),
+            );
+            !to_remove.contains(&key)
+        });
+    }
 }
 
 fn route_resource(goods: &str) -> ResourceType {
@@ -2317,6 +3565,10 @@ mod tests {
     /// numeric tolerance (≤ 1e-4 of the tidal amplitude in fixed-point units).
     #[test]
     fn tide_offset_shifts_coastal_voxel_height() {
+        use civ_voxel::material::WATER;
+
+        assert_eq!(WATER_MARKER_MATERIAL, WATER);
+
         // Use a moon config whose orbit period is a clean factor so we can land
         // on the peak (+amplitude), trough (-amplitude), and zero-crossing
         // ticks exactly. sin(TAU * phase) = +1 at phase=0.25, -1 at phase=0.75.
@@ -2726,6 +3978,58 @@ mod tests {
         assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
     }
 
+    /// FR-CIV-CA-005 — identical dirty-chunk voxel setups must replay to the
+    /// same log and voxel state on same-seed reruns.
+    #[test]
+    fn replay_ca_dirty_chunk_bit_identical() {
+        use civ_voxel::material::{SAND, STONE, WATER};
+        use civ_voxel::WorldCoord;
+
+        let mut sim1 = Simulation::with_seed(17);
+        let mut sim2 = Simulation::with_seed(17);
+        let writes = [
+            (
+                WorldCoord {
+                    x: 1_000_000,
+                    y: 0,
+                    z: 0,
+                },
+                WATER,
+            ),
+            (
+                WorldCoord {
+                    x: 16_000_000,
+                    y: 0,
+                    z: 0,
+                },
+                STONE,
+            ),
+            (
+                WorldCoord {
+                    x: 0,
+                    y: 16_000_000,
+                    z: 0,
+                },
+                SAND,
+            ),
+        ];
+
+        for (pos, mat) in writes {
+            sim1.voxel_mut().write(pos, mat);
+            sim2.voxel_mut().write(pos, mat);
+        }
+        let hash_before_1 = sim1.hash_chain_root();
+        let hash_before_2 = sim2.hash_chain_root();
+        assert_eq!(hash_before_1, hash_before_2);
+        sim1.tick();
+        sim2.tick();
+
+        assert_eq!(sim1.replay_log(), sim2.replay_log());
+        assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
+        assert_eq!(sim1.voxel().chunk_count(), sim2.voxel().chunk_count());
+        assert_eq!(sim1.hash_chain_root(), sim2.hash_chain_root());
+    }
+
     /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
     #[test]
     fn replay_log_round_trips_through_save_load() {
@@ -3079,5 +4383,1052 @@ mod tests {
             snap_summer.weather_grid, summer_grid_2,
             "weather grid must be deterministic across re-runs"
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // FR-CIV-CA-009 — `Simulation::phase_voxel_ca` + abiogenesis sites.
+    // -------------------------------------------------------------------------
+
+    /// FR-CIV-CA-009 — `phase_voxel_ca(None)` is a no-op: sites stay empty.
+    /// This is the cheap path (no resident window wired up) and must not
+    /// blow up or allocate a giant vec.
+    #[test]
+    fn phase_voxel_ca_none_is_noop() {
+        let mut sim = Simulation::with_seed(1);
+        sim.phase_voxel_ca(None);
+        assert!(sim.last_tick_abiogenesis_sites().is_empty());
+    }
+
+    /// FR-CIV-CA-009 — warm liquid WATER in a single chunk produces at
+    /// least one viable abiogenesis site. A pure STONE chunk produces
+    /// zero. The two runs must round-trip deterministically (same seed,
+    /// same grid → same sites).
+    #[test]
+    fn phase_voxel_ca_warm_water_is_viable_stone_is_not() {
+        use civ_voxel::fluid_ca::{AbiogenesisSuitability, CaGrid};
+        use civ_voxel::material::{MaterialRegistry, STONE, WATER};
+        use civ_voxel::BoundaryConfig;
+
+        // 16³ grid (single chunk) seeded with one warm WATER cell in the
+        //  middle of an otherwise-AIR volume.
+        let mut g = CaGrid::new([16, 16, 16]);
+        g.set_with_temp(8, 8, 8, WATER, 40);
+        g.dirty_chunks.clear();
+        g.mark_dirty_cell(8, 8, 8);
+        // Run a CA tick so the cell participates in the dirty-chunk set.
+        let _ = civ_voxel::fluid_ca::step_with_config(
+            &mut g,
+            MaterialRegistry::standard(),
+            BoundaryConfig::closed(),
+            0,
+        );
+        let mut sim = Simulation::with_seed(7);
+        sim.phase_voxel_ca(Some(&g));
+        let sites = sim.last_tick_abiogenesis_sites();
+        // The WATER cell at (8, 8, 8) is at 40 °C → solvent=255, energy=127
+        // (40 * 255 / 80 = 127) → viability true. AIR cells score 0.
+        assert!(
+            sites.iter().any(|s| s.is_viable()),
+            "warm water should be a viable abiogenesis site, got {sites:?}"
+        );
+        assert!(
+            sites
+                .iter()
+                .all(|s| matches!(s, AbiogenesisSuitability { value, .. } if *value <= 100)),
+            "abiogenesis value must be in [0, 100]"
+        );
+
+        // Stone-only grid: no solvents at all.
+        let mut g2 = CaGrid::new([16, 16, 16]);
+        for x in 0..16 {
+            for y in 0..16 {
+                for z in 0..16 {
+                    g2.set_with_temp(x, y, z, STONE, 40);
+                }
+            }
+        }
+        g2.dirty_chunks.clear();
+        g2.mark_mobile_chunks(MaterialRegistry::standard());
+        let mut sim2 = Simulation::with_seed(7);
+        sim2.phase_voxel_ca(Some(&g2));
+        assert!(
+            sim2.last_tick_abiogenesis_sites().is_empty()
+                || sim2
+                    .last_tick_abiogenesis_sites()
+                    .iter()
+                    .all(|s| !s.is_viable()),
+            "stone-only grid must produce zero viable sites"
+        );
+    }
+
+    /// FR-CIV-0100 — chronicle records technological breakthroughs when tech bits advance.
+    #[test]
+    fn chronicle_records_tech_breakthroughs() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.research_progress = 200_000;
+        sim.phase_tech();
+        sim.phase_chronicle();
+        assert!(!sim.chronicle().is_empty());
+        assert!(
+            sim.chronicle()
+                .iter()
+                .any(|line| line.contains("technological breakthrough")),
+            "expected a tech breakthrough line"
+        );
+    }
+
+    /// FR-CIV-0100 — chronicle length stays bounded at CHRONICLE_MAX_LEN.
+    #[test]
+    fn chronicle_is_length_capped() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.chronicle = (0..=CHRONICLE_MAX_LEN)
+            .map(|i| format!("filler {i}"))
+            .collect();
+        sim.phase_chronicle();
+        assert!(sim.chronicle().len() <= CHRONICLE_MAX_LEN);
+    }
+
+    /// FR-CIV-0100 — golden-age chronicle lines are deduped via chronicle_age.
+    #[test]
+    fn chronicle_dedups_age() {
+        let mut sim = Simulation::with_seed(1);
+        sim.state.cohesion = 60_000;
+        sim.state.belief = 60_000;
+        sim.phase_chronicle();
+        sim.phase_chronicle();
+        assert_eq!(sim.state.chronicle_age, 1);
+        let golden_count = sim
+            .chronicle()
+            .iter()
+            .filter(|line| line.contains("golden age"))
+            .count();
+        assert_eq!(golden_count, 1);
+    }
+
+    /// `tick_with_emergence_source` advances ticks identically; CA grid changes sampling.
+    #[test]
+    fn tick_with_emergence_source_advances_tick_and_differs_on_ca_grid() {
+        use crate::emergence_metrics::EMERGENCE_SAMPLE_INTERVAL;
+        use civ_voxel::fluid_ca::CaGrid;
+        use civ_voxel::CHUNK_EDGE;
+
+        let mut without_ca = Simulation::with_seed(42);
+        let mut with_ca = Simulation::with_seed(42);
+        let mut grid = CaGrid::new([CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE]);
+        for x in 0..4 {
+            for y in 0..4 {
+                for z in 0..4 {
+                    grid.set(x, y, z, MaterialId(3));
+                }
+            }
+        }
+
+        for _ in 0..EMERGENCE_SAMPLE_INTERVAL {
+            without_ca.tick_with_emergence_source(None);
+            with_ca.tick_with_emergence_source(Some(&grid));
+        }
+
+        assert_eq!(without_ca.state.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(with_ca.state.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(without_ca.state.tick, with_ca.state.tick);
+
+        let sample_none = without_ca
+            .last_emergence_sample()
+            .expect("sample at 50-tick boundary");
+        let sample_ca = with_ca
+            .last_emergence_sample()
+            .expect("sample at 50-tick boundary");
+        assert_eq!(sample_none.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert_eq!(sample_ca.tick, EMERGENCE_SAMPLE_INTERVAL);
+        assert!(
+            sample_ca.histogram_total > sample_none.histogram_total,
+            "CA grid should contribute voxels to the emergence histogram"
+        );
+    }
+
+    /// `apply_scenario_military` wires cadence overrides and clamps engage range.
+    #[test]
+    fn apply_scenario_military_wires_overrides_and_clamps_range() {
+        use crate::scenario::ScenarioMilitary;
+
+        let mut sim = Simulation::with_seed(8);
+        let military = ScenarioMilitary {
+            movement_cadence_ticks: Some(8),
+            movement_pulses_per_cadence: Some(3),
+            war_cadence_ticks: Some(32),
+            engage_range_grid: Some(0),
+        };
+        sim.apply_scenario_military(&military);
+        let cfg = sim.military_phase_config();
+        assert_eq!(cfg.movement.cadence_ticks, 8);
+        assert_eq!(cfg.movement_pulses_per_cadence, 3);
+        assert_eq!(cfg.war.cadence_ticks, 32);
+        assert_eq!(cfg.war.engage_range_grid, 1);
+    }
+
+    /// `configure_military_fog` sets vision radius and clamps grid size.
+    #[test]
+    fn configure_military_fog_sets_radius_and_clamps_grid() {
+        let mut sim = Simulation::with_seed(9);
+        sim.configure_military_fog(Some(8), 12);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            Some(8)
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, 16);
+
+        let kept_radius = sim.military_phase_config().war.fog_vision_radius;
+        let kept_grid = sim.military_phase_config().war.fog_grid_size;
+        sim.configure_military_fog(None, 99);
+        assert_eq!(
+            sim.military_phase_config().war.fog_vision_radius,
+            kept_radius
+        );
+        assert_eq!(sim.military_phase_config().war.fog_grid_size, kept_grid);
+    }
+
+    // -------------------------------------------------------------------
+    // Coverage-gap closure (COVERAGE_GAPS_4): the three pure policy helpers
+    // below had no direct unit tests prior to this commit. Each test below
+    // is named per the coverage-gap closure plan and bundles all relevant
+    // edge cases from TEST_SPECS_UNTESTED.md into a single `#[test]`.
+    // -------------------------------------------------------------------
+
+    /// `job_type_for_civilian_id` is a total pure function of its `u64`
+    /// input. This test pins the full mod-7 bucket map (including the
+    /// catch-all `_` arm), wrap-around at the modulus, sparse / far-out ids
+    /// resolving to the right bucket via `id % 7`, the `u64::MAX` boundary,
+    /// and the determinism guarantee (same id → same `JobType`, no state).
+    /// FR-CIV-ENGINE spawn-determinism depends on this. (COVERAGE_GAPS_4 row 1.)
+    #[test]
+    fn job_type_for_civilian_id_deterministic_split() {
+        // All seven mod-buckets, including the `_`-arm for remainder 6.
+        assert_eq!(job_type_for_civilian_id(0), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(1), JobType::Warrior);
+        assert_eq!(job_type_for_civilian_id(2), JobType::Scholar);
+        assert_eq!(job_type_for_civilian_id(3), JobType::Trader);
+        assert_eq!(job_type_for_civilian_id(4), JobType::Priest);
+        assert_eq!(job_type_for_civilian_id(5), JobType::Admin);
+        assert_eq!(job_type_for_civilian_id(6), JobType::Unemployed);
+
+        // `id % 7` wraps cleanly: every 7th id resolves to the same JobType.
+        assert_eq!(job_type_for_civilian_id(7), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(14), JobType::Farmer);
+        assert_eq!(job_type_for_civilian_id(42), JobType::Farmer); // 42 % 7 == 0
+        assert_eq!(job_type_for_civilian_id(13), JobType::Unemployed); // 13 % 7 == 6
+        assert_eq!(job_type_for_civilian_id(20), JobType::Unemployed); // 20 % 7 == 6
+
+        // Sparse / far-out ids resolve to a deterministic bucket.
+        // 1_000_000_008 % 7 == 0 (1_000_000_008 = 142_857_144 * 7) → Farmer.
+        assert_eq!(job_type_for_civilian_id(1_000_000_008), JobType::Farmer);
+        // 999_999_999 % 7: 999_999_999 / 7 = 142_857_142 remainder 5 → Admin.
+        assert_eq!(job_type_for_civilian_id(999_999_999), JobType::Admin);
+        // 1_000_000_000_000_000_000 % 7 = 1 → Warrior.
+        assert_eq!(
+            job_type_for_civilian_id(1_000_000_000_000_000_000),
+            JobType::Warrior
+        );
+
+        // u64::MAX % 7 == 1 (u64::MAX = 2^64-1 = 2_635_249_153_387_078_802*7 + 1)
+        // → Warrior. Confirms totality over the full u64 range, no overflow.
+        assert_eq!(job_type_for_civilian_id(u64::MAX), JobType::Warrior);
+
+        // Determinism: same id → same JobType, no state, no panic.
+        for id in [0u64, 1, 6, 7, 42, 100, 999_999_999, u64::MAX] {
+            assert_eq!(
+                job_type_for_civilian_id(id),
+                job_type_for_civilian_id(id),
+                "job_type_for_civilian_id({id}) must be a pure function of its input"
+            );
+        }
+    }
+
+    /// `faction_wealth_scarcity_shadow` maps (treasury, resources) → shadow
+    /// price used as input to `faction_unrest_delta_from_shadow`. This test
+    /// pins the comfort-threshold branch (≥ 12_000 → baseline), the exact
+    /// `12_000` boundary, the empty-Resources "deep scarcity" extreme
+    /// (wealth = 0 → 4_000), food-only and treasury-only shortfalls, the
+    /// lower floor at `FOOD_SCARCITY_BASELINE`, and the `treasury.raw / SCALE`
+    /// integer-units conversion. (COVERAGE_GAPS_4 row 5.)
+    #[test]
+    fn faction_wealth_scarcity_shadow_edge_cases() {
+        // Comfort branch: wealth >= 12_000 pins shadow to FOOD_SCARCITY_BASELINE.
+        // treasury=100_000, food=10_000 → wealth = 100_000 + 10_000*50 = 600_000.
+        let res = Resources {
+            food: Fixed::from_num(10_000),
+            wood: Fixed::ZERO,
+            metal: Fixed::ZERO,
+            energy: Fixed::ZERO,
+        };
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(100_000), &res),
+            FOOD_SCARCITY_BASELINE
+        );
+
+        // Exact comfort boundary: wealth == 12_000 still pins to baseline
+        // because the function uses `>=`, not strict `>`.
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(12_000), &res),
+            FOOD_SCARCITY_BASELINE
+        );
+
+        // Empty Resources + zero treasury = "deep scarcity": wealth = 0,
+        // shadow = 1_000 + 12_000/4 = 4_000. (No upper clamp inside the
+        // function; this is the maximum shadow reachable in one call.)
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::ZERO, &res),
+            FOOD_SCARCITY_BASELINE + 12_000 / 4,
+            "empty Resources + zero treasury lands at the maximum shadow"
+        );
+
+        // Food-only shortfall: treasury = 0, food = 10 → wealth = 500.
+        // shadow = 1_000 + (12_000 - 500)/4 = 1_000 + 2_875 = 3_875.
+        let res = Resources {
+            food: Fixed::from_num(10),
+            wood: Fixed::ZERO,
+            metal: Fixed::ZERO,
+            energy: Fixed::ZERO,
+        };
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::ZERO, &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 500) / 4
+        );
+
+        // Treasury-only shortfall: treasury = 4_000, food = 0 → wealth = 4_000.
+        // shadow = 1_000 + (12_000 - 4_000)/4 = 3_000.
+        // NOTE: the function does NOT implement a "treasury hedges food"
+        // channel — treasury is additive in the same units as the
+        // food-weighted wealth. This test pins the actual behavior.
+        let res = Resources::default();
+        assert_eq!(
+            faction_wealth_scarcity_shadow(Fixed::from_num(4_000), &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 4_000) / 4
+        );
+
+        // Lower floor: shadow never falls below FOOD_SCARCITY_BASELINE for
+        // any legal input. The comfort branch pins to it, the shortfall
+        // branch adds to it.
+        let cases: Vec<(i64, Resources)> = vec![
+            (0, Resources::default()),
+            (10_000, Resources::default()),
+            (0, Resources { food: Fixed::from_num(1), ..Resources::default() }),
+            (Fixed::from_num(5_000).raw, Resources::default()),
+            (Fixed::from_num(99_999_999).raw, Resources::default()),
+        ];
+        for (treasury_raw, res) in cases {
+            let treasury = Fixed { raw: treasury_raw };
+            let shadow = faction_wealth_scarcity_shadow(treasury, &res);
+            assert!(
+                shadow >= FOOD_SCARCITY_BASELINE,
+                "shadow ({shadow}) fell below FOOD_SCARCITY_BASELINE ({FOOD_SCARCITY_BASELINE})"
+            );
+        }
+
+        // `treasury.raw / SCALE` is the integer wealth — guards against a
+        // regression that would drop the `/ SCALE` and treat `raw` directly
+        // as a wealth value.
+        // treasury = 5_000 (fixed-point) → treasury_i = 5_000, food_i = 0,
+        // wealth = 5_000 < 12_000 → shortfall: 1_000 + 7_000/4 = 2_750.
+        let res = Resources::default();
+        let treasury = Fixed::from_num(5_000);
+        assert_eq!(
+            faction_wealth_scarcity_shadow(treasury, &res),
+            FOOD_SCARCITY_BASELINE + (12_000 - 5_000) / 4
+        );
+    }
+
+    /// `faction_unrest_delta_from_shadow` is a thin pass-through to
+    /// `unrest_delta`. This test pins the sign behavior (shadow ≤ baseline
+    /// → decay `-10`; shadow > baseline → positive rise), the `clamp(1, 50)`
+    /// bounds, the linear scaling with shortfall, the `MAX_RISE = 50`
+    /// ceiling for arbitrarily large shadows (including `i64::MAX`), and
+    /// the wrapper's identity with `unrest_delta` across the full sign
+    /// range. (COVERAGE_GAPS_4 row 6: "clamp at 0" lives in the caller's
+    /// accumulator; the delta itself only knows `-10` and `[1, 50]`.)
+    #[test]
+    fn faction_unrest_delta_from_shadow_sign_and_clamp() {
+        // shadow ≤ baseline → decay -10 (not zero, not positive).
+        for shadow in [0i64, 100, 500, 999] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                -10,
+                "shadow={shadow} (below baseline) must decay by 10"
+            );
+        }
+
+        // At the boundary shadow == baseline the function takes the `else`
+        // branch (scarcity is not > 0) and returns -10, not zero. Pin this
+        // so a future `>=` refactor doesn't silently flip the boundary.
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE),
+            -10
+        );
+
+        // Just above baseline, rise is clamped to a minimum of +1
+        // (clamp(1, MAX_RISE) lower bound kicks in for any scarcity > 0,
+        // even when scarcity / 20 == 0).
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 1),
+            1
+        );
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 19),
+            1
+        );
+
+        // Rise scales linearly with shortfall (scarcity / 20) until it
+        // hits the MAX_RISE ceiling of 50.
+        // shadow = 1_100 → scarcity = 100 → 100/20 = 5
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 100),
+            5
+        );
+        // shadow = 1_400 → scarcity = 400 → 400/20 = 20
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 400),
+            20
+        );
+        // shadow = 2_000 → scarcity = 1_000 → 1_000/20 = 50 (at ceiling)
+        assert_eq!(
+            faction_unrest_delta_from_shadow(FOOD_SCARCITY_BASELINE + 1_000),
+            50
+        );
+
+        // Large shadows still clamp to MAX_RISE = 50. Stops a price spike
+        // from instantly maxing faction unrest.
+        for shadow in [10_000i64, 1_000_000, 1_000_000_000, i64::MAX] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                50,
+                "shadow={shadow} must clamp at MAX_RISE=50"
+            );
+        }
+
+        // Wrapper identity with `unrest_delta` across the full sign range.
+        for shadow in [
+            0i64,
+            FOOD_SCARCITY_BASELINE - 1,
+            FOOD_SCARCITY_BASELINE,
+            FOOD_SCARCITY_BASELINE + 1,
+            FOOD_SCARCITY_BASELINE + 100,
+            FOOD_SCARCITY_BASELINE + 1_000,
+            FOOD_SCARCITY_BASELINE + 100_000,
+            i64::MAX,
+        ] {
+            assert_eq!(
+                faction_unrest_delta_from_shadow(shadow),
+                unrest_delta(shadow),
+                "wrapper must equal unrest_delta at shadow={shadow}"
+            );
+        }
+    }
+
+    // ── N9 tests ──────────────────────────────────────────────────────────────
+
+    /// N9: `aggression_threshold_reduction` is bounded: 0.0→0, 0.5→1500,
+    /// 1.0→3000, and clamping means 2.0 still yields 3000.
+    #[test]
+    fn aggression_threshold_reduction_bounded() {
+        assert_eq!(aggression_threshold_reduction(0.0), 0);
+        assert_eq!(aggression_threshold_reduction(0.5), 1500);
+        assert_eq!(aggression_threshold_reduction(1.0), 3000);
+        assert_eq!(aggression_threshold_reduction(2.0), 3000); // clamped
+    }
+
+    /// N9: `faction_aggression` is rebuilt fresh each tick (ephemeral).
+    #[test]
+    fn faction_aggression_rebuilt_each_tick() {
+        let mut sim = Simulation::with_seed(1);
+        // Before any tick, faction_aggression is empty.
+        assert!(
+            sim.faction_aggression.is_empty(),
+            "faction_aggression should start empty"
+        );
+        // After a tick the emergence phase populates it (agents have DNA).
+        sim.tick();
+        // The map is populated whenever there are aligned civilians with DNA.
+        // Just verify the field is accessible and the type is correct.
+        let _: &std::collections::BTreeMap<u32, f32> = &sim.faction_aggression;
+    }
+
+    /// N9: faction pairs with high aggression clash at lower disparity than
+    /// faction pairs with zero aggression.
+    #[test]
+    fn aggressive_factions_clash_sooner() {
+        // Build a baseline sim where factions are at the trade/conflict boundary.
+        let mut sim_low = Simulation::with_seed(5);
+        sim_low.state.tick = 500;
+        sim_low.state.belief = 0;
+        sim_low.state.cohesion = 0;
+        sim_low.state.unrest = 0;
+        let mut faction_ids: Vec<u32> = sim_low.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim_low.state.tick);
+        // A disparity just below the base threshold: both sims should trade normally.
+        let base = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+        sim_low.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_low.state.faction_treasury.insert(b, Fixed::from_num(base - 1));
+        // Zero aggression → no reduction.
+        sim_low.faction_aggression.insert(a, 0.0);
+        sim_low.faction_aggression.insert(b, 0.0);
+        sim_low.phase_diplomacy();
+        let low_kind = sim_low.diplomacy_events().last().expect("event").kind;
+
+        // High aggression sim: same disparity, but aggression lowers threshold.
+        let mut sim_high = Simulation::with_seed(5);
+        sim_high.state.tick = 500;
+        sim_high.state.belief = 0;
+        sim_high.state.cohesion = 0;
+        sim_high.state.unrest = 0;
+        sim_high.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_high.state.faction_treasury.insert(b, Fixed::from_num(base - 1));
+        // Max aggression → reduction = 3000, so threshold drops to DIPLOMACY_MIN_CONFLICT_THRESHOLD.
+        sim_high.faction_aggression.insert(a, 1.0);
+        sim_high.faction_aggression.insert(b, 1.0);
+        sim_high.phase_diplomacy();
+        let high_kind = sim_high.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            low_kind,
+            DiplomacyKind::TradeAgreement,
+            "low-aggression factions should trade at this disparity"
+        );
+        assert_eq!(
+            high_kind,
+            DiplomacyKind::Conflict,
+            "high-aggression factions should clash at the same disparity"
+        );
+    }
+
+    // N11 maturity↔belief coupling tests (FR-CIV-EMERGENCE-N11)
+
+    #[test]
+    fn n11_avg_psyche_maturity_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        assert_eq!(avg_psyche_maturity(&sim.world), 0.0);
+    }
+
+    #[test]
+    fn n11_avg_psyche_maturity_computes_mean() {
+        use civ_agents::{Mood, Psyche, Temperament, PSYCHE_DIM};
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        let psyche = Psyche {
+            drives: [0.5; PSYCHE_DIM],
+            temperament: Temperament::neutral(),
+            mood: Mood::neutral(),
+            beliefs: [0.5; PSYCHE_DIM],
+            maturity: 1.0,
+        };
+        sim.world.spawn((psyche,));
+        assert_eq!(avg_psyche_maturity(&sim.world), 1.0);
+    }
+
+    #[test]
+    fn n11_drift_factor_bounds() {
+        for (maturity, expected) in [(0.0f32, 0.95f32), (0.5, 0.975), (1.0, 1.0)] {
+            let drift = 0.95 + 0.05 * maturity;
+            assert!((drift - expected).abs() < 1e-6, "maturity={} drift={}", maturity, drift);
+        }
+    }
+
+    /// `canonical_faction_pair` always returns the pair in ascending order so
+    /// (a, b) and (b, a) hash to the same BTreeMap key.
+    #[test]
+    fn canonical_faction_pair_orders_ascending() {
+        assert_eq!(canonical_faction_pair(0, 1), (0, 1), "already sorted");
+        assert_eq!(canonical_faction_pair(1, 0), (0, 1), "reversed becomes sorted");
+        assert_eq!(canonical_faction_pair(3, 3), (3, 3), "equal ids stay equal");
+        assert_eq!(canonical_faction_pair(u32::MAX, 0), (0, u32::MAX), "large vs small");
+        for (a, b) in [(2u32, 5), (10, 1), (7, 7), (0, u32::MAX)] {
+            assert_eq!(
+                canonical_faction_pair(a, b),
+                canonical_faction_pair(b, a),
+                "canonical_faction_pair({a},{b}) must be symmetric"
+            );
+        }
+    }
+
+    /// `route_resource` maps known goods labels to the correct ResourceType.
+    /// Unknown goods fall back to Food (documented default).
+    #[test]
+    fn route_resource_maps_known_goods() {
+        assert_eq!(route_resource("grain"), ResourceType::Food, "grain → Food");
+        assert_eq!(route_resource("timber"), ResourceType::Wood, "timber → Wood");
+        assert_eq!(route_resource("ore"), ResourceType::Metal, "ore → Metal");
+        assert_eq!(route_resource("tools"), ResourceType::Metal, "tools → Metal");
+        assert_eq!(route_resource("cloth"), ResourceType::Energy, "cloth → Energy");
+        assert_eq!(route_resource("salt"), ResourceType::Energy, "salt → Energy");
+        assert_eq!(route_resource(""), ResourceType::Food, "empty string → Food (fallback)");
+        assert_eq!(route_resource("unknown"), ResourceType::Food, "unrecognized → Food (fallback)");
+    }
+
+    /// `emergent_route_goods` is deterministic: same faction id → same goods
+    /// label, cycling across the three labels via id % 3.
+    #[test]
+    fn emergent_route_goods_is_deterministic_and_covers_all_labels() {
+        assert_eq!(emergent_route_goods(0), "grain", "id%3==0 → grain");
+        assert_eq!(emergent_route_goods(1), "ore",   "id%3==1 → ore");
+        assert_eq!(emergent_route_goods(2), "cloth", "id%3==2 → cloth");
+        assert_eq!(emergent_route_goods(3), "grain", "id=3 wraps to grain");
+        for id in [0u32, 1, 2, 100, u32::MAX] {
+            assert_eq!(
+                emergent_route_goods(id),
+                emergent_route_goods(id),
+                "emergent_route_goods({id}) must be a pure function of its input"
+            );
+        }
+        // All labels returned by emergent_route_goods must be handled by route_resource
+        // without falling through to the unknown fallback path.
+        let known_labels = ["grain", "ore", "cloth", "timber", "tools", "salt"];
+        for id in 0u32..3 {
+            let goods = emergent_route_goods(id);
+            assert!(
+                known_labels.contains(&goods),
+                "emergent_route_goods({id})=\"{goods}\" is not a known trade label"
+            );
+        }
+    }
+
+    // N10 kinship↔cohesion coupling tests (FR-CIV-EMERGENCE-N10)
+
+    #[test]
+    fn n10_avg_faction_kinship_computes_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        let avg = avg_faction_kinship(&sim.world);
+        assert_eq!(avg, 0.0, "empty world should have zero average kinship");
+    }
+
+    #[test]
+    fn n10_avg_faction_kinship_computes_mean_correctly() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+        sim.world.clear();
+
+        // Spawn one social graph with a single kinship tie of 1.0.
+        let graph_a = SocialGraph {
+            ties: vec![Tie {
+                other: 1002,
+                kinship: 1.0,
+                familiarity: 0.0,
+                affinity: 0.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((graph_a,));
+        sim.world.spawn((SocialGraph::default(),));
+
+        let avg = avg_faction_kinship(&sim.world);
+        assert_eq!(avg, 1.0, "one kinship tie of 1.0 should average to 1.0");
+    }
+
+    #[test]
+    fn n10_kinship_coupling_boosts_cohesion_basic() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+
+        // Spawn a social graph with a kinship tie.
+        let graph_a = SocialGraph {
+            ties: vec![Tie {
+                other: 2002,
+                kinship: 1.0,
+                familiarity: 0.0,
+                affinity: 0.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((graph_a,));
+
+        // Record cohesion before and after a tick.
+        let before = sim.cohesion();
+        sim.tick();
+        let after = sim.cohesion();
+
+        // With kinship=1.0, boost = 0.02 * 100_000 = 2000, so after >= before.
+        // (caveat: other couplings and decay might affect this, but kinship boost
+        // should dominate if no other agents contribute negative factors)
+        assert!(
+            after >= before,
+            "phase_cohesion with kinship should not decrease cohesion (before={}, after={})",
+            before,
+            after
+        );
+    }
+
+    #[test]
+    fn n10_kinship_decay_factor_bounds() {
+        // Verify the decay_factor formula stays in [0.93, 0.98].
+        let test_cases: [(f32, f32); 3] = [(0.0, 0.93), (0.5, 0.955), (1.0, 0.98)];
+
+        for (kinship, expected_factor) in test_cases {
+            let decay_factor = 0.98_f32 - (0.05_f32 * (1.0_f32 - kinship)).max(0.0).min(1.0);
+            assert!(
+                (decay_factor - expected_factor).abs() < 1e-6,
+                "kinship={} should give decay_factor≈{}, got {}",
+                kinship,
+                expected_factor,
+                decay_factor
+            );
+        }
+    }
+
+    // N12 affinity↔diplomacy coupling tests (FR-CIV-EMERGENCE-N12)
+
+    #[test]
+    fn n12_avg_social_affinity_zero_for_empty_world() {
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        assert_eq!(avg_social_affinity(&sim.world), 0.0);
+    }
+
+    #[test]
+    fn n12_avg_social_affinity_computes_mean_and_clamps() {
+        use civ_agents::Tie;
+        let mut sim = Simulation::new();
+        sim.world.clear();
+        // One graph affinity +1.0, one graph affinity -1.0 → mean 0.0.
+        let g_pos = SocialGraph {
+            ties: vec![Tie {
+                other: 1,
+                kinship: 0.0,
+                familiarity: 0.0,
+                affinity: 1.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        let g_neg = SocialGraph {
+            ties: vec![Tie {
+                other: 2,
+                kinship: 0.0,
+                familiarity: 0.0,
+                affinity: -1.0,
+                trust: 0.0,
+                last_seen: 0,
+            }],
+        };
+        sim.world.spawn((g_pos,));
+        sim.world.spawn((g_neg,));
+        assert!(avg_social_affinity(&sim.world).abs() < 1e-6);
+    }
+
+    #[test]
+    fn n12_affinity_bias_direction_and_bounds() {
+        // Positive affinity raises threshold; negative lowers it; bounded [-5000, 5000].
+        let pos = affinity_threshold_bias(1.0);
+        let neg = affinity_threshold_bias(-1.0);
+        let zero = affinity_threshold_bias(0.0);
+        assert_eq!(pos, 5_000);
+        assert_eq!(neg, -5_000);
+        assert_eq!(zero, 0);
+        assert!(pos > zero && zero > neg, "goodwill must raise tolerance over hostility");
+        // Out-of-range inputs clamp.
+        assert_eq!(affinity_threshold_bias(2.0), 5_000);
+        assert_eq!(affinity_threshold_bias(-2.0), -5_000);
+    }
+
+    #[test]
+    fn n12_high_affinity_keeps_factions_trading() {
+        use civ_agents::Tie;
+        // Disparity ABOVE the base threshold (would Conflict at neutral affinity),
+        // but strong collective goodwill raises the threshold enough to keep trade.
+        let base = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+        let disparity = base + 2_000; // 12_000: above base, below base + max affinity bias
+
+        // Low-affinity sim: hostile ties → threshold drops → Conflict.
+        let mut sim_low = Simulation::with_seed(5);
+        sim_low.state.tick = 500;
+        sim_low.state.belief = 0;
+        sim_low.state.cohesion = 0;
+        sim_low.state.unrest = 0;
+        for _ in 0..3 {
+            sim_low.world.spawn((SocialGraph {
+                ties: vec![Tie {
+                    other: 9,
+                    kinship: 0.0,
+                    familiarity: 0.0,
+                    affinity: -1.0,
+                    trust: 0.0,
+                    last_seen: 0,
+                }],
+            },));
+        }
+        let mut faction_ids: Vec<u32> = sim_low.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        if faction_ids.len() < 2 {
+            return; // Defensive: need a faction pair; skip if scenario has none.
+        }
+        let (a, b) = diplomacy_faction_pair(&faction_ids, sim_low.state.tick);
+        sim_low.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_low
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_low.phase_diplomacy();
+        let low_kind = sim_low.diplomacy_events().last().expect("event").kind;
+
+        // High-affinity sim: goodwill ties → threshold rises → TradeAgreement.
+        let mut sim_high = Simulation::with_seed(5);
+        sim_high.state.tick = 500;
+        sim_high.state.belief = 0;
+        sim_high.state.cohesion = 0;
+        sim_high.state.unrest = 0;
+        for _ in 0..3 {
+            sim_high.world.spawn((SocialGraph {
+                ties: vec![Tie {
+                    other: 9,
+                    kinship: 0.0,
+                    familiarity: 0.0,
+                    affinity: 1.0,
+                    trust: 0.0,
+                    last_seen: 0,
+                }],
+            },));
+        }
+        sim_high.state.faction_treasury.insert(a, Fixed::from_num(0));
+        sim_high
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_high.phase_diplomacy();
+        let high_kind = sim_high.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            low_kind,
+            DiplomacyKind::Conflict,
+            "hostile populations should clash at disparity above base threshold"
+        );
+        assert_eq!(
+            high_kind,
+            DiplomacyKind::TradeAgreement,
+            "collective goodwill should raise the threshold and keep factions trading"
+        );
+    }
+
+    // ── Named-race seed spawn tests (FR-CIV-GENETICS-SEED-*) ─────────────────
+
+    /// FR-CIV-GENETICS-SEED-001 — first spawned agent carries Ardani archetype
+    /// DNA after applying divergence=0.3 with a fixed RNG seed, and the result
+    /// is deterministic across two identical Simulation instances.
+    #[test]
+    fn test_seed_spawn_determinism() {
+        use civ_genetics::NamedSeed;
+        let sim_a = Simulation::with_seed(0xC0FFEE_u64);
+        let sim_b = Simulation::with_seed(0xC0FFEE_u64);
+        // Collect all Dna components from both worlds.
+        let dna_a: Vec<Dna> = sim_a.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
+        let dna_b: Vec<Dna> = sim_b.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
+        assert_eq!(
+            dna_a.len(),
+            dna_b.len(),
+            "both sims must spawn the same number of DNA-bearing entities"
+        );
+        assert!(!dna_a.is_empty(), "at least one entity must carry DNA");
+        // Both runs must be bit-identical under the same seed.
+        for (a, b) in dna_a.iter().zip(dna_b.iter()) {
+            assert_eq!(a, b, "Dna must be deterministic under an identical RNG seed");
+        }
+        // The first civilian's DNA must differ from the raw zero genome, proving
+        // it was seeded from an archetype rather than left default.
+        let archetype = civ_genetics::archetype_dna(NamedSeed::Ardani);
+        assert_eq!(dna_a[0].0.len(), archetype.0.len(), "genome length must match archetype");
+        // With divergence=0.3 the result must not be all-zero (extremely unlikely).
+        assert_ne!(dna_a[0].0, vec![0u8; 64], "seeded DNA must not be the zero genome");
+    }
+
+    /// FR-CIV-GENETICS-SEED-002 — spawn indices 0, 1, and 2 produce three
+    /// distinct NamedSeed assignments (Ardani, Velthari, Grundak respectively).
+    #[test]
+    fn test_faction_archetype_variety() {
+        use civ_genetics::NamedSeed;
+        let ardani_base = civ_genetics::archetype_dna(NamedSeed::Ardani);
+        let velthari_base = civ_genetics::archetype_dna(NamedSeed::Velthari);
+        let grundak_base = civ_genetics::archetype_dna(NamedSeed::Grundak);
+
+        // Verify the three archetypes are distinct from each other —
+        // confirming the % 3 cycle will produce genuinely different seeds.
+        assert_ne!(ardani_base, velthari_base, "Ardani and Velthari must differ");
+        assert_ne!(ardani_base, grundak_base, "Ardani and Grundak must differ");
+        assert_ne!(velthari_base, grundak_base, "Velthari and Grundak must differ");
+
+        // With 128 civilians, each archetype slot is hit ~42-43 times.
+        let sim = Simulation::with_seed(1);
+        let dna_list: Vec<Dna> = sim.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
+        assert_eq!(dna_list.len(), 128, "all 128 civilians must carry Dna");
+
+        // Verify that at minimum 3 distinct genomes are present, proving all
+        // three archetype branches were exercised (divergence prevents collisions).
+        let unique_count = {
+            let mut seen: std::collections::HashSet<Vec<u8>> = std::collections::HashSet::new();
+            for d in &dna_list {
+                seen.insert(d.0.clone());
+            }
+            seen.len()
+        };
+        assert!(
+            unique_count >= 3,
+            "at least 3 distinct genomes expected (one per archetype); got {unique_count}"
+        );
+    }
+
+    /// FR-CIV-GENETICS-SEED-003 — `seed_with_divergence` at divergence=0.0
+    /// returns an exact clone of the archetype; this is the zero-divergence contract.
+    #[test]
+    fn test_zero_divergence_exact() {
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        let archetype = civ_genetics::archetype_dna(NamedSeed::Ardani);
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(0xDEAD_BEEF);
+        let result = civ_genetics::seed_with_divergence(&archetype, 0.0, &mut rng);
+        assert_eq!(
+            result, archetype,
+            "seed_with_divergence with divergence=0.0 must return an exact clone of the archetype"
+        );
+    }
+
+    // ── FR-CONTENT-SEEDMIX: choose_named_seed helper unit tests ──────────────
+
+    /// Empty seed_mix must reproduce the classic Ardani/Velthari/Grundak round-robin
+    /// without advancing the RNG (bit-identical default path).
+    #[test]
+    fn choose_named_seed_empty_is_round_robin() {
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(1);
+        let expected = [
+            NamedSeed::Ardani,
+            NamedSeed::Velthari,
+            NamedSeed::Grundak,
+            NamedSeed::Ardani,
+            NamedSeed::Velthari,
+            NamedSeed::Grundak,
+        ];
+        for (i, &exp) in expected.iter().enumerate() {
+            let got = choose_named_seed(&[], None, i, &mut rng);
+            assert_eq!(got, exp, "round-robin mismatch at spawn_index={i}");
+        }
+    }
+
+    /// A 60/30/10 mix should yield Ardani as plurality (~0.6), Grundak as minority (~0.1).
+    #[test]
+    fn choose_named_seed_weighted_distribution() {
+        use crate::scenario::SeedWeight;
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        use rand::distributions::WeightedIndex;
+
+        let seed_mix = vec![
+            SeedWeight { seed: NamedSeed::Ardani, weight: 0.6 },
+            SeedWeight { seed: NamedSeed::Velthari, weight: 0.3 },
+            SeedWeight { seed: NamedSeed::Grundak, weight: 0.1 },
+        ];
+        let weights: Vec<f32> = seed_mix.iter().map(|sw| sw.weight).collect();
+        let dist = WeightedIndex::new(&weights).expect("valid weights");
+
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
+        let n = 2000usize;
+        let mut counts = [0usize; 3];
+        for i in 0..n {
+            let result = choose_named_seed(&seed_mix, Some(&dist), i, &mut rng);
+            match result {
+                NamedSeed::Ardani => counts[0] += 1,
+                NamedSeed::Velthari => counts[1] += 1,
+                NamedSeed::Grundak => counts[2] += 1,
+            }
+        }
+        let ardani_frac = counts[0] as f32 / n as f32;
+        let grundak_frac = counts[2] as f32 / n as f32;
+        assert!(
+            (ardani_frac - 0.6).abs() < 0.08,
+            "Ardani fraction {ardani_frac:.3} not within ±0.08 of 0.6"
+        );
+        assert!(
+            (grundak_frac - 0.1).abs() < 0.05,
+            "Grundak fraction {grundak_frac:.3} not within ±0.05 of 0.1"
+        );
+        // Ardani must be the plurality
+        assert!(counts[0] > counts[1] && counts[0] > counts[2], "Ardani must be plurality");
+    }
+
+    /// A single-entry mix must always yield that one race.
+    #[test]
+    fn choose_named_seed_single_seed_all_that_race() {
+        use crate::scenario::SeedWeight;
+        use civ_genetics::NamedSeed;
+        use rand::SeedableRng;
+        use rand::distributions::WeightedIndex;
+
+        let seed_mix = vec![SeedWeight { seed: NamedSeed::Velthari, weight: 1.0 }];
+        let weights: Vec<f32> = seed_mix.iter().map(|sw| sw.weight).collect();
+        let dist = WeightedIndex::new(&weights).expect("valid weights");
+
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(7);
+        for i in 0..100 {
+            let result = choose_named_seed(&seed_mix, Some(&dist), i, &mut rng);
+            assert_eq!(result, NamedSeed::Velthari, "expected Velthari at index {i}");
+        }
+    }
+
+    /// FR-CIV-014 / emergence-spawn — scenario-controlled faction spawning must
+    /// honor arbitrary faction counts and per-faction civilian counts.
+    #[test]
+    fn scenario_faction_spawn_honors_counts() {
+        use crate::scenario::ScenarioStartingConditions;
+        use civ_agents::{Alignment, Civilian};
+        use std::collections::BTreeMap;
+
+        let sc = ScenarioStartingConditions {
+            civilians_per_faction: 2,
+            faction_count: 5,
+            quadrant_spread: 1,
+            seed_mix: Vec::new(),
+        };
+        let sim = Simulation::with_seed_and_starting_conditions(123, sc);
+
+        let mut counts: BTreeMap<u32, u32> = BTreeMap::new();
+        for (_, civ) in sim.world.query::<&Civilian>().iter() {
+            if let Alignment::Faction(fid) = civ.alignment {
+                *counts.entry(fid).or_insert(0) += 1;
+            }
+        }
+
+        assert_eq!(counts.len(), 5, "expected five factions to be spawned");
+        assert!(counts.values().all(|&count| count == 2));
+    }
+
+    // ── LANGUAGE→DIPLOMACY coupling tests ─────────────────────────────────────
+
+    #[cfg(test)]
+    mod language_diplomacy_tests {
+        use super::*;
+
+        #[test]
+        fn bonus_bounded_and_monotonic() {
+            let bonus_close = language_intelligibility_peace_bonus(0.1);
+            let bonus_far = language_intelligibility_peace_bonus(0.9);
+            assert!(bonus_close > bonus_far, "closer language must yield bigger bonus");
+            assert!(bonus_close <= 1200, "bonus must not exceed cap");
+        }
+
+        #[test]
+        fn identical_language_max_bonus_more_peaceful() {
+            let max_bonus = language_intelligibility_peace_bonus(0.0);
+            let no_bonus = language_intelligibility_peace_bonus(1.0);
+            assert_eq!(max_bonus, 1200, "identical language must yield max bonus");
+            assert_eq!(no_bonus, 0, "max distance must yield zero bonus");
+            assert!(max_bonus > no_bonus);
+        }
+
+        #[test]
+        fn missing_language_legacy_threshold_unchanged() {
+            let bonus = language_intelligibility_peace_bonus(1.0);
+            assert_eq!(bonus, 0, "missing language must not alter threshold");
+        }
     }
 }

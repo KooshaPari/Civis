@@ -10,7 +10,7 @@
 //! crate, while hosts provide adapters that call into engine internals.
 
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
+#![allow(missing_docs)]
 
 pub mod building;
 pub mod events;

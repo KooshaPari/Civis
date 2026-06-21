@@ -254,6 +254,8 @@ pub const RED: egui::Color32 = DANGER;
 pub const VIOLET: egui::Color32 = MANA;
 pub const BG_DEEP: egui::Color32 = INK_0;
 pub const PANEL_FILL: egui::Color32 = GRAPHITE_900;
+/// Elevated chip / badge background — layer 2 tint above PANEL_FILL.
+pub const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 pub const SURFACE: egui::Color32 = GRAPHITE_700;
 pub const SURFACE_HI: egui::Color32 = GRAPHITE_600;
 pub const INSET_FILL: egui::Color32 = GRAPHITE_800;

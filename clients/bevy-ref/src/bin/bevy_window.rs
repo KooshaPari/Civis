@@ -32,12 +32,13 @@ use civ_bevy_ref::{
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
+    tech_tree_ui::{TechTreeState, TechTreeUiPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
 use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
-use civ_protocol_3d::Frame3d;
+use civ_protocol_3d::{EventFeedMessage3d, Frame3d};
 use civ_voxel::ChunkId;
 
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
@@ -189,6 +190,7 @@ fn main() {
             EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
+            TechTreeUiPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -456,6 +458,7 @@ fn apply_live_frames(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
+    mut tech_tree: ResMut<TechTreeState>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -510,6 +513,13 @@ fn apply_live_frames(
                 }
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
                 apply_event_feed_frame(&mut feed, event_frame.clone());
+                for msg in &event_frame.events {
+                    if let EventFeedMessage3d::Tech(ev) = msg {
+                        if !ev.tech.is_empty() {
+                            tech_tree.unlock(&ev.tech);
+                        }
+                    }
+                }
             }
         }
     }

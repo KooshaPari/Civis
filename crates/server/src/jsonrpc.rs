@@ -962,8 +962,13 @@ pub enum DispatchEffect {
     },
     /// Replace bridge simulation from a slot archive (`save.load`).
     LoadSlot {
-        /// Validated slot stem (`slot-1` … `slot-5`).
+        /// Validated slot stem (`slot-1` ... `slot-5`).
         slot_name: String,
+    },
+    /// Push a tech name onto the engine `ResearchCache` queue (`sim.queue_research`).
+    QueueResearch {
+        /// Validated tech name.
+        tech: String,
     },
 }
 
@@ -3263,5 +3268,87 @@ mod tests {
         assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
         let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
         assert!((mi - 0.42).abs() < 1e-5);
+    }
+
+    // -- FR-CIV-SERVER-004: sim.diplomacy_action / sim.diplomacy_state --------
+
+    fn diplomacy_ctx() -> DispatchContext {
+        DispatchContext {
+            tick: 42,
+            population: None,
+            snapshot: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            diplomacy_snapshot: vec![serde_json::json!({"faction_a":0,"faction_b":1,"status":"Peace","treaty_active":false})],
+        }
+    }
+
+    #[test]
+    fn diplomacy_action_propose_treaty_plans_effect() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":10,"method":"sim.diplomacy_action","params":{"action":"propose_treaty","source_faction":0,"target_faction":1}}"#,
+        ).expect("parse");
+        let plan = dispatch_request(req, diplomacy_ctx());
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::DiplomacyAction { action: "propose_treaty".into(), source_faction: 0, target_faction: 1, amount: 0 }
+        );
+        assert!(plan.response.result.is_some(), "should succeed");
+        let r = plan.response.result.unwrap();
+        assert_eq!(r["ok"], true);
+        assert_eq!(r["action"], "propose_treaty");
+    }
+
+    #[test]
+    fn diplomacy_action_declare_war_plans_effect() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":11,"method":"sim.diplomacy_action","params":{"action":"declare_war","source_faction":0,"target_faction":2}}"#,
+        ).expect("parse");
+        let plan = dispatch_request(req, diplomacy_ctx());
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::DiplomacyAction { action: "declare_war".into(), source_faction: 0, target_faction: 2, amount: 0 }
+        );
+    }
+
+    #[test]
+    fn diplomacy_action_offer_trade_carries_amount() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":12,"method":"sim.diplomacy_action","params":{"action":"offer_trade","source_faction":1,"target_faction":2,"amount":500}}"#,
+        ).expect("parse");
+        let plan = dispatch_request(req, diplomacy_ctx());
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::DiplomacyAction { action: "offer_trade".into(), source_faction: 1, target_faction: 2, amount: 500 }
+        );
+    }
+
+    #[test]
+    fn diplomacy_action_unknown_verb_returns_error() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":13,"method":"sim.diplomacy_action","params":{"action":"annex","source_faction":0,"target_faction":1}}"#,
+        ).expect("parse");
+        let plan = dispatch_request(req, diplomacy_ctx());
+        assert!(plan.response.error.is_some(), "unknown action must error");
+        assert_eq!(plan.effect, DispatchEffect::None);
+    }
+
+    #[test]
+    fn diplomacy_state_returns_snapshot() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":14,"method":"sim.diplomacy_state","params":{}}"#,
+        ).expect("parse");
+        let plan = dispatch_request(req, diplomacy_ctx());
+        assert!(plan.response.result.is_some());
+        let r = plan.response.result.unwrap();
+        assert_eq!(r["ok"], true);
+        let rels = r["relations"].as_array().expect("relations array");
+        assert_eq!(rels.len(), 1, "snapshot has one relation");
+        assert_eq!(rels[0]["faction_a"], 0);
+        assert_eq!(rels[0]["status"], "Peace");
+        assert_eq!(plan.effect, DispatchEffect::None);
     }
 }

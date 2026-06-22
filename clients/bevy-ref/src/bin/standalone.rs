@@ -49,6 +49,7 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
+        .add_plugins(civ_bevy_ref::AgentNeedsPlugin)
         // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
         // second at INFO so the 90s frame-budget profile has a measurable
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.

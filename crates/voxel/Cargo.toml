@@ -10,6 +10,8 @@ publish = false
 glam = "0.30.10"
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
+# Compact, deterministic binary serialisation for the disk-backed dirty-chunk cache.
+bincode-next = { version = "3.1.1", features = ["serde"] }
 
 # Adaptive voxel kernel shared across Phenotype-org game clients.
 # Pin the git revision so CI can resolve the same kernel without a sibling checkout.

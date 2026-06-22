@@ -2629,8 +2629,7 @@ name = "civ-voxel"
 version = "0.1.0"
 dependencies = [
  "bincode-next",
- "criterion 0.5.1",
- "glam 0.30.10",
+ "criterion",
  "phenotype-voxel",
  "proptest",
  "ron 0.8.1",

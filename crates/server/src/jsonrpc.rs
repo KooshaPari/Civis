@@ -3635,8 +3635,6 @@ mod tests {
             .expect("mi_material_faction_norm f64");
         assert!((mi - 0.42).abs() < 1e-5);
     }
-    #[test]
-    fn dispatch_queue_research_valid_tech_accepted() {
     /// FR-CIV-SERVER-003 — sim.queue_research with a valid tech accepts the request.
     #[test]
     fn dispatch_queue_research_valid_tech_accepted() {

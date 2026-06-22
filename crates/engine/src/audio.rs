@@ -1,97 +1,162 @@
-//! Audio configuration helpers for the engine.
-//!
-//! The crate only needs a lightweight public surface here so the top-level
-//! `civ-engine` re-exports stay coherent. The actual runtime integration can
-//! grow later without changing the API names used by downstream crates.
+//! Era-aware audio configuration helpers.
 
-#![allow(missing_docs)]
-
-/// Coarse era buckets used to select audio packs / mixing presets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// The player's current civilization era.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum GameEra {
+    /// Early survival, primitive tools, fire, and hand drums.
     #[default]
-    Ancient,
-    Classical,
+    Stone,
+    /// First organized settlements and metalworking.
+    Bronze,
+    /// Larger fortified societies and disciplined military culture.
+    Iron,
+    /// Feudal courts, cathedrals, and regional trade networks.
     Medieval,
+    /// Courtly refinement, exploration, and early orchestration.
     Renaissance,
+    /// Mechanization, steam power, and factory cities.
     Industrial,
+    /// Electrified, globalized, and synthetic modern culture.
     Modern,
-    Future,
 }
 
-/// Minimal audio configuration for a given era.
-#[derive(Debug, Clone, Copy, PartialEq)]
+/// Audio settings associated with a specific era.
+#[derive(Debug, Clone, PartialEq)]
 pub struct EraAudioConfig {
-    /// Era this config was derived from.
-    pub era: GameEra,
-    /// Relative music intensity / layering hint.
-    pub music_intensity: f32,
-    /// Relative ambient intensity / layering hint.
-    pub ambient_intensity: f32,
+    /// The ambient or looped music track used for the era.
+    pub ambient_track: String,
+    /// Base tempo for music selection or sequencing.
+    pub music_tempo: f32,
+    /// Instrument family or asset identifiers used by the arrangement layer.
+    pub instrument_set: Vec<String>,
 }
 
-impl Default for EraAudioConfig {
-    fn default() -> Self {
-        Self {
-            era: GameEra::Ancient,
-            music_intensity: 0.25,
-            ambient_intensity: 0.35,
-        }
-    }
-}
-
-/// Map a technology level to a coarse game era.
-#[must_use]
-pub fn era_from_tech_level(tech_level: u32) -> GameEra {
-    match tech_level {
-        0..=1 => GameEra::Ancient,
-        2..=3 => GameEra::Classical,
-        4..=5 => GameEra::Medieval,
-        6..=7 => GameEra::Renaissance,
-        8..=9 => GameEra::Industrial,
-        10..=11 => GameEra::Modern,
-        _ => GameEra::Future,
-    }
-}
-
-/// Build an audio preset for an era.
-#[must_use]
-pub fn audio_config_for_era(era: GameEra) -> EraAudioConfig {
+/// Return the era-specific audio configuration.
+pub fn audio_config_for_era(era: &GameEra) -> EraAudioConfig {
     match era {
-        GameEra::Ancient => EraAudioConfig {
-            era,
-            music_intensity: 0.25,
-            ambient_intensity: 0.35,
+        GameEra::Stone => EraAudioConfig {
+            ambient_track: "audio/stone_embers.ogg".to_string(),
+            music_tempo: 72.0,
+            instrument_set: vec![
+                "hand_drum".to_string(),
+                "bone_flute".to_string(),
+                "stone_rattle".to_string(),
+            ],
         },
-        GameEra::Classical => EraAudioConfig {
-            era,
-            music_intensity: 0.35,
-            ambient_intensity: 0.4,
+        GameEra::Bronze => EraAudioConfig {
+            ambient_track: "audio/bronze_harvest.ogg".to_string(),
+            music_tempo: 84.0,
+            instrument_set: vec![
+                "lyre".to_string(),
+                "reed_pipe".to_string(),
+                "bronze_chimes".to_string(),
+            ],
+        },
+        GameEra::Iron => EraAudioConfig {
+            ambient_track: "audio/iron_fortress.ogg".to_string(),
+            music_tempo: 96.0,
+            instrument_set: vec![
+                "war_drum".to_string(),
+                "horn".to_string(),
+                "string_ensemble".to_string(),
+            ],
         },
         GameEra::Medieval => EraAudioConfig {
-            era,
-            music_intensity: 0.45,
-            ambient_intensity: 0.45,
+            ambient_track: "audio/medieval_court.ogg".to_string(),
+            music_tempo: 102.0,
+            instrument_set: vec![
+                "lute".to_string(),
+                "hurdy_gurdy".to_string(),
+                "fiddle".to_string(),
+            ],
         },
         GameEra::Renaissance => EraAudioConfig {
-            era,
-            music_intensity: 0.55,
-            ambient_intensity: 0.5,
+            ambient_track: "audio/renaissance_citadel.ogg".to_string(),
+            music_tempo: 108.0,
+            instrument_set: vec![
+                "harpsichord".to_string(),
+                "violin".to_string(),
+                "flute".to_string(),
+            ],
         },
         GameEra::Industrial => EraAudioConfig {
-            era,
-            music_intensity: 0.65,
-            ambient_intensity: 0.55,
+            ambient_track: "audio/industrial_forge.ogg".to_string(),
+            music_tempo: 116.0,
+            instrument_set: vec![
+                "piano".to_string(),
+                "brass_section".to_string(),
+                "steam_percussion".to_string(),
+            ],
         },
         GameEra::Modern => EraAudioConfig {
-            era,
-            music_intensity: 0.75,
-            ambient_intensity: 0.6,
+            ambient_track: "audio/modern_metropolis.ogg".to_string(),
+            music_tempo: 124.0,
+            instrument_set: vec![
+                "synth_pad".to_string(),
+                "electric_bass".to_string(),
+                "drum_kit".to_string(),
+            ],
         },
-        GameEra::Future => EraAudioConfig {
-            era,
-            music_intensity: 0.85,
-            ambient_intensity: 0.65,
-        },
+    }
+}
+
+/// Convert a tech count into the current civilization era.
+pub fn era_from_tech_level(tech_count: u32) -> GameEra {
+    match tech_count {
+        0..=2 => GameEra::Stone,
+        3..=5 => GameEra::Bronze,
+        6..=9 => GameEra::Iron,
+        10..=14 => GameEra::Medieval,
+        15..=19 => GameEra::Renaissance,
+        20..=29 => GameEra::Industrial,
+        _ => GameEra::Modern,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{audio_config_for_era, era_from_tech_level, EraAudioConfig, GameEra};
+
+    #[test]
+    fn era_thresholds_match_spec() {
+        assert_eq!(era_from_tech_level(0), GameEra::Stone);
+        assert_eq!(era_from_tech_level(3), GameEra::Bronze);
+        assert_eq!(era_from_tech_level(6), GameEra::Iron);
+        assert_eq!(era_from_tech_level(10), GameEra::Medieval);
+        assert_eq!(era_from_tech_level(15), GameEra::Renaissance);
+        assert_eq!(era_from_tech_level(20), GameEra::Industrial);
+        assert_eq!(era_from_tech_level(30), GameEra::Modern);
+    }
+
+    #[test]
+    fn stone_audio_config_is_default_campfire_theme() {
+        let config = audio_config_for_era(&GameEra::default());
+        assert_eq!(
+            config,
+            EraAudioConfig {
+                ambient_track: "audio/stone_embers.ogg".to_string(),
+                music_tempo: 72.0,
+                instrument_set: vec![
+                    "hand_drum".to_string(),
+                    "bone_flute".to_string(),
+                    "stone_rattle".to_string(),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn modern_audio_config_has_electronic_instrumentation() {
+        let config = audio_config_for_era(&GameEra::Modern);
+        assert_eq!(config.ambient_track, "audio/modern_metropolis.ogg");
+        assert_eq!(config.music_tempo, 124.0);
+        assert_eq!(
+            config.instrument_set,
+            vec![
+                "synth_pad".to_string(),
+                "electric_bass".to_string(),
+                "drum_kit".to_string(),
+            ]
+        );
     }
 }

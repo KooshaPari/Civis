@@ -386,6 +386,119 @@ pub struct UtilityWeights {
     pub belonging: f32,
 }
 
+/// Utility-AI needs vector for scoring higher-level actions.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NeedsVector {
+    /// Hunger pressure.
+    pub hunger: f32,
+    /// Safety pressure.
+    pub safety: f32,
+    /// Social pressure.
+    pub social: f32,
+    /// Purpose pressure.
+    pub purpose: f32,
+    /// Spirituality pressure.
+    pub spirituality: f32,
+}
+
+impl NeedsVector {
+    /// Highest current need pressure.
+    #[must_use]
+    pub fn urgency(&self) -> f32 {
+        self.hunger
+            .max(self.safety)
+            .max(self.social)
+            .max(self.purpose)
+            .max(self.spirituality)
+    }
+}
+
+/// Coarse world context used by the utility scorer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct WorldSnapshot {
+    /// Food is nearby.
+    pub food_nearby: bool,
+    /// Threat is nearby.
+    pub threat_nearby: bool,
+    /// Other agents are nearby.
+    pub others_nearby: bool,
+    /// Temple is nearby.
+    pub temple_nearby: bool,
+}
+
+/// High-level action considered by the utility scorer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AgentAction {
+    /// Consume food.
+    Eat,
+    /// Avoid danger.
+    Flee,
+    /// Seek social contact.
+    Socialize,
+    /// Do productive work.
+    Work,
+    /// Visit a temple.
+    Pray,
+}
+
+/// Score an action for the current needs and world snapshot.
+pub trait UtilityScorer {
+    /// Score one action. Higher is better.
+    fn score_action(
+        &self,
+        action: &AgentAction,
+        needs: &NeedsVector,
+        world_state: &WorldSnapshot,
+    ) -> f32;
+}
+
+/// Simple context-sensitive utility scorer.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BasicUtilityScorer;
+
+impl UtilityScorer for BasicUtilityScorer {
+    fn score_action(
+        &self,
+        action: &AgentAction,
+        needs: &NeedsVector,
+        world_state: &WorldSnapshot,
+    ) -> f32 {
+        match action {
+            AgentAction::Eat if world_state.food_nearby => needs.hunger * 1.5,
+            AgentAction::Flee if world_state.threat_nearby => needs.safety * 2.0,
+            AgentAction::Socialize if world_state.others_nearby => needs.social * 1.0,
+            AgentAction::Work => needs.purpose * 1.0,
+            AgentAction::Pray if world_state.temple_nearby => needs.spirituality * 1.0,
+            _ => 0.0,
+        }
+    }
+}
+
+/// Pick the highest-scoring available action.
+#[must_use]
+pub fn choose_action(
+    needs: &NeedsVector,
+    available: &[AgentAction],
+    scorer: &dyn UtilityScorer,
+    world: &WorldSnapshot,
+) -> AgentAction {
+    assert!(
+        !available.is_empty(),
+        "available actions must not be empty"
+    );
+
+    let mut best_action = available[0];
+    let mut best_score = scorer.score_action(&best_action, needs, world);
+    for action in &available[1..] {
+        let score = scorer.score_action(action, needs, world);
+        if score > best_score {
+            best_action = *action;
+            best_score = score;
+        }
+    }
+    best_action
+}
+
 /// Cohort-level diffusion statistics for a target era.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CohortStats {
@@ -1234,6 +1347,119 @@ mod tests {
             belonging: 3.0,
         };
         assert_eq!(top_action(&needs, &weights), NeedAction::FindShelter);
+    }
+
+    /// Covers utility-AI urgency as the maximum need pressure.
+    #[test]
+    fn needs_vector_urgency_returns_maximum_need() {
+        let needs = NeedsVector {
+            hunger: 0.4,
+            safety: 0.9,
+            social: 0.1,
+            purpose: 0.7,
+            spirituality: 0.6,
+        };
+        assert_eq!(needs.urgency(), 0.9);
+    }
+
+    /// Covers contextual utility scoring for the basic scorer.
+    #[test]
+    fn basic_utility_scorer_scores_contextual_actions() {
+        let scorer = BasicUtilityScorer;
+        let needs = NeedsVector {
+            hunger: 0.8,
+            safety: 0.6,
+            social: 0.5,
+            purpose: 0.4,
+            spirituality: 0.3,
+        };
+        let world = WorldSnapshot {
+            food_nearby: true,
+            threat_nearby: true,
+            others_nearby: true,
+            temple_nearby: true,
+        };
+
+        assert_eq!(
+            scorer.score_action(&AgentAction::Eat, &needs, &world),
+            0.8 * 1.5
+        );
+        assert_eq!(
+            scorer.score_action(&AgentAction::Flee, &needs, &world),
+            0.6 * 2.0
+        );
+        assert_eq!(
+            scorer.score_action(&AgentAction::Socialize, &needs, &world),
+            0.5
+        );
+        assert_eq!(scorer.score_action(&AgentAction::Work, &needs, &world), 0.4);
+        assert_eq!(
+            scorer.score_action(&AgentAction::Pray, &needs, &world),
+            0.3
+        );
+
+        let empty_world = WorldSnapshot::default();
+        assert_eq!(
+            scorer.score_action(&AgentAction::Eat, &needs, &empty_world),
+            0.0
+        );
+        assert_eq!(
+            scorer.score_action(&AgentAction::Flee, &needs, &empty_world),
+            0.0
+        );
+        assert_eq!(
+            scorer.score_action(&AgentAction::Socialize, &needs, &empty_world),
+            0.0
+        );
+        assert_eq!(
+            scorer.score_action(&AgentAction::Pray, &needs, &empty_world),
+            0.0
+        );
+    }
+
+    /// Covers greedy action selection from the highest available utility.
+    #[test]
+    fn choose_action_picks_highest_scoring_available_action() {
+        let scorer = BasicUtilityScorer;
+        let needs = NeedsVector {
+            hunger: 0.9,
+            safety: 0.2,
+            social: 0.1,
+            purpose: 0.7,
+            spirituality: 0.4,
+        };
+        let world = WorldSnapshot {
+            food_nearby: true,
+            threat_nearby: false,
+            others_nearby: false,
+            temple_nearby: false,
+        };
+        let available = [AgentAction::Work, AgentAction::Eat, AgentAction::Pray];
+
+        assert_eq!(
+            choose_action(&needs, &available, &scorer, &world),
+            AgentAction::Eat
+        );
+    }
+
+    /// Covers deterministic tie-breaking in the greedy selector.
+    #[test]
+    fn choose_action_keeps_first_action_on_tie() {
+        let scorer = BasicUtilityScorer;
+        let needs = NeedsVector {
+            hunger: 0.5,
+            safety: 0.5,
+            social: 0.5,
+            purpose: 0.5,
+            spirituality: 0.5,
+        };
+        let world = WorldSnapshot::default();
+        let available = [AgentAction::Work, AgentAction::Eat];
+
+        assert_eq!(
+            choose_action(&needs, &available, &scorer, &world),
+            AgentAction::Work
+        );
     }
 
     /// Covers FR-CIV-EMERGENCE-010 — spawn alignment is inferred from nearby

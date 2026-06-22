@@ -4,6 +4,17 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
+namespace
+{
+    static constexpr uint8 BiomeDeepWater = 0;
+    static constexpr uint8 BiomeWater = 1;
+    static constexpr uint8 BiomeSand = 2;
+    static constexpr uint8 BiomeGrass = 3;
+    static constexpr uint8 BiomeForest = 4;
+    static constexpr uint8 BiomeStone = 5;
+    static constexpr uint8 BiomeUnknown = 6;
+}
+
 void UCivProtocolClient::Connect(const FString& InBaseUrl)
 {
     BaseUrl = InBaseUrl;
@@ -11,12 +22,14 @@ void UCivProtocolClient::Connect(const FString& InBaseUrl)
 
 void UCivProtocolClient::FetchTerrain()
 {
+    OnTerrainStatus.Broadcast(TEXT("waiting"), FString::Printf(TEXT("terrain HTTP %s/terrain"), *BaseUrl));
     RequestJson(TEXT("GET"), TEXT("/terrain"), TEXT(""), [this](const FString& Json)
     {
         TSharedPtr<FJsonObject> Root;
         const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
         if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
         {
+            OnTerrainStatus.Broadcast(TEXT("unavailable"), TEXT("terrain HTTP returned invalid JSON"));
             return;
         }
 
@@ -37,14 +50,23 @@ void UCivProtocolClient::FetchTerrain()
             for (const TSharedPtr<FJsonValue>& Value : *BiomesJson)
             {
                 const FString Biome = Value->AsString();
-                if (Biome == TEXT("deepwater")) Biomes.Add(0);
-                else if (Biome == TEXT("water")) Biomes.Add(1);
-                else if (Biome == TEXT("sand")) Biomes.Add(2);
-                else if (Biome == TEXT("grass")) Biomes.Add(3);
-                else if (Biome == TEXT("forest")) Biomes.Add(4);
-                else if (Biome == TEXT("stone")) Biomes.Add(5);
-                else Biomes.Add(6);
+                if (Biome == TEXT("deepwater")) Biomes.Add(BiomeDeepWater);
+                else if (Biome == TEXT("water")) Biomes.Add(BiomeWater);
+                else if (Biome == TEXT("sand")) Biomes.Add(BiomeSand);
+                else if (Biome == TEXT("grass")) Biomes.Add(BiomeGrass);
+                else if (Biome == TEXT("forest")) Biomes.Add(BiomeForest);
+                else if (Biome == TEXT("stone")) Biomes.Add(BiomeStone);
+                else Biomes.Add(BiomeUnknown);
             }
+        }
+
+        if (Heights.Num() > 0)
+        {
+            OnTerrainStatus.Broadcast(TEXT("live"), FString::Printf(TEXT("terrain ready: %d samples"), Heights.Num()));
+        }
+        else
+        {
+            OnTerrainStatus.Broadcast(TEXT("unavailable"), TEXT("terrain HTTP returned no height samples"));
         }
     });
 }
@@ -118,6 +140,7 @@ bool UCivProtocolClient::RequestJson(const FString& Verb, const FString& Path, c
         {
             if (!bSucceeded || !Response.IsValid())
             {
+                OnOk(TEXT(""));
                 return;
             }
             OnOk(Response->GetContentAsString());

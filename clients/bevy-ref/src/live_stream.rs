@@ -919,6 +919,7 @@ mod tests {
     use crate::encode_chunk_id;
     use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
+    use civ_voxel::material::WATER;
     use civ_voxel::MaterialId;
 
     const CHUNK_VOXELS: usize = LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE;
@@ -929,7 +930,7 @@ mod tests {
 
     fn solid_chunk_voxels() -> Vec<MaterialId> {
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
+        voxels[voxel_index(4, 3, 5)] = WATER;
         voxels
     }
 

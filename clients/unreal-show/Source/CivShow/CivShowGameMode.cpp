@@ -8,7 +8,6 @@
 #include "Blueprint/UserWidget.h"
 #include "Dom/JsonObject.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Engine/Engine.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -33,7 +32,6 @@ void ACivShowGameMode::BeginPlay()
     HttpClient = NewObject<UCivProtocolClient>(this);
     WsClient = NewObject<UCivWsClient>(this);
 
-    HttpClient->OnTerrainStatus.AddDynamic(this, &ACivShowGameMode::OnTerrainStatusChanged);
     HttpClient->Connect(WatchHttpUrl);
     HttpClient->FetchTerrain();
 
@@ -47,11 +45,9 @@ void ACivShowGameMode::BeginPlay()
 
     WsClient->OnSnapshotReceived.AddDynamic(this, &ACivShowGameMode::OnWsSnapshot);
     WsClient->OnF3d0FrameReceived.AddDynamic(this, &ACivShowGameMode::OnF3d0Frame);
-    WsClient->OnConnectionChanged.AddDynamic(this, &ACivShowGameMode::OnWsConnectionChanged);
     WsClient->ConnectServer(ServerWsUrl);
 
     SpawnMinimapHud();
-    UpdateAttachWarning();
 }
 
 void ACivShowGameMode::SpawnMinimapHud()
@@ -93,62 +89,10 @@ void ACivShowGameMode::Tick(float DeltaSeconds)
     }
 }
 
-void ACivShowGameMode::UpdateAttachWarning()
-{
-    const bool bShowWarning = !(bTerrainLive && bWsLive);
-    if (!bShowWarning)
-    {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(1357911, 2.0f, FColor::Green, TEXT("CivShow attached: terrain HTTP + WS live"));
-        }
-        return;
-    }
-
-    FString Warning;
-    if (!bTerrainLive)
-    {
-        Warning += FString::Printf(TEXT("waiting for terrain HTTP at %s"), *WatchHttpUrl);
-    }
-    if (!bWsLive)
-    {
-        if (!Warning.IsEmpty())
-        {
-            Warning += TEXT(" | ");
-        }
-        Warning += FString::Printf(TEXT("waiting for WS at %s"), *ServerWsUrl);
-    }
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(1357911, 2.0f, FColor::Red, Warning);
-    }
-}
-
-void ACivShowGameMode::OnTerrainStatusChanged(const FString& State, const FString& Detail)
-{
-    bTerrainLive = State == TEXT("live");
-    if (!bTerrainLive)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("CivShow terrain attach: %s"), *Detail);
-    }
-    UpdateAttachWarning();
-}
-
-void ACivShowGameMode::OnWsConnectionChanged(const FString& State)
-{
-    bWsLive = State == TEXT("live");
-    if (!bWsLive)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("CivShow WS attach: %s"), *State);
-    }
-    UpdateAttachWarning();
-}
-
 void ACivShowGameMode::OnTerrainFetched()
 {
     if (!HttpClient || HttpClient->Heights.Num() == 0)
     {
-        UpdateAttachWarning();
         return;
     }
 
@@ -168,8 +112,6 @@ void ACivShowGameMode::OnTerrainFetched()
     if (TerrainActor)
     {
         TerrainActor->BuildFromHeightmap(HttpClient->Heights, HttpClient->Biomes, Size);
-        bTerrainLive = true;
-        UpdateAttachWarning();
     }
 }
 

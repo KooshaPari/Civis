@@ -9,7 +9,10 @@ members = [
   "crates/economy",
   "crates/species",
   "crates/agents",
+<<<<<<< HEAD
   "crates/ai",
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
   "crates/diffusion",
   "crates/laws",
   "crates/research",
@@ -19,8 +22,11 @@ members = [
   "crates/mod-host",
   "crates/civlab-sdk",
   "crates/watch",
+<<<<<<< HEAD
   "crates/save-db",
   "crates/climate",
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
   "clients/bevy-ref",
 ]
 exclude = [

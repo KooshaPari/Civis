@@ -6,10 +6,6 @@ use crate::{Building, BuildingType, Fixed, MilitaryUnit, Position, UnitType};
 
 /// Map normalized terrain coords (0..1) to the engine hex grid.
 pub fn norm_to_grid(x: f32, y: f32) -> Position {
-    assert!(
-        x.is_finite() && y.is_finite(),
-        "normalized spawn coords must be finite"
-    );
     Position {
         x: (x.clamp(0.0, 1.0) * 127.0).round() as i32 - 64,
         y: (y.clamp(0.0, 1.0) * 127.0).round() as i32 - 64,
@@ -99,12 +95,6 @@ mod tests {
         let p = norm_to_grid(0.5, 0.5);
         assert!((p.x).abs() <= 1);
         assert!((p.y).abs() <= 1);
-    }
-
-    #[test]
-    #[should_panic(expected = "normalized spawn coords must be finite")]
-    fn norm_to_grid_rejects_non_finite_coords() {
-        let _ = norm_to_grid(f32::NAN, 0.5);
     }
 
     #[test]

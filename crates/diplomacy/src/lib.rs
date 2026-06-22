@@ -39,7 +39,7 @@
 #![warn(missing_docs)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use thiserror::Error;
 
 /// Schema version of this crate's public types. Bumped on breaking changes.
@@ -59,6 +59,9 @@ impl PolityId {
 /// Compatibility alias preserved for earlier crate code.
 #[deprecated(note = "PolityId is the preferred term in active diplomacy contracts")]
 pub type ActorId = PolityId;
+
+/// Compatibility alias for faction-scoped diplomacy contracts.
+pub type FactionId = PolityId;
 
 /// Ordered pair `(min, max)` of actor ids. The order is fixed at construction
 /// so that `Pair::new(a, b) == Pair::new(b, a)` for any `a, b`.
@@ -84,6 +87,182 @@ impl Pair {
     pub fn actors(self) -> (PolityId, PolityId) {
         (self.lo, self.hi)
     }
+}
+
+/// High-level resource categories used by trade acts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum ResourceKind {
+    /// Agricultural goods.
+    Food,
+    /// Timber and construction materials.
+    Wood,
+    /// Refined industrial materials.
+    Metal,
+    /// Energy commodities or power credits.
+    Energy,
+}
+
+/// Event-driven diplomatic action.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum DiplomaticAct {
+    /// Exchange a resource for diplomatic goodwill.
+    Trade {
+        /// Traded resource type.
+        good: ResourceKind,
+        /// Trade volume.
+        volume: f32,
+    },
+    /// Form or extend an alliance for a fixed duration.
+    Alliance {
+        /// Duration in ticks.
+        duration_ticks: u32,
+    },
+    /// Declare or renounce war.
+    Declaration {
+        /// `true` if this is a war declaration.
+        war: bool,
+    },
+    /// Send tribute to the target.
+    Tribute {
+        /// Tribute amount.
+        amount: f32,
+    },
+    /// Open a negotiation topic.
+    Proposal {
+        /// Negotiation topic.
+        topic: String,
+    },
+}
+
+/// Opinion state for one directed diplomatic edge.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct Opinion {
+    /// Current opinion value.
+    pub value: f32,
+    /// Raw history of the last 20 events as `(tick, delta)`.
+    pub memory: VecDeque<(u64, f32)>,
+}
+
+impl Opinion {
+    /// Record one opinion delta and keep only the most recent 20 events.
+    pub fn record(&mut self, tick: u64, delta: f32) {
+        self.memory.push_back((tick, delta));
+        while self.memory.len() > OPINION_MEMORY_LIMIT {
+            self.memory.pop_front();
+        }
+    }
+}
+
+/// Directed diplomacy network keyed by `(target, actor)` opinion edges.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct DiplomacyNetwork {
+    opinions: BTreeMap<(FactionId, FactionId), Opinion>,
+}
+
+impl DiplomacyNetwork {
+    /// Construct an empty diplomacy network.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+const OPINION_MEMORY_LIMIT: usize = 20;
+const OPINION_DECAY_START_TICKS: u64 = 100;
+const OPINION_DECAY_SCALE: f32 = 100.0;
+
+fn opinion_key(from: FactionId, to: FactionId) -> (FactionId, FactionId) {
+    (from, to)
+}
+
+fn resource_weight(good: ResourceKind) -> f32 {
+    match good {
+        ResourceKind::Food => 0.8,
+        ResourceKind::Wood => 0.6,
+        ResourceKind::Metal => 1.0,
+        ResourceKind::Energy => 1.2,
+    }
+}
+
+fn act_base_delta(act: &DiplomaticAct) -> f32 {
+    match act {
+        DiplomaticAct::Trade { good, volume } => volume.max(0.0) * resource_weight(*good),
+        DiplomaticAct::Alliance { duration_ticks } => *duration_ticks as f32 * 0.02,
+        DiplomaticAct::Declaration { war } => {
+            if *war {
+                -14.0
+            } else {
+                5.0
+            }
+        }
+        DiplomaticAct::Tribute { amount } => amount.max(0.0) * 0.5,
+        DiplomaticAct::Proposal { topic } => 0.5 + topic.chars().count().min(120) as f32 * 0.01,
+    }
+}
+
+fn opinion_modifier(current: f32) -> f32 {
+    (1.0 - current / 400.0).clamp(0.75, 1.25)
+}
+
+/// Recompute opinion from stored history with exponential decay for old events.
+pub fn decay_opinion(op: &mut Opinion, current_tick: u64) {
+    while op.memory.len() > OPINION_MEMORY_LIMIT {
+        op.memory.pop_front();
+    }
+    op.value = op
+        .memory
+        .iter()
+        .map(|&(tick, delta)| {
+            let age = current_tick.saturating_sub(tick);
+            let weight = if age <= OPINION_DECAY_START_TICKS {
+                1.0
+            } else {
+                (-((age - OPINION_DECAY_START_TICKS) as f32 / OPINION_DECAY_SCALE)).exp()
+            };
+            delta * weight
+        })
+        .sum();
+}
+
+/// Predict the opinion delta for a diplomatic act.
+pub fn evaluate_act(
+    actor: FactionId,
+    target: FactionId,
+    act: &DiplomaticAct,
+    network: &DiplomacyNetwork,
+) -> f32 {
+    if actor == target {
+        return 0.0;
+    }
+    let current = network
+        .opinions
+        .get(&opinion_key(target, actor))
+        .map(|op| op.value)
+        .unwrap_or(0.0);
+    act_base_delta(act) * opinion_modifier(current)
+}
+
+/// Apply a diplomatic act to the directed opinion edge from target to actor.
+pub fn apply_act(
+    network: &mut DiplomacyNetwork,
+    actor: FactionId,
+    target: FactionId,
+    act: DiplomaticAct,
+    tick: u64,
+) {
+    if actor == target {
+        return;
+    }
+
+    let key = opinion_key(target, actor);
+    {
+        let opinion = network.opinions.entry(key).or_default();
+        decay_opinion(opinion, tick);
+    }
+
+    let delta = evaluate_act(actor, target, &act, network);
+    let opinion = network.opinions.entry(key).or_default();
+    opinion.record(tick, delta);
+    decay_opinion(opinion, tick);
 }
 
 /// Coarse stance derived from standing. Thresholds are configurable via
@@ -876,6 +1055,117 @@ mod tests {
 
     fn a(id: u32) -> PolityId {
         PolityId::new(id)
+    }
+
+    fn approx_eq(lhs: f32, rhs: f32) -> bool {
+        (lhs - rhs).abs() < 1e-5
+    }
+
+    // -- Event-driven diplomacy ---------------------------------------------
+
+    /// Event-driven diplomacy keeps all act kinds deterministic and signed.
+    #[test]
+    fn fr_civ_diplo_009_evaluate_act_covers_all_variants() {
+        let network = DiplomacyNetwork::new();
+        let actor = a(1);
+        let target = a(2);
+        let cases = [
+            (
+                DiplomaticAct::Trade {
+                    good: ResourceKind::Food,
+                    volume: 10.0,
+                },
+                true,
+            ),
+            (
+                DiplomaticAct::Alliance {
+                    duration_ticks: 200,
+                },
+                true,
+            ),
+            (DiplomaticAct::Declaration { war: true }, false),
+            (DiplomaticAct::Declaration { war: false }, true),
+            (DiplomaticAct::Tribute { amount: 8.0 }, true),
+            (
+                DiplomaticAct::Proposal {
+                    topic: "open border talks".to_string(),
+                },
+                true,
+            ),
+        ];
+
+        for (act, expected_positive) in cases {
+            let delta = evaluate_act(actor, target, &act, &network);
+            if expected_positive {
+                assert!(delta > 0.0, "{act:?} should improve opinion");
+            } else {
+                assert!(delta < 0.0, "{act:?} should worsen opinion");
+            }
+        }
+    }
+
+    /// Applying an act updates the directed target->actor opinion edge.
+    #[test]
+    fn fr_civ_diplo_009_apply_act_updates_directed_opinion() {
+        let mut network = DiplomacyNetwork::new();
+        let actor = a(3);
+        let target = a(4);
+        let act = DiplomaticAct::Trade {
+            good: ResourceKind::Metal,
+            volume: 5.0,
+        };
+
+        let expected = evaluate_act(actor, target, &act, &network);
+        apply_act(&mut network, actor, target, act, 42);
+
+        let opinion = network
+            .opinions
+            .get(&(target, actor))
+            .expect("target->actor opinion exists");
+        assert!(approx_eq(opinion.value, expected));
+        assert_eq!(opinion.memory.len(), 1);
+        assert_eq!(opinion.memory[0], (42, expected));
+        assert!(network.opinions.get(&(actor, target)).is_none());
+    }
+
+    /// Opinion history is capped at the most recent 20 events.
+    #[test]
+    fn fr_civ_diplo_009_memory_keeps_last_twenty_events() {
+        let mut network = DiplomacyNetwork::new();
+        let actor = a(5);
+        let target = a(6);
+
+        for tick in 0..21 {
+            apply_act(
+                &mut network,
+                actor,
+                target,
+                DiplomaticAct::Tribute { amount: 1.0 },
+                tick,
+            );
+        }
+
+        let opinion = network
+            .opinions
+            .get(&(target, actor))
+            .expect("target->actor opinion exists");
+        assert_eq!(opinion.memory.len(), 20);
+        assert_eq!(opinion.memory.front().map(|(tick, _)| *tick), Some(1));
+        assert_eq!(opinion.memory.back().map(|(tick, _)| *tick), Some(20));
+    }
+
+    /// Events older than 100 ticks decay exponentially.
+    #[test]
+    fn fr_civ_diplo_009_decay_opinion_exponentially_decays_old_events() {
+        let mut opinion = Opinion::default();
+        opinion.memory.push_back((0, 10.0));
+        opinion.memory.push_back((150, 4.0));
+
+        decay_opinion(&mut opinion, 250);
+
+        let expected = 10.0 * (-1.5f32).exp() + 4.0;
+        assert!(approx_eq(opinion.value, expected));
+        assert_eq!(opinion.memory.len(), 2);
     }
 
     // -- Pair ordering -------------------------------------------------------

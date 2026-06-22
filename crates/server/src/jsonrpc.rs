@@ -1584,7 +1584,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 DispatchPlan {
                     response: JsonRpcResponse::failure(req.id, JsonRpcError {
                         code: error_code::INVALID_PARAMS,
-                        message: "missing 'tech' param".to_owned(),
                         message: "Missing or empty \"tech\" parameter".to_owned(),
                         data: None,
                     }),
@@ -1594,7 +1593,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 DispatchPlan {
                     response: JsonRpcResponse::failure(req.id, JsonRpcError {
                         code: error_code::INVALID_PARAMS,
-                        message: format!("unknown tech '{}'; known: {}", tech, KNOWN_TECHS.join(", ")),
                         message: format!("Unknown tech \"{tech}\"; valid: {}", KNOWN_TECHS.join(", ")),
                         data: None,
                     }),
@@ -3668,13 +3666,6 @@ mod tests {
         assert_eq!(plan.effect, DispatchEffect::QueueResearch { tech: "pottery".to_owned() });
         let res = plan.response.result.expect("result");
         assert_eq!(res["queued"], "pottery");
-    }
-
-            },
-        );
-        assert!(plan.response.result.is_some(), "expected success result");
-        let result = plan.response.result.unwrap();
-        assert_eq!(result.get("queued").and_then(|v| v.as_str()), Some("pottery"));
     }
 
     /// FR-CIV-SERVER-003 — sim.queue_research with an unknown tech returns INVALID_PARAMS.

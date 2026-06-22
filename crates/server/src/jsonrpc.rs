@@ -766,11 +766,11 @@ pub fn snapshot_fields_from_sim(
             .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
+        researched: vec![],
+        in_progress_tech: None,
     }
 }
 
-/// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, Default, PartialEq)]
 /// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeFields {
@@ -778,6 +778,9 @@ pub struct OutcomeFields {
     pub reason: String,
     pub tick: u64,
 }
+
+/// Tick and optional snapshot fields passed into dispatch.
+#[derive(Debug, Clone, Default)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -2762,6 +2765,8 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                    researched: vec![],
+                    in_progress_tech: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -2837,6 +2842,8 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                    researched: vec![],
+                    in_progress_tech: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -2917,6 +2924,8 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                    researched: vec![],
+                    in_progress_tech: None,
                 }),
                 require_role: false,
                 speed_multiplier: 1,
@@ -3618,6 +3627,8 @@ mod tests {
                 tide_offset: 0.0,
             },
             emergence: Some(emergence),
+            researched: vec![],
+            in_progress_tech: None,
         };
         let json = snapshot_result_json(&fields);
         let emerg = json.get("emergence").expect("emergence block");

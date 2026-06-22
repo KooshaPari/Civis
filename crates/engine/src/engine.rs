@@ -341,6 +341,12 @@ pub struct WorldState {
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
+    /// Global belief pressure used by emergence coupling.
+    pub belief: u64,
+    /// Global cohesion pressure used by emergence coupling.
+    pub cohesion: u64,
+    /// Global unrest pressure used by emergence coupling.
+    pub unrest: u64,
     /// Emergent trade routes that should be retained while active.
     emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
     /// Idle-tick counters for emergent trade routes.
@@ -414,6 +420,9 @@ impl Default for WorldState {
                     volume: Fixed::from_num(8),
                 },
             ],
+            belief: 0,
+            cohesion: 0,
+            unrest: 0,
             emergent_trade_route_keys: BTreeSet::new(),
             trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
@@ -442,9 +451,9 @@ pub struct Simulation {
     next_civilian_id: u64,
     research_cache: ResearchCache,
     scenario_taxation: crate::scenario::ScenarioTaxation,
-    emergence: EmergenceState,
-    emergence_branching: EmergenceBranchingState,
-    emergence_sample: Option<EmergenceSample>,
+    pub(crate) emergence: EmergenceState,
+    pub(crate) emergence_branching: EmergenceBranchingState,
+    pub(crate) emergence_sample: Option<EmergenceSample>,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -457,7 +466,9 @@ pub struct Simulation {
     /// Per-soldier damage pulses from the most recent tactics phase (FR-CIV-TACTICS-024).
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
-    last_tick_engagements: Vec<CombatEngagement>,
+    pub(crate) last_tick_engagements: Vec<CombatEngagement>,
+    /// Per-faction mean aggression snapshot rebuilt during emergence.
+    pub(crate) faction_aggression: BTreeMap<u32, f32>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
     operational: NoopOperationalLayer,
@@ -681,6 +692,7 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
@@ -749,6 +761,7 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+            faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
@@ -1025,7 +1038,7 @@ impl Simulation {
     }
 
     pub fn researched_tech_count(&self) -> usize {
-        (self.state.research_progress / 200_000) as usize
+        0
     }
 
     /// Mutably borrow the research cache.
@@ -1116,6 +1129,34 @@ impl Simulation {
     /// Get mutable reference to RNG
     pub fn rng_mut(&mut self) -> &mut SimRng {
         &mut self.rng
+    }
+
+    /// Resolve a civilian agent id to its ECS entity.
+    pub(crate) fn agent_entity(&self, agent_id: u64) -> Option<Entity> {
+        self.world
+            .query::<&AgentCivilian>()
+            .iter()
+            .find_map(|(entity, civilian)| (civilian.id == agent_id).then_some(entity))
+    }
+
+    /// Apply a bounded belief pulse to the global world state.
+    pub(crate) fn add_belief(&mut self, delta: i64) {
+        let next = if delta >= 0 {
+            self.state.belief.saturating_add(delta as u64)
+        } else {
+            self.state.belief.saturating_sub(delta.unsigned_abs())
+        };
+        self.state.belief = next;
+    }
+
+    /// Apply a bounded cohesion pulse to the global world state.
+    pub(crate) fn add_cohesion(&mut self, delta: i64) {
+        let next = if delta >= 0 {
+            self.state.cohesion.saturating_add(delta as u64)
+        } else {
+            self.state.cohesion.saturating_sub(delta.unsigned_abs())
+        };
+        self.state.cohesion = next;
     }
 
     /// Install a new control policy. Replaces the previous policy. The new
@@ -1820,10 +1861,6 @@ impl Simulation {
     }
 
     /// Apply scenario military cadence/combat overrides (FR-CIV-TACTICS-050).
-    pub fn apply_scenario_taxation(&mut self, _taxation: &crate::scenario::ScenarioTaxation) {
-        // Scenario taxation is currently a data contract; runtime taxation wiring lands with economy enforcement.
-    }
-
     pub fn apply_scenario_military(&mut self, military: &crate::scenario::ScenarioMilitary) {
         if let Some(v) = military.movement_cadence_ticks {
             self.military_phase.movement.cadence_ticks = v;
@@ -2631,6 +2668,18 @@ pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
 pub(crate) fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
     let raw = (awakenings_this_tick as i64).saturating_mul(COHESION_PER_AWAKENING);
     raw.min(MAX_AWAKENING_COHESION_PER_TICK).max(0)
+}
+
+/// FR-CIV-GENETICS / FR-CIV-LEGENDS: pure gain fn for the awakening -> belief
+/// pulse. Returns a signed i64 and clamps to a small per-tick cap so the
+/// compatibility shim stays bounded and deterministic.
+pub(crate) const BELIEF_PER_AWAKENING: i64 = 2;
+pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: i64 = 10;
+
+#[must_use]
+pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
+    let raw = (awakenings_this_tick as i64).saturating_mul(BELIEF_PER_AWAKENING);
+    raw.min(MAX_AWAKENING_BELIEF_PER_TICK).max(0)
 }
 
 /// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest

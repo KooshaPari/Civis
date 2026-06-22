@@ -409,7 +409,7 @@ impl Simulation {
     }
 
     fn micro_descendant_action_count(&self) -> u32 {
-        self.last_tick_engagements().len().try_into().unwrap_or(u32::MAX)
+        self.last_tick_engagements.len().try_into().unwrap_or(u32::MAX)
     }
 
     /// Take one emergence sample if the current tick is on a sample

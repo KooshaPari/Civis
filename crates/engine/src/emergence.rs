@@ -16,9 +16,7 @@ use civ_agents::{
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    Dna, DnaClass,
-    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
-    SeedSet,
+    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
@@ -66,6 +64,9 @@ pub struct EmergenceState {
     pub(crate) last_feed: Vec<EmergenceFeedEvent>,
     pub(crate) last_ai_decisions: Vec<CivAiDecision>,
     pub(crate) last_sentience: Vec<SentienceEvent>,
+    pub(crate) novelty_window_start_tick: u64,
+    pub(crate) novelty_window_new: u32,
+    pub(crate) seen_config_hashes: HashSet<u64>,
     pub(crate) dna_class: DnaClass,
     pub(crate) psych_profile: civ_agents::PsychGenomeProfile,
     pub(crate) sentience_profile: CognitionTraitProfile,
@@ -82,6 +83,9 @@ impl EmergenceState {
             last_feed: Vec::new(),
             last_ai_decisions: Vec::new(),
             last_sentience: Vec::new(),
+            novelty_window_start_tick: 0,
+            novelty_window_new: 0,
+            seen_config_hashes: HashSet::new(),
             dna_class: DnaClass::default(),
             psych_profile: psych_genome_profile(),
             sentience_profile: CognitionTraitProfile::new(

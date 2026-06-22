@@ -15,6 +15,7 @@ pub mod command_queue;
 pub mod conditions;
 pub mod era;
 pub mod engine;
+pub mod emergence;
 pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;

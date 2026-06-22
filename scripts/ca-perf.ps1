@@ -5,8 +5,8 @@
 
 .NOTES
   This is the combined profiling entrypoint for the civ-020 dirty-chunk
-  workstream. It runs the benchmark first, emits a report, then produces the
-  flamegraph.
+  workstream. It runs the benchmark first, emits the markdown report, then
+  produces the flamegraph.
 #>
 [CmdletBinding()]
 param(

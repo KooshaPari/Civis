@@ -10,8 +10,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $Output = 'target/ca-dirty-chunk.flamegraph.svg',
-    [string] $Report = 'target/ca-dirty-chunk.report.md'
+    [string] $Output = 'target/ca-dirty-chunk.flamegraph.svg'
 )
 
 $ErrorActionPreference = 'Stop'

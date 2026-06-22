@@ -101,7 +101,3 @@ debug = 1
 opt-level = 3
 debug = 1
 
-[patch.crates-io]
-metal = { path = "vendor/metal" }
-kira = { path = "vendor/kira" }
-simba = { path = "vendor/simba" }

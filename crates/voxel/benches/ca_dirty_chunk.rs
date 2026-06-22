@@ -1,7 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use civ_voxel::fluid_ca::{step_with_config, CaGrid};
 use civ_voxel::material::{MaterialRegistry, AIR, WATER};
 use civ_voxel::BoundaryConfig;
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 
 fn dirty_chunk_fixture() -> (CaGrid, MaterialRegistry) {
     let mut grid = CaGrid::new([32, 16, 16]);
@@ -64,13 +64,9 @@ fn bench_ca_dirty_chunk(c: &mut Criterion) {
         b.iter_batched(
             dirty_chunk_fixture,
             |(mut grid, reg)| {
-                let outcome = step_with_config(
-                    black_box(&mut grid),
-                    reg,
-                    BoundaryConfig::closed(),
-                    0,
-                );
-                black_box(outcome.changed_chunks.len())
+                let changed =
+                    step_with_config(black_box(&mut grid), reg, BoundaryConfig::closed(), 0);
+                black_box((changed, grid.last_changed_chunks.len()))
             },
             BatchSize::SmallInput,
         );
@@ -88,13 +84,9 @@ fn bench_ca_dirty_chunk(c: &mut Criterion) {
         b.iter_batched(
             dirty_chunk_fixture,
             |(mut grid, reg)| {
-                let outcome = step_with_config(
-                    black_box(&mut grid),
-                    reg,
-                    BoundaryConfig::closed(),
-                    0,
-                );
-                black_box((outcome.changed, outcome.changed_chunks.len()))
+                let changed =
+                    step_with_config(black_box(&mut grid), reg, BoundaryConfig::closed(), 0);
+                black_box((changed, grid.last_changed_chunks.len()))
             },
             BatchSize::SmallInput,
         );
@@ -117,13 +109,9 @@ fn bench_ca_dirty_chunk(c: &mut Criterion) {
         b.iter_batched(
             dirty_chunk_fixture,
             |(mut grid, reg)| {
-                let outcome = step_with_config(
-                    black_box(&mut grid),
-                    reg,
-                    BoundaryConfig::closed(),
-                    0,
-                );
-                black_box(outcome.changed_chunks.len())
+                let changed =
+                    step_with_config(black_box(&mut grid), reg, BoundaryConfig::closed(), 0);
+                black_box((changed, grid.last_changed_chunks.len()))
             },
             BatchSize::SmallInput,
         );
@@ -134,18 +122,20 @@ fn bench_ca_dirty_chunk(c: &mut Criterion) {
             dirty_chunk_fixture,
             |(mut grid_a, reg)| {
                 let mut grid_b = grid_a.clone();
-                let out_a = step_with_config(black_box(&mut grid_a), reg, BoundaryConfig::closed(), 0);
+                let out_a =
+                    step_with_config(black_box(&mut grid_a), reg, BoundaryConfig::closed(), 0);
                 let out_b = step_with_config(
                     black_box(&mut grid_b),
                     MaterialRegistry::standard(),
                     BoundaryConfig::closed(),
                     0,
                 );
-                assert_eq!(out_a.changed_chunks, out_b.changed_chunks);
+                assert_eq!(out_a, out_b);
+                assert_eq!(grid_a.last_changed_chunks, grid_b.last_changed_chunks);
                 assert_eq!(grid_a.cells, grid_b.cells);
                 assert_eq!(grid_a.temperatures, grid_b.temperatures);
                 assert_eq!(grid_a.saturation, grid_b.saturation);
-                black_box(out_a.changed_chunks.len())
+                black_box((out_a, grid_a.last_changed_chunks.len()))
             },
             BatchSize::SmallInput,
         );
@@ -155,13 +145,9 @@ fn bench_ca_dirty_chunk(c: &mut Criterion) {
         b.iter_batched(
             reference_grid_fixture,
             |(mut grid, reg)| {
-                let outcome = step_with_config(
-                    black_box(&mut grid),
-                    reg,
-                    BoundaryConfig::closed(),
-                    0,
-                );
-                black_box((outcome.changed, outcome.changed_chunks.len()))
+                let changed =
+                    step_with_config(black_box(&mut grid), reg, BoundaryConfig::closed(), 0);
+                black_box((changed, grid.last_changed_chunks.len()))
             },
             BatchSize::SmallInput,
         );

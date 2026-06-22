@@ -44,7 +44,11 @@ pub struct CaGrid {
     pub temperatures: Vec<i16>,
     /// Per-cell liquid saturation (0-255).
     pub saturation: Vec<u8>,
-    /// Chunks queued for the next CA pass.
+    /// Active chunks queued for the next CA pass.
+    ///
+    /// Any cell mutation marks the owning chunk plus its 6 face-neighbors so
+    /// the next tick can read cross-chunk halos without falling back to a
+    /// full-grid sweep.
     pub dirty_chunks: HashSet<usize>,
     /// Chunks whose cells (material / temperature / saturation) actually
     /// changed on the most recent [`step`] (or `step_n`) call. Cleared at the
@@ -339,8 +343,9 @@ impl CaGrid {
         chunks
     }
 
-    /// Mark the chunk containing cell `(x, y, z)` as dirty (no-op if grid has
-    /// a zero dimension in any axis).
+    /// Mark the chunk containing cell `(x, y, z)` dirty, plus its 6 face
+    /// neighbors, so the next pass can read a 1-cell halo around the active
+    /// region.
     pub fn mark_dirty_cell(&mut self, x: usize, y: usize, z: usize) {
         let cx = x / 16;
         let cy = y / 16;
@@ -367,7 +372,9 @@ impl CaGrid {
                     let phase = phase_of(reg, id);
                     if matches!(phase, Phase::Liquid | Phase::Powder | Phase::Gas) {
                         self.dirty_chunks.insert(
-                            chunk_x[x] + chunk_y[y] * counts[0] + chunk_z[z] * counts[0] * counts[1],
+                            chunk_x[x]
+                                + chunk_y[y] * counts[0]
+                                + chunk_z[z] * counts[0] * counts[1],
                         );
                     }
                 }
@@ -617,6 +624,8 @@ fn try_swap(
     let av = grid.cells[ai];
     let bv = grid.cells[bi];
     if material_can_swap_into(reg, av, bv) {
+        grid.mark_dirty_cell(a.0, a.1, a.2);
+        grid.mark_dirty_cell(b.0, b.1, b.2);
         swap_cells(grid, ai, bi);
         return true;
     }
@@ -663,6 +672,8 @@ fn powder_step(
             let ti = grid.index(nx, y - 1, z).unwrap_or(i);
             let sat = grid.saturation[ti];
             grid.saturation[ti] = sat.saturating_add(drop);
+            grid.mark_dirty_cell(x, y, z);
+            grid.mark_dirty_cell(nx, y - 1, z);
             return;
         }
     }
@@ -915,9 +926,10 @@ fn evaporation_pass(
                             grid.cells[idx] = AIR;
                             grid.cells[si] = STEAM;
                             grid.temperatures[si] = t;
-                            grid.temperatures[idx] = t.saturating_sub(
-                                i16::try_from(def.latent_heat).unwrap_or(0),
-                            );
+                            grid.temperatures[idx] =
+                                t.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
+                            grid.mark_dirty_cell(x, y, z);
+                            grid.mark_dirty_cell(sx, sy, sz);
                         }
                     }
                 }
@@ -936,13 +948,17 @@ fn evaporation_pass(
                 }
             }
             if cold_neighbor {
-                grid.cells[idx] = if rng_roll(hash32(idx as u64 ^ 0xA5A5, tick as u64), 255) < 64 {
+                let next = if rng_roll(hash32(idx as u64 ^ 0xA5A5, tick as u64), 255) < 64 {
                     WATER
                 } else {
                     STEAM
                 };
-                if grid.cells[idx] == WATER {
-                    grid.temperatures[idx] = (def.freeze_point / 2).max(-10);
+                if next != scratch.cells[idx] {
+                    grid.cells[idx] = next;
+                    if next == WATER {
+                        grid.temperatures[idx] = (def.freeze_point / 2).max(-10);
+                    }
+                    grid.mark_dirty_cell(x, y, z);
                 }
             } else {
                 for dir in 0..6 {
@@ -953,6 +969,8 @@ fn evaporation_pass(
                         {
                             if let Some(ti) = grid.index(nx, ny, nz) {
                                 swap_cells(grid, idx, ti);
+                                grid.mark_dirty_cell(x, y, z);
+                                grid.mark_dirty_cell(nx, ny, nz);
                             }
                             break;
                         }
@@ -1001,13 +1019,7 @@ fn percolation_pass(
             let nx = x as isize + dx;
             let ny = y as isize + dy;
             let nz = z as isize + dz;
-            if nx < 0
-                || ny < 0
-                || nz < 0
-                || nx >= dims0_i
-                || ny >= dims1_i
-                || nz >= dims2_i
-            {
+            if nx < 0 || ny < 0 || nz < 0 || nx >= dims0_i || ny >= dims1_i || nz >= dims2_i {
                 continue;
             }
             let nxu = usize::try_from(nx).expect("nx");
@@ -1017,6 +1029,8 @@ fn percolation_pass(
             if scratch.cells[ni] == WATER {
                 grid.cells[ni] = AIR;
                 pending_saturation[idx] = pending_saturation[idx].saturating_add(1);
+                grid.mark_dirty_cell(x, y, z);
+                grid.mark_dirty_cell(nxu, nyu, nzu);
             }
         }
         let cap_i = i32::from(cap);
@@ -1038,11 +1052,15 @@ fn percolation_pass(
                 }
                 pending_saturation[idx] = pending_saturation[idx].saturating_sub(1);
                 pending_saturation[ni] = pending_saturation[ni].saturating_add(1);
+                grid.mark_dirty_cell(x, y, z);
+                grid.mark_dirty_cell(nxu, nyu, nzu);
                 break 'outer;
             }
         }
     }
-    grid.saturation = pending_saturation;
+    if grid.saturation != pending_saturation {
+        grid.saturation = pending_saturation;
+    }
 }
 
 fn boundary_flux_pass(
@@ -1064,13 +1082,12 @@ fn boundary_flux_pass(
         let idx = x + y * row + z * plane;
         let id = grid.cells[idx];
         let is_fluid = phase_of(reg, id) == Phase::Liquid || phase_of(reg, id) == Phase::Gas;
-        if x == 0
-            && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum
-            && is_fluid
+        if x == 0 && boundary.faces[BoundaryFace::NegX.index()] == BoundaryMode::Vacuum && is_fluid
         {
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if x == x_last
             && boundary.faces[BoundaryFace::PosX.index()] == BoundaryMode::Vacuum
@@ -1079,14 +1096,14 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
-        if y == 0
-            && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum
-            && is_fluid
+        if y == 0 && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum && is_fluid
         {
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if y == y_last
             && boundary.faces[BoundaryFace::PosY.index()] == BoundaryMode::Vacuum
@@ -1095,14 +1112,14 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
-        if z == 0
-            && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum
-            && is_fluid
+        if z == 0 && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum && is_fluid
         {
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if z == z_last
             && boundary.faces[BoundaryFace::PosZ.index()] == BoundaryMode::Vacuum
@@ -1111,6 +1128,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         for face in 0..6 {
             if let BoundaryMode::Inflow {
@@ -1131,6 +1149,7 @@ fn boundary_flux_pass(
                 {
                     grid.cells[idx] = material;
                     grid.temperatures[idx] = temp;
+                    grid.mark_dirty_cell(x, y, z);
                 }
             }
         }
@@ -1261,25 +1280,26 @@ fn step_with_parity(
         // by `dirty_chunks.len() * 4096` worst case, but breaks out per chunk
         // on the first divergent cell, so a single voxel flip = 1 chunk.
         grid.last_changed_chunks = grid.chunks_changed_from(&before).into_iter().collect();
-        let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(27));
+        let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(7));
         for chunk in before.dirty_chunks.iter().copied() {
-            let cx = chunk % counts[0];
-            let rem = chunk - cx;
-            let cy = rem / counts[0] % counts[1];
-            let cz = rem / (counts[0] * counts[1]);
-            for dz in 0..3usize {
-                for dy in 0..3usize {
-                    for dx in 0..3usize {
-                        let nx = cx + dx.saturating_sub(1);
-                        let ny = cy + dy.saturating_sub(1);
-                        let nz = cz + dz.saturating_sub(1);
-                        if nx >= counts[0] || ny >= counts[1] || nz >= counts[2] {
-                            continue;
-                        }
-                        next.insert(nx + ny * counts[0] + nz * counts[0] * counts[1]);
-                    }
+            let Some([cx, cy, cz]) = before.chunk_coord_from_index(chunk) else {
+                continue;
+            };
+            let mut push = |x: i32, y: i32, z: i32| {
+                let Ok(x) = usize::try_from(x) else { return };
+                let Ok(y) = usize::try_from(y) else { return };
+                let Ok(z) = usize::try_from(z) else { return };
+                if x < counts[0] && y < counts[1] && z < counts[2] {
+                    next.insert(x + y * counts[0] + z * counts[0] * counts[1]);
                 }
-            }
+            };
+            push(cx as i32, cy as i32, cz as i32);
+            push(cx as i32 - 1, cy as i32, cz as i32);
+            push(cx as i32 + 1, cy as i32, cz as i32);
+            push(cx as i32, cy as i32 - 1, cz as i32);
+            push(cx as i32, cy as i32 + 1, cz as i32);
+            push(cx as i32, cy as i32, cz as i32 - 1);
+            push(cx as i32, cy as i32, cz as i32 + 1);
         }
         grid.dirty_chunks = next;
     } else {
@@ -1829,7 +1849,7 @@ mod tests {
             }
         }
         g.mark_mobile_chunks(reg());
-        assert!(!step(&mut g, reg()).changed);
+        assert!(!step(&mut g, reg()));
         assert!(g.dirty_chunks().is_empty());
     }
 
@@ -1839,7 +1859,7 @@ mod tests {
         // Warm water (temp 20) so it stays liquid as it falls; the grid default
         // temp 0 equals water's freeze_point and would freeze it to ICE.
         g.set_with_temp(1, 3, 0, WATER, 20);
-        assert!(step(&mut g, reg()).changed);
+        assert!(step(&mut g, reg()));
         assert_eq!(g.get(1, 2, 0), WATER);
         assert_eq!(g.get(1, 3, 0), AIR);
         assert!(!g.dirty_chunks().is_empty());
@@ -2406,7 +2426,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 5, BoundaryConfig::closed(), 0);
         // Gas should spread horizontally away from blocked top.
         let steam_count = count(&g, STEAM);
-        assert!(steam_count >= 1, "steam must exist, got count {steam_count}");
+        assert!(
+            steam_count >= 1,
+            "steam must exist, got count {steam_count}"
+        );
     }
 
     /// Covers snow as powder — SNOW is Phase::Powder (not Solid) so it follows
@@ -2433,7 +2456,8 @@ mod tests {
         step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
         let result = g.get(0, 0, 0);
         assert_eq!(
-            result, crate::material::FIRE,
+            result,
+            crate::material::FIRE,
             "LAVA at boiling point must boil to FIRE, got {result:?}"
         );
     }
@@ -2477,7 +2501,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 5, BoundaryConfig::closed(), 0);
         // Steam should still exist somewhere after movement (gas step exercises the branch).
         let steam_count = count(&g, STEAM);
-        assert!(steam_count >= 1, "steam must still exist after gas_step, count={steam_count}");
+        assert!(
+            steam_count >= 1,
+            "steam must still exist after gas_step, count={steam_count}"
+        );
     }
 
     /// Covers percolation water removal when field_capacity exceeded.
@@ -2550,7 +2577,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 5, boundary, 0);
         // Inflow should populate the grid from both x faces.
         let water_count = count(&g, WATER);
-        assert!(water_count > 0, "inflow must create water, got {water_count}");
+        assert!(
+            water_count > 0,
+            "inflow must create water, got {water_count}"
+        );
     }
 
     /// Covers integer_cube_root edge cases (0, 1, large values).
@@ -2625,7 +2655,10 @@ mod tests {
         g.mark_dirty_cell(16, 8, 8); // Mark chunk 1, center cell
         let indices = g.dirty_cell_indices();
         let boundary_idx = g.index(15, 8, 8).unwrap(); // Halo cell from chunk 0
-        assert!(indices.contains(&boundary_idx), "halo must include neighbors");
+        assert!(
+            indices.contains(&boundary_idx),
+            "halo must include neighbors"
+        );
     }
 
     /// Covers chunks_changed_from with mismatched grid sizes.
@@ -2634,7 +2667,10 @@ mod tests {
         let g1 = CaGrid::new([16, 16, 16]);
         let g2 = CaGrid::new([32, 16, 16]); // Different size
         let changed = g2.chunks_changed_from(&g1);
-        assert!(changed.is_empty(), "mismatched grids return empty change list");
+        assert!(
+            changed.is_empty(),
+            "mismatched grids return empty change list"
+        );
     }
 
     /// Covers dirty_owned_cell_indices with halo exclusion.
@@ -2667,7 +2703,10 @@ mod tests {
         let mut g2 = CaGrid::new([1, 1, 1]);
         g2.set(0, 0, 0, WATER);
         let changed = g2.chunks_changed_from(&g1);
-        assert!(changed.is_empty(), "zero-dim grid returns empty change list");
+        assert!(
+            changed.is_empty(),
+            "zero-dim grid returns empty change list"
+        );
     }
 
     /// Covers mark_dirty_cell with zero dimensions.
@@ -2749,9 +2788,9 @@ mod tests {
         let mut g = CaGrid::new([2, 2, 2]);
         g.set(0, 0, 0, BEDROCK);
         g.dirty_chunks.clear(); // No dirty chunks
-        let outcome = step(&mut g, reg());
-        assert!(!outcome.changed);
-        assert!(outcome.changed_chunks.is_empty());
+        let changed = step(&mut g, reg());
+        assert!(!changed);
+        assert!(g.last_changed_chunks.is_empty());
     }
 
     /// Covers write_back_world with empty changed_chunks.
@@ -2887,7 +2926,10 @@ mod tests {
         step_n_with_config(&mut g, reg(), 2, BoundaryConfig::closed(), 0);
         // Water should have transitioned to STEAM (phase_transition_pass, boiling_point=100).
         let result = g.get(0, 0, 0);
-        assert_eq!(result, STEAM, "WATER at 150°C must become STEAM via phase transition");
+        assert_eq!(
+            result, STEAM,
+            "WATER at 150°C must become STEAM via phase transition"
+        );
     }
 
     /// Covers salt_water boiling path.
@@ -2911,7 +2953,8 @@ mod tests {
         step_n_with_config(&mut g, reg(), 1, BoundaryConfig::closed(), 0);
         let result = g.get(0, 0, 0);
         assert_eq!(
-            result, crate::material::FIRE,
+            result,
+            crate::material::FIRE,
             "MOLTEN_METAL at boiling point must boil to FIRE"
         );
     }

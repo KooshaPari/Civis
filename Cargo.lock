@@ -6301,7 +6301,7 @@ dependencies = [
 
 [[package]]
 name = "paste-complete"
-version = "1.0.15"
+version = "0.2.3"
 
 [[package]]
 name = "pastey"

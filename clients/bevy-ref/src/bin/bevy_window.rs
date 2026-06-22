@@ -9,24 +9,9 @@ use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::ui::{FocusPolicy, RelativeCursorPosition};
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
 use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
-    chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv,
-    emergence_dashboard::EmergenceDashboardPlugin,
-    event_feed::{EventFeed, EventFeedPlugin},
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
-    focused_chunk_at_grid,
-    god_panel::GodPanelPlugin,
+    chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
@@ -43,25 +28,36 @@ use civ_bevy_ref::{
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame,
-        apply_voxel_delta_frame, default_stream_meshes, format_event_feed_message,
-        push_event_feed_to_hud_summary, sync_agent_labels_from_civilians, AgentLabelConfig,
-        LiveAgentTag, LiveBuildingTag, LiveChunkFade, LiveChunkTag, LiveGraphParcelTag,
-        LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
+        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
+        LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
+        StreamCulling,
+        LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
-    perf_hud::{PerfHudPlugin, PerfMetrics},
-    post_fx::PostFxPlugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    save_load_ui::SaveLoadUiPlugin,
-    tutorial::TutorialPlugin,
+    event_feed::{EventFeed, EventFeedPlugin},
+    emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, WsConnectionState,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
     VOXEL_CHUNK_EDGE,
+    post_fx::PostFxPlugin,
+    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
+use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -113,6 +109,7 @@ impl Default for ScenarioPanel {
         Self { seed_index: 0, speed_index: 0 }
     }
 }
+
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -231,9 +228,6 @@ impl Default for EmergencePollTimer {
     }
 }
 
-#[derive(Resource, Default)]
-struct EmergencePollTimer(f32);
-
 #[derive(Component)]
 struct ScenarioSeedLabel;
 
@@ -272,10 +266,12 @@ impl Default for EmergencePollTimer {
 fn main() {
     let mut app = App::new();
     app.add_plugins((
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Civis 3D — Bevy reference (live)".to_string(),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Civis 3D — Bevy reference (live)".to_string(),
+                        ..default()
+                    }),
                     ..default()
                 })
                 .set(native_render_plugin()),
@@ -342,9 +338,9 @@ fn main() {
                 update_presentation_lighting,
             ),
         )
-            .run_if(in_state(AppState::InGame)),
-    )
-    .run();
+        .run();
+            ),
+        );
 
     #[cfg(feature = "egui")]
     {
@@ -369,31 +365,9 @@ fn scenario_panel_input(
     mouse: Res<ButtonInput<MouseButton>>,
     mut panel: ResMut<ScenarioPanel>,
     bridge: Res<LiveBridge>,
-    mut seed_labels: Query<
-        &mut Text,
-        (
-            With<ScenarioSeedLabel>,
-            Without<ScenarioSpeedLabel>,
-            Without<ScenarioStartButton>,
-        ),
-    >,
-    mut speed_labels: Query<
-        &mut Text,
-        (
-            With<ScenarioSpeedLabel>,
-            Without<ScenarioSeedLabel>,
-            Without<ScenarioStartButton>,
-        ),
-    >,
-    mut preset_labels: Query<
-        &mut Text,
-        (
-            With<ScenarioPresetLabel>,
-            Without<ScenarioSeedLabel>,
-            Without<ScenarioSpeedLabel>,
-            Without<ScenarioStartButton>,
-        ),
-    >,
+    mut seed_labels: Query<&mut Text, (With<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
+    mut speed_labels: Query<&mut Text, (With<ScenarioSpeedLabel>, Without<ScenarioSeedLabel>, Without<ScenarioStartButton>)>,
+    mut preset_labels: Query<&mut Text, (With<ScenarioPresetLabel>, Without<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
     start_buttons: Query<&Interaction, With<ScenarioStartButton>>,
 ) {
     // Keyboard shortcuts: Left/Right cycle seeds; Up/Down cycle speeds; Enter launches.
@@ -401,28 +375,19 @@ fn scenario_panel_input(
         panel.seed_index = (panel.seed_index + 1) % NAMED_SEEDS.len();
     }
     if keys.just_pressed(KeyCode::ArrowLeft) {
-        panel.seed_index = panel
-            .seed_index
-            .checked_sub(1)
-            .unwrap_or(NAMED_SEEDS.len() - 1);
+        panel.seed_index = panel.seed_index.checked_sub(1).unwrap_or(NAMED_SEEDS.len() - 1);
     }
     if keys.just_pressed(KeyCode::ArrowDown) {
         panel.speed_index = (panel.speed_index + 1) % SPEED_OPTIONS.len();
     }
     if keys.just_pressed(KeyCode::ArrowUp) {
-        panel.speed_index = panel
-            .speed_index
-            .checked_sub(1)
-            .unwrap_or(SPEED_OPTIONS.len() - 1);
+        panel.speed_index = panel.speed_index.checked_sub(1).unwrap_or(SPEED_OPTIONS.len() - 1);
     }
     if keys.just_pressed(KeyCode::KeyP) {
         panel.preset_index = (panel.preset_index + 1) % PRESET_OPTIONS.len();
     }
     if keys.just_pressed(KeyCode::KeyO) {
-        panel.preset_index = panel
-            .preset_index
-            .checked_sub(1)
-            .unwrap_or(PRESET_OPTIONS.len() - 1);
+        panel.preset_index = panel.preset_index.checked_sub(1).unwrap_or(PRESET_OPTIONS.len() - 1);
     }
 
     // Rebuild seed label
@@ -430,13 +395,7 @@ fn scenario_panel_input(
         let label = NAMED_SEEDS
             .iter()
             .enumerate()
-            .map(|(i, (name, _))| {
-                if i == panel.seed_index {
-                    format!("[ {name} ]")
-                } else {
-                    name.to_string()
-                }
-            })
+            .map(|(i, (name, _))| if i == panel.seed_index { format!("[ {name} ]") } else { name.to_string() })
             .collect::<Vec<_>>()
             .join("  ");
         *text = Text::new(format!("Race: {label}"));
@@ -447,13 +406,7 @@ fn scenario_panel_input(
         let label = SPEED_OPTIONS
             .iter()
             .enumerate()
-            .map(|(i, (name, _))| {
-                if i == panel.speed_index {
-                    format!("[ {name} ]")
-                } else {
-                    name.to_string()
-                }
-            })
+            .map(|(i, (name, _))| if i == panel.speed_index { format!("[ {name} ]") } else { name.to_string() })
             .collect::<Vec<_>>()
             .join("  ");
         *text = Text::new(format!("Speed: {label}"));
@@ -464,13 +417,7 @@ fn scenario_panel_input(
         let label = PRESET_OPTIONS
             .iter()
             .enumerate()
-            .map(|(i, name)| {
-                if i == panel.preset_index {
-                    format!("[ {name} ]")
-                } else {
-                    name.to_string()
-                }
-            })
+            .map(|(i, name)| if i == panel.preset_index { format!("[ {name} ]") } else { name.to_string() })
             .collect::<Vec<_>>()
             .join("  ");
         *text = Text::new(format!("Preset: {label}"));
@@ -485,16 +432,11 @@ fn scenario_panel_input(
         let (_, seed) = NAMED_SEEDS[panel.seed_index];
         let (_, speed) = SPEED_OPTIONS[panel.speed_index];
         let preset = PRESET_OPTIONS[panel.preset_index];
-        bridge
-            .client
-            .send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
         bridge.client.send_rpc(
             "sim.load_scenario",
             serde_json::json!({ "preset": preset, "seed": seed }),
         );
-        bridge
-            .client
-            .send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
         info!("scenario launch: preset={preset} seed={seed} speed={speed}");
         bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
         bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
@@ -502,23 +444,13 @@ fn scenario_panel_input(
     }
 }
 
-fn drive_app_state(
-    bridge: Res<LiveBridge>,
-    current: Res<State<AppState>>,
-    mut next: ResMut<NextState<AppState>>,
-) {
+
+fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
     let ws = bridge.client.latest_connection_state();
     match (current.get(), ws) {
-        (AppState::Connecting, WsConnectionState::Connected) => {
-            next.set(AppState::InGame);
-        }
-        (AppState::InGame, WsConnectionState::Reconnecting)
-        | (AppState::InGame, WsConnectionState::Disconnected) => {
-            next.set(AppState::ConnectionLost);
-        }
-        (AppState::ConnectionLost, WsConnectionState::Connected) => {
-            next.set(AppState::InGame);
-        }
+        (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        (AppState::InGame, WsConnectionState::Reconnecting) | (AppState::InGame, WsConnectionState::Disconnected) => { next.set(AppState::ConnectionLost); }
+        (AppState::ConnectionLost, WsConnectionState::Connected) => { next.set(AppState::InGame); }
         _ => {}
     }
 }
@@ -600,26 +532,7 @@ fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOver
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    if let Some(root) = overlay.root.take() {
-        commands.entity(root).despawn_recursive();
-    }
-}
-
-const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-fn animate_splash(
-    mut overlay: ResMut<ConnectionOverlay>,
-    mut spinners: Query<&mut Text, With<SplashSpinner>>,
-) {
-    overlay.tick = overlay.tick.wrapping_add(1);
-    if overlay.tick % 4 != 0 {
-        return;
-    }
-
-    let frame = SPINNER_FRAMES[((overlay.tick / 4) as usize) % SPINNER_FRAMES.len()];
-    for mut text in &mut spinners {
-        **text = frame.to_string();
-    }
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -856,19 +769,10 @@ fn speed_control_input(
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused {
-        0
-    } else {
-        SPEED_OPTIONS[speed.speed_idx]
-    };
-    let json = format!(
-        r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#,
-        speed.multiplier
-    );
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
+    let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
-}
-
 fn action_pressed(
     #[cfg(feature = "egui")] settings: Option<&GameSettings>,
     action: &str,
@@ -882,11 +786,9 @@ fn action_pressed(
             .and_then(|s| s.key_for(action))
             .unwrap_or(default)
             .is_pressed(keys, mouse_buttons)
-    }
     #[cfg(not(feature = "egui"))]
     {
         default.is_pressed(keys, mouse_buttons)
-    }
 }
 
 fn sync_chunk_debug_render(
@@ -1005,7 +907,8 @@ fn orbit_camera_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut motion_events: MessageReader<MouseMotion>,
     mut scroll_events: MessageReader<MouseWheel>,
-    #[cfg(feature = "egui")] settings: Option<Res<GameSettings>>,
+    #[cfg(feature = "egui")]
+    settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
     minimap: Query<&Interaction, With<MinimapPanel>>,
 ) {
@@ -1072,9 +975,7 @@ fn orbit_camera_input(
         }
         #[cfg(not(feature = "egui"))]
         {
-            keys.just_pressed(KeyCode::Equal)
-                || keys.just_pressed(KeyCode::NumpadAdd)
-                || keys.just_pressed(KeyCode::BracketLeft)
+            keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::NumpadAdd) || keys.just_pressed(KeyCode::BracketLeft)
         }
     };
     let zoom_out = {
@@ -1124,28 +1025,16 @@ fn orbit_camera_input(
         }
     };
 
-    if pan_pressed(
-        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_FORWARD,
-        KeyCode::KeyW,
-    ) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_FORWARD, KeyCode::KeyW) {
         forward += pan;
     }
-    if pan_pressed(
-        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_BACKWARD,
-        KeyCode::KeyS,
-    ) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_BACKWARD, KeyCode::KeyS) {
         forward -= pan;
     }
-    if pan_pressed(
-        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_LEFT,
-        KeyCode::KeyA,
-    ) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_LEFT, KeyCode::KeyA) {
         right -= pan;
     }
-    if pan_pressed(
-        civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_RIGHT,
-        KeyCode::KeyD,
-    ) {
+    if pan_pressed(civ_bevy_ref::settings_ui::ACTION_CAMERA_MOVE_RIGHT, KeyCode::KeyD) {
         right += pan;
     }
     if right != 0.0 || forward != 0.0 {
@@ -1400,13 +1289,15 @@ fn update_minimap(
                 false,
             );
         }
+
     });
 }
 
 fn minimap_click_focus(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    #[cfg(feature = "egui")] settings: Option<Res<GameSettings>>,
+    #[cfg(feature = "egui")]
+    settings: Option<Res<GameSettings>>,
     panels: Query<(&Interaction, &RelativeCursorPosition), With<MinimapPanel>>,
     cache: Res<MinimapCache>,
     scene: Res<LiveStreamScene>,
@@ -1424,34 +1315,30 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-        // Right-click: open inspect popup
-        if mouse.just_pressed(MouseButton::Right) {
-            if let Ok((interaction, cursor)) = panels.single() {
-                if *interaction != Interaction::None {
-                    if let Some(normalized) = cursor.normalized {
-                        let uv = inset_minimap_uv_from_cursor(normalized);
-                        let (tx, ty) = if cache.use_focus_bounds {
-                            if let Some(focus) = cache.focus {
-                                let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                                (x as i32, z as i32)
-                            } else {
-                                (0, 0)
-                            }
-                        } else if let Some(bounds) = cache.bounds {
-                            let (cx, cz) = minimap_uv_to_chunk_grid(
-                                inset_minimap_uv_from_cursor(normalized),
-                                bounds,
-                            );
-                            (cx, cz)
+    // Right-click: open inspect popup
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Ok((interaction, cursor)) = panels.single() {
+            if *interaction != Interaction::None {
+                if let Some(normalized) = cursor.normalized {
+                    let uv = inset_minimap_uv_from_cursor(normalized);
+                    let (tx, ty) = if cache.use_focus_bounds {
+                        if let Some(focus) = cache.focus {
+                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                            (x as i32, z as i32)
                         } else {
                             (0, 0)
-                        };
-                        popup.pending = Some((tx, ty));
-                    }
+                        }
+                    } else if let Some(bounds) = cache.bounds {
+                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                        (cx, cz)
+                    } else {
+                        (0, 0)
+                    };
+                    popup.pending = Some((tx, ty));
                 }
             }
-            return;
         }
+        return;
     }
     // Suppress unused warning — bridge is available for future left-click RPCs.
     let _ = &bridge;
@@ -1504,7 +1391,8 @@ fn minimap_click_focus(
 fn viewport_chunk_raycast(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    #[cfg(feature = "egui")] settings: Option<Res<GameSettings>>,
+    #[cfg(feature = "egui")]
+    settings: Option<Res<GameSettings>>,
     windows: Query<&Window>,
     cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     minimap: Query<&Interaction, With<MinimapPanel>>,

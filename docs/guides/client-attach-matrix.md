@@ -2,18 +2,18 @@
 
 Single reference for how each client talks to **civ-server** (WS JSON-RPC + optional F3D0) and **civ-watch** (HTTP terrain / legacy controls).
 
-| Client | Primary attach | Default URL | Terrain | Snapshot / pins | Spawn / place | F3D0 voxels | Spectator default |
-|--------|----------------|-------------|---------|-----------------|---------------|-------------|-------------------|
-| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **VoxelDelta** chunk overlays + snapshot throttle | `spectator_mode=true` |
-| **Godot** watch mode | `attach_mode=watch` | HTTP `http://127.0.0.1:9090` | Same | SSE / poll via watch | `POST /control/*` when not spectator | — | — |
-| **Web dashboard** | civ-watch HTTP + optional WS | `http://127.0.0.1:9090`, dev `5173` | `/terrain` | `/snapshot` or WS | L2 authoring routes | — | `spectator_mode=false` |
-| **Bevy window** | civ-server WS | `ws://127.0.0.1:3000/ws?tick_format=binary` | Optional watch HTTP | `sim.snapshot` side-channel | WS spawn RPCs | Binary F3D0 path | N/A (tooling) |
-| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **VoxelDelta** chunk markers (`OnF3d0FrameReceived`) | Editor PIE |
-| **civ-server tests** | In-process | `127.0.0.1:3000` | — | JSON-RPC | Full RPC surface | Replay tests | — |
+| Client | Primary attach | Default URL | Terrain | Snapshot / pins | Spawn / place | F3D0 voxels | Default mode | Exact override | Validation command |
+|--------|----------------|-------------|---------|-----------------|---------------|-------------|--------------|---------------|-------------------|
+| **Godot** (`clients/godot-ref`) | `attach_mode=server` | WS `ws://127.0.0.1:3000/ws?tick_format=binary` | HTTP `http://127.0.0.1:9090/terrain` | `sim.snapshot` on WS (F3D0-throttled) | WS: `sim.spawn_civilian`, `sim.place_voxel` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers + throttle | Spectator by default (`spectator_mode=true`) | Inspector toggle to `spectator_mode=false` | `cargo run -p civ-server` |
+| **Godot** watch mode | `attach_mode=watch` | HTTP `http://127.0.0.1:9090` | Same | SSE / poll via watch | `POST /control/*` when not spectator | — | Spectator / read-only by default | Set the same `spectator_mode` / authoring override used by the embedding scene | `cargo run -p civ-watch` |
+| **Web dashboard** | civ-watch HTTP + optional WS | `http://127.0.0.1:9090`, dev `5173` | `/terrain` | `/snapshot` or WS | L2 authoring routes | — | Authoring by default (`spectator_mode=false`) | `?spectator=1` or `?authoring=0` | `cd web && npm run build` |
+| **Bevy window** | civ-server WS | `ws://127.0.0.1:3000/ws?tick_format=binary` | Optional watch HTTP | `sim.snapshot` side-channel | WS spawn RPCs | Binary F3D0 path | N/A (tooling) | N/A | `just civis-3d-verify` |
+| **Unreal CivShow** | WS + watch HTTP | Same as Godot defaults in `CivShowGameMode` | `UCivProtocolClient` → `/terrain` | `UCivWsClient` → `sim.snapshot` | WS `sim.spawn_*` + HTTP `POST /control/*` | **16³ procedural mesh** when dense `voxels` (4096); else chunk markers (`OnF3d0FrameReceived`) | Editor PIE / authoring session | PIE session, or the project-specific auth path that flips `spectator_mode` off | `.\clients\unreal-show\scripts\build.ps1` |
+| **civ-server tests** | In-process | `127.0.0.1:3000` | — | JSON-RPC | Full RPC surface | Replay tests | N/A | N/A | `just civis-3d-catalog-check` |
 
 ### UX-05 — `spectator_mode` defaults
 
-ADR-009: web is **L2 authoring by default**; Godot is **spectator by default** (WorldBox-style observer until Inspector toggle). Use explicit overrides for demos so both clients match intent.
+ADR-009: web is **L2 authoring by default**; Godot is **spectator by default** (WorldBox-style observer until Inspector toggle). Use explicit overrides for demos so both clients match intent, and prefer the override that matches the client entry in the matrix above.
 
 | Client | Default | How to override | When authoring enabled | Hidden / disabled tools |
 |--------|---------|-----------------|------------------------|-------------------------|
@@ -45,8 +45,8 @@ Unreal: `UCivWsClient::SpawnEntity` / `UCivProtocolClient::SpawnEntity` — HTTP
 |--------|--------|
 | Bevy | 160×160 chunk dots; click-to-focus — [`minimap-conventions.md`](minimap-conventions.md) |
 | Godot | 128×128 terrain texture + orbit dot |
-| Web dashboard | Terrain preview canvas; no click-to-focus yet |
-| **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho) + `UCivMinimapWidget` UMG in `CivShowGameMode`; no click-to-focus yet |
+| Web dashboard | 160×160 terrain canvas; **left-click** → UV → chunk grid → `set_camera_focus` — [`minimap-conventions.md`](minimap-conventions.md) |
+| **Unreal CivShow** | **Partial** — `ACivMinimapCapture` (256² ortho at ~(64,800,64), width 512) + `UCivMinimapWidget` UMG; **left-click** → UV → world XZ → `ACivShowGameMode::FocusCameraAtWorldLocation` |
 
 ## Services to start (local demo)
 
@@ -71,7 +71,7 @@ cargo run -p civ-watch
 ## Parity gaps (see maturity audit)
 
 - `civ_pins.job` may be `null` until spawn sets `Citizen.job` (Unreal `CivisJobColors` ready when wired).
-- F3D0 **full mesh**: Bevy renders `Frame3d` voxels; Godot shows chunk **markers** on `VoxelDelta`; Unreal throttles snapshot only.
+- F3D0 mesh: Bevy full `Frame3d`; Godot/Unreal **16³ procedural mesh** when `deltas[].voxels` has 4096 ids, else chunk markers.
 
 ## Related docs
 

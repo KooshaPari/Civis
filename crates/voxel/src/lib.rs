@@ -27,6 +27,50 @@ pub use phenotype_voxel::{
     VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
+pub mod boundary;
+pub use boundary::{BoundaryConfig, BoundaryFace, BoundaryMode, Bounds3};
+pub mod fluid_ca;
+pub mod hud;
+pub mod lod;
+pub mod material;
+pub mod material_pbr;
+pub mod reactions;
+pub mod scale_budget;
+pub mod stream;
+pub mod window;
+pub mod worldgen;
+
+pub use hud::{
+    DiplomacyFsm, DiplomacyPanel, EventFeed, EventFeedItem, EventSeverity, MenuKind, MenuStack,
+    MenuStackError, TechNode, TechTree, TechTreeError, ToolEntry, ToolPalette, ToolPaletteError,
+    TreatySlot, HUB_PALETTE_SCHEMA_VERSION, HUB_TECH_SCHEMA_VERSION,
+};
+pub use material_pbr::{
+    AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
+    GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
+    MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
+    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction, TextureChannelMap,
+    TriplanarLayer, TriplanarSplatPlan, SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
+};
+
+pub use scale_budget::{
+    CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
+    MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,
+};
+pub use stream::{
+    ChunkStorePort, FsChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE,
+    CHUNK_EDGE_I32,
+};
+pub use window::io::{IoContract, MaterializedSnapshot, IO_CONTRACT_VERSION};
+pub use window::plan::{
+    prefetch_set, ChunkOffsetIter, ScaleReport, VelocityChunksPerTick, DEFAULT_PREFETCH_TICKS,
+    P99_SAMPLE_CAP,
+};
+pub use window::ring_iter::RingIter;
+pub use window::{ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy};
+pub use lod::{drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, ChunkDirty};
+pub use worldgen::HeightFieldGen;
+
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

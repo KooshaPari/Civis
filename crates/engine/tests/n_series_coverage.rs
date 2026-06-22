@@ -9,8 +9,7 @@
 //! - N7  sentience pipeline stability — no panic with no / many tick cycles
 
 use civ_agents::culture::{cultural_distance, CultureProfile};
-use civ_engine::{Simulation, TradeRoute};
-use fixed::types::I48F16 as Fixed;
+use civ_engine::{Fixed, Simulation, TradeRoute};
 
 // ── N1: market food price responds to stock conditions ────────────────────
 
@@ -93,12 +92,12 @@ fn n3_multi_faction_sim_emits_diplomacy_events() {
     for ev in events {
         assert!(
             sim.state.factions.contains_key(&ev.faction_a),
-            "faction_a {} missing from sim.state.factions",
+            "faction_a {:?} missing from sim.state.factions",
             ev.faction_a
         );
         assert!(
             sim.state.factions.contains_key(&ev.faction_b),
-            "faction_b {} missing from sim.state.factions",
+            "faction_b {:?} missing from sim.state.factions",
             ev.faction_b
         );
     }
@@ -219,8 +218,7 @@ fn n7_fresh_sim_cluster_cultures_empty_at_tick_zero() {
     let cultures = sim.cluster_cultures();
     assert!(
         cultures.is_empty(),
-        "cluster_cultures must be empty before any tick, got {}",
+        "cluster_cultures must be empty before any tick, got {:?}",
         cultures.len()
     );
 }
-

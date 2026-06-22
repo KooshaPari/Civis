@@ -38,8 +38,14 @@ impl LodPolicy {
     pub fn cadence_for(self, tier: LodTier) -> u64 {
         match tier {
             LodTier::Hot => 1,
-            LodTier::Warm => self.warm_cadence,
-            LodTier::Cold => self.cold_cadence,
+            LodTier::Warm => {
+                assert!(self.warm_cadence > 0, "warm cadence must be > 0");
+                self.warm_cadence
+            }
+            LodTier::Cold => {
+                assert!(self.cold_cadence > 0, "cold cadence must be > 0");
+                self.cold_cadence
+            }
         }
     }
 }
@@ -55,8 +61,7 @@ pub fn should_tick_entity(tick: u64, tier: LodTier) -> bool {
 pub fn should_tick_entity_with_policy(tick: u64, tier: LodTier, policy: LodPolicy) -> bool {
     match tier {
         LodTier::Hot => true,
-        LodTier::Warm => tick % policy.warm_cadence == 0,
-        LodTier::Cold => tick % policy.cold_cadence == 0,
+        LodTier::Warm | LodTier::Cold => tick % policy.cadence_for(tier) == 0,
     }
 }
 
@@ -91,7 +96,7 @@ pub fn project_zoom(state_tick: u64, zoom: ZoomLevel) -> (u64, ZoomLevel) {
 mod tests {
     use super::*;
 
-    /// Covers FR-LOD-001.
+    /// FR-LOD-001 — strategic and operational zoom levels are defined.
     #[test]
     fn two_levels_defined() {
         let levels = [ZoomLevel::Strategic, ZoomLevel::Operational];
@@ -99,14 +104,14 @@ mod tests {
         assert_ne!(levels[0], levels[1]);
     }
 
-    /// Covers FR-LOD-002.
+    /// FR-LOD-002 — strategic view aggregates district data.
     #[test]
     fn strategic_aggregation() {
         assert_eq!(aggregate_strategic(&[100, 200, 50]), 350);
         assert_eq!(aggregate_strategic(&[]), 0);
     }
 
-    /// Covers FR-LOD-003.
+    /// FR-LOD-003 — zoom transitions do not alter simulation tick state.
     #[test]
     fn transition_no_state_mutation() {
         let tick = 42_u64;
@@ -116,7 +121,7 @@ mod tests {
         assert_eq!(operational_tick, tick);
     }
 
-    /// Covers FR-LOD-004.
+    /// FR-LOD-004 — operational view exposes hex-cell resource and population data.
     #[test]
     fn operational_hex_data_visible() {
         let cell = operational_hex_snapshot(12, 500);
@@ -149,5 +154,15 @@ mod tests {
         assert_eq!(policy.cadence_for(LodTier::Hot), 1);
         assert_eq!(policy.cadence_for(LodTier::Warm), 4);
         assert_eq!(policy.cadence_for(LodTier::Cold), 16);
+    }
+
+    #[test]
+    #[should_panic(expected = "warm cadence must be > 0")]
+    fn should_tick_entity_rejects_zero_warm_cadence() {
+        let policy = LodPolicy {
+            warm_cadence: 0,
+            cold_cadence: 16,
+        };
+        let _ = should_tick_entity_with_policy(4, LodTier::Warm, policy);
     }
 }

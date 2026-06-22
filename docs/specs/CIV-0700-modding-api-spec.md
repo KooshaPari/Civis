@@ -2653,7 +2653,17 @@ fuzz_target!(|data: &[u8]| {
 
 Fuzz targets run in CI for 60 seconds per target per PR using `cargo fuzz run --jobs 4 -- -max_total_time=60`.
 
-### 16.4 Example Mods in CI
+### 16.4 Finish-Readiness Gates
+
+A release candidate for the modding surface is only considered finish-ready when all of the following are true:
+
+- The native mock-host unit tests cover the deterministic policy and action-shape paths that the spec promises.
+- At least one integration test loads a real compiled WASM mod into a headless simulation and verifies the resulting state change.
+- Timeout behavior is exercised explicitly so a callback that exceeds the 50 µs budget is discarded rather than partially applied.
+- Load validation has coverage for both unsigned-mod rejection in production and non-deterministic instruction rejection at module load time.
+- Fuzz targets remain enabled for WASM parsing, action deserialization, and manifest parsing so malformed inputs cannot regress into panics.
+
+### 16.5 Example Mods in CI
 
 All four example mods from Section 13 are built and run in CI on every PR. The CI pipeline:
 

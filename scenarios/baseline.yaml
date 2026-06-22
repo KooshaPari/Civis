@@ -3,28 +3,5 @@ tick_start: 0
 population: 1000000
 base_consumption_joules: 5000000000
 scarcity_multiplier: 1.0
-fog_vision_radius: 8
-fog_grid_size: 64
-military:
-  movement_cadence_ticks: 4
-  movement_pulses_per_cadence: 2
-  war_cadence_ticks: 16
-  engage_range_grid: 10
 mods:
   - mods/example-policy
-  - mods/example-economic
-seeds:
-  - scenarios/canonical_seeds.ron
-active_seed: raw_organism
-# divergence_override: 0.5  # Optional: overrides the seed's divergence dial (0.0=clone, 1.0=full drift)
-# starting_conditions:       # Optional: override spawn defaults (all fields default-able)
-#   civilians_per_faction: 32
-#   faction_count: 4
-#   quadrant_spread: 2500
-#   seed_mix:                 # Optional weighted race mix (omit for default Ardani/Velthari/Grundak round-robin)
-#     - seed: Ardani
-#       weight: 0.6
-#     - seed: Velthari
-#       weight: 0.3
-#     - seed: Grundak
-#       weight: 0.1

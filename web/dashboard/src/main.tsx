@@ -25,7 +25,11 @@ function App() {
   const { state, dispatch } = useDashboardStore();
   const previousSnapshotRef = useRef<Snapshot | null>(null);
   useCivisAttach(dispatch);
-  useFramePerfMock(state.connection, dispatch);
+  useFramePerfMock(
+    state.connection,
+    state.inspectorOpen && state.activeSideTab === "inspector",
+    dispatch,
+  );
 
   useEffect(() => {
     if (!state.toast) return;
@@ -93,6 +97,11 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
       (event) => `${event.x}:${event.y}:${event.unit_a ?? ""}:${event.unit_b ?? ""}`,
     ),
   );
+  const prevDisasterKeys = new Set(
+    previous.disaster_events.map(
+      (event) => `${event.tick}:${event.kind}:${event.x}:${event.y}:${event.radius}:${event.severity}`,
+    ),
+  );
   const prevDiplomacyKeys = new Set(previous.diplomacy_events.map((event) => `${event.tick}:${event.faction_a}:${event.faction_b}:${event.kind}`));
   const prevEventKeys = new Set(previous.events.map((event) => `${event.tick}:${event.kind}:${event.message}:${event.faction_id ?? "n"}`));
 
@@ -138,6 +147,20 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
       focus: [event.x, event.y],
     });
   });
+  snapshot.disaster_events.forEach((event, index) => {
+    const key = `${event.tick}:${event.kind}:${event.x}:${event.y}:${event.radius}:${event.severity}`;
+    if (prevDisasterKeys.has(key)) return;
+    add({
+      id: Number(`${snapshot.tick}${Math.round(event.x * 1000)}${Math.round(event.y * 1000)}7${index}`),
+      tick: event.tick,
+      kind: "disaster",
+      icon: "⚠️",
+      message: `${event.kind} at ${event.x.toFixed(2)}, ${event.y.toFixed(2)} (r ${event.radius.toFixed(
+        0,
+      )}, sev ${event.severity.toFixed(0)})`,
+      focus: [event.x, event.y],
+    });
+  });
   snapshot.diplomacy_events.forEach((event, index) => {
     const key = `${event.tick}:${event.faction_a}:${event.faction_b}:${event.kind}`;
     if (prevDiplomacyKeys.has(key)) return;
@@ -177,7 +200,34 @@ function buildNotifications(snapshot: Snapshot, previous: Snapshot, existing: No
     }
   });
 
+  items.sort((a, b) => {
+    const tickDelta = b.tick - a.tick;
+    if (tickDelta !== 0) return tickDelta;
+    return notificationPriority(a.kind) - notificationPriority(b.kind);
+  });
+
   return items.slice(0, 5);
+}
+
+function notificationPriority(kind: NotificationItem["kind"]) {
+  switch (kind) {
+    case "disaster":
+      return 0;
+    case "death":
+      return 1;
+    case "damage":
+      return 2;
+    case "diplomacy":
+      return 3;
+    case "birth":
+      return 4;
+    case "tech":
+      return 5;
+    case "trade":
+      return 6;
+    default:
+      return 99;
+  }
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use civ_voxel::{ChunkId, MaterialId};
+use civ_voxel::{material::WATER, ChunkId, MaterialId};
 
 use crate::{decode_chunk_id, terrain::terrain_surface_y};
 
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn voxel_column_surface_finds_top_solid() {
         let mut voxels = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
-        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
+        voxels[voxel_index(4, 3, 5)] = WATER;
         let id = encode_chunk_id(0, 0, 0);
         let mut cache = ChunkVoxelCache::new();
         cache.insert(id, voxels);
@@ -102,5 +102,23 @@ mod tests {
         let y = live_ground_y(&cache, 64.0, 128.0, offset);
         let expected = terrain_surface_y(64.0, 128.0) + offset;
         assert!((y - expected).abs() < 0.01);
+    }
+
+    #[test]
+    fn chunk_seam_watertight() {
+        let mut left = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        let mut right = vec![MaterialId(0); CHUNK_EDGE * CHUNK_EDGE * CHUNK_EDGE];
+        left[voxel_index(15, 2, 8)] = WATER;
+        right[voxel_index(0, 5, 8)] = WATER;
+
+        let mut cache = ChunkVoxelCache::new();
+        cache.insert(encode_chunk_id(0, 0, 0), left);
+        cache.insert(encode_chunk_id(1, 0, 0), right);
+
+        let left_surface = live_voxel_surface_y(&cache, 15.5, 8.5).expect("left surface");
+        let right_surface = live_voxel_surface_y(&cache, 16.5, 8.5).expect("right surface");
+
+        assert_eq!(left_surface, 3.0);
+        assert_eq!(right_surface, 6.0);
     }
 }

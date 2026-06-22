@@ -145,8 +145,10 @@ mod tests {
 
     #[test]
     fn apply_preset_clears_mute_and_records_change() {
-        let mut m = AudioMix::default();
-        m.master_mute = true;
+        let mut m = AudioMix {
+            master_mute: true,
+            ..Default::default()
+        };
 
         let prev = m.apply_preset(AudioMixPreset::Casual);
         assert_eq!(prev, Some(AudioMixPreset::Reference));

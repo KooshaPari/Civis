@@ -1,0 +1,9 @@
+C:\Users\koosh\Dev\Civis\target-audit\release\deps\bevy_render_macros-ef368c1fa7ccce12.d: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\as_bind_group.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\extract_component.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\extract_resource.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\specializer.rs
+
+C:\Users\koosh\Dev\Civis\target-audit\release\deps\bevy_render_macros-ef368c1fa7ccce12.dll: C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\lib.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\as_bind_group.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\extract_component.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\extract_resource.rs C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\specializer.rs
+
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\lib.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\as_bind_group.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\extract_component.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\extract_resource.rs:
+C:\Users\koosh\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\bevy_render_macros-0.18.1\src\specializer.rs:

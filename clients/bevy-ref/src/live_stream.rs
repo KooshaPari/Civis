@@ -18,11 +18,12 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
-    agent_color_from_id, agent_label_stub, agent_scale_multiplier, chunk_distance_from_camera,
-    decode_chunk_id, mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind,
-    SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
+    mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
+    AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
 
 /// Chunk edge length in voxels (matches kernel).
@@ -122,6 +123,8 @@ pub struct LiveStreamScene {
     pub faction_entries: Vec<civ_protocol_3d::FactionStateEntry>,
     /// Max era from the latest faction state frame (HUD era chip).
     pub faction_era: u16,
+    /// Civilian count per faction id from the latest FactionState frame (FR-CIV-PROTO-001).
+    pub population_by_faction: std::collections::BTreeMap<u32, u32>,
 }
 
 impl Default for LiveStreamScene {
@@ -144,6 +147,7 @@ impl Default for LiveStreamScene {
             factions: HashSet::default(),
             faction_entries: Vec::new(),
             faction_era: 0,
+            population_by_faction: std::collections::BTreeMap::new(),
         }
     }
 }
@@ -172,6 +176,7 @@ pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStat
     scene
         .factions
         .extend(scene.faction_entries.iter().map(|entry| entry.id));
+    scene.population_by_faction = frame.population_by_faction;
 }
 
 /// Maps a `FactionState` wire frame into [`DiplomacyState`] for the egui panel.
@@ -594,7 +599,13 @@ pub fn apply_agent_appearance_frame_with_labels(
         let rgb = agent_color_from_id(update.agent_id);
         let scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
+        if !x.is_finite() || !z.is_finite() || !scale.is_finite() {
+            continue;
+        }
         let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
+        if !y.is_finite() {
+            continue;
+        }
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -620,7 +631,11 @@ pub fn apply_agent_appearance_frame_with_labels(
                 })
                 .id();
             if labels.enabled {
-                let label = agent_label_stub(update.agent_id, None);
+                let label = scene
+                    .civilian_entries
+                    .get(&update.agent_id)
+                    .map(civilian_display_name)
+                    .unwrap_or_else(|| format!("#{}", update.agent_id));
                 commands.entity(entity).with_children(|parent| {
                     parent.spawn((
                         Text2d::new(label),
@@ -639,6 +654,29 @@ pub fn apply_agent_appearance_frame_with_labels(
             MeshMaterial3d(material_handle),
             transform,
         ));
+    }
+}
+
+/// Refreshes floating agent labels from the latest civilian snapshot.
+#[cfg(feature = "bevy")]
+pub fn sync_agent_labels_from_civilians(
+    scene: Res<LiveStreamScene>,
+    agents: Query<(&LiveAgentTag, &Children)>,
+    mut labels: Query<&mut Text2d, With<LiveAgentLabel>>,
+) {
+    for (agent, children) in &agents {
+        let label = scene
+            .civilian_entries
+            .get(&agent.id)
+            .map(civilian_display_name)
+            .unwrap_or_else(|| format!("#{}", agent.id));
+        for &child in children.iter() {
+            let Ok(mut text) = labels.get_mut(child) else {
+                continue;
+            };
+            *text = Text2d::new(label.clone());
+            break;
+        }
     }
 }
 
@@ -678,6 +716,9 @@ pub fn apply_building_diff_frame(
 
     for entry in buildings {
         let (base_color, emissive, roughness) = building_material_style(entry.kind, provenance);
+        if !entry.position.x.is_finite() || !entry.position.z.is_finite() {
+            continue;
+        }
         let material_handle = scene
             .building_materials
             .entry(entry.id)
@@ -702,6 +743,9 @@ pub fn apply_building_diff_frame(
             entry.position.z,
             BUILDING_GROUND_Y,
         );
+        if !ground.is_finite() {
+            continue;
+        }
         let transform = Transform::from_xyz(entry.position.x, ground, entry.position.z);
         let entity = *scene
             .buildings
@@ -875,6 +919,7 @@ mod tests {
     use crate::encode_chunk_id;
     use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
+    use civ_voxel::material::WATER;
     use civ_voxel::MaterialId;
 
     const CHUNK_VOXELS: usize = LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE;
@@ -885,7 +930,7 @@ mod tests {
 
     fn solid_chunk_voxels() -> Vec<MaterialId> {
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
+        voxels[voxel_index(4, 3, 5)] = WATER;
         voxels
     }
 

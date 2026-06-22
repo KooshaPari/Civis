@@ -3,7 +3,7 @@
 //!
 //! Components live in a shared `hecs::World`. This crate ships:
 //!
-//! - `Civilian` — identity + age + alignment
+//! - `Civilian` — identity + age + faction
 //! - `Wardrobe` — current clothing era + material slot (diffusion-driven)
 //! - `Tools` — current tool era + material slot (diffusion-driven)
 //! - `Needs` — utility-AI scalar weights (food, shelter, safety, belonging)
@@ -21,178 +21,25 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod cluster;
-pub mod culture;
-pub mod daily_path;
-pub mod diplomacy;
-pub mod psyche;
-pub mod social;
-
-pub use cluster::{
-    cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
-    ClusterMember, MembershipPayoff,
-};
-pub use daily_path::{
-    choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
-    wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
-};
-pub use diplomacy::{
-    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
-};
-pub use psyche::{
-    belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
-    PSYCHE_DIM,
-};
-pub use social::{
-    apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,
-    SocialEvent, SocialGraph, Tie, MAX_TIES,
-};
-
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};
 use civ_voxel::{MaterialId, WorldCoord};
 use hecs::World;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Schema version. Bumped on breaking changes.
-pub const SCHEMA_VERSION: &str = "0.1.0";
-
-/// Minimum number of positive social ties required to form a new faction.
-/// A "positive" tie is one with affinity >= FRIEND_AFFINITY_THRESHOLD or
-/// kinship >= KIN_THRESHOLD.
-pub const FORM_FACTION_COHESION: usize = 3;
-
-/// Minimum number of existing ties to current faction members required to join
-/// an existing faction.
-pub const JOIN_FACTION_ACCEPTANCE: usize = 2;
-
-/// Affinity floor above which a cooperative tie counts as "positive" for
-/// faction cohesion. A single cooperative interaction (affinity > 0) qualifies;
-/// hostile ties (affinity <= 0) do not.
-pub const FRIEND_AFFINITY_THRESHOLD: f32 = 0.0;
-
-/// Kinship threshold above which a tie is considered "kin" for faction
-/// formation/joining purposes.
-pub const KIN_THRESHOLD: f32 = 0.5;
-
-/// Returns true if the tie is positive (cooperative or kin) for faction cohesion.
-fn is_positive_tie(tie: &Tie) -> bool {
-    tie.affinity > FRIEND_AFFINITY_THRESHOLD || tie.kinship >= KIN_THRESHOLD
-}
-
-/// Which CC0 glTF rig the Bevy client should render for this agent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ActorVisualKind {
-    /// Humanoid civilian (KayKit Knight / capsule fallback).
-    Humanoid,
-    /// Non-combat herd / fauna (skeleton minion rig).
-    Herd,
-}
-
-/// Marks the visual model variant chosen at spawn (herd tool vs organism).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ActorVisual(pub ActorVisualKind);
+pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
 /// Civilian identity component.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Civilian {
     /// Stable agent ID.
     pub id: u64,
-    /// Emergent alignment: none, a faction, or another life-framework entity.
-    pub alignment: Alignment,
+    /// Faction this civilian belongs to.
+    pub faction: u32,
     /// Age in years (game-time).
     pub age: u16,
-}
-
-/// Emergent political/social alignment for a civilian.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
-pub enum Alignment {
-    /// Civilian has not aligned yet.
-    #[default]
-    None,
-    /// Civilian aligns to an existing faction.
-    Faction(u32),
-    /// Civilian aligns to another life-framework entity by id.
-    OtherEntity(u64),
-}
-
-impl Alignment {
-    /// Construct an explicit faction alignment.
-    pub const fn with_faction(faction_id: u32) -> Self {
-        Self::Faction(faction_id)
-    }
-
-    /// Construct an explicit entity alignment.
-    pub const fn with_entity(entity_id: u64) -> Self {
-        Self::OtherEntity(entity_id)
-    }
-
-    /// Attempt to form a new faction with this agent as founder (FR-CIV-EMERGENCE-001).
-    ///
-    /// Formation is gated on emergent social cohesion: the founder must hold at
-    /// least [`FORM_FACTION_COHESION`] positive ties (cooperative or kin). Below
-    /// that, no faction coalesces and the alignment is left unchanged.
-    pub fn form_faction(self, graph: &SocialGraph, new_faction_id: u32, _founder_id: u64) -> Self {
-        let cohesion = graph.ties.iter().filter(|tie| is_positive_tie(tie)).count();
-        if cohesion >= FORM_FACTION_COHESION {
-            Self::Faction(new_faction_id)
-        } else {
-            self
-        }
-    }
-
-    /// Attempt to join an existing faction (FR-CIV-EMERGENCE-002).
-    ///
-    /// Joining is gated on social acceptance: the joiner must hold at least
-    /// [`JOIN_FACTION_ACCEPTANCE`] positive ties to current `members` of the
-    /// target faction. Ties to non-members and hostile ties do not count.
-    pub fn join_faction(
-        self,
-        graph: &SocialGraph,
-        faction_id: u32,
-        _agent_id: u64,
-        members: &[u64],
-    ) -> Self {
-        let acceptance = graph
-            .ties
-            .iter()
-            .filter(|tie| members.contains(&tie.other) && is_positive_tie(tie))
-            .count();
-        if acceptance >= JOIN_FACTION_ACCEPTANCE {
-            Self::Faction(faction_id)
-        } else {
-            self
-        }
-    }
-}
-
-/// Infer alignment for a new spawn at `(x, y)`.
-///
-/// Returns the majority non-None alignment among all civilians within a
-/// `SPAWN_RADIUS` of the spawn point. This is the minimal slice of
-/// FR-CIV-EMERGENCE-010 (kinship proximity) and FR-CIV-EMERGENCE-002
-/// (agent bootstrap from local context).
-pub fn infer_alignment_for_spawn(world: &World, x: f32, y: f32) -> Alignment {
-    const SPAWN_RADIUS: f32 = 0.05;
-    let mut counts: HashMap<Alignment, usize> = HashMap::new();
-    for (_, (civilian, pos)) in world.query::<(&Civilian, &Position3d)>().iter() {
-        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
-        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
-        let dx = px - x;
-        let dy = py - y;
-        let dist_sq = dx * dx + dy * dy;
-        if dist_sq <= SPAWN_RADIUS * SPAWN_RADIUS {
-            *counts.entry(civilian.alignment).or_insert(0) += 1;
-        }
-    }
-    counts
-        .into_iter()
-        .filter(|(alignment, _)| *alignment != Alignment::None)
-        .max_by_key(|(_, count)| *count)
-        .map(|(alignment, _)| alignment)
-        .unwrap_or(Alignment::None)
 }
 
 /// Wardrobe state. The `era` is the civilian's currently worn-tech era;
@@ -333,7 +180,7 @@ pub fn child_bundle_from_parent(rng: &mut ChaCha8Rng) -> CivilianBundle {
 pub fn spawn_child_near(
     world: &mut World,
     id: u64,
-    alignment: Alignment,
+    faction: u32,
     x: f32,
     y: f32,
     rng: &mut ChaCha8Rng,
@@ -344,7 +191,7 @@ pub fn spawn_child_near(
         world,
         Civilian {
             id,
-            alignment,
+            faction,
             age: 0,
         },
         Position3d {
@@ -445,10 +292,9 @@ pub fn drift_toward_home(
 pub fn spawn_civilian_at(
     world: &mut World,
     id: u64,
-    alignment: Alignment,
+    faction: u32,
     x: f32,
     y: f32,
-    visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
@@ -461,18 +307,16 @@ pub fn spawn_civilian_at(
         y: 0,
         z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
     };
-    let entity = spawn_civilian(
+    spawn_civilian(
         world,
         Civilian {
             id,
-            alignment,
+            faction,
             age: 18 + (id % 50) as u16,
         },
         Position3d { coord },
         CivilianBundle::newborn_default(velocity),
-    );
-    let _ = world.insert_one(entity, ActorVisual(visual));
-    entity
+    )
 }
 
 /// Spawn a deterministic batch of civilians with sequential IDs.
@@ -486,7 +330,7 @@ pub fn spawn_many(
     for offset in 0..count {
         let civilian = Civilian {
             id: seed_civilian_id + u64::from(offset),
-            alignment: Alignment::with_faction(faction),
+            faction,
             age: 18 + (offset % 50) as u16,
         };
         let position = Position3d {
@@ -757,7 +601,7 @@ mod tests {
         ChaCha8Rng::seed_from_u64(seed)
     }
 
-    /// Covers FR-CIV-AGENTS-000 — exposes a semver-like schema version stub.
+    /// FR-CIV-AGENTS-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
@@ -767,7 +611,7 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// Covers FR-CIV-AGENTS-001 — wardrobe + tools state ticks deterministically under
+    /// FR-CIV-AGENTS-001 — wardrobe + tools state ticks deterministically under
     /// a fixed seed (replay-safe).
     #[test]
     fn wardrobe_tools_deterministic() {
@@ -794,7 +638,7 @@ mod tests {
         assert_eq!(tools_a, tools_b);
     }
 
-    /// Covers FR-CIV-AGENTS-001 — propagate_wardrobe is deterministic under a fixed
+    /// FR-CIV-AGENTS-001 — propagate_wardrobe is deterministic under a fixed
     /// seed (replay-safe).
     #[test]
     fn propagate_wardrobe_is_deterministic() {
@@ -813,7 +657,7 @@ mod tests {
         assert_eq!(w1, w2);
     }
 
-    /// Covers FR-CIV-AGENTS-002 — propagation never goes backwards.
+    /// FR-CIV-AGENTS-002 — propagation never goes backwards.
     #[test]
     fn propagation_is_monotone() {
         let params = DiffusionParams::default();
@@ -829,7 +673,7 @@ mod tests {
         assert!(w.era <= 5);
     }
 
-    /// Covers FR-CIV-AGENTS-003 — civilians at the target era do not propagate further.
+    /// FR-CIV-AGENTS-003 — civilians at the target era do not propagate further.
     #[test]
     fn at_target_era_is_a_noop() {
         let params = DiffusionParams::default();
@@ -844,7 +688,7 @@ mod tests {
         assert_eq!(w.era, 5);
     }
 
-    /// Covers FR-CIV-AGENTS-010 — gestalt (Cold) and Hot tiers agree at shared sync ticks.
+    /// FR-CIV-AGENTS-010 — gestalt (Cold) and Hot tiers agree at shared sync ticks.
     #[test]
     fn lod_gestalt_no_divergence() {
         let params = DiffusionParams::default();
@@ -868,7 +712,7 @@ mod tests {
         assert_eq!(hot, cold);
     }
 
-    /// Covers FR-CIV-AGENTS-010 — LodTier debug / equality holds across copies.
+    /// FR-CIV-AGENTS-010 — LodTier debug / equality holds across copies.
     #[test]
     fn lod_tier_equality_round_trips() {
         for t in [LodTier::Hot, LodTier::Warm, LodTier::Cold] {
@@ -877,7 +721,7 @@ mod tests {
         }
     }
 
-    /// Covers FR-CIV-AGENTS-011 — fixture access: civilians compose with civ-genetics
+    /// FR-CIV-AGENTS-011 — fixture access: civilians compose with civ-genetics
     /// and civ-species without leaking RNG into the type system.
     #[test]
     fn civilian_composition_smoke() {
@@ -888,18 +732,18 @@ mod tests {
         let _: Phenotype = express(&dna);
         let _civ = Civilian {
             id: 0,
-            alignment: Alignment::with_faction(1),
+            faction: 1,
             age: 30,
         };
     }
 
-    /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
+    /// FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
         let mut world = World::new();
         let civ = Civilian {
             id: 11,
-            alignment: Alignment::with_faction(7),
+            faction: 7,
             age: 24,
         };
         let pos = Position3d {
@@ -945,7 +789,7 @@ mod tests {
         assert_eq!(&*world.get::<&LodTier>(entity).unwrap(), &lod);
     }
 
-    /// Covers FR-CIV-AGENTS-021 — spawn_many produces sequential IDs.
+    /// FR-CIV-AGENTS-021 — spawn_many produces sequential IDs.
     #[test]
     fn spawn_many_produces_sequential_ids() {
         let mut world = World::new();
@@ -959,7 +803,7 @@ mod tests {
         assert_eq!(ids, vec![100, 101, 102, 103]);
     }
 
-    /// Covers FR-CIV-AGENTS-022 — count_civilians reports the current world total.
+    /// FR-CIV-AGENTS-022 — count_civilians reports the current world total.
     #[test]
     fn count_civilians_reports_correctly() {
         let mut world = World::new();
@@ -977,7 +821,7 @@ mod tests {
             &mut world,
             Civilian {
                 id: 1,
-                alignment: Alignment::None,
+                faction: 0,
                 age: 20,
             },
             Position3d {
@@ -1021,7 +865,7 @@ mod tests {
             &mut world,
             Civilian {
                 id: 2,
-                alignment: Alignment::None,
+                faction: 0,
                 age: 22,
             },
             Position3d {
@@ -1067,7 +911,7 @@ mod tests {
             &mut world,
             Civilian {
                 id: 3,
-                alignment: Alignment::None,
+                faction: 0,
                 age: 23,
             },
             Position3d {
@@ -1101,7 +945,7 @@ mod tests {
         assert!(pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32 <= 0.500_001);
     }
 
-    /// Covers FR-CIV-AGENTS-030 — cohort wardrobe propagation is deterministic under a
+    /// FR-CIV-AGENTS-030 — cohort wardrobe propagation is deterministic under a
     /// fixed seed.
     #[test]
     fn propagate_cohort_wardrobe_is_deterministic() {
@@ -1122,7 +966,7 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    /// Covers FR-CIV-AGENTS-031 — stats.total_civilians matches count_civilians.
+    /// FR-CIV-AGENTS-031 — stats.total_civilians matches count_civilians.
     #[test]
     fn cohort_stats_total_matches_count_civilians() {
         let params = DiffusionParams::default();
@@ -1133,7 +977,7 @@ mod tests {
         assert_eq!(stats.total_civilians as usize, count_civilians(&world));
     }
 
-    /// Covers FR-CIV-AGENTS-032 — after many ticks, currently_at_target approaches total_civilians.
+    /// FR-CIV-AGENTS-032 — after many ticks, currently_at_target approaches total_civilians.
     #[test]
     fn cohort_wardrobe_converges_over_many_ticks() {
         let params = DiffusionParams::default();
@@ -1149,7 +993,7 @@ mod tests {
         assert!((stats.current_fraction - 1.0).abs() < f32::EPSILON);
     }
 
-    /// Covers FR-CIV-AGENTS-033 — propagate_tools mirrors propagate_wardrobe behaviour.
+    /// FR-CIV-AGENTS-033 — propagate_tools mirrors propagate_wardrobe behaviour.
     #[test]
     fn propagate_cohort_tools_mirrors_wardrobe() {
         let params = DiffusionParams::default();
@@ -1177,7 +1021,7 @@ mod tests {
         assert_eq!(wardrobe_eras, tool_eras);
     }
 
-    /// Covers FR-CIV-AGENTS-034 — zero civilians produces zero-everything stats without panicking.
+    /// FR-CIV-AGENTS-034 — zero civilians produces zero-everything stats without panicking.
     #[test]
     fn empty_cohort_returns_zeroed_stats() {
         let params = DiffusionParams::default();
@@ -1197,7 +1041,7 @@ mod tests {
         assert_eq!(tools_stats, wardrobe_stats);
     }
 
-    /// Covers FR-CIV-AGENTS-023 — score_needs is a deterministic weighted sum.
+    /// FR-CIV-AGENTS-023 — score_needs is a deterministic weighted sum.
     #[test]
     fn score_needs_returns_deterministic_sums() {
         let needs = Needs {
@@ -1218,7 +1062,7 @@ mod tests {
         );
     }
 
-    /// Covers FR-CIV-AGENTS-024 — top_action selects the highest-weighted unmet need.
+    /// FR-CIV-AGENTS-024 — top_action selects the highest-weighted unmet need.
     #[test]
     fn top_action_picks_highest_weighted_unmet_need() {
         let needs = Needs {
@@ -1236,249 +1080,7 @@ mod tests {
         assert_eq!(top_action(&needs, &weights), NeedAction::FindShelter);
     }
 
-    /// Covers FR-CIV-EMERGENCE-010 — spawn alignment is inferred from nearby
-    /// civilians (kinship proximity).
-    #[test]
-    fn infer_alignment_for_spawn_majority() {
-        let mut world = World::new();
-        let mut rng = rng(42);
-
-        // Spawn a cluster of faction-1 civilians near (0.5, 0.5)
-        for i in 0..3 {
-            let angle = (i as f32) * 0.5;
-            spawn_civilian_at(
-                &mut world,
-                100 + i as u64,
-                Alignment::with_faction(1),
-                0.5 + angle.cos() * 0.01,
-                0.5 + angle.sin() * 0.01,
-                ActorVisualKind::Humanoid,
-                &mut rng,
-            );
-        }
-
-        // Spawn one faction-2 civilian nearby
-        spawn_civilian_at(
-            &mut world,
-            200,
-            Alignment::with_faction(2),
-            0.51,
-            0.51,
-            ActorVisualKind::Humanoid,
-            &mut rng,
-        );
-
-        // Spawn a faction-3 civilian far away
-        spawn_civilian_at(
-            &mut world,
-            300,
-            Alignment::with_faction(3),
-            0.9,
-            0.9,
-            ActorVisualKind::Humanoid,
-            &mut rng,
-        );
-
-        // Spawn point near the faction-1 cluster → should infer faction 1
-        assert_eq!(
-            infer_alignment_for_spawn(&world, 0.5, 0.5),
-            Alignment::with_faction(1)
-        );
-
-        // Spawn point near the distant faction-3 civilian → should infer faction 3
-        assert_eq!(
-            infer_alignment_for_spawn(&world, 0.9, 0.9),
-            Alignment::with_faction(3)
-        );
-
-        // Spawn point far from everyone → should be None
-        assert_eq!(infer_alignment_for_spawn(&world, 0.1, 0.1), Alignment::None);
-    }
-
-    /// Covers FR-CIV-EMERGENCE-010 — unaligned neighbors do not force a
-    /// spurious alignment; None is returned when only `Alignment::None`
-    /// civilians are nearby.
-    #[test]
-    fn infer_alignment_for_spawn_unaligned_only() {
-        let mut world = World::new();
-        let mut rng = rng(42);
-        for i in 0..3 {
-            spawn_civilian_at(
-                &mut world,
-                400 + i as u64,
-                Alignment::None,
-                0.5,
-                0.5,
-                ActorVisualKind::Humanoid,
-                &mut rng,
-            );
-        }
-        assert_eq!(infer_alignment_for_spawn(&world, 0.5, 0.5), Alignment::None);
-    }
-
-    /// Covers FR-CIV-EMERGENCE-001 — form_faction succeeds only when the founder
-    /// has at least [`FORM_FACTION_COHESION`] positive social ties
-    /// (e.g. affinity >= FRIEND_AFFINITY_THRESHOLD or kinship >= KIN_THRESHOLD).
-    /// Below the threshold, alignment is left unchanged.
-    #[test]
-    fn form_faction_requires_cohesion_threshold() {
-        let mut graph = SocialGraph::default();
-        // Zero ties → no cohesion → cannot form a faction.
-        assert_eq!(Alignment::None.form_faction(&graph, 1, 42), Alignment::None);
-
-        // Add FORM_FACTION_COHESION - 1 positive ties — still under threshold.
-        for i in 0..(FORM_FACTION_COHESION - 1) as u64 {
-            apply_social_event(
-                &mut graph,
-                SocialEvent {
-                    a: 42,
-                    b: 100 + i,
-                    kind: Interaction::Cooperated { benefit: 1.0 },
-                    tick: 1,
-                },
-            );
-        }
-        assert_eq!(Alignment::None.form_faction(&graph, 1, 42), Alignment::None);
-
-        // Push the count to the cohesion threshold — faction is formed.
-        apply_social_event(
-            &mut graph,
-            SocialEvent {
-                a: 42,
-                b: 999,
-                kind: Interaction::Cooperated { benefit: 1.0 },
-                tick: 1,
-            },
-        );
-        assert_eq!(
-            Alignment::None.form_faction(&graph, 7, 42),
-            Alignment::with_faction(7)
-        );
-    }
-
-    /// Covers FR-CIV-EMERGENCE-001 — `kin`-tagged ties also count toward the
-    /// cohesion threshold (kinship is a strong bond).
-    #[test]
-    fn form_faction_kin_ties_count_toward_cohesion() {
-        let mut graph = SocialGraph::default();
-        for i in 0..FORM_FACTION_COHESION as u64 {
-            apply_social_event(
-                &mut graph,
-                SocialEvent {
-                    a: 42,
-                    b: 200 + i,
-                    kind: Interaction::Kin,
-                    tick: 1,
-                },
-            );
-        }
-        assert_eq!(
-            Alignment::None.form_faction(&graph, 3, 42),
-            Alignment::with_faction(3)
-        );
-    }
-
-    /// Covers FR-CIV-EMERGENCE-002 — join_faction succeeds only when the joiner
-    /// has at least [`JOIN_FACTION_ACCEPTANCE`] existing ties to current members
-    /// of the target faction. Without those ties, the join is rejected and the
-    /// alignment is left unchanged.
-    #[test]
-    fn join_faction_requires_acceptance_ties() {
-        let mut graph = SocialGraph::default();
-
-        // Faction membership set: {100, 101, 102, 103} (ids of current members).
-        let members = [100u64, 101, 102, 103];
-        // No ties yet → no acceptance → cannot join.
-        assert_eq!(
-            Alignment::None.join_faction(&graph, 5, 42, &members),
-            Alignment::None
-        );
-
-        // Add JOIN_FACTION_ACCEPTANCE - 1 ties — still under threshold.
-        for i in 0..(JOIN_FACTION_ACCEPTANCE - 1) as u64 {
-            apply_social_event(
-                &mut graph,
-                SocialEvent {
-                    a: 42,
-                    b: 100 + i,
-                    kind: Interaction::Cooperated { benefit: 1.0 },
-                    tick: 1,
-                },
-            );
-        }
-        assert_eq!(
-            Alignment::None.join_faction(&graph, 5, 42, &members),
-            Alignment::None
-        );
-
-        // Add the final tie — acceptance threshold met → can join.
-        apply_social_event(
-            &mut graph,
-            SocialEvent {
-                a: 42,
-                b: 100 + (JOIN_FACTION_ACCEPTANCE - 1) as u64,
-                kind: Interaction::Cooperated { benefit: 1.0 },
-                tick: 1,
-            },
-        );
-        assert_eq!(
-            Alignment::None.join_faction(&graph, 5, 42, &members),
-            Alignment::with_faction(5)
-        );
-    }
-
-    /// Covers FR-CIV-EMERGENCE-002 — a tie to a non-member does not count
-    /// toward the acceptance threshold.
-    #[test]
-    fn join_faction_ties_to_non_members_do_not_count() {
-        let mut graph = SocialGraph::default();
-        let members = [100u64, 101];
-
-        // Add many ties, but only to non-members.
-        for i in 0..(JOIN_FACTION_ACCEPTANCE + 2) as u64 {
-            apply_social_event(
-                &mut graph,
-                SocialEvent {
-                    a: 42,
-                    b: 900 + i,
-                    kind: Interaction::Cooperated { benefit: 1.0 },
-                    tick: 1,
-                },
-            );
-        }
-        assert_eq!(
-            Alignment::None.join_faction(&graph, 5, 42, &members),
-            Alignment::None
-        );
-    }
-
-    /// Covers FR-CIV-EMERGENCE-002 — a hostile tie to a member does not count
-    /// toward the acceptance threshold (negative affinity is a rival, not a
-    /// social acceptance signal).
-    #[test]
-    fn join_faction_hostile_ties_do_not_count() {
-        let mut graph = SocialGraph::default();
-        let members = [100u64, 101, 102, 103, 104];
-
-        // Defection pushes affinity deeply negative — no acceptance.
-        for &m in &members {
-            apply_social_event(
-                &mut graph,
-                SocialEvent {
-                    a: 42,
-                    b: m,
-                    kind: Interaction::Defected { harm: 1.0 },
-                    tick: 1,
-                },
-            );
-        }
-        assert_eq!(
-            Alignment::None.join_faction(&graph, 5, 42, &members),
-            Alignment::None
-        );
-    }
-
-    /// Covers FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.
+    /// FR-CIV-AGENTS-025 — should_tick_now respects LOD modulo cadence.
     #[test]
     fn should_tick_now_respects_lod_modulo() {
         assert!(should_tick_now(LodTier::Hot, 1));
@@ -1486,81 +1088,5 @@ mod tests {
         assert!(!should_tick_now(LodTier::Warm, 5));
         assert!(should_tick_now(LodTier::Cold, 16));
         assert!(!should_tick_now(LodTier::Cold, 17));
-    }
-
-    /// `child_bundle_from_parent` is deterministic with unit velocity and default needs.
-    #[test]
-    fn child_bundle_from_parent_is_deterministic_unit_velocity() {
-        let mut r1 = rng(99);
-        let mut r2 = rng(99);
-        let b1 = child_bundle_from_parent(&mut r1);
-        let b2 = child_bundle_from_parent(&mut r2);
-        assert_eq!(b1.velocity, b2.velocity);
-        let len_sq = b1.velocity.dx * b1.velocity.dx + b1.velocity.dy * b1.velocity.dy;
-        assert!((len_sq - 1.0).abs() < 1e-5);
-        assert_eq!(b1.needs.food, 0.25);
-        assert_eq!(b1.needs.shelter, 0.25);
-        assert_eq!(b1.needs.safety, 0.25);
-        assert_eq!(b1.needs.belonging, 0.25);
-        assert_eq!(b1.wardrobe.era, 0);
-        assert_eq!(b1.tools.era, 0);
-        assert_eq!(b1.lod, LodTier::Hot);
-    }
-
-    /// `spawn_child_near` spawns a newborn hot civilian within the parent offset band.
-    #[test]
-    fn spawn_child_near_spawns_newborn_within_offset_band() {
-        let mut world = World::new();
-        let mut child_rng = rng(42);
-        let entity = spawn_child_near(
-            &mut world,
-            1001,
-            Alignment::with_faction(1),
-            0.5,
-            0.5,
-            &mut child_rng,
-        );
-        let civilian = world.get::<&Civilian>(entity).unwrap();
-        let pos = world.get::<&Position3d>(entity).unwrap();
-        let lod = world.get::<&LodTier>(entity).unwrap();
-        assert_eq!(civilian.age, 0);
-        assert_eq!(*lod, LodTier::Hot);
-        let norm_x = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
-        let norm_z = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
-        assert!((norm_x - 0.5).abs() <= 0.015 + 1e-4);
-        assert!((norm_z - 0.5).abs() <= 0.015 + 1e-4);
-        assert!((0.01..=0.99).contains(&norm_x));
-        assert!((0.01..=0.99).contains(&norm_z));
-    }
-
-    /// `drift_toward_home` steers toward home when shelter need is high.
-    #[test]
-    fn drift_toward_home_steers_when_shelter_need_high() {
-        let scale = civ_voxel::FIXED_SCALE as f32;
-        let here = Position3d {
-            coord: WorldCoord { x: 0, y: 0, z: 0 },
-        };
-        let home = Position3d {
-            coord: WorldCoord {
-                x: scale as i64,
-                y: 0,
-                z: scale as i64,
-            },
-        };
-        let current = Velocity {
-            dx: 0.3,
-            dy: 0.7,
-        };
-        let steered = drift_toward_home(&here, &home, current, 0.75);
-        let len_sq = steered.dx * steered.dx + steered.dy * steered.dy;
-        assert!((len_sq - 1.0).abs() < 1e-5);
-        assert!(steered.dx > 0.0);
-        assert!(steered.dy > 0.0);
-
-        let unchanged = drift_toward_home(&here, &home, current, 0.5);
-        assert_eq!(unchanged, current);
-
-        let at_home = drift_toward_home(&here, &here, current, 0.9);
-        assert_eq!(at_home, current);
     }
 }

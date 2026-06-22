@@ -9,7 +9,6 @@
 #![warn(missing_docs)]
 
 mod doctrine_fitness;
-mod fog_of_war;
 mod formation;
 mod grid_obstacles;
 mod los;
@@ -20,23 +19,20 @@ mod pathfinding;
 mod war_bridge;
 
 pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
-pub use fog_of_war::FogOfWar;
 pub use formation::{
     formation_offsets, formation_positions, rotate_offsets, Facing, FormationKind,
 };
-pub use grid_obstacles::{grid_cell_blocked, grid_cell_impassable, grid_cell_occupied};
 pub use los::line_of_sight;
 pub use military_phase::MilitaryPhaseConfig;
 pub use movement::{
     operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
 };
 pub use operational::{NoopOperationalLayer, OperationalLayer};
-pub use pathfinding::{
-    astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked,
-};
+pub use grid_obstacles::grid_cell_blocked;
+pub use pathfinding::{astar_path, astar_path_with_blocked, bfs_next_step, bfs_next_step_with_blocked};
 pub use war_bridge::{
-    build_fog_for_units, grid_to_world_coord, tick_war_bridge, CombatEngagement,
-    MilitaryUnitSample, WarBridge, WarBridgeConfig,
+    grid_to_world_coord, tick_war_bridge, CombatEngagement, MilitaryUnitSample, WarBridge,
+    WarBridgeConfig,
 };
 
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
@@ -314,9 +310,6 @@ mod tests {
         assert_eq!(wedge[0], (0, 0));
     }
 
-    /// FR-CIV-WAR-001 — military units form opposing-side pairs for first-phase war outcomes.
-    /// FR-CIV-WAR-002-COMBAT — war-bridge combat is cadence-gated and produces engagements.
-    /// FR-CIV-WAR-001-UNITS — `MilitaryUnitSample` identity/faction fields participate in engagement setup.
     /// FR-CIV-TACTICS-022/024 — war bridge returns per-soldier engagements on cadence.
     #[test]
     fn war_bridge_queues_damage_on_cadence_with_los() {
@@ -339,8 +332,8 @@ mod tests {
             cadence_ticks: 4,
             ..WarBridgeConfig::default()
         };
-        assert!(tick_war_bridge(3, &config, &units, &world, None).is_empty());
-        let engagements = tick_war_bridge(4, &config, &units, &world, None);
+        assert!(tick_war_bridge(3, &config, &units, &world).is_empty());
+        let engagements = tick_war_bridge(4, &config, &units, &world);
         assert_eq!(engagements.len(), 2);
         assert!(engagements
             .iter()
@@ -356,39 +349,6 @@ mod tests {
         assert_eq!(bfs_next_step((0, 0), (5, 0), 16), Some((1, 0)));
     }
 
-    /// FR-CIV-WAR-003 — operational movement routes respond to local formation/pressure layout.
-    /// FR-CIV-WAR-004 — tactical groups keep movement behavior stable under local occupancy constraints.
-    /// FR-CIV-TACTICS-039 — movement routes around cells occupied by other units.
-    #[test]
-    fn operational_movement_avoids_occupied_cell() {
-        let mut units = [
-            MilitaryUnitSample {
-                unit_id: 1,
-                faction_id: 0,
-                grid_x: 0,
-                grid_y: 0,
-            },
-            MilitaryUnitSample {
-                unit_id: 2,
-                faction_id: 0,
-                grid_x: 1,
-                grid_y: 0,
-            },
-            MilitaryUnitSample {
-                unit_id: 3,
-                faction_id: 1,
-                grid_x: 4,
-                grid_y: 0,
-            },
-        ];
-        let config = OperationalMovementConfig::default();
-        let world = VoxelWorld::new(1);
-        let moves = tick_operational_movement(4, &config, &mut units, 1, &world);
-        assert!(moves.iter().any(|m| m.unit_index == 0 && m.new_grid_y == 1));
-    }
-
-    /// FR-CIV-WAR-004 — tactical movement accounts for environmental obstruction.
-    /// FR-CIV-WAR-010 — operational pathways remain pathable under terrain constraints.
     /// FR-CIV-TACTICS-036 — movement routes around solid voxels on the grid plane.
     #[test]
     fn operational_movement_avoids_voxel_obstacle() {
@@ -414,8 +374,6 @@ mod tests {
         assert!(moves.iter().any(|m| m.unit_index == 0 && m.new_grid_y == 1));
     }
 
-    /// FR-CIV-WAR-010 — operational pressure drives movement cadence and engagement approach.
-    /// FR-CIV-WAR-020 — tactical movement pressure is shared across order/initiative cycles.
     /// FR-CIV-TACTICS-031 — operational movement steps toward nearest enemy.
     #[test]
     fn operational_movement_steps_toward_enemy() {

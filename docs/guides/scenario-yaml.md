@@ -33,7 +33,7 @@ Example from baseline: `base_consumption_joules: 5000000000`, `scarcity_multipli
 |-----|------|----------|---------|-------|
 | `mods` | list of strings | no | `[]` | Repo-relative directory paths from the Civis repo root (resolved via `crates/engine/../../`). Each entry should contain a mod `manifest.toml` (see [`mods/example-policy`](../../mods/example-policy)). |
 
-**MVP behavior (CIV-0700 / mod-host):** On [`Scenario::into_simulation`](../../crates/engine/src/scenario.rs), paths are passed to [`Simulation::register_mod_stubs`](../../crates/engine/src/engine.rs). Manifests load into `ModHost`; policy/economy/military WASM ticks run when `mod.wasm` is present (build via `just civis-3d-mod-wasm`). Load failures are logged and skipped so headless runs stay up during mod development.
+**MVP behavior (CIV-0700 / mod-host):** On [`Scenario::into_simulation`](../../crates/engine/src/scenario.rs), paths are passed to [`Simulation::register_mod_stubs`](../../crates/engine/src/engine.rs). Manifests are loaded into `ModHost`; WASM guests and phase hooks are **not** executed yet. Load failures are logged and skipped so headless runs stay up during mod development.
 
 Example with one mod:
 
@@ -48,15 +48,11 @@ mods:
   - mods/example-policy
 ```
 
-Canonical [`scenarios/baseline.yaml`](../../scenarios/baseline.yaml) loads **two** example mods:
+Baseline explicitly sets an empty list:
 
 ```yaml
-mods:
-  - mods/example-policy
-  - mods/example-economic
+mods: []
 ```
-
-Regression: `baseline_yaml_parses`, `baseline_scenario_headless_smoke`, and `scenario_mods_loads_example_policy` in `scenario.rs`.
 
 ## Minimal file
 
@@ -68,9 +64,7 @@ tick_start: 0
 population: 1000000
 base_consumption_joules: 5000000000
 scarcity_multiplier: 1.0
-mods:
-  - mods/example-policy
-  - mods/example-economic
+mods: []
 ```
 
 ## Loading and errors

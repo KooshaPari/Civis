@@ -21,7 +21,7 @@ use axum::{
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    DiplomacyKind, JobType, Simulation,
+    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -451,6 +451,49 @@ async fn handle_jsonrpc_text(
                 }
                 _ => (None, None),
             };
+
+            let (research_researched, research_in_progress) = {
+                let sim = state.sim.lock().await;
+                let cache = sim.research_cache();
+                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
+            };
+            let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
+                let sim = state.sim.lock().await;
+                let outcome = civ_engine::conditions::check_outcome(&sim);
+                Some(crate::jsonrpc::OutcomeFields {
+                    tag: outcome.tag().to_owned(),
+                    reason: outcome.reason().to_owned(),
+                    tick: sim.state.tick,
+                })
+            } else {
+                None
+            let diplomacy_snapshot = if req.method == JsonRpcMethod::SimDiplomacyState {
+                let sim = state.sim.lock().await;
+                sim.diplomacy_events()
+                    .iter()
+                    .map(|e| {
+                        let status = match e.kind {
+                            civ_engine::DiplomacyKind::Peace => "Peace",
+                            civ_engine::DiplomacyKind::Conflict => "War",
+                            civ_engine::DiplomacyKind::TradeAgreement => "Trade",
+                        };
+                        serde_json::json!({
+                            "tick": e.tick,
+                            "faction_a": e.faction_a,
+                            "faction_b": e.faction_b,
+                            "status": status,
+                            "treaty_active": e.kind == civ_engine::DiplomacyKind::Peace,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                vec![]
+            };
+            let (research_researched, research_in_progress) = {
+                let sim = state.sim.lock().await;
+                let cache = sim.research_cache();
+                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -462,6 +505,13 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
+                    researched: research_researched,
+                    in_progress_tech: research_in_progress,
+                    outcome_fields,
+                    last_tick_ms: 0.0,
+                    diplomacy_snapshot,
+                    researched: research_researched,
+                    in_progress_tech: research_in_progress,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -588,6 +638,10 @@ fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame
                 / 4.0;
             CivilianStateEntry {
                 id: civilian.id,
+                faction_id: match civilian.alignment {
+                    civ_agents::Alignment::Faction(id) => id,
+                    _ => 0,
+                },
                 needs: CivilianNeeds3d {
                     food: need_satisfaction(needs.food),
                     shelter: need_satisfaction(needs.shelter),
@@ -657,7 +711,15 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
         })
         .collect();
     factions.sort_by_key(|entry| entry.id);
-    FactionStateFrame { tick, factions }
+    let mut population_by_faction: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
+    for (_, (civilian, _needs, _wardrobe)) in sim.world.query::<(&civ_agents::Civilian, &civ_agents::Needs, &civ_agents::Wardrobe)>().iter() {
+        let fid = match civilian.alignment {
+            civ_agents::Alignment::Faction(id) => id,
+            _ => 0,
+        };
+        *population_by_faction.entry(fid).or_insert(0) += 1;
+    }
+    FactionStateFrame { tick, factions, population_by_faction }
 }
 
 /// Build event-feed messages for one tick.
@@ -819,6 +881,26 @@ async fn apply_dispatch_effect(
         DispatchEffect::ResetSimulation { seed } => {
             *state.sim.lock().await = Simulation::with_seed(seed);
             state.tick.store(0, Ordering::SeqCst);
+        }
+        DispatchEffect::LoadScenario { preset, seed } => {
+            match load_scenario(preset_scenario_path(&preset)) {
+                Ok(scenario) => {
+                    *state.sim.lock().await = scenario.into_simulation(seed);
+                    state.tick.store(0, Ordering::SeqCst);
+                    tracing::info!(%preset, seed, "loaded scenario preset");
+                }
+                Err(err) => {
+                    tracing::error!(%preset, ?err, "sim.load_scenario failed");
+                    *response = civ_server::jsonrpc::JsonRpcResponse::error(
+                        response.id.clone(),
+                        civ_server::jsonrpc::JsonRpcError {
+                            code: civ_server::jsonrpc::error_code::INTERNAL_ERROR,
+                            message: format!("failed to load preset {preset:?}: {err}"),
+                            data: None,
+                        },
+                    );
+                }
+            }
         }
         DispatchEffect::SetPolicy {
             scarcity_multiplier,
@@ -995,6 +1077,53 @@ async fn apply_dispatch_effect(
                 Err(err) => {
                     tracing::error!("save.load failed: {err}");
                     set_replay_io_error(response, err.to_string());
+                }
+            }
+        }
+        DispatchEffect::QueueResearch { tech } => {
+            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
+        }
+        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
+            use civ_engine::disasters::{trigger_disaster, DisasterKind};
+            use civ_voxel::WorldCoord;
+            let mut sim = state.sim.lock().await;
+            let world_w = sim.voxel().width() as f32;
+            let world_d = sim.voxel().depth() as f32;
+            let wx = x.unwrap_or(0.5) * world_w;
+            let wz = y.unwrap_or(0.5) * world_d;
+            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
+            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
+            match action.as_str() {
+                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
+                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
+                "plague" => {
+                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
+                        }
+                    }
+                }
+                "bless" => {
+                    if let Some(fid) = target_faction {
+                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
+                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            *t += credit;
+                        }
+                    }
+                    sim.add_belief(500);
+                }
+                "miracle" => {
+                    sim.add_belief(2000);
+                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                }
+                _ => {}
+            }
+            if let Some(result) = response.result.as_mut() {
+                if let Some(obj) = result.as_object_mut() {
+                    obj.insert("applied".to_owned(), serde_json::json!(true));
                 }
             }
         }

@@ -17,14 +17,14 @@ fi
 
 if [[ ! -f "${MANIFEST}" ]]; then
   cat >&2 <<'EOF'
-WARN: .ci/quality-manifest.json not found
-Local-quality attestation has not been run on this branch yet.
-CI check is passing in this case; please run local gates and commit the manifest when available:
+ERROR: missing .ci/quality-manifest.json
 
+Run local gates and commit the manifest:
+  lefthook install
   lefthook run pre-push
   git add .ci/quality-manifest.json && git commit -m "chore(ci): refresh quality manifest"
 EOF
-  exit 0
+  exit 1
 fi
 
 python3 - "${MANIFEST}" <<'PY'
@@ -54,7 +54,7 @@ if attested not in {head, ""}:
             + "\nRe-run: lefthook run pre-push && commit .ci/quality-manifest.json"
         )
 
-OPTIONAL_GATE_PREFIXES = ("unreal_", "extra_")
+OPTIONAL_GATE_PREFIXES = ("unreal_",)
 
 def gate_ok(key: str, status: str) -> bool:
     if status == "pass":

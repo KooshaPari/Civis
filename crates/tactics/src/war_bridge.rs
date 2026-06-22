@@ -7,7 +7,6 @@
 //! - [`WarBridge::formation_move`] — returns the target grid positions for a
 //!   squad moving in formation, computed via [`formation_positions`].
 
-use crate::fog_of_war::FogOfWar;
 use crate::formation::{formation_positions, Facing, FormationKind};
 use crate::los::line_of_sight;
 use crate::DamageEvent;
@@ -56,10 +55,6 @@ pub struct WarBridgeConfig {
     pub damage_energy: u32,
     /// Fixed-point strength drained from the target (`civ-engine` Fixed scale 1e6).
     pub strength_damage_fixed: u32,
-    /// When `Some`, shooters may only engage targets visible on their faction fog grid (FR-CIV-TACTICS-042).
-    pub fog_vision_radius: Option<u32>,
-    /// Square fog grid edge length when fog is enabled (clamped 16..=256).
-    pub fog_grid_size: u32,
 }
 
 impl Default for WarBridgeConfig {
@@ -70,8 +65,6 @@ impl Default for WarBridgeConfig {
             damage_radius_voxels: 2,
             damage_energy: 250,
             strength_damage_fixed: 50_000,
-            fog_vision_radius: None,
-            fog_grid_size: 64,
         }
     }
 }
@@ -90,32 +83,12 @@ fn manhattan(a: (i32, i32), b: (i32, i32)) -> i32 {
     (a.0 - b.0).abs() + (a.1 - b.1).abs()
 }
 
-/// Build an updated fog grid when [`WarBridgeConfig::fog_vision_radius`] is set.
-#[must_use]
-pub fn build_fog_for_units(
-    config: &WarBridgeConfig,
-    units: &[MilitaryUnitSample],
-    world: &VoxelWorld<MaterialId>,
-) -> Option<FogOfWar> {
-    let radius = config.fog_vision_radius?;
-    let extent = units
-        .iter()
-        .map(|u| u.grid_x.unsigned_abs().max(u.grid_y.unsigned_abs()))
-        .max()
-        .unwrap_or(0);
-    let grid_size = config.fog_grid_size.max(extent + 8).clamp(16, 256);
-    let mut fog = FogOfWar::new(grid_size, Some(radius));
-    fog.update(units, world);
-    Some(fog)
-}
-
 /// Resolve cross-faction engagements with per-soldier ids and LOS.
 pub fn tick_war_bridge(
     tick: u64,
     config: &WarBridgeConfig,
     units: &[MilitaryUnitSample],
     world: &VoxelWorld<MaterialId>,
-    fog: Option<&FogOfWar>,
 ) -> Vec<CombatEngagement> {
     if config.cadence_ticks == 0 || tick % config.cadence_ticks != 0 {
         return Vec::new();
@@ -144,12 +117,6 @@ pub fn tick_war_bridge(
             let to = grid_to_world_coord(target.grid_x, target.grid_y);
             if !line_of_sight(world, from, to) {
                 continue;
-            }
-            if let Some(fog) = fog {
-                let cell = (target.grid_x, target.grid_y);
-                if !fog.is_visible(shooter.faction_id, cell) {
-                    continue;
-                }
             }
             match best {
                 None => best = Some((j, dist)),
@@ -221,9 +188,8 @@ impl<'world> WarBridge<'world> {
         &self,
         tick: u64,
         units: &[MilitaryUnitSample],
-        fog: Option<&FogOfWar>,
     ) -> Vec<CombatEngagement> {
-        tick_war_bridge(tick, &self.config, units, self.world, fog)
+        tick_war_bridge(tick, &self.config, units, self.world)
     }
 
     /// Compute the **absolute target grid positions** for `units` when they
@@ -289,9 +255,6 @@ mod tests {
     // FR-CIV-TACTICS-022 — LOS-gated combat resolution
     // -----------------------------------------------------------------------
 
-    /// FR-CIV-WAR-002-COMBAT — tactical combat requires LOS+cadence before engagements resolve.
-    /// FR-CIV-WAR-001 — combat requires opposing sampled units as input.
-    /// FR-CIV-WAR-001-UNITS — unit sample identity and faction fields drive engagement pairing.
     /// Attack is blocked when solid voxels fill the entire path between shooter
     /// and target.
     #[test]
@@ -305,17 +268,10 @@ mod tests {
         let target_wc = grid_to_world_coord(4, 0);
         // Step halfway along x in world coords.
         let mid_x = (shooter_wc.x + target_wc.x) / 2;
-        world.write(
-            WorldCoord {
-                x: mid_x,
-                y: 0,
-                z: 0,
-            },
-            MaterialId(1),
-        );
+        world.write(WorldCoord { x: mid_x, y: 0, z: 0 }, MaterialId(1));
 
         let bridge = WarBridge::new(&world, bridge_config_immediate());
-        let engagements = bridge.resolve_combat(1, &units, None);
+        let engagements = bridge.resolve_combat(1, &units);
         // Neither unit should be able to fire; the wall blocks both directions.
         assert!(
             engagements.is_empty(),
@@ -324,8 +280,6 @@ mod tests {
         );
     }
 
-    /// FR-CIV-WAR-002-COMBAT — clear LOS enables mutual engagement on cadence ticks.
-    /// FR-CIV-WAR-002 — combat handshake depends on resolved pairings between enemy groups.
     /// Attack succeeds when the path between shooter and target is clear.
     #[test]
     fn attack_succeeds_with_clear_los() {
@@ -333,7 +287,7 @@ mod tests {
         let units = two_enemy_units();
 
         let bridge = WarBridge::new(&world, bridge_config_immediate());
-        let engagements = bridge.resolve_combat(1, &units, None);
+        let engagements = bridge.resolve_combat(1, &units);
         assert_eq!(
             engagements.len(),
             2,
@@ -351,8 +305,6 @@ mod tests {
     // FR-CIV-TACTICS-024 — formation movement produces valid positions
     // -----------------------------------------------------------------------
 
-    /// FR-CIV-WAR-003 — formation positions provide operational placement output for unit groups.
-    /// FR-CIV-WAR-004 — formation movement remains deterministic across unit counts.
     /// A squad in Line formation produces distinct positions equal in count to
     /// the number of units.
     #[test]
@@ -370,11 +322,7 @@ mod tests {
         let bridge = WarBridge::with_defaults(&world);
         let positions = bridge.formation_move(&units, FormationKind::Line, Facing::East);
 
-        assert_eq!(
-            positions.len(),
-            units.len(),
-            "position count matches unit count"
-        );
+        assert_eq!(positions.len(), units.len(), "position count matches unit count");
 
         // No duplicates.
         let mut sorted = positions.clone();
@@ -383,7 +331,6 @@ mod tests {
         assert_eq!(sorted.len(), positions.len(), "positions are unique");
     }
 
-    /// FR-CIV-WAR-003 — formation movement preserves count and ordering constraints.
     /// A squad in Column formation produces positions ordered along the
     /// dominant axis.
     #[test]
@@ -412,7 +359,6 @@ mod tests {
         assert!(xs.iter().all(|&x| x == xs[0]), "all on same x axis");
     }
 
-    /// FR-CIV-WAR-003 — zero-units operational moves short-circuit safely.
     /// An empty squad produces an empty position list.
     #[test]
     fn formation_move_empty_squad_returns_empty() {
@@ -422,42 +368,6 @@ mod tests {
         assert!(positions.is_empty());
     }
 
-    /// Covers FR-CIV-TACTICS-042.
-    /// FR-CIV-TACTICS-042 — fog hides distant targets even within engage range.
-    #[test]
-    fn fog_blocks_engagement_beyond_vision() {
-        let world = empty_world();
-        let units = [
-            MilitaryUnitSample {
-                unit_id: 1,
-                faction_id: 0,
-                grid_x: 0,
-                grid_y: 0,
-            },
-            MilitaryUnitSample {
-                unit_id: 2,
-                faction_id: 1,
-                grid_x: 20,
-                grid_y: 0,
-            },
-        ];
-        let config = WarBridgeConfig {
-            cadence_ticks: 1,
-            engage_range_grid: 24,
-            fog_vision_radius: Some(3),
-            fog_grid_size: 32,
-            ..WarBridgeConfig::default()
-        };
-        let fog = build_fog_for_units(&config, &units, &world).expect("fog");
-        let bridge = WarBridge::new(&world, config);
-        let engagements = bridge.resolve_combat(1, &units, Some(&fog));
-        assert!(
-            engagements.is_empty(),
-            "target outside vision radius must not be engaged"
-        );
-    }
-
-    /// FR-CIV-WAR-010 — engagement cadence control creates periodic conflict windows.
     /// resolve_combat respects the cadence — no engagements on off-cadence ticks.
     #[test]
     fn combat_respects_cadence() {
@@ -470,9 +380,9 @@ mod tests {
         };
         let bridge = WarBridge::new(&world, config);
         // Off-cadence ticks -> empty.
-        assert!(bridge.resolve_combat(1, &units, None).is_empty());
-        assert!(bridge.resolve_combat(7, &units, None).is_empty());
+        assert!(bridge.resolve_combat(1, &units).is_empty());
+        assert!(bridge.resolve_combat(7, &units).is_empty());
         // On-cadence tick -> engagements.
-        assert!(!bridge.resolve_combat(8, &units, None).is_empty());
+        assert!(!bridge.resolve_combat(8, &units).is_empty());
     }
 }

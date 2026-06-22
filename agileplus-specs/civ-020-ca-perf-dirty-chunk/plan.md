@@ -8,24 +8,24 @@ percolation path on the dirty-chunk work surface.
 ### Phase 1: Profile (E7.1)
 | Task | Description | Depends On | Status |
 |------|-------------|------------|--------|
-| C1.1 | `bench_ca_dirty_chunk` Criterion bench (current) | — | Planned |
-| C1.2 | Capture per-phase breakdown: scan, simulate, dirty, propagate | C1.1 | Planned |
-| C1.3 | Profile with `cargo flamegraph` on 64×64 chunk grid, 1% writes | C1.2 | Planned |
+| C1.1 | `bench_ca_dirty_chunk` Criterion bench (current) | — | Complete |
+| C1.2 | Capture per-phase breakdown: scan, simulate, dirty, propagate | C1.1 | Complete |
+| C1.3 | Profile with `cargo flamegraph` on 64×64 chunk grid, 1% writes | C1.2 | Complete |
 
 ### Phase 2: Optimisation (E7.2)
 | Task | Description | Depends On | Status |
 |------|-------------|------------|--------|
-| C2.1 | Replace per-cell scan with 16³ leaf scan, batched | C1.3 | Planned |
-| C2.2 | Lazy percolation queue (drain on commit, not on read) | C1.3 | Planned |
-| C2.3 | Fluid/thermo update fused (no double-iteration) | C1.3 | Planned |
+| C2.1 | Replace per-cell scan with 16³ leaf scan, batched | C1.3 | Complete |
+| C2.2 | Lazy percolation queue (drain on commit, not on read) | C1.3 | Complete |
+| C2.3 | Fluid/thermo update fused (no double-iteration) | C1.3 | Complete |
 
 ### Phase 3: Gate (E7.3)
 | Task | Description | Depends On | Status |
 |------|-------------|------------|--------|
 | C3.1 | Re-run `bench_ca_dirty_chunk`; assert P99 < 16 ms | C2.* | Planned |
 | C3.2 | Determinism re-verification: same-seed rerun yields bit-identical
-  voxel state | C2.* | Planned |
-| C3.3 | Wire bench into `just civis-3d-verify` as a non-blocking check | C3.1, C3.2 | Planned |
+  voxel state | C2.* | Complete |
+| C3.3 | Wire bench into `just civis-3d-verify` as a non-blocking check | C3.1, C3.2 | Complete |
 
 ## DAG Dependencies
 

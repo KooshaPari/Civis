@@ -4,13 +4,14 @@
 //! Settings GPU readout: FR-CIV-BEVY-036 / item 61.
 
 use crate::gpu_features::GpuCapabilities;
+use crate::settings_ui::{GameSettings, ACTION_PAUSE_SIM, KeyBinding};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use crate::ui_theme::CHIP_FILL;
 
 const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 const DIM: egui::Color32 = egui::Color32::from_rgb(150, 158, 178);
 const OVERLAY_DIM: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 160);
 
@@ -45,6 +46,24 @@ impl EraBanner {
 #[derive(Resource, Default, Debug)]
 pub struct SettingsOpen(pub bool);
 
+/// Per-world setup parameters shared by voxel generation and the map view.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct WorldSetupParams {
+    /// World seed selected for the current run.
+    pub seed: u64,
+    /// World-size preset index mirrored by the settings UI.
+    pub world_size: usize,
+}
+
+impl Default for WorldSetupParams {
+    fn default() -> Self {
+        Self {
+            seed: 0xC1F1_5EED_D3AD_BEEF,
+            world_size: 1,
+        }
+    }
+}
+
 /// Transient state for the settings window (no persistence yet).
 #[derive(Resource, Debug)]
 pub struct SettingsState {
@@ -52,7 +71,7 @@ pub struct SettingsState {
     pub graphics_quality: usize,
     /// 0.0 – 1.0
     pub master_volume: f32,
-    /// Tick speed multiplier stub.
+    /// Tick speed multiplier.
     pub sim_speed: u32,
 }
 
@@ -74,6 +93,7 @@ impl Plugin for MenusPlugin {
         app.init_resource::<GameUiMode>()
             .init_resource::<EraBanner>()
             .init_resource::<SettingsOpen>()
+            .init_resource::<WorldSetupParams>()
             .init_resource::<SettingsState>()
             .add_systems(Update, (toggle_pause, tick_era_banner))
             .add_systems(
@@ -83,8 +103,17 @@ impl Plugin for MenusPlugin {
     }
 }
 
-fn toggle_pause(keys: Res<ButtonInput<KeyCode>>, mut mode: ResMut<GameUiMode>) {
-    if keys.just_pressed(KeyCode::Escape) {
+fn toggle_pause(
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    settings: Option<Res<GameSettings>>,
+    mut mode: ResMut<GameUiMode>,
+) {
+    let pause_binding = settings
+        .as_ref()
+        .and_then(|s| s.key_for(ACTION_PAUSE_SIM))
+        .unwrap_or(KeyBinding::Key(KeyCode::Escape));
+    if pause_binding.is_just_pressed(&keys, &mouse_buttons) {
         *mode = match *mode {
             GameUiMode::Playing => GameUiMode::Paused,
             GameUiMode::Paused => GameUiMode::Playing,
@@ -96,6 +125,12 @@ fn tick_era_banner(mut banner: ResMut<EraBanner>, time: Res<Time>) {
     if banner.show_timer > 0.0 {
         banner.show_timer = (banner.show_timer - time.delta_secs()).max(0.0);
     }
+}
+
+/// True while the player is in live gameplay rather than the paused overlay.
+#[must_use]
+pub fn in_game(mode: Res<GameUiMode>) -> bool {
+    *mode == GameUiMode::Playing
 }
 
 fn draw_pause_menu(

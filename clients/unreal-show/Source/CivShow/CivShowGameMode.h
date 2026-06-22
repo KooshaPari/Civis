@@ -22,6 +22,10 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
 
+    /** Move the local view to `WorldLocation` (XZ from minimap); Y is sampled from terrain when available. */
+    UFUNCTION(BlueprintCallable, Category = "Civis")
+    void FocusCameraAtWorldLocation(FVector WorldLocation);
+
 protected:
     UPROPERTY(EditAnywhere, Category = "Civis")
     FString WatchHttpUrl = TEXT("http://127.0.0.1:9090");
@@ -40,6 +44,12 @@ private:
     void OnTerrainFetched();
 
     UFUNCTION()
+    void OnTerrainStatusChanged(const FString& State, const FString& Detail);
+
+    UFUNCTION()
+    void OnWsConnectionChanged(const FString& State);
+
+    UFUNCTION()
     void OnWsSnapshot(const FString& SnapshotJson);
 
     UFUNCTION()
@@ -51,11 +61,22 @@ private:
 
     void ApplyDayNight(bool bIsDay);
 
+    void UpdateAttachWarning();
+
+    UFUNCTION()
+    void OnMinimapUvClicked(float U, float V);
+
     UPROPERTY()
     UCivProtocolClient* HttpClient = nullptr;
 
     UPROPERTY()
     UCivWsClient* WsClient = nullptr;
+
+    UPROPERTY()
+    bool bTerrainLive = false;
+
+    UPROPERTY()
+    bool bWsLive = false;
 
     UPROPERTY()
     AVoxelTerrain* TerrainActor = nullptr;

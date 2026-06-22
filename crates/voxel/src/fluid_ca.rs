@@ -384,6 +384,22 @@ impl CaGrid {
         ]
     }
 
+    /// Convert a local chunk index into `[cx, cy, cz]` chunk coordinates.
+    pub fn chunk_coord_from_index(&self, chunk: usize) -> Option<[usize; 3]> {
+        let counts = self.chunk_counts();
+        if counts.contains(&0) {
+            return None;
+        }
+        let total = counts[0].saturating_mul(counts[1]).saturating_mul(counts[2]);
+        if chunk >= total {
+            return None;
+        }
+        let cx = chunk % counts[0];
+        let cy = (chunk / counts[0]) % counts[1];
+        let cz = chunk / (counts[0] * counts[1]);
+        Some([cx, cy, cz])
+    }
+
     /// Cell indices belonging to the currently dirty chunks, expanded by a
     /// one-cell halo so a rule pass can read neighbours across chunk borders and
     /// still settle correctly while only WRITING owned cells.
@@ -869,8 +885,11 @@ fn fluid_thermo_pass(
             next = ICE;
             temp = temp.saturating_add(latent_heat);
         }
-        grid.cells[idx] = next;
-        grid.temperatures[idx] = temp;
+        if next != scratch.cells[idx] || temp != scratch.temperatures[idx] {
+            grid.cells[idx] = next;
+            grid.temperatures[idx] = temp;
+            grid.mark_dirty_cell(x, y, z);
+        }
     }
 }
 
@@ -918,6 +937,8 @@ fn evaporation_pass(
                             grid.temperatures[idx] = t.saturating_sub(
                                 i16::try_from(def.latent_heat).unwrap_or(0),
                             );
+                            grid.mark_dirty_cell(x, y, z);
+                            grid.mark_dirty_cell(sx, sy, sz);
                         }
                     }
                 }
@@ -936,13 +957,17 @@ fn evaporation_pass(
                 }
             }
             if cold_neighbor {
-                grid.cells[idx] = if rng_roll(hash32(idx as u64 ^ 0xA5A5, tick as u64), 255) < 64 {
+                let next = if rng_roll(hash32(idx as u64 ^ 0xA5A5, tick as u64), 255) < 64 {
                     WATER
                 } else {
                     STEAM
                 };
-                if grid.cells[idx] == WATER {
-                    grid.temperatures[idx] = (def.freeze_point / 2).max(-10);
+                if next != scratch.cells[idx] {
+                    grid.cells[idx] = next;
+                    if next == WATER {
+                        grid.temperatures[idx] = (def.freeze_point / 2).max(-10);
+                    }
+                    grid.mark_dirty_cell(x, y, z);
                 }
             } else {
                 for dir in 0..6 {
@@ -953,6 +978,8 @@ fn evaporation_pass(
                         {
                             if let Some(ti) = grid.index(nx, ny, nz) {
                                 swap_cells(grid, idx, ti);
+                                grid.mark_dirty_cell(x, y, z);
+                                grid.mark_dirty_cell(nx, ny, nz);
                             }
                             break;
                         }
@@ -1017,6 +1044,8 @@ fn percolation_pass(
             if scratch.cells[ni] == WATER {
                 grid.cells[ni] = AIR;
                 pending_saturation[idx] = pending_saturation[idx].saturating_add(1);
+                grid.mark_dirty_cell(x, y, z);
+                grid.mark_dirty_cell(nxu, nyu, nzu);
             }
         }
         let cap_i = i32::from(cap);
@@ -1038,11 +1067,15 @@ fn percolation_pass(
                 }
                 pending_saturation[idx] = pending_saturation[idx].saturating_sub(1);
                 pending_saturation[ni] = pending_saturation[ni].saturating_add(1);
+                grid.mark_dirty_cell(x, y, z);
+                grid.mark_dirty_cell(nx, ny, nz);
                 break 'outer;
             }
         }
     }
-    grid.saturation = pending_saturation;
+    if grid.saturation != pending_saturation {
+        grid.saturation = pending_saturation;
+    }
 }
 
 fn boundary_flux_pass(
@@ -1055,11 +1088,12 @@ fn boundary_flux_pass(
         return;
     }
 
-    let x_last = grid.dims[0] - 1;
-    let y_last = grid.dims[1] - 1;
-    let z_last = grid.dims[2] - 1;
-    let row = grid.dims[0];
-    let plane = grid.dims[0] * grid.dims[1];
+    let dims = grid.dims;
+    let x_last = dims[0] - 1;
+    let y_last = dims[1] - 1;
+    let z_last = dims[2] - 1;
+    let row = dims[0];
+    let plane = dims[0] * dims[1];
     let mut apply = |x: usize, y: usize, z: usize| {
         let idx = x + y * row + z * plane;
         let id = grid.cells[idx];
@@ -1071,6 +1105,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if x == x_last
             && boundary.faces[BoundaryFace::PosX.index()] == BoundaryMode::Vacuum
@@ -1079,6 +1114,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if y == 0
             && boundary.faces[BoundaryFace::NegY.index()] == BoundaryMode::Vacuum
@@ -1087,6 +1123,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if y == y_last
             && boundary.faces[BoundaryFace::PosY.index()] == BoundaryMode::Vacuum
@@ -1095,6 +1132,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if z == 0
             && boundary.faces[BoundaryFace::NegZ.index()] == BoundaryMode::Vacuum
@@ -1103,6 +1141,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         if z == z_last
             && boundary.faces[BoundaryFace::PosZ.index()] == BoundaryMode::Vacuum
@@ -1111,6 +1150,7 @@ fn boundary_flux_pass(
             grid.cells[idx] = AIR;
             grid.temperatures[idx] = boundary.ambient_temp;
             grid.saturation[idx] = 0;
+            grid.mark_dirty_cell(x, y, z);
         }
         for face in 0..6 {
             if let BoundaryMode::Inflow {
@@ -1131,20 +1171,21 @@ fn boundary_flux_pass(
                 {
                     grid.cells[idx] = material;
                     grid.temperatures[idx] = temp;
+                    grid.mark_dirty_cell(x, y, z);
                 }
             }
         }
     };
 
-    for z in 0..grid.dims[2] {
-        for y in 0..grid.dims[1] {
+    for z in 0..dims[2] {
+        for y in 0..dims[1] {
             apply(0, y, z);
             if x_last != 0 {
                 apply(x_last, y, z);
             }
         }
     }
-    for z in 0..grid.dims[2] {
+    for z in 0..dims[2] {
         for x in 1..x_last {
             apply(x, 0, z);
             if y_last != 0 {
@@ -1213,6 +1254,7 @@ fn step_with_parity(
     tick: usize,
 ) -> bool {
     if grid.dirty_chunks.is_empty() {
+        grid.last_changed_chunks.clear();
         return false;
     }
     let before = grid.clone();
@@ -1261,25 +1303,26 @@ fn step_with_parity(
         // by `dirty_chunks.len() * 4096` worst case, but breaks out per chunk
         // on the first divergent cell, so a single voxel flip = 1 chunk.
         grid.last_changed_chunks = grid.chunks_changed_from(&before).into_iter().collect();
-        let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(27));
+        let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(7));
         for chunk in before.dirty_chunks.iter().copied() {
-            let cx = chunk % counts[0];
-            let rem = chunk - cx;
-            let cy = rem / counts[0] % counts[1];
-            let cz = rem / (counts[0] * counts[1]);
-            for dz in 0..3usize {
-                for dy in 0..3usize {
-                    for dx in 0..3usize {
-                        let nx = cx + dx.saturating_sub(1);
-                        let ny = cy + dy.saturating_sub(1);
-                        let nz = cz + dz.saturating_sub(1);
-                        if nx >= counts[0] || ny >= counts[1] || nz >= counts[2] {
-                            continue;
-                        }
-                        next.insert(nx + ny * counts[0] + nz * counts[0] * counts[1]);
-                    }
+            let Some([cx, cy, cz]) = before.chunk_coord_from_index(chunk) else {
+                continue;
+            };
+            let mut push = |x: i32, y: i32, z: i32| {
+                let Ok(x) = usize::try_from(x) else { return };
+                let Ok(y) = usize::try_from(y) else { return };
+                let Ok(z) = usize::try_from(z) else { return };
+                if x < counts[0] && y < counts[1] && z < counts[2] {
+                    next.insert(x + y * counts[0] + z * counts[0] * counts[1]);
                 }
-            }
+            };
+            push(cx, cy, cz);
+            push(cx - 1, cy, cz);
+            push(cx + 1, cy, cz);
+            push(cx, cy - 1, cz);
+            push(cx, cy + 1, cz);
+            push(cx, cy, cz - 1);
+            push(cx, cy, cz + 1);
         }
         grid.dirty_chunks = next;
     } else {
@@ -1390,42 +1433,23 @@ fn write_back_world(
     wrote
 }
 
-/// Runs one deterministic CA tick over a grid. Returns a [`StepOutcome`].
-pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> StepOutcome {
+/// Runs one deterministic CA tick over a grid.
+pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> bool {
     step_with_config(grid, reg, BoundaryConfig::closed(), 0)
 }
 
 /// Runs one CA tick with boundary/sea-level control.
-///
-/// Returns a [`StepOutcome`] carrying the cheap `changed` boolean and the
-/// minimal remesh list (`changed_chunks`) — local chunk indices in the
-/// `CaGrid`'s chunk-coord space, sorted ascending. The grid's own
-/// `last_changed_chunks` field is also populated for callers that want to
-/// query it later (e.g. from inside a hot loop where the returned vec would
-/// have to be merged across ticks).
 pub fn step_with_config(
     grid: &mut CaGrid,
     reg: MaterialRegistry,
     boundary: BoundaryConfig,
     sea_level: i32,
-) -> StepOutcome {
+) -> bool {
     if grid.dirty_chunks.is_empty() {
-        // Static world path: nothing to step, but still report "no work done"
-        // so the remesh side skips a full grid walk. `last_changed_chunks` is
-        // already empty (it was cleared at the end of the last successful
-        // step), so we don't need to touch it.
-        return StepOutcome {
-            changed: false,
-            changed_chunks: Vec::new(),
-        };
+        grid.last_changed_chunks.clear();
+        return false;
     }
-    let changed = step_with_parity(grid, reg, 0, boundary, sea_level, 0);
-    let mut changed_chunks: Vec<usize> = grid.last_changed_chunks.iter().copied().collect();
-    changed_chunks.sort_unstable();
-    StepOutcome {
-        changed,
-        changed_chunks,
-    }
+    step_with_parity(grid, reg, 0, boundary, sea_level, 0)
 }
 
 /// Runs `n` CA ticks.

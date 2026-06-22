@@ -1,8 +1,8 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "62fb8aa3e7f7e562b9632c75b0ce92fbc689df31",
-  "created_at": "2026-06-18T08:19:42Z",
+  "git_sha": "928950bb640ce7b3a75766f61c72959ccf68e78b",
+  "created_at": "2026-06-22T22:37:23Z",
   "git_sha_history": [
     "ec75ddfb611345fcfe9cec95c72d8437e973bae4",
     "62fb8aa3e7f7e562b9632c75b0ce92fbc689df31"
@@ -12,7 +12,7 @@
     "2026-06-18T08:19:42Z"
   ],
   "runner": {
-    "host": "KOOSHAPARI-DESK",
+    "host": "unknown",
     "rust": "manifest-refresh (gates reused)"
   },
   "gates": {
@@ -37,7 +37,7 @@
       "detail": "optional UE gate"
     }
   },
-  "manifest_hash": "12c0cde49550392b31b356ce92acb6d365a44a4a39e694d6b8d5a5c33719e9e7",
+  "manifest_hash": "010d04fec9330825a095f15c0ec7772f96e3c6f2b1d485a636c851990bb88fc9",
   "manifest_hash_history": [
     "90bb378c085a232bbf4f4e2cf388d055a8c30f2e9acf9cbd6e9abf9856b35f82",
     "12c0cde49550392b31b356ce92acb6d365a44a4a39e694d6b8d5a5c33719e9e7"

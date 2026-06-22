@@ -391,6 +391,22 @@ impl CaGrid {
         ]
     }
 
+    /// Convert a local chunk index into `[cx, cy, cz]` chunk coordinates.
+    pub fn chunk_coord_from_index(&self, chunk: usize) -> Option<[usize; 3]> {
+        let counts = self.chunk_counts();
+        if counts.contains(&0) {
+            return None;
+        }
+        let total = counts[0].saturating_mul(counts[1]).saturating_mul(counts[2]);
+        if chunk >= total {
+            return None;
+        }
+        let cx = chunk % counts[0];
+        let cy = (chunk / counts[0]) % counts[1];
+        let cz = chunk / (counts[0] * counts[1]);
+        Some([cx, cy, cz])
+    }
+
     /// Cell indices belonging to the currently dirty chunks, expanded by a
     /// one-cell halo so a rule pass can read neighbours across chunk borders and
     /// still settle correctly while only WRITING owned cells.
@@ -880,8 +896,11 @@ fn fluid_thermo_pass(
             next = ICE;
             temp = temp.saturating_add(latent_heat);
         }
-        grid.cells[idx] = next;
-        grid.temperatures[idx] = temp;
+        if next != scratch.cells[idx] || temp != scratch.temperatures[idx] {
+            grid.cells[idx] = next;
+            grid.temperatures[idx] = temp;
+            grid.mark_dirty_cell(x, y, z);
+        }
     }
 }
 
@@ -926,8 +945,9 @@ fn evaporation_pass(
                             grid.cells[idx] = AIR;
                             grid.cells[si] = STEAM;
                             grid.temperatures[si] = t;
-                            grid.temperatures[idx] =
-                                t.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
+                            grid.temperatures[idx] = t.saturating_sub(
+                                i16::try_from(def.latent_heat).unwrap_or(0),
+                            );
                             grid.mark_dirty_cell(x, y, z);
                             grid.mark_dirty_cell(sx, sy, sz);
                         }
@@ -1233,6 +1253,7 @@ fn step_with_parity(
     tick: usize,
 ) -> bool {
     if grid.dirty_chunks.is_empty() {
+        grid.last_changed_chunks.clear();
         return false;
     }
     let before = grid.clone();
@@ -1283,10 +1304,9 @@ fn step_with_parity(
         grid.last_changed_chunks = grid.chunks_changed_from(&before).into_iter().collect();
         let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(7));
         for chunk in before.dirty_chunks.iter().copied() {
-            let cx = chunk % counts[0];
-            let rem = chunk - cx;
-            let cy = rem / counts[0] % counts[1];
-            let cz = rem / (counts[0] * counts[1]);
+            let Some([cx, cy, cz]) = before.chunk_coord_from_index(chunk) else {
+                continue;
+            };
             let mut push = |x: i32, y: i32, z: i32| {
                 let Ok(x) = usize::try_from(x) else { return };
                 let Ok(y) = usize::try_from(y) else { return };
@@ -1295,13 +1315,13 @@ fn step_with_parity(
                     next.insert(x + y * counts[0] + z * counts[0] * counts[1]);
                 }
             };
-            push(cx as i32, cy as i32, cz as i32);
-            push(cx as i32 - 1, cy as i32, cz as i32);
-            push(cx as i32 + 1, cy as i32, cz as i32);
-            push(cx as i32, cy as i32 - 1, cz as i32);
-            push(cx as i32, cy as i32 + 1, cz as i32);
-            push(cx as i32, cy as i32, cz as i32 - 1);
-            push(cx as i32, cy as i32, cz as i32 + 1);
+            push(cx, cy, cz);
+            push(cx - 1, cy, cz);
+            push(cx + 1, cy, cz);
+            push(cx, cy - 1, cz);
+            push(cx, cy + 1, cz);
+            push(cx, cy, cz - 1);
+            push(cx, cy, cz + 1);
         }
         grid.dirty_chunks = next;
     } else {
@@ -1412,42 +1432,23 @@ fn write_back_world(
     wrote
 }
 
-/// Runs one deterministic CA tick over a grid. Returns a [`StepOutcome`].
-pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> StepOutcome {
+/// Runs one deterministic CA tick over a grid.
+pub fn step(grid: &mut CaGrid, reg: MaterialRegistry) -> bool {
     step_with_config(grid, reg, BoundaryConfig::closed(), 0)
 }
 
 /// Runs one CA tick with boundary/sea-level control.
-///
-/// Returns a [`StepOutcome`] carrying the cheap `changed` boolean and the
-/// minimal remesh list (`changed_chunks`) — local chunk indices in the
-/// `CaGrid`'s chunk-coord space, sorted ascending. The grid's own
-/// `last_changed_chunks` field is also populated for callers that want to
-/// query it later (e.g. from inside a hot loop where the returned vec would
-/// have to be merged across ticks).
 pub fn step_with_config(
     grid: &mut CaGrid,
     reg: MaterialRegistry,
     boundary: BoundaryConfig,
     sea_level: i32,
-) -> StepOutcome {
+) -> bool {
     if grid.dirty_chunks.is_empty() {
-        // Static world path: nothing to step, but still report "no work done"
-        // so the remesh side skips a full grid walk. `last_changed_chunks` is
-        // already empty (it was cleared at the end of the last successful
-        // step), so we don't need to touch it.
-        return StepOutcome {
-            changed: false,
-            changed_chunks: Vec::new(),
-        };
+        grid.last_changed_chunks.clear();
+        return false;
     }
-    let changed = step_with_parity(grid, reg, 0, boundary, sea_level, 0);
-    let mut changed_chunks: Vec<usize> = grid.last_changed_chunks.iter().copied().collect();
-    changed_chunks.sort_unstable();
-    StepOutcome {
-        changed,
-        changed_chunks,
-    }
+    step_with_parity(grid, reg, 0, boundary, sea_level, 0)
 }
 
 /// Runs `n` CA ticks.

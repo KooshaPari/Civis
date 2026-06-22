@@ -1,4 +1,4 @@
-//! civ-bevy-ref library surface.
+﻿//! civ-bevy-ref library surface.
 //!
 //! Splits cleanly into two parts:
 //!
@@ -13,6 +13,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+#[cfg(feature = "bevy")]
+pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
@@ -44,6 +46,8 @@ pub mod game_laws;
 pub mod map2d;
 #[cfg(feature = "bevy")]
 pub mod gpu_features;
+#[cfg(feature = "bevy")]
+pub mod info_views;
 #[cfg(feature = "bevy")]
 pub mod live_attach;
 #[cfg(feature = "bevy")]
@@ -80,6 +84,10 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
+<<<<<<< HEAD
+=======
+pub mod civ_history;
+>>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -300,6 +308,9 @@ pub struct LiveHudSnapshot {
     pub civilian_count: usize,
     /// Factions tracked from `Frame3d::FactionState` wire frames.
     pub faction_count: usize,
+    /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
+    #[serde(default)]
+    pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,
     /// Chunk under the cursor from minimap click or viewport raycast stub, if any.
@@ -362,10 +373,6 @@ impl LiveHudSnapshot {
         );
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
-        }
-        {
-            let spd = if self.speed_multiplier == 0 { "PAUSED".to_string() } else { format!("{}x", self.speed_multiplier) };
-            line.push_str(&format!(" | spd:{spd}"));
         }
         if let Some(chunk) = self.focused_chunk {
             line.push_str(&format!(" | chunk: {}", chunk.0));
@@ -678,7 +685,7 @@ pub const CHUNK_FADE_DURATION_SECS: f32 = 0.3;
 /// [`CHUNK_FADE_DURATION_SECS`]).
 #[must_use]
 pub fn chunk_fade_alpha(elapsed_secs: f32) -> f32 {
-    if elapsed_secs <= 0.0 {
+    if !elapsed_secs.is_finite() || elapsed_secs <= 0.0 {
         0.0
     } else if elapsed_secs >= CHUNK_FADE_DURATION_SECS {
         1.0
@@ -690,7 +697,7 @@ pub fn chunk_fade_alpha(elapsed_secs: f32) -> f32 {
 /// Returns true once the chunk fade-in has reached full opacity.
 #[must_use]
 pub fn chunk_fade_complete(elapsed_secs: f32) -> bool {
-    elapsed_secs >= CHUNK_FADE_DURATION_SECS
+    elapsed_secs.is_finite() && elapsed_secs >= CHUNK_FADE_DURATION_SECS
 }
 
 /// Apply a fade alpha to an opaque sRGB triple (preserves RGB, sets alpha).
@@ -1237,6 +1244,14 @@ mod tests {
         assert_eq!(rgba[1], 0.69);
         assert_eq!(rgba[2], 0.62);
         assert_eq!(rgba[3], 0.4);
+    }
+
+    #[test]
+    fn chunk_fade_helpers_ignore_non_finite_elapsed() {
+        assert_eq!(chunk_fade_alpha(f32::NAN), 0.0);
+        assert!(!chunk_fade_complete(f32::NAN));
+        assert_eq!(chunk_fade_alpha(f32::INFINITY), 0.0);
+        assert!(!chunk_fade_complete(f32::INFINITY));
     }
 
     #[test]

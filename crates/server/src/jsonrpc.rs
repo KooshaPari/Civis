@@ -58,6 +58,21 @@ pub enum JsonRpcMethod {
     SimPlaceVoxel,
     /// Tactical voxel damage (`sim.damage`, FR-CIV-TACTICS / P-U1).
     SimDamage,
+    /// Persist simulation to a production slot (`save.slot`, CIV-1000 §13).
+    SaveSlot,
+    /// Load simulation from a production slot (`save.load`, CIV-1000 §13).
+    LoadSlot,
+    /// List saves in the bridge `saves/` directory (`save.list`, CIV-1000 §13).
+    SaveList,
+    /// Read the latest civ-emergence-metrics sample
+    /// (`sim.emergence`, stacked on PR #350; FR dashboard).
+    SimEmergence,
+    /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
+    SimSubscribe,
+    /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
+    SimUnsubscribe,
+    /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
+    SimUpdateSubscription,
 }
 
 impl JsonRpcMethod {
@@ -78,6 +93,13 @@ impl JsonRpcMethod {
             Self::SimSpawnEntity => "sim.spawn_entity",
             Self::SimPlaceVoxel => "sim.place_voxel",
             Self::SimDamage => "sim.damage",
+            Self::SaveSlot => "save.slot",
+            Self::LoadSlot => "save.load",
+            Self::SaveList => "save.list",
+            Self::SimEmergence => "sim.emergence",
+            Self::SimSubscribe => "sim.subscribe",
+            Self::SimUnsubscribe => "sim.unsubscribe",
+            Self::SimUpdateSubscription => "sim.update_subscription",
         }
     }
 
@@ -98,6 +120,13 @@ impl JsonRpcMethod {
             "sim.spawn_entity" => Some(Self::SimSpawnEntity),
             "sim.place_voxel" => Some(Self::SimPlaceVoxel),
             "sim.damage" => Some(Self::SimDamage),
+            "save.slot" => Some(Self::SaveSlot),
+            "save.load" => Some(Self::LoadSlot),
+            "save.list" => Some(Self::SaveList),
+            "sim.emergence" => Some(Self::SimEmergence),
+            "sim.subscribe" => Some(Self::SimSubscribe),
+            "sim.unsubscribe" => Some(Self::SimUnsubscribe),
+            "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             _ => None,
         }
     }
@@ -1057,6 +1086,73 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 ),
                 effect: DispatchEffect::None,
             },
+        },
+        JsonRpcMethod::SaveSlot => match parse_slot_name_params(req.params.as_ref()) {
+            Ok(slot_name) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "saved": true, "slot_name": slot_name }),
+                ),
+                effect: DispatchEffect::SaveSlot { slot_name },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::LoadSlot => match parse_slot_name_params(req.params.as_ref()) {
+            Ok(slot_name) => DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::json!({ "loaded": true, "slot_name": slot_name }),
+                ),
+                effect: DispatchEffect::LoadSlot { slot_name },
+            },
+            Err(error) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, error),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::SaveList => match ctx.saves_dir.as_deref() {
+            Some(dir) => match list_saves(dir) {
+                Ok(entries) => DispatchPlan {
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::to_value(entries).unwrap_or(Value::Array(vec![])),
+                    ),
+                    effect: DispatchEffect::None,
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
+                    effect: DispatchEffect::None,
+                },
+            },
+            None => DispatchPlan {
+                response: JsonRpcResponse::failure(
+                    req.id,
+                    JsonRpcError {
+                        code: error_code::INTERNAL_ERROR,
+                        message: "Save directory unavailable".to_owned(),
+                        data: None,
+                    },
+                ),
+                effect: DispatchEffect::None,
+            },
+        },
+        JsonRpcMethod::SimSubscribe
+        | JsonRpcMethod::SimUpdateSubscription
+        | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
+            response: JsonRpcResponse::failure(
+                req.id,
+                JsonRpcError {
+                    code: error_code::INTERNAL_ERROR,
+                    message:
+                        "sim.subscribe/unsubscribe require an active WebSocket connection"
+                            .to_owned(),
+                    data: None,
+                },
+            ),
+            effect: DispatchEffect::None,
         },
     }
 }
@@ -2218,5 +2314,318 @@ mod tests {
             plan.response.result,
             Some(serde_json::json!({ "multiplier": 4 }))
         );
+    }
+
+    /// Covers FR-CIV-SAVE-001.
+    /// Covers FR-CIV-SAVE-002.
+    /// Covers FR-CIV-TACTICS-066.
+    /// FR-CIV-TACTICS-066 — `save.slot` is a JSON-RPC method dispatched on
+    /// the server bridge; the planner emits a `DispatchEffect::SaveSlot`
+    /// with the slot name from the request params.
+    #[test]
+    fn dispatch_save_slot_plans_save_effect_fr_save_002() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":30,"method":"save.slot","params":{"slot_name":"slot-2"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 1,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+            },
+        );
+        assert_eq!(
+            plan.effect,
+            DispatchEffect::SaveSlot {
+                slot_name: "slot-2".to_owned()
+            }
+        );
+    }
+
+    /// Covers FR-CIV-SAVE-001.
+    /// Covers FR-CIV-SAVE-002.
+    /// Covers FR-CIV-TACTICS-066.
+    #[test]
+    fn dispatch_save_slot_rejects_invalid_slot_fr_save_002() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":31,"method":"save.slot","params":{"slot_name":"slot-9"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 0,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        assert_eq!(
+            plan.response.error.as_ref().map(|e| e.code),
+            Some(error_code::INVALID_PARAMS)
+        );
+    }
+
+    #[test]
+    fn parse_reset_seed_extracts_u64() {
+        use serde_json::json;
+        assert_eq!(parse_reset_seed(Some(&json!({"seed": 42}))).unwrap(), 42);
+        assert!(parse_reset_seed(None).is_err());
+        assert!(parse_reset_seed(Some(&json!({}))).is_err());
+        assert!(parse_reset_seed(Some(&json!({"seed": "x"}))).is_err());
+    }
+
+    #[test]
+    fn parse_set_speed_params_validates_multiplier() {
+        use serde_json::json;
+        assert_eq!(
+            parse_set_speed_params(Some(&json!({"multiplier": 2}))).unwrap(),
+            2
+        );
+        assert_eq!(
+            parse_set_speed_params(Some(&json!({"multiplier": 0}))).unwrap(),
+            0
+        );
+        assert!(parse_set_speed_params(Some(&json!({"multiplier": 3}))).is_err());
+        assert!(parse_set_speed_params(None).is_err());
+        assert!(parse_set_speed_params(Some(&json!({"multiplier": "x"}))).is_err());
+    }
+
+    #[test]
+    fn parse_role_param_reads_nonempty_role() {
+        use serde_json::json;
+        assert_eq!(
+            parse_role_param(Some(&json!({"role":"operator"}))),
+            Some("operator".to_string())
+        );
+        assert_eq!(parse_role_param(Some(&json!({"role":""}))), None);
+        assert_eq!(parse_role_param(None), None);
+        assert_eq!(parse_role_param(Some(&json!({}))), None);
+    }
+
+    #[test]
+    fn role_allows_operator_enforces_when_required() {
+        use serde_json::json;
+        assert!(role_allows_operator(false, None, None));
+        assert!(role_allows_operator(
+            true,
+            Some(&json!({"role":"operator"})),
+            None
+        ));
+        assert!(role_allows_operator(true, None, Some("operator")));
+        assert!(!role_allows_operator(true, None, None));
+        assert!(!role_allows_operator(
+            true,
+            Some(&json!({"role":"viewer"})),
+            None
+        ));
+    }
+
+    #[test]
+    fn parse_name_maps_all_known_methods() {
+        assert_eq!(
+            JsonRpcMethod::parse_name("health"),
+            Some(JsonRpcMethod::Health)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.command"),
+            Some(JsonRpcMethod::SimCommand)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.status"),
+            Some(JsonRpcMethod::SimStatus)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.set_speed"),
+            Some(JsonRpcMethod::SimSetSpeed)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.slot"),
+            Some(JsonRpcMethod::SaveSlot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.load"),
+            Some(JsonRpcMethod::LoadSlot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("save.list"),
+            Some(JsonRpcMethod::SaveList)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.emergence"),
+            Some(JsonRpcMethod::SimEmergence)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.snapshot"),
+            Some(JsonRpcMethod::SimSnapshot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.spawn_entity"),
+            Some(JsonRpcMethod::SimSpawnEntity)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.subscribe"),
+            Some(JsonRpcMethod::SimSubscribe)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.unsubscribe"),
+            Some(JsonRpcMethod::SimUnsubscribe)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.update_subscription"),
+            Some(JsonRpcMethod::SimUpdateSubscription)
+        );
+        assert_eq!(JsonRpcMethod::parse_name("unknown.method"), None);
+        assert_eq!(JsonRpcMethod::parse_name(""), None);
+    }
+
+    #[test]
+    fn parse_replay_path_extracts_nonempty() {
+        use serde_json::json;
+        assert_eq!(
+            parse_replay_path(Some(&json!({"path":"saves/x.civreplay"}))).unwrap(),
+            "saves/x.civreplay"
+        );
+        assert!(parse_replay_path(None).is_err());
+        assert!(parse_replay_path(Some(&json!({}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
+    }
+
+    #[test]
+    fn parse_sim_command_action_maps_noop_tick() {
+        use serde_json::json;
+        assert!(matches!(
+            parse_sim_command_action(Some(&json!({"action":"noop"}))),
+            Some(SimCommandAction::Noop)
+        ));
+        assert!(matches!(
+            parse_sim_command_action(Some(&json!({"action":"tick"}))),
+            Some(SimCommandAction::Tick)
+        ));
+        assert!(parse_sim_command_action(Some(&json!({"action":"bogus"}))).is_none());
+        assert!(parse_sim_command_action(Some(&json!({}))).is_none());
+        assert!(parse_sim_command_action(None).is_none());
+    }
+
+    #[test]
+    fn spawn_entity_kind_wire_labels() {
+        assert_eq!(SpawnEntityKind::Civilian.wire_label(), "civilian");
+        assert_eq!(SpawnEntityKind::Vehicle.wire_label(), "vehicle");
+        assert_eq!(SpawnEntityKind::Airport.wire_label(), "airport");
+        assert_eq!(SpawnEntityKind::Port.wire_label(), "port");
+        assert_eq!(SpawnEntityKind::Hangar.wire_label(), "hangar");
+    }
+
+    #[test]
+    fn set_sim_command_tick_inserts_tick_into_object_result() {
+        use serde_json::json;
+        let mut resp = JsonRpcResponse::success(RequestId::Null, json!({"status":"ok"}));
+        set_sim_command_tick(&mut resp, 99);
+        assert_eq!(
+            resp.result.as_ref().unwrap().get("tick").unwrap(),
+            &json!(99)
+        );
+        let mut resp2 = JsonRpcResponse::success(RequestId::Null, json!("plain-string"));
+        set_sim_command_tick(&mut resp2, 5);
+        assert_eq!(resp2.result.as_ref().unwrap(), &json!("plain-string"));
+    }
+
+    /// Criticality metrics are carried through From<EmergenceSample> for EmergenceSampleFields.
+    #[test]
+    fn emergence_sample_fields_from_carries_criticality_metrics() {
+        use civ_engine::emergence_metrics::EmergenceSample;
+        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_emergence_metrics::branching::BranchingRegime;
+
+        let sample = EmergenceSample {
+            tick: 1,
+            entropy_bits: 0.0,
+            entropy_norm: 0.0,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 0,
+            histogram_populated_bins: 0,
+            sample_dur_us: 0,
+            dashboard: EmergenceDashboard::default(),
+            branching_sigma: 0.0,
+            branching_sigma_score: 0.0,
+            branching_window: 0,
+            avalanches_closed: 0,
+            branching_regime: BranchingRegime::HeatDeath,
+            power_law_alpha: 1.95,
+            novelty_rate: 0.008,
+            mi_material_faction_norm: Some(0.33),
+        };
+        let fields = EmergenceSampleFields::from(sample);
+        assert!((fields.power_law_alpha - 1.95).abs() < 1e-6, "power_law_alpha mismatch");
+        assert!((fields.novelty_rate - 0.008).abs() < 1e-6, "novelty_rate mismatch");
+        assert_eq!(fields.mi_material_faction_norm, Some(0.33));
+    }
+
+    /// snapshot_result_json includes power_law_alpha, novelty_rate, mi_material_faction_norm
+    /// in the emergence block.
+    #[test]
+    fn snapshot_result_json_emergence_contains_criticality_keys() {
+        let emergence = EmergenceSampleFields {
+            tick: 5,
+            entropy_bits: 0.1,
+            entropy_norm: 0.05,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 100,
+            histogram_populated_bins: 3,
+            sample_dur_us: 10,
+            dashboard: None,
+            branching_sigma: 1.0,
+            branching_sigma_score: 0.5,
+            branching_window: 5,
+            avalanches_closed: 2,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 2.1,
+            novelty_rate: 0.005,
+            mi_material_faction_norm: Some(0.42),
+        };
+        let fields = SnapshotFields {
+            tick: 5,
+            population: 0,
+            building_count: 0,
+            energy_budget: None,
+            market_prices: Default::default(),
+            hash_chain_root: None,
+            speed_multiplier: 1,
+            spectator: None,
+            institutions: vec![],
+            military_units: vec![],
+            damage_events: vec![],
+            damage_events_count: 0,
+            voxel_damage_removed_this_tick: 0,
+            mods: vec![],
+            mod_lifecycle: vec![],
+            session_saved: vec![],
+            mod_permission_violations: vec![],
+            climate: civ_engine::Climate { tick: 5, day_phase: 0.0, year_phase: 0.0, moon_phase: 0.0, tide_offset: 0.0 },
+            emergence: Some(emergence),
+        };
+        let json = snapshot_result_json(&fields);
+        let emerg = json.get("emergence").expect("emergence block");
+        assert!(emerg.get("power_law_alpha").is_some(), "missing power_law_alpha");
+        assert!(emerg.get("novelty_rate").is_some(), "missing novelty_rate");
+        assert!(emerg.get("mi_material_faction_norm").is_some(), "missing mi_material_faction_norm");
+        let mi = emerg["mi_material_faction_norm"].as_f64().expect("mi_material_faction_norm f64");
+        assert!((mi - 0.42).abs() < 1e-5);
     }
 }

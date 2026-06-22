@@ -99,3 +99,8 @@ debug = 1
 [profile.dev.package.bevy_kira_audio]
 opt-level = 3
 debug = 1
+
+[patch.crates-io]
+metal = { path = "vendor/metal" }
+kira = { path = "vendor/kira" }
+simba = { path = "vendor/simba" }

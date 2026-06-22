@@ -409,7 +409,7 @@ pub struct InstitutionSnapshot {
     /// Institution id.
     pub id: u32,
     /// `market` or `treasury`.
-    pub kind: &'static str,
+    pub kind: String,
     /// Joule balance.
     pub balance_joules: i64,
 }
@@ -719,8 +719,8 @@ pub fn institutions_from_sim(sim: &civ_engine::Simulation) -> Vec<InstitutionSna
         .map(|account| InstitutionSnapshot {
             id: account.id,
             kind: match account.kind {
-                InstitutionKind::Market => "market",
-                InstitutionKind::Treasury => "treasury",
+                InstitutionKind::Market => "market".to_owned(),
+                InstitutionKind::Treasury => "treasury".to_owned(),
             },
             balance_joules: account.balance_joules,
         })
@@ -1273,11 +1273,11 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
         JsonRpcMethod::SimLoadScenario => {
             let (preset, seed) = parse_load_scenario_params(req.params.as_ref())
                 .map_err(|e| DispatchPlan {
-                    response: JsonRpcResponse::error(req.id.clone(), e),
+                    response: JsonRpcResponse::failure(req.id.clone(), e),
                     effect: DispatchEffect::None,
                 })?;
             DispatchPlan {
-                response: JsonRpcResponse::ok(
+                response: JsonRpcResponse::success(
                     req.id.clone(),
                     serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
                 ),

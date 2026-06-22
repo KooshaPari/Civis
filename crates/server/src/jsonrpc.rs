@@ -404,7 +404,7 @@ pub fn parse_sim_command_action(params: Option<&Value>) -> Option<SimCommandActi
 }
 
 /// Institution row on `sim.snapshot` (read-only, from `civ-economy` ledger).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InstitutionSnapshot {
     /// Institution id.
     pub id: u32,
@@ -415,7 +415,7 @@ pub struct InstitutionSnapshot {
 }
 
 /// Snapshot fields from `Simulation::snapshot()` for read-only RPC handlers.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SnapshotFields {
     /// Engine tick at snapshot time.
     pub tick: u64,
@@ -468,7 +468,7 @@ pub struct SnapshotFields {
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DamagePulseSnapshot {
     /// Normalized map X.
     pub x: f32,
@@ -483,7 +483,7 @@ pub struct DamagePulseSnapshot {
 }
 
 /// Military pin row for `sim.snapshot` (matches civ-watch wire shape).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MilitaryPinSnapshot {
     /// Stable pin id for clients.
     pub id: u64,
@@ -780,7 +780,7 @@ pub struct OutcomeFields {
 }
 
 /// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,

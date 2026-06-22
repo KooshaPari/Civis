@@ -404,6 +404,14 @@ impl Simulation {
             .saturating_add(units);
     }
 
+    fn micro_actor_action_count(&self) -> u32 {
+        self.emergence_branching.last_tick_unrest_events
+    }
+
+    fn micro_descendant_action_count(&self) -> u32 {
+        self.last_tick_engagements().len().try_into().unwrap_or(u32::MAX)
+    }
+
     /// Take one emergence sample if the current tick is on a sample
     /// boundary (every [`EMERGENCE_SAMPLE_INTERVAL`] ticks). The
     /// function is a no-op (returns `false`) on non-sample ticks so
@@ -569,12 +577,6 @@ impl Simulation {
             sample.dashboard.sentience_fraction,
             sample.dashboard.psyche_stability,
             sample.dashboard.diplomacy_tension,
-            sample.branching_sigma,
-            sample.branching_sigma_score,
-            sample.branching_regime.label(),
-            sample.power_law_alpha,
-            sample.novelty_rate,
-            sample.mi_material_faction_norm,
         );
         true
     }

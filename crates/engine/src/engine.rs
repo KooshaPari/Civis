@@ -11,7 +11,7 @@ use civ_agents::{
 use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState, Stocks as ClusterStocks};
+use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
 use civ_genetics::{
     sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold},
@@ -42,6 +42,8 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
+use crate::emergence::EmergenceState;
+use crate::emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
@@ -439,6 +441,10 @@ pub struct Simulation {
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
+    scenario_taxation: crate::scenario::ScenarioTaxation,
+    emergence: EmergenceState,
+    emergence_branching: EmergenceBranchingState,
+    emergence_sample: Option<EmergenceSample>,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -666,6 +672,10 @@ impl Simulation {
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            scenario_taxation: crate::scenario::ScenarioTaxation::default(),
+            emergence: EmergenceState::new(42),
+            emergence_branching: EmergenceBranchingState::default(),
+            emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -730,6 +740,10 @@ impl Simulation {
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            scenario_taxation: crate::scenario::ScenarioTaxation::default(),
+            emergence: EmergenceState::new(seed),
+            emergence_branching: EmergenceBranchingState::default(),
+            emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -1008,6 +1022,10 @@ impl Simulation {
     /// Borrow the research cache.
     pub fn research_cache(&self) -> &ResearchCache {
         &self.research_cache
+    }
+
+    pub fn researched_tech_count(&self) -> usize {
+        (self.state.research_progress / 200_000) as usize
     }
 
     /// Mutably borrow the research cache.
@@ -1819,6 +1837,11 @@ impl Simulation {
         if let Some(v) = military.engage_range_grid {
             self.military_phase.war.engage_range_grid = v.max(1);
         }
+    }
+
+    /// Store scenario taxation settings for later economy-phase wiring.
+    pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
+        self.scenario_taxation = taxation.clone();
     }
 
     /// Military phase configuration (tests and tooling).

@@ -74,7 +74,7 @@ pub struct EmergenceState {
 }
 
 impl EmergenceState {
-    fn new(seed: u64) -> Self {
+    pub(crate) fn new(seed: u64) -> Self {
         let _ = seed;
         EmergenceState {
             legends: LegendsWorker::new(SagaGraph::new(LegendsConfig::default())),

@@ -13,6 +13,7 @@
 mod allocation;
 mod institution;
 mod market;
+mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
 pub use institution::{
@@ -21,6 +22,7 @@ pub use institution::{
     INSTITUTION_TREASURY,
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
+pub use stocks::Stocks;
 
 use serde::{Deserialize, Serialize};
 

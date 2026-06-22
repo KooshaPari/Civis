@@ -121,6 +121,7 @@ pub mod window_icon;
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
+pub use civ_agents::NeedAction;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -922,6 +923,164 @@ pub fn parse_ws_payload(payload: &[u8]) -> Result<civ_protocol_3d::Frame3d, Stri
     let text = std::str::from_utf8(payload).map_err(|err| err.to_string())?;
     parse_frame3d_json(text)
 }
+
+#[cfg(feature = "bevy")]
+mod agent_needs {
+    use bevy::prelude::{App, Component, Plugin, Query, Res, Resource, Update};
+    use civ_agents::{Needs as AgentNeedsData, Position3d as AgentPositionData};
+    use civ_voxel::material::{
+        ACID, CO2, FIRE, LAVA, MOLD, MOSS, MOLTEN_METAL, PLANT, SALT_WATER, SMOKE, STEAM,
+        TOXIC_GAS, WATER, WOOD,
+    };
+    use civ_voxel::{MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
+
+    /// Bevy component wrapper for the agent needs vector.
+    #[derive(Component, Debug, Clone, Copy, PartialEq)]
+    pub struct AgentNeeds {
+        /// Food pressure.
+        pub food: f32,
+        /// Shelter pressure.
+        pub shelter: f32,
+        /// Safety pressure.
+        pub safety: f32,
+        /// Belonging pressure.
+        pub belonging: f32,
+    }
+
+    impl From<AgentNeedsData> for AgentNeeds {
+        fn from(value: AgentNeedsData) -> Self {
+            Self {
+                food: value.food,
+                shelter: value.shelter,
+                safety: value.safety,
+                belonging: value.belonging,
+            }
+        }
+    }
+
+    impl From<AgentNeeds> for AgentNeedsData {
+        fn from(value: AgentNeeds) -> Self {
+            Self {
+                food: value.food,
+                shelter: value.shelter,
+                safety: value.safety,
+                belonging: value.belonging,
+            }
+        }
+    }
+
+    /// Bevy component wrapper for the agent world position.
+    #[derive(Component, Debug, Clone, Copy, PartialEq)]
+    pub struct Position {
+        /// Fixed-point world coordinate.
+        pub coord: WorldCoord,
+    }
+
+    impl From<AgentPositionData> for Position {
+        fn from(value: AgentPositionData) -> Self {
+            Self { coord: value.coord }
+        }
+    }
+
+    impl From<Position> for AgentPositionData {
+        fn from(value: Position) -> Self {
+            Self { coord: value.coord }
+        }
+    }
+
+    /// Bevy resource carrying the voxel world used by the needs tick.
+    #[derive(Resource)]
+    pub struct VoxelWorldRes {
+        /// Backing voxel world.
+        pub world: VoxelWorld<MaterialId>,
+    }
+
+    impl Default for VoxelWorldRes {
+        fn default() -> Self {
+            Self {
+                world: VoxelWorld::new(FIXED_SCALE),
+            }
+        }
+    }
+
+    const SAMPLE_RADIUS: i64 = 1;
+    const FOOD_RELIEF_PER_HIT: f32 = 0.02;
+    const FOOD_DECAY_WITHOUT_SIGNAL: f32 = 0.008;
+    const SAFETY_PRESSURE_PER_HIT: f32 = 0.03;
+    const SAFETY_RELIEF_WITHOUT_SIGNAL: f32 = 0.006;
+
+    fn classify_voxel(material: MaterialId) -> (bool, bool) {
+        let food = matches!(material, WATER | SALT_WATER | PLANT | MOSS | MOLD | WOOD);
+        let threat = matches!(
+            material,
+            LAVA | FIRE | ACID | TOXIC_GAS | SMOKE | STEAM | MOLTEN_METAL | CO2
+        );
+        (food, threat)
+    }
+
+    fn nearby_stimuli(world: &VoxelWorld<MaterialId>, center: WorldCoord) -> (u32, u32) {
+        let mut food_hits = 0;
+        let mut threat_hits = 0;
+        'samples: for dx in -SAMPLE_RADIUS..=SAMPLE_RADIUS {
+            for dy in -SAMPLE_RADIUS..=SAMPLE_RADIUS {
+                for dz in -SAMPLE_RADIUS..=SAMPLE_RADIUS {
+                    let sample = WorldCoord {
+                        x: center.x + dx * FIXED_SCALE,
+                        y: center.y + dy * FIXED_SCALE,
+                        z: center.z + dz * FIXED_SCALE,
+                    };
+                    let (food, threat) = classify_voxel(world.read(sample));
+                    if food {
+                        food_hits += 1;
+                    }
+                    if threat {
+                        threat_hits += 1;
+                    }
+                    if food_hits > 0 && threat_hits > 0 {
+                        break 'samples;
+                    }
+                }
+            }
+        }
+        (food_hits, threat_hits)
+    }
+
+    /// Tick hunger and safety pressure from nearby voxel-world signals.
+    pub fn update_agent_needs(
+        mut query: Query<(&mut AgentNeeds, &Position)>,
+        world: Res<VoxelWorldRes>,
+    ) {
+        for (mut needs, position) in &mut query {
+            let (food_hits, threat_hits) = nearby_stimuli(&world.world, position.coord);
+
+            if food_hits > 0 {
+                needs.food = (needs.food - FOOD_RELIEF_PER_HIT * food_hits as f32).max(0.0);
+            } else {
+                needs.food = (needs.food + FOOD_DECAY_WITHOUT_SIGNAL).min(1.0);
+            }
+
+            if threat_hits > 0 {
+                needs.safety =
+                    (needs.safety + SAFETY_PRESSURE_PER_HIT * threat_hits as f32).min(1.0);
+            } else {
+                needs.safety = (needs.safety - SAFETY_RELIEF_WITHOUT_SIGNAL).max(0.0);
+            }
+        }
+    }
+
+    /// Registers the agent-needs tick into the Bevy gameplay loop.
+    pub struct AgentNeedsPlugin;
+
+    impl Plugin for AgentNeedsPlugin {
+        fn build(&self, app: &mut App) {
+            app.init_resource::<VoxelWorldRes>()
+                .add_systems(Update, update_agent_needs);
+        }
+    }
+}
+
+#[cfg(feature = "bevy")]
+pub use agent_needs::{AgentNeeds, AgentNeedsPlugin, Position, VoxelWorldRes, update_agent_needs};
 
 #[cfg(feature = "bevy")]
 pub mod bevy_render;

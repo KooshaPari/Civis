@@ -99,12 +99,17 @@ pub enum InstitutionLedgerError {
         /// Requested debit (joules).
         requested: i64,
     },
-    /// Aggregate debits ≠ aggregate credits across postings.
-    UnbalancedPostings {
-        /// Sum of debited amounts.
-        debits: i64,
-        /// Sum of credited amounts.
-        credits: i64,
+    /// A posting has the same account on both sides (debit == credit is a no-op).
+    ///
+    /// Each `InstitutionPosting` is recorded as a single balanced pair, so the
+    /// conservation contract is per-posting: `debit != credit`. This variant
+    /// replaces the previous broken cross-posting sum (which summed
+    /// `postings[i].amount` for both sides, making the check trivially pass).
+    SelfPosting {
+        /// The account that appeared on both legs of the posting.
+        side: LedgerSide,
+        /// Amount that would have been transferred (no-op).
+        amount: i64,
     },
 }
 
@@ -143,6 +148,12 @@ impl InstitutionLedger {
     }
 
     /// Post a balanced transfer: debit side pays, credit side receives.
+    ///
+    /// Each posting is intrinsically balanced: `apply_debit` and `apply_credit`
+    /// are called with the same `amount`, and the resulting `InstitutionPosting`
+    /// row records the pair. Conservation across postings is therefore
+    /// enforced per-posting (`debit != credit`, `amount > 0`) rather than via
+    /// cross-posting sums — see [`Self::verify_conservation`].
     pub fn post(
         &mut self,
         economy: &mut EconomyState,
@@ -152,6 +163,9 @@ impl InstitutionLedger {
     ) -> Result<(), InstitutionLedgerError> {
         if amount <= 0 {
             return Err(InstitutionLedgerError::NonPositiveAmount { amount });
+        }
+        if debit == credit {
+            return Err(InstitutionLedgerError::SelfPosting { side: debit, amount });
         }
 
         self.apply_debit(economy, debit, amount)?;
@@ -225,12 +239,26 @@ impl InstitutionLedger {
         Ok(())
     }
 
-    /// Verify aggregate debits equal aggregate credits and institution balances are non-negative.
+    /// Verify per-posting conservation and non-negative institution balances.
+    ///
+    /// Each `InstitutionPosting` is intrinsically balanced, so the conservation
+    /// contract is per-posting (`debit != credit`, `amount > 0`). The previous
+    /// cross-posting sum (`postings.iter().map(|p| p.amount).sum()` for both
+    /// sides) was a tautology — both sides summed the same field — and was
+    /// removed in favour of the meaningful per-posting check.
     pub fn verify_conservation(&self) -> Result<(), InstitutionLedgerError> {
-        let debits: i64 = self.postings.iter().map(|p| p.amount).sum();
-        let credits: i64 = self.postings.iter().map(|p| p.amount).sum();
-        if debits != credits {
-            return Err(InstitutionLedgerError::UnbalancedPostings { debits, credits });
+        for posting in &self.postings {
+            if posting.amount <= 0 {
+                return Err(InstitutionLedgerError::NonPositiveAmount {
+                    amount: posting.amount,
+                });
+            }
+            if posting.debit == posting.credit {
+                return Err(InstitutionLedgerError::SelfPosting {
+                    side: posting.debit,
+                    amount: posting.amount,
+                });
+            }
         }
 
         for account in self.accounts.values() {
@@ -361,5 +389,146 @@ mod tests {
             .institutions
             .verify_conservation()
             .expect("conservation");
+    }
+
+    /// `post` rejects a posting whose debit and credit are the same account —
+    /// a self-posting is a no-op and would corrupt the conservation
+    /// invariants if recorded.
+    #[test]
+    fn post_rejects_self_posting_macro() {
+        let mut economy = EconomyState::with_energy_budget(100);
+        let mut ledger = InstitutionLedger::with_defaults();
+        let err = ledger
+            .post(
+                &mut economy,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                10,
+            )
+            .expect_err("self-posting must be rejected");
+        assert_eq!(
+            err,
+            InstitutionLedgerError::SelfPosting {
+                side: LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                amount: 10,
+            }
+        );
+        // No mutation must have happened.
+        assert_eq!(economy.energy_budget_joules, 100);
+        assert!(ledger.postings.is_empty());
+    }
+
+    #[test]
+    fn post_rejects_self_posting_institution() {
+        let mut economy = EconomyState::with_energy_budget(0);
+        let mut ledger = InstitutionLedger::with_defaults();
+        let err = ledger
+            .post(
+                &mut economy,
+                LedgerSide::Institution(INSTITUTION_MARKET),
+                LedgerSide::Institution(INSTITUTION_MARKET),
+                5,
+            )
+            .expect_err("self-posting must be rejected");
+        assert_eq!(
+            err,
+            InstitutionLedgerError::SelfPosting {
+                side: LedgerSide::Institution(INSTITUTION_MARKET),
+                amount: 5,
+            }
+        );
+        assert!(ledger.postings.is_empty());
+    }
+
+    /// `verify_conservation` catches a corrupted posting (debit == credit)
+    /// that snuck past `post`. The previous sum-based check summed the same
+    /// field for both sides and was a tautology; this regression test would
+    /// have silently passed under the old code.
+    #[test]
+    fn verify_conservation_catches_self_posting_in_log() {
+        let mut economy = EconomyState::with_energy_budget(0);
+        let mut ledger = InstitutionLedger::with_defaults();
+        // Construct a corrupted posting directly (bypass `post`'s guard, which
+        // is what the engine would do if it ever serialised a bad row from
+        // disk).
+        ledger.postings.push(InstitutionPosting {
+            tick: 0,
+            debit: LedgerSide::Institution(INSTITUTION_TREASURY),
+            credit: LedgerSide::Institution(INSTITUTION_TREASURY),
+            amount: 1,
+        });
+        assert_eq!(
+            ledger.verify_conservation(),
+            Err(InstitutionLedgerError::SelfPosting {
+                side: LedgerSide::Institution(INSTITUTION_TREASURY),
+                amount: 1,
+            })
+        );
+        // Suppress unused mutability warning when other consumers borrow
+        // `economy` for the next test.
+        let _ = &mut economy;
+    }
+
+    /// End-to-end conservation under a sequence of random institution↔institution
+    /// transfers: the sum of all institution balances plus the macro joule
+    /// budget must remain invariant (no joules created or destroyed).
+    #[test]
+    fn institution_transfers_are_conservative_end_to_end() {
+        let mut economy = EconomyState::with_energy_budget(80);
+        let mut ledger = InstitutionLedger::with_defaults();
+        // Fund both institutions from the macro budget so transfers can flow.
+        ledger
+            .post(
+                &mut economy,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_TREASURY),
+                50,
+            )
+            .expect("seed treasury");
+        ledger
+            .post(
+                &mut economy,
+                LedgerSide::Macro(ACCOUNT_ENERGY_BUDGET),
+                LedgerSide::Institution(INSTITUTION_MARKET),
+                30,
+            )
+            .expect("seed market");
+        assert_eq!(economy.energy_budget_joules, 0);
+
+        let total_before: i64 = economy.energy_budget_joules
+            + ledger.institution_balance(INSTITUTION_TREASURY)
+            + ledger.institution_balance(INSTITUTION_MARKET);
+        assert_eq!(total_before, 80);
+
+        // Six alternating transfers; the only flow direction is institution→institution,
+        // so the macro joule budget is untouched and conservation must hold at the
+        // institution layer.
+        let flows = [
+            (INSTITUTION_TREASURY, INSTITUTION_MARKET, 5),
+            (INSTITUTION_MARKET, INSTITUTION_TREASURY, 3),
+            (INSTITUTION_TREASURY, INSTITUTION_MARKET, 7),
+            (INSTITUTION_MARKET, INSTITUTION_TREASURY, 2),
+            (INSTITUTION_TREASURY, INSTITUTION_MARKET, 4),
+            (INSTITUTION_MARKET, INSTITUTION_TREASURY, 1),
+        ];
+        for (from, to, amount) in flows {
+            ledger
+                .post(
+                    &mut economy,
+                    LedgerSide::Institution(from),
+                    LedgerSide::Institution(to),
+                    amount,
+                )
+                .expect("transfer");
+            let total: i64 = economy.energy_budget_joules
+                + ledger.institution_balance(INSTITUTION_TREASURY)
+                + ledger.institution_balance(INSTITUTION_MARKET);
+            assert_eq!(total, total_before, "joules leaked across transfers");
+            assert!(economy.energy_budget_joules >= 0);
+            assert!(ledger.institution_balance(INSTITUTION_TREASURY) >= 0);
+            assert!(ledger.institution_balance(INSTITUTION_MARKET) >= 0);
+            ledger.verify_conservation().expect("conservation");
+        }
+        assert_eq!(ledger.postings.len(), 2 + flows.len());
     }
 }

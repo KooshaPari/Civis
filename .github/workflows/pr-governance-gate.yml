@@ -1,6 +1,7 @@
 # Local-first merge gate (Phenotype / agileplus pattern).
 # Heavy quality runs locally via lefthook pre-push; cloud CI only verifies the
-# committed `.ci/quality-manifest.json` attestation (see quality.yml).
+# committed `.ci/quality-manifest.json` attestation (see quality.yml). Labels
+# `ci-billing-exception` and `local-first-ci` both bypass legacy/optional checks.
 name: pr-governance-gate
 
 on:
@@ -148,7 +149,7 @@ jobs:
               core.summary.addHeading("PR governance").addList(failures);
               core.setFailed(
                 failures.join("\n") +
-                  "\n\nTip: add label `local-first-ci` when third-party checks are optional for your PR."
+                  "\n\nTip: add label `ci-billing-exception` or `local-first-ci` when optional checks should not block the PR."
               );
               return;
             }
@@ -157,7 +158,7 @@ jobs:
               .addHeading("PR governance")
               .addRaw(
                 billingException
-                  ? "Manifest OK; optional third-party checks ignored (local-first label)."
+                  ? "Manifest OK; optional/legacy checks ignored (billing or local-first label)."
                   : "Manifest OK; all reported checks passed or were ignored as optional."
               )
               .write();

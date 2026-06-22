@@ -11,6 +11,9 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
+pub mod command_queue;
+pub mod ca_budget;
+pub mod conditions;
 pub mod engine;
 pub mod hash_chain;
 pub mod integrity;
@@ -25,6 +28,8 @@ pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 
+pub use conditions::{check_outcome, GameOutcome};
+pub use ca_budget::{CaTickBudget, StepOutcome, step_with_budget};
 pub use engine::{
     Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType,
     MilitaryUnit, PopulationEvent, Position, Production, ResourceType, Resources, Simulation,

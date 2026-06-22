@@ -11,11 +11,15 @@
 #![warn(missing_docs)]
 
 mod allocation;
+mod extraction;
 mod institution;
 mod market;
 mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
+pub use extraction::{
+    find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
+};
 pub use institution::{
     collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
     InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,

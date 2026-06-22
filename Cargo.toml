@@ -1,7 +1,28 @@
+[package]
+name = "civis"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dev-dependencies]
+criterion = "0.6"
+hecs = "0.10"
+rand = "0.8.6"
+rand_chacha = "0.3"
+civ-agents = { path = "crates/agents" }
+civ-economy = { path = "crates/economy" }
+civ-voxel = { path = "crates/voxel" }
+
+[[bench]]
+name = "civis_perf"
+harness = false
+
 [workspace]
 members = [
   "crates/engine",
-  "crates/civ-traffic",
   "crates/server",
   "crates/voxel",
   "crates/build",
@@ -14,7 +35,6 @@ members = [
   "crates/diplomacy",
   "crates/laws",
   "crates/research",
-  "crates/ai",
   "crates/tactics",
     "crates/planet",
     "crates/protocol-3d",
@@ -26,8 +46,6 @@ members = [
   "crates/save-db",
   "crates/legends",
   "crates/civ-emergence-metrics",
-  "crates/audio",
-  "crates/climate",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]
@@ -36,6 +54,7 @@ exclude = [
   "clients/unreal-show/Source/Civis/rust-shim",
 ]
 resolver = "2"
+default-members = ["."]
 
 [workspace.package]
 version = "0.1.0"
@@ -78,3 +97,4 @@ debug = 1
 [profile.dev.package.bevy_kira_audio]
 opt-level = 3
 debug = 1
+

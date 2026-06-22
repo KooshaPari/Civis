@@ -1977,12 +1977,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "bincode"
-version = "1.3.3"
+name = "bincode-next"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+checksum = "1d6626829353ae29293be5c86f42de5f0468bc758af074b0c7d08f07e538ccbc"
 dependencies = [
+ "bincode_derive-next",
+ "pastey",
+ "rapidhash",
  "serde",
+ "unty-next",
+]
+
+[[package]]
+name = "bincode_derive-next"
+version = "3.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "409532b1da3be643427e49c2f79e0c47d445f695e1b028270d9e80e9044d7d1c"
+dependencies = [
+ "virtue-next",
 ]
 
 [[package]]
@@ -2312,30 +2325,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "civ-ai"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "blake3",
- "civ-research",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "civ-audio"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
 name = "civ-bevy-ref"
 version = "0.1.0"
 dependencies = [
@@ -2419,7 +2408,7 @@ dependencies = [
 name = "civ-engine"
 version = "0.1.0"
 dependencies = [
- "bincode",
+ "bincode-next",
  "blake3",
  "chrono",
  "civ-agents",
@@ -2437,6 +2426,7 @@ dependencies = [
  "civ-tactics",
  "civ-traffic",
  "civ-voxel",
+ "glam 0.30.10",
  "hecs",
  "proptest",
  "rand 0.8.6",
@@ -2638,7 +2628,7 @@ dependencies = [
 name = "civ-voxel"
 version = "0.1.0"
 dependencies = [
- "bincode",
+ "bincode-next",
  "criterion",
  "phenotype-voxel",
  "proptest",
@@ -6375,6 +6365,7 @@ dependencies = [
 [[package]]
 name = "phenotype-voxel"
 version = "0.1.0"
+source = "git+https://github.com/KooshaPari/phenotype-voxel?rev=a4d115898c0db4afe77074fe51a302b1c09d4478#a4d115898c0db4afe77074fe51a302b1c09d4478"
 dependencies = [
  "bytemuck",
  "serde",
@@ -6868,6 +6859,15 @@ name = "rangemap"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "973443cf09a9c8656b574a866ab68dfa19f0867d0340648c7d2f6a71b8a8ea68"
+
+[[package]]
+name = "rapidhash"
+version = "4.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5e48930979c155e2f33aa36ab3119b5ee81332beb6482199a8ecd6029b80b59"
+dependencies = [
+ "rustversion",
+]
 
 [[package]]
 name = "rapier3d"
@@ -8674,6 +8674,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
+name = "unty-next"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16062d030850f35054e37746427b9febb74a2f24c9c6dd6fa2d0c13c5f53221e"
+
+[[package]]
 name = "url"
 version = "2.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8750,6 +8756,12 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "virtue-next"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d5208a9710a6ca1c2da0d64289a5dcca13deb05afdedf651f4e11bcd9fc53eb"
 
 [[package]]
 name = "wait-timeout"

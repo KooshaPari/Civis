@@ -24,6 +24,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::sample_snapshot::EmergenceSampleSnapshot;
+
 /// All five dashboard summary metrics computed from a single tick's
 /// pre-aggregated inputs (FR-CIV-EMERG-001). The struct is the
 /// engine's hand-off shape: the engine builds the input slices, calls
@@ -51,6 +53,18 @@ pub struct EmergenceDashboard {
     /// Mean absolute tension across the recent diplomacy events. See
     /// [`diplomacy_tension`].
     pub diplomacy_tension: f32,
+}
+
+impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
+    fn from(sample: EmergenceSampleSnapshot) -> Self {
+        Self {
+            cluster_entropy: sample.resource_entropy,
+            ideology_homophily: sample.novelty_rate,
+            sentience_fraction: sample.agent_count as f32,
+            psyche_stability: sample.faction_count as f32,
+            diplomacy_tension: sample.coupling_strength,
+        }
+    }
 }
 
 impl EmergenceDashboard {
@@ -228,6 +242,7 @@ pub fn diplomacy_tension(pair_scores: &[f32]) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sample_snapshot::EmergenceSampleSnapshot;
 
     fn approx(a: f32, b: f32) {
         assert!(
@@ -447,5 +462,48 @@ mod tests {
         // Variance of zero observations is 0; stability = 1 - 0 = 1.
         assert_eq!(d.psyche_stability, 1.0);
         assert_eq!(d.diplomacy_tension, 0.0);
+    }
+
+    #[test]
+    fn emerg_emerg_001_dashboard_from_sample_snapshot_maps_fields() {
+        let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
+            agent_count: 12,
+            faction_count: 3,
+            resource_entropy: 0.25,
+            structure_count: 9,
+            novelty_rate: 0.5,
+            coupling_strength: 0.75,
+            tick: 42,
+        });
+
+        assert_eq!(dashboard.cluster_entropy, 0.25);
+        assert_eq!(dashboard.ideology_homophily, 0.5);
+        assert_eq!(dashboard.sentience_fraction, 12.0);
+        assert_eq!(dashboard.psyche_stability, 3.0);
+        assert_eq!(dashboard.diplomacy_tension, 0.75);
+    }
+
+    #[test]
+    fn emerg_emerg_001_dashboard_from_sample_snapshot_ignores_tick_and_structure_count() {
+        let low = EmergenceDashboard::from(EmergenceSampleSnapshot {
+            agent_count: 1,
+            faction_count: 2,
+            resource_entropy: 0.1,
+            structure_count: 7,
+            novelty_rate: 0.2,
+            coupling_strength: 0.3,
+            tick: 5,
+        });
+        let high = EmergenceDashboard::from(EmergenceSampleSnapshot {
+            agent_count: 1,
+            faction_count: 2,
+            resource_entropy: 0.1,
+            structure_count: 99,
+            novelty_rate: 0.2,
+            coupling_strength: 0.3,
+            tick: 500,
+        });
+
+        assert_eq!(low, high);
     }
 }

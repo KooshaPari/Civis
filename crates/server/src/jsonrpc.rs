@@ -1672,7 +1672,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     })),
                     effect: DispatchEffect::None,
                 }
-            }
         }
         JsonRpcMethod::SimTechState => {
             DispatchPlan {
@@ -1688,7 +1687,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
-        JsonRpcMethod::SimSubscribe         | JsonRpcMethod::SimUpdateSubscription
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
@@ -3689,7 +3687,6 @@ mod tests {
         let plan = dispatch_request(
             req,
             DispatchContext {
-                tick: 1,
                 tick: 0,
                 population: None,
                 snapshot: None,
@@ -3709,19 +3706,6 @@ mod tests {
         assert_eq!(plan.response.error.as_ref().map(|e| e.code), Some(error_code::INVALID_PARAMS));
     }
 
-    #[test]
-    fn dispatch_tech_state_returns_available_list() {
-        let req = parse_request(
-            r#"{"jsonrpc":"2.0","id":3,"method":"sim.tech_state"}"#,
-            },
-        );
-        assert!(plan.response.result.is_none(), "expected error, not success");
-        assert!(plan.response.error.is_some(), "expected error body");
-        let err = plan.response.error.unwrap();
-        assert_eq!(err.code, error_code::INVALID_PARAMS);
-        assert!(err.message.contains("unobtainium") || err.message.contains("Unknown tech"));
-    }
-
     /// FR-CIV-SERVER-003 — sim.tech_state returns available list and stub flag.
     #[test]
     fn dispatch_tech_state_returns_available_list() {
@@ -3732,7 +3716,6 @@ mod tests {
         let plan = dispatch_request(
             req,
             DispatchContext {
-                tick: 5,
                 tick: 42,
                 population: None,
                 snapshot: None,
@@ -3746,11 +3729,6 @@ mod tests {
                 last_tick_ms: 0.0,
                 outcome_fields: None,
                 diplomacy_snapshot: vec![],
-            },
-        );
-        assert!(plan.response.result.is_some());
-        let res = plan.response.result.expect("result");
-        assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
             },
         );
         assert!(plan.response.result.is_some(), "expected success");

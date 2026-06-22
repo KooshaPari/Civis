@@ -13,4 +13,4 @@ tracing = "0.1"
 # so civ-planet must stay foundational to avoid a workspace cycle.
 
 [dev-dependencies]
-proptest = "1.11"
+proptest = "1.4"

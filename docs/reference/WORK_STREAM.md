@@ -105,7 +105,6 @@ These items model CIV simulation outputs as Venture artifacts (timelines, dashbo
 | | - Create `BoardSpec` for economic dashboard | | | |
 | | - Create custom IR type for institutional org chart | | | |
 | | - All artifacts include `content_hash`, `inputs_hash`, `policy_bundle_id` | | | |
-| | - `CivSimulationArtifact` is a closed tagged union (`timeline`, `board`, `org_chart`); parsers reject unknown variants and missing shared metadata at load time | | | |
 | **P2-2** | Deterministic Artifact Build Contract | P2-1, Venture P0-3b | TODO | CIV-Venture Artifact |
 | | - Idempotency key: `hash(ir_hash, toolchain_version, policy_bundle_id, surface)` | | | |
 | | - Cache layer: bytewise-identical replay | | | |

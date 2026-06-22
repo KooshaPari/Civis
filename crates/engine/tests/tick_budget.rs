@@ -13,7 +13,6 @@ const TICK_COUNT: usize = 10_000;
 #[cfg(not(debug_assertions))]
 const BUDGET: Duration = Duration::from_secs(2);
 
-/// Covers FR-CORE-001.
 /// FR-CORE-001 — 10k `Simulation::tick()` calls stay under 2s in release builds.
 #[test]
 #[ignore = "benchmark: run with --ignored --release"]

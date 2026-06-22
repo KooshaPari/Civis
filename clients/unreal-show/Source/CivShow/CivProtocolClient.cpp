@@ -11,14 +11,12 @@ void UCivProtocolClient::Connect(const FString& InBaseUrl)
 
 void UCivProtocolClient::FetchTerrain()
 {
-    OnTerrainStatus.Broadcast(TEXT("waiting"), FString::Printf(TEXT("terrain HTTP %s/terrain"), *BaseUrl));
     RequestJson(TEXT("GET"), TEXT("/terrain"), TEXT(""), [this](const FString& Json)
     {
         TSharedPtr<FJsonObject> Root;
         const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
         if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
         {
-            OnTerrainStatus.Broadcast(TEXT("unavailable"), TEXT("terrain HTTP returned invalid JSON"));
             return;
         }
 
@@ -47,15 +45,6 @@ void UCivProtocolClient::FetchTerrain()
                 else if (Biome == TEXT("stone")) Biomes.Add(5);
                 else Biomes.Add(6);
             }
-        }
-
-        if (Heights.Num() > 0)
-        {
-            OnTerrainStatus.Broadcast(TEXT("live"), FString::Printf(TEXT("terrain ready: %d samples"), Heights.Num()));
-        }
-        else
-        {
-            OnTerrainStatus.Broadcast(TEXT("unavailable"), TEXT("terrain HTTP returned no height samples"));
         }
     });
 }
@@ -129,7 +118,6 @@ bool UCivProtocolClient::RequestJson(const FString& Verb, const FString& Path, c
         {
             if (!bSucceeded || !Response.IsValid())
             {
-                OnOk(TEXT(""));
                 return;
             }
             OnOk(Response->GetContentAsString());

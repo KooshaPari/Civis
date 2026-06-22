@@ -1,21 +1,23 @@
 # CA dirty-chunk profiling
 
-Use this when you need a flamegraph for the CA dirty-chunk hot path.
+Use this when you need a benchmark summary or flamegraph for the CA dirty-chunk hot path.
 
 ## Entry points
 
 - `just ca-perf`
 - `just ca-bench`
+- `just ca-report`
 - `just ca-flamegraph`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-perf.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-dirty-chunk-bench.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-bench-report.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-flamegraph.ps1`
 
 ## Output
 
 - `target/criterion`
+- `target/ca-dirty-chunk.report.md`
 - `target/ca-dirty-chunk.flamegraph.svg`
-- GitHub Actions manual quality sweep uploads both as artifacts.
 
 ## What it profiles
 
@@ -26,8 +28,10 @@ Use this when you need a flamegraph for the CA dirty-chunk hot path.
 ## Notes
 
 - The benchmark itself is still the source of truth for P99 comparisons.
-- This guide standardizes the benchmark and profiling entrypoints plus output
-  locations.
-- `just ca-perf` runs the benchmark first, then the flamegraph with the same
-  repo-local output path.
+- This guide standardizes the benchmark, report, and profiling entrypoints plus
+  output locations.
+- `just ca-perf` runs the benchmark first, writes the markdown report, then
+  produces the flamegraph with the same repo-local output path.
+- `just ca-report` reads the existing Criterion artifacts and writes the
+  markdown summary without rerunning the benchmark.
 - `just ca-flamegraph` requires `cargo-flamegraph` (`cargo install flamegraph`).

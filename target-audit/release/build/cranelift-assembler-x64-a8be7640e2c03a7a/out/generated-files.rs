@@ -1,0 +1,3 @@
+vec![
+  "C:\\Users\\koosh\\Dev\\Civis\\target-audit\\release\\build\\cranelift-assembler-x64-a8be7640e2c03a7a\\out\\assembler.rs".into(),
+]

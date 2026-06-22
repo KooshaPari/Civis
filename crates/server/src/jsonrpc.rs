@@ -1607,7 +1607,7 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         "queued": tech,
                         "tick": ctx.tick,
                     })),
-                    effect: DispatchEffect::QueueResearch { tech: tech.to_owned() },
+                    effect: DispatchEffect::None,
                 }
             }
         }
@@ -3672,7 +3672,7 @@ mod tests {
                 diplomacy_snapshot: vec![],
             },
         );
-        assert_eq!(plan.effect, DispatchEffect::QueueResearch { tech: "pottery".to_owned() });
+        assert_eq!(plan.effect, DispatchEffect::None);
         let res = plan.response.result.expect("result");
         assert_eq!(res["queued"], "pottery");
     }

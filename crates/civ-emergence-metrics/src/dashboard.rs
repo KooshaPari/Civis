@@ -29,7 +29,7 @@ use crate::sample_snapshot::EmergenceSampleSnapshot;
 /// All five dashboard summary metrics computed from a single tick's
 /// pre-aggregated inputs (FR-CIV-EMERG-001). The struct is the
 /// engine's hand-off shape: the engine builds the input slices, calls
-/// [`EmergenceDashboard::compute`], and stores the result on
+/// [`TileDashboard::compute`], and stores the result on
 /// `EmergenceSample` for the JSON-RPC / replay-bus surfaces.
 ///
 /// The default is "no data" — every field is `0.0`. That matches the

@@ -497,6 +497,7 @@ async fn handle_jsonrpc_text(
                 })
             } else {
                 None
+            };
             let diplomacy_snapshot = if req.method == JsonRpcMethod::SimDiplomacyState {
                 let sim = state.sim.lock().await;
                 sim.diplomacy_events()

@@ -142,7 +142,6 @@ pub fn spawn_voxel_mesh(
     if !crate::should_render_chunk(chunk_id, camera_eye, max_dist) {
         return;
     }
-    let _lod = crate::mesh_lod_level(max_dist);
     let handle = meshes.add(mesh_buffer_to_bevy(buf));
     let material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.72, 0.69, 0.62),

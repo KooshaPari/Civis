@@ -3,28 +3,38 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "voxel")]
 use civ_bevy_ref::ocean::OceanPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
 use civ_bevy_ref::{
-    post_fx::PostFxSettings,
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
+    post_fx::PostFxSettings,
     resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
     AttachMode,
 };
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+
+#[derive(States, Default, Debug, Clone, Eq, PartialEq, Hash)]
+pub enum AppState {
+    #[default]
+    MainMenu,
+    Loading,
+    InGame,
+    Paused,
+    GameOver,
+}
 
 fn main() {
     let attach_mode = resolve_attach_mode_from_env();
@@ -67,19 +77,29 @@ fn main() {
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
+        .init_state::<AppState>()
         .add_systems(Startup, setup_atmosphere)
+        .add_systems(OnEnter(AppState::MainMenu), enter_loading_from_main_menu)
         .add_systems(
-            Startup,
+            OnEnter(AppState::Loading),
             (
                 setup_camera,
                 setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
                 spawn_decorations.run_if(in_sandbox_attach_mode),
+                finish_loading,
             )
                 .chain(),
         )
         .add_systems(
             Update,
-            (camera_input, update_camera, animate_water, update_lighting),
+            (
+                camera_input,
+                update_camera,
+                animate_water,
+                update_lighting,
+                escape_to_pause,
+            )
+                .run_if(in_state(AppState::InGame)),
         );
     #[cfg(feature = "egui")]
     {
@@ -188,10 +208,7 @@ fn main() {
 }
 
 #[cfg(feature = "egui")]
-fn sync_post_fx_from_settings(
-    settings: Res<GameSettings>,
-    mut post_fx: ResMut<PostFxSettings>,
-) {
+fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<PostFxSettings>) {
     let graphics = &settings.graphics;
     post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
     post_fx.bloom = graphics.bloom;
@@ -199,8 +216,26 @@ fn sync_post_fx_from_settings(
     post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
 }
 
+fn enter_loading_from_main_menu(mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::Loading);
+}
+
+fn finish_loading(mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::InGame);
+}
+
 fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
     *mode == AttachMode::Standalone
+}
+
+fn escape_to_pause(
+    keys: Res<ButtonInput<KeyCode>>,
+    state: Res<State<AppState>>,
+    mut next: ResMut<NextState<AppState>>,
+) {
+    if *state.get() == AppState::InGame && keys.just_pressed(KeyCode::Escape) {
+        next.set(AppState::Paused);
+    }
 }
 
 fn setup_camera(mut commands: Commands) {

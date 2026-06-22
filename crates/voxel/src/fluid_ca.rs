@@ -945,8 +945,9 @@ fn evaporation_pass(
                             grid.cells[idx] = AIR;
                             grid.cells[si] = STEAM;
                             grid.temperatures[si] = t;
-                            grid.temperatures[idx] =
-                                t.saturating_sub(i16::try_from(def.latent_heat).unwrap_or(0));
+                            grid.temperatures[idx] = t.saturating_sub(
+                                i16::try_from(def.latent_heat).unwrap_or(0),
+                            );
                             grid.mark_dirty_cell(x, y, z);
                             grid.mark_dirty_cell(sx, sy, sz);
                         }
@@ -1315,13 +1316,13 @@ fn step_with_parity(
                     next.insert(x + y * counts[0] + z * counts[0] * counts[1]);
                 }
             };
-            push(cx as i32, cy as i32, cz as i32);
-            push(cx as i32 - 1, cy as i32, cz as i32);
-            push(cx as i32 + 1, cy as i32, cz as i32);
-            push(cx as i32, cy as i32 - 1, cz as i32);
-            push(cx as i32, cy as i32 + 1, cz as i32);
-            push(cx as i32, cy as i32, cz as i32 - 1);
-            push(cx as i32, cy as i32, cz as i32 + 1);
+            push(cx, cy, cz);
+            push(cx - 1, cy, cz);
+            push(cx + 1, cy, cz);
+            push(cx, cy - 1, cz);
+            push(cx, cy + 1, cz);
+            push(cx, cy, cz - 1);
+            push(cx, cy, cz + 1);
         }
         grid.dirty_chunks = next;
     } else {

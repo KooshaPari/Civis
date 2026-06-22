@@ -356,6 +356,7 @@ impl AmbientBlend {
 mod tests {
     use super::*;
 
+    #[allow(clippy::too_many_arguments)]
     fn footprint(
         water: u32,
         sand: u32,

@@ -382,7 +382,10 @@ pub fn resolve_tile_set<'a>(
     match mode {
         ArchitectureMode::Primitive => {
             if let Some(tile_set_id) = primitive_tile_set_id {
-                return tile_sets.iter().find(|tile_set| tile_set.id == tile_set_id);
+                if let Some(tile_set) = tile_sets.iter().find(|tile_set| tile_set.id == tile_set_id)
+                {
+                    return Some(tile_set);
+                }
             }
 
             if let Some(candidate) = tile_sets
@@ -1006,6 +1009,35 @@ mod tests {
         )
         .expect("canonical mode should select a tile-set");
         assert_eq!(selected, 4);
+    }
+
+    /// FR-CIV-ARCH-005 — tile-set selection stays stable when candidate order changes.
+    #[test]
+    fn fr_arch_005_tile_set_selection_is_order_independent() {
+        let tile_sets = sample_tile_sets();
+        let demands = sample_demand_signals();
+        let vector = CultureEraWealthVector::new(1, 4, 20_000);
+        let mut reversed = tile_sets.clone();
+        reversed.reverse();
+
+        let selected_forward = pick_tile_set(
+            &vector,
+            &demands,
+            &tile_sets,
+            ArchitectureMode::Canonical,
+            None,
+        )
+        .expect("canonical mode should select a tile-set");
+        let selected_reversed = pick_tile_set(
+            &vector,
+            &demands,
+            &reversed,
+            ArchitectureMode::Canonical,
+            None,
+        )
+        .expect("reordered canonical candidates should still select a tile-set");
+
+        assert_eq!(selected_forward, selected_reversed);
     }
 
     /// FR-CIV-ARCH-007 — canonical mode keys by culture/era while primitive honors explicit ids.

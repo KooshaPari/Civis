@@ -993,6 +993,10 @@ pub fn load_manifest(path: impl AsRef<Path>) -> Result<ModManifest, ManifestErro
 }
 
 fn validate_manifest(manifest: &ModManifest, path: &Path) -> Result<(), ManifestError> {
+    fn trimmed_nonempty(value: &str) -> bool {
+        !value.trim().is_empty()
+    }
+
     let id = &manifest.meta.id;
     let valid_id = !id.is_empty()
         && id.as_bytes()[0].is_ascii_lowercase()
@@ -1007,10 +1011,37 @@ fn validate_manifest(manifest: &ModManifest, path: &Path) -> Result<(), Manifest
         });
     }
 
+    if !trimmed_nonempty(&manifest.meta.name) {
+        return Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: "mod.name must not be empty".into(),
+        });
+    }
+
+    if !trimmed_nonempty(&manifest.meta.version) {
+        return Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: "mod.version must not be empty".into(),
+        });
+    }
+
+    if !trimmed_nonempty(&manifest.meta.author) {
+        return Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: "mod.author must not be empty".into(),
+        });
+    }
+
     if manifest.meta.description.len() > 256 {
         return Err(ManifestError::Validation {
             path: path.to_path_buf(),
             message: "mod.description must be at most 256 characters".into(),
+        });
+    }
+    if !trimmed_nonempty(&manifest.meta.description) {
+        return Err(ManifestError::Validation {
+            path: path.to_path_buf(),
+            message: "mod.description must not be empty".into(),
         });
     }
 
@@ -1024,7 +1055,7 @@ fn validate_manifest(manifest: &ModManifest, path: &Path) -> Result<(), Manifest
         });
     }
 
-    if manifest.dependencies.civlab_api.trim().is_empty() {
+    if !trimmed_nonempty(&manifest.dependencies.civlab_api) {
         return Err(ManifestError::Validation {
             path: path.to_path_buf(),
             message: "dependencies.civlab-api must not be empty".into(),
@@ -1180,6 +1211,19 @@ write_policy = false
         let wasm = wat::parse_str(WAT).expect("wat");
         let mut mem = Vec::new();
         assert_eq!(invoke_policy_tick(&wasm, 7, &mut mem).expect("invoke"), 42);
+    }
+
+    #[test]
+    fn wasm_policy_tick_falls_back_to_legacy_export_name() {
+        const WAT: &str = r#"
+            (module
+              (func (export "policy_tick") (result i32)
+                i32.const 17)
+            )
+        "#;
+        let wasm = wat::parse_str(WAT).expect("wat");
+        let mut mem = Vec::new();
+        assert_eq!(invoke_policy_tick(&wasm, 7, &mut mem).expect("invoke"), 17);
     }
 
     #[test]

@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react";
-import { postControl } from "../control";
+import { DASHBOARD_SHORTCUTS, postControl } from "../control";
 import { useDashboardStore, type TimeSpeed } from "../store";
 import { isDashboardShortcutTarget } from "../../../src/shortcutTarget.mjs";
 
 export { isDashboardShortcutTarget };
 
-const SPEED_KEYS: Record<string, TimeSpeed> = {
-  "1": 1,
-  "2": 2,
-  "3": 4,
-};
+const SPEED_KEYS: Record<string, TimeSpeed> = DASHBOARD_SHORTCUTS.reduce((acc, shortcut) => {
+  if (shortcut.keys === "1") acc["1"] = 1;
+  if (shortcut.keys === "2") acc["2"] = 2;
+  if (shortcut.keys === "3") acc["3"] = 4;
+  return acc;
+}, {} as Record<string, TimeSpeed>);
 
 async function setSpeed(speed: TimeSpeed) {
   await postControl("/control/speed", { speed });

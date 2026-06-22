@@ -15,3 +15,18 @@ export async function postControl<TBody extends object>(
   }
 }
 
+export type DashboardShortcut = {
+  keys: string;
+  action: string;
+};
+
+export const DASHBOARD_SHORTCUTS: DashboardShortcut[] = [
+  { keys: "1", action: "Set speed to 1x" },
+  { keys: "2", action: "Set speed to 2x" },
+  { keys: "3", action: "Set speed to 4x" },
+  { keys: "Space", action: "Pause / resume" },
+  { keys: "g", action: "Toggle grid" },
+  { keys: "m", action: "Toggle minimap" },
+  { keys: "Esc", action: "Clear selection" },
+];
+

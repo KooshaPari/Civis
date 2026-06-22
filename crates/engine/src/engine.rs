@@ -4,13 +4,19 @@
 
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, Alignment, Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
+    ActorVisualKind, Alignment, Civilian as AgentCivilian, CohortStats, ClusterMember,
+    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Position3d, Psyche, SocialGraph, Tools,
+    Wardrobe,
 };
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
+use civ_genetics::{
+    sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold},
+    Dna,
+};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
@@ -30,6 +36,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -114,6 +121,45 @@ pub enum JobType {
     Priest,
     Admin,
     Unemployed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+enum EconomicFocus {
+    Balanced,
+    Agrarian,
+    Industrial,
+    Sacred,
+    Mercantile,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+enum Good {
+    Food,
+    Water,
+    Wood,
+    Metal,
+    Tools,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct ClusterStocks {
+    goods: BTreeMap<Good, i64>,
+}
+
+impl ClusterStocks {
+    pub fn add(&mut self, good: Good, delta: i64) -> i64 {
+        let entry = self.goods.entry(good).or_insert(0);
+        if delta >= 0 {
+            let before = *entry;
+            *entry = entry.saturating_add(delta);
+            *entry - before
+        } else {
+            let requested = delta.saturating_abs();
+            let removed = requested.min(*entry);
+            *entry -= removed;
+            -removed
+        }
+    }
 }
 
 /// Deterministic job assignment for agent civilians (stable across seeds).
@@ -293,6 +339,10 @@ pub struct WorldState {
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
+    /// Emergent trade routes that should be retained while active.
+    emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
+    /// Idle-tick counters for emergent trade routes.
+    trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
 }
 
@@ -362,6 +412,8 @@ impl Default for WorldState {
                     volume: Fixed::from_num(8),
                 },
             ],
+            emergent_trade_route_keys: BTreeSet::new(),
+            trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
         }
     }
@@ -404,6 +456,9 @@ pub struct Simulation {
     last_tick_mod_lifecycle: Vec<String>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
+    pub(crate) last_settlement_count: u32,
+    pub(crate) last_life_deaths: u32,
+    cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
     pub economy_policy: PolicyInput,
     /// Active control policy (FR-CORE-005). Read in [`Self::phase_policy`]
@@ -622,6 +677,9 @@ impl Simulation {
                 seed: 42,
                 ..ReplayLog::default()
             },
+            last_settlement_count: 0,
+            last_life_deaths: 0,
+            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -683,6 +741,9 @@ impl Simulation {
                 seed,
                 ..ReplayLog::default()
             },
+            last_settlement_count: 0,
+            last_life_deaths: 0,
+            cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
             policy: Box::new(crate::policy::NoopPolicy),
             last_control_signals: ControlSignals::default(),
@@ -1809,7 +1870,7 @@ impl Simulation {
     #[cfg(test)]
     pub(crate) fn test_set_cluster_food_stock(&mut self, cluster_id: u64, food: i64) {
         let mut stock = ClusterStocks::default();
-        stock.add(civ_economy::Good::Food, food);
+        stock.add(Good::Food, food);
         self.cluster_stocks.insert(cluster_id, stock);
     }
 }

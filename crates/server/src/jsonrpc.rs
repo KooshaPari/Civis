@@ -168,7 +168,6 @@ impl JsonRpcMethod {
 
 /// JSON-RPC request `id` (string, number, or null per spec).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
 pub enum RequestId {
     /// Numeric id.
     Number(i64),
@@ -199,7 +198,6 @@ pub struct JsonRpcError {
     /// Short description.
     pub message: String,
     /// Optional structured detail.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
 }
 
@@ -211,10 +209,8 @@ pub struct JsonRpcResponse {
     /// Echoes the request id.
     pub id: RequestId,
     /// Present on success.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
     /// Present on failure.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<JsonRpcError>,
 }
 
@@ -294,7 +290,6 @@ struct RawRequest {
     jsonrpc: Option<String>,
     id: Option<Value>,
     method: Option<String>,
-    #[serde(default)]
     params: Option<Value>,
 }
 
@@ -461,7 +456,6 @@ pub struct SnapshotFields {
     /// missing the dashboard block.
     pub emergence: Option<EmergenceSampleFields>,
     /// Fully-researched techs (FR-CIV-SERVER-003).
-    #[serde(default)]
     pub researched: Vec<String>,
     /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
@@ -475,10 +469,8 @@ pub struct DamagePulseSnapshot {
     /// Normalized map Y.
     pub y: f32,
     /// Attacking unit pin id when damage came from military contact.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub unit_a: Option<u64>,
     /// Defending unit pin id.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub unit_b: Option<u64>,
 }
 
@@ -800,12 +792,10 @@ pub struct DispatchContext {
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
     /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
-    #[serde(default)]
     pub researched: Vec<String>,
     /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
     /// Precomputed game outcome for `sim.outcome` handler (FR-CIV-GAME-001).
-    #[serde(default)]
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
@@ -827,13 +817,10 @@ pub struct EmergenceSampleFields {
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
     /// 6-connectivity component count on the first dense chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub structure_count: Option<u32>,
     /// Size (in voxels) of the largest component in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub structure_largest: Option<u32>,
     /// Number of foreground voxels in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub structure_foreground: Option<u32>,
     /// Total number of voxels accumulated into the histogram.
     pub histogram_total: u64,
@@ -846,7 +833,6 @@ pub struct EmergenceSampleFields {
     /// absent and we still want to emit a non-`null` JSON object;
     /// the wire shape is `cluster_entropy`, `ideology_homophily`,
     /// `sentience_fraction`, `psyche_stability`, `diplomacy_tension`.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub dashboard: Option<DashboardBlock>,
     /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
     pub branching_sigma: f32,
@@ -859,13 +845,10 @@ pub struct EmergenceSampleFields {
     /// Charter regime label for `branching_sigma`.
     pub branching_regime: String,
     /// Power-law exponent α for the cluster-size distribution (charter §3.5).
-    #[serde(default)]
     pub power_law_alpha: f32,
     /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
-    #[serde(default)]
     pub novelty_rate: f32,
     /// Normalised mutual information between material and faction distributions.
-    #[serde(default)]
     pub mi_material_faction_norm: Option<f32>,
 }
 
@@ -1282,8 +1265,8 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 response: JsonRpcResponse::failure(req.id, e),
                 effect: DispatchEffect::None,
             },
-        }
-                JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
+        },
+        JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
             Ok(policy) => DispatchPlan {
                 response: JsonRpcResponse::success(
                     req.id,

@@ -243,6 +243,27 @@ pub fn format_live_selection(entity: SelectedLiveEntity) -> String {
     format!("sel: {label} #{}", entity.id)
 }
 
+fn format_live_pick_context(
+    focused_chunk: Option<ChunkId>,
+    selected_live: Option<SelectedLiveEntity>,
+) -> Option<String> {
+    let mut parts = Vec::with_capacity(2);
+    if let Some(chunk) = focused_chunk {
+        parts.push(format!("chunk {}", chunk.0));
+    }
+    if let Some(selection) = selected_live {
+        let rendered = format_live_selection(selection);
+        let selection = rendered.strip_prefix("sel: ").unwrap_or(&rendered);
+        parts.push(selection.to_string());
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(format!("pick: {}", parts.join(" / ")))
+    }
+}
+
 /// Parse `sim.snapshot` JSON-RPC text (not F3D0 tick frames).
 #[cfg(any(test, feature = "bevy"))]
 #[must_use]
@@ -371,11 +392,8 @@ impl LiveHudSnapshot {
         if let Some(rtt) = self.ws_rtt_ms {
             line.push_str(&format!(" | RTT: {rtt:.0}ms"));
         }
-        if let Some(chunk) = self.focused_chunk {
-            line.push_str(&format!(" | chunk: {}", chunk.0));
-        }
-        if let Some(selection) = self.selected_live {
-            line.push_str(&format!(" | {}", format_live_selection(selection)));
+        if let Some(pick) = format_live_pick_context(self.focused_chunk, self.selected_live) {
+            line.push_str(&format!(" | {pick}"));
         }
         if let Some(event) = &self.last_event {
             line.push_str(&format!(" | evt: {event}"));
@@ -1021,7 +1039,7 @@ mod tests {
             ..Default::default()
         }
         .format_overlay();
-        assert!(line.contains("chunk: 42"));
+        assert!(line.contains("pick: chunk 42"));
     }
 
     #[test]
@@ -1055,7 +1073,24 @@ mod tests {
             ..Default::default()
         }
         .format_overlay();
-        assert!(line.contains("sel: graph #11"));
+        assert!(line.contains("pick: graph #11"));
+    }
+
+    #[test]
+    fn live_hud_overlay_combines_focused_chunk_and_selection() {
+        let line = LiveHudSnapshot {
+            connected: true,
+            tick: Some(1),
+            fps: 60.0,
+            focused_chunk: Some(ChunkId(42)),
+            selected_live: Some(SelectedLiveEntity {
+                kind: LiveEntityKind::Building,
+                id: 3,
+            }),
+            ..Default::default()
+        }
+        .format_overlay();
+        assert!(line.contains("pick: chunk 42 / building #3"));
     }
 
     #[test]

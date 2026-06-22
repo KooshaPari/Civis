@@ -67,6 +67,17 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Read the transport-safe emergence dashboard snapshot.
+    EmergenceDashboard,
+    /// Inspect terrain + faction at a tile coordinate.
+    /// (`sim.inspect_tile`, FR tile-inspector).
+    SimInspectTile,
+    /// Client-initiated diplomacy action (propose_treaty / declare_war / offer_trade). (sim.diplomacy_action, FR-CIV-CLIENT-006).
+    SimDiplomacyAction,
+    /// Queue a research tech on the simulation (`sim.queue_research`, FR-CIV-SERVER-003).
+    SimQueueResearch,
+    /// Read the current tech research state (`sim.tech_state`, FR-CIV-SERVER-003).
+    SimTechState,
     /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
     SimSubscribe,
     /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
@@ -97,6 +108,12 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::EmergenceDashboard => "emergence.dashboard",
+            Self::SimInspectTile => "sim.inspect_tile",
+            Self::SimPerf => "sim.perf",
+            Self::SimDiplomacyAction => "sim.diplomacy_action",
+            Self::SimQueueResearch => "sim.queue_research",
+            Self::SimTechState => "sim.tech_state",
             Self::SimSubscribe => "sim.subscribe",
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
@@ -124,6 +141,12 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "emergence.dashboard" => Some(Self::EmergenceDashboard),
+            "sim.inspect_tile" => Some(Self::SimInspectTile),
+            "sim.perf" => Some(Self::SimPerf),
+            "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
+            "sim.queue_research" => Some(Self::SimQueueResearch),
+            "sim.tech_state" => Some(Self::SimTechState),
             "sim.subscribe" => Some(Self::SimSubscribe),
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
@@ -608,6 +631,138 @@ pub struct DispatchContext {
     pub speed_multiplier: u32,
     /// Role established on connect (header) or first JSON-RPC message params.
     pub connection_role: Option<String>,
+    /// Bridge save directory for `save.*` handlers.
+    pub saves_dir: Option<PathBuf>,
+    /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
+    /// fresh simulation before the first 50-tick sample boundary.
+    pub emergence: Option<EmergenceSampleFields>,
+    /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
+    #[serde(default)]
+    pub researched: Vec<String>,
+    /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
+    pub in_progress_tech: Option<String>,
+    /// Precomputed game outcome for `sim.outcome` handler (FR-CIV-GAME-001).
+    #[serde(default)]
+    pub outcome_fields: Option<OutcomeFields>,
+    /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
+    pub last_tick_ms: f64,
+}
+
+/// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
+///
+/// Mirrors the engine type but keeps a fixed, transport-friendly
+/// representation (no `f32` precision surprises, all `Option`s for the
+/// "no dense chunks yet" boot state). Emitted by the `sim.emergence`
+/// JSON-RPC method and embedded in `sim.snapshot` for dashboard
+/// consumers that poll the snapshot stream instead.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmergenceSampleFields {
+    /// Engine tick the sample was taken at.
+    pub tick: u64,
+    /// Shannon entropy (bits) over the live material histogram.
+    pub entropy_bits: f32,
+    /// Normalised Shannon entropy (`0..=1`).
+    pub entropy_norm: f32,
+    /// 6-connectivity component count on the first dense chunk.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structure_count: Option<u32>,
+    /// Size (in voxels) of the largest component in the sampled chunk.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structure_largest: Option<u32>,
+    /// Number of foreground voxels in the sampled chunk.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structure_foreground: Option<u32>,
+    /// Total number of voxels accumulated into the histogram.
+    pub histogram_total: u64,
+    /// Number of populated bins in the material histogram.
+    pub histogram_populated_bins: u32,
+    /// Wall-clock duration of the sample, in microseconds.
+    pub sample_dur_us: u64,
+    /// Five-tile dashboard block (FR-CIV-EMERG-001/003). Field is
+    /// `None` only on the (rare) path where the engine sample is
+    /// absent and we still want to emit a non-`null` JSON object;
+    /// the wire shape is `cluster_entropy`, `ideology_homophily`,
+    /// `sentience_fraction`, `psyche_stability`, `diplomacy_tension`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dashboard: Option<DashboardBlock>,
+    /// Rolling-mean branching ratio `σ̄_W` (charter §3.6).
+    pub branching_sigma: f32,
+    /// Normalised edge-of-chaos score for `branching_sigma`.
+    pub branching_sigma_score: f32,
+    /// Rolling window `W` for `branching_sigma`.
+    pub branching_window: u32,
+    /// Monotonic count of closed avalanches.
+    pub avalanches_closed: u64,
+    /// Charter regime label for `branching_sigma`.
+    pub branching_regime: String,
+    /// Power-law exponent α for the cluster-size distribution (charter §3.5).
+    #[serde(default)]
+    pub power_law_alpha: f32,
+    /// Novelty rate: novel config fingerprints per window per civilian (charter §3.4).
+    #[serde(default)]
+    pub novelty_rate: f32,
+    /// Normalised mutual information between material and faction distributions.
+    #[serde(default)]
+    pub mi_material_faction_norm: Option<f32>,
+}
+
+/// Wire-friendly mirror of
+/// [`civ_emergence_metrics::dashboard::TileDashboard`] for the
+/// `sim.emergence` / `sim.snapshot.emergence` JSON-RPC surface
+/// (FR-CIV-EMERG-003). The struct re-exports the five f32 fields as a
+/// nested object so dashboard clients can read either the flat
+/// `result["cluster_entropy"]` shape *or* the nested
+/// `result["dashboard"]["cluster_entropy"]` shape — both are emitted
+/// by the dispatch for backwards compatibility with PR #350 consumers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DashboardBlock {
+    /// Normalised Shannon entropy over per-cluster population sizes.
+    pub cluster_entropy: f32,
+    /// Homophily index for the ideology distribution.
+    pub ideology_homophily: f32,
+    /// Fraction of agents that have crossed the sentience threshold.
+    pub sentience_fraction: f32,
+    /// Population stability of mood valence.
+    pub psyche_stability: f32,
+    /// Mean absolute tension across the recent diplomacy events.
+    pub diplomacy_tension: f32,
+}
+
+impl From<civ_emergence_metrics::dashboard::TileDashboard> for DashboardBlock {
+    fn from(d: civ_emergence_metrics::dashboard::TileDashboard) -> Self {
+        Self {
+            cluster_entropy: d.cluster_entropy,
+            ideology_homophily: d.ideology_homophily,
+            sentience_fraction: d.sentience_fraction,
+            psyche_stability: d.psyche_stability,
+            diplomacy_tension: d.diplomacy_tension,
+        }
+    }
+}
+
+impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFields {
+    fn from(s: civ_engine::emergence_metrics::EmergenceSample) -> Self {
+        Self {
+            tick: s.tick,
+            entropy_bits: s.entropy_bits,
+            entropy_norm: s.entropy_norm,
+            structure_count: s.structure_count,
+            structure_largest: s.structure_largest,
+            structure_foreground: s.structure_foreground,
+            histogram_total: s.histogram_total,
+            histogram_populated_bins: s.histogram_populated_bins,
+            sample_dur_us: s.sample_dur_us,
+            dashboard: Some(DashboardBlock::from(s.dashboard)),
+            branching_sigma: s.branching_sigma,
+            branching_sigma_score: s.branching_sigma_score,
+            branching_window: s.branching_window,
+            avalanches_closed: s.avalanches_closed,
+            branching_regime: s.branching_regime.label().to_string(),
+            power_law_alpha: s.power_law_alpha,
+            novelty_rate: s.novelty_rate,
+            mi_material_faction_norm: s.mi_material_faction_norm,
+        }
+    }
 }
 
 /// Side effect the WebSocket bridge must apply after building the wire response.
@@ -935,6 +1090,65 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
+        JsonRpcMethod::SimEmergence => {
+            // Latest emergence-metrics sample (civ-emergence-metrics
+            // via `crates/engine::emergence_metrics`). Returns `null`
+            // for the no-sample-yet state (ticks 0..49 on a fresh sim)
+            // so dashboard clients can disambiguate "no data" from
+            // "entropy is exactly zero".
+            let result = match ctx.emergence.as_ref() {
+                Some(sample) => serde_json::to_value(sample).unwrap_or(serde_json::json!({
+                    "tick": ctx.tick,
+                })),
+                None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::EmergenceDashboard => {
+            let snapshot = emergence_dashboard_snapshot_from_context(&ctx);
+            let dashboard = civ_emergence_metrics::dashboard::EmergenceDashboard::from(snapshot);
+            DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::to_value(dashboard).unwrap_or(serde_json::json!({
+                        "tick": ctx.tick,
+                    })),
+                ),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimInspectTile => {
+            let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
+            let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
+            let result = serde_json::json!({ "x": x, "y": y, "stub": true });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimDiplomacyAction => {
+            let action = req.params.as_ref()
+                .and_then(|p| p.get("action"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let target = req.params.as_ref()
+                .and_then(|p| p.get("target_faction"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let result = serde_json::json!({
+                "action": action,
+                "target_faction": target,
+                "stub": true,
+                "tick": ctx.tick,
+            });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimSpawnCivilian => {
             if !role_allows_operator(
                 ctx.require_role,

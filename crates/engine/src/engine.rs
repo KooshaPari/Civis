@@ -6,6 +6,7 @@ use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_many,
     Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
 };
+<<<<<<< HEAD
     choose_activity, cluster_by_colocation, count_civilians, path_step, pick_target,
     propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at, wander_anchor,
     Activity, Alignment, Civilian as AgentCivilian, ClusterId, ClusterMember, CohortStats,
@@ -13,6 +14,8 @@ use civ_agents::{
     SocialGraph, Tools, Wardrobe,
 };
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile, TraitVector};
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_genetics::Dna;
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
@@ -21,6 +24,7 @@ use civ_economy::Stocks as ClusterStocks;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_mod_host::ModHost;
 use civ_planet::{compute_climate, defaults_earthlike, Climate, MoonConfig, PlanetConfig};
+<<<<<<< HEAD
 use civ_needs::{
     tick as needs_tick, DecayRates, Health as LifeHealth, HealthParams, Needs as LifeNeeds,
 };
@@ -28,6 +32,8 @@ use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell,
 };
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
     tick_war_bridge, CombatEngagement, DamageEvent, Doctrine, DoctrineLibrary,
@@ -35,7 +41,10 @@ use civ_tactics::{
     OperationalLayer,
 };
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, FIXED_SCALE};
+<<<<<<< HEAD
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE};
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 use hecs::{Entity, World};
 use rand::Rng;
 use rand::SeedableRng;
@@ -163,6 +172,7 @@ pub fn attach_citizen_to_agents(world: &mut World) {
     }
 }
 
+<<<<<<< HEAD
 fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
     const CIVILIANS_PER_FACTION: usize = 32;
     const QUADRANT_SPREAD: i32 = 2_500;
@@ -196,6 +206,8 @@ fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
     }
 }
 
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 /// Building entity component
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Building {
@@ -433,6 +445,7 @@ pub struct WorldState {
     pub factions: HashMap<u32, String>,
     /// Faction ID -> treasury balance
     pub faction_treasury: HashMap<u32, Fixed>,
+<<<<<<< HEAD
     /// Faction ID -> resource holdings.
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
@@ -456,6 +469,8 @@ pub struct WorldState {
     /// maps during migration). `BTreeMap` keys iterate in deterministic order.
     #[serde(default)]
     pub polities: BTreeMap<u32, PolityMacroState>,
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     pub resources: Resources,
 }
 
@@ -543,6 +558,7 @@ impl Default for WorldState {
                 (1, Fixed::from_num(8_000)),
                 (2, Fixed::from_num(8_000)),
             ]),
+<<<<<<< HEAD
             faction_resources: HashMap::from([
                 (
                     0,
@@ -597,6 +613,8 @@ impl Default for WorldState {
             trade_route_idle_ticks: BTreeMap::new(),
             faction_relations: DiplomacyMatrix::default(),
             polities: BTreeMap::new(),
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
             resources: Resources::default(),
         };
         hydrate_polities_from_legacy(&mut state);
@@ -633,10 +651,13 @@ pub struct Simulation {
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     last_tick_engagements: Vec<CombatEngagement>,
+<<<<<<< HEAD
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
     /// FR-CIV-CA-009: abiogenesis suitability sites detected this tick.
     last_tick_abiogenesis_sites: Vec<civ_voxel::fluid_ca::AbiogenesisSuitability>,
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy.
@@ -654,6 +675,7 @@ pub struct Simulation {
     military_phase: MilitaryPhaseConfig,
     /// Per-faction doctrine libraries evolved on a fixed tick cadence (FR-CIV-TACTICS-010).
     faction_doctrines: Vec<DoctrineLibrary>,
+<<<<<<< HEAD
     /// offset every tick (FR-CIV-PLANET-020). Keyed by `(x, z)` in fixed-point
     /// world coords; iteration order is deterministic.
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
@@ -725,6 +747,8 @@ struct CoastalColumn {
     /// writing the new level — preserves FR-CIV-VOXEL-002 dirty-event
     /// invariants by going through `VoxelWorld::write`).
     last_water_y: i64,
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 }
 
 /// Default doctrine population for three factions (deterministic seed layout).
@@ -933,8 +957,11 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+<<<<<<< HEAD
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_abiogenesis_sites: Vec::new(),
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -946,6 +973,7 @@ impl Simulation {
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
         }
+<<<<<<< HEAD
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(42),
@@ -955,6 +983,8 @@ impl Simulation {
         };
         sim.rebuild_agent_id_index();
         sim
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     }
 
     /// Create simulation with custom seed
@@ -1012,8 +1042,11 @@ impl Simulation {
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
+<<<<<<< HEAD
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_abiogenesis_sites: Vec::new(),
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -1025,6 +1058,7 @@ impl Simulation {
             military_phase: MilitaryPhaseConfig::default(),
             faction_doctrines: default_faction_doctrines(),
         }
+<<<<<<< HEAD
             coastal_columns: BTreeMap::new(),
             weather_grid,
             emergence: Self::default_emergence_state(seed),
@@ -1034,6 +1068,8 @@ impl Simulation {
         };
         sim.rebuild_agent_id_index();
         sim
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     }
 
     /// Load mod manifests from scenario `mods` paths (repo-relative).
@@ -1300,6 +1336,7 @@ impl Simulation {
         &self.research_cache
     }
 
+<<<<<<< HEAD
     /// Accumulated emergent research effort (FR-CIV-0200), advanced each tick by
     /// [`Simulation::phase_research`] in proportion to the living population.
     #[must_use]
@@ -1458,6 +1495,8 @@ impl Simulation {
         self.state.cohesion = next.max(0) as u64;
     }
 
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     pub fn last_births(&self) -> &[PopulationEvent] {
         &self.last_births
     }
@@ -1564,8 +1603,11 @@ impl Simulation {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
+<<<<<<< HEAD
         self.last_tick_mod_lifecycle.clear();
         self.emergence_branching.last_tick_unrest_events = 0;
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -1652,6 +1694,7 @@ impl Simulation {
     /// Planet phase - recompute climate from the current tick.
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
+<<<<<<< HEAD
         self.weather_grid = compute_weather(
             &self.climate,
             self.state.tick,
@@ -1739,6 +1782,8 @@ impl Simulation {
                 column.last_water_y = new_y;
             }
         }
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     }
 
     /// Tactics phase - evolve faction doctrines and apply queued voxel damage.
@@ -2615,8 +2660,11 @@ impl Simulation {
 
         for (child_id, x, y) in births {
             let _ = spawn_child_near(&mut self.world, child_id, 0, x, y, &mut self.rng);
+<<<<<<< HEAD
             let alignment = civ_agents::infer_alignment_for_spawn(&self.world, x, y);
             let _ = spawn_child_near(&mut self.world, child_id, alignment, x, y, &mut self.rng);
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
             self.last_births.push(PopulationEvent {
                 tick: self.state.tick,
                 entity_id: child_id,
@@ -2923,6 +2971,7 @@ impl Simulation {
         civ_economy::step(&mut self.economy_state);
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
+<<<<<<< HEAD
         self.tick_trade_routes();
         // N1 coupling: aggregate settlement commons before any mutable market borrow.
         let settlement_food_supply: i64 = self
@@ -2937,6 +2986,8 @@ impl Simulation {
             .get("food")
             .copied()
             .unwrap_or(FOOD_SCARCITY_BASELINE);
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
         self.market_state.step(self.state.tick);
 
         // Emergent pricing (FR-CIV-0100 §3d): the living population is demand
@@ -2976,6 +3027,7 @@ impl Simulation {
             .apply_pressure("energy", scaled_demand, scaled_energy_supply);
     }
 
+<<<<<<< HEAD
     fn tick_trade_routes(&mut self) {
         // Societal unrest throttles all commerce this tick (computed once).
         let unrest_factor = unrest_trade_factor(self.state.unrest);
@@ -3113,6 +3165,8 @@ impl Simulation {
         &self.military_phase
     }
 
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     /// Get snapshot of current state
     pub fn snapshot(&self) -> SimulationSnapshot {
         let citizen_count = self.world.query::<&Citizen>().iter().count();
@@ -3132,6 +3186,7 @@ impl Simulation {
             diplomacy_events: self.diplomacy_events.clone(),
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
+<<<<<<< HEAD
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
@@ -4145,6 +4200,10 @@ fn adjust_resource(resources: &mut Resources, resource: ResourceType, delta: Fix
         ResourceType::Metal => resources.metal += delta,
         ResourceType::Energy => resources.energy += delta,
     }
+=======
+        }
+    }
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 }
 
 /// Replay-aware mutable voxel access wrapper.
@@ -4196,6 +4255,7 @@ pub struct SimulationSnapshot {
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
     /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
     pub damage_events: usize,
+<<<<<<< HEAD
     /// Deterministic climate snapshot computed by `phase_planet` for the current tick
     /// (FR-CIV-PLANET-010 — bit-identical to `compute_climate(tick, planet, moon)`).
     pub climate: Climate,
@@ -4247,6 +4307,8 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> u64 {
     (awakenings_this_tick as u64)
         .saturating_mul(BELIEF_PER_AWAKENING)
         .min(MAX_AWAKENING_BELIEF_PER_TICK)
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
 }
 
 // ============================================================================
@@ -4274,6 +4336,7 @@ mod tests {
         }
     }
 
+<<<<<<< HEAD
     /// Faction pair chosen by [`Simulation::phase_diplomacy`] (sorted ids + tick modulus).
     fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
         let idx = tick as usize;
@@ -4299,11 +4362,14 @@ mod tests {
     }
 
     /// FR-CIV-ENGINE-INT-010 — startup spawns 128 civilians across four factions.
+=======
+    /// FR-CIV-ENGINE-INT-010 — startup spawns 32 civilians.
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     #[test]
-    fn startup_spawns_128_civilians() {
+    fn startup_spawns_32_civilians() {
         let sim = Simulation::new();
         assert_eq!(sim.state.tick, 0);
-        assert_eq!(count_civilians(&sim.world), 128);
+        assert_eq!(count_civilians(&sim.world), 32);
     }
 
     #[test]
@@ -4343,94 +4409,17 @@ mod tests {
                 "production",
                 "citizen_lifecycle",
                 "military",
-                "policy",
                 "economy",
-                "planet",
-                "diplomacy",
                 "tactics",
                 "voxel",
                 "compact",
+                "planet",
                 "buildings",
                 "diffusion",
                 "disasters",
                 "life",
                 "emergence",
             ]
-        );
-    }
-
-    /// L5-115 — `PHASE_ORDER` includes "emergence" and the phase is positioned
-    /// after `life` so the agent state that emergence depends on is finalized
-    /// (cluster stocks, needs, settlements) before emergence runs.
-    /// Closes FR-CIV-LEGENDS-INGEST-02, FR-CIV-PSYCHE-900/901, FR-CIV-PSYCHE-911,
-    /// FR-CIV-PSYCHE-912, FR-CIV-GENETICS, FR-CIV-AI-006, FR-CIV-LEGENDS-QUERY-07.
-    #[test]
-    fn phase_order_includes_emergence() {
-        let emergence_idx = PHASE_ORDER
-            .iter()
-            .position(|p| *p == "emergence")
-            .expect("PHASE_ORDER must include 'emergence'");
-        let life_idx = PHASE_ORDER
-            .iter()
-            .position(|p| *p == "life")
-            .expect("PHASE_ORDER must include 'life'");
-        assert!(
-            emergence_idx > life_idx,
-            "emergence (idx {emergence_idx}) must run after life (idx {life_idx}) \
-             so agent state is finalized first"
-        );
-        // And it must be the final phase in the deterministic core loop —
-        // anything reading emergence state downstream (saga belief gain,
-        // unrest, chronicle) depends on the phase having run.
-        assert_eq!(
-            emergence_idx,
-            PHASE_ORDER.len() - 1,
-            "emergence must be the final entry in PHASE_ORDER"
-        );
-    }
-
-    /// L5-115 — `Simulation::tick` invokes `phase_emergence` and the public
-    /// accessors on `Simulation` (legends_graph, emergence_feed,
-    /// cluster_cultures) are queryable after a tick. Two same-seed sims run
-    /// deterministically through the emergence pipeline (RNG state is
-    /// preserved across the phase — see `test_determinism`).
-    #[test]
-    fn tick_invokes_emergence_phase() {
-        let mut sim_a = Simulation::with_seed(2026_06_18);
-        let mut sim_b = Simulation::with_seed(2026_06_18);
-
-        for _ in 0..10 {
-            sim_a.tick();
-            sim_b.tick();
-        }
-
-        // Post-condition: the wire-up is observable via the public API.
-        // `legends_graph` is the saga state populated by `emergence_legends`
-        // (FR-CIV-LEGENDS-INGEST-02). The accessor must return without panic
-        // — a non-panic on a wired phase is the wire-up check.
-        let _graph_a = sim_a.legends_graph();
-        let _graph_b = sim_b.legends_graph();
-
-        // Determinism: same seed → same saga graph node count after N ticks.
-        assert_eq!(
-            sim_a.legends_graph().node_count(),
-            sim_b.legends_graph().node_count(),
-            "phase_emergence must be deterministic across same-seed sims"
-        );
-
-        // `emergence_feed` is cleared at the start of `phase_emergence` and
-        // re-populated with the tick's events. The accessor must remain
-        // queryable after a tick.
-        let _feed_a = sim_a.emergence_feed();
-        let _feed_b = sim_b.emergence_feed();
-
-        // `cluster_cultures` is the population-level culture map populated
-        // by `emergence_culture` (FR-CIV-PSYCHE-911). It must be queryable
-        // and deterministic.
-        assert_eq!(
-            sim_a.cluster_cultures().len(),
-            sim_b.cluster_cultures().len(),
-            "phase_emergence must produce deterministic cluster_cultures"
         );
     }
 
@@ -4443,6 +4432,7 @@ mod tests {
     }
 
     /// CIV-0100 stub: joule budget drain matches policy formula and stays non-negative.
+<<<<<<< HEAD
     #[test]
     fn phase_economy_conserves_non_negative_budget() {
         use crate::policy::PolicyInput;
@@ -4629,6 +4619,8 @@ mod tests {
     }
 
     /// FR-CIV-0100 emergence — at the baseline food price births are unaffected.
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     #[test]
     fn food_scarcity_birth_factor_is_unity_at_baseline() {
         assert_eq!(food_scarcity_birth_factor(FOOD_SCARCITY_BASELINE), 1.0);
@@ -6362,6 +6354,7 @@ mod tests {
         assert_eq!(sim.climate(), &expected);
     }
 
+<<<<<<< HEAD
     /// FR-CIV-PLANET-010 — `Simulation::snapshot()` surfaces the deterministic
     /// `Climate` produced by `phase_planet`, bit-identical to `compute_climate`.
     #[test]
@@ -6516,6 +6509,9 @@ mod tests {
 
     /// Covers FR-CIV-TACTICS-010.
     /// Doctrine GA advances on a fixed tick cadence.
+=======
+    /// FR-CIV-TACTICS-010 — doctrine GA advances on a fixed tick cadence.
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     #[test]
     fn phase_tactics_evolve_doctrine_on_cadence() {
         let mut sim = Simulation::with_seed(42);
@@ -7325,10 +7321,7 @@ mod tests {
     /// FR-CIV-ENGINE-INT-015 — Cold-tier wardrobe diffusion only runs on cadence boundaries.
     #[test]
     fn cold_tier_diffusion_only_on_cadence_boundaries() {
-        use civ_agents::spawn_many;
-
         let mut sim = Simulation::with_seed(55);
-        let _ = spawn_many(&mut sim.world, 6, 50_000, 0);
         let policy = LodPolicy::default();
 
         let cold_entities: Vec<hecs::Entity> = sim
@@ -7527,6 +7520,7 @@ mod tests {
         assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
     }
 
+<<<<<<< HEAD
     /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
     #[test]
     fn phase_order_matches_tick_sequence() {
@@ -8087,6 +8081,8 @@ mod tests {
         assert_eq!(sim1.last_tick_voxel_events(), sim2.last_tick_voxel_events());
     }
 
+=======
+>>>>>>> 2c9bf0da (add save-db coverage tests)
     /// FR-CIV-ENGINE-REPLAY-001 — ReplayLog round-trips through save/load.
     #[test]
     fn replay_log_round_trips_through_save_load() {

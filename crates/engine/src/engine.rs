@@ -1,4 +1,4 @@
-﻿//! CivLab Simulation Engine - Core Tick Loop with ECS
+//! CivLab Simulation Engine - Core Tick Loop with ECS
 //!
 //! This module provides the deterministic simulation loop with entity component system.
 
@@ -8,10 +8,10 @@ use civ_agents::{
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Position3d, Psyche, SocialGraph, Tools,
     Wardrobe,
 };
-use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
+use civ_agents::culture::{cultural_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
+use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState, Stocks as ClusterStocks};
 use civ_mod_host::ModHost;
 use civ_genetics::{
     sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold},
@@ -1802,7 +1802,7 @@ impl Simulation {
     }
 
     /// Apply scenario military cadence/combat overrides (FR-CIV-TACTICS-050).
-    pub fn apply_scenario_military(&mut self, military: &crate::scenario::ScenarioMilitary) {
+    pub fn apply_scenario_taxation(&mut self, _taxation: &crate::scenario::ScenarioTaxation) {`r`n        // Scenario taxation is currently a data contract; runtime taxation wiring lands with economy enforcement.`r`n    }`r`n`r`n    pub fn apply_scenario_military(&mut self, military: &crate::scenario::ScenarioMilitary) {
         if let Some(v) = military.movement_cadence_ticks {
             self.military_phase.movement.cadence_ticks = v;
         }

@@ -55,7 +55,19 @@ pub struct TileDashboard {
     pub diplomacy_tension: f32,
 }
 
-impl TileDashboard {
+impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
+    fn from(sample: EmergenceSampleSnapshot) -> Self {
+        Self {
+            cluster_entropy: sample.resource_entropy,
+            ideology_homophily: sample.novelty_rate,
+            sentience_fraction: sample.agent_count as f32,
+            psyche_stability: sample.faction_count as f32,
+            diplomacy_tension: sample.coupling_strength,
+        }
+    }
+}
+
+impl EmergenceDashboard {
     /// Compute the dashboard from pre-aggregated inputs. All five
     /// sub-metrics are computed; the inputs are *not* validated. The
     /// caller is the engine and the engine has the only authority over
@@ -494,16 +506,15 @@ mod tests {
             tick: 42,
         });
 
-        assert_eq!(dashboard.power_law_alpha, 12.0);
-        assert_eq!(dashboard.shannon_entropy, 0.25);
-        assert_eq!(dashboard.structure_count, 9);
-        assert_eq!(dashboard.novelty_score, 0.5);
-        assert_eq!(dashboard.coupling_mi, 0.75);
-        assert_eq!(dashboard.tick, 42);
+        assert_eq!(dashboard.cluster_entropy, 0.25);
+        assert_eq!(dashboard.ideology_homophily, 0.5);
+        assert_eq!(dashboard.sentience_fraction, 12.0);
+        assert_eq!(dashboard.psyche_stability, 3.0);
+        assert_eq!(dashboard.diplomacy_tension, 0.75);
     }
 
     #[test]
-    fn emerg_emerg_001_dashboard_from_sample_snapshot_changes_with_tick_and_structure_count() {
+    fn emerg_emerg_001_dashboard_from_sample_snapshot_ignores_tick_and_structure_count() {
         let low = EmergenceDashboard::from(EmergenceSampleSnapshot {
             agent_count: 1,
             faction_count: 2,
@@ -523,12 +534,6 @@ mod tests {
             tick: 500,
         });
 
-        assert_ne!(low, high);
-        assert_eq!(low.power_law_alpha, high.power_law_alpha);
-        assert_eq!(low.shannon_entropy, high.shannon_entropy);
-        assert_eq!(low.novelty_score, high.novelty_score);
-        assert_eq!(low.coupling_mi, high.coupling_mi);
-        assert_ne!(low.structure_count, high.structure_count);
-        assert_ne!(low.tick, high.tick);
+        assert_eq!(low, high);
     }
 }

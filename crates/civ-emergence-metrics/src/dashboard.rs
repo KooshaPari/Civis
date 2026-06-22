@@ -407,9 +407,9 @@ mod tests {
         approx(diplomacy_tension(&v), 0.35);
     }
 
-    // ---- TileDashboard::compute ----
+    // ---- EmergenceDashboard::compute ----
 
-    /// FR-CIV-EMERG-001: `TileDashboard::compute` returns the
+    /// FR-CIV-EMERG-001: `EmergenceDashboard::compute` returns the
     /// per-metric value for every one of the five fields. This locks
     /// the engine's first-sample contract: the engine stores a
     /// non-`None` `EmergenceSample` with the documented all-zeros
@@ -425,7 +425,7 @@ mod tests {
         // Ideology binning (bw=0.2, 5 bins/side, total=10):
         //   -0.9 → bin 0; -0.7 → bin 1; 0.1 → bin 5; 0.2 → bin 6
         // → 4 bins × 1 agent each, max share = 1/4 = 0.25.
-        let d = TileDashboard::compute(
+        let d = EmergenceDashboard::compute(
             &[3, 3],                 // cluster_sizes
             &[-0.9, -0.7, 0.1, 0.2], // ideologies
             1,
@@ -455,7 +455,7 @@ mod tests {
     /// contracts are explicit.
     #[test]
     fn emerg_emerg_001_dashboard_compute_empty_inputs_yield_documented_defaults() {
-        let d = TileDashboard::compute(&[], &[], 0, 0, &[], &[]);
+        let d = EmergenceDashboard::compute(&[], &[], 0, 0, &[], &[]);
         assert_eq!(d.cluster_entropy, 0.0);
         assert_eq!(d.ideology_homophily, 0.0);
         assert_eq!(d.sentience_fraction, 0.0);

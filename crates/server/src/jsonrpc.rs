@@ -72,6 +72,8 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Read the transport-safe emergence dashboard snapshot.
+    EmergenceDashboard,
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
@@ -115,6 +117,7 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::EmergenceDashboard => "emergence.dashboard",
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimPerf => "sim.perf",
             Self::SimDiplomacyAction => "sim.diplomacy_action",
@@ -149,6 +152,7 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "emergence.dashboard" => Some(Self::EmergenceDashboard),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.perf" => Some(Self::SimPerf),
             "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
@@ -862,7 +866,7 @@ pub struct EmergenceSampleFields {
 }
 
 /// Wire-friendly mirror of
-/// [`civ_emergence_metrics::dashboard::EmergenceDashboard`] for the
+/// [`civ_emergence_metrics::dashboard::TileDashboard`] for the
 /// `sim.emergence` / `sim.snapshot.emergence` JSON-RPC surface
 /// (FR-CIV-EMERG-003). The struct re-exports the five f32 fields as a
 /// nested object so dashboard clients can read either the flat
@@ -883,8 +887,8 @@ pub struct DashboardBlock {
     pub diplomacy_tension: f32,
 }
 
-impl From<civ_emergence_metrics::dashboard::EmergenceDashboard> for DashboardBlock {
-    fn from(d: civ_emergence_metrics::dashboard::EmergenceDashboard) -> Self {
+impl From<civ_emergence_metrics::dashboard::TileDashboard> for DashboardBlock {
+    fn from(d: civ_emergence_metrics::dashboard::TileDashboard) -> Self {
         Self {
             cluster_entropy: d.cluster_entropy,
             ideology_homophily: d.ideology_homophily,
@@ -1320,6 +1324,19 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             };
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::EmergenceDashboard => {
+            let snapshot = emergence_dashboard_snapshot_from_context(&ctx);
+            let dashboard = civ_emergence_metrics::dashboard::EmergenceDashboard::from(snapshot);
+            DispatchPlan {
+                response: JsonRpcResponse::success(
+                    req.id,
+                    serde_json::to_value(dashboard).unwrap_or(serde_json::json!({
+                        "tick": ctx.tick,
+                    })),
+                ),
                 effect: DispatchEffect::None,
             }
         }

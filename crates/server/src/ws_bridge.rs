@@ -829,7 +829,7 @@ fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], S
         Frame3d::Climate(ClimateFrame {
             tick,
             climate: *sim.climate(),
-            weather: sim.weather_grid.to_vec(),
+            weather: sim.snapshot().weather_grid.to_vec(),
         }),
     ])
 }
@@ -1077,9 +1077,6 @@ async fn apply_dispatch_effect(
                     set_replay_io_error(response, err.to_string());
                 }
             }
-        }
-        DispatchEffect::QueueResearch { tech } => {
-            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
         }
         DispatchEffect::GodAction { action, .. } => {
             tracing::warn!(action, "god_action engine integration pending");

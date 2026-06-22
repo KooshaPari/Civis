@@ -136,8 +136,8 @@ impl FsChunkStore {
 
 impl ChunkStorePort for FsChunkStore {
     fn put(&self, coord: ChunkCoord, chunk: &Chunk<MaterialId>) -> std::io::Result<()> {
-        let bytes =
-            bincode::serialize(chunk).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
+        let bytes = bincode_next::serde::encode_to_vec(chunk, bincode_next::config::standard())
+            .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         fs::write(self.path_for(coord), bytes)
     }
     fn get(&self, coord: ChunkCoord) -> std::io::Result<Option<Chunk<MaterialId>>> {
@@ -148,7 +148,9 @@ impl ChunkStorePort for FsChunkStore {
             Err(err) => return Err(err),
         };
         let chunk =
-            bincode::deserialize(&bytes).map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
+            bincode_next::serde::decode_from_slice(&bytes, bincode_next::config::standard())
+                .map_err(|err| Error::new(ErrorKind::InvalidData, err))?
+                .0;
         Ok(Some(chunk))
     }
     fn contains(&self, coord: ChunkCoord) -> bool {

@@ -19,8 +19,10 @@ use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
 pub enum SaveError {
     #[error("io at {path}: {message}")]
     Io { path: String, message: String },
-    #[error("bincode: {0}")]
-    Bincode(#[from] bincode::Error),
+    #[error("bincode encode: {0}")]
+    BincodeEncode(#[from] bincode_next::error::EncodeError),
+    #[error("bincode decode: {0}")]
+    BincodeDecode(#[from] bincode_next::error::DecodeError),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -259,14 +261,21 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
 
 pub fn save_game(sim: &Simulation, path: impl AsRef<Path>) -> Result<(), SaveError> {
     let path = path.as_ref();
-    let bytes = bincode::serialize(&snapshot_sim(sim))?;
+    let bytes = bincode_next::serde::encode_to_vec(
+        &snapshot_sim(sim),
+        bincode_next::config::standard(),
+    )?;
     fs::write(path, bytes).map_err(|e| io_err(path, e))
 }
 
 pub fn load_game(path: impl AsRef<Path>) -> Result<Simulation, SaveError> {
     let path = path.as_ref();
     let bytes = fs::read(path).map_err(|e| io_err(path, e))?;
-    let saved: SavedSimulation = bincode::deserialize(&bytes)?;
+    let saved: SavedSimulation = bincode_next::serde::decode_from_slice(
+        &bytes,
+        bincode_next::config::standard(),
+    )?
+    .0;
     Ok(restore_sim(saved))
 }
 

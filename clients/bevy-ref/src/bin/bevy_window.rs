@@ -342,6 +342,9 @@ fn main() {
                 update_presentation_lighting,
             ),
         )
+        .run();
+            ),
+        )
             .run_if(in_state(AppState::InGame)),
     )
     .run();
@@ -495,6 +498,9 @@ fn scenario_panel_input(
         bridge
             .client
             .send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
+        bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
         info!("scenario launch: preset={preset} seed={seed} speed={speed}");
         bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
         bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));

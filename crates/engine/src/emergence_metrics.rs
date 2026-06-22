@@ -1029,7 +1029,7 @@ mod tests {
     }
 
     /// FR-CIV-EMERG-001: the sampler computes the five-tile
-    /// `TileDashboard` from the live ECS and caches it on the
+    /// `EmergenceDashboard` from the live ECS and caches it on the
     /// `EmergenceSample`. The test inserts a population with `Civilian`,
     /// `ClusterMember`, `Psyche`, and `Mood`, takes one sample, and asserts the
     /// dashboard block is `Some(_)` with values that match the helper crate's

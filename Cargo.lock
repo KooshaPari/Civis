@@ -2629,7 +2629,8 @@ name = "civ-voxel"
 version = "0.1.0"
 dependencies = [
  "bincode-next",
- "criterion",
+ "criterion 0.5.1",
+ "glam 0.30.10",
  "phenotype-voxel",
  "proptest",
  "ron 0.8.1",
@@ -6300,7 +6301,7 @@ dependencies = [
 
 [[package]]
 name = "paste-complete"
-version = "0.2.3"
+version = "1.0.15"
 
 [[package]]
 name = "pastey"

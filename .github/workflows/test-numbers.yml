@@ -1,0 +1,68 @@
+name: Test Numbers
+# Free (public repo, ubuntu) authoritative test + coverage. Split into two
+# PARALLEL jobs so the workspace pass-count surfaces fast (~6 min) instead of
+# waiting behind the coverage step's second instrumented build.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/sim-emergence-batch, feat/civis-platform]
+
+concurrency:
+  group: test-numbers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+      - name: cargo test --workspace
+        run: |
+          # Capture cargo's real exit code through the pipe so a COMPILE failure
+          # (which prints zero "test result:" lines) cannot masquerade as green.
+          # A previous `... | tee || true` swallowed E0382-class build breaks and
+          # the TOTAL line read PASSED=0 while the job reported success.
+          cargo test --workspace --no-fail-fast 2>&1 | tee test.log
+          cargo_status=${PIPESTATUS[0]}
+          echo "===== TEST RESULT SUMMARY ====="
+          grep -E "test result:" test.log || echo "no test-result lines"
+          awk '/test result:/{for(i=1;i<=NF;i++){if($i=="passed;")p+=$(i-1);if($i=="failed;")f+=$(i-1);if($i=="ignored;")g+=$(i-1)}} END{printf "TOTAL PASSED=%d FAILED=%d IGNORED=%d\n",p,f,g}' test.log
+          # Fail the step if the workspace did not compile (no test-result lines at
+          # all) or if cargo itself reported failure (test failures / build error).
+          if ! grep -qE "test result:" test.log; then
+            echo "::error::no test-result lines — the workspace failed to compile"
+            exit 1
+          fi
+          exit "$cargo_status"
+
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537
+        with:
+          components: llvm-tools-preview
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+      # Prebuilt binary instead of `cargo install --locked` (which compiles from
+      # crates.io and intermittently dies on a transient registry download —
+      # `SSL_ERROR_SYSCALL` fetching shared_child — leaving `no such command:
+      # llvm-cov` and a silent no-numbers coverage job).
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: coverage (llvm-cov)
+        run: cargo llvm-cov --workspace --summary-only 2>&1 | tail -40

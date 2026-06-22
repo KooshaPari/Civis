@@ -1,0 +1,36 @@
+# CIVIS_DUMP render-frame regression — fixture-backed unit tests for civis-cli.
+# Full Bevy capture (CIVIS_DUMP producer) runs locally; this workflow gates the
+# parser/validator so agents cannot merge broken dump schema handling.
+name: CIVIS_DUMP regression
+
+on:
+  pull_request:
+    paths:
+      - "crates/civis-cli/**"
+      - "docs/guides/civis-dump-regression.md"
+      - ".github/workflows/civis-dump-regression.yml"
+  push:
+    branches: [main]
+    paths:
+      - "crates/civis-cli/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump-harness:
+    name: civis-cli dump fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+      - name: cargo test -p civis-cli (dump regression)
+        run: cargo test -p civis-cli dump::

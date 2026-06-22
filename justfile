@@ -188,7 +188,7 @@ civis-3d-watch-build:
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
 godot-test:
-    cargo test --manifest-path clients/godot-ref/rust/Cargo.toml
+    powershell -NoProfile -ExecutionPolicy Bypass -Command 'Set-Item Env:CARGO_TARGET_DIR target-godot-smoke; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1'
 
 # Full local dev stack: infra + civ-watch.
 dev:
@@ -297,6 +297,10 @@ bench:
 # CA dirty-chunk benchmark.
 ca-bench:
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-dirty-chunk-bench.ps1
+
+# CA dirty-chunk benchmark report.
+ca-report:
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-bench-report.ps1
 
 # CA dirty-chunk profiling.
 ca-flamegraph:

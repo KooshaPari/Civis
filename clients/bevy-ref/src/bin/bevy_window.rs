@@ -222,7 +222,6 @@ struct MinimapPopup {
 struct SimSpeedState {
     multiplier: u32,
 }
-
 #[derive(Resource)]
 struct EmergencePollTimer(f32);
 impl Default for EmergencePollTimer {
@@ -339,7 +338,7 @@ fn main() {
                 update_presentation_lighting,
             ),
         )
-            .run_if(in_state(AppState::InGame)),
+        .run_if(in_state(AppState::InGame)),
     )
     .run();
 
@@ -496,6 +495,9 @@ fn scenario_panel_input(
         bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
         bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
         info!("scenario launch: preset={preset} seed={seed} speed={speed}");
+        bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
     }
 }
 
@@ -603,7 +605,6 @@ fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<Connec
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
 fn animate_splash(
     mut overlay: ResMut<ConnectionOverlay>,
     mut spinners: Query<&mut Text, With<SplashSpinner>>,
@@ -619,19 +620,6 @@ fn animate_splash(
     }
 }
 
-const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-fn animate_splash(
-    mut overlay: ResMut<ConnectionOverlay>,
-    mut spinners: Query<&mut Text, With<SplashSpinner>>,
-) {
-    overlay.tick = overlay.tick.wrapping_add(1);
-    if overlay.tick % 4 != 0 { return; }
-    let frame = SPINNER_FRAMES[((overlay.tick / 4) as usize) % SPINNER_FRAMES.len()];
-    for mut text in &mut spinners {
-        **text = frame.to_string();
-    }
-}
 fn apply_spectator_meta(
     bridge: Res<LiveBridge>,
     mut presentation: ResMut<ScenePresentation>,

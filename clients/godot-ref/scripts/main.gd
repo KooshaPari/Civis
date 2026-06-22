@@ -118,7 +118,6 @@ func _ready() -> void:
 	_bind_ui()
 	ui.get_node("Minimap").setup(terrain_heights, terrain_biomes, $Camera3D, terrain_height_exaggeration)
 	_refresh_attach_status()
-
 	if attach_mode == "server":
 		_ws_client.connect_server(civ_server_ws)
 		$Timer.stop()

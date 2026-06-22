@@ -109,7 +109,7 @@ civis-3d-watch-build:
 
 # Godot GDExtension crate (excluded from workspace; test in-tree).
 godot-test:
-    cd clients/godot-ref/rust && cargo test
+    powershell -NoProfile -ExecutionPolicy Bypass -Command 'Set-Item Env:CARGO_TARGET_DIR target-godot-smoke; cargo test --manifest-path clients/godot-ref/rust/Cargo.toml -j 1'
 
 # Native infra + sim-server (postgres, dragonfly, nats, minio). Requires process-compose + sh.
 infra-up:

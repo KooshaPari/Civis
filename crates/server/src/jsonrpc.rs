@@ -1270,19 +1270,18 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             },
         },
-        JsonRpcMethod::SimLoadScenario => {
-            let (preset, seed) = parse_load_scenario_params(req.params.as_ref())
-                .map_err(|e| DispatchPlan {
-                    response: JsonRpcResponse::failure(req.id.clone(), e),
-                    effect: DispatchEffect::None,
-                })?;
-            DispatchPlan {
+        JsonRpcMethod::SimLoadScenario => match parse_load_scenario_params(req.params.as_ref()) {
+            Ok((preset, seed)) => DispatchPlan {
                 response: JsonRpcResponse::success(
-                    req.id.clone(),
+                    req.id,
                     serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
                 ),
                 effect: DispatchEffect::LoadScenario { preset, seed },
-            }
+            },
+            Err(e) => DispatchPlan {
+                response: JsonRpcResponse::failure(req.id, e),
+                effect: DispatchEffect::None,
+            },
         }
                 JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
             Ok(policy) => DispatchPlan {

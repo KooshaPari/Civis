@@ -14,7 +14,7 @@ bincode = "1.3"
 
 # Adaptive voxel kernel shared across Phenotype-org game clients.
 # Pin the git revision so CI can resolve the same kernel without a sibling checkout.
-phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-gfx.git", rev = "db2203159f7dc528e72ba3a94e593a9d39ef8ea2", package = "phenotype-voxel" }
+phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-gfx.git", rev = "7ed27211554f5ba25d3a79c54c73262db6e160b1", package = "phenotype-voxel" }
 
 [dev-dependencies]
 criterion = { version = "=0.5.1", features = ["html_reports"] }

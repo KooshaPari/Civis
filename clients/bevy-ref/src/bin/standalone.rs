@@ -122,27 +122,39 @@ fn main() {
                 primary_window: Some(Window {
                     title: TITLE.to_string(),
                     ..default()
-                }),
-                ..default()
-            }),
-            WireframePlugin,
-        ))
-        .insert_resource(StandaloneSim {
-            sim: Simulation::with_seed(42),
-            terrain: Terrain::generate(42),
-            paused: false,
-        })
-        .insert_resource(SimTickTimer(Timer::from_seconds(
-            1.0 / SIM_TICK_RATE_HZ,
-            TimerMode::Repeating,
-        )))
-        .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
-        .insert_resource(TerrainVisuals::default())
-        .insert_resource(CivilianVisuals::default())
-        .insert_resource(UiState::default())
-        .init_state::<AppState>()
-        .add_systems(Startup, setup_camera)
-        .add_systems(OnEnter(AppState::Loading), setup_world)
+                })
+                .set(native_render_plugin()),
+        )
+        .add_plugins(GpuFeaturesPlugin)
+        .add_plugins(civ_bevy_ref::AgentNeedsPlugin)
+        // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
+        // second at INFO so the 90s frame-budget profile has a measurable
+        // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
+        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
+        // embedded icon on the primary winit window at startup.
+        .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
+        .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
+        .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
+        .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
+        .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
+        .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
+        .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
+        .add_plugins(civ_bevy_ref::menus::MenusPlugin)
+        .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
+        .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
+        .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
+        .add_systems(Startup, setup_atmosphere)
+        .add_systems(
+            Startup,
+            (
+                setup_camera,
+                setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
+                spawn_decorations.run_if(in_sandbox_attach_mode),
+            )
+                .chain(),
+        )
         .add_systems(
             Update,
             (

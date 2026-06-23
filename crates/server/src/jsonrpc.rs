@@ -168,6 +168,7 @@ impl JsonRpcMethod {
 
 /// JSON-RPC request `id` (string, number, or null per spec).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum RequestId {
     /// Numeric id.
     Number(i64),
@@ -1166,9 +1167,11 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
         .and_then(|p| p.get("path"))
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
-        .filter(|path| {
-            let path = std::path::Path::new(path);
+        .filter(|path_str| {
+            // Reject absolute paths (Unix-style starting with / or Windows-style with drive letter)
+            let path = std::path::Path::new(path_str);
             path.is_relative()
+                && !path_str.starts_with('/')
                 && !path
                     .components()
                     .any(|component| matches!(component, std::path::Component::ParentDir))

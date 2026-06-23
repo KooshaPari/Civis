@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 20">
+  <!--
+    Progress bar fill. Designed to be clipped to the filled width.
+    9-slice: x=10/230 (same as track). Use as overlay on track, clip width by progress %.
+  -->
+  <defs>
+    <linearGradient id="fillGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#50C8F0"/>
+      <stop offset="60%" stop-color="#70d8ff"/>
+      <stop offset="100%" stop-color="#50C8F0"/>
+    </linearGradient>
+    <linearGradient id="fillSheen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.15"/>
+    </linearGradient>
+    <filter id="fillGlow" x="-5%" y="-10%" width="110%" height="120%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- fill body -->
+  <rect x="2" y="2" width="236" height="16" rx="8" ry="8" fill="url(#fillGrad)" filter="url(#fillGlow)"/>
+  <!-- sheen overlay -->
+  <rect x="2" y="2" width="236" height="16" rx="8" ry="8" fill="url(#fillSheen)"/>
+  <!-- leading edge glow dot -->
+  <ellipse cx="234" cy="10" rx="6" ry="6" fill="#ffffff" opacity="0.4"/>
+</svg>

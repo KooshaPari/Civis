@@ -1,0 +1,282 @@
+CIVIS COVERAGE GAPS — pub fn static scan
+Generated: 2026-06-16
+Method: compare pub fn names in src/ vs #[cfg(test)] modules, tests/, benches/
+Heuristic: fn name appears in test corpus (call, assert, test_<fn>, mod <fn>)
+Scope: per-crate only (no cross-crate test attribution)
+Note: read-only scan; cargo not run
+
+========================================================================
+CRATE RANKING (by untested pub fn count, descending)
+========================================================================
+Crate                    Untested   Tested    Total    Gap%
+------------------------------------------------------------------------
+engine                         33      143      176   18.8%
+server                         22       32       54   40.7%
+voxel                          14      121      135   10.4%
+legends                        12       40       52   23.1%
+civis-cli                       9       11       20   45.0%
+ai                              8       26       34   23.5%
+agents                          7       49       56   12.5%
+infra                           7        8       15   46.7%
+mod-host                        7       54       61   11.5%
+economy                         6       44       50   12.0%
+watch                           5        3        8   62.5%
+civ-emergence-metrics           4       21       25   16.0%
+civ-traffic                     4       27       31   12.9%
+civis-mcp                       4        4        8   50.0%
+genetics                        4       25       29   13.8%
+tactics                         4       25       29   13.8%
+audio                           3       42       45    6.7%
+civlab-sdk                      3       14       17   17.6%
+protocol-3d                     3        9       12   25.0%
+build                           1       15       16    6.2%
+diplomacy                       1       28       29    3.4%
+laws                            1        9       10   10.0%
+diffusion                       0        3        3    0.0%
+needs                           0        9        9    0.0%
+planet                          0        5        5    0.0%
+research                        0        9        9    0.0%
+save-db                         0        6        6    0.0%
+species                         0        1        1    0.0%
+------------------------------------------------------------------------
+ALL CRATES                    162      783      945   17.1%
+
+========================================================================
+TOP 25 UNTESTED PUBLIC FUNCTIONS (file:fn)
+Selection: up to 7 per priority crate (engine, agents, economy, voxel), then fill
+========================================================================
+engine/src/emergence.rs:agent_social_graph
+engine/src/emergence.rs:civ_ai_decisions
+engine/src/emergence.rs:register_seed_set
+engine/src/emergence.rs:sentience_events
+engine/src/emergence.rs:set_active_seed
+engine/src/engine.rs:apply_scenario_military
+engine/src/engine.rs:configure_military_fog
+agents/src/daily_path.rs:need_for_poi_kind
+agents/src/daily_path.rs:poi_kind_for_need
+agents/src/lib.rs:child_bundle_from_parent
+agents/src/lib.rs:drift_toward_home
+agents/src/lib.rs:newborn_default
+agents/src/lib.rs:spawn_child_near
+agents/src/psyche.rs:default_profile
+economy/src/allocator.rs:next_order_id
+economy/src/chains.rs:add_joule_recipe
+economy/src/chains.rs:is_noop
+economy/src/chains.rs:is_zero_joule
+economy/src/chains.rs:total_joule_delta
+economy/src/chains.rs:verify_reserve_reshuffle
+voxel/src/boundary.rs:enforce_boundary_walls
+voxel/src/fluid_ca.rs:settle_world
+voxel/src/fluid_ca.rs:snapshot_into_scratch
+voxel/src/fluid_ca.rs:step_with_config
+voxel/src/fluid_ca.rs:step_world_with_config
+
+========================================================================
+PER-CRATE UNTESTED pub fn DETAIL
+========================================================================
+
+## engine (33 untested / 176 total)
+  src/emergence.rs:agent_social_graph
+  src/emergence.rs:civ_ai_decisions
+  src/emergence.rs:register_seed_set
+  src/emergence.rs:sentience_events
+  src/emergence.rs:set_active_seed
+  src/engine.rs:apply_scenario_military
+  src/engine.rs:configure_military_fog
+  src/engine.rs:faction_alignment
+  src/engine.rs:faction_count
+  src/engine.rs:install_mod_path
+  src/engine.rs:last_births
+  src/engine.rs:last_tick_damage_centers
+  src/engine.rs:last_tick_mod_lifecycle
+  src/engine.rs:push_voxel_write
+  src/engine.rs:register_mod_stubs
+  src/engine.rs:reload_mod_by_id
+  src/engine.rs:research_cache
+  src/engine.rs:tick_with_emergence_source
+  src/engine.rs:unload_mod_by_id
+  src/io.rs:write_text
+  src/lib.rs:clamp
+  src/lib.rs:create_rng
+  src/lib.rs:saturating_add
+  src/replay.rs:mod_loaded_bus_at_tick
+  src/replay.rs:record_climate
+  src/replay.rs:record_mod_permission_violation
+  src/save_bundle.rs:is_save_dir
+  src/save_bundle.rs:read_metadata
+  src/scenario.rs:apply_world_state
+  src/scenario.rs:policy_input
+  src/spawn.rs:grid_to_norm
+  src/spawn.rs:military_pin_id
+  src/spawn.rs:unit_type_label
+
+## server (22 untested / 54 total)
+  src/autosave.rs:spawn_autosave_loop
+  src/jsonrpc.rs:encode_response
+  src/jsonrpc.rs:institutions_from_sim
+  src/jsonrpc.rs:into_error
+  src/jsonrpc.rs:military_pins_from_sim
+  src/jsonrpc.rs:parse_name
+  src/jsonrpc.rs:parse_replay_path
+  src/jsonrpc.rs:parse_reset_seed
+  src/jsonrpc.rs:parse_role_param
+  src/jsonrpc.rs:parse_set_speed_params
+  src/jsonrpc.rs:parse_sim_command_action
+  src/jsonrpc.rs:role_allows_operator
+  src/jsonrpc.rs:set_sim_command_tick
+  src/jsonrpc.rs:set_spawn_civilian_result
+  src/jsonrpc.rs:success
+  src/jsonrpc.rs:wire_label
+  src/saves.rs:parse_slot_name_params
+  src/saves.rs:save_archive_path
+  src/saves.rs:save_type_for_name
+  src/voxel_frame_builder.rs:world_coord_to_chunk_id
+  src/ws_bridge.rs:from_env
+  src/ws_bridge.rs:run_ws_bridge
+
+## voxel (14 untested / 135 total)
+  src/boundary.rs:enforce_boundary_walls
+  src/fluid_ca.rs:settle_world
+  src/fluid_ca.rs:snapshot_into_scratch
+  src/fluid_ca.rs:step_with_config
+  src/fluid_ca.rs:step_world_with_config
+  src/hud.rs:available_nodes
+  src/hud.rs:can_queue
+  src/hud.rs:prerequisites_met
+  src/hud.rs:with_body
+  src/hud.rs:with_region
+  src/hud.rs:with_shortcut
+  src/material_pbr.rs:with_world_tile
+  src/stream.rs:new_with_store
+  src/stream.rs:voxels_per_side
+
+## legends (12 untested / 52 total)
+  src/config.rs:epoch_of
+  src/config.rs:kind_affinity
+  src/graph.rs:current_epoch
+  src/graph.rs:node_count
+  src/lib.rs:mark_died
+  src/lib.rs:set_name
+  src/model.rs:as_entity
+  src/model.rs:as_event
+  src/model.rs:weight
+  src/model.rs:with_region
+  src/rumor.rs:embellishment_gate
+  src/rumor.rs:swap_gate
+
+## civis-cli (9 untested / 20 total)
+  src/census.rs:from_response
+  src/config.rs:load_dotenv
+  src/config.rs:verify_settle_frames_from_env
+  src/lib.rs:workspace_root
+  src/pixels.rs:hue_bucket
+  src/pixels.rs:is_gray
+  src/pixels.rs:is_near_black
+  src/pixels.rs:mean_channel
+  src/verify.rs:run_verify
+
+## ai (8 untested / 34 total)
+  src/pool.rs:drain_results
+  src/preflight.rs:check_artifacts
+  src/preflight.rs:preflight
+  src/preflight.rs:required_artifacts
+  src/provenance.rs:compose_cache_key
+  src/providers/dummy.rs:generate_sync
+  src/providers/firepass_kimi.rs:inner
+  src/registry.rs:as_str
+
+## agents (7 untested / 56 total)
+  src/daily_path.rs:need_for_poi_kind
+  src/daily_path.rs:poi_kind_for_need
+  src/lib.rs:child_bundle_from_parent
+  src/lib.rs:drift_toward_home
+  src/lib.rs:newborn_default
+  src/lib.rs:spawn_child_near
+  src/psyche.rs:default_profile
+
+## infra (7 untested / 15 total)
+  src/cache.rs:del
+  src/cache.rs:get
+  src/cache.rs:set
+  src/minio.rs:get_object
+  src/minio.rs:put_object
+  src/nats.rs:publish
+  src/nats.rs:subscribe
+
+## mod-host (7 untested / 61 total)
+  src/capability.rs:from_i32
+  src/lib.rs:format_mod_error_event
+  src/lib.rs:on_economy_phase
+  src/lib.rs:parse_manifest
+  src/lib.rs:read_manifest_from_civmod
+  src/lib.rs:remove_by_id
+  src/wasm_guest.rs:invoke_military_tick_with_capabilities
+
+## economy (6 untested / 50 total)
+  src/allocator.rs:next_order_id
+  src/chains.rs:add_joule_recipe
+  src/chains.rs:is_noop
+  src/chains.rs:is_zero_joule
+  src/chains.rs:total_joule_delta
+  src/chains.rs:verify_reserve_reshuffle
+
+## watch (5 untested / 8 total)
+  src/terrain.rs:biome_at
+  src/terrain.rs:cell_index
+  src/terrain.rs:from_height
+  src/terrain.rs:is_walkable
+  src/terrain.rs:rgb
+
+## civ-emergence-metrics (4 untested / 25 total)
+  src/lib.rs:is_empty
+  src/lib.rs:len
+  src/structure.rs:is_empty
+  src/structure.rs:len
+
+## civ-traffic (4 untested / 31 total)
+  src/lib.rs:iter_segments
+  src/lib.rs:kind_for
+  src/lib.rs:promoted
+  src/lib.rs:unlock_era
+
+## civis-mcp (4 untested / 8 total)
+  src/lib.rs:census_config_with_url
+  src/lib.rs:census_sim_status
+  src/lib.rs:pixels_for_png
+  src/server.rs:registered_router
+
+## genetics (4 untested / 29 total)
+  src/lib.rs:random
+  src/seeds.rs:base_dna
+  src/seeds.rs:from_seed_set
+  src/seeds.rs:retain
+
+## tactics (4 untested / 29 total)
+  src/doctrine_fitness.rs:net_pressure
+  src/fog_of_war.rs:grid_size
+  src/fog_of_war.rs:vision_radius
+  src/movement.rs:operational_movement_pulse
+
+## audio (3 untested / 45 total)
+  src/ambient.rs:index
+  src/mood.rs:index
+  src/sfx.rs:is_ui
+
+## civlab-sdk (3 untested / 17 total)
+  src/manifest.rs:load_manifest_file
+  src/material.rs:into_material_def
+  src/registry.rs:register_manifest
+
+## protocol-3d (3 untested / 12 total)
+  src/lib.rs:from_fixed_coord
+  src/lib.rs:is_frame3d_binary
+  src/lib.rs:map_build_provenance
+
+## build (1 untested / 16 total)
+  src/lib.rs:select_tile_set_id
+
+## diplomacy (1 untested / 29 total)
+  src/lib.rs:push_clause
+
+## laws (1 untested / 10 total)
+  src/lib.rs:load_path

@@ -18,6 +18,8 @@
 #include "VoxelTerrain.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMeshActor.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 
 ACivShowGameMode::ACivShowGameMode()
 {
@@ -76,11 +78,56 @@ void ACivShowGameMode::SpawnMinimapHud()
         if (MinimapWidget)
         {
             MinimapWidget->AddToViewport(1);
+            MinimapWidget->OnMinimapClicked.AddDynamic(this, &ACivShowGameMode::OnMinimapUvClicked);
             if (MinimapCapture->MinimapTexture)
             {
                 MinimapWidget->SetMinimapTexture(MinimapCapture->MinimapTexture);
             }
         }
+    }
+}
+
+void ACivShowGameMode::OnMinimapUvClicked(const float U, const float V)
+{
+    const FVector WorldXZ = UCivMinimapWidget::MinimapUvToWorldLocation(U, V);
+    FocusCameraAtWorldLocation(WorldXZ);
+}
+
+void ACivShowGameMode::FocusCameraAtWorldLocation(FVector WorldLocation)
+{
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    static constexpr float MapSize = 128.0f;
+    static constexpr float CameraHeightAboveGround = 380.0f;
+
+    const float NormX = FMath::Clamp(WorldLocation.X / MapSize, 0.0f, 1.0f);
+    const float NormZ = FMath::Clamp(WorldLocation.Z / MapSize, 0.0f, 1.0f);
+
+    float GroundY = 12.0f;
+    if (TerrainActor)
+    {
+        GroundY = TerrainActor->SampleWorldHeightAtNorm(NormX, NormZ, 0.0f);
+        WorldLocation.Y = TerrainActor->SampleWorldHeightAtNorm(NormX, NormZ, CameraHeightAboveGround);
+    }
+    else
+    {
+        WorldLocation.Y = CameraHeightAboveGround;
+    }
+
+    APlayerController* const PC = GetWorld()->GetFirstPlayerController();
+    if (!PC)
+    {
+        return;
+    }
+
+    if (APawn* const Pawn = PC->GetPawn())
+    {
+        Pawn->SetActorLocation(WorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
+        const FVector LookAt(WorldLocation.X, GroundY, WorldLocation.Z);
+        PC->SetControlRotation((LookAt - WorldLocation).Rotation());
     }
 }
 

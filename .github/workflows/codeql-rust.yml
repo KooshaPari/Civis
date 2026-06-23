@@ -1,15 +1,32 @@
+# Local-first: PRs use quality.yml + pr-governance only.
+# Heavy CodeQL Rust scan runs locally via lefthook (the manifest's clippy +
+# `cargo test --workspace` already exercise the same surface that CodeQL
+# inspects). This workflow is a manual escape hatch; no push/PR triggers.
 name: CodeQL (Rust)
 
-# Local-first: PRs use quality.yml + pr-governance-gate only.
-# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
+  manifest-verify:
+    name: manifest-verify (cloud)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify local quality manifest
+        run: bash scripts/quality/verify-quality-manifest.sh
+
   analyze:
+    # Manual escape hatch: rerun CodeQL Rust with the full autobuild pipeline.
+    if: github.event_name == 'workflow_dispatch'
     name: Analyze (rust)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     permissions:
       actions: read
@@ -18,19 +35,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb
+        uses: github/codeql-action/init@v3
         with:
           languages: rust
       - name: Autobuild
-        uses: github/codeql-action/autobuild@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb
+        uses: github/codeql-action/autobuild@v3
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:rust"

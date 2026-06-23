@@ -32,7 +32,7 @@ function Test-UeAndUbtAvailable {
 }
 
 function Invoke-GateResult {
-    param([string] $Name, [scriptblock] $Block)
+    param([scriptblock] $Block, [string] $Name = '')
     & $Block
     if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
         # Optional Unreal tier: record skip so cloud verify accepts the manifest.

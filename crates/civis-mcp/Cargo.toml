@@ -1,0 +1,30 @@
+[package]
+name = "civis-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "MCP server that exposes the civis-cli verification harness (verify, pixels, census) as MCP-shaped tools."
+
+[dependencies]
+rmcp = { version = "1.7", features = ["server", "transport-io", "macros"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "net", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
+civis-cli = { path = "../civis-cli" }
+# Direct deps required for the pixels (PNG decode) and census (WS JSON-RPC)
+# library paths exposed by `civis-cli`. Kept in sync with `crates/civis-cli/Cargo.toml`.
+png = "0.17"
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["rustls-tls-webpki-roots", "connect"] }
+futures-util = "0.3"
+
+[features]
+# Default empty: tools that need a windowed Bevy renderer (currently only
+# `civis_verify`) are gated behind this feature. Matches `civis-cli`'s own
+# `bevy` feature so the two crates stay in lockstep.
+default = []
+bevy = ["civis-cli/bevy"]
+
+[lib]
+path = "src/lib.rs"

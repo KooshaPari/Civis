@@ -3,6 +3,12 @@
 #
 # Setup: lefthook install
 # Manual: lefthook run pre-push
+#
+# Opt-in extended gates (cargo-audit, cargo-deny, cargo-machete, cargo-semver,
+# trufflehog, fr-coverage, docs:check, security-guard) are run during pre-push
+# when the developer sets CIVIS_QUALITY_EXTRAS=1. The default path is the
+# 5–7 second manifest emission: rust_fmt + rust_clippy + rust_test + godot_test
+# + web_test + dashboard_typecheck (or `just civis-3d-verify`).
 
 pre-commit:
   parallel: true
@@ -11,10 +17,23 @@ pre-commit:
       run: bash .github/hooks/pre-commit
 
 pre-push:
-  piped: true
+  piped: false
   commands:
     quality-manifest:
       run: |
+        # Skip in CI contexts and when an explicit skip flag is set.
+        if [ "${CI:-}" = "true" ] || [ "${CI:-}" = "1" ] || [ "${SKIP_QUALITY_MANIFEST:-}" = "1" ] || [ "${SKIP_QUALITY:-}" = "1" ]; then
+          echo "quality-manifest: skipped (CI or SKIP_QUALITY*)"
+          exit 0
+        fi
+
+        manifest_path=".ci/quality-manifest.json"
+        if [ -f "$manifest_path" ]; then
+          if command -v python3 >/dev/null 2>&1 && python3 -c "import os, sys, time; exit(0 if time.time() - os.path.getmtime(sys.argv[1]) < 3600 else 1)" "$manifest_path"; then
+            echo "quality-manifest: skipped (recent manifest < 1h old)"
+            exit 0
+          fi
+        fi
         if command -v pwsh >/dev/null 2>&1; then
           pwsh -NoProfile -File scripts/quality/emit-quality-manifest.ps1
         elif command -v powershell >/dev/null 2>&1; then

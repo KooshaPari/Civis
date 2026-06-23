@@ -14,7 +14,7 @@ permissions:
 jobs:
   quality-manifest:
     name: quality-manifest (cloud verify)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -30,18 +30,12 @@ jobs:
   quality-full:
     name: quality-full (manual)
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Full Rust + web sweep
@@ -52,3 +46,14 @@ jobs:
           (cd clients/godot-ref/rust && cargo test)
           (cd web && npm test)
           (cd web/dashboard && bun install --frozen-lockfile && bun run typecheck && bun run build)
+      - name: Run CA dirty-chunk benchmark
+        continue-on-error: true
+        run: cargo bench --bench ca_dirty_chunk
+      - name: Upload CA dirty-chunk criterion artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: criterion-ca-dirty-chunk
+          path: target/criterion
+          if-no-files-found: warn
+          retention-days: 30

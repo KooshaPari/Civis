@@ -269,7 +269,10 @@ mod tests {
         assert_eq!(path.last().copied(), Some((3, 0)));
         // No cell in the path may be blocked.
         for &(x, y) in &path {
-            assert!(!blocked(x, y), "path stepped through blocked cell ({x},{y})");
+            assert!(
+                !blocked(x, y),
+                "path stepped through blocked cell ({x},{y})"
+            );
         }
         // Path must be connected.
         for window in path.windows(2) {
@@ -284,12 +287,7 @@ mod tests {
     fn astar_no_path_when_fully_blocked() {
         // Goal at (2,2); surround it on all cardinal sides and seal the only
         // approach corridors with a solid ring.
-        let blocked = |x: i32, y: i32| {
-            matches!(
-                (x, y),
-                (2, 1) | (2, 3) | (1, 2) | (3, 2)
-            )
-        };
+        let blocked = |x: i32, y: i32| matches!((x, y), (2, 1) | (2, 3) | (1, 2) | (3, 2));
         let result = astar_path_with_blocked((0, 0), (2, 2), 256, &blocked);
         assert!(result.is_none(), "expected None for enclosed goal");
     }

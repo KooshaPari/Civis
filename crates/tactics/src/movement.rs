@@ -1,7 +1,7 @@
 //! Operational-layer grid movement toward enemies (FR-CIV-TACTICS-031).
 
-use crate::grid_obstacles::grid_cell_blocked;
-use crate::pathfinding::bfs_next_step_with_blocked;
+use crate::grid_obstacles::grid_cell_impassable;
+use crate::pathfinding::{astar_path_with_blocked, bfs_next_step_with_blocked};
 use crate::war_bridge::MilitaryUnitSample;
 use civ_voxel::{MaterialId, VoxelWorld};
 
@@ -69,10 +69,11 @@ pub fn operational_movement_pulse(
             continue;
         };
         let to = positions[enemy_idx];
-        let blocked = |gx: i32, gy: i32| grid_cell_blocked(world, gx, gy);
-        let Some((nx, ny)) =
-            bfs_next_step_with_blocked(from, to, config.path_search_radius, &blocked)
-        else {
+        let blocked = |gx: i32, gy: i32| grid_cell_impassable(world, units, gx, gy, i);
+        let next = astar_path_with_blocked(from, to, config.path_search_radius, &blocked)
+            .and_then(|path| path.get(1).copied())
+            .or_else(|| bfs_next_step_with_blocked(from, to, config.path_search_radius, &blocked));
+        let Some((nx, ny)) = next else {
             continue;
         };
         moves.push(GridMove {

@@ -24,6 +24,10 @@ ron = "0.8"
 bincode-next = { version = "3.1.1", features = ["serde"] }
 blake3 = "1"
 sha2 = "0.10"
+thiserror = "1"
+tar = "0.4"
+tempfile = "3"
+zstd = "0.13"
 
 # Logging
 tracing = "0.1"
@@ -34,8 +38,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Civis 3D voxel substrate (sibling Phenotype-org repo via civ-voxel).
 civ-agents = { path = "../agents" }
+civ-needs = { path = "../needs" }
 civ-build = { path = "../build" }
 civ-diffusion = { path = "../diffusion" }
+civ-traffic = { path = "../civ-traffic" }
 civ-voxel = { path = "../voxel" }
 
 # Planet and tactics foundations.
@@ -47,8 +53,21 @@ civ-economy = { path = "../economy" }
 
 # Mod manifest host stub (CIV-0700 Sprint D).
 civ-mod-host = { path = "../mod-host" }
+civ-save-db = { path = "../save-db" }
+
+# MOAT emergence (legends, psyche, culture, genetics, civ-ai) — FR-CIV-LEGENDS-*,
+# FR-CIV-PSYCHE-*, FR-CIV-SPECIES-*, FR-CIV-GENETICS-*, FR-CIV-AI-*.
+civ-legends = { path = "../legends" }
+civ-genetics = { path = "../genetics" }
+civ-species = { path = "../species" }
+
+# Weak-emergence / criticality metrics consumed by the Emergence Dashboard
+# (see `docs/design/emergence-dashboard.md`). Stacked on PR #350
+# (scaffold + design): this PR wires the live sampling into the engine
+# tick and exposes the latest sample over the WS JSON-RPC surface.
+civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }
-proptest = "1.4"
+proptest = "1.11"
 tempfile = "3"

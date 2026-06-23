@@ -1,0 +1,10 @@
+/**
+ * Phenotype docs theme — Geist Sans + Geist Mono (OFL, self-hostable).
+ *
+ * Loaded from the public Geist CDN as a zero-config default so the theme works
+ * out of the box. To fully self-host (offline / OSS-only builds), drop the OFL
+ * woff2 files under docs/public/fonts/geist/ and swap the @font-face srcs to
+ * local('') + url('/fonts/geist/...'). The token --ph-font-sans/-mono already
+ * declare Inter / JetBrains Mono fallbacks, so missing fonts degrade cleanly.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');

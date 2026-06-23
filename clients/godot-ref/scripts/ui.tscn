@@ -89,6 +89,10 @@ tooltip_text = "Live tick from civ-watch GET /snapshot"
 text = "Population: 0"
 tooltip_text = "Population from civ-watch GET /snapshot"
 
+[node name="ModsLabel" type="Label" parent="BottomBar/HBoxContainer"]
+text = "Mods: 0"
+tooltip_text = "Loaded CivLab mods from sim.snapshot (civ-server attach)"
+
 [node name="EraLabel" type="Label" parent="BottomBar/HBoxContainer"]
 text = "Era: 0"
 tooltip_text = "Era index from tick / era length (FR-CIV-UX-001 timelapse)"

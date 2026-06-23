@@ -10,8 +10,9 @@ use std::collections::HashMap;
 
 use bevy_ecs::{
     entity::Entity,
-    system::{CommandQueue, Commands},
+    system::Commands,
     world::World,
+    world::CommandQueue,
 };
 use bevy_math::IVec3;
 use phenotype_voxel::{ChunkId, MaterialId, VoxelWorld};
@@ -86,7 +87,7 @@ pub fn drain_and_schedule_remesh(
         .into_iter()
         .map(|event| chunk_key_from_chunk_id(event.chunk_id))
         .collect();
-    remesh_keys.sort_unstable();
+    remesh_keys.sort_unstable_by_key(|key| (key.x, key.y, key.z));
     remesh_keys.dedup();
 
     for key in remesh_keys {
@@ -182,4 +183,3 @@ mod tests {
         assert!(check_version_compat(&bridge).is_ok());
     }
 }
-

@@ -15,9 +15,9 @@ use civ_agents::{
     SocialGraph,
 };
 use civ_genetics::{
-    example_seed_set,
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    spawn_genome, spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
+    Dna, DnaClass,
+    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
     SeedSet,
 };
 use civ_legends::{
@@ -34,7 +34,6 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 
 use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
 
@@ -72,37 +71,11 @@ pub struct EmergenceState {
     pub(crate) sentience_profile: CognitionTraitProfile,
     pub(crate) sentience_threshold: SentienceThreshold,
     pub(crate) sentient_agents: HashSet<u64>,
-    /// Canonical seed library (FR-CONTENT-MODEL / CIV-008). When a `Scenario`
-    /// pins a `seed_ref`, that seed is used as the spawn-time base DNA via
-    /// [`spawn_genome`]; the seed's divergence dial is then used by
-    /// `mutate_with_divergence` to scale per-byte mutation rates.
-    pub(crate) seed_library: SeedLibrary,
-    /// Active seed id referenced by the loaded scenario (or `None` to use
-    /// raw-organism drift for every spawn).
-    pub(crate) active_seed_id: Option<String>,
-    /// Scenario-level divergence override (0..1). When `Some(v)`, overrides
-    /// `active_seed.divergence` at every spawn call inside
-    /// [`Simulation::emergence_ensure_genomes`].
-    pub(crate) divergence_override: Option<f32>,
-    /// Cumulative set of world-configuration fingerprints seen (§3.4 novelty-rate).
-    pub seen_config_hashes: std::collections::HashSet<u64>,
-    /// Count of new (previously-unseen) fingerprints in the current W_nov window.
-    pub novelty_window_new: u32,
-    /// Tick at which the current W_nov window started.
-    pub novelty_window_start_tick: u64,
 }
 
 impl EmergenceState {
     fn new(seed: u64) -> Self {
         let _ = seed;
-        // Pre-seed the library with the canonical example set so a baseline
-        // sim can spawn a raw-organism without a scenario. Scenarios can
-        // override via `register_seed_files` / `set_active_seed`.
-        let mut seed_library = SeedLibrary::new();
-        for s in example_seed_set().seeds {
-            // ignore validation errors here — example set is hand-curated
-            let _ = seed_library.insert(s);
-        }
         EmergenceState {
             legends: LegendsWorker::new(SagaGraph::new(LegendsConfig::default())),
             cluster_cultures: BTreeMap::new(),
@@ -117,12 +90,6 @@ impl EmergenceState {
             ),
             sentience_threshold: SentienceThreshold::new(0.72),
             sentient_agents: HashSet::new(),
-            seed_library,
-            active_seed_id: Some("raw_organism".to_string()),
-            divergence_override: None,
-            seen_config_hashes: std::collections::HashSet::new(),
-            novelty_window_new: 0,
-            novelty_window_start_tick: 0,
         }
     }
 
@@ -205,70 +172,18 @@ impl Simulation {
 
     fn emergence_ensure_genomes(&mut self) {
         let len = self.emergence.dna_class.length;
-
-        // Pass 1: collect agents that still lack a Dna component, together
-        // with their Position3d (if any).  We clone everything out of the ECS
-        // so we can release all borrows before doing the seed lookup and
-        // insert.  This is the two-pass pattern required to satisfy the
-        // borrow-checker: the ECS query immutably borrows `self.world`, and
-        // `world.insert` requires `&mut World`.
-        let agents_needing_dna: Vec<(Entity, u64, Option<Position3d>)> = self
+        let agents: Vec<(Entity, u64)> = self
             .world
-            .query::<(&Civilian, Option<&Position3d>)>()
+            .query::<&Civilian>()
             .iter()
-            .filter(|(e, _)| self.world.get::<&Dna>(*e).is_err())
-            .map(|(e, (c, pos))| (e, c.id, pos.copied()))
+            .map(|(e, c)| (e, c.id))
             .collect();
-
-        // Clone the active seed and library data we need before the insert
-        // pass so we hold no reference into `self.emergence` while mutating
-        // `self.world`.
-        let active_seed: Option<SeedDefinition> = self
-            .emergence
-            .active_seed_id
-            .as_ref()
-            .and_then(|id| self.emergence.seed_library.get(id).cloned());
-        // Scenario-level divergence dial: when set, overrides each seed's own
-        // divergence at spawn (snapshot once so we hold no `self.emergence`
-        // borrow during the mutating insert pass).
-        let divergence_override = self.emergence.divergence_override;
-        // Build a geology map on demand (cheap: pure deterministic arithmetic
-        // from PlanetConfig; no RNG, no heap beyond the 16-element Vec).
-        let geology_map = civ_planet::GeologyMap::seed(self.planet());
-
-        // Pass 2: resolve the biome-matched seed and insert Dna components.
-        for (entity, id, pos_opt) in agents_needing_dna {
+        for (entity, id) in agents {
+            if self.world.get::<&Dna>(entity).is_ok() {
+                continue;
+            }
             let mut local = ChaCha8Rng::seed_from_u64(self.state.rng_seed ^ id);
-
-            // Choose seed: position-matched biome seed first, active seed as
-            // fallback, raw random when neither has the right dna_length.
-            let chosen_seed: Option<SeedDefinition> = if let Some(pos) = pos_opt {
-                select_seed_for_position(
-                    &self.emergence.seed_library,
-                    active_seed.as_ref(),
-                    &geology_map,
-                    &pos,
-                )
-                .cloned()
-            } else {
-                active_seed.clone()
-            };
-
-            let dna = match chosen_seed.as_ref() {
-                Some(seed) if seed.dna_length == len => {
-                    // Use scenario-level override when present; otherwise
-                    // fall through to the seed's own divergence dial.
-                    let effective_divergence =
-                        divergence_override.unwrap_or(seed.divergence);
-                    spawn_genome_with_divergence(
-                        &mut local,
-                        &self.emergence.dna_class,
-                        seed,
-                        effective_divergence,
-                    )
-                }
-                _ => Dna::random(len, &mut local),
-            };
+            let dna = Dna::random(len, &mut local);
             let _ = self.world.insert(entity, (dna,));
         }
     }
@@ -317,39 +232,6 @@ impl Simulation {
             }
         }
         drift_populations(&mut profiles, &edges, self.rng_mut(), 0.02, 0.08, 0.85);
-        // FR-CIV-NA/INF-GUARD (L5-116): `drift_populations` clamps the trait
-        // vectors internally, but it returns the profiles by value and
-        // does not (and cannot) reach into `self.emergence.cluster_cultures`
-        // to clamp the canonical store. A defensive re-clamp here means
-        // any edge case that produces a non-finite component (e.g. an
-        // external caller passing pre-poisoned profiles into a future
-        // expansion of this hot path) is caught at the store boundary.
-        for p in &mut profiles {
-            for slot in &mut p.traits {
-                if !slot.is_finite() {
-                    *slot = 0.5;
-                } else {
-                    *slot = slot.clamp(0.0, 1.0);
-                }
-            }
-            for slot in &mut p.language {
-                if !slot.is_finite() {
-                    *slot = 0.5;
-                } else {
-                    *slot = slot.clamp(0.0, 1.0);
-                }
-            }
-            if !p.contact.is_finite() {
-                p.contact = 0.0;
-            } else {
-                p.contact = p.contact.clamp(0.0, 1.0);
-            }
-            if !p.kinship.is_finite() {
-                p.kinship = 0.0;
-            } else {
-                p.kinship = p.kinship.clamp(0.0, 1.0);
-            }
-        }
         for (key, profile) in keys.into_iter().zip(profiles) {
             self.emergence.cluster_cultures.insert(key, profile);
         }
@@ -467,7 +349,11 @@ impl Simulation {
                 .0
                 .clone();
             let psyche = psyche_from_dna(&Dna(genome), &profile);
-            let _ = self.world.insert(*entity, (psyche, SocialGraph::default()));
+            let had_social_graph = self.world.get::<&SocialGraph>(*entity).is_ok();
+            let _ = self.world.insert(*entity, (psyche,));
+            if !had_social_graph {
+                let _ = self.world.insert(*entity, (SocialGraph::default(),));
+            }
         }
 
         for (entity, id, cluster) in agents {
@@ -530,39 +416,10 @@ impl Simulation {
             };
 
             if let Ok(mut psyche) = self.world.get::<&mut Psyche>(entity) {
-                // FR-CIV-NA/INF-GUARD (L5-116): sanitize the few float fields
-                // that enter the mood/temperament math. `life_needs.safety`
-                // and `needs.*` come from upstream systems (life, needs) and
-                // can, in pathological edge cases, be NaN — replacing them
-                // with a safe default BEFORE the subtraction/abs() means a
-                // single bad value cannot cascade into a poisoned mood
-                // vector. We deliberately do NOT clamp the range here; the
-                // needs fields can be outside [0, 1] (e.g. food surplus),
-                // and `update_mood` already clamps its own outputs.
-                let safety = if life_needs.safety.is_finite() {
-                    life_needs.safety
-                } else {
-                    0.5
-                };
-                let food = if needs.food.is_finite() {
-                    needs.food
-                } else {
-                    0.5
-                };
-                let belonging = if needs.belonging.is_finite() {
-                    needs.belonging
-                } else {
-                    0.5
-                };
-                let threat = (1.0 - safety).max(0.0);
-                let delta_needs = (food - 0.5).abs();
+                let threat = (1.0 - life_needs.safety).max(0.0);
+                let delta_needs = (needs.food - 0.5).abs();
                 let temperament = psyche.temperament;
-                let maturity_in = psyche.maturity;
-                let maturity_in = if maturity_in.is_finite() {
-                    maturity_in.clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
+                let maturity = psyche.maturity;
                 update_mood(
                     &mut psyche.mood,
                     &needs,
@@ -571,37 +428,13 @@ impl Simulation {
                     delta_needs,
                     0.0,
                 );
-                let new_maturity = (maturity_in + 0.001).clamp(0.0, 1.0);
                 let arousal = psyche.mood.arousal;
-                psyche.maturity = new_maturity;
-                // Pass a sanitized `belonging` into temperament so a
-                // poisoned need field cannot pin `temperament.sociability`
-                // to a non-finite value.
                 nudge_temperament(
                     &mut psyche.temperament,
                     arousal,
-                    belonging,
-                    new_maturity,
+                    needs.belonging,
+                    maturity,
                 );
-                // Post-mutation defensive scrub: a hot-path bug upstream
-                // (e.g. a future mood function that does not yet guard
-                // against non-finite) would still leave a poisoned psyche
-                // here. Reset to neutral rather than allow NaN to leak
-                // into the next tick's hash.
-                if !psyche.mood.valence.is_finite() {
-                    psyche.mood.valence = 0.0;
-                }
-                if !psyche.mood.arousal.is_finite() {
-                    psyche.mood.arousal = 0.0;
-                }
-                psyche.mood.valence = psyche.mood.valence.clamp(-1.0, 1.0);
-                psyche.mood.arousal = psyche.mood.arousal.clamp(0.0, 1.0);
-                if !psyche.temperament.reactivity.is_finite() {
-                    psyche.temperament.reactivity = 0.5;
-                }
-                if !psyche.temperament.sociability.is_finite() {
-                    psyche.temperament.sociability = 0.5;
-                }
             }
             let sociability = self
                 .world
@@ -880,124 +713,6 @@ impl Simulation {
             .get::<&SocialGraph>(entity)
             .ok()
             .map(|g| (*g).clone())
-    }
-
-    /// Borrow the canonical seed library (FR-CONTENT-MODEL). Read-only access
-    /// for inspectors; mutation goes through [`Self::register_seed_file`] or
-    /// [`Self::register_seed_set`].
-    #[must_use]
-    pub fn seed_library(&self) -> &SeedLibrary {
-        &self.emergence.seed_library
-    }
-
-    /// Id of the active seed (used for spawn-time DNA). `None` means raw
-    /// drift with no seed reference.
-    #[must_use]
-    pub fn active_seed_id(&self) -> Option<&str> {
-        self.emergence.active_seed_id.as_deref()
-    }
-
-    /// Install a [`SeedSet`] (in-memory) into the seed library, replacing
-    /// any conflicting ids.
-    pub fn register_seed_set(&mut self, set: SeedSet) {
-        // Drop seeds with the same id to avoid duplicates; keep any
-        // pre-loaded seeds that are not in the new set (e.g. the
-        // example/raw_organism baseline).
-        let new_ids: HashSet<String> = set.seeds.iter().map(|s| s.id.clone()).collect();
-        self.emergence
-            .seed_library
-            .retain(|id, _| !new_ids.contains(id));
-        for s in set.seeds {
-            // Validate before insert; invalid seeds are skipped (logged
-            // via a feed event below).
-            if let Err(e) = self.emergence.seed_library.insert(s.clone()) {
-                self.emergence.push_feed(
-                    self.state.tick,
-                    "seed_rejected",
-                    format!("seed {} rejected: {e}", s.id),
-                    None,
-                );
-            }
-        }
-    }
-
-    /// Load a single `.ron` seed file and merge it into the library. The
-    /// path is resolved against the engine crate's manifest dir
-    /// (CARGO_MANIFEST_DIR) when relative.
-    pub fn register_seed_file(&mut self, path: impl AsRef<Path>) {
-        let path = path.as_ref();
-        let resolved: PathBuf = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../")
-                .join(path)
-        };
-        match std::fs::read_to_string(&resolved) {
-            Err(e) => {
-                self.emergence.push_feed(
-                    self.state.tick,
-                    "seed_load_failed",
-                    format!("could not read seed file {}: {e}", resolved.display()),
-                    None,
-                );
-            }
-            Ok(src) => match SeedLibrary::from_ron_str(&src) {
-                Err(e) => {
-                    self.emergence.push_feed(
-                        self.state.tick,
-                        "seed_load_failed",
-                        format!("seed file {} parse error: {e}", resolved.display()),
-                        None,
-                    );
-                }
-                Ok(lib) => {
-                    for (id, seed) in lib.iter() {
-                        if self.emergence.seed_library.get(id).is_none() {
-                            let _ = self.emergence.seed_library.insert(seed.clone());
-                        }
-                    }
-                    self.emergence.push_feed(
-                        self.state.tick,
-                        "seed_loaded",
-                        format!("loaded seed file {} (n={})", resolved.display(), lib.len()),
-                        None,
-                    );
-                }
-            },
-        }
-    }
-
-    /// Set (or clear) the scenario-level divergence override.
-    ///
-    /// `Some(v)` overrides the active seed's own `divergence` at every
-    /// spawn-time DNA sample. `None` restores the seed's own divergence dial.
-    /// The value is defensively clamped to `[0.0, 1.0]`; scenario validation
-    /// already enforces this but callers from outside the load path are safe.
-    pub fn set_divergence_override(&mut self, v: Option<f32>) {
-        self.emergence.divergence_override = v.map(|x| x.clamp(0.0, 1.0));
-    }
-
-    /// Set the active seed id used for spawn-time DNA. Pass `None` to fall
-    /// back to raw drift.
-    pub fn set_active_seed(&mut self, id: Option<String>) {
-        if let Some(ref sid) = id {
-            if self.emergence.seed_library.get(sid).is_none() {
-                // Unknown seed id is rejected; report and leave the
-                // existing active id in place.
-                self.emergence.push_feed(
-                    self.state.tick,
-                    "seed_unknown",
-                    format!(
-                        "active seed id {sid} not in library; keeping {:?}",
-                        self.emergence.active_seed_id
-                    ),
-                    None,
-                );
-                return;
-            }
-        }
-        self.emergence.active_seed_id = id;
     }
 }
 
@@ -1291,6 +1006,66 @@ mod tests {
         );
     }
 
+    /// FR-CIV-014 / map-seed determinism — seed selection must ignore
+    /// insertion order when multiple biome-matching seeds exist.
+    #[test]
+    fn seed_selection_is_deterministic_across_library_ordering() {
+        use civ_agents::Position3d;
+        use civ_genetics::{SeedDefinition, SeedLibrary, SeedSet};
+        use civ_planet::{defaults_earthlike, GeologyMap};
+        use civ_voxel::{WorldCoord, FIXED_SCALE};
+
+        let (mut planet_cfg, _) = defaults_earthlike();
+        planet_cfg.axial_tilt_deg = 40;
+        let geology_map = GeologyMap::seed(&planet_cfg);
+
+        let pos = Position3d {
+            coord: WorldCoord {
+                x: (0.5 * FIXED_SCALE as f32) as i64,
+                y: 0,
+                z: (0.5 * FIXED_SCALE as f32) as i64,
+            },
+        };
+
+        let alpha = SeedDefinition {
+            id: "alpha_seed".to_string(),
+            display_name: "Alpha Seed".to_string(),
+            dna_length: 64,
+            genome: vec![1; 64],
+            divergence: 0.2,
+            spawn_biome_affinity: vec!["TemperateForest".to_string()],
+            notes: None,
+        };
+        let beta = SeedDefinition {
+            id: "beta_seed".to_string(),
+            display_name: "Beta Seed".to_string(),
+            dna_length: 64,
+            genome: vec![2; 64],
+            divergence: 0.2,
+            spawn_biome_affinity: vec!["TemperateForest".to_string()],
+            notes: None,
+        };
+
+        let lib_a = SeedLibrary::from_seed_set(SeedSet {
+            version: 1,
+            seeds: vec![beta.clone(), alpha.clone()],
+        })
+        .expect("valid seed set");
+        let lib_b = SeedLibrary::from_seed_set(SeedSet {
+            version: 1,
+            seeds: vec![alpha.clone(), beta.clone()],
+        })
+        .expect("valid seed set");
+
+        let chosen_a = select_seed_for_position(&lib_a, Some(&alpha), &geology_map, &pos)
+            .map(|seed| seed.id.as_str());
+        let chosen_b = select_seed_for_position(&lib_b, Some(&alpha), &geology_map, &pos)
+            .map(|seed| seed.id.as_str());
+
+        assert_eq!(chosen_a, Some("alpha_seed"));
+        assert_eq!(chosen_b, Some("alpha_seed"));
+    }
+
     /// `civ_ai_decisions` surfaces naming decisions after sentience crossings.
     #[test]
     fn civ_ai_decisions_populated_after_sentience_tick() {
@@ -1319,198 +1094,6 @@ mod tests {
         for event in events {
             assert!(event.crossed);
             assert!(event.lineage_id.is_some());
-        }
-    }
-
-    // ============================================================
-    // L5-116 — NaN/Inf/saturating-arithmetic guards
-    // (FR-CIV-NA/INF-GUARD)
-    //
-    // Determinism is contractual for `phase_emergence`. These tests
-    // exercise the saturating-arithmetic safety net at the simulation
-    // boundary: a single non-finite float leaked into the psyche /
-    // culture / awakening hot path must not poison the per-tick hash.
-    // ============================================================
-
-    /// L5-116 — `phase_emergence` must clamp extreme `mood` inputs to
-    /// `[-1, 1]` (valence) / `[0, 1]` (arousal) and keep both fields
-    /// finite, even when the input floats are `f32::INFINITY`. We
-    /// drive the input by directly mutating the in-world `Psyche`
-    /// component between ticks, so the hot path sees `±Inf` on the
-    /// way into `update_mood` and `nudge_temperament`.
-    #[test]
-    fn psyche_phase_clamps_extreme_inputs() {
-        use civ_agents::Psyche;
-        let mut sim = Simulation::with_seed(11);
-        // Run a few ticks to attach a Psyche component to civilians.
-        run_ticks(&mut sim, 5);
-
-        // Inject extreme non-finite values into every agent's mood,
-        // then re-tick and assert the safety net brought them back
-        // into a finite, in-range state.
-        let mut poisoned_count = 0;
-        for (_, (civ, mut psyche)) in sim
-            .world
-            .query::<(&Civilian, &mut Psyche)>()
-            .iter()
-        {
-            psyche.mood.valence = f32::INFINITY;
-            psyche.mood.arousal = f32::NEG_INFINITY;
-            psyche.temperament.reactivity = f32::INFINITY;
-            psyche.temperament.sociability = f32::NAN;
-            psyche.maturity = f32::NAN;
-            poisoned_count += 1;
-            let _ = civ;
-        }
-        assert!(poisoned_count > 0, "test fixture: no agents to poison");
-
-        // Two ticks — the first is where the guards fire; the second
-        // confirms the post-guard state is stable and does not
-        // re-poison on subsequent passes.
-        sim.tick();
-        sim.tick();
-
-        for (_, (civ, psyche)) in sim.world.query::<(&Civilian, &Psyche)>().iter() {
-            assert!(
-                psyche.mood.valence.is_finite(),
-                "agent {}: mood.valence non-finite after tick",
-                civ.id
-            );
-            assert!(
-                psyche.mood.arousal.is_finite(),
-                "agent {}: mood.arousal non-finite after tick",
-                civ.id
-            );
-            assert!(
-                (-1.0..=1.0).contains(&psyche.mood.valence),
-                "agent {}: mood.valence {} out of [-1, 1]",
-                civ.id,
-                psyche.mood.valence
-            );
-            assert!(
-                (0.0..=1.0).contains(&psyche.mood.arousal),
-                "agent {}: mood.arousal {} out of [0, 1]",
-                civ.id,
-                psyche.mood.arousal
-            );
-            assert!(
-                psyche.temperament.reactivity.is_finite()
-                    && (0.0..=1.0).contains(&psyche.temperament.reactivity),
-                "agent {}: reactivity {} non-finite or out of [0, 1]",
-                civ.id,
-                psyche.temperament.reactivity
-            );
-            assert!(
-                psyche.temperament.sociability.is_finite()
-                    && (0.0..=1.0).contains(&psyche.temperament.sociability),
-                "agent {}: sociability {} non-finite or out of [0, 1]",
-                civ.id,
-                psyche.temperament.sociability
-            );
-            assert!(
-                psyche.maturity.is_finite() && (0.0..=1.0).contains(&psyche.maturity),
-                "agent {}: maturity {} non-finite or out of [0, 1]",
-                civ.id,
-                psyche.maturity
-            );
-        }
-    }
-
-    /// L5-116 — `emergence_culture` must keep every cluster
-    /// `CultureProfile` trait / language component finite and in
-    /// `[0, 1]` after a long, high-divergence run. We run 5,000
-    /// ticks with the divergence override pinned to the extreme
-    /// (1.0) so mutation rates and edge effects are maximized.
-    #[test]
-    fn culture_phase_clamps_trait_array() {
-        let mut sim = Simulation::with_seed(13);
-        // Pin the scenario-level divergence to 1.0 (the most extreme
-        // value permitted by `set_divergence_override`).
-        sim.set_divergence_override(Some(1.0));
-
-        run_ticks(&mut sim, 5_000);
-
-        // Every CultureProfile must be finite and in range.
-        let cultures = sim.cluster_cultures();
-        assert!(
-            !cultures.is_empty(),
-            "expected at least one cluster culture after 5,000 ticks"
-        );
-        for (cluster_id, profile) in cultures {
-            for (i, v) in profile.traits.iter().enumerate() {
-                assert!(
-                    v.is_finite(),
-                    "cluster {cluster_id} traits[{i}] = {v} non-finite after 5,000 high-divergence ticks"
-                );
-                assert!(
-                    (0.0..=1.0).contains(v),
-                    "cluster {cluster_id} traits[{i}] = {v} out of [0, 1] after 5,000 ticks"
-                );
-            }
-            for (i, v) in profile.language.iter().enumerate() {
-                assert!(
-                    v.is_finite(),
-                    "cluster {cluster_id} language[{i}] = {v} non-finite after 5,000 high-divergence ticks"
-                );
-                assert!(
-                    (0.0..=1.0).contains(v),
-                    "cluster {cluster_id} language[{i}] = {v} out of [0, 1] after 5,000 ticks"
-                );
-            }
-            assert!(
-                profile.contact.is_finite()
-                    && (0.0..=1.0).contains(&profile.contact),
-                "cluster {cluster_id} contact = {} non-finite or out of [0, 1]",
-                profile.contact
-            );
-            assert!(
-                profile.kinship.is_finite() && profile.kinship >= 0.0,
-                "cluster {cluster_id} kinship = {} non-finite or negative",
-                profile.kinship
-            );
-        }
-    }
-
-    /// L5-116 — `apply_awakening_coupling` must produce no NaN / Inf
-    /// even when `last_sentience` is empty (zero divisor scenario).
-    /// The function uses saturating-add on integers, so this is a
-    /// smoke test that the safety net is in place at the boundary
-    /// rather than a numeric overflow test.
-    #[test]
-    fn awakening_coupling_handles_zero_divisor() {
-        let mut sim = Simulation::with_seed(17);
-        // Force a tick without any sentience crossings: pin the
-        // threshold to 1.0 (unreachable for any cognition score).
-        sim.emergence.sentience_threshold = SentienceThreshold::new(1.0);
-        sim.emergence.last_sentience.clear();
-
-        let belief_before = sim.state.belief;
-        let cohesion_before = sim.state.cohesion;
-        sim.apply_awakening_coupling();
-
-        // No sentience events -> zero awakenees -> belief + cohesion
-        // unchanged. Nothing to divide, nothing to overflow.
-        assert_eq!(sim.state.belief, belief_before);
-        assert_eq!(sim.state.cohesion, cohesion_before);
-
-        // And the per-tick caps must still bound the upper end:
-        // crank a synthetic sentience burst, then call the
-        // coupling and verify the integer-typed belief delta is
-        // bounded by `MAX_AWAKENING_BELIEF_PER_TICK` (no NaN
-        // poisoning across many such bursts).
-        for _ in 0..50 {
-            sim.emergence.last_sentience.push(SentienceEvent {
-                lineage_id: Some(0),
-                cognition_score: 1.0,
-                threshold: SentienceThreshold::new(0.5),
-                crossed: true,
-            });
-            let before = sim.state.belief;
-            sim.apply_awakening_coupling();
-            let delta = sim.state.belief.saturating_sub(before);
-            assert!(delta <= 20, "belief delta {delta} exceeds per-tick cap");
-            // next iteration: clearing keeps the loop finite
-            sim.emergence.last_sentience.clear();
         }
     }
 }

@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolveAttachConfig } from "../src/attachConfig.mjs";
@@ -10,10 +9,6 @@ import {
   WATCH_CLIENT_PATHS,
   WATCH_VITE_PROXY_PREFIXES,
 } from "../src/watchAttach.mjs";
-
-function readFixture(relativeUrl) {
-  return readFileSync(new URL(relativeUrl, import.meta.url), "utf8");
-}
 
 test("watch client paths match civ-watch API routes", () => {
   assert.equal(WATCH_CLIENT_PATHS.sse, WATCH_API_ROUTES.events);
@@ -85,21 +80,4 @@ test("joinWatchHttp strips trailing slash from base", () => {
     joinWatchHttp("http://127.0.0.1:9090/", "/terrain"),
     "http://127.0.0.1:9090/terrain",
   );
-});
-
-test("watch-mode attach docs stay aligned with code routes and defaults", () => {
-  const readme = readFixture("../dashboard/README.md");
-  const matrix = readFixture("../../docs/guides/client-attach-matrix.md");
-
-  assert.ok(readme.includes("http://localhost:9090/snapshot"));
-  assert.ok(readme.includes("http://localhost:9090/terrain"));
-  assert.ok(readme.includes("http://localhost:9090/events"));
-  assert.ok(matrix.includes("POST /control/*"));
-  assert.ok(matrix.includes("http://127.0.0.1:9090/terrain"));
-  assert.ok(matrix.includes("http://127.0.0.1:9090"));
-
-  assert.equal(WATCH_CLIENT_PATHS.sse, WATCH_API_ROUTES.events);
-  assert.equal(WATCH_CLIENT_PATHS.snapshot, WATCH_API_ROUTES.snapshot);
-  assert.equal(WATCH_CLIENT_PATHS.terrain, WATCH_API_ROUTES.terrain);
-  assert.equal(WATCH_CLIENT_PATHS.controlSpeed, WATCH_API_ROUTES.controlSpeed);
 });

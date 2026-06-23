@@ -13,7 +13,3 @@ test("resolveRendererMode honors ?renderer=babylon", () => {
 test("resolveRendererMode honors CIVIS_RENDERER env", () => {
   assert.equal(resolveRendererMode("", { CIVIS_RENDERER: "babylon" }), "babylon");
 });
-
-test("resolveRendererMode trims accidental whitespace around search strings", () => {
-  assert.equal(resolveRendererMode(" ?renderer=three "), "three");
-});

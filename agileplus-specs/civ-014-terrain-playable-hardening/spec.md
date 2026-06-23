@@ -93,11 +93,11 @@ spawn, deterministically, with documented performance budgets."
 
 | Story | Status |
 |-------|--------|
-| E7.1 Terrain playability smoke | Complete |
+| E7.1 Terrain playability smoke | Partial (scripted in `agent-smoke.ps1`; spec home is this file) |
 | E7.2 Chunk-seam fix (`wt/chunk-seam`) | Partial |
 | E7.3 CA-dirty-chunk perf (`perf/ca-dirty-chunk`) | Partial |
 | E7.4 Map2D zoom + UX (`wt/map2d-zoom`, `wt/map2d-ux-2494`) | Partial |
-| E7.5 Water placement single-source-of-truth (`wt/water-placement`) | Complete |
+| E7.5 Water placement single-source-of-truth (`wt/water-placement`) | Partial |
 | E7.6 Actor-Y determinism (`wt/actor-y-fix`) | Partial |
 | E7.7 Emergence spawn layout (`wt/emergence-spawn`) | Partial |
 | E7.8 Map seed determinism (`wt/map-seed`) | Partial |

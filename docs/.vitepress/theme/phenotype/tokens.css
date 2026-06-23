@@ -1,0 +1,81 @@
+/**
+ * Phenotype docs theme — LOCKED DESIGN TOKENS ("Console Holo")
+ *
+ * Shared, project-agnostic base. Mirrors docs/design/ui-design-language.md §1.
+ * Every Phenotype docs site consumes these tokens unchanged; a project overrides
+ * ONLY its branding (accent hue, name, logo) via theme/project.config.ts —
+ * never these primitives.
+ *
+ * Two-tier surface model:
+ *   CHROME (~92%) = neutral graphite glass + Geist + 1px hairlines + bevel.
+ *   HOLO   (~8%)  = hologram-cyan projection (callouts / hero accents only).
+ * Neon is EDGE/GLOW only, never a fill (≤8% area budget).
+ */
+
+:root {
+  /* ---- 1.1 Neutral graphite ramp (entire chrome surface) ---- */
+  --ph-ink-0: #05070a;
+  --ph-ink-1: #0a0d12;
+  --ph-graphite-900: #0f131a;
+  --ph-graphite-800: #161b23;
+  --ph-graphite-700: #1e242e;
+  --ph-graphite-600: #272e3a;
+  --ph-graphite-500: #333c4a;
+  --ph-steel-400: #4a5564; /* bevel highlight (top/left lit edge) */
+  --ph-steel-300: #5e6a7a; /* hairline borders */
+  --ph-steel-200: #7c8898; /* tick marks, disabled glyphs */
+
+  /* ---- 1.2 Text ramp (Geist neutral, high contrast) ---- */
+  --ph-text-hi: #eceff4;
+  --ph-text-mid: #9aa4b2;
+  --ph-text-low: #646f7e;
+  --ph-text-disabled: #3c4450;
+
+  /* ---- 1.3 Neon accent (electric green) — line/edge/glow ONLY ----
+     Default Phenotype signature. A project may override --ph-accent* in
+     project.config.ts to rebrand; the chrome stays graphite either way. */
+  --ph-neon: #3df07a;
+  --ph-neon-hi: #8bffb4;
+  --ph-neon-dim: #1e7a45;
+
+  /* Brand accent indirection: projects override these three, nothing else. */
+  --ph-accent: var(--ph-neon);
+  --ph-accent-hi: var(--ph-neon-hi);
+  --ph-accent-dim: var(--ph-neon-dim);
+
+  /* ---- 1.4 Warm signal (amber) — semantic, sharp + tiny ---- */
+  --ph-amber: #f2b33d;
+  --ph-amber-hi: #ffe3a0;
+
+  /* ---- 1.5 Hologram cyan family — PROJECTION tier ONLY ---- */
+  --ph-holo-core: #7fe9ff;
+  --ph-holo-glow: #2fbfe6;
+  --ph-holo-deep: #0e3a4a;
+  --ph-holo-aberr-r: #ff3b6b;
+  --ph-holo-aberr-b: #3b7bff;
+
+  /* ---- 1.6 Semantic status ---- */
+  --ph-ok: #46d67a;
+  --ph-warn: #f2b33d;
+  --ph-danger: #f0556b;
+  --ph-mana: #9b7bf0;
+
+  /* ---- Typography (Geist Sans + Geist Mono, web fallbacks) ---- */
+  --ph-font-sans:
+    'Geist', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    sans-serif;
+  --ph-font-mono:
+    'Geist Mono', 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas,
+    monospace;
+
+  /* ---- Glass / elevation primitives (§2) ---- */
+  --ph-radius-sm: 6px;
+  --ph-radius: 8px;
+  --ph-radius-lg: 12px;
+  --ph-glass-fill: rgba(15, 19, 26, 0.92); /* GRAPHITE_900 @ ~236 */
+  --ph-glass-fill-inset: rgba(22, 27, 35, 0.92); /* GRAPHITE_800 well */
+  --ph-hairline: rgba(94, 106, 122, 0.5); /* STEEL_300 */
+  --ph-bevel-hi: rgba(74, 85, 100, 0.55); /* STEEL_400 top/left */
+  --ph-bevel-lo: rgba(10, 13, 18, 0.9); /* INK_1 bottom/right */
+  --ph-blur: 14px;
+}

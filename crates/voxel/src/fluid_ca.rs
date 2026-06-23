@@ -2669,10 +2669,14 @@ mod tests {
         let mut g = CaGrid::new([16, 16, 1]);
         g.mark_dirty_cell(0, 0, 0);
         let indices = g.dirty_owned_cell_indices_gas_order();
-        let top = g.index(0, 15, 0).unwrap();
-        let bottom = g.index(0, 0, 0).unwrap();
-        assert_eq!(indices.first().copied(), Some(top));
-        assert_eq!(indices.last().copied(), Some(bottom));
+        // Sorted by (Reverse(y), z, x): highest y first, then within same y by z and x ascending.
+        // For a 16x16x1 grid marked at (0,0,0), chunk 0 spans y: 0..16, z: 0..1, x: 0..16.
+        // First entry: (y=15, z=0, x=0) = 0 + 15*16 + 0 = 240
+        // Last entry: (y=0, z=0, x=15) = 15 + 0*16 + 0 = 15
+        let first_cell = g.index(0, 15, 0).unwrap();
+        let last_cell = g.index(15, 0, 0).unwrap();
+        assert_eq!(indices.first().copied(), Some(first_cell));
+        assert_eq!(indices.last().copied(), Some(last_cell));
     }
 
     /// Covers chunks_changed_from with zero dimensions.

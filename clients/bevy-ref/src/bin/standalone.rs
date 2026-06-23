@@ -7,113 +7,39 @@ use std::collections::HashMap;
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
-use bevy::render::render_asset::RenderAssetUsages;
-use civ_agents::{spawn_civilian_at, Civilian as AgentCivilian, Position3d, Velocity};
-use civ_bevy_ref::{agent_color_from_id, agent_scale_multiplier, CameraTarget};
-use civ_engine::Simulation;
-use civ_voxel::FIXED_SCALE;
-use terrain::{Biome, Terrain, SIZE};
+use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "voxel")]
+use civ_bevy_ref::ocean::OceanPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
+use civ_bevy_ref::{
+    atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
+    camera::{camera_input, update_camera, CameraRig},
+    decorations::spawn_decorations,
+    gpu_features::GpuFeaturesPlugin,
+    live_attach::LiveAttachPlugin,
+    native_backend::native_render_plugin,
+    post_fx::PostFxSettings,
+    resolve_attach_mode_from_env,
+    terrain::{terrain_mesh, WORLD_SIZE},
+    AttachMode,
+};
 
-const TITLE: &str = "Civis 3D — Standalone";
-const TERRAIN_WORLD_SIZE: f32 = 256.0;
-const TERRAIN_SCALE_XZ: f32 = TERRAIN_WORLD_SIZE / (SIZE as f32 - 1.0);
-const TERRAIN_HEIGHT_SCALE: f32 = 28.0;
-const WATER_LEVEL: f32 = 0.34;
-const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
-const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
-const MIN_ORBIT_ELEVATION: f32 = 0.08;
-const MIN_ORBIT_DISTANCE: f32 = 20.0;
-const MAX_ORBIT_DISTANCE: f32 = 500.0;
-const CIVILIAN_POOL: usize = 256;
-const SIM_TICK_RATE_HZ: f32 = 10.0;
-
-#[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
-enum AppState {
+#[derive(States, Default, Debug, Clone, Eq, PartialEq, Hash)]
+pub enum AppState {
     #[default]
+    MainMenu,
     Loading,
-    Playing,
+    InGame,
+    Paused,
+    GameOver,
 }
-
-#[derive(Resource, Debug, Clone, Copy)]
-struct OrbitCamera {
-    centre: [f32; 3],
-    azimuth: f32,
-    elevation: f32,
-    distance: f32,
-}
-
-impl OrbitCamera {
-    fn from_target(target: CameraTarget) -> Self {
-        Self {
-            centre: target.centre,
-            azimuth: target.azimuth_rad,
-            elevation: target.elevation_rad,
-            distance: target.distance,
-        }
-    }
-
-    fn as_target(&self) -> CameraTarget {
-        CameraTarget {
-            centre: self.centre,
-            distance: self.distance,
-            azimuth_rad: self.azimuth,
-            elevation_rad: self.elevation,
-        }
-    }
-
-    fn adjust_distance(&mut self, delta: f32) {
-        self.distance = (self.distance + delta).clamp(MIN_ORBIT_DISTANCE, MAX_ORBIT_DISTANCE);
-    }
-
-    fn pan_centre(&mut self, right: f32, forward: f32) {
-        let sin = self.azimuth.sin();
-        let cos = self.azimuth.cos();
-        self.centre[0] += right * cos + forward * sin;
-        self.centre[2] += -right * sin + forward * cos;
-    }
-}
-
-#[derive(Resource)]
-struct StandaloneSim {
-    sim: Simulation,
-    terrain: Terrain,
-    paused: bool,
-}
-
-#[derive(Resource)]
-struct SimTickTimer(Timer);
-
-#[derive(Resource, Default)]
-struct TerrainVisuals {
-    water: Option<Entity>,
-    trees: Vec<Entity>,
-}
-
-#[derive(Resource, Default)]
-struct CivilianVisuals {
-    pool: Vec<Entity>,
-    materials: HashMap<u32, Handle<StandardMaterial>>,
-}
-
-#[derive(Resource, Default)]
-struct UiState {
-    text: Option<Entity>,
-}
-
-#[derive(Component)]
-struct OverlayText;
-
-#[derive(Component)]
-struct CivilianMarker {
-    pool_index: usize,
-}
-
-#[derive(Component)]
-struct TreeMarker;
-
-#[derive(Component)]
-struct TerrainMarker;
 
 fn main() {
     App::new()
@@ -126,7 +52,6 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
-        .add_plugins(civ_bevy_ref::AgentNeedsPlugin)
         // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
         // second at INFO so the 90s frame-budget profile has a measurable
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
@@ -145,28 +70,165 @@ fn main() {
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
+        .init_state::<AppState>()
         .add_systems(Startup, setup_atmosphere)
+        .add_systems(OnEnter(AppState::MainMenu), enter_loading_from_main_menu)
         .add_systems(
-            Startup,
+            OnEnter(AppState::Loading),
             (
                 setup_camera,
                 setup_sandbox_terrain.run_if(in_sandbox_attach_mode),
                 spawn_decorations.run_if(in_sandbox_attach_mode),
+                finish_loading,
             )
                 .chain(),
         )
         .add_systems(
             Update,
             (
-                orbit_camera_input,
-                orbit_camera_transform,
-                input_controls,
-                tick_simulation,
-                update_civilian_meshes,
-                update_overlay,
-            ),
-        )
-        .run();
+                camera_input,
+                update_camera,
+                animate_water,
+                update_lighting,
+                escape_to_pause,
+            )
+                .run_if(in_state(AppState::InGame)),
+        );
+    #[cfg(feature = "egui")]
+    {
+        app.add_plugins(SettingsPlugin)
+            .add_systems(Startup, sync_post_fx_from_settings)
+            .add_systems(
+                Update,
+                sync_post_fx_from_settings.run_if(resource_changed::<GameSettings>),
+            );
+    }
+
+    #[cfg(feature = "models")]
+    {
+        app.add_plugins((GltfModelsPlugin, ActorAnimationPlugin));
+    }
+
+    #[cfg(feature = "gi")]
+    {
+        app.add_plugins(SolariGiPlugin);
+    }
+
+    if attach_mode == AttachMode::Standalone {
+        #[cfg(feature = "pbr-textures")]
+        app.add_plugins(civ_bevy_ref::materials::BiomeMaterialsPlugin);
+    }
+
+    // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::info_views::InfoViewsPlugin);
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::inspect::InspectPlugin);
+
+    // Event-feed / toast notifications.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::notifications::NotificationsPlugin);
+
+    // Terrain sculpting brush (raise/lower/flatten); bevy-only, no egui needed.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::terraform_brush::TerraformBrushPlugin);
+
+    // God-game disaster actions (meteor/flood/quake/storm/wildfire) that mutate
+    // the voxel world; bevy-only, gated systems handle egui/voxel internally.
+    #[cfg(feature = "bevy")]
+    app.add_plugins(civ_bevy_ref::disaster_tools::DisasterToolsPlugin);
+
+    // Material brush palette + voxel paint (Powder-Toy-style); bevy+egui.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
+
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
+
+    // Settings / options panel (RON-persisted); bevy+egui.
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);
+    // Ambient + SFX audio (feature-gated).
+    #[cfg(feature = "audio")]
+    app.add_plugins(civ_bevy_ref::audio::CivisAudioPlugin);
+    // GPU particle VFX for events (feature-gated).
+    #[cfg(feature = "vfx")]
+    app.add_plugins(civ_bevy_ref::vfx::VfxPlugin);
+    // Real-time RT global illumination via bevy_solari (feature-gated).
+    #[cfg(feature = "gi")]
+    app.add_plugins(civ_bevy_ref::lighting_gi::SolariGiPlugin);
+
+    // P-VM-3: real volumetric voxel material world (replaces the heightmap).
+    // `voxel_stream` takes precedence: when enabled, the camera-driven streaming
+    // sandbox owns the world instead of the bounded dense `VoxelSimPlugin`.
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
+    app.add_plugins(civ_bevy_ref::voxel_sim::VoxelSimPlugin);
+
+    // OceanPlugin — wraps bevy_water::WaterPlugin.  Gated on `voxel` (which
+    // pulls bevy_water).  Two modes:
+    //
+    // • voxel + voxel_stream  → full mode (OceanPlugin::default): WaterPlugin
+    //   + WaterSettings + wave-plane spawn.  VoxelStreamPlugin does NOT spawn
+    //   a water plane, so OceanPlugin owns the surface here.
+    //
+    // • voxel only (VoxelSimPlugin active) → thin mode (water_plugin_only):
+    //   registers WaterPlugin shader infrastructure but skips the spawn because
+    //   VoxelSimPlugin::spawn_bevy_water_plane already owns the wave surface.
+    #[cfg(all(feature = "voxel", feature = "voxel_stream"))]
+    app.add_plugins(OceanPlugin::default());
+    #[cfg(all(feature = "voxel", not(feature = "voxel_stream")))]
+    app.add_plugins(OceanPlugin::water_plugin_only());
+
+    // FR-CIV-VOXEL-020: camera-driven chunk streaming over the 20mi voxel world.
+    #[cfg(feature = "voxel_stream")]
+    app.add_plugins(civ_bevy_ref::voxel_stream::VoxelStreamPlugin);
+
+    // CC0 GLTF models: populate GameModels so sim_bridge swaps capsule/cuboid
+    // primitives for real Knight/house scenes (per-asset primitive fallback).
+    #[cfg(feature = "models")]
+    app.add_plugins(civ_bevy_ref::gltf_models::GltfModelsPlugin);
+
+    // Actor rigging: drive glTF skeletal animation from emergent motion so
+    // agents idle / walk / run + face their heading instead of sliding statically.
+    #[cfg(feature = "models")]
+    app.add_plugins(civ_bevy_ref::animation::ActorAnimationPlugin);
+
+    if attach_mode == AttachMode::Server {
+        app.add_plugins(LiveAttachPlugin);
+    }
+
+    app.run();
+}
+
+#[cfg(feature = "egui")]
+fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<PostFxSettings>) {
+    let graphics = &settings.graphics;
+    post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
+    post_fx.bloom = graphics.bloom;
+    post_fx.ssao = graphics.ambient_occlusion;
+    post_fx.taa = graphics.anti_aliasing == AntiAliasing::TAA;
+}
+
+fn enter_loading_from_main_menu(mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::Loading);
+}
+
+fn finish_loading(mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::InGame);
+}
+
+fn in_sandbox_attach_mode(mode: Res<AttachMode>) -> bool {
+    *mode == AttachMode::Standalone
+}
+
+fn escape_to_pause(
+    keys: Res<ButtonInput<KeyCode>>,
+    state: Res<State<AppState>>,
+    mut next: ResMut<NextState<AppState>>,
+) {
+    if *state.get() == AppState::InGame && keys.just_pressed(KeyCode::Escape) {
+        next.set(AppState::Paused);
+    }
 }
 
 fn setup_camera(mut commands: Commands) {

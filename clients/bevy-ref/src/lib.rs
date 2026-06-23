@@ -1,4 +1,4 @@
-﻿//! civ-bevy-ref library surface.
+//! civ-bevy-ref library surface.
 //!
 //! Splits cleanly into two parts:
 //!
@@ -13,8 +13,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-#[cfg(feature = "bevy")]
-pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
 #[cfg(feature = "bevy")]
@@ -38,8 +36,6 @@ pub mod event_feed;
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 pub mod game_laws;
@@ -84,10 +80,7 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-<<<<<<< HEAD
-=======
 pub mod civ_history;
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;

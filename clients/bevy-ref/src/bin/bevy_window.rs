@@ -308,11 +308,8 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-<<<<<<< HEAD
-=======
         .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,

@@ -1115,8 +1115,9 @@ async fn apply_dispatch_effect(
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
+            let world = sim.voxel();
+            let world_w = voxel_axis_span(world, |coord| coord.cx);
+            let world_d = voxel_axis_span(world, |coord| coord.cz);
             let wx = x.unwrap_or(0.5) * world_w;
             let wz = y.unwrap_or(0.5) * world_d;
             let pos = WorldCoord {
@@ -1132,7 +1133,7 @@ async fn apply_dispatch_effect(
                     trigger_disaster(&mut sim, DisasterKind::Plague, pos);
                     if let Some(fid) = target_faction {
                         if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            let debit = civ_engine::Fixed::from_num((mag * 500.0_f32) as i64);
                             *t = (*t - debit).max(civ_engine::Fixed::ZERO);
                         }
                     }
@@ -1140,7 +1141,7 @@ async fn apply_dispatch_effect(
                 "bless" => {
                     if let Some(fid) = target_faction {
                         if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            let credit = civ_engine::Fixed::from_num((mag * 1000.0_f32) as i64);
                             *t += credit;
                         }
                     }
@@ -1148,7 +1149,7 @@ async fn apply_dispatch_effect(
                 }
                 "miracle" => {
                     sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    let boost = civ_engine::Fixed::from_num((mag * 200.0_f32) as i64);
                     for t in sim.state.faction_treasury.values_mut() {
                         *t += boost;
                     }

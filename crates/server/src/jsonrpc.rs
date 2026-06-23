@@ -556,6 +556,8 @@ pub struct EmergenceMetricsSnapshot {
     pub language_count: u32,
 }
 
+pub use civ_emergence_metrics::sample_snapshot::EmergenceSampleSnapshot;
+
 /// Build the JSON-RPC result object for `sim.snapshot`.
 pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
     let mut obj = serde_json::Map::new();
@@ -1457,9 +1459,16 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             },
         },
         JsonRpcMethod::SimLoadScenario => {
-            let (preset, seed) =
-                parse_load_scenario_params(req.params.as_ref()).map_err(|e| DispatchPlan {
-                    response: JsonRpcResponse::error(req.id.clone(), e),
+            match parse_load_scenario_params(req.params.as_ref()) {
+                Ok((preset, seed)) => DispatchPlan {
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
+                    ),
+                    effect: DispatchEffect::LoadScenario { preset, seed },
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
                     effect: DispatchEffect::None,
                 },
             }
@@ -1855,7 +1864,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         req.id,
                         JsonRpcError {
                             code: error_code::INVALID_PARAMS,
-                            message: "missing 'tech' param".to_owned(),
                             message: "Missing or empty \"tech\" parameter".to_owned(),
                             data: None,
                         },
@@ -1868,11 +1876,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         req.id,
                         JsonRpcError {
                             code: error_code::INVALID_PARAMS,
-                            message: format!(
-                                "unknown tech '{}'; known: {}",
-                                tech,
-                                KNOWN_TECHS.join(", ")
-                            ),
                             message: format!(
                                 "Unknown tech \"{tech}\"; valid: {}",
                                 KNOWN_TECHS.join(", ")

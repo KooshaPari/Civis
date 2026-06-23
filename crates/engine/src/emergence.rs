@@ -843,26 +843,23 @@ mod tests {
 
     /// `register_seed_set` merges valid seeds and replaces ids on re-register.
     #[test]
-    #[ignore]
+    #[ignore = "Simulation::register_seed_set and seed_library() not implemented"]
     fn register_seed_set_merges_and_replaces_ids() {
         // TODO: Implement register_seed_set and seed_library methods on Simulation
-        // This test is disabled until the seed management API is implemented.
     }
 
     /// `set_active_seed` updates the active id; unknown ids are rejected.
     #[test]
-    #[ignore]
+    #[ignore = "Simulation::set_active_seed and active_seed_id() not implemented"]
     fn set_active_seed_updates_or_rejects_unknown() {
         // TODO: Implement set_active_seed, active_seed_id methods on Simulation
-        // This test is disabled until the seed management API is implemented.
     }
 
     /// `register_seed_file` loads fixture RON and reports missing paths.
     #[test]
-    #[ignore]
+    #[ignore = "Simulation::register_seed_file and seed_library() not implemented"]
     fn register_seed_file_loads_fixture_and_reports_missing() {
         // TODO: Implement register_seed_file and seed_library methods on Simulation
-        // This test is disabled until the seed management API is implemented.
     }
 
     /// `agent_social_graph` returns cloned graphs by civilian id.

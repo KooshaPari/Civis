@@ -1240,10 +1240,9 @@ mod tests {
     ///   `σ̄_W = (1 / min(10, 1)) · 0.9 = 0.9` ∈ `[0.85, 0.95)` →
     ///   `SubcriticalTransition`.
     #[test]
-    #[ignore]
+    #[ignore = "Simulation::branching_ratio() not implemented"]
     fn phase_emergence_events_close_updates_branching_state() {
         // TODO: Implement branching_ratio method on Simulation
-        // This test is disabled until the branching metrics API is implemented.
     }
 
     /// Charter §3.4: fewer than 3 clusters → power_law_alpha sentinel 0.0.

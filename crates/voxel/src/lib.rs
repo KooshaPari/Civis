@@ -53,7 +53,6 @@ pub use material_pbr::{
     TriplanarLayer, TriplanarSplatPlan, SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
 };
 
-pub use lod::{drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, ChunkDirty};
 pub use scale_budget::{
     CohortTotals, ExtentBudget, ExtentError, Gestalt, LodRingPlan, MvpResidentBudget,
     MvpResidentConfig, PlanError, RingRole, SimLodAggregator, StreamConfigLite,

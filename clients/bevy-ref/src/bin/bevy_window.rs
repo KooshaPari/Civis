@@ -286,6 +286,7 @@ fn main() {
             EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
+            civ_bevy_ref::AgentNeedsPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
             EguiPlugin::default(),

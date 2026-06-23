@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveBrowserWsUrl } from "./lib/attachConfig";
 import {
   buildHealthProbe,
@@ -15,6 +15,7 @@ import { useDashboardStore } from "./store";
 export function ConnectionStatusCard() {
   const { state, dispatch } = useDashboardStore();
   const [probeNote, setProbeNote] = useState<string | null>(null);
+  const probeTimerRef = useRef<number | null>(null);
 
   const wsUrl = useMemo(() => resolveBrowserWsUrl(window.location.search), []);
   const endpointLabel = state.attachMode === "server" ? "WebSocket URL" : "Attach endpoint";
@@ -34,11 +35,26 @@ export function ConnectionStatusCard() {
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(buildHealthProbe(Date.now()));
       setProbeNote("Sent JSON-RPC health probe");
-      window.setTimeout(() => setProbeNote(null), 2500);
+      if (probeTimerRef.current !== null) {
+        window.clearTimeout(probeTimerRef.current);
+      }
+      probeTimerRef.current = window.setTimeout(() => {
+        probeTimerRef.current = null;
+        setProbeNote(null);
+      }, 2500);
       return;
     }
     dispatch({ type: "set_toast", message: "Not connected to civ-server" });
   };
+
+  useEffect(() => {
+    return () => {
+      if (probeTimerRef.current !== null) {
+        window.clearTimeout(probeTimerRef.current);
+        probeTimerRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <section className="inspector-section connection-status" aria-labelledby="connection-heading">

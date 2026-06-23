@@ -980,6 +980,40 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
     Ok(path.to_owned())
 }
 
+fn emergence_dashboard_snapshot_from_context(ctx: &DispatchContext) -> EmergenceSampleSnapshot {
+    let agent_count = ctx
+        .population
+        .or_else(|| ctx.snapshot.as_ref().map(|snapshot| snapshot.population))
+        .unwrap_or(0) as u32;
+    let faction_count = ctx
+        .snapshot
+        .as_ref()
+        .and_then(|snapshot| snapshot.spectator.as_ref())
+        .map(|spectator| spectator.factions.len() as u32)
+        .unwrap_or(0);
+    let (resource_entropy, structure_count, novelty_rate, coupling_strength) = ctx
+        .emergence
+        .as_ref()
+        .map(|sample| {
+            (
+                sample.entropy_bits,
+                sample.structure_count.unwrap_or(0),
+                sample.novelty_rate,
+                sample.mi_material_faction_norm.unwrap_or(0.0),
+            )
+        })
+        .unwrap_or((0.0, 0, 0.0, 0.0));
+
+    EmergenceSampleSnapshot {
+        agent_count,
+        faction_count,
+        resource_entropy,
+        structure_count,
+        novelty_rate,
+        coupling_strength,
+        tick: ctx.tick,
+    }
+}
 /// Dispatch a validated request (CIV-0200 stub handlers).
 pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPlan {
     match req.method {
@@ -2705,6 +2739,13 @@ mod tests {
         assert_eq!(JsonRpcMethod::parse_name(""), None);
     }
 
+    #[test]
+    fn emergence_dashboard_method_uses_expected_wire_name() {
+        assert_eq!(
+            JsonRpcMethod::EmergenceDashboard.as_str(),
+            "emergence.dashboard"
+        );
+    }
     #[test]
     fn parse_replay_path_extracts_nonempty() {
         use serde_json::json;

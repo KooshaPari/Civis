@@ -1,0 +1,2189 @@
+warning: type alias `GoodId` is never used
+   --> crates\economy\src\allocation.rs:144:10
+    |
+144 | pub type GoodId = u32;
+    |          ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `SCALE` is never used
+   --> crates\economy\src\allocation.rs:153:7
+    |
+153 | const SCALE: i64 = 10;
+    |       ^^^^^
+
+warning: enum `NeedKind` is never used
+   --> crates\economy\src\allocation.rs:159:10
+    |
+159 | pub enum NeedKind {
+    |          ^^^^^^^^
+
+warning: struct `AgentNeed` is never constructed
+   --> crates\economy\src\allocation.rs:172:12
+    |
+172 | pub struct AgentNeed {
+    |            ^^^^^^^^^
+
+warning: methods `deficit` and `need_units` are never used
+   --> crates\economy\src\allocation.rs:185:8
+    |
+183 | impl AgentNeed {
+    | -------------- methods in this implementation
+184 |     /// Deficit in `[0.0, 1.0]` (1.0 minus satisfaction, clamped at 0).
+185 |     fn deficit(&self) -> f64 {
+    |        ^^^^^^^
+...
+197 |     fn need_units(&self) -> i64 {
+    |        ^^^^^^^^^^
+
+warning: struct `AllocationOutcome` is never constructed
+   --> crates\economy\src\allocation.rs:222:12
+    |
+222 | pub struct AllocationOutcome {
+    |            ^^^^^^^^^^^^^^^^^
+
+warning: function `subsistence_first_allocate` is never used
+   --> crates\economy\src\allocation.rs:259:8
+    |
+259 | pub fn subsistence_first_allocate(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `Taxation` is never constructed
+  --> crates\economy\src\institution.rs:93:12
+   |
+93 | pub struct Taxation {
+   |            ^^^^^^^^
+
+warning: struct `TaxCollection` is never constructed
+   --> crates\economy\src\institution.rs:105:12
+    |
+105 | pub struct TaxCollection {
+    |            ^^^^^^^^^^^^^
+
+warning: function `collect_taxes` is never used
+   --> crates\economy\src\institution.rs:389:8
+    |
+389 | pub fn collect_taxes(
+    |        ^^^^^^^^^^^^^
+
+warning: struct `ProductionProfile` is never constructed
+  --> crates\economy\src\stocks.rs:88:12
+   |
+88 | pub struct ProductionProfile {
+   |            ^^^^^^^^^^^^^^^^^
+
+warning: associated items `new`, `production`, `consumption`, and `net_flow` are never used
+   --> crates\economy\src\stocks.rs:104:12
+    |
+102 | impl ProductionProfile {
+    | ---------------------- associated items in this implementation
+103 |     /// Creates a profile from explicit production and consumption arrays.
+104 |     pub fn new(production: [i64; GOODS.len()], consumption: [i64; GOODS.len()]) -> Self {
+    |            ^^^
+...
+112 |     pub fn production(&self, good: Good) -> i64 {
+    |            ^^^^^^^^^^
+...
+117 |     pub fn consumption(&self, good: Good) -> i64 {
+    |            ^^^^^^^^^^^
+...
+122 |     pub fn net_flow(&self, good: Good) -> i64 {
+    |            ^^^^^^^^
+
+warning: struct `TradeOffer` is never constructed
+   --> crates\economy\src\stocks.rs:129:12
+    |
+129 | pub struct TradeOffer {
+    |            ^^^^^^^^^^
+
+warning: function `deficit_was_clamped` is never used
+   --> crates\economy\src\stocks.rs:144:4
+    |
+144 | fn deficit_was_clamped(flow: i64, applied: i64) -> bool {
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `step_stocks` is never used
+   --> crates\economy\src\stocks.rs:152:8
+    |
+152 | pub fn step_stocks(stocks: &mut Stocks, profile: &ProductionProfile) {
+    |        ^^^^^^^^^^^
+
+warning: function `surplus` is never used
+   --> crates\economy\src\stocks.rs:172:8
+    |
+172 | pub fn surplus(stocks: &Stocks, profile: &ProductionProfile, good: Good) -> i64 {
+    |        ^^^^^^^
+
+warning: function `deficit` is never used
+   --> crates\economy\src\stocks.rs:179:8
+    |
+179 | pub fn deficit(stocks: &Stocks, profile: &ProductionProfile, good: Good) -> i64 {
+    |        ^^^^^^^
+
+warning: function `comparative_advantage` is never used
+   --> crates\economy\src\stocks.rs:185:8
+    |
+185 | pub fn comparative_advantage(profile: &ProductionProfile) -> Good {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `trade_gain` is never used
+   --> crates\economy\src\stocks.rs:200:8
+    |
+200 | pub fn trade_gain(a: &ProductionProfile, b: &ProductionProfile) -> i64 {
+    |        ^^^^^^^^^^
+
+warning: function `propose_trade` is never used
+   --> crates\economy\src\stocks.rs:214:8
+    |
+214 | pub fn propose_trade(
+    |        ^^^^^^^^^^^^^
+
+warning: function `offer_better` is never used
+   --> crates\economy\src\stocks.rs:272:4
+    |
+272 | fn offer_better(candidate: &TradeOffer, current: &TradeOffer) -> bool {
+    |    ^^^^^^^^^^^^
+
+warning: function `apply_trade` is never used
+   --> crates\economy\src\stocks.rs:279:8
+    |
+279 | pub fn apply_trade(a: &mut Stocks, b: &mut Stocks, offer: &TradeOffer) {
+    |        ^^^^^^^^^^^
+
+warning: `civ-economy` (lib) generated 22 warnings
+warning: unused imports: `SeedSet` and `spawn_genome_with_divergence`
+  --> crates\engine\src\emergence.rs:19:5
+   |
+19 |     spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                              ^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `Good` is more private than the item `ClusterStocks::add`
+   --> crates\engine\src\engine.rs:152:5
+    |
+152 |     pub fn add(&mut self, good: Good, delta: i64) -> i64 {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method `ClusterStocks::add` is reachable at visibility `pub`
+    |
+note: but type `Good` is only usable at visibility `pub(self)`
+   --> crates\engine\src\engine.rs:138:1
+    |
+138 | enum Good {
+    | ^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: constant `PHASE_ORDER` is never used
+  --> crates\engine\src\engine.rs:60:18
+   |
+60 | pub(crate) const PHASE_ORDER: &[&str] = &[
+   |                  ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: enum `EconomicFocus` is never used
+   --> crates\engine\src\engine.rs:129:6
+    |
+129 | enum EconomicFocus {
+    |      ^^^^^^^^^^^^^
+
+warning: fields `faction_aggression` and `last_life_deaths` are never read
+   --> crates\engine\src\engine.rs:471:16
+    |
+434 | pub struct Simulation {
+    |            ---------- fields in this struct
+...
+471 |     pub(crate) faction_aggression: BTreeMap<u32, f32>,
+    |                ^^^^^^^^^^^^^^^^^^
+...
+477 |     pub(crate) last_life_deaths: u32,
+    |                ^^^^^^^^^^^^^^^^
+
+warning: methods `add_belief` and `add_cohesion` are never used
+    --> crates\engine\src\engine.rs:1155:19
+     |
+ 648 | impl Simulation {
+     | --------------- methods in this implementation
+...
+1155 |     pub(crate) fn add_belief(&mut self, delta: i64) {
+     |                   ^^^^^^^^^^
+...
+1165 |     pub(crate) fn add_cohesion(&mut self, delta: i64) {
+     |                   ^^^^^^^^^^^^
+
+warning: constant `CHRONICLE_MAX_LEN` is never used
+    --> crates\engine\src\engine.rs:1955:7
+     |
+1955 | const CHRONICLE_MAX_LEN: usize = 200;
+     |       ^^^^^^^^^^^^^^^^^
+
+warning: constant `CLUSTER_FOOD_PRODUCTION_PER_MEMBER` is never used
+    --> crates\engine\src\engine.rs:1959:7
+     |
+1959 | const CLUSTER_FOOD_PRODUCTION_PER_MEMBER: i64 = 1;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `CLUSTER_FOOD_CONSUMPTION_PER_MEMBER` is never used
+    --> crates\engine\src\engine.rs:1964:7
+     |
+1964 | const CLUSTER_FOOD_CONSUMPTION_PER_MEMBER: i64 = 1;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SETTLEMENT_FOOD_MARKET_WEIGHT` is never used
+    --> crates\engine\src\engine.rs:1966:7
+     |
+1966 | const SETTLEMENT_FOOD_MARKET_WEIGHT: i64 = 2;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FOOD_MARKET_PRESSURE_SCALE` is never used
+    --> crates\engine\src\engine.rs:1970:7
+     |
+1970 | const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FOOD_SCARCITY_BASELINE` is never used
+    --> crates\engine\src\engine.rs:1974:7
+     |
+1974 | const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `tech_unlocks_for_tier` is never used
+    --> crates\engine\src\engine.rs:1985:4
+     |
+1985 | fn tech_unlocks_for_tier(research_tier: u64) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `food_scarcity_birth_factor` is never used
+    --> crates\engine\src\engine.rs:2020:4
+     |
+2020 | fn food_scarcity_birth_factor(food_price: i64) -> f64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unrest_delta` is never used
+    --> crates\engine\src\engine.rs:2030:4
+     |
+2030 | fn unrest_delta(food_price: i64) -> i64 {
+     |    ^^^^^^^^^^^^
+
+warning: function `commodity_unrest_delta` is never used
+    --> crates\engine\src\engine.rs:2048:4
+     |
+2048 | fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `faction_wealth_scarcity_shadow` is never used
+    --> crates\engine\src\engine.rs:2069:4
+     |
+2069 | fn faction_wealth_scarcity_shadow(treasury: Fixed, resources: &Resources) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `faction_unrest_delta_from_shadow` is never used
+    --> crates\engine\src\engine.rs:2088:4
+     |
+2088 | fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `energy_scarcity_unrest` is never used
+    --> crates\engine\src\engine.rs:2096:4
+     |
+2096 | fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `agent_misery_unrest` is never used
+    --> crates\engine\src\engine.rs:2108:4
+     |
+2108 | fn agent_misery_unrest(world: &hecs::World) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `micro_cohesion_delta` is never used
+    --> crates\engine\src\engine.rs:2123:4
+     |
+2123 | fn micro_cohesion_delta(world: &hecs::World) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `micro_social_trust_permille` is never used
+    --> crates\engine\src\engine.rs:2154:4
+     |
+2154 | fn micro_social_trust_permille(world: &hecs::World) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `avg_psyche_maturity` is never used
+    --> crates\engine\src\engine.rs:2178:4
+     |
+2178 | fn avg_psyche_maturity(world: &hecs::World) -> f32 {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `avg_faction_kinship` is never used
+    --> crates\engine\src\engine.rs:2190:4
+     |
+2190 | fn avg_faction_kinship(world: &hecs::World) -> f32 {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `avg_social_affinity` is never used
+    --> crates\engine\src\engine.rs:2209:4
+     |
+2209 | fn avg_social_affinity(world: &hecs::World) -> f32 {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: constant `N12_AFFINITY_BIAS_SCALE` is never used
+    --> crates\engine\src\engine.rs:2230:7
+     |
+2230 | const N12_AFFINITY_BIAS_SCALE: f32 = 5_000.0;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `affinity_threshold_bias` is never used
+    --> crates\engine\src\engine.rs:2235:4
+     |
+2235 | fn affinity_threshold_bias(avg_affinity: f32) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `RELIGIOUS_UNITY_PEACE_CAP` is never used
+    --> crates\engine\src\engine.rs:2240:7
+     |
+2240 | const RELIGIOUS_UNITY_PEACE_CAP: i64 = 1_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `religious_unity_peace_bonus` is never used
+    --> crates\engine\src\engine.rs:2256:4
+     |
+2256 | fn religious_unity_peace_bonus(has_patron: bool) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `sentience_research_bonus` is never used
+    --> crates\engine\src\engine.rs:2283:4
+     |
+2283 | fn sentience_research_bonus(world: &hecs::World) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `candidate_economic_focus` is never used
+    --> crates\engine\src\engine.rs:2303:4
+     |
+2303 | fn candidate_economic_focus(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `production_yield_factor` is never used
+    --> crates\engine\src\engine.rs:2331:4
+     |
+2331 | fn production_yield_factor(research_tier: u64) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `biome_yield_factor` is never used
+    --> crates\engine\src\engine.rs:2340:4
+     |
+2340 | fn biome_yield_factor(biome: civ_planet::BiomeKind) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^
+
+warning: function `aggregate_biome_yield` is never used
+    --> crates\engine\src\engine.rs:2364:4
+     |
+2364 | fn aggregate_biome_yield(biomes: &[civ_planet::BiomeKind]) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `morale_recovery_rate` is never used
+    --> crates\engine\src\engine.rs:2381:4
+     |
+2381 | fn morale_recovery_rate(cohesion: u64) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `overcrowding_unrest` is never used
+    --> crates\engine\src\engine.rs:2392:4
+     |
+2392 | fn overcrowding_unrest(population: u64, capacity: i64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: function `cohesion_research_bonus_permille` is never used
+    --> crates\engine\src\engine.rs:2405:4
+     |
+2405 | fn cohesion_research_bonus_permille(cohesion: u64) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `faction_treasury_spread` is never used
+    --> crates\engine\src\engine.rs:2411:4
+     |
+2411 | fn faction_treasury_spread(treasury: &HashMap<u32, Fixed>) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `inequality_unrest` is never used
+    --> crates\engine\src\engine.rs:2429:4
+     |
+2429 | fn inequality_unrest(treasury_spread: i64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^
+
+warning: function `dispossession_target_permille` is never used
+    --> crates\engine\src\engine.rs:2438:4
+     |
+2438 | fn dispossession_target_permille(treasury_spread: i64, cohesion: u64) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `institution_target_level` is never used
+    --> crates\engine\src\engine.rs:2450:4
+     |
+2450 | fn institution_target_level(signal: u64, per_level: u64) -> u32 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `institution_step` is never used
+    --> crates\engine\src\engine.rs:2456:4
+     |
+2456 | fn institution_step(current: u32, target: u32) -> u32 {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `dispossession_step` is never used
+    --> crates\engine\src\engine.rs:2468:4
+     |
+2468 | fn dispossession_step(current: u64, target: u64) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^
+
+warning: function `dispossession_unrest` is never used
+    --> crates\engine\src\engine.rs:2478:4
+     |
+2478 | fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `research_unrest_mitigation` is never used
+    --> crates\engine\src\engine.rs:2488:4
+     |
+2488 | fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_cadence` is never used
+    --> crates\engine\src\engine.rs:2500:4
+     |
+2500 | fn building_cadence(research_tier: u64) -> u64 {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: function `building_demand_signals` is never used
+    --> crates\engine\src\engine.rs:2511:4
+     |
+2511 | fn building_demand_signals(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `BUILDING_WOOD_PER_PARCEL` is never used
+    --> crates\engine\src\engine.rs:2543:7
+     |
+2543 | const BUILDING_WOOD_PER_PARCEL: i64 = 10;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `BUILDING_METAL_PER_PARCEL` is never used
+    --> crates\engine\src\engine.rs:2545:7
+     |
+2545 | const BUILDING_METAL_PER_PARCEL: i64 = 5;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `BUILDING_MATERIAL_GATE` is never used
+    --> crates\engine\src\engine.rs:2547:7
+     |
+2547 | const BUILDING_MATERIAL_GATE: i64 = 500;
+     |       ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FC3_COMMERCIAL_PARCEL_THRESHOLD` is never used
+    --> crates\engine\src\engine.rs:2548:7
+     |
+2548 | const FC3_COMMERCIAL_PARCEL_THRESHOLD: f32 = 0.5;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_material_headroom_permille` is never used
+    --> crates\engine\src\engine.rs:2551:4
+     |
+2551 | fn building_material_headroom_permille(stock: Fixed, reserve_units: i64, gate_units: i64) -> u64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_affordable_parcel_count` is never used
+    --> crates\engine\src\engine.rs:2563:4
+     |
+2563 | fn building_affordable_parcel_count(wood: Fixed, metal: Fixed) -> usize {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_signals_limited` is never used
+    --> crates\engine\src\engine.rs:2580:4
+     |
+2580 | fn building_signals_limited(signals: DemandSignals, max_parcels: usize) -> DemandSignals {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `fc3_commercial_metal_steady_ceiling_i64` is never used
+    --> crates\engine\src\engine.rs:2612:4
+     |
+2612 | fn fc3_commercial_metal_steady_ceiling_i64(cohesion: u64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_parcel_count` is never used
+    --> crates\engine\src\engine.rs:2623:4
+     |
+2623 | fn building_parcel_count(signals: &DemandSignals) -> usize {
+     |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_material_cost` is never used
+    --> crates\engine\src\engine.rs:2636:4
+     |
+2636 | fn building_material_cost(parcel_count: usize) -> (Fixed, Fixed) {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `building_materials_affordable` is never used
+    --> crates\engine\src\engine.rs:2646:4
+     |
+2646 | fn building_materials_affordable(wood: Fixed, metal: Fixed, parcel_count: usize) -> bool {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `COHESION_BELIEF_DIVISOR` is never used
+    --> crates\engine\src\engine.rs:2652:7
+     |
+2652 | const COHESION_BELIEF_DIVISOR: u64 = 200;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `COHESION_UNREST_DIVISOR` is never used
+    --> crates\engine\src\engine.rs:2654:7
+     |
+2654 | const COHESION_UNREST_DIVISOR: u64 = 50;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `cohesion_delta` is never used
+    --> crates\engine\src\engine.rs:2660:4
+     |
+2660 | fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
+     |    ^^^^^^^^^^^^^^
+
+warning: constant `COHESION_PER_AWAKENING` is never used
+    --> crates\engine\src\engine.rs:2672:18
+     |
+2672 | pub(crate) const COHESION_PER_AWAKENING: i64 = 2;
+     |                  ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `MAX_AWAKENING_COHESION_PER_TICK` is never used
+    --> crates\engine\src\engine.rs:2675:18
+     |
+2675 | pub(crate) const MAX_AWAKENING_COHESION_PER_TICK: i64 = 10;
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `awakening_cohesion_gain` is never used
+    --> crates\engine\src\engine.rs:2680:15
+     |
+2680 | pub(crate) fn awakening_cohesion_gain(awakenings_this_tick: usize) -> i64 {
+     |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `BELIEF_PER_AWAKENING` is never used
+    --> crates\engine\src\engine.rs:2688:18
+     |
+2688 | pub(crate) const BELIEF_PER_AWAKENING: i64 = 2;
+     |                  ^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `MAX_AWAKENING_BELIEF_PER_TICK` is never used
+    --> crates\engine\src\engine.rs:2689:18
+     |
+2689 | pub(crate) const MAX_AWAKENING_BELIEF_PER_TICK: i64 = 10;
+     |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `awakening_belief_gain` is never used
+    --> crates\engine\src\engine.rs:2692:15
+     |
+2692 | pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
+     |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `cohesion_unrest_damp` is never used
+    --> crates\engine\src\engine.rs:2699:4
+     |
+2699 | fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `TRADE_GAP_SCALE` is never used
+    --> crates\engine\src\engine.rs:2709:7
+     |
+2709 | const TRADE_GAP_SCALE: i64 = 100;
+     |       ^^^^^^^^^^^^^^^
+
+warning: function `trade_volume_multiplier` is never used
+    --> crates\engine\src\engine.rs:2717:4
+     |
+2717 | fn trade_volume_multiplier(from_stock: Fixed, to_stock: Fixed) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `UNREST_TRADE_FLOOR_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2725:7
+     |
+2725 | const UNREST_TRADE_FLOOR_PERMILLE: i64 = 500;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `UNREST_PER_TRADE_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2727:7
+     |
+2727 | const UNREST_PER_TRADE_PERMILLE: u64 = 4;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `unrest_trade_factor` is never used
+    --> crates\engine\src\engine.rs:2733:4
+     |
+2733 | fn unrest_trade_factor(unrest: u64) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: constant `COHESION_PER_TRADE_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2740:7
+     |
+2740 | const COHESION_PER_TRADE_PERMILLE: u64 = 4;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `COHESION_TRADE_CAP_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2742:7
+     |
+2742 | const COHESION_TRADE_CAP_PERMILLE: i64 = 500;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `MICRO_TRUST_CAP_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2744:7
+     |
+2744 | const MICRO_TRUST_CAP_PERMILLE: u64 = 250;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SOCIETY_TRADE_BOOST_CAP_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2746:7
+     |
+2746 | const SOCIETY_TRADE_BOOST_CAP_PERMILLE: i64 = 750;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `society_trade_factor` is never used
+    --> crates\engine\src\engine.rs:2750:4
+     |
+2750 | fn society_trade_factor(cohesion: u64, micro_trust_permille: u64) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `cohesion_trade_factor` is never used
+    --> crates\engine\src\engine.rs:2761:4
+     |
+2761 | fn cohesion_trade_factor(cohesion: u64) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `relation_trade_factor` is never used
+    --> crates\engine\src\engine.rs:2767:4
+     |
+2767 | fn relation_trade_factor(relation: f32) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `LANGUAGE_TRADE_PENALTY_PERMILLE` is never used
+    --> crates\engine\src\engine.rs:2775:7
+     |
+2775 | const LANGUAGE_TRADE_PENALTY_PERMILLE: i64 = 500;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `language_trade_factor` is never used
+    --> crates\engine\src\engine.rs:2778:4
+     |
+2778 | fn language_trade_factor(distance: f32) -> Fixed {
+     |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `DIPLOMACY_BASE_CONFLICT_THRESHOLD` is never used
+    --> crates\engine\src\engine.rs:2786:7
+     |
+2786 | const DIPLOMACY_BASE_CONFLICT_THRESHOLD: i64 = 10_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FACTION_TRADE_RELATION_SIGNAL` is never used
+    --> crates\engine\src\engine.rs:2788:7
+     |
+2788 | const FACTION_TRADE_RELATION_SIGNAL: f32 = 0.05 / 0.08;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FACTION_CONFLICT_RELATION_SIGNAL` is never used
+    --> crates\engine\src\engine.rs:2790:7
+     |
+2790 | const FACTION_CONFLICT_RELATION_SIGNAL: f32 = 0.1 / 0.12;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FACTION_RELATION_DECAY_FACTOR` is never used
+    --> crates\engine\src\engine.rs:2792:7
+     |
+2792 | const FACTION_RELATION_DECAY_FACTOR: f32 = 0.98;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `DIPLOMACY_TRADE_DRIFT` is never used
+    --> crates\engine\src\engine.rs:2794:7
+     |
+2794 | const DIPLOMACY_TRADE_DRIFT: f32 = 0.08;
+     |       ^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `DIPLOMACY_COMPETITION_DRIFT` is never used
+    --> crates\engine\src\engine.rs:2796:7
+     |
+2796 | const DIPLOMACY_COMPETITION_DRIFT: f32 = 0.12;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `FACTION_RELATION_THRESHOLD_SPAN` is never used
+    --> crates\engine\src\engine.rs:2798:7
+     |
+2798 | const FACTION_RELATION_THRESHOLD_SPAN: i64 = 5_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `CULTURE_PEACE_SPAN` is never used
+    --> crates\engine\src\engine.rs:2800:7
+     |
+2800 | const CULTURE_PEACE_SPAN: f32 = 3_000.0;
+     |       ^^^^^^^^^^^^^^^^^^
+
+warning: constant `SETTLEMENT_MIN_MEMBERS` is never used
+    --> crates\engine\src\engine.rs:2802:7
+     |
+2802 | const SETTLEMENT_MIN_MEMBERS: u32 = 2;
+     |       ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SETTLEMENT_CLUSTER_RADIUS_FP` is never used
+    --> crates\engine\src\engine.rs:2804:7
+     |
+2804 | const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SETTLEMENT_CONTACT_RADIUS_FP` is never used
+    --> crates\engine\src\engine.rs:2806:7
+     |
+2806 | const SETTLEMENT_CONTACT_RADIUS_FP: i64 = SETTLEMENT_CLUSTER_RADIUS_FP * 2;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `BELIEF_PEACE_DIVISOR` is never used
+    --> crates\engine\src\engine.rs:2808:7
+     |
+2808 | const BELIEF_PEACE_DIVISOR: u64 = 50;
+     |       ^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `BELIEF_PEACE_CAP` is never used
+    --> crates\engine\src\engine.rs:2811:7
+     |
+2811 | const BELIEF_PEACE_CAP: i64 = DIPLOMACY_BASE_CONFLICT_THRESHOLD;
+     |       ^^^^^^^^^^^^^^^^
+
+warning: constant `UNREST_WAR_DIVISOR` is never used
+    --> crates\engine\src\engine.rs:2813:7
+     |
+2813 | const UNREST_WAR_DIVISOR: u64 = 50;
+     |       ^^^^^^^^^^^^^^^^^^
+
+warning: constant `UNREST_WAR_CAP` is never used
+    --> crates\engine\src\engine.rs:2815:7
+     |
+2815 | const UNREST_WAR_CAP: i64 = 8_000;
+     |       ^^^^^^^^^^^^^^
+
+warning: constant `DIPLOMACY_MIN_CONFLICT_THRESHOLD` is never used
+    --> crates\engine\src\engine.rs:2818:7
+     |
+2818 | const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `diplomacy_conflict_threshold` is never used
+    --> crates\engine\src\engine.rs:2826:4
+     |
+2826 | fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `AGGRESSION_CONFLICT_BOOST` is never used
+    --> crates\engine\src\engine.rs:2833:7
+     |
+2833 | const AGGRESSION_CONFLICT_BOOST: i64 = 3_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `aggression_threshold_reduction` is never used
+    --> crates\engine\src\engine.rs:2838:4
+     |
+2838 | fn aggression_threshold_reduction(mean: f32) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `diplomacy_relation_threshold_bias` is never used
+    --> crates\engine\src\engine.rs:2843:4
+     |
+2843 | fn diplomacy_relation_threshold_bias(relation_score: f32) -> i64 {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `diplomacy_culture_threshold_bias` is never used
+    --> crates\engine\src\engine.rs:2851:4
+     |
+2851 | fn diplomacy_culture_threshold_bias(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `settlement_dominant_factions` is never used
+    --> crates\engine\src\engine.rs:2868:4
+     |
+2868 | fn settlement_dominant_factions(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `faction_language_centroids` is never used
+    --> crates\engine\src\engine.rs:2917:4
+     |
+2917 | fn faction_language_centroids(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `settlement_contact_pairs` is never used
+    --> crates\engine\src\engine.rs:2953:4
+     |
+2953 | fn settlement_contact_pairs(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `diplomacy_faction_pairs_from_settlement_contact` is never used
+    --> crates\engine\src\engine.rs:3000:4
+     |
+3000 | fn diplomacy_faction_pairs_from_settlement_contact(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `diplomacy_pair_from_settlement_overlap` is never used
+    --> crates\engine\src\engine.rs:3020:4
+     |
+3020 | fn diplomacy_pair_from_settlement_overlap(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `decay_faction_relations` is never used
+    --> crates\engine\src\engine.rs:3061:4
+     |
+3061 | fn decay_faction_relations(matrix: &mut DiplomacyMatrix, factor: f32) {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD` is never used
+    --> crates\engine\src\engine.rs:3094:7
+     |
+3094 | const TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD: u32 = 2;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `TRADE_ROUTE_MIN_RELATION` is never used
+    --> crates\engine\src\engine.rs:3096:7
+     |
+3096 | const TRADE_ROUTE_MIN_RELATION: f32 = 0.0;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `MAX_TRADE_ROUTES` is never used
+    --> crates\engine\src\engine.rs:3098:7
+     |
+3098 | const MAX_TRADE_ROUTES: usize = 64;
+     |       ^^^^^^^^^^^^^^^^
+
+warning: constant `TRADE_ROUTE_UNUSED_DECAY_TICKS` is never used
+    --> crates\engine\src\engine.rs:3100:7
+     |
+3100 | const TRADE_ROUTE_UNUSED_DECAY_TICKS: u32 = 2_000;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `canonical_faction_pair` is never used
+    --> crates\engine\src\engine.rs:3102:4
+     |
+3102 | fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
+     |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `emergent_route_goods` is never used
+    --> crates\engine\src\engine.rs:3111:4
+     |
+3111 | fn emergent_route_goods(from: u32) -> &'static str {
+     |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `record_trade_agreement_streak` is never used
+    --> crates\engine\src\engine.rs:3119:4
+     |
+3119 | fn record_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `reset_trade_agreement_streak` is never used
+    --> crates\engine\src\engine.rs:3124:4
+     |
+3124 | fn reset_trade_agreement_streak(streak: &mut BTreeMap<(u32, u32), u32>, a: u32, b: u32) {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `remove_emergent_routes_between` is never used
+    --> crates\engine\src\engine.rs:3128:4
+     |
+3128 | fn remove_emergent_routes_between(state: &mut WorldState, a: u32, b: u32) {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `decay_idle_emergent_trade_routes` is never used
+    --> crates\engine\src\engine.rs:3151:4
+     |
+3151 | fn decay_idle_emergent_trade_routes(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `dna_class`, `psych_profile`, `sentience_profile`, and `sentience_threshold` are never read
+  --> crates\engine\src\emergence.rs:70:16
+   |
+61 | pub struct EmergenceState {
+   |            -------------- fields in this struct
+...
+70 |     pub(crate) dna_class: DnaClass,
+   |                ^^^^^^^^^
+71 |     pub(crate) psych_profile: civ_agents::PsychGenomeProfile,
+   |                ^^^^^^^^^^^^^
+72 |     pub(crate) sentience_profile: CognitionTraitProfile,
+   |                ^^^^^^^^^^^^^^^^^
+73 |     pub(crate) sentience_threshold: SentienceThreshold,
+   |                ^^^^^^^^^^^^^^^^^^^
+
+warning: method `push_feed` is never used
+   --> crates\engine\src\emergence.rs:100:8
+    |
+ 77 | impl EmergenceState {
+    | ------------------- method in this implementation
+...
+100 |     fn push_feed(
+    |        ^^^^^^^^^
+
+warning: function `select_seed_for_position` is never used
+   --> crates\engine\src\emergence.rs:130:4
+    |
+130 | fn select_seed_for_position<'a>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> crates\engine\src\emergence.rs:156:19
+    |
+155 | impl Simulation {
+    | --------------- associated items in this implementation
+156 |     pub(crate) fn default_emergence_state(seed: u64) -> EmergenceState {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^
+...
+163 |     pub(crate) fn phase_emergence(&mut self) {
+    |                   ^^^^^^^^^^^^^^^
+...
+177 |     fn emergence_ensure_genomes(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+195 |     fn emergence_culture(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^
+...
+253 |     fn emergence_social(&mut self) {
+    |        ^^^^^^^^^^^^^^^^
+...
+294 |     fn apply_social_pair(&mut self, a_id: u64, b_id: u64, kind: Interaction, tick: u32) {
+    |        ^^^^^^^^^^^^^^^^^
+...
+326 |     fn ensure_social_graph(&mut self, entity: Entity) {
+    |        ^^^^^^^^^^^^^^^^^^^
+...
+332 |     fn emergence_psyche(&mut self) {
+    |        ^^^^^^^^^^^^^^^^
+...
+476 |     fn emergence_genetics_sentience(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+543 |     pub(crate) fn apply_awakening_coupling(&mut self) {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+552 |     fn emergence_legends(&mut self) {
+    |        ^^^^^^^^^^^^^^^^^
+...
+617 |     fn emergence_ingest_legend(&mut self, raw: RawSimEvent) -> IngestOutcome {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+621 |     fn record_legend_promotions(&mut self, tick: u64, promoted: &[LegendEntityId], agent_id: u64) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+637 |     fn emergence_civ_ai(&mut self) {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `civ_ai_sync_generate` is never used
+   --> crates\engine\src\emergence.rs:724:4
+    |
+724 | fn civ_ai_sync_generate(prompt: &str) -> String {
+    |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SUBCRITICAL_TICK_ALARM` is never used
+  --> crates\engine\src\emergence_metrics.rs:75:7
+   |
+75 | const SUBCRITICAL_TICK_ALARM: u32 = 100;
+   |       ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: constant `SUPERCRITICAL_AVALANCHE_ALARM` is never used
+  --> crates\engine\src\emergence_metrics.rs:78:7
+   |
+78 | const SUPERCRITICAL_AVALANCHE_ALARM: u32 = 10;
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> crates\engine\src\emergence_metrics.rs:285:19
+    |
+259 | impl Simulation {
+    | --------------- methods in this implementation
+...
+285 |     pub(crate) fn phase_emergence_events_close(&mut self) {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+330 |     fn close_open_avalanche(&mut self, open: OpenAvalanche, ratio: f32, close_tick: u64) {
+    |        ^^^^^^^^^^^^^^^^^^^^
+...
+349 |     fn refresh_branching_metrics(&mut self, silence: bool) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+400 |     pub(crate) fn record_unrest_micro_activity(&mut self, units: u32) {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+407 |     fn micro_actor_action_count(&self) -> u32 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+411 |     fn micro_descendant_action_count(&self) -> u32 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+428 |     pub(crate) fn sample_emergence_with_ca_grid(&mut self, grid: &CaGrid) -> bool {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `civ-engine` (lib) generated 127 warnings (run `cargo fix --lib -p civ-engine` to apply 1 suggestion)
+warning: unused import: `civ_engine::check_outcome`
+    --> crates\server\src\jsonrpc.rs:1613:17
+     |
+1613 |             use civ_engine::check_outcome;
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unreachable pattern
+    --> crates\server\src\jsonrpc.rs:1662:9
+     |
+1599 |         JsonRpcMethod::SimTechState => DispatchPlan {
+     |         --------------------------- matches all the relevant values
+...
+1662 |         JsonRpcMethod::SimTechState => {
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+     |
+     = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `sim`
+    --> crates\server\src\jsonrpc.rs:1615:21
+     |
+1615 |                 let sim = ctx.snapshot.as_ref().map(|_| ()).is_some();
+     |                     ^^^ help: if this is intentional, prefix it with an underscore: `_sim`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: missing documentation for a variant
+  --> crates\server\src\jsonrpc.rs:86:5
+   |
+86 |     SimPerf,
+   |     ^^^^^^^
+   |
+note: the lint level is defined here
+  --> crates\server\src\lib.rs:9:9
+   |
+ 9 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+  --> crates\server\src\jsonrpc.rs:87:5
+   |
+87 |     SimSubscribe,
+   |     ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:770:5
+    |
+770 |     pub tag: String,
+    |     ^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:771:5
+    |
+771 |     pub reason: String,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:772:5
+    |
+772 |     pub tick: u64,
+    |     ^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:982:17
+    |
+982 |     GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    |                 ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:982:33
+    |
+982 |     GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    |                                 ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:982:49
+    |
+982 |     GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    |                                                 ^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:982:65
+    |
+982 |     GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> crates\server\src\jsonrpc.rs:982:94
+    |
+982 |     GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
+    |                                                                                              ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a variant
+   --> crates\server\src\jsonrpc.rs:983:5
+    |
+983 |     PlaceVoxel {
+    |     ^^^^^^^^^^
+
+warning: `civ-server` (lib) generated 14 warnings (run `cargo fix --lib -p civ-server` to apply 2 suggestions)
+warning: missing documentation for a struct field
+   --> clients\bevy-ref\src\lib.rs:302:5
+    |
+302 |     pub tag: String,
+    |     ^^^^^^^^^^^^^^^
+    |
+note: the lint level is defined here
+   --> clients\bevy-ref\src\lib.rs:14:9
+    |
+ 14 | #![warn(missing_docs)]
+    |         ^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> clients\bevy-ref\src\lib.rs:303:5
+    |
+303 |     pub reason: String,
+    |     ^^^^^^^^^^^^^^^^^^
+
+warning: missing documentation for a struct field
+   --> clients\bevy-ref\src\lib.rs:304:5
+    |
+304 |     pub tick: u64,
+    |     ^^^^^^^^^^^^^
+
+warning: `civ-bevy-ref` (lib) generated 3 warnings
+warning: `civ-bevy-ref` (lib test) generated 3 warnings (3 duplicates)
+warning: function `surface_y` is never used
+  --> clients\bevy-ref\tests\requirements_bdd.rs:12:4
+   |
+12 | fn surface_y(world: &GenWorld, x: usize, z: usize) -> Option<usize> {
+   |    ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `civ-bevy-ref` (test "requirements_bdd") generated 1 warning
+warning: unused imports: `CapitalistPolicy`, `NoopPolicy`, and `SubsistenceFirstPolicy`
+  --> crates\engine\tests\uncovered_coverage.rs:9:23
+   |
+ 9 |     policy_from_kind, CapitalistPolicy, ControlSignals, ModHost, ModLoadedRecord,
+   |                       ^^^^^^^^^^^^^^^^
+10 |     ModUnloadedRecord, NoopPolicy, Policy, PolicyInput, SubsistenceFirstPolicy,
+   |                        ^^^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Policy`
+  --> crates\engine\tests\uncovered_coverage.rs:10:36
+   |
+10 |     ModUnloadedRecord, NoopPolicy, Policy, PolicyInput, SubsistenceFirstPolicy,
+   |                                    ^^^^^^
+
+warning: enum `EconomicFocus` is never used
+   --> crates\engine\src\engine.rs:129:6
+    |
+129 | enum EconomicFocus {
+    |      ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `last_life_deaths` is never read
+   --> crates\engine\src\engine.rs:477:16
+    |
+434 | pub struct Simulation {
+    |            ---------- field in this struct
+...
+477 |     pub(crate) last_life_deaths: u32,
+    |                ^^^^^^^^^^^^^^^^
+
+warning: methods `add_belief`, `add_cohesion`, `test_clear_cluster_stocks`, and `test_set_cluster_food_stock` are never used
+    --> crates\engine\src\engine.rs:1155:19
+     |
+ 648 | impl Simulation {
+     | --------------- methods in this implementation
+...
+1155 |     pub(crate) fn add_belief(&mut self, delta: i64) {
+     |                   ^^^^^^^^^^
+...
+1165 |     pub(crate) fn add_cohesion(&mut self, delta: i64) {
+     |                   ^^^^^^^^^^^^
+...
+1942 |     pub(crate) fn test_clear_cluster_stocks(&mut self) {
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1947 |     pub(crate) fn test_set_cluster_food_stock(&mut self, cluster_id: u64, food: i64) {
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `dna_class`, `psych_profile`, and `sentience_profile` are never read
+  --> crates\engine\src\emergence.rs:70:16
+   |
+61 | pub struct EmergenceState {
+   |            -------------- fields in this struct
+...
+70 |     pub(crate) dna_class: DnaClass,
+   |                ^^^^^^^^^
+71 |     pub(crate) psych_profile: civ_agents::PsychGenomeProfile,
+   |                ^^^^^^^^^^^^^
+72 |     pub(crate) sentience_profile: CognitionTraitProfile,
+   |                ^^^^^^^^^^^^^^^^^
+
+warning: function `test_seed_definition` is never used
+   --> crates\engine\src\emergence.rs:831:8
+    |
+831 |     fn test_seed_definition(id: &str) -> SeedDefinition {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: `civ-engine` (test "uncovered_coverage") generated 2 warnings (run `cargo fix --test "uncovered_coverage" -p civ-engine` to apply 1 suggestion)
+warning: `civ-engine` (lib test) generated 112 warnings (107 duplicates)
+warning: unused imports: `ACCOUNT_CONSUMPTION`, `LedgerInvariantError`, `drain_energy_budget`, `step`, and `verify_ledger_conservation`
+  --> crates\economy\tests\fr_matrix_batch7.rs:8:5
+   |
+ 8 |     drain_energy_budget, step, verify_ledger_conservation,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |     EconomyState, LedgerInvariantError, LedgerSide,
+   |                   ^^^^^^^^^^^^^^^^^^^^
+10 |     ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET,
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `funded_economy` is never used
+  --> crates\economy\tests\fr_matrix_batch7.rs:16:4
+   |
+16 | fn funded_economy() -> EconomyState {
+   |    ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `ACCOUNT_ENERGY_BUDGET` and `drain_energy_budget`
+  --> crates\economy\tests\economy_coverage.rs:10:5
+   |
+10 |     drain_energy_budget, step, verify_ledger_conservation,
+   |     ^^^^^^^^^^^^^^^^^^^
+11 |     EconomyState, LedgerEntry, LedgerInvariantError,
+12 |     ACCOUNT_CONSUMPTION, ACCOUNT_ENERGY_BUDGET,
+   |                          ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `civ-economy` (test "fr_matrix_batch7") generated 2 warnings (run `cargo fix --test "fr_matrix_batch7" -p civ-economy` to apply 1 suggestion)
+warning: `civ-economy` (test "economy_coverage") generated 1 warning (run `cargo fix --test "economy_coverage" -p civ-economy` to apply 1 suggestion)
+warning: unused import: `serde_json::json`
+    --> crates\server\src\jsonrpc.rs:3637:13
+     |
+3637 |         use serde_json::json;
+     |             ^^^^^^^^^^^^^^^^
+
+warning: `civ-server` (lib test) generated 15 warnings (14 duplicates) (run `cargo fix --lib -p civ-server --tests` to apply 1 suggestion)
+warning: `civ-economy` (lib test) generated 7 warnings (7 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.47s
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_agents-9448cf6be41ae91e.exe)
+
+running 66 tests
+test cluster::tests::join_and_leave_respect_threshold ... ok
+test cluster::tests::co_located_agents_cluster_together ... ok
+test cluster::tests::cluster_id_is_min_id_and_deterministic ... ok
+test cluster::tests::clustering_is_order_independent ... ok
+test daily_path::tests::nearest_of_kind_picks_closest ... ok
+test culture::tests::contact_diffuses_culture_and_creolizes_language ... ok
+test culture::tests::kinship_resists_external_contact ... ok
+test culture::tests::isolated_populations_diverge_over_time ... ok
+test cluster::tests::reconcile_joins_positive_and_leaves_negative ... ok
+test culture::tests::mutation_moves_traits_but_keeps_bounds ... ok
+test daily_path::tests::path_step_moves_toward_target_without_overshoot ... ok
+test daily_path::tests::pick_target_chooses_highest_pressure_need ... ok
+test daily_path::tests::poi_registry_is_empty_tracks_insertions ... ok
+test cluster::tests::far_apart_agents_get_different_clusters ... ok
+test daily_path::tests::satisfied_needs_do_not_seek ... ok
+test daily_path::tests::empty_registry_returns_none ... ok
+test daily_path::tests::wander_anchor_stays_local ... ok
+test daily_path::tests::scoring_is_deterministic ... ok
+test diplomacy::tests::competition_and_proximity_can_drive_war ... ok
+test diplomacy::tests::matrix_is_symmetric_and_empty_defaults_neutral ... ok
+test diplomacy::tests::trade_emerges_toward_alliance ... ok
+test diplomacy::tests::mixed_interactions_remain_stable_and_clamped ... ok
+test psyche::tests::belief_culture_exposure_ignores_non_positive_weights ... ok
+test psyche::tests::beliefs_move_toward_culture_exposure ... ok
+test psyche::tests::genetics_projection_is_bounded_and_sibling_sensitive ... ok
+test psyche::tests::maturity_grows_under_low_stress_and_stalls_under_high_stress ... ok
+test psyche::tests::mood_tracks_needs_and_reactivity ... ok
+test psyche::tests::temperament_nudges_but_stays_bounded ... ok
+test social::tests::asymmetry_is_preserved ... ok
+test social::tests::cooperation_and_defection_mutate_ties ... ok
+test social::tests::decay_reduces_old_ties_and_keeps_kinship ... ok
+test social::tests::labels_are_derived_not_stored ... ok
+test social::tests::partnered_couples_with_enough_food_and_safety_can_reproduce ... ok
+test tests::at_target_era_is_a_noop ... ok
+test tests::child_bundle_from_parent_is_deterministic_unit_velocity ... ok
+test tests::civilian_composition_smoke ... ok
+test tests::count_civilians_reports_correctly ... ok
+test tests::cohort_stats_total_matches_count_civilians ... ok
+test tests::drift_toward_home_steers_when_shelter_need_high ... ok
+test tests::empty_cohort_returns_zeroed_stats ... ok
+test tests::form_faction_kin_ties_count_toward_cohesion ... ok
+test tests::form_faction_requires_cohesion_threshold ... ok
+test tests::infer_alignment_for_spawn_breaks_ties_deterministically ... ok
+test tests::infer_alignment_for_spawn_majority ... ok
+test tests::join_faction_hostile_ties_do_not_count ... ok
+test tests::join_faction_requires_acceptance_ties ... ok
+test tests::infer_alignment_for_spawn_unaligned_only ... ok
+test tests::join_faction_ties_to_non_members_do_not_count ... ok
+test tests::lod_tier_equality_round_trips ... ok
+test tests::lod_gestalt_no_divergence ... ok
+test tests::propagate_wardrobe_is_deterministic ... ok
+test tests::propagate_cohort_wardrobe_is_deterministic ... ok
+test tests::propagation_is_monotone ... ok
+test tests::schema_version_stub ... ok
+test tests::propagate_cohort_tools_mirrors_wardrobe ... ok
+test tests::score_needs_returns_deterministic_sums ... ok
+test tests::should_tick_now_respects_lod_modulo ... ok
+test tests::spawn_civilian_inserts_components ... ok
+test tests::spawn_child_near_spawns_newborn_within_offset_band ... ok
+test tests::spawn_many_produces_sequential_ids ... ok
+test tests::tick_movement_avoids_water ... ok
+test tests::top_action_picks_highest_weighted_unmet_need ... ok
+test tests::tick_movement_respects_bounds ... ok
+test tests::tick_movement_updates_position ... ok
+test tests::wardrobe_tools_deterministic ... ok
+test tests::cohort_wardrobe_converges_over_many_ticks ... ok
+
+test result: ok. 66 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_ai-42a26fcee85e5359.exe)
+
+running 7 tests
+test cache::tests::cache_clone_shares_data ... ok
+test cache::tests::cache_multiple_keys_independent ... ok
+test cache::tests::cache_insert_get_roundtrip ... ok
+test cache::tests::cache_overwrite_updates_value ... ok
+test config::tests::defaults_are_stable ... ok
+test config::tests::from_env_honors_each_key ... ok
+test config::tests::from_env_ignores_malformed_integers ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\dummy_roundtrip.rs (E:/cargo-target\debug\deps\dummy_roundtrip-d834646367edcb48.exe)
+
+running 11 tests
+test cache_round_trips_generic_value ... ok
+test worker_pool_runs_task_off_thread ... ignored, pre-existing tokio runtime blocking issue
+test replay_canonical_refuses_ai_event ... ok
+test fr_civ_llm_001_cache_key_is_stable_for_identical_inputs ... ok
+test cached_generate_hits_on_repeat ... ok
+test dummy_embed_round_trips ... ok
+test dummy_generate_is_deterministic ... ok
+test registry_required_provider_fails_loud ... ok
+test fr_civ_llm_002_cache_key_changes_when_prompt_or_model_shift ... ok
+test fr_civ_llm_003_max_concurrent_gen_from_env_is_honored ... ok
+test fr_civ_llm_004_provider_operations_enforce_allowed_use_matrix ... ok
+
+test result: ok. 10 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_audio-3bcbd8c06c30b770.exe)
+
+running 75 tests
+test ambient::tests::blend_converges_to_target ... ok
+test ambient::tests::coastal_footprint_lights_water_bed ... ok
+test ambient::tests::blend_is_monotonic_per_slot ... ok
+test ambient::tests::empty_footprint_returns_wind_floor ... ok
+test ambient::tests::forest_footprint_lights_forest_bed ... ok
+test ambient::tests::fr_audio_002_coast_to_forest_glide_is_continuous ... ok
+test ambient::tests::winter_silences_wildlife_overlay ... ok
+test ambient::tests::storm_overlay_stronger_than_light_rain ... ok
+test ambient::tests::nighttime_silences_wildlife_overlay ... ok
+test bus::tests::set_clamps_out_of_range_to_unit_range ... ok
+test ambient::tests::slot_cap_is_one ... ok
+test bus::tests::defaults_follow_audio_direction_table ... ok
+test bus::tests::fr_audio_001_per_tier_mix_is_independent ... ok
+test ducking::tests::apply_is_idempotent_for_same_reason ... ok
+test ambient::tests::weights_are_well_formed_after_footprint_projection ... ok
+test bus::tests::tier_iteration_excludes_master ... ok
+test ducking::tests::concurrent_ducks_layer_and_loudest_wins ... ok
+test bus::tests::serde_round_trip_is_bit_identical ... ok
+test ducking::tests::apply_records_duck ... ok
+test bus::tests::is_well_formed_rejects_nan_and_out_of_range ... ok
+test ducking::tests::custom_clamps_target_level ... ok
+test ducking::tests::custom_clamps_tween_ms_to_band ... ok
+test ducking::tests::default_tweens_sit_in_150_400ms_band ... ok
+test ducking::tests::fr_audio_008_bus_ducking_lives_in_audio_direction_band ... ok
+test ducking::tests::restore_clamps_pre_duck_level ... ok
+test ducking::tests::restore_returns_pre_duck_level_and_drops_duck ... ok
+test ducking::tests::restore_with_no_active_duck_returns_none ... ok
+test mix::tests::apply_preset_clears_mute_and_records_change ... ok
+test mix::tests::default_mix_is_reference_preset ... ok
+test mix::tests::effective_gain_returns_zero_under_master_mute ... ok
+test mix::tests::fr_audio_001_mix_persists_and_mute_is_independent ... ok
+test mix::tests::serde_round_trip_preserves_state ... ok
+test mix::tests::silent_ambient_preset_zeros_score_and_ambient ... ok
+test mix::tests::tier_gain_routes_master_through_mute_toggle ... ok
+test mood::tests::all_axes_combined_respect_slot_cap ... ok
+test mood::tests::cadence_does_not_fire_on_zero_dt ... ok
+test mood::tests::cadence_fires_after_period_elapses ... ok
+test mood::tests::fr_audio_004_mood_to_stems_is_monotonic_per_axis ... ok
+test mood::tests::growth_does_not_leak_into_other_stems ... ok
+test mood::tests::high_prosperity_lifts_base_stem ... ok
+test mood::tests::mood_peak_is_max_component ... ok
+test mood::tests::tension_does_not_leak_into_other_stems ... ok
+test mood::tests::wonder_does_not_leak_into_other_stems ... ok
+test mood::tests::zero_mood_yields_base_floor_only ... ok
+test sfx::tests::cap_drops_excess_same_kind ... ok
+test sfx::tests::custom_cap_is_respected ... ok
+test sfx::tests::drain_is_pure_across_calls ... ok
+test sfx::tests::drain_output_is_sorted_by_kind ... ok
+test sfx::tests::empty_drain_yields_empty_queue ... ok
+test sfx::tests::for_disaster_label_routes_to_per_kind_stings ... ok
+test sfx::tests::fr_audio_006_birth_storm_coalesces_to_safe_output ... ok
+test sfx::tests::global_gain_clamp_protects_headroom ... ok
+test sfx::tests::is_disaster_variant_flags_only_the_six_per_kind_stings ... ok
+test sfx::tests::mixed_kinds_each_get_their_own_cap ... ok
+test sfx::tests::single_request_passes_through_at_full_volume ... ok
+test sfx::tests::summed_volume_clamps_to_one_per_kind ... ok
+test sfx::tests::ui_kinds_have_cap_of_one ... ok
+test triggers::tests::batch_conversion_preserves_order ... ok
+test triggers::tests::disaster_kind_routes_through_for_disaster_label ... ok
+test triggers::tests::empty_batch_is_empty ... ok
+test triggers::tests::fr_audio_005_event_triggers_route_to_sfx_requests ... ok
+test triggers::tests::kind_routes_simple_triggers_to_their_target_sfx ... ok
+test triggers::tests::trigger_to_sfx_requests_yields_exactly_one_request ... ok
+test triggers::tests::volume_is_unit_for_simple_triggers_and_clamps_for_scaled ... ok
+test ui_sound::tests::alert_priority_is_highest ... ok
+test ui_sound::tests::budget_decrements_on_try_play ... ok
+test ui_sound::tests::budget_exhaustion_blocks_routine_ui ... ok
+test ui_sound::tests::budget_refill_restores_capacity ... ok
+test ui_sound::tests::budget_starts_full ... ok
+test ui_sound::tests::fr_audio_007_ui_sound_language_maps_to_visual_palette ... ok
+test ui_sound::tests::palette_label_matches_visual_palette ... ok
+test ui_sound::tests::try_play_returns_false_for_non_ui_kinds ... ok
+test ui_sound::tests::ui_alert_is_exempt_from_budget ... ok
+test ui_sound::tests::ui_role_maps_ui_kinds_to_palette ... ok
+test ui_sound::tests::ui_role_returns_none_for_non_ui_kinds ... ok
+
+test result: ok. 75 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_bevy_ref-96e45daa02ea74ac.exe)
+
+running 47 tests
+test tests::agent_color_from_id_is_in_unit_cube_and_distinct ... ok
+test tests::agent_scale_multiplier_filters_invalid_values ... ok
+test tests::agent_label_text_prefers_name ... ok
+test tests::chunk_to_minimap_uv_centres_single_chunk_bounds ... ok
+test tests::debug_render_wireframe_toggle_flips_state ... ok
+test tests::chunk_fade_color_preserves_rgb ... ok
+test tests::default_live_ws_url_matches_builder ... ok
+test tests::focused_chunk_at_grid_prefers_loaded_y_slice ... ok
+test tests::chunk_fade_helpers_ignore_non_finite_elapsed ... ok
+test tests::chunk_distance_from_camera_at_same_point_is_zero ... ok
+test tests::chunk_to_minimap_uv_maps_chunk_centre_in_bounds ... ok
+test tests::chunk_fade_alpha_ramps_linearly ... ok
+test tests::decode_chunk_id_unpacks_grid_coords ... ok
+test tests::default_camera_target_is_sensible ... ok
+test tests::encode_chunk_id_roundtrips_decode ... ok
+test tests::chunk_fade_complete_after_duration ... ok
+test tests::format_live_selection_labels_entity_kind ... ok
+test tests::is_frame3d_binary_detects_magic ... ok
+test tests::live_hud_overlay_combines_focused_chunk_and_selection ... ok
+test tests::live_hud_overlay_includes_connection_and_tick ... ok
+test tests::live_hud_overlay_includes_focused_chunk_id ... ok
+test tests::live_hud_overlay_includes_last_event_suffix ... ok
+test tests::live_hud_overlay_includes_pick_detail_suffix ... ok
+test tests::live_hud_overlay_includes_selected_live_entity ... ok
+test tests::live_hud_overlay_includes_ws_rtt_when_present ... ok
+test tests::live_hud_overlay_shows_disconnected_without_tick ... ok
+test tests::mesh_buffer_default_is_empty ... ok
+test tests::mesh_lod_level_boundary_thresholds ... ok
+test tests::mesh_lod_level_increases_with_distance ... ok
+test tests::minimap_uv_to_chunk_grid_clamps_to_bounds ... ok
+test tests::minimap_uv_to_chunk_grid_inverts_chunk_to_minimap_uv ... ok
+test tests::parse_frame3d_binary_roundtrips_building_diff ... ok
+test tests::parse_frame3d_json_accepts_building_diff ... ok
+test tests::parse_jsonrpc_snapshot_meta_ignores_tick_broadcast ... ok
+test tests::parse_jsonrpc_snapshot_meta_reads_is_day_and_tick ... ok
+test tests::parse_ws_binary_env_flag_accepts_common_truthy_values ... ok
+test tests::parse_ws_payload_accepts_binary_and_text ... ok
+test tests::parse_ws_payload_prefers_binary_when_magic_present ... ok
+test tests::presentation_ambient_warm_day_and_cool_night ... ok
+test tests::presentation_clear_color_lerps_day_and_night ... ok
+test tests::presentation_day_factor_target_matches_web_night_blend ... ok
+test tests::resolve_attach_mode_defaults_to_standalone ... ok
+test tests::resolve_attach_mode_server_from_env_strings ... ok
+test tests::parse_ws_payload_decodes_all_frame_kinds ... ok
+test tests::should_render_chunk_uses_sphere_distance ... ok
+test tests::with_tick_format_binary_query_appends_once ... ok
+test tests::resolve_ws_url_from_env_parses_addr_and_path ... ok
+
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (E:/cargo-target\debug\deps\civ_bevy_ref-d093a3672252e673.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\requirements_bdd.rs (E:/cargo-target\debug\deps\requirements_bdd-918707ca297feade.exe)
+
+running 3 tests
+test requirement_terrain_is_continuous_not_blobs ... ok
+test requirement_water_only_below_sea ... ok
+test requirement_native_ocean_renders_with_sea_level_match ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\settings_bdd.rs (E:/cargo-target\debug\deps\settings_bdd-d96a8c423084cce4.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\world_size_bdd.rs (E:/cargo-target\debug\deps\world_size_bdd-b4119776612758f9.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_build-61588cbc29242356.exe)
+
+running 21 tests
+test tests::build_003_parcels_at_era_filters_correctly ... ok
+test tests::build_002_default_facade_for_era_covers_0_to_5 ... ok
+test tests::build_010_zero_signals_produce_no_parcels ... ok
+test tests::build_013_mixed_signals_produce_one_parcel_per_saturated_kind ... ok
+test tests::build_011_high_residential_signal_places_residential_parcel ... ok
+test tests::build_004_insert_and_retrieve_parcel_preserves_fields ... ok
+test tests::build_001_building_graph_round_trips_through_ron ... ok
+test tests::fr_arch_005_tile_set_selection_is_order_independent ... ok
+test tests::build_012_deterministic_placement_is_reproducible ... ok
+test tests::build_014_facade_era_matches_era_argument ... ok
+test tests::build_005_provenance_tagging_round_trips ... ok
+test tests::demand_allocation_deterministic ... ok
+test tests::fr_arch_003_tilesets_and_adjacency_use_style_vectors ... ok
+test tests::fr_arch_004_template_scoring_is_deterministic ... ok
+test tests::fr_arch_007_modes_control_facade_resolution ... ok
+test tests::era_grammar_histogram ... ok
+test tests::fr_arch_008_facade_histogram_tracks_culture_vector_divergence ... ok
+test tests::freehand_matches_grammar ... ok
+test tests::build_015_hundred_ticks_of_high_signals_produce_around_hundred_parcels ... ok
+test tests::schema_version_stub ... ok
+test tests::graph_ron_roundtrip ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\fr_matrix_batch12.rs (E:/cargo-target\debug\deps\fr_matrix_batch12-8463e3e349768651.exe)
+
+running 36 tests
+test fr_api_002_schema_version_has_three_segments ... ok
+test fr_civ_0001_parcel_graph_default_empty ... ok
+test fr_api_004_schema_version_rounds_trip_stable_prefix ... ok
+test fr_api_003_schema_version_is_non_empty ... ok
+test fr_civ_act_001_default_provenance_tag_exists ... ok
+test fr_civ_actor_001_lifecycle_graph_keeps_parcel_id_stable ... ok
+test fr_civ_actor_002_building_ids_compare_by_ordered_numeric_value ... ok
+test fr_civ_audio_003_default_style_has_materials ... ok
+test fr_civ_bevy_016_allocator_deterministic_seed ... ok
+test fr_civ_audio_005_era_progresses_style_family ... ok
+test fr_civ_audio_007_facade_properties_are_stable ... ok
+test fr_civ_audio_008_fallback_style_has_placeholder_name ... ok
+test fr_civ_actor_001_parcel_id_is_copyable ... ok
+test fr_civ_bevy_022_allocator_does_not_allocate_below_threshold ... ok
+test fr_civ_bevy_024_multi_signal_chooses_multiple_parcels ... ok
+test fr_civ_bevy_025_graph_parcel_at_era_filters ... ok
+test fr_civ_bevy_023_coverage_of_single_high_signal_drops ... ok
+test fr_civ_bevy_026_era_zero_allocates_zero ... ok
+test fr_civ_bio_002_capacity_counts_only_residential ... ok
+test fr_civ_bio_003_occupied_counts_residential ... ok
+test fr_civ_build_000_schema_version_semver_prefix ... ok
+test fr_civ_bio_001_round_trip_parcel_facade ... ok
+test fr_civ_build_001_default_provenance_roundtrip ... ok
+test fr_civ_build_002_facade_era_matches_argument ... ok
+test fr_civ_build_003_era_filter_with_single_parcel ... ok
+test fr_civ_build_010_zero_signals_do_not_allocate ... ok
+test fr_civ_build_020_freehand_and_procedural_use_same_shape_fields ... ok
+test fr_civ_build_030_era_transition_changes_facade_name ... ok
+test fr_civ_client_godot_001_vector_shape ... ok
+test fr_civ_client_godot_002_wealth_bucket_is_monotonic_for_growth ... ok
+test fr_civ_climate_001_resolve_prefers_culture_match ... ok
+test fr_civ_climate_002_adjacency_weights_returned ... ok
+test fr_civ_climate_003_fallback_style ... ok
+test fr_civ_core_001_facade_score_is_deterministic ... ok
+test fr_civ_core_020_select_tile_set_deterministic_with_no_primitive ... ok
+test fr_civ_core_021_missing_primitive_id_falls_back_deterministically ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_climate-b590f963054c61a8.exe)
+
+running 5 tests
+test tests::new_creates_defaults ... ok
+test tests::sea_level_rises_with_temp ... ok
+test tests::step_with_emissions_raises_temp ... ok
+test tests::set_co2_changes_state ... ok
+test tests::step_zero_emissions ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_diffusion-f3f4427d8594bb98.exe)
+
+running 16 tests
+test tests::cumulative_increase_equals_final_minus_initial ... ok
+test tests::fully_saturated_start_stays_at_one ... ok
+test tests::imitation_dominated_curve_is_faster_than_innovation_only ... ok
+test tests::monotone_spread_with_minimal_coefficients ... ok
+test tests::schema_version_stub ... ok
+test tests::saturation_produces_zero_increase ... ok
+test tests::tick_increase_matches_closed_form ... ok
+test tests::trajectories_are_monotone_nondecreasing ... ok
+test tests::single_tick_trajectory_matches_advance ... ok
+test tests::trajectory_first_element_is_initial_value ... ok
+test tests::out_of_range_inputs_clamp ... ok
+test tests::tick_increase_is_always_nonnegative ... ok
+test tests::trajectory_is_deterministic ... ok
+test tests::trajectory_length_equals_ticks_plus_one ... ok
+test tests::zero_coefficients_produce_no_growth ... ok
+test tests::zero_ticks_returns_single_element ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_diplomacy-f9ca09b90c312ef1.exe)
+
+running 33 tests
+test tests::bump_into_neutral_band_emits_no_event ... ok
+test tests::default_config_validates ... ok
+test tests::decay_pulls_negative_standing_toward_zero ... ok
+test tests::combat_bump_is_symmetric_and_hostility_amplifying ... ok
+test tests::decay_pulls_positive_standing_toward_zero ... ok
+test tests::fr_civ_diplo_004_concession_machine_is_monotonic ... ok
+test tests::first_bump_creates_relation_and_records_zero_to_neutral_event ... ok
+test tests::fr_civ_diplo_005_structured_transcript_remains_stable_without_garnish ... ok
+test tests::decay_eventually_crosses_back_to_neutral ... ok
+test tests::fr_civ_diplo_006_blocks_llm_treaty_acceptance_decision ... ok
+test tests::fr_civ_diplo_004_rejects_round_limit ... ok
+test tests::fr_civ_diplo_007_polity_ids_are_scalar_clusters ... ok
+test tests::fr_civ_diplo_006_blocks_llm_trust_and_war_goal_decisions ... ok
+test tests::fr_civ_diplo_008_accept_path_for_limited_goal ... ok
+test tests::fr_civ_diplo_008_counter_and_propose_converge_to_same_level ... ok
+test tests::fr_civ_diplo_008_counter_from_same_actor_is_rejected ... ok
+test tests::fr_civ_diplo_008_counter_path_for_surrender_goal ... ok
+test tests::fr_civ_diplo_008_reject_path_for_total_goal ... ok
+test tests::fr_civ_diplo_008_select_war_goal_v2_blocks_llm ... ok
+test tests::fr_civ_diplo_008_select_war_goal_v2_partitions_three_branches ... ok
+test tests::identical_ingest_sequences_produce_identical_states_and_events ... ok
+test tests::overlapping_thresholds_rejected ... ok
+test tests::pair_is_canonical_and_symmetric ... ok
+test tests::pair_with_equal_actors_is_self ... ok
+test tests::positive_hostile_threshold_rejected ... ok
+test tests::schema_version_is_positive ... ok
+test tests::self_targeted_event_is_ignored ... ok
+test tests::stance_thresholds_partition_real_line ... ok
+test tests::standing_is_clamped_to_max ... ok
+test tests::zero_energy_combat_records_no_standing_change ... ok
+test tests::proptest_bump_direction_is_symmetric ... ok
+test tests::proptest_event_sequence_is_deterministic_under_shuffled_input_pairs ... ok
+test tests::proptest_decay_converges_to_neutral ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_economy-b7fc8b853fe3cc7b.exe)
+
+running 78 tests
+test allocation::tests::allocate_with_dispatches_per_regime ... ok
+test allocation::tests::allocate_with_never_exceeds_budget ... ok
+test allocation::tests::capitalist_allocator_fills_demand_when_budget_sufficient ... ok
+test allocation::tests::priority_starves_lowest_tier_when_budget_tight ... ok
+test allocation::tests::priority_fills_subsistence_before_luxury ... ok
+test allocation::tests::capitalist_allocator_returns_zero_for_non_positive_inputs ... ok
+test allocation::tests::joule_allocator_matches_planned_at_single_good ... ok
+test allocation::tests::planned_allocator_fills_to_ceiling_then_caps ... ok
+test allocation::tests::capitalist_allocator_rations_proportionally_when_budget_scarce ... ok
+test allocation::tests::priority_tier_orders_subsistence_first ... ok
+test allocation::tests::priority_zero_budget_grants_nothing ... ok
+test institution::tests::collect_taxes_floors_at_zero_for_tiny_rates ... ok
+test institution::tests::collect_taxes_distributes_to_multiple_institutions ... ok
+test institution::tests::collect_taxes_posts_balanced_transfer_at_basis_points_rate ... ok
+test institution::tests::collect_taxes_respects_per_institution_cap ... ok
+test institution::tests::collect_taxes_stops_when_budget_depleted ... ok
+test institution::tests::collect_taxes_with_no_rates_is_no_op ... ok
+test institution::tests::collect_taxes_zero_rate_skips_institution ... ok
+test institution::tests::post_institution_to_institution_conserves_and_non_negative ... ok
+test institution::tests::post_macro_to_institution_conserves_debits_and_credits ... ok
+test institution::tests::post_records_split_debit_and_credit_amounts ... ok
+test institution::tests::post_rejects_negative_institution_balance ... ok
+test institution::tests::post_rejects_self_posting_to_same_institution ... ok
+test institution::tests::post_rejects_self_posting_to_same_macro_account ... ok
+test institution::tests::step_institutions_seeds_defaults ... ok
+test institution::tests::verify_conservation_accepts_legacy_posting_without_split_amounts ... ok
+test institution::tests::verify_conservation_rejects_non_positive_posting_amount ... ok
+test institution::tests::verify_conservation_rejects_self_posting_in_log ... ok
+test institution::tests::verify_conservation_rejects_tampered_posting_amount ... ok
+test market::multigood_tests::bid_price_below_ask_price_emits_no_trades ... ok
+test market::multigood_tests::clear_all_emits_trades_in_ascending_good_id_order ... ok
+test market::multigood_tests::clear_all_is_deterministic_independent_of_insertion_order ... ok
+test market::multigood_tests::empty_book_for_new_good_is_no_op ... ok
+test market::multigood_tests::ensure_book_is_idempotent_and_returns_mutable_handle ... ok
+test market::multigood_tests::leftover_ask_remains_after_larger_ask_partial_fill ... ok
+test market::multigood_tests::orders_past_uncleared_ttl_dropped_on_second_tick ... ok
+test market::multigood_tests::partial_fill_emits_one_trade_of_smaller_qty ... ok
+test market::multigood_tests::simple_book_three_bids_three_asks_clear_at_midpoints ... ok
+test market::tests::apply_pressure_demand_outstrips_supply_lifts_price ... ok
+test market::tests::apply_pressure_floors_at_min_price ... ok
+test market::tests::apply_pressure_floors_price_at_one ... ok
+test market::tests::apply_pressure_keeps_price_when_demand_equals_supply ... ok
+test market::tests::apply_pressure_lowers_price_when_supply_exceeds_demand ... ok
+test market::tests::apply_pressure_raises_price_when_demand_exceeds_supply ... ok
+test market::tests::apply_pressure_self_heals_for_new_good ... ok
+test market::tests::apply_pressure_supply_outstrips_demand_drops_price ... ok
+test market::tests::apply_pressure_zero_supply_zero_demand_is_neutral ... ok
+test market::tests::ensure_good_is_idempotent ... ok
+test market::tests::mean_clearing_price_averages_existing_goods ... ok
+test market::tests::mean_clearing_price_is_none_when_empty ... ok
+test market::tests::mean_clearing_price_reflects_apply_pressure_changes ... ok
+test market::tests::prices_accessor_returns_same_map_reference ... ok
+test market::tests::step_is_deterministic_for_same_tick ... ok
+test market::tests::step_no_op_when_zero_supply ... ok
+test market::tests::step_single_good_updates_only_that_good ... ok
+test market::tests::step_updates_exactly_one_price_from_tick ... ok
+test stocks::tests::apply_trade_conserves_total_stock ... ok
+test stocks::tests::comparative_advantage_picks_max_surplus_good ... ok
+test stocks::tests::deficit_was_clamped_detects_only_real_clamps ... ok
+test stocks::tests::production_and_consumption_getters_return_profile_rates ... ok
+test stocks::tests::propose_trade_returns_none_without_mutual_benefit ... ok
+test stocks::tests::step_conserves_and_clamps_to_zero ... ok
+test stocks::tests::surplus_and_deficit_signs_are_correct ... ok
+test stocks::tests::trade_gain_reflects_specialization_difference ... ok
+test tests::drain_energy_budget_clamps_at_zero ... ok
+test tests::drain_energy_budget_records_ledger_entry ... ok
+test tests::schema_version_present ... ok
+test tests::step_appends_entry_when_budget_changed ... ok
+test tests::verify_ledger_conservation_rejects_oversized_ledger ... ok
+test allocation::tests::priority_total_within_budget ... ok
+test allocation::tests::capitalist_allocator_never_negative ... ok
+test allocation::tests::capitalist_allocator_never_exceeds_budget ... ok
+test market::tests::apply_pressure_keeps_prices_positive ... ok
+test stocks::tests::comparative_advantage_is_global_maximum ... ok
+test stocks::tests::add_and_step_never_produce_negative_stock ... ok
+test stocks::tests::apply_trade_conserves_total_for_valid_offers ... ok
+test market::tests::prices_remain_positive_after_n_steps ... ok
+test market::tests::same_tick_sequence_yields_identical_prices ... ok
+
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\allocation_behavior.rs (E:/cargo-target\debug\deps\allocation_behavior-9879c915151a37d3.exe)
+
+running 21 tests
+test scenario_all_regimes_return_zero_when_budget_is_zero ... ok
+test scenario_all_regimes_return_zero_when_demand_is_zero ... ok
+test scenario_all_tiers_fully_met_when_budget_is_sufficient ... ok
+test scenario_allocate_with_dispatches_all_three_regimes_correctly ... ok
+test scenario_capitalist_allocator_rations_proportionally_when_budget_is_scarce ... ok
+test scenario_allocate_with_never_exceeds_budget_for_any_regime ... ok
+test scenario_negative_budget_grants_nothing_across_all_tiers ... ok
+test scenario_partition_sum_never_exceeds_budget ... ok
+test scenario_partition_sum_with_capitalist_engine_rations_at_boundary ... ok
+test scenario_partition_sum_exactly_equals_budget_when_total_demand_exceeds_budget ... ok
+test scenario_planned_allocator_caps_at_budget_when_demand_exceeds_supply ... ok
+test scenario_mixed_tier_ordering_is_resolved_by_priority_not_by_index ... ok
+test scenario_planned_allocator_fills_demand_when_budget_is_sufficient ... ok
+test scenario_lowest_tier_is_starved_when_budget_is_tight ... ok
+test scenario_partition_sum_with_joule_engine_matches_planned_budget_exhaustion ... ok
+test scenario_joule_allocator_matches_planned_behavior_for_single_good ... ok
+test scenario_priority_total_with_single_consumer_and_insufficient_budget ... ok
+test scenario_priority_total_with_single_consumer_and_sufficient_budget ... ok
+test scenario_subsistence_is_filled_before_luxury ... ok
+test scenario_zero_budget_grants_nothing_across_all_tiers ... ok
+test scenario_zero_or_negative_demands_are_skipped_without_consuming_budget ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\economy_coverage.rs (E:/cargo-target\debug\deps\economy_coverage-6fdaceab32d3524e.exe)
+
+running 4 tests
+test multigood_place_order_matches_place_bid_and_place_ask ... ok
+test multigood_with_ttl_keeps_orders_alive_for_custom_ttl ... ok
+test step_does_not_append_tick_close_when_budget_unchanged ... ok
+test verify_ledger_conservation_rejects_unbalanced_entry ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\fr_matrix_batch7.rs (E:/cargo-target\debug\deps\fr_matrix_batch7-9e676dda07d43cb0.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_emergence_metrics-1d74aa92f51c7cf4.exe)
+
+running 68 tests
+test branching::tests::known_stream_yields_expected_sigma_bar_and_regime ... ok
+test branching::tests::rolling_mean_is_deterministic_for_same_push_sequence ... ok
+test branching::tests::sigma_a_ratio_and_zero_actor_guard ... ok
+test branching::tests::rolling_mean_sigma_window_four ... ok
+test dashboard::tests::cluster_entropy_is_permutation_invariant ... ok
+test branching::tests::sigma_score_endpoints_and_clamp ... ok
+test dashboard::tests::cluster_entropy_empty_is_zero ... ok
+test dashboard::tests::diplomacy_tension_extreme_pairs_is_one ... ok
+test dashboard::tests::cluster_entropy_single_cluster_is_zero ... ok
+test dashboard::tests::cluster_entropy_skewed_between_zero_and_one ... ok
+test dashboard::tests::cluster_entropy_three_equal_is_one ... ok
+test dashboard::tests::cluster_entropy_two_equal_clusters_is_one ... ok
+test dashboard::tests::diplomacy_tension_empty_is_zero ... ok
+test dashboard::tests::diplomacy_tension_mixed_magnitudes ... ok
+test dashboard::tests::emerg_emerg_001_dashboard_compute_combines_all_five ... ok
+test dashboard::tests::diplomacy_tension_neutral_pairs_is_zero ... ok
+test dashboard::tests::emerg_emerg_001_dashboard_compute_empty_inputs_yield_documented_defaults ... ok
+test dashboard::tests::ideology_homophily_all_in_one_bin_is_one ... ok
+test dashboard::tests::ideology_homophily_empty_is_zero ... ok
+test dashboard::tests::ideology_homophily_uniform_spread_is_one_over_n_bins ... ok
+test dashboard::tests::ideology_homophily_zero_bin_width_falls_back_to_default ... ok
+test dashboard::tests::psyche_stability_empty_is_one ... ok
+test dashboard::tests::psyche_stability_full_spread_clamps_to_zero ... ok
+test dashboard::tests::psyche_stability_mild_spread_between_zero_and_one ... ok
+test dashboard::tests::psyche_stability_single_agent_is_one ... ok
+test dashboard::tests::psyche_stability_uniform_mood_is_one ... ok
+test dashboard::tests::sentience_fraction_all_sentient_is_one ... ok
+test dashboard::tests::sentience_fraction_clamps_when_sentient_exceeds_total ... ok
+test dashboard::tests::sentience_fraction_half_is_half ... ok
+test dashboard::tests::sentience_fraction_no_agents_is_zero ... ok
+test mutual_information::tests::mi_handles_empty_degenerate ... ok
+test mutual_information::tests::mi_max_for_deterministic_coupling ... ok
+test mutual_information::tests::mi_zero_for_independent_layers ... ok
+test power_law::tests::empty_histogram_returns_zero ... ok
+test power_law::tests::metric_name_is_stable ... ok
+test power_law::tests::power_law_fit_on_perfect_data ... ok
+test power_law::tests::power_law_fit_on_uniform_data_has_low_r_squared ... ok
+test power_law::tests::power_law_fit_on_zipf_like_data ... ok
+test power_law::tests::single_bin_returns_zero ... ok
+test power_law::tests::trait_compute_returns_alpha ... ok
+test shannon::tests::dirac_is_zero ... ok
+test shannon::tests::empty_histogram_is_zero ... ok
+test shannon::tests::entropy_uniform_vs_peaked ... ok
+test shannon::tests::metric_name_is_stable ... ok
+test shannon::tests::metric_trait_returns_bits ... ok
+test shannon::tests::single_bin_is_zero ... ok
+test shannon::tests::skewed_distribution_between_dirac_and_uniform ... ok
+test shannon::tests::synthetic_uniform_across_many_bins ... ok
+test shannon::tests::two_equal_bins_is_one_bit ... ok
+test shannon::tests::uniform_eight_bins_is_three_bits ... ok
+test shannon::tests::uniform_histogram_is_log2_n ... ok
+test structure::tests::all_background_is_zero_components ... ok
+test structure::tests::checkerboard_3d_has_many_components ... ok
+test structure::tests::compute_on_histogram_returns_largest_fraction ... ok
+test structure::tests::empty_grid_is_zero_components ... ok
+test structure::tests::face_connectivity_does_not_count_corner_touch ... ok
+test structure::tests::full_block_is_one_component ... ok
+test structure::tests::get_returns_value_and_handles_oob ... ok
+test structure::tests::grid_shape_mismatch_rejected ... ok
+test structure::tests::metric_name_is_stable ... ok
+test structure::tests::single_voxel_in_corner_is_one_component ... ok
+test structure::tests::synthetic_two_block_distribution ... ok
+test structure::tests::three_voxels_in_a_row_are_one_component ... ok
+test structure::tests::two_disconnected_voxels_in_face_diagonal ... ok
+test tests::dirac_clamps_hot_index ... ok
+test tests::empty_histogram_p_is_zero ... ok
+test tests::histogram_total_and_p ... ok
+test tests::uniform_and_dirac ... ok
+
+test result: ok. 68 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\emergence_coverage.rs (E:/cargo-target\debug\deps\emergence_coverage-748c7522b920609b.exe)
+
+running 4 tests
+test branching_ledger_closed_total_is_monotonic ... ok
+test branching_regime_label_covers_all_five_arms ... ok
+test classify_regime_boundary_values_agree_with_label ... ok
+test joint_histogram_rows_and_cols_match_construction_dimensions ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (E:/cargo-target\debug\deps\civ_engine-ec8954305759a894.exe)
+
+running 225 tests
+test command_queue::tests::capacity_enforcement ... ok
+test command_queue::tests::drain ... ok
+test command_queue::tests::invalid_speed_rejection ... ok
+test command_queue::tests::len ... ok
+test command_queue::tests::push_pop ... ok
+test emergence::tests::register_seed_file_loads_fixture_and_reports_missing ... ignored, Simulation::register_seed_file and seed_library() not implemented
+test emergence::tests::register_seed_set_merges_and_replaces_ids ... ignored, Simulation::register_seed_set and seed_library() not implemented
+test emergence::tests::set_active_seed_updates_or_rejects_unknown ... ignored, Simulation::set_active_seed and active_seed_id() not implemented
+test emergence::tests::seed_selection_picks_biome_match ... ok
+test emergence::tests::seed_selection_is_deterministic_across_library_ordering ... ok
+test emergence_metrics::tests::emergence_sample_stdout_summary_has_stable_field_order ... ok
+test emergence_metrics::tests::known_event_stream_yields_expected_sigma_bar_and_regime ... ok
+test emergence_metrics::tests::novelty_rate_positive_on_new_configs ... ok
+test emergence_metrics::tests::phase_emergence_events_close_updates_branching_state ... ignored, Simulation::branching_ratio() not implemented
+test emergence_metrics::tests::novelty_rate_zero_on_repeated_identical_config ... ok
+test emergence::tests::agent_social_graph_returns_graph_for_known_agent ... ok
+test conditions::tests::victory_population_threshold ... ok
+test conditions::tests::ongoing_on_fresh_sim ... FAILED
+test emergence::tests::civ_ai_decisions_populated_after_sentience_tick ... FAILED
+test conditions::tests::defeat_extinction ... ok
+test emergence::tests::sentience_events_records_threshold_crossings ... FAILED
+test engine::tests::aggressive_factions_clash_sooner ... ignored, diplomacy_faction_pair() function not implemented
+test engine::tests::aggression_threshold_reduction_bounded ... ok
+test emergence_metrics::tests::sampler_on_two_block_grid_matches_direct_pass ... ok
+test engine::tests::choose_named_seed_empty_is_round_robin ... ignored, choose_named_seed() function not implemented
+test engine::tests::choose_named_seed_single_seed_all_that_race ... ignored, choose_named_seed() function not implemented
+test engine::tests::choose_named_seed_weighted_distribution ... ignored, choose_named_seed() function not implemented
+test engine::tests::chronicle_dedups_age ... ignored, WorldState::chronicle_age field, Simulation::phase_chronicle() and chronicle() not implemented
+test engine::tests::chronicle_is_length_capped ... ignored, WorldState::chronicle field and Simulation::phase_chronicle() and chronicle() not implemented
+test engine::tests::chronicle_records_tech_breakthroughs ... ignored, WorldState::research_progress field, Simulation::phase_tech() and phase_chronicle() and chronicle() not implemented
+test emergence_metrics::tests::emerg_emerg_001_dashboard_block_populated_from_ecs ... ok
+test engine::tests::canonical_faction_pair_orders_ascending ... ok
+test emergence_metrics::tests::sampler_on_uniform_solid_cube_is_dirac_and_one_component ... ok
+test emergence_metrics::tests::sampler_no_op_on_non_sample_ticks ... ok
+test engine::tests::apply_scenario_military_wires_overrides_and_clamps_range ... ok
+test emergence_metrics::tests::power_law_alpha_zero_when_too_few_clusters ... ok
+test emergence_metrics::tests::mi_material_faction_some_with_coupling ... ok
+test emergence_metrics::tests::power_law_alpha_populated_on_distribution ... ok
+test engine::tests::combat_events_extend_replay_hash_chain ... ok
+test emergence_metrics::tests::mi_material_faction_none_without_factions ... FAILED
+test engine::tests::emergent_route_goods_is_deterministic_and_covers_all_labels ... ok
+test emergence_metrics::tests::sampler_fires_on_sample_ticks_and_caches ... ok
+test emergence_metrics::tests::emerg_emerg_002_dashboard_is_deterministic_same_seed ... ok
+test engine::tests::daytime_cycles_across_one_full_day ... ok
+test engine::tests::faction_unrest_delta_from_shadow_sign_and_clamp ... ok
+test engine::tests::faction_wealth_scarcity_shadow_edge_cases ... ok
+test engine::tests::climate_recomputes_every_tick ... ok
+test engine::tests::configure_military_fog_sets_radius_and_clamps_grid ... ok
+test engine::tests::custom_policy_signals_propagate_to_simulation ... ok
+test engine::tests::default_policy_is_noop ... ok
+test engine::tests::job_type_for_civilian_id_deterministic_split ... ok
+test engine::tests::language_diplomacy_tests::bonus_bounded_and_monotonic ... ok
+test engine::tests::language_diplomacy_tests::identical_language_max_bonus_more_peaceful ... ok
+test engine::tests::faction_aggression_rebuilt_each_tick ... ok
+test engine::tests::language_diplomacy_tests::missing_language_legacy_threshold_unchanged ... ok
+test engine::tests::n10_kinship_coupling_boosts_cohesion_basic ... ignored, Simulation::cohesion() not implemented
+test engine::tests::engine_tick_includes_climate_in_snapshot ... ok
+test engine::tests::last_cohort_stats_reflects_population ... ok
+test engine::tests::fr_core_001_single_tick_event_per_tick ... ok
+test engine::tests::n10_kinship_decay_factor_bounds ... ok
+test engine::tests::n10_avg_faction_kinship_computes_zero_for_empty_world ... ok
+test engine::tests::n11_drift_factor_bounds ... ok
+test engine::tests::n12_affinity_bias_direction_and_bounds ... ok
+test engine::tests::n10_avg_faction_kinship_computes_mean_correctly ... ok
+test engine::tests::n12_high_affinity_keeps_factions_trading ... ignored, diplomacy_faction_pair() function not implemented
+test engine::tests::n11_avg_psyche_maturity_computes_mean ... ok
+test engine::tests::n11_avg_psyche_maturity_zero_for_empty_world ... ok
+test engine::tests::n12_avg_social_affinity_computes_mean_and_clamps ... ok
+test engine::tests::n12_avg_social_affinity_zero_for_empty_world ... ok
+test engine::tests::phase_order_includes_emergence ... FAILED
+test engine::tests::phase_economy_conserves_non_negative_budget ... ok
+test engine::tests::phase_order_matches_tick_sequence ... ok
+test engine::tests::phase_economy_updates_economy_state ... ok
+test engine::tests::pending_damage_drains_and_reduces_chunk_count ... ok
+test engine::tests::phase_economy_steps_market_prices ... ok
+test engine::tests::phase_voxel_ca_none_is_noop ... ignored, Simulation::phase_voxel_ca and last_tick_abiogenesis_sites() not implemented
+test engine::tests::phase_voxel_ca_warm_water_is_viable_stone_is_not ... ignored, Simulation::phase_voxel_ca and last_tick_abiogenesis_sites() not implemented
+test engine::tests::phase_policy_populates_last_control_signals ... ok
+test engine::tests::phase_policy_runs_before_phase_economy ... ok
+test engine::tests::phase_economy_uses_capitalist_allocator ... ok
+test engine::tests::push_damage_records_damage_event ... ok
+test engine::tests::phase_policy_runs_every_tick ... ok
+test engine::tests::replay_ca_dirty_chunk_bit_identical ... ok
+test engine::tests::replay_combat_events_restore_pending_damage ... ok
+test engine::tests::replay_log_round_trips_through_save_load ... ok
+test engine::tests::replay_reproduces_final_voxel_chunk_count_and_tick ... ok
+test engine::tests::replay_logs_converge_to_identical_voxel_state ... ok
+test engine::tests::route_resource_maps_known_goods ... ok
+test engine::tests::scenario_faction_spawn_honors_counts ... ignored, Simulation::with_seed_and_starting_conditions() not implemented
+test engine::tests::set_policy_replaces_active_policy ... ok
+test engine::tests::simulation_tick_produces_replay_tick_event ... ok
+test engine::tests::startup_spawns_128_civilians ... ok
+test engine::tests::civreplay_save_load_restores_tick_after_ticks ... ok
+test engine::tests::replay_combat_drains_to_same_voxel_state_as_live ... ok
+test engine::tests::test_faction_archetype_variety ... FAILED
+test emergence::tests::psyche_phase_mutates_mood_over_ticks ... FAILED
+test engine::tests::test_tick_advances ... ok
+test engine::tests::test_zero_divergence_exact ... ok
+test emergence::tests::civ_ai_phase_leaves_observable_emergence_state ... FAILED
+test engine::tests::snapshot_damage_events_reflects_last_tick_pulses ... ok
+test engine::tests::tick_with_emergence_source_advances_tick_and_differs_on_ca_grid ... ignored, Simulation::tick_with_emergence_source() not implemented
+test engine::tests::test_initial_entities ... ok
+test engine::tests::phase_buildings_allocates_over_time_when_signals_are_high ... ok
+test engine::tests::test_seed_spawn_determinism ... FAILED
+test engine::tests::cold_tier_diffusion_only_on_cadence_boundaries ... ok
+test engine::tests::tide_offset_shifts_coastal_voxel_height ... ok
+test engine::tests::voxel_phase_replay_is_bit_identical ... ok
+test engine::tests::voxel_phase_drains_dirty_events_each_tick ... ok
+test engine::tests::weather_grid_temperature_varies_with_year_phase ... ok
+test engine::tests::tick_invokes_emergence_phase ... ok
+test engine::tests::with_seed_default_policy_is_noop ... ok
+test hash_chain::tests::chain_is_deterministic ... ok
+test hash_chain::tests::chain_root_from_ticks_matches_incremental ... ok
+test hash_chain::tests::tick_hash_uses_blake3_not_sha256 ... ok
+test hash_chain::tests::hash_hex_is_lowercase_64_chars ... ok
+test hash_chain::tests::combat_payload_extends_chain ... ok
+test integrity::tests::check_integrity_accepts_after_tick ... ok
+test hash_chain::tests::replay_hash_chain_differs_when_climate_changes ... ok
+test hash_chain::tests::tamper_changes_hash ... ok
+test integrity::tests::check_integrity_accepts_fresh_simulation ... ok
+test integrity::tests::check_integrity_rejects_invariant_violation ... ok
+test invariants::tests::check_tick_invariants_accepts_simulation_with_economy_ledger ... ok
+test emergence::tests::legends_phase_ingests_death_events ... FAILED
+test integrity::tests::check_integrity_after_replay_load ... ok
+test engine::tests::phase_tactics_evolve_doctrine_on_cadence ... ok
+test invariants::tests::unbalanced_ledger_entry_rejected ... ok
+test invariants::tests::check_tick_invariants_rejects_oversized_ledger ... ok
+test integrity::tests::replay_log_without_stored_hash_skips_chain_check ... ok
+test integrity::tests::check_integrity_rejects_tampered_hash_chain ... ok
+test lod::tests::gestalt_no_divergence ... ok
+test lod::tests::lod_policy_default_matches_agents_cadence ... ok
+test lod::tests::operational_hex_data_visible ... ok
+test lod::tests::should_tick_entity_rejects_zero_warm_cadence - should panic ... ok
+test lod::tests::should_tick_entity_respects_modulo_cadence ... ok
+test lod::tests::transition_no_state_mutation ... ok
+test lod::tests::two_levels_defined ... ok
+test metrics::tests::compute_fixed_clamps_negative_inputs ... ok
+test metrics::tests::compute_fixed_matches_float_within_six_decimals ... ok
+test lod::tests::strategic_aggregation ... ok
+test metrics::tests::compute_sanitizes_non_finite_inputs ... ok
+test invariants::tests::empty_ledger_skips_growth_check ... ok
+test invariants::tests::negative_economy_budget_rejected_when_ledger_nonempty ... ok
+test metrics::tests::test_metrics_clamp_over_budget ... ok
+test metrics::tests::test_tyranny_index ... ok
+test metrics::tests::test_metrics_basic ... ok
+test perf::tests::clear_resets_phases_and_total ... ok
+test perf::tests::phases_over_budget_selects_only_offenders ... ok
+test perf::tests::record_accumulates_total ... ok
+test perf::tests::slowest_picks_max_duration_phase ... ok
+test perf::tests::tick_over_budget_compares_total ... ok
+test policy::tests::capitalist_policy_evaluate_is_default ... ok
+test policy::tests::capitalist_policy_name ... ok
+test policy::tests::consumption_non_negative ... ok
+test policy::tests::noop_policy_evaluate_returns_default ... ok
+test policy::tests::noop_policy_name ... ok
+test policy::tests::policy_from_kind_subsistence_first ... ok
+test policy::tests::policy_from_kind_unknown_falls_back_to_noop ... ok
+test policy::tests::policy_from_kind_capitalist ... ok
+test policy::tests::policy_from_kind_empty_string_falls_back_to_noop ... ok
+test policy::tests::subsistence_first_policy_evaluate_is_default ... ok
+test policy::tests::subsistence_first_policy_name ... ok
+test replay::tests::mod_permission_violation_records_bus_json_at_tick ... ok
+test replay::tests::session_saved_records_bus_json_at_tick ... ok
+test replay::tests::rng_draw_records_event_and_counts ... ok
+test replay_format::tests::civreplay_rejects_all_zero_footer ... ok
+test replay_format::tests::civreplay_rejects_hash_chain_mismatch ... ok
+test replay::tests::session_saved_round_trips_through_save_load ... ok
+test io::tests::test_read_write ... ok
+test replay::tests::rng_draw_round_trips_through_save_load ... ok
+test replay_format::tests::civreplay_rejects_tampered_footer ... ok
+test replay_format::tests::civreplay_rejects_tampered_payload ... ok
+test replay_format::tests::civreplay_roundtrip_preserves_running_hash ... ok
+test emergence::tests::culture_phase_drifts_cluster_profiles ... ok
+test replay_format::tests::civreplay_roundtrip_preserves_replay_log ... ok
+test scenario::tests::baseline_yaml_parses ... ok
+test replay_format::tests::civreplay_roundtrip_empty_log ... ok
+test scenario::tests::parse_error_includes_field_path ... ok
+test scenario::tests::preset_three_race_balanced_has_three_seeds ... ok
+test scenario::tests::rejects_empty_name ... ok
+test scenario::tests::preset_single_race_is_monocultural ... ok
+test scenario::tests::all_presets_load_and_validate ... ok
+test save_bundle::tests::civsave_folder_round_trips_mod_guest_state ... ok
+test scenario::tests::rejects_negative_scarcity ... ok
+test engine::tests::replay_round_trip_preserves_combat_events ... ok
+test scenario::tests::scenario_divergence_override_parses_and_validates ... ok
+test scenario::tests::mod_guest_state_exports_after_baseline_load ... ok
+test scenario::tests::scenario_fog_wires_military_phase ... ok
+test engine::tests::phase_diffusion_bumps_wardrobe_eras ... ok
+test scenario::tests::scenario_military_wires_military_phase ... ok
+test scenario::tests::scenario_mods_loads_example_policy ... ok
+test scenario::tests::scenario_policy_capitalist_installs_capitalist_policy ... ok
+test scenario::tests::scenario_seed_mix_absent_is_empty_default ... ok
+test scenario::tests::scenario_policy_signals_propagate_through_tick ... ok
+test scenario::tests::scenario_starting_conditions_defaults ... ok
+test scenario::tests::scenario_economy_policy_affects_consumption ... ok
+test scenario::tests::scenario_seed_mix_zero_weight_is_invalid ... ok
+test scenario::tests::scenario_seed_mix_negative_weight_is_invalid ... ok
+test scenario::tests::scenario_seed_mix_parses_and_validates ... ok
+test scenario::tests::scenario_starting_conditions_validates_faction_count_zero ... ok
+test scenario::tests::scenario_starting_conditions_parses ... ok
+test save_bundle::tests::civsave_archive_round_trips_mod_guest_state ... ok
+test scenario::tests::scenario_starting_conditions_validates_faction_count_too_high ... ok
+test spawn::tests::spawn_military_and_airport_insert_components ... ok
+test scenario::tests::scenario_policy_subsistence_first_installs_subsistence_first_policy ... ok
+test scenario::tests::scenario_unknown_policy_kind_falls_back_to_noop ... ok
+test scenario::tests::scenario_without_policy_field_defaults_to_noop ... ok
+test spawn::tests::norm_to_grid_maps_center ... ok
+test spectator::tests::civ_pins_include_job_when_citizen_component_present ... ok
+test spawn::tests::norm_to_grid_rejects_non_finite_coords - should panic ... ok
+test tests::determinism_same_seed_same_output ... ok
+test scenario::tests::starting_conditions_spawns_expected_count ... FAILED
+test spectator::tests::civ_pins_reflect_spawned_agent_coordinates ... ok
+test spectator::tests::spectator_view_has_pins_after_startup ... ok
+test tests::step_advances_tick ... ok
+test tests::step_decreases_energy ... ok
+test tests::step_energy_floor_at_zero ... ok
+test spectator::tests::fr_civ_web_003_spectator_view_read_only_and_deterministic ... ok
+test engine::tests::replay_combat_log_deterministic_for_seed_rerun ... ok
+test engine::tests::war_bridge_records_combat_replay_events ... ok
+test engine::tests::tick_invariants_hold_across_many_ticks ... ok
+test integrity::tests::check_integrity_across_many_ticks ... ok
+test engine::tests::determinism_holds_with_all_phases_enabled ... ok
+test engine::tests::test_determinism ... ok
+test engine::tests::compact_runs_every_64_ticks ... ok
+test scenario::tests::baseline_scenario_headless_smoke has been running for over 60 seconds
+test scenario::tests::baseline_scenario_headless_smoke ... ok
+
+failures:
+
+---- conditions::tests::ongoing_on_fresh_sim stdout ----
+
+thread 'conditions::tests::ongoing_on_fresh_sim' (103628) panicked at crates\engine\src\conditions.rs:98:9:
+assertion `left == right` failed
+  left: Victory("Thriving Civilization")
+ right: Ongoing
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- emergence::tests::civ_ai_decisions_populated_after_sentience_tick stdout ----
+
+thread 'emergence::tests::civ_ai_decisions_populated_after_sentience_tick' (105008) panicked at crates\engine\src\emergence.rs:1025:9:
+sentience tick should produce civ-ai decisions
+
+---- emergence::tests::sentience_events_records_threshold_crossings stdout ----
+
+thread 'emergence::tests::sentience_events_records_threshold_crossings' (53232) panicked at crates\engine\src\emergence.rs:1042:9:
+low threshold should yield crossings
+
+---- emergence_metrics::tests::mi_material_faction_none_without_factions stdout ----
+emergence sample: entropy=0.0000 structures=0 power_law_alpha=0.0000 novelty_rate=0.000113 mi_material_faction=0.0000
+
+thread 'emergence_metrics::tests::mi_material_faction_none_without_factions' (101908) panicked at crates\engine\src\emergence_metrics.rs:1381:9:
+no faction-aligned citizens → MI must be None, got Some(0.0)
+
+---- engine::tests::phase_order_includes_emergence stdout ----
+
+thread 'engine::tests::phase_order_includes_emergence' (119920) panicked at crates\engine\src\engine.rs:3398:14:
+PHASE_ORDER must include 'emergence'
+
+---- engine::tests::test_faction_archetype_variety stdout ----
+
+thread 'engine::tests::test_faction_archetype_variety' (122380) panicked at crates\engine\src\engine.rs:5337:9:
+assertion `left == right` failed: all 128 civilians must carry Dna
+  left: 0
+ right: 128
+
+---- emergence::tests::psyche_phase_mutates_mood_over_ticks stdout ----
+
+thread 'emergence::tests::psyche_phase_mutates_mood_over_ticks' (111964) panicked at crates\engine\src\emergence.rs:782:48:
+psyche attached
+
+---- emergence::tests::civ_ai_phase_leaves_observable_emergence_state stdout ----
+
+thread 'emergence::tests::civ_ai_phase_leaves_observable_emergence_state' (111236) panicked at crates\engine\src\emergence.rs:821:9:
+psyche component should attach
+
+---- engine::tests::test_seed_spawn_determinism stdout ----
+
+thread 'engine::tests::test_seed_spawn_determinism' (118564) panicked at crates\engine\src\engine.rs:5306:9:
+at least one entity must carry DNA
+
+---- emergence::tests::legends_phase_ingests_death_events stdout ----
+
+thread 'emergence::tests::legends_phase_ingests_death_events' (117464) panicked at crates\engine\src\emergence.rs:764:9:
+expected saga graph growth or emergence feed entries
+
+---- scenario::tests::starting_conditions_spawns_expected_count stdout ----
+
+thread 'scenario::tests::starting_conditions_spawns_expected_count' (121544) panicked at crates\engine\src\scenario.rs:873:9:
+assertion `left == right` failed: expected 2 civilians × 3 factions = 6
+  left: 128
+ right: 6
+
+
+failures:
+    conditions::tests::ongoing_on_fresh_sim
+    emergence::tests::civ_ai_decisions_populated_after_sentience_tick
+    emergence::tests::civ_ai_phase_leaves_observable_emergence_state
+    emergence::tests::legends_phase_ingests_death_events
+    emergence::tests::psyche_phase_mutates_mood_over_ticks
+    emergence::tests::sentience_events_records_threshold_crossings
+    emergence_metrics::tests::mi_material_faction_none_without_factions
+    engine::tests::phase_order_includes_emergence
+    engine::tests::test_faction_archetype_variety
+    engine::tests::test_seed_spawn_determinism
+    scenario::tests::starting_conditions_spawns_expected_count
+
+test result: FAILED. 197 passed; 11 failed; 17 ignored; 0 measured; 0 filtered out; finished in 87.26s
+
+error: test failed, to rerun pass `-p civ-engine --lib`

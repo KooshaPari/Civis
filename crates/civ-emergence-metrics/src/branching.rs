@@ -273,4 +273,159 @@ mod tests {
         );
         assert_eq!(classify_regime(explosion_bar), BranchingRegime::Supercritical);
     }
+
+    // ---- classify_regime: all five bands ----
+
+    #[test]
+    fn classify_regime_subcritical_transition_band() {
+        // [0.85, 0.95) → SubcriticalTransition
+        assert_eq!(
+            classify_regime(0.85),
+            BranchingRegime::SubcriticalTransition,
+            "σ̄=0.85 (= SIGMA_SUBCRITICAL) must be SubcriticalTransition"
+        );
+        assert_eq!(
+            classify_regime(0.90),
+            BranchingRegime::SubcriticalTransition,
+            "σ̄=0.90 must be SubcriticalTransition"
+        );
+        // Just below the edge-of-chaos lower bound
+        assert_eq!(
+            classify_regime(SIGMA_EDGE_LOW - 1e-4),
+            BranchingRegime::SubcriticalTransition,
+            "σ̄ just below SIGMA_EDGE_LOW must be SubcriticalTransition"
+        );
+    }
+
+    #[test]
+    fn classify_regime_near_supercritical_band() {
+        // (0.99, 1.0] → NearSupercritical
+        assert_eq!(
+            classify_regime(0.995),
+            BranchingRegime::NearSupercritical,
+            "σ̄=0.995 must be NearSupercritical"
+        );
+        assert_eq!(
+            classify_regime(SIGMA_SUPERCRITICAL),
+            BranchingRegime::NearSupercritical,
+            "σ̄=SIGMA_SUPERCRITICAL (1.0) must be NearSupercritical, not Supercritical"
+        );
+    }
+
+    #[test]
+    fn classify_regime_supercritical_above_one() {
+        assert_eq!(
+            classify_regime(1.001),
+            BranchingRegime::Supercritical,
+            "σ̄ just above 1.0 must be Supercritical"
+        );
+        assert_eq!(
+            classify_regime(2.0),
+            BranchingRegime::Supercritical,
+            "σ̄=2.0 must be Supercritical"
+        );
+    }
+
+    // ---- BranchingRegime::label ----
+
+    #[test]
+    fn branching_regime_labels_are_stable() {
+        assert_eq!(BranchingRegime::HeatDeath.label(), "Subcritical (heat-death risk)");
+        assert_eq!(
+            BranchingRegime::SubcriticalTransition.label(),
+            "Subcritical → critical transition"
+        );
+        assert_eq!(BranchingRegime::EdgeOfChaos.label(), "Edge of chaos (target)");
+        assert_eq!(BranchingRegime::NearSupercritical.label(), "Near-supercritical");
+        assert_eq!(BranchingRegime::Supercritical.label(), "Supercritical (explosion risk)");
+    }
+
+    // ---- rolling_mean_sigma: edge cases ----
+
+    #[test]
+    fn rolling_mean_sigma_window_zero_is_zero() {
+        let mut ledger = BranchingLedger::with_capacity(4);
+        ledger.push_closed(0.9, 5, 1);
+        assert_eq!(
+            rolling_mean_sigma(&ledger, 0),
+            0.0,
+            "window=0 must return 0.0 (no window)"
+        );
+    }
+
+    #[test]
+    fn rolling_mean_sigma_window_larger_than_ledger() {
+        // Push 3 entries into a capacity-8 ledger, then request window=10.
+        // Should use only the 3 available entries.
+        let mut ledger = BranchingLedger::with_capacity(8);
+        for sigma in [0.8, 1.0, 0.9] {
+            ledger.push_closed(sigma, 1, 0);
+        }
+        let mean = rolling_mean_sigma(&ledger, 10);
+        // expected = (0.8 + 1.0 + 0.9) / 3 = 0.9
+        assert!(
+            (mean - 0.9).abs() < 1e-5,
+            "window larger than ledger must average all entries: expected 0.9, got {mean}"
+        );
+    }
+
+    #[test]
+    fn rolling_mean_sigma_empty_ledger_is_zero() {
+        let ledger = BranchingLedger::with_capacity(4);
+        assert_eq!(
+            rolling_mean_sigma(&ledger, 4),
+            0.0,
+            "empty ledger must return 0.0"
+        );
+    }
+
+    // ---- BranchingLedger ring-buffer eviction ----
+
+    #[test]
+    fn ledger_ring_evicts_oldest_at_capacity() {
+        // Capacity-2 ledger: push 3 entries; first must be evicted.
+        let mut ledger = BranchingLedger::with_capacity(2);
+        ledger.push_closed(0.1, 1, 1); // evicted on third push
+        ledger.push_closed(0.9, 1, 2);
+        ledger.push_closed(0.7, 1, 3);
+        assert_eq!(ledger.len(), 2, "len must equal capacity after eviction");
+        // Mean of the last 2: (0.9 + 0.7) / 2 = 0.8
+        let mean = rolling_mean_sigma(&ledger, 2);
+        assert!(
+            (mean - 0.8).abs() < 1e-5,
+            "evicted ledger mean must be 0.8, got {mean}"
+        );
+    }
+
+    #[test]
+    fn ledger_closed_total_is_monotonic() {
+        let mut ledger = BranchingLedger::with_capacity(2);
+        assert_eq!(ledger.closed_total(), 0);
+        ledger.push_closed(0.9, 1, 1);
+        assert_eq!(ledger.closed_total(), 1);
+        ledger.push_closed(0.8, 1, 2);
+        assert_eq!(ledger.closed_total(), 2);
+        // Exceeds ring capacity — total still increments
+        ledger.push_closed(0.7, 1, 3);
+        assert_eq!(ledger.closed_total(), 3);
+    }
+
+    // ---- sigma_score: mid-range value ----
+
+    #[test]
+    fn sigma_score_midpoint_of_band() {
+        // Midpoint of [SIGMA_SUBCRITICAL, SIGMA_EDGE_HIGH] should give ≈ 0.5
+        let mid = (SIGMA_SUBCRITICAL + SIGMA_EDGE_HIGH) / 2.0;
+        let score = sigma_score(mid);
+        assert!(
+            (score - 0.5).abs() < 1e-4,
+            "midpoint of SOC band should give score≈0.5, got {score}"
+        );
+    }
+
+    #[test]
+    fn sigma_score_below_subcritical_clamps_to_zero() {
+        assert_eq!(sigma_score(0.0), 0.0, "σ̄=0.0 must clamp to 0.0");
+        assert_eq!(sigma_score(-1.0), 0.0, "negative σ̄ must clamp to 0.0");
+    }
 }

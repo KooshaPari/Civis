@@ -1,0 +1,24 @@
+﻿## Summary
+
+- Adds `crates/server/tests/integration.rs` with 6 end-to-end JSON-RPC integration tests covering the WebSocket bridge
+- Tests follow the exact import and helper pattern from `ws_smoke.rs`
+- Traces to FR-CIV-TEST-004
+
+## Tests
+
+| # | Test | Method | Assertion |
+|---|------|--------|-----------|
+| 1 | `test_sim_reset_clears_state` | `sim.reset` | `result.tick == 0` |
+| 2 | `test_load_scenario_ardani` | `sim.load_scenario` + `sim.status` | status returns numeric tick after load |
+| 3 | `test_set_speed_accepted` | `sim.set_speed` | response has `result`, no `error` |
+| 4 | `test_god_action_smite` | `sim.god_action` | response has `result`, no `error` |
+| 5 | `test_outcome_ongoing_at_start` | `sim.reset` + `sim.outcome` | `result.outcome == "ongoing"` |
+| 6 | `test_perf_returns_last_tick_ms` | `sim.perf` | `result.last_tick_ms` is a number |
+
+Note: `sim.era` does not exist in jsonrpc.rs; test 6 uses `sim.perf`/`last_tick_ms` instead (FR-CIV-PERF-001).
+
+## Test plan
+- [ ] `cargo test -p civ_server --test integration` passes
+- [ ] CI green
+
+Generated with Claude Code

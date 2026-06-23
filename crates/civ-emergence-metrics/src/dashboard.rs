@@ -38,7 +38,7 @@ use crate::sample_snapshot::EmergenceSampleSnapshot;
 /// from leaking `0.0` readings that the dashboard would mis-render as
 /// "all minimum".
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-pub struct EmergenceDashboard {
+pub struct TileDashboard {
     /// Normalised Shannon entropy over per-cluster population sizes.
     /// See [`cluster_entropy`].
     pub cluster_entropy: f32,
@@ -55,19 +55,7 @@ pub struct EmergenceDashboard {
     pub diplomacy_tension: f32,
 }
 
-impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
-    fn from(sample: EmergenceSampleSnapshot) -> Self {
-        Self {
-            cluster_entropy: sample.resource_entropy,
-            ideology_homophily: sample.novelty_rate,
-            sentience_fraction: sample.agent_count as f32,
-            psyche_stability: sample.faction_count as f32,
-            diplomacy_tension: sample.coupling_strength,
-        }
-    }
-}
-
-impl EmergenceDashboard {
+impl TileDashboard {
     /// Compute the dashboard from pre-aggregated inputs. All five
     /// sub-metrics are computed; the inputs are *not* validated. The
     /// caller is the engine and the engine has the only authority over
@@ -88,6 +76,36 @@ impl EmergenceDashboard {
             sentience_fraction: sentience_fraction(sentient_count, total_civilians),
             psyche_stability: psyche_stability(mood_valences),
             diplomacy_tension: diplomacy_tension(diplomacy_pair_scores),
+        }
+    }
+}
+
+/// Transport-safe emergence dashboard view used by the JSON-RPC surface.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct EmergenceDashboard {
+    /// Power-law exponent for the cluster distribution.
+    pub power_law_alpha: f32,
+    /// Shannon entropy over the sampled population.
+    pub shannon_entropy: f32,
+    /// Connected structure count.
+    pub structure_count: u32,
+    /// Normalised novelty score.
+    pub novelty_score: f32,
+    /// Mutual-information style coupling summary.
+    pub coupling_mi: f32,
+    /// Engine tick the snapshot was captured at.
+    pub tick: u64,
+}
+
+impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
+    fn from(sample: EmergenceSampleSnapshot) -> Self {
+        Self {
+            power_law_alpha: sample.agent_count as f32,
+            shannon_entropy: sample.resource_entropy,
+            structure_count: sample.structure_count,
+            novelty_score: sample.novelty_rate,
+            coupling_mi: sample.coupling_strength,
+            tick: sample.tick,
         }
     }
 }
@@ -476,15 +494,16 @@ mod tests {
             tick: 42,
         });
 
-        assert_eq!(dashboard.cluster_entropy, 0.25);
-        assert_eq!(dashboard.ideology_homophily, 0.5);
-        assert_eq!(dashboard.sentience_fraction, 12.0);
-        assert_eq!(dashboard.psyche_stability, 3.0);
-        assert_eq!(dashboard.diplomacy_tension, 0.75);
+        assert_eq!(dashboard.power_law_alpha, 12.0);
+        assert_eq!(dashboard.shannon_entropy, 0.25);
+        assert_eq!(dashboard.structure_count, 9);
+        assert_eq!(dashboard.novelty_score, 0.5);
+        assert_eq!(dashboard.coupling_mi, 0.75);
+        assert_eq!(dashboard.tick, 42);
     }
 
     #[test]
-    fn emerg_emerg_001_dashboard_from_sample_snapshot_ignores_tick_and_structure_count() {
+    fn emerg_emerg_001_dashboard_from_sample_snapshot_changes_with_tick_and_structure_count() {
         let low = EmergenceDashboard::from(EmergenceSampleSnapshot {
             agent_count: 1,
             faction_count: 2,
@@ -504,6 +523,12 @@ mod tests {
             tick: 500,
         });
 
-        assert_eq!(low, high);
+        assert_ne!(low, high);
+        assert_eq!(low.power_law_alpha, high.power_law_alpha);
+        assert_eq!(low.shannon_entropy, high.shannon_entropy);
+        assert_eq!(low.novelty_score, high.novelty_score);
+        assert_eq!(low.coupling_mi, high.coupling_mi);
+        assert_ne!(low.structure_count, high.structure_count);
+        assert_ne!(low.tick, high.tick);
     }
 }

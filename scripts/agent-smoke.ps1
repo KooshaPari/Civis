@@ -32,8 +32,10 @@ function Test-UnrealUbtAvailable {
     return ($LASTEXITCODE -eq 0)
 }
 
-Push-Location $RepoRoot
-try {
+function Invoke-PlayableGate {
+    # Terrain playability gate: WS + watch + Unreal preflight in series.
+    Write-Host '==> playable gate (WS, watch, Unreal preflight)' -ForegroundColor Cyan
+
     # ws_smoke includes civ_pins[].job asserts (UX-01) in ws_jsonrpc_sim_snapshot_returns_snapshot_fields
     Write-Host '==> civ-server WS smoke (health, snapshot, civ_pins job, spawn palette)' -ForegroundColor Cyan
     & cargo test -p civ-server --quiet --test ws_smoke
@@ -43,34 +45,51 @@ try {
     & cargo test -p civ-watch --quiet
     if ($LASTEXITCODE -ne 0) { exit 1 }
 
+    if ($SkipUnreal) {
+        return
+    }
+
+    $unrealScripts = Join-Path $RepoRoot 'clients\unreal-show\scripts'
+    if ($FullUnreal) {
+        $build = Join-Path $unrealScripts 'build.ps1'
+        if ((Test-UnrealUbtAvailable) -and (Test-Path -LiteralPath $build)) {
+            Write-Host '==> Unreal full build (build.ps1, UBT)' -ForegroundColor Cyan
+            & powershell -NoProfile -ExecutionPolicy Bypass -File $build
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+        }
+        else {
+            Write-Host '==> FullUnreal: no UE_ROOT/UBT — skipping full compile' -ForegroundColor Yellow
+        }
+        return
+    }
+
+    $verify = Join-Path $unrealScripts 'verify-unreal-ready.ps1'
+    if (Test-Path -LiteralPath $verify) {
+        Write-Host '==> Unreal offline preflight' -ForegroundColor Cyan
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $verify
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+    }
+}
+
+Push-Location $RepoRoot
+try {
+    Write-Host '==> civis-3d quick gates (catalog, scenario, mod-host, godot rust)' -ForegroundColor Cyan
+    & just civis-3d-catalog-check
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    & just civis-3d-scenario-check
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    & just civis-3d-mod-check
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    & just godot-test
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+
     if ($IncludeBevy) {
         Write-Host '==> civ-bevy-ref lib tests' -ForegroundColor Cyan
         & cargo test -p civ-bevy-ref --quiet
         if ($LASTEXITCODE -ne 0) { exit 1 }
     }
 
-    if (-not $SkipUnreal) {
-        $unrealScripts = Join-Path $RepoRoot 'clients\unreal-show\scripts'
-        if ($FullUnreal) {
-            $build = Join-Path $unrealScripts 'build.ps1'
-            if ((Test-UnrealUbtAvailable) -and (Test-Path -LiteralPath $build)) {
-                Write-Host '==> Unreal full build (build.ps1, UBT)' -ForegroundColor Cyan
-                & powershell -NoProfile -ExecutionPolicy Bypass -File $build
-                if ($LASTEXITCODE -ne 0) { exit 1 }
-            }
-            else {
-                Write-Host '==> FullUnreal: no UE_ROOT/UBT — skipping full compile' -ForegroundColor Yellow
-            }
-        }
-        else {
-            $verify = Join-Path $unrealScripts 'verify-unreal-ready.ps1'
-            if (Test-Path -LiteralPath $verify) {
-                Write-Host '==> Unreal offline preflight' -ForegroundColor Cyan
-                & powershell -NoProfile -ExecutionPolicy Bypass -File $verify
-                if ($LASTEXITCODE -ne 0) { exit 1 }
-            }
-        }
-    }
+    Invoke-PlayableGate
 
     Write-Host '==> agent-smoke passed' -ForegroundColor Green
     exit 0

@@ -1,0 +1,16 @@
+[package]
+name = "civ-traffic"
+description = "Emergent + user-authored road/traffic/desire-path + vehicle layer for Civis"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+civ-voxel = { path = "../voxel" }
+rand = "0.8"
+rand_chacha = "0.3"
+
+[dev-dependencies]
+ron = "0.8"

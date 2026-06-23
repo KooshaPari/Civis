@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Gas/Steam: rising wispy plumes -->
+  <defs>
+    <filter id="steamBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- base source (small pool) -->
+  <ellipse cx="24" cy="42" rx="10" ry="3" fill="#1a2840" stroke="#50C8F0" stroke-width="1.5" opacity="0.6"/>
+  <!-- left plume -->
+  <path d="M18,42 Q14,34 18,26 Q22,18 16,10"
+    fill="none" stroke="#a0d0e8" stroke-width="3" stroke-linecap="round"
+    opacity="0.55" filter="url(#steamBlur)"/>
+  <!-- center plume (tallest) -->
+  <path d="M24,42 Q20,32 24,22 Q28,12 24,6"
+    fill="none" stroke="#c0e0f0" stroke-width="3.5" stroke-linecap="round"
+    opacity="0.7" filter="url(#steamBlur)"/>
+  <!-- right plume -->
+  <path d="M30,42 Q34,34 30,26 Q26,18 32,10"
+    fill="none" stroke="#a0d0e8" stroke-width="3" stroke-linecap="round"
+    opacity="0.55" filter="url(#steamBlur)"/>
+  <!-- small particles -->
+  <circle cx="20" cy="16" r="2" fill="#c0e8f8" opacity="0.4"/>
+  <circle cx="28" cy="12" r="1.5" fill="#c0e8f8" opacity="0.3"/>
+  <circle cx="16" cy="20" r="1.2" fill="#c0e8f8" opacity="0.35"/>
+</svg>

@@ -1,12 +1,14 @@
-import { evaluatePerfBudget, summarizeFrameSamples } from "./lib/framePerf";
-import { Sparkline } from "./sparkline";
+import { evaluatePerfBudget } from "./lib/framePerf";
+import { formatPerfSummary, Sparkline } from "./sparkline";
 import { useDashboardStore } from "./store";
 
 export function PerfPanel() {
   const { state } = useDashboardStore();
   const { frameSamples, frameSampleSource } = state;
-  const summary = summarizeFrameSamples(frameSamples);
+  const summary = formatPerfSummary(frameSamples);
   const budget = evaluatePerfBudget(frameSamples);
+  const latestMs = frameSamples.length ? frameSamples[frameSamples.length - 1] : 0;
+  const latestFps = latestMs > 0 ? 1000 / latestMs : 0;
 
   const sourceLabel =
     frameSampleSource === "mock" ? "mock (dev)" : frameSampleSource === "attach" ? "attach" : "idle";
@@ -44,8 +46,8 @@ export function PerfPanel() {
         </div>
         <div className="perf-metric">
           <span>Latest</span>
-          <strong>{summary.latestFps.toFixed(0)} fps</strong>
-          <small>{summary.latestMs.toFixed(1)} ms</small>
+          <strong>{latestFps.toFixed(0)} fps</strong>
+          <small>{latestMs.toFixed(1)} ms</small>
         </div>
       </div>
       <Sparkline samples={frameSamples} />

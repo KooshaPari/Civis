@@ -315,16 +315,10 @@ mod tests {
         let b = wc(8, 0, 0);
 
         // Empty world — both directions clear.
-        assert_eq!(
-            line_of_sight(&world, a, b),
-            line_of_sight(&world, b, a)
-        );
+        assert_eq!(line_of_sight(&world, a, b), line_of_sight(&world, b, a));
 
         // Add a blocker.
         world.write(wc(4, 0, 0), MaterialId(1));
-        assert_eq!(
-            line_of_sight(&world, a, b),
-            line_of_sight(&world, b, a)
-        );
+        assert_eq!(line_of_sight(&world, a, b), line_of_sight(&world, b, a));
     }
 }

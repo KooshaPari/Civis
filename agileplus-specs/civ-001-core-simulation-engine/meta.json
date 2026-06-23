@@ -1,0 +1,21 @@
+{
+  "spec_id": "civ-001",
+  "slug": "civ-001-core-simulation-engine",
+  "title": "Core Simulation Engine",
+  "status": "active",
+  "type": "feature",
+  "epic": "E1",
+  "fr_ids": [
+    "FR-CORE-001",
+    "FR-CORE-002",
+    "FR-CORE-003",
+    "FR-CORE-004",
+    "FR-CORE-005",
+    "FR-CORE-006",
+    "FR-CORE-007"
+  ],
+  "created_at": "2026-05-29T00:00:00Z",
+  "updated_at": "2026-05-29T00:00:00Z",
+  "priority": "SHALL",
+  "target_release": "MVP"
+}

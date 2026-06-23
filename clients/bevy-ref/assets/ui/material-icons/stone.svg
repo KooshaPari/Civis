@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Stone: faceted irregular boulder -->
+  <defs>
+    <linearGradient id="stoneFill" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#7a7a8a"/>
+      <stop offset="100%" stop-color="#3a3a48"/>
+    </linearGradient>
+  </defs>
+  <!-- irregular stone polygon -->
+  <polygon points="14,8 34,6 44,18 42,36 30,44 12,42 4,28 8,14"
+    fill="url(#stoneFill)" stroke="#9a9aaa" stroke-width="2" stroke-linejoin="round"/>
+  <!-- facet crack lines -->
+  <line x1="14" y1="8" x2="24" y2="26" stroke="#2a2a38" stroke-width="1.5" opacity="0.6"/>
+  <line x1="34" y1="6" x2="24" y2="26" stroke="#2a2a38" stroke-width="1.5" opacity="0.6"/>
+  <line x1="44" y1="18" x2="24" y2="26" stroke="#2a2a38" stroke-width="1.2" opacity="0.4"/>
+  <line x1="4" y1="28" x2="24" y2="26" stroke="#2a2a38" stroke-width="1.2" opacity="0.4"/>
+  <!-- center facet node -->
+  <circle cx="24" cy="26" r="2" fill="#4a4a5a" opacity="0.7"/>
+  <!-- highlight chip -->
+  <polygon points="16,10 26,8 20,16" fill="#9a9aaa" opacity="0.4"/>
+</svg>

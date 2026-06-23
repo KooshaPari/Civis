@@ -180,6 +180,9 @@ func _normalize_snapshot(result: Dictionary) -> Dictionary:
 		out["military_units"] = military
 	if result.has("is_day"):
 		out["is_day"] = result.get("is_day")
+	var mods = result.get("mods", [])
+	if typeof(mods) == TYPE_ARRAY:
+		out["mods"] = mods
 	return out
 
 func _maybe_refresh_snapshot() -> void:

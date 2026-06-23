@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!--
+    Small-scale Civis icon (16/24/32px source). Same mark as civis-icon.svg but
+    authored for legibility under 32px: thicker neon edges, no scanline/holo-ring
+    fine detail, the silhouette carries the meaning (voxel-world stack + apex spark).
+    License: hand-authored for Civis — project-owned.
+  -->
+  <defs>
+    <linearGradient id="p" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1F28"/>
+      <stop offset="1" stop-color="#07090D"/>
+    </linearGradient>
+    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="0.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="13" fill="url(#p)"
+        stroke="#4A5564" stroke-opacity="0.5" stroke-width="1"/>
+  <g filter="url(#g)">
+    <!-- base tier -->
+    <polygon points="32,46 12,35 32,24 52,35" fill="#0F131A"
+             stroke="#3DF07A" stroke-width="2.6" stroke-linejoin="round"/>
+    <polygon points="12,35 12,42 32,53 32,46" fill="#06080C"
+             stroke="#1E7A45" stroke-width="2" stroke-linejoin="round"/>
+    <polygon points="52,35 52,42 32,53 32,46" fill="#040609"
+             stroke="#1E7A45" stroke-width="2" stroke-linejoin="round"/>
+    <!-- mid tier -->
+    <polygon points="32,32 18,24 32,16 46,24" fill="#0F131A"
+             stroke="#3DF07A" stroke-width="2.4" stroke-linejoin="round"/>
+    <polygon points="18,24 18,30 32,38 32,32" fill="#06080C"
+             stroke="#1E7A45" stroke-width="1.8" stroke-linejoin="round"/>
+    <polygon points="46,24 46,30 32,38 32,32" fill="#040609"
+             stroke="#1E7A45" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+  <!-- apex spark (holo) -->
+  <line x1="32" y1="16" x2="32" y2="9" stroke="#7FE9FF" stroke-width="2"
+        stroke-linecap="round"/>
+  <circle cx="32" cy="8" r="3" fill="#7FE9FF"/>
+</svg>

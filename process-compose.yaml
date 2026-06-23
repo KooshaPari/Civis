@@ -149,8 +149,6 @@ processes:
       period_seconds: 5
       timeout_seconds: 10
     log_location: .process-compose/logs/sim-server.log
-    depends_on:
-      - condition: "healthy"
 
   metrics-collector:
     command: sh

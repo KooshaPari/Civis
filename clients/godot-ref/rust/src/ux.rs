@@ -54,7 +54,7 @@ pub const DEFAULT_ERA_LENGTH_TICKS: u32 = 5_000;
 pub enum SpawnKind {
     /// Civilian entity (wired).
     Civilian,
-    /// Vehicle placeholder.
+    /// Vehicle spawn kind.
     Vehicle,
     /// Airport hub building.
     Airport,

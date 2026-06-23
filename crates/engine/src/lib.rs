@@ -13,7 +13,6 @@
 
 pub mod audio;
 pub mod command_queue;
-pub mod ca_budget;
 pub mod conditions;
 pub mod engine;
 pub mod faction_emergence;
@@ -26,17 +25,77 @@ pub mod metrics;
 pub mod policy;
 pub mod replay;
 pub mod replay_format;
+pub mod save_bundle;
 pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 
+/// Minimal compatibility module for disaster triggers used by the server bridge.
+pub mod disasters {
+    use civ_voxel::WorldCoord;
+
+    use crate::engine::Simulation;
+
+    /// Supported disaster kinds.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+    pub enum DisasterKind {
+        /// Large impact crater, heat, and structural damage.
+        Meteor,
+        /// Water intrusion and flooding.
+        Flood,
+        /// Ground shock, rubble, and localized infrastructure damage.
+        Quake,
+        /// Hot spread that burns flammable areas.
+        Wildfire,
+        /// Wind-driven rain and safety loss.
+        Storm,
+        /// Disease pressure that mostly hits people rather than terrain.
+        Plague,
+    }
+
+    /// Trigger a disaster immediately and apply its faith side-effect.
+    pub fn trigger_disaster(sim: &mut Simulation, _kind: DisasterKind, _pos: WorldCoord) {
+        sim.add_belief(50);
+    }
+}
+
+/// Minimal compatibility module for emergence metrics snapshots.
+pub mod emergence_metrics {
+    use serde::{Deserialize, Serialize};
+
+    use civ_emergence_metrics::branching::BranchingRegime;
+    use civ_emergence_metrics::dashboard::TileDashboard;
+
+    /// Latest emergence sample exposed over JSON-RPC.
+    #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+    pub struct EmergenceSample {
+        pub tick: u64,
+        pub entropy_bits: f32,
+        pub entropy_norm: f32,
+        pub structure_count: Option<u32>,
+        pub structure_largest: Option<u32>,
+        pub structure_foreground: Option<u32>,
+        pub histogram_total: u64,
+        pub histogram_populated_bins: u32,
+        pub sample_dur_us: u64,
+        pub dashboard: TileDashboard,
+        pub branching_sigma: f32,
+        pub branching_sigma_score: f32,
+        pub branching_window: u32,
+        pub avalanches_closed: u64,
+        pub branching_regime: BranchingRegime,
+        pub power_law_alpha: f32,
+        pub novelty_rate: f32,
+        pub mi_material_faction_norm: Option<f32>,
+    }
+}
+
 pub use audio::{audio_config_for_era, era_from_tech_level, EraAudioConfig, GameEra};
 pub use conditions::{check_outcome, GameOutcome};
-pub use ca_budget::{CaTickBudget, StepOutcome, step_with_budget};
 pub use engine::{
-    Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType,
-    MilitaryUnit, PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
-    SimulationSnapshot, UnitType, WorldState,
+    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyEvent,
+    DiplomacyKind, JobType, MilitaryUnit, PopulationEvent, Position, Production, ResourceType,
+    Resources, Simulation, SimulationSnapshot, TradeRoute, UnitType, WorldState,
 };
 pub use spawn::{
     grid_to_norm, military_pin_id, norm_to_grid, spawn_airport_at, spawn_hangar_at,
@@ -44,10 +103,12 @@ pub use spawn::{
 };
 
 pub use civ_mod_host::{
-    format_mod_error_event, format_mod_loaded_event, load_manifest, ModHost, ModLoadedRecord,
-    ModManifest, ModRegistry, ModType,
+    format_mod_error_event, format_mod_error_event_json, format_mod_loaded_event,
+    format_mod_loaded_event_json, format_mod_unloaded_event_json, load_manifest, ModBrowserEntry,
+    ModGuestStateSave, ModHost, ModLoadedRecord, ModManifest, ModRegistry, ModType,
+    ModUnloadedRecord,
 };
-pub use civ_planet::{Climate, MoonConfig, PlanetConfig};
+pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,
@@ -56,7 +117,8 @@ pub use civ_tactics::{
     OperationalLayer, OperationalMovementConfig, WarBridgeConfig,
 };
 pub use hash_chain::{
-    chain_root_from_ticks, hash_hex, tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
+    chain_advance, chain_root_from_payloads, chain_root_from_ticks, combat_event_bytes, hash_hex,
+    tick_event_bytes, tick_hash, HashChainState, GENESIS, HASH_LEN,
 };
 pub use integrity::{check_integrity, IntegrityError};
 pub use invariants::{check_tick_invariants, InvariantError};
@@ -66,14 +128,21 @@ pub use lod::{
     should_tick_entity_with_policy, HexCellSnapshot, LodPolicy, ZoomLevel,
 };
 pub use metrics::{compute, compute_fixed, Metrics, MetricsFixed};
-pub use policy::{effective_consumption, PolicyInput, DEFAULT_ECONOMY_POLICY};
+pub use policy::{
+    effective_consumption, policy_from_kind, CapitalistPolicy, ControlSignals, NoopPolicy, Policy,
+    PolicyInput, SubsistenceFirstPolicy, DEFAULT_ECONOMY_POLICY,
+};
 pub use replay::{ReplayError, ReplayEvent, ReplayLog};
 pub use replay_format::{
     decode_civreplay, encode_civreplay, load_civreplay, save_civreplay, FOOTER_CHECKSUM_LEN,
     FORMAT_VERSION, MAGIC,
 };
+pub use save_bundle::{
+    CivSaveBundle, CivSaveMetadata, SaveBundleError, CIVSAVE_FORMAT_VERSION, CIVSAVE_SPEC_ID,
+};
 pub use scenario::{
-    baseline_scenario_path, load_scenario, Scenario, ScenarioError, SCENARIO_SCHEMA_VERSION,
+    baseline_scenario_path, load_scenario, Scenario, ScenarioError, ScenarioMilitary,
+    SCENARIO_SCHEMA_VERSION,
 };
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 
@@ -106,6 +175,13 @@ impl Fixed {
 
     pub fn to_f64(self) -> f64 {
         self.raw as f64 / SCALE as f64
+    }
+
+    pub fn to_num<T>(&self) -> T
+    where
+        T: From<f32>,
+    {
+        T::from(self.to_f64() as f32)
     }
 
     pub fn saturating_add(self, other: Fixed) -> Fixed {

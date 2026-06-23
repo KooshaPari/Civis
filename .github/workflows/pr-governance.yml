@@ -1,0 +1,166 @@
+# retrigger: 2026-06-21T12:31
+# Local-first merge gate (Phenotype / agileplus pattern).
+# Heavy quality runs locally via lefthook pre-push; cloud CI only verifies the
+# committed `.ci/quality-manifest.json` attestation (see quality.yml).
+name: pr-governance-gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+  checks: read
+  pull-requests: read
+  statuses: read
+
+jobs:
+  pr-governance-gate:
+    name: pr-governance-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify quality manifest (local-first attestation)
+        run: bash scripts/quality/verify-quality-manifest.sh
+
+      - name: Evaluate PR checks (billing bypass)
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const prNumber =
+              context.payload.pull_request?.number ??
+              context.payload.review?.pull_request?.number;
+            if (!prNumber) {
+              core.setFailed("No pull request number was provided.");
+              return;
+            }
+
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    labels(first: 30) { nodes { name } }
+                    commits(last: 1) {
+                      nodes {
+                        commit {
+                          statusCheckRollup {
+                            contexts(first: 100) {
+                              nodes {
+                                __typename
+                                ... on CheckRun {
+                                  name
+                                  status
+                                  conclusion
+                                }
+                                ... on StatusContext {
+                                  context
+                                  state
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: prNumber,
+            });
+
+            const pr = result.repository.pullRequest;
+            const labels = new Set((pr.labels.nodes || []).map((n) => n.name));
+            const billingException =
+              labels.has("ci-billing-exception") || labels.has("local-first-ci");
+
+            // Only these two jobs are required on PRs in local-first mode.
+            // NOTE: must be Array (not Set) — consumed via .some() which Set lacks.
+            const requiredOk = [
+              /^pr-governance-gate$/i,
+              /^quality-manifest/i,
+            ];
+
+            // Third-party / legacy optional checks (never block when local-first label is set).
+            const optionalBypass = [
+              /billing/i,
+              /quota/i,
+              /spending/i,
+              /actions.*limit/i,
+              /^cargo-/i,
+              /^Analyze \(rust\)$/i,
+              /^quality-gate$/i,
+              /^gate$/i,
+              /^coverage$/i,
+              /^links$/i,
+              /^docs-build$/i,
+              /^journey-validate$/i,
+              /^Legacy Tooling/i,
+              /^policy-gate$/i,
+              /^guard$/i,
+              /^semver-checks$/i,
+              /^machete$/i,
+              /^civ-show/i,
+              /^GitGuardian/i,
+              /^Kilo/i,
+              /^semgrep/i,
+              /^SonarCloud/i,
+              /^Cursor Bugbot/i,
+              /^CodeRabbit$/i,
+              /^Rust Module Graph$/i,
+            ];
+
+            const contexts =
+              pr.commits.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
+            const failures = [];
+
+            for (const node of contexts) {
+              const name =
+                node.__typename === "CheckRun" ? node.name : node.context;
+              if (!name || requiredOk.some((re) => re.test(name))) {
+                continue;
+              }
+              if (billingException && optionalBypass.some((re) => re.test(name))) {
+                continue;
+              }
+              if (node.__typename === "CheckRun") {
+                if (node.status !== "COMPLETED") {
+                  failures.push(`Check '${name}' is still ${node.status}.`);
+                  continue;
+                }
+                if (!["SUCCESS", "SKIPPED", "NEUTRAL"].includes(node.conclusion || "")) {
+                  failures.push(`Check '${name}' concluded with ${node.conclusion}.`);
+                }
+              } else if (!["SUCCESS", "PENDING"].includes(node.state)) {
+                failures.push(`Status '${name}' is ${node.state}.`);
+              }
+            }
+
+            if (failures.length > 0) {
+              core.summary.addHeading("PR governance").addList(failures);
+              core.setFailed(
+                failures.join("\n") +
+                  "\n\nTip: add label `local-first-ci` when third-party checks are optional for your PR."
+              );
+              return;
+            }
+
+            core.summary
+              .addHeading("PR governance")
+              .addRaw(
+                billingException
+                  ? "Manifest OK; optional third-party checks ignored (local-first label)."
+                  : "Manifest OK; all reported checks passed or were ignored as optional."
+              )
+              .write();

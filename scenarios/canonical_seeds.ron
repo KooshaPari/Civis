@@ -1,0 +1,51 @@
+// FR-CONTENT-MODEL / CIV-008 — canonical content seeds substrate.
+//
+// The 2-layer content model: canonical SEEDS (named races + a raw-organism
+// primitive, with a `0..1` divergence dial) atop the algorithmic DNA
+// substrate. Emergence is the default everywhere; this file just provides
+// the *nudge* at spawn time.
+//
+// * `raw_organism`  — primitive substrate; no biome preference, full drift.
+// * `human_baseline` — named race; mid-low drift, prefers temperate forest.
+// * `deep_one`      — aquatic-adapted named race; moderate drift, marine.
+(
+    version: 1,
+    seeds: [
+        (
+            id: "raw_organism",
+            display_name: "Raw Organism",
+            dna_length: 64,
+            genome: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                     32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+                     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63],
+            divergence: 1.0,
+            spawn_biome_affinity: [],
+            notes: Some("Primitive substrate; no biome affinity, full drift. This is the default when no seed is referenced."),
+        ),
+        (
+            id: "human_baseline",
+            display_name: "Human Baseline",
+            dna_length: 64,
+            genome: [13, 20, 27, 34, 41, 48, 55, 62, 69, 76, 83, 90, 97, 104, 111, 118,
+                     125, 132, 139, 146, 153, 160, 167, 174, 181, 188, 195, 202, 209, 216, 223, 230,
+                     237, 244, 251, 2, 9, 16, 23, 30, 37, 44, 51, 58, 65, 72, 79, 86,
+                     93, 100, 107, 114, 121, 128, 135, 142, 149, 156, 163, 170, 177, 184, 191, 198],
+            divergence: 0.1,
+            spawn_biome_affinity: ["TemperateForest"],
+            notes: Some("Named race; mid-low drift, prefers temperate forest biomes."),
+        ),
+        (
+            id: "deep_one",
+            display_name: "Deep One",
+            dna_length: 64,
+            genome: [5, 36, 67, 98, 129, 160, 191, 222, 253, 28, 59, 90, 121, 152, 183, 214,
+                     245, 20, 51, 82, 113, 144, 175, 206, 237, 12, 43, 74, 105, 136, 167, 198,
+                     229, 4, 35, 66, 97, 128, 159, 190, 221, 252, 27, 58, 89, 120, 151, 182,
+                     213, 244, 19, 50, 81, 112, 143, 174, 205, 236, 11, 42, 73, 104, 135, 166],
+            divergence: 0.4,
+            spawn_biome_affinity: ["Ocean", "Tidepool"],
+            notes: Some("Aquatic-adapted named race; moderate drift, marine affinity."),
+        ),
+    ],
+)

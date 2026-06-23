@@ -1,1 +1,0 @@
-C:\Users\koosh\Dev\Civis\target-check-build\debug\libciv_economy.rlib: C:\Users\koosh\Dev\Civis\crates\economy\src\allocation.rs C:\Users\koosh\Dev\Civis\crates\economy\src\institution.rs C:\Users\koosh\Dev\Civis\crates\economy\src\lib.rs C:\Users\koosh\Dev\Civis\crates\economy\src\market.rs

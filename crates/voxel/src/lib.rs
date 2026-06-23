@@ -69,6 +69,7 @@ pub use window::plan::{
 };
 pub use window::ring_iter::RingIter;
 pub use window::{ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy};
+pub use lod::{drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, ChunkDirty};
 pub use worldgen::HeightFieldGen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can

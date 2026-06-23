@@ -309,6 +309,7 @@ pub struct LiveHudSnapshot {
     /// Factions tracked from `Frame3d::FactionState` wire frames.
     pub faction_count: usize,
     /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
+    #[serde(default)]
     pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,

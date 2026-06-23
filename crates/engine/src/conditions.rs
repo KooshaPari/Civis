@@ -94,20 +94,20 @@ mod tests {
 
     #[test]
     fn ongoing_on_fresh_sim() {
-        let sim = Simulation::new(42);
+        let sim = Simulation::with_seed(42);
         assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
     }
 
     #[test]
     fn victory_population_threshold() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = POPULATION_VICTORY;
         assert!(matches!(check_outcome(&sim), GameOutcome::Victory(_)));
     }
 
     #[test]
     fn defeat_extinction() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = 0;
         assert!(matches!(check_outcome(&sim), GameOutcome::Defeat(_)));
     }

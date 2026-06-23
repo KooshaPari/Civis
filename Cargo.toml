@@ -57,6 +57,7 @@ exclude = [
   "clients/unreal-show/Source/Civis/rust-shim",
 ]
 resolver = "2"
+default-members = ["."]
 
 [workspace.package]
 version = "0.1.0"

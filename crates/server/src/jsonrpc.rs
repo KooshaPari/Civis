@@ -1386,6 +1386,7 @@ fn emergence_dashboard_snapshot_from_context(ctx: &DispatchContext) -> Emergence
         tick: ctx.tick,
     }
 }
+
 /// Dispatch a validated request (CIV-0200 stub handlers).
 pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPlan {
     match req.method {
@@ -3868,6 +3869,7 @@ mod tests {
             "emergence.dashboard"
         );
     }
+
     #[test]
     fn parse_replay_path_extracts_nonempty() {
         use serde_json::json;

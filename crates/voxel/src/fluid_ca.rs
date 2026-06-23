@@ -1072,7 +1072,7 @@ fn percolation_pass(
                 pending_saturation[idx] = pending_saturation[idx].saturating_sub(1);
                 pending_saturation[ni] = pending_saturation[ni].saturating_add(1);
                 grid.mark_dirty_cell(x, y, z);
-                grid.mark_dirty_cell(nxu, nyu, nzu);
+                grid.mark_dirty_cell(nx, ny, nz);
                 break 'outer;
             }
         }
@@ -1303,9 +1303,10 @@ fn step_with_parity(
         grid.last_changed_chunks = grid.chunks_changed_from(&before).into_iter().collect();
         let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(7));
         for chunk in before.dirty_chunks.iter().copied() {
-            let Some([cx, cy, cz]) = before.chunk_coord_from_index(chunk) else {
-                continue;
-            };
+            let cx = chunk % counts[0];
+            let rem = chunk - cx;
+            let cy = rem / counts[0] % counts[1];
+            let cz = rem / (counts[0] * counts[1]);
             let mut push = |x: i32, y: i32, z: i32| {
                 let Ok(x) = usize::try_from(x) else { return };
                 let Ok(y) = usize::try_from(y) else { return };

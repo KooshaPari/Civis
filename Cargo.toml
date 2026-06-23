@@ -1,0 +1,36 @@
+[workspace]
+members = [
+  "crates/engine",
+  "crates/infra",
+  "crates/server",
+  "crates/voxel",
+  "crates/build",
+  "crates/genetics",
+  "crates/economy",
+  "crates/species",
+  "crates/agents",
+  "crates/diffusion",
+  "crates/laws",
+  "crates/research",
+  "crates/tactics",
+  "crates/planet",
+  "crates/protocol-3d",
+  "crates/mod-host",
+  "crates/civlab-sdk",
+  "crates/watch",
+  "crates/save-db",
+  "clients/bevy-ref",
+  # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
+]
+exclude = [
+  "clients/godot-ref/rust",
+  "clients/unreal-show/Source/Civis/rust-shim",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["CivLab"]
+license = "MIT OR Apache-2.0"
+rust-version = "1.75"

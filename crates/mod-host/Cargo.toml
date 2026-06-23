@@ -1,0 +1,33 @@
+[package]
+name = "civ-mod-host"
+description = "CivLab mod manifest loader and tick hook host (CIV-0700 MVP stub)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ed25519-dalek = { version = "2", features = ["std", "rand_core"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+toml = "0.8"
+wasmtime = "45.0.0"
+wasmparser = "0.248.0"
+zip = "2"
+rand = "0.8"
+
+[[bin]]
+name = "civ-mod-sign"
+path = "src/bin/sign.rs"
+
+[features]
+default = []
+mod-dev = []
+determinism-strict = []
+
+[dev-dependencies]
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+tempfile = "3"
+wat = "1"

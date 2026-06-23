@@ -1,0 +1,796 @@
+# =============================================================================
+# thegent — Root Taskfile
+# =============================================================================
+# MCP server + agent hook system for AI agent lifecycle governance.
+# Python-primary project using uv + ruff + ty/basedpyright.
+# Includes shared templates for consistent cross-project quality.
+# Run `task --list` to see all available tasks.
+# =============================================================================
+
+version: '3'
+
+vars:
+  PYTHONPATH:
+    sh: pwd
+  PYTHON_SRC: 'src'
+  PYTHON_TESTS: 'tests'
+  BASH_SRC: 'scripts'
+  BASH_TESTS: 'tests'
+  THGENT_LOG_DIR: .process-compose/logs
+
+includes:
+  py:
+    taskfile: ./templates/python/Taskfile.python.yml
+    optional: true
+    vars:
+      PYTHON_SRC: '{{.PYTHON_SRC}}'
+      PYTHON_TESTS: '{{.PYTHON_TESTS}}'
+  bash:
+    taskfile: ./templates/bash/Taskfile.bash.yml
+    optional: true
+    vars:
+      BASH_SRC: '{{.BASH_SRC}}'
+      BASH_TESTS: '{{.BASH_TESTS}}'
+  quality:
+    taskfile: ./templates/shared/Taskfile.quality.yml
+    optional: true
+    vars:
+      GENT_ROOT: .
+
+tasks:
+  # -- Safety checks --
+
+  shims:guard:
+    desc: "Validate generated shims for self-reinvocation patterns"
+    cmds:
+      - zsh scripts/guard-shim-forks.sh
+
+  shims:probe:
+    desc: "Run binary shim startup probes with timeout and fail fast"
+    cmds:
+      - |
+        PATH="${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        export PATH
+        zsh scripts/guard-shim-forks.sh
+
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  # -- Project setup --
+
+  nix:setup:
+    desc: "Setup Nix environment (flake + direnv)"
+    cmds:
+      - |
+        if ! command -v nix >/dev/null 2>&1; then
+          echo "Nix not found. Install it first: https://nixos.org/download.html"
+          exit 1
+        fi
+      - nix flake update
+      - direnv allow || echo "direnv not found, skipping allow"
+
+  nix:develop:
+    desc: "Enter Nix development shell"
+    cmds:
+      - nix develop
+
+  setup:
+    desc: "Full setup: deps, config, shell, shims, polyglot"
+    cmds:
+      - brew bundle check || brew bundle
+      - uv sync
+      - cp -n .env.example .env || true
+      - task: cliproxy:build
+      - task: cliproxy:ensure-config
+      - task: polyglot:setup
+      - mkdir -p ~/.local/bin
+      - zsh scripts/install-thegent-shims.sh
+      - uv run thegent install -t shell
+      - task: shims:guard
+      - task: shims:probe
+      - '[ "$(uname -s)" = "Darwin" ] && uv run thegent mcp spotlight-exclude || true'
+      - |
+        printf '%s\n' '# thegent project starship config' \
+          '# Avoids "Scanning current directory timed out" in large repos' \
+          '# Increased command_timeout to handle git shim resolution (first call only)' \
+          'scan_timeout = 2000' \
+          'command_timeout = 10000' > .starship.toml
+      - task: polyglot:doctor
+      - |
+        echo ""
+        echo "Setup complete. Shell config: ~/.zshenv, ~/.zshrc, ~/.zsh_bundle.zsh, ~/.zshrc.local"
+        echo "Shims: ~/.local/bin (ensure early in PATH)"
+    sources:
+      - Brewfile
+      - pyproject.toml
+    generates:
+      - .venv/bin/python
+      - .env
+
+  # -- Polyglot Architecture Tasks (2026) --
+
+  polyglot:setup:
+    desc: "Setup polyglot runtimes (PyPy, Mojo, Zig, Rust)"
+    cmds:
+      - uv python install pypy-3.11 3.13 3.14
+      - brew install zig || echo "Zig install via brew failed"
+      - command -v rustup >/dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh)
+      - task: polyglot:build
+      - 'echo "Mojo installation requires manual step: https://docs.modular.com/mojo/manual/get-started/"'
+
+  polyglot:build:
+    desc: "Build all native polyglot extensions (Rust, Go)"
+    cmds:
+      - task: build:rust
+      - task: cliproxy:build
+      - echo "Building Rust Python extensions..."
+      - export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 && cd crates/thegent-shm && uvx maturin develop --release
+      - export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 && cd crates/thegent-router && uvx maturin develop --release --features python
+
+  polyglot:doctor:
+    desc: "Verify environment health across all runtimes"
+    cmds:
+      - ./thegent.sh audit doctor --runtime
+
+  polyglot:shm:clean:
+    desc: "Reset the shared memory IPC mesh"
+    cmds:
+      - rm -rf /tmp/thegent-bridge*
+      - rm -rf /tmp/agent-mesh*
+
+  polyglot:wasm:build:
+    desc: "Build all Zig/Rust Wasm plugins"
+    cmds:
+      - |
+        for tool in tools/*/; do
+          if [ -f "$tool/main.zig" ]; then
+            echo "Building Zig tool: $tool"
+            cd "$tool" && zig build-lib main.zig -target wasm32-wasi -dynamic -O ReleaseSmall
+          fi
+        done
+
+  polyglot:bench:
+    desc: "Run performance comparison across runtimes"
+    cmds:
+      - task: bench:extended
+      - ./thegent.sh audit doctor --runtime
+
+  # -- Dev environment (process-compose) --
+
+  dev:
+    desc: "Start MCP + Proxy via process-compose (TUI)"
+    cmds:
+      - uv run python scripts/dev_start_with_preflight.py up
+
+  dev:bg:
+    desc: "Start MCP + Proxy in background"
+    cmds:
+      - uv run python scripts/dev_start_with_preflight.py up -d
+
+  dev:hmr:
+    desc: "Start MCP + Proxy with hot reload (HMR)"
+    cmds:
+      - task: cliproxy:build
+      - task: cliproxy:ensure-config
+      - uv run thegent mcp up --reload
+
+  dev:down:
+    desc: "Stop all services"
+    cmds:
+      - process-compose down
+
+  dev:logs:
+    desc: "Follow service logs"
+    cmds:
+      - process-compose logs -f
+
+  # -- cliproxyapi++ (local fork) --
+
+  cliproxy:build:
+    desc: "Build cliproxyapi++ binary from source"
+    cmds:
+      - |
+        if [ -d ../cliproxyapi-plusplus ]; then
+          cd ../cliproxyapi-plusplus && go build -o cli-proxy-api-plus ./cmd/server
+        elif [ -d ../cliproxyapi++-fork ]; then
+          cd ../cliproxyapi++-fork && go build -o cli-proxy-api-plus ./cmd/server
+        else
+          echo "CLIProxy source not found; using system binary"
+        fi
+    silent: true
+
+  cliproxy:ensure-config:
+    desc: "Ensure cliproxy config exists (port, auth-dir)"
+    cmds:
+      - uv run thegent cliproxy ensure-config
+
+  cliproxy:restart:
+    desc: "Restart proxy (ensure-config, stop, start)"
+    cmds:
+      - uv run thegent cliproxy restart
+
+  cliproxy:start:
+    desc: "Start proxy if not running"
+    cmds:
+      - uv run thegent cliproxy start
+
+  cliproxy:stop:
+    desc: "Stop proxy"
+    cmds:
+      - uv run thegent cliproxy stop
+
+  # -- Mgmt (agent self-service) --
+
+  mgmt:ensure-proxy:
+    desc: "Ensure MCP+proxy running (mcp up if needed). Agent self-service."
+    cmds:
+      - uv run thegent mgmt ensure-proxy
+
+  mgmt:verify-codex-cliproxy:
+    desc: "Verify Codex+CLIProxy: ensure proxy, run codex exec, report. Agent self-service."
+    cmds:
+      - uv run thegent mgmt verify-codex-cliproxy
+
+  # -- Testing --
+
+  test:
+    desc: "Run all tests"
+    cmds:
+      - uv run pytest -q
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - uv run pytest -m unit
+
+  test:fast-lane:
+    desc: "Run fast pytest lane (WL-134): fail-fast, exclude slow/integration/e2e/load markers."
+    cmds:
+      - uv run pytest -c pytest-fast.ini
+
+  test:fast:
+    desc: "Run tests marked @pytest.mark.fast only (WL-134 B90-W2-A4)."
+    cmds:
+      - uv run pytest -m fast -q
+
+  test:nightly-lane:
+    desc: "Run deep pytest lane (WL-134): slow/integration/e2e/load markers."
+    cmds:
+      - uv run pytest -q -m "slow or integration or e2e or load"
+
+  test:deep:
+    desc: "Run deep-marked tests (WL-134): tests tagged @pytest.mark.deep."
+    cmds:
+      - uv run pytest -m deep -q --timeout=300
+
+  test:gate:
+    desc: "Run fast lane then deep lane; fail fast on error before deep (WL-134)."
+    cmds:
+      - task: test:fast-lane
+      - task: test:deep
+
+  coverage-index:
+    desc: "Build coverage_affected_map.json for P7 coverage-based test selection"
+    cmds:
+      - uv run pytest -q --cov=src --cov-context=test --cov-report= -p no:tach
+      - uv run python scripts/build_coverage_affected_map.py
+
+  coverage:map:
+    desc: "Alias: build coverage→test map for hooks (run periodically for best affected-test selection)"
+    cmds:
+      - task: coverage-index
+
+  test:pyramid:
+    desc: "Validate test pyramid distribution"
+    cmds:
+      - zsh scripts/test-pyramid-validator.sh
+
+  # -- Linting --
+
+  lint:
+    desc: "Run all linters"
+    cmds:
+      - task: lint:python
+      - task: typecheck
+      - task: lint:dead-code
+      - task: lint:shell
+      - task: lint:arch
+
+  lint:python:
+    desc: "Python linting (ruff)"
+    env:
+      RUFF_CACHE_DIR: /tmp/.ruff_cache
+    cmds:
+      - uv run ruff check . --output-format=grouped
+      - uv run ruff format --check .
+
+  lint:strict:
+    desc: "Strict type checking (basedpyright + mypy) - recommended for CI/commit"
+    cmds:
+      - uv run basedpyright src/
+      - uv run mypy src/
+
+  lint:dead-code:
+    desc: "Dead code detection (vulture)"
+    cmds:
+      - uv run vulture src/thegent --min-confidence 80
+
+  lint:shell:
+    desc: "Shell script linting"
+    cmds:
+      - shellcheck -x hooks/*.sh hooks/lib/*.sh scripts/*.sh
+
+  lint:arch:
+    desc: "Architectural boundary check"
+    cmds:
+      - uv run python scripts/check_boundaries.py
+      - uv run tach check
+      - uv run import-linter
+
+  lint:architecture:
+    desc: "Check hexagonal architecture layer boundaries (alias)"
+    cmds:
+      - uv run import-linter
+
+  lint:antipatterns:
+    desc: "Scan for agent anti-patterns (custom retry, wrong logging, hardcoded providers)"
+    cmds:
+      - zsh -c 'find src/ -name "*.py" -not -path "*/test*" -not -name "conftest.py" | while read f; do FILE_PATH="$f" TOOL_CONTENT="$(cat "$f")" zsh hooks/agent-antipattern-detector.sh; done'
+
+  # -- Formatting --
+
+  format:
+    desc: "Format all code"
+    env:
+      RUFF_CACHE_DIR: /tmp/.ruff_cache
+    cmds:
+      - uv run ruff format .
+      - uv run ruff check --fix .
+
+  format:check:
+    desc: "Check formatting without modifying"
+    env:
+      RUFF_CACHE_DIR: /tmp/.ruff_cache
+    cmds:
+      - uv run ruff format --check .
+
+  # -- Type checking alias --
+
+  typecheck:
+    desc: "Run canonical fast type checker lane (ty + zuban)"
+    cmds:
+      - uv run ty check src/
+      - uv run zuban check src/ --disable-error-code call-overload --disable-error-code unreachable --disable-error-code assignment --disable-error-code var-annotated --disable-error-code override --disable-error-code return-value --disable-error-code arg-type --disable-error-code union-attr --disable-error-code dict-item --disable-error-code misc --disable-error-code no-redef --disable-error-code call-arg --disable-error-code operator
+
+  # -- Security --
+
+  security:
+    desc: "Run security checks"
+    env:
+      RUFF_CACHE_DIR: /tmp/.ruff_cache
+    cmds:
+      - uv run ruff check --select S src/
+
+  # -- Complexity --
+
+  complexity:
+    desc: "Check code complexity"
+    cmds:
+      - uv run radon cc src/ --min C --show-complexity 2>/dev/null || echo "radon not installed, skipping"
+      - uv run radon mi src/ --min B 2>/dev/null || echo "radon not installed, skipping"
+
+  # -- Quality gates --
+
+  quality:sitback-contracts:
+    desc: "Run sitback harness contracts"
+    cmds:
+      - uv run pytest -q tests/test_unit_clode_main.py
+
+  quality:harness-model-contracts:
+    desc: "Run harness model contracts"
+    cmds:
+      - uv run pytest -q tests/routing/test_request_extensions.py -k "inject_proxy_models"
+
+  quality:list-check:
+    desc: "Run harness contracts list check alias"
+    cmds:
+      - task: quality:harness-contracts:list-check
+
+  quality:harness-contracts:list-check:
+    desc: "Verify harness contract task names are listed"
+    cmds:
+      - task --list | rg -F "quality:sitback-contracts"
+      - task --list | rg -F "quality:harness-model-contracts"
+      - task --list | rg -F "quality:harness-contracts"
+      - task --list | rg -F "quality:harness-contracts:smoke"
+      - task --list | rg -F "quality:harness-contracts:quick"
+      - task --list | rg -F "quality:list-check"
+
+  quality:harness-contracts:smoke:
+    desc: "Run smoke harness contract checks"
+    cmds:
+      - task: quality:harness-model-contracts
+
+  quality:harness-contracts:quick:
+    desc: "Run quick harness contract checks"
+    cmds:
+      - task: quality:harness-contracts:list-check
+      - task: quality:harness-model-contracts
+
+  quality:harness-contracts:
+    desc: "Run canonical harness contract chain"
+    cmds:
+      - task: quality:harness-contracts:list-check
+      - task: quality:sitback-contracts
+      - task: quality:harness-model-contracts
+
+  quality:runtime-contracts:zig-abi:
+    desc: "Run Zig ABI production contract gates (WL-132)."
+    cmds:
+      - uv run python scripts/validate_zig_abi_contract.py --contract contracts/runtime/zig_abi_contract_v1.json
+      - uv run python scripts/check_zig_abi_artifact.py --contract contracts/runtime/zig_abi_contract_v1.json --symbols-file tests/fixtures/runtime/zig_abi_symbols_fixture.txt --error-envelope-json tests/fixtures/runtime/zig_abi_error_envelope_fixture.json
+      - uv run pytest -q tests/test_zig_abi_contract_validation.py tests/test_wl132_zig_abi_contract.py
+
+  quality:runtime-contracts:mojo-kernel:
+    desc: "Run Mojo deterministic kernel contract gates (WL-133)."
+    cmds:
+      - uv run pytest -q tests/test_mojo_kernel_contract_v1.py tests/test_mojo_score_rank_harness.py tests/mojo/test_wl133_mojo_kernel_smoke.py
+
+  quality:runtime-contracts:
+    desc: "Run canonical runtime contract chain (WL-132/WL-133)."
+    cmds:
+      - task: quality:runtime-contracts:zig-abi
+      - task: quality:runtime-contracts:mojo-kernel
+
+  quality:
+    desc: "Run strict teammate-safe quality lane (contract checks)"
+    cmds:
+      - task: shims:guard
+      - task: shims:probe
+      - task: quality:core-boundary:strict
+      - task: quality:deprecated-aliases:strict
+      - task: quality:instruction-architecture
+      - task: quality:harness-contracts
+      - task: quality:runtime-contracts
+
+  quality:
+    desc: "Run full strict quality pipeline (max-lines/lint/type/test/traceability/dx-audit)"
+    cmds:
+      - task: shims:guard
+      - task: shims:probe
+      - task: quality:max-lines
+      - task: quality:core-boundary:strict
+      - task: quality:deprecated-aliases:strict
+      - task: quality:instruction-architecture
+      - task: quality:harness-contracts
+      - task: quality:runtime-contracts
+      - task: lint
+      - task: lint:strict
+      - task: test
+      - task: test:pyramid
+      - zsh scripts/traceability-validator.sh
+      - zsh scripts/dx-audit.sh
+
+  metrics:loc:
+    desc: "Collect LOC/complexity metrics for src/thegent/ and write to .quality/loc-metrics.json (WL-135)."
+    cmds:
+      - uv run python scripts/collect_loc_metrics.py
+
+  slo:check:
+    desc: "Check SLO pass/fail gate (exits 1 if any red metric)"
+    cmds:
+      - uv run python scripts/check_slo_gate.py
+
+  metrics:slo:emit-stub:
+    desc: "Emit WL-135 SLO metric stub payload (JSON + optional JSONL append)."
+    cmds:
+      - uv run python scripts/emit_wl135_slo_stub.py --metric cli_help_p95_ms --value 0 --threshold 250 --lane fast-lane --jsonl var/metrics/slo_stub_metrics.jsonl
+
+  quality:max-lines:
+    desc: "Run max-lines gate via canonical developer task path (WL-122)."
+    cmds:
+      - MAX_LINES=${MAX_LINES:-500} WARN_LINES=${WARN_LINES:-350} MAX_LINES_SCOPE=${MAX_LINES_SCOPE:-changed} sh scripts/max-lines-gate.sh
+
+  quality:core-boundary:
+    desc: "Advisory check for thegent-core import boundary (WL-121)."
+    cmds:
+      - uv run python scripts/check_thegent_core_boundary.py
+
+  quality:core-boundary:strict:
+    desc: "Strict check for thegent-core import boundary (WL-121 CI mode)."
+    cmds:
+      - uv run python scripts/check_thegent_core_boundary.py --strict
+
+  quality:deprecated-aliases:
+    desc: "Audit deprecated quality aliases and print replacement suggestions (WL-123)."
+    cmds:
+      - uv run python scripts/check_deprecated_quality_aliases.py --format migration
+
+  quality:deprecated-aliases:strict:
+    desc: "Fail if deprecated aliases remain or canonical quality commands are missing (WL-123)."
+    cmds:
+      - uv run python scripts/check_deprecated_quality_aliases.py --strict
+
+  quality:instruction-architecture:
+    desc: "Validate instruction doc-map links, anchors, and CLAUDE overlay template sections (WL-139 Phase A-D)."
+    cmds:
+      - uv run python scripts/check_instruction_architecture.py --strict
+
+  # -- Quality fix (format + lint --fix) --
+
+  quality:fix:runner:
+    desc: "Run canonical quality fix runner (ruff format + safe fixes)"
+    cmds:
+      - zsh scripts/quality-fix-agent.sh
+
+  # -- Hooks --
+
+  hooks:bin:
+    desc: "Build hook-dispatcher and install to hooks/bin"
+    cmds:
+      - cargo build --release --manifest-path hooks/hook-dispatcher/Cargo.toml
+      - mkdir -p hooks/bin
+      - cp hooks/hook-dispatcher/target/release/hook-dispatcher hooks/bin/hook-dispatcher
+
+  build:rust:
+    desc: "Build BKM Rust crates (thegent-resources, thegent-crypto, thegent-parser, thegent-shm, thegent-git, thegent-discovery, thegent-watcher, hook-dispatcher)"
+    cmds:
+      - cargo build --release -p thegent-resources -p thegent-discovery -p thegent-watcher -p hook-dispatcher --manifest-path crates/Cargo.toml
+      - uv pip install crates/thegent-crypto
+      - uv pip install crates/thegent-parser
+      - uv pip install crates/thegent-shm
+      - uv pip install crates/thegent-git
+
+  hooks:install:
+    desc: "Install pre-commit hooks"
+    cmds:
+      - uv run pre-commit install
+      - uv run pre-commit install --hook-type commit-msg
+
+  # -- Memory cache (Supermemory integration) --
+
+  memory:cache:test:
+    desc: "Run L1/L2 cache tests"
+    cmds:
+      - uv run pytest src/thegent/memory/test_cache.py -v
+
+  memory:cache:bench:
+    desc: "Run L1/L2 cache performance benchmarks"
+    cmds:
+      - uv run pytest src/thegent/memory/test_cache.py::TestPerformance -v
+
+  memory:client:test:
+    desc: "Run Rust Supermemory client tests"
+    cmds:
+      - cargo test --manifest-path crates/thegent-memory/Cargo.toml
+
+  memory:client:build:
+    desc: "Build Rust Supermemory client"
+    cmds:
+      - cargo build --manifest-path crates/thegent-memory/Cargo.toml
+
+  memory:client:doc:
+    desc: "Build and open Rust docs for thegent-memory"
+    cmds:
+      - cargo doc --manifest-path crates/thegent-memory/Cargo.toml --no-deps --open
+
+  # -- Cleanup --
+
+  clean:
+    desc: "Clean all build artifacts and caches"
+    cmds:
+      - rm -rf .venv/
+      - rm -rf .pytest_cache/
+      - rm -rf .ruff_cache/
+      - rm -rf .mypy_cache/
+      - rm -rf .ty_cache/
+      - rm -rf .basedpyright_cache/
+      - rm -rf .process-compose/
+      - task: polyglot:shm:clean
+      - find . -type d -name "__pycache__" -exec rm -rf {} +
+
+  # -- Docs (VitePress) --
+
+  docs:demos:
+    desc: Generate GIFs for documentation demos
+    cmds:
+      - zsh scripts/generate_demos.sh
+
+  docs:build:
+    desc: Build docsite (all versions)
+    deps: [docs:demos]
+    cmds:
+      - |
+        if command -v bun >/dev/null 2>&1; then
+          bun run docs:build
+        else
+          pnpm docs:build
+        fi
+
+  docs:watch:
+    desc: Watch docs and rebuild on change
+    cmds:
+      - |
+        if command -v bun >/dev/null 2>&1; then
+          bun run docs:dev
+        else
+          pnpm docs:dev
+        fi
+
+  docs:serve:
+    desc: Serve docsite locally with hot reload
+    cmds:
+      - |
+        if command -v bun >/dev/null 2>&1; then
+          bun run docs:preview
+        else
+          pnpm docs:preview
+        fi
+
+  docs:pdf:
+    desc: Export docsite to PDF
+    env:
+      PUPPETEER_EXECUTABLE_PATH: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+    cmds:
+      - pnpm docs:pdf
+
+  docs:convert-audit:
+    desc: Audit docs/*.md for H1, frontmatter, See also (convert phase)
+    cmds:
+      - zsh scripts/docs-convert-audit.sh docs
+
+  harvest-idea-seeds:
+    desc: Harvest $idea prompts from Claude/Codex/Cursor into docs/research/idea-seeds
+    cmds:
+      - zsh scripts/harvest-idea-seeds.sh
+  prompts-harvest:
+    desc: Same as harvest-idea-seeds via thegent CLI
+    cmds:
+      - uv run thegent prompts harvest
+  prompts-sessions:
+    desc: List sessions from Cursor, Codex, Claude (by session and project)
+    cmds:
+      - uv run thegent prompts sessions
+  prompts-sync:
+    desc: Harvest + list — one-shot sync of all sources
+    cmds:
+      - uv run thegent prompts sync
+
+  # -- Benchmarks (Hook Rust Migration) --
+
+  bench:
+    desc: "Run Python benchmark suite with regression check (fails CI on >15% mean regression)"
+    cmds:
+      - uv run pytest benchmarks/ --benchmark-compare=benchmarks/baseline.json --benchmark-compare-fail=mean:15%
+
+  bench:setup:
+    desc: "Setup benchmarking environment (hyperfine, dependencies)"
+    cmds:
+      - |
+        if ! command -v hyperfine >/dev/null 2>&1; then
+          echo "Installing hyperfine..."
+          if command -v brew >/dev/null 2>&1; then
+            brew install hyperfine
+          else
+            cargo install hyperfine
+          fi
+        fi
+      - mkdir -p benchmarks/results
+
+  bench:baseline:refresh:
+    desc: "WL-078 refresh benchmark baseline snapshot (benchmarks/baseline.json)"
+    cmds:
+      - uv run python scripts/benchmark_python_suite.py --iterations 50000 --output benchmarks/baseline.json --overwrite
+
+  bench:rust:audit:
+    desc: "Run deterministic Rust audit benchmark (offline + locked)"
+    cmds:
+      - CARGO_NET_OFFLINE=true cargo bench --locked --manifest-path crates/Cargo.toml -p thegent-router --bench audit_bench
+
+  bench:smoke:ci:
+    desc: "Deterministic benchmark smoke for CI docs/checklist"
+    cmds:
+      - uv run pytest -q tests/test_wl079_audit_bench.py
+
+  bench:comprehensive:
+    desc: "Run comprehensive hook benchmark suite (all scenarios)"
+    deps: [bench:setup]
+    cmds:
+      - zsh scripts/benchmark-comprehensive.sh
+
+  bench:extended:
+    desc: "Run extended benchmark suite (operations + hooks + aggregate)"
+    deps: [bench:setup]
+    cmds:
+      - BENCH_SCENARIO=all zsh scripts/benchmark-extended.sh
+
+  bench:operations:
+    desc: "Run operation-level benchmarks only (init, cache, git, etc.)"
+    deps: [bench:setup]
+    cmds:
+      - BENCH_SCENARIO=operations zsh scripts/benchmark-extended.sh
+
+  bench:hooks:
+    desc: "Run real hook benchmarks (pre-write-validator, etc.)"
+    deps: [bench:setup]
+    cmds:
+      - BENCH_SCENARIO=hooks zsh scripts/benchmark-extended.sh
+
+  bench:aggregate:
+    desc: "Run aggregate benchmarks (sequential hooks, batch performance)"
+    deps: [bench:setup]
+    cmds:
+      - BENCH_SCENARIO=aggregate zsh scripts/benchmark-extended.sh
+
+  bench:dry-run:
+    desc: "Dry run (plan benchmarks without executing)"
+    deps: [bench:setup]
+    cmds:
+      - BENCH_DRY_RUN=1 zsh scripts/benchmark-extended.sh
+
+  bench:custom:
+    desc: "Run with custom settings (use BENCH_WARMUP_RUNS and BENCH_MEASURE_RUNS)"
+    deps: [bench:setup]
+    cmds:
+      - zsh scripts/benchmark-extended.sh
+
+  bench:report:
+    desc: "Generate report from latest benchmark results"
+    cmds:
+      - |
+        if [[ -d benchmarks/results/latest ]]; then
+          uv run python scripts/benchmark-analysis.py \
+            --baseline-dir benchmarks/results/latest/baseline \
+            --current-dir benchmarks/results/latest/current \
+            --report-path benchmarks/results/latest/analysis.md \
+            --summary-path benchmarks/results/latest/analysis.json
+          echo ""
+          echo "Report: benchmarks/results/latest/analysis.md"
+          echo "Summary: benchmarks/results/latest/analysis.json"
+        else
+          echo "No benchmark results found. Run 'task bench:extended' first."
+          exit 1
+        fi
+
+  bench:compare:
+    desc: "Compare two benchmark runs"
+    cmds:
+      - |
+        if [[ $# -lt 2 ]]; then
+          echo "Usage: task bench:compare -- <run1_id> <run2_id>"
+          echo ""
+          echo "Available runs:"
+          ls -1 benchmarks/results/ | grep -v latest | tail -10
+          exit 1
+        fi
+        uv run python scripts/benchmark-analysis.py \
+          --baseline-dir benchmarks/results/$1/current \
+          --current-dir benchmarks/results/$2/current \
+          --report-path benchmarks/results/comparison-$1-$2.md \
+          --summary-path benchmarks/results/comparison-$1-$2.json
+
+  bench:view:
+    desc: "View latest benchmark report"
+    cmds:
+      - |
+        if [[ -f benchmarks/results/latest/report.md ]]; then
+          less benchmarks/results/latest/report.md
+        else
+          echo "No report found. Run 'task bench:extended' first."
+          exit 1
+        fi
+
+  bench:list:
+    desc: "List all benchmark runs"
+    cmds:
+      - |
+        echo "Benchmark runs:"
+        ls -1dt benchmarks/results/* 2>/dev/null | head -20 | while read dir; do
+          if [[ -f "$dir/manifest.json" ]]; then
+            run_id=$(basename "$dir")
+            timestamp=$(jq -r '.generated_at_utc' "$dir/manifest.json" 2>/dev/null || echo "unknown")
+            echo "  $run_id ($timestamp)"
+          fi
+        done

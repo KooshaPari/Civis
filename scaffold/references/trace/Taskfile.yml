@@ -1,0 +1,291 @@
+version: '3'
+
+vars:
+  PYTHONPATH:
+    sh: pwd
+  PYTHON_SRC: 'src'
+  PYTHON_TESTS: 'tests'
+  BASH_SRC: 'scripts'
+  GO_PKG: './...'
+  TS_SRC: 'frontend/src'
+  PKG_MGR: 'bun'
+  PC_CONFIG:
+    sh: |
+      PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
+      if [ "$PLATFORM" = "linux" ]; then
+        echo "-f config/process-compose.yaml -f config/process-compose.linux.yaml"
+      elif echo "$PLATFORM" | grep -q "mingw"; then
+        echo "-f config/process-compose.yaml -f config/process-compose.windows.yaml"
+      else
+        echo "-f config/process-compose.yaml"
+      fi
+
+includes:
+  py:
+    taskfile: ../thegent/templates/python/Taskfile.python.yml
+    optional: true
+    vars:
+      PYTHON_SRC: '{{.PYTHON_SRC}}'
+      PYTHON_TESTS: '{{.PYTHON_TESTS}}'
+  ts:
+    taskfile: ../thegent/templates/typescript/Taskfile.typescript.yml
+    optional: true
+    vars:
+      TS_SRC: '{{.TS_SRC}}'
+      PKG_MGR: '{{.PKG_MGR}}'
+  go:
+    taskfile: ../thegent/templates/go/Taskfile.go.yml
+    optional: true
+    vars:
+      GO_PKG: '{{.GO_PKG}}'
+  bash:
+    taskfile: ../thegent/templates/bash/Taskfile.bash.yml
+    optional: true
+    vars:
+      BASH_SRC: '{{.BASH_SRC}}'
+  quality:
+    taskfile: ../thegent/templates/shared/Taskfile.quality.yml
+    optional: true
+    vars:
+      GENT_ROOT: ../thegent
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  install:
+    desc: "Install native dependencies"
+    cmds:
+      - bash scripts/shell/setup-native-dev.sh
+
+  dev:
+    desc: "Start all services (detached)"
+    cmds:
+      - echo "🚀 Starting TraceRTM development environment..."
+      - uv run scripts/python/dev-start-with-preflight.py up -d --logs-truncate
+
+  dev:tui:
+    desc: "Start with interactive TUI dashboard"
+    cmds:
+      - uv run scripts/python/dev-start-with-preflight.py up --logs-truncate
+
+  dev:down:
+    desc: "Stop all services"
+    cmds:
+      - process-compose down --port 18080
+
+  dev:logs:
+    desc: "Show logs for all services"
+    cmds:
+      - process-compose logs --port 18080
+
+  dev:status:
+    desc: "Show service status"
+    cmds:
+      - process-compose process list --port 18080
+
+  lint:
+    desc: "Run all linters"
+    cmds:
+      - task: lint:naming
+      - task: lint:python
+      - task: lint:go
+      - task: lint:frontend
+      - task: lint:strict
+      - task: lint:dead-code
+      - task: lint:arch
+
+  lint:strict:
+    desc: "Strict type checking (mypy + basedpyright)"
+    cmds:
+      - uv run mypy src/
+      - uv run basedpyright src/ || true
+
+  lint:dead-code:
+    desc: "Dead code detection (vulture)"
+    cmds:
+      - uv run vulture src/ --min-confidence 80
+
+  lint:arch:
+    desc: "Architectural boundary check (tach + import-linter)"
+    cmds:
+      - uv run tach check
+      - uv run import-linter check
+
+  lint:naming:
+    desc: "Naming explosion + LOC guards"
+    cmds:
+      - bash scripts/shell/check-file-loc.sh
+      - bash scripts/shell/check-naming-explosion-python.sh
+      - bash scripts/shell/check-naming-explosion-go.sh
+      - cd frontend && bash scripts/check-naming-explosion.sh
+
+  lint:python:
+    desc: "Python linting (ruff)"
+    cmds:
+      - uv run ruff format src/ tests/
+      - uv run ruff check src/ tests/ --output-format=grouped
+
+  lint:go:
+    desc: "Go linting"
+    cmds:
+      - cd backend && gofumpt -w . && go vet ./...
+      - cd backend && go install github.com/swaggo/swag/cmd/swag@latest
+      - cd backend && ./scripts/generate-openapi.sh
+      - ./scripts/lint-go-chunks.sh
+
+  lint:frontend:
+    desc: "Frontend linting"
+    cmds:
+      - cd frontend && bun run format && bun run lint
+
+  type-check:
+    desc: "Run all type checkers"
+    cmds:
+      - task: type-check:python
+      - task: type-check:frontend
+
+  type-check:python:
+    desc: "Python type check (ty + zuban + basedpyright)"
+    cmds:
+      - uv run ty check src/
+      - zuban check src/
+      - uv run basedpyright src/ || true
+
+  type-check:frontend:
+    desc: "Frontend type check (tsc)"
+    cmds:
+      - cd frontend && bun run tsc --noEmit
+
+  test:
+    desc: "Run all tests"
+    cmds:
+      - task: test:unit
+      - task: test:integration
+
+  test:unit:
+    desc: "Run unit tests"
+    cmds:
+      - echo "🧪 Running unit tests..."
+      - cd backend && ./test-commands.sh unit
+      - uv run pytest tests/ -v -m "unit"
+      - cd frontend/apps/web && bun run test --run
+
+  test:integration:
+    desc: "Run integration tests"
+    cmds:
+      - echo "🧪 Running integration tests..."
+      - cd backend/tests && ./test-commands.sh integration
+      - uv run pytest backend/tests/integration/test_full_agent_lifecycle.py -v
+
+  test:e2e:
+    desc: "Run E2E tests"
+    cmds:
+      - echo "🧪 Running E2E tests..."
+      - cd backend/tests/e2e && go test -tags=e2e -timeout=30m ./...
+
+  test:env:up:
+    desc: "Start test environment (PostgreSQL, Redis, Neo4j, NATS)"
+    cmds:
+      - cd backend/tests && docker-compose -f ../docker-compose.test.yml up -d
+      - sleep 5
+
+  test:env:down:
+    desc: "Stop test environment"
+    cmds:
+      - cd backend/tests && docker-compose -f ../docker-compose.test.yml down
+
+  gate:
+    desc: "Run full 9-gate quality system"
+    cmds:
+      - task: quality:gate
+
+  typecheck:
+    desc: "Run all type checkers (alias)"
+    cmds:
+      - task: type-check
+
+  format:check:
+    desc: "Check formatting without modifying"
+    cmds:
+      - uv run ruff format --check src/ tests/
+      - cd frontend && bun run format:check 2>/dev/null || true
+
+  security:
+    desc: "Run security checks"
+    cmds:
+      - uv run ruff check --select S src/
+      - cd backend && gosec ./... 2>/dev/null || true
+
+  complexity:
+    desc: "Check code complexity"
+    cmds:
+      - uv run radon cc src/ --min C --show-complexity 2>/dev/null || echo "radon not installed, skipping"
+
+  quality:local:
+    desc: "Run full quality gate (project-specific)"
+    cmds:
+      - bash scripts/shell/run-quality-split.sh
+
+  quality:dag:tui:
+    desc: "Run quality DAG with TUI progress (writes progress.json for dashboard)"
+    cmds:
+      - uv run --project ../thegent python ../thegent/templates/shared/scripts/quality/quality_runner.py --tui
+
+  quality:tui:
+    desc: "Run quality runner TUI dashboard (set QUALITY_ROOT for other projects)"
+    cmds:
+      - uv run --extra tui python scripts/python/quality_runner_tui.py
+
+  # quality:dag, quality:dag:dry-run, quality:dag:v, quality:fix from shared Taskfile.quality.yml
+
+  quality:report:
+    desc: "Parse .quality/logs and print action plan"
+    cmds:
+      - bash scripts/shell/quality-report.sh
+
+  clean:
+    desc: "Clean build artifacts and logs"
+    cmds:
+      - find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+      - find . -type d -name '.pytest_cache' -exec rm -rf {} + 2>/dev/null || true
+      - rm -rf .quality/logs/* 2>/dev/null || true
+      - cd backend && go clean
+
+  test:api:
+    desc: "Run API tests"
+    cmds:
+      - cd backend && ./test-commands.sh api
+
+  test:e2e:
+    desc: "Run E2E tests"
+    cmds:
+      - cd backend && ./test-commands.sh e2e
+
+  build:
+    desc: "Build all components"
+    cmds:
+      - task: build:backend
+      - task: build:frontend
+
+  build:backend:
+    desc: "Build backend binary"
+    cmds:
+      - cd backend && go build -o tracertm-backend .
+
+  build:frontend:
+    desc: "Build frontend"
+    cmds:
+      - cd frontend && bun run build
+
+  db:setup:
+    desc: "Setup databases"
+    cmds:
+      - cd backend && go run cmd/setup/main.go
+
+  atlas:migrate:
+    desc: "Apply Atlas migrations"
+    cmds:
+      - cd backend && atlas migrate apply --env supabase

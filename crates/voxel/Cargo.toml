@@ -1,0 +1,18 @@
+[package]
+name = "civ-voxel"
+description = "Adaptive voxel substrate: sparse octree + dense leaf chunks; deterministic mesh-dirty queue"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+
+# Adaptive voxel kernel shared across Phenotype-org game clients.
+# Pin the git revision so CI can resolve the same kernel without a sibling checkout.
+phenotype-voxel = { git = "https://github.com/KooshaPari/phenotype-voxel.git", rev = "0bbd1b7c64e64e7723c42a7417680c23860dfb5a" }
+
+[dev-dependencies]
+proptest = "1.4"

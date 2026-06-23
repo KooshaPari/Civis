@@ -1,0 +1,11 @@
+[configuration]
+entry_symbol = "civis_rust_init"
+compatibility_minimum = "4.6"
+
+[libraries]
+windows.debug.x86_64 = "res://rust/target/debug/civis_godot_rust.dll"
+windows.release.x86_64 = "res://rust/target/release/civis_godot_rust.dll"
+linux.debug.x86_64 = "res://rust/target/debug/libcivis_godot_rust.so"
+linux.release.x86_64 = "res://rust/target/release/libcivis_godot_rust.so"
+macos.debug = "res://rust/target/debug/libcivis_godot_rust.dylib"
+macos.release = "res://rust/target/release/libcivis_godot_rust.dylib"

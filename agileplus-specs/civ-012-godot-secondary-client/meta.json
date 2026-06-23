@@ -1,0 +1,17 @@
+{
+  "spec_id": "civ-012",
+  "slug": "civ-012-godot-secondary-client",
+  "title": "Godot Secondary Client",
+  "status": "active",
+  "type": "feature",
+  "epic": "E8",
+  "fr_ids": [
+    "FR-CIV-CLIENT-GODOT-001",
+    "FR-CIV-CLIENT-GODOT-002"
+  ],
+  "created_at": "2026-05-29T00:00:00Z",
+  "updated_at": "2026-05-29T00:00:00Z",
+  "priority": "SHOULD",
+  "target_release": "v2",
+  "civ_spec_ref": "CIV-0200-client-protocol.md"
+}

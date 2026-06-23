@@ -1,0 +1,15 @@
+name: baseline
+tick_start: 0
+population: 1000000
+base_consumption_joules: 5000000000
+scarcity_multiplier: 1.0
+fog_vision_radius: 8
+fog_grid_size: 64
+military:
+  movement_cadence_ticks: 4
+  movement_pulses_per_cadence: 2
+  war_cadence_ticks: 16
+  engage_range_grid: 10
+mods:
+  - mods/example-policy
+  - mods/example-economic

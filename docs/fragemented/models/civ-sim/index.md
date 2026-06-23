@@ -1,0 +1,13 @@
+# Consolidated Index
+
+## Files
+
+* `API_EVENTS_SPEC.md`
+* `DATA_MODEL_DB_SPEC.md`
+* `OPS_GOVERNANCE_SPEC.md`
+* `PRODUCT_MODEL.md`
+* `TECHNICAL_SPEC.md`
+* `USER_SPEC.md`
+
+## Subdirectories
+

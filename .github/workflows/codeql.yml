@@ -1,0 +1,25 @@
+name: CodeQL
+
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    uses: KooshaPari/phenoShared/.github/workflows/reusable/codeql.yml@main
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    with:
+      languages: '["rust"]'
+      build-mode: 'manual'
+      build-command: 'cargo build --release || cargo build'

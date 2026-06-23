@@ -1,0 +1,12 @@
+version: v1
+roles:
+  orchestrator:
+    tools: ["workflow.dispatch", "policy.evaluate", "event.publish"]
+  researcher:
+    tools: ["io.read", "web.fetch", "event.publish"]
+  compiler:
+    tools: ["artifact.render", "artifact.validate", "io.write", "event.publish"]
+  treasury:
+    tools: ["money.intent.create", "money.authorize", "ledger.record", "event.publish"]
+  compliance:
+    tools: ["policy.evaluate", "privacy.request.handle", "event.publish"]

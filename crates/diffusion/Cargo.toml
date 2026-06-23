@@ -1,0 +1,16 @@
+[package]
+name = "civ-diffusion"
+description = "Tech adoption S-curve engine (Bass/Rogers) driving wardrobe/tools propagation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+# Note: diffusion is a foundational math primitive — it intentionally has no
+# dep on civ-agents. Agents depend on diffusion, not the other way around.
+
+[dev-dependencies]
+proptest = "1.4"

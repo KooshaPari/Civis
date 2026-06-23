@@ -1,6 +1,6 @@
 # Local-first merge gate (Phenotype / agileplus pattern).
-# Heavy quality runs locally via lefthook pre-push; cloud CI only verifies the
-# committed `.ci/quality-manifest.json` attestation (see quality.yml).
+# Heavy quality runs locally via lefthook; this job enforces manifest attestation and
+# ignores billable-runner failures when labeled ci-billing-exception.
 name: pr-governance-gate
 
 on:
@@ -84,14 +84,12 @@ jobs:
             const billingException =
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
-            // Only these two jobs are required on PRs in local-first mode.
             const requiredOk = new Set([
               /^pr-governance-gate$/i,
               /^quality-manifest/i,
             ]);
 
-            // Third-party / legacy optional checks (never block when local-first label is set).
-            const optionalBypass = [
+            const billingBypass = [
               /billing/i,
               /quota/i,
               /spending/i,
@@ -128,7 +126,7 @@ jobs:
               if (!name || requiredOk.some((re) => re.test(name))) {
                 continue;
               }
-              if (billingException && optionalBypass.some((re) => re.test(name))) {
+              if (billingException && billingBypass.some((re) => re.test(name))) {
                 continue;
               }
               if (node.__typename === "CheckRun") {
@@ -148,7 +146,7 @@ jobs:
               core.summary.addHeading("PR governance").addList(failures);
               core.setFailed(
                 failures.join("\n") +
-                  "\n\nTip: add label `local-first-ci` when third-party checks are optional for your PR."
+                  "\n\nTip: add label `ci-billing-exception` or `local-first-ci` when GitHub Actions billing blocks legacy jobs."
               );
               return;
             }
@@ -157,7 +155,7 @@ jobs:
               .addHeading("PR governance")
               .addRaw(
                 billingException
-                  ? "Manifest OK; optional third-party checks ignored (local-first label)."
+                  ? "Manifest OK; legacy CI failures ignored (billing/local-first label)."
                   : "Manifest OK; all reported checks passed or were ignored as optional."
               )
               .write();

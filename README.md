@@ -36,25 +36,6 @@ CivLab decouples simulation logic from rendering: a Rust simulation core runs he
 
 CivLab is simultaneously a **game** (RTS-style city/nation building), a **research sandbox** (deterministic, scriptable, full event logs), and a **platform** (multiple renderers attach to one simulation).
 
-```mermaid
-flowchart TD
-    subgraph Core["civ-engine (Rust, hecs ECS)"]
-        Tick["Fixed 100ms tick loop<br/>fixed-point i64 · ChaCha8Rng"]
-        Replay[".civreplay event log"]
-    end
-    Server["civ-server<br/>HTTP + WS JSON-RPC /ws"]
-    Core --> Server
-    Server -->|10 Hz Frame3d push| Bevy
-    Server --> Godot
-    Server --> Unreal
-    Server --> Web["Web dashboard (L2 authoring)"]
-    Server --> Research["Research / ops clients"]
-    Replay -. bit-identical replay .-> Core
-```
-
-> [!EMBED] STUB — multi-client world playback
-> A recording of two renderers (e.g. Bevy + Web dashboard) attached to one live simulation timeline belongs here. Pending rich-embed pipeline (#966).
-
 See [`COMPARISON.md`](./COMPARISON.md) for how CivLab differs from Dwarf Fortress, Victoria 3, CK3, and Factorio.
 
 ---

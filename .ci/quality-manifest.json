@@ -1,19 +1,11 @@
 {
   "version": "1",
   "repo": "Civis",
-  "git_sha": "62fb8aa3e7f7e562b9632c75b0ce92fbc689df31",
-  "created_at": "2026-06-18T08:19:42Z",
-  "git_sha_history": [
-    "ec75ddfb611345fcfe9cec95c72d8437e973bae4",
-    "62fb8aa3e7f7e562b9632c75b0ce92fbc689df31"
-  ],
-  "created_at_history": [
-    "2026-05-25T23:54:40Z",
-    "2026-06-18T08:19:42Z"
-  ],
+  "git_sha": "ec75ddfb611345fcfe9cec95c72d8437e973bae4",
+  "created_at": "2026-05-25T23:54:40Z",
   "runner": {
     "host": "KOOSHAPARI-DESK",
-    "rust": "manifest-refresh (gates reused)"
+    "rust": "rustc 1.95.0 (59807616e 2026-04-14)"
   },
   "gates": {
     "dashboard_typecheck": {
@@ -29,9 +21,5 @@
       "detail": ""
     }
   },
-  "manifest_hash": "12c0cde49550392b31b356ce92acb6d365a44a4a39e694d6b8d5a5c33719e9e7",
-  "manifest_hash_history": [
-    "90bb378c085a232bbf4f4e2cf388d055a8c30f2e9acf9cbd6e9abf9856b35f82",
-    "12c0cde49550392b31b356ce92acb6d365a44a4a39e694d6b8d5a5c33719e9e7"
-  ]
+  "manifest_hash": "90bb378c085a232bbf4f4e2cf388d055a8c30f2e9acf9cbd6e9abf9856b35f82"
 }

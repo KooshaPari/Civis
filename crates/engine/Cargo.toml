@@ -10,6 +10,7 @@ publish = false
 # Random number generation with seeding
 rand = "0.8.6"
 rand_chacha = "0.3"
+glam = "0.30.10"
 
 # Entity Component System (ECS)
 hecs = "0.10"

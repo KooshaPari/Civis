@@ -202,6 +202,7 @@ pub struct WsSpectatorMeta {
 
 /// WebSocket session state exposed to live attach HUD and event feed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum WsConnectionState {
     /// Active stream to `civ-server`.
     Connected,
@@ -213,7 +214,7 @@ pub enum WsConnectionState {
 }
 
 /// Streamed entity kind for viewport pick and HUD labels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LiveEntityKind {
     /// Streamed agent marker.
     Agent,
@@ -224,7 +225,7 @@ pub enum LiveEntityKind {
 }
 
 /// A single streamed entity selected in the live viewport.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SelectedLiveEntity {
     /// Entity category.
     pub kind: LiveEntityKind,
@@ -276,7 +277,7 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
     /// Normalised Shannon entropy (`0..=1`).
@@ -295,7 +296,7 @@ pub struct EmergenceHudData {
 
 
 /// Outcome data from `sim.outcome` polling (FR-CIV-GAME-001).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct OutcomeHudData {
     pub tag: String,
@@ -304,7 +305,7 @@ pub struct OutcomeHudData {
 }
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 pub struct LiveHudSnapshot {
     /// WebSocket session state from the reconnecting client.
     pub connection: WsConnectionState,
@@ -1515,6 +1516,7 @@ mod tests {
                 tick: 4,
                 civilians: vec![CivilianStateEntry {
                     id: 1,
+                    faction_id: 0,
                     needs: CivilianNeeds3d::default(),
                     profession: String::new(),
                     genome_summary: Default::default(),
@@ -1530,6 +1532,7 @@ mod tests {
                     government: Government3d::Unknown,
                     treasury: FactionTreasury3d::default(),
                 }],
+                population_by_faction: Default::default(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 6,

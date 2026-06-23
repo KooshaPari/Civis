@@ -1105,6 +1105,7 @@ mod tests {
     fn fr_civ_proto3d_011_civilian_state_entry_roundtrip_and_backward_compat() {
         let entry = CivilianStateEntry {
             id: 17,
+            faction_id: 0,
             needs: CivilianNeeds3d {
                 food: 0.8,
                 shelter: 0.6,
@@ -1212,6 +1213,7 @@ mod tests {
         let faction = Frame3d::FactionState(FactionStateFrame {
             tick: 21,
             factions: Vec::new(),
+            population_by_faction: Default::default(),
         });
         assert_eq!(faction.tick(), 21);
     }
@@ -1630,6 +1632,7 @@ mod tests {
                 Frame3d::FactionState(FactionStateFrame {
                     tick: TICK,
                     factions: vec![],
+                    population_by_faction: Default::default(),
                 }),
             ),
             (

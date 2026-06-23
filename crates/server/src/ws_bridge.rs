@@ -1782,6 +1782,7 @@ mod tests {
             Frame3d::FactionState(FactionStateFrame {
                 tick: 5,
                 factions: Vec::new(),
+                population_by_faction: std::collections::BTreeMap::new(),
             }),
             Frame3d::EventFeed(EventFeedFrame {
                 tick: 5,

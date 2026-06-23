@@ -143,7 +143,7 @@ fn n4_route_transfers_food_to_importer() {
 
     assert!(
         food_after > food_before,
-        "importer food must increase after trade route tick: before={food_before}, after={food_after}"
+        "importer food must increase after trade route tick: before={food_before:?}, after={food_after:?}"
     );
 }
 
@@ -180,7 +180,7 @@ fn n4_route_does_not_overdraft_exporter() {
     let food = sim.state.faction_resources[&0].food;
     assert!(
         food >= Fixed::ZERO,
-        "exporter food must not go negative after over-sized route, got {food}"
+        "exporter food must not go negative after over-sized route, got {food:?}"
     );
 }
 

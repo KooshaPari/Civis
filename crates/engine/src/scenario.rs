@@ -525,6 +525,7 @@ mod tests {
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
         };
         let sim = scenario.into_simulation(1);

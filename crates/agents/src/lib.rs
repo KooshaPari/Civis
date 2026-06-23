@@ -358,8 +358,22 @@ pub fn spawn_child_near(
     y: f32,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+
     let nx = (x + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
     let ny = (y + rng.gen_range(-0.015..0.015)).clamp(0.01, 0.99);
+
+    // Generate DNA from archetype with divergence
+    let seed_index = (id as usize) % 3;
+    let named_seed = match seed_index {
+        0 => NamedSeed::Ardani,
+        1 => NamedSeed::Velthari,
+        _ => NamedSeed::Grundak,
+    };
+    let dna_class = civ_genetics::DnaClass::default();
+    let seed_def = civ_genetics::archetype_seed(named_seed);
+    let dna = spawn_genome_with_divergence(rng, &dna_class, &seed_def, 0.3);
+
     spawn_civilian(
         world,
         Civilian {
@@ -375,6 +389,7 @@ pub fn spawn_child_near(
             },
         },
         child_bundle_from_parent(rng),
+        dna,
     )
 }
 
@@ -425,6 +440,7 @@ pub fn spawn_civilian(
     civilian: Civilian,
     position: Position3d,
     bundle: CivilianBundle,
+    dna: civ_genetics::Dna,
 ) -> hecs::Entity {
     let CivilianBundle {
         velocity,
@@ -433,7 +449,7 @@ pub fn spawn_civilian(
         needs,
         lod,
     } = bundle;
-    world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod))
+    world.spawn((civilian, position, velocity, wardrobe, tools, needs, lod, dna))
 }
 
 /// Return a normalized direction from a civilian toward a home coordinate.
@@ -471,6 +487,8 @@ pub fn spawn_civilian_at(
     visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
     let velocity = Velocity {
         dx: angle.cos(),
@@ -481,6 +499,20 @@ pub fn spawn_civilian_at(
         y: 0,
         z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
     };
+
+    // Select archetype seed based on civilian ID % 3 for variety (Ardani, Velthari, Grundak)
+    let seed_index = (id as usize) % 3;
+    let named_seed = match seed_index {
+        0 => NamedSeed::Ardani,
+        1 => NamedSeed::Velthari,
+        _ => NamedSeed::Grundak,
+    };
+
+    // Generate DNA from archetype with divergence
+    let dna_class = civ_genetics::DnaClass::default();
+    let seed_def = civ_genetics::archetype_seed(named_seed);
+    let dna = spawn_genome_with_divergence(rng, &dna_class, &seed_def, 0.3);
+
     let entity = spawn_civilian(
         world,
         Civilian {
@@ -490,6 +522,7 @@ pub fn spawn_civilian_at(
         },
         Position3d { coord },
         CivilianBundle::newborn_default(velocity),
+        dna,
     );
     let _ = world.insert_one(entity, ActorVisual(visual));
     entity
@@ -502,6 +535,13 @@ pub fn spawn_many(
     seed_civilian_id: u64,
     faction: u32,
 ) -> Vec<hecs::Entity> {
+    use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
+
+    // Create a seeded RNG for deterministic DNA generation
+    let mut rng = ChaCha8Rng::seed_from_u64(seed_civilian_id);
+
     let mut entities = Vec::with_capacity(count as usize);
     for offset in 0..count {
         let civilian = Civilian {
@@ -532,6 +572,18 @@ pub fn spawn_many(
             _ => LodTier::Cold,
         };
         let angle = (offset as f32) * 0.5;
+
+        // Generate DNA from archetype with divergence
+        let seed_index = ((seed_civilian_id + u64::from(offset)) as usize) % 3;
+        let named_seed = match seed_index {
+            0 => NamedSeed::Ardani,
+            1 => NamedSeed::Velthari,
+            _ => NamedSeed::Grundak,
+        };
+        let dna_class = civ_genetics::DnaClass::default();
+        let seed_def = civ_genetics::archetype_seed(named_seed);
+        let dna = spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3);
+
         entities.push(spawn_civilian(
             world,
             civilian,
@@ -546,6 +598,7 @@ pub fn spawn_many(
                 needs,
                 lod,
             },
+            dna,
         ));
     }
     entities
@@ -897,6 +950,17 @@ mod tests {
         }
     }
 
+    /// Helper function for tests to create default DNA
+    fn test_dna() -> civ_genetics::Dna {
+        use civ_genetics::{NamedSeed, archetype_seed, spawn_genome_with_divergence, DnaClass};
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha8Rng;
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let dna_class = DnaClass::default();
+        let seed_def = archetype_seed(NamedSeed::Ardani);
+        spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3)
+    }
+
     /// Covers FR-CIV-AGENTS-011 — fixture access: civilians compose with civ-genetics
     /// and civ-species without leaking RNG into the type system.
     #[test]
@@ -916,6 +980,10 @@ mod tests {
     /// Covers FR-CIV-AGENTS-020 — spawn_civilian inserts all requested components.
     #[test]
     fn spawn_civilian_inserts_components() {
+        use civ_genetics::{NamedSeed, spawn_genome_with_divergence};
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha8Rng;
+
         let mut world = World::new();
         let civ = Civilian {
             id: 11,
@@ -940,6 +1008,8 @@ mod tests {
             belonging: 0.4,
         };
         let lod = LodTier::Warm;
+        let mut rng = ChaCha8Rng::seed_from_u64(11);
+        let dna = spawn_genome_with_divergence(&mut rng, NamedSeed::Ardani, 0.3);
         let entity = spawn_civilian(
             &mut world,
             civ.clone(),
@@ -951,6 +1021,7 @@ mod tests {
                 needs,
                 lod,
             },
+            dna,
         );
 
         assert_eq!(&*world.get::<&Civilian>(entity).unwrap(), &civ);
@@ -1025,6 +1096,7 @@ mod tests {
                 },
                 lod: LodTier::Hot,
             },
+            test_dna(),
         );
         let before = *world.get::<&Position3d>(entity).unwrap();
         tick_movement(&mut world, 128, &mut rng, |_, _| true);
@@ -1069,6 +1141,7 @@ mod tests {
                 },
                 lod: LodTier::Hot,
             },
+            test_dna(),
         );
         tick_movement(&mut world, 128, &mut rng, |_, _| true);
         let pos = world.get::<&Position3d>(entity).unwrap();
@@ -1115,6 +1188,7 @@ mod tests {
                 },
                 lod: LodTier::Hot,
             },
+            test_dna(),
         );
         tick_movement(&mut world, 128, &mut rng, |x, _| x < 0.500_001);
         let pos = world.get::<&Position3d>(entity).unwrap();

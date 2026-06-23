@@ -70,6 +70,8 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "compact",
     "buildings",
     "diffusion",
+    "life",
+    "emergence",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -200,25 +202,34 @@ pub fn attach_citizen_to_agents(world: &mut World) {
 }
 
 fn spawn_faction_civilians(world: &mut World, rng: &mut SimRng) {
-    const CIVILIANS_PER_FACTION: usize = 32;
-    const QUADRANT_SPREAD: i32 = 2_500;
+    spawn_faction_civilians_custom(world, rng, 32, 4, 2_500);
+}
 
-    let faction_capitals = [
-        (-7_500, 7_500),  // faction 0: NW
-        (7_500, 7_500),   // faction 1: NE
-        (-7_500, -7_500), // faction 2: SW
-        (7_500, -7_500),  // faction 3: SE
-    ];
-
+/// Spawn civilians for each faction with custom parameters.
+pub(crate) fn spawn_faction_civilians_custom(
+    world: &mut World,
+    rng: &mut SimRng,
+    civilians_per_faction: u32,
+    faction_count: u32,
+    quadrant_spread: i32,
+) {
     let scale = FIXED_SCALE as f32;
     let mut next_civilian_id = 1u64;
-    for (faction, (center_x, center_y)) in faction_capitals.into_iter().enumerate() {
-        for _ in 0..CIVILIANS_PER_FACTION {
-            let grid_x = center_x + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
-            let grid_z = center_y + rng.gen_range(-QUADRANT_SPREAD..=QUADRANT_SPREAD);
+
+    // Arrange faction capitals in a ring around the map center
+    let faction_count_f32 = faction_count as f32;
+    for faction in 0..faction_count {
+        let angle = (faction as f32 / faction_count_f32) * std::f32::consts::TAU;
+        let radius = 7_500.0;
+        let center_x = (angle.cos() * radius) as i32;
+        let center_y = (angle.sin() * radius) as i32;
+
+        for _ in 0..civilians_per_faction {
+            let grid_x = center_x + rng.gen_range(-quadrant_spread..=quadrant_spread);
+            let grid_z = center_y + rng.gen_range(-quadrant_spread..=quadrant_spread);
             let norm_x = (grid_x as f32 / scale).clamp(0.0, 1.0);
             let norm_y = (grid_z as f32 / scale).clamp(0.0, 1.0);
-            spawn_civilian_at(world, next_civilian_id, Alignment::Faction(faction as u32), norm_x, norm_y, ActorVisualKind::Humanoid, rng);
+            spawn_civilian_at(world, next_civilian_id, Alignment::Faction(faction), norm_x, norm_y, ActorVisualKind::Humanoid, rng);
             next_civilian_id += 1;
         }
     }
@@ -726,8 +737,13 @@ impl Simulation {
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
         let weather_grid = compute_weather(&climate, 0, 16);
+
+        // Count actual civilians spawned (128: 32 per faction × 4 factions)
+        let civilian_count = count_civilians(&world) as u64;
+
         let state = WorldState {
             rng_seed: seed,
+            population: civilian_count,
             ..Default::default()
         };
 
@@ -3381,6 +3397,8 @@ mod tests {
                 "compact",
                 "buildings",
                 "diffusion",
+                "life",
+                "emergence",
             ]
         );
     }

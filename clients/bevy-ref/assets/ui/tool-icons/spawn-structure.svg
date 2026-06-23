@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- isometric voxel block (structure). Monochrome line-glyph, neon on active. -->
-  <g fill="none" stroke="#9AA4B2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <polygon points="32,12 52,23 52,42 32,53 12,42 12,23"/>
-    <polyline points="12,23 32,34 52,23"/>
-    <line x1="32" y1="34" x2="32" y2="53"/>
-  </g>
-  <circle cx="32" cy="23" r="3" fill="none" stroke="#3DF07A" stroke-width="2.4"/>
-</svg>

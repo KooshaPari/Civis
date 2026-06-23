@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # suppress-custom-retry.sh — Anti-pattern: custom retry loops when tenacity is available
 # Trigger: PreToolUse:Write/Edit
 # Severity: WARNING (advisory)

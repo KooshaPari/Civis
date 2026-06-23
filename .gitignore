@@ -20,7 +20,6 @@ clients/unreal-show/scripts/vs-modify2.log
 /.task
 .DS_Store
 .env
-scripts/omniroute.env
 *.log
 
 /docs/node_modules
@@ -52,17 +51,6 @@ scripts/omniroute.env
 .llmignore
 worktrees/
 worktrees/
-.worktrees/
-.worktrees-prompts/
 vendor/phenodocs/node_modules/
 .vitepress/cache/
 target-ci/
-.worker_tasks/
-.worker_logs/
-/dist/
-target-check-build/
-*-target/
-
-# Traceability: stray user-drive nesting inside agileplus-specs/
-# (D:/ mount surface that Git Bash sometimes symlinks into the worktree)
-/agileplus-specs/d/

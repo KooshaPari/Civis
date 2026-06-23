@@ -33,9 +33,6 @@ use tokio::{
 };
 
 use crate::{
-    autosave::{
-        autosave_cadence_from_env, autosave_keep_from_env, spawn_autosave_loop, AutosaveContext,
-    },
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
@@ -241,34 +238,7 @@ async fn serve_ws_bridge(
         }
     });
 
-    // Background autosaver (CIV-1000 §13 / P5). Cadence is configurable via
-    // `CIV_AUTOSAVE_EVERY_SECS` (default 60s, `0` disables). The loop shares
-    // the bridge's `Simulation` mutex and the `SaveDb` instance, so saves
-    // serialize against client-driven `save.slot` / `save.load` calls.
-    let autosave_handle = autosave_cadence_from_env().and_then(|cadence| {
-        let keep = autosave_keep_from_env();
-        let ctx = AutosaveContext {
-            sim: Arc::clone(&state.sim),
-            saves_dir: state.saves_dir.clone(),
-            session_id: state.session_id.clone(),
-            save_db: Arc::clone(&state.save_db),
-            keep,
-        };
-        spawn_autosave_loop(ctx, cadence)
-    });
-
-    let server_result = server.await;
-    // Tear down the long-lived background tasks so the process can exit
-    // cleanly. The tick task was already being polled by the previous
-    // `tokio::join!`; aborting it here preserves that intent.
-    ticker.abort();
-    if let Some(handle) = autosave_handle {
-        handle.abort();
-        let _ = handle.await;
-    }
-    if let Err(err) = server_result {
-        tracing::error!("ws bridge server error: {err}");
-    }
+    let _ = tokio::join!(server, ticker);
 }
 
 async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
@@ -379,37 +349,24 @@ async fn handle_jsonrpc_text(
                 }
             }
             let tick = state.tick.load(Ordering::SeqCst);
-            let (population, snapshot, emergence) = match req.method {
+            let (population, snapshot) = match req.method {
                 JsonRpcMethod::SimStatus => {
                     let sim = state.sim.lock().await;
                     let snap = sim.snapshot();
-                    (Some(snap.population), None, None)
+                    (Some(snap.population), None)
                 }
                 JsonRpcMethod::SimSnapshot => {
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
-                    let emergence = sim
-                        .last_emergence_sample()
-                        .map(crate::jsonrpc::EmergenceSampleFields::from);
                     (
                         None,
                         Some(crate::jsonrpc::snapshot_fields_from_sim(
                             &sim,
                             speed_multiplier,
                         )),
-                        emergence,
                     )
                 }
-                JsonRpcMethod::SimEmergence => {
-                    // Read the latest sample (sampler is internal to
-                    // the simulation; we just expose it).
-                    let sim = state.sim.lock().await;
-                    let emergence = sim
-                        .last_emergence_sample()
-                        .map(crate::jsonrpc::EmergenceSampleFields::from);
-                    (None, None, emergence)
-                }
-                _ => (None, None, None),
+                _ => (None, None),
             };
             let mut plan = dispatch_request(
                 req,
@@ -421,7 +378,6 @@ async fn handle_jsonrpc_text(
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
-                    emergence,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -443,7 +399,6 @@ fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceF
                 wardrobe: wardrobe.material,
                 tools: tools.material,
                 scale: 1.0,
-                position: None,
             },
         )
         .collect();
@@ -461,8 +416,6 @@ fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
         } else {
             BuildingProvenance::Freehand
         },
-        buildings: Vec::new(),
-        graph: None,
     };
     let agents = build_agent_appearance_frame(sim, tick);
     Ok([
@@ -547,15 +500,8 @@ async fn apply_dispatch_effect(
         } => {
             let mut sim = state.sim.lock().await;
             let mut rng = sim.rng_mut().clone();
-            let entity = civ_agents::spawn_civilian_at(
-                &mut sim.world,
-                entity_seq,
-                civ_agents::Alignment::Faction(faction),
-                x,
-                y,
-                civ_agents::ActorVisualKind::Humanoid,
-                &mut rng,
-            );
+            let entity =
+                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, faction, x, y, &mut rng);
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }
@@ -578,10 +524,9 @@ async fn apply_dispatch_effect(
                     let entity = civ_agents::spawn_civilian_at(
                         &mut sim.world,
                         entity_seq,
-                        civ_agents::Alignment::Faction(faction),
+                        faction,
                         x,
                         y,
-                        civ_agents::ActorVisualKind::Humanoid,
                         &mut rng,
                     );
                     *sim.rng_mut() = rng;
@@ -898,14 +843,10 @@ mod tests {
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Procedural,
-                buildings: Vec::new(),
-                graph: None,
             }),
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
                 provenance: BuildingProvenance::Freehand,
-                buildings: Vec::new(),
-                graph: None,
             }),
             Frame3d::AgentAppearance(AgentAppearanceFrame {
                 tick: 1,
@@ -941,8 +882,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("json");
         let decoded: Frame3d = serde_json::from_str(&json).expect("decode");

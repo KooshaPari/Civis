@@ -235,7 +235,6 @@ mod tests {
     /// FR-CIV-PLANET-060 — chain digest changes on any ClimateFrame field delta.
     #[test]
     fn replay_hash_chain_differs_when_climate_changes() {
-        use civ_planet::weather::{SeasonKind, WeatherKind};
         use civ_planet::{Climate, GeologyMap, PlanetConfig, WeatherCell};
 
         let base_climate = Climate {
@@ -247,12 +246,8 @@ mod tests {
         };
         let weather = vec![WeatherCell {
             region_id: 0,
-            latitude_fp: 0,
-            season: SeasonKind::Summer,
-            kind: WeatherKind::Clear,
             temp_c_fp: 20_000,
             precip_mm_fp: 1_000,
-            storm_intensity_fp: 0,
         }];
         let planet_cfg = PlanetConfig {
             radius_km: 6_371,
@@ -290,12 +285,8 @@ mod tests {
         // Mutate weather cell temperature — hash must differ
         let weather_changed = vec![WeatherCell {
             region_id: 0,
-            latitude_fp: 0,
-            season: SeasonKind::Summer,
-            kind: WeatherKind::Clear,
             temp_c_fp: 30_000,
             precip_mm_fp: 1_000,
-            storm_intensity_fp: 0,
         }];
         let changed_hash = chain_advance(
             &GENESIS,

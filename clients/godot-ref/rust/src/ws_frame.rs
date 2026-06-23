@@ -20,20 +20,10 @@ fn is_frame3d_binary(bytes: &[u8]) -> bool {
 }
 
 fn frame_kind_tick_json(frame: &Frame3d) -> DecodedWsPacket {
-    // Frame3d gained four additional variants (CivilianState, FactionState,
-    // EventFeed, Climate) on the wave-1 branch. The Godot client only renders
-    // the three voxel/building/agent variants as ECS entities, so for the
-    // GDScript surface we report any of the others as a generic "Other" kind
-    // and let GDScript ignore them — keeping the DecodedWsPacket contract
-    // stable while the protocol grows.
     let kind = match frame {
         Frame3d::VoxelDelta(_) => "VoxelDelta",
         Frame3d::BuildingDiff(_) => "BuildingDiff",
         Frame3d::AgentAppearance(_) => "AgentAppearance",
-        Frame3d::CivilianState(_)
-        | Frame3d::FactionState(_)
-        | Frame3d::EventFeed(_)
-        | Frame3d::Climate(_) => "Other",
     };
     let tick = frame.tick();
     let json = serde_json::to_string(frame).unwrap_or_default();
@@ -177,8 +167,6 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 42,
             provenance: BuildingProvenance::Procedural,
-            buildings: Vec::new(),
-            graph: None,
         });
         let bytes = encode_frame3d_binary(&frame).expect("encode fixture");
         assert!(bytes.starts_with(FRAME3D_BINARY_MAGIC));

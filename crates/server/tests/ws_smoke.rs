@@ -1204,10 +1204,8 @@ fn assert_three_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
             Frame3d::VoxelDelta(_) => has_voxel = true,
             Frame3d::BuildingDiff(_) => has_building = true,
             Frame3d::AgentAppearance(_) => has_agent = true,
-            // Climate / civilian / faction / event-feed frames are on their own
-            // broadcasts and may interleave with the per-tick batch; ignore any
-            // non-expected frame kind in this assertion.
-            _ => {}
+            // ClimateFrame is a separate broadcast; ignore it in this assertion.
+            Frame3d::Climate(_) => {}
         }
     }
     assert!(has_voxel && has_building && has_agent);

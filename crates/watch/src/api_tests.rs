@@ -32,7 +32,6 @@ use crate::mods_api::{
 };
 use crate::server::build_api_router;
 use crate::sim_worker::simulation_worker;
-use crate::snapshot::make_snapshot;
 use crate::terrain::{self, Terrain};
 
 fn test_state() -> AppState {
@@ -174,32 +173,6 @@ async fn get_snapshot_returns_null_before_first_tick() {
     assert_eq!(response.status(), StatusCode::OK);
     let json = body_json(response).await;
     assert!(json.is_null());
-}
-
-#[tokio::test]
-async fn make_snapshot_includes_life_sim_state_parity() {
-    let state = test_state();
-    {
-        let mut sim = state.sim.lock().await;
-        sim.tick();
-    }
-
-    let sim = state.sim.lock().await;
-    let snapshot = make_snapshot(
-        &sim,
-        &[],
-        &[],
-        &crate::app::TradeTickSummary::default(),
-        state.speed.load(std::sync::atomic::Ordering::Relaxed),
-        &state.laws,
-        state.target_era.load(std::sync::atomic::Ordering::Relaxed),
-    );
-
-    assert_eq!(snapshot.population, sim.state.population);
-    assert_eq!(snapshot.births_this_tick, sim.last_births().len() as u32);
-    assert_eq!(snapshot.deaths_this_tick, sim.last_deaths().len() as u32);
-    assert_eq!(snapshot.settlement_count, sim.settlement_count());
-    assert_eq!(snapshot.cluster_stocks, sim.cluster_stocks().clone());
 }
 
 #[tokio::test]

@@ -67,9 +67,6 @@ pub enum JsonRpcMethod {
     LoadSlot,
     /// List saves in the bridge `saves/` directory (`save.list`, CIV-1000 §13).
     SaveList,
-    /// Read the latest civ-emergence-metrics sample
-    /// (`sim.emergence`, stacked on PR #350; FR dashboard).
-    SimEmergence,
 }
 
 impl JsonRpcMethod {
@@ -93,7 +90,6 @@ impl JsonRpcMethod {
             Self::SaveSlot => "save.slot",
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
-            Self::SimEmergence => "sim.emergence",
         }
     }
 
@@ -117,7 +113,6 @@ impl JsonRpcMethod {
             "save.slot" => Some(Self::SaveSlot),
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
-            "sim.emergence" => Some(Self::SimEmergence),
             _ => None,
         }
     }
@@ -630,7 +625,7 @@ pub fn snapshot_fields_from_sim(
 }
 
 /// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -646,57 +641,6 @@ pub struct DispatchContext {
     pub connection_role: Option<String>,
     /// Bridge save directory for `save.*` handlers.
     pub saves_dir: Option<PathBuf>,
-    /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
-    /// fresh simulation before the first 50-tick sample boundary.
-    pub emergence: Option<EmergenceSampleFields>,
-}
-
-/// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
-///
-/// Mirrors the engine type but keeps a fixed, transport-friendly
-/// representation (no `f32` precision surprises, all `Option`s for the
-/// "no dense chunks yet" boot state). Emitted by the `sim.emergence`
-/// JSON-RPC method and embedded in `sim.snapshot` for dashboard
-/// consumers that poll the snapshot stream instead.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EmergenceSampleFields {
-    /// Engine tick the sample was taken at.
-    pub tick: u64,
-    /// Shannon entropy (bits) over the live material histogram.
-    pub entropy_bits: f32,
-    /// Normalised Shannon entropy (`0..=1`).
-    pub entropy_norm: f32,
-    /// 6-connectivity component count on the first dense chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub structure_count: Option<u32>,
-    /// Size (in voxels) of the largest component in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub structure_largest: Option<u32>,
-    /// Number of foreground voxels in the sampled chunk.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub structure_foreground: Option<u32>,
-    /// Total number of voxels accumulated into the histogram.
-    pub histogram_total: u64,
-    /// Number of populated bins in the material histogram.
-    pub histogram_populated_bins: u32,
-    /// Wall-clock duration of the sample, in microseconds.
-    pub sample_dur_us: u64,
-}
-
-impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFields {
-    fn from(s: civ_engine::emergence_metrics::EmergenceSample) -> Self {
-        Self {
-            tick: s.tick,
-            entropy_bits: s.entropy_bits,
-            entropy_norm: s.entropy_norm,
-            structure_count: s.structure_count,
-            structure_largest: s.structure_largest,
-            structure_foreground: s.structure_foreground,
-            histogram_total: s.histogram_total,
-            histogram_populated_bins: s.histogram_populated_bins,
-            sample_dur_us: s.sample_dur_us,
-        }
-    }
 }
 
 /// Side effect the WebSocket bridge must apply after building the wire response.
@@ -1034,23 +978,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
-        JsonRpcMethod::SimEmergence => {
-            // Latest emergence-metrics sample (civ-emergence-metrics
-            // via `crates/engine::emergence_metrics`). Returns `null`
-            // for the no-sample-yet state (ticks 0..49 on a fresh sim)
-            // so dashboard clients can disambiguate "no data" from
-            // "entropy is exactly zero".
-            let result = match ctx.emergence.as_ref() {
-                Some(sample) => serde_json::to_value(sample).unwrap_or(serde_json::json!({
-                    "tick": ctx.tick,
-                })),
-                None => serde_json::json!({ "tick": ctx.tick, "sample": serde_json::Value::Null }),
-            };
-            DispatchPlan {
-                response: JsonRpcResponse::success(req.id, result),
-                effect: DispatchEffect::None,
-            }
-        }
         JsonRpcMethod::SimSpawnCivilian => {
             if !role_allows_operator(
                 ctx.require_role,
@@ -1489,7 +1416,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1524,7 +1450,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(
@@ -1559,7 +1484,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -1583,7 +1507,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1608,7 +1531,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1634,7 +1556,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1660,7 +1581,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1682,7 +1602,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -1754,7 +1673,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -1778,95 +1696,9 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
-    }
-
-    /// `sim.emergence` returns the cached [`EmergenceSampleFields`] when
-    /// the bridge has already populated [`DispatchContext::emergence`]
-    /// (PR #350 stack). The wire contract is a flat JSON object with
-    /// `tick`, `entropy_bits`, `entropy_norm`, and the structure bin
-    /// counts — exactly the shape the dashboard tiles consume.
-    #[test]
-    fn dispatch_sim_emergence_returns_cached_sample() {
-        let req =
-            parse_request(r#"{"jsonrpc":"2.0","id":50,"method":"sim.emergence","params":{}}"#)
-                .expect("parse");
-        let sample = EmergenceSampleFields {
-            tick: 50,
-            entropy_bits: 0.3472,
-            entropy_norm: 0.0820,
-            structure_count: Some(3),
-            structure_largest: Some(2048),
-            structure_foreground: Some(4096),
-            histogram_total: 4096,
-            histogram_populated_bins: 4,
-            sample_dur_us: 17,
-        };
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 50,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: Some(sample),
-            },
-        );
-        assert_eq!(plan.effect, DispatchEffect::None);
-        let result = plan.response.result.expect("result");
-        assert_eq!(result["tick"], 50);
-        // f32 round-trips through JSON as a number close to the
-        // original; we assert within a small absolute tolerance
-        // rather than exact equality.
-        let entropy_bits = result["entropy_bits"].as_f64().expect("f64");
-        assert!(
-            (entropy_bits - 0.3472).abs() < 1e-5,
-            "entropy_bits: {entropy_bits}"
-        );
-        let entropy_norm = result["entropy_norm"].as_f64().expect("f64");
-        assert!(
-            (entropy_norm - 0.0820).abs() < 1e-5,
-            "entropy_norm: {entropy_norm}"
-        );
-        assert_eq!(result["structure_count"], 3);
-        assert_eq!(result["structure_largest"], 2048);
-        assert_eq!(result["structure_foreground"], 4096);
-        assert_eq!(result["histogram_total"], 4096);
-        assert_eq!(result["histogram_populated_bins"], 4);
-        assert_eq!(result["sample_dur_us"], 17);
-    }
-
-    /// `sim.emergence` on a fresh sim (ticks 0..49, no sample yet)
-    /// returns `{ "tick": N, "sample": null }` so dashboard clients can
-    /// distinguish "no data" from "entropy is exactly zero".
-    #[test]
-    fn dispatch_sim_emergence_returns_null_sample_before_first_boundary() {
-        let req = parse_request(r#"{"jsonrpc":"2.0","id":51,"method":"sim.emergence"}"#)
-            .expect("parse");
-        let plan = dispatch_request(
-            req,
-            DispatchContext {
-                tick: 12,
-                population: None,
-                snapshot: None,
-                require_role: false,
-                speed_multiplier: 1,
-                connection_role: None,
-                saves_dir: None,
-                emergence: None,
-            },
-        );
-        assert_eq!(plan.effect, DispatchEffect::None);
-        assert_eq!(
-            plan.response.result,
-            Some(serde_json::json!({ "tick": 12, "sample": serde_json::Value::Null }))
-        );
     }
 
     #[test]
@@ -1973,7 +1805,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -2009,7 +1840,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert!(matches!(
@@ -2056,7 +1886,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert!(matches!(
@@ -2128,7 +1957,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2198,7 +2026,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(
@@ -2273,7 +2100,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(
@@ -2314,7 +2140,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(
@@ -2348,7 +2173,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(
@@ -2380,7 +2204,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2405,7 +2228,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2472,7 +2294,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2537,7 +2358,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -2563,7 +2383,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2594,7 +2413,6 @@ mod tests {
                 speed_multiplier: 4,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2620,7 +2438,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(
@@ -2647,7 +2464,6 @@ mod tests {
                 speed_multiplier: 1,
                 connection_role: None,
                 saves_dir: None,
-                emergence: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);

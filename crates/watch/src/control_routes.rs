@@ -38,15 +38,7 @@ pub(crate) async fn spawn_civilian_handler(
     let mut sim = state.sim.lock().await;
     let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
     let mut rng = sim.rng_mut().clone();
-    let _ = spawn_civilian_at(
-        &mut sim.world,
-        id,
-        civ_agents::Alignment::Faction(req.faction),
-        req.x,
-        req.y,
-        civ_agents::ActorVisualKind::Humanoid,
-        &mut rng,
-    );
+    let _ = spawn_civilian_at(&mut sim.world, id, req.faction, req.x, req.y, &mut rng);
     *sim.rng_mut() = rng;
     Json(ControlOk {
         ok: true,
@@ -59,26 +51,12 @@ pub(crate) async fn spawn_entity_handler(
     Json(req): Json<SpawnEntityReq>,
 ) -> Json<ControlOk> {
     let mut sim = state.sim.lock().await;
-    let mut spawn_civilian_like = |kind: civ_agents::ActorVisualKind| {
-        let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
-        let mut rng = sim.rng_mut().clone();
-        let _ = spawn_civilian_at(
-            &mut sim.world,
-            id,
-            civ_agents::Alignment::Faction(req.faction),
-            req.x,
-            req.y,
-            kind,
-            &mut rng,
-        );
-        *sim.rng_mut() = rng;
-    };
     match req.kind.as_str() {
         "civilian" => {
-            spawn_civilian_like(civ_agents::ActorVisualKind::Humanoid);
-        }
-        "herd" => {
-            spawn_civilian_like(civ_agents::ActorVisualKind::Herd);
+            let id = sim.state.tick.wrapping_add(1) ^ 0x00c0_ffee;
+            let mut rng = sim.rng_mut().clone();
+            let _ = spawn_civilian_at(&mut sim.world, id, req.faction, req.x, req.y, &mut rng);
+            *sim.rng_mut() = rng;
         }
         "vehicle" => {
             use civ_engine::{spawn_military_at, UnitType};
@@ -110,7 +88,7 @@ pub(crate) async fn spawn_entity_handler(
             return Json(ControlOk {
                 ok: false,
                 message: Some(
-                    "kind must be civilian, vehicle, airport, port, hangar, or herd".to_string(),
+                    "kind must be civilian, vehicle, airport, port, or hangar".to_string(),
                 ),
             });
         }

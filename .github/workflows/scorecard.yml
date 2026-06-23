@@ -1,12 +1,10 @@
-# Local-first: PRs use quality.yml + pr-governance only.
-# Scorecard runs on a weekly cron only (no push-to-main, no PR). The push
-# trigger was burning ~5 min per merge; that line of work is now covered by
-# the local `just quality` attestation in `.ci/quality-manifest.json`.
 name: OpenSSF Scorecard
 on:
   branch_protection_rule:
   schedule:
     - cron: '17 3 * * 6'
+  push:
+    branches: [main]
 
 permissions: read-all
 
@@ -14,7 +12,6 @@ jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     permissions:
       security-events: write
       id-token: write

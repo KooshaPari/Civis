@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Console Holo tool glyph: monochrome graphite line-glyph (rest). Active
-       state = neon edge applied by the HUD. Scale-safe to 16px. Project-owned. -->
-  <g fill="none" stroke="#9AA4B2" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
-    <polygon points="18,12 18,48 28,39 34,53 40,50 34,37 47,37"/>
-  </g>
-</svg>

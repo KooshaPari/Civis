@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # pre-validate-bash.sh — PreToolUse hook for civ
 # Validates Bash syntax before execution
-set -uo pipefail
+set -euo pipefail
 
 # Only check Bash tool
 if [[ "${TOOL_NAME:-}" != "Bash" ]]; then

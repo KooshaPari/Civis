@@ -100,7 +100,6 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     let camera = CameraTarget::default();
     let eye = camera.orbit_position();
     let centre = Vec3::from_array(camera.centre);
-    let sun_dir = Vec3::new(-0.4, -0.8, -0.3).normalize();
 
     let day_factor = 1.0_f32;
     let clear_rgb = presentation_clear_color_rgb(day_factor);
@@ -119,25 +118,17 @@ pub fn spawn_default_scene(commands: &mut Commands) {
     // Sun light — offset from the camera azimuth so voxels pick up depth.
     commands.spawn((
         DirectionalLight {
-            illuminance: 12_000.0,
+            illuminance: 10_000.0,
             shadows_enabled: true,
             ..default()
         },
-        Transform::from_rotation(Quat::from_rotation_arc(Vec3::NEG_Z, sun_dir)),
+        Transform::from_xyz(eye[0] + 12.0, eye[1] + 20.0, eye[2] + 8.0).looking_at(centre, Vec3::Y),
     ));
 
-    let mut cam = commands.spawn((
+    commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(eye[0], eye[1], eye[2]).looking_at(centre, Vec3::Y),
     ));
-    // Marker so `crate::map2d` can locate the *main* perspective camera
-    // (distinct from the minimap `Camera3d`) and toggle its `is_active`
-    // when the 2D map view fades in. Without this, the live 3D scene
-    // bleeds through the alpha-faded basemap. Only attached under `egui`
-    // because the marker type lives in the egui-gated `map2d` module.
-    #[cfg(feature = "egui")]
-    cam.insert(crate::map2d::MainSceneCamera);
-    let _ = cam;
 }
 
 /// Spawn a voxel mesh entity with a basic stone-coloured PBR material.

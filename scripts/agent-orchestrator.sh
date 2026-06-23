@@ -1,5 +1,5 @@
-#!/bin/bash
-# shellcheck disable=SC2155,SC2046,SC2034,SC2207
+#!/usr/bin/env bash
+set -euo pipefail
 # agent-orchestrator.sh - Service-style management for external CLI agents
 #
 # Provides bash-native introspection and control of cursor-agent and codex
@@ -30,7 +30,6 @@ set -e
 AGENT_DIR="${AGENT_DIR:-$(pwd)/.agents}"
 CURSOR_MODEL="${CURSOR_MODEL:-auto}"
 CODEX_SANDBOX="${CODEX_SANDBOX:-workspace-write}"
-OMNIROUTE_ENV_FILE="${OMNIROUTE_ENV_FILE:-$(pwd)/scripts/omniroute.env}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -50,27 +49,6 @@ log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
 ensure_dir() {
   mkdir -p "${AGENT_DIR}"
-}
-
-load_omniroute_env() {
-  if [[ ! -f "${OMNIROUTE_ENV_FILE}" ]]; then
-    return 0
-  fi
-  while IFS= read -r line || [[ -n "${line}" ]]; do
-    line="${line#"${line%%[![:space:]]*}"}"
-    [[ -z "${line}" || "${line}" == \#* ]] && continue
-    if [[ "${line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-      export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
-    fi
-  done <"${OMNIROUTE_ENV_FILE}"
-  if [[ -n "${OMNROUTE_BASE_URL:-}" ]]; then
-    export OPENAI_API_BASE="${OPENAI_API_BASE:-${OMNROUTE_BASE_URL}}"
-    export OPENAI_BASE_URL="${OPENAI_BASE_URL:-${OMNROUTE_BASE_URL}}"
-  fi
-  if [[ -n "${OMNROUTE_AGENT_MODEL:-}" ]]; then
-    export OPENAI_MODEL="${OPENAI_MODEL:-${OMNROUTE_AGENT_MODEL}}"
-  fi
-  log_info "OmniRoute env loaded from ${OMNIROUTE_ENV_FILE} (base=${OMNROUTE_BASE_URL:-unset})"
 }
 
 get_pid_file() { echo "${AGENT_DIR}/$1.pid"; }
@@ -99,7 +77,6 @@ cmd_start() {
   fi
 
   ensure_dir
-  load_omniroute_env
 
   if is_running "${name}"; then
     log_warn "Agent '${name}' is already running (PID $(cat $(get_pid_file "${name}")))"

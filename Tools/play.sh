@@ -42,38 +42,17 @@ fi
 # 2. Build
 step "Building civ-standalone ($PROFILE)..."
 cd "$REPO_ROOT"
-
-# Asset-root + target-dir ergonomics: see Tools/play.ps1 for the long-form
-# rationale. Bevy 0.18's default `AssetPlugin::file_path` is "assets"
-# relative to CWD, which from the workspace root is the wrong directory.
-# Honor caller-provided values, otherwise default BEVY_ASSET_ROOT to the
-# bevy-ref crate and CARGO_TARGET_DIR to <repo>/target (which is where
-# `EXE` below looks for the bin). The `just play*` recipes set
-# CARGO_TARGET_DIR=G:/civis-target-gate themselves; this fallback covers
-# direct `./Tools/play.sh` callers on POSIX.
-if [ -z "${BEVY_ASSET_ROOT:-}" ]; then
-    export BEVY_ASSET_ROOT="$REPO_ROOT/clients/bevy-ref"
-    ok "BEVY_ASSET_ROOT unset -> defaulting to $BEVY_ASSET_ROOT"
-fi
-if [ -z "${CARGO_TARGET_DIR:-}" ]; then
-    export CARGO_TARGET_DIR="$REPO_ROOT/target"
-    ok "CARGO_TARGET_DIR unset -> defaulting to $CARGO_TARGET_DIR"
-fi
-
 BUILD_ARGS=(build -p civ-bevy-ref --features bevy,egui --bin civ-standalone)
 [[ "$PROFILE" == "release" ]] && BUILD_ARGS+=(--release)
 cargo "${BUILD_ARGS[@]}"
 
-# `cargo build` writes to $CARGO_TARGET_DIR/$PROFILE/ by default, but
-# `cargo run` resolves the bin path from CARGO_TARGET_DIR too — keep both in sync.
-EXE="${CARGO_TARGET_DIR}/${PROFILE}/civ-standalone"
+EXE="$REPO_ROOT/target/$PROFILE/civ-standalone"
 [[ -x "$EXE" ]] || { err "Binary not found: $EXE"; exit 1; }
 ok "Built: $EXE"
 
 # 3. Launch
 step "Launching civ-standalone (RUST_LOG=$LOG_LEVEL)..."
-: > "$LOG_FILE"
-: > "$ERR_FILE"
+: > "$LOG_FILE"; : > "$ERR_FILE"
 
 RUST_LOG="$LOG_LEVEL" RUST_BACKTRACE=1 nohup "$EXE" \
     >"$LOG_FILE" 2>"$ERR_FILE" &

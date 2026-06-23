@@ -87,8 +87,6 @@ pub(crate) fn make_snapshot(
         tick_dt_ms,
         current_era,
         population: sim.state.population,
-        settlement_count: sim.settlement_count(),
-        cluster_stocks: sim.cluster_stocks().clone(),
         voxel_dirty_count: events.len(),
         voxel_chunk_count: sim.voxel().chunk_count(),
         sample_civilians,

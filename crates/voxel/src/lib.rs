@@ -27,22 +27,6 @@ pub use phenotype_voxel::{
     VoxelWorld, WorldCoord, WriteSeq, FIXED_SCALE,
 };
 
-pub mod boundary;
-pub mod fluid_ca;
-pub mod lod;
-pub mod material;
-pub mod reactions;
-pub mod stream;
-pub mod window;
-pub mod worldgen;
-
-pub use stream::{
-    ChunkStore, StreamConfig, StreamStats, StreamingWorld, WorldGen, CHUNK_EDGE, CHUNK_EDGE_I32,
-};
-pub use window::{ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy, ring_distance};
-pub use window::ring_iter::RingIter;
-pub use worldgen::HeightFieldGen;
-
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can
 /// evolve the adapter without forcing kernel-version bumps.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";

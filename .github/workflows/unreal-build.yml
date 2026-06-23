@@ -1,38 +1,28 @@
-# Local-first: PRs use quality.yml + pr-governance only.
-# Optional Unreal compile check on Windows. The full UBT run only ever succeeded
-# on a Windows self-hosted runner with UE 5.4 installed; on the GitHub-hosted
-# ubuntu/windows runner it always exits with code 2 (engine not found). The
-# real compile path is the developer machine via `.\clients\unreal-show\scripts\build.ps1`
-# (or with `CIVIS_QUALITY_UNREAL=1 lefthook run pre-push`, which records
-# `unreal_preflight` / `unreal_build` into the manifest).
+# Optional Unreal compile check on Windows.
+# GitHub-hosted runners do not ship UE 5.4; expect exit code 2 (engine not found).
+# Install UE locally and run clients/unreal-show/scripts/build.ps1 for a real compile.
 name: Unreal build (optional)
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-
+  push:
+    branches: [main]
 permissions:
   contents: read
 
 jobs:
-  manifest-verify:
-    name: manifest-verify (cloud)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Verify local quality manifest
-        run: bash scripts/quality/verify-quality-manifest.sh
-
   unreal-show:
-    # Manual escape hatch: rerun the rust-shim + UE build (windows-latest).
-    if: github.event_name == 'workflow_dispatch'
     name: civ-show (rust-shim + UE if present)
     runs-on: windows-latest
     timeout-minutes: 30
     continue-on-error: true
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
       - uses: dtolnay/rust-toolchain@stable
+
       - name: Run automated build script
         shell: pwsh
         working-directory: clients/unreal-show

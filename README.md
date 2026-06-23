@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Updated | 2026-06-10 |
-| State | Engine-only on main — deterministic 100ms-tick sim (P-P1 climate replay complete); playable wave-1 Bevy client pending in PR #333; game NOT yet playable |
-| Open PRs | #333 (wave-1 playable foundation), #334, #337, #345 |
-| Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
+| Last commit | 2026-06-05 |
+| Open issues | 158 |
+| Open PRs | 3 |
+| Focus | Civic engagement platform (CivLab) |
 
-Progress: ███░░░░░░░ 30% (engine foundation; client + gameplay phases pending)
+Progress: ████░░░░░░ 45%
 
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml
@@ -75,47 +75,6 @@ cargo build --workspace && cargo test --workspace
 just civis-3d-verify          # or: lefthook run pre-push (emits manifest + runs gates)
 cargo run -p civ-server       # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
 ```
-
-### Launch the standalone game (Bevy)
-
-The Bevy reference client needs **both** the `bevy,egui` feature set and
-a `BEVY_ASSET_ROOT` env var. Bevy 0.18 `AssetPlugin::file_path` defaults
-to `"./assets"` relative to CWD — from the workspace root that resolves
-to the wrong directory and produces 6 phantom module errors + ~10 asset
-404s. Use the ergonomic launcher (it defaults `BEVY_ASSET_ROOT` and
-`CARGO_TARGET_DIR=G:/civis-target-gate` for you):
-
-```bash
-just play          # release build + detached launch + log tail
-just play-debug    # RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn
-just play-trace    # + RUST_BACKTRACE=full
-just play-window   # live F3D0 binary-frame client (civ-bevy-window)
-```
-
-Manual incantation if you don't have `just` (Windows PowerShell):
-
-```powershell
-$env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
-$env:CARGO_TARGET_DIR = "G:/civis-target-gate"   # any out-of-tree dir
-cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-```
-
-Manual incantation (POSIX / WSL):
-
-```bash
-BEVY_ASSET_ROOT="$PWD/clients/bevy-ref" \
-CARGO_TARGET_DIR="$PWD/target" \
-cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-```
-
-The `just play*` recipes call into `Tools/play.ps1` (Windows) or
-`Tools/play.sh` (POSIX) — both scripts honor a pre-set
-`CARGO_TARGET_DIR` and default `BEVY_ASSET_ROOT` to
-`clients/bevy-ref` when the env var is unset, so direct script
-invocation is also safe. A runtime asset-root fallback in
-`clients/bevy-ref/src/bin/standalone.rs` is planned but **deferred** to
-a follow-up PR; for now, set `BEVY_ASSET_ROOT` (or use `just play*`,
-which sets it for you).
 
 ### Local-first CI (avoid billable runners)
 

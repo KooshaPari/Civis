@@ -3,7 +3,7 @@
 //!
 //! Components live in a shared `hecs::World`. This crate ships:
 //!
-//! - `Civilian` — identity + age + alignment
+//! - `Civilian` — identity + age + faction
 //! - `Wardrobe` — current clothing era + material slot (diffusion-driven)
 //! - `Tools` — current tool era + material slot (diffusion-driven)
 //! - `Needs` — utility-AI scalar weights (food, shelter, safety, belonging)
@@ -21,33 +21,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod cluster;
-pub mod culture;
-pub mod daily_path;
-pub mod diplomacy;
-pub mod psyche;
-pub mod social;
-
-pub use cluster::{
-    cluster_by_colocation, reconcile_membership, should_join, should_leave, ClusterId,
-    ClusterMember, MembershipPayoff,
-};
-pub use daily_path::{
-    choose_activity, need_for_poi_kind, path_step, pick_target, poi_kind_for_need, score_poi,
-    wander_anchor, Activity, DailyGoal, Poi, PoiKind, PoiRegistry,
-};
-pub use diplomacy::{
-    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
-};
-pub use psyche::{
-    belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
-    PSYCHE_DIM,
-};
-pub use social::{
-    apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,
-    SocialEvent, SocialGraph, Tie, MAX_TIES,
-};
-
 use civ_diffusion::{advance as diffusion_advance, DiffusionParams};
 use civ_voxel::{MaterialId, WorldCoord};
 use hecs::World;
@@ -58,81 +31,15 @@ use serde::{Deserialize, Serialize};
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 
-/// Which CC0 glTF rig the Bevy client should render for this agent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ActorVisualKind {
-    /// Humanoid civilian (KayKit Knight / capsule fallback).
-    Humanoid,
-    /// Non-combat herd / fauna (skeleton minion rig).
-    Herd,
-}
-
-/// Marks the visual model variant chosen at spawn (herd tool vs organism).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ActorVisual(pub ActorVisualKind);
-
 /// Civilian identity component.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Civilian {
     /// Stable agent ID.
     pub id: u64,
-    /// Emergent alignment: none, a faction, or another life-framework entity.
-    pub alignment: Alignment,
+    /// Faction this civilian belongs to.
+    pub faction: u32,
     /// Age in years (game-time).
     pub age: u16,
-}
-
-/// Emergent political/social alignment for a civilian.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Alignment {
-    /// Civilian has not aligned yet.
-    None,
-    /// Civilian aligns to an existing faction.
-    Faction(u32),
-    /// Civilian aligns to another life-framework entity by id.
-    OtherEntity(u64),
-}
-
-impl Default for Alignment {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl Alignment {
-    /// Construct an explicit faction alignment.
-    pub const fn with_faction(faction_id: u32) -> Self {
-        Self::Faction(faction_id)
-    }
-
-    /// Construct an explicit entity alignment.
-    pub const fn with_entity(entity_id: u64) -> Self {
-        Self::OtherEntity(entity_id)
-    }
-
-    /// Attempt to form a new faction with this agent as founder.
-    ///
-    /// TODO(FR-CIV-EMERGENCE): replace with emergent settlement conditions and
-    /// faction seed generation once full politics rollout begins.
-    pub fn form_faction(self, _new_faction_id: u32) -> Self {
-        Self::Faction(_new_faction_id)
-    }
-
-    /// Attempt to join an existing faction.
-    ///
-    /// TODO(FR-CIV-EMERGENCE): add social acceptance / coercion gating before
-    /// actually setting this field.
-    pub fn join_faction(self, _faction_id: u32) -> Self {
-        Self::Faction(_faction_id)
-    }
-}
-
-/// Infer alignment for a new spawn at `(x, y)`.
-///
-/// TODO(FR-CIV-EMERGENCE): if a parcel is owned by a faction or life-framework
-/// entity, return that alignment; otherwise keep non-aligned.
-pub fn infer_alignment_for_spawn(_world: &World, _x: f32, _y: f32) -> Alignment {
-    Alignment::None
 }
 
 /// Wardrobe state. The `era` is the civilian's currently worn-tech era;
@@ -273,7 +180,7 @@ pub fn child_bundle_from_parent(rng: &mut ChaCha8Rng) -> CivilianBundle {
 pub fn spawn_child_near(
     world: &mut World,
     id: u64,
-    alignment: Alignment,
+    faction: u32,
     x: f32,
     y: f32,
     rng: &mut ChaCha8Rng,
@@ -284,7 +191,7 @@ pub fn spawn_child_near(
         world,
         Civilian {
             id,
-            alignment,
+            faction,
             age: 0,
         },
         Position3d {
@@ -385,10 +292,9 @@ pub fn drift_toward_home(
 pub fn spawn_civilian_at(
     world: &mut World,
     id: u64,
-    alignment: Alignment,
+    faction: u32,
     x: f32,
     y: f32,
-    visual: ActorVisualKind,
     rng: &mut ChaCha8Rng,
 ) -> hecs::Entity {
     let angle = rng.gen::<f32>() * std::f32::consts::TAU;
@@ -401,18 +307,16 @@ pub fn spawn_civilian_at(
         y: 0,
         z: (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64,
     };
-    let entity = spawn_civilian(
+    spawn_civilian(
         world,
         Civilian {
             id,
-            alignment,
+            faction,
             age: 18 + (id % 50) as u16,
         },
         Position3d { coord },
         CivilianBundle::newborn_default(velocity),
-    );
-    let _ = world.insert_one(entity, ActorVisual(visual));
-    entity
+    )
 }
 
 /// Spawn a deterministic batch of civilians with sequential IDs.
@@ -426,7 +330,7 @@ pub fn spawn_many(
     for offset in 0..count {
         let civilian = Civilian {
             id: seed_civilian_id + u64::from(offset),
-            alignment: Alignment::with_faction(faction),
+            faction,
             age: 18 + (offset % 50) as u16,
         };
         let position = Position3d {
@@ -828,7 +732,7 @@ mod tests {
         let _: Phenotype = express(&dna);
         let _civ = Civilian {
             id: 0,
-            alignment: Alignment::with_faction(1),
+            faction: 1,
             age: 30,
         };
     }
@@ -839,7 +743,7 @@ mod tests {
         let mut world = World::new();
         let civ = Civilian {
             id: 11,
-            alignment: Alignment::with_faction(7),
+            faction: 7,
             age: 24,
         };
         let pos = Position3d {
@@ -917,7 +821,7 @@ mod tests {
             &mut world,
             Civilian {
                 id: 1,
-                alignment: Alignment::None,
+                faction: 0,
                 age: 20,
             },
             Position3d {
@@ -961,7 +865,7 @@ mod tests {
             &mut world,
             Civilian {
                 id: 2,
-                alignment: Alignment::None,
+                faction: 0,
                 age: 22,
             },
             Position3d {
@@ -1007,7 +911,7 @@ mod tests {
             &mut world,
             Civilian {
                 id: 3,
-                alignment: Alignment::None,
+                faction: 0,
                 age: 23,
             },
             Position3d {

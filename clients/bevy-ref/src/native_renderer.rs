@@ -68,7 +68,11 @@ pub fn detect_capabilities(
 
     info!(
         "native gpu adapter={} vendor=0x{:04x} backend={} ray_tracing={} mesh_shaders={}",
-        caps.adapter_name, caps.vendor_id, caps.backend_name, caps.ray_tracing, caps.mesh_shaders
+        caps.adapter_name,
+        caps.vendor_id,
+        caps.backend_name,
+        caps.ray_tracing,
+        caps.mesh_shaders
     );
 
     caps

@@ -1,29 +1,14 @@
-# Local-first: PRs use quality.yml + pr-governance only.
-# Heavy gate (cargo-machete) runs locally via lefthook pre-push and is attested
-# in `.ci/quality-manifest.json`; this workflow is dispatch-only.
 name: cargo-machete
 
+# Local-first: PRs use quality.yml + pr-governance-gate only.
+# Run heavy gates locally: lefthook run pre-push
 on:
   workflow_dispatch:
-
-permissions:
-  contents: read
-
+  push:
+    branches: [main]
 jobs:
-  manifest-verify:
-    name: manifest-verify (cloud)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Verify local quality manifest
-        run: bash scripts/quality/verify-quality-manifest.sh
-
   machete:
-    # Manual escape hatch: run heavy machete on the runner when explicitly asked.
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: bnjbvr/cargo-machete@main

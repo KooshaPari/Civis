@@ -164,16 +164,6 @@ Status values: `planned` | `in_progress` | `implemented`
 
 ---
 
-## Bevy reference client (FR-CIV-BEVY-*)
-
-| FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
-|---|---|---|---|---|
-| FR-CIV-BEVY-023 | P-W1 kickoff **item 48**: `event_feed` egui toasts + scrollable log on `civ-standalone`; `live_attach` pushes `EventKind::System` on WebSocket `connected` / `reconnecting` / `disconnected`. | `clients/bevy-ref` (`event_feed`, `live_attach`, `standalone`) | `cargo test -p civ-bevy-ref --features bevy,egui --lib event_feed::`, `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone` | implemented |
-| FR-CIV-BEVY-024 | P-W1 kickoff **item 49**: `MenusPlugin` on `civ-standalone` — Escape pause overlay, settings stub, era banner; in-process sim tick gated while paused (`GameUiMode` / HUD speed `0`). | `clients/bevy-ref` (`menus`, `lib.rs`, `bin/standalone.rs`, `sim_bridge`) | `cargo check -p civ-bevy-ref --features bevy,egui --bin civ-standalone`, `cargo test -p civ-bevy-ref --features bevy,egui --lib menus::` | implemented |
-| FR-CIV-BEVY-026 | P-W1 kickoff **item 51**: document and test native GPU backend selection (`CIV_BEVY_BACKEND`, DX12/Vulkan/Metal; no GLES). | `clients/bevy-ref` (`native_backend`), `clients/bevy-ref/README.md`, `docs/research/wgpu-native-escape-hatches.md` | `cargo test -p civ-bevy-ref --features bevy --lib native_backend`, `just civis-3d-live-smoke` | implemented |
-
----
-
 ## Planet (FR-CIV-PLANET-*)
 
 | FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |

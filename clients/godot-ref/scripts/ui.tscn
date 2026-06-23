@@ -93,10 +93,6 @@ tooltip_text = "Population from civ-watch GET /snapshot"
 text = "Era: 0"
 tooltip_text = "Era index from tick / era length (FR-CIV-UX-001 timelapse)"
 
-[node name="AttachStatusLabel" type="Label" parent="BottomBar/HBoxContainer"]
-text = "Attach: -"
-tooltip_text = "Current attach mode, connection state, frame kind, and snapshot throttle"
-
 [node name="SpawnCountLabel" type="Label" parent="BottomBar/HBoxContainer"]
 visible = false
 text = "Spawns: 0"

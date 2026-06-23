@@ -3,8 +3,7 @@ name = "civis-godot-rust"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-
-[workspace]
+publish = false
 
 [lib]
 crate-type = ["cdylib"]
@@ -12,8 +11,6 @@ crate-type = ["cdylib"]
 [dependencies]
 civ-protocol-3d = { path = "../../../crates/protocol-3d" }
 godot = "0.4"
-civ-voxel = { path = "../../../crates/voxel" }
-godot = { version = "0.4", default-features = false, features = ["lazy-function-tables"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }

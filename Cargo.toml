@@ -19,8 +19,6 @@ members = [
   "crates/mod-host",
   "crates/civlab-sdk",
   "crates/watch",
-  "crates/save-db",
-  "crates/climate",
   "clients/bevy-ref",
 ]
 exclude = [

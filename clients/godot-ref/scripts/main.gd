@@ -56,7 +56,6 @@ var _civis_http: CivisClient
 @onready var military_root: Node3D = $Military
 @onready var voxel_overlay: F3d0VoxelOverlay = $VoxelOverlays
 @onready var ui = $UI
-@onready var attach_status_label: Label = $UI/BottomBar/HBoxContainer/AttachStatusLabel
 
 var current_tool := "Inspect"
 var current_material := 0
@@ -72,10 +71,6 @@ var _ws_client: CivisWsClient
 var _spawn_drag_active := false
 var _spawn_drag_start := Vector2(-1.0, -1.0)
 var _drag_preview: MeshInstance3D
-var _connection_state := "offline"
-var _last_frame_kind := "-"
-var _last_frame_tick := 0
-var _snapshot_state := "idle"
 
 func _ready() -> void:
 	_civis_http = CivisClient.new()
@@ -101,23 +96,8 @@ func _ready() -> void:
 	_civis_http.connect(civ_watch_http)
 	_load_terrain()
 	_build_terrain_mesh()
-	var timer := $Timer as Timer
-	if not timer.timeout.is_connected(_on_timer_timeout):
-		timer.timeout.connect(_on_timer_timeout)
-	if _server_attach:
-		timer.stop()
-		timer.autostart = false
-		_ws_client = CivisWsClient.new()
-		_ws_client.name = "CivisWsClient"
-		add_child(_ws_client)
-		_ws_client.connection_changed.connect(_on_connection_changed)
-		_ws_client.snapshot_received.connect(_apply_snapshot)
-		_ws_client.f3d0_frame_received.connect(_on_f3d0_frame_received)
-		_ws_client.snapshot_throttled.connect(_on_snapshot_throttled)
-		_ws_client.connect_server()
 	_bind_ui()
 	ui.get_node("Minimap").setup(terrain_heights, terrain_biomes, $Camera3D, terrain_height_exaggeration)
-	_refresh_attach_status()
 
 	if attach_mode == "server":
 		_ws_client.connect_server(civ_server_ws)
@@ -206,7 +186,6 @@ func _bind_ui() -> void:
 	var mode_label := "Spectator" if spectator_mode else "Authoring"
 	var hint := "%s — %s. Terrain from civ-watch." % [mode_label, attach_label]
 	ui.get_node("BottomBar").tooltip_text = hint
-	_refresh_attach_status()
 	if spectator_mode:
 		ui.get_node("BottomBar/HBoxContainer/Material").visible = false
 		ui.get_node("BottomBar/HBoxContainer/SpawnKind").visible = false
@@ -406,35 +385,6 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 	_sync_civilians(snapshot.get("civ_pins", []))
 	_sync_buildings(snapshot.get("buildings", []))
 	_sync_military(snapshot.get("military_units", []))
-	_snapshot_state = "snapshot@%s" % tick
-	_refresh_attach_status()
-
-func _on_connection_changed(state: String) -> void:
-	_connection_state = state
-	_refresh_attach_status()
-
-func _on_f3d0_frame_received(kind: String, tick: int, _frame: Variant) -> void:
-	_last_frame_kind = kind
-	_last_frame_tick = tick
-	_refresh_attach_status()
-
-func _on_snapshot_throttled(wait_ms: int) -> void:
-	_snapshot_state = "throttled %dms" % max(0, wait_ms)
-	_refresh_attach_status()
-
-func _refresh_attach_status() -> void:
-	if attach_status_label == null:
-		return
-	var attach_label := "server" if _server_attach else "standalone"
-	var mode_label := "spectator" if spectator_mode else "authoring"
-	attach_status_label.text = "Attach: %s | %s | WS: %s | Frame: %s@%s | Snapshot: %s" % [
-		attach_label,
-		mode_label,
-		_connection_state,
-		_last_frame_kind,
-		_last_frame_tick,
-		_snapshot_state,
-	]
 
 
 func _apply_day_night(is_day: bool) -> void:

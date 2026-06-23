@@ -18,9 +18,8 @@ rand_chacha = "0.3"
 civ-species = { path = "../species" }
 civ-genetics = { path = "../genetics" }
 civ-voxel = { path = "../voxel" }
-civ-needs = { path = "../needs" }
 civ-diffusion = { path = "../diffusion" }
 hecs = "0.10"
 
 [dev-dependencies]
-proptest = "1.11"
+proptest = "1.4"

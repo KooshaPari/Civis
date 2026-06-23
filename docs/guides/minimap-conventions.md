@@ -22,10 +22,10 @@ Shared rules for reference-client minimaps. Authoritative Bevy helpers: `clients
 
 ## Dashboard (`web/dashboard`)
 
-- 160×160 canvas terrain preview from `/terrain`; faction capitals overlaid.
-- **Left-click** maps canvas UV → chunk grid via `minimapUvToChunkGrid` (`web/dashboard/src/lib/minimap.ts`, mirrored in `web/src/minimap.mjs`) and dispatches `set_camera_focus` + `set_inspected_chunk` (`bottom_bar.tsx`).
-- Chunk-dot overlays when F3D0 chunk keys drive the view — future polish.
+- **Today:** 160×160 canvas terrain preview from `/terrain`; faction capitals overlaid; no click-to-focus.
+- **Future:** adopt `chunk_to_minimap_uv` semantics (or a TS port) for chunk-dot overlays and click-to-pan when F3D0 chunk keys drive the view.
 
 ## Out of scope (for now)
 
+- Minimap click on Bevy ref and dashboard (Godot only).
 - CIV-0300 production minimap (200×150, alerts, batched re-render) — see `docs/specs/CIV-0300-rts-ui-ux-spec.md`.

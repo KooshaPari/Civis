@@ -1,30 +1,27 @@
-# Build mods/example-policy/mod.wasm from civlab-sdk (wasm32-unknown-unknown).
-# Prefer: just civis-3d-mod-wasm
+# Build mods/example-policy/mod.wasm from civlab-sdk (wasm32-wasi).
 param(
     [string]$OutPath = (Join-Path $PSScriptRoot "..\mods\example-policy\mod.wasm")
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$Target = "wasm32-unknown-unknown"
-$Wasm = Join-Path $Root "target\$Target\release\civlab_sdk.wasm"
+$SdkDir = Join-Path $Root "crates\civlab-sdk"
 
-Push-Location (Join-Path $Root "crates\civlab-sdk")
+Push-Location $SdkDir
 try {
-    cmd /c "rustup target add $Target >nul 2>&1"
-    cargo rustc --release --target $Target --crate-type cdylib
-    if ($LASTEXITCODE -ne 0) { throw "cargo rustc failed" }
+    rustup target add wasm32-wasi 2>$null | Out-Null
+    cargo build --release --target wasm32-wasi
+    $Built = Join-Path $SdkDir "target\wasm32-wasi\release\civlab_sdk.wasm"
+    if (-not (Test-Path $Built)) {
+        throw "Expected wasm artifact at $Built"
+    }
+    $Dest = Resolve-Path (Split-Path $OutPath -Parent) -ErrorAction SilentlyContinue
+    if (-not $Dest) {
+        New-Item -ItemType Directory -Force -Path (Split-Path $OutPath -Parent) | Out-Null
+    }
+    Copy-Item -Force $Built $OutPath
+    Write-Host "Wrote $OutPath"
 }
 finally {
     Pop-Location
 }
-
-if (-not (Test-Path -LiteralPath $Wasm)) {
-    throw "missing $Wasm (run from repo root via just civis-3d-mod-wasm)"
-}
-$Parent = Split-Path $OutPath -Parent
-if (-not (Test-Path -LiteralPath $Parent)) {
-    New-Item -ItemType Directory -Force -Path $Parent | Out-Null
-}
-Copy-Item -Force $Wasm $OutPath
-Write-Host "Wrote $OutPath"

@@ -6,11 +6,6 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod geology;
-pub use geology::{BiomeKind, GeologyMap, RegionBiome};
-pub mod weather;
-pub use weather::{compute_weather, SeasonKind, WeatherCell, WeatherKind};
-
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;
 
@@ -40,7 +35,7 @@ pub struct MoonConfig {
 }
 
 /// Deterministic climate snapshot for a single tick.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Climate {
     /// Simulation tick this climate was derived from.
     pub tick: u64,
@@ -100,7 +95,7 @@ pub fn defaults_earthlike() -> (PlanetConfig, MoonConfig) {
 mod tests {
     use super::*;
 
-    /// Covers FR-CIV-PLANET-000 — exposes a semver-like schema version stub.
+    /// FR-CIV-PLANET-000 — exposes a semver-like schema version stub.
     #[test]
     fn schema_version_stub() {
         assert!(!SCHEMA_VERSION.is_empty());
@@ -110,7 +105,7 @@ mod tests {
         assert!(segments.iter().all(|part| !part.is_empty()));
     }
 
-    /// Covers FR-CIV-PLANET-001 - day phase wraps deterministically across the day length.
+    /// FR-CIV-PLANET-001 - day phase wraps deterministically across the day length.
     #[test]
     fn day_phase_wraps_deterministically() {
         let planet = PlanetConfig {
@@ -131,7 +126,7 @@ mod tests {
         assert_eq!(b.day_phase, 0.3);
     }
 
-    /// Covers FR-CIV-PLANET-002 - moon tide offset remains within the configured amplitude.
+    /// FR-CIV-PLANET-002 - moon tide offset remains within the configured amplitude.
     #[test]
     fn tide_offset_stays_within_amplitude() {
         let planet = PlanetConfig {
@@ -152,7 +147,7 @@ mod tests {
         }
     }
 
-    /// Covers FR-CIV-PLANET-003 - daytime is true at noon and false at midnight.
+    /// FR-CIV-PLANET-003 - daytime is true at noon and false at midnight.
     #[test]
     fn daytime_matches_expected_window() {
         let climate_noon = Climate {
@@ -174,7 +169,7 @@ mod tests {
         assert!(!is_daytime(&climate_midnight));
     }
 
-    /// Covers FR-CIV-PLANET-004 - earthlike defaults are non-zero and plausible.
+    /// FR-CIV-PLANET-004 - earthlike defaults are non-zero and plausible.
     #[test]
     fn defaults_are_sane() {
         let (planet, moon) = defaults_earthlike();
@@ -187,7 +182,7 @@ mod tests {
         assert!(moon.tidal_amplitude > 0.0);
     }
 
-    /// Covers FR-CIV-PLANET-005 - climate computation is pure and bit-identical across calls.
+    /// FR-CIV-PLANET-005 - climate computation is pure and bit-identical across calls.
     #[test]
     fn climate_is_bit_identical_across_calls() {
         let (planet, moon) = defaults_earthlike();

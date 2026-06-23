@@ -394,40 +394,19 @@ async fn ws_jsonrpc_sim_snapshot_returns_snapshot_fields() {
         "expected speed_multiplier in snapshot result after sim.set_speed"
     );
     let snap = sim.lock().await.snapshot();
-    // The food price EMERGES from live supply/demand pressure (faction wealth +
-    // population vs carrying capacity) and so moves every tick. The WS response
-    // is captured at one tick and this snapshot at a later one, so an exact
-    // cross-tick equality is racy by construction. Assert the field is present
-    // and a valid clearing price (>= 1) in both reads instead.
-    let response_food = response
-        .pointer("/result/market_prices/food")
-        .and_then(|v| v.as_i64());
-    assert!(
-        response_food.is_some_and(|p| p >= 1),
-        "expected a positive food price in market_prices, got {response_food:?}"
+    assert_eq!(
+        response
+            .pointer("/result/market_prices/food")
+            .and_then(|v| v.as_i64()),
+        snap.market_prices.get("food").copied(),
+        "expected food price in market_prices"
     );
-    assert!(
-        snap.market_prices
-            .get("food")
-            .copied()
-            .is_some_and(|p| p >= 1),
-        "expected a positive food price in sim snapshot"
-    );
-    // Energy, like food, emerges from live supply/demand pressure and moves
-    // every tick, so the cross-tick equality is racy. Assert present + positive.
-    let response_energy = response
-        .pointer("/result/market_prices/energy")
-        .and_then(|v| v.as_i64());
-    assert!(
-        response_energy.is_some_and(|p| p >= 1),
-        "expected a positive energy price in market_prices, got {response_energy:?}"
-    );
-    assert!(
-        snap.market_prices
-            .get("energy")
-            .copied()
-            .is_some_and(|p| p >= 1),
-        "expected a positive energy price in sim snapshot"
+    assert_eq!(
+        response
+            .pointer("/result/market_prices/energy")
+            .and_then(|v| v.as_i64()),
+        snap.market_prices.get("energy").copied(),
+        "expected energy price in market_prices"
     );
 
     let civ_pins = response
@@ -465,7 +444,6 @@ async fn ws_smoke() {
             max_clients: PARALLEL_CLIENTS,
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::Binary,
-            ..Default::default()
         },
     )
     .await;
@@ -508,7 +486,6 @@ async fn ws_jsonrpc_sim_command_tick_rejects_missing_role_when_required() {
             max_clients: 4,
             require_role: true,
             tick_broadcast_format: TickBroadcastFormat::Both,
-            ..Default::default()
         },
     )
     .await;
@@ -559,7 +536,6 @@ async fn ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header() {
             max_clients: 4,
             require_role: true,
             tick_broadcast_format: TickBroadcastFormat::Both,
-            ..Default::default()
         },
     )
     .await;
@@ -1210,31 +1186,24 @@ async fn ws_jsonrpc_sim_set_speed_rejects_invalid_multiplier() {
     );
 }
 
-fn assert_six_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
+fn assert_three_valid_frame3d_kinds(frames: &[Frame3d], expected_tick: u64) {
     assert_eq!(
         frames.len(),
-        civ_server::ws_bridge::FRAME_BUNDLE_LEN,
-        "expected full F3D0 bundle for tick {expected_tick}"
+        3,
+        "expected VoxelDelta + BuildingDiff + AgentAppearance for tick {expected_tick}"
     );
     let mut has_voxel = false;
     let mut has_building = false;
     let mut has_agent = false;
-    let mut has_civilian = false;
-    let mut has_faction = false;
-    let mut has_event = false;
     for frame in frames {
         assert_eq!(frame.tick(), expected_tick);
         match frame {
             Frame3d::VoxelDelta(_) => has_voxel = true,
             Frame3d::BuildingDiff(_) => has_building = true,
             Frame3d::AgentAppearance(_) => has_agent = true,
-            Frame3d::CivilianState(_) => has_civilian = true,
-            Frame3d::FactionState(_) => has_faction = true,
-            Frame3d::EventFeed(_) => has_event = true,
-            Frame3d::Climate(_) => {}
         }
     }
-    assert!(has_voxel && has_building && has_agent && has_civilian && has_faction && has_event);
+    assert!(has_voxel && has_building && has_agent);
 }
 
 async fn collect_f3d0_frames_after_sim_command_tick(
@@ -1248,7 +1217,6 @@ async fn collect_f3d0_frames_after_sim_command_tick(
             max_clients: 4,
             require_role: false,
             tick_broadcast_format: format,
-            ..Default::default()
         },
     )
     .await;
@@ -1267,9 +1235,7 @@ async fn collect_f3d0_frames_after_sim_command_tick(
     let mut frames_for_tick = Vec::new();
 
     timeout(Duration::from_secs(3), async {
-        while tick_after.is_none()
-            || frames_for_tick.len() < civ_server::ws_bridge::FRAME_BUNDLE_LEN
-        {
+        while tick_after.is_none() || frames_for_tick.len() < 3 {
             let frame = socket
                 .next()
                 .await
@@ -1320,22 +1286,22 @@ async fn collect_f3d0_frames_after_sim_command_tick(
     (tick, frames_for_tick)
 }
 
-/// CIV-0200 / FR-CIV-BEVY-028: `sim.command` tick broadcasts decodable six-frame F3D0 bundle when format is `Both`.
+/// CIV-0200: `sim.command` tick broadcasts decodable F3D0 triple when format is `Both`.
 #[tokio::test]
 async fn ws_sim_command_tick_broadcasts_f3d0_when_both() {
     let (tick, frames) =
         collect_f3d0_frames_after_sim_command_tick(TickBroadcastFormat::Both).await;
     assert!(tick > 0, "sim.command should advance tick");
-    assert_six_valid_frame3d_kinds(&frames, tick);
+    assert_three_valid_frame3d_kinds(&frames, tick);
 }
 
-/// CIV-0200 / FR-CIV-BEVY-028: `sim.command` tick broadcasts decodable six-frame F3D0 bundle when format is `Binary`.
+/// CIV-0200: `sim.command` tick broadcasts decodable F3D0 triple when format is `Binary`.
 #[tokio::test]
 async fn ws_sim_command_tick_broadcasts_f3d0_when_binary() {
     let (tick, frames) =
         collect_f3d0_frames_after_sim_command_tick(TickBroadcastFormat::Binary).await;
     assert!(tick > 0, "sim.command should advance tick");
-    assert_six_valid_frame3d_kinds(&frames, tick);
+    assert_three_valid_frame3d_kinds(&frames, tick);
 }
 
 /// Tick push after `sim.command` emits the configured number of WebSocket frames.
@@ -1360,7 +1326,6 @@ async fn count_tick_broadcast_ws_frames_after_sim_command(format: TickBroadcastF
             max_clients: 4,
             require_role: false,
             tick_broadcast_format: format,
-            ..Default::default()
         },
     )
     .await;
@@ -1495,7 +1460,6 @@ async fn ws_client_receives_text_frames_after_tick() {
 }
 
 /// FR-PROTO-001: ten concurrent clients each receive tick-broadcast text frames.
-/// Covers FR-PROTO-001.
 #[tokio::test]
 async fn ws_ten_clients_each_receive_text_frame() {
     const MAX_CLIENTS: usize = 10;
@@ -1739,7 +1703,6 @@ async fn ws_jsonrpc_sim_damage_accepts_event() {
 }
 
 /// FR-CIV-UX-006 — spawn palette kinds accepted over WS JSON-RPC.
-/// Covers FR-CIV-UX-006.
 #[tokio::test]
 async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
     let kinds = ["civilian", "vehicle", "airport", "port", "hangar"];
@@ -1787,337 +1750,4 @@ async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
         .await
         .unwrap_or_else(|_| panic!("spawn_entity timeout for kind={kind}"));
     }
-}
-
-#[tokio::test]
-async fn ws_jsonrpc_save_slot_roundtrip() {
-    let saves_dir = tempfile::tempdir().expect("temp saves dir");
-    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(42)));
-    {
-        let mut guard = sim.lock().await;
-        for _ in 0..3 {
-            guard.tick();
-        }
-    }
-
-    let addr = spawn_ws_bridge_with_config(
-        sim.clone(),
-        WsBridgeConfig {
-            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
-            max_clients: 4,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-            saves_dir: saves_dir.path().to_path_buf(),
-        },
-    )
-    .await;
-    let url = format!("ws://{addr}/ws");
-    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
-
-    // Pause background ticks so save/load assertions stay deterministic.
-    socket
-        .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":59,"method":"sim.set_speed","params":{"multiplier":0}}"#
-                .into(),
-        ))
-        .await
-        .expect("send sim.set_speed");
-    timeout(Duration::from_secs(2), async {
-        while let Some(frame) = socket.next().await {
-            let Message::Text(text) = frame.expect("ws frame") else {
-                continue;
-            };
-            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
-            if value.get("id") == Some(&serde_json::json!(59)) {
-                return;
-            }
-        }
-        panic!("ws closed before sim.set_speed response");
-    })
-    .await
-    .expect("sim.set_speed timeout");
-
-    let save_req = serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 60,
-        "method": "save.slot",
-        "params": { "slot_name": "slot-1" }
-    });
-    socket
-        .send(Message::Text(save_req.to_string()))
-        .await
-        .expect("send save.slot");
-
-    let save_response = timeout(Duration::from_secs(2), async {
-        while let Some(frame) = socket.next().await {
-            let Message::Text(text) = frame.expect("ws frame") else {
-                continue;
-            };
-            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
-            if value.get("id") == Some(&serde_json::json!(60)) {
-                return value;
-            }
-        }
-        panic!("ws closed before save.slot response");
-    })
-    .await
-    .expect("save.slot timeout");
-
-    let saved_tick = save_response
-        .pointer("/result/tick")
-        .and_then(|v| v.as_u64())
-        .expect("save tick");
-    assert_eq!(
-        save_response.pointer("/result/saved"),
-        Some(&serde_json::json!(true))
-    );
-    assert_eq!(
-        save_response.pointer("/result/slot_name"),
-        Some(&serde_json::json!("slot-1"))
-    );
-    assert!(
-        saves_dir.path().join("slot-1.civsave.zst").is_file(),
-        "expected slot-1.civsave.zst on disk"
-    );
-
-    {
-        let mut guard = sim.lock().await;
-        for _ in 0..5 {
-            guard.tick();
-        }
-    }
-    assert!(sim.lock().await.state.tick > saved_tick);
-
-    let load_req = serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 61,
-        "method": "save.load",
-        "params": { "slot_name": "slot-1" }
-    });
-    socket
-        .send(Message::Text(load_req.to_string()))
-        .await
-        .expect("send save.load");
-
-    let load_response = timeout(Duration::from_secs(2), async {
-        while let Some(frame) = socket.next().await {
-            let Message::Text(text) = frame.expect("ws frame") else {
-                continue;
-            };
-            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
-            if value.get("id") == Some(&serde_json::json!(61)) {
-                return value;
-            }
-        }
-        panic!("ws closed before save.load response");
-    })
-    .await
-    .expect("save.load timeout");
-
-    assert_eq!(
-        load_response.pointer("/result/loaded"),
-        Some(&serde_json::json!(true))
-    );
-    assert_eq!(
-        load_response
-            .pointer("/result/tick")
-            .and_then(|v| v.as_u64()),
-        Some(saved_tick)
-    );
-    assert_eq!(sim.lock().await.state.tick, saved_tick);
-
-    let list_req = serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 62,
-        "method": "save.list",
-        "params": {}
-    });
-    socket
-        .send(Message::Text(list_req.to_string()))
-        .await
-        .expect("send save.list");
-
-    let list_response = timeout(Duration::from_secs(2), async {
-        while let Some(frame) = socket.next().await {
-            let Message::Text(text) = frame.expect("ws frame") else {
-                continue;
-            };
-            let value: serde_json::Value = serde_json::from_str(&text).expect("json");
-            if value.get("id") == Some(&serde_json::json!(62)) {
-                return value;
-            }
-        }
-        panic!("ws closed before save.list response");
-    })
-    .await
-    .expect("save.list timeout");
-
-    let entries = list_response
-        .pointer("/result")
-        .and_then(|v| v.as_array())
-        .expect("save.list array");
-    assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].get("name"), Some(&serde_json::json!("slot-1")));
-    assert_eq!(
-        entries[0].get("tick").and_then(|v| v.as_u64()),
-        Some(saved_tick)
-    );
-    assert_eq!(
-        entries[0].get("save_type"),
-        Some(&serde_json::json!("slot"))
-    );
-}
-
-/// Opt-in `sub_filter` query limits tick broadcasts to requested `Frame3d` kinds.
-#[tokio::test]
-async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
-    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(31)));
-    let addr = spawn_ws_bridge_with_config(
-        sim,
-        WsBridgeConfig {
-            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
-            max_clients: 2,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Binary,
-            ..Default::default()
-        },
-    )
-    .await;
-    let url = format!("ws://{addr}/ws?sub_filter=climate");
-
-    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
-
-    socket
-        .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{"multiplier":0}}"#
-                .into(),
-        ))
-        .await
-        .expect("pause ticks");
-    wait_for_jsonrpc_id(&mut socket, 1).await;
-
-    socket
-        .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick"}}"#.into(),
-        ))
-        .await
-        .expect("manual tick");
-
-    let mut command_done = false;
-    let mut climate_frames = 0usize;
-    let mut other_frames = 0usize;
-
-    timeout(Duration::from_secs(3), async {
-        while !command_done || climate_frames == 0 {
-            let frame = socket
-                .next()
-                .await
-                .expect("ws stream open")
-                .expect("ws frame");
-            match frame {
-                Message::Text(text) => {
-                    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
-                        if value.get("id") == Some(&serde_json::json!(2)) {
-                            command_done = true;
-                        }
-                    }
-                }
-                Message::Binary(bytes) if bytes.starts_with(FRAME3D_BINARY_MAGIC) => {
-                    let decoded = decode_frame3d_binary(&bytes).expect("F3D0 frame");
-                    if matches!(decoded, Frame3d::Climate(_)) {
-                        climate_frames += 1;
-                    } else {
-                        other_frames += 1;
-                    }
-                }
-                _ => {}
-            }
-        }
-    })
-    .await
-    .expect("filtered tick broadcast timeout");
-
-    assert!(command_done, "sim.command should complete");
-    assert_eq!(climate_frames, 1, "expected one climate frame");
-    assert_eq!(other_frames, 0, "filtered client should not receive other kinds");
-}
-
-/// `sim.subscribe` over JSON-RPC applies the same per-connection frame filter.
-#[tokio::test]
-async fn ws_sim_subscribe_limits_tick_broadcast_frames() {
-    let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(32)));
-    let addr = spawn_ws_bridge_with_config(
-        sim,
-        WsBridgeConfig {
-            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
-            max_clients: 2,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Binary,
-            ..Default::default()
-        },
-    )
-    .await;
-    let url = format!("ws://{addr}/ws");
-
-    let (mut socket, _) = connect_async(&url).await.expect("ws connect");
-
-    socket
-        .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":1,"method":"sim.subscribe","params":{"frame_kinds":["event_feed"]}}"#
-                .into(),
-        ))
-        .await
-        .expect("subscribe");
-    wait_for_jsonrpc_id(&mut socket, 1).await;
-
-    socket
-        .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":2,"method":"sim.set_speed","params":{"multiplier":0}}"#.into(),
-        ))
-        .await
-        .expect("pause ticks");
-    wait_for_jsonrpc_id(&mut socket, 2).await;
-
-    socket
-        .send(Message::Text(
-            r#"{"jsonrpc":"2.0","id":3,"method":"sim.command","params":{"action":"tick"}}"#.into(),
-        ))
-        .await
-        .expect("manual tick");
-
-    let mut command_done = false;
-    let mut event_frames = 0usize;
-
-    timeout(Duration::from_secs(3), async {
-        while !command_done || event_frames == 0 {
-            let frame = socket
-                .next()
-                .await
-                .expect("ws stream open")
-                .expect("ws frame");
-            match frame {
-                Message::Text(text) => {
-                    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
-                        if value.get("id") == Some(&serde_json::json!(3)) {
-                            command_done = true;
-                        }
-                    }
-                }
-                Message::Binary(bytes) if bytes.starts_with(FRAME3D_BINARY_MAGIC) => {
-                    let decoded = decode_frame3d_binary(&bytes).expect("F3D0 frame");
-                    if matches!(decoded, Frame3d::EventFeed(_)) {
-                        event_frames += 1;
-                    } else {
-                        panic!("unexpected filtered frame: {decoded:?}");
-                    }
-                }
-                _ => {}
-            }
-        }
-    })
-    .await
-    .expect("subscribe-filtered tick broadcast timeout");
-
-    assert!(command_done, "sim.command should complete");
-    assert_eq!(event_frames, 1);
 }

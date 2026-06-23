@@ -38,14 +38,8 @@ impl LodPolicy {
     pub fn cadence_for(self, tier: LodTier) -> u64 {
         match tier {
             LodTier::Hot => 1,
-            LodTier::Warm => {
-                assert!(self.warm_cadence > 0, "warm cadence must be > 0");
-                self.warm_cadence
-            }
-            LodTier::Cold => {
-                assert!(self.cold_cadence > 0, "cold cadence must be > 0");
-                self.cold_cadence
-            }
+            LodTier::Warm => self.warm_cadence,
+            LodTier::Cold => self.cold_cadence,
         }
     }
 }
@@ -61,7 +55,8 @@ pub fn should_tick_entity(tick: u64, tier: LodTier) -> bool {
 pub fn should_tick_entity_with_policy(tick: u64, tier: LodTier, policy: LodPolicy) -> bool {
     match tier {
         LodTier::Hot => true,
-        LodTier::Warm | LodTier::Cold => tick % policy.cadence_for(tier) == 0,
+        LodTier::Warm => tick % policy.warm_cadence == 0,
+        LodTier::Cold => tick % policy.cold_cadence == 0,
     }
 }
 
@@ -154,15 +149,5 @@ mod tests {
         assert_eq!(policy.cadence_for(LodTier::Hot), 1);
         assert_eq!(policy.cadence_for(LodTier::Warm), 4);
         assert_eq!(policy.cadence_for(LodTier::Cold), 16);
-    }
-
-    #[test]
-    #[should_panic(expected = "warm cadence must be > 0")]
-    fn should_tick_entity_rejects_zero_warm_cadence() {
-        let policy = LodPolicy {
-            warm_cadence: 0,
-            cold_cadence: 16,
-        };
-        let _ = should_tick_entity_with_policy(4, LodTier::Warm, policy);
     }
 }

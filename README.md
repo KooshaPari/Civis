@@ -1,14 +1,3 @@
-## Work State
-
-| Field | Value |
-|---|---|
-| Updated | 2026-06-14 |
-| State | Recovery complete (p-l1+p-w1 merged); consolidation collapsing (branches 180→97, worktrees 95→25); 13 PRs this session; playable voxel build via one-click launcher; 3D protocol + modding v3 partial; 113 / 212 traced requirements implemented; 82.6% line coverage; 750+ tests green; live emergence dashboard online; full triage complete. Still far from AAA: GFX is partial, balancing is not implemented, and audio is substrate-only. |
-| Open PRs | None |
-| Focus | Civis — 3D civilization godgame (WorldBox-class sandbox on emergent simulation) |
-
-Progress: ████████▓░ 82.6% (recovery complete; consolidation collapsing: branches 180→97, worktrees 95→25; 13 PRs this session; playable voxel build shipped; 3D protocol + modding v3 partial; 113 / 212 FRs implemented; 750+ tests green; dashboard live; triage complete; AAA gaps: partial GFX, no balancing, audio substrate-only)
-
 > **Pinned references (Phenotype-org)**
 > - MSRV: see rust-toolchain.toml
 > - cargo-deny config: see deny.toml
@@ -37,7 +26,7 @@ CivLab decouples simulation logic from rendering: a Rust simulation core runs he
 
 | Dimension | Choice |
 |---|---|
-| **Language** | Rust (edition 2021) |
+| **Language** | Rust (edition 2024) |
 | **Architecture** | ECS via [`hecs`](https://crates.io/crates/hecs) |
 | **Determinism** | Fixed-point `i64` @ 10^6 scale; `ChaCha8Rng` seeded once per run; `BTreeMap` for ordered iteration |
 | **Tick loop** | Fixed-timestep, 100 ms/tick, sub-16 ms target budget |
@@ -47,32 +36,13 @@ CivLab decouples simulation logic from rendering: a Rust simulation core runs he
 
 CivLab is simultaneously a **game** (RTS-style city/nation building), a **research sandbox** (deterministic, scriptable, full event logs), and a **platform** (multiple renderers attach to one simulation).
 
-```mermaid
-flowchart TD
-    subgraph Core["civ-engine (Rust, hecs ECS)"]
-        Tick["Fixed 100ms tick loop<br/>fixed-point i64 · ChaCha8Rng"]
-        Replay[".civreplay event log"]
-    end
-    Server["civ-server<br/>HTTP + WS JSON-RPC /ws"]
-    Core --> Server
-    Server -->|10 Hz Frame3d push| Bevy
-    Server --> Godot
-    Server --> Unreal
-    Server --> Web["Web dashboard (L2 authoring)"]
-    Server --> Research["Research / ops clients"]
-    Replay -. bit-identical replay .-> Core
-```
-
-> [!EMBED] STUB — multi-client world playback
-> A recording of two renderers (e.g. Bevy + Web dashboard) attached to one live simulation timeline belongs here. Pending rich-embed pipeline (#966).
-
 See [`COMPARISON.md`](./COMPARISON.md) for how CivLab differs from Dwarf Fortress, Victoria 3, CK3, and Factorio.
 
 ---
 
 ## Repository Structure
 
-- `crates/` — simulation core (Rust workspace, 28 members)
+- `src/` — simulation core (Rust workspace)
 - `Cargo.toml` — Rust 2024 workspace manifest
 - `docs/` — VitePress docs and specification corpus
   - `docs/wiki/` — concept and architecture knowledge
@@ -94,47 +64,6 @@ cargo build --workspace && cargo test --workspace
 just civis-3d-verify          # or: lefthook run pre-push (emits manifest + runs gates)
 cargo run -p civ-server       # http://127.0.0.1:3000  (override with CIVIS_WS_ADDR)
 ```
-
-### Launch the standalone game (Bevy)
-
-The Bevy reference client needs **both** the `bevy,egui` feature set and
-a `BEVY_ASSET_ROOT` env var. Bevy 0.18 `AssetPlugin::file_path` defaults
-to `"./assets"` relative to CWD — from the workspace root that resolves
-to the wrong directory and produces 6 phantom module errors + ~10 asset
-404s. Use the ergonomic launcher (it defaults `BEVY_ASSET_ROOT` and
-`CARGO_TARGET_DIR=G:/civis-target-gate` for you):
-
-```bash
-just play          # release build + detached launch + log tail
-just play-debug    # RUST_LOG=info,civ_bevy_ref=debug,wgpu=warn
-just play-trace    # + RUST_BACKTRACE=full
-just play-window   # live F3D0 binary-frame client (civ-bevy-window)
-```
-
-Manual incantation if you don't have `just` (Windows PowerShell):
-
-```powershell
-$env:BEVY_ASSET_ROOT = "$PWD/clients/bevy-ref"
-$env:CARGO_TARGET_DIR = "G:/civis-target-gate"   # any out-of-tree dir
-cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-```
-
-Manual incantation (POSIX / WSL):
-
-```bash
-BEVY_ASSET_ROOT="$PWD/clients/bevy-ref" \
-CARGO_TARGET_DIR="$PWD/target" \
-cargo run -p civ-bevy-ref --features bevy,egui --bin civ-standalone
-```
-
-The `just play*` recipes call into `Tools/play.ps1` (Windows) or
-`Tools/play.sh` (POSIX) — both scripts honor a pre-set
-`CARGO_TARGET_DIR` and default `BEVY_ASSET_ROOT` to
-`clients/bevy-ref` when the env var is unset, so direct script
-invocation is also safe. A runtime asset-root fallback in
-`clients/bevy-ref/src/bin/standalone.rs` is planned but **deferred** to
-a follow-up PR; for now, set `BEVY_ASSET_ROOT` (or use `just play*`,
-which sets it for you).
 
 ### Local-first CI (avoid billable runners)
 
@@ -217,7 +146,6 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS
 
 | Task | Command |
 |---|---|
-| Bevy live-attach smoke (headless, no GPU) | `just civis-3d-live-smoke` — F3D0 WS, `live_*`, `event_feed` / `menus`, protocol extended frames, optional `gpu_features` / `pbr-textures` (`materials`); see `clients/bevy-ref/README.md` |
 | Run all Rust tests | `cargo test --workspace` |
 | FR-CORE-001 tick budget (10k ticks, release) | `cargo test -p civ-engine --release ten_thousand_ticks_under_budget -- --ignored` |
 | Lint (deny warnings) | `cargo clippy --workspace -- -D warnings` |
@@ -227,9 +155,6 @@ For contributors: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS
 | Preview docs | `cd docs && bun run docs:dev` |
 | Web dashboard (L2 authoring default) | `cargo run -p civ-server` + `cargo run -p civ-watch` (terrain) → `cd web/dashboard && npm run dev` → http://127.0.0.1:5173 — `?spectator=1` for read-only |
 | Web tests | `cd web && npm test` |
-| CA dirty-chunk benchmark | `just ca-bench` |
-| CA dirty-chunk flamegraph | `just ca-flamegraph` |
-| CA dirty-chunk perf sweep | `just ca-perf` |
 | Screenshot assets | [`docs/guides/screenshot-automation.md`](docs/guides/screenshot-automation.md) |
 
 All tests must reference a Functional Requirement (FR) per `FUNCTIONAL_REQUIREMENTS.md`.

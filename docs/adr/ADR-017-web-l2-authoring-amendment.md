@@ -1,8 +1,13 @@
-# ADR-009 Amendment: Web L2 Authoring (Not Spectator-Only)
+# ADR-017: Web L2 Authoring (Amendment to ADR-009)
 
-**Date:** 2026-05-24  
-**Status:** ACCEPTED (amends [ADR-009](./ADR-009-web-client-strategy.md) default)  
-**Supersedes:** “Web never mutates the sim” as a hard rule
+**Date:** 2026-05-24
+**Status:** Accepted (amends [ADR-009](./ADR-009-web-client-strategy.md) default)
+**Supersedes:** "Web never mutates the sim" as a hard rule
+**Renumbered note:** Originally proposed as an amendment to ADR-009 under the
+file name `ADR-009-amendment-web-l2-authoring.md`. Renumbered to ADR-017 in
+the docs/adr-recovery-renumber pass to remove the duplicate `ADR-009` filename
+collision. The substantive decision (web may author the sim under explicit
+limits, opt-out via `?spectator=1`) is unchanged.
 
 ## Decision
 

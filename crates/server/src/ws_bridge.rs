@@ -172,9 +172,12 @@ struct AppState {
     sim: Arc<Mutex<Simulation>>,
     tick: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
+<<<<<<< HEAD
     tick_batches_sent: Arc<AtomicU64>,
     tick_messages_sent: Arc<AtomicU64>,
     ws_client_disconnects: Arc<AtomicU64>,
+=======
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
     max_clients: usize,
     require_role: bool,
@@ -372,7 +375,10 @@ async fn handle_socket(
     }
 
     let forward_filter = Arc::clone(&subscription_filter);
+<<<<<<< HEAD
     let tick_messages_sent = Arc::clone(&state.tick_messages_sent);
+=======
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     let forward = tokio::spawn(async move {
         while let Some(outbound) = rx.recv().await {
             match outbound {
@@ -382,13 +388,20 @@ async fn handle_socket(
                     }
                 }
                 ClientOutbound::Tick(broadcast) => {
+<<<<<<< HEAD
                     let filter = forward_filter.lock().await.clone();
+=======
+                    let filter = forward_filter.lock().await;
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
                     if !filter.is_active() {
                         for msg in broadcast.encoded.iter() {
                             if sender.send(msg.clone()).await.is_err() {
                                 return;
                             }
+<<<<<<< HEAD
                             tick_messages_sent.fetch_add(1, Ordering::Relaxed);
+=======
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
                         }
                         continue;
                     }
@@ -411,7 +424,10 @@ async fn handle_socket(
                         if sender.send(msg).await.is_err() {
                             return;
                         }
+<<<<<<< HEAD
                         tick_messages_sent.fetch_add(1, Ordering::Relaxed);
+=======
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
                     }
                 }
             }
@@ -1243,11 +1259,16 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     state.tick_batches_sent.fetch_add(1, Ordering::Relaxed);
     let mut clients = state.clients.lock().await;
     clients.retain(|tx| {
+<<<<<<< HEAD
         let delivered = tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok();
         if !delivered {
             state.ws_client_disconnects.fetch_add(1, Ordering::Relaxed);
         }
         delivered
+=======
+        tx.send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok()
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     });
     Ok(())
 }
@@ -1317,6 +1338,10 @@ mod tests {
             save_db,
             session_id: "test-session".to_string(),
         }
+    }
+
+    fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
+        Arc::new(tokio::sync::Mutex::new(SubscriptionFilter::default()))
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
@@ -2062,7 +2087,11 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
+<<<<<<< HEAD
         let state = test_app_state(sim, 0, 1, false);
+=======
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let text = handle_jsonrpc_text(
@@ -2073,10 +2102,14 @@ mod tests {
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("subscribe json");
+<<<<<<< HEAD
         assert_eq!(
             value.pointer("/result/subscribed"),
             Some(&serde_json::json!(true))
         );
+=======
+        assert_eq!(value.pointer("/result/subscribed"), Some(&serde_json::json!(true)));
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         assert_eq!(
             value.pointer("/result/filter_active"),
             Some(&serde_json::json!(true))
@@ -2089,7 +2122,11 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
+<<<<<<< HEAD
         let state = test_app_state(sim, 0, 1, false);
+=======
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let subscribe = handle_jsonrpc_text(
@@ -2110,10 +2147,14 @@ mod tests {
         assert!(unsubscribe.contains("\"unsubscribed\":true"));
         let guard = filter.lock().await;
         assert!(!guard.is_active());
+<<<<<<< HEAD
         assert_eq!(
             guard.filter_frames(&sample_frame_bundle()).len(),
             FRAME_BUNDLE_LEN
         );
+=======
+        assert_eq!(guard.filter_frames(&sample_frame_bundle()).len(), FRAME_BUNDLE_LEN);
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     }
 
     #[tokio::test]

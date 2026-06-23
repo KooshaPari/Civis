@@ -2028,7 +2028,12 @@ async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
 
     socket
         .send(Message::Text(
+<<<<<<< HEAD
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{"multiplier":0}}"#.into(),
+=======
+            r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{"multiplier":0}}"#
+                .into(),
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         ))
         .await
         .expect("pause ticks");
@@ -2077,10 +2082,14 @@ async fn ws_sub_filter_query_limits_tick_broadcast_frames() {
 
     assert!(command_done, "sim.command should complete");
     assert_eq!(climate_frames, 1, "expected one climate frame");
+<<<<<<< HEAD
     assert_eq!(
         other_frames, 0,
         "filtered client should not receive other kinds"
     );
+=======
+    assert_eq!(other_frames, 0, "filtered client should not receive other kinds");
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
 }
 
 /// `sim.subscribe` over JSON-RPC applies the same per-connection frame filter.

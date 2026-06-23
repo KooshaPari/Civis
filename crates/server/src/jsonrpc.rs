@@ -72,6 +72,7 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+<<<<<<< HEAD
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
@@ -91,6 +92,14 @@ pub enum JsonRpcMethod {
     SimUpdateSubscription,
     /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
     SimOutcome,
+=======
+    /// Opt-in tick broadcast filter (`sim.subscribe`, CIV-0200).
+    SimSubscribe,
+    /// Clear per-connection tick broadcast filter (`sim.unsubscribe`).
+    SimUnsubscribe,
+    /// Replace per-connection tick broadcast filter (`sim.update_subscription`).
+    SimUpdateSubscription,
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
 }
 
 impl JsonRpcMethod {
@@ -116,6 +125,7 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+<<<<<<< HEAD
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimGodAction => "sim.god_action",
             Self::SimPerf => "sim.perf",
@@ -126,6 +136,11 @@ impl JsonRpcMethod {
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
+=======
+            Self::SimSubscribe => "sim.subscribe",
+            Self::SimUnsubscribe => "sim.unsubscribe",
+            Self::SimUpdateSubscription => "sim.update_subscription",
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         }
     }
 
@@ -151,6 +166,7 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+<<<<<<< HEAD
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.god_action" => Some(Self::SimGodAction),
             "sim.perf" => Some(Self::SimPerf),
@@ -161,6 +177,11 @@ impl JsonRpcMethod {
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
+=======
+            "sim.subscribe" => Some(Self::SimSubscribe),
+            "sim.unsubscribe" => Some(Self::SimUnsubscribe),
+            "sim.update_subscription" => Some(Self::SimUpdateSubscription),
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
             _ => None,
         }
     }

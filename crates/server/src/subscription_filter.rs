@@ -44,7 +44,11 @@ impl FrameKind {
     ];
 
     /// Stable wire name for subscribe responses.
+<<<<<<< HEAD
     pub fn wire_name(&self) -> &'static str {
+=======
+    pub const fn wire_name(self) -> &'static str {
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         match self {
             Self::VoxelDelta => "voxel_delta",
             Self::BuildingDiff => "building_diff",
@@ -103,8 +107,19 @@ impl Default for SubscriptionFilter {
 impl SubscriptionFilter {
     /// Build from WS connect query params. Absent params → inactive (full broadcast).
     pub fn from_connect_query(query: &WsConnectQuery) -> Self {
+<<<<<<< HEAD
         let kinds_source = query.sub_filter.as_deref().or(query.frame_kinds.as_deref());
         let stride = query.tick_stride.as_deref().and_then(parse_tick_stride);
+=======
+        let kinds_source = query
+            .sub_filter
+            .as_deref()
+            .or(query.frame_kinds.as_deref());
+        let stride = query
+            .tick_stride
+            .as_deref()
+            .and_then(parse_tick_stride);
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         build_filter(kinds_source, stride, None)
     }
 
@@ -124,6 +139,7 @@ impl SubscriptionFilter {
                     .and_then(|v| v.as_u64())
                     .and_then(tick_stride_from_max_framerate)
             });
+<<<<<<< HEAD
         let explicit_id = params.and_then(|p| p.get("subscription_id")).is_some();
         let subscription_id = params
             .and_then(|p| p.get("subscription_id"))
@@ -139,6 +155,14 @@ impl SubscriptionFilter {
                 }
             });
         *self = build_filter(kinds.as_deref(), stride, subscription_id);
+=======
+        let subscription_id = params
+            .and_then(|p| p.get("subscription_id"))
+            .and_then(|v| v.as_str())
+            .map(str::to_owned)
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        *self = build_filter(kinds.as_deref(), stride, Some(subscription_id));
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         Ok(self.subscribe_result(current_tick))
     }
 
@@ -149,22 +173,38 @@ impl SubscriptionFilter {
 
     /// Whether this connection requested filtered/decimated delivery.
     #[must_use]
+<<<<<<< HEAD
     pub fn is_active(&self) -> bool {
+=======
+    pub fn is_active(self) -> bool {
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         self.active
     }
 
     /// Whether a tick broadcast should be delivered on this connection.
     #[must_use]
+<<<<<<< HEAD
     pub fn should_deliver_tick(&self, tick: u64) -> bool {
         if !self.active || self.tick_stride <= 1 {
             return true;
         }
         tick % u64::from(self.tick_stride) == 0
+=======
+    pub fn should_deliver_tick(self, tick: u64) -> bool {
+        if !self.active || self.tick_stride <= 1 {
+            return true;
+        }
+        tick.is_multiple_of(u64::from(self.tick_stride))
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     }
 
     /// Return the subset of frames allowed by this filter (cloned).
     #[must_use]
+<<<<<<< HEAD
     pub fn filter_frames(&self, frames: &[Frame3d]) -> Vec<Frame3d> {
+=======
+    pub fn filter_frames(self, frames: &[Frame3d]) -> Vec<Frame3d> {
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
         if !self.active {
             return frames.to_vec();
         }
@@ -177,7 +217,11 @@ impl SubscriptionFilter {
 
     fn subscribe_result(&self, current_tick: u64) -> Value {
         let kinds: Vec<&str> = if self.active {
+<<<<<<< HEAD
             let mut names: Vec<&str> = self.kinds.iter().map(|kind| kind.wire_name()).collect();
+=======
+            let mut names: Vec<&str> = self.kinds.iter().map(FrameKind::wire_name).collect();
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
             names.sort_unstable();
             names
         } else {
@@ -209,10 +253,16 @@ fn build_filter(
                 subscription_id,
             };
         }
+<<<<<<< HEAD
         return SubscriptionFilter {
             subscription_id,
             ..Default::default()
         };
+=======
+        let mut filter = SubscriptionFilter::default();
+        filter.subscription_id = subscription_id;
+        return filter;
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     };
 
     let kinds = parse_kind_csv(source).unwrap_or_default();
@@ -354,7 +404,11 @@ mod tests {
     use civ_engine::Simulation;
     use civ_protocol_3d::{
         AgentAppearanceFrame, BuildingDiffFrame, BuildingProvenance, CivilianStateFrame,
+<<<<<<< HEAD
         ClimateFrame, EventFeedFrame, VoxelDeltaFrame,
+=======
+        ClimateFrame, EventFeedFrame, FactionStateFrame, VoxelDeltaFrame,
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     };
 
     fn sample_frames() -> [Frame3d; 3] {
@@ -442,6 +496,7 @@ mod tests {
     }
 
     #[test]
+<<<<<<< HEAD
     fn subscribe_params_trim_blank_subscription_id() {
         let mut filter = SubscriptionFilter::default();
         let params = json!({
@@ -456,6 +511,8 @@ mod tests {
     }
 
     #[test]
+=======
+>>>>>>> 997248af (feat(server): opt-in per-connection subscription filtering for ws_bridge)
     fn clear_restores_full_broadcast() {
         let mut filter = SubscriptionFilter::from_connect_query(&WsConnectQuery {
             sub_filter: Some("climate".into()),

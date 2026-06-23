@@ -51,6 +51,7 @@ pub mod dashboard;
 pub mod mutual_information;
 pub mod power_law;
 pub mod shannon;
+pub mod sample_snapshot;
 pub mod structure;
 
 pub use mutual_information::{

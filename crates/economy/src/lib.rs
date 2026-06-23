@@ -13,14 +13,16 @@
 mod allocation;
 mod institution;
 mod market;
+mod stocks;
 
 pub use allocation::{AllocationEngine, CapitalistAllocator};
 pub use institution::{
-    step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
-    InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
-    INSTITUTION_TREASURY,
+    collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
+    InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
+    INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
+pub use stocks::Stocks;
 
 use serde::{Deserialize, Serialize};
 

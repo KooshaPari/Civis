@@ -4,12 +4,15 @@
 
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, Alignment, Civilian as AgentCivilian, CohortStats, LodTier, Needs, Position3d, Tools, Wardrobe,
+    ActorVisualKind, Alignment, ClusterMember, Civilian as AgentCivilian, CohortStats,
+    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Psyche, SocialGraph, Position3d, Tools,
+    Wardrobe,
 };
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, DemandSignals};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
+use civ_economy::{collect_taxes, Taxation};
 use civ_mod_host::ModHost;
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
@@ -21,6 +24,8 @@ use civ_tactics::{
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+use civ_genetics::Dna;
 use civ_voxel::{
     material::WATER,
     DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE,
@@ -30,8 +35,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
@@ -64,7 +68,26 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ResearchCache;
+pub struct ResearchCache {
+    pub researched: Vec<String>,
+    #[serde(default)]
+    pub queued: VecDeque<String>,
+    #[serde(default)]
+    pub in_progress: Option<(String, u64)>,
+}
+
+/// Per-cluster stockpiles keyed by emergent settlement id.
+pub type ClusterStocks = civ_economy::Stocks;
+
+/// Broad economic orientation inferred from a civilization's strongest signal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EconomicFocus {
+    Balanced,
+    Agrarian,
+    Industrial,
+    Sacred,
+    Mercantile,
+}
 
 /// Seeded RNG for reproducible simulation
 pub type SimRng = ChaCha8Rng;
@@ -293,6 +316,12 @@ pub struct WorldState {
     pub faction_resources: HashMap<u32, Resources>,
     /// Active trade routes connecting factions.
     pub trade_routes: Vec<TradeRoute>,
+    /// Emergent trade routes (bootstrap routes are excluded from idle decay).
+    #[serde(default)]
+    pub emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
+    /// Idle tick counters for emergent trade routes.
+    #[serde(default)]
+    pub trade_route_idle_ticks: BTreeMap<(u32, u32, String), u32>,
     pub resources: Resources,
 }
 
@@ -362,6 +391,8 @@ impl Default for WorldState {
                     volume: Fixed::from_num(8),
                 },
             ],
+            emergent_trade_route_keys: BTreeSet::new(),
+            trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
         }
     }
@@ -384,9 +415,14 @@ pub struct Simulation {
     last_cohort_stats: Option<CohortStats>,
     last_births: Vec<PopulationEvent>,
     last_deaths: Vec<PopulationEvent>,
+    last_life_deaths: u32,
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
+    belief: u64,
+    cluster_cultures: BTreeMap<u64, CultureProfile>,
+    cluster_stocks: BTreeMap<u64, ClusterStocks>,
+    last_settlement_count: u32,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -608,9 +644,14 @@ impl Simulation {
             last_cohort_stats: None,
             last_births: Vec::new(),
             last_deaths: Vec::new(),
+            last_life_deaths: 0,
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            belief: 0,
+            cluster_cultures: BTreeMap::new(),
+            cluster_stocks: BTreeMap::new(),
+            last_settlement_count: 0,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -669,9 +710,14 @@ impl Simulation {
             last_cohort_stats: None,
             last_births: Vec::new(),
             last_deaths: Vec::new(),
+            last_life_deaths: 0,
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            belief: 0,
+            cluster_cultures: BTreeMap::new(),
+            cluster_stocks: BTreeMap::new(),
+            last_settlement_count: 0,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -843,6 +889,11 @@ impl Simulation {
         &self.climate
     }
 
+    /// Borrow the latest weather grid for the current tick.
+    pub fn weather_grid(&self) -> &[WeatherCell] {
+        &self.weather_grid
+    }
+
     /// Queue tactical voxel damage for the tactics phase.
     pub fn push_damage(&mut self, event: DamageEvent) {
         self.replay_log.record_damage(self.state.tick, event);
@@ -952,6 +1003,62 @@ impl Simulation {
     /// Mutably borrow the research cache.
     pub fn research_cache_mut(&mut self) -> &mut ResearchCache {
         &mut self.research_cache
+    }
+
+    /// Current faith / belief reserve.
+    #[must_use]
+    pub fn belief(&self) -> u64 {
+        self.belief
+    }
+
+    /// Increase belief by the provided amount, saturating on overflow.
+    pub fn add_belief(&mut self, amount: u64) {
+        self.belief = self.belief.saturating_add(amount);
+    }
+
+    /// Spend belief if enough reserve is available.
+    #[must_use]
+    pub fn try_invoke_divine_power(&mut self, cost: u64) -> bool {
+        if self.belief >= cost {
+            self.belief -= cost;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Research tier derived from the number of completed techs.
+    #[must_use]
+    pub fn research_tier(&self) -> u64 {
+        self.research_cache.researched.len() as u64
+    }
+
+    /// Most recent emergence sample, if any.
+    #[must_use]
+    pub fn last_emergence_sample(&self) -> Option<crate::emergence_metrics::EmergenceSample> {
+        None
+    }
+
+    /// Per-cluster emergent culture profiles.
+    #[must_use]
+    pub fn cluster_cultures(&self) -> &BTreeMap<u64, CultureProfile> {
+        &self.cluster_cultures
+    }
+
+    /// Apply scenario taxation rules to the economy phase.
+    pub fn apply_scenario_taxation(&mut self, taxation: &crate::scenario::ScenarioTaxation) {
+        let mut resolved = Taxation::default();
+        for (institution_id, rate_bp) in &taxation.rates_bp {
+            if let Ok(id) = (*institution_id).try_into() {
+                resolved.rates_bp.insert(id, *rate_bp);
+            }
+        }
+        resolved.per_institution_cap = taxation
+            .per_institution_cap
+            .and_then(|cap| (cap >= 0).then_some(cap));
+        if !resolved.rates_bp.is_empty() {
+            let _ = collect_taxes(&mut self.economy_state, &resolved);
+        }
     }
 
     pub fn last_births(&self) -> &[PopulationEvent] {

@@ -3,28 +3,28 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "voxel")]
 use civ_bevy_ref::ocean::OceanPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
 use civ_bevy_ref::{
-    post_fx::PostFxSettings,
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
+    post_fx::PostFxSettings,
     resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
     AttachMode,
 };
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 
 fn main() {
     let attach_mode = resolve_attach_mode_from_env();
@@ -188,10 +188,7 @@ fn main() {
 }
 
 #[cfg(feature = "egui")]
-fn sync_post_fx_from_settings(
-    settings: Res<GameSettings>,
-    mut post_fx: ResMut<PostFxSettings>,
-) {
+fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<PostFxSettings>) {
     let graphics = &settings.graphics;
     post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
     post_fx.bloom = graphics.bloom;

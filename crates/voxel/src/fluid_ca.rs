@@ -1053,7 +1053,7 @@ fn percolation_pass(
                 pending_saturation[idx] = pending_saturation[idx].saturating_sub(1);
                 pending_saturation[ni] = pending_saturation[ni].saturating_add(1);
                 grid.mark_dirty_cell(x, y, z);
-                grid.mark_dirty_cell(nxu, nyu, nzu);
+                grid.mark_dirty_cell(nx, ny, nz);
                 break 'outer;
             }
         }
@@ -1073,11 +1073,12 @@ fn boundary_flux_pass(
         return;
     }
 
-    let x_last = grid.dims[0] - 1;
-    let y_last = grid.dims[1] - 1;
-    let z_last = grid.dims[2] - 1;
-    let row = grid.dims[0];
-    let plane = grid.dims[0] * grid.dims[1];
+    let dims = grid.dims;
+    let x_last = dims[0] - 1;
+    let y_last = dims[1] - 1;
+    let z_last = dims[2] - 1;
+    let row = dims[0];
+    let plane = dims[0] * dims[1];
     let mut apply = |x: usize, y: usize, z: usize| {
         let idx = x + y * row + z * plane;
         let id = grid.cells[idx];
@@ -1155,15 +1156,15 @@ fn boundary_flux_pass(
         }
     };
 
-    for z in 0..grid.dims[2] {
-        for y in 0..grid.dims[1] {
+    for z in 0..dims[2] {
+        for y in 0..dims[1] {
             apply(0, y, z);
             if x_last != 0 {
                 apply(x_last, y, z);
             }
         }
     }
-    for z in 0..grid.dims[2] {
+    for z in 0..dims[2] {
         for x in 1..x_last {
             apply(x, 0, z);
             if y_last != 0 {
@@ -1282,9 +1283,10 @@ fn step_with_parity(
         grid.last_changed_chunks = grid.chunks_changed_from(&before).into_iter().collect();
         let mut next = HashSet::with_capacity(before.dirty_chunks.len().saturating_mul(7));
         for chunk in before.dirty_chunks.iter().copied() {
-            let Some([cx, cy, cz]) = before.chunk_coord_from_index(chunk) else {
-                continue;
-            };
+            let cx = chunk % counts[0];
+            let rem = chunk - cx;
+            let cy = rem / counts[0] % counts[1];
+            let cz = rem / (counts[0] * counts[1]);
             let mut push = |x: i32, y: i32, z: i32| {
                 let Ok(x) = usize::try_from(x) else { return };
                 let Ok(y) = usize::try_from(y) else { return };

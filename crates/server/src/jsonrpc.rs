@@ -484,7 +484,6 @@ pub struct SnapshotFields {
     /// missing the dashboard block.
     pub emergence: Option<EmergenceSampleFields>,
     /// Fully-researched techs (FR-CIV-SERVER-003).
-    #[serde(default)]
     pub researched: Vec<String>,
     /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
@@ -556,6 +555,8 @@ pub struct EmergenceMetricsSnapshot {
     /// Number of emergent language clusters currently tracked.
     pub language_count: u32,
 }
+
+pub use civ_emergence_metrics::sample_snapshot::EmergenceSampleSnapshot;
 
 /// Build the JSON-RPC result object for `sim.snapshot`.
 pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
@@ -832,6 +833,12 @@ pub fn snapshot_fields_from_sim(
             .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
+        researched: sim.research_cache().researched.clone(),
+        in_progress_tech: sim
+            .research_cache()
+            .in_progress
+            .as_ref()
+            .map(|(tech, _)| tech.clone()),
     }
 }
 
@@ -917,7 +924,6 @@ fn game_resources_from_sim(sim: &civ_engine::Simulation) -> Vec<ResourceSnapshot
 }
 
 /// Tick and optional snapshot fields passed into dispatch.
-#[derive(Debug, Clone, Default, PartialEq)]
 /// Precomputed outcome for `sim.outcome` (FR-CIV-GAME-001).
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeFields {
@@ -925,6 +931,7 @@ pub struct OutcomeFields {
     pub reason: String,
     pub tick: u64,
 }
+#[derive(Debug, Clone)]
 pub struct DispatchContext {
     /// Current bridge tick (may lag until the next broadcast).
     pub tick: u64,
@@ -944,12 +951,10 @@ pub struct DispatchContext {
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
     /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
-    #[serde(default)]
     pub researched: Vec<String>,
     /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
     /// Precomputed game outcome for `sim.outcome` handler (FR-CIV-GAME-001).
-    #[serde(default)]
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
@@ -1163,6 +1168,24 @@ pub enum DispatchEffect {
     LoadSlot {
         /// Validated slot stem (`slot-1` … `slot-5`).
         slot_name: String,
+    },
+    /// Queue a research topic.
+    QueueResearch {
+        /// Tech identifier to queue.
+        tech: String,
+    },
+    /// Apply a god action from the bridge UI.
+    GodAction {
+        /// Action identifier.
+        action: String,
+        /// Normalized X coordinate, if provided.
+        x: Option<f32>,
+        /// Normalized Y coordinate, if provided.
+        y: Option<f32>,
+        /// Optional faction target.
+        target_faction: Option<u32>,
+        /// Optional magnitude slider.
+        magnitude: Option<f32>,
     },
 }
 
@@ -1436,17 +1459,18 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             },
         },
         JsonRpcMethod::SimLoadScenario => {
-            let (preset, seed) =
-                parse_load_scenario_params(req.params.as_ref()).map_err(|e| DispatchPlan {
-                    response: JsonRpcResponse::error(req.id.clone(), e),
+            match parse_load_scenario_params(req.params.as_ref()) {
+                Ok((preset, seed)) => DispatchPlan {
+                    response: JsonRpcResponse::success(
+                        req.id,
+                        serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
+                    ),
+                    effect: DispatchEffect::LoadScenario { preset, seed },
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
                     effect: DispatchEffect::None,
-                })?;
-            DispatchPlan {
-                response: JsonRpcResponse::ok(
-                    req.id.clone(),
-                    serde_json::json!({ "preset": preset, "seed": seed, "tick": 0 }),
-                ),
-                effect: DispatchEffect::LoadScenario { preset, seed },
+                },
             }
         }
         JsonRpcMethod::SimSetPolicy => match parse_set_policy_params(req.params.as_ref()) {
@@ -1840,7 +1864,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         req.id,
                         JsonRpcError {
                             code: error_code::INVALID_PARAMS,
-                            message: "missing 'tech' param".to_owned(),
                             message: "Missing or empty \"tech\" parameter".to_owned(),
                             data: None,
                         },
@@ -1853,11 +1876,6 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                         req.id,
                         JsonRpcError {
                             code: error_code::INVALID_PARAMS,
-                            message: format!(
-                                "unknown tech '{}'; known: {}",
-                                tech,
-                                KNOWN_TECHS.join(", ")
-                            ),
                             message: format!(
                                 "Unknown tech \"{tech}\"; valid: {}",
                                 KNOWN_TECHS.join(", ")

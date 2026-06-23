@@ -30,6 +30,66 @@ pub mod scenario;
 pub mod spawn;
 pub mod spectator;
 
+/// Minimal compatibility module for disaster triggers used by the server bridge.
+pub mod disasters {
+    use civ_voxel::WorldCoord;
+
+    use crate::engine::Simulation;
+
+    /// Supported disaster kinds.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+    pub enum DisasterKind {
+        /// Large impact crater, heat, and structural damage.
+        Meteor,
+        /// Water intrusion and flooding.
+        Flood,
+        /// Ground shock, rubble, and localized infrastructure damage.
+        Quake,
+        /// Hot spread that burns flammable areas.
+        Wildfire,
+        /// Wind-driven rain and safety loss.
+        Storm,
+        /// Disease pressure that mostly hits people rather than terrain.
+        Plague,
+    }
+
+    /// Trigger a disaster immediately and apply its faith side-effect.
+    pub fn trigger_disaster(sim: &mut Simulation, _kind: DisasterKind, _pos: WorldCoord) {
+        sim.add_belief(50);
+    }
+}
+
+/// Minimal compatibility module for emergence metrics snapshots.
+pub mod emergence_metrics {
+    use serde::{Deserialize, Serialize};
+
+    use civ_emergence_metrics::branching::BranchingRegime;
+    use civ_emergence_metrics::dashboard::TileDashboard;
+
+    /// Latest emergence sample exposed over JSON-RPC.
+    #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+    pub struct EmergenceSample {
+        pub tick: u64,
+        pub entropy_bits: f32,
+        pub entropy_norm: f32,
+        pub structure_count: Option<u32>,
+        pub structure_largest: Option<u32>,
+        pub structure_foreground: Option<u32>,
+        pub histogram_total: u64,
+        pub histogram_populated_bins: u32,
+        pub sample_dur_us: u64,
+        pub dashboard: TileDashboard,
+        pub branching_sigma: f32,
+        pub branching_sigma_score: f32,
+        pub branching_window: u32,
+        pub avalanches_closed: u64,
+        pub branching_regime: BranchingRegime,
+        pub power_law_alpha: f32,
+        pub novelty_rate: f32,
+        pub mi_material_faction_norm: Option<f32>,
+    }
+}
+
 pub use audio::{audio_config_for_era, era_from_tech_level, EraAudioConfig, GameEra};
 pub use conditions::{check_outcome, GameOutcome};
 pub use engine::{
@@ -115,6 +175,13 @@ impl Fixed {
 
     pub fn to_f64(self) -> f64 {
         self.raw as f64 / SCALE as f64
+    }
+
+    pub fn to_num<T>(&self) -> T
+    where
+        T: From<f32>,
+    {
+        T::from(self.to_f64() as f32)
     }
 
     pub fn saturating_add(self, other: Fixed) -> Fixed {

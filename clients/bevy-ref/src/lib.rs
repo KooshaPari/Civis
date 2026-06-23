@@ -84,10 +84,7 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-<<<<<<< HEAD
-=======
 pub mod civ_history;
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -258,7 +255,7 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
     /// Normalised Shannon entropy (`0..=1`).
@@ -309,7 +306,6 @@ pub struct LiveHudSnapshot {
     /// Factions tracked from `Frame3d::FactionState` wire frames.
     pub faction_count: usize,
     /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
-    #[serde(default)]
     pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,

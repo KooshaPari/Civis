@@ -50,6 +50,25 @@ use crate::{
     voxel_frame_builder::build_voxel_delta_frame,
 };
 
+fn voxel_axis_span<F>(world: &civ_voxel::VoxelWorld<civ_voxel::MaterialId>, axis: F) -> f32
+where
+    F: Fn(civ_voxel::ChunkCoord) -> i32,
+{
+    let mut min = None::<i32>;
+    let mut max = None::<i32>;
+    for (coord, _) in world.chunks_dense() {
+        let value = axis(coord);
+        min = Some(min.map_or(value, |current| current.min(value)));
+        max = Some(max.map_or(value, |current| current.max(value)));
+    }
+    let Some(min) = min else {
+        return civ_voxel::FIXED_SCALE as f32;
+    };
+    let max = max.unwrap_or(min);
+    let chunk_span = i64::from(max - min + 1) * i64::from(civ_voxel::CHUNK_EDGE as i32);
+    (chunk_span * i64::from(civ_voxel::FIXED_SCALE)) as f32
+}
+
 /// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
 pub const FRAME_BUNDLE_LEN: usize = 7;
 
@@ -888,10 +907,10 @@ async fn apply_dispatch_effect(
                 }
                 Err(err) => {
                     tracing::error!(%preset, ?err, "sim.load_scenario failed");
-                    *response = civ_server::jsonrpc::JsonRpcResponse::error(
+                    *response = crate::jsonrpc::JsonRpcResponse::failure(
                         response.id.clone(),
-                        civ_server::jsonrpc::JsonRpcError {
-                            code: civ_server::jsonrpc::error_code::INTERNAL_ERROR,
+                        crate::jsonrpc::JsonRpcError {
+                            code: crate::jsonrpc::error_code::INTERNAL_ERROR,
                             message: format!("failed to load preset {preset:?}: {err}"),
                             data: None,
                         },
@@ -1096,8 +1115,9 @@ async fn apply_dispatch_effect(
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
+            let world = sim.voxel();
+            let world_w = voxel_axis_span(world, |coord| coord.cx);
+            let world_d = voxel_axis_span(world, |coord| coord.cz);
             let wx = x.unwrap_or(0.5) * world_w;
             let wz = y.unwrap_or(0.5) * world_d;
             let pos = WorldCoord {
@@ -1113,7 +1133,7 @@ async fn apply_dispatch_effect(
                     trigger_disaster(&mut sim, DisasterKind::Plague, pos);
                     if let Some(fid) = target_faction {
                         if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
+                            let debit = civ_engine::Fixed::from_num((mag * 500.0_f32) as i64);
                             *t = (*t - debit).max(civ_engine::Fixed::ZERO);
                         }
                     }
@@ -1121,7 +1141,7 @@ async fn apply_dispatch_effect(
                 "bless" => {
                     if let Some(fid) = target_faction {
                         if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
+                            let credit = civ_engine::Fixed::from_num((mag * 1000.0_f32) as i64);
                             *t += credit;
                         }
                     }
@@ -1129,7 +1149,7 @@ async fn apply_dispatch_effect(
                 }
                 "miracle" => {
                     sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
+                    let boost = civ_engine::Fixed::from_num((mag * 200.0_f32) as i64);
                     for t in sim.state.faction_treasury.values_mut() {
                         *t += boost;
                     }

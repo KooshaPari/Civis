@@ -15,8 +15,7 @@
 //! so this default headless smoke stays valid without a running server.
 
 use civ_voxel::{
-    material::WATER, ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld,
-    WorldCoord,
+    material::WATER, ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId, VoxelWorld, WorldCoord,
 };
 
 const VOXEL_SPAN: i64 = 1_000_000;

@@ -29,10 +29,13 @@ function Read-Estimates {
     param([string] $Path)
 
     $json = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    $mean = $json.mean.point_estimate
+    $median = $json.median.point_estimate
+    $stdDev = $json.mean.standard_error
     [pscustomobject]@{
-        MeanNs = [double] $json.mean.point_estimate
-        MedianNs = [double] $json.median.point_estimate
-        StdDevNs = [double] $json.mean.standard_error
+        MeanNs = [double] $mean
+        MedianNs = [double] $median
+        StdDevNs = [double] $stdDev
     }
 }
 
@@ -42,14 +45,13 @@ try {
         throw "Criterion output not found at $CriterionRoot. Run scripts/ca-dirty-chunk-bench.ps1 first."
     }
 
-    $rootPath = (Resolve-Path $CriterionRoot).Path
     $rows = Get-ChildItem -LiteralPath $CriterionRoot -Recurse -Filter estimates.json |
-        Where-Object { $_.FullName -match '[\\/](new|base)[\\/]estimates\.json$' } |
+        Where-Object { $_.FullName -match '[\\/](new|base)[\\/](estimates\.json)$' } |
         ForEach-Object {
             $kind = if ($_.FullName -match '[\\/]new[\\/]estimates\.json$') { 'new' } else { 'base' }
             $benchmarkPath = Split-Path -Parent (Split-Path -Parent $_.FullName)
             [pscustomobject]@{
-                BenchmarkPath = $benchmarkPath.Substring($rootPath.Length + 1)
+                BenchmarkPath = $benchmarkPath.Substring((Resolve-Path $CriterionRoot).Path.Length + 1)
                 Kind = $kind
                 Estimates = Read-Estimates -Path $_.FullName
             }
@@ -89,10 +91,6 @@ try {
             $row.Benchmark, $row.Source, (Format-Nanos $row.MeanNs), (Format-Nanos $row.MedianNs), (Format-Nanos $row.StdDevNs))
     }
 
-    $outputDir = Split-Path -Parent $Output
-    if ($outputDir) {
-        New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-    }
     Set-Content -LiteralPath $Output -Value $lines -NoNewline:$false
     Write-Host "Wrote $Output"
 }

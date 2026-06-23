@@ -94,12 +94,7 @@ function Invoke-RustShimBuild {
         Pop-Location
     }
 
-    $metadataJson = & cargo metadata --manifest-path (Join-Path $RustShimDir 'Cargo.toml') --format-version 1 --no-deps
-    if ($LASTEXITCODE -ne 0) {
-        throw "cargo metadata failed with exit code $LASTEXITCODE"
-    }
-    $targetDir = ($metadataJson | ConvertFrom-Json).target_directory
-    $builtLib = Join-Path $targetDir "release\$LibName"
+    $builtLib = Join-Path $RustShimDir "target\release\$LibName"
     if (-not (Test-Path -LiteralPath $builtLib)) {
         throw "Expected static library not found: $builtLib"
     }
@@ -134,16 +129,11 @@ function Invoke-UnrealBuild([string] $UeRoot, [string] $UbtOrBuildBat) {
 
     $projectArg = "-Project=`"$Uproject`""
 
-    # UBA retries compile jobs when RAM is tight and can loop forever; -NoUBA is slower but reliable.
-    $ubtArgs = @(
-        $EditorTarget, $Platform, $Configuration, $projectArg,
-        '-WaitMutex', '-NoUBA', '-MaxParallelActions=2'
-    )
     if ($UbtOrBuildBat -like '*.exe') {
-        & $UbtOrBuildBat @ubtArgs
+        & $UbtOrBuildBat $EditorTarget $Platform $Configuration $projectArg '-WaitMutex'
     }
     else {
-        & $UbtOrBuildBat @ubtArgs
+        & $UbtOrBuildBat $EditorTarget $Platform $Configuration $projectArg '-WaitMutex'
     }
 
     if ($LASTEXITCODE -ne 0) {

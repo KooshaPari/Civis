@@ -6,7 +6,6 @@ extends Node
 signal snapshot_received(snapshot: Dictionary)
 signal connection_changed(state: String)
 signal f3d0_frame_received(kind: String, tick: int, frame: Variant)
-signal snapshot_throttled(wait_ms: int)
 
 ## WebSocket URL for civ-server. Override via CIV_SERVER_WS env var or the Inspector.
 @export var ws_url := "ws://127.0.0.1:3000/ws?tick_format=binary"
@@ -180,15 +179,11 @@ func _normalize_snapshot(result: Dictionary) -> Dictionary:
 		out["military_units"] = military
 	if result.has("is_day"):
 		out["is_day"] = result.get("is_day")
-	var mods = result.get("mods", [])
-	if typeof(mods) == TYPE_ARRAY:
-		out["mods"] = mods
 	return out
 
 func _maybe_refresh_snapshot() -> void:
 	var now := Time.get_ticks_msec()
 	if now - _last_snapshot_request_ms < snapshot_throttle_ms:
-		snapshot_throttled.emit(snapshot_throttle_ms - int(now - _last_snapshot_request_ms))
 		return
 	_last_snapshot_request_ms = now
 	request_snapshot()

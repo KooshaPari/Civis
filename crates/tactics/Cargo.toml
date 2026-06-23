@@ -15,4 +15,4 @@ civ-voxel = { path = "../voxel" }
 civ-agents = { path = "../agents" }
 
 [dev-dependencies]
-proptest = "1.11"
+proptest = "1.4"

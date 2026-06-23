@@ -1,4 +1,0 @@
-crates/research/src/lib.rs — unlockable_at_era (LawDb method missing)
-crates/watch/src/app.rs — default_canon, load_with_mod_overlays (LawDb associated fns missing)
-crates/watch/src/snapshot.rs — unlockable_at_era (LawDb method missing)
-crates/watch/src/server.rs — load_law_db import broken after app.rs revert

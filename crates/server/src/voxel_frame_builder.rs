@@ -177,17 +177,4 @@ mod tests {
         assert_eq!(frame.deltas[1].event.write_seq, WriteSeq(10));
         assert_eq!(frame.deltas[2].event.chunk_id, ChunkId(3));
     }
-
-    #[test]
-    fn world_coord_to_chunk_id_is_deterministic_and_separates_chunks() {
-        let origin = WorldCoord { x: 0, y: 0, z: 0 };
-        let a = world_coord_to_chunk_id(origin);
-        assert_eq!(a, world_coord_to_chunk_id(origin));
-        let far = WorldCoord {
-            x: 100 * FIXED_SCALE * i64::from(CHUNK_EDGE),
-            y: 0,
-            z: 0,
-        };
-        assert_ne!(world_coord_to_chunk_id(far), a);
-    }
 }

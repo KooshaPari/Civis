@@ -278,11 +278,8 @@ mod tests {
         // col_offset=0, row_offset=0 → same (no shift for side=2 odd floor)
         // Actually centre = (side-1)/2 = 0, so no shift
         for &o in &offsets {
-            assert!(
-                o.0 >= -1 && o.0 <= 1 && o.1 >= -1 && o.1 <= 1,
-                "offset {:?} out of expected range",
-                o
-            );
+            assert!(o.0 >= -1 && o.0 <= 1 && o.1 >= -1 && o.1 <= 1,
+                "offset {:?} out of expected range", o);
         }
         // No duplicates
         let mut sorted = offsets.clone();
@@ -360,10 +357,7 @@ mod tests {
         let e = rotate_offsets(&s, Facing::North);
         // Each North rotation: (dx,dy) → (dy,-dx)
         // Four applications returns to original.
-        assert_eq!(
-            e, original,
-            "four North rotations should return to original"
-        );
+        assert_eq!(e, original, "four North rotations should return to original");
     }
 
     // ------------------------------------------------------------------
@@ -480,10 +474,7 @@ mod tests {
     #[test]
     fn wedge_facing_north_leader_at_anchor() {
         let pos = formation_positions(&squad_at_origin(3), FormationKind::Wedge, Facing::North);
-        assert!(
-            pos.contains(&(0, 0)),
-            "leader stays at anchor when facing North"
-        );
+        assert!(pos.contains(&(0, 0)), "leader stays at anchor when facing North");
     }
 
     // ------------------------------------------------------------------
@@ -564,14 +555,7 @@ mod tests {
             ] {
                 for facing in [Facing::North, Facing::South, Facing::East, Facing::West] {
                     let pos = formation_positions(&units, kind, facing);
-                    assert_eq!(
-                        pos.len(),
-                        n,
-                        "len mismatch for {:?} {:?} n={}",
-                        kind,
-                        facing,
-                        n
-                    );
+                    assert_eq!(pos.len(), n, "len mismatch for {:?} {:?} n={}", kind, facing, n);
                 }
             }
         }

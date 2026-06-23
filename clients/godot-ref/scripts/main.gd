@@ -3,11 +3,16 @@ extends Node3D
 ## Vertical scale for normalized `[0, 1]` heights from civ-watch (tweak in Inspector).
 @export_range(1.0, 64.0, 1.0) var terrain_height_exaggeration := 24.0
 
+## `server` = civ-server WebSocket + civ-watch terrain. `watch` = civ-watch HTTP only.
+@export_enum("server", "watch") var attach_mode := "server"
+
+## civ-server WebSocket URL. Resolved at startup from CIV_SERVER_WS env var if set,
+## otherwise falls back to this Inspector value (default port 3000).
+@export var civ_server_ws := "ws://127.0.0.1:3000/ws?tick_format=binary"
+@export var civ_watch_http := "http://127.0.0.1:9090"
+
 ## When true (ADR-009), hide world-mutation tools.
 @export var spectator_mode := true
-
-## `standalone` runs the in-process SimulationHost; `server` attaches to civ-server WS.
-@export var attach_mode := "standalone"
 
 const TERRAIN_GRID_SIZE := 128
 const CIVILIAN_FOOT_OFFSET := 0.55
@@ -44,16 +49,13 @@ const MILITARY_COLORS := {
 	"Scout": Color(0.95, 0.85, 0.4),
 }
 
-var _simulation_host: SimulationHost
-var _ws_client: CivisWsClient
-var _server_attach := false
+var _civis_http: CivisClient
 @onready var terrain_mesh: MeshInstance3D = $Terrain/TerrainMesh
 @onready var civilians_root: Node3D = $Civilians
 @onready var buildings_root: Node3D = $Buildings
 @onready var military_root: Node3D = $Military
 @onready var voxel_overlay: F3d0VoxelOverlay = $VoxelOverlays
 @onready var ui = $UI
-@onready var attach_status_label: Label = $UI/BottomBar/HBoxContainer/AttachStatusLabel
 
 var current_tool := "Inspect"
 var current_material := 0
@@ -65,43 +67,48 @@ var civilian_nodes: Dictionary = {}
 var building_nodes: Dictionary = {}
 var military_nodes: Dictionary = {}
 var spawn_count := 0
+var _ws_client: CivisWsClient
 var _spawn_drag_active := false
 var _spawn_drag_start := Vector2(-1.0, -1.0)
 var _drag_preview: MeshInstance3D
-var _connection_state := "offline"
-var _last_frame_kind := "-"
-var _last_frame_tick := 0
-var _snapshot_state := "idle"
 
 func _ready() -> void:
-	_server_attach = attach_mode == "server"
-	_simulation_host = SimulationHost.new()
-	_simulation_host.name = "SimulationHost"
-	add_child(_simulation_host)
+	_civis_http = CivisClient.new()
+	add_child(_civis_http)
+
+	_ws_client = CivisWsClient.new()
+	_ws_client.name = "CivisWsClient"
+	add_child(_ws_client)
+	_ws_client.snapshot_received.connect(_on_ws_snapshot)
+	_ws_client.connection_changed.connect(_on_ws_connection)
+	_ws_client.f3d0_frame_received.connect(_on_f3d0_frame)
+
+	# Allow env var override so local dev on a non-default port doesn't require
+	# editing the scene file.  CIV_SERVER_WS takes precedence over the Inspector
+	# export; CIV_WATCH_HTTP similarly overrides the watch endpoint.
+	var env_ws: String = OS.get_environment("CIV_SERVER_WS")
+	if not env_ws.is_empty():
+		civ_server_ws = env_ws
+	var env_http: String = OS.get_environment("CIV_WATCH_HTTP")
+	if not env_http.is_empty():
+		civ_watch_http = env_http
+
+	_civis_http.connect(civ_watch_http)
 	_load_terrain()
 	_build_terrain_mesh()
-	var timer := $Timer as Timer
-	if not timer.timeout.is_connected(_on_timer_timeout):
-		timer.timeout.connect(_on_timer_timeout)
-	if _server_attach:
-		timer.stop()
-		timer.autostart = false
-		_ws_client = CivisWsClient.new()
-		_ws_client.name = "CivisWsClient"
-		add_child(_ws_client)
-		_ws_client.connection_changed.connect(_on_connection_changed)
-		_ws_client.snapshot_received.connect(_apply_snapshot)
-		_ws_client.f3d0_frame_received.connect(_on_f3d0_frame_received)
-		_ws_client.snapshot_throttled.connect(_on_snapshot_throttled)
-		_ws_client.connect_server()
 	_bind_ui()
 	ui.get_node("Minimap").setup(terrain_heights, terrain_biomes, $Camera3D, terrain_height_exaggeration)
-	_refresh_attach_status()
+
+	if attach_mode == "server":
+		_ws_client.connect_server(civ_server_ws)
+		$Timer.stop()
+	else:
+		_update_snapshot_watch()
+		$Timer.start()
 
 func _load_terrain() -> void:
-	var terrain := _simulation_host.get_terrain()
-	terrain_heights = terrain.get("heights", PackedFloat32Array())
-	terrain_biomes = terrain.get("biomes", PackedByteArray())
+	terrain_heights = _civis_http.fetch_terrain()
+	terrain_biomes = _civis_http.fetch_terrain_biomes()
 
 func _build_terrain_mesh() -> void:
 	if terrain_heights.is_empty():
@@ -148,12 +155,12 @@ func _world_y_at_norm(norm_x: float, norm_y: float, foot_offset: float) -> float
 func _terrain_color(x: int, z: int) -> Color:
 	var idx := z * TERRAIN_GRID_SIZE + x
 	if idx < 0:
-		return SimulationHost.biome_color(0)
+		return CivisClient.biome_color(0)
 	if not terrain_biomes.is_empty() and idx < terrain_biomes.size():
-		return SimulationHost.biome_color(int(terrain_biomes[idx]))
+		return CivisClient.biome_color(int(terrain_biomes[idx]))
 	if idx < terrain_heights.size():
-		return SimulationHost.height_color(terrain_heights[idx])
-	return SimulationHost.biome_color(0)
+		return CivisClient.height_color(terrain_heights[idx])
+	return CivisClient.biome_color(0)
 
 func _bind_ui() -> void:
 	for button_name in ["Place Voxel", "Spawn Civilian", "Damage", "Inspect", "Camera"]:
@@ -175,11 +182,10 @@ func _bind_ui() -> void:
 		spawn_kind_ui.add_item(label)
 	spawn_kind_ui.select(0)
 	spawn_kind_ui.item_selected.connect(_on_spawn_kind_selected)
+	var attach_label := "civ-server WS" if attach_mode == "server" else "civ-watch HTTP"
 	var mode_label := "Spectator" if spectator_mode else "Authoring"
-	var attach_hint := "civ-server WebSocket attach" if _server_attach else "standalone in-process simulation"
-	var hint := "%s — %s." % [mode_label, attach_hint]
+	var hint := "%s — %s. Terrain from civ-watch." % [mode_label, attach_label]
 	ui.get_node("BottomBar").tooltip_text = hint
-	_refresh_attach_status()
 	if spectator_mode:
 		ui.get_node("BottomBar/HBoxContainer/Material").visible = false
 		ui.get_node("BottomBar/HBoxContainer/SpawnKind").visible = false
@@ -199,16 +205,10 @@ func _bind_ui() -> void:
 	_apply_speed(current_speed)
 
 func _apply_speed(speed: int) -> void:
-	if _server_attach and _ws_client != null:
+	if attach_mode == "server":
 		_ws_client.set_speed(speed)
-		return
-	var timer := $Timer as Timer
-	if speed <= 0:
-		timer.stop()
-		return
-	timer.wait_time = 0.1 / float(speed)
-	if timer.is_stopped():
-		timer.start()
+	else:
+		_civis_http.post_speed(speed)
 
 func _process(_delta: float) -> void:
 	if spectator_mode:
@@ -288,7 +288,10 @@ func _spawn_convoy_along_drag(start: Vector2, end: Vector2) -> void:
 		_spawn_at_norm(nx, ny)
 
 func _spawn_at_norm(norm_x: float, norm_y: float) -> void:
-	_simulation_host.tick()
+	if attach_mode == "server":
+		_ws_client.spawn_entity(spawn_kind, norm_x, norm_y, 0)
+	else:
+		_civis_http.post_spawn_entity(spawn_kind, norm_x, norm_y, 0)
 	spawn_count += 1
 	ui.get_node("BottomBar/HBoxContainer/SpawnCountLabel").text = "Spawns: %d" % spawn_count
 	_spawn_burst_at_norm(norm_x, norm_y, _spawn_burst_color_for_kind(spawn_kind))
@@ -339,62 +342,49 @@ func _handle_mutation_click() -> void:
 		return
 	var pos: Vector3 = hit.position
 	if current_tool == "Place Voxel":
-		_simulation_host.tick()
+		if attach_mode == "server":
+			_ws_client.place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
+		else:
+			_civis_http.post_place_voxel(int(pos.x), int(pos.y), int(pos.z), current_material)
 	elif current_tool == "Damage":
 		var wx := int(pos.x) * WORLD_SCALE
 		var wy := int(maxf(0.0, pos.y)) * WORLD_SCALE
 		var wz := int(pos.z) * WORLD_SCALE
-		_simulation_host.tick()
+		if attach_mode == "server":
+			_ws_client.apply_damage(wx, wy, wz, damage_radius)
+		else:
+			_civis_http.post_damage(wx, wy, wz, damage_radius)
 		SpawnBurst.emit_at(self, pos + Vector3(0, 0.6, 0), Color(1.0, 0.3, 0.3))
 
 func _on_timer_timeout() -> void:
-	if _server_attach:
-		return
-	_simulation_host.tick()
-	var snapshot := _simulation_host.snapshot()
+	_update_snapshot_watch()
+
+func _update_snapshot_watch() -> void:
+	var snapshot := _civis_http.latest_snapshot()
 	if snapshot.is_empty():
 		return
 	_apply_snapshot(snapshot)
+
+func _on_ws_snapshot(snapshot: Dictionary) -> void:
+	_apply_snapshot(snapshot)
+
+func _on_ws_connection(state: String) -> void:
+	if state != "live":
+		ui.get_node("BottomBar/HBoxContainer/TickLabel").text = "Conn: %s" % state
+
+func _on_f3d0_frame(kind: String, _tick: int, frame: Variant) -> void:
+	if kind == "VoxelDelta":
+		voxel_overlay.apply_voxel_delta_frame(frame)
 
 func _apply_snapshot(snapshot: Dictionary) -> void:
 	var tick := int(snapshot.get("tick", 0))
 	ui.get_node("BottomBar/HBoxContainer/TickLabel").text = "Tick: %s" % tick
 	ui.get_node("BottomBar/HBoxContainer/PopulationLabel").text = "Population: %s" % snapshot.get("population", 0)
-	ui.get_node("BottomBar/HBoxContainer/ModsLabel").text = _mods_label_text(snapshot.get("mods", []))
 	ui.get_node("BottomBar/HBoxContainer/EraLabel").text = EraTimelapse.era_label(tick)
 	_apply_day_night(bool(snapshot.get("is_day", true)))
 	_sync_civilians(snapshot.get("civ_pins", []))
 	_sync_buildings(snapshot.get("buildings", []))
 	_sync_military(snapshot.get("military_units", []))
-	_snapshot_state = "snapshot@%s" % tick
-	_refresh_attach_status()
-
-func _on_connection_changed(state: String) -> void:
-	_connection_state = state
-	_refresh_attach_status()
-
-func _on_f3d0_frame_received(kind: String, tick: int, _frame: Variant) -> void:
-	_last_frame_kind = kind
-	_last_frame_tick = tick
-	_refresh_attach_status()
-
-func _on_snapshot_throttled(wait_ms: int) -> void:
-	_snapshot_state = "throttled %dms" % max(0, wait_ms)
-	_refresh_attach_status()
-
-func _refresh_attach_status() -> void:
-	if attach_status_label == null:
-		return
-	var attach_label := "server" if _server_attach else "standalone"
-	var mode_label := "spectator" if spectator_mode else "authoring"
-	attach_status_label.text = "Attach: %s | %s | WS: %s | Frame: %s@%s | Snapshot: %s" % [
-		attach_label,
-		mode_label,
-		_connection_state,
-		_last_frame_kind,
-		_last_frame_tick,
-		_snapshot_state,
-	]
 
 
 func _apply_day_night(is_day: bool) -> void:
@@ -525,19 +515,3 @@ func _spawn_burst_at_norm(norm_x: float, norm_y: float, color: Color) -> void:
 	var gz := norm_y * float(TERRAIN_GRID_SIZE)
 	var gy := _world_y_at_norm(norm_x, norm_y, SPAWN_BURST_FOOT_OFFSET)
 	SpawnBurst.emit_at(civilians_root, Vector3(gx, gy, gz), color)
-
-func _mods_label_text(mods: Array) -> String:
-	if mods.is_empty():
-		return "Mods: 0"
-	var names: PackedStringArray = PackedStringArray()
-	for entry in mods:
-		if typeof(entry) != TYPE_DICTIONARY:
-			continue
-		var mod_name := str(entry.get("name", entry.get("id", "")))
-		if not mod_name.is_empty():
-			names.append(mod_name)
-	if names.is_empty():
-		return "Mods: %d" % mods.size()
-	if names.size() <= 2:
-		return "Mods: %s" % ", ".join(names)
-	return "Mods: %d (%s, …)" % [mods.size(), names[0]]

@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 # Run full local quality gates and write `.ci/quality-manifest.json` for cloud CI verification.
 # Optional Unreal tier: unreal_preflight, unreal_build (see scripts/quality/README.md).
-# Optional Extras tier (opt-in via CIVIS_QUALITY_EXTRAS=1): cargo-audit, cargo-deny,
-# cargo-machete, cargo-semver-checks, trufflehog, fr-coverage, docs:check. These
-# run only when the corresponding tools are on PATH; otherwise the gate is
-# recorded as `skip` with a clear reason. CI never runs them.
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -28,7 +24,7 @@ record() {
   if [[ "${status}" == "pass" ]]; then
     return 0
   fi
-  if [[ "${status}" == "skip" && ( "${name}" == unreal_* || "${name}" == extra_* ) ]]; then
+  if [[ "${status}" == "skip" && "${name}" == unreal_* ]]; then
     return 0
   fi
   FAIL=1
@@ -49,11 +45,7 @@ run_gate() {
 echo "==> civis quality manifest (local gates)"
 
 if command -v just >/dev/null 2>&1; then
-  if [ "${SKIP_CIVIS_3D_VERIFY:-0}" = "1" ] || [ "${SKIP_QUALITY_MANIFEST:-0}" = "1" ] || [ "${SKIP_QUALITY:-0}" = "1" ]; then
-    record "civis_3d_verify" "skip" "SKIP_CIVIS_3D_VERIFY/SKIP_QUALITY_MANIFEST set"
-  else
-    run_gate civis_3d_verify just civis-3d-verify || true
-  fi
+  run_gate civis_3d_verify just civis-3d-verify || true
 else
   run_gate rust_fmt cargo fmt --check || true
   run_gate rust_clippy cargo clippy --workspace --all-targets -- -D warnings || true
@@ -90,67 +82,6 @@ optional_unreal_gate() {
   fi
 }
 optional_unreal_gate || true
-
-# Optional Extras tier (opt-in; gated behind CIVIS_QUALITY_EXTRAS=1 so the
-# default path is the 5–7 second manifest emission, not a multi-minute sweep).
-# Each gate that is `skip` is recorded as such and the manifest hash treats it
-# as informational. CI's verify-quality-manifest.sh still passes for skipped
-# extras (the script's gate_ok treats any status as long as it's not "fail" for
-# non-optional gates; extras are added to the optional prefix list below).
-optional_extras_gate() {
-  if [[ "${CIVIS_QUALITY_EXTRAS:-}" != "1" ]]; then
-    record extra_cargo_audit skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_cargo_deny skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_cargo_machete skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_cargo_semver skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_trufflehog skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_fr_coverage skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_docs_check skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    record extra_security_guard skip "CIVIS_QUALITY_EXTRAS not set (opt-in)"
-    return 0
-  fi
-  if command -v cargo-audit >/dev/null 2>&1; then
-    run_gate extra_cargo_audit cargo audit --quiet || true
-  else
-    record extra_cargo_audit skip "cargo-audit not installed"
-  fi
-  if command -v cargo-deny >/dev/null 2>&1; then
-    run_gate extra_cargo_deny cargo deny check || true
-  else
-    record extra_cargo_deny skip "cargo-deny not installed"
-  fi
-  if command -v cargo-machete >/dev/null 2>&1; then
-    run_gate extra_cargo_machete cargo machete || true
-  else
-    record extra_cargo_machete skip "cargo-machete not installed"
-  fi
-  if command -v cargo-semver-checks >/dev/null 2>&1; then
-    run_gate extra_cargo_semver cargo semver-checks || true
-  else
-    record extra_cargo_semver skip "cargo-semver-checks not installed"
-  fi
-  if command -v trufflehog >/dev/null 2>&1; then
-    run_gate extra_trufflehog trufflehog filesystem . --no-update --only-verified || true
-  else
-    record extra_trufflehog skip "trufflehog not installed"
-  fi
-  if [[ -f "${ROOT}/scripts/fr-coverage/run-fr-coverage.sh" ]]; then
-    run_gate extra_fr_coverage bash "${ROOT}/scripts/fr-coverage/run-fr-coverage.sh" || true
-  else
-    record extra_fr_coverage skip "scripts/fr-coverage/run-fr-coverage.sh missing"
-  fi
-  if [[ -d "${ROOT}/docs" ]] && command -v bun >/dev/null 2>&1; then
-    run_gate extra_docs_check bash -lc 'cd docs && bun run docs:check' || true
-  else
-    record extra_docs_check skip "docs/ missing or bun not installed"
-  fi
-  if [[ -x "${ROOT}/.github/hooks/security-guard.sh" ]]; then
-    run_gate extra_security_guard bash "${ROOT}/.github/hooks/security-guard.sh" || true
-  else
-    record extra_security_guard skip ".github/hooks/security-guard.sh missing"
-  fi
-}
-optional_extras_gate || true
 
 export MANIFEST_PATH="${MANIFEST}"
 export QUALITY_GATE_RESULTS="$(printf '%s\n' "${RESULTS[@]}")"

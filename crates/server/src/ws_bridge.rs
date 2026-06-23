@@ -20,8 +20,9 @@ use axum::{
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
-    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id,
+    scenario::{load_scenario, preset_scenario_path},
+    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -438,7 +439,10 @@ async fn handle_jsonrpc_text(
                     let snap = sim.snapshot();
                     (Some(snap.population), None)
                 }
-                JsonRpcMethod::SimSnapshot => {
+                JsonRpcMethod::SimSnapshot
+                | JsonRpcMethod::GetFactions
+                | JsonRpcMethod::GetResources
+                | JsonRpcMethod::GetEmergenceMetrics => {
                     let sim = state.sim.lock().await;
                     let speed_multiplier = state.speed_multiplier.load(Ordering::Relaxed);
                     (
@@ -452,10 +456,19 @@ async fn handle_jsonrpc_text(
                 _ => (None, None),
             };
 
+            let emergence = if req.method == JsonRpcMethod::SimEmergence {
+                let sim = state.sim.lock().await;
+                sim.last_emergence_sample().map(Into::into)
+            } else {
+                None
+            };
             let (research_researched, research_in_progress) = {
                 let sim = state.sim.lock().await;
                 let cache = sim.research_cache();
-                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
+                (
+                    cache.researched.clone(),
+                    cache.in_progress.as_ref().map(|(t, _)| t.clone()),
+                )
             };
             let outcome_fields = if req.method == crate::jsonrpc::JsonRpcMethod::SimOutcome {
                 let sim = state.sim.lock().await;
@@ -467,32 +480,6 @@ async fn handle_jsonrpc_text(
                 })
             } else {
                 None
-            let diplomacy_snapshot = if req.method == JsonRpcMethod::SimDiplomacyState {
-                let sim = state.sim.lock().await;
-                sim.diplomacy_events()
-                    .iter()
-                    .map(|e| {
-                        let status = match e.kind {
-                            civ_engine::DiplomacyKind::Peace => "Peace",
-                            civ_engine::DiplomacyKind::Conflict => "War",
-                            civ_engine::DiplomacyKind::TradeAgreement => "Trade",
-                        };
-                        serde_json::json!({
-                            "tick": e.tick,
-                            "faction_a": e.faction_a,
-                            "faction_b": e.faction_b,
-                            "status": status,
-                            "treaty_active": e.kind == civ_engine::DiplomacyKind::Peace,
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                vec![]
-            };
-            let (research_researched, research_in_progress) = {
-                let sim = state.sim.lock().await;
-                let cache = sim.research_cache();
-                (cache.researched.clone(), cache.in_progress.as_ref().map(|(t, _)| t.clone()))
             };
             let mut plan = dispatch_request(
                 req,
@@ -504,14 +491,11 @@ async fn handle_jsonrpc_text(
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
-                    emergence: None,
+                    emergence,
                     researched: research_researched,
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
-                    diplomacy_snapshot,
-                    researched: research_researched,
-                    in_progress_tech: research_in_progress,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -711,15 +695,28 @@ fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
         })
         .collect();
     factions.sort_by_key(|entry| entry.id);
-    let mut population_by_faction: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
-    for (_, (civilian, _needs, _wardrobe)) in sim.world.query::<(&civ_agents::Civilian, &civ_agents::Needs, &civ_agents::Wardrobe)>().iter() {
+    let mut population_by_faction: std::collections::BTreeMap<u32, u32> =
+        std::collections::BTreeMap::new();
+    for (_, (civilian, _needs, _wardrobe)) in sim
+        .world
+        .query::<(
+            &civ_agents::Civilian,
+            &civ_agents::Needs,
+            &civ_agents::Wardrobe,
+        )>()
+        .iter()
+    {
         let fid = match civilian.alignment {
             civ_agents::Alignment::Faction(id) => id,
             _ => 0,
         };
         *population_by_faction.entry(fid).or_insert(0) += 1;
     }
-    FactionStateFrame { tick, factions, population_by_faction }
+    FactionStateFrame {
+        tick,
+        factions,
+        population_by_faction,
+    }
 }
 
 /// Build event-feed messages for one tick.
@@ -1081,9 +1078,21 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::QueueResearch { tech } => {
-            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
+            state
+                .sim
+                .lock()
+                .await
+                .research_cache_mut()
+                .queued
+                .push_back(tech);
         }
-        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
+        DispatchEffect::GodAction {
+            action,
+            x,
+            y,
+            target_faction,
+            magnitude,
+        } => {
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
@@ -1091,7 +1100,11 @@ async fn apply_dispatch_effect(
             let world_d = sim.voxel().depth() as f32;
             let wx = x.unwrap_or(0.5) * world_w;
             let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
+            let pos = WorldCoord {
+                x: wx as i64,
+                y: 0,
+                z: wz as i64,
+            };
             let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
             match action.as_str() {
                 "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
@@ -1117,7 +1130,9 @@ async fn apply_dispatch_effect(
                 "miracle" => {
                     sim.add_belief(2000);
                     let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
-                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                    for t in sim.state.faction_treasury.values_mut() {
+                        *t += boost;
+                    }
                 }
                 _ => {}
             }
@@ -1199,10 +1214,7 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     };
 
     let mut clients = state.clients.lock().await;
-    clients.retain(|tx| {
-        tx.send(ClientOutbound::Tick(Arc::clone(&batch)))
-            .is_ok()
-    });
+    clients.retain(|tx| tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok());
     Ok(())
 }
 
@@ -1560,7 +1572,10 @@ mod tests {
         let sim = Simulation::with_seed(11);
         let frame = build_civilian_state_frame(&sim, 5);
         assert_eq!(frame.tick, 5);
-        assert!(frame.civilians.len() <= 256, "civilians must be capped at 256");
+        assert!(
+            frame.civilians.len() <= 256,
+            "civilians must be capped at 256"
+        );
         // Verify all entries are sorted by id
         for i in 1..frame.civilians.len() {
             assert!(
@@ -1590,7 +1605,10 @@ mod tests {
             let frame = build_faction_state_frame(&sim, tick);
             let expected_era = ((tick / 120) % 6) as u16;
             for entry in &frame.factions {
-                assert_eq!(entry.era, expected_era, "tick {tick} should wrap era to {expected_era}");
+                assert_eq!(
+                    entry.era, expected_era,
+                    "tick {tick} should wrap era to {expected_era}"
+                );
             }
         }
     }
@@ -1677,8 +1695,14 @@ mod tests {
 
     #[test]
     fn encode_messages_per_tick_consistency() {
-        assert_eq!(TickBroadcastFormat::Text.messages_per_tick(), FRAME_BUNDLE_LEN);
-        assert_eq!(TickBroadcastFormat::Binary.messages_per_tick(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            TickBroadcastFormat::Text.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
+        assert_eq!(
+            TickBroadcastFormat::Binary.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
         assert_eq!(
             TickBroadcastFormat::Both.messages_per_tick(),
             FRAME_BUNDLE_LEN * 2
@@ -1723,7 +1747,15 @@ mod tests {
     fn job_profession_label_all_variants() {
         use JobType::*;
         let all_jobs = [Farmer, Warrior, Scholar, Trader, Priest, Admin, Unemployed];
-        let labels = ["farmer", "warrior", "scholar", "trader", "priest", "admin", "unemployed"];
+        let labels = [
+            "farmer",
+            "warrior",
+            "scholar",
+            "trader",
+            "priest",
+            "admin",
+            "unemployed",
+        ];
         for (job, label) in all_jobs.iter().zip(labels.iter()) {
             assert_eq!(job_profession_label(*job), *label);
         }
@@ -2005,7 +2037,10 @@ mod tests {
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("subscribe json");
-        assert_eq!(value.pointer("/result/subscribed"), Some(&serde_json::json!(true)));
+        assert_eq!(
+            value.pointer("/result/subscribed"),
+            Some(&serde_json::json!(true))
+        );
         assert_eq!(
             value.pointer("/result/filter_active"),
             Some(&serde_json::json!(true))
@@ -2039,7 +2074,10 @@ mod tests {
         assert!(unsubscribe.contains("\"unsubscribed\":true"));
         let guard = filter.lock().await;
         assert!(!guard.is_active());
-        assert_eq!(guard.filter_frames(&sample_frame_bundle()).len(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            guard.filter_frames(&sample_frame_bundle()).len(),
+            FRAME_BUNDLE_LEN
+        );
     }
 
     #[tokio::test]

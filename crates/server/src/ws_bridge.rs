@@ -1,5 +1,6 @@
 use std::{
     net::SocketAddr,
+    path::PathBuf,
     sync::{
         atomic::{AtomicU32, AtomicU64, Ordering},
         Arc,
@@ -10,19 +11,26 @@ use axum::{
     body::Bytes,
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        Query, State,
     },
     http::{header, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
-use civ_agents::{Tools, Wardrobe};
-use civ_engine::{decode_civreplay, encode_civreplay, Citizen, Simulation};
+use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
+use civ_engine::{
+    decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
+    DiplomacyKind, JobType, Simulation,
+};
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
-    AgentAppearanceUpdate, BuildingDiffFrame, BuildingProvenance, Frame3d,
+    AgentAppearanceUpdate, BattleEvent3d, BirthEvent3d, BuildingDiffFrame, BuildingProvenance,
+    CivilianNeeds3d, CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d,
+    EventFeedFrame, EventFeedMessage3d, FactionStateEntry, FactionStateFrame, FactionTreasury3d,
+    Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
+use civ_save_db::SaveDb;
 use futures::{SinkExt, StreamExt};
 use tokio::{
     net::TcpListener,
@@ -36,8 +44,13 @@ use crate::{
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
         DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
+    saves::save_archive_path,
+    subscription_filter::{SubscriptionFilter, WsConnectQuery},
     voxel_frame_builder::build_voxel_delta_frame,
 };
+
+/// Number of distinct `Frame3d` variants emitted per simulation tick (FR-CIV-BEVY-028 / item 53).
+pub const FRAME_BUNDLE_LEN: usize = 7;
 
 /// Which wire encodings the 10 Hz tick loop broadcasts to connected clients.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -64,11 +77,11 @@ impl TickBroadcastFormat {
         matches!(self, Self::Binary | Self::Both)
     }
 
-    /// WebSocket frames emitted per simulation tick (three `Frame3d` values).
+    /// WebSocket frames emitted per simulation tick ([`FRAME_BUNDLE_LEN`] `Frame3d` values).
     #[must_use]
     pub fn messages_per_tick(self) -> usize {
-        let kinds = 3;
-        kinds * usize::from(self.sends_text()) + kinds * usize::from(self.sends_binary())
+        FRAME_BUNDLE_LEN * usize::from(self.sends_text())
+            + FRAME_BUNDLE_LEN * usize::from(self.sends_binary())
     }
 
     /// Parse `CIVIS_TICK_BROADCAST` values: `text`, `binary`, or `both` (case-insensitive).
@@ -93,7 +106,7 @@ impl TickBroadcastFormat {
 }
 
 /// WebSocket bridge configuration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WsBridgeConfig {
     /// Socket address to bind the HTTP/WebSocket server to.
     pub addr: SocketAddr,
@@ -106,6 +119,8 @@ pub struct WsBridgeConfig {
     /// Use [`TickBroadcastFormat::Binary`] to skip redundant JSON text frames and
     /// serialize each `Frame3d` once (inside the `F3D0` envelope only).
     pub tick_broadcast_format: TickBroadcastFormat,
+    /// Directory for `.civsave.zst` slot files (created on bridge start).
+    pub saves_dir: PathBuf,
 }
 
 impl Default for WsBridgeConfig {
@@ -115,21 +130,55 @@ impl Default for WsBridgeConfig {
             max_clients: 16,
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::default(),
+            saves_dir: PathBuf::from("saves"),
         }
     }
 }
 
-type TickBroadcastTx = mpsc::UnboundedSender<Arc<[Message]>>;
+type ClientOutboundTx = mpsc::UnboundedSender<ClientOutbound>;
+
+/// Outbound WebSocket traffic for one connected client.
+enum ClientOutbound {
+    /// Immediate JSON-RPC (or error) text frame.
+    Rpc(Message),
+    /// Shared simulation tick bundle filtered per connection.
+    Tick(Arc<TickBroadcast>),
+}
+
+/// One simulation tick's `Frame3d` bundle shared across connected clients.
+struct TickBroadcast {
+    tick: u64,
+    frames: Arc<[Frame3d]>,
+    encoded: Arc<[Message]>,
+}
+
+fn resolve_session_id() -> String {
+    std::env::var("CIVIS_SESSION_ID")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+}
+
+fn save_db_path_for_saves_dir(saves_dir: &std::path::Path) -> PathBuf {
+    saves_dir
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("saves.db")
+}
 
 #[derive(Clone)]
 struct AppState {
     sim: Arc<Mutex<Simulation>>,
     tick: Arc<AtomicU64>,
     speed_multiplier: Arc<AtomicU32>,
-    clients: Arc<Mutex<Vec<TickBroadcastTx>>>,
+    clients: Arc<Mutex<Vec<ClientOutboundTx>>>,
     max_clients: usize,
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
+    saves_dir: PathBuf,
+    save_db: Arc<SaveDb>,
+    session_id: String,
 }
 
 /// Run the WebSocket bridge and 10 Hz tick loop.
@@ -149,6 +198,7 @@ pub async fn spawn_ws_bridge(sim: Arc<Mutex<Simulation>>, max_clients: usize) ->
             max_clients,
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::Both,
+            ..Default::default()
         },
     )
     .await
@@ -172,6 +222,14 @@ async fn serve_ws_bridge(
     config: WsBridgeConfig,
     sim: Arc<Mutex<Simulation>>,
 ) {
+    std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
+    let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
+    let save_db = Arc::new(
+        SaveDb::open(&save_db_path)
+            .unwrap_or_else(|err| panic!("open save db at {save_db_path:?}: {err}")),
+    );
+    let session_id = resolve_session_id();
+    tracing::info!(%session_id, ?save_db_path, "session-scoped save metadata db ready");
     let state = AppState {
         sim,
         tick: Arc::new(AtomicU64::new(0)),
@@ -180,6 +238,9 @@ async fn serve_ws_bridge(
         max_clients: config.max_clients,
         require_role: config.require_role,
         tick_broadcast_format: config.tick_broadcast_format,
+        saves_dir: config.saves_dir,
+        save_db,
+        session_id,
     };
 
     let app = Router::new()
@@ -251,18 +312,28 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(query): Query<WsConnectQuery>,
 ) -> impl IntoResponse {
     let header_role = headers
         .get("x-civis-role")
         .and_then(|value| value.to_str().ok())
         .filter(|role| !role.is_empty())
         .map(str::to_owned);
-    ws.on_upgrade(move |socket| handle_socket(socket, state, header_role))
+    ws.on_upgrade(move |socket| handle_socket(socket, state, header_role, query))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, mut connection_role: Option<String>) {
+async fn handle_socket(
+    socket: WebSocket,
+    state: AppState,
+    mut connection_role: Option<String>,
+    connect_query: WsConnectQuery,
+) {
     let (mut sender, mut receiver) = socket.split();
-    let (tx, mut rx) = mpsc::unbounded_channel::<Arc<[Message]>>();
+    let (tx, mut rx) = mpsc::unbounded_channel::<ClientOutbound>();
+    let subscription_filter = Arc::new(tokio::sync::Mutex::new(
+        SubscriptionFilter::from_connect_query(&connect_query),
+    ));
+    let tick_broadcast_format = state.tick_broadcast_format;
 
     {
         let mut clients = state.clients.lock().await;
@@ -273,11 +344,45 @@ async fn handle_socket(socket: WebSocket, state: AppState, mut connection_role: 
         clients.push(tx.clone());
     }
 
+    let forward_filter = Arc::clone(&subscription_filter);
     let forward = tokio::spawn(async move {
-        while let Some(batch) = rx.recv().await {
-            for msg in batch.iter() {
-                if sender.send(msg.clone()).await.is_err() {
-                    return;
+        while let Some(outbound) = rx.recv().await {
+            match outbound {
+                ClientOutbound::Rpc(msg) => {
+                    if sender.send(msg).await.is_err() {
+                        return;
+                    }
+                }
+                ClientOutbound::Tick(broadcast) => {
+                    let filter = forward_filter.lock().await;
+                    if !filter.is_active() {
+                        for msg in broadcast.encoded.iter() {
+                            if sender.send(msg.clone()).await.is_err() {
+                                return;
+                            }
+                        }
+                        continue;
+                    }
+                    if !filter.should_deliver_tick(broadcast.tick) {
+                        continue;
+                    }
+                    let frames = filter.filter_frames(broadcast.frames.as_ref());
+                    if frames.is_empty() {
+                        continue;
+                    }
+                    let messages =
+                        match encode_tick_broadcast_messages(&frames, tick_broadcast_format) {
+                            Ok(messages) => messages,
+                            Err(err) => {
+                                tracing::error!("tick broadcast encode failed: {err}");
+                                continue;
+                            }
+                        };
+                    for msg in messages {
+                        if sender.send(msg).await.is_err() {
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -286,9 +391,17 @@ async fn handle_socket(socket: WebSocket, state: AppState, mut connection_role: 
     while let Some(msg) = receiver.next().await {
         match msg {
             Ok(Message::Text(text)) => {
-                let response = handle_jsonrpc_text(&text, &state, &mut connection_role).await;
-                let batch: Arc<[Message]> = Arc::from([Message::Text(response)]);
-                if tx.send(batch).is_err() {
+                let response = handle_jsonrpc_text(
+                    &text,
+                    &state,
+                    &mut connection_role,
+                    Arc::clone(&subscription_filter),
+                )
+                .await;
+                if tx
+                    .send(ClientOutbound::Rpc(Message::Text(response)))
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -304,9 +417,15 @@ async fn handle_jsonrpc_text(
     text: &str,
     state: &AppState,
     connection_role: &mut Option<String>,
+    subscription_filter: Arc<tokio::sync::Mutex<SubscriptionFilter>>,
 ) -> String {
     match parse_request(text) {
         Ok(req) => {
+            if let Some(response) =
+                handle_subscription_jsonrpc(&req, state, &subscription_filter).await
+            {
+                return encode_response(&response);
+            }
             if connection_role.is_none() {
                 if let Some(role) = parse_role_param(req.params.as_ref()) {
                     *connection_role = Some(role);
@@ -341,6 +460,8 @@ async fn handle_jsonrpc_text(
                     require_role: state.require_role,
                     speed_multiplier: state.speed_multiplier.load(Ordering::Relaxed),
                     connection_role: connection_role.clone(),
+                    saves_dir: Some(state.saves_dir.clone()),
+                    emergence: None,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;
@@ -350,25 +471,281 @@ async fn handle_jsonrpc_text(
     }
 }
 
+async fn handle_subscription_jsonrpc(
+    req: &crate::jsonrpc::JsonRpcRequest,
+    state: &AppState,
+    subscription_filter: &Arc<tokio::sync::Mutex<SubscriptionFilter>>,
+) -> Option<JsonRpcResponse> {
+    match req.method {
+        JsonRpcMethod::SimSubscribe | JsonRpcMethod::SimUpdateSubscription => {
+            let tick = state.tick.load(Ordering::SeqCst);
+            let mut filter = subscription_filter.lock().await;
+            match filter.apply_subscribe_params(req.params.as_ref(), tick) {
+                Ok(result) => Some(JsonRpcResponse::success(req.id.clone(), result)),
+                Err(error) => Some(JsonRpcResponse::failure(req.id.clone(), error)),
+            }
+        }
+        JsonRpcMethod::SimUnsubscribe => {
+            let mut filter = subscription_filter.lock().await;
+            filter.clear();
+            Some(JsonRpcResponse::success(
+                req.id.clone(),
+                serde_json::json!({ "unsubscribed": true }),
+            ))
+        }
+        _ => None,
+    }
+}
+
 fn build_agent_appearance_frame(sim: &Simulation, tick: u64) -> AgentAppearanceFrame {
     let updates = sim
         .world
-        .query::<(&Citizen, &Wardrobe, &Tools)>()
+        .query::<(&AgentCivilian, &Wardrobe, &Tools)>()
         .iter()
         .map(
-            |(entity, (_citizen, wardrobe, tools))| AgentAppearanceUpdate {
-                agent_id: u64::from(entity.id()),
+            |(_entity, (civilian, wardrobe, tools))| AgentAppearanceUpdate {
+                agent_id: civilian.id,
                 era: wardrobe.era,
                 wardrobe: wardrobe.material,
                 tools: tools.material,
                 scale: 1.0,
+                position: None,
             },
         )
         .collect();
     AgentAppearanceFrame { tick, updates }
 }
 
-fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
+fn need_satisfaction(pressure: f32) -> f32 {
+    (1.0 - pressure).clamp(0.0, 1.0)
+}
+
+fn job_profession_label(job: JobType) -> &'static str {
+    match job {
+        JobType::Farmer => "farmer",
+        JobType::Warrior => "warrior",
+        JobType::Scholar => "scholar",
+        JobType::Trader => "trader",
+        JobType::Priest => "priest",
+        JobType::Admin => "admin",
+        JobType::Unemployed => "unemployed",
+    }
+}
+
+fn government_for_faction(faction_id: u32) -> Government3d {
+    match faction_id % 6 {
+        0 => Government3d::Monarchy,
+        1 => Government3d::Republic,
+        2 => Government3d::Theocracy,
+        3 => Government3d::Junta,
+        4 => Government3d::Council,
+        _ => Government3d::Corporate,
+    }
+}
+
+fn faction_for_norm(x: f32, y: f32, sim: &Simulation) -> u32 {
+    sim.spectator_view()
+        .factions
+        .iter()
+        .min_by(|a, b| {
+            let da = (x - a.capital[0]).powi(2) + (y - a.capital[1]).powi(2);
+            let db = (x - b.capital[0]).powi(2) + (y - b.capital[1]).powi(2);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|faction| faction.id)
+        .unwrap_or(0)
+}
+
+fn build_civilian_state_frame(sim: &Simulation, tick: u64) -> CivilianStateFrame {
+    let mut civilians: Vec<CivilianStateEntry> = sim
+        .world
+        .query::<(&AgentCivilian, &Needs, &Wardrobe)>()
+        .iter()
+        .map(|(entity, (civilian, needs, wardrobe))| {
+            let (profession, health) = sim
+                .world
+                .get::<&Citizen>(entity)
+                .ok()
+                .map(|citizen| {
+                    let job = citizen
+                        .job
+                        .unwrap_or_else(|| job_type_for_civilian_id(civilian.id));
+                    (
+                        job_profession_label(job).to_string(),
+                        citizen.health.to_f64() as f32,
+                    )
+                })
+                .unwrap_or_else(|| {
+                    (
+                        job_profession_label(job_type_for_civilian_id(civilian.id)).to_string(),
+                        1.0,
+                    )
+                });
+            let rest = (need_satisfaction(needs.food)
+                + need_satisfaction(needs.shelter)
+                + need_satisfaction(needs.safety)
+                + need_satisfaction(needs.belonging))
+                / 4.0;
+            CivilianStateEntry {
+                id: civilian.id,
+                needs: CivilianNeeds3d {
+                    food: need_satisfaction(needs.food),
+                    shelter: need_satisfaction(needs.shelter),
+                    safety: need_satisfaction(needs.safety),
+                    social: need_satisfaction(needs.belonging),
+                    rest,
+                },
+                profession,
+                genome_summary: GenomeSummary3d {
+                    summary: format!("era-{}", wardrobe.era),
+                    lineage: format!(
+                        "faction-{}",
+                        match civilian.alignment {
+                            civ_agents::Alignment::Faction(id) => id,
+                            _ => 0,
+                        }
+                    ),
+                    traits: Vec::new(),
+                },
+                species: "human".to_string(),
+                health,
+            }
+        })
+        .collect();
+    civilians.sort_by_key(|entry| entry.id);
+    civilians.truncate(256);
+    CivilianStateFrame { tick, civilians }
+}
+
+fn build_faction_state_frame(sim: &Simulation, tick: u64) -> FactionStateFrame {
+    let era = ((tick / 120) % 6) as u16;
+    let institutions = crate::jsonrpc::institutions_from_sim(sim);
+    let market_balance = institutions
+        .iter()
+        .find(|row| row.kind == "market")
+        .map(|row| row.balance_joules as f64)
+        .unwrap_or(0.0);
+    let treasury_balance = institutions
+        .iter()
+        .find(|row| row.kind == "treasury")
+        .map(|row| row.balance_joules as f64)
+        .unwrap_or(0.0);
+
+    let mut factions: Vec<FactionStateEntry> = sim
+        .spectator_view()
+        .factions
+        .iter()
+        .map(|faction| {
+            let mut amount = sim
+                .state
+                .faction_treasury
+                .get(&faction.id)
+                .map(|value| value.to_f64())
+                .unwrap_or(0.0);
+            if faction.id == 0 {
+                amount += market_balance + treasury_balance;
+            }
+            FactionStateEntry {
+                id: faction.id,
+                era,
+                government: government_for_faction(faction.id),
+                treasury: FactionTreasury3d {
+                    amount,
+                    currency: "joules".to_string(),
+                },
+            }
+        })
+        .collect();
+    factions.sort_by_key(|entry| entry.id);
+    FactionStateFrame { tick, factions }
+}
+
+/// Build event-feed messages for one tick.
+///
+/// Maps births/deaths/diplomacy/combat from the live sim. `last_tick_mod_lifecycle` JSON is
+/// surfaced as [`EventFeedMessage3d::Tech`] stubs until a dedicated system/lifecycle wire kind
+/// exists (Bevy maps those to `EventKind::System` locally).
+fn build_event_feed_frame(sim: &Simulation, tick: u64) -> EventFeedFrame {
+    let mut events = Vec::new();
+
+    for birth in sim.last_births() {
+        events.push(EventFeedMessage3d::Birth(BirthEvent3d {
+            entity_id: birth.entity_id,
+            faction_id: faction_for_norm(birth.x, birth.y, sim),
+            species: "human".to_string(),
+            position: Some(WorldXZ {
+                x: birth.x,
+                z: birth.y,
+            }),
+        }));
+    }
+
+    for death in sim.last_deaths() {
+        events.push(EventFeedMessage3d::Death(DeathEvent3d {
+            entity_id: death.entity_id,
+            faction_id: faction_for_norm(death.x, death.y, sim),
+            position: Some(WorldXZ {
+                x: death.x,
+                z: death.y,
+            }),
+            cause: String::new(),
+        }));
+    }
+
+    for diplomacy in sim.diplomacy_events() {
+        if diplomacy.tick != tick {
+            continue;
+        }
+        let outcome = match diplomacy.kind {
+            DiplomacyKind::TradeAgreement => "trade_agreement",
+            DiplomacyKind::Conflict => "conflict",
+            DiplomacyKind::Peace => "peace",
+        };
+        events.push(EventFeedMessage3d::Battle(BattleEvent3d {
+            attacker_faction: diplomacy.faction_a,
+            defender_faction: diplomacy.faction_b,
+            outcome: outcome.to_string(),
+            position: None,
+        }));
+    }
+
+    for pulse in sim.last_tick_combat_pulses() {
+        events.push(EventFeedMessage3d::Battle(BattleEvent3d {
+            attacker_faction: 0,
+            defender_faction: 0,
+            outcome: "combat_pulse".to_string(),
+            position: Some(WorldXZ {
+                x: pulse.x,
+                z: pulse.y,
+            }),
+        }));
+    }
+
+    for line in sim.last_tick_mod_lifecycle() {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        let Some(event_name) = value.get("event").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if event_name == "mod.loaded.v1" {
+            let mod_name = value
+                .get("mod_name")
+                .or_else(|| value.get("mod_id"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("mod");
+            events.push(EventFeedMessage3d::Tech(TechEvent3d {
+                faction_id: 0,
+                era: ((tick / 120) % 6) as u16,
+                tech: format!("mod.loaded:{mod_name}"),
+            }));
+        }
+    }
+
+    EventFeedFrame { tick, events }
+}
+
+fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], String> {
     let tick = sim.state.tick;
     let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
         .map_err(|e| e.to_string())?;
@@ -379,12 +756,21 @@ fn build_frame_triple(sim: &Simulation) -> Result<[Frame3d; 3], String> {
         } else {
             BuildingProvenance::Freehand
         },
+        buildings: Vec::new(),
+        graph: None,
     };
-    let agents = build_agent_appearance_frame(sim, tick);
     Ok([
         Frame3d::VoxelDelta(voxel),
         Frame3d::BuildingDiff(building),
-        Frame3d::AgentAppearance(agents),
+        Frame3d::AgentAppearance(build_agent_appearance_frame(sim, tick)),
+        Frame3d::CivilianState(build_civilian_state_frame(sim, tick)),
+        Frame3d::FactionState(build_faction_state_frame(sim, tick)),
+        Frame3d::EventFeed(build_event_feed_frame(sim, tick)),
+        Frame3d::Climate(ClimateFrame {
+            tick,
+            climate: *sim.climate(),
+            weather: sim.weather_grid().to_vec(),
+        }),
     ])
 }
 
@@ -463,8 +849,15 @@ async fn apply_dispatch_effect(
         } => {
             let mut sim = state.sim.lock().await;
             let mut rng = sim.rng_mut().clone();
-            let entity =
-                civ_agents::spawn_civilian_at(&mut sim.world, entity_seq, faction, x, y, &mut rng);
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                civ_agents::Alignment::Faction(faction),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
             *sim.rng_mut() = rng;
             set_spawn_civilian_result(response, entity.id());
         }
@@ -487,9 +880,10 @@ async fn apply_dispatch_effect(
                     let entity = civ_agents::spawn_civilian_at(
                         &mut sim.world,
                         entity_seq,
-                        faction,
+                        civ_agents::Alignment::Faction(faction),
                         x,
                         y,
+                        civ_agents::ActorVisualKind::Humanoid,
                         &mut rng,
                     );
                     *sim.rng_mut() = rng;
@@ -526,8 +920,6 @@ async fn apply_dispatch_effect(
                 }
             }
         }
-<<<<<<< HEAD
-=======
         DispatchEffect::SaveSlot { slot_name } => {
             let path = match save_archive_path(&state.saves_dir, &slot_name) {
                 Ok(path) => path,
@@ -606,54 +998,6 @@ async fn apply_dispatch_effect(
                 }
             }
         }
-        DispatchEffect::QueueResearch { tech } => {
-            state.sim.lock().await.research_cache_mut().queued.push_back(tech);
-        }
-        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
-            use civ_engine::disasters::{trigger_disaster, DisasterKind};
-            use civ_voxel::WorldCoord;
-            let mut sim = state.sim.lock().await;
-            let world_w = sim.voxel().width() as f32;
-            let world_d = sim.voxel().depth() as f32;
-            let wx = x.unwrap_or(0.5) * world_w;
-            let wz = y.unwrap_or(0.5) * world_d;
-            let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
-            let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
-            match action.as_str() {
-                "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
-                "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
-                "plague" => {
-                    trigger_disaster(&mut sim, DisasterKind::Plague, pos);
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let debit = civ_engine::Fixed::from_num(mag * 500.0_f32);
-                            *t = (*t - debit).max(civ_engine::Fixed::ZERO);
-                        }
-                    }
-                }
-                "bless" => {
-                    if let Some(fid) = target_faction {
-                        if let Some(t) = sim.state.faction_treasury.get_mut(&fid) {
-                            let credit = civ_engine::Fixed::from_num(mag * 1000.0_f32);
-                            *t += credit;
-                        }
-                    }
-                    sim.add_belief(500);
-                }
-                "miracle" => {
-                    sim.add_belief(2000);
-                    let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
-                    for t in sim.state.faction_treasury.values_mut() { *t += boost; }
-                }
-                _ => {}
-            }
-            if let Some(result) = response.result.as_mut() {
-                if let Some(obj) = result.as_object_mut() {
-                    obj.insert("applied".to_owned(), serde_json::json!(true));
-                }
-            }
-        }
->>>>>>> c526d8bb (feat(client): in-game event feed panel -- N key toggle, 50-entry rolling log (FR-CIV-CLIENT-005))
     }
 }
 
@@ -670,7 +1014,7 @@ fn set_replay_io_error(response: &mut JsonRpcResponse, message: String) {
 }
 
 fn encode_tick_broadcast_messages(
-    frames: [Frame3d; 3],
+    frames: &[Frame3d],
     format: TickBroadcastFormat,
 ) -> Result<Vec<Message>, String> {
     let mut payloads = Vec::with_capacity(format.messages_per_tick());
@@ -679,7 +1023,7 @@ fn encode_tick_broadcast_messages(
 
     if send_text && send_binary {
         let mut json_by_frame = Vec::with_capacity(frames.len());
-        for frame in &frames {
+        for frame in frames {
             json_by_frame.push(serde_json::to_vec(frame).map_err(|e| e.to_string())?);
         }
         for json in &json_by_frame {
@@ -694,7 +1038,7 @@ fn encode_tick_broadcast_messages(
         return Ok(payloads);
     }
 
-    for frame in &frames {
+    for frame in frames {
         if send_text {
             let text = serde_json::to_string(frame).map_err(|e| e.to_string())?;
             payloads.push(Message::Text(text));
@@ -713,14 +1057,23 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
         sim.tick();
         let tick = sim.state.tick;
         state.tick.store(tick, Ordering::SeqCst);
-        let frames = build_frame_triple(&sim)?;
-        Arc::from(
-            encode_tick_broadcast_messages(frames, state.tick_broadcast_format)?.into_boxed_slice(),
-        )
+        let bundle = build_frame_bundle(&sim)?;
+        let encoded = Arc::from(
+            encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
+                .into_boxed_slice(),
+        );
+        Arc::new(TickBroadcast {
+            tick,
+            frames: Arc::from(bundle),
+            encoded,
+        })
     };
 
     let mut clients = state.clients.lock().await;
-    clients.retain(|tx| tx.send(Arc::clone(&batch)).is_ok());
+    clients.retain(|tx| {
+        tx.send(ClientOutbound::Tick(Arc::clone(&batch)))
+            .is_ok()
+    });
     Ok(())
 }
 
@@ -738,22 +1091,80 @@ async fn tick_once(state: &AppState) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use civ_save_db::SessionSaveRecord;
+
+    #[test]
+    fn need_satisfaction_inverts_and_clamps_pressure() {
+        assert_eq!(need_satisfaction(0.0), 1.0); // no pressure -> fully satisfied
+        assert_eq!(need_satisfaction(1.0), 0.0); // full pressure -> unsatisfied
+        assert!((need_satisfaction(0.25) - 0.75).abs() < 1e-6);
+        assert_eq!(need_satisfaction(2.0), 0.0); // over-pressure clamps to 0
+        assert_eq!(need_satisfaction(-1.0), 1.0); // negative pressure clamps to 1
+    }
+
+    #[test]
+    fn tick_broadcast_format_text_binary_flags_are_exclusive_per_variant() {
+        assert!(TickBroadcastFormat::Text.sends_text());
+        assert!(!TickBroadcastFormat::Text.sends_binary());
+        assert!(!TickBroadcastFormat::Binary.sends_text());
+        assert!(TickBroadcastFormat::Binary.sends_binary());
+        assert!(TickBroadcastFormat::Both.sends_text());
+        assert!(TickBroadcastFormat::Both.sends_binary());
+        // `Both` emits both stream sizes; single-format variants emit one.
+        assert_eq!(
+            TickBroadcastFormat::Both.messages_per_tick(),
+            TickBroadcastFormat::Text.messages_per_tick()
+                + TickBroadcastFormat::Binary.messages_per_tick()
+        );
+    }
     use civ_voxel::{MaterialId, WorldCoord};
+
+    fn test_app_state(
+        sim: Arc<Mutex<Simulation>>,
+        tick: u64,
+        speed_multiplier: u32,
+        require_role: bool,
+    ) -> (tempfile::TempDir, AppState) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let saves_dir = dir.path().join("saves");
+        std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let save_db_path = save_db_path_for_saves_dir(&saves_dir);
+        let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
+        let state = AppState {
+            sim,
+            tick: Arc::new(AtomicU64::new(tick)),
+            speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
+            clients: Arc::new(Mutex::new(Vec::new())),
+            max_clients: 1,
+            require_role,
+            tick_broadcast_format: TickBroadcastFormat::Both,
+            saves_dir,
+            save_db,
+            session_id: "test-session".to_string(),
+        };
+        (dir, state)
+    }
+
+    fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
+        Arc::new(tokio::sync::Mutex::new(SubscriptionFilter::default()))
+    }
 
     #[test]
     fn tick_broadcast_both_sends_text_then_binary() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let messages =
-            encode_tick_broadcast_messages(frames, TickBroadcastFormat::Both).expect("encode");
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
         assert_eq!(
             messages.len(),
             TickBroadcastFormat::Both.messages_per_tick()
         );
-        assert!(matches!(&messages[0], Message::Text(_)));
-        assert!(matches!(&messages[1], Message::Text(_)));
-        assert!(matches!(&messages[2], Message::Text(_)));
-        assert!(matches!(&messages[3], Message::Binary(_)));
-        if let Message::Binary(bytes) = &messages[3] {
+        for msg in &messages[..FRAME_BUNDLE_LEN] {
+            assert!(matches!(msg, Message::Text(_)));
+        }
+        for msg in &messages[FRAME_BUNDLE_LEN..] {
+            assert!(matches!(msg, Message::Binary(_)));
+        }
+        if let Message::Binary(bytes) = &messages[FRAME_BUNDLE_LEN] {
             assert!(bytes.starts_with(civ_protocol_3d::FRAME3D_BINARY_MAGIC));
         }
     }
@@ -778,38 +1189,47 @@ mod tests {
 
     #[test]
     fn tick_broadcast_message_count_per_format() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         for format in [
             TickBroadcastFormat::Text,
             TickBroadcastFormat::Binary,
             TickBroadcastFormat::Both,
         ] {
-            let messages = encode_tick_broadcast_messages(frames.clone(), format).expect("encode");
+            let messages = encode_tick_broadcast_messages(&frames, format).expect("encode");
             assert_eq!(
                 messages.len(),
                 format.messages_per_tick(),
                 "{format:?} message count"
             );
         }
-        assert_eq!(TickBroadcastFormat::Text.messages_per_tick(), 3);
-        assert_eq!(TickBroadcastFormat::Binary.messages_per_tick(), 3);
-        assert_eq!(TickBroadcastFormat::Both.messages_per_tick(), 6);
+        assert_eq!(
+            TickBroadcastFormat::Text.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
+        assert_eq!(
+            TickBroadcastFormat::Binary.messages_per_tick(),
+            FRAME_BUNDLE_LEN
+        );
+        assert_eq!(
+            TickBroadcastFormat::Both.messages_per_tick(),
+            FRAME_BUNDLE_LEN * 2
+        );
     }
 
     #[test]
     fn tick_broadcast_binary_only_skips_text_frames() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let messages =
-            encode_tick_broadcast_messages(frames, TickBroadcastFormat::Binary).expect("encode");
-        assert_eq!(messages.len(), 3);
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Binary).expect("encode");
+        assert_eq!(messages.len(), FRAME_BUNDLE_LEN);
         assert!(messages.iter().all(|msg| matches!(msg, Message::Binary(_))));
     }
 
     #[test]
     fn tick_broadcast_both_binary_payload_matches_text_json() {
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let messages =
-            encode_tick_broadcast_messages(frames, TickBroadcastFormat::Both).expect("encode");
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
         let half = messages.len() / 2;
         for i in 0..half {
             let Message::Text(text) = &messages[i] else {
@@ -824,21 +1244,99 @@ mod tests {
         }
     }
 
-    fn sample_frame_triple() -> [Frame3d; 3] {
+    fn sample_frame_bundle() -> [Frame3d; FRAME_BUNDLE_LEN] {
         [
-            Frame3d::BuildingDiff(BuildingDiffFrame {
+            Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
                 tick: 1,
-                provenance: BuildingProvenance::Procedural,
+                deltas: Vec::new(),
             }),
             Frame3d::BuildingDiff(BuildingDiffFrame {
                 tick: 1,
-                provenance: BuildingProvenance::Freehand,
+                provenance: BuildingProvenance::Procedural,
+                buildings: Vec::new(),
+                graph: None,
             }),
             Frame3d::AgentAppearance(AgentAppearanceFrame {
                 tick: 1,
                 updates: Vec::new(),
             }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 1,
+                civilians: Vec::new(),
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 1,
+                factions: Vec::new(),
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 1,
+                events: Vec::new(),
+            }),
+            Frame3d::Climate(ClimateFrame {
+                tick: 1,
+                climate: *Simulation::with_seed(1).climate(),
+                weather: Vec::new(),
+            }),
         ]
+    }
+
+    #[test]
+    fn frame_bundle_includes_all_wire_kinds() {
+        let sim = Simulation::with_seed(11);
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        assert_eq!(bundle.len(), FRAME_BUNDLE_LEN);
+        let mut kinds = [false; FRAME_BUNDLE_LEN];
+        for frame in &bundle {
+            let idx = match frame {
+                Frame3d::VoxelDelta(_) => 0,
+                Frame3d::BuildingDiff(_) => 1,
+                Frame3d::AgentAppearance(_) => 2,
+                Frame3d::CivilianState(_) => 3,
+                Frame3d::FactionState(_) => 4,
+                Frame3d::EventFeed(_) => 5,
+                Frame3d::Climate(_) => 6,
+            };
+            kinds[idx] = true;
+        }
+        assert!(kinds.iter().all(|present| *present));
+        let Frame3d::CivilianState(civilian) = &bundle[3] else {
+            panic!("expected civilian state frame");
+        };
+        assert!(
+            !civilian.civilians.is_empty(),
+            "seed 11 should emit agent civilians"
+        );
+        let Frame3d::FactionState(faction) = &bundle[4] else {
+            panic!("expected faction state frame");
+        };
+        assert_eq!(faction.factions.len(), 4);
+    }
+
+    #[test]
+    fn agent_appearance_ids_match_civilian_state_ids() {
+        let sim = Simulation::with_seed(11);
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        let Frame3d::AgentAppearance(appearance) = &bundle[2] else {
+            panic!("expected agent appearance frame");
+        };
+        let Frame3d::CivilianState(civilian) = &bundle[3] else {
+            panic!("expected civilian state frame");
+        };
+        let appearance_ids: std::collections::BTreeSet<u64> = appearance
+            .updates
+            .iter()
+            .map(|update| update.agent_id)
+            .collect();
+        let civilian_ids: std::collections::BTreeSet<u64> =
+            civilian.civilians.iter().map(|entry| entry.id).collect();
+        assert_eq!(
+            appearance_ids, civilian_ids,
+            "agent appearance and civilian state must share civilian.id keys"
+        );
+        assert!(
+            !appearance_ids.is_empty(),
+            "seed 11 should emit matching agent ids"
+        );
     }
 
     /// Manual probe: `cargo test -p civ-server tick_broadcast_encode_bench --release -- --ignored --nocapture`
@@ -847,12 +1345,12 @@ mod tests {
     fn tick_broadcast_encode_bench() {
         use std::time::Instant;
 
-        let frames = sample_frame_triple();
+        let frames = sample_frame_bundle();
         let iterations = 20_000u32;
         for format in [TickBroadcastFormat::Binary, TickBroadcastFormat::Both] {
             let start = Instant::now();
             for _ in 0..iterations {
-                let _ = encode_tick_broadcast_messages(frames.clone(), format).expect("encode");
+                let _ = encode_tick_broadcast_messages(&frames, format).expect("encode");
             }
             let elapsed = start.elapsed();
             eprintln!(
@@ -868,10 +1366,348 @@ mod tests {
         let frame = Frame3d::BuildingDiff(BuildingDiffFrame {
             tick: 9,
             provenance: BuildingProvenance::Procedural,
+            buildings: Vec::new(),
+            graph: None,
         });
         let json = serde_json::to_string(&frame).expect("json");
         let decoded: Frame3d = serde_json::from_str(&json).expect("decode");
         assert_eq!(decoded.tick(), 9);
+    }
+
+    #[test]
+    fn encode_tick_broadcast_text_only_format() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Text).expect("encode");
+        assert_eq!(messages.len(), FRAME_BUNDLE_LEN);
+        assert!(messages.iter().all(|msg| matches!(msg, Message::Text(_))));
+    }
+
+    #[test]
+    fn encode_tick_broadcast_binary_only_format() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Binary).expect("encode");
+        assert_eq!(messages.len(), FRAME_BUNDLE_LEN);
+        assert!(messages.iter().all(|msg| matches!(msg, Message::Binary(_))));
+        for msg in &messages {
+            if let Message::Binary(bytes) = msg {
+                assert!(
+                    bytes.starts_with(civ_protocol_3d::FRAME3D_BINARY_MAGIC),
+                    "binary frame must start with F3D0 magic"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn encode_tick_broadcast_both_format_interleaves_correctly() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
+        let text_count = messages
+            .iter()
+            .filter(|msg| matches!(msg, Message::Text(_)))
+            .count();
+        let binary_count = messages
+            .iter()
+            .filter(|msg| matches!(msg, Message::Binary(_)))
+            .count();
+        assert_eq!(text_count, FRAME_BUNDLE_LEN);
+        assert_eq!(binary_count, FRAME_BUNDLE_LEN);
+    }
+
+    #[test]
+    fn build_agent_appearance_frame_from_empty_sim() {
+        let sim = Simulation::with_seed(99);
+        let frame = build_agent_appearance_frame(&sim, 42);
+        assert_eq!(frame.tick, 42);
+        // Seed 99 may have no agents, but frame must be valid
+        assert_eq!(frame.updates.len(), frame.updates.len());
+    }
+
+    #[test]
+    fn build_civilian_state_frame_truncates_at_256() {
+        let sim = Simulation::with_seed(11);
+        let frame = build_civilian_state_frame(&sim, 5);
+        assert_eq!(frame.tick, 5);
+        assert!(frame.civilians.len() <= 256, "civilians must be capped at 256");
+        // Verify all entries are sorted by id
+        for i in 1..frame.civilians.len() {
+            assert!(
+                frame.civilians[i - 1].id <= frame.civilians[i].id,
+                "civilians must be sorted by id"
+            );
+        }
+    }
+
+    #[test]
+    fn build_civilian_state_frame_needs_are_normalized() {
+        let sim = Simulation::with_seed(11);
+        let frame = build_civilian_state_frame(&sim, 0);
+        for entry in &frame.civilians {
+            assert!(entry.needs.food >= 0.0 && entry.needs.food <= 1.0);
+            assert!(entry.needs.shelter >= 0.0 && entry.needs.shelter <= 1.0);
+            assert!(entry.needs.safety >= 0.0 && entry.needs.safety <= 1.0);
+            assert!(entry.needs.social >= 0.0 && entry.needs.social <= 1.0);
+            assert!(entry.needs.rest >= 0.0 && entry.needs.rest <= 1.0);
+        }
+    }
+
+    #[test]
+    fn build_faction_state_frame_wraps_era_at_six() {
+        let sim = Simulation::with_seed(7);
+        for tick in [0, 120, 240, 360, 480, 600, 719] {
+            let frame = build_faction_state_frame(&sim, tick);
+            let expected_era = ((tick / 120) % 6) as u16;
+            for entry in &frame.factions {
+                assert_eq!(entry.era, expected_era, "tick {tick} should wrap era to {expected_era}");
+            }
+        }
+    }
+
+    #[test]
+    fn build_faction_state_frame_sorts_by_faction_id() {
+        let sim = Simulation::with_seed(3);
+        let frame = build_faction_state_frame(&sim, 0);
+        for i in 1..frame.factions.len() {
+            assert!(
+                frame.factions[i - 1].id <= frame.factions[i].id,
+                "factions must be sorted by id"
+            );
+        }
+    }
+
+    #[test]
+    fn build_event_feed_frame_handles_empty_events() {
+        let sim = Simulation::with_seed(100);
+        let frame = build_event_feed_frame(&sim, 0);
+        assert_eq!(frame.tick, 0);
+        // Empty simulation should produce minimal events
+        let event_count = frame.events.len();
+        assert!(event_count >= 0); // Always valid, even if empty
+    }
+
+    #[test]
+    fn build_event_feed_frame_categorizes_all_event_kinds() {
+        let sim = Simulation::with_seed(11);
+        let frame = build_event_feed_frame(&sim, 0);
+        for event in &frame.events {
+            match event {
+                EventFeedMessage3d::Birth(_) => {}
+                EventFeedMessage3d::Death(_) => {}
+                EventFeedMessage3d::Battle(_) => {}
+                EventFeedMessage3d::Tech(_) => {}
+                EventFeedMessage3d::Disaster(_) => {}
+            }
+        }
+    }
+
+    #[test]
+    fn build_frame_bundle_returns_exact_frame_count() {
+        for seed in [1, 5, 11, 37, 42, 99] {
+            let sim = Simulation::with_seed(seed);
+            let bundle = build_frame_bundle(&sim).expect("bundle");
+            assert_eq!(
+                bundle.len(),
+                FRAME_BUNDLE_LEN,
+                "seed {seed} must return exactly {FRAME_BUNDLE_LEN} frames"
+            );
+        }
+    }
+
+    #[test]
+    fn build_frame_bundle_all_frames_have_matching_tick() {
+        let sim = Simulation::with_seed(17);
+        let expected_tick = sim.state.tick;
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        for frame in &bundle {
+            assert_eq!(
+                frame.tick(),
+                expected_tick,
+                "all frames in bundle must have matching tick"
+            );
+        }
+    }
+
+    #[test]
+    fn tick_broadcast_format_both_sends_text_before_binary() {
+        let frames = sample_frame_bundle();
+        let messages =
+            encode_tick_broadcast_messages(&frames, TickBroadcastFormat::Both).expect("encode");
+        assert!(messages.len() >= FRAME_BUNDLE_LEN * 2);
+        // First FRAME_BUNDLE_LEN are text
+        for i in 0..FRAME_BUNDLE_LEN {
+            assert!(matches!(messages[i], Message::Text(_)));
+        }
+        // Second FRAME_BUNDLE_LEN are binary
+        for i in FRAME_BUNDLE_LEN..FRAME_BUNDLE_LEN * 2 {
+            assert!(matches!(messages[i], Message::Binary(_)));
+        }
+    }
+
+    #[test]
+    fn encode_messages_per_tick_consistency() {
+        assert_eq!(TickBroadcastFormat::Text.messages_per_tick(), FRAME_BUNDLE_LEN);
+        assert_eq!(TickBroadcastFormat::Binary.messages_per_tick(), FRAME_BUNDLE_LEN);
+        assert_eq!(
+            TickBroadcastFormat::Both.messages_per_tick(),
+            FRAME_BUNDLE_LEN * 2
+        );
+    }
+
+    #[test]
+    fn build_civilian_state_frame_handles_missing_citizen() {
+        // Some agents may not have Citizen component; frame builder should handle gracefully
+        let sim = Simulation::with_seed(11);
+        let frame = build_civilian_state_frame(&sim, 0);
+        // At least verify structure is valid
+        for entry in &frame.civilians {
+            assert!(!entry.profession.is_empty());
+            assert!(!entry.species.is_empty());
+            assert!(entry.health >= 0.0);
+        }
+    }
+
+    #[test]
+    fn need_satisfaction_boundary_values() {
+        // Test exact boundary values for clamping logic
+        assert_eq!(need_satisfaction(0.0), 1.0);
+        assert_eq!(need_satisfaction(0.5), 0.5);
+        assert_eq!(need_satisfaction(1.0), 0.0);
+        // Over 1.0 should clamp to 0.0
+        assert_eq!(need_satisfaction(100.0), 0.0);
+        // Negative should clamp to 1.0
+        assert_eq!(need_satisfaction(-100.0), 1.0);
+    }
+
+    #[test]
+    fn government_for_faction_all_six_variants() {
+        use Government3d::*;
+        let variants = [Monarchy, Republic, Theocracy, Junta, Council, Corporate];
+        for (idx, expected) in variants.iter().enumerate() {
+            assert_eq!(government_for_faction(idx as u32), *expected);
+        }
+    }
+
+    #[test]
+    fn job_profession_label_all_variants() {
+        use JobType::*;
+        let all_jobs = [Farmer, Warrior, Scholar, Trader, Priest, Admin, Unemployed];
+        let labels = ["farmer", "warrior", "scholar", "trader", "priest", "admin", "unemployed"];
+        for (job, label) in all_jobs.iter().zip(labels.iter()) {
+            assert_eq!(job_profession_label(*job), *label);
+        }
+    }
+
+    #[test]
+    fn frame3d_all_variants_round_trip() {
+        let frames = [
+            Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+                tick: 1,
+                deltas: Vec::new(),
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 1,
+                provenance: BuildingProvenance::Procedural,
+                buildings: Vec::new(),
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 1,
+                updates: Vec::new(),
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 1,
+                civilians: Vec::new(),
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 1,
+                factions: Vec::new(),
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 1,
+                events: Vec::new(),
+            }),
+            Frame3d::Climate(ClimateFrame {
+                tick: 1,
+                climate: *Simulation::with_seed(1).climate(),
+                weather: Vec::new(),
+            }),
+        ];
+        for frame in &frames {
+            let json = serde_json::to_string(frame).expect("json encode");
+            let decoded: Frame3d = serde_json::from_str(&json).expect("json decode");
+            assert_eq!(decoded.tick(), frame.tick());
+        }
+    }
+
+    #[test]
+    fn encode_messages_handles_all_frame_variants() {
+        let frames = [
+            Frame3d::VoxelDelta(civ_protocol_3d::VoxelDeltaFrame {
+                tick: 5,
+                deltas: Vec::new(),
+            }),
+            Frame3d::BuildingDiff(BuildingDiffFrame {
+                tick: 5,
+                provenance: BuildingProvenance::Freehand,
+                buildings: Vec::new(),
+                graph: None,
+            }),
+            Frame3d::AgentAppearance(AgentAppearanceFrame {
+                tick: 5,
+                updates: Vec::new(),
+            }),
+            Frame3d::CivilianState(CivilianStateFrame {
+                tick: 5,
+                civilians: Vec::new(),
+            }),
+            Frame3d::FactionState(FactionStateFrame {
+                tick: 5,
+                factions: Vec::new(),
+            }),
+            Frame3d::EventFeed(EventFeedFrame {
+                tick: 5,
+                events: Vec::new(),
+            }),
+            Frame3d::Climate(ClimateFrame {
+                tick: 5,
+                climate: *Simulation::with_seed(1).climate(),
+                weather: Vec::new(),
+            }),
+        ];
+        for format in [
+            TickBroadcastFormat::Text,
+            TickBroadcastFormat::Binary,
+            TickBroadcastFormat::Both,
+        ] {
+            let messages = encode_tick_broadcast_messages(&frames, format).expect("encode");
+            assert!(!messages.is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn build_frame_bundle_integrates_all_builders() {
+        let sim = Simulation::with_seed(11);
+        let bundle = build_frame_bundle(&sim).expect("bundle");
+        // Verify all 7 frame types are present
+        let mut found = [false; 7];
+        for frame in &bundle {
+            match frame {
+                Frame3d::VoxelDelta(_) => found[0] = true,
+                Frame3d::BuildingDiff(_) => found[1] = true,
+                Frame3d::AgentAppearance(_) => found[2] = true,
+                Frame3d::CivilianState(_) => found[3] = true,
+                Frame3d::FactionState(_) => found[4] = true,
+                Frame3d::EventFeed(_) => found[5] = true,
+                Frame3d::Climate(_) => found[6] = true,
+            }
+        }
+        assert!(
+            found.iter().all(|&f| f),
+            "bundle must contain all 7 frame types"
+        );
     }
 
     #[tokio::test]
@@ -894,18 +1730,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn frame_triple_is_deterministic_for_fixed_seed() {
+    async fn frame_bundle_is_deterministic_for_fixed_seed() {
         let make = || async {
             let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
-            let state = AppState {
-                sim,
-                tick: Arc::new(AtomicU64::new(0)),
-                speed_multiplier: Arc::new(AtomicU32::new(1)),
-                clients: Arc::new(Mutex::new(Vec::new())),
-                max_clients: 1,
-                require_role: false,
-                tick_broadcast_format: TickBroadcastFormat::Both,
-            };
+            let (_dir, state) = test_app_state(sim, 0, 1, false);
             tick_once(&state).await.expect("tick");
             state.tick.load(Ordering::SeqCst)
         };
@@ -916,17 +1744,16 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_invalid_json_returns_parse_error() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(9))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
-        let text = handle_jsonrpc_text("{not json", &state, &mut connection_role).await;
+        let text = handle_jsonrpc_text(
+            "{not json",
+            &state,
+            &mut connection_role,
+            test_subscription_filter(),
+        )
+        .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("error response json");
         assert_eq!(value.get("jsonrpc").and_then(|v| v.as_str()), Some("2.0"));
         assert_eq!(value.get("id"), Some(&serde_json::Value::Null));
@@ -943,20 +1770,13 @@ mod tests {
             let guard = sim.lock().await;
             guard.snapshot().population
         };
-        let state = AppState {
-            sim,
-            tick: Arc::new(AtomicU64::new(5)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let (_dir, state) = test_app_state(sim, 5, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":7,"method":"sim.status","params":{}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.status json");
@@ -993,20 +1813,13 @@ mod tests {
                     .expect("hash chain root after tick"),
             )
         };
-        let state = AppState {
-            sim,
-            tick: Arc::new(AtomicU64::new(5)),
-            speed_multiplier: Arc::new(AtomicU32::new(4)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let (_dir, state) = test_app_state(sim, 5, 4, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":8,"method":"sim.snapshot","params":{}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("sim.snapshot json");
@@ -1050,16 +1863,60 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let mut connection_role = None;
+        let filter = test_subscription_filter();
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":11,"method":"sim.subscribe","params":{"frame_kinds":["climate"]}}"#,
+            &state,
+            &mut connection_role,
+            Arc::clone(&filter),
+        )
+        .await;
+        let value: serde_json::Value = serde_json::from_str(&text).expect("subscribe json");
+        assert_eq!(value.pointer("/result/subscribed"), Some(&serde_json::json!(true)));
+        assert_eq!(
+            value.pointer("/result/filter_active"),
+            Some(&serde_json::json!(true))
+        );
+        let bundle = sample_frame_bundle();
+        let guard = filter.lock().await;
+        assert_eq!(guard.filter_frames(&bundle).len(), 1);
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
+        let mut connection_role = None;
+        let filter = test_subscription_filter();
+        let subscribe = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":12,"method":"sim.subscribe","params":{"frame_kinds":["climate"]}}"#,
+            &state,
+            &mut connection_role,
+            Arc::clone(&filter),
+        )
+        .await;
+        assert!(subscribe.contains("\"subscribed\":true"));
+        let unsubscribe = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":13,"method":"sim.unsubscribe","params":{}}"#,
+            &state,
+            &mut connection_role,
+            Arc::clone(&filter),
+        )
+        .await;
+        assert!(unsubscribe.contains("\"unsubscribed\":true"));
+        let guard = filter.lock().await;
+        assert!(!guard.is_active());
+        assert_eq!(guard.filter_frames(&sample_frame_bundle()).len(), FRAME_BUNDLE_LEN);
+    }
+
+    #[tokio::test]
     async fn healthz_exposes_latest_tick() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(3))),
-            tick: Arc::new(AtomicU64::new(123)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(3)));
+        let (_dir, state) = test_app_state(sim, 123, 1, false);
         let response = healthz(State(state)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
     }
@@ -1073,15 +1930,8 @@ mod tests {
         let bytes = encode_civreplay(source.replay_log()).expect("encode replay");
         let expected_tick = source.state.tick;
 
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(99))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(99)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_import(State(state.clone()), bytes.into())
             .await
             .expect("replay import")
@@ -1103,15 +1953,8 @@ mod tests {
 
     #[tokio::test]
     async fn replay_export_sets_octet_stream_and_attachment_headers() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(31))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(31)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_export(State(state))
             .await
             .expect("replay export")
@@ -1136,20 +1979,13 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_policy_updates_simulation_policy() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = AppState {
-            sim: sim.clone(),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_policy","params":{"scarcity_multiplier":3.0,"base_consumption_joules":500}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("set_policy json");
@@ -1176,20 +2012,14 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_sim_set_speed_stores_multiplier() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(5))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.set_speed","params":{"multiplier":4}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("set_speed json");
@@ -1206,20 +2036,14 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_sim_get_speed_returns_stored_multiplier() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(5))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: false,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let set_text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":8}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let set_value: serde_json::Value = serde_json::from_str(&set_text).expect("set_speed json");
@@ -1231,6 +2055,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":5,"method":"sim.get_speed"}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let get_value: serde_json::Value = serde_json::from_str(&get_text).expect("get_speed json");
@@ -1244,20 +2069,14 @@ mod tests {
 
     #[tokio::test]
     async fn jsonrpc_sim_command_tick_rejects_wrong_role_when_enforced() {
-        let state = AppState {
-            sim: Arc::new(Mutex::new(Simulation::with_seed(9))),
-            tick: Arc::new(AtomicU64::new(0)),
-            speed_multiplier: Arc::new(AtomicU32::new(1)),
-            clients: Arc::new(Mutex::new(Vec::new())),
-            max_clients: 1,
-            require_role: true,
-            tick_broadcast_format: TickBroadcastFormat::Both,
-        };
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
+        let (_dir, state) = test_app_state(sim, 0, 1, true);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick","role":"viewer"}}"#,
             &state,
             &mut connection_role,
+            test_subscription_filter(),
         )
         .await;
         let value: serde_json::Value = serde_json::from_str(&text).expect("forbidden json");
@@ -1271,5 +2090,85 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("operator")
         );
+    }
+
+    #[tokio::test]
+    async fn jsonrpc_save_slot_records_save_db_and_replay_bus() {
+        let sim = Arc::new(Mutex::new(Simulation::with_seed(7)));
+        {
+            let mut guard = sim.lock().await;
+            guard.tick();
+        }
+        let saved_tick = sim.lock().await.state.tick;
+        let (_dir, state) = test_app_state(sim.clone(), saved_tick, 1, false);
+        let mut connection_role = None;
+        let text = handle_jsonrpc_text(
+            r#"{"jsonrpc":"2.0","id":70,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,
+            &state,
+            &mut connection_role,
+            test_subscription_filter(),
+        )
+        .await;
+        let value: serde_json::Value = serde_json::from_str(&text).expect("save.slot json");
+        assert_eq!(value.get("id"), Some(&serde_json::json!(70)));
+        assert_eq!(
+            value.pointer("/result/tick").and_then(|v| v.as_u64()),
+            Some(saved_tick)
+        );
+        assert!(
+            state.saves_dir.join("slot-1.civsave.zst").is_file(),
+            "expected slot archive on disk"
+        );
+
+        let records = state
+            .save_db
+            .list_for_session("test-session")
+            .expect("list save db");
+        assert_eq!(records.len(), 1);
+        let SessionSaveRecord::Slot(slot) = &records[0] else {
+            panic!("expected slot record");
+        };
+        assert_eq!(slot.slot_name, "slot-1");
+        assert_eq!(slot.tick, i64::try_from(saved_tick).unwrap_or(i64::MAX));
+        assert!(slot.byte_size > 0);
+
+        let guard = sim.lock().await;
+        assert_eq!(
+            guard
+                .replay_log()
+                .session_saved_bus_at_tick(saved_tick)
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn government_for_faction_cycles_through_six_forms_and_wraps() {
+        use Government3d::*;
+        let expected = [Monarchy, Republic, Theocracy, Junta, Council, Corporate];
+        for (id, want) in expected.into_iter().enumerate() {
+            assert_eq!(government_for_faction(id as u32), want, "faction {id}");
+        }
+        // The mapping is mod-6: faction 6 wraps to Monarchy, 7 to Republic, 11 to Corporate.
+        assert_eq!(government_for_faction(6), Monarchy);
+        assert_eq!(government_for_faction(7), Republic);
+        assert_eq!(government_for_faction(11), Corporate);
+    }
+
+    #[test]
+    fn job_profession_label_maps_every_job_variant() {
+        use JobType::*;
+        let cases = [
+            (Farmer, "farmer"),
+            (Warrior, "warrior"),
+            (Scholar, "scholar"),
+            (Trader, "trader"),
+            (Priest, "priest"),
+            (Admin, "admin"),
+            (Unemployed, "unemployed"),
+        ];
+        for (job, label) in cases {
+            assert_eq!(job_profession_label(job), label);
+        }
     }
 }

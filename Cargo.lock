@@ -2525,6 +2525,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-powers"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "civ-protocol-3d"
 version = "0.1.0"
 dependencies = [

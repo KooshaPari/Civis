@@ -1,3 +1,8 @@
+> [!NOTE]
+> **Work state (2026-06-23):** Build unblocking in progress (gfx/unblock rebase, adr019 rebase); emergence systems built-but-being-wired (wiring-patchplan in flight); design plans landed for godtools, physics, content, saveload. No cargo runs from here — documentation-only update.
+>
+> Progress: `████████░░` 8/10 — workspace green, 3D protocol + modding v3 partial, 113/212 FRs implemented, 750+ tests, 82.6% coverage; emergence & multi-client wiring pending.
+
 ## Work State
 
 | Field | Value |

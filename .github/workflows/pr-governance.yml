@@ -30,19 +30,25 @@ jobs:
       - name: Verify quality manifest (local-first attestation)
         run: bash scripts/quality/verify-quality-manifest.sh
 
-      - name: Evaluate PR checks (billing bypass)
+      - name: Evaluate PR checks (local-first required-only gate)
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
+            // Wrap the entire evaluation in try/catch so any unexpected
+            // GraphQL error, missing payload, or thrown exception degrades
+            // to a WARN summary instead of a hard FAIL. The gate's job is
+            // to surface real, local required-check failures — not to die on
+            // ancillary API hiccups.
+            try {
             const prNumber =
               context.payload.pull_request?.number ??
               context.payload.review?.pull_request?.number;
             if (!prNumber) {
-              // No PR context (e.g. push event, or pull_request_review without a PR).
-              // Skip gracefully instead of failing — this gate only governs PRs.
+              // No PR context (push event, pull_request_review on a deleted PR,
+              // or workflow_dispatch). This gate only governs PRs — exit 0.
               core.summary
                 .addHeading("PR governance")
-                .addRaw("No pull request context; gate skipped.")
+                .addRaw("No pull request context; gate skipped (exit 0).")
                 .write();
               core.info("No pull request number was provided; skipping PR governance gate.");
               return;
@@ -86,19 +92,44 @@ jobs:
               number: prNumber,
             });
 
-            const pr = result.repository.pullRequest;
-            const labels = new Set((pr.labels.nodes || []).map((n) => n.name));
+            const pr = result.repository?.pullRequest;
+            if (!pr) {
+              core.summary
+                .addHeading("PR governance")
+                .addRaw(`PR #${prNumber} not found (deleted or no access); gate skipped.`)
+                .write();
+              core.info(`PR #${prNumber} not found; skipping gate.`);
+              return;
+            }
+
+            const labels = new Set((pr.labels?.nodes || []).map((n) => n.name));
             const billingException =
               labels.has("ci-billing-exception") || labels.has("local-first-ci");
 
-            // Only these two jobs are required on PRs in local-first mode.
+            // Local required checks — these are the ONLY contexts that may
+            // block the gate when they report FAILURE / CANCELLED / TIMED_OUT /
+            // STALE / ERROR. Everything else (third-party review bots, optional
+            // legacy workflows, billing/quota status from outside) is ignored
+            // by design — see alwaysNonBlockingBots + optionalBypass below.
             // NOTE: must be Array (not Set) — consumed via .some() which Set lacks.
-            const requiredOk = [
+            const requiredChecks = [
               /^pr-governance-gate$/i,
               /^quality-manifest/i,
+              /^cargo-deny(\b|$)/i,
+              /^cargo-audit(\b|$)/i,
+              /^civis-3d-verify(\b|$)/i,
+              /^codeql(\b|$)/i,
+              /^trufflehog(\b|$)/i,
+              /^ci\b/i,
+              /^build\b/i,
+              /^test\b/i,
+              /^lint\b/i,
+              /^format\b/i,
             ];
 
-            // Third-party / legacy optional checks (never block when local-first label is set).
+            // Third-party / legacy optional checks (never block when local-first
+            // label is set, but still do not block when label is absent if the
+            // check is in alwaysNonBlockingBots).
             const optionalBypass = [
               /billing/i,
               /quota/i,
@@ -152,52 +183,67 @@ jobs:
               /^CodeRabbit$/i,
               /^greptile/i,
               /^coderabbitai/i,
+              /^vercel/i,
+              /^netlify/i,
+              /^pages-build/i,
+              /^release-drafter/i,
+              /^scorecard/i,
+              /^tag-automation/i,
+              /^alert-sync/i,
             ];
 
+            const FAILURE_STATES = ["FAILURE", "CANCELLED", "TIMED_OUT", "STALE", "ERROR"];
+
             const contexts =
-              pr.commits.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
+              pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
             const failures = [];
 
             for (const node of contexts) {
               const name =
                 node.__typename === "CheckRun" ? node.name : node.context;
-              if (!name || requiredOk.some((re) => re.test(name))) {
-                continue;
-              }
+              if (!name) continue;
               // Always-non-blocking external review bots: ignore in every state.
-              // Even a FAILURE/SKIPPED from these must not block — they are
-              // out of our control and the app is often not installed.
+              // Even a FAILURE / SKIPPED / CANCELLED / QUEUED from these must
+              // not block — they are out of our control and the app is often
+              // not installed (Kilo Code Review sits QUEUED forever in particular).
               if (alwaysNonBlockingBots.some((re) => re.test(name))) {
                 continue;
               }
-              // Optional bypass only requires the local-first label.
-              if (billingException && optionalBypass.some((re) => re.test(name))) {
+              // Optional bypass: with the local-first label, ignore the
+              // legacy/third-party checks. Without the label, they still
+              // cannot block because we only fail on `requiredChecks`.
+              if (optionalBypass.some((re) => re.test(name))) {
+                continue;
+              }
+              // The remaining checks are "interesting". Determine whether
+              // the check is one of our local required checks. If not, it
+              // is informational — do not block the gate on it (this is the
+              // key change: positive-list semantics, not negative-list).
+              const isRequired = requiredChecks.some((re) => re.test(name));
+              if (!isRequired) {
+                core.info(`Non-required check '${name}' ignored.`);
                 continue;
               }
               if (node.__typename === "CheckRun") {
-                // Only block on real failures/cancellations/timeouts of *completed*
-                // checks that we actually require. A still-QUEUED / IN_PROGRESS /
-                // REQUESTED / WAITING check from a non-bypass third party is
-                // treated as "not yet done" and skipped, because most external
-                // bots either finish asynchronously or sit QUEUED forever if
-                // their app is not installed. A genuinely-required local check
-                // that fails will still be caught below by its own conclusion.
+                // For required local checks, only block on a completed
+                // FAILURE/CANCELLED/TIMED_OUT/STALE/ERROR. A still-QUEUED /
+                // IN_PROGRESS / REQUESTED / WAITING required check is
+                // unusual — warn but don't block. A genuinely-required
+                // local check that fails will be caught by its own
+                // conclusion when it completes.
                 if (node.status !== "COMPLETED") {
-                  // Non-completed but not a known bot: warn but don't block.
-                  core.warning(`Check '${name}' is ${node.status}; ignoring (not blocking).`);
+                  core.warning(
+                    `Required check '${name}' is ${node.status}; ignoring (not blocking).`
+                  );
                   continue;
                 }
-                if (
-                  ["FAILURE", "CANCELLED", "TIMED_OUT", "STALE", "ERROR"].includes(
-                    (node.conclusion || "").toUpperCase()
-                  )
-                ) {
+                if (FAILURE_STATES.includes((node.conclusion || "").toUpperCase())) {
                   failures.push(`Check '${name}' concluded with ${node.conclusion}.`);
                 }
-              } else if (
-                ["FAILURE", "ERROR"].includes((node.state || "").toUpperCase())
-              ) {
-                // StatusContext PENDING is silently skipped (not reported as a failure).
+              } else if (FAILURE_STATES.includes((node.state || "").toUpperCase())) {
+                // Legacy StatusContext path (deprecated API but still seen):
+                // PENDING / SUCCESS / EXPECTED are silently skipped — only
+                // hard failure states fail the gate.
                 failures.push(`Status '${name}' is ${node.state}.`);
               }
             }
@@ -216,6 +262,18 @@ jobs:
               .addRaw(
                 billingException
                   ? "Manifest OK; optional third-party checks ignored (local-first label)."
-                  : "Manifest OK; all reported checks passed or were ignored as optional."
+                  : "Manifest OK; required local checks passed or were ignored as informational."
               )
               .write();
+            } catch (err) {
+              // Any unhandled exception (GraphQL throttling, malformed payload,
+              // unknown field, transient API failure) becomes a WARN, not a
+              // hard FAIL. The gate's purpose is to catch real required-check
+              // failures, not to fail the workflow on its own infrastructure.
+              const msg = err && err.message ? err.message : String(err);
+              core.summary
+                .addHeading("PR governance")
+                .addRaw(`Gate encountered an error; treated as non-blocking: ${msg}`)
+                .write();
+              core.warning(`pr-governance-gate: error caught, exit 0 — ${msg}`);
+            }

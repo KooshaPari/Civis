@@ -9,7 +9,7 @@ use civ_agents::{
     Wardrobe,
 };
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
-use civ_build::{Allocator, BuildingGraph, DemandSignals};
+use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_economy::{collect_taxes, Taxation};
@@ -467,6 +467,13 @@ pub struct Simulation {
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
     weather_grid: Vec<WeatherCell>,
+    /// Construction queue of in-progress `BuildSite`s.
+    /// Drives `phase_buildings` per-tick progress + completion (FR-CIV-BUILD-001/002).
+    build_sites: Vec<BuildSite>,
+    /// Construction events emitted during the most recent tick (FR-CIV-BUILD-002).
+    /// Reset at the start of every [`Simulation::tick`]; surfaced through the
+    /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
+    last_tick_construction_events: Vec<ProductionEvent>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -672,6 +679,8 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            build_sites: Vec::new(),
+            last_tick_construction_events: Vec::new(),
         }
     }
 
@@ -738,6 +747,8 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            build_sites: Vec::new(),
+            last_tick_construction_events: Vec::new(),
         }
     }
 
@@ -1174,6 +1185,7 @@ impl Simulation {
         self.last_tick_combat_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
+        self.last_tick_construction_events.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial)
         self.phase_production();
@@ -1433,37 +1445,93 @@ impl Simulation {
         }
     }
 
-    /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
+    /// Buildings phase - allocates parcels on a fixed cadence when demand is
+    /// high, then drives per-tick construction progress on the in-flight
+    /// [`BuildSite`] queue (FR-CIV-BUILD-001/002). Completed sites are
+    /// recorded in `building_graph.completed` and emit a [`ProductionEvent`]
+    /// so `phase_economy` (this tick) and the JSON-RPC bridge (next tick)
+    /// can react.
     fn phase_buildings(&mut self) {
-        if self.state.tick % 16 != 0 {
-            return;
+        let tick = self.state.tick;
+
+        // ---- 1. Parcel allocation cadence (every 16 ticks) ----
+        if tick % 16 == 0 {
+            let signals = DemandSignals {
+                residential: 0.75,
+                commercial: 0.25,
+                industrial: 0.25,
+                civic: 0.75,
+            };
+
+            if [
+                signals.residential,
+                signals.commercial,
+                signals.industrial,
+                signals.civic,
+            ]
+            .iter()
+            .any(|signal| *signal > 0.5)
+            {
+                let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
+                let _ = self.allocator.allocate(
+                    &mut self.building_graph,
+                    &signals,
+                    self.target_era,
+                    origin,
+                    16,
+                );
+            }
         }
 
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
-        };
-
-        if [
-            signals.residential,
-            signals.commercial,
-            signals.industrial,
-            signals.civic,
-        ]
-        .iter()
-        .any(|signal| *signal > 0.5)
-        {
-            let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
-            let _ = self.allocator.allocate(
-                &mut self.building_graph,
-                &signals,
-                self.target_era,
-                origin,
-                16,
-            );
+        // ---- 2. Construction progress (every tick) ----
+        // Advance each in-flight site; remove completed ones; record the
+        // CompletedBuilding in the building_graph.
+        let mut completed_ids = Vec::new();
+        for site in self.build_sites.iter_mut() {
+            if site.is_complete() {
+                continue;
+            }
+            if let Some(_completion) = site.tick() {
+                completed_ids.push(site.id());
+                self.building_graph.record_completed(site);
+            }
         }
+        // Drop completed sites from the active queue.
+        self.build_sites
+            .retain(|site| !site.is_complete() || completed_ids.contains(&site.id()));
+
+        // ---- 3. Production events for completed buildings (every tick) ----
+        // Each completed building begins producing on the same tick it
+        // finishes; run the production chain against the live economy state.
+        let mut events = std::mem::take(&mut self.last_tick_construction_events);
+        for site in self.build_sites.iter() {
+            if completed_ids.contains(&site.id()) {
+                events.extend(site.produce_and_collect(&mut self.economy_state, tick));
+            }
+        }
+        self.last_tick_construction_events = events;
+    }
+
+    /// Public accessor for the most recent construction events. Cleared at
+    /// the start of every [`Simulation::tick`].
+    pub fn last_construction_events(&self) -> &[ProductionEvent] {
+        &self.last_tick_construction_events
+    }
+
+    /// Enqueue a new construction site. Caller picks the id/spec/coord;
+    /// the engine runs it on subsequent ticks.
+    pub fn enqueue_build_site(&mut self, site: BuildSite) {
+        self.build_sites.push(site);
+    }
+
+    /// Read-only view of the active build queue (FR-CIV-BUILD-001).
+    pub fn build_sites(&self) -> &[BuildSite] {
+        &self.build_sites
+    }
+
+    /// Count of completed buildings (FR-CIV-BUILD-001).
+    pub fn completed_buildings(&self) -> usize {
+        self.building_graph.completed_count()
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.

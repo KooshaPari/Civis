@@ -84,11 +84,10 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-<<<<<<< HEAD
-=======
 pub mod civ_history;
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
 pub mod god_panel;
+#[cfg(feature = "bevy")]
+pub mod godtools;
 pub mod tutorial;
 pub mod perf_hud;
 #[cfg(feature = "bevy")]

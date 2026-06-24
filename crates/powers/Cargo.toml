@@ -1,0 +1,15 @@
+[package]
+name = "civ-powers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Data-driven God-Tools Power registry (FR-CIV-GODTOOL-900..901)."
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

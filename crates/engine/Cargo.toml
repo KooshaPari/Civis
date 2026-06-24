@@ -67,6 +67,13 @@ civ-species = { path = "../species" }
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 
+# God-Tools power registry (FR-CIV-GODTOOL-900..901). Engine depends on it
+# only for the substrate-side `apply_god_tool` chokepoint to map a
+# `PowerDef.id` to its handler. The Bevy dispatcher imports it directly
+# for the deck UI; this engine dependency is the **single substrate
+# chokepoint** (AC-CPL-2).
+civ-powers = { path = "../powers" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.11"

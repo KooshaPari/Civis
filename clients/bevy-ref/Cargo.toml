@@ -18,6 +18,11 @@ path = "src/main.rs"
 civ-agents = { path = "../../crates/agents" }
 civ-laws = { path = "../../crates/laws", optional = true }
 civ-engine = { path = "../../crates/engine", optional = true }
+# God-Tools power registry (FR-CIV-GODTOOL-900..901). The Bevy dispatcher
+# (`src/godtools.rs`) imports `civ_powers::PowerDef` / `default_powers` for
+# the Holocron Deck search / filter, so the dep is direct on the Bevy side
+# (not just transitive via `civ-engine`).
+civ-powers = { path = "../../crates/powers", optional = true }
 # Diplomacy substrate (PR #362 — P4 civ-007 slice): pairwise Relation graph +
 # scalar standing + threshold-crossing events. Pulled in for the Standings
 # section of the Diplomacy panel. Optional, gated behind the `bevy` feature
@@ -95,6 +100,7 @@ bevy = [
     "dep:civ-engine",
     "dep:civ-diplomacy",
     "dep:civ-laws",
+    "dep:civ-powers",
     "dep:rand",
     "dep:rand_chacha",
     "dep:image",

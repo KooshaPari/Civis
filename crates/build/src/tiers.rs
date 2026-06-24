@@ -14,7 +14,7 @@ use civ_economy::{EconomyState, Good as ProductionGood};
 use civ_voxel::WorldCoord;
 use serde::{Deserialize, Serialize};
 
-use crate::BuildingGraph;
+use crate::{BuildingGraph, BuildingId};
 
 /// Era-driven tier classification for a building. Each tier scales slot
 /// counts, joule cost, and construction time (`FR-CIV-BUILD-001`).

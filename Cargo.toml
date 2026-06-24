@@ -47,6 +47,7 @@ members = [
   "crates/powers",
   "crates/watch",
   "crates/save-db",
+  "crates/hud",
   "crates/legends",
   "crates/civ-emergence-metrics",
   "clients/bevy-ref",

@@ -50,6 +50,7 @@ members = [
   "crates/hud",
   "crates/legends",
   "crates/civ-emergence-metrics",
+  "crates/physics-substrate",
   "clients/bevy-ref",
   # "clients/fyrox-ref" - excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

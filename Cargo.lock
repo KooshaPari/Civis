@@ -2524,6 +2524,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-physics-substrate"
+version = "0.1.0"
+dependencies = [
+ "glam 0.30.10",
+ "serde",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "civ-planet"
 version = "0.1.0"
 dependencies = [

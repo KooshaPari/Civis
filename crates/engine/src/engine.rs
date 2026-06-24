@@ -1200,6 +1200,18 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_buildings();
+        self.phase_life();                    // ADR-020 #1 — settlement commons
+        self.phase_research();                // ADR-020 #2 — research progress
+        self.phase_tech();                    // ADR-020 #3 — tier-derived tech unlocks
+        self.phase_belief();                  // ADR-020 #4 — faith reserve
+        self.phase_unrest();                  // ADR-020 #5 — societal unrest
+        self.phase_cohesion();                // ADR-020 #6 — social fabric
+        self.phase_social_mood();             // ADR-020 #7 — mean mood aggregate
+        self.phase_economic_focus_pre();      // ADR-020 #10a — first-pass focus seed
+        self.phase_stratification();          // ADR-020 #8 — dispossessed share
+        self.phase_institutions();            // ADR-020 #9 — temple + garrison levels
+        self.phase_economic_focus();          // ADR-020 #10 — settle pass
+        self.phase_emergence();               // ADR-020 orchestrator
         self.phase_diffusion();
         self.replay_log.record_tick(self.state.tick);
 

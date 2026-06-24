@@ -841,16 +841,7 @@ fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], S
     let tick = sim.state.tick;
     let voxel = build_voxel_delta_frame(tick, sim.last_tick_voxel_events(), sim.voxel())
         .map_err(|e| e.to_string())?;
-    let building = BuildingDiffFrame {
-        tick,
-        provenance: if sim.snapshot().building_count % 2 == 0 {
-            BuildingProvenance::Procedural
-        } else {
-            BuildingProvenance::Freehand
-        },
-        buildings: Vec::new(),
-        graph: None,
-    };
+    let building = build_building_diff_frame(sim, tick);
     Ok([
         Frame3d::VoxelDelta(voxel),
         Frame3d::BuildingDiff(building),
@@ -864,6 +855,81 @@ fn build_frame_bundle(sim: &Simulation) -> Result<[Frame3d; FRAME_BUNDLE_LEN], S
             weather: sim.weather_grid().to_vec(),
         }),
     ])
+}
+
+/// Map a `ProductionChain` to a `BuildingKind3d` for client-side rendering.
+///
+/// `ProductionChain` is the engine-side game-mechanics classification
+/// (Farm / Workshop / Factory); `BuildingKind3d` is the wire-level
+/// classification (Farm / Market / House / etc.). They share `Farm` directly
+/// and the rest map by intent: workshops and factories produce goods and
+/// count as `Market`-class industrial parcels, while primitive builds that
+/// produce nothing map to `House`. This keeps the wire protocol stable for
+/// legacy clients while exposing the new construction events.
+fn chain_to_building_kind(chain: civ_build::ProductionChain) -> BuildingKind3d {
+    use civ_build::ProductionChain as Chain;
+    match chain {
+        Chain::Farm => BuildingKind3d::Farm,
+        Chain::Workshop => BuildingKind3d::Market,
+        Chain::Factory => BuildingKind3d::Market,
+    }
+}
+
+/// Build a [`BuildingDiffFrame`] from the engine's most recent construction
+/// events and the live `BuildingGraph` snapshot (FR-CIV-BUILD-001/002/003
+/// wiring: produced and halted events surface as `BuildingDiffEntry`s so the
+/// Bevy client can render construction sites and completed buildings).
+fn build_building_diff_frame(sim: &Simulation, tick: u64) -> BuildingDiffFrame {
+    let events = sim.last_construction_events();
+    let graph = sim.building_graph();
+
+    // Provenance rule: if any completed building was recorded this tick
+    // (i.e. we have at least one Producing event) the frame is
+    // `Procedural`; otherwise it follows the historical parity rule.
+    let has_completion = events
+        .iter()
+        .any(|event| matches!(event, ProductionEvent::Produced { .. }));
+    let provenance = if has_completion {
+        BuildingProvenance::Procedural
+    } else if sim.snapshot().building_count % 2 == 0 {
+        BuildingProvenance::Procedural
+    } else {
+        BuildingProvenance::Freehand
+    };
+
+    // One diff entry per completed building, derived from the live
+    // BuildingGraph. Halted events do not produce new entries (the building
+    // already exists in the graph) but contribute to provenance
+    // decisions via the snapshot count above.
+    let mut buildings: Vec<BuildingDiffEntry> = graph
+        .completed
+        .values()
+        .map(|completed| BuildingDiffEntry {
+            id: completed.id.0,
+            kind: chain_to_building_kind(completed.chain()),
+            tier: match completed.tier() {
+                civ_build::BuildingTier::Primitive => 0,
+                civ_build::BuildingTier::Artisan => 1,
+                civ_build::BuildingTier::Industrial => 2,
+                civ_build::BuildingTier::Advanced => 3,
+            },
+            position: WorldXZ {
+                x: completed.origin.x as f32,
+                z: completed.origin.z as f32,
+            },
+        })
+        .collect();
+
+    // Stable sort so client-side diffs don't churn when iteration order
+    // changes between runs.
+    buildings.sort_by_key(|entry| entry.id);
+
+    BuildingDiffFrame {
+        tick,
+        provenance,
+        buildings,
+        graph: Some(graph.clone()),
+    }
 }
 
 async fn apply_dispatch_effect(

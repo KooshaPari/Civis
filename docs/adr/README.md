@@ -33,6 +33,8 @@ Numbered ADRs (in numeric order):
 | 016   | Religion Emergence from Needs Vector                                                                        | Accepted          | [ADR-016-religion-emergence-from-needs-vector.md](ADR-016-religion-emergence-from-needs-vector.md) |
 | 017   | Web L2 Authoring (Amendment to ADR-009)                                                                     | Accepted          | [ADR-017-web-l2-authoring-amendment.md](ADR-017-web-l2-authoring-amendment.md)             |
 | 018   | Emergence Systems Bidirectional Coupling via Shared Gradients + Conserved Resources                       | Proposed          | [ADR-018-emergence-systems-coupling.md](ADR-018-emergence-systems-coupling.md)             |
+| 019   | *reserved / vacant* — see Numeric gaps and renumber history                                                                 | reserved / vacant | —                                                                                          |
+| 020   | Wire Dormant Emergence Phases into `Simulation::tick`                                                                       | Proposed          | [ADR-020-wire-dormant-emergence-phases.md](ADR-020-wire-dormant-emergence-phases.md)       |
 
 Non-numeric ADRs (named; kept under their original filenames on purpose — see
 notes below the table):
@@ -46,6 +48,12 @@ notes below the table):
 
 ## Numeric gaps and renumber history
 
+- **ADR-019 is reserved / vacant.** It is intentionally left as a gap so
+  that the `emergence-wiring-adr` branch lands cleanly under ADR-020 (the
+  companion wiring decision) without disturbing the existing ADR-001 …
+  ADR-018 numbering or requiring a cross-ADR renumber. Do not introduce a
+  new ADR-019 without first re-allocating the gap or renumbering
+  ADR-020.
 - **ADR-004 is reserved / vacant.** It is historically referenced by
   ADR-005 / ADR-006 / ADR-007 / ADR-008 as the "deterministic replay" ADR. The
   decision they reference now lives under ADR-003
@@ -108,6 +116,15 @@ on recovery and the ADR-009 collision.
   faction, religion, trade, architecture, and climate. It enumerates
   the N-series rows from ADR-011 against the actual crate / file /
   symbol that owns each direction.
+- [ADR-020-wire-dormant-emergence-phases](ADR-020-wire-dormant-emergence-phases.md)
+  is the **wiring decision** that closes the `EMERGENCE_AUDIT.md` §5 #1
+  gap: it inserts the 11 dormant emergence phases (`life`, `research`,
+  `tech`, `belief`, `unrest`, `cohesion`, `social_mood`,
+  `stratification`, `institutions`, `economic_focus`, plus the
+  already-implemented `emergence`) into `PHASE_ORDER` after
+  `phase_buildings` and before `phase_diffusion`, and records the
+  dependency DAG / shared-gradient / per-tick-cap table the 11 new
+  producers must satisfy under the ADR-011 / ADR-018 doctrine.
 
 ## Recovery / renumber pass (2026-06)
 

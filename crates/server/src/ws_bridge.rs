@@ -19,6 +19,7 @@ use axum::{
     Json, Router,
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
+use civ_build::{ProductionChain, ProductionEvent};
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id,
     scenario::{load_scenario, preset_scenario_path},
@@ -176,6 +177,10 @@ struct TickBroadcast {
     tick: u64,
     frames: Arc<[Frame3d]>,
     encoded: Arc<[Message]>,
+    /// Construction lifecycle events emitted by `phase_buildings` this tick
+    /// (FR-CIV-BUILD-001/002). Bevy clients render scaffolding + completion FX
+    /// from this list; replay bus captures the same stream.
+    construction: Arc<[ProductionEvent]>,
 }
 
 fn resolve_session_id() -> String {
@@ -1329,10 +1334,17 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
             encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
                 .into_boxed_slice(),
         );
+        // Drain construction events produced by phase_buildings this tick
+        // (FR-CIV-BUILD-001/002). The engine clears the buffer at the start
+        // of each tick, so this snapshot is exactly the events emitted by
+        // the most recent phase_buildings call.
+        let construction: Arc<[ProductionEvent]> =
+            Arc::from(sim.last_construction_events().to_vec().into_boxed_slice());
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
+            construction,
         })
     };
 

@@ -75,6 +75,23 @@ Status values: `planned` | `in_progress` | `implemented`
 
 ---
 
+## Physics substrate (FR-PHYS-substrate-*)
+
+Shared physics-field substrate — the **only** public write path between emergent layers (life, language, faction, religion, trade, architecture, economy, climate, tactics, diplomacy, laws). Doctrinal anchor for the coupling plan in `docs/design/PHYSICS_INTEGRATION_PLAN.md` + `docs/design/PHYSICS_COUPLING_SUBSTRATE.md`.
+
+| FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |
+|---|---|---|---|---|
+| FR-PHYS-substrate-000 | Schema-version stub follows `MAJOR.MINOR.PATCH` convention. | `crates/physics-substrate/src/lib.rs` | `physics_substrate::schema_version_stub` | implemented |
+| FR-PHYS-substrate-001 | `Grid::get` / `linear_index` are consistent: in-bounds round-trips; out-of-bounds reads return `0.0`, out-of-bounds writes return `OutOfBounds`; NaN writes return `NonFinite`. | `crates/physics-substrate/src/lib.rs` | `physics_substrate::grid_indexing_is_consistent` | implemented |
+| FR-PHYS-substrate-002 | `PhysicsFields::set` is the only public mutator layers see: clamps to `[0, ceiling]`, rejects out-of-bounds / non-finite writes. | `crates/physics-substrate/src/lib.rs` | `physics_substrate::set_clamps_to_field_ceiling_and_rejects_bad_writes` | implemented |
+| FR-PHYS-substrate-003 | `grad()` returns central-difference gradient on interior cells, one-sided clamped gradients on boundary cells. | `crates/physics-substrate/src/lib.rs` | `physics_substrate::grad_central_difference_with_clamped_edges` | implemented |
+| FR-PHYS-substrate-004 | `evolve()` is mass-conserving: uniform steady state → per-field totals unchanged (within float epsilon); `F` and `P` are not evolved by `evolve()` (their `leak` is exactly 0). | `crates/physics-substrate/src/lib.rs` | `physics_substrate::evolve_conserves_total_with_uniform_state` | implemented |
+| FR-PHYS-substrate-005 | `evolve()` diffuses heat from a hot cell toward cooler neighbours and never invents / destroys total energy. | `crates/physics-substrate/src/lib.rs` | `physics_substrate::evolve_diffuses_heat_and_preserves_total` | implemented |
+| FR-PHYS-substrate-006 | `evolve()` grows biomass in cells near `BIOMASS_OPTIMAL_TEMP` with positive moisture; leaves hot / dry cells untouched. | `crates/physics-substrate/src/lib.rs` | `physics_substrate::evolve_regrows_biomass_in_habitable_cells` | implemented |
+| FR-PHYS-substrate-007 | `evolve()` is deterministic: same initial state + same `dt` produces bit-identical per-field totals (replay contract, ADR-008). | `crates/physics-substrate/src/lib.rs` | `physics_substrate::evolve_is_deterministic` | implemented |
+
+---
+
 ## Laws (FR-CIV-LAWS-*)
 
 | FR ID | Requirement Summary | Crate / Source Path | Test Name Pattern | Status |

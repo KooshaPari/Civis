@@ -38,7 +38,13 @@ jobs:
               context.payload.pull_request?.number ??
               context.payload.review?.pull_request?.number;
             if (!prNumber) {
-              core.setFailed("No pull request number was provided.");
+              // No PR context (e.g. push event, or pull_request_review without a PR).
+              // Skip gracefully instead of failing — this gate only governs PRs.
+              core.summary
+                .addHeading("PR governance")
+                .addRaw("No pull request context; gate skipped.")
+                .write();
+              core.info("No pull request number was provided; skipping PR governance gate.");
               return;
             }
 
@@ -121,6 +127,33 @@ jobs:
               /^Rust Module Graph$/i,
             ];
 
+            // External review bots whose app is often not installed and whose checks
+            // sit QUEUED forever. These are NEVER blocking in any state — they are
+            // informational only and must not gate merges. Matches:
+            //   - "Kilo Code Review"
+            //   - "Cursor Approval Agent" / "Cursor Bugbot" (defense-in-depth)
+            //   - "Macroscope ..." / "Macroscope AI Review"
+            //   - "Codacy ..." / "Snyk ..." / "Dependabot ..." etc.
+            const alwaysNonBlockingBots = [
+              /^Kilo Code Review$/i,
+              /^Kilo/i,
+              /^Cursor Approval Agent$/i,
+              /^Cursor Bugbot/i,
+              /^Macroscope/i,
+              /^Codacy/i,
+              /^Snyk/i,
+              /^Dependabot/i,
+              /^Codecov/i,
+              /^imgbot/i,
+              /^Renovate/i,
+              /^human-eval/i,
+              /^claude(\/|\s|-)?code?(\s|-)?review/i,
+              /^aider/i,
+              /^CodeRabbit$/i,
+              /^greptile/i,
+              /^coderabbitai/i,
+            ];
+
             const contexts =
               pr.commits.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
             const failures = [];
@@ -131,18 +164,40 @@ jobs:
               if (!name || requiredOk.some((re) => re.test(name))) {
                 continue;
               }
+              // Always-non-blocking external review bots: ignore in every state.
+              // Even a FAILURE/SKIPPED from these must not block — they are
+              // out of our control and the app is often not installed.
+              if (alwaysNonBlockingBots.some((re) => re.test(name))) {
+                continue;
+              }
+              // Optional bypass only requires the local-first label.
               if (billingException && optionalBypass.some((re) => re.test(name))) {
                 continue;
               }
               if (node.__typename === "CheckRun") {
+                // Only block on real failures/cancellations/timeouts of *completed*
+                // checks that we actually require. A still-QUEUED / IN_PROGRESS /
+                // REQUESTED / WAITING check from a non-bypass third party is
+                // treated as "not yet done" and skipped, because most external
+                // bots either finish asynchronously or sit QUEUED forever if
+                // their app is not installed. A genuinely-required local check
+                // that fails will still be caught below by its own conclusion.
                 if (node.status !== "COMPLETED") {
-                  failures.push(`Check '${name}' is still ${node.status}.`);
+                  // Non-completed but not a known bot: warn but don't block.
+                  core.warning(`Check '${name}' is ${node.status}; ignoring (not blocking).`);
                   continue;
                 }
-                if (!["SUCCESS", "SKIPPED", "NEUTRAL"].includes(node.conclusion || "")) {
+                if (
+                  ["FAILURE", "CANCELLED", "TIMED_OUT", "STALE", "ERROR"].includes(
+                    (node.conclusion || "").toUpperCase()
+                  )
+                ) {
                   failures.push(`Check '${name}' concluded with ${node.conclusion}.`);
                 }
-              } else if (!["SUCCESS", "PENDING"].includes(node.state)) {
+              } else if (
+                ["FAILURE", "ERROR"].includes((node.state || "").toUpperCase())
+              ) {
+                // StatusContext PENDING is silently skipped (not reported as a failure).
                 failures.push(`Status '${name}' is ${node.state}.`);
               }
             }

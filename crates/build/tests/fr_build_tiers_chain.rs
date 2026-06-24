@@ -109,7 +109,7 @@ fn fr_build_002_farm_produces_food_when_active() {
 fn fr_build_002_workshop_halts_when_wood_is_zero() {
     let spec = BuildingSpec::minimal(BuildingTier::Artisan, ProductionChain::Workshop);
     let mut economy = EconomyState::with_energy_budget(1_000);
-    economy.stocks_mut().wood = 0;
+    economy.stocks_mut().set(civ_economy::Good::Wood, 0);
 
     let mut site = BuildSite::new(BuildingId(2), spec, WorldCoord { x: 0, y: 0, z: 0 });
     site.complete();
@@ -127,8 +127,8 @@ fn fr_build_002_workshop_halts_when_wood_is_zero() {
 fn fr_build_002_factory_halts_when_any_input_is_zero() {
     let spec = BuildingSpec::minimal(BuildingTier::Industrial, ProductionChain::Factory);
     let mut economy = EconomyState::with_energy_budget(10_000);
-    economy.stocks_mut().wood = 5;
-    economy.stocks_mut().metal = 0; // halt trigger
+    economy.stocks_mut().set(civ_economy::Good::Wood, 5);
+    economy.stocks_mut().set(civ_economy::Good::Metal, 0); // halt trigger
 
     let mut site = BuildSite::new(BuildingId(3), spec, WorldCoord { x: 0, y: 0, z: 0 });
     site.complete();
@@ -151,7 +151,7 @@ fn fr_build_002_factory_halts_when_any_input_is_zero() {
 fn fr_build_002_halts_emit_production_event() {
     let spec = BuildingSpec::minimal(BuildingTier::Artisan, ProductionChain::Workshop);
     let mut economy = EconomyState::with_energy_budget(1_000);
-    economy.stocks_mut().wood = 0;
+    economy.stocks_mut().set(civ_economy::Good::Wood, 0);
 
     let mut site = BuildSite::new(BuildingId(42), spec, WorldCoord { x: 0, y: 0, z: 0 });
     site.complete();

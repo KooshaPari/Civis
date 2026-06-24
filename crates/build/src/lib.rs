@@ -8,12 +8,27 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+/// Building tiers, production chains, and construction sites
+/// (`FR-CIV-BUILD-001/002/003`). See `tiers.rs` for the API.
+pub mod tiers;
+
+// Public re-exports from `tiers` so the test crate can `use civ_build::*`
+// without diving into the submodule path.
+pub use tiers::{
+    BuildingSpec, BuildingSpecOverride, BuildingSpecOverrideError, BuildingTier, BuildSite,
+    CompletedBuilding, ProductionChain, ProductionEvent,
+};
+
 use std::collections::BTreeMap;
 
 use civ_voxel::{MaterialId, WorldCoord};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
+
+/// Re-export of `civ_economy::Good` as the canonical production good type used
+/// by the building tier + production chain APIs (`FR-CIV-BUILD-001/002/003`).
+pub use civ_economy::Good as ProductionGood;
 
 /// Provenance tag carried by every building diff so the renderer can style
 /// procedural-grown vs user-freehand structures differently if desired.
@@ -251,6 +266,9 @@ pub struct BuildingGraph {
     pub facades: BTreeMap<BuildingId, FacadeStyle>,
     /// Provenance tag per parcel.
     pub provenance: BTreeMap<BuildingId, BuildingProvenance>,
+    /// Completed buildings (set by `phase_buildings` once construction ends).
+    /// Populated by [`crate::tiers::BuildingGraph::record_completed`].
+    pub completed: BTreeMap<BuildingId, CompletedBuilding>,
 }
 
 impl BuildingGraph {

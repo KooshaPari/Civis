@@ -1166,8 +1166,16 @@ pub fn parse_set_speed_params(params: Option<&Value>) -> Result<u32, JsonRpcErro
 }
 
 /// Parse `sim.save_replay` / `sim.load_replay` `path` param.
+///
+/// The returned path is **strictly relative**: it must not be absolute,
+/// must not start with a path separator, must not contain any `..`
+/// parent segments, prefix components (e.g. `C:`), or root directory
+/// components. This blocks arbitrary-file-read attacks where a client
+/// sends `/etc/passwd` or `../../something`. Containment under the
+/// bridge's replay base directory is enforced separately at the
+/// consumer via [`resolve_replay_path`].
 pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError> {
-    let path = params
+    let path_str = params
         .and_then(|p| p.get("path"))
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
@@ -1186,7 +1194,94 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
                 .to_owned(),
             data: None,
         })?;
-    Ok(path.to_owned())
+    let path = std::path::Path::new(path_str);
+    if !path.is_relative()
+        || path_str.starts_with('/')
+        || path_str.starts_with('\\')
+        || path
+            .components()
+            .any(|c| matches!(
+                c,
+                std::path::Component::ParentDir
+                    | std::path::Component::Prefix(_)
+                    | std::path::Component::RootDir
+            ))
+    {
+        return Err(JsonRpcError {
+            code: error_code::INVALID_PARAMS,
+            message: format!(
+                "Invalid params: replay path {path_str:?} must be a relative path with no \"..\", absolute, or prefix components"
+            ),
+            data: None,
+        });
+    }
+    Ok(path_str.to_owned())
+}
+
+/// Resolve a validated relative replay path under `base_dir` and verify
+/// the canonicalized result is still contained inside the canonicalized
+/// base directory. This defeats symlink escape: `..` and absolute paths
+/// are rejected earlier by [`parse_replay_path`], but a relative path
+/// like `replays/../../etc/passwd` (after symlink resolution) could
+/// otherwise still escape if a parent of `base_dir` is itself a
+/// symlink. Canonicalizing both sides and checking containment closes
+/// that gap.
+pub fn resolve_replay_path(
+    base_dir: &std::path::Path,
+    relative: &str,
+) -> Result<std::path::PathBuf, String> {
+    let base_canonical = std::fs::canonicalize(base_dir)
+        .map_err(|err| format!("replay base dir {:?} not accessible: {err}", base_dir))?;
+    let joined = base_canonical.join(relative);
+    // Canonicalize the joined path; if the file does not yet exist
+    // (e.g. `sim.save_replay` is creating it), canonicalize the deepest
+    // existing ancestor and re-append the final filename. This still
+    // defeats symlink escape because every existing parent must resolve
+    // to a path under `base_canonical` for the containment check to
+    // pass.
+    let canonical = match std::fs::canonicalize(&joined) {
+        Ok(path) => path,
+        Err(_) => {
+            let mut existing = joined.clone();
+            let mut tail_components: Vec<std::path::PathBuf> = Vec::new();
+            loop {
+                let parent = existing
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .ok_or_else(|| {
+                        format!("replay path {:?} has no existing ancestor", joined)
+                    })?;
+                if parent == existing {
+                    return Err(format!(
+                        "replay path {:?} cannot be resolved relative to base {:?}",
+                        joined, base_canonical
+                    ));
+                }
+                if let Some(name) = existing.file_name() {
+                    tail_components.push(std::path::PathBuf::from(name));
+                }
+                match std::fs::canonicalize(parent) {
+                    Ok(canonical_parent) => {
+                        let mut result = canonical_parent;
+                        for component in tail_components.iter().rev() {
+                            result.push(component);
+                        }
+                        break result;
+                    }
+                    Err(_) => {
+                        existing = parent.to_path_buf();
+                    }
+                }
+            }
+        }
+    };
+    if !canonical.starts_with(&base_canonical) {
+        return Err(format!(
+            "replay path {:?} escapes replay base directory {:?}",
+            canonical, base_canonical
+        ));
+    }
+    Ok(canonical)
 }
 
 /// Dispatch a validated request (CIV-0200 stub handlers).
@@ -3488,6 +3583,109 @@ mod tests {
         assert!(parse_replay_path(Some(&json!({"path":""}))).is_err());
         assert!(parse_replay_path(Some(&json!({"path":"/tmp/x.civreplay"}))).is_err());
         assert!(parse_replay_path(Some(&json!({"path":"../x.civreplay"}))).is_err());
+    }
+
+    #[test]
+    fn parse_replay_path_rejects_absolute_paths() {
+        use serde_json::json;
+        // Linux/macOS absolute path.
+        assert!(parse_replay_path(Some(&json!({"path":"/etc/passwd"}))).is_err());
+        // Windows-style absolute paths with drive prefix.
+        assert!(
+            parse_replay_path(Some(&json!({"path":"C:\\Windows\\System32\\drivers\\etc\\hosts"})))
+                .is_err()
+        );
+        // Backslash-leading UNC-style path is rejected.
+        assert!(parse_replay_path(Some(&json!({"path":"\\\\server\\share\\file"}))).is_err());
+        // Just the root.
+        assert!(parse_replay_path(Some(&json!({"path":"/"}))).is_err());
+    }
+
+    #[test]
+    fn parse_replay_path_rejects_parent_segments() {
+        use serde_json::json;
+        // Single `..` segment.
+        assert!(parse_replay_path(Some(&json!({"path":"../etc/passwd"}))).is_err());
+        // Embedded `..` segment.
+        assert!(parse_replay_path(Some(&json!({"path":"replays/../../etc/passwd"}))).is_err());
+        // Trailing `..`.
+        assert!(parse_replay_path(Some(&json!({"path":"replays/.."}))).is_err());
+        // `..` as the entire (non-empty) path.
+        assert!(parse_replay_path(Some(&json!({"path":".."}))).is_err());
+    }
+
+    #[test]
+    fn parse_replay_path_rejects_windows_drive_prefix() {
+        use serde_json::json;
+        // `C:` alone or with relative path is rejected because of the
+        // Prefix component.
+        assert!(parse_replay_path(Some(&json!({"path":"C:replays/x.civreplay"}))).is_err());
+        assert!(parse_replay_path(Some(&json!({"path":"D:\\foo"}))).is_err());
+    }
+
+    #[test]
+    fn parse_replay_path_accepts_safe_relative_paths() {
+        use serde_json::json;
+        assert_eq!(
+            parse_replay_path(Some(&json!({"path":"replays/x.civreplay"}))).unwrap(),
+            "replays/x.civreplay"
+        );
+        assert_eq!(
+            parse_replay_path(Some(&json!({"path":"a/b/c/x.civreplay"}))).unwrap(),
+            "a/b/c/x.civreplay"
+        );
+        // A single filename (no separator) is fine.
+        assert_eq!(
+            parse_replay_path(Some(&json!({"path":"x.civreplay"}))).unwrap(),
+            "x.civreplay"
+        );
+    }
+
+    #[test]
+    fn resolve_replay_path_contains_existing_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let base = dir.path().join("replays");
+        std::fs::create_dir_all(&base).expect("create base");
+        let file = base.join("x.civreplay");
+        std::fs::write(&file, b"replay-bytes").expect("write file");
+        let resolved = resolve_replay_path(&base, "x.civreplay").expect("resolve");
+        // Canonicalize both before comparing (symlink-resolved on macOS).
+        assert_eq!(
+            std::fs::canonicalize(&resolved).unwrap(),
+            std::fs::canonicalize(&file).unwrap()
+        );
+    }
+
+    #[test]
+    fn resolve_replay_path_resolves_new_file_under_base() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let base = dir.path().join("replays");
+        std::fs::create_dir_all(&base).expect("create base");
+        // File does not exist yet — `save_replay` will create it.
+        let resolved = resolve_replay_path(&base, "new.civreplay").expect("resolve");
+        let base_canonical = std::fs::canonicalize(&base).unwrap();
+        assert!(resolved.starts_with(&base_canonical));
+        assert!(resolved.ends_with("new.civreplay"));
+    }
+
+    #[test]
+    fn resolve_replay_path_rejects_escape_via_symlink() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let base = dir.path().join("replays");
+        std::fs::create_dir_all(&base).expect("create base");
+        // Create an out-of-base target file.
+        let outside = dir.path().join("outside.civreplay");
+        std::fs::write(&outside, b"out-of-base").expect("write outside");
+        // Inside the base, plant a symlink that points outside.
+        let link = base.join("escape.civreplay");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&outside, &link).expect("symlink");
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&outside, &link).expect("symlink");
+        // The relative path resolves via the symlink to a file outside
+        // the canonicalized base — containment check must reject it.
+        let result = resolve_replay_path(&base, "escape.civreplay");
+        assert!(result.is_err(), "expected escape rejection, got {result:?}");
     }
 
     #[test]

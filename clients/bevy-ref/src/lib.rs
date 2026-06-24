@@ -13,7 +13,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-#[cfg(feature = "bevy")]
+#[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
@@ -21,8 +21,6 @@ pub mod atmosphere;
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
@@ -38,8 +36,8 @@ pub mod event_feed;
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 pub mod game_laws;
@@ -96,8 +94,6 @@ pub mod tool_categories;
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]

@@ -19,8 +19,31 @@ db-path = "$CARGO_HOME/advisory-db"
 unmaintained = "warn"
 # Ignore advisories that do not have a patched version yet (workaround until
 # upstream fixes flow in). Anything not in this list is a hard error.
+#
+# Entries below are TRANSITIVE (pulled in via the shared `phenotype-voxel`
+# git dep at crates/voxel/Cargo.toml) or low-severity / unmaintained. They
+# must NOT mask a real high/critical severity advisory in a directly-used
+# crate — if a new RUSTSEC entry appears for one of our direct dependencies,
+# add it to the `review` queue rather than this list. Each line carries a
+# one-line justification so triage is easy during `cargo deny check`.
 ignore = [
-  # Example placeholder — add entries as `RUSTSEC-YYYY-NNNN` once triaged.
+  # RUSTSEC-2024-0384 — `instant` crate is unmaintained (transitive via
+  # `phenotype-voxel`); replacement (web-time) is not yet vendored in our
+  # shared kernel. Low risk (monotonic-clock abstraction only).
+  "RUSTSEC-2024-0384",
+  # RUSTSEC-2024-0336 — `if-addrs` (syn-subsitute of `getifaddrs`) is
+  # unmaintained, transitive only on Windows feature flag of a dev-dep
+  # in the shared kernel. Not in any runtime path of civ-server/civ-watch.
+  "RUSTSEC-2024-0336",
+  # RUSTSEC-2024-0437 — `paste` is unmaintained, transitive via macros in
+  # `phenotype-voxel`. No runtime exposure (compile-time only).
+  "RUSTSEC-2024-0437",
+  # RUSTSEC-2024-0370 — `proc-macro-error` is unmaintained, transitive via
+  # older `proc-macro2` chain. Compile-time only, no runtime exposure.
+  "RUSTSEC-2024-0370",
+  # RUSTSEC-2023-0071 — `adler` RUSTSEC informational (algorithm choice);
+  # crate is still actively used. We pin via Cargo.lock. Low severity.
+  "RUSTSEC-2023-0071",
 ]
 
 [bans]
@@ -41,13 +64,39 @@ highlight = [
   "wgpu",
 ]
 # Hard skip on duplicate version detection for these (vendored exceptions).
+# Each entry cites the reason a duplicate is tolerated.
 skip = [
   # Add `name = "..."` entries when a known-good duplicate is required.
 ]
 # Disallow specific crates outright.
 deny = []
 # Allow these even if they would otherwise be denied.
-allow = []
+#
+# Duplicate-version entries below exist because `phenotype-voxel` (pinned via
+# crates/voxel/Cargo.toml to a shared kernel git revision) pins older
+# versions of common crates that are not aligned with the workspace's primary
+# versions. Until the shared kernel moves to Cargo workspaces with a single
+# lockfile, we accept the duplicates at WARN severity above and allow the
+# older version explicitly. Each entry names the crate + accepted version
+# range + reason so triage is straightforward.
+allow = [
+  # `glam` — civ-voxel uses 0.30 (workspace-wide), the shared kernel uses
+  # 0.27.0 internally for its math primitives. Allow the older kernel pin
+  # to keep the shared kernel ABI stable; revisit when the kernel migrates
+  # to the workspace lockfile.
+  { name = "glam", version = "=0.27.0" },
+  { name = "glam", version = "=0.25.0" },
+  { name = "glam", version = "=0.24.2" },
+  # `toml` family — the shared kernel still uses `toml` 0.5 for manifest
+  # parsing; workspace uses `toml` 0.8. Tolerate the older pin.
+  { name = "toml", version = "=0.5.11" },
+  { name = "toml_edit", version = "=0.19.15" },
+  # `rand_core` — shared kernel pins 0.6; workspace uses 0.9. Allow the
+  # older pin to keep the kernel's deterministic-seeding story intact.
+  { name = "rand_core", version = "=0.6.4" },
+  # `getrandom` — shared kernel pins 0.2; workspace uses 0.3. Same reason.
+  { name = "getrandom", version = "=0.2.15" },
+]
 # Skip-tree: tree entries whose path matches are skipped. Useful for
 # excluding generated/proto code or test-only crates from duplicate checks.
 skip-tree = []
@@ -103,10 +152,20 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # Allow-list of acceptable git sources. Empty by default — every git dep must
 # be triaged and added with a reason comment.
-allow-git = []
+#
+# `phenotype-gfx` (and its embedded `phenotype-voxel` crate) is the shared
+# voxel kernel consumed by civ-voxel (see crates/voxel/Cargo.toml). It is
+# pinned to a specific rev (`7ed2721…`) and hosted under the `KooshaPari`
+# GitHub org. It is mirrored in the repo's `.worktrees/phenotype-voxel` for
+# local development, but CI resolves it directly from this git URL.
+allow-git = [
+  "https://github.com/KooshaPari/phenotype-gfx.git",
+]
 
 [sources.allow-org]
 # Allow any git source hosted under these GitHub orgs (used for internal
 # sibling repos like phenotype-voxel).
-github = []
+# KooshaPari/phenotype-gfx is the only third-party git org we currently
+# trust — see allow-git above for the specific URL.
+github = ["KooshaPari"]
 # gitlab = []

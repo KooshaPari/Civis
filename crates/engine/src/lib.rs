@@ -89,6 +89,12 @@ pub use scenario::{
 };
 pub use spectator::{BuildingPin, CivPin, Faction, JobLabel, SpectatorView};
 
+/// Re-export of the `hecs::World` type used by `Simulation::world`. Lets
+/// downstream crates (e.g. `civ-server`) iterate and mutate simulation
+/// entities without taking a direct `hecs` dependency. Aliased to `EcsWorld`
+/// to avoid colliding with any future voxel- or planet-side `World` types.
+pub use hecs::World as EcsWorld;
+
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 

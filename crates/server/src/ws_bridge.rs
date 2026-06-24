@@ -1119,6 +1119,249 @@ async fn apply_dispatch_effect(
     }
 }
 
+/// Apply a [`GodActionRequest`] to the simulation and stamp the response with
+/// the verb's outcome.
+///
+/// Each verb maps to one of:
+///
+/// - a single engine write (smite → `push_damage`, place_terrain/ignite →
+///   `voxel_mut().write()` in a disk, spawn_creature/multiply_creatures →
+///   `civ_agents::spawn_civilian_at`)
+/// - a hecs world mutation (heal/bless → iterate `world` and patch `Citizen`
+///   fields in place; this is the only place we deliberately mutate
+///   agent-side state outside the scheduled sim phases).
+///
+/// Coordinates from the wire are normalized `[0, 1]`. We convert to the
+/// fixed-point voxel world with [`civ_voxel::FIXED_SCALE`]. Radius clamps are
+/// already enforced by [`parse_god_action`] so we don't re-validate here.
+fn apply_god_action(
+    sim: &mut Simulation,
+    request: GodActionRequest,
+    response: &mut JsonRpcResponse,
+) {
+    use civ_voxel::{MaterialId, WorldCoord};
+
+    let mut applied = true;
+    let mut affected: u64 = 0;
+    match request {
+        GodActionRequest::Smite { x, y, radius, energy } => {
+            let center = normalized_to_world(x, y, 0);
+            sim.push_damage(civ_engine::DamageEvent {
+                center,
+                radius_voxels: radius,
+                energy,
+            });
+            tracing::debug!(x, y, radius, energy, "god_action:smite");
+        }
+        GodActionRequest::Heal { x, y, radius_norm } => {
+            affected = heal_citizens_near(&mut sim.world, x, y, radius_norm);
+            tracing::debug!(x, y, radius_norm, affected, "god_action:heal");
+        }
+        GodActionRequest::PlaceTerrain {
+            x,
+            y,
+            radius,
+            material,
+        } => {
+            let written = paint_voxel_disk(
+                &mut sim.voxel_mut(),
+                x,
+                y,
+                radius,
+                MaterialId(material),
+            );
+            affected = written as u64;
+            tracing::debug!(x, y, radius, material, written, "god_action:place_terrain");
+        }
+        GodActionRequest::Ignite { x, y, radius } => {
+            // Material id 4 = LAVA in the phenotype-voxel material table. Keeping
+            // it a literal here (not a re-exported constant) because the material
+            // table is currently owned by the voxel kernel, not by civis.
+            const LAVA: u16 = 4;
+            let written = paint_voxel_disk(&mut sim.voxel_mut(), x, y, radius, MaterialId(LAVA));
+            affected = written as u64;
+            tracing::debug!(x, y, radius, written, "god_action:ignite");
+        }
+        GodActionRequest::SpawnCreature {
+            x,
+            y,
+            faction,
+            entity_seq,
+        } => {
+            let mut rng = sim.rng_mut().clone();
+            let entity = civ_agents::spawn_civilian_at(
+                &mut sim.world,
+                entity_seq,
+                civ_agents::Alignment::Faction(faction),
+                x,
+                y,
+                civ_agents::ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+            *sim.rng_mut() = rng;
+            set_spawn_civilian_result(response, entity.id());
+            tracing::debug!(x, y, faction, entity_seq, "god_action:spawn_creature");
+            return;
+        }
+        GodActionRequest::Bless {
+            x,
+            y,
+            radius_norm,
+            magnitude,
+        } => {
+            affected = bless_citizens_near(&mut sim.world, x, y, radius_norm, magnitude);
+            tracing::debug!(x, y, radius_norm, magnitude, affected, "god_action:bless");
+        }
+        GodActionRequest::MultiplyCreatures {
+            x,
+            y,
+            radius_norm,
+            count,
+            faction,
+            entity_seq,
+        } => {
+            let mut rng = sim.rng_mut().clone();
+            let mut spawned: u64 = 0;
+            for i in 0..count {
+                // Deterministic offset within the disk so consecutive god-tool
+                // calls don't collapse into a single point.
+                let angle = (i as f32) * 0.785_398; // π/4 step
+                let r = radius_norm * ((i as f32 + 1.0) / (count as f32 + 1.0));
+                let px = (x + r * angle.cos()).clamp(0.0, 1.0);
+                let py = (y + r * angle.sin()).clamp(0.0, 1.0);
+                let _ = civ_agents::spawn_civilian_at(
+                    &mut sim.world,
+                    entity_seq.wrapping_add(u64::from(i)),
+                    civ_agents::Alignment::Faction(faction),
+                    px,
+                    py,
+                    civ_agents::ActorVisualKind::Humanoid,
+                    &mut rng,
+                );
+                spawned += 1;
+            }
+            *sim.rng_mut() = rng;
+            affected = spawned;
+            tracing::debug!(x, y, radius_norm, count, faction, spawned, "god_action:multiply_creatures");
+        }
+    }
+
+    // Stamp outcome metadata onto the wire response so the client can confirm
+    // what landed. Mutating the response object keeps the wire shape identical
+    // to the prior stub (`{"ok": true, ...}`) and just enriches it.
+    if let Some(result) = response.result.as_mut() {
+        if let Some(obj) = result.as_object_mut() {
+            obj.insert("applied".to_owned(), serde_json::json!(applied));
+            obj.insert("affected".to_owned(), serde_json::json!(affected));
+        }
+    }
+}
+
+/// Convert a normalized `(x, y)` map point to a fixed-point [`WorldCoord`].
+///
+/// `x` and `y` are clamped to `[0, 1]`. The `z` plane is a fixed altitude for
+/// god-tool brushes (we paint at the surface and don't reach underground).
+fn normalized_to_world(x: f32, y: f32, z: i64) -> WorldCoord {
+    let fx = (x.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64;
+    let fy = (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64;
+    WorldCoord {
+        x: fx,
+        y: fy,
+        z,
+    }
+}
+
+/// Paint a disk of voxels at `(x, y)` with the given `material`. Returns the
+/// number of voxels written (clamped to `radius² * π` worst-case). Out-of-bounds
+/// writes are silently dropped by [`VoxelWriteProxy::write`].
+fn paint_voxel_disk(
+    proxy: &mut civ_engine::VoxelWriteProxy<'_>,
+    x: f32,
+    y: f32,
+    radius: u8,
+    material: civ_voxel::MaterialId,
+) -> usize {
+    let center = normalized_to_world(x, y, 0);
+    let r_fixed = (radius as i64).saturating_mul(civ_voxel::FIXED_SCALE / 8);
+    let r2 = r_fixed.saturating_mul(r_fixed);
+    let mut written = 0usize;
+    let r_i = radius as i32;
+    for dx in -r_i..=r_i {
+        for dy in -r_i..=r_i {
+            let dxf = (dx as i64).saturating_mul(civ_voxel::FIXED_SCALE / 8);
+            let dyf = (dy as i64).saturating_mul(civ_voxel::FIXED_SCALE / 8);
+            if dxf.saturating_mul(dxf) + dyf.saturating_mul(dyf) > r2 {
+                continue;
+            }
+            proxy.write(
+                WorldCoord {
+                    x: center.x.saturating_add(dxf),
+                    y: center.y.saturating_add(dyf),
+                    z: center.z,
+                },
+                material,
+            );
+            written += 1;
+        }
+    }
+    written
+}
+
+/// Restore full health to every citizen within `radius_norm` of `(x, y)`.
+///
+/// Returns the count of citizens healed. The function intentionally does not
+/// touch `welfare` or `ideology` — that's what `bless` is for. Splitting the
+/// two verbs means a UI button can offer "heal body" vs "lift spirit" without
+/// one action accidentally doing both.
+fn heal_citizens_near(world: &mut civ_engine::EcsWorld, x: f32, y: f32, radius_norm: f32) -> u64 {
+    let radius_sq = radius_norm * radius_norm;
+    let mut healed = 0u64;
+    for (_e, (_c, citizen, pos)) in world
+        .query_mut::<(&mut AgentCivilian, &mut civ_engine::Citizen, &civ_agents::Position3d)>()
+    {
+        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        let dx = px - x;
+        let dy = py - y;
+        if dx * dx + dy * dy <= radius_sq {
+            citizen.health = civ_engine::Fixed::from_num(1);
+            healed += 1;
+        }
+    }
+    healed
+}
+
+/// Bump `welfare` and `ideology` of every citizen within `radius_norm` of `(x, y)`
+/// by `magnitude` (clamped to `[0, 1]`). Used for "bless"-style effects.
+fn bless_citizens_near(
+    world: &mut civ_engine::EcsWorld,
+    x: f32,
+    y: f32,
+    radius_norm: f32,
+    magnitude: f32,
+) -> u64 {
+    let radius_sq = radius_norm * radius_norm;
+    let mag = (magnitude.clamp(0.0, 1.0) as f64) * civ_engine::SCALE as f64;
+    let mut blessed = 0u64;
+    for (_e, (_c, citizen, pos)) in world
+        .query_mut::<(&mut AgentCivilian, &mut civ_engine::Citizen, &civ_agents::Position3d)>()
+    {
+        let px = pos.coord.x as f32 / civ_voxel::FIXED_SCALE as f32;
+        let py = pos.coord.z as f32 / civ_voxel::FIXED_SCALE as f32;
+        let dx = px - x;
+        let dy = py - y;
+        if dx * dx + dy * dy > radius_sq {
+            continue;
+        }
+        let new_welfare = (citizen.welfare.raw as f64 + mag) as i64;
+        let new_ideology = (citizen.ideology.raw as f64 + mag * 0.5) as i64;
+        citizen.welfare = civ_engine::Fixed::from_raw(new_welfare.min(civ_engine::SCALE));
+        citizen.ideology = civ_engine::Fixed::from_raw(new_ideology.clamp(-civ_engine::SCALE, civ_engine::SCALE));
+        blessed += 1;
+    }
+    blessed
+}
+
 fn set_replay_io_error(response: &mut JsonRpcResponse, message: String) {
     let id = response.id.clone();
     *response = JsonRpcResponse::failure(

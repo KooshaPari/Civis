@@ -465,6 +465,16 @@ pub struct Simulation {
     pub(crate) emergence: EmergenceState,
     pub(crate) emergence_branching: EmergenceBranchingState,
     pub(crate) emergence_sample: Option<EmergenceSample>,
+    /// Shared physics coupling substrate (FR-CIV-PHYS-SUBSTRATE-001,
+    /// PHYS-COUPLING-SUBSTRATE-001 §7.1). Sprint 1: identity evolve; the six
+    /// conserved fields are zero-init and the conservation budget is trivially
+    /// `0` delta. Sprints 2–4 fill in real operators. The field is public to
+    /// the engine crate so phase_substrate, integrity, and tests can read it.
+    pub(crate) substrate: civ_physics_substrate::PhysicsFields,
+    /// Last [`civ_physics_substrate::EvolveReport`] from `phase_substrate`.
+    /// Cached so the JSON-RPC surface and integrity invariants can read the
+    /// most recent conservation budget without re-running the phase.
+    pub(crate) last_substrate_report: Option<civ_physics_substrate::EvolveReport>,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -698,6 +708,19 @@ impl Simulation {
             emergence: EmergenceState::new(42),
             emergence_branching: EmergenceBranchingState::default(),
             emergence_sample: None,
+            substrate: civ_physics_substrate::PhysicsFields::with_init(
+                civ_physics_substrate::GridDescriptor::new(16, 16, 16)
+                    .expect("16³ grid is well-defined and small"),
+                0.0,
+            ),
+            last_substrate_report: Some(civ_physics_substrate::EvolveReport {
+                conservation: civ_physics_substrate::Totals {
+                    T: 0.0, M: 0.0, E: 0.0, F: 0.0, P: 0.0, B: 0.0,
+                },
+                alpha: 0.0,
+                beta: 0.0,
+                gamma: 0.0,
+            }),
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -772,6 +795,19 @@ impl Simulation {
             emergence: EmergenceState::new(seed),
             emergence_branching: EmergenceBranchingState::default(),
             emergence_sample: None,
+            substrate: civ_physics_substrate::PhysicsFields::with_init(
+                civ_physics_substrate::GridDescriptor::new(16, 16, 16)
+                    .expect("16³ grid is well-defined and small"),
+                0.0,
+            ),
+            last_substrate_report: Some(civ_physics_substrate::EvolveReport {
+                conservation: civ_physics_substrate::Totals {
+                    T: 0.0, M: 0.0, E: 0.0, F: 0.0, P: 0.0, B: 0.0,
+                },
+                alpha: 0.0,
+                beta: 0.0,
+                gamma: 0.0,
+            }),
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -1230,6 +1266,14 @@ impl Simulation {
         self.phase_compact();
         self.phase_buildings();
         self.phase_diffusion();
+        // ADR-020 / L5-115: wire the dormant emergence tail into the tick.
+        // `phase_substrate` advances the shared physics fields (Sprint 1 of
+        // PHYS-COUPLING-SUBSTRATE-001 §7.1); `phase_life` rolls up per-cluster
+        // needs; `phase_emergence` runs the genetics/culture/social/psyche/
+        // legends/civ-ai emergence steps.
+        self.phase_substrate();
+        self.phase_life();
+        self.phase_emergence();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -1533,6 +1577,16 @@ impl Simulation {
             count_civilians(&self.world) as u32
         );
         self.last_cohort_stats = Some(wardrobe_stats);
+    }
+
+    /// Physics-substrate phase (ADR §7.1) — evolve the shared
+    /// T/M/E/F/P/B fields on the unified grid by one tick. Identity
+    /// operators in Sprint 1; real PDEs land in Sprint 2+. Must run
+    /// AFTER `phase_voxel` (which materialises the grid) and BEFORE
+    /// `phase_life`/`phase_emergence` (which read field gradients).
+    fn phase_substrate(&mut self) {
+        let report = self.substrate.evolve(1.0);
+        self.last_substrate_report = Some(report);
     }
 
     /// Production phase - buildings produce resources

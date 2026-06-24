@@ -157,6 +157,20 @@ impl Simulation {
         EmergenceState::new(seed)
     }
 
+    /// Needs/cluster rollup for emergent entities (ADR-020 / L5-115).
+    ///
+    /// Runs after `phase_citizen_lifecycle` and `phase_diffusion`. Recomputes
+    /// per-cluster hunger, shelter, and population aggregates so the
+    /// emergence layer can read them deterministically without re-iterating
+    /// the world. Sprint 1 ships this as a no-op; Sprint 2 fills in the
+    /// actual rollup once cluster storage lands in the substrate.
+    pub(crate) fn phase_life(&mut self) {
+        // No-op for Sprint 1: emergence_ensure_genomes + emergence_culture
+        // already recompute the cluster_ids map from `ClusterMember` queries,
+        // so per-cluster rollup is deferred until the substrate exposes a
+        // typed hook (PHYS-COUPLING-SUBSTRATE-001 §5).
+    }
+
     /// MOAT emergence — genetics, culture, social, psyche, legends, civ-ai.
     ///
     /// Runs after [`Self::phase_life`] so needs/clusters are current.

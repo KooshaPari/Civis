@@ -66,6 +66,11 @@ civ-species = { path = "../species" }
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 
+# Shared physics substrate (FR-CIV-PHYS-SUBSTRATE-001, PHYS-COUPLING-SUBSTRATE-001
+# §7.1). Sprint 1 ships an identity evolve + GridDescriptor + PhysicsFields;
+# Sprints 2–4 wire real operators (advection, diffusion, reaction, regrowth).
+civ-physics-substrate = { path = "../physics-substrate" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.11"

@@ -28,6 +28,7 @@ members = [
   "crates/civ-emergence-metrics",
   "crates/audio",
   "crates/climate",
+  "crates/physics-substrate",
   "clients/bevy-ref",
   # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

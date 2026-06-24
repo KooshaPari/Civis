@@ -68,11 +68,26 @@ fn age_label_for_mtime_does_not_panic() {
 // ── parse_replay_path ────────────────────────────────────────────────────────
 
 #[test]
-fn parse_replay_path_accepts_nonempty_string() {
-    let params = json!({ "path": "/saves/my.civreplay" });
+fn parse_replay_path_accepts_relative_path() {
+    // Only relative paths without parent segments are accepted.
+    let params = json!({ "path": "saves/my.civreplay" });
     assert_eq!(
         parse_replay_path(Some(&params)).unwrap(),
-        "/saves/my.civreplay"
+        "saves/my.civreplay"
+    );
+}
+
+#[test]
+fn parse_replay_path_rejects_absolute_and_parent_segments() {
+    // Absolute paths must be rejected (security: arbitrary-file-read).
+    assert!(
+        parse_replay_path(Some(&json!({ "path": "/saves/my.civreplay" }))).is_err(),
+        "absolute paths must be rejected"
+    );
+    // Parent segments must be rejected (path traversal).
+    assert!(
+        parse_replay_path(Some(&json!({ "path": "../etc/passwd" }))).is_err(),
+        "parent segments must be rejected"
     );
 }
 

@@ -210,8 +210,10 @@ pub struct JsonRpcResponse {
     /// Echoes the request id.
     pub id: RequestId,
     /// Present on success.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
     /// Present on failure.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<JsonRpcError>,
 }
 
@@ -1066,16 +1068,18 @@ pub fn parse_load_scenario_params(
     Ok((preset, seed))
 }
 
-/// Parse `sim.reset` `seed` param.
+/// Parse `sim.reset` `seed` param (optional; defaults to 0 when absent).
 pub fn parse_reset_seed(params: Option<&Value>) -> Result<u64, JsonRpcError> {
-    params
-        .and_then(|p| p.get("seed"))
-        .and_then(|v| v.as_u64())
-        .ok_or(JsonRpcError {
+    // If seed key is present it must be a valid u64; if absent or params is
+    // None the seed defaults to 0 so callers can omit it entirely.
+    match params.and_then(|p| p.get("seed")) {
+        None => Ok(0),
+        Some(v) => v.as_u64().ok_or(JsonRpcError {
             code: error_code::INVALID_PARAMS,
             message: "Invalid params: expected unsigned integer \"seed\"".to_owned(),
             data: None,
-        })
+        }),
+    }
 }
 
 /// Parsed `sim.set_policy` params.
@@ -3357,8 +3361,10 @@ mod tests {
     fn parse_reset_seed_extracts_u64() {
         use serde_json::json;
         assert_eq!(parse_reset_seed(Some(&json!({"seed": 42}))).unwrap(), 42);
-        assert!(parse_reset_seed(None).is_err());
-        assert!(parse_reset_seed(Some(&json!({}))).is_err());
+        // seed is optional — None params and missing key both default to 0.
+        assert_eq!(parse_reset_seed(None).unwrap(), 0);
+        assert_eq!(parse_reset_seed(Some(&json!({}))).unwrap(), 0);
+        // A present but non-integer seed is still an error.
         assert!(parse_reset_seed(Some(&json!({"seed": "x"}))).is_err());
     }
 

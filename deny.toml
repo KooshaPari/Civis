@@ -108,6 +108,8 @@ allow = [
   "ISC",
   "Zlib",
   "MPL-2.0",
+  "BSL-1.0",           # Boost Software License 1.0 — permissive
+  "CDLA-Permissive-2.0", # Community Data License Agreement Permissive 2.0 — permissive / public-domain-equivalent
   "0BSD",
   "CC0-1.0",
   "Unicode-DFS-2016",

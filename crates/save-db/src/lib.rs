@@ -1,7 +1,8 @@
 //! Session-scoped SQLite metadata index for save files (CIV-1000 §9.2–9.3 MVP).
 
 use std::{
-    path::Path,
+    io::Read,
+    path::{Path, PathBuf},
     sync::{Mutex, MutexGuard},
 };
 
@@ -42,6 +43,30 @@ pub enum SaveDbError {
     Sqlite(#[from] rusqlite::Error),
     #[error("lock poisoned")]
     LockPoisoned,
+    #[error("io error at {path}: {message}")]
+    Io {
+        path: PathBuf,
+        message: String,
+    },
+    #[error("save slot not found: {0}")]
+    NotFound(String),
+    #[error("save archive is empty or unreadable: {path}")]
+    EmptyArchive { path: PathBuf },
+}
+
+/// Saved archive bytes retrieved via [`SaveDb::restore`].
+///
+/// Contains the **raw bytes** recorded at `record_slot_save` time plus the
+/// metadata record so callers can route the bytes back to
+/// `civ_engine::CivSaveBundle::load_archive` (or a future save-format loader)
+/// without a second database round-trip.
+///
+/// Per `docs/design/SAVELOAD_HUD_PLAN.md` §2.4 (RESTORE tab) this is the
+/// payload the wire hands to the engine on `save.load`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaveArchive {
+    pub record: SessionSaveRecord,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -206,6 +231,97 @@ impl SaveDb {
         Ok(records)
     }
 
+    /// Locate a slot record by `slot_id` (the `id` returned from
+    /// [`SaveDb::record_slot_save`] / [`SaveDb::record_autosave`]).
+    fn find_record(&self, slot_id: &str) -> Result<SessionSaveRecord, SaveDbError> {
+        let conn = self.conn()?;
+
+        let mut slot_stmt = conn.prepare(
+            "SELECT id, session_id, slot_name, tick, file_path, byte_size, created_at
+             FROM save_slots WHERE id = ?1",
+        )?;
+        let slot_row = slot_stmt.query_row(params![slot_id], |row| {
+            Ok(SaveSlotRecord {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                slot_name: row.get(2)?,
+                tick: row.get(3)?,
+                file_path: row.get(4)?,
+                byte_size: row.get(5)?,
+                created_at: row.get(6)?,
+            })
+        });
+        match slot_row {
+            Ok(rec) => return Ok(SessionSaveRecord::Slot(rec)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => {}
+            Err(err) => return Err(SaveDbError::Sqlite(err)),
+        }
+
+        let mut auto_stmt = conn.prepare(
+            "SELECT id, session_id, tick, file_path, byte_size, created_at
+             FROM autosaves WHERE id = ?1",
+        )?;
+        let auto_row = auto_stmt.query_row(params![slot_id], |row| {
+            Ok(AutosaveRecord {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                tick: row.get(2)?,
+                file_path: row.get(3)?,
+                byte_size: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        });
+        match auto_row {
+            Ok(rec) => Ok(SessionSaveRecord::Autosave(rec)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                Err(SaveDbError::NotFound(slot_id.to_owned()))
+            }
+            Err(err) => Err(SaveDbError::Sqlite(err)),
+        }
+    }
+
+    /// Restore (load) a save by id — returns the raw archive bytes recorded
+    /// at save-time, plus the metadata record.
+    ///
+    /// This is the **wire half** of the save/load flow:
+    /// `record_slot_save` → `list_for_session` → `restore(slot_id)` →
+    /// `civ_engine::CivSaveBundle::load_archive` (the caller hands the bytes
+    /// back to the engine, keeping `civ-save-db` substrate-neutral).
+    ///
+    /// Charter-required per `emergence-charter.md:24-27`: no silent data loss
+    /// on quit/restore. The return type makes the byte payload explicit so
+    /// the server can wrap restore-with-autosave atomically.
+    pub fn restore(&self, slot_id: &str) -> Result<SaveArchive, SaveDbError> {
+        let record = self.find_record(slot_id)?;
+        let path = match &record {
+            SessionSaveRecord::Slot(r) => PathBuf::from(&r.file_path),
+            SessionSaveRecord::Autosave(r) => PathBuf::from(&r.file_path),
+        };
+        let bytes = read_archive_bytes(&path)?;
+        Ok(SaveArchive { record, bytes })
+    }
+
+    /// Restore a manual slot by `(session_id, slot_name)`. Convenience for
+    /// the JSON-RPC `save.load { slot_name }` shape.
+    pub fn restore_slot(
+        &self,
+        session_id: &str,
+        slot_name: &str,
+    ) -> Result<SaveArchive, SaveDbError> {
+        let conn = self.conn()?;
+        let id: Option<String> = conn
+            .query_row(
+                "SELECT id FROM save_slots WHERE session_id = ?1 AND slot_name = ?2",
+                params![session_id, slot_name],
+                |row| row.get(0),
+            )
+            .ok();
+        let id = id.ok_or_else(|| {
+            SaveDbError::NotFound(format!("{session_id}::{slot_name}"))
+        })?;
+        self.restore(&id)
+    }
+
     pub fn evict_autosaves(
         &self,
         session_id: &str,
@@ -235,6 +351,28 @@ impl SaveDb {
     fn conn(&self) -> Result<MutexGuard<'_, Connection>, SaveDbError> {
         self.conn.lock().map_err(|_| SaveDbError::LockPoisoned)
     }
+}
+
+/// Read the save archive bytes from `path`. Returns
+/// [`SaveDbError::EmptyArchive`] when the file is missing or zero-length —
+/// charter: never hand an empty payload to the engine loader.
+fn read_archive_bytes(path: &Path) -> Result<Vec<u8>, SaveDbError> {
+    let mut file = std::fs::File::open(path).map_err(|err| SaveDbError::Io {
+        path: path.to_path_buf(),
+        message: err.to_string(),
+    })?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)
+        .map_err(|err| SaveDbError::Io {
+            path: path.to_path_buf(),
+            message: err.to_string(),
+        })?;
+    if buf.is_empty() {
+        return Err(SaveDbError::EmptyArchive {
+            path: path.to_path_buf(),
+        });
+    }
+    Ok(buf)
 }
 
 /// Format `session.saved.v1` payload JSON for the event bus (EVENT_TAXONOMY).
@@ -357,5 +495,74 @@ mod tests {
         assert_eq!(value["slot"], "slot-1");
         assert_eq!(value["tick"], 42);
         assert_eq!(value["byte_size"], 2048);
+    }
+
+    /// PHASE-1 round-trip test (SAVELOAD_HUD_PLAN §3 / §5):
+    /// write archive bytes → `record_slot_save` → `list_for_session` →
+    /// `restore(id)` → assert the bytes round-trip byte-identical.
+    #[test]
+    fn record_save_list_restore_roundtrip_bytes_match() {
+        let (dir, path) = temp_db();
+        let db = SaveDb::open(&path).expect("open db");
+
+        let archive_bytes: Vec<u8> = (0..1024u32).map(|i| (i & 0xFF) as u8).collect();
+        let archive_path = dir.path().join("slot-1.civsave.zst");
+        std::fs::write(&archive_path, &archive_bytes).expect("write archive");
+
+        let id = db
+            .record_slot_save(
+                "sess-roundtrip",
+                "slot-1",
+                4242,
+                archive_path.to_str().expect("utf8 path"),
+                archive_bytes.len() as u64,
+            )
+            .expect("record slot save");
+
+        let listed = db
+            .list_for_session("sess-roundtrip")
+            .expect("list for session");
+        assert_eq!(listed.len(), 1, "exactly one record after one save");
+        let SessionSaveRecord::Slot(rec) = &listed[0] else {
+            panic!("expected slot record, got autosave");
+        };
+        assert_eq!(rec.id, id, "list returns the same id we recorded");
+        assert_eq!(rec.tick, 4242);
+
+        let archive = db.restore(&id).expect("restore by id");
+        assert_eq!(
+            archive.bytes,
+            archive_bytes,
+            "restored bytes must match what we wrote"
+        );
+        assert_eq!(archive.bytes.len() as i64, rec.byte_size);
+
+        // restore_slot convenience lookup also works.
+        let by_name = db
+            .restore_slot("sess-roundtrip", "slot-1")
+            .expect("restore_slot by name");
+        assert_eq!(by_name.bytes, archive_bytes);
+    }
+
+    /// PHASE-1 round-trip test (SAVELOAD_HUD_PLAN §3 / §5):
+    /// the restore half also covers autosaves — `F5` quick-load hits this
+    /// path when the panel opens pre-filtered to the most-recent autosave.
+    #[test]
+    fn restore_returns_not_found_for_unknown_id() {
+        let (_dir, path) = temp_db();
+        let db = SaveDb::open(&path).expect("open db");
+        let err = db.restore("not-a-real-id").expect_err("must not find");
+        assert!(
+            matches!(err, SaveDbError::NotFound(ref id) if id == "not-a-real-id"),
+            "expected NotFound, got {err:?}"
+        );
+
+        let err = db
+            .restore_slot("ghost-session", "ghost-slot")
+            .expect_err("must not find");
+        assert!(
+            matches!(err, SaveDbError::NotFound(_)),
+            "expected NotFound, got {err:?}"
+        );
     }
 }

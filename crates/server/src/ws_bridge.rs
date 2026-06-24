@@ -121,6 +121,11 @@ pub struct WsBridgeConfig {
     pub tick_broadcast_format: TickBroadcastFormat,
     /// Directory for `.civsave.zst` slot files (created on bridge start).
     pub saves_dir: PathBuf,
+    /// Directory for `.civreplay` files (created on bridge start).
+    /// `sim.save_replay` / `sim.load_replay` paths are validated as
+    /// relative and resolved under this directory with containment
+    /// enforced via canonicalize (see `resolve_replay_path`).
+    pub replays_dir: PathBuf,
 }
 
 impl Default for WsBridgeConfig {
@@ -131,6 +136,7 @@ impl Default for WsBridgeConfig {
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::default(),
             saves_dir: PathBuf::from("saves"),
+            replays_dir: PathBuf::from("replays"),
         }
     }
 }
@@ -180,6 +186,7 @@ struct AppState {
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
     saves_dir: PathBuf,
+    replays_dir: PathBuf,
     save_db: Arc<SaveDb>,
     session_id: String,
 }
@@ -226,6 +233,7 @@ async fn serve_ws_bridge(
     sim: Arc<Mutex<Simulation>>,
 ) {
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
+    std::fs::create_dir_all(&config.replays_dir).expect("create replays directory");
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
     let save_db = Arc::new(
         SaveDb::open(&save_db_path)
@@ -245,6 +253,7 @@ async fn serve_ws_bridge(
         require_role: config.require_role,
         tick_broadcast_format: config.tick_broadcast_format,
         saves_dir: config.saves_dir,
+        replays_dir: config.replays_dir,
         save_db,
         session_id,
     };
@@ -851,31 +860,56 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::SaveReplay { path } => {
+            // `parse_replay_path` already rejected absolute paths, `..`
+            // segments, prefixes, and root. Resolve the path under the
+            // bridge's `replays_dir` with canonicalize+containment to
+            // defeat symlink escape. Any failure becomes a clear error
+            // response — no silent fallback to `path` as-is.
+            let resolved = match crate::jsonrpc::resolve_replay_path(&state.replays_dir, &path) {
+                Ok(resolved) => resolved,
+                Err(err) => {
+                    tracing::error!("sim.save_replay rejected path {path:?}: {err}");
+                    set_replay_io_error(response, format!("rejected path {path:?}: {err}"));
+                    return;
+                }
+            };
             let save_result = {
                 let sim = state.sim.lock().await;
-                sim.save_replay(&path)
+                sim.save_replay(&resolved)
             };
             if let Err(err) = save_result {
                 tracing::error!("sim.save_replay failed: {err}");
                 set_replay_io_error(response, err.to_string());
             }
         }
-        DispatchEffect::LoadReplay { path } => match Simulation::load_replay_from_file(&path) {
-            Ok(loaded) => {
-                let tick = loaded.state.tick;
-                *state.sim.lock().await = loaded;
-                state.tick.store(tick, Ordering::SeqCst);
-                if let Some(result) = response.result.as_mut() {
-                    if let Some(obj) = result.as_object_mut() {
-                        obj.insert("tick".to_owned(), serde_json::json!(tick));
+        DispatchEffect::LoadReplay { path } => {
+            // Same containment check as SaveReplay: the path must resolve
+            // inside `replays_dir` after canonicalize.
+            let resolved = match crate::jsonrpc::resolve_replay_path(&state.replays_dir, &path) {
+                Ok(resolved) => resolved,
+                Err(err) => {
+                    tracing::error!("sim.load_replay rejected path {path:?}: {err}");
+                    set_replay_io_error(response, format!("rejected path {path:?}: {err}"));
+                    return;
+                }
+            };
+            match Simulation::load_replay_from_file(&resolved) {
+                Ok(loaded) => {
+                    let tick = loaded.state.tick;
+                    *state.sim.lock().await = loaded;
+                    state.tick.store(tick, Ordering::SeqCst);
+                    if let Some(result) = response.result.as_mut() {
+                        if let Some(obj) = result.as_object_mut() {
+                            obj.insert("tick".to_owned(), serde_json::json!(tick));
+                        }
                     }
                 }
+                Err(err) => {
+                    tracing::error!("sim.load_replay failed: {err}");
+                    set_replay_io_error(response, err.to_string());
+                }
             }
-            Err(err) => {
-                tracing::error!("sim.load_replay failed: {err}");
-                set_replay_io_error(response, err.to_string());
-            }
-        },
+        }
         DispatchEffect::ResetSimulation { seed } => {
             *state.sim.lock().await = Simulation::with_seed(seed);
             state.tick.store(0, Ordering::SeqCst);
@@ -1216,10 +1250,15 @@ mod tests {
         tick: u64,
         speed_multiplier: u32,
         require_role: bool,
-    ) -> AppState {
-        let saves_dir = PathBuf::from("test-saves");
-        let save_db = Arc::new(SaveDb::open_in_memory().expect("open save db"));
-        AppState {
+    ) -> (tempfile::TempDir, AppState) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let saves_dir = dir.path().join("saves");
+        std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let replays_dir = dir.path().join("replays");
+        std::fs::create_dir_all(&replays_dir).expect("replays dir");
+        let save_db_path = save_db_path_for_saves_dir(&saves_dir);
+        let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
+        let state = AppState {
             sim,
             tick: Arc::new(AtomicU64::new(tick)),
             speed_multiplier: Arc::new(AtomicU32::new(speed_multiplier)),
@@ -1231,9 +1270,11 @@ mod tests {
             require_role,
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir,
+            replays_dir,
             save_db,
             session_id: "test-session".to_string(),
-        }
+        };
+        (dir, state)
     }
 
     fn test_subscription_filter() -> Arc<tokio::sync::Mutex<SubscriptionFilter>> {
@@ -1850,7 +1891,7 @@ mod tests {
     async fn frame_bundle_is_deterministic_for_fixed_seed() {
         let make = || async {
             let sim = Arc::new(Mutex::new(Simulation::with_seed(11)));
-            let state = test_app_state(sim, 0, 1, false);
+            let (_dir, state) = test_app_state(sim, 0, 1, false);
             tick_once(&state).await.expect("tick");
             state.tick.load(Ordering::SeqCst)
         };
@@ -1862,7 +1903,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_invalid_json_returns_parse_error() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             "{not json",
@@ -1887,7 +1928,7 @@ mod tests {
             let guard = sim.lock().await;
             guard.snapshot().population
         };
-        let state = test_app_state(sim, 5, 1, false);
+        let (_dir, state) = test_app_state(sim, 5, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":7,"method":"sim.status","params":{}}"#,
@@ -1930,7 +1971,7 @@ mod tests {
                     .expect("hash chain root after tick"),
             )
         };
-        let state = test_app_state(sim, 5, 4, false);
+        let (_dir, state) = test_app_state(sim, 5, 4, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":8,"method":"sim.snapshot","params":{}}"#,
@@ -1982,7 +2023,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_subscribe_applies_frame_kind_filter() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(23)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let text = handle_jsonrpc_text(
@@ -2009,7 +2050,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_unsubscribe_restores_full_broadcast() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(24)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let filter = test_subscription_filter();
         let subscribe = handle_jsonrpc_text(
@@ -2039,7 +2080,7 @@ mod tests {
     #[tokio::test]
     async fn healthz_exposes_latest_tick() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(3)));
-        let state = test_app_state(sim, 123, 1, false);
+        let (_dir, state) = test_app_state(sim, 123, 1, false);
         let response = healthz(State(state)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -2061,7 +2102,7 @@ mod tests {
         let expected_tick = source.state.tick;
 
         let sim = Arc::new(Mutex::new(Simulation::with_seed(99)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_import(State(state.clone()), bytes.into())
             .await
             .expect("replay import")
@@ -2084,7 +2125,7 @@ mod tests {
     #[tokio::test]
     async fn replay_export_sets_octet_stream_and_attachment_headers() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(31)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let response = replay_export(State(state))
             .await
             .expect("replay export")
@@ -2109,7 +2150,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_policy_updates_simulation_policy() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = test_app_state(sim.clone(), 0, 1, false);
+        let (_dir, state) = test_app_state(sim.clone(), 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":1,"method":"sim.set_policy","params":{"scarcity_multiplier":3.0,"base_consumption_joules":500}}"#,
@@ -2143,7 +2184,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_set_speed_stores_multiplier() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":3,"method":"sim.set_speed","params":{"multiplier":4}}"#,
@@ -2167,7 +2208,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_get_speed_returns_stored_multiplier() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(5)));
-        let state = test_app_state(sim, 0, 1, false);
+        let (_dir, state) = test_app_state(sim, 0, 1, false);
         let mut connection_role = None;
         let set_text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":4,"method":"sim.set_speed","params":{"multiplier":8}}"#,
@@ -2200,7 +2241,7 @@ mod tests {
     #[tokio::test]
     async fn jsonrpc_sim_command_tick_rejects_wrong_role_when_enforced() {
         let sim = Arc::new(Mutex::new(Simulation::with_seed(9)));
-        let state = test_app_state(sim, 0, 1, true);
+        let (_dir, state) = test_app_state(sim, 0, 1, true);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":2,"method":"sim.command","params":{"action":"tick","role":"viewer"}}"#,
@@ -2230,7 +2271,7 @@ mod tests {
             guard.tick();
         }
         let saved_tick = sim.lock().await.state.tick;
-        let state = test_app_state(sim.clone(), saved_tick, 1, false);
+        let (_dir, state) = test_app_state(sim.clone(), saved_tick, 1, false);
         let mut connection_role = None;
         let text = handle_jsonrpc_text(
             r#"{"jsonrpc":"2.0","id":70,"method":"save.slot","params":{"slot_name":"slot-1"}}"#,

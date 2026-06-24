@@ -1073,7 +1073,7 @@ fn percolation_pass(
                 pending_saturation[idx] = pending_saturation[idx].saturating_sub(1);
                 pending_saturation[ni] = pending_saturation[ni].saturating_add(1);
                 grid.mark_dirty_cell(x, y, z);
-                grid.mark_dirty_cell(nxu, nyu, nzu);
+                grid.mark_dirty_cell(nx, ny, nz);
                 break 'outer;
             }
         }
@@ -1315,13 +1315,13 @@ fn step_with_parity(
                     next.insert(x + y * counts[0] + z * counts[0] * counts[1]);
                 }
             };
-            push(cx, cy, cz);
-            push(cx - 1, cy, cz);
-            push(cx + 1, cy, cz);
-            push(cx, cy - 1, cz);
-            push(cx, cy + 1, cz);
-            push(cx, cy, cz - 1);
-            push(cx, cy, cz + 1);
+            push(cx as i32, cy as i32, cz as i32);
+            push(cx as i32 - 1, cy as i32, cz as i32);
+            push(cx as i32 + 1, cy as i32, cz as i32);
+            push(cx as i32, cy as i32 - 1, cz as i32);
+            push(cx as i32, cy as i32 + 1, cz as i32);
+            push(cx as i32, cy as i32, cz as i32 - 1);
+            push(cx as i32, cy as i32, cz as i32 + 1);
         }
         grid.dirty_chunks = next;
     } else {

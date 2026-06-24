@@ -25,7 +25,7 @@ on:
 permissions:
   contents: read
 
-# Cancel in-progress runs for the same PR/branch when a new commit lands —
+# Cancel in-progress runs for the same PR/branch when a new commit lands â€”
 # keeps the queue short and feedback fast.
 concurrency:
   group: cargo-deny-${{ github.ref }}

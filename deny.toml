@@ -2,11 +2,11 @@
 # Docs: https://embarkstudios.github.io/cargo-deny/
 #
 # Sections:
-#   * [advisories] — pulls the RustSec advisory DB and fails on known vulns.
-#   * [bans]       — refuses duplicate crate versions and `*` dep specs.
-#   * [licenses]   — allow-list; any license outside the list fails the check.
-#   * [sources]    — refuses deps from registries/git sources we do not trust.
-#   * [graph]      — sanity-checks the dep graph (cycles, features, etc).
+#   * [advisories] â€” pulls the RustSec advisory DB and fails on known vulns.
+#   * [bans]       â€” refuses duplicate crate versions and `*` dep specs.
+#   * [licenses]   â€” allow-list; any license outside the list fails the check.
+#   * [sources]    â€” refuses deps from registries/git sources we do not trust.
+#   * [graph]      â€” sanity-checks the dep graph (cycles, features, etc).
 #
 # Run locally with: `cargo deny check` (or `just deny`).
 
@@ -14,13 +14,13 @@
 # Path where the RustSec advisory-db is cloned. Defaults to ~/.cargo/advisory-db.
 # Pinned to $CARGO_HOME so the CI runner and the developer laptop share state.
 db-path = "$CARGO_HOME/advisory-db"
-# Fail the check on any unmaintained-warnings entry too — RustSec classifies
+# Fail the check on any unmaintained-warnings entry too â€” RustSec classifies
 # these as "unmaintained" but we treat them as warnings, not hard errors.
-unmaintained = "warn"
+unmaintained = "workspace"
 # Ignore advisories that do not have a patched version yet (workaround until
 # upstream fixes flow in). Anything not in this list is a hard error.
 ignore = [
-  # Example placeholder — add entries as `RUSTSEC-YYYY-NNNN` once triaged.
+  # Example placeholder â€” add entries as `RUSTSEC-YYYY-NNNN` once triaged.
 ]
 
 [bans]
@@ -33,13 +33,7 @@ multiple-versions = "warn"
 wildcards = "warn"
 # Highlight very-common crates that may have legitimate duplicate-version
 # issues we want to know about (serde, tokio, etc).
-highlight = [
-  "rustls",
-  "openssl",
-  "ring",
-  "bevy",
-  "wgpu",
-]
+highlight = "all"
 # Hard skip on duplicate version detection for these (vendored exceptions).
 skip = [
   # Add `name = "..."` entries when a known-good duplicate is required.
@@ -68,7 +62,7 @@ allow = [
   "CC0-1.0",
   "Unicode-DFS-2016",
   "Unicode-3.0",
-  "OpenSSL",          # used by rustls/openssl-sys stack — accept, do not silently absorb
+  "OpenSSL",          # used by rustls/openssl-sys stack â€” accept, do not silently absorb
   "NCSA",             # University of Illinois / NCSA (used by some llvm deps)
 ]
 # Confidence threshold for the SPDX matcher. `threshold = 1.0` is the strictest
@@ -77,14 +71,14 @@ confidence-threshold = 1.0
 
 [licenses.private]
 # If a workspace crate is private (no published license), treat as ignored
-# rather than failing — local crates are governed by LICENSE at repo root.
+# rather than failing â€” local crates are governed by LICENSE at repo root.
 ignore = true
 
 [licenses.clarify]
 # Required clarifications for ambiguous SPDX expressions. Useful when a crate
 # declares "MIT OR Apache-2.0" and we need the SPDX to be canonicalised before
-# the allow-list runs.
-# expressions = []
+# the allow-list runs. Empty by default â€” no clarifications required.
+clarify = []
 
 [licenses.copyleft]
 # Cargo-deny categorises strong/weak copyleft. Strong copyleft (GPL family) is
@@ -101,7 +95,7 @@ unknown-git = "deny"
 # Allow-list of acceptable registries. Only crates.io is whitelisted; private
 # registries / alt indexes would need to be added explicitly.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# Allow-list of acceptable git sources. Empty by default — every git dep must
+# Allow-list of acceptable git sources. Empty by default â€” every git dep must
 # be triaged and added with a reason comment.
 allow-git = []
 

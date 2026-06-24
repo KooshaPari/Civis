@@ -9,4 +9,5 @@ publish = false
 [dependencies]
 bevy_ecs = "0.18"
 bevy_math = "0.18"
-phenotype-voxel = { path = "../../../phenotype-voxel" }
+# Pin the same git revision as crates/voxel so CI resolves one kernel without a sibling checkout.
+phenotype-voxel = { package = "phenotype-voxel", git = "https://github.com/KooshaPari/phenotype-voxel", rev = "a4d115898c0db4afe77074fe51a302b1c09d4478" }

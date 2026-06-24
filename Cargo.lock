@@ -2360,6 +2360,7 @@ dependencies = [
 name = "civ-build"
 version = "0.1.0"
 dependencies = [
+ "civ-economy",
  "civ-voxel",
  "proptest",
  "rand 0.8.6",
@@ -2571,6 +2572,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "civ-agents",
+ "civ-build",
  "civ-economy",
  "civ-emergence-metrics",
  "civ-engine",
@@ -2633,7 +2635,7 @@ dependencies = [
  "bincode-next",
  "criterion 0.5.1",
  "glam 0.30.10",
- "phenotype-voxel 0.1.0 (git+https://github.com/KooshaPari/phenotype-voxel?rev=a4d115898c0db4afe77074fe51a302b1c09d4478)",
+ "phenotype-voxel",
  "proptest",
  "ron 0.8.1",
  "serde",
@@ -4366,6 +4368,9 @@ name = "glam"
 version = "0.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8babf46d4c1c9d92deac9f7be466f76dfc4482b6452fc5024b5e8daf6ffeb3ee"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "glam"
@@ -6399,17 +6404,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "phenotype-voxel"
-version = "0.1.0"
+name = "phenotype-gfx"
+version = "0.2.0"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?rev=7ed27211554f5ba25d3a79c54c73262db6e160b1#7ed27211554f5ba25d3a79c54c73262db6e160b1"
+dependencies = [
+ "bytemuck",
+ "glam 0.29.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
 
 [[package]]
 name = "phenotype-voxel"
-version = "0.1.0"
-source = "git+https://github.com/KooshaPari/phenotype-voxel?rev=a4d115898c0db4afe77074fe51a302b1c09d4478#a4d115898c0db4afe77074fe51a302b1c09d4478"
+version = "0.2.0"
+source = "git+https://github.com/KooshaPari/phenotype-gfx.git?rev=7ed27211554f5ba25d3a79c54c73262db6e160b1#7ed27211554f5ba25d3a79c54c73262db6e160b1"
 dependencies = [
- "bytemuck",
- "serde",
- "thiserror 1.0.69",
+ "phenotype-gfx",
 ]
 
 [[package]]
@@ -8807,7 +8819,7 @@ version = "0.1.0"
 dependencies = [
  "bevy_ecs",
  "bevy_math",
- "phenotype-voxel 0.1.0",
+ "phenotype-voxel",
 ]
 
 [[package]]

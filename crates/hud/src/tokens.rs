@@ -176,14 +176,30 @@ mod tests {
 
     #[test]
     fn every_hex_is_unique() {
+        // The design language explicitly aliases `Warn` to `Amber` (both
+        // render `#F2B33D` — "caution (shares AMBER)" per
+        // `ui-design-language.md`). The check therefore counts unique hex
+        // values and asserts that exactly one duplication exists (the
+        // documented alias).
         let mut seen = std::collections::HashSet::new();
+        let mut duplicates: Vec<&'static str> = Vec::new();
         for (_, token) in CANONICAL_TOKENS {
-            assert!(
-                seen.insert(token.hex),
-                "duplicate canonical hex {}",
-                token.hex
-            );
+            if !seen.insert(token.hex) {
+                duplicates.push(token.hex);
+            }
         }
+        assert_eq!(
+            duplicates.len(),
+            1,
+            "expected exactly one documented Warn↔Amber alias, found {} duplicates: {:?}",
+            duplicates.len(),
+            duplicates
+        );
+        assert!(
+            duplicates.contains(&"#F2B33D"),
+            "the documented alias must be #F2B33D (Amber/Warn); got {:?}",
+            duplicates
+        );
     }
 
     #[test]

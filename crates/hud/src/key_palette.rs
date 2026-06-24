@@ -34,22 +34,30 @@ pub enum KeyId {
 }
 
 /// One keycap definition.
+///
+/// Fields are `String` (not `&'static str`) so the struct is `serde`-friendly:
+/// serde's `'de` lifetime cannot outlive `'static`, so borrowed-string fields
+/// break `Deserialize`. The `KeycapDef::new` constructor still accepts
+/// `&'static str` literals so the default palette stays verbatim from
+/// `GOD_TOOLS_SANDBOX.md` §2.2.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeycapDef {
     pub id: KeyId,
     /// Single uppercase character the keycap glyph renders (e.g. `"Q"`).
-    pub glyph: &'static str,
+    pub glyph: String,
     /// One-word verb shown on the keycap (`Speed`, `Pause`, `Lightning`…).
-    pub verb: &'static str,
+    pub verb: String,
     /// Optional secondary verb (e.g. `"Raise/Lower"` for W).
-    pub verb_secondary: Option<&'static str>,
+    pub verb_secondary: Option<String>,
     /// Whether this keycap is the currently-active verb (1px `HOLO_GLOW`
     /// edge + 3px halo per §4.2).
     pub active: bool,
 }
 
 impl KeycapDef {
-    pub const fn new(
+    /// Construct a `KeycapDef` from `&'static str` literals (the default
+    /// palette pattern). Widens to `String` so the value is `serde`-friendly.
+    pub fn new(
         id: KeyId,
         glyph: &'static str,
         verb: &'static str,
@@ -57,9 +65,9 @@ impl KeycapDef {
     ) -> Self {
         Self {
             id,
-            glyph,
-            verb,
-            verb_secondary,
+            glyph: glyph.to_owned(),
+            verb: verb.to_owned(),
+            verb_secondary: verb_secondary.map(str::to_owned),
             active: false,
         }
     }
@@ -88,19 +96,16 @@ impl Default for KeycapPalette {
     }
 }
 
-/// Default palette constant — frozen so other crates can `const`-compare.
-pub const KEYCAP_PALETTE_DEFAULT: KeycapPalette = KeycapPalette {
-    keys: [
-        KeycapDef::new(KeyId::Q, "Q", "Select", None),
-        KeycapDef::new(KeyId::W, "W", "Raise", Some("Lower")),
-        KeycapDef::new(KeyId::E, "E", "Material", None),
-        KeycapDef::new(KeyId::R, "R", "Spawn", None),
-        KeycapDef::new(KeyId::T, "T", "Land", Some("Ocean")),
-        KeycapDef::new(KeyId::A, "A", "Pause", None),
-        KeycapDef::new(KeyId::S, "S", "Speed", None),
-        KeycapDef::new(KeyId::F, "F", "Lightning", None),
-    ],
-};
+/// Default palette accessor — frozen so other crates can compare against it.
+///
+/// Implemented as a function (not a `const`) because the inner `KeycapDef`
+/// fields are owned `String`s (for `serde` `Deserialize` compatibility —
+/// serde's `'de` lifetime cannot outlive `'static`). Callers that need a
+/// stable default should cache the result themselves.
+#[must_use]
+pub fn keycap_palette_default() -> KeycapPalette {
+    KeycapPalette::default()
+}
 
 impl KeycapPalette {
     /// Mark a single keycap as active (1px teal edge + 3px halo).
@@ -146,7 +151,7 @@ mod tests {
         assert_eq!(p.keys[0].glyph, "Q");
         assert_eq!(p.keys[0].verb, "Select");
         assert_eq!(p.keys[1].glyph, "W");
-        assert_eq!(p.keys[1].verb_secondary, Some("Lower"));
+        assert_eq!(p.keys[1].verb_secondary.as_deref(), Some("Lower"));
         assert_eq!(p.keys[5].glyph, "A");
         assert_eq!(p.keys[5].verb, "Pause");
         assert_eq!(p.keys[6].glyph, "S");
@@ -169,8 +174,8 @@ mod tests {
 
     #[test]
     fn const_default_matches_default_constructor() {
-        assert_eq!(KEYCAP_PALETTE_DEFAULT.keys.len(), 8);
-        let mut p = KeycapPalette::default();
+        assert_eq!(keycap_palette_default().keys.len(), 8);
+        let p = KeycapPalette::default();
         // Default starts with nothing active.
         assert!(p.keys.iter().all(|k| !k.active));
     }

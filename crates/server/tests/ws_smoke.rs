@@ -1831,6 +1831,7 @@ async fn ws_jsonrpc_spawn_palette_all_kinds_accepted() {
 #[tokio::test]
 async fn ws_jsonrpc_save_slot_roundtrip() {
     let saves_dir = tempfile::tempdir().expect("temp saves dir");
+    let replays_dir = tempfile::tempdir().expect("temp replays dir");
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(42)));
     {
         let mut guard = sim.lock().await;
@@ -1847,6 +1848,7 @@ async fn ws_jsonrpc_save_slot_roundtrip() {
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir: saves_dir.path().to_path_buf(),
+            replays_dir: replays_dir.path().to_path_buf(),
         },
     )
     .await;

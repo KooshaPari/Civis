@@ -146,6 +146,11 @@ impl GridDescriptor {
 /// All six `Vec<f32>`s are the same length (`grid.cell_count()`); the
 /// constructor enforces that. Storage is flat (row-major, x-fastest) for
 /// cache-friendly scans; chunking is a future optimization.
+///
+/// Field names use the physical-symbol identifiers (`T`/`M`/`E`/`F`/`P`/`B`)
+/// verbatim from `PHYSICS_COUPLING_SUBSTRATE.md` so that emergent-layer code
+/// reads the same notation as the spec.
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PhysicsFields {
     /// Grid descriptor (shared by all six fields).
@@ -249,6 +254,7 @@ impl PhysicsFields {
 }
 
 /// Per-field totals — the conservation report.
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Totals {
     /// Σ T (K·cells).

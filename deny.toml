@@ -74,6 +74,10 @@ confidence-threshold = 1.0
 # rather than failing â€” local crates are governed by LICENSE at repo root.
 ignore = true
 
+[licenses.clarify]
+# Required clarifications for ambiguous SPDX expressions. Useful when a crate
+# declares "MIT OR Apache-2.0" and we need the SPDX to be canonicalised before
+# the allow-list runs. Empty by default â€” no clarifications required.
 clarify = []
 
 [licenses.copyleft]

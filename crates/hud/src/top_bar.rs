@@ -78,19 +78,44 @@ impl Default for SimSpeed {
 ///
 /// The host client renders: `◆ POP 12.4K` where `POP` is `label_uppercase`,
 /// `12.4K` is the formatted value, and `◆` is the chip's `glyph`.
+///
+/// `label` and `glyph` are owned `String`s (not `&'static str`) so the struct
+/// is `serde`-friendly (serde's `'de` lifetime cannot outlive `'static`).
+/// The default constructor still feeds in `&'static str` literals from the
+/// design recipe.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChipValue {
     /// Short uppercase label (`POP`, `ERA`, `TREASURY`, `YEAR`, `TIME`,
     /// `SPEED`, `AUTO`).
-    pub label: &'static str,
+    pub label: String,
     /// Single-character glyph rendered before the label (`◆ POP`, `⌖ ERA`).
-    pub glyph: &'static str,
+    pub glyph: String,
     /// Render-ready value (already formatted: `12.4K`, `IRON`, `14:32`).
     pub value: String,
     /// Token used for the label colour.
     pub label_token: TokenName,
     /// Token used for the value colour.
     pub value_token: TokenName,
+}
+
+impl ChipValue {
+    /// Construct a `ChipValue` from `&'static str` literals (the default
+    /// palette pattern). Widens to `String` for serde compatibility.
+    pub fn from_static(
+        label: &'static str,
+        glyph: &'static str,
+        value: &'static str,
+        label_token: TokenName,
+        value_token: TokenName,
+    ) -> Self {
+        Self {
+            label: label.to_owned(),
+            glyph: glyph.to_owned(),
+            value: value.to_owned(),
+            label_token,
+            value_token,
+        }
+    }
 }
 
 /// Top-bar chip set. Always-on when the HUD is visible.
@@ -109,50 +134,50 @@ impl Default for TopBarChips {
     fn default() -> Self {
         Self {
             pop: ChipValue {
-                label: "POP",
-                glyph: "◆",
+                label: "POP".to_owned(),
+                glyph: "◆".to_owned(),
                 value: "0".to_owned(),
                 label_token: TokenName::TextMid,
                 value_token: TokenName::TextHi,
             },
             era: ChipValue {
-                label: "ERA",
-                glyph: "⌖",
+                label: "ERA".to_owned(),
+                glyph: "⌖".to_owned(),
                 value: "—".to_owned(),
                 label_token: TokenName::TextMid,
                 value_token: TokenName::TextHi,
             },
             treasury: ChipValue {
-                label: "TREAS",
-                glyph: "⛁",
+                label: "TREAS".to_owned(),
+                glyph: "⛁".to_owned(),
                 value: "0".to_owned(),
                 label_token: TokenName::TextMid,
                 value_token: TokenName::TextHi,
             },
             year: ChipValue {
-                label: "YEAR",
-                glyph: "◷",
+                label: "YEAR".to_owned(),
+                glyph: "◷".to_owned(),
                 value: "—".to_owned(),
                 label_token: TokenName::TextLow,
                 value_token: TokenName::TextMid,
             },
             time: ChipValue {
-                label: "TIME",
-                glyph: "☼",
+                label: "TIME".to_owned(),
+                glyph: "☼".to_owned(),
                 value: "00:00".to_owned(),
                 label_token: TokenName::TextLow,
                 value_token: TokenName::TextMid,
             },
             speed: ChipValue {
-                label: "SPEED",
-                glyph: "●",
+                label: "SPEED".to_owned(),
+                glyph: "●".to_owned(),
                 value: "1×".to_owned(),
                 label_token: TokenName::TextLow,
                 value_token: TokenName::Neon,
             },
             auto: ChipValue {
-                label: "AUTO",
-                glyph: "💾",
+                label: "AUTO".to_owned(),
+                glyph: "💾".to_owned(),
                 value: "—".to_owned(),
                 label_token: TokenName::TextLow,
                 value_token: TokenName::TextLow,

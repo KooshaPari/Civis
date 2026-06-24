@@ -20,7 +20,7 @@ pub mod tile_inspector;
 pub mod tokens;
 pub mod top_bar;
 
-pub use key_palette::{KeyId, KeycapDef, KeycapPalette, KEYCAP_PALETTE_DEFAULT};
+pub use key_palette::{KeyId, KeycapDef, KeycapPalette, keycap_palette_default};
 pub use tile_inspector::{TileInspector, CELL_NONE};
 pub use tokens::{Token, TokenName, CANONICAL_TOKENS, TOKEN_AUDIT};
 pub use top_bar::{

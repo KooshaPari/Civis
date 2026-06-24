@@ -303,22 +303,26 @@ impl SaveDb {
 
     /// Restore a manual slot by `(session_id, slot_name)`. Convenience for
     /// the JSON-RPC `save.load { slot_name }` shape.
+    ///
+    /// Note: the SQLite mutex is **not** re-entrant, so this helper resolves
+    /// the `id` → drops the guard → then forwards to [`SaveDb::restore`].
+    /// Forgetting the explicit drop is a deadlock (caught by the
+    /// `record_save_list_restore_roundtrip_bytes_match` test).
     pub fn restore_slot(
         &self,
         session_id: &str,
         slot_name: &str,
     ) -> Result<SaveArchive, SaveDbError> {
-        let conn = self.conn()?;
-        let id: Option<String> = conn
-            .query_row(
+        let id: Option<String> = {
+            let conn = self.conn()?;
+            conn.query_row(
                 "SELECT id FROM save_slots WHERE session_id = ?1 AND slot_name = ?2",
                 params![session_id, slot_name],
                 |row| row.get(0),
             )
-            .ok();
-        let id = id.ok_or_else(|| {
-            SaveDbError::NotFound(format!("{session_id}::{slot_name}"))
-        })?;
+            .ok()
+        };
+        let id = id.ok_or_else(|| SaveDbError::NotFound(format!("{session_id}::{slot_name}")))?;
         self.restore(&id)
     }
 
@@ -505,7 +509,10 @@ mod tests {
         let (dir, path) = temp_db();
         let db = SaveDb::open(&path).expect("open db");
 
-        let archive_bytes: Vec<u8> = (0..1024u32).map(|i| (i & 0xFF) as u8).collect();
+        // 64-byte payload — keep the assertion meaningful (multi-byte
+        // sentinel values) but small enough that the SQLite + filesystem
+        // roundtrip completes within a normal test budget on Windows.
+        let archive_bytes: Vec<u8> = (0..64u8).collect();
         let archive_path = dir.path().join("slot-1.civsave.zst");
         std::fs::write(&archive_path, &archive_bytes).expect("write archive");
 
@@ -528,20 +535,46 @@ mod tests {
         };
         assert_eq!(rec.id, id, "list returns the same id we recorded");
         assert_eq!(rec.tick, 4242);
+        assert_eq!(rec.byte_size as usize, archive_bytes.len());
 
         let archive = db.restore(&id).expect("restore by id");
         assert_eq!(
-            archive.bytes,
-            archive_bytes,
+            archive.bytes, archive_bytes,
             "restored bytes must match what we wrote"
         );
-        assert_eq!(archive.bytes.len() as i64, rec.byte_size);
+        assert_eq!(archive.record, listed[0], "restore returns same record");
 
-        // restore_slot convenience lookup also works.
+        // restore_slot convenience lookup also works (covers the
+        // JSON-RPC `save.load { slot_name }` shape from
+        // SAVELOAD_HUD_PLAN §2.4).
         let by_name = db
             .restore_slot("sess-roundtrip", "slot-1")
             .expect("restore_slot by name");
         assert_eq!(by_name.bytes, archive_bytes);
+        assert_eq!(by_name.record, listed[0]);
+
+        // And the listing stays at exactly one entry — record_slot_save
+        // upserts on `(session_id, slot_name)`, so a second save to the
+        // same slot_name does not create a second row.
+        let id2 = db
+            .record_slot_save(
+                "sess-roundtrip",
+                "slot-1",
+                4243,
+                archive_path.to_str().expect("utf8 path"),
+                archive_bytes.len() as u64,
+            )
+            .expect("upsert same slot_name");
+        let after = db
+            .list_for_session("sess-roundtrip")
+            .expect("list after upsert");
+        assert_eq!(after.len(), 1, "upsert keeps the row count at 1");
+        let SessionSaveRecord::Slot(rec2) = &after[0] else {
+            panic!("expected slot record");
+        };
+        assert_eq!(rec2.tick, 4243, "upsert updates the tick");
+        assert_ne!(rec2.id, rec.id, "upsert rotates the row id");
+        assert_ne!(id2, id, "record_slot_save returns a fresh id on upsert");
     }
 
     /// PHASE-1 round-trip test (SAVELOAD_HUD_PLAN §3 / §5):

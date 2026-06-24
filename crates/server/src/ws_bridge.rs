@@ -21,7 +21,7 @@ use axum::{
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id, Citizen, CivSaveBundle,
-    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, JobType, Simulation,
+    scenario::{load_scenario, preset_scenario_path}, DiplomacyKind, EcsWorld, JobType, Simulation,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -31,6 +31,7 @@ use civ_protocol_3d::{
     Frame3d, GenomeSummary3d, Government3d, TechEvent3d, WorldXZ,
 };
 use civ_save_db::SaveDb;
+use civ_voxel::{MaterialId, WorldCoord, FIXED_SCALE};
 use futures::{SinkExt, StreamExt};
 use tokio::{
     net::TcpListener,
@@ -42,7 +43,7 @@ use crate::{
     jsonrpc::{
         dispatch_request, encode_response, error_code, parse_error_response, parse_request,
         parse_role_param, set_sim_command_tick, set_spawn_civilian_result, DispatchContext,
-        DispatchEffect, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
+        DispatchEffect, GodActionRequest, JsonRpcError, JsonRpcMethod, JsonRpcResponse,
     },
     saves::save_archive_path,
     subscription_filter::{SubscriptionFilter, WsConnectQuery},
@@ -1139,8 +1140,6 @@ fn apply_god_action(
     request: GodActionRequest,
     response: &mut JsonRpcResponse,
 ) {
-    use civ_voxel::{MaterialId, WorldCoord};
-
     let mut applied = true;
     let mut affected: u64 = 0;
     match request {
@@ -1262,8 +1261,8 @@ fn apply_god_action(
 /// `x` and `y` are clamped to `[0, 1]`. The `z` plane is a fixed altitude for
 /// god-tool brushes (we paint at the surface and don't reach underground).
 fn normalized_to_world(x: f32, y: f32, z: i64) -> WorldCoord {
-    let fx = (x.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64;
-    let fy = (y.clamp(0.0, 1.0) * civ_voxel::FIXED_SCALE as f32) as i64;
+    let fx = (x.clamp(0.0, 1.0) * FIXED_SCALE as f32) as i64;
+    let fy = (y.clamp(0.0, 1.0) * FIXED_SCALE as f32) as i64;
     WorldCoord {
         x: fx,
         y: fy,
@@ -1275,21 +1274,21 @@ fn normalized_to_world(x: f32, y: f32, z: i64) -> WorldCoord {
 /// number of voxels written (clamped to `radius² * π` worst-case). Out-of-bounds
 /// writes are silently dropped by [`VoxelWriteProxy::write`].
 fn paint_voxel_disk(
-    proxy: &mut civ_engine::VoxelWriteProxy<'_>,
+    proxy: &mut civ_engine::engine::VoxelWriteProxy<'_>,
     x: f32,
     y: f32,
     radius: u8,
-    material: civ_voxel::MaterialId,
+    material: MaterialId,
 ) -> usize {
     let center = normalized_to_world(x, y, 0);
-    let r_fixed = (radius as i64).saturating_mul(civ_voxel::FIXED_SCALE / 8);
+    let r_fixed = (radius as i64).saturating_mul(FIXED_SCALE / 8);
     let r2 = r_fixed.saturating_mul(r_fixed);
     let mut written = 0usize;
     let r_i = radius as i32;
     for dx in -r_i..=r_i {
         for dy in -r_i..=r_i {
-            let dxf = (dx as i64).saturating_mul(civ_voxel::FIXED_SCALE / 8);
-            let dyf = (dy as i64).saturating_mul(civ_voxel::FIXED_SCALE / 8);
+            let dxf = (dx as i64).saturating_mul(FIXED_SCALE / 8);
+            let dyf = (dy as i64).saturating_mul(FIXED_SCALE / 8);
             if dxf.saturating_mul(dxf) + dyf.saturating_mul(dyf) > r2 {
                 continue;
             }

@@ -26,7 +26,7 @@ pub use institution::{
     INSTITUTION_MARKET, INSTITUTION_TREASURY,
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
-pub use stocks::Stocks;
+pub use stocks::{Good, Stocks};
 
 use serde::{Deserialize, Serialize};
 
@@ -67,6 +67,9 @@ pub struct EconomyState {
     /// Institution accounts and posting log (CIV-0100 §3d stub).
     #[serde(default)]
     pub institutions: InstitutionLedger,
+    /// Per-good material stocks consumed and produced by completed buildings.
+    #[serde(default)]
+    pub stocks: Stocks,
     /// Budget at the previous [`step`] boundary (tick-close reconciliation).
     #[serde(default)]
     last_step_budget_joules: i64,
@@ -80,6 +83,16 @@ impl EconomyState {
             last_step_budget_joules: energy_budget_joules,
             ..Default::default()
         }
+    }
+
+    /// Returns a shared reference to the per-good material stocks.
+    pub fn stocks(&self) -> &Stocks {
+        &self.stocks
+    }
+
+    /// Returns a mutable reference to the per-good material stocks.
+    pub fn stocks_mut(&mut self) -> &mut Stocks {
+        &mut self.stocks
     }
 }
 

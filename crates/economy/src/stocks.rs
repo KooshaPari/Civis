@@ -21,15 +21,18 @@ pub enum Good {
     Metal = 3,
     /// Durable manufactured equipment.
     Tools = 4,
+    /// Refined energetic output of advanced industrial production chains.
+    Energy = 5,
 }
 
 /// All built-in goods in deterministic iteration order.
-pub const GOODS: [Good; 5] = [
+pub const GOODS: [Good; 6] = [
     Good::Food,
     Good::Water,
     Good::Wood,
     Good::Metal,
     Good::Tools,
+    Good::Energy,
 ];
 
 fn good_index(good: Good) -> usize {
@@ -54,6 +57,41 @@ impl Stocks {
     /// Returns the current quantity of `good`.
     pub fn get(&self, good: Good) -> i64 {
         self.quantities[good_index(good)]
+    }
+
+    /// Sets the current quantity of `good` to `qty`, clamping negatives to 0.
+    pub fn set(&mut self, good: Good, qty: i64) {
+        self.quantities[good_index(good)] = qty.max(0);
+    }
+
+    /// Returns the [`Good::Food`] stock quantity.
+    pub fn food(&self) -> i64 {
+        self.get(Good::Food)
+    }
+
+    /// Returns the [`Good::Water`] stock quantity.
+    pub fn water(&self) -> i64 {
+        self.get(Good::Water)
+    }
+
+    /// Returns the [`Good::Wood`] stock quantity.
+    pub fn wood(&self) -> i64 {
+        self.get(Good::Wood)
+    }
+
+    /// Returns the [`Good::Metal`] stock quantity.
+    pub fn metal(&self) -> i64 {
+        self.get(Good::Metal)
+    }
+
+    /// Returns the [`Good::Tools`] stock quantity.
+    pub fn tools(&self) -> i64 {
+        self.get(Good::Tools)
+    }
+
+    /// Returns the [`Good::Energy`] stock quantity.
+    pub fn energy(&self) -> i64 {
+        self.get(Good::Energy)
     }
 
     /// Applies a signed quantity change to `good`.

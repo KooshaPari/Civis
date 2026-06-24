@@ -19,6 +19,7 @@ use axum::{
     Json, Router,
 };
 use civ_agents::{Civilian as AgentCivilian, Needs, Tools, Wardrobe};
+use civ_build::ProductionEvent;
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id,
     scenario::{load_scenario, preset_scenario_path},
@@ -141,6 +142,11 @@ pub struct WsBridgeConfig {
     pub tick_broadcast_format: TickBroadcastFormat,
     /// Directory for `.civsave.zst` slot files (created on bridge start).
     pub saves_dir: PathBuf,
+    /// Directory for `.civreplay` files (created on bridge start).
+    /// `sim.save_replay` / `sim.load_replay` paths are validated as
+    /// relative and resolved under this directory with containment
+    /// enforced via canonicalize (see `resolve_replay_path`).
+    pub replays_dir: PathBuf,
 }
 
 impl Default for WsBridgeConfig {
@@ -151,6 +157,7 @@ impl Default for WsBridgeConfig {
             require_role: false,
             tick_broadcast_format: TickBroadcastFormat::default(),
             saves_dir: PathBuf::from("saves"),
+            replays_dir: PathBuf::from("replays"),
         }
     }
 }
@@ -170,6 +177,10 @@ struct TickBroadcast {
     tick: u64,
     frames: Arc<[Frame3d]>,
     encoded: Arc<[Message]>,
+    /// Construction lifecycle events emitted during the most recent tick
+    /// (FR-CIV-BUILD-002). Bevy clients use these to render scaffolding and
+    /// completion FX; replay log mirrors them for deterministic reloads.
+    construction_events: Arc<[ProductionEvent]>,
 }
 
 fn resolve_session_id() -> String {
@@ -197,6 +208,7 @@ struct AppState {
     require_role: bool,
     tick_broadcast_format: TickBroadcastFormat,
     saves_dir: PathBuf,
+    replays_dir: PathBuf,
     save_db: Arc<SaveDb>,
     session_id: String,
 }
@@ -243,6 +255,7 @@ async fn serve_ws_bridge(
     sim: Arc<Mutex<Simulation>>,
 ) {
     std::fs::create_dir_all(&config.saves_dir).expect("create saves directory");
+    std::fs::create_dir_all(&config.replays_dir).expect("create replays directory");
     let save_db_path = save_db_path_for_saves_dir(&config.saves_dir);
     let save_db = Arc::new(
         SaveDb::open(&save_db_path)
@@ -259,6 +272,7 @@ async fn serve_ws_bridge(
         require_role: config.require_role,
         tick_broadcast_format: config.tick_broadcast_format,
         saves_dir: config.saves_dir,
+        replays_dir: config.replays_dir,
         save_db,
         session_id,
     };
@@ -869,31 +883,56 @@ async fn apply_dispatch_effect(
             }
         }
         DispatchEffect::SaveReplay { path } => {
+            // `parse_replay_path` already rejected absolute paths, `..`
+            // segments, prefixes, and root. Resolve the path under the
+            // bridge's `replays_dir` with canonicalize+containment to
+            // defeat symlink escape. Any failure becomes a clear error
+            // response — no silent fallback to `path` as-is.
+            let resolved = match crate::jsonrpc::resolve_replay_path(&state.replays_dir, &path) {
+                Ok(resolved) => resolved,
+                Err(err) => {
+                    tracing::error!("sim.save_replay rejected path {path:?}: {err}");
+                    set_replay_io_error(response, format!("rejected path {path:?}: {err}"));
+                    return;
+                }
+            };
             let save_result = {
                 let sim = state.sim.lock().await;
-                sim.save_replay(&path)
+                sim.save_replay(&resolved)
             };
             if let Err(err) = save_result {
                 tracing::error!("sim.save_replay failed: {err}");
                 set_replay_io_error(response, err.to_string());
             }
         }
-        DispatchEffect::LoadReplay { path } => match Simulation::load_replay_from_file(&path) {
-            Ok(loaded) => {
-                let tick = loaded.state.tick;
-                *state.sim.lock().await = loaded;
-                state.tick.store(tick, Ordering::SeqCst);
-                if let Some(result) = response.result.as_mut() {
-                    if let Some(obj) = result.as_object_mut() {
-                        obj.insert("tick".to_owned(), serde_json::json!(tick));
+        DispatchEffect::LoadReplay { path } => {
+            // Same containment check as SaveReplay: the path must resolve
+            // inside `replays_dir` after canonicalize.
+            let resolved = match crate::jsonrpc::resolve_replay_path(&state.replays_dir, &path) {
+                Ok(resolved) => resolved,
+                Err(err) => {
+                    tracing::error!("sim.load_replay rejected path {path:?}: {err}");
+                    set_replay_io_error(response, format!("rejected path {path:?}: {err}"));
+                    return;
+                }
+            };
+            match Simulation::load_replay_from_file(&resolved) {
+                Ok(loaded) => {
+                    let tick = loaded.state.tick;
+                    *state.sim.lock().await = loaded;
+                    state.tick.store(tick, Ordering::SeqCst);
+                    if let Some(result) = response.result.as_mut() {
+                        if let Some(obj) = result.as_object_mut() {
+                            obj.insert("tick".to_owned(), serde_json::json!(tick));
+                        }
                     }
                 }
+                Err(err) => {
+                    tracing::error!("sim.load_replay failed: {err}");
+                    set_replay_io_error(response, err.to_string());
+                }
             }
-            Err(err) => {
-                tracing::error!("sim.load_replay failed: {err}");
-                set_replay_io_error(response, err.to_string());
-            }
-        },
+        }
         DispatchEffect::ResetSimulation { seed } => {
             *state.sim.lock().await = Simulation::with_seed(seed);
             state.tick.store(0, Ordering::SeqCst);
@@ -1295,10 +1334,19 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
             encode_tick_broadcast_messages(&bundle, state.tick_broadcast_format)?
                 .into_boxed_slice(),
         );
+        // Snapshot construction events for the just-completed tick. The events
+        // are cleared at the top of `Simulation::tick()`, so we read them here
+        // after `sim.tick()` has run (FR-CIV-BUILD-002).
+        let construction_events: Arc<[ProductionEvent]> = Arc::from(
+            sim.last_construction_events()
+                .to_vec()
+                .into_boxed_slice(),
+        );
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
+            construction_events,
         })
     };
 
@@ -1306,7 +1354,6 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
     clients.retain(|tx| tx.send(ClientOutbound::Tick(Arc::clone(&batch))).is_ok());
     Ok(())
 }
-
 async fn tick_once(state: &AppState) -> Result<(), String> {
     let multiplier = state.speed_multiplier.load(Ordering::Relaxed);
     if multiplier == 0 {
@@ -1358,6 +1405,8 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let saves_dir = dir.path().join("saves");
         std::fs::create_dir_all(&saves_dir).expect("saves dir");
+        let replays_dir = dir.path().join("replays");
+        std::fs::create_dir_all(&replays_dir).expect("replays dir");
         let save_db_path = save_db_path_for_saves_dir(&saves_dir);
         let save_db = Arc::new(SaveDb::open(&save_db_path).expect("open save db"));
         let state = AppState {
@@ -1369,6 +1418,7 @@ mod tests {
             require_role,
             tick_broadcast_format: TickBroadcastFormat::Both,
             saves_dir,
+            replays_dir,
             save_db,
             session_id: "test-session".to_string(),
         };

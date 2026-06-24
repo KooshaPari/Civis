@@ -1140,7 +1140,7 @@ fn apply_god_action(
     request: GodActionRequest,
     response: &mut JsonRpcResponse,
 ) {
-    let mut applied = true;
+    let applied = true;
     let mut affected: u64 = 0;
     match request {
         GodActionRequest::Smite { x, y, radius, energy } => {

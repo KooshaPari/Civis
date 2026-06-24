@@ -33,6 +33,7 @@ Numbered ADRs (in numeric order):
 | 016   | Religion Emergence from Needs Vector                                                                        | Accepted          | [ADR-016-religion-emergence-from-needs-vector.md](ADR-016-religion-emergence-from-needs-vector.md) |
 | 017   | Web L2 Authoring (Amendment to ADR-009)                                                                     | Accepted          | [ADR-017-web-l2-authoring-amendment.md](ADR-017-web-l2-authoring-amendment.md)             |
 | 018   | Emergence Systems Bidirectional Coupling via Shared Gradients + Conserved Resources                       | Proposed          | [ADR-018-emergence-systems-coupling.md](ADR-018-emergence-systems-coupling.md)             |
+| 019   | Rendering / World-Substrate Selection for Civis Bevy Client (voxel + instanced + cluster-LOD + surface-nets) | Proposed          | [ADR-019-rendering-substrate-selection.md](ADR-019-rendering-substrate-selection.md)   |
 
 Non-numeric ADRs (named; kept under their original filenames on purpose — see
 notes below the table):

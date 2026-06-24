@@ -32,6 +32,7 @@ Numbered ADRs (in numeric order):
 | 015   | Faction Emergence via k-means Ideology Clustering                                                           | Accepted          | [ADR-015-faction-emergence-via-k-means-ideology-clustering.md](ADR-015-faction-emergence-via-k-means-ideology-clustering.md) |
 | 016   | Religion Emergence from Needs Vector                                                                        | Accepted          | [ADR-016-religion-emergence-from-needs-vector.md](ADR-016-religion-emergence-from-needs-vector.md) |
 | 017   | Web L2 Authoring (Amendment to ADR-009)                                                                     | Accepted          | [ADR-017-web-l2-authoring-amendment.md](ADR-017-web-l2-authoring-amendment.md)             |
+| 018   | Emergence Systems Bidirectional Coupling via Shared Gradients + Conserved Resources                       | Proposed          | [ADR-018-emergence-systems-coupling.md](ADR-018-emergence-systems-coupling.md)             |
 
 Non-numeric ADRs (named; kept under their original filenames on purpose — see
 notes below the table):
@@ -101,6 +102,12 @@ on recovery and the ADR-009 collision.
   Bevy/Vulkan and voxel streaming rows of the 3D FR matrix.
 - [ADR-emergence-charter](ADR-emergence-charter.md) is the umbrella decision
   that ADR-011, ADR-014, ADR-015, and ADR-016 implement.
+- [ADR-018-emergence-systems-coupling](ADR-018-emergence-systems-coupling.md)
+  is the **inventory** of bidirectional couplings (shared gradient + cap
+  + upward path) implementing the ADR-011 contract across language,
+  faction, religion, trade, architecture, and climate. It enumerates
+  the N-series rows from ADR-011 against the actual crate / file /
+  symbol that owns each direction.
 
 ## Recovery / renumber pass (2026-06)
 

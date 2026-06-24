@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 civ-engine = { path = "../engine" }
+civ-voxel = { path = "../voxel" }
 clap = { version = "4", features = ["derive"] }
 regex = "1"
 serde_json = "1"

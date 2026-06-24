@@ -35,6 +35,7 @@ pub fn workspace_root() -> PathBuf {
 
 pub mod build;
 pub mod census;
+pub mod populated_boot;
 pub mod proc;
 pub mod screenshot;
 pub mod verify;
@@ -43,6 +44,7 @@ pub use build::run_build;
 pub use census::{
     census_to_json, find_latest_run_log, parse_census_text, read_census_from_log, CensusData,
 };
+pub use populated_boot::run_populated_boot;
 pub use screenshot::{run_screenshot, ScreenshotResult};
 pub use verify::{run_verify, VerifyResult};
 

@@ -2381,6 +2381,7 @@ dependencies = [
  "civ-build",
  "civ-diffusion",
  "civ-economy",
+ "civ-emergence-metrics",
  "civ-genetics",
  "civ-legends",
  "civ-mod-host",
@@ -2637,6 +2638,7 @@ name = "civis-cli"
 version = "0.1.0"
 dependencies = [
  "civ-engine",
+ "civ-voxel",
  "clap",
  "regex",
  "serde_json",

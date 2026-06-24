@@ -1112,13 +1112,9 @@ async fn apply_dispatch_effect(
                 }
             }
         }
-        DispatchEffect::GodAction { action, .. } => {
-            tracing::warn!(action, "god_action engine integration pending");
-            if let Some(result) = response.result.as_mut() {
-                if let Some(obj) = result.as_object_mut() {
-                    obj.insert("applied".to_owned(), serde_json::json!(false));
-                }
-            }
+        DispatchEffect::GodAction(request) => {
+            let mut sim = state.sim.lock().await;
+            apply_god_action(&mut sim, request, response);
         }
     }
 }

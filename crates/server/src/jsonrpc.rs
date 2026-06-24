@@ -980,8 +980,17 @@ pub enum DispatchEffect {
         /// Entity id seed for civilians only.
         entity_seq: u64,
     },
+    /// Apply a god-tool palette verb (`sim.god_action`).
+    ///
+    /// Replaces the older `(action, x, y, target_faction, magnitude)` stub. The
+    /// tagged enum below makes each verb's payload explicit, exhaustive in
+    /// pattern matching, and lets us add new verbs without breaking wire
+    /// compatibility (clients send the action string; the planner maps it to
+    /// the variant with all required fields). This is the FR-CIV-GODTOOL
+    /// surface — see `docs/specs/requirements/FR-CIV-GODTOOL.md` and the
+    /// 50-verb god-tools implementation plan (#712) for the full palette.
+    GodAction(GodActionRequest),
     /// Write one voxel (`sim.place_voxel`).
-    GodAction { action: String, x: Option<f32>, y: Option<f32>, target_faction: Option<u32>, magnitude: Option<f32> },
     PlaceVoxel {
         /// World X coordinate.
         x: i64,
@@ -1006,6 +1015,94 @@ pub enum DispatchEffect {
     LoadSlot {
         /// Validated slot stem (`slot-1` … `slot-5`).
         slot_name: String,
+    },
+}
+
+/// Payload variants for [`DispatchEffect::GodAction`].
+///
+/// Each verb is one variant, with the parameters it actually needs. This keeps
+/// the planner/executor pattern matches exhaustive and lets us add new verbs
+/// (per the 50-verb palette in god-tools implementation plan #712) without
+/// growing a flat options struct. New verbs: add a variant here, parse it
+/// in [`parse_god_action`], and dispatch it in `ws_bridge.rs`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GodActionRequest {
+    /// `smite` — apply a tactical damage blast at a normalized map point.
+    Smite {
+        /// Normalized map X ∈ [0, 1].
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Blast radius in voxels (clamped 1..=32 by the planner).
+        radius: u8,
+        /// Energy delivered to the blast (clamped 0..=u32::MAX).
+        energy: u32,
+    },
+    /// `heal` — restore full health to every citizen near a point.
+    Heal {
+        /// Normalized map X ∈ [0, 1].
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Affect every citizen within this normalized radius.
+        radius_norm: f32,
+    },
+    /// `place_terrain` — paint voxels in a disk around a point with a chosen material.
+    PlaceTerrain {
+        /// Normalized map X ∈ [0, 1].
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Brush radius in voxels (clamped 1..=16).
+        radius: u8,
+        /// Material id (0..=255).
+        material: u16,
+    },
+    /// `ignite` — shorthand for `place_terrain` with the LAVA material id (4).
+    Ignite {
+        /// Normalized map X ∈ [0, 1].
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Brush radius in voxels (clamped 1..=8).
+        radius: u8,
+    },
+    /// `spawn_creature` — drop a single civilian into the world at a point.
+    SpawnCreature {
+        /// Normalized map X ∈ [0, 1].
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Owning faction id.
+        faction: u32,
+        /// Stable id seed for the new civilian.
+        entity_seq: u64,
+    },
+    /// `bless` — bump `welfare` and `ideology` of nearby citizens.
+    Bless {
+        /// Normalized map X ∈ [0, 1].
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Affect every citizen within this normalized radius.
+        radius_norm: f32,
+        /// Magnitude of the welfare/ideology shift (clamped 0..=1).
+        magnitude: f32,
+    },
+    /// `multiply_creatures` — spawn N civilians within a disk (FR-CIV-GODTOOL-001).
+    MultiplyCreatures {
+        /// Normalized map X ∈ [0, 1] (center of the spawn disk).
+        x: f32,
+        /// Normalized map Y ∈ [0, 1].
+        y: f32,
+        /// Disk radius in normalized units (0..=0.5).
+        radius_norm: f32,
+        /// Number of civilians to spawn (clamped 1..=32).
+        count: u32,
+        /// Owning faction id.
+        faction: u32,
+        /// Stable id seed for the new civilians.
+        entity_seq: u64,
     },
 }
 
@@ -1730,19 +1827,15 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             }
         }
         JsonRpcMethod::SimGodAction => {
-            let params = req.params.as_ref().and_then(|p| p.as_object())
-                .ok_or("sim.god_action requires params object");
-            match params {
-                Err(msg) => DispatchPlan { response: JsonRpcResponse::failure(req.id, JsonRpcError { code: error_code::INVALID_PARAMS, message: msg.to_owned(), data: None }), effect: DispatchEffect::None },
-                Ok(p) => DispatchPlan {
+            let params = req.params.as_ref();
+            match parse_god_action(params) {
+                Ok(req_action) => DispatchPlan {
                     response: JsonRpcResponse::success(req.id, serde_json::json!({ "ok": true, "tick": ctx.tick })),
-                    effect: DispatchEffect::GodAction {
-                        action: p.get("action").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
-                        x: p.get("x").and_then(|v| v.as_f64()).map(|f| f as f32),
-                        y: p.get("y").and_then(|v| v.as_f64()).map(|f| f as f32),
-                        target_faction: p.get("target_faction").and_then(|v| v.as_u64()).map(|f| f as u32),
-                        magnitude: p.get("magnitude").and_then(|v| v.as_f64()).map(|f| f as f32),
-                    },
+                    effect: DispatchEffect::GodAction(req_action),
+                },
+                Err(error) => DispatchPlan {
+                    response: JsonRpcResponse::failure(req.id, error),
+                    effect: DispatchEffect::None,
                 },
             }
         }
@@ -1907,6 +2000,171 @@ pub fn parse_damage_params(
         radius_voxels: radius,
         energy,
     })
+}
+
+/// Parse `sim.god_action` params and dispatch to a [`GodActionRequest`] variant.
+///
+/// The wire form is a single JSON object with an `action` string discriminator
+/// and a verb-specific payload. All numeric values are clamped to safe ranges
+/// so a malicious client can't pass `radius = u64::MAX` and exhaust the sim.
+///
+/// Verb table (see [`GodActionRequest`] for full payload docs):
+///   - `smite`              → `Smite`              (requires x, y; radius defaults 8; energy defaults 1000)
+///   - `heal`               → `Heal`               (requires x, y; radius_norm defaults 0.05)
+///   - `place_terrain`      → `PlaceTerrain`       (requires x, y, material; radius defaults 4)
+///   - `ignite`             → `Ignite`             (requires x, y; radius defaults 3)
+///   - `spawn_creature`     → `SpawnCreature`      (requires x, y; faction defaults 0; entity_seq defaults 0)
+///   - `bless`              → `Bless`              (requires x, y; radius_norm defaults 0.05; magnitude defaults 0.1)
+///   - `multiply_creatures` → `MultiplyCreatures`  (requires x, y; radius_norm defaults 0.05; count defaults 1; faction defaults 0; entity_seq defaults 0)
+pub fn parse_god_action(params: Option<&Value>) -> Result<GodActionRequest, JsonRpcError> {
+    let p = params.ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "sim.god_action requires params object".to_owned(),
+        data: None,
+    })?;
+    let obj = p.as_object().ok_or(JsonRpcError {
+        code: error_code::INVALID_PARAMS,
+        message: "sim.god_action params must be a JSON object".to_owned(),
+        data: None,
+    })?;
+    let action = obj
+        .get("action")
+        .and_then(|v| v.as_str())
+        .ok_or(invalid_params("action"))?;
+    let x = obj
+        .get("x")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .ok_or(invalid_params("x"))?;
+    let y = obj
+        .get("y")
+        .and_then(|v| v.as_f64())
+        .map(|v| v as f32)
+        .ok_or(invalid_params("y"))?;
+    let request = match action {
+        "smite" => {
+            let radius = obj
+                .get("radius")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.clamp(1, 32) as u8)
+                .unwrap_or(8);
+            let energy = obj
+                .get("energy")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.min(u32::MAX as u64) as u32)
+                .unwrap_or(1000);
+            GodActionRequest::Smite { x, y, radius, energy }
+        }
+        "heal" => {
+            let radius_norm = obj
+                .get("radius_norm")
+                .and_then(|v| v.as_f64())
+                .map(|v| (v as f32).clamp(0.0, 0.5))
+                .unwrap_or(0.05);
+            GodActionRequest::Heal { x, y, radius_norm }
+        }
+        "place_terrain" => {
+            let radius = obj
+                .get("radius")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.clamp(1, 16) as u8)
+                .unwrap_or(4);
+            let material = obj
+                .get("material")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.min(u16::MAX as u64) as u16)
+                .ok_or(invalid_params("material"))?;
+            GodActionRequest::PlaceTerrain {
+                x,
+                y,
+                radius,
+                material,
+            }
+        }
+        "ignite" => {
+            let radius = obj
+                .get("radius")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.clamp(1, 8) as u8)
+                .unwrap_or(3);
+            GodActionRequest::Ignite { x, y, radius }
+        }
+        "spawn_creature" => {
+            let faction = obj
+                .get("faction")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32)
+                .unwrap_or(0);
+            let entity_seq = obj
+                .get("entity_seq")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            GodActionRequest::SpawnCreature {
+                x,
+                y,
+                faction,
+                entity_seq,
+            }
+        }
+        "bless" => {
+            let radius_norm = obj
+                .get("radius_norm")
+                .and_then(|v| v.as_f64())
+                .map(|v| (v as f32).clamp(0.0, 0.5))
+                .unwrap_or(0.05);
+            let magnitude = obj
+                .get("magnitude")
+                .and_then(|v| v.as_f64())
+                .map(|v| (v as f32).clamp(0.0, 1.0))
+                .unwrap_or(0.1);
+            GodActionRequest::Bless {
+                x,
+                y,
+                radius_norm,
+                magnitude,
+            }
+        }
+        "multiply_creatures" => {
+            let radius_norm = obj
+                .get("radius_norm")
+                .and_then(|v| v.as_f64())
+                .map(|v| (v as f32).clamp(0.0, 0.5))
+                .unwrap_or(0.05);
+            let count = obj
+                .get("count")
+                .and_then(|v| v.as_u64())
+                .map(|v| v.clamp(1, 32) as u32)
+                .unwrap_or(1);
+            let faction = obj
+                .get("faction")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32)
+                .unwrap_or(0);
+            let entity_seq = obj
+                .get("entity_seq")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            GodActionRequest::MultiplyCreatures {
+                x,
+                y,
+                radius_norm,
+                count,
+                faction,
+                entity_seq,
+            }
+        }
+        other => {
+            return Err(JsonRpcError {
+                code: error_code::INVALID_PARAMS,
+                message: format!(
+                    "unknown god action '{other}'; expected one of: \
+                     smite, heal, place_terrain, ignite, spawn_creature, bless, multiply_creatures"
+                ),
+                data: None,
+            });
+        }
+    };
+    Ok(request)
 }
 
 /// Parse `sim.place_voxel` params: `{ "x", "y", "z", "material" }`.

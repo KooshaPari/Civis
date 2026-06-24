@@ -1009,7 +1009,9 @@ mod tests {
         };
         let lod = LodTier::Warm;
         let mut rng = ChaCha8Rng::seed_from_u64(11);
-        let dna = spawn_genome_with_divergence(&mut rng, NamedSeed::Ardani, 0.3);
+        let dna_class = civ_genetics::DnaClass::default();
+        let seed_def = civ_genetics::archetype_seed(civ_genetics::NamedSeed::Ardani);
+        let dna = spawn_genome_with_divergence(&mut rng, &dna_class, &seed_def, 0.3);
         let entity = spawn_civilian(
             &mut world,
             civ.clone(),

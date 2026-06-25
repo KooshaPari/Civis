@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use crate::menus::in_game;
 use crate::live_stream::LiveBridge;
+use crate::god_actions::GodActionRequest;
 
 #[derive(Resource, Default)]
 pub struct GodPanelState {
@@ -45,6 +46,7 @@ fn draw_god_panel(
     mut contexts: EguiContexts,
     mut state: ResMut<GodPanelState>,
     bridge: Res<LiveBridge>,
+    mut requests: MessageWriter<GodActionRequest>,
 ) {
     if !state.visible { return; }
     let ctx = contexts.ctx_mut();
@@ -127,6 +129,13 @@ fn draw_god_panel(
             "magnitude": state.magnitude,
         });
         bridge.client.send_rpc("sim.god_action", payload);
-        state.status = Some(format!("Invoked: {}", ACTIONS[state.selected_action]));
+        requests.write(GodActionRequest {
+            action,
+            norm_x: state.target_x,
+            norm_y: state.target_y,
+            target_faction: state.target_faction,
+            magnitude: state.magnitude,
+        });
+        state.status = Some(format!("Invoked: {} (applying…)", ACTIONS[state.selected_action]));
     }
 }

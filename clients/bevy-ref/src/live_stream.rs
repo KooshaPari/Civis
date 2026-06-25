@@ -25,6 +25,15 @@ use crate::{
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
+use crate::ws_client::WsClient;
+
+/// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
+/// to `civ-server` without depending on the window binary crate.
+#[derive(Resource, Clone)]
+pub struct LiveBridge {
+    /// Shared WebSocket client for live JSON-RPC + frame traffic.
+    pub client: WsClient,
+}
 
 /// Chunk edge length in voxels (matches kernel).
 pub const LIVE_CHUNK_EDGE: usize = 16;
@@ -480,6 +489,52 @@ fn chunk_transform(id: ChunkId) -> Transform {
         y as f32 * LIVE_CHUNK_EDGE as f32,
         z as f32 * LIVE_CHUNK_EDGE as f32,
     )
+}
+
+/// Re-mesh cached chunks after a local god-tool mutation (client-side preview).
+pub fn remesh_cached_chunks(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    mesh_assets: &mut Assets<Mesh>,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
+) {
+    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, WriteSeq};
+
+    let deltas: Vec<VoxelChunkDelta> = chunk_ids
+        .iter()
+        .filter_map(|chunk_id| {
+            scene
+                .chunk_voxels
+                .get_chunk(*chunk_id)
+                .map(|voxels| VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: *chunk_id,
+                        write_seq: WriteSeq(1),
+                    },
+                    voxels: voxels.to_vec(),
+                })
+        })
+        .collect();
+    if deltas.is_empty() {
+        return;
+    }
+    apply_voxel_delta_frame(
+        commands,
+        scene,
+        mesh_assets,
+        material_assets,
+        culling,
+        debug,
+        VoxelDeltaFrame {
+            tick: 0,
+            deltas,
+        },
+        wireframe_line_color,
+    );
 }
 
 /// Applies a voxel delta frame (caches voxels, meshes in-range chunks).

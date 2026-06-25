@@ -31,11 +31,13 @@ use civ_bevy_ref::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
         default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
-        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBridge, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
         StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
+    god_panel::GodPanelPlugin,
+    god_actions::GodActionsPlugin,
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
@@ -153,11 +155,6 @@ impl OrbitCamera {
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
     }
-}
-
-#[derive(Resource)]
-struct LiveBridge {
-    client: WsClient,
 }
 
 #[derive(Resource)]
@@ -288,6 +285,8 @@ fn main() {
             EventFeedPlugin,
             EmergenceDashboardPlugin,
             DiplomacyUiPlugin,
+            GodPanelPlugin,
+            GodActionsPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()

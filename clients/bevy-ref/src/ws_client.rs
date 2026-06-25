@@ -46,6 +46,7 @@ pub struct WsClient {
     meta_rx: Receiver<WsSpectatorMeta>,
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
+    save_list_rx: Receiver<Vec<SaveListEntry>>,
     latest_state: AtomicU32,
     /// Outbound raw text frame channel — for `send_rpc_raw` callers.
     cmd_tx: Sender<String>,
@@ -68,6 +69,7 @@ impl WsClient {
         let (meta_tx, meta_rx) = crossbeam_channel::unbounded();
         let (rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
         let (state_tx, state_rx) = crossbeam_channel::unbounded();
+        let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<String>();
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
@@ -80,6 +82,7 @@ impl WsClient {
                 meta_tx,
                 rtt_tx,
                 state_tx,
+                save_list_tx,
                 cmd_rx,
                 send_rx,
                 emergence_tx,
@@ -91,6 +94,7 @@ impl WsClient {
             meta_rx,
             rtt_rx,
             state_rx,
+            save_list_rx,
             latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
             cmd_tx,
             send_tx,
@@ -161,6 +165,16 @@ impl WsClient {
             metas.push(meta);
         }
         metas
+    }
+
+    /// Drain any parsed `save.list` responses (id=2099).
+    #[must_use]
+    pub fn poll_save_list(&self) -> Vec<SaveListEntry> {
+        let mut entries = Vec::new();
+        while let Ok(batch) = self.save_list_rx.try_recv() {
+            entries.extend(batch);
+        }
+        entries
     }
 
     /// Latest measured `sim.snapshot` round-trip time in milliseconds, if any.
@@ -244,6 +258,7 @@ fn run_client(
     meta_tx: Sender<WsSpectatorMeta>,
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
+    save_list_tx: Sender<Vec<SaveListEntry>>,
     cmd_rx: Receiver<String>,
     send_rx: crossbeam_channel::Receiver<String>,
     emergence_tx: Sender<EmergenceHudData>,
@@ -265,6 +280,7 @@ fn run_client(
                 &meta_tx,
                 &rtt_tx,
                 &state_tx,
+                &save_list_tx,
                 &cmd_rx,
                 &send_rx,
                 &emergence_tx,
@@ -382,6 +398,44 @@ fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
     })
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaveListEntry {
+    pub name: String,
+    pub tick: u64,
+    pub save_type: String,
+}
+
+fn parse_save_list_response(text: &str) -> Option<Vec<SaveListEntry>> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    let id_is_2099 = match v.get("id")?.as_u64() {
+        Some(2099) => true,
+        None => match v.get("id").and_then(|i| i.as_i64()) {
+            Some(2099) => true,
+            None | Some(_) => false,
+        },
+    };
+    if !id_is_2099 {
+        return None;
+    }
+    let entries = v.get("result")?.as_array()?;
+    let mut out = Vec::new();
+    for entry in entries {
+        let Some(name) = entry.get("name").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let Some(save_type) = entry.get("save_type").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let tick = entry.get("tick").and_then(|v| v.as_u64()).unwrap_or(0);
+        out.push(SaveListEntry {
+            name: name.to_string(),
+            tick,
+            save_type: save_type.to_string(),
+        });
+    }
+    Some(out)
+}
+
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -389,6 +443,7 @@ async fn connect_and_stream(
     meta_tx: &Sender<WsSpectatorMeta>,
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
+    save_list_tx: &Sender<Vec<SaveListEntry>>,
     cmd_rx: &Receiver<String>,
     send_rx: &crossbeam_channel::Receiver<String>,
     emergence_tx: &Sender<EmergenceHudData>,
@@ -447,6 +502,10 @@ async fn connect_and_stream(
                 }
                 if let Some(em) = parse_emergence_response(&text) {
                     let _ = emergence_tx.send(em);
+                    continue;
+                }
+                if let Some(entries) = parse_save_list_response(&text) {
+                    let _ = save_list_tx.send(entries);
                     continue;
                 }
                 if let Some(oc) = parse_outcome_response(&text) {

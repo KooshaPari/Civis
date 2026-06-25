@@ -489,7 +489,9 @@ async fn handle_jsonrpc_text(
                 _ => (None, None),
             };
 
-            let emergence = if req.method == JsonRpcMethod::SimEmergence {
+            let emergence = if req.method == JsonRpcMethod::SimEmergence
+                || req.method == JsonRpcMethod::EmergenceMetrics
+            {
                 let sim = state.sim.lock().await;
                 sim.last_emergence_sample().map(Into::into)
             } else {

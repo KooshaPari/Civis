@@ -82,6 +82,13 @@ pub enum JsonRpcMethod {
     SimEmergence,
     /// Read the transport-safe emergence dashboard snapshot.
     EmergenceDashboard,
+    /// Read the full emergence-metrics sample
+    /// (`emergence.metrics`, FR-CIV-EMERG-001..005 dashboard surface
+    /// — see `docs/design/emergence-dashboard.md`). Surfaces the
+    /// Shannon entropy, structure count, and power-law slope the
+    /// criticality tuning dashboard polls; computed from existing
+    /// per-tick engine state, never introduces a new tick.
+    EmergenceMetrics,
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
@@ -130,6 +137,7 @@ impl JsonRpcMethod {
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
             Self::EmergenceDashboard => "emergence.dashboard",
+            Self::EmergenceMetrics => "emergence.metrics",
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimPerf => "sim.perf",
             Self::SimDiplomacyAction => "sim.diplomacy_action",
@@ -169,6 +177,7 @@ impl JsonRpcMethod {
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
             "emergence.dashboard" => Some(Self::EmergenceDashboard),
+            "emergence.metrics" => Some(Self::EmergenceMetrics),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.perf" => Some(Self::SimPerf),
             "sim.diplomacy_action" => Some(Self::SimDiplomacyAction),
@@ -1686,6 +1695,50 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::EmergenceMetrics => {
+            // FR-CIV-EMERG-001..005 / docs/design/emergence-dashboard.md:
+            // dashboard-facing read of the latest
+            // civ-emergence-metrics sample. Computed entirely from
+            // existing per-tick engine state (the WS bridge populates
+            // `ctx.emergence` from `sim.last_emergence_sample()`);
+            // does not introduce a new tick. When the engine has not
+            // produced a sample yet (ticks 0..49 on a fresh sim), we
+            // return a fully-zeroed but well-shaped
+            // [`EmergenceSampleFields`] so dashboard tiles can render
+            // a stable 5-tile view without nullability branching.
+            let result = match ctx.emergence.as_ref() {
+                Some(sample) => {
+                    serde_json::to_value(sample).unwrap_or_else(|_| {
+                        serde_json::json!({ "tick": ctx.tick })
+                    })
+                }
+                None => serde_json::to_value(EmergenceSampleFields {
+                    tick: ctx.tick,
+                    entropy_bits: 0.0,
+                    entropy_norm: 0.0,
+                    structure_count: Some(0),
+                    structure_largest: Some(0),
+                    structure_foreground: Some(0),
+                    histogram_total: 0,
+                    histogram_populated_bins: 0,
+                    sample_dur_us: 0,
+                    dashboard: None,
+                    branching_sigma: 0.0,
+                    branching_sigma_score: 0.0,
+                    branching_window: 0,
+                    avalanches_closed: 0,
+                    branching_regime: String::new(),
+                    power_law_alpha: 0.0,
+                    novelty_rate: 0.0,
+                    mi_material_faction_norm: None,
+                })
+                .unwrap_or_else(|_| serde_json::json!({ "tick": ctx.tick })),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimInspectTile => {
             let x = req
                 .params
@@ -2863,6 +2916,131 @@ mod tests {
         );
     }
 
+    /// FR-CIV-EMERG-001..005: `emergence.metrics` returns the full
+    /// [`EmergenceSampleFields`] view (same shape as `sim.emergence`)
+    /// when the bridge has populated `ctx.emergence`. The dashboard
+    /// uses this to read the three criticality knobs the brief calls
+    /// out — Shannon entropy (`entropy_bits`), structure count
+    /// (`structure_count`), and power-law slope (`power_law_alpha`)
+    /// — all derived from existing per-tick engine state.
+    #[test]
+    fn dispatch_emergence_metrics_returns_cached_sample() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":60,"method":"emergence.metrics","params":{}}"#)
+                .expect("parse");
+        let sample = EmergenceSampleFields {
+            tick: 75,
+            entropy_bits: 0.5123,
+            entropy_norm: 0.1208,
+            structure_count: Some(5),
+            structure_largest: Some(8192),
+            structure_foreground: Some(12288),
+            histogram_total: 16384,
+            histogram_populated_bins: 8,
+            sample_dur_us: 24,
+            dashboard: Some(DashboardBlock {
+                cluster_entropy: 0.91,
+                ideology_homophily: 0.55,
+                sentience_fraction: 0.42,
+                psyche_stability: 0.78,
+                diplomacy_tension: 0.13,
+            }),
+            branching_sigma: 0.97,
+            branching_sigma_score: 0.74,
+            branching_window: 12,
+            avalanches_closed: 6,
+            branching_regime: "Edge of chaos (target)".to_string(),
+            power_law_alpha: 1.42,
+            novelty_rate: 0.18,
+            mi_material_faction_norm: Some(0.31),
+        };
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 75,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: Some(sample),
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("result");
+        assert_eq!(result["tick"], 75);
+        let entropy_bits = result["entropy_bits"].as_f64().expect("f64");
+        assert!(
+            (entropy_bits - 0.5123).abs() < 1e-5,
+            "entropy_bits: {entropy_bits}"
+        );
+        assert_eq!(result["structure_count"], 5);
+        let power_law_alpha = result["power_law_alpha"].as_f64().expect("f64");
+        assert!(
+            (power_law_alpha - 1.42).abs() < 1e-5,
+            "power_law_alpha: {power_law_alpha}"
+        );
+        let novelty_rate = result["novelty_rate"].as_f64().expect("f64");
+        assert!(
+            (novelty_rate - 0.18).abs() < 1e-5,
+            "novelty_rate: {novelty_rate}"
+        );
+        let mi = result["mi_material_faction_norm"].as_f64().expect("f64");
+        assert!((mi - 0.31).abs() < 1e-5, "mi_material_faction_norm: {mi}");
+        // Dashboard block is preserved verbatim.
+        let dashboard = &result["dashboard"];
+        assert!(dashboard.is_object(), "dashboard must be an object");
+        assert!(
+            (dashboard["cluster_entropy"].as_f64().unwrap_or(f64::NAN) - 0.91).abs() < 1e-5
+        );
+    }
+
+    /// FR-CIV-EMERG-001..005: `emergence.metrics` on a fresh sim
+    /// (ticks 0..49, no sample yet) returns a fully-shaped
+    /// [`EmergenceSampleFields`] with zero values rather than `null`,
+    /// so the dashboard can render its 5-tile view without
+    /// nullability branching.
+    #[test]
+    fn dispatch_emergence_metrics_returns_zeroed_sample_before_first_boundary() {
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":61,"method":"emergence.metrics","params":{}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 12,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("result");
+        assert_eq!(result["tick"], 12);
+        // Well-shaped, not null — dashboard tiles can read fields directly.
+        assert!(result["entropy_bits"].as_f64().is_some());
+        assert!(result["structure_count"].as_u64().is_some());
+        assert!(result["power_law_alpha"].as_f64().is_some());
+        assert_eq!(result["entropy_bits"].as_f64().unwrap(), 0.0);
+        assert_eq!(result["structure_count"].as_u64().unwrap(), 0);
+        assert_eq!(result["power_law_alpha"].as_f64().unwrap(), 0.0);
+        assert!(result["dashboard"].is_null());
+    }
+
     #[test]
     fn parse_sim_snapshot_request() {
         let req = parse_request(r#"{"jsonrpc":"2.0","id":13,"method":"sim.snapshot","params":{}}"#)
@@ -3961,6 +4139,20 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::EmergenceDashboard.as_str(),
             "emergence.dashboard"
+        );
+    }
+    /// FR-CIV-EMERG-001..005: the `emergence.metrics` wire name is the
+    /// canonical dashboard surface; round-trip via `as_str` /
+    /// `parse_name` to lock the contract.
+    #[test]
+    fn emergence_metrics_method_uses_expected_wire_name() {
+        assert_eq!(
+            JsonRpcMethod::EmergenceMetrics.as_str(),
+            "emergence.metrics"
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("emergence.metrics"),
+            Some(JsonRpcMethod::EmergenceMetrics)
         );
     }
     #[test]

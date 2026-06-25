@@ -324,6 +324,101 @@ pub fn delta_within_cap(delta: f32, cap: f32) -> bool {
     delta.abs() <= cap + f32::EPSILON
 }
 
+// ─── §7 Phase wiring support ────────────────────────────────────────────────
+
+/// Per-tick observation recorded by `phase_belief`. One event per settlement
+/// per tick that crosses a tripwire (cap violation, regime shift, dissolution,
+/// etc.). The kinds are intentionally additive — new variants land here without
+/// touching the spec §4.1 response curve.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReligionEventKind {
+    /// Tick boundary observation; emitted every tick so consumers can read
+    /// the post-response profile.
+    Tick,
+    /// Monitoring crossed `LAW_MONITORING_THRESHOLD` (0.6) upward — the
+    /// substrate would now respond with a "Big Gods" legal regime.
+    BigGodsThresholdCrossed,
+    /// Monitoring crossed `LAW_MONITORING_THRESHOLD` downward — the
+    /// substrate regressed from Big-Gods legal regime to shamanic / animist.
+    BigGodsThresholdReleased,
+    /// Per-tick delta exceeded `MAX_D_MONITORING_PER_TICK` (the
+    /// enforce_caps tripwire). Should never happen if `apply_big_gods_response`
+    /// is the only mutator; emitted only when an external system
+    /// bypasses the cap.
+    MonitoringCapViolation { delta: f32 },
+    /// Coherence fell below dissolution threshold — the settlement is
+    /// culturally fragmenting; god-tools / law phase should react.
+    DissolutionImminent,
+}
+
+/// A per-tick observation from `phase_belief`. Carries the settlement
+/// id, the kind of event, and a snapshot of the post-response scalars
+/// so downstream consumers (god-tools UI, laws hooks, legends events)
+/// can render or react without re-reading `Simulation::religious_profiles`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReligionEvent {
+    pub settlement_id: u32,
+    pub kind: ReligionEventKind,
+    pub monitor: f32,
+    pub coherence: f32,
+    pub uncertainty_reduction: f32,
+    pub tick: u64,
+}
+
+impl ReligionEvent {
+    /// Convenience constructor for the per-tick boundary observation.
+    pub fn tick(
+        settlement_id: u32,
+        monitor: f32,
+        coherence: f32,
+        uncertainty_reduction: f32,
+        tick: u64,
+    ) -> Self {
+        Self {
+            settlement_id,
+            kind: ReligionEventKind::Tick,
+            monitor,
+            coherence,
+            uncertainty_reduction,
+            tick,
+        }
+    }
+
+    /// True if this event is a regime-shift or tripwire (not a routine
+    /// Tick observation). Consumers can filter on this to drive UI badges,
+    /// audio cues, etc.
+    pub fn is_notable(&self) -> bool {
+        !matches!(self.kind, ReligionEventKind::Tick)
+    }
+}
+
+/// Substrate-side input sampler. In a fully wired build this reads
+/// gradient fields from `civ-planet::GeologyMap` (via `civ-physics-substrate`,
+/// added in PR #758) and a few derived scalars from the simulation's
+/// own state (population density, kin-network cohesion, etc.). For the
+/// §7 first slice we return `SubstrateGradients::default()` so the
+/// phase loop compiles and the per-tick update is deterministic given
+/// a known substrate snapshot.
+///
+/// The real read path lands once the substrate exposes per-settlement
+/// gradient accessors (currently a single substrate, not per-settlement).
+pub fn substrate_gradients_for(_settlement_id: u32) -> SubstrateGradients {
+    SubstrateGradients::default()
+}
+
+/// Latest per-settlement profile snapshot accessor. Returns a Vec of
+/// `(settlement_id, profile)` pairs sorted by settlement_id. Used by
+/// the JSON-RPC `emergence.metrics` method (PR #763) and the god-tools
+/// UI for rendering the religion dashboard. The actual read path
+/// (which would walk `Simulation::religious_profiles`) lives in
+/// `engine.rs::last_religion_sample`; this is the type-level accessor
+/// used by tests and any consumer that holds a snapshot directly.
+pub fn last_religion_sample(
+    religious_profiles: &std::collections::BTreeMap<u32, ReligiousProfile>,
+) -> Vec<(u32, ReligiousProfile)> {
+    religious_profiles.iter().map(|(k, v)| (*k, v.clone())).collect()
+}
+
 // ─── §12.4 Deprecation shim ────────────────────────────────────────────────
 
 // The previous module exported an authored `BeliefConcept` enum

@@ -27,6 +27,8 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 
 fn main() {
+    civ_bevy_ref::install_crash_handler();
+
     let attach_mode = resolve_attach_mode_from_env();
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),

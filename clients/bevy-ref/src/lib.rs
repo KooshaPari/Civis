@@ -13,6 +13,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod crash_handler;
+
 #[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
@@ -120,6 +122,7 @@ pub mod window_icon;
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
+pub use crash_handler::install_crash_handler;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -1573,5 +1576,10 @@ mod tests {
         let bytes = encode_frame3d_binary(&frame).expect("encode");
         let parsed = parse_frame3d_binary(&bytes).expect("parse");
         assert_eq!(parsed, frame);
+    }
+
+    #[test]
+    fn install_crash_handler_does_not_panic() {
+        std::panic::catch_unwind(|| install_crash_handler()).expect("install_crash_handler should install");
     }
 }

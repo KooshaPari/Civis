@@ -15,18 +15,11 @@ use std::collections::VecDeque;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use crate::ui_theme::CHIP_FILL;
+use crate::ui_theme::{ACCENT, CHIP_FILL, PANEL_FILL};
 
 // ---------------------------------------------------------------------------
 // Palette — canonical Keycap tokens from ui_theme; local CHIP_FILL not in ui_theme
 // ---------------------------------------------------------------------------
-
-const PANEL_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(17, 20, 31, 235);
-const ACCENT: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
-use crate::ui_theme::{ACCENT, PANEL_FILL};
-
-// CHIP_FILL: local tint not present in ui_theme (different from GRAPHITE_700)
-const CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(31, 37, 52, 235);
 
 // ---------------------------------------------------------------------------
 // Domain types

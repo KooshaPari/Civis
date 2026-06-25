@@ -21,11 +21,22 @@ use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
+use crate::ws_client::WsClient;
 use crate::{
     agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
+
+/// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
+/// to `civ-server` without taking a direct dependency on the transport layer.
+/// The `civ-bevy-window` binary inserts a concrete instance at startup; tests
+/// and headless binaries may substitute a fake.
+#[derive(Resource, Clone)]
+pub struct LiveBridge {
+    /// The shared WebSocket client used for live JSON-RPC + frame traffic.
+    pub client: WsClient,
+}
 
 /// Chunk edge length in voxels (matches kernel).
 pub const LIVE_CHUNK_EDGE: usize = 16;

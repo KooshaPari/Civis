@@ -107,6 +107,8 @@ pub enum JsonRpcMethod {
     SimUpdateSubscription,
     /// Query current game outcome state (`sim.outcome`, FR-CIV-GAME-001).
     SimOutcome,
+    /// Apply a god action from the bridge UI (`sim.god_action`, FR-CIV-GAME-002).
+    SimGodAction,
 }
 
 impl JsonRpcMethod {
@@ -147,6 +149,7 @@ impl JsonRpcMethod {
             Self::SimUnsubscribe => "sim.unsubscribe",
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
+            Self::SimGodAction => "sim.god_action",
         }
     }
 
@@ -187,6 +190,7 @@ impl JsonRpcMethod {
             "sim.unsubscribe" => Some(Self::SimUnsubscribe),
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
+            "sim.god_action" => Some(Self::SimGodAction),
             _ => None,
         }
     }
@@ -1790,6 +1794,64 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::SimGodAction => {
+            // FR-PLAY-click-to-fire: the first end-to-end click-to-fire loop.
+            // The bevy-ref client opens a small egui god-tool panel and sends
+            // `sim.god_action` when the user clicks the button. We echo the
+            // action and the tick so the HUD can confirm the round trip; the
+            // bridge handles the actual `DispatchEffect::GodAction` (smite /
+            // bless / earthquake / plague / miracle).
+            let action = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("action"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_owned();
+            let x = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("x"))
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32);
+            let y = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("y"))
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32);
+            let target_faction = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("target_faction"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let magnitude = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("magnitude"))
+                .and_then(|v| v.as_f64())
+                .map(|f| f as f32);
+            let result = serde_json::json!({
+                "action": action,
+                "x": x,
+                "y": y,
+                "target_faction": target_faction,
+                "magnitude": magnitude,
+                "accepted": true,
+                "tick": ctx.tick,
+            });
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::GodAction {
+                    action,
+                    x,
+                    y,
+                    target_faction,
+                    magnitude,
+                },
             }
         }
         JsonRpcMethod::SimSpawnCivilian => {

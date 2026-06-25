@@ -16,6 +16,7 @@ use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 use crate::game_laws::GameLawsOpen;
 use crate::live_pick::LiveSelection;
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
+use crate::tool_categories::{ActiveSubTool, LeftClusterTab, ToolIcons, TOOL_ICON_PATHS, handle_category_hotkeys};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
     ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_10X, ACTION_SPEED_2X,
@@ -247,13 +248,6 @@ fn load_tool_icons(
         icons.ids.insert(key, id);
     }
     icons.registered = true;
-}
-
-            .add_plugins(crate::game_laws::GameLawsPlugin)
-            .add_systems(Startup, sync_initial_game_speed_from_settings)
-            .add_systems(Update, handle_speed_shortcuts)
-            .add_systems(EguiPrimaryContextPass, draw_game_ui);
-    }
 }
 
 #[cfg(feature = "egui")]

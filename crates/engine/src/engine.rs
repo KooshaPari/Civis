@@ -41,6 +41,11 @@ use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
 use crate::language::{tick_language, LanguageState};
+
+/// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
+/// Re-exported from the `fixed` crate; aliased here so callers can use
+/// `crate::engine::Fixed` (or `crate::Fixed`) and `Fixed::from_num(...)`.
+pub type Fixed = fixed::types::I16F16;
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
@@ -422,7 +427,7 @@ pub struct Simulation {
     rng: SimRng,
     planet: PlanetConfig,
     moon: MoonConfig,
-    climate: Climate,
+    pub climate: Climate,
     pending_damage: Vec<DamageEvent>,
     tick_modulo_compact: u64,
     building_graph: BuildingGraph,
@@ -432,14 +437,23 @@ pub struct Simulation {
     last_cohort_stats: Option<CohortStats>,
     last_births: Vec<PopulationEvent>,
     last_deaths: Vec<PopulationEvent>,
-    last_life_deaths: u32,
+    pub last_life_deaths: u32,
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
     belief: u64,
-    cluster_cultures: BTreeMap<u64, CultureProfile>,
+    /// Per-cluster culture profiles (cluster_cultures key is the cluster id).
+    pub cluster_cultures: BTreeMap<u64, CultureProfile>,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
-    last_settlement_count: u32,
+    pub last_settlement_count: u32,
+    /// Per-faction aggression (u32 faction id → average aggression).
+    pub faction_aggression: std::collections::BTreeMap<u32, f32>,
+    /// MOAT emergence state — culture/legends/feed buffers.
+    pub emergence: crate::emergence::EmergenceState,
+    /// Live emergence-branching state (rolling σ̄_W).
+    pub emergence_branching: crate::emergence_metrics::EmergenceBranchingState,
+    /// Most recent emergence sample (None before first sample).
+    pub emergence_sample: Option<crate::emergence_metrics::EmergenceSample>,
     /// 3D voxel substrate (Civis 3D extension). Hosts terrain + destructible
     /// structures + tactical combat impacts. Drained per tick by
     /// [`Simulation::phase_voxel`].
@@ -491,7 +505,7 @@ pub struct Simulation {
     /// world coords; iteration order is deterministic.
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
-    weather_grid: Vec<WeatherCell>,
+    pub weather_grid: Vec<WeatherCell>,
     /// Construction queue of in-progress `BuildSite`s.
     /// Drives `phase_buildings` per-tick progress + completion (FR-CIV-BUILD-001/002).
     build_sites: Vec<BuildSite>,
@@ -749,6 +763,10 @@ impl Simulation {
             cluster_cultures: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
             last_settlement_count: 0,
+            faction_aggression: BTreeMap::new(),
+            emergence: crate::emergence::EmergenceState::new(42),
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
+            emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -822,6 +840,10 @@ impl Simulation {
             cluster_cultures: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
             last_settlement_count: 0,
+            faction_aggression: BTreeMap::new(),
+            emergence: crate::emergence::EmergenceState::new(seed),
+            emergence_branching: crate::emergence_metrics::EmergenceBranchingState::default(),
+            emergence_sample: None,
             voxel: VoxelWorld::new(FIXED_SCALE),
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
@@ -3594,6 +3616,48 @@ pub struct SimulationSnapshot {
     ///
     /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
     pub geology_map: GeologyMap,
+}
+
+// ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).
+// These phases are no-op in this build; downstream mod-host + legacy code
+// still references them by name.
+impl Simulation {
+    /// ADR-020 #1 — settlement commons (no-op stub).
+    pub fn phase_life(&mut self) {}
+    /// ADR-020 #2 — research progress (no-op stub).
+    pub fn phase_research(&mut self) {}
+    /// ADR-020 #3 — tier-derived tech unlocks (no-op stub).
+    pub fn phase_tech(&mut self) {}
+    /// ADR-020 #4 — faith reserve (no-op stub).
+    pub fn phase_belief(&mut self) {}
+    /// ADR-020 #5 — societal unrest (no-op stub).
+    pub fn phase_unrest(&mut self) {}
+    /// ADR-020 #6 — social fabric (no-op stub).
+    pub fn phase_cohesion(&mut self) {}
+    /// ADR-020 #7 — mean mood aggregate (no-op stub).
+    pub fn phase_social_mood(&mut self) {}
+    /// ADR-020 #10a — first-pass focus seed (no-op stub).
+    pub fn phase_economic_focus_pre(&mut self) {}
+    /// ADR-020 #8 — dispossessed share (no-op stub).
+    pub fn phase_stratification(&mut self) {}
+    /// ADR-020 #9 — temple + garrison levels (no-op stub).
+    pub fn phase_institutions(&mut self) {}
+    /// ADR-020 #10 — settle pass (no-op stub).
+    pub fn phase_economic_focus(&mut self) {}
+    /// Adjust cohesion for a faction (no-op stub used by tests).
+    pub fn add_cohesion(&mut self, _faction: u32, _delta: f32) {}
+    /// Lookup the ECS entity id for a faction agent (no-op stub).
+    pub fn agent_entity(&self, _faction: u32) -> Option<u32> {
+        None
+    }
+    /// Micro-actor action count for emergence metrics (no-op stub).
+    pub fn micro_actor_action_count(&self, _actor: u64) -> u64 {
+        0
+    }
+    /// Micro-descendant action count for emergence metrics (no-op stub).
+    pub fn micro_descendant_action_count(&self, _descendant: u64) -> u64 {
+        0
+    }
 }
 
 // ============================================================================

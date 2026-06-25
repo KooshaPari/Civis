@@ -15,6 +15,9 @@ glam = "0.30.10"
 # Entity Component System (ECS)
 hecs = "0.10"
 
+# Fixed-point arithmetic (16-bit signed with 16 fractional bits).
+fixed = "1.28"
+
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

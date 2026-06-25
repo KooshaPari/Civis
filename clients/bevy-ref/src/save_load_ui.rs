@@ -111,7 +111,7 @@ fn render_panel(
                 "save.list requested".to_string(),
             ),
         };
-        bridge.client.send_rpc(json);
+        bridge.client.send_rpc_raw(json);
         panel.last_status = status;
     }
 }

@@ -1780,9 +1780,124 @@ impl Simulation {
         });
     }
 
-    /// Social-mood phase (FR-CIV-GOV-100 family). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A2.
-    fn phase_social_mood(&mut self) {}
+    /// Social-mood phase (FR-CIV-GOV-100 family). Computes a per-settlement
+    /// `MoodSnapshot` from food surplus, housing capacity vs population,
+    /// crime pressure, and institution bonuses (Temple + Garrison L1/L2).
+    ///
+    /// Algorithm (deterministic given identical inputs):
+    /// 1. `food_score` = `clamp(stocked/200, -200, 200)` in the range
+    ///    [-200, +200] (200 stocked = perfect; negative if negative stock).
+    /// 2. `housing_score` = `clamp(2*(capacity - population), -200, 200)`.
+    ///    Positive when capacity > population (surplus housing lifts mood);
+    ///    negative when overcrowded.
+    /// 3. `crime_score` = `max(0, 300 - 4*crime_pressure)` in [0, 300].
+    ///    Crime at 75 saturates the score to 0; below that mood degrades
+    ///    linearly.
+    /// 4. `temple_bonus` = 25 + 25*level (Temple L1=+25, L2=+50).
+    /// 5. `garrison_bonus` = 15 + 15*level (Garrison L1=+15, L2=+30).
+    /// 6. `mood` = `food_score + housing_score + crime_score + bonuses`,
+    ///    saturated at [`MOOD_MIN`, `MOOD_MAX`].
+    /// 7. `mood_delta` = `mood - previous_mood` (0 if no prior snapshot).
+    /// 8. Snapshots are written to `self.last_tick_mood` in ascending
+    ///    `settlement_id` order for determinism (test pinning).
+    fn phase_social_mood(&mut self) {
+        // 1) For every settlement, compute the sub-scores + total mood.
+        let mut snapshots: Vec<MoodSnapshot> = Vec::with_capacity(self.settlements.len());
+        for (&settlement_id, &population) in &self.settlements {
+            let stocked = self
+                .settlement_food_stocked
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let capacity = self
+                .settlement_housing_capacity
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let crime_pressure = self
+                .settlement_crime_pressure
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+
+            // 1. food_score
+            let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
+
+            // 2. housing_score
+            let housing_signed =
+                (capacity as i64).saturating_sub(population as i64).saturating_mul(2);
+            let housing_score = housing_signed.clamp(MOOD_MIN, MOOD_MAX);
+
+            // 3. crime_score (max(0, 300 - 4*pressure), bounded)
+            let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
+            let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
+
+            // 4-5. institution bonuses (settlement may have 0 or 1 institution)
+            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
+                Some(inst) if inst.kind == InstitutionKind::Temple => (
+                    25 + 25 * (inst.level as i32),
+                    0,
+                ),
+                Some(inst) if inst.kind == InstitutionKind::Garrison => (
+                    0,
+                    15 + 15 * (inst.level as i32),
+                ),
+                _ => (0, 0),
+            };
+
+            // 6. total mood (saturated)
+            let total = food_score
+                .saturating_add(housing_score)
+                .saturating_add(crime_score)
+                .saturating_add(temple_bonus as i64)
+                .saturating_add(garrison_bonus as i64)
+                .clamp(MOOD_MIN, MOOD_MAX);
+
+            // 7. delta vs previous
+            let prev = self
+                .mood_history
+                .iter()
+                .rev()
+                .find(|s| s.settlement_id == settlement_id)
+                .map(|s| s.mood)
+                .unwrap_or(0);
+            let mood_delta = total - prev;
+
+            snapshots.push(MoodSnapshot {
+                settlement_id,
+                mood: total,
+                mood_delta,
+                food_score,
+                housing_score,
+                crime_score,
+                temple_bonus,
+                garrison_bonus,
+            });
+        }
+
+        // 8) Sort by settlement_id for determinism (test pinning).
+        snapshots.sort_by_key(|s| s.settlement_id);
+
+        // 9) Persist current + history (capped to 16 entries per settlement).
+        for snap in &snapshots {
+            let history = self
+                .mood_history_by_settlement
+                .entry(snap.settlement_id)
+                .or_insert_with(Vec::new);
+            history.push(*snap);
+            if history.len() > MOOD_HISTORY_CAP {
+                let drop = history.len() - MOOD_HISTORY_CAP;
+                history.drain(0..drop);
+            }
+        }
+        // Also append into the flat history (test convenience).
+        self.mood_history.extend(snapshots.iter().copied());
+        if self.mood_history.len() > MOOD_HISTORY_CAP * 8 {
+            let drop = self.mood_history.len() - MOOD_HISTORY_CAP * 8;
+            self.mood_history.drain(0..drop);
+        }
+        self.last_tick_mood = snapshots;
+    }
 
     /// Stratification phase (FR-CIV-GOV-200 family). Stub for ADR-020;
     /// real implementation lands in TDD cycle A3.
@@ -1833,6 +1948,45 @@ impl Simulation {
     #[must_use]
     pub fn last_tick_institution_events(&self) -> &[InstitutionEvent] {
         &self.last_tick_institution_events
+    }
+
+    /// Per-settlement per-tick social-mood snapshot, computed by
+    /// [`Self::phase_social_mood`]. Cleared at the start of every
+    /// [`Simulation::tick`].
+    ///
+    /// `last_tick_mood(settlement_id) -> Option<&MoodSnapshot>` returns the
+    /// snapshot for one settlement (if any was computed this tick).
+    /// `last_tick_mood_all() -> &[MoodSnapshot]` returns the full list.
+    #[must_use]
+    pub fn last_tick_mood(&self, settlement_id: u32) -> Option<&MoodSnapshot> {
+        self.last_tick_mood
+            .iter()
+            .find(|s| s.settlement_id == settlement_id)
+    }
+
+    /// All per-settlement mood snapshots from the most recent tick. Read-only.
+    #[must_use]
+    pub fn last_tick_mood_all(&self) -> &[MoodSnapshot] {
+        &self.last_tick_mood
+    }
+
+    /// Set (or replace) the food-stocked snapshot for a settlement.
+    /// `phase_social_mood` consumes it to compute `food_score`. Units are
+    /// the same as `Stocks::food()` (i64 food units; clamped at 0 on read).
+    pub fn set_settlement_food_stocked(&mut self, settlement_id: u32, units: i64) {
+        self.settlement_food_stocked.insert(settlement_id, units);
+    }
+
+    /// Set (or replace) the housing capacity for a settlement. Used by
+    /// `phase_social_mood` to compute `housing_score` (capacity vs population).
+    pub fn set_settlement_housing_capacity(&mut self, settlement_id: u32, units: u32) {
+        self.settlement_housing_capacity.insert(settlement_id, units);
+    }
+
+    /// Set (or replace) the crime pressure (0..300) for a settlement. Used
+    /// by `phase_social_mood` to compute `crime_score`.
+    pub fn set_settlement_crime_pressure(&mut self, settlement_id: u32, units: i32) {
+        self.settlement_crime_pressure.insert(settlement_id, units);
     }
 
     /// Advance the simulation `n` ticks. Convenience wrapper for tests +

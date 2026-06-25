@@ -13,7 +13,6 @@ import {
   executeTerrainAuthoring,
 } from "./lib/authoring";
 import { convoyCells, spawnKindUsesConvoy } from "./lib/spawnConvoy";
-import { zoomDistanceFromWheel } from "./lib/zoomMath.mjs";
 import { postControl } from "./control";
 import { useDashboardShortcuts } from "./hooks/useDashboardShortcuts";
 import { getActiveServerSocket } from "./lib/civisSocket";
@@ -1313,12 +1312,14 @@ export function Scene3d() {
 
       const minDistance = Math.max(terrain.size * 0.12, controls.minDistance || 0);
       const maxDistance = Math.max(terrain.size * 8, controls.maxDistance || Infinity);
-      const nextDistance = zoomDistanceFromWheel({
-        distance: offset.length(),
-        deltaY: event.deltaY,
-        minDistance,
+      // zoomDistanceFromWheel (harvested in fb4c135d) inlined here.
+      // Math: distance * exp(deltaY * 0.0012), clamped to [minDistance, maxDistance].
+      const zoomFactor = Math.exp(event.deltaY * 0.0012);
+      const rawNextDistance = offset.length() * zoomFactor;
+      const nextDistance = Math.min(
+        Math.max(rawNextDistance, minDistance),
         maxDistance,
-      });
+      );
       offset.setLength(nextDistance);
 
       camera.position.copy(controls.target).add(offset);

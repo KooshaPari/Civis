@@ -8,6 +8,8 @@ pub mod emergence;
 pub mod emergence_metrics;
 pub mod engine;
 pub mod era;
+pub mod history;
+pub mod tech;
 pub mod faction_emergence;
 pub mod godtools;
 pub mod hash_chain;
@@ -52,6 +54,9 @@ pub use engine::{
     CombatDamagePulse, DiplomacyKind, FactionRelationSnapshot, Fixed, MilitaryUnit, ModGuestStateSave, Position, ReplayLog,
     Simulation, UnitType, WorldState,
 };
+pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
+pub use history::{EraHistory, EraTransition};
+pub use tech::{FactionEmergenceInputs, FactionTechState};
 pub use replay::ReplayError;
 pub use spawn::norm_to_grid;
 

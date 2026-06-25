@@ -463,6 +463,8 @@ pub struct Simulation {
     faction_trade_agreement_streak: BTreeMap<(u32, u32), u32>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
+    /// Per-faction emergent era/tech progression (FR-ERA).
+    pub(crate) era_progression: crate::era::EraProgressionState,
     belief: u64,
     /// Per-cluster culture profiles (cluster_cultures key is the cluster id).
     pub cluster_cultures: BTreeMap<u64, CultureProfile>,
@@ -1128,6 +1130,7 @@ impl Simulation {
             faction_trade_agreement_streak: BTreeMap::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            era_progression: crate::era::EraProgressionState::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
@@ -1228,6 +1231,7 @@ impl Simulation {
             faction_trade_agreement_streak: BTreeMap::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            era_progression: crate::era::EraProgressionState::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
@@ -2506,13 +2510,15 @@ impl Simulation {
     /// real implementation lands in TDD cycle A6.
     fn phase_life(&mut self) {}
 
-    /// Research phase (FR-CIV-RESEARCH-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A7.
-    fn phase_research(&mut self) {}
+    /// Research phase (FR-ERA): emergent per-faction research progress.
+    fn phase_research(&mut self) {
+        crate::era::phase_research(self);
+    }
 
-    /// Tech-tree phase (FR-CIV-TECH-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A8.
-    fn phase_tech(&mut self) {}
+    /// Tech-tree phase (FR-ERA): emergent tech levels + era evaluation.
+    fn phase_tech(&mut self) {
+        crate::era::phase_tech(self);
+    }
 
     /// Belief phase (FR-CIV-BELIEF-001) — religion §7 wiring.
     /// For each settlement, sample substrate gradients, run the
@@ -3520,6 +3526,17 @@ impl Simulation {
         &self.military_phase
     }
 
+    /// Borrow emergent era progression state (FR-ERA).
+    #[must_use]
+    pub fn era_progression(&self) -> &crate::era::EraProgressionState {
+        &self.era_progression
+    }
+
+    /// Mutably borrow emergent era progression state (FR-ERA).
+    pub(crate) fn era_progression_mut(&mut self) -> &mut crate::era::EraProgressionState {
+        &mut self.era_progression
+    }
+
     /// Get snapshot of current state
     pub fn snapshot(&self) -> SimulationSnapshot {
         let citizen_count = self.world.query::<&Citizen>().iter().count();
@@ -3544,6 +3561,7 @@ impl Simulation {
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
+            faction_eras: self.era_progression.faction_era_snapshots(self),
         }
     }
 
@@ -5089,6 +5107,9 @@ pub struct SimulationSnapshot {
     ///
     /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
     pub geology_map: GeologyMap,
+    /// Per-faction emergent civilization age (FR-ERA).
+    #[serde(default)]
+    pub faction_eras: std::collections::BTreeMap<u32, crate::era::FactionEraSnapshot>,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).

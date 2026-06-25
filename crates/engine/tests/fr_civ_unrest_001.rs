@@ -18,57 +18,10 @@
 
 use civ_engine::{
     CohesionSnapshot, FabricTier, MoodSnapshot, Sim, SimSeed, StratificationReport,
+    UnrestEvent, UnrestLevel, UnrestSnapshot,
 };
 
 const UNREST_SEED: u64 = 0xA5_A5_00_03;
-
-// --- Public API the green step must provide -------------------------------
-
-/// Per-settlement unrest level after `phase_unrest` runs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UnrestLevel {
-    /// No unrest signals. Citizens are content.
-    Stable,
-    /// Early warning signs: minor discontent, no events yet.
-    Restless,
-    /// Active civil disorder: riots and protests.
-    Rioting,
-    /// Open revolt: government is being challenged.
-    Revolting,
-}
-
-impl UnrestLevel {
-    /// Map a numeric unrest score [0, 400] to a level.
-    pub fn from_score(score: i32) -> Self {
-        match score {
-            s if s < 50 => UnrestLevel::Stable,
-            s if s < 150 => UnrestLevel::Restless,
-            s if s < 300 => UnrestLevel::Rioting,
-            _ => UnrestLevel::Revolting,
-        }
-    }
-}
-
-/// Per-tick unrest event.
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnrestEvent {
-    pub settlement_id: u32,
-    pub level: UnrestLevel,
-    pub score: i32,
-    pub score_delta: i32,
-    pub mood: i32,
-    pub gini_x100: i32,
-    pub fabric: FabricTier,
-}
-
-/// Per-settlement unrest snapshot.
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnrestSnapshot {
-    pub settlement_id: u32,
-    pub level: UnrestLevel,
-    pub score: i32,
-    pub events_count: u32,
-}
 
 fn make_sim(seed: u64) -> Sim {
     Sim::with_seed(SimSeed::from_u64(seed))

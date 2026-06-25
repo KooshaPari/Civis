@@ -25,8 +25,11 @@ pub mod replay_format;
 pub mod save;
 pub mod save_bundle;
 pub mod scenario;
+pub mod route;
+pub mod settlement;
 pub mod spawn;
 pub mod spectator;
+pub mod trade;
 
 /// Fixed-point scaling factor (1 raw unit = SCALE joules). Engine energy
 /// quantities are stored in fixed-point `i64` for determinism and converted
@@ -52,6 +55,7 @@ pub use engine::{
     CombatDamagePulse, DiplomacyKind, Fixed, MilitaryUnit, ModGuestStateSave, Position, ReplayLog,
     Simulation, UnitType, WorldState,
 };
+pub use trade::{SettlementTradeRoute, SettlementTradeState};
 pub use replay::ReplayError;
 pub use spawn::norm_to_grid;
 

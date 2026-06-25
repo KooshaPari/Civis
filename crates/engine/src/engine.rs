@@ -57,6 +57,7 @@ use crate::religion::{
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
+use crate::trade::{SettlementTradeRoute, SettlementTradeState};
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -595,6 +596,8 @@ pub struct Simulation {
     /// JSON-RPC `sim.snapshot.religion` method) read this buffer once per
     /// tick.
     pub last_tick_religion_events: Vec<ReligionEvent>,
+    /// Emergent settlement trade routes (FR-TRADE): positions + active flows.
+    settlement_trade: SettlementTradeState,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -1130,6 +1133,7 @@ impl Simulation {
             last_tick_mood: Vec::new(),
             religious_profiles: BTreeMap::new(),
             last_tick_religion_events: Vec::new(),
+            settlement_trade: SettlementTradeState::default(),
         }
     }
 
@@ -1230,6 +1234,7 @@ impl Simulation {
             last_tick_stratification_reports: BTreeMap::new(),
             religious_profiles: BTreeMap::new(),
             last_tick_religion_events: Vec::new(),
+            settlement_trade: SettlementTradeState::default(),
         }
     }
 
@@ -2523,6 +2528,11 @@ impl Simulation {
         self.settlement_crime_pressure.insert(settlement_id, units);
     }
 
+    /// Register settlement world position for emergent trade connectivity (FR-TRADE).
+    pub fn set_settlement_position(&mut self, settlement_id: u32, position: glam::IVec3) {
+        self.settlement_trade.set_position(settlement_id, position);
+    }
+
     /// Advance the simulation `n` ticks. Convenience wrapper for tests +
     /// scenario runners so they can compress `n` ticks of `phase_*` work into
     /// a single call. Calls [`Self::tick`] `n` times.
@@ -3114,6 +3124,11 @@ impl Simulation {
 
         self.state.energy_budget_joules = Fixed::from_num(self.economy_state.energy_budget_joules);
         self.tick_trade_routes();
+        self.settlement_trade.tick(
+            &self.settlements,
+            &mut self.settlement_food_stocked,
+            &mut self.market_state,
+        );
         self.market_state.step(self.state.tick);
     }
 
@@ -3240,6 +3255,7 @@ impl Simulation {
             diplomacy_events: self.diplomacy_events.clone(),
             disaster_events: self.last_tick_disaster_events.clone(),
             market_prices: self.market_state.prices().clone(),
+            settlement_trade_routes: self.settlement_trade.active_routes.clone(),
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
@@ -4575,6 +4591,8 @@ pub struct SimulationSnapshot {
     pub diplomacy_events: Vec<DiplomacyEvent>,
     /// Per-good clearing prices in cents from [`MarketState`].
     pub market_prices: BTreeMap<String, i64>,
+    /// Active settlement trade routes from the most recent economy tick (FR-TRADE).
+    pub settlement_trade_routes: Vec<SettlementTradeRoute>,
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
     /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
     pub damage_events: usize,

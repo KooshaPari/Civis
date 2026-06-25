@@ -23,7 +23,8 @@ use civ_build::ProductionEvent;
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id,
     scenario::{load_scenario, preset_scenario_path},
-    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
+    Citizen, CivSaveBundle, CohesionEvent, DiplomacyKind, InstitutionEvent,
+    JobType, MoodSnapshot, Simulation, StratificationEvent, UnrestEvent,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -187,6 +188,11 @@ struct TickBroadcast {
     /// consume this list to play SFX cues. Replay log mirrors it via
     /// `audio_events` snapshot field.
     audio_events: Arc<[civ_engine::SfxTrigger]>,
+    institution_events: Arc<[civ_engine::InstitutionEvent]>,
+    mood_snapshots: Arc<[civ_engine::MoodSnapshot]>,
+    stratification_events: Arc<[civ_engine::StratificationEvent]>,
+    cohesion_events: Arc<[civ_engine::CohesionEvent]>,
+    unrest_events: Arc<[civ_engine::UnrestEvent]>,
 }
 
 fn resolve_session_id() -> String {
@@ -1533,12 +1539,43 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
                 .to_vec()
                 .into_boxed_slice(),
         );
+        // governance event snapshots
+        let institution_events: Arc<[InstitutionEvent]> = Arc::from(
+            sim.last_tick_institution_events()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        let mood_snapshots: Arc<[MoodSnapshot]> = Arc::from(
+            sim.last_tick_mood_all()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        let stratification_events: Arc<[StratificationEvent]> = Arc::from(
+            sim.last_tick_stratification()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        let cohesion_events: Arc<[CohesionEvent]> = Arc::from(
+            sim.last_tick_cohesion()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        let unrest_events: Arc<[UnrestEvent]> = Arc::from(
+            sim.last_tick_unrest()
+                .to_vec()
+                .into_boxed_slice(),
+        );
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
             construction_events,
             audio_events,
+            institution_events,
+            mood_snapshots,
+            stratification_events,
+            cohesion_events,
+            unrest_events,
         })
     };
 

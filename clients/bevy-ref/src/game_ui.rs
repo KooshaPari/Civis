@@ -131,6 +131,40 @@ fn speed_value_matches(actual: f32, expected: f32) -> bool {
     (actual - expected).abs() < 0.01
 }
 
+pub const GOD_ACTION_TOAST_DURATION_SECS: f32 = 3.0;
+
+#[derive(Resource, Debug, Clone)]
+pub struct GodActionToast {
+    message: String,
+    ttl_secs: f32,
+}
+
+impl Default for GodActionToast {
+    fn default() -> Self {
+        Self {
+            message: String::new(),
+            ttl_secs: 0.0,
+        }
+    }
+}
+
+impl GodActionToast {
+    pub fn show<S: Into<String>>(&mut self, message: S) {
+        self.message = message.into();
+        self.ttl_secs = GOD_ACTION_TOAST_DURATION_SECS;
+    }
+}
+
+fn tick_god_action_toast(time: Res<Time>, mut toast: ResMut<GodActionToast>) {
+    if toast.ttl_secs <= 0.0 {
+        if !toast.message.is_empty() {
+            toast.message.clear();
+        }
+        return;
+    }
+    toast.ttl_secs = (toast.ttl_secs - time.delta_secs()).clamp(0.0, GOD_ACTION_TOAST_DURATION_SECS);
+}
+
 // ---------------------------------------------------------------------------
 // Palette
 // ---------------------------------------------------------------------------
@@ -153,6 +187,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
+            .init_resource::<GodActionToast>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
             // Holocron motion state is intentionally NOT registered here yet —
@@ -168,7 +203,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<crate::info_views::InfoViewRegistry>()
             .init_resource::<ToolIcons>()
             .add_systems(Startup, queue_tool_icon_handles)
-            .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
+            .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys, tick_god_action_toast))
             // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
             // `load_tool_icons` registers the PNGs as egui textures and must run
             // before `draw_game_ui` consumes them. Bevy 0.18 dropped the
@@ -325,6 +360,7 @@ fn draw_game_ui(
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
     mut building_kind: ResMut<BuildingSpawnKind>,
+    god_action_toast: Res<GodActionToast>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -360,6 +396,37 @@ fn draw_game_ui(
                 inspector_ui(ui, &details);
             });
     }
+
+    draw_god_action_toast(ctx, &god_action_toast);
+}
+
+fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
+    if toast.message.is_empty() || toast.ttl_secs <= 0.0 {
+        return;
+    }
+
+    let fade = (toast.ttl_secs / GOD_ACTION_TOAST_DURATION_SECS).clamp(0.0, 1.0);
+    let alpha = (fade * 220.0).clamp(50.0, 220.0) as u8;
+    let fill = egui::Color32::from_rgba_premultiplied(12, 16, 28, alpha);
+    let text = egui::Color32::from_rgba_unmultiplied(223, 231, 246, alpha);
+
+    egui::Area::new(egui::Id::new("civis_god_action_toast"))
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-18.0, -20.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::NONE
+                .fill(fill)
+                .stroke(egui::Stroke::new(1.0, ACCENT))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::symmetric(12, 8))
+                .show(ui, |ui| {
+                    ui.label(
+                        egui::RichText::new(&toast.message)
+                            .size(13.5)
+                            .color(text),
+                    );
+                });
+        });
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).

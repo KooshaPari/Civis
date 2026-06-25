@@ -9,7 +9,7 @@ use civ_agents::{
     SocialGraph, Position3d, Tools, Wardrobe,
 };
 use civ_agents::diplomacy::GriefAccumulator;
-use civ_audio::triggers::SfxTrigger;
+use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
@@ -504,6 +504,10 @@ pub struct Simulation {
     /// tick broadcast; clients translate each entry into a kira SFX
     /// trigger via [`civ_audio::triggers::trigger_to_sfx_requests`].
     last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
+    /// Per-culture music cue parameters derived from emergent culture + state.
+    /// Updated in `phase_audio` and surfaced on `SimulationSnapshot::music_cues`
+    /// as a stable per-cluster key-value map.
+    last_tick_music_cues: BTreeMap<u64, MusicCue>,
     /// Per-tick disaster events surfaced in snapshots.
     last_tick_disaster_events: Vec<crate::disasters::DisasterTickEvent>,
     operational: NoopOperationalLayer,
@@ -1328,6 +1332,7 @@ impl Simulation {
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
+            last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
@@ -1441,6 +1446,7 @@ impl Simulation {
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
+            last_tick_music_cues: BTreeMap::new(),
             last_tick_disaster_events: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
@@ -1983,6 +1989,7 @@ impl Simulation {
         // audio events mid-tick; `phase_audio` re-emits the survivors
         // alongside combat + construction events on the wire.
         self.last_tick_audio_events.clear();
+        self.last_tick_music_cues.clear();
         self.last_tick_disaster_events.clear();
         // Social-mood buffer (FR-CIV-GOV-100). `phase_social_mood` overwrites
         // this with the per-settlement snapshots each tick; downstream
@@ -3271,6 +3278,22 @@ impl Simulation {
             }
         }
 
+        let cluster_member_counts = settlement_member_counts(&self.world);
+        let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
+        let mut cues = BTreeMap::new();
+        for (&cluster_id, profile) in &self.cluster_cultures {
+            let faction_id = dominant.get(&cluster_id).copied();
+            let aggression = faction_id
+                .and_then(|id| self.faction_aggression.get(&id))
+                .copied()
+                .unwrap_or(0.0);
+            cues.insert(
+                cluster_id,
+                derive_music_cue(profile.traits, cluster_id, aggression, self.state.tick),
+            );
+        }
+        self.last_tick_music_cues = cues;
+
         self.last_tick_audio_events = events;
     }
 
@@ -4066,6 +4089,7 @@ impl Simulation {
             faction_relations: self.faction_relations_snapshot(),
             disaster_events: self.last_tick_disaster_events.clone(),
             market_prices: self.market_state.prices().clone(),
+            music_cues: self.last_tick_music_cues.clone(),
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
@@ -5666,6 +5690,9 @@ pub struct SimulationSnapshot {
     pub faction_relations: Vec<FactionRelationSnapshot>,
     /// Per-good clearing prices in cents from [`MarketState`].
     pub market_prices: BTreeMap<String, i64>,
+    /// Per-culture music cue parameters surfaced on snapshot for clients.
+    /// Keyed by cluster id, stable-order by map iteration.
+    pub music_cues: BTreeMap<u64, MusicCue>,
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
     /// (FR-CIV-TACTICS-024 — feeds doctrine fitness and the server `/sim/state` wire).
     pub damage_events: usize,
@@ -8378,6 +8405,54 @@ mod tests {
                 }
                 other => panic!("expected Battle trigger, got {other:?}"),
             }
+        }
+
+        /// FR-MUSIC-001 — two cultures produce distinct, drifting music-cue
+        /// surfaces derived from emergent culture profiles.
+        #[test]
+        fn fr_music_distinct_culture_cues_evolve_over_time() {
+            use civ_agents::culture::CultureProfile;
+
+            let mut sim = Simulation::new();
+            sim.cluster_cultures.insert(100, CultureProfile::new([0.14, 0.14, 0.14, 0.14]));
+            sim.cluster_cultures.insert(
+                200,
+                CultureProfile::new([0.86, 0.86, 0.86, 0.86]),
+            );
+            sim.faction_aggression.insert(0, 0.1);
+            sim.faction_aggression.insert(1, 0.2);
+
+            sim.tick();
+            let snap_a = sim.snapshot();
+            let cue_a_100 = snap_a
+                .music_cues
+                .get(&100)
+                .copied()
+                .expect("seeded cluster 100 should have a cue");
+            let cue_a_200 = snap_a
+                .music_cues
+                .get(&200)
+                .copied()
+                .expect("seeded cluster 200 should have a cue");
+            assert_ne!(
+                cue_a_100, cue_a_200,
+                "cultures with distinct profiles should surface distinct cue params"
+            );
+
+            sim.tick();
+            let snap_b = sim.snapshot();
+            let cue_b_100 = snap_b
+                .music_cues
+                .get(&100)
+                .copied()
+                .expect("seeded cluster 100 should persist");
+            let cue_b_200 = snap_b
+                .music_cues
+                .get(&200)
+                .copied()
+                .expect("seeded cluster 200 should persist");
+            assert_ne!(cue_a_100, cue_b_100);
+            assert_ne!(cue_a_200, cue_b_200);
         }
     }
 }

@@ -1361,6 +1361,45 @@ impl Simulation {
         &self.faction_doctrines
     }
 
+    /// Snapshot doctrine libraries for full-state save/load serialization.
+    #[must_use]
+    pub(crate) fn saveable_faction_doctrines(&self) -> Vec<DoctrineLibrary> {
+        self.faction_doctrines.clone()
+    }
+
+    /// Restore doctrine libraries after simulation state load.
+    pub(crate) fn restore_faction_doctrines(&mut self, doctrines: Vec<DoctrineLibrary>) {
+        self.faction_doctrines = doctrines;
+    }
+
+    /// Snapshot institution state for full-state persistence.
+    #[must_use]
+    pub(crate) fn saveable_institution_state(
+        &self,
+    ) -> (
+        BTreeMap<u32, u32>,
+        BTreeMap<u32, civ_institutions::Institution>,
+        BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+    ) {
+        (
+            self.settlements.clone(),
+            self.institutions.clone(),
+            self.institution_levels_emitted.clone(),
+        )
+    }
+
+    /// Restore institution state after simulation state load.
+    pub(crate) fn restore_institution_state(
+        &mut self,
+        settlements: BTreeMap<u32, u32>,
+        institutions: BTreeMap<u32, civ_institutions::Institution>,
+        institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+    ) {
+        self.settlements = settlements;
+        self.institutions = institutions;
+        self.institution_levels_emitted = institution_levels_emitted;
+    }
+
     /// Borrow the immutable planet config.
     pub fn planet(&self) -> &PlanetConfig {
         &self.planet

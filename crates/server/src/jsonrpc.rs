@@ -2387,6 +2387,26 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 }
             }
         }
+        JsonRpcMethod::PsycheSnapshot => {
+            let psyche_snapshot = ctx
+                .psyche_snapshot
+                .map(|snapshot| serde_json::to_value(snapshot).unwrap_or(Value::Array(Vec::new())))
+                .unwrap_or_else(|| Value::Array(Vec::new()));
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, psyche_snapshot),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::PsycheEvents => {
+            let sentience_events = ctx
+                .sentience_events
+                .map(|events| serde_json::to_value(events).unwrap_or(Value::Array(Vec::new())))
+                .unwrap_or_else(|| Value::Array(Vec::new()));
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, sentience_events),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimTechState => DispatchPlan {
             response: JsonRpcResponse::success(
                 req.id,
@@ -4457,6 +4477,14 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("save.list"),
             Some(JsonRpcMethod::SaveList)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("psyche.snapshot"),
+            Some(JsonRpcMethod::PsycheSnapshot)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("psyche.events"),
+            Some(JsonRpcMethod::PsycheEvents)
         );
         assert_eq!(
             JsonRpcMethod::parse_name("sim.emergence"),

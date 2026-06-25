@@ -1641,6 +1641,8 @@ impl Simulation {
             civilian.age = civilian.age.saturating_add(1);
             if self.state.resources.food.raw > 0 {
                 needs.food = (needs.food + 0.008).min(1.0);
+                self.state.resources.food =
+                    (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
@@ -1680,6 +1682,7 @@ impl Simulation {
 
         let births_count = self.last_births.len() as u64;
         let deaths_count = self.last_deaths.len() as u64;
+        self.last_life_deaths = deaths_count as u32;
         self.state.population = self.state.population.saturating_add(births_count);
         self.state.population = self.state.population.saturating_sub(deaths_count);
     }

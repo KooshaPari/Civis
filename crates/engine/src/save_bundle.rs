@@ -54,6 +54,9 @@ pub enum SaveBundleError {
     /// Replay encode/decode failure.
     #[error("replay: {0}")]
     Replay(#[from] ReplayError),
+    /// Full simulation payload save/load failure (`simulation.bin`).
+    #[error("state: {0}")]
+    State(#[from] crate::save::SaveError),
     /// Missing required component in the folder.
     #[error("missing {component} in {dir}")]
     MissingComponent {
@@ -108,6 +111,9 @@ impl CivSaveBundle {
         fs::write(&mod_state_path, sim.export_mod_guest_state().to_json()?)
             .map_err(|e| io_err(&mod_state_path, e))?;
 
+        let simulation_path = dir.join("simulation.bin");
+        crate::save::save_game(sim, &simulation_path).map_err(SaveBundleError::State)?;
+
         let replay_path = dir.join("replay.civreplay");
         sim.save_replay(&replay_path)?;
         Ok(())
@@ -116,14 +122,19 @@ impl CivSaveBundle {
     /// Load simulation from a `.civsave/` folder.
     pub fn load_dir(dir: impl AsRef<Path>) -> Result<Simulation, SaveBundleError> {
         let dir = dir.as_ref();
-        let replay_path = dir.join("replay.civreplay");
-        if !replay_path.is_file() {
-            return Err(SaveBundleError::MissingComponent {
-                dir: dir.to_path_buf(),
-                component: "replay.civreplay",
-            });
-        }
-        let mut sim = Simulation::load_replay_from_file(&replay_path)?;
+        let simulation_path = dir.join("simulation.bin");
+        let mut sim = if simulation_path.is_file() {
+            crate::save::load_game(&simulation_path)?
+        } else {
+            let replay_path = dir.join("replay.civreplay");
+            if !replay_path.is_file() {
+                return Err(SaveBundleError::MissingComponent {
+                    dir: dir.to_path_buf(),
+                    component: "replay.civreplay",
+                });
+            }
+            Simulation::load_replay_from_file(&replay_path)?
+        };
 
         let mod_state_path = dir.join("mod_state.json");
         if mod_state_path.is_file() {
@@ -275,11 +286,41 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn civsave_folder_round_trips_mod_guest_state() {
+    fn civsave_folder_round_trips_full_simulation_state() {
         let mut sim = Simulation::with_seed(9);
+        sim.set_settlement_population(101, 2_000_000);
+        sim.set_settlement_population(102, 1_500_000);
+        sim.religious_profiles.insert(
+            101,
+            crate::ReligiousProfile {
+                monitoring: 0.42,
+                mythic_coherence: 0.33,
+                uncertainty_reduction: 0.27,
+                age_ticks: sim.state.tick,
+                population: 2_000_000,
+                last_drift_seed: 1_234,
+            },
+        );
+        sim.religious_profiles.insert(
+            102,
+            crate::ReligiousProfile {
+                monitoring: 0.21,
+                mythic_coherence: 0.17,
+                uncertainty_reduction: 0.55,
+                age_ticks: sim.state.tick,
+                population: 1_500_000,
+                last_drift_seed: 2_468,
+            },
+        );
         for _ in 0..5 {
             sim.tick();
         }
+        let state = sim.state.clone();
+        let institutions = sim.saveable_institution_state();
+        let doctrines = sim.saveable_faction_doctrines();
+        let religious_profiles = sim.religious_profiles.clone();
+        let last_settlement_count = sim.last_settlement_count;
+        let last_life_deaths = sim.last_life_deaths;
         sim.mod_host_mut()
             .restore_guest_memory("test-mod", vec![4, 5, 6]);
 
@@ -288,7 +329,12 @@ mod tests {
         CivSaveBundle::save_dir(&save_path, &sim).expect("save");
 
         let loaded = CivSaveBundle::load_dir(&save_path).expect("load");
-        assert_eq!(loaded.state.tick, sim.state.tick);
+        assert_eq!(loaded.state, state);
+        assert_eq!(loaded.saveable_institution_state(), institutions);
+        assert_eq!(loaded.saveable_faction_doctrines(), doctrines);
+        assert_eq!(loaded.religious_profiles, religious_profiles);
+        assert_eq!(loaded.last_settlement_count, last_settlement_count);
+        assert_eq!(loaded.last_life_deaths, last_life_deaths);
         assert_eq!(
             loaded.mod_host().guest_memory_snapshot("test-mod"),
             vec![4, 5, 6]

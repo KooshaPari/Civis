@@ -521,6 +521,24 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
+            let (psyche_snapshot, sentience_events) = if req.method
+                == crate::jsonrpc::JsonRpcMethod::PsycheSnapshot
+                || req.method == crate::jsonrpc::JsonRpcMethod::PsycheEvents
+            {
+                let sim = state.sim.lock().await;
+                let events = crate::jsonrpc::sentience_events_from_sim(&sim);
+                let snapshot = crate::jsonrpc::psyche_snapshot_from_sim(&sim, &events);
+                (
+                    Some(snapshot),
+                    if req.method == crate::jsonrpc::JsonRpcMethod::PsycheEvents {
+                        Some(events)
+                    } else {
+                        None
+                    },
+                )
+            } else {
+                (None, None)
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -536,6 +554,8 @@ async fn handle_jsonrpc_text(
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
+                    psyche_snapshot,
+                    sentience_events,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

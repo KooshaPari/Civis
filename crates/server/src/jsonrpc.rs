@@ -2328,6 +2328,26 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
+        JsonRpcMethod::PsycheSnapshot => DispatchPlan {
+            response: JsonRpcResponse::success(
+                req.id,
+                serde_json::json!({
+                    "entities": ctx.psyche_snapshot.unwrap_or_default(),
+                    "tick": ctx.tick,
+                }),
+            ),
+            effect: DispatchEffect::None,
+        },
+        JsonRpcMethod::PsycheEvents => DispatchPlan {
+            response: JsonRpcResponse::success(
+                req.id,
+                serde_json::json!({
+                    "events": ctx.sentience_events.unwrap_or_default(),
+                    "tick": ctx.tick,
+                }),
+            ),
+            effect: DispatchEffect::None,
+        },
     }
 }
 

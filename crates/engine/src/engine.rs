@@ -18,8 +18,8 @@ use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceT
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_planet::{
-    compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
-    PlanetConfig, WeatherCell,
+    classify_biome, compute_climate, compute_weather, defaults_earthlike, Climate,
+    GeologyMap, MoonConfig, PlanetConfig, WeatherCell, WeatherKind,
 };
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
@@ -57,6 +57,13 @@ use crate::religion::{
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
+
+#[derive(Debug, Clone, Copy, Default)]
+struct ClimateBiomeDriftState {
+    drought_pressure_fp: i32,
+    pending_biome: Option<civ_planet::BiomeKind>,
+    transition_streak: u32,
+}
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -513,6 +520,12 @@ pub struct Simulation {
     coastal_columns: BTreeMap<(i64, i64), CoastalColumn>,
     /// Per-region weather grid updated by `phase_planet` each tick (FR-CIV-PLANET-030).
     pub weather_grid: Vec<WeatherCell>,
+    /// Region-evolution cache that links climate pressure to dynamic biome shifts
+    /// over time (FR-CIV-PLANET-070).
+    geology_map: GeologyMap,
+    /// Per-region drought pressure accumulator and transition memory for climate-driven
+    /// biome evolution.
+    climate_biome_state: Vec<ClimateBiomeDriftState>,
     /// Construction queue of in-progress `BuildSite`s.
     /// Drives `phase_buildings` per-tick progress + completion (FR-CIV-BUILD-001/002).
     build_sites: Vec<BuildSite>,
@@ -1062,6 +1075,8 @@ impl Simulation {
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
         let weather_grid = compute_weather(&climate, 0, 16);
+        let geology_map = GeologyMap::seed(&planet);
+        let climate_biome_state = vec![ClimateBiomeDriftState::default(); geology_map.regions.len()];
         let state = WorldState::default();
 
         Self {
@@ -1116,6 +1131,8 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            geology_map,
+            climate_biome_state,
             build_sites: Vec::new(),
             last_tick_construction_events: Vec::new(),
             language_state: LanguageState::default(),
@@ -1150,6 +1167,8 @@ impl Simulation {
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
         let weather_grid = compute_weather(&climate, 0, 16);
+        let geology_map = GeologyMap::seed(&planet);
+        let climate_biome_state = vec![ClimateBiomeDriftState::default(); geology_map.regions.len()];
         let state = WorldState {
             rng_seed: seed,
             ..Default::default()
@@ -1207,6 +1226,8 @@ impl Simulation {
             faction_doctrines: default_faction_doctrines(),
             coastal_columns: BTreeMap::new(),
             weather_grid,
+            geology_map,
+            climate_biome_state,
             build_sites: Vec::new(),
             last_tick_construction_events: Vec::new(),
             language_state: LanguageState::default(),
@@ -1857,11 +1878,26 @@ impl Simulation {
     }
 
     /// Planet phase - recompute climate and weather grid from the current tick,
-    /// then apply the resulting tide offset to any registered coastal water
-    /// columns (FR-CIV-PLANET-020, FR-CIV-PLANET-030).
+    /// enrich weather fields with topography + drought cycles, and shift biomes
+    /// after sustained climate pressure (FR-CIV-PLANET-030 + FR-CIV-PLANET-070).
     fn phase_planet(&mut self) {
         self.climate = compute_climate(self.state.tick, &self.planet, &self.moon);
-        self.weather_grid = compute_weather(&self.climate, self.state.tick, self.weather_grid.len().max(1) as u32);
+        self.weather_grid = compute_weather(
+            &self.climate,
+            self.state.tick,
+            self.weather_grid.len().max(1) as u32,
+        );
+        self.sync_climate_and_geology_buffers();
+
+        for region_id in 0..self.weather_grid.len() {
+            let region_count = self.weather_grid.len();
+            let elevation = self.region_elevation(region_id, region_count);
+            let climate_pressure = &mut self.climate_biome_state[region_id];
+            self.apply_drought_feedback(region_id, climate_pressure, &mut self.weather_grid[region_id]);
+            self.apply_topography_feedback(elevation, &mut self.weather_grid[region_id]);
+            self.evolve_region_biome(region_id, elevation, self.weather_grid[region_id]);
+        }
+
         self.apply_tide_offset();
     }
 
@@ -1881,6 +1917,138 @@ impl Simulation {
         // FR-CIV-VOXEL-002 dirty-event invariants stay intact.
         self.push_voxel_write(WorldCoord { x, y: base_y, z }, WATER_MARKER_MATERIAL);
         self.coastal_columns.insert((x, z), column);
+    }
+
+    fn sync_climate_and_geology_buffers(&mut self) {
+        let expected = self.weather_grid.len();
+        if self.geology_map.regions.len() != expected {
+            let mut regions = GeologyMap::seed(&self.planet).regions;
+            if regions.len() >= expected {
+                regions.truncate(expected);
+            } else {
+                while regions.len() < expected {
+                    regions.push(civ_planet::RegionBiome {
+                        region_id: regions.len() as u32,
+                        biome: civ_planet::BiomeKind::Plains,
+                    });
+                }
+            }
+            self.geology_map.regions = regions;
+        }
+
+        self.climate_biome_state
+            .resize(expected, ClimateBiomeDriftState::default());
+    }
+
+    fn apply_drought_feedback(
+        &mut self,
+        region_id: usize,
+        state: &mut ClimateBiomeDriftState,
+        cell: &mut WeatherCell,
+    ) {
+        let annual_cycle = (self.climate.year_phase * std::f32::consts::TAU).sin();
+        let regional_cycle = (region_id as f32 * 0.73).sin() * 0.25;
+        let seasonal_wave = (self.climate.day_phase * std::f32::consts::TAU).sin() * 0.25;
+        let pressure_signal = annual_cycle + regional_cycle + seasonal_wave;
+        let drift = if pressure_signal > 0.18 {
+            DRYNESS_PRESSURE_STEP
+        } else if pressure_signal < -0.18 {
+            -DRYNESS_PRESSURE_STEP
+        } else {
+            0
+        };
+        state.drought_pressure_fp = (state.drought_pressure_fp + drift).clamp(
+            -DRYNESS_PRESSURE_MAX,
+            DRYNESS_PRESSURE_MAX,
+        );
+
+        let scaled_precip =
+            ((cell.precip_mm_fp as f64) * f64::from(PRECIP_SCALE_FP)) as i32;
+        let drought_adjust = state.drought_pressure_fp * DRYNESS_TO_PRECIP_FP;
+        let seasonal_precip_bias = match cell.season {
+            civ_planet::SeasonKind::Summer => 1_500,
+            civ_planet::SeasonKind::Autumn => 300,
+            civ_planet::SeasonKind::Spring => 900,
+            civ_planet::SeasonKind::Winter => -500,
+        };
+        let drought_precip = scaled_precip - drought_adjust;
+        cell.precip_mm_fp = (drought_precip + seasonal_precip_bias).clamp(0, MAX_PRECIP_FP);
+
+        let drought_temp = state.drought_pressure_fp * 45;
+        cell.temp_c_fp = (cell.temp_c_fp + drought_temp).clamp(MIN_TEMP_FP, MAX_TEMP_FP);
+        cell.kind = classify_weather_kind(
+            cell.temp_c_fp,
+            cell.precip_mm_fp,
+            cell.storm_intensity_fp,
+        );
+    }
+
+    fn region_elevation(&self, region_id: usize, region_count: usize) -> f32 {
+        if region_count <= 1 {
+            return 0.10;
+        }
+        let latitude_norm = -1.0 + 2.0 * region_id as f32 / (region_count as f32 - 1.0);
+        let lat_abs = latitude_norm.abs();
+        let ridge_noise = (region_id as f32 * 0.91).sin().abs() * 0.07;
+        (0.08 + lat_abs * 0.52 + ridge_noise).clamp(0.0, 1.0)
+    }
+
+    fn apply_topography_feedback(&self, elevation: f32, cell: &mut WeatherCell) {
+        let temp_delta_fp = (ELEVATION_TEMP_COOLING_FP * elevation) as i32;
+        let lat_temp = -((cell.latitude_fp as i32).abs() / 9_000);
+        let lat_moisture = (cell.latitude_fp as i64).abs() as i64 / 90_000;
+        let elevation_moisture = (elevation * ELEVATION_MOISTURE_DROP_FP as f32) as i32;
+        let moisture_delta_fp =
+            ELEVATION_DRYNESS_BASE_FP - elevation_moisture - lat_moisture as i32;
+
+        cell.temp_c_fp = (cell.temp_c_fp + temp_delta_fp + lat_temp).clamp(MIN_TEMP_FP, MAX_TEMP_FP);
+        let scaled_precip = ((cell.precip_mm_fp as i64) * i64::from(PRECIP_SCALE_FP)) + i64::from(moisture_delta_fp);
+        cell.precip_mm_fp = scaled_precip
+            .clamp(0, i64::from(MAX_PRECIP_FP))
+            .try_into()
+            .unwrap_or_else(|_| 0);
+        cell.kind = classify_weather_kind(
+            cell.temp_c_fp,
+            cell.precip_mm_fp,
+            cell.storm_intensity_fp,
+        );
+    }
+
+    fn evolve_region_biome(&mut self, region_id: usize, elevation: f32, cell: WeatherCell) {
+        let Some(region_state) = self.climate_biome_state.get_mut(region_id) else {
+            return;
+        };
+        let Some(region_entry) = self.geology_map.regions.get_mut(region_id) else {
+            return;
+        };
+
+        let candidate = classify_biome(
+            elevation,
+            cell.temp_c_fp as f32 / 1_000.0,
+            cell.precip_mm_fp as f32 / 1_000.0,
+        );
+
+        if candidate == region_entry.biome {
+            region_state.pending_biome = None;
+            region_state.transition_streak = 0;
+            return;
+        }
+
+        match region_state.pending_biome {
+            Some(pending) if pending == candidate => {
+                region_state.transition_streak = region_state.transition_streak.saturating_add(1);
+            }
+            Some(_) | None => {
+                region_state.pending_biome = Some(candidate);
+                region_state.transition_streak = 1;
+            }
+        }
+
+        if region_state.transition_streak >= BIOME_SHIFT_STREAK {
+            region_entry.biome = candidate;
+            region_state.pending_biome = None;
+            region_state.transition_streak = 0;
+        }
     }
 
     /// Borrow the registered coastal water columns (for tests + tooling).
@@ -3243,7 +3411,7 @@ impl Simulation {
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
-            geology_map: GeologyMap::seed(&self.planet),
+            geology_map: self.geology_map.clone(),
         }
     }
 
@@ -3276,6 +3444,18 @@ impl Simulation {
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].
 const CHRONICLE_MAX_LEN: usize = 200;
+
+const BIOME_SHIFT_STREAK: u32 = 24;
+const DRYNESS_PRESSURE_MAX: i32 = 140;
+const DRYNESS_PRESSURE_STEP: i32 = 8;
+const DRYNESS_TO_PRECIP_FP: i32 = 55;
+const PRECIP_SCALE_FP: i32 = 22;
+const ELEVATION_TEMP_COOLING_FP: f32 = -16_000.0;
+const ELEVATION_MOISTURE_DROP_FP: i32 = 4_500;
+const ELEVATION_DRYNESS_BASE_FP: i32 = 350;
+const MAX_PRECIP_FP: i32 = 200_000;
+const MIN_TEMP_FP: i32 = -60_000;
+const MAX_TEMP_FP: i32 = 55_000;
 
 /// Food units each cluster member adds to settlement stock per tick in
 /// [`Simulation::phase_life`].
@@ -3620,6 +3800,18 @@ fn sentience_research_bonus(world: &hecs::World) -> u64 {
     }
     let fraction = sentient as f32 / total as f32;
     ((fraction * MAX_SENTIENCE_RESEARCH as f32) as u64).min(MAX_SENTIENCE_RESEARCH)
+}
+
+fn classify_weather_kind(temp_c_fp: i32, precip_mm_fp: i32, storm_intensity_fp: i32) -> WeatherKind {
+    if storm_intensity_fp >= 1_500 {
+        WeatherKind::Storm
+    } else if temp_c_fp <= 0 && precip_mm_fp > 250 {
+        WeatherKind::Snow
+    } else if precip_mm_fp > 200 {
+        WeatherKind::Rain
+    } else {
+        WeatherKind::Clear
+    }
 }
 
 /// The economic focus a civilization tends toward, from its strongest sector.
@@ -4588,9 +4780,9 @@ pub struct SimulationSnapshot {
     /// Each entry is a [`WeatherCell`] with fixed-point temp and precipitation.
     /// The grid is re-derived from `tick` and `planet.axial_tilt_deg` every tick.
     pub weather_grid: Vec<WeatherCell>,
-    /// Deterministic geology map for the planet (FR-CIV-PLANET-040).
+    /// Evolving geology map for the planet (FR-CIV-PLANET-040).
     ///
-    /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
+    /// Seeded from `PlanetConfig` and then adjusted by sustained climate state.
     pub geology_map: GeologyMap,
 }
 
@@ -5930,6 +6122,43 @@ mod tests {
     /// FR-CIV-PLANET-030 — `snapshot().weather_grid` temperature varies with
     /// year phase (summer equatorial > winter equatorial) and results are
     /// deterministic across re-runs.
+    #[test]
+    fn sustained_climate_pressure_drives_biome_shift() {
+        let mut sim = Simulation::with_seed(2026);
+        let region_id = 8usize;
+        sim.state.tick = 1;
+        sim.phase_planet();
+
+        let initial_candidate = classify_biome(
+            sim.region_elevation(region_id, sim.weather_grid.len()),
+            sim.weather_grid[region_id].temp_c_fp as f32 / 1_000.0,
+            sim.weather_grid[region_id].precip_mm_fp as f32 / 1_000.0,
+        );
+        sim.geology_map.regions[region_id].biome =
+            if initial_candidate == civ_planet::BiomeKind::Rainforest {
+                civ_planet::BiomeKind::Tundra
+            } else {
+                civ_planet::BiomeKind::Rainforest
+            };
+
+        let baseline = sim.geology_map.regions[region_id].biome;
+        for _ in 0..(BIOME_SHIFT_STREAK - 1) {
+            sim.state.tick = 1;
+            if let Some(state) = sim.climate_biome_state.get_mut(region_id) {
+                state.drought_pressure_fp = DRYNESS_PRESSURE_MAX;
+            }
+            sim.phase_planet();
+            assert_eq!(sim.geology_map.regions[region_id].biome, baseline);
+        }
+
+        sim.state.tick = 1;
+        if let Some(state) = sim.climate_biome_state.get_mut(region_id) {
+            state.drought_pressure_fp = DRYNESS_PRESSURE_MAX;
+        }
+        sim.phase_planet();
+        assert_ne!(sim.geology_map.regions[region_id].biome, baseline);
+    }
+
     #[test]
     fn weather_grid_temperature_varies_with_year_phase() {
         // Earth-like defaults: year_length_ticks = 8_766_000, tilt = 23°.

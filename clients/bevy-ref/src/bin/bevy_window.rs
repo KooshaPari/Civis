@@ -39,6 +39,7 @@ use civ_bevy_ref::{
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
+    world_stats_dashboard::WorldStatsDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
     VOXEL_CHUNK_EDGE, WsConnectionState,
@@ -274,6 +275,7 @@ fn main() {
             EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
+            WorldStatsDashboardPlugin,
             civ_bevy_ref::AgentNeedsPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
@@ -545,6 +547,22 @@ fn apply_spectator_meta(
         if let Some(tick) = meta.tick {
             hud.snapshot.tick = Some(tick);
             hud.snapshot.connected = true;
+        }
+        if let Some(population) = meta.population {
+            hud.snapshot.world_stats.population = population;
+        }
+        if let Some(building_count) = meta.building_count {
+            hud.snapshot.world_stats.building_count = building_count;
+        }
+        if let Some(speed_multiplier) = meta.speed_multiplier {
+            hud.snapshot.world_stats.speed_multiplier = speed_multiplier;
+            hud.snapshot.speed_multiplier = speed_multiplier;
+        }
+        if let Some(market_prices) = meta.market_prices {
+            hud.snapshot.world_stats.market_prices = market_prices;
+        }
+        if let Some(factions) = meta.factions {
+            hud.snapshot.world_stats.factions = factions;
         }
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
@@ -1566,6 +1584,6 @@ fn poll_emergence(
         return;
     }
     timer.0 = 0.0;
-    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    let json = r#"{"jsonrpc":"2.0","id":3,"method":"emergence.metrics","params":null}"#.to_string();
     bridge.client.send_rpc_raw(json);
 }

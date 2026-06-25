@@ -13,6 +13,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+use std::collections::BTreeMap;
+
 #[cfg(feature = "bevy")]
 pub mod animation;
 #[cfg(feature = "bevy")]
@@ -32,6 +34,8 @@ pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;
 pub mod emergence_dashboard;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod world_stats_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
@@ -192,12 +196,50 @@ impl DebugRender {
 pub const DEBUG_WIREFRAME_OVERLAY_ALPHA: f32 = 0.22;
 
 /// Climate presentation fields from a `sim.snapshot` JSON-RPC response.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct WsSpectatorMeta {
     /// Day/night flag from the simulation climate phase.
     pub is_day: bool,
     /// Latest tick when present on the snapshot payload.
     pub tick: Option<u64>,
+    /// World population from the same snapshot payload.
+    pub population: Option<u64>,
+    /// World building count from the same snapshot payload.
+    pub building_count: Option<usize>,
+    /// Live speed multiplier from snapshot `speed_multiplier`.
+    pub speed_multiplier: Option<u32>,
+    /// Price-by-good map for the world market.
+    pub market_prices: Option<BTreeMap<String, i64>>,
+    /// Snapshot cohort for factions and territory proxy.
+    pub factions: Option<Vec<FactionSnapshotSummary>>,
+}
+
+/// Faction snapshot row exposed on `sim.snapshot`.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FactionSnapshotSummary {
+    /// Stable faction ID.
+    pub id: u32,
+    /// Display name from the simulation registry.
+    pub name: String,
+    /// Civilian population assigned to this faction.
+    pub population: u32,
+    /// Deterministic territory proxy from live spectator radius.
+    pub territory_size: u32,
+}
+
+/// World-level read stats from `sim.snapshot`.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct WorldStatsSnapshot {
+    /// Latest world population.
+    pub population: u64,
+    /// Latest building count.
+    pub building_count: usize,
+    /// Latest speed multiplier from the snapshot read API.
+    pub speed_multiplier: u32,
+    /// Latest known market prices by good.
+    pub market_prices: BTreeMap<String, i64>,
+    /// Snapshot factions.
+    pub factions: Vec<FactionSnapshotSummary>,
 }
 
 /// WebSocket session state exposed to live attach HUD and event feed.
@@ -251,7 +293,42 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
     let result = value.get("result")?;
     let is_day = result.get("is_day")?.as_bool()?;
     let tick = result.get("tick").and_then(|v| v.as_u64());
-    Some(WsSpectatorMeta { is_day, tick })
+    let market_prices = result.get("market_prices").and_then(|prices| prices.as_object()).map(|prices| {
+        prices
+            .iter()
+            .filter_map(|(key, value)| value.as_i64().map(|value| (key.to_string(), value)))
+            .collect()
+    });
+    let factions = result.get("factions").and_then(|values| values.as_array()).map(|values| {
+        values
+            .iter()
+            .filter_map(|entry| {
+                let id = entry.get("id")?.as_u64()? as u32;
+                let name = entry.get("name")?.as_str()?.to_string();
+                let population = entry.get("population")?.as_u64()? as u32;
+                let territory_size = entry.get("territory_size")?.as_u64()? as u32;
+                Some(FactionSnapshotSummary {
+                    id,
+                    name,
+                    population,
+                    territory_size,
+                })
+            })
+            .collect()
+    });
+    let population = result.get("population").and_then(|v| v.as_u64());
+    let building_count = result.get("building_count").and_then(|v| v.as_u64()).map(|v| v as usize);
+    let speed_multiplier = result.get("speed_multiplier").and_then(|v| v.as_u64()).map(|v| v as u32);
+
+    Some(WsSpectatorMeta {
+        is_day,
+        tick,
+        population,
+        building_count,
+        speed_multiplier,
+        market_prices,
+        factions,
+    })
 }
 
 /// Subset of sim.emergence fields shown in the HUD.
@@ -260,10 +337,18 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 pub struct EmergenceHudData {
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
+    /// Raw entropy bits from sample window.
+    pub entropy_bits: f32,
     /// Power-law exponent alpha for cluster-size distribution.
     pub power_law_alpha: f32,
     /// Novel config fingerprints per window per civilian.
     pub novelty_rate: f32,
+    /// Novelty score (highlights novelty density across sampled windows).
+    pub novelty_score: f32,
+    /// Material-faction coupling estimate.
+    pub coupling_mi_estimate: f32,
+    /// Criticality indicator from emergence dashboard branch analysis.
+    pub criticality_indicator: f32,
     /// Normalised mutual information between material and faction distributions.
     pub mi_material_faction_norm: Option<f32>,
     /// 6-connectivity component count from the sampled chunk (None = not yet sampled).
@@ -324,6 +409,8 @@ pub struct LiveHudSnapshot {
     pub last_event: Option<String>,
     /// One-line civilian detail for the current viewport pick (inspector-lite HUD).
     pub pick_detail: Option<String>,
+    /// Cached world read-model from `sim.snapshot`.
+    pub world_stats: WorldStatsSnapshot,
     /// Current sim speed multiplier (0 = paused, 1/2/4/8 = normal/fast/faster/fastest).
     /// Cached emergence metrics from sim.emergence poll (entropy_norm, power_law_alpha, novelty_rate, mi).
     pub emergence: Option<EmergenceHudData>,
@@ -1287,6 +1374,9 @@ mod tests {
         let meta = parse_jsonrpc_snapshot_meta(text).expect("snapshot meta");
         assert!(!meta.is_day);
         assert_eq!(meta.tick, Some(12));
+        assert_eq!(meta.population, Some(4));
+        assert_eq!(meta.speed_multiplier, None);
+        assert!(meta.market_prices.is_none());
     }
 
     #[test]

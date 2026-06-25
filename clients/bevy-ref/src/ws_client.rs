@@ -307,10 +307,11 @@ fn record_snapshot_rtt(snapshot_ping: &mut Option<std::time::Instant>, rtt_tx: &
     }
 }
 
-/// Parse a sim.emergence (id=2) JSON-RPC response into `EmergenceHudData`.
+/// Parse a sim.emergence / emergence.metrics response into `EmergenceHudData`.
 fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
-    if v.get("id").and_then(|i| i.as_i64()) != Some(2) {
+    let id = v.get("id").and_then(|i| i.as_i64())?;
+    if !matches!(id, 2 | 3) {
         return None;
     }
     let result = v.get("result")?;
@@ -319,12 +320,28 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
             .get("entropy_norm")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
+        entropy_bits: result
+            .get("entropy_bits")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
         power_law_alpha: result
             .get("power_law_alpha")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
         novelty_rate: result
             .get("novelty_rate")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
+        novelty_score: result
+            .get("novelty_score")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
+        coupling_mi_estimate: result
+            .get("coupling_mi_estimate")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
+        criticality_indicator: result
+            .get("criticality_indicator")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
         mi_material_faction_norm: result

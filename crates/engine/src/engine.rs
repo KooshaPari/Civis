@@ -3124,23 +3124,33 @@ impl Simulation {
             }
 
             let resource = route_resource(&route.goods);
-            let available = {
-                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+            let from_faction = route.from_faction;
+            let to_faction = route.to_faction;
+            let from_stock = {
+                let Some(from_resources) = self.state.faction_resources.get(&from_faction)
                 else {
                     continue;
                 };
                 resource_amount(from_resources, resource)
             };
-            if available <= Fixed::ZERO {
+            let to_stock = self
+                .state
+                .faction_resources
+                .get(&to_faction)
+                .map_or(Fixed::ZERO, |to_resources| resource_amount(to_resources, resource));
+            if from_stock <= Fixed::ZERO {
                 continue;
             }
 
-            let quantity = route.volume.min(available);
+            let quantity = (route.volume * trade_volume_multiplier(from_stock, to_stock)).min(from_stock);
+            if quantity <= Fixed::ZERO {
+                continue;
+            }
             {
                 let from_resources = self
                     .state
                     .faction_resources
-                    .entry(route.from_faction)
+                    .entry(from_faction)
                     .or_default();
                 adjust_resource(from_resources, resource, Fixed::ZERO - quantity);
             }
@@ -3148,31 +3158,34 @@ impl Simulation {
                 let to_resources = self
                     .state
                     .faction_resources
-                    .entry(route.to_faction)
+                    .entry(to_faction)
                     .or_default();
                 adjust_resource(to_resources, resource, quantity);
             }
 
             let supply = {
-                let Some(from_resources) = self.state.faction_resources.get(&route.from_faction)
+                let Some(from_resources) = self.state.faction_resources.get(&from_faction)
                 else {
                     continue;
                 };
                 resource_amount(from_resources, resource)
             };
-            let demand = {
-                let Some(to_resources) = self.state.faction_resources.get(&route.to_faction) else {
-                    continue;
-                };
-                resource_amount(to_resources, resource)
-            };
+            let demand = self
+                .state
+                .faction_resources
+                .get(&to_faction)
+                .map_or(Fixed::ZERO, |to_resources| resource_amount(to_resources, resource));
+            let supply_units = (supply.max(Fixed::ZERO).raw / crate::SCALE) as i64;
+            let demand_units = (demand.max(Fixed::ZERO).raw / crate::SCALE) as i64;
+            self.market_state
+                .apply_pressure(resource_market_key(resource), supply_units, demand_units);
             let margin = (demand - supply).max(Fixed::ZERO);
             let profit = quantity * (Fixed::from_num(1) + margin / Fixed::from_num(100));
 
-            if let Some(from_treasury) = self.state.faction_treasury.get_mut(&route.from_faction) {
+            if let Some(from_treasury) = self.state.faction_treasury.get_mut(&from_faction) {
                 *from_treasury += profit;
             }
-            if let Some(to_treasury) = self.state.faction_treasury.get_mut(&route.to_faction) {
+            if let Some(to_treasury) = self.state.faction_treasury.get_mut(&to_faction) {
                 *to_treasury -= profit;
             }
         }
@@ -4489,6 +4502,15 @@ fn route_resource(goods: &str) -> ResourceType {
     }
 }
 
+fn resource_market_key(resource: ResourceType) -> &'static str {
+    match resource {
+        ResourceType::Food => "food",
+        ResourceType::Wood => "wood",
+        ResourceType::Metal => "metal",
+        ResourceType::Energy => "energy",
+    }
+}
+
 fn resource_amount(resources: &Resources, resource: ResourceType) -> Fixed {
     match resource {
         ResourceType::Food => resources.food,
@@ -4998,6 +5020,50 @@ mod tests {
         assert_ne!(
             sim.market_state.prices, initial,
             "expected at least one market price to change after {N} ticks"
+        );
+    }
+
+    /// FR-MARKET — supply shocks increase local scarcity pressure so the next
+    /// tick food price exceeds a comparison sim without the shock.
+    #[test]
+    fn phase_economy_prices_respond_to_supply_shock() {
+        let mut stable = Simulation::with_seed(9001);
+        let mut shocked = Simulation::with_seed(9001);
+
+        stable.state.trade_routes = vec![TradeRoute {
+            from_faction: 0,
+            to_faction: 1,
+            goods: "grain".to_string(),
+            volume: Fixed::from_num(20),
+        }];
+        shocked.state.trade_routes = vec![TradeRoute {
+            from_faction: 0,
+            to_faction: 1,
+            goods: "grain".to_string(),
+            volume: Fixed::from_num(20),
+        }];
+        stable.state.faction_resources.entry(0).or_default().food = Fixed::from_num(180);
+        stable.state.faction_resources.entry(1).or_default().food = Fixed::from_num(10);
+        shocked.state.faction_resources.entry(0).or_default().food = Fixed::from_num(180);
+        shocked.state.faction_resources.entry(1).or_default().food = Fixed::from_num(10);
+
+        stable.tick();
+        shocked.tick();
+
+        // Apply a one-tick supply shock between trade passes by draining
+        // the exporter to create a scarcity signal.
+        shocked.state.faction_resources.entry(0).and_modify(|resources| {
+            resources.food = Fixed::ZERO;
+        });
+
+        stable.tick();
+        shocked.tick();
+
+        let stable_food = stable.snapshot().market_prices.get("food").copied().unwrap_or(0);
+        let shocked_food = shocked.snapshot().market_prices.get("food").copied().unwrap_or(0);
+        assert!(
+            shocked_food > stable_food,
+            "expected shocked sim to have higher food price: stable={stable_food}, shocked={shocked_food}"
         );
     }
 

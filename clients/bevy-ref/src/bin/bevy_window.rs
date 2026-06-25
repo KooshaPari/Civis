@@ -1,8 +1,3 @@
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
@@ -27,9 +22,10 @@ use civ_bevy_ref::{
     save_load_ui::SaveLoadUiPlugin,
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
-        apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
-        default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
+        apply_agent_appearance_frame_with_labels_and_eye, apply_building_diff_frame,
+        apply_civilian_state_frame, apply_climate_frame, apply_event_feed_frame,
+        apply_faction_state_frame, apply_voxel_delta_frame, default_stream_meshes,
+        format_event_feed_message, latest_climate, push_event_feed_to_hud_summary,
         sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
         StreamCulling,
@@ -43,11 +39,9 @@ use civ_bevy_ref::{
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
-    VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
+    VOXEL_CHUNK_EDGE, WsConnectionState,
     post_fx::PostFxPlugin,
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -106,7 +100,6 @@ struct ScenarioPanel {
 impl Default for ScenarioPanel {
     fn default() -> Self {
         Self { seed_index: 0, speed_index: 0, preset_index: 0 }
-        Self { seed_index: 0, speed_index: 0 }
     }
 }
 
@@ -254,7 +247,6 @@ struct SimSpeedState {
     multiplier: u32,
 }
 
-#[derive(Resource)]
 #[derive(Resource, Default)]
 struct EmergencePollTimer(f32);
 impl Default for EmergencePollTimer {
@@ -289,8 +281,6 @@ fn main() {
             civ_bevy_ref::AgentNeedsPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
-            EguiPlugin::default(),
-            EventFeedPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -309,11 +299,8 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-<<<<<<< HEAD
-=======
         .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
@@ -336,12 +323,15 @@ fn main() {
                 update_chunk_fade,
                 update_hud,
                 update_minimap,
+                // FR-CLIENT-render: climate frame → presentation.is_day.
+                // Must run after `apply_live_frames` (which records the
+                // climate snapshot) and before `update_presentation_lighting`
+                // (which consumes the flag).
+                sync_presentation_from_climate.after(apply_live_frames),
                 update_presentation_lighting,
             ),
         )
         .run();
-            ),
-        );
 
     #[cfg(feature = "egui")]
     {
@@ -660,6 +650,21 @@ fn update_presentation_lighting(
     clear.0 = Color::srgb(clear_rgb[0], clear_rgb[1], clear_rgb[2]);
 }
 
+/// FR-CLIENT-render: when the live scene has observed a climate frame, the
+/// presentation's `is_day` flag is driven by the snapshot's `day_phase`
+/// instead of being a static default. Falls through to the existing
+/// `is_day=true` default when no climate frame has been observed yet so
+/// pre-snapshot behaviour is preserved.
+fn sync_presentation_from_climate(
+    scene: Res<LiveStreamScene>,
+    mut presentation: ResMut<ScenePresentation>,
+) {
+    let Some((snap, _)) = latest_climate(&scene) else {
+        return;
+    };
+    presentation.is_day = snap.day_phase.is_day_band();
+}
+
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
@@ -787,9 +792,11 @@ fn action_pressed(
             .and_then(|s| s.key_for(action))
             .unwrap_or(default)
             .is_pressed(keys, mouse_buttons)
+    }
     #[cfg(not(feature = "egui"))]
     {
         default.is_pressed(keys, mouse_buttons)
+    }
 }
 
 fn sync_chunk_debug_render(
@@ -869,14 +876,20 @@ fn apply_live_frames(
                 delta,
                 wireframe_color,
             ),
-            Frame3d::AgentAppearance(agents) => apply_agent_appearance_frame_with_labels(
-                &mut commands,
-                &mut scene,
-                &mut materials,
-                assets.as_ref(),
-                agents,
-                AgentLabelConfig { enabled: true },
-            ),
+            Frame3d::AgentAppearance(agents) => {
+                // FR-CLIENT-render: pass the camera eye so far-away agents
+                // get a distance-LOD scale attenuation (otherwise they punch
+                // through the terrain near the horizon).
+                apply_agent_appearance_frame_with_labels_and_eye(
+                    &mut commands,
+                    &mut scene,
+                    &mut materials,
+                    assets.as_ref(),
+                    agents,
+                    AgentLabelConfig { enabled: true },
+                    Some(eye),
+                );
+            }
             Frame3d::BuildingDiff(building) => apply_building_diff_frame(
                 &mut commands,
                 &mut scene,
@@ -897,7 +910,10 @@ fn apply_live_frames(
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
                 apply_event_feed_frame(&mut feed, event_frame.clone());
             }
-            Frame3d::Climate(_) => {}
+            // FR-CLIENT-render: route the streamed climate frame into the
+            // live scene (was previously dropped). Downstream sky/sun/
+            // ambient systems consume it via `latest_climate(&scene)`.
+            Frame3d::Climate(climate) => apply_climate_frame(&mut scene, climate),
         }
     }
 }
@@ -1486,7 +1502,7 @@ fn minimap_popup_ui(
                 let json = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
                 );
-                bridge.client.send_rpc(json);
+                bridge.client.send_rpc_raw(json);
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1529,6 +1545,5 @@ fn poll_emergence(
     }
     timer.0 = 0.0;
     let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
-    bridge.client.send_rpc(json);
-}
+    bridge.client.send_rpc_raw(json);
 }

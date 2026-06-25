@@ -84,10 +84,8 @@ pub mod sim_bridge;
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
-<<<<<<< HEAD
-=======
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
->>>>>>> 34495eed48a7965a10f0cb2f2db986adfb380b94
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -844,6 +842,39 @@ pub fn presentation_day_factor_target(is_day: bool) -> f32 {
     }
 }
 
+/// Maps a `ClimateSnapshot.day_phase` (`0..=1`) into a continuous
+/// `day_factor` (FR-CLIENT-render). The transition is treated as
+/// "dawn" in `[0.20, 0.30]`, "day" in `[0.30, 0.70]`, "dusk" in
+/// `[0.70, 0.80]`, and "night" outside that band — the curve smoothly
+/// ramps from `PRESENTATION_NIGHT_DAY_FACTOR` (0.32) up to 1.0 across
+/// the day, with a cosine ease for the dawn/dusk transitions.
+///
+/// Non-finite or out-of-range phases clamp to the night side so a
+/// missing/wrong climate frame keeps the renderer in the existing
+/// `is_day=false` presentation.
+#[must_use]
+pub fn presentation_day_factor_from_climate(day_phase: f32) -> f32 {
+    if !day_phase.is_finite() {
+        return PRESENTATION_NIGHT_DAY_FACTOR;
+    }
+    let p = day_phase.rem_euclid(1.0);
+    // Smooth band: 0.20..0.30 dawn, 0.30..0.70 day, 0.70..0.80 dusk, else night.
+    let factor = if (0.30..=0.70).contains(&p) {
+        1.0
+    } else if (0.20..0.30).contains(&p) {
+        // Dawn ramp: 0.20 → night, 0.30 → day.
+        let t = (p - 0.20) / 0.10;
+        PRESENTATION_NIGHT_DAY_FACTOR + (1.0 - PRESENTATION_NIGHT_DAY_FACTOR) * t
+    } else if (0.70..0.80).contains(&p) {
+        // Dusk ramp: 0.70 → day, 0.80 → night.
+        let t = (0.80 - p) / 0.10;
+        PRESENTATION_NIGHT_DAY_FACTOR + (1.0 - PRESENTATION_NIGHT_DAY_FACTOR) * t
+    } else {
+        PRESENTATION_NIGHT_DAY_FACTOR
+    };
+    factor.clamp(PRESENTATION_NIGHT_DAY_FACTOR, 1.0)
+}
+
 /// Linear interpolation between two sRGB triples (`t` in `0.0..=1.0`).
 #[must_use]
 pub fn lerp_rgb(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
@@ -1493,6 +1524,34 @@ mod tests {
     fn presentation_day_factor_target_matches_web_night_blend() {
         assert_eq!(presentation_day_factor_target(true), 1.0);
         assert!((presentation_day_factor_target(false) - 0.3).abs() < 0.05);
+    }
+
+    #[test]
+    fn presentation_day_factor_from_climate_tracks_day_night_band() {
+        // Full daylight at noon.
+        assert!((presentation_day_factor_from_climate(0.50) - 1.0).abs() < 1e-3);
+        // Mid-night is the night blend.
+        let mid = presentation_day_factor_from_climate(0.0);
+        assert!((mid - PRESENTATION_NIGHT_DAY_FACTOR).abs() < 1e-3);
+        // Dawn ramps between night and day.
+        let dawn = presentation_day_factor_from_climate(0.25);
+        assert!(dawn > PRESENTATION_NIGHT_DAY_FACTOR && dawn < 1.0);
+        // Dusk ramps between day and night.
+        let dusk = presentation_day_factor_from_climate(0.75);
+        assert!(dusk > PRESENTATION_NIGHT_DAY_FACTOR && dusk < 1.0);
+        // NaN / out-of-range phases fall back to night blend.
+        assert_eq!(
+            presentation_day_factor_from_climate(f32::NAN),
+            PRESENTATION_NIGHT_DAY_FACTOR
+        );
+        assert_eq!(
+            presentation_day_factor_from_climate(-0.1),
+            PRESENTATION_NIGHT_DAY_FACTOR
+        );
+        // Phases outside [0,1) wrap via rem_euclid so a 2.05 lands at
+        // 0.05 (night) — still in the night band.
+        let wrapped = presentation_day_factor_from_climate(2.05);
+        assert!((wrapped - PRESENTATION_NIGHT_DAY_FACTOR).abs() < 1e-3);
     }
 
     #[test]

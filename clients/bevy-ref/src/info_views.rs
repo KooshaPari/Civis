@@ -2,8 +2,10 @@
 //!
 //! Cities-Skylines-2-style overlays: a registry of named overlays, each mapping
 //! a world sample point (and optional sim state) to a colour on a legend scale.
-//! A toggle panel (hotkey `Tab` / UI buttons) switches the *active* overlay; the
-//! legend shows the colour ramp. New overlays are a [`InfoOverlay`] registration,
+//! A toggle panel (UI buttons in the left HUD) switches the *active* terrain
+//! overlay; the legend shows the colour ramp. [`NearbyCountsOverlay`] (hotkey
+//! `Tab`) shows live nearby entity counts. New overlays are a [`InfoOverlay`]
+//! registration,
 //! not a code fork.
 //!
 //! Overlays here are sourced from data Civis already computes in the standalone
@@ -493,7 +495,7 @@ impl InfoViewRegistry {
 
     /// Cycle to the next overlay, wrapping through `None` (off) at the end.
     ///
-    /// Order: off → 0 → 1 → … → n-1 → off. Bound to the `Tab` hotkey.
+    /// Order: off → 0 → 1 → … → n-1 → off.
     pub fn cycle(&mut self) {
         let n = self.overlays.len();
         self.active = match self.active {
@@ -546,45 +548,220 @@ impl InfoViewRegistry {
     }
 }
 
+/// Live nearby-entity counts for the Tab overlay (P1.3.2).
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct NearbyEntityCounts {
+    /// Civilians within the nearby radius.
+    pub civilians: usize,
+    /// Buildings within the nearby radius.
+    pub buildings: usize,
+    /// Civilian count per faction id.
+    pub factions: std::collections::BTreeMap<u32, usize>,
+}
+
+fn faction_letter_label(id: u32) -> String {
+    if id < 26 {
+        format!("Faction {}", (b'A' + id as u8) as char)
+    } else {
+        format!("Faction {id}")
+    }
+}
+
+/// Format the nearby summary line shown in the Tab overlay.
+#[must_use]
+pub fn format_nearby_counts_line(counts: &NearbyEntityCounts) -> String {
+    let civ_word = if counts.civilians == 1 {
+        "civilian"
+    } else {
+        "civilians"
+    };
+    let bld_word = if counts.buildings == 1 {
+        "building"
+    } else {
+        "buildings"
+    };
+    let faction_part = if counts.factions.is_empty() || counts.civilians == 0 {
+        String::new()
+    } else {
+        let breakdown: Vec<String> = counts
+            .factions
+            .iter()
+            .map(|(id, count)| format!("{}: {count}", faction_letter_label(*id)))
+            .collect();
+        format!(" ({})", breakdown.join(", "))
+    };
+    format!(
+        "Nearby: {} {}{}, {} {}.",
+        counts.civilians, civ_word, faction_part, counts.buildings, bld_word
+    )
+}
+
 #[cfg(feature = "egui")]
 pub use plugin::*;
 
 #[cfg(feature = "egui")]
 mod plugin {
     use super::*;
-    use crate::sim_bridge::SimState;
+    use crate::camera::CameraRig;
+    use crate::live_attach::is_server_attach_mode;
+    use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveStreamScene};
+    use crate::sim_bridge::{SimBuildingMarker, SimCivilianMarker, SimState};
     use crate::ui_theme::{TEXT, TEXT_LOW};
-    use bevy_egui::egui;
+    use crate::AttachMode;
+    use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
     use civ_agents::{Civilian, Needs};
 
-    /// Plugin: registers the overlay registry, the `Tab` cycle hotkey, the
-    /// toggle/legend panel, and the gizmo recolor pass.
+    /// Radius (world units) around the camera target for nearby-entity counts.
+    const NEARBY_RADIUS: f32 = 100.0;
+
+    /// Tab-toggled HUD listing live nearby entity counts (P1.3.2).
+    #[derive(Resource, Default, Debug)]
+    pub struct NearbyCountsOverlay {
+        /// Whether the semi-transparent summary panel is visible.
+        pub visible: bool,
+    }
+
+    /// Plugin: overlay registry, Tab nearby-counts HUD, and terrain recolor pass.
     pub struct InfoViewsPlugin;
 
     impl Plugin for InfoViewsPlugin {
         fn build(&self, app: &mut App) {
-            // The overlay PICKER UI now lives in the left HUD cluster's
-            // "Info Views" tab (see `info_view_tab_body`); this plugin keeps the
-            // registry, the `Tab` cycle hotkey, and the terrain recolor pass.
+            // The overlay PICKER UI lives in the left HUD cluster's "Info Views"
+            // tab (see `info_view_tab_body`); this plugin keeps the registry,
+            // the Tab nearby-counts overlay, and the terrain recolor pass.
             app.init_resource::<InfoViewRegistry>()
-                .add_systems(Update, (cycle_overlay_hotkey, render_active_overlay));
+                .init_resource::<NearbyCountsOverlay>()
+                .add_systems(Update, (toggle_nearby_overlay_hotkey, render_active_overlay))
+                .add_systems(
+                    EguiPrimaryContextPass,
+                    draw_nearby_counts_overlay.run_if(crate::menus::in_game),
+                );
         }
     }
 
-    fn cycle_overlay_hotkey(
+    fn toggle_nearby_overlay_hotkey(
         keys: Res<ButtonInput<KeyCode>>,
-        mut registry: ResMut<InfoViewRegistry>,
+        mut overlay: ResMut<NearbyCountsOverlay>,
     ) {
         if keys.just_pressed(KeyCode::Tab) {
-            registry.cycle();
+            overlay.visible = !overlay.visible;
         }
+        if keys.just_pressed(KeyCode::Escape) && overlay.visible {
+            overlay.visible = false;
+        }
+    }
+
+    fn is_nearby(eye: Vec3, pos: Vec3) -> bool {
+        let dx = pos.x - eye.x;
+        let dz = pos.z - eye.z;
+        (dx * dx + dz * dz) <= NEARBY_RADIUS * NEARBY_RADIUS
+    }
+
+    fn collect_nearby_counts_standalone(
+        eye: Vec3,
+        civilians: &Query<(&GlobalTransform, &SimCivilianMarker)>,
+        buildings: &Query<&GlobalTransform, With<SimBuildingMarker>>,
+    ) -> NearbyEntityCounts {
+        let mut counts = NearbyEntityCounts::default();
+        for (transform, marker) in civilians.iter() {
+            if !is_nearby(eye, transform.translation()) {
+                continue;
+            }
+            counts.civilians += 1;
+            *counts.factions.entry(marker.faction).or_insert(0) += 1;
+        }
+        for transform in buildings.iter() {
+            if is_nearby(eye, transform.translation()) {
+                counts.buildings += 1;
+            }
+        }
+        counts
+    }
+
+    fn collect_nearby_counts_live(
+        eye: Vec3,
+        scene: Option<&LiveStreamScene>,
+        agents: &Query<(&GlobalTransform, &LiveAgentTag)>,
+        buildings: &Query<&GlobalTransform, With<LiveBuildingTag>>,
+    ) -> NearbyEntityCounts {
+        let mut counts = NearbyEntityCounts::default();
+        let civilian_entries = scene.map(|s| &s.civilian_entries);
+        for (transform, tag) in agents.iter() {
+            if !is_nearby(eye, transform.translation()) {
+                continue;
+            }
+            counts.civilians += 1;
+            let faction = civilian_entries
+                .and_then(|entries| entries.get(&tag.id))
+                .map(|entry| entry.faction_id)
+                .unwrap_or(0);
+            *counts.factions.entry(faction).or_insert(0) += 1;
+        }
+        for transform in buildings.iter() {
+            if is_nearby(eye, transform.translation()) {
+                counts.buildings += 1;
+            }
+        }
+        counts
+    }
+
+    fn draw_nearby_counts_overlay(
+        mut contexts: EguiContexts,
+        overlay: Res<NearbyCountsOverlay>,
+        attach: Res<AttachMode>,
+        rig: Res<CameraRig>,
+        sim_civilians: Query<(&GlobalTransform, &SimCivilianMarker)>,
+        sim_buildings: Query<&GlobalTransform, With<SimBuildingMarker>>,
+        live_agents: Query<(&GlobalTransform, &LiveAgentTag)>,
+        live_buildings: Query<&GlobalTransform, With<LiveBuildingTag>>,
+        scene: Option<Res<LiveStreamScene>>,
+    ) {
+        if !overlay.visible {
+            return;
+        }
+
+        let eye = rig.target;
+        let counts = if is_server_attach_mode(*attach) {
+            collect_nearby_counts_live(eye, scene.as_deref(), &live_agents, &live_buildings)
+        } else {
+            collect_nearby_counts_standalone(eye, &sim_civilians, &sim_buildings)
+        };
+        let summary = format_nearby_counts_line(&counts);
+
+        let ctx = contexts.ctx_mut();
+        let screen = ctx.screen_rect();
+        egui::Area::new(egui::Id::new("nearby_counts_overlay"))
+            .fixed_pos(egui::pos2(screen.center().x - 220.0, 72.0))
+            .show(ctx, |ui| {
+                egui::Frame::none()
+                    .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 200))
+                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
+                    .rounding(egui::Rounding::same(8.0))
+                    .inner_margin(egui::Margin::symmetric(16.0, 10.0))
+                    .show(ui, |ui| {
+                        ui.set_min_width(440.0);
+                        ui.label(
+                            egui::RichText::new("Info View — Nearby")
+                                .heading()
+                                .color(egui::Color32::from_rgb(126, 186, 181)),
+                        );
+                        ui.label(egui::RichText::new(summary).color(TEXT).size(15.0));
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "Within {NEARBY_RADIUS:.0}m of camera focus · Tab or Esc to close"
+                            ))
+                            .color(TEXT_LOW)
+                            .small(),
+                        );
+                    });
+            });
     }
 
     /// Draw the Info Views overlay picker + legend as a tab body (no window
     /// chrome). Used by the left HUD cluster's "Info Views" tab so the overlay
     /// suite lives inside the unified left panel instead of a separate window.
     pub fn info_view_tab_body(ui: &mut egui::Ui, registry: &mut InfoViewRegistry) {
-        ui.label(egui::RichText::new("Overlay (Tab to cycle):").color(TEXT));
+        ui.label(egui::RichText::new("Terrain overlay:").color(TEXT));
         ui.horizontal_wrapped(|ui| {
             if ui.selectable_label(!registry.is_active(), "Off").clicked() {
                 registry.deactivate();
@@ -795,7 +972,22 @@ mod tests {
         assert!(!reg.is_active(), "default starts off");
     }
 
-    /// FR-CIV-INFOVIEW-900 — `Tab` cycle walks off → each → off.
+    /// P1.3.2 — nearby summary formats civilians, factions, and buildings.
+    #[test]
+    fn nearby_counts_line_formats_breakdown() {
+        let counts = NearbyEntityCounts {
+            civilians: 12,
+            buildings: 3,
+            factions: [(0, 8), (1, 4)].into_iter().collect(),
+        };
+        let line = format_nearby_counts_line(&counts);
+        assert!(line.contains("12 civilians"));
+        assert!(line.contains("Faction A: 8"));
+        assert!(line.contains("Faction B: 4"));
+        assert!(line.contains("3 buildings"));
+    }
+
+    /// FR-CIV-INFOVIEW-900 — cycle walks off → each → off.
     #[test]
     fn cycle_wraps_through_off() {
         let mut reg = InfoViewRegistry::default();

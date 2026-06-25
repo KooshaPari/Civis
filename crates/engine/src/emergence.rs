@@ -34,6 +34,7 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
+use crate::lod::{should_tick_entity_with_policy, LodTier};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -174,15 +175,22 @@ impl Simulation {
         self.emergence_civ_ai();
     }
 
+    fn should_tick_civilian_for_emergence(&self, lod: LodTier) -> bool {
+        should_tick_entity_with_policy(self.state.tick, lod, self.lod_policy)
+    }
+
     fn emergence_ensure_genomes(&mut self) {
         let len = self.emergence.dna_class.length;
-        let agents: Vec<(Entity, u64)> = self
+        let agents: Vec<(Entity, u64, LodTier)> = self
             .world
-            .query::<&Civilian>()
+            .query::<(&Civilian, &LodTier)>()
             .iter()
-            .map(|(e, c)| (e, c.id))
+            .map(|(e, (c, lod))| (e, c.id, *lod))
             .collect();
-        for (entity, id) in agents {
+        for (entity, id, lod) in agents {
+            if !self.should_tick_civilian_for_emergence(lod) {
+                continue;
+            }
             if self.world.get::<&Dna>(entity).is_ok() {
                 continue;
             }
@@ -206,9 +214,11 @@ impl Simulation {
     fn emergence_recluster(&mut self) {
         let positions: Vec<(u64, Position3d)> = self
             .world
-            .query::<(&Civilian, &Position3d)>()
+            .query::<(&Civilian, &Position3d, &LodTier)>()
             .iter()
-            .map(|(_, (civ, pos))| (civ.id, *pos))
+            .filter_map(|(_, (civ, pos, lod))| {
+                self.should_tick_civilian_for_emergence(*lod).then_some((civ.id, *pos))
+            })
             .collect();
         if positions.is_empty() {
             return;
@@ -219,9 +229,11 @@ impl Simulation {
 
         let entities: Vec<(Entity, u64)> = self
             .world
-            .query::<&Civilian>()
+            .query::<(&Civilian, &LodTier)>()
             .iter()
-            .map(|(e, c)| (e, c.id))
+            .filter_map(|(e, (c, lod))| {
+                self.should_tick_civilian_for_emergence(*lod).then_some((e, c.id))
+            })
             .collect();
         for (entity, id) in entities {
             if let Some(cluster) = by_id.get(&id) {
@@ -313,14 +325,20 @@ impl Simulation {
 
     fn emergence_social(&mut self) {
         let tick_u32 = self.state.tick.min(u32::MAX as u64) as u32;
-        let agents: Vec<(Entity, u64, Option<u64>)> = self
+        let agents: Vec<(Entity, u64, Option<u64>, LodTier)> = self
             .world
-            .query::<(&Civilian, Option<&ClusterMember>)>()
+            .query::<(&Civilian, Option<&ClusterMember>, &LodTier)>()
             .iter()
-            .map(|(e, (c, m))| (e, c.id, m.map(|x| x.cluster.0)))
+            .filter_map(|(e, (c, m, lod))| {
+                if !self.should_tick_civilian_for_emergence(*lod) {
+                    None
+                } else {
+                    Some((e, c.id, m.map(|x| x.cluster.0), *lod))
+                }
+            })
             .collect();
         let mut by_cluster: BTreeMap<u64, Vec<u64>> = BTreeMap::new();
-        for (_, id, cluster) in &agents {
+        for (_, id, cluster, _) in &agents {
             if let Some(c) = cluster {
                 by_cluster.entry(*c).or_default().push(*id);
             }
@@ -343,7 +361,7 @@ impl Simulation {
                 self.apply_social_pair(a, b, kind, tick_u32);
             }
         }
-        let social_entities: Vec<Entity> = agents.iter().map(|(entity, _, _)| *entity).collect();
+        let social_entities: Vec<Entity> = agents.iter().map(|(entity, _, _, _)| *entity).collect();
         for entity in social_entities {
             self.ensure_social_graph(entity);
             if let Ok(mut graph) = self.world.get::<&mut SocialGraph>(entity) {
@@ -394,14 +412,20 @@ impl Simulation {
         let tick = self.state.tick;
         let tick_u32 = tick.min(u32::MAX as u64) as u32;
         let profile = self.emergence.psych_profile.clone();
-        let agents: Vec<(Entity, u64, Option<u64>)> = self
+        let agents: Vec<(Entity, u64, Option<u64>, LodTier)> = self
             .world
-            .query::<(&Civilian, Option<&ClusterMember>)>()
+            .query::<(&Civilian, Option<&ClusterMember>, &LodTier)>()
             .iter()
-            .map(|(e, (c, m))| (e, c.id, m.map(|x| x.cluster.0)))
+            .filter_map(|(e, (c, m, lod))| {
+                if !self.should_tick_civilian_for_emergence(*lod) {
+                    None
+                } else {
+                    Some((e, c.id, m.map(|x| x.cluster.0), *lod))
+                }
+            })
             .collect();
 
-        for (entity, _, _) in &agents {
+        for (entity, _, _, _) in &agents {
             if self.world.get::<&Dna>(*entity).is_err()
                 || self.world.get::<&Psyche>(*entity).is_ok()
             {
@@ -421,7 +445,7 @@ impl Simulation {
             }
         }
 
-        for (entity, id, cluster) in agents {
+        for (entity, id, cluster, _) in agents {
             let culture_traits = cluster
                 .and_then(|c| self.emergence.cluster_cultures.get(&c))
                 .map(|p| p.traits)
@@ -542,14 +566,17 @@ impl Simulation {
         // mean aggression without a second world scan.
         let agents: Vec<(u64, Option<u32>, Dna)> = self
             .world
-            .query::<(&Civilian, &Dna)>()
+            .query::<(&Civilian, &Dna, &LodTier)>()
             .iter()
-            .map(|(_, (c, d))| {
+            .filter_map(|(_, (c, d, lod))| {
+                if !self.should_tick_civilian_for_emergence(*lod) {
+                    return None;
+                }
                 let faction = match c.alignment {
                     Alignment::Faction(fid) => Some(fid),
                     _ => None,
                 };
-                (c.id, faction, d.clone())
+                Some((c.id, faction, d.clone()))
             })
             .collect();
 

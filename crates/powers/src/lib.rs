@@ -65,7 +65,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Lowers terrain height by Δ under brush footprint; CA settles.", PowerRequestKind::TerraformEdit),
     def_live("terrain.level", "Level", PowerTab::Terrain, PowerCategory::Mutating,
         "Sets terrain height to a picked target value across footprint.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.smooth", "Smooth", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.smooth", "Smooth", PowerTab::Terrain, PowerCategory::Mutating,
         "Averages neighbour heights under footprint; 3×3×3 window.", PowerRequestKind::TerraformEdit),
     def_near("terrain.slope", "Slope", PowerTab::Terrain, PowerCategory::Mutating,
         "Tilts height field toward a 2-click anchor gradient.", PowerRequestKind::TerraformEdit),
@@ -77,7 +77,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Chunky +Δ in a hard-edged footprint; god-brush ignores falloff.", PowerRequestKind::TerraformEdit),
     def_near("terrain.dig_ocean", "DigOcean", PowerTab::Terrain, PowerCategory::Mutating,
         "Chunky –Δ down to sea level; water CA fills the basin.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.raise_mountain", "RaiseMountain", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.raise_mountain", "RaiseMountain", PowerTab::Terrain, PowerCategory::Mutating,
         "AddLand with a Gaussian peak profile + height-noise dither.", PowerRequestKind::TerraformEdit),
     def_near("terrain.drop_biome", "DropBiome", PowerTab::Terrain, PowerCategory::Mutating,
         "Re-paints the surface material band to a chosen biome id.", PowerRequestKind::TerraformEdit),
@@ -103,21 +103,18 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
     // ===================== LIFE (8) =====================
     def_live("life.spawn_organism", "SpawnOrganism", PowerTab::Life, PowerCategory::Mutating,
         "Spawns one agent with a chosen genome + cradle_state + age.", PowerRequestKind::ActorSpawn),
-    def_near("life.spawn_herd", "SpawnHerd", PowerTab::Life, PowerCategory::Mutating,
+    def_live("life.spawn_herd", "SpawnHerd", PowerTab::Life, PowerCategory::Mutating,
         "Spawns N organisms with shared genome at jittered positions.", PowerRequestKind::ActorSpawn),
     def_near("life.spawn_civ_seed", "SpawnCivilizationSeed", PowerTab::Life, PowerCategory::Mutating,
         "Spawns 6 founder agents + 1 hut BuildingGraph seed + 1 stockpile.", PowerRequestKind::ActorSpawn),
-    def_near("life.bless", "Bless", PowerTab::Life, PowerCategory::Mutating,
+    def_live("life.bless", "Bless", PowerTab::Life, PowerCategory::Mutating,
         "Increments each actor's `mood` driver in a positive direction.", PowerRequestKind::ActorEffect),
-    def_near("life.curse", "Curse", PowerTab::Life, PowerCategory::Mutating,
+    def_live("life.curse", "Curse", PowerTab::Life, PowerCategory::Mutating,
         "Symmetric inverse of Bless.", PowerRequestKind::ActorEffect),
-    def_near("life.plague", "Plague", PowerTab::Life, PowerCategory::Mutating,
-        "Writes a pathogen field to footprint; SIR-coupled CA propagates.", PowerRequestKind::ActorEffect),
-    def_near("life.heal", "Heal", PowerTab::Life, PowerCategory::Mutating,
+    def_live("life.heal", "Heal", PowerTab::Life, PowerCategory::Mutating,
         "Clears active afflictions on actors in footprint.", PowerRequestKind::ActorEffect),
-    def_near("life.extinct", "Extinct", PowerTab::Life, PowerCategory::Mutating,
+    def_live("life.extinct", "Extinct", PowerTab::Life, PowerCategory::Mutating,
         "Despawns all organisms matching a genome hash in footprint.", PowerRequestKind::ActorEffect),
-
     // ===================== DISASTER (8) =====================
     def_live("disaster.meteor", "Meteor", PowerTab::Disaster, PowerCategory::Mutating,
         "Spawns a hot, fast-moving solid mass at altitude; impact crater + thermal field.",
@@ -125,13 +122,13 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
     def_near("disaster.lightning", "Lightning", PowerTab::Disaster, PowerCategory::Mutating,
         "Writes a high-voltage arc between two anchor cells; ignites flammables.",
         PowerRequestKind::Disaster),
-    def_near("disaster.flood", "Flood", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.flood", "Flood", PowerTab::Disaster, PowerCategory::Mutating,
         "Large AdditiveDrop of water + raise sea_level locally.",
         PowerRequestKind::Disaster),
-    def_near("disaster.quake", "Quake", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.quake", "Quake", PowerTab::Disaster, PowerCategory::Mutating,
         "Adds a shockwave displacement field for N ticks; structural damage via physics.",
         PowerRequestKind::Disaster),
-    def_near("disaster.firestorm", "Firestorm", PowerTab::Disaster, PowerCategory::Mutating,
+    def_live("disaster.firestorm", "Firestorm", PowerTab::Disaster, PowerCategory::Mutating,
         "Seeds fire voxels in a radius + raises ambient temp; R0_fire measured not authored.",
         PowerRequestKind::Disaster),
     def_near("disaster.tornado", "Tornado", PowerTab::Disaster, PowerCategory::Mutating,
@@ -339,6 +336,13 @@ mod tests {
     /// Phase 1 names the 3-5 highest-value verbs explicitly: 3
     /// TERRAIN ops (raise/lower/level), 1 LIFE (spawn_organism), 1
     /// DISASTER (meteor), 1 INSPECT (probe). All marked `Live`.
+    ///
+    /// Phase 2 promotes 10 more verbs from `Near` to `Live` by
+    /// landing their substrate handlers in `civ-engine`:
+    /// `terrain.smooth`, `terrain.raise_mountain`,
+    /// `life.spawn_herd`, `life.bless`, `life.curse`, `life.heal`,
+    /// `life.extinct`, `disaster.flood`, `disaster.quake`,
+    /// `disaster.firestorm`.
     #[test]
     fn phase1_live_verbs_are_present() {
         let live: Vec<&'static str> = default_powers()
@@ -347,17 +351,36 @@ mod tests {
             .map(|p| p.id.as_str())
             .collect();
         for expected in [
+            // Phase 1 (the original 6).
             "terrain.raise",
             "terrain.lower",
             "terrain.level",
             "life.spawn_organism",
             "disaster.meteor",
             "inspect.probe",
+            // Phase 2 (10 more, all substrate-handled).
+            "terrain.smooth",
+            "terrain.raise_mountain",
+            "life.spawn_herd",
+            "life.bless",
+            "life.curse",
+            "life.heal",
+            "life.extinct",
+            "disaster.flood",
+            "disaster.quake",
+            "disaster.firestorm",
         ] {
             assert!(
                 live.contains(&expected),
-                "Phase 1 verb `{expected}` must be marked Live in the catalog (got {live:?})"
+                "Phase 1/2 verb `{expected}` must be marked Live in the catalog (got {live:?})"
             );
         }
+        // 6 (Phase 1) + 10 (Phase 2) = 16 Live verbs.
+        assert_eq!(
+            live.len(),
+            16,
+            "expected exactly 16 Live verbs after Phase 2 (6 Phase 1 + 10 Phase 2), got {} ({live:?})",
+            live.len()
+        );
     }
 }

@@ -595,6 +595,28 @@ pub struct Simulation {
     /// JSON-RPC `sim.snapshot.religion` method) read this buffer once per
     /// tick.
     pub last_tick_religion_events: Vec<ReligionEvent>,
+
+    /// Per-settlement Gini coefficient, set externally by the simulation driver
+    /// (typically derived from the `last_tick_stratification_reports` map) and
+    /// consulted by [`Simulation::phase_unrest`] (FR-CIV-UNREST-001) to amplify
+    /// unrest when inequality is high. Values clamped to [0.0, 1.0].
+    pub settlement_gini: BTreeMap<u32, f64>,
+
+    /// Per-tick buffer of unrest events emitted by `phase_unrest`. Cleared at
+    /// the top of each `tick()` (mirrors the `last_tick_cohesion` /
+    /// `last_tick_religion_events` pattern). Consumers (JSON-RPC `sim.snapshot.unrest`)
+    /// read this buffer once per tick.
+    pub last_tick_unrest: Vec<UnrestEvent>,
+
+    /// Per-settlement unrest snapshot keyed by settlement id. Populated by
+    /// `phase_unrest` whenever a settlement's level changes or produces a
+    /// riot/migration event. Consulted by `last_tick_unrest_settlement` /
+    /// `unrest_level` accessors.
+    pub last_tick_unrest_snapshots: BTreeMap<u32, UnrestSnapshot>,
+
+    /// Per-settlement last unrest level, used to compute `level_delta` in the
+    /// event stream. Defaults to [`UnrestLevel::Calm`] for unseen settlements.
+    pub last_unrest_level: BTreeMap<u32, UnrestLevel>,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -1130,6 +1152,12 @@ impl Simulation {
             last_tick_mood: Vec::new(),
             religious_profiles: BTreeMap::new(),
             last_tick_religion_events: Vec::new(),
+            unrest_settlement_gini: BTreeMap::new(),
+            last_tick_unrest: Vec::new(),
+            last_tick_unrest_snapshots: BTreeMap::new(),
+            last_unrest_level: BTreeMap::new(),
+            riot_accumulator: BTreeMap::new(),
+            migrant_accumulator: BTreeMap::new(),
         }
     }
 
@@ -1230,6 +1258,12 @@ impl Simulation {
             last_tick_stratification_reports: BTreeMap::new(),
             religious_profiles: BTreeMap::new(),
             last_tick_religion_events: Vec::new(),
+            unrest_settlement_gini: BTreeMap::new(),
+            last_tick_unrest: Vec::new(),
+            last_tick_unrest_snapshots: BTreeMap::new(),
+            last_unrest_level: BTreeMap::new(),
+            riot_accumulator: BTreeMap::new(),
+            migrant_accumulator: BTreeMap::new(),
         }
     }
 
@@ -2457,9 +2491,37 @@ impl Simulation {
     /// real implementation lands in TDD cycle A8.
     fn phase_tech(&mut self) {}
 
-    /// Belief phase (FR-CIV-BELIEF-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A9.
-    fn phase_belief(&mut self) {}
+    /// Belief phase (FR-CIV-BELIEF-001) — religion §7 wiring.
+    /// For each settlement, sample substrate gradients, run the
+    /// Norenzayan Big-Gods response curve, and push a per-tick
+    /// `ReligionEvent` to `last_tick_religion_events`. Notable events
+    /// (cap violations, threshold crossings) drive the §10 civ-legends
+    /// hook; the per-settlement profile is collected by
+    /// `last_religion_sample` for the `emergence.metrics` consumer
+    /// (see #763).
+    fn phase_belief(&mut self) {
+        let tick = self.current_tick;
+        self.last_tick_religion_events.clear();
+        let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
+        for sid in settlement_ids {
+            let gradients = crate::religion::substrate_gradients_for(sid);
+            let profile = self
+                .religious_profiles
+                .entry(sid)
+                .or_insert_with(crate::religion::ReligiousProfile::default);
+            crate::religion::apply_big_gods_response(profile, &gradients, tick);
+            let event = crate::religion::ReligionEvent::tick(
+                sid,
+                profile.monitoring,
+                profile.mythic_coherence,
+                profile.uncertainty_reduction,
+                tick,
+            );
+            if event.is_notable() {
+                self.last_tick_religion_events.push(event);
+            }
+        }
+    }
 
     /// Economic-focus pre-pass (FR-CIV-ECON-001). Stub for ADR-020;
     /// real implementation lands in TDD cycle A10.
@@ -2657,6 +2719,39 @@ impl Simulation {
                 None
             }
         })
+    }
+
+    /// Set the Gini coefficient for a settlement's wealth distribution. The
+    /// unrest phase reads this each tick to compute unrest amplification from
+    /// inequality. `gini` is expected in `[0.0, 1.0]`; values outside that
+    /// range are clamped.
+    pub fn set_settlement_gini(&mut self, settlement_id: u32, gini: f64) {
+        let clamped = if gini.is_nan() { 0.0 } else { gini.clamp(0.0, 1.0) };
+        self.settlement_gini.insert(settlement_id, clamped);
+    }
+
+    /// Read-only access to the `phase_unrest` event stream for the most
+    /// recent tick. The slice is reset by `tick()` and repopulated by the
+    /// next `phase_unrest` invocation.
+    pub fn last_tick_unrest(&self) -> &[UnrestEvent] {
+        &self.last_tick_unrest
+    }
+
+    /// Per-settlement unrest snapshot from the most recent tick, if any
+    /// event was recorded for that settlement.
+    pub fn last_tick_unrest_settlement(
+        &self,
+        settlement_id: u32,
+    ) -> Option<UnrestSnapshot> {
+        self.last_tick_unrest_snapshots.get(&settlement_id).cloned()
+    }
+
+    /// The current [`UnrestLevel`] for a settlement, derived from the most
+    /// recent tick's snapshot. `None` if no snapshot has been recorded yet.
+    pub fn unrest_level(&self, settlement_id: u32) -> Option<UnrestLevel> {
+        self.last_tick_unrest_snapshots
+            .get(&settlement_id)
+            .map(|s| s.level)
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.

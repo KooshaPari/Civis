@@ -8,6 +8,7 @@ use civ_agents::{
     DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Psyche, SocialGraph, Position3d, Tools,
     Wardrobe,
 };
+use civ_audio::triggers::SfxTrigger;
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
@@ -80,6 +81,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "language",
     "sentience",
     "diffusion",
+    "audio",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -453,6 +455,14 @@ pub struct Simulation {
     last_tick_engagements: Vec<CombatEngagement>,
     /// `mod.loaded.v1` replay-bus JSON emitted when mods load (cleared each tick).
     last_tick_mod_lifecycle: Vec<String>,
+    /// Audio events derived from substrate signals on the most recent tick
+    /// (FR-AUDIO-wire). Reset at the start of every [`Simulation::tick`];
+    /// populated by [`Simulation::phase_audio`] from combat pulses,
+    /// construction events, and emergent disasters. Consumed by the
+    /// JSON-RPC bridge (`sim.snapshot.audio_events`) and the WebSocket
+    /// tick broadcast; clients translate each entry into a kira SFX
+    /// trigger via [`civ_audio::triggers::trigger_to_sfx_requests`].
+    last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -745,6 +755,7 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
+            last_tick_audio_events: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -817,6 +828,7 @@ impl Simulation {
             last_tick_combat_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
+            last_tick_audio_events: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -1277,6 +1289,11 @@ impl Simulation {
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
         self.last_tick_construction_events.clear();
+        // Audio buffer is reset at the top of the tick so caller-side
+        // builders (disasters, god-tool handlers, mod hooks) can record
+        // audio events mid-tick; `phase_audio` re-emits the survivors
+        // alongside combat + construction events on the wire.
+        self.last_tick_audio_events.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
@@ -1329,6 +1346,7 @@ impl Simulation {
             "language" => self.phase_language(),
             "sentience" => self.phase_sentience(),
             "diffusion" => self.phase_diffusion(),
+            "audio" => self.phase_audio(),
             other => panic!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
         }
     }
@@ -1353,6 +1371,17 @@ impl Simulation {
     #[must_use]
     pub fn last_tick_mod_lifecycle(&self) -> &[String] {
         &self.last_tick_mod_lifecycle
+    }
+
+    /// Audio triggers derived from substrate signals on the most recent tick
+    /// (FR-AUDIO-wire). Reset at the start of every [`Simulation::tick`];
+    /// populated by [`Simulation::phase_audio`] and consumed by the
+    /// JSON-RPC bridge (`sim.snapshot.audio_events`) and clients that
+    /// translate each entry into kira SFX requests via
+    /// [`civ_audio::triggers::trigger_to_sfx_requests`].
+    #[must_use]
+    pub fn last_tick_audio_events(&self) -> &[SfxTrigger] {
+        &self.last_tick_audio_events
     }
 
     /// Ingest mod-host phase log lines: record permission violations on the replay bus and debug-log.
@@ -1683,6 +1712,97 @@ impl Simulation {
             count_civilians(&self.world) as u32
         );
         self.last_cohort_stats = Some(wardrobe_stats);
+    }
+
+    /// Audio phase (FR-AUDIO-wire) — translate per-tick substrate events
+    /// produced by the earlier phases (combat pulses from `phase_tactics`,
+    /// construction events from `phase_buildings`, emergent disasters
+    /// from `phase_disasters`-style paths) into substrate-level
+    /// [`SfxTrigger`]s the JSON-RPC bridge and WebSocket broadcast will
+    /// forward to clients.
+    ///
+    /// This is intentionally a *thin mapping* — no synthesis, no
+    /// coalescing, no client logic. Per-tick capacity is bounded by
+    /// the substrate:
+    ///
+    /// - One [`SfxTrigger::Battle`] per distinct combat pulse center
+    ///   (already deduped by `phase_tactics`), volume = the
+    ///   normalized proximity to the world center so distant battles
+    ///   are quieter without leaking exact unit coordinates.
+    /// - One [`SfxTrigger::Build`] per completed-building
+    ///   `ProductionEvent` (the "Produced" variant).
+    /// - [`SfxTrigger::Disaster`]s are pushed by `trigger_disaster` /
+    ///   `phase_disasters` via [`Self::record_disaster_audio`]; this
+    ///   phase only forwards what's already in the per-tick buffer.
+    ///
+    /// The buffer resets at the start of [`Simulation::tick`] (not
+    /// here) so caller-side builders (god-tool handlers,
+    /// `phase_disasters`) can record disasters that fire mid-tick.
+    fn phase_audio(&mut self) {
+        let mut events: Vec<SfxTrigger> =
+            Vec::with_capacity(self.last_tick_audio_events.capacity());
+
+        // Combat pulses → Battle triggers. Volume scales with normalized
+        // proximity to the world center so loudest battles are the ones
+        // the camera is most likely to be near. Distant pulses stay
+        // audible but quieter (the coalescer clamps gain anyway).
+        for pulse in &self.last_tick_combat_pulses {
+            // Distance from the world center (0.5, 0.5) in normalized
+            // coords; clamped to [0, 1] for the volume curve.
+            let dx = pulse.x - 0.5;
+            let dy = pulse.y - 0.5;
+            let dist = ((dx * dx + dy * dy).sqrt() * 2.0).clamp(0.0, 1.0);
+            let intensity = 1.0 - dist;
+            events.push(SfxTrigger::Battle { intensity });
+        }
+
+        // Construction completions → Build triggers (one per
+        // `ProductionEvent::Produced` this tick).
+        for event in &self.last_tick_construction_events {
+            if matches!(event, ProductionEvent::Produced { .. }) {
+                events.push(SfxTrigger::Build);
+            }
+        }
+
+        // Disasters → already-recorded Disaster triggers; keep their
+        // recorded order so the wire stream is deterministic.
+        for trigger in &self.last_tick_audio_events {
+            if matches!(trigger, SfxTrigger::Disaster { .. }) {
+                events.push(*trigger);
+            }
+        }
+
+        self.last_tick_audio_events = events;
+    }
+
+    /// Record a [`SfxTrigger::Disaster`] on the per-tick audio buffer
+    /// (FR-AUDIO-wire). Called by [`crate::disasters::trigger_disaster`]
+    /// and `phase_disasters` so disasters fired mid-tick land in the
+    /// snapshot. The buffer is cleared at the start of
+    /// [`Simulation::tick`] so callers can invoke this any time during
+    /// the tick. Forwarded to the client in [`Simulation::phase_audio`].
+    pub fn record_disaster_audio(&mut self, kind: &str, severity: f32) {
+        // Convert the DisasterKind label into a wire-stable `&'static str`
+        // by lowercasing once and matching against the canonical names
+        // the audio substrate recognizes (see
+        // `civ_audio::SfxKind::for_disaster_label`). Unknown kinds
+        // surface as the umbrella "disaster" label so the substrate's
+        // `for_disaster_label` falls back to `SfxKind::Disaster` rather
+        // than dropping the event.
+        let label: &'static str = match kind.to_ascii_lowercase().as_str() {
+            "meteor" => "meteor",
+            "flood" => "flood",
+            "quake" | "earthquake" => "quake",
+            "wildfire" | "fire" => "wildfire",
+            "storm" => "storm",
+            "plague" => "plague",
+            _ => "disaster",
+        };
+        self.last_tick_audio_events
+            .push(SfxTrigger::Disaster {
+                kind: label,
+                severity: severity.clamp(0.0, 1.0),
+            });
     }
 
     /// Language phase (FR-CIV-LANG-001) — drifts the emergent language
@@ -5821,6 +5941,143 @@ mod tests {
         fn missing_language_legacy_threshold_unchanged() {
             let bonus = language_intelligibility_peace_bonus(1.0);
             assert_eq!(bonus, 0, "missing language must not alter threshold");
+        }
+    }
+
+    // ── AUDIO-wire (FR-AUDIO-wire) tests ────────────────────────────────────
+    //
+    // These tests cover the thin wire between per-tick substrate events
+    // (disasters / combat pulses / construction / emergence) and the
+    // `SfxTrigger` buffer surfaced on `sim.last_tick_audio_events()`.
+    // Audio synthesis itself lives in `civ-audio`; the engine only owns
+    // the trigger list.
+
+    #[cfg(test)]
+    impl Simulation {
+        /// FR-AUDIO-wire test helper — push a `CombatDamagePulse` into
+        /// the engine's per-tick buffer at normalized world coords
+        /// (`x_norm`, `y_norm` in `[0, 1]`), so the audio phase can be
+        /// exercised without running the full tactics resolution.
+        fn push_combat_pulse_for_test(&mut self, x_norm: f32, y_norm: f32) {
+            self.last_tick_combat_pulses.push(CombatDamagePulse {
+                x: x_norm.clamp(0.0, 1.0),
+                y: y_norm.clamp(0.0, 1.0),
+                unit_a: None,
+                unit_b: None,
+            });
+        }
+    }
+
+    #[cfg(test)]
+    mod audio_wire_tests {
+        use super::*;
+
+        /// FR-AUDIO-wire — on a fresh `Simulation::new()`, the audio buffer
+        /// starts empty and remains empty after one tick (no combat, no
+        /// construction, no disasters on the seeded first tick).
+        #[test]
+        fn fr_audio_wire_empty_buffer_clears_across_ticks() {
+            let mut sim = Simulation::new();
+            assert!(sim.last_tick_audio_events().is_empty());
+            sim.tick();
+            // No substrate event has fired on a seeded tick 1 — audio buffer
+            // stays empty.
+            assert!(sim.last_tick_audio_events().is_empty());
+        }
+
+        /// FR-AUDIO-wire — triggering a disaster mid-tick records a
+        /// `SfxTrigger::Disaster` whose `kind` matches the
+        /// `DisasterKind` label so the audio substrate's
+        /// `SfxKind::for_disaster_label` can route it to the per-kind
+        /// sting (Meteor / Flood / Quake / Wildfire / Storm / Plague).
+        #[test]
+        fn fr_audio_wire_disaster_records_routed_trigger() {
+            use crate::disasters::{trigger_disaster, DisasterKind};
+
+            let mut sim = Simulation::new();
+            // Direct API: `trigger_disaster` records the audio trigger as
+            // a side effect of `apply_disaster`.
+            trigger_disaster(&mut sim, DisasterKind::Quake, WorldCoord { x: 0, y: 0, z: 0 });
+            let recorded = sim.last_tick_audio_events();
+            assert_eq!(recorded.len(), 1, "one disaster → one trigger");
+            match recorded[0] {
+                SfxTrigger::Disaster { kind, severity } => {
+                    assert_eq!(kind, "quake", "wire label matches the per-kind sting");
+                    assert!(
+                        (0.0..=1.0).contains(&severity),
+                        "severity is clamped to [0, 1]"
+                    );
+                    assert!(severity > 0.0, "non-zero severity (quake has positive radius)");
+                }
+                other => panic!("expected Disaster trigger, got {other:?}"),
+            }
+        }
+
+        /// FR-AUDIO-wire — `record_disaster_audio` is idempotent: an
+        /// unknown label surfaces as the umbrella "disaster" label so the
+        /// substrate's `for_disaster_label` falls back to
+        /// `SfxKind::Disaster` (no panic, no skipped event).
+        #[test]
+        fn fr_audio_wire_unknown_disaster_label_falls_back() {
+            let mut sim = Simulation::new();
+            sim.record_disaster_audio("hailstorm", 0.4);
+            assert_eq!(sim.last_tick_audio_events().len(), 1);
+            match sim.last_tick_audio_events()[0] {
+                SfxTrigger::Disaster { kind, severity } => {
+                    assert_eq!(kind, "disaster", "unknown → umbrella label");
+                    assert!((severity - 0.4).abs() < 1e-5, "severity passes through clamp");
+                }
+                other => panic!("expected Disaster trigger, got {other:?}"),
+            }
+        }
+
+        /// FR-AUDIO-wire — `record_disaster_audio` clamps severity out of
+        /// `[0, 1]` so the wire shape is bounded.
+        #[test]
+        fn fr_audio_wire_record_disaster_severity_is_clamped() {
+            let mut sim = Simulation::new();
+            sim.record_disaster_audio("flood", 1.7);
+            match sim.last_tick_audio_events()[0] {
+                SfxTrigger::Disaster { severity, .. } => {
+                    assert!(severity <= 1.0, "severity > 1 must clamp to 1.0");
+                    assert!((severity - 1.0).abs() < 1e-5);
+                }
+                other => panic!("expected Disaster trigger, got {other:?}"),
+            }
+            let mut sim = Simulation::new();
+            sim.record_disaster_audio("flood", -0.3);
+            match sim.last_tick_audio_events()[0] {
+                SfxTrigger::Disaster { severity, .. } => {
+                    assert!(severity >= 0.0, "severity < 0 must clamp to 0.0");
+                    assert!((severity - 0.0).abs() < 1e-5);
+                }
+                other => panic!("expected Disaster trigger, got {other:?}"),
+            }
+        }
+
+        /// FR-AUDIO-wire — `phase_audio` translates a queued combat pulse
+        /// into a `SfxTrigger::Battle` with intensity scaled by
+        /// normalized proximity to the world center. We use the
+        /// `#[cfg(test)]`-gated `push_combat_pulse_for_test` helper to
+        /// stage the pulse without running the full tactics phase.
+        #[test]
+        fn fr_audio_wire_combat_pulse_emits_battle_trigger() {
+            let mut sim = Simulation::new();
+            // A pulse at the world center → maximum intensity (1.0).
+            sim.push_combat_pulse_for_test(0.5, 0.5);
+            sim.phase_audio();
+            let events = sim.last_tick_audio_events();
+            assert_eq!(events.len(), 1, "one pulse → one Battle trigger");
+            match events[0] {
+                SfxTrigger::Battle { intensity } => {
+                    assert!(
+                        (0.0..=1.0).contains(&intensity),
+                        "intensity is in [0, 1]"
+                    );
+                    assert!(intensity > 0.99, "center pulse → near-1.0 intensity");
+                }
+                other => panic!("expected Battle trigger, got {other:?}"),
+            }
         }
     }
 }

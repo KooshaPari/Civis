@@ -67,6 +67,14 @@ civ-species = { path = "../species" }
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 
+# Audio substrate (CIV-0800 / FR-CIV-AUDIO-005 / FR-AUDIO-wire): pure-Rust
+# reactive SFX trigger mapping. Engine ingests per-tick substrate events
+# (combat pulses, construction events, disasters) and emits a
+# `last_tick_audio_events` list the JSON-RPC bridge surfaces to clients.
+# No engine deps in `civ-audio` so this stays an additive, lightweight
+# dependency.
+civ-audio = { path = "../audio" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.11"

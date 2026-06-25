@@ -181,6 +181,11 @@ struct TickBroadcast {
     /// (FR-CIV-BUILD-002). Bevy clients use these to render scaffolding and
     /// completion FX; replay log mirrors them for deterministic reloads.
     construction_events: Arc<[ProductionEvent]>,
+    /// Audio triggers emitted by `Simulation::phase_audio` for the
+    /// just-completed tick (FR-AUDIO-wire). Bevy and Godot clients
+    /// consume this list to play SFX cues. Replay log mirrors it via
+    /// `audio_events` snapshot field.
+    audio_events: Arc<[civ_engine::SfxTrigger]>,
 }
 
 fn resolve_session_id() -> String {
@@ -1410,11 +1415,20 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
                 .to_vec()
                 .into_boxed_slice(),
         );
+        // FR-AUDIO-wire — forward the engine's per-tick audio triggers.
+        // Clients play SFX cues from this list; the replay log mirrors
+        // it via the JSON-RPC `sim.snapshot.audio_events` field.
+        let audio_events: Arc<[civ_engine::SfxTrigger]> = Arc::from(
+            sim.last_tick_audio_events()
+                .to_vec()
+                .into_boxed_slice(),
+        );
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
             construction_events,
+            audio_events,
         })
     };
 

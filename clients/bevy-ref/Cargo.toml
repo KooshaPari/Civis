@@ -130,10 +130,9 @@ voxel_stream = ["voxel"]
 models = ["bevy"]
 # Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
 # (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
-audio = ["bevy", "dep:bevy_kira_audio"]
-# Empty placeholder for the `vfx` feature. The actual implementation
-# (bevy_hanabi integration) is DEFERRED: `src/vfx.rs` and the
-# `#[cfg(feature = "vfx")]` blocks in `bin/standalone.rs` + `lib.rs` still
+# `dep:serde_json` is required by the FR-AUDIO-wire snapshot parser in
+# `audio::parse_audio_events_from_snapshot_json`.
+audio = ["bevy", "dep:bevy_kira_audio", "dep:serde_json"]
 # exist, but they fail to compile because the `bevy_hanabi` dep is not
 # declared. Defining the (empty) feature silences the `unexpected_cfgs`
 # warning that those guards produce today; enabling the feature on the
@@ -142,7 +141,6 @@ audio = ["bevy", "dep:bevy_kira_audio"]
 # `bevy_hanabi` + the `vfx` feature together in a single PR (see
 # `docs/development-guide/fr-vfx.md` TBD).
 vfx = []
-# `pbr-textures` — enable PBR texture asset loading (normal/roughness/AO maps) on
 # top of the base material pipeline (src/materials.rs). OFF by default so CI builds
 # stay fast and texture assets are optional. Enable: `--features pbr-textures`.
 pbr-textures = ["bevy"]

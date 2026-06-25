@@ -4181,4 +4181,179 @@ mod tests {
         assert!(available.is_array(), "available should be an array");
         assert!(available.as_array().unwrap().len() > 0, "available should be non-empty");
     }
+
+    // --- God-tools palette tests (FR-CIV-GODTOOL) -----------------------------
+
+    fn empty_ctx() -> DispatchContext {
+        DispatchContext {
+            tick: 0,
+            population: None,
+            snapshot: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+        }
+    }
+
+    #[test]
+    fn parse_god_action_smite_defaults_apply_when_optional_fields_missing() {
+        let v = serde_json::json!({"action": "smite", "x": 0.5, "y": 0.5});
+        let req = parse_god_action(Some(&v)).expect("smite parses");
+        assert_eq!(
+            req,
+            GodActionRequest::Smite {
+                x: 0.5,
+                y: 0.5,
+                radius: 8,
+                energy: 1000,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_god_action_smite_clamps_radius_and_energy() {
+        let v = serde_json::json!({
+            "action": "smite",
+            "x": 0.1, "y": 0.9,
+            "radius": 9999,        // clamped to 32
+            "energy": u64::MAX,    // clamped to u32::MAX
+        });
+        let req = parse_god_action(Some(&v)).expect("smite clamps");
+        match req {
+            GodActionRequest::Smite { radius, energy, .. } => {
+                assert_eq!(radius, 32);
+                assert_eq!(energy, u32::MAX);
+            }
+            other => panic!("expected Smite, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_god_action_heal_clamps_radius_norm() {
+        let v = serde_json::json!({
+            "action": "heal",
+            "x": 0.5, "y": 0.5,
+            "radius_norm": 99.0,  // clamped to 0.5
+        });
+        let req = parse_god_action(Some(&v)).expect("heal clamps");
+        match req {
+            GodActionRequest::Heal { radius_norm, .. } => {
+                assert!((radius_norm - 0.5).abs() < 1e-6, "got {radius_norm}");
+            }
+            other => panic!("expected Heal, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_god_action_place_terrain_requires_material() {
+        let v = serde_json::json!({"action": "place_terrain", "x": 0.5, "y": 0.5});
+        let err = parse_god_action(Some(&v)).expect_err("material is required");
+        assert_eq!(err.code, error_code::INVALID_PARAMS);
+    }
+
+    #[test]
+    fn parse_god_action_ignite_rounds_radius() {
+        let v = serde_json::json!({"action": "ignite", "x": 0.5, "y": 0.5, "radius": 16});
+        let req = parse_god_action(Some(&v)).expect("ignite parses");
+        match req {
+            GodActionRequest::Ignite { radius, .. } => assert_eq!(radius, 8), // clamped
+            other => panic!("expected Ignite, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_god_action_spawn_creature_captures_faction_and_seq() {
+        let v = serde_json::json!({
+            "action": "spawn_creature",
+            "x": 0.25, "y": 0.75,
+            "faction": 3,
+            "entity_seq": 4242,
+        });
+        let req = parse_god_action(Some(&v)).expect("spawn_creature parses");
+        match req {
+            GodActionRequest::SpawnCreature { faction, entity_seq, .. } => {
+                assert_eq!(faction, 3);
+                assert_eq!(entity_seq, 4242);
+            }
+            other => panic!("expected SpawnCreature, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_god_action_bless_scales_magnitude() {
+        let v = serde_json::json!({
+            "action": "bless",
+            "x": 0.5, "y": 0.5,
+            "radius_norm": 0.1,
+            "magnitude": 0.7,
+        });
+        let req = parse_god_action(Some(&v)).expect("bless parses");
+        match req {
+            GodActionRequest::Bless { magnitude, .. } => {
+                assert!((magnitude - 0.7).abs() < 1e-6);
+            }
+            other => panic!("expected Bless, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_god_action_multiply_creatures_clamps_count() {
+        let v = serde_json::json!({
+            "action": "multiply_creatures",
+            "x": 0.5, "y": 0.5,
+            "radius_norm": 0.2,
+            "count": 9999,        // clamped to 64
+            "faction": 1,
+            "entity_seq": 100,
+        });
+        let req = parse_god_action(Some(&v)).expect("multiply parses");
+        match req {
+            GodActionRequest::MultiplyCreatures { count, .. } => assert_eq!(count, 64),
+            other => panic!("expected MultiplyCreatures, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_god_action_unknown_action_errors() {
+        let v = serde_json::json!({"action": "obliterate", "x": 0.5, "y": 0.5});
+        let err = parse_god_action(Some(&v)).expect_err("unknown verb must error");
+        assert_eq!(err.code, error_code::INVALID_PARAMS);
+        assert!(
+            err.message.contains("obliterate"),
+            "error should mention the unknown verb: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn parse_god_action_missing_params_object_errors() {
+        let err = parse_god_action(None).expect_err("missing params is invalid");
+        assert_eq!(err.code, error_code::INVALID_PARAMS);
+    }
+
+    #[test]
+    fn dispatch_sim_god_action_routes_to_god_action_effect() {
+        // Confirms the wire-method → enum-variant plumbing is wired.
+        // Execution itself is verified by integration tests against a live bridge.
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":99,"method":"sim.god_action",
+                 "params":{"action":"smite","x":0.5,"y":0.5,"radius":8,"energy":1000}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(req, empty_ctx());
+        match plan.effect {
+            DispatchEffect::GodAction(GodActionRequest::Smite { radius, energy, .. }) => {
+                assert_eq!(radius, 8);
+                assert_eq!(energy, 1000);
+            }
+            other => panic!("expected GodAction(Smite), got {other:?}"),
+        }
+        assert!(plan.response.error.is_none(), "dispatch should not error");
+    }
 }

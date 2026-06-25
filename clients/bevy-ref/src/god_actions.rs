@@ -24,6 +24,7 @@ use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::live_stream::{
     remesh_cached_chunks, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
 };
+use crate::frame_budget::FrameBudgetRecovery;
 use crate::menus::in_game;
 use crate::terrain::{terrain_surface_y, WORLD_SIZE};
 use crate::{decode_chunk_id, encode_chunk_id, DebugRender};
@@ -326,6 +327,7 @@ fn apply_god_action_requests(
     mut toast: Option<ResMut<GodActionToast>>,
     focus: Res<LiveSceneFocus>,
     debug: Res<DebugRender>,
+    frame_budget_recovery: Res<FrameBudgetRecovery>,
     effect_meshes: Res<GodEffectMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -346,6 +348,7 @@ fn apply_god_action_requests(
                     &mut scene,
                     &focus,
                     &debug,
+                    &frame_budget_recovery,
                     &effect_meshes,
                     &mut meshes,
                     &mut materials,
@@ -373,6 +376,7 @@ fn apply_god_action_requests(
                     &mut scene,
                     &focus,
                     &debug,
+                    &frame_budget_recovery,
                     &effect_meshes,
                     &mut meshes,
                     &mut materials,
@@ -441,6 +445,7 @@ fn remesh_dirty_chunks(
     scene: &mut LiveStreamScene,
     focus: &LiveSceneFocus,
     debug: &DebugRender,
+    frame_budget_recovery: &FrameBudgetRecovery,
     _effect_meshes: &GodEffectMeshes,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
@@ -452,6 +457,8 @@ fn remesh_dirty_chunks(
     let culling = StreamCulling {
         eye: [focus.centre.x, 64.0, focus.centre.z],
         max_distance: focus.half_extent * 4.0 + 256.0,
+        draw_distance_scale: frame_budget_recovery.draw_distance_scale(),
+        lod_distance_scale: frame_budget_recovery.lod_distance_scale(),
     };
     let wire = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
     let ids: Vec<ChunkId> = dirty.iter().copied().collect();

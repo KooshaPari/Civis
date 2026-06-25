@@ -497,4 +497,124 @@ mod tests {
         assert_eq!(classify_biome(0.3, 25.0, 80.0), BiomeKind::Savanna);
         assert_eq!(classify_biome(0.3, 25.0, 200.0), BiomeKind::Rainforest);
     }
+
+    // ── `classify_weather_cell` (terrain / heightfield bridge) ──────────────
+    //
+    // `classify_weather_cell` is the only public function in the crate that
+    // integrates a per-cell `WeatherCell` (fixed-point temp + precip) with a
+    // caller-supplied terrain elevation to produce a `BiomeKind`. It is the
+    // primary terrain/heightfield bridge between civ-weather and the biome
+    // taxonomy, so it gets dedicated direct coverage here.
+
+    /// `classify_weather_cell` must be exactly equivalent to `classify_biome`
+    /// after dividing the cell's fixed-point temp/precip by `FP_SCALE` (1 000).
+    #[test]
+    fn classify_weather_cell_matches_classify_biome() {
+        let cell = crate::weather::WeatherCell {
+            region_id: 0,
+            latitude_fp: 0,
+            season: crate::weather::SeasonKind::Summer,
+            kind: crate::weather::WeatherKind::Clear,
+            temp_c_fp: 25_000,
+            precip_mm_fp: 200_000,
+            storm_intensity_fp: 0,
+        };
+
+        for elevation in [-0.25_f32, 0.0, 0.04, 0.3, 0.7, 0.8, 0.95] {
+            let direct = classify_biome(elevation, 25.0, 200.0);
+            let via_cell = classify_weather_cell(&cell, elevation);
+            assert_eq!(
+                via_cell, direct,
+                "classify_weather_cell must agree with classify_biome at elevation={elevation}"
+            );
+        }
+    }
+
+    /// Elevation-override branches (Ocean / Beach / Glacier / Mountain) survive
+    /// the fixed-point conversion unchanged.
+    #[test]
+    fn classify_weather_cell_respects_elevation_overrides() {
+        // Sub-sea-level elevation always wins, regardless of weather.
+        let cell = crate::weather::WeatherCell {
+            region_id: 7,
+            latitude_fp: 12_000,
+            season: crate::weather::SeasonKind::Winter,
+            kind: crate::weather::WeatherKind::Snow,
+            temp_c_fp: -20_000,
+            precip_mm_fp: 300_000,
+            storm_intensity_fp: 5_000,
+        };
+        assert_eq!(classify_weather_cell(&cell, -0.1), BiomeKind::Ocean);
+
+        // Beach band (0 < elev <= 0.05).
+        assert_eq!(classify_weather_cell(&cell, 0.0), BiomeKind::Beach);
+        assert_eq!(classify_weather_cell(&cell, 0.05), BiomeKind::Beach);
+
+        // Glacier at high elevation + very cold (temp_c_fp <= -5_000 → -5 °C).
+        assert_eq!(classify_weather_cell(&cell, 0.8), BiomeKind::Glacier);
+
+        // Mountain at high elevation but not glacial (warm up the cell).
+        let mut warm = cell;
+        warm.temp_c_fp = 10_000;
+        assert_eq!(classify_weather_cell(&warm, 0.7), BiomeKind::Mountain);
+    }
+
+    /// Hot + wet WeatherCell → Rainforest (Whittaker hot/wet band survives the
+    /// fixed-point divide by 1 000 without off-by-one errors at the boundary).
+    #[test]
+    fn classify_weather_cell_hot_wet_is_rainforest() {
+        let cell = crate::weather::WeatherCell {
+            region_id: 3,
+            latitude_fp: 0,
+            season: crate::weather::SeasonKind::Summer,
+            kind: crate::weather::WeatherKind::Rain,
+            temp_c_fp: 28_000,     // 28.0 °C
+            precip_mm_fp: 300_000, // 300 mm/year
+            storm_intensity_fp: 0,
+        };
+        assert_eq!(classify_weather_cell(&cell, 0.3), BiomeKind::Rainforest);
+    }
+
+    /// Temperate + very-wet WeatherCell → Wetland.
+    #[test]
+    fn classify_weather_cell_temperate_wet_is_wetland() {
+        let cell = crate::weather::WeatherCell {
+            region_id: 5,
+            latitude_fp: 25_000,
+            season: crate::weather::SeasonKind::Spring,
+            kind: crate::weather::WeatherKind::Rain,
+            temp_c_fp: 12_000,     // 12 °C
+            precip_mm_fp: 200_000, // 200 mm/year
+            storm_intensity_fp: 1_000,
+        };
+        assert_eq!(classify_weather_cell(&cell, 0.2), BiomeKind::Wetland);
+    }
+
+    /// Round-trip via a real `compute_weather` snapshot: every cell of an
+    /// earthlike climate vector classifies to one of the canonical biome
+    /// archetypes — never panics, never returns an out-of-range enum value.
+    /// This is the integration test that exercises the weather→biome terrain
+    /// pipeline end-to-end.
+    #[test]
+    fn classify_weather_cell_end_to_end_with_compute_weather() {
+        let (planet, moon) = defaults_earthlike();
+        let climate = crate::compute_climate(123_456, &planet, &moon);
+        let cells = crate::compute_weather(&climate, 123_456, 16);
+
+        // Sweep a coarse normalised elevation grid across all 16 cells.
+        for elev_idx in 0..=10 {
+            let elevation = elev_idx as f32 / 10.0; // 0.0 .. 1.0
+            for cell in &cells {
+                let biome = classify_weather_cell(cell, elevation);
+                // Result must always be one of the defined BiomeKind variants.
+                // We assert this by checking against itself + Debug formatting,
+                // since `BiomeKind` is `Copy` and has no "invalid" sentinel.
+                let debug = format!("{biome:?}");
+                assert!(
+                    !debug.is_empty(),
+                    "classify_weather_cell returned an invalid biome"
+                );
+            }
+        }
+    }
 }

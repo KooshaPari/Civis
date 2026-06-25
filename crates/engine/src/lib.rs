@@ -54,3 +54,19 @@ pub use engine::{
 };
 pub use replay::ReplayError;
 pub use spawn::norm_to_grid;
+
+// FR-CIV-GOV-001/002/003 (civ-007 institutions epic). Re-exported so callers
+// (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
+// pulling the `civ-institutions` crate directly.
+pub use civ_institutions::{
+    Institution, InstitutionEvent, InstitutionKind, GARRISON_UNLOCK_POPULATION,
+    TEMPLE_UNLOCK_POPULATION, TEMPLE_TO_GARRISON_RATIO,
+};
+
+// FR-CIV-GOV-100 (civ-007 social-mood epic). Re-exported so callers can name
+// the snapshot type as `civ_engine::MoodSnapshot` and the saturation /
+// history-cap constants as `civ_engine::MOOD_*` without taking a dependency
+// on the private `engine` module path.
+pub use engine::{
+    MoodSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
+};

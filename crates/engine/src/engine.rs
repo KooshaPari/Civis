@@ -529,7 +529,118 @@ pub struct Simulation {
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers).
     last_tick_sentience_events: Vec<crate::genetics::sentience::SentienceEvent>,
+    /// Per-settlement population snapshot, settable by tests + scenario loaders
+    /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
+    /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
+    settlements: BTreeMap<u32, u32>,
+    /// Currently-active institutions per settlement, keyed by
+    /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
+    /// upgrades (FR-CIV-GOV-003).
+    institutions: BTreeMap<u32, civ_institutions::Institution>,
+    /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
+    /// call (cleared at the start of every [`Simulation::tick`], alongside the
+    /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
+    /// Bevy client can render the civil layer.
+    last_tick_institution_events: Vec<InstitutionEvent>,
+    /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
+    /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
+    /// across population dips/rebounds (FR-CIV-GOV-003).
+    institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+    /// Per-settlement food stock, settable by tests + scenario loaders so
+    /// [`Simulation::phase_social_mood`] can derive `food_score` deterministically
+    /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
+    /// to `0` in the phase.
+    settlement_food_stocked: BTreeMap<u32, i64>,
+    /// Per-settlement housing capacity, settable by tests + scenario loaders
+    /// so [`Simulation::phase_social_mood`] can compute `housing_score` as
+    /// `2 * (capacity - population)` (FR-CIV-GOV-100). Keyed by settlement id
+    /// (`u32`); missing keys default to `0` in the phase.
+    settlement_housing_capacity: BTreeMap<u32, u32>,
+    /// Per-settlement crime pressure, settable by tests + scenario loaders so
+    /// [`Simulation::phase_social_mood`] can compute `crime_score`
+    /// (FR-CIV-GOV-100). Keyed by settlement id (`u32`); missing keys default
+    /// to `0` in the phase. Treated as `i32` so the `4 * pressure` term
+    /// saturates cleanly in `i64` arithmetic.
+    settlement_crime_pressure: BTreeMap<u32, i32>,
+    /// Flat mood history ring (test convenience). At most
+    /// [`MOOD_HISTORY_CAP`] * 8 entries are kept; older entries are drained
+    /// from the front. Mirrors the per-settlement ring in
+    /// `mood_history_by_settlement` for assertion convenience.
+    mood_history: Vec<MoodSnapshot>,
+    /// Per-settlement mood history ring. Each entry retains at most
+    /// [`MOOD_HISTORY_CAP`] [`MoodSnapshot`]s in append order (oldest first).
+    mood_history_by_settlement: BTreeMap<u32, Vec<MoodSnapshot>>,
+    /// Per-settlement mood snapshot emitted on the most recent tick
+    /// (cleared at the start of every [`Simulation::tick`], alongside the
+    /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so
+    /// clients can render the social-mood layer.
+    last_tick_mood: Vec<MoodSnapshot>,
 }
+
+/// Civic institution event emitted by [`Simulation::phase_institutions`]
+/// (FR-CIV-GOV-001/002/003). Consumed by the JSON-RPC bridge in
+/// `crates/server/src/ws_bridge.rs` to surface the civil layer to clients.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstitutionEvent {
+    /// The kind of institution that changed.
+    pub kind: civ_institutions::InstitutionKind,
+    /// The new level (1 = L1 / first spawn, 2 = L2 / first upgrade, ...).
+    pub level: u8,
+    /// The settlement id this event pertains to.
+    pub settlement_id: u32,
+}
+
+/// Per-settlement mood snapshot emitted by [`Simulation::phase_social_mood`]
+/// (FR-CIV-GOV-100 family). Carries the total mood plus the four contributing
+/// sub-scores and the institution bonus, so downstream phases and the
+/// JSON-RPC bridge (`sim.snapshot.mood`) can attribute changes to specific
+/// drivers. `Copy` because the snapshot is pushed to a flat `Vec` for
+/// determinism testing and the `mood_history` ring is updated in place.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MoodSnapshot {
+    /// Settlement this snapshot pertains to.
+    pub settlement_id: u32,
+    /// Total mood after summing the sub-scores and institution bonuses
+    /// (saturated to [`MOOD_MIN`, `MOOD_MAX`]).
+    pub mood: i64,
+    /// Delta versus the previous tick's mood for this settlement
+    /// (`0` if no prior snapshot was recorded).
+    pub mood_delta: i64,
+    /// `clamp(stocked / 200, MOOD_MIN, MOOD_MAX)` — food surplus contribution.
+    pub food_score: i64,
+    /// `clamp(2 * (capacity - population), MOOD_MIN, MOOD_MAX)` —
+    /// housing surplus / deficit contribution.
+    pub housing_score: i64,
+    /// `max(0, MOOD_CRIME_BASE - 4 * crime_pressure)` — crime inverse
+    /// contribution (clipped to `[0, MOOD_CRIME_BASE]`).
+    pub crime_score: i64,
+    /// `25 + 25 * level` when a Temple is present, else `0`.
+    pub temple_bonus: i32,
+    /// `15 + 15 * level` when a Garrison is present, else `0`.
+    pub garrison_bonus: i32,
+}
+
+/// Lower saturation bound for the per-settlement `mood` total in
+/// [`MoodSnapshot`] (FR-CIV-GOV-100). Chosen symmetric with [`MOOD_MAX`]
+/// so the score stays balanced for tests asserting `|mood| <= 200`.
+pub const MOOD_MIN: i64 = -200;
+
+/// Upper saturation bound for the per-settlement `mood` total in
+/// [`MoodSnapshot`] (FR-CIV-GOV-100). Matches the documentation in
+/// [`Simulation::phase_social_mood`].
+pub const MOOD_MAX: i64 = 200;
+
+/// `crime_score` baseline used by [`Simulation::phase_social_mood`]
+/// (FR-CIV-GOV-100). Crime at `MOOD_CRIME_BASE / 4` (i.e. `75`) saturates
+/// `crime_score` to `0`; lower crime gives a linearly higher score.
+pub const MOOD_CRIME_BASE: i64 = 300;
+
+/// Per-settlement mood history cap (FR-CIV-GOV-100). The engine keeps at
+/// most this many [`MoodSnapshot`] entries per settlement in
+/// `Simulation::mood_history_by_settlement`, plus [`MOOD_HISTORY_CAP`] * 8
+/// entries in the flat `Simulation::mood_history` ring buffer (test
+/// convenience).
+pub const MOOD_HISTORY_CAP: usize = 16;
 
 /// Voxel material id used to mark coastal water-level voxels written by
 /// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Reuses the shared
@@ -794,6 +905,12 @@ impl Simulation {
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
+            settlement_food_stocked: BTreeMap::new(),
+            settlement_housing_capacity: BTreeMap::new(),
+            settlement_crime_pressure: BTreeMap::new(),
+            mood_history: Vec::new(),
+            mood_history_by_settlement: BTreeMap::new(),
+            last_tick_mood: Vec::new(),
         }
     }
 
@@ -871,6 +988,12 @@ impl Simulation {
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
+            settlement_food_stocked: BTreeMap::new(),
+            settlement_housing_capacity: BTreeMap::new(),
+            settlement_crime_pressure: BTreeMap::new(),
+            mood_history: Vec::new(),
+            mood_history_by_settlement: BTreeMap::new(),
+            last_tick_mood: Vec::new(),
         }
     }
 
@@ -1316,6 +1439,11 @@ impl Simulation {
         // audio events mid-tick; `phase_audio` re-emits the survivors
         // alongside combat + construction events on the wire.
         self.last_tick_audio_events.clear();
+        // Social-mood buffer (FR-CIV-GOV-100). `phase_social_mood` overwrites
+        // this with the per-settlement snapshots each tick; downstream
+        // consumers (`last_tick_mood`, `last_tick_mood_all`) read a fresh
+        // value when called after `tick()` returns.
+        self.last_tick_mood.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
@@ -1706,6 +1834,320 @@ impl Simulation {
     /// Count of completed buildings (FR-CIV-BUILD-001).
     pub fn completed_buildings(&self) -> usize {
         self.building_graph.completed_count()
+    }
+
+    // =======================================================================
+    // phase_institutions (FR-CIV-GOV-001/002/003) + phase_social_mood
+    // (FR-CIV-GOV-010/100) + the 9 phase_* stubs that ADR-020 declared as
+    // "tick() compiles" placeholders. The two real phases are wired into
+    // PHASE_ORDER + `run_phase` (supersets of PRs #772 + #773, deduped);
+    // the remaining stubs exist purely so the engine compiles against
+    // `run_phase`'s exhaustive match. They will be replaced with real
+    // implementations in subsequent TDD cycles (A3..A11).
+    // =======================================================================
+
+    /// Civic-institutions phase (FR-CIV-GOV-001/002/003). Emits one
+    /// `InstitutionEvent` per settlement the moment it crosses a population
+    /// threshold (Temple at ≥ `TEMPLE_UNLOCK_POPULATION`, Garrison at ≥
+    /// `GARRISON_UNLOCK_POPULATION`), and a follow-up `Upgraded` event the
+    /// first time a settlement crosses the L2 threshold. Events are one-shot
+    /// per `(settlement_id, kind, level)` tuple so re-emission across
+    /// population dips is suppressed.
+    fn phase_institutions(&mut self) {
+        let mut new_events = Vec::new();
+        // Snapshot the settlements up front so we can mutate the institutions
+        // map without borrowing `self` in a way that fights the borrow
+        // checker.
+        let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
+        for sid in settlement_ids {
+            let pop = self.settlements[&sid];
+            // ---- Temple ----
+            if pop >= civ_institutions::TEMPLE_UNLOCK_POPULATION {
+                let new_level = if pop >= civ_institutions::TEMPLE_L2_POPULATION {
+                    2
+                } else {
+                    1
+                };
+                self.upsert_institution(
+                    sid,
+                    civ_institutions::InstitutionKind::Temple,
+                    new_level,
+                    &mut new_events,
+                );
+            }
+            // ---- Garrison ----
+            if pop >= civ_institutions::GARRISON_UNLOCK_POPULATION {
+                let new_level = if pop >= civ_institutions::GARRISON_L2_POPULATION {
+                    2
+                } else {
+                    1
+                };
+                self.upsert_institution(
+                    sid,
+                    civ_institutions::InstitutionKind::Garrison,
+                    new_level,
+                    &mut new_events,
+                );
+            }
+        }
+        self.last_tick_institution_events = new_events;
+    }
+
+    /// Internal helper: bump the institution's level to `new_level` and emit
+    /// exactly one `InstitutionEvent` if this is the first time we record
+    /// that `(sid, kind, level)` triple. No-op (no event) if we've already
+    /// emitted it, so transient population dips do not produce duplicate
+    /// upgrade notifications.
+    fn upsert_institution(
+        &mut self,
+        sid: u32,
+        kind: civ_institutions::InstitutionKind,
+        new_level: u8,
+        events: &mut Vec<InstitutionEvent>,
+    ) {
+        let key = (sid, kind, new_level);
+        if self.institution_levels_emitted.contains(&key) {
+            // Already emitted this level for this settlement+kind - skip.
+            return;
+        }
+        // Update the institution record (insert if missing, replace if
+        // present but at a lower level).
+        self.institutions
+            .entry(sid)
+            .and_modify(|inst| {
+                if matches!(inst.kind, _k if std::mem::discriminant(&inst.kind) == std::mem::discriminant(&kind)) {
+                    inst.level = inst.level.max(new_level);
+                }
+            })
+            .or_insert(civ_institutions::Institution { kind, level: new_level });
+        // Only emit the event if this is the first time we've ever seen this
+        // level for this settlement+kind. We mark the triple as emitted even
+        // if the new_level is higher than what we've seen (e.g. L1 -> L2
+        // upgrade) so the upgrade event is one-shot.
+        self.institution_levels_emitted.insert(key);
+        events.push(InstitutionEvent {
+            kind,
+            level: new_level,
+            settlement_id: sid,
+        });
+    }
+
+    /// Social-mood phase (FR-CIV-GOV-100 family). Computes a per-settlement
+    /// `MoodSnapshot` from food surplus, housing capacity vs population,
+    /// crime pressure, and institution bonuses (Temple + Garrison L1/L2).
+    ///
+    /// Algorithm (deterministic given identical inputs):
+    /// 1. `food_score` = `clamp(stocked/200, -200, 200)` in the range
+    ///    [-200, +200] (200 stocked = perfect; negative if negative stock).
+    /// 2. `housing_score` = `clamp(2*(capacity - population), -200, 200)`.
+    ///    Positive when capacity > population (surplus housing lifts mood);
+    ///    negative when overcrowded.
+    /// 3. `crime_score` = `max(0, 300 - 4*crime_pressure)` in [0, 300].
+    ///    Crime at 75 saturates the score to 0; below that mood degrades
+    ///    linearly.
+    /// 4. `temple_bonus` = 25 + 25*level (Temple L1=+25, L2=+50).
+    /// 5. `garrison_bonus` = 15 + 15*level (Garrison L1=+15, L2=+30).
+    /// 6. `mood` = `food_score + housing_score + crime_score + bonuses`,
+    ///    saturated at [`MOOD_MIN`, `MOOD_MAX`].
+    /// 7. `mood_delta` = `mood - previous_mood` (0 if no prior snapshot).
+    /// 8. Snapshots are written to `self.last_tick_mood` in ascending
+    ///    `settlement_id` order for determinism (test pinning).
+    fn phase_social_mood(&mut self) {
+        // 1) For every settlement, compute the sub-scores + total mood.
+        let mut snapshots: Vec<MoodSnapshot> = Vec::with_capacity(self.settlements.len());
+        for (&settlement_id, &population) in &self.settlements {
+            let stocked = self
+                .settlement_food_stocked
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let capacity = self
+                .settlement_housing_capacity
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+            let crime_pressure = self
+                .settlement_crime_pressure
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(0);
+
+            // 1. food_score
+            let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
+
+            // 2. housing_score
+            let housing_signed =
+                (capacity as i64).saturating_sub(population as i64).saturating_mul(2);
+            let housing_score = housing_signed.clamp(MOOD_MIN, MOOD_MAX);
+
+            // 3. crime_score (max(0, 300 - 4*pressure), bounded)
+            let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
+            let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
+
+            // 4-5. institution bonuses (settlement may have 0 or 1 institution)
+            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
+                Some(inst) if inst.kind == InstitutionKind::Temple => (
+                    25 + 25 * (inst.level as i32),
+                    0,
+                ),
+                Some(inst) if inst.kind == InstitutionKind::Garrison => (
+                    0,
+                    15 + 15 * (inst.level as i32),
+                ),
+                _ => (0, 0),
+            };
+
+            // 6. total mood (saturated)
+            let total = food_score
+                .saturating_add(housing_score)
+                .saturating_add(crime_score)
+                .saturating_add(temple_bonus as i64)
+                .saturating_add(garrison_bonus as i64)
+                .clamp(MOOD_MIN, MOOD_MAX);
+
+            // 7. delta vs previous
+            let prev = self
+                .mood_history
+                .iter()
+                .rev()
+                .find(|s| s.settlement_id == settlement_id)
+                .map(|s| s.mood)
+                .unwrap_or(0);
+            let mood_delta = total - prev;
+
+            snapshots.push(MoodSnapshot {
+                settlement_id,
+                mood: total,
+                mood_delta,
+                food_score,
+                housing_score,
+                crime_score,
+                temple_bonus,
+                garrison_bonus,
+            });
+        }
+
+        // 8) Sort by settlement_id for determinism (test pinning).
+        snapshots.sort_by_key(|s| s.settlement_id);
+
+        // 9) Persist current + history (capped to 16 entries per settlement).
+        for snap in &snapshots {
+            let history = self
+                .mood_history_by_settlement
+                .entry(snap.settlement_id)
+                .or_insert_with(Vec::new);
+            history.push(*snap);
+            if history.len() > MOOD_HISTORY_CAP {
+                let drop = history.len() - MOOD_HISTORY_CAP;
+                history.drain(0..drop);
+            }
+        }
+        // Also append into the flat history (test convenience).
+        self.mood_history.extend(snapshots.iter().copied());
+        if self.mood_history.len() > MOOD_HISTORY_CAP * 8 {
+            let drop = self.mood_history.len() - MOOD_HISTORY_CAP * 8;
+            self.mood_history.drain(0..drop);
+        }
+        self.last_tick_mood = snapshots;
+    }
+
+    /// Stratification phase (FR-CIV-GOV-200 family). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A3.
+    fn phase_stratification(&mut self) {}
+
+    /// Cohesion phase (FR-CIV-COHESION-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A4.
+    fn phase_cohesion(&mut self) {}
+
+    /// Unrest phase (FR-CIV-UNREST-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A5.
+    fn phase_unrest(&mut self) {}
+
+    /// Citizen-life phase (FR-CIV-LIFE-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A6.
+    fn phase_life(&mut self) {}
+
+    /// Research phase (FR-CIV-RESEARCH-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A7.
+    fn phase_research(&mut self) {}
+
+    /// Tech-tree phase (FR-CIV-TECH-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A8.
+    fn phase_tech(&mut self) {}
+
+    /// Belief phase (FR-CIV-BELIEF-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A9.
+    fn phase_belief(&mut self) {}
+
+    /// Economic-focus pre-pass (FR-CIV-ECON-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A10.
+    fn phase_economic_focus_pre(&mut self) {}
+
+    /// Economic-focus phase (FR-CIV-ECON-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A11.
+    fn phase_economic_focus(&mut self) {}
+
+    /// Set (or replace) the population snapshot for a settlement. Used by
+    /// tests + scenario loaders to drive `phase_institutions` deterministically
+    /// (FR-CIV-GOV-001).
+    pub fn set_settlement_population(&mut self, settlement_id: u32, population: u32) {
+        self.settlements.insert(settlement_id, population);
+    }
+
+    /// Read-only view of the civic-institution events produced by the most
+    /// recent [`Self::phase_institutions`] call. Cleared at the start of
+    /// every [`Simulation::tick`].
+    #[must_use]
+    pub fn last_tick_institution_events(&self) -> &[InstitutionEvent] {
+        &self.last_tick_institution_events
+    }
+
+    /// Per-settlement per-tick social-mood snapshot, computed by
+    /// [`Self::phase_social_mood`]. Cleared at the start of every
+    /// [`Simulation::tick`].
+    ///
+    /// `last_tick_mood(settlement_id) -> Option<&MoodSnapshot>` returns the
+    /// snapshot for one settlement (if any was computed this tick).
+    /// `last_tick_mood_all() -> &[MoodSnapshot]` returns the full list.
+    #[must_use]
+    pub fn last_tick_mood(&self, settlement_id: u32) -> Option<&MoodSnapshot> {
+        self.last_tick_mood
+            .iter()
+            .find(|s| s.settlement_id == settlement_id)
+    }
+
+    /// All per-settlement mood snapshots from the most recent tick. Read-only.
+    #[must_use]
+    pub fn last_tick_mood_all(&self) -> &[MoodSnapshot] {
+        &self.last_tick_mood
+    }
+
+    /// Set (or replace) the food-stocked snapshot for a settlement.
+    /// `phase_social_mood` consumes it to compute `food_score`. Units are
+    /// the same as `Stocks::food()` (i64 food units; clamped at 0 on read).
+    pub fn set_settlement_food_stocked(&mut self, settlement_id: u32, units: i64) {
+        self.settlement_food_stocked.insert(settlement_id, units);
+    }
+
+    /// Set (or replace) the housing capacity for a settlement. Used by
+    /// `phase_social_mood` to compute `housing_score` (capacity vs population).
+    pub fn set_settlement_housing_capacity(&mut self, settlement_id: u32, units: u32) {
+        self.settlement_housing_capacity.insert(settlement_id, units);
+    }
+
+    /// Set (or replace) the crime pressure (0..300) for a settlement. Used
+    /// by `phase_social_mood` to compute `crime_score`.
+    pub fn set_settlement_crime_pressure(&mut self, settlement_id: u32, units: i32) {
+        self.settlement_crime_pressure.insert(settlement_id, units);
+    }
+
+    /// Advance the simulation `n` ticks. Convenience wrapper for tests +
+    /// scenario runners so they can compress `n` ticks of `phase_*` work into
+    /// a single call. Calls [`Self::tick`] `n` times.
+    pub fn advance_ticks(&mut self, n: u32) {
+        for _ in 0..n {
+            self.tick();
+        }
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.
@@ -3621,29 +4063,21 @@ pub struct SimulationSnapshot {
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).
 // These phases are no-op in this build; downstream mod-host + legacy code
 // still references them by name.
+//
+// NOTE: As of the phase_institutions (FR-CIV-GOV-001/002/003) +
+// phase_social_mood (FR-CIV-GOV-010) superset-merge, the canonical home
+// for these phase_* methods is the *primary* `impl Simulation` block
+// above (so they can be `fn` instead of `pub fn` and benefit from
+// inherent-impl encapsulation). The 11 phase_* orphan stubs that used
+// to live here have been **deleted** to avoid duplicate-symbol compile
+// errors: each is now defined exactly once in the primary block
+// (real impls for `phase_institutions` + `phase_social_mood`, no-op
+// `fn ... {}` stubs for the other 9 ADR-020 placeholders). The non-phase
+// stubs below (`add_cohesion`, `agent_entity`,
+// `micro_actor_action_count`, `micro_descendant_action_count`) are
+// *not* phase methods and remain in this trailing impl block because
+// they have no primary-block duplicates.
 impl Simulation {
-    /// ADR-020 #1 — settlement commons (no-op stub).
-    pub fn phase_life(&mut self) {}
-    /// ADR-020 #2 — research progress (no-op stub).
-    pub fn phase_research(&mut self) {}
-    /// ADR-020 #3 — tier-derived tech unlocks (no-op stub).
-    pub fn phase_tech(&mut self) {}
-    /// ADR-020 #4 — faith reserve (no-op stub).
-    pub fn phase_belief(&mut self) {}
-    /// ADR-020 #5 — societal unrest (no-op stub).
-    pub fn phase_unrest(&mut self) {}
-    /// ADR-020 #6 — social fabric (no-op stub).
-    pub fn phase_cohesion(&mut self) {}
-    /// ADR-020 #7 — mean mood aggregate (no-op stub).
-    pub fn phase_social_mood(&mut self) {}
-    /// ADR-020 #10a — first-pass focus seed (no-op stub).
-    pub fn phase_economic_focus_pre(&mut self) {}
-    /// ADR-020 #8 — dispossessed share (no-op stub).
-    pub fn phase_stratification(&mut self) {}
-    /// ADR-020 #9 — temple + garrison levels (no-op stub).
-    pub fn phase_institutions(&mut self) {}
-    /// ADR-020 #10 — settle pass (no-op stub).
-    pub fn phase_economic_focus(&mut self) {}
     /// Adjust cohesion for a faction (no-op stub used by tests).
     pub fn add_cohesion(&mut self, _faction: u32, _delta: f32) {}
     /// Lookup the ECS entity id for a faction agent (no-op stub).

@@ -12,11 +12,14 @@ pub mod history;
 pub mod tech;
 pub mod faction_emergence;
 pub mod godtools;
+pub mod governance;
 pub mod hash_chain;
+pub mod institution;
 pub mod integrity;
 pub mod invariants;
 pub mod io;
 pub mod language;
+pub mod law;
 pub mod lod;
 pub mod metrics;
 pub mod perf;
@@ -64,8 +67,16 @@ pub use spawn::norm_to_grid;
 // (server, clients, tests) can `use civ_engine::InstitutionKind` etc. without
 // pulling the `civ-institutions` crate directly.
 pub use civ_institutions::{
-    Institution, InstitutionEvent, InstitutionKind, GARRISON_UNLOCK_POPULATION,
-    TEMPLE_UNLOCK_POPULATION, TEMPLE_TO_GARRISON_RATIO,
+    Institution, InstitutionEvent, InstitutionKind, GARRISON_L2_POPULATION,
+    GARRISON_UNLOCK_POPULATION, TEMPLE_L2_POPULATION, TEMPLE_UNLOCK_POPULATION,
+    TEMPLE_TO_GARRISON_RATIO,
+};
+
+// FR-LAW — emergent customary law from recurring disputes.
+pub use governance::{GovernanceSignals, PendingDisputes};
+pub use law::{
+    CustomaryLaw, DisputeKind, FactionLawSnapshot, FactionLawState, LawEvent, LawEventKind,
+    CODIFICATION_INSTITUTION_STRENGTH, DISPUTE_THRESHOLD_FOR_LAW,
 };
 
 // FR-CIV-GOV-100 (civ-007 social-mood epic). Re-exported so callers can name

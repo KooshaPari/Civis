@@ -61,6 +61,7 @@ use crate::language::{
     borrow_word, ensure_seeded_word, place_name, person_name, place_name_meaning, person_name_meaning,
     seeded_language_state, tick_language, LanguageState,
 };
+use crate::law::{DisputeKind, FactionLawState, LawEvent};
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -90,6 +91,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "economic_focus_pre",
     "stratification",
     "institutions",
+    "governance",
     "economic_focus",
     "emergence",
     "language",
@@ -680,6 +682,17 @@ pub struct Simulation {
 
     /// Per-settlement migrant accumulator used by `phase_unrest`.
     pub migrant_accumulator: BTreeMap<u32, i64>,
+
+    // ── Phase A6: Emergent law (FR-LAW) ───────────────────────────────────
+
+    /// Settlement → owning faction for governance / law emergence.
+    settlement_factions: BTreeMap<u32, u32>,
+    /// Per-faction customary law state (dispute tallies + emerged norms).
+    faction_laws: BTreeMap<u32, FactionLawState>,
+    /// Disputes queued for the next [`Simulation::phase_governance`] call.
+    pending_faction_disputes: Vec<(u32, DisputeKind)>,
+    /// Law events emitted on the most recent governance tick.
+    last_tick_law_events: Vec<LawEvent>,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -1375,6 +1388,10 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest: BTreeMap::new(),
+            settlement_factions: BTreeMap::new(),
+            faction_laws: BTreeMap::new(),
+            pending_faction_disputes: Vec::new(),
+            last_tick_law_events: Vec::new(),
         }
     }
 
@@ -1497,6 +1514,10 @@ impl Simulation {
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
             last_tick_unrest: BTreeMap::new(),
+            settlement_factions: BTreeMap::new(),
+            faction_laws: BTreeMap::new(),
+            pending_faction_disputes: Vec::new(),
+            last_tick_law_events: Vec::new(),
         }
     }
 
@@ -1991,6 +2012,7 @@ impl Simulation {
         self.last_tick_mood.clear();
         self.last_tick_cohesion_events.clear();
         self.last_tick_unrest_events.clear();
+        self.last_tick_law_events.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
@@ -2039,6 +2061,7 @@ impl Simulation {
             "economic_focus_pre" => self.phase_economic_focus_pre(),
             "stratification" => self.phase_stratification(),
             "institutions" => self.phase_institutions(),
+            "governance" => self.phase_governance(),
             "economic_focus" => self.phase_economic_focus(),
             "emergence" => self.phase_emergence(),
             "language" => self.phase_language(),
@@ -2439,6 +2462,41 @@ impl Simulation {
             }
         }
         self.last_tick_institution_events = new_events;
+    }
+
+    /// Governance phase (FR-LAW). Ingests recurring disputes and crystallizes
+    /// customary laws; stronger institutions codify and enforce them.
+    fn phase_governance(&mut self) {
+        let unrest_scores = self
+            .last_tick_unrest_snapshots
+            .iter()
+            .map(|(sid, snap)| (*sid, snap.score))
+            .collect();
+        let resource_stress = self
+            .settlement_food_stocked
+            .iter()
+            .map(|(sid, stock)| {
+                let stress = if *stock < 0 {
+                    (-stock).min(100) as i32
+                } else {
+                    0
+                };
+                (*sid, stress)
+            })
+            .collect();
+        let signals = crate::governance::GovernanceSignals {
+            crime_pressure: self.settlement_crime_pressure.clone(),
+            unrest_scores,
+            resource_stress,
+        };
+        self.last_tick_law_events = crate::governance::tick_governance(
+            self.state.tick,
+            &self.settlement_factions,
+            &self.institutions,
+            &signals,
+            &mut self.faction_laws,
+            &mut self.pending_faction_disputes,
+        );
     }
 
     /// Internal helper: bump the institution's level to `new_level` and emit
@@ -3014,6 +3072,22 @@ impl Simulation {
     /// by `phase_social_mood` to compute `crime_score`.
     pub fn set_settlement_crime_pressure(&mut self, settlement_id: u32, units: i32) {
         self.settlement_crime_pressure.insert(settlement_id, units);
+    }
+
+    /// Assign a settlement to a faction for governance / law emergence (FR-LAW).
+    pub fn set_settlement_faction(&mut self, settlement_id: u32, faction_id: u32) {
+        self.settlement_factions.insert(settlement_id, faction_id);
+    }
+
+    /// Queue a dispute for the next governance tick (FR-LAW tests + god-tools).
+    pub fn record_faction_dispute(&mut self, faction_id: u32, kind: DisputeKind) {
+        self.pending_faction_disputes.push((faction_id, kind));
+    }
+
+    /// Law events from the most recent governance tick (FR-LAW).
+    #[must_use]
+    pub fn last_tick_law_events(&self) -> &[LawEvent] {
+        &self.last_tick_law_events
     }
 
     /// Advance the simulation `n` ticks. Convenience wrapper for tests +
@@ -4071,6 +4145,11 @@ impl Simulation {
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
             faction_eras: self.era_progression.faction_era_snapshots(self),
+            faction_laws: crate::governance::faction_law_snapshots(
+                &self.settlement_factions,
+                &self.institutions,
+                &self.faction_laws,
+            ),
         }
     }
 
@@ -5686,6 +5765,9 @@ pub struct SimulationSnapshot {
     /// Per-faction emergent civilization age (FR-ERA).
     #[serde(default)]
     pub faction_eras: std::collections::BTreeMap<u32, crate::era::FactionEraSnapshot>,
+    /// Per-faction customary law sets (FR-LAW).
+    #[serde(default)]
+    pub faction_laws: std::collections::BTreeMap<u32, crate::law::FactionLawSnapshot>,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).

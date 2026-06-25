@@ -615,27 +615,65 @@ pub struct Simulation {
     /// tick.
     pub last_tick_religion_events: Vec<ReligionEvent>,
 
+    // ── Phase A4: Cohesion (FR-CIV-GOV-030) ──────────────────────────────
+
+    /// Per-actor settlement assignment used by `phase_cohesion` to group
+    /// actors by settlement for fabric computation.
+    /// Inserted via [`Simulation::set_settlement_actor`].
+    actor_settlement: BTreeMap<u64, u32>,
+
+    /// Per-actor hardship level (0..1000 scale). Inserted via
+    /// [`Simulation::set_actor_in_settlement_hardship`]; consumed by
+    /// `phase_cohesion` as a fabric-eroding input.
+    actor_hardship: BTreeMap<u64, i64>,
+
+    /// Per-actor institution presence tuple `(has_temple, has_garrison)`.
+    /// Inserted via [`Simulation::set_actor_in_settlement_institutions`].
+    actor_institutions: BTreeMap<u64, (bool, bool)>,
+
+    /// Directed kinship edges indexed by actor id. Inserted via
+    /// [`Simulation::register_kinship`].
+    kinship: BTreeMap<u64, Vec<KinshipEdge>>,
+
+    /// Weighted directed trust network. `trust[a][b] = amount` means actor
+    /// `a` trusts actor `b` by `amount`. Inserted via [`Simulation::add_trust`].
+    trust: BTreeMap<u64, BTreeMap<u64, i64>>,
+
+    /// Last per-tick fabric score for each actor, used by `phase_cohesion`
+    /// to detect delta and emit [`CohesionEvent`]s.
+    last_actor_fabric: BTreeMap<u64, i64>,
+
+    /// Per-tick buffer of [`CohesionEvent`]s emitted by `phase_cohesion`.
+    last_tick_cohesion_events: Vec<CohesionEvent>,
+
+    /// Per-settlement snapshot emitted by `phase_cohesion` on the most
+    /// recent tick. Surfaced via [`Simulation::last_tick_cohesion`].
+    last_tick_cohesion: BTreeMap<u32, CohesionSnapshot>,
+
+    // ── Phase A5: Unrest (FR-CIV-UNREST-001) ─────────────────────────────
+
     /// Per-settlement Gini coefficient, set externally by the simulation driver
     /// (typically derived from the `last_tick_stratification_reports` map) and
-    /// consulted by [`Simulation::phase_unrest`] (FR-CIV-UNREST-001) to amplify
-    /// unrest when inequality is high. Values clamped to [0.0, 1.0].
-    pub settlement_gini: BTreeMap<u32, f64>,
+    /// consulted by [`Simulation::phase_unrest`] to amplify unrest when inequality
+    /// is high.
+    pub unrest_settlement_gini: BTreeMap<u32, f64>,
 
-    /// Per-tick buffer of unrest events emitted by `phase_unrest`. Cleared at
-    /// the top of each `tick()` (mirrors the `last_tick_cohesion` /
-    /// `last_tick_religion_events` pattern). Consumers (JSON-RPC `sim.snapshot.unrest`)
-    /// read this buffer once per tick.
+    /// Per-tick buffer of unrest events emitted by `phase_unrest`.
     pub last_tick_unrest: Vec<UnrestEvent>,
 
     /// Per-settlement unrest snapshot keyed by settlement id. Populated by
-    /// `phase_unrest` whenever a settlement's level changes or produces a
-    /// riot/migration event. Consulted by `last_tick_unrest_settlement` /
-    /// `unrest_level` accessors.
+    /// `phase_unrest` whenever a settlement's level changes.
     pub last_tick_unrest_snapshots: BTreeMap<u32, UnrestSnapshot>,
 
     /// Per-settlement last unrest level, used to compute `level_delta` in the
     /// event stream. Defaults to [`UnrestLevel::Calm`] for unseen settlements.
     pub last_unrest_level: BTreeMap<u32, UnrestLevel>,
+
+    /// Per-settlement riot accumulator used by `phase_unrest`.
+    pub riot_accumulator: BTreeMap<u32, i64>,
+
+    /// Per-settlement migrant accumulator used by `phase_unrest`.
+    pub migrant_accumulator: BTreeMap<u32, i64>,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -897,6 +935,144 @@ fn compute_gini(wealths: &[i64]) -> f64 {
     } else {
         0.0
     }
+}
+
+// ---------------------------------------------------------------------------
+// FR-CIV-GOV-030 (Phase A4) — cohesion types (kinship, trust, fabric)
+// ---------------------------------------------------------------------------
+
+/// Kinship relation between two actors in the simulation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum KinshipKind {
+    Family,
+    Clan,
+    Tribe,
+    Guild,
+    Oath,
+}
+
+impl KinshipKind {
+    /// Base weight that this kinship kind contributes to fabric.
+    /// Family = 40, Clan = 25, Tribe = 15, Guild = 10, Oath = 5.
+    pub fn weight(self) -> i64 {
+        match self {
+            KinshipKind::Family => 40,
+            KinshipKind::Clan => 25,
+            KinshipKind::Tribe => 15,
+            KinshipKind::Guild => 10,
+            KinshipKind::Oath => 5,
+        }
+    }
+}
+
+/// A directed edge carrying one actor's kinship to another.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct KinshipEdge {
+    pub kind: KinshipKind,
+    pub target: u64,
+}
+
+/// A change in an actor's social-fabric metric produced by
+/// [`Simulation::phase_cohesion`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum CohesionEventKind {
+    Strengthened,
+    Weakened,
+    Fragmented,
+}
+
+/// One actor's per-tick cohesion result.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct CohesionEvent {
+    pub actor_id: u64,
+    pub settlement_id: u32,
+    pub kind: CohesionEventKind,
+    pub score: i64,
+    pub score_delta: i64,
+    pub fabric: FabricTier,
+}
+
+/// The social-fabric tier of a settlement, derived from its aggregate cohesion score.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum FabricTier {
+    Tight,
+    Loosened,
+    Strained,
+    Fractured,
+}
+
+impl FabricTier {
+    /// Classify a raw fabric score into a tier.
+    pub fn from_score(score: i64) -> Self {
+        if score >= 80 {
+            FabricTier::Tight
+        } else if score >= 40 {
+            FabricTier::Loosened
+        } else if score >= 10 {
+            FabricTier::Strained
+        } else {
+            FabricTier::Fractured
+        }
+    }
+}
+
+/// Per-settlement cohesion summary produced every tick.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CohesionSnapshot {
+    pub settlement_id: u32,
+    pub fabric: FabricTier,
+    pub kin_count: u32,
+    pub trust_sum: i64,
+    pub fragmentation_events: u32,
+}
+
+// ---------------------------------------------------------------------------
+// FR-CIV-UNREST-001 (Phase A5) — unrest types
+// ---------------------------------------------------------------------------
+
+/// The unrest level of a settlement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum UnrestLevel {
+    Stable,
+    Restless,
+    Rioting,
+    Revolting,
+}
+
+impl UnrestLevel {
+    /// Classify a raw unrest score (0-500) into a level.
+    pub fn from_score(score: i32) -> Self {
+        if score < 50 {
+            UnrestLevel::Stable
+        } else if score < 150 {
+            UnrestLevel::Restless
+        } else if score < 300 {
+            UnrestLevel::Rioting
+        } else {
+            UnrestLevel::Revolting
+        }
+    }
+}
+
+/// A per-tick event emitted when a settlement's unrest state changes.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UnrestEvent {
+    pub settlement_id: u32,
+    pub level: UnrestLevel,
+    pub score: i32,
+    pub score_delta: i32,
+    pub mood: i32,
+    pub gini_x100: i32,
+    pub fabric: FabricTier,
+}
+
+/// Per-settlement unrest snapshot for the last tick.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UnrestSnapshot {
+    pub settlement_id: u32,
+    pub level: UnrestLevel,
+    pub score: i32,
+    pub events_count: u32,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -1181,6 +1357,17 @@ impl Simulation {
             last_unrest_level: BTreeMap::new(),
             riot_accumulator: BTreeMap::new(),
             migrant_accumulator: BTreeMap::new(),
+            actor_settlement: BTreeMap::new(),
+            actor_hardship: BTreeMap::new(),
+            actor_institutions: BTreeMap::new(),
+            kinship: BTreeMap::new(),
+            trust: BTreeMap::new(),
+            last_actor_fabric: BTreeMap::new(),
+            last_tick_cohesion_events: Vec::new(),
+            last_tick_cohesion: BTreeMap::new(),
+            settlement_gini: BTreeMap::new(),
+            last_tick_unrest_events: Vec::new(),
+            last_tick_unrest: BTreeMap::new(),
         }
     }
 
@@ -1291,6 +1478,17 @@ impl Simulation {
             last_unrest_level: BTreeMap::new(),
             riot_accumulator: BTreeMap::new(),
             migrant_accumulator: BTreeMap::new(),
+            actor_settlement: BTreeMap::new(),
+            actor_hardship: BTreeMap::new(),
+            actor_institutions: BTreeMap::new(),
+            kinship: BTreeMap::new(),
+            trust: BTreeMap::new(),
+            last_actor_fabric: BTreeMap::new(),
+            last_tick_cohesion_events: Vec::new(),
+            last_tick_cohesion: BTreeMap::new(),
+            settlement_gini: BTreeMap::new(),
+            last_tick_unrest_events: Vec::new(),
+            last_tick_unrest: BTreeMap::new(),
         }
     }
 
@@ -1783,6 +1981,8 @@ impl Simulation {
         // consumers (`last_tick_mood`, `last_tick_mood_all`) read a fresh
         // value when called after `tick()` returns.
         self.last_tick_mood.clear();
+        self.last_tick_cohesion_events.clear();
+        self.last_tick_unrest_events.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
@@ -2498,13 +2698,207 @@ impl Simulation {
         }
     }
 
-    /// Cohesion phase (FR-CIV-COHESION-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A4.
-    fn phase_cohesion(&mut self) {}
+    /// Cohesion phase (FR-CIV-COHESION-001). Computes per-actor fabric score
+    /// from kinship edges, trust network, hardship reduction, and institution
+    /// bonuses. Emits CohesionEvent (Strengthened/Weakened/Fragmented) on
+    /// fabric change. Aggregates per-settlement CohesionSnapshot.
+    fn phase_cohesion(&mut self) {
+        self.last_tick_cohesion_events.clear();
+        let mut new_snapshots: BTreeMap<u32, CohesionSnapshot> = BTreeMap::new();
 
-    /// Unrest phase (FR-CIV-UNREST-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A5.
-    fn phase_unrest(&mut self) {}
+        // Group actors by settlement
+        let mut settlement_actors: BTreeMap<u32, Vec<u64>> = BTreeMap::new();
+        for (&actor_id, &sid) in &self.actor_settlement {
+            settlement_actors.entry(sid).or_default().push(actor_id);
+        }
+
+        for (&settlement_id, actor_ids) in &settlement_actors {
+            let mut kin_count: u64 = 0;
+            let mut trust_sum: i64 = 0;
+            let mut fragmentations: u64 = 0;
+
+            for &actor_id in actor_ids {
+                // Kinship density: count how many kinship edges this actor has
+                if let Some(edges) = self.kinship_edges.get(&actor_id) {
+                    kin_count += edges.len() as u64;
+                }
+
+                // Trust sum
+                if let Some(trusts) = self.trust_network.get(&actor_id) {
+                    trust_sum += trusts.values().sum::<i64>();
+                }
+
+                // Compute fabric for this actor
+                let hardship = self.actor_hardship.get(&actor_id).copied().unwrap_or(0);
+                let (has_temple, has_garrison) = self
+                    .actor_institutions
+                    .get(&actor_id)
+                    .copied()
+                    .unwrap_or((false, false));
+
+                let edge_count = self
+                    .kinship_edges
+                    .get(&actor_id)
+                    .map_or(0, |e| e.len());
+                let trust = self
+                    .trust_network
+                    .get(&actor_id)
+                    .map_or(0i64, |t| t.values().sum::<i64>());
+                let fabric_score: i64 = (edge_count as i64 * 10)
+                    + trust
+                    - hardship.max(0)
+                    + if has_temple { 30 } else { 0 }
+                    + if has_garrison { 20 } else { 0 };
+
+                let prev_fabric = self.last_actor_fabric.get(&actor_id).copied().unwrap_or(0);
+                let delta = fabric_score - prev_fabric;
+                self.last_actor_fabric.insert(actor_id, fabric_score);
+
+                if delta.abs() > 5 {
+                    let kind = if delta > 0 {
+                        CohesionEventKind::Strengthened
+                    } else {
+                        CohesionEventKind::Weakened
+                    };
+                    self.last_tick_cohesion_events.push(CohesionEvent {
+                        actor_id,
+                        settlement_id,
+                        kind,
+                        score: fabric_score,
+                        score_delta: delta,
+                        fabric: FabricTier::from_score(fabric_score),
+                    });
+                }
+
+                if fabric_score < -50 {
+                    fragmentations += 1;
+                    self.last_tick_cohesion_events.push(CohesionEvent {
+                        actor_id,
+                        settlement_id,
+                        kind: CohesionEventKind::Fragmented,
+                        score: fabric_score,
+                        score_delta: delta,
+                        fabric: FabricTier::from_score(fabric_score),
+                    });
+                }
+            }
+
+            let snapshot = CohesionSnapshot {
+                settlement_id,
+                fabric: FabricTier::from_score(
+                    actor_ids
+                        .iter()
+                        .map(|a| self.last_actor_fabric.get(a).copied().unwrap_or(0))
+                        .sum::<i64>()
+                        / actor_ids.len().max(1) as i64,
+                ),
+                kin_count,
+                trust_sum,
+                fragmentations,
+                faction_count: settlement_actors
+                    .get(&settlement_id)
+                    .map_or(0, |ids| ids.len() as u64),
+            };
+            new_snapshots.insert(settlement_id, snapshot);
+        }
+        self.last_tick_cohesion_snapshots = new_snapshots;
+    }
+
+    /// Unrest phase (FR-CIV-UNREST-001). Converts mood + stratification +
+    /// cohesion into unrest events per settlement. Higher gini and fractured
+    /// fabric amplify unrest. Emits UnrestEvent with Riot/MigrateOut/Supressed
+    /// kinds. Aggregates per-settlement UnrestSnapshot with score and level.
+    fn phase_unrest(&mut self) {
+        self.last_tick_unrest_events.clear();
+        let mut new_snapshots: BTreeMap<u32, UnrestSnapshot> = BTreeMap::new();
+
+        // Collect all settlement IDs from mood, stratification, and cohesion
+        let mut settlement_ids: BTreeSet<u32> = BTreeSet::new();
+        for (&sid, _) in &self.settlement_gini {
+            settlement_ids.insert(sid);
+        }
+        for (&sid, _) in &self.actor_settlement {
+            settlement_ids.insert(sid);
+        }
+
+        for &settlement_id in &settlement_ids {
+            // Mood: find the latest mood snapshot for this settlement
+            let mood = self.last_tick_mood.get(&settlement_id).map_or(0i32, |m| m.mood);
+
+            // Gini (x100 scaling): from settlement_gini or default
+            let gini_x100 = self.settlement_gini.get(&settlement_id).copied().unwrap_or(0i32);
+
+            // Fabric from cohesion snapshot
+            let fabric = self
+                .last_tick_cohesion_snapshots
+                .get(&settlement_id)
+                .map_or(FabricTier::Tight, |s| s.fabric.clone());
+
+            let fabric_x100: i32 = match &fabric {
+                FabricTier::Tight => 0,
+                FabricTier::Loosened => 50,
+                FabricTier::Strained => 100,
+                FabricTier::Fractured => 200,
+            };
+
+            // Score formula: base from inverted mood + gini + fabric
+            let score: i32 = (200i32.saturating_sub(mood))
+                .saturating_add(gini_x100.saturating_div(4))
+                .saturating_add(fabric_x100.saturating_div(2))
+                .max(0);
+
+            let level = UnrestLevel::from_score(score);
+            let prev_level = self
+                .last_tick_unrest_levels
+                .get(&settlement_id)
+                .copied()
+                .unwrap_or(UnrestLevel::Stable);
+            let level_delta = level.to_rank() as i32 - prev_level.to_rank() as i32;
+
+            // Generate events based on level transitions
+            let mut riots_count: u64 = 0;
+            let mut migrants_count: u64 = 0;
+
+            if prev_level < UnrestLevel::Rioting && level >= UnrestLevel::Rioting {
+                riots_count = (score as u64).saturating_div(30).max(1);
+                self.last_tick_unrest_events.push(UnrestEvent {
+                    settlement_id,
+                    level: level.clone(),
+                    score,
+                    score_delta: level_delta,
+                    mood,
+                    gini_x100,
+                    fabric: fabric_x100,
+                });
+            }
+            if prev_level <= UnrestLevel::Restless && level >= UnrestLevel::Rioting {
+                migrants_count = (score as u64).saturating_div(50).max(1);
+            }
+            if level <= UnrestLevel::Stable && prev_level > UnrestLevel::Stable {
+                self.last_tick_unrest_events.push(UnrestEvent {
+                    settlement_id,
+                    level: level.clone(),
+                    score,
+                    score_delta: level_delta,
+                    mood,
+                    gini_x100,
+                    fabric: fabric_x100,
+                });
+            }
+
+            let snapshot = UnrestSnapshot {
+                settlement_id,
+                level: level.clone(),
+                score,
+                riots_count,
+                migrants_count,
+                mob_size: riots_count.saturating_add(migrants_count),
+            };
+            new_snapshots.insert(settlement_id, snapshot);
+            self.last_tick_unrest_levels.insert(settlement_id, level);
+        }
+        self.last_tick_unrest_snapshots = new_snapshots;
+    }
 
     /// Citizen-life phase (FR-CIV-LIFE-001). Stub for ADR-020;
     /// real implementation lands in TDD cycle A6.

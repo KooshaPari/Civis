@@ -76,6 +76,23 @@ pub use engine::{
     MoodSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
 };
 
+// FR-CIV-GOV-030 (civ-007 cohesion epic). Re-exported so callers
+// (server, clients, tests) can name the cohesion types as `civ_engine::KinshipEdge`
+// etc. without pulling the private `engine` module path.
+pub use engine::{
+    add_cohesion, add_trust, faction_count, last_tick_cohesion, last_tick_cohesion_snapshot,
+    CohesionCause, CohesionEdge, CohesionEvent, CohesionEventKind, CohesionKind, CohesionSnapshot,
+    FabricTier, KinshipEdge, KinshipKind,
+};
+
+// FR-CIV-UNREST-001 (civ-007 unrest sub-epic). Re-exported so callers
+// can name the unrest types as `civ_engine::UnrestEvent` etc.
+// without pulling the private `engine` module path.
+pub use engine::{
+    last_tick_unrest, last_tick_unrest_settlement, set_settlement_gini, unrest_level,
+    UnrestEvent, UnrestEventKind, UnrestLevel, UnrestSnapshot,
+};
+
 // FR-CIV-RELIGION (religion §7 wiring). Re-exported so callers
 // (server, clients, tests) can name `ReligiousProfile`, `SubstrateGradients`,
 // `ReligionEvent`, and the `apply_big_gods_response` /

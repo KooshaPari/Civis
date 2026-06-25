@@ -516,6 +516,10 @@ pub struct SnapshotFields {
     /// zero-bytes on the wire.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub audio_events: Vec<civ_engine::SfxTrigger>,
+    /// Per-tick disaster outcomes (`snap.disaster_events`) for world/agent
+    /// telemetry and FR-DISASTER UI panels.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub disaster_events: Vec<civ_engine::disasters::DisasterTickEvent>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -681,6 +685,12 @@ pub fn snapshot_result_json(fields: &SnapshotFields) -> Value {
             serde_json::to_value(&fields.mod_permission_violations).unwrap_or(Value::Null),
         );
     }
+    if !fields.disaster_events.is_empty() {
+        obj.insert(
+            "disaster_events".to_owned(),
+            serde_json::to_value(&fields.disaster_events).unwrap_or(Value::Null),
+        );
+    }
     obj.insert(
         "climate".to_owned(),
         serde_json::to_value(fields.climate).unwrap_or(Value::Null),
@@ -821,11 +831,12 @@ pub fn snapshot_fields_from_sim(
     speed_multiplier: u32,
 ) -> SnapshotFields {
     let snap = sim.snapshot();
-    let spectator = sim.spectator_view();
-    SnapshotFields {
-        tick: snap.tick,
-        population: snap.population,
-        building_count: snap.building_count,
+        let spectator = sim.spectator_view();
+        let sim_snapshot = snap.disaster_events;
+        SnapshotFields {
+            tick: snap.tick,
+            population: snap.population,
+            building_count: snap.building_count,
         energy_budget: Some(snap.energy_budget.to_f64()),
         market_prices: snap.market_prices.clone(),
         hash_chain_root: sim
@@ -855,11 +866,12 @@ pub fn snapshot_fields_from_sim(
             language_count: sim.cluster_cultures().len() as u32,
         },
         mods: sim.mod_browser_entries(),
-        mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
-        session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
-        mod_permission_violations: sim
-            .replay_log()
-            .mod_permission_violation_bus_at_tick(sim.state.tick),
+            mod_lifecycle: sim.replay_log().mod_loaded_bus_at_tick(sim.state.tick),
+            session_saved: sim.replay_log().session_saved_bus_at_tick(sim.state.tick),
+            disaster_events: sim_snapshot,
+            mod_permission_violations: sim
+                .replay_log()
+                .mod_permission_violation_bus_at_tick(sim.state.tick),
         climate: *sim.climate(),
         emergence: sim.last_emergence_sample().map(EmergenceSampleFields::from),
         researched: sim.research_cache().researched.clone(),
@@ -3659,6 +3671,7 @@ mod tests {
                     mod_lifecycle: vec![],
                     session_saved: vec![],
                     mod_permission_violations: vec![],
+                    disaster_events: vec![],
                     climate: civ_engine::Climate {
                         tick: 42,
                         day_phase: 0.0,
@@ -3741,6 +3754,7 @@ mod tests {
                     mod_lifecycle: vec![],
                     session_saved: vec![],
                     mod_permission_violations: vec![],
+                    disaster_events: vec![],
                     climate: civ_engine::Climate {
                         tick: 1,
                         day_phase: 0.0,
@@ -3828,6 +3842,7 @@ mod tests {
                     mod_lifecycle: vec![],
                     session_saved: vec![],
                     mod_permission_violations: vec![],
+                    disaster_events: vec![],
                     climate: civ_engine::Climate {
                         tick: 1,
                         day_phase: 0.0,
@@ -4839,6 +4854,7 @@ mod tests {
             mod_lifecycle: vec![],
             session_saved: vec![],
             mod_permission_violations: vec![],
+            disaster_events: vec![],
             climate: civ_engine::Climate {
                 tick: 5,
                 day_phase: 0.0,

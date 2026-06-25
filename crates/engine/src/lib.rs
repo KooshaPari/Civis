@@ -34,6 +34,10 @@ pub mod spectator;
 pub const SCALE: i64 = 1_000;
 
 pub use religion::{emerge_belief, spread_religion, Belief, BeliefConcept, Religion};
+pub use religion::{
+    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
+    ReligionEvent, ReligiousProfile, SubstrateGradients,
+};
 pub use demographics::{
     carrying_capacity_from_food, tick_demographics, total_population, AgeGroup, Demographics,
 };

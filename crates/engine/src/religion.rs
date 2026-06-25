@@ -404,7 +404,60 @@ pub fn emerge_belief(_hardship: f32, _group_size: u32, _agent_detection_bias: f3
 #[allow(dead_code)]
 pub fn spread_religion(_rel: &mut Religion, _nearby_agents: u32, _tick: u64) {}
 
-// ─── Tests (spec §11.1 unit tests + §11.3 property tests) ─────────────────
+// ─── Spec §7 / §6 — substrate reads + per-tick sample export ─────────────
+
+/// Per-settlement substrate sample derived from `civ-planet::GeologyMap`.
+///
+/// Spec §6 calls for substrate writes back to a gradient field; the writer is
+/// deferred to a follow-up PR because the per-settlement substrate interface
+/// (`GeologyMap::sample(sid) -> GradientSet`) is not yet exposed on
+/// `Simulation`. For now, [`substrate_gradients_for`] returns [`SubstrateGradients::default`]
+/// which keeps the Big-Gods response curve at floor — i.e. religion stays in
+/// its dormant Big-Gods state until a substrate hook is wired in.
+pub fn substrate_gradients_for(_settlement_id: u32) -> SubstrateGradients {
+    SubstrateGradients::default()
+}
+
+/// Spec §10 hook: event emitted during `phase_belief` for downstream
+/// `civ-laws` / `civ-legends` consumers. Deferred per spec §10 (civ-laws
+/// hooks queued behind #743). The variant is here so `phase_belief` has a
+/// concrete payload to push into `last_tick_religion_events`.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReligionEvent {
+    /// Monitoring crossed above the Big-Gods threshold (response curve fired).
+    BigGodsEmergence { settlement_id: u32 },
+    /// Mythic coherence decayed below `DISSOLUTION_THRESHOLD` (kinship-only).
+    Dissolution { settlement_id: u32, mythic_coherence: f32 },
+    /// A previously-taboo domain was breached this tick (deferred hook for
+    /// `civ-laws` to gate).
+    TabooBreach { settlement_id: u32, domain_id: u16 },
+}
+
+/// Snapshot accessor mirroring `last_emergence_sample()` — returns the
+/// settlement_id -> ReligiousProfile mapping captured during the most recent
+/// `phase_belief` invocation.
+pub fn last_religion_sample(
+    profiles: &std::collections::BTreeMap<u32, ReligiousProfile>,
+) -> Vec<(u32, ReligiousProfile)> {
+    profiles.iter().map(|(k, v)| (*k, v.clone())).collect()
+}
+
+/// `ReligionEvent` default constructor + helper for tests/JSON-RPC surface.
+impl ReligionEvent {
+    pub fn big_gods_emergence(settlement_id: u32) -> Self {
+        ReligionEvent::BigGodsEmergence { settlement_id }
+    }
+
+    pub fn settlement_id(&self) -> u32 {
+        match self {
+            ReligionEvent::BigGodsEmergence { settlement_id }
+            | ReligionEvent::Dissolution { settlement_id, .. }
+            | ReligionEvent::TabooBreach { settlement_id, .. } => *settlement_id,
+        }
+    }
+}
+
+// ─── Deprecated shims (spec §12.4 migration plan) ────────────────────────
 
 #[cfg(test)]
 mod tests {

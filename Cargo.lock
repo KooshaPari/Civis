@@ -528,6 +528,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "az"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5eb007b7cacc6c660343e96f650fedf4b5a77512399eb952ca6642cf8d13f7"
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2325,6 +2331,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-audio"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "civ-bevy-ref"
 version = "0.1.0"
 dependencies = [
@@ -2337,6 +2353,7 @@ dependencies = [
  "civ-diplomacy",
  "civ-engine",
  "civ-laws",
+ "civ-planet",
  "civ-protocol-3d",
  "civ-voxel",
  "crossbeam-channel",
@@ -2415,11 +2432,13 @@ dependencies = [
  "blake3",
  "chrono",
  "civ-agents",
+ "civ-audio",
  "civ-build",
  "civ-diffusion",
  "civ-economy",
  "civ-emergence-metrics",
  "civ-genetics",
+ "civ-institutions",
  "civ-legends",
  "civ-mod-host",
  "civ-needs",
@@ -2429,6 +2448,7 @@ dependencies = [
  "civ-tactics",
  "civ-traffic",
  "civ-voxel",
+ "fixed",
  "glam 0.30.10",
  "hecs",
  "proptest",
@@ -2467,6 +2487,13 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "civ-institutions"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -3942,6 +3969,18 @@ name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
+
+[[package]]
+name = "fixed"
+version = "1.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9af2cbf772fa6d1c11358f92ef554cb6b386201210bcf0e91fb7fba8a907fb40"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "typenum",
+]
 
 [[package]]
 name = "fixedbitset"

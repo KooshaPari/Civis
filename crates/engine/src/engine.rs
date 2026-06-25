@@ -41,6 +41,7 @@ use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
 use crate::language::{tick_language, LanguageState};
+use crate::religion::{apply_big_gods_response, ReligionEvent, ReligiousProfile, SubstrateGradients};
 
 /// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
 /// Re-exported from the `fixed` crate; aliased here so callers can use
@@ -529,6 +530,7 @@ pub struct Simulation {
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers).
     last_tick_sentience_events: Vec<crate::genetics::sentience::SentienceEvent>,
+<<<<<<< HEAD
     /// Per-settlement population snapshot, settable by tests + scenario loaders
     /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
     /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
@@ -575,6 +577,37 @@ pub struct Simulation {
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so
     /// clients can render the social-mood layer.
     last_tick_mood: Vec<MoodSnapshot>,
+=======
+    /// Per-settlement religious profile (FR-CIV-REL-001 / RELIGION_EMERGENCE §4.1).
+    /// Persists across ticks; updated each call to [`Simulation::phase_belief`]
+    /// by [`crate::religion::apply_big_gods_response`].
+    religious_profiles: BTreeMap<u32, crate::religion::ReligiousProfile>,
+    /// Religion events produced by the most recent [`Simulation::phase_belief`]
+    /// call (cleared at the start of every [`Simulation::tick`], alongside the
+    /// other `last_tick_*` buffers).
+    last_tick_religion_events: Vec<crate::religion::ReligionEvent>,
+    /// Per-household wealth scores (FR-CIV-GOV-020). Keyed by household_id.
+    /// Units are an arbitrary civic-economy fixed-point scale.
+    household_wealth: BTreeMap<u64, i64>,
+    /// Per-household power scores (FR-CIV-GOV-020). Keyed by household_id.
+    household_power: BTreeMap<u64, i64>,
+    /// Maps household_id -> settlement_id. Allows fast lookup of which
+    /// settlement a household belongs to for stratification computation.
+    household_settlement: BTreeMap<u64, u32>,
+    /// Last-computed `StratBand` for each household, persisted across ticks
+    /// so we can compute Promoted/Demoted deltas.
+    household_band: BTreeMap<u64, StratBand>,
+    /// Last-computed score for each household (wealth + power). Used to
+    /// compute score_delta in the per-tick event stream.
+    household_score: BTreeMap<u64, i64>,
+    /// Stratification events emitted by the most recent
+    /// [`Simulation::phase_stratification`] call. Cleared at the start of
+    /// every [`Simulation::tick`].
+    last_tick_stratification: Vec<StratificationEvent>,
+    /// Per-settlement stratification report (quantiles + Gini), refreshed
+    /// each tick.
+    last_tick_stratification_reports: BTreeMap<u32, StratificationReport>,
+>>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
 }
 
 /// Civic institution event emitted by [`Simulation::phase_institutions`]
@@ -988,12 +1021,18 @@ impl Simulation {
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
+<<<<<<< HEAD
             settlement_food_stocked: BTreeMap::new(),
             settlement_housing_capacity: BTreeMap::new(),
             settlement_crime_pressure: BTreeMap::new(),
             mood_history: Vec::new(),
             mood_history_by_settlement: BTreeMap::new(),
             last_tick_mood: Vec::new(),
+=======
+            religious_profiles: BTreeMap::new(),
+            last_tick_religion_events: Vec::new(),
+            current_tick: 0,
+>>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
         }
     }
 
@@ -1439,11 +1478,18 @@ impl Simulation {
         // audio events mid-tick; `phase_audio` re-emits the survivors
         // alongside combat + construction events on the wire.
         self.last_tick_audio_events.clear();
+<<<<<<< HEAD
         // Social-mood buffer (FR-CIV-GOV-100). `phase_social_mood` overwrites
         // this with the per-settlement snapshots each tick; downstream
         // consumers (`last_tick_mood`, `last_tick_mood_all`) read a fresh
         // value when called after `tick()` returns.
         self.last_tick_mood.clear();
+=======
+        // Religion events are reset at the top of the tick so per-settlement
+        // `phase_belief` re-records them; this matches the per-tick buffer
+        // semantics used by combat / construction / diplomacy / audio.
+        self.last_tick_religion_events.clear();
+>>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
@@ -4078,6 +4124,60 @@ pub struct SimulationSnapshot {
 // *not* phase methods and remain in this trailing impl block because
 // they have no primary-block duplicates.
 impl Simulation {
+<<<<<<< HEAD
+=======
+    /// ADR-020 #1 — settlement commons (no-op stub).
+    pub fn phase_life(&mut self) {}
+    /// ADR-020 #2 — research progress (no-op stub).
+    pub fn phase_research(&mut self) {}
+    /// ADR-020 #3 — tier-derived tech unlocks (no-op stub).
+    pub fn phase_tech(&mut self) {}
+    /// ADR-020 #4 — faith reserve.
+    ///
+    /// Per-tick Big-Gods response (FR-CIV-REL-001 / RELIGION_EMERGENCE §4.1,
+    /// §7): for each settlement, look up or create the [`crate::religion::ReligiousProfile`],
+    /// sample the substrate gradients, and call
+    /// [`crate::religion::apply_big_gods_response`] to advance the three scalar
+    /// signals (`monitoring`, `mythic_coherence`, `uncertainty_reduction`).
+    /// Records the per-settlement `ReligionEvent` so god-game clients can
+    /// surface the change (spec §10 hook).
+    pub fn phase_belief(&mut self) {
+        use crate::religion::{
+            ReligionEvent, apply_big_gods_response, substrate_gradients_for,
+        };
+
+        let tick = self.state.tick;
+        // Iterate over a snapshot of settlement ids so we can mutate
+        // `self.religious_profiles` while walking the map.
+        let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
+        for sid in settlement_ids {
+            let gradients = substrate_gradients_for(sid);
+            // Look up or create the per-settlement profile, then advance
+            // the Big-Gods response curve for this tick.
+            let profile = self
+                .religious_profiles
+                .entry(sid)
+                .or_insert_with(crate::religion::ReligiousProfile::default);
+            apply_big_gods_response(profile, &gradients, tick);
+            self.last_tick_religion_events
+                .push(ReligionEvent::Updated { settlement: sid });
+        }
+    }
+    /// ADR-020 #5 — societal unrest (no-op stub).
+    pub fn phase_unrest(&mut self) {}
+    /// ADR-020 #6 — social fabric (no-op stub).
+    pub fn phase_cohesion(&mut self) {}
+    /// ADR-020 #7 — mean mood aggregate (no-op stub).
+    pub fn phase_social_mood(&mut self) {}
+    /// ADR-020 #10a — first-pass focus seed (no-op stub).
+    pub fn phase_economic_focus_pre(&mut self) {}
+    /// ADR-020 #8 — dispossessed share (no-op stub).
+    pub fn phase_stratification(&mut self) {}
+    /// ADR-020 #9 — temple + garrison levels (no-op stub).
+    pub fn phase_institutions(&mut self) {}
+    /// ADR-020 #10 — settle pass (no-op stub).
+    pub fn phase_economic_focus(&mut self) {}
+>>>>>>> eee640b47 (feat(engine): religion §7 phase_belief wiring — Big-Gods response per tick per settlement)
     /// Adjust cohesion for a faction (no-op stub used by tests).
     pub fn add_cohesion(&mut self, _faction: u32, _delta: f32) {}
     /// Lookup the ECS entity id for a faction agent (no-op stub).

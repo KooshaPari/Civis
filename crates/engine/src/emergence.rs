@@ -238,16 +238,12 @@ impl Simulation {
                 .or_insert(0) += 1;
         }
         self.rollup_emergent_settlements(&cluster_member_counts);
+        self.emergence_accrue_cluster_cultures(&cluster_member_counts);
     }
 
-    fn emergence_culture(&mut self) {
-        self.emergence_recluster();
-        let tick = self.state.tick;
-        let mut cluster_ids: BTreeMap<u64, u32> = BTreeMap::new();
-        for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_ids.entry(member.cluster.0).or_insert(0) += 1;
-        }
-        for (cluster_id, size) in &cluster_ids {
+    /// Form or retain a [`CultureProfile`] for every multi-member settlement cluster.
+    fn emergence_accrue_cluster_cultures(&mut self, cluster_member_counts: &BTreeMap<u64, u32>) {
+        for (cluster_id, size) in cluster_member_counts {
             if *size < 2 {
                 continue;
             }
@@ -263,6 +259,22 @@ impl Simulation {
                     ];
                     CultureProfile::new(seed)
                 });
+        }
+        self.emergence.cluster_cultures.retain(|cluster_id, _| {
+            cluster_member_counts
+                .get(cluster_id)
+                .copied()
+                .unwrap_or(0)
+                >= 2
+        });
+    }
+
+    fn emergence_culture(&mut self) {
+        self.emergence_recluster();
+        let tick = self.state.tick;
+        let mut cluster_ids: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *cluster_ids.entry(member.cluster.0).or_insert(0) += 1;
         }
         let mut profiles: Vec<CultureProfile> =
             self.emergence.cluster_cultures.values().cloned().collect();

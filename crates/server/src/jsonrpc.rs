@@ -1167,34 +1167,28 @@ pub fn parse_set_speed_params(params: Option<&Value>) -> Result<u32, JsonRpcErro
 
 /// Parse `sim.save_replay` / `sim.load_replay` `path` param.
 ///
-/// The returned path is **strictly relative**: it must not be absolute,
-/// must not start with a path separator, must not contain any `..`
-/// parent segments, prefix components (e.g. `C:`), or root directory
-/// components. This blocks arbitrary-file-read attacks where a client
-/// sends `/etc/passwd` or `../../something`. Containment under the
-/// bridge's replay base directory is enforced separately at the
+/// The returned path is **strictly relative**: it must not be absolute
+/// (Unix `/foo`, Windows drive `C:\foo` / `C:/foo`, drive-relative
+/// `C:foo`, or UNC `\\server\share\foo`), and must not contain any `..`
+/// parent segment. This blocks arbitrary-file-read attacks where a
+/// client sends `/etc/passwd` or `../../something`. Containment under
+/// the bridge's replay base directory is enforced separately at the
 /// consumer via [`resolve_replay_path`].
 pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError> {
     let path_str = params
         .and_then(|p| p.get("path"))
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
-        .filter(|path_str| {
-            // Reject absolute paths (Unix-style starting with / or Windows-style with drive letter)
-            let path = std::path::Path::new(path_str);
-            path.is_relative()
-                && !path_str.starts_with('/')
-                && !path
-                    .components()
-                    .any(|component| matches!(component, std::path::Component::ParentDir))
-        })
         .ok_or(JsonRpcError {
             code: error_code::INVALID_PARAMS,
-            message: "Invalid params: expected relative replay path without parent segments"
-                .to_owned(),
+            message: "Invalid params: expected non-empty relative replay path".to_owned(),
             data: None,
         })?;
+
     let path = std::path::Path::new(path_str);
+    // Reject any path whose components include a parent directory
+    // traversal segment (`..`), an absolute prefix (`/`, `\`, or a
+    // Windows drive prefix like `C:`), or a root directory component.
     if !path.is_relative()
         || path_str.starts_with('/')
         || path_str.starts_with('\\')

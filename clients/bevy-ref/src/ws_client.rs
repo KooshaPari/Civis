@@ -315,8 +315,16 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
     }
     let result = v.get("result")?;
     Some(EmergenceHudData {
+        entropy_bits: result
+            .get("entropy_bits")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
         entropy_norm: result
             .get("entropy_norm")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
+        branching_sigma: result
+            .get("branching_sigma")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
         power_law_alpha: result

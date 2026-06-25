@@ -94,7 +94,14 @@ impl Plugin for SimBridgePlugin {
                 ),
             );
         #[cfg(feature = "egui")]
-        app.add_systems(Update, sync_game_ui_snapshot.run_if(in_process_sim_active));
+        app.init_resource::<crate::EmergenceHudData>().add_systems(
+            Update,
+            (
+                sync_game_ui_snapshot,
+                sync_emergence_hud,
+            )
+                .run_if(in_process_sim_active),
+        );
         app.add_systems(Update, sync_visible_gameplay.run_if(in_process_sim_active));
     }
 }
@@ -529,6 +536,25 @@ fn next_civilian_id(sim: &Simulation) -> u64 {
 }
 
 #[cfg(feature = "egui")]
+fn sync_emergence_hud(sim: Res<SimState>, mut hud: ResMut<crate::EmergenceHudData>) {
+    let Some(sample) = sim.0.last_emergence_sample() else {
+        return;
+    };
+    if !sim.is_changed() {
+        return;
+    }
+    *hud = crate::EmergenceHudData {
+        entropy_bits: sample.entropy_bits,
+        entropy_norm: sample.entropy_norm,
+        branching_sigma: sample.branching_sigma,
+        power_law_alpha: sample.power_law_alpha,
+        novelty_rate: sample.novelty_rate,
+        mi_material_faction_norm: sample.mi_material_faction_norm,
+        structure_count: sample.structure_count,
+        branching_regime: sample.branching_regime.label().to_string(),
+    };
+}
+
 fn sync_game_ui_snapshot(
     sim: Res<SimState>,
     speed: Res<crate::game_ui::GameSpeed>,

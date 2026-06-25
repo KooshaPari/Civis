@@ -10,6 +10,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 use crate::ui_theme::CHIP_FILL;
+use crate::menus::AppState;
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
@@ -309,6 +310,7 @@ fn handle_speed_shortcuts(
 #[allow(clippy::too_many_arguments)]
 fn draw_game_ui(
     mut contexts: EguiContexts,
+    state: Option<Res<State<AppState>>>,
     snapshot: Res<GameUiSnapshot>,
     selected: Res<SelectedEntity>,
     live_selection: Res<LiveSelection>,
@@ -320,6 +322,13 @@ fn draw_game_ui(
     mut active_tool: ResMut<ActiveTool>,
     mut building_kind: ResMut<BuildingSpawnKind>,
 ) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state != AppState::Playing {
+        return;
+    }
+
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };

@@ -1,5 +1,5 @@
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use bevy_egui::{egui, EguiContexts};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -19,7 +19,9 @@ use civ_bevy_ref::{
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
     god_panel::GodPanelPlugin,
-    save_load_ui::SaveLoadUiPlugin,
+    game_ui::GameUiPlugin,
+    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
+    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
         apply_agent_appearance_frame_with_labels_and_eye, apply_building_diff_frame,
@@ -41,7 +43,7 @@ use civ_bevy_ref::{
     emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
     CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
-    VOXEL_CHUNK_EDGE, WsConnectionState,
+    VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
 };
 #[cfg(feature = "gi")]
@@ -73,37 +75,20 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
-
-// FR-CIV-CLIENT-001
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-enum AppState {
-    #[default]
-    Connecting,
-    InGame,
-    ConnectionLost,
-}
+const WORLDGEN_PRESETS: [&str; 4] = [
+    "single-race-ardani",
+    "three-race-balanced",
+    "ardani-dominant",
+    "lush-frontier",
+];
+const WORLDGEN_SPEED_STEPS: [u32; 3] = [1, 2, 5];
+const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
 
 #[derive(Resource, Default)]
-struct ConnectionOverlay {
-    root: Option<Entity>,
-    tick: u32,
+struct SaveListState {
+    /// Requested one-time save list query.
+    pub queried: bool,
 }
-
-#[derive(Component)]
-struct SplashSpinner;
-#[derive(Resource, Debug, Clone)]
-struct ScenarioPanel {
-    seed_index: usize,
-    speed_index: usize,
-    preset_index: usize,
-}
-
-impl Default for ScenarioPanel {
-    fn default() -> Self {
-        Self { seed_index: 0, speed_index: 0, preset_index: 0 }
-    }
-}
-
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -212,40 +197,8 @@ struct MinimapPopup {
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
-}
-
-#[derive(Resource)]
-struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
-}
-
-#[derive(Component)]
-struct ScenarioSeedLabel;
-
-#[derive(Component)]
-struct ScenarioSpeedLabel;
-
-#[derive(Component)]
-struct ScenarioPresetLabel;
-
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
-}
-
-#[derive(Resource, Default)]
-struct SimSpeedState {
-    multiplier: u32,
+    speed_idx: usize,
+    paused: bool,
 }
 
 #[derive(Resource, Default)]
@@ -271,60 +224,57 @@ fn main() {
             SaveLoadUiPlugin,
             TutorialPlugin,
             PerfHudPlugin,
-            EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
             civ_bevy_ref::AgentNeedsPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
+            MenusPlugin,
+            GameUiPlugin,
         ))
+        .init_state::<AppState>()
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
-        .init_resource::<ConnectionOverlay>()
-        .init_resource::<ScenarioPanel>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
         .init_resource::<EmergencePollTimer>()
         .init_resource::<EmergenceHudData>()
+        .init_resource::<SaveListState>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, setup)
-        .add_systems(OnEnter(AppState::Connecting), spawn_connecting_overlay)
-        .add_systems(OnExit(AppState::Connecting), despawn_connection_overlay)
-        .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
-        .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
-        .add_systems(Update, drive_app_state)
-        .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
-        .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
-        .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
+        .add_systems(Update, (consume_menu_commands, update_mainmenu_saves, sync_app_state_with_game_mode))
         .add_systems(
             Update,
             (
-                debug_render_input,
-                orbit_camera_input,
-                minimap_click_focus,
-                minimap_popup_ui,
-                poll_emergence,
-                viewport_chunk_raycast,
-                update_orbit_camera_transform,
-                apply_live_frames,
-                sync_agent_labels_from_civilians.after(apply_live_frames),
-                apply_spectator_meta,
-                sync_live_hud_stats,
-                sync_live_pick_detail,
-                update_live_focus,
-                follow_live_orbit_focus,
-                sync_chunk_debug_render,
-                update_chunk_fade,
-                update_hud,
-                update_minimap,
-                // FR-CLIENT-render: climate frame → presentation.is_day.
-                // Must run after `apply_live_frames` (which records the
-                // climate snapshot) and before `update_presentation_lighting`
-                // (which consumes the flag).
-                sync_presentation_from_climate.after(apply_live_frames),
-                update_presentation_lighting,
+                worldgen_to_playing,
+                (
+                    debug_render_input,
+                    orbit_camera_input,
+                    minimap_click_focus,
+                    minimap_popup_ui,
+                    poll_emergence,
+                    viewport_chunk_raycast,
+                    update_orbit_camera_transform,
+                    apply_live_frames,
+                    sync_agent_labels_from_civilians.after(apply_live_frames),
+                    apply_spectator_meta,
+                    sync_live_hud_stats,
+                    sync_live_pick_detail,
+                    update_live_focus,
+                    follow_live_orbit_focus,
+                    sync_chunk_debug_render,
+                    update_chunk_fade,
+                    update_hud,
+                    update_minimap,
+                    // FR-CLIENT-render: climate frame → presentation.is_day.
+                    // Must run after `apply_live_frames` (which records the
+                    // climate snapshot) and before `update_presentation_lighting`
+                    // (which consumes the flag).
+                    sync_presentation_from_climate.after(apply_live_frames),
+                    update_presentation_lighting,
+                ).run_if(in_state(AppState::Playing)),
             ),
         )
         .run();
@@ -347,194 +297,182 @@ fn main() {
     app.run();
 }
 
-fn scenario_panel_input(
-    keys: Res<ButtonInput<KeyCode>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-    mut panel: ResMut<ScenarioPanel>,
+fn consume_menu_commands(
+    mut menu_command: ResMut<MenuCommand>,
+    state: Option<Res<State<AppState>>>,
+    mut next_state: ResMut<NextState<AppState>>,
     bridge: Res<LiveBridge>,
-    mut seed_labels: Query<&mut Text, (With<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
-    mut speed_labels: Query<&mut Text, (With<ScenarioSpeedLabel>, Without<ScenarioSeedLabel>, Without<ScenarioStartButton>)>,
-    mut preset_labels: Query<&mut Text, (With<ScenarioPresetLabel>, Without<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
-    start_buttons: Query<&Interaction, With<ScenarioStartButton>>,
+    mut speed: ResMut<SimSpeedState>,
+    mut save_panel: ResMut<SaveLoadPanel>,
+    saves: Res<MainMenuSaves>,
+    params: Res<WorldSetupParams>,
+    mut game_mode: ResMut<GameUiMode>,
+    mut exit: MessageWriter<AppExit>,
 ) {
-    // Keyboard shortcuts: Left/Right cycle seeds; Up/Down cycle speeds; Enter launches.
-    if keys.just_pressed(KeyCode::ArrowRight) {
-        panel.seed_index = (panel.seed_index + 1) % NAMED_SEEDS.len();
-    }
-    if keys.just_pressed(KeyCode::ArrowLeft) {
-        panel.seed_index = panel.seed_index.checked_sub(1).unwrap_or(NAMED_SEEDS.len() - 1);
-    }
-    if keys.just_pressed(KeyCode::ArrowDown) {
-        panel.speed_index = (panel.speed_index + 1) % SPEED_OPTIONS.len();
-    }
-    if keys.just_pressed(KeyCode::ArrowUp) {
-        panel.speed_index = panel.speed_index.checked_sub(1).unwrap_or(SPEED_OPTIONS.len() - 1);
-    }
-    if keys.just_pressed(KeyCode::KeyP) {
-        panel.preset_index = (panel.preset_index + 1) % PRESET_OPTIONS.len();
-    }
-    if keys.just_pressed(KeyCode::KeyO) {
-        panel.preset_index = panel.preset_index.checked_sub(1).unwrap_or(PRESET_OPTIONS.len() - 1);
+    let Some(state) = state else {
+        return;
+    };
+    if menu_command.action == MainMenuCommand::None {
+        return;
     }
 
-    // Rebuild seed label
-    if let Ok(mut text) = seed_labels.get_single_mut() {
-        let label = NAMED_SEEDS
-            .iter()
-            .enumerate()
-            .map(|(i, (name, _))| if i == panel.seed_index { format!("[ {name} ]") } else { name.to_string() })
-            .collect::<Vec<_>>()
-            .join("  ");
-        *text = Text::new(format!("Race: {label}"));
-    }
-
-    // Rebuild speed label
-    if let Ok(mut text) = speed_labels.get_single_mut() {
-        let label = SPEED_OPTIONS
-            .iter()
-            .enumerate()
-            .map(|(i, (name, _))| if i == panel.speed_index { format!("[ {name} ]") } else { name.to_string() })
-            .collect::<Vec<_>>()
-            .join("  ");
-        *text = Text::new(format!("Speed: {label}"));
-    }
-
-    // Rebuild preset label
-    if let Ok(mut text) = preset_labels.get_single_mut() {
-        let label = PRESET_OPTIONS
-            .iter()
-            .enumerate()
-            .map(|(i, name)| if i == panel.preset_index { format!("[ {name} ]") } else { name.to_string() })
-            .collect::<Vec<_>>()
-            .join("  ");
-        *text = Text::new(format!("Preset: {label}"));
-    }
-
-    // Launch on button click or Enter key
-    let clicked = start_buttons
-        .get_single()
-        .map(|i| *i == Interaction::Pressed)
-        .unwrap_or(false);
-    if clicked || keys.just_pressed(KeyCode::Enter) {
-        let (_, seed) = NAMED_SEEDS[panel.seed_index];
-        let (_, speed) = SPEED_OPTIONS[panel.speed_index];
-        let preset = PRESET_OPTIONS[panel.preset_index];
-        bridge.client.send_rpc(
-            "sim.load_scenario",
-            serde_json::json!({ "preset": preset, "seed": seed }),
-        );
-        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
-        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
-        bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
-        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
-        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
+    let action = menu_command.action;
+    menu_command.action = MainMenuCommand::None;
+    match action {
+        MainMenuCommand::None => {}
+        MainMenuCommand::NewWorld => {
+            let preset = WORLDGEN_PRESETS
+                .get(params.world_size % WORLDGEN_PRESETS.len())
+                .copied()
+                .unwrap_or(WORLDGEN_PRESETS[0]);
+            start_world_boot(
+                &bridge,
+                preset,
+                params.seed,
+                speed.as_mut(),
+                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)],
+            );
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::Continue => {
+            let slot_name = saves
+                .preferred_slot
+                .as_deref()
+                .unwrap_or("slot-1")
+                .to_string();
+            let slot_id = slot_name
+                .strip_prefix("slot-")
+                .and_then(|raw| raw.parse::<u32>().ok())
+                .map(|slot| 2010 + slot)
+                .unwrap_or(2010);
+            let json = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": slot_id,
+                "method": "save.load",
+                "params": { "slot_name": slot_name },
+            })
+            .to_string();
+            bridge.client.send_rpc_raw(json);
+            next_state.set(AppState::WorldGen);
+        }
+        MainMenuCommand::Resume => {
+            if *state == AppState::Paused {
+                next_state.set(AppState::Playing);
+            }
+        }
+        MainMenuCommand::OpenSettings => {}
+        MainMenuCommand::OpenSavePanel => {
+            save_panel.visible = true;
+        }
+        MainMenuCommand::ExitToMainMenu => {
+            next_state.set(AppState::MainMenu);
+            *game_mode = GameUiMode::Playing;
+        }
+        MainMenuCommand::Quit => {
+            *game_mode = GameUiMode::Playing;
+            exit.write(AppExit::Success);
+        }
     }
 }
 
+fn worldgen_to_playing(
+    state: Option<Res<State<AppState>>>,
+    scene: Res<LiveStreamScene>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    if *state != AppState::WorldGen {
+        return;
+    }
+    if live_stream_has_content(&scene) {
+        next_state.set(AppState::Playing);
+    }
+}
 
-fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
-    let ws = bridge.client.latest_connection_state();
-    match (current.get(), ws) {
-        (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
-        (AppState::InGame, WsConnectionState::Reconnecting) | (AppState::InGame, WsConnectionState::Disconnected) => { next.set(AppState::ConnectionLost); }
-        (AppState::ConnectionLost, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+fn sync_app_state_with_game_mode(
+    state: Option<Res<State<AppState>>>,
+    mode: Res<GameUiMode>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(state) = state else {
+        return;
+    };
+    match (*mode, state.get()) {
+        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
+        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
         _ => {}
     }
 }
 
-fn spawn_connecting_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    let root = commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(0.0), left: Val::Px(0.0),
-            width: Val::Percent(100.0), height: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            row_gap: Val::Px(12.0),
-            ..default()
-        },
-        BackgroundColor(Color::srgb(0.035, 0.039, 0.047)),
-        ZIndex(100),
-    )).with_children(|p| {
-        p.spawn((
-            Text::new("CIVIS"),
-            TextFont::from_font_size(72.0),
-            TextColor(Color::srgb(0.494, 0.729, 0.710)),
-        ));
-        p.spawn((
-            Text::new("An Emergent Civilization"),
-            TextFont::from_font_size(20.0),
-            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.45)),
-        ));
-        p.spawn((
-            Text::new("⠋"),
-            TextFont::from_font_size(28.0),
-            TextColor(Color::srgb(0.494, 0.729, 0.710)),
-            SplashSpinner,
-        ));
-        p.spawn((
-            Text::new("Connecting to simulation server..."),
-            TextFont::from_font_size(14.0),
-            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
-        ));
-    }).id();
-    overlay.root = Some(root);
-    overlay.tick = 0;
-}
-
-fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    let root = commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(0.0), left: Val::Px(0.0),
-            width: Val::Percent(100.0), height: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            row_gap: Val::Px(12.0),
-            ..default()
-        },
-        BackgroundColor(Color::srgba(0.18, 0.02, 0.02, 0.92)),
-        ZIndex(100),
-    )).with_children(|p| {
-        p.spawn((
-            Text::new("CIVIS"),
-            TextFont::from_font_size(72.0),
-            TextColor(Color::srgb(0.494, 0.729, 0.710)),
-        ));
-        p.spawn((
-            Text::new("Connection lost. Retrying..."),
-            TextFont::from_font_size(22.0),
-            TextColor(Color::srgb(1.0, 0.35, 0.35)),
-        ));
-        p.spawn((
-            Text::new("The simulation will resume when the server is reachable."),
-            TextFont::from_font_size(14.0),
-            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
-        ));
-    }).id();
-    overlay.root = Some(root);
-    overlay.tick = 0;
-}
-
-fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
-}
-
-const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-fn animate_splash(
-    mut overlay: ResMut<ConnectionOverlay>,
-    mut spinners: Query<&mut Text, With<SplashSpinner>>,
+fn update_mainmenu_saves(
+    bridge: Res<LiveBridge>,
+    state: Option<Res<State<AppState>>>,
+    mut saves: ResMut<MainMenuSaves>,
+    mut query: ResMut<SaveListState>,
 ) {
-    overlay.tick = overlay.tick.wrapping_add(1);
-    if overlay.tick % 4 != 0 { return; }
-    let frame = SPINNER_FRAMES[((overlay.tick / 4) as usize) % SPINNER_FRAMES.len()];
-    for mut text in &mut spinners {
-        **text = frame.to_string();
+    let Some(state) = state else {
+        return;
+    };
+    if *state != AppState::MainMenu {
+        return;
     }
+    if !query.queried {
+        bridge
+            .client
+            .send_rpc_raw(r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string());
+        query.queried = true;
+    }
+
+    let mut preferred = None;
+    for entry in bridge.client.poll_save_list() {
+        if entry.save_type != "slot" {
+            continue;
+        }
+        match &preferred {
+            Some((_, tick)) if entry.tick <= *tick => {}
+            _ => preferred = Some((entry.name, entry.tick)),
+        }
+    }
+    saves.can_continue = preferred.is_some();
+    saves.preferred_slot = preferred.map(|entry| entry.0);
 }
+
+fn start_world_boot(
+    bridge: &LiveBridge,
+    preset: &str,
+    seed: u64,
+    speed: &mut SimSpeedState,
+    multiplier: u32,
+) {
+    if speed.speed_idx >= WORLDGEN_SPEED_STEPS.len() || WORLDGEN_SPEED_STEPS[speed.speed_idx] != multiplier {
+        if let Some(speed_idx) = WORLDGEN_SPEED_STEPS.iter().position(|value| *value == multiplier) {
+            speed.speed_idx = speed_idx;
+        } else {
+            speed.speed_idx = 0;
+        }
+    }
+    speed.multiplier = multiplier;
+    let init_seed = if seed == 0 { WORLDGEN_DEFAULT_SEED } else { seed };
+    bridge.client.send_rpc(
+        "sim.load_scenario",
+        serde_json::json!({ "preset": preset, "seed": init_seed }),
+    );
+    bridge.client.send_rpc(
+        "sim.set_speed",
+        serde_json::json!({ "multiplier": multiplier }),
+    );
+    bridge.client.send_rpc(
+        "sim.reset",
+        serde_json::json!({ "seed": init_seed }),
+    );
+    bridge.client.send_rpc(
+        "sim.set_speed",
+        serde_json::json!({ "multiplier": multiplier }),
+    );
+}
+
 fn apply_spectator_meta(
     bridge: Res<LiveBridge>,
     mut presentation: ResMut<ScenePresentation>,
@@ -772,14 +710,18 @@ fn speed_control_input(
     if toggle_pause {
         speed.paused = !speed.paused;
     } else if speed_up {
-        speed.speed_idx = (speed.speed_idx + 1).min(SPEED_OPTIONS.len() - 1);
+        speed.speed_idx = (speed.speed_idx + 1).min(WORLDGEN_SPEED_STEPS.len() - 1);
         speed.paused = false;
     } else {
         speed.speed_idx = speed.speed_idx.saturating_sub(1);
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
+    speed.multiplier = if speed.paused {
+        0
+    } else {
+        WORLDGEN_SPEED_STEPS[speed.speed_idx]
+    };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;

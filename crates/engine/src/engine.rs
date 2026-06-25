@@ -4,10 +4,11 @@
 
 use civ_agents::{
     count_civilians, propagate_tools, propagate_wardrobe, spawn_child_near, spawn_civilian_at,
-    ActorVisualKind, Alignment, ClusterMember, Civilian as AgentCivilian, CohortStats,
-    DiplomacyMatrix, DiplomacySignal, LodTier, Needs, Psyche, SocialGraph, Position3d, Tools,
-    Wardrobe,
+    ActorVisualKind, Alignment, ClusterId, ClusterMember, Civilian as AgentCivilian, CohortStats,
+    DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, LodTier, Needs, Psyche, RelationKind,
+    SocialGraph, Position3d, Tools, Wardrobe,
 };
+use civ_agents::diplomacy::GriefAccumulator;
 use civ_audio::triggers::SfxTrigger;
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
@@ -271,6 +272,16 @@ pub enum DiplomacyKind {
     Peace,
 }
 
+/// Pairwise faction relation surfaced on [`SimulationSnapshot`] (FR-DIPLOMACY).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FactionRelationSnapshot {
+    pub faction_a: u32,
+    pub faction_b: u32,
+    pub score: f32,
+    pub kind: RelationKind,
+    pub samples: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiplomacyEvent {
     pub tick: u64,
@@ -444,6 +455,12 @@ pub struct Simulation {
     last_deaths: Vec<PopulationEvent>,
     pub last_life_deaths: u32,
     diplomacy_events: Vec<DiplomacyEvent>,
+    /// Pairwise emergent faction relations (FR-DIPLOMACY / CIV-007).
+    faction_relations: DiplomacyMatrix,
+    /// Combat grievance accumulator feeding relation drift (CIV-007 §2.2).
+    grief_accumulator: GriefAccumulator,
+    /// Sustained trade-agreement streak per canonical faction pair (N4 route birth).
+    faction_trade_agreement_streak: BTreeMap<(u32, u32), u32>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
     belief: u64,
@@ -1106,6 +1123,9 @@ impl Simulation {
             last_deaths: Vec::new(),
             last_life_deaths: 0,
             diplomacy_events: Vec::new(),
+            faction_relations: DiplomacyMatrix::new(),
+            grief_accumulator: GriefAccumulator::new(),
+            faction_trade_agreement_streak: BTreeMap::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             belief: 0,
@@ -1203,6 +1223,9 @@ impl Simulation {
             last_deaths: Vec::new(),
             last_life_deaths: 0,
             diplomacy_events: Vec::new(),
+            faction_relations: DiplomacyMatrix::new(),
+            grief_accumulator: GriefAccumulator::new(),
+            faction_trade_agreement_streak: BTreeMap::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
             belief: 0,
@@ -3127,21 +3150,105 @@ impl Simulation {
     }
 
     fn phase_diplomacy(&mut self) {
+        self.tick_faction_relation_drift();
         if self.state.tick % 500 != 0 {
             return;
         }
-        self.diplomacy_events.clear();
-        let faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        self.run_macro_diplomacy_event();
+    }
+
+    /// Per-tick relation drift from proximity, competition, trade, religion, and combat.
+    fn tick_faction_relation_drift(&mut self) {
+        self.grief_accumulator.tick_decay();
+        for eng in &self.last_tick_engagements {
+            self.grief_accumulator
+                .add_engagement(eng.shooter_faction, eng.target_faction);
+        }
+
+        let member_counts = rollup_cluster_member_counts(&self.world);
+        let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
         if faction_ids.len() < 2 {
             return;
         }
-        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
-        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
-            DiplomacyKind::TradeAgreement
-        } else {
+
+        let pairs = all_registered_faction_pairs(&faction_ids);
+        for (a, b) in pairs {
+            let signal = diplomacy_signal_for_pair(
+                a,
+                b,
+                &self.state,
+                &self.world,
+                &member_counts,
+                &self.cluster_cultures,
+                &self.grief_accumulator,
+            );
+            let outcome = self.faction_relations.apply_signal(
+                faction_cluster_id(a),
+                faction_cluster_id(b),
+                signal,
+            );
+            self.emit_relation_threshold_event(a, b, outcome);
+        }
+    }
+
+    /// 500-tick macro diplomacy: treasury disparity vs emergent threshold (N2/N9/N12).
+    fn run_macro_diplomacy_event(&mut self) {
+        let mut faction_ids: Vec<u32> = self.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        if faction_ids.len() < 2 {
+            return;
+        }
+
+        let member_counts = rollup_cluster_member_counts(&self.world);
+        let (a, b) = diplomacy_pair_from_settlement_overlap(
+            &self.world,
+            &member_counts,
+            &faction_ids,
+            self.state.tick,
+        );
+
+        let belief = self.belief;
+        let unrest = 0u64;
+        let disparity = treasury_disparity_whole(&self.state.faction_treasury, a, b);
+        let relation_score = self
+            .faction_relations
+            .record(faction_cluster_id(a), faction_cluster_id(b))
+            .map(|r| r.score)
+            .unwrap_or(0.0);
+        let mean_aggression = mean_pair_aggression(&self.faction_aggression, a, b);
+        let avg_affinity = avg_social_affinity(&self.world);
+        let culture_bias =
+            diplomacy_culture_threshold_bias(&self.cluster_cultures, a, b);
+        let lang_centroids = faction_language_centroids(
+            &self.cluster_cultures,
+            &settlement_dominant_factions(&self.world, &member_counts),
+            &member_counts,
+        );
+        let lang_dist = language_distance(
+            lang_centroids.get(&a).copied().unwrap_or([0.5; 4]),
+            lang_centroids.get(&b).copied().unwrap_or([0.5; 4]),
+        );
+        let has_shared_patron = shared_religious_unity(&self.cluster_cultures, a, b);
+
+        let threshold = diplomacy_conflict_threshold(belief, unrest)
+            + diplomacy_relation_threshold_bias(relation_score)
+            + culture_bias
+            + affinity_threshold_bias(avg_affinity)
+            + religious_unity_peace_bonus(has_shared_patron)
+            + language_intelligibility_peace_bonus(lang_dist)
+            - aggression_threshold_reduction(mean_aggression);
+
+        let kind = if disparity >= threshold {
             DiplomacyKind::Conflict
+        } else {
+            DiplomacyKind::TradeAgreement
         };
+
+        self.apply_macro_diplomacy_outcome(a, b, kind);
+    }
+
+    fn apply_macro_diplomacy_outcome(&mut self, a: u32, b: u32, kind: DiplomacyKind) {
         match kind {
             DiplomacyKind::TradeAgreement => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -3150,6 +3257,15 @@ impl Simulation {
                 if let Some(v) = self.state.faction_treasury.get_mut(&b) {
                     *v += Fixed::from_num(100);
                 }
+                self.faction_relations.apply_signal(
+                    faction_cluster_id(a),
+                    faction_cluster_id(b),
+                    DiplomacySignal {
+                        trade_volume: FACTION_TRADE_RELATION_SIGNAL,
+                        ..Default::default()
+                    },
+                );
+                self.try_birth_emergent_trade_route(a, b);
             }
             DiplomacyKind::Conflict => {
                 if let Some(v) = self.state.faction_treasury.get_mut(&a) {
@@ -3158,15 +3274,103 @@ impl Simulation {
                 if let Some(v) = self.state.faction_treasury.get_mut(&b) {
                     *v -= Fixed::from_num(50);
                 }
+                self.faction_relations.apply_signal(
+                    faction_cluster_id(a),
+                    faction_cluster_id(b),
+                    DiplomacySignal {
+                        resource_competition: FACTION_CONFLICT_RELATION_SIGNAL,
+                        ..Default::default()
+                    },
+                );
+                reset_trade_agreement_streak(&mut self.faction_trade_agreement_streak, a, b);
+                remove_emergent_routes_between(&mut self.state, a, b);
             }
             DiplomacyKind::Peace => {}
         }
+
         self.diplomacy_events.push(DiplomacyEvent {
             tick: self.state.tick,
             faction_a: a,
             faction_b: b,
             kind,
         });
+    }
+
+    fn emit_relation_threshold_event(&mut self, a: u32, b: u32, outcome: DiplomacyOutcome) {
+        if outcome.before == outcome.after {
+            return;
+        }
+        let kind = match outcome.after {
+            RelationKind::War => DiplomacyKind::Conflict,
+            RelationKind::Alliance => DiplomacyKind::Peace,
+            RelationKind::Trade if matches!(outcome.before, RelationKind::Neutral | RelationKind::Rivalry) => {
+                DiplomacyKind::TradeAgreement
+            }
+            _ => return,
+        };
+        self.diplomacy_events.push(DiplomacyEvent {
+            tick: self.state.tick,
+            faction_a: a,
+            faction_b: b,
+            kind,
+        });
+    }
+
+    fn try_birth_emergent_trade_route(&mut self, a: u32, b: u32) {
+        record_trade_agreement_streak(&mut self.faction_trade_agreement_streak, a, b);
+        let pair = canonical_faction_pair(a, b);
+        let streak = self
+            .faction_trade_agreement_streak
+            .get(&pair)
+            .copied()
+            .unwrap_or(0);
+        let relation_score = self
+            .faction_relations
+            .record(faction_cluster_id(a), faction_cluster_id(b))
+            .map(|r| r.score)
+            .unwrap_or(0.0);
+        if streak < TRADE_ROUTE_AGREEMENT_BIRTH_THRESHOLD
+            || relation_score < TRADE_ROUTE_MIN_RELATION
+            || self.state.trade_routes.len() >= MAX_TRADE_ROUTES
+        {
+            return;
+        }
+
+        let goods = emergent_route_goods(a);
+        let already_exists = self.state.trade_routes.iter().any(|route| {
+            route.from_faction == a && route.to_faction == b && route.goods == goods
+        });
+        if already_exists {
+            return;
+        }
+
+        let key = (a, b, goods.to_string());
+        self.state.trade_routes.push(TradeRoute {
+            from_faction: a,
+            to_faction: b,
+            goods: goods.to_string(),
+            volume: Fixed::from_num(8),
+        });
+        self.state.emergent_trade_route_keys.insert(key);
+        self.faction_trade_agreement_streak.remove(&pair);
+    }
+
+    fn faction_relations_snapshot(&self) -> Vec<FactionRelationSnapshot> {
+        self.faction_relations
+            .snapshot()
+            .into_iter()
+            .filter_map(|(ca, cb, record)| {
+                let a = u32::try_from(ca.0).ok()?;
+                let b = u32::try_from(cb.0).ok()?;
+                Some(FactionRelationSnapshot {
+                    faction_a: a,
+                    faction_b: b,
+                    score: record.score,
+                    kind: self.faction_relations.relation(ca, cb),
+                    samples: record.samples,
+                })
+            })
+            .collect()
     }
 
     /// Policy phase — read the active [`Policy`] for the current tick and
@@ -3333,6 +3537,7 @@ impl Simulation {
             births_this_tick: self.last_births.len() as u32,
             deaths_this_tick: self.last_deaths.len() as u32,
             diplomacy_events: self.diplomacy_events.clone(),
+            faction_relations: self.faction_relations_snapshot(),
             disaster_events: self.last_tick_disaster_events.clone(),
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
@@ -4513,6 +4718,201 @@ fn canonical_faction_pair(a: u32, b: u32) -> (u32, u32) {
     }
 }
 
+/// Map a registered faction id to the diplomacy matrix cluster key (N3 bridge).
+fn faction_cluster_id(faction: u32) -> ClusterId {
+    ClusterId(u64::from(faction))
+}
+
+/// Round-robin pair selection over the static faction registry (tests / fallback).
+fn diplomacy_faction_pair(faction_ids: &[u32], tick: u64) -> (u32, u32) {
+    if faction_ids.len() < 2 {
+        return (0, 0);
+    }
+    let idx = tick as usize % faction_ids.len();
+    let a = faction_ids[idx];
+    let b = faction_ids[(idx + 1) % faction_ids.len()];
+    (a, b)
+}
+
+fn all_registered_faction_pairs(faction_ids: &[u32]) -> Vec<(u32, u32)> {
+    let mut pairs = Vec::new();
+    for i in 0..faction_ids.len() {
+        for j in (i + 1)..faction_ids.len() {
+            pairs.push(canonical_faction_pair(faction_ids[i], faction_ids[j]));
+        }
+    }
+    pairs
+}
+
+fn rollup_cluster_member_counts(world: &World) -> BTreeMap<u64, u32> {
+    let mut counts = BTreeMap::new();
+    for (_, member) in world.query::<&ClusterMember>().iter() {
+        *counts.entry(member.cluster.0).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn treasury_disparity_whole(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
+    let ta = treasury.get(&a).copied().unwrap_or(Fixed::ZERO);
+    let tb = treasury.get(&b).copied().unwrap_or(Fixed::ZERO);
+    ((ta.raw - tb.raw).unsigned_abs() / crate::SCALE) as i64
+}
+
+fn mean_pair_aggression(aggression: &BTreeMap<u32, f32>, a: u32, b: u32) -> f32 {
+    let aa = aggression.get(&a).copied().unwrap_or(0.0);
+    let ab = aggression.get(&b).copied().unwrap_or(0.0);
+    (aa + ab) * 0.5
+}
+
+fn shared_religion_cohesion(
+    cultures: &BTreeMap<u64, CultureProfile>,
+    a: u32,
+    b: u32,
+) -> f32 {
+    let Some(pa) = cultures.get(&u64::from(a)) else {
+        return 0.0;
+    };
+    let Some(pb) = cultures.get(&u64::from(b)) else {
+        return 0.0;
+    };
+    let similarity = 1.0 - cultural_distance(pa.traits, pb.traits);
+    similarity.clamp(0.0, 1.0)
+}
+
+fn shared_religious_unity(
+    cultures: &BTreeMap<u64, CultureProfile>,
+    a: u32,
+    b: u32,
+) -> bool {
+    shared_religion_cohesion(cultures, a, b) >= 0.7
+}
+
+fn resource_competition_signal(ra: &Resources, rb: &Resources) -> f32 {
+    let overlaps = [
+        (ra.food, rb.food),
+        (ra.wood, rb.wood),
+        (ra.metal, rb.metal),
+        (ra.energy, rb.energy),
+    ];
+    let mut sum = 0.0f32;
+    let mut count = 0u32;
+    for (a, b) in overlaps {
+        if a.raw > 0 && b.raw > 0 {
+            let af = a.raw as f32;
+            let bf = b.raw as f32;
+            sum += af.min(bf) / af.max(bf);
+            count += 1;
+        }
+    }
+    if count == 0 {
+        0.0
+    } else {
+        (sum / count as f32).clamp(0.0, 1.0)
+    }
+}
+
+fn need_complementarity_signal(ra: &Resources, rb: &Resources) -> f32 {
+    let pairs = [
+        (ra.food, rb.food),
+        (ra.wood, rb.wood),
+        (ra.metal, rb.metal),
+        (ra.energy, rb.energy),
+    ];
+    let mut sum = 0.0f32;
+    let mut count = 0u32;
+    for (a, b) in pairs {
+        if a.raw == 0 && b.raw == 0 {
+            continue;
+        }
+        let af = a.raw as f32;
+        let bf = b.raw as f32;
+        let gap = (af - bf).abs();
+        let scale = af.max(bf).max(1.0);
+        sum += (gap / scale).clamp(0.0, 1.0);
+        count += 1;
+    }
+    if count == 0 {
+        0.0
+    } else {
+        (sum / count as f32).clamp(0.0, 1.0)
+    }
+}
+
+fn scarcity_pressure_signal(energy_budget: Fixed, ra: &Resources, rb: &Resources) -> f32 {
+    const SCARCITY_GATE: i64 = 100;
+    let budget_scarce = energy_budget.raw / crate::SCALE < SCARCITY_GATE;
+    let a_scarce = ra.energy.raw / crate::SCALE < SCARCITY_GATE && ra.food.raw / crate::SCALE < SCARCITY_GATE;
+    let b_scarce = rb.energy.raw / crate::SCALE < SCARCITY_GATE && rb.food.raw / crate::SCALE < SCARCITY_GATE;
+    if budget_scarce && a_scarce && b_scarce {
+        1.0
+    } else if (a_scarce && !b_scarce) || (b_scarce && !a_scarce) {
+        -0.5
+    } else {
+        0.0
+    }
+}
+
+fn trade_volume_signal(routes: &[TradeRoute], a: u32, b: u32) -> f32 {
+    let volume: i64 = routes
+        .iter()
+        .filter(|route| {
+            (route.from_faction == a && route.to_faction == b)
+                || (route.from_faction == b && route.to_faction == a)
+        })
+        .map(|route| route.volume.raw)
+        .sum();
+    ((volume as f64) / 1_000_000.0).clamp(0.0, 1.0) as f32
+}
+
+fn proximity_signal(
+    a: u32,
+    b: u32,
+    world: &World,
+    member_counts: &BTreeMap<u64, u32>,
+    routes: &[TradeRoute],
+) -> f32 {
+    let dominant = settlement_dominant_factions(world, member_counts);
+    let contacts = settlement_contact_pairs(world, member_counts, SETTLEMENT_CONTACT_RADIUS_FP);
+    let contact_pairs = diplomacy_faction_pairs_from_settlement_contact(&dominant, &contacts);
+    let pair = canonical_faction_pair(a, b);
+    if contact_pairs.contains(&pair) {
+        return 1.0;
+    }
+    if routes.iter().any(|route| {
+        (route.from_faction == a && route.to_faction == b)
+            || (route.from_faction == b && route.to_faction == a)
+    }) {
+        return 0.7;
+    }
+    if a.abs_diff(b) == 1 {
+        return 0.5;
+    }
+    0.0
+}
+
+fn diplomacy_signal_for_pair(
+    a: u32,
+    b: u32,
+    state: &WorldState,
+    world: &World,
+    member_counts: &BTreeMap<u64, u32>,
+    cultures: &BTreeMap<u64, CultureProfile>,
+    grief: &GriefAccumulator,
+) -> DiplomacySignal {
+    let ra = state.faction_resources.get(&a).cloned().unwrap_or_default();
+    let rb = state.faction_resources.get(&b).cloned().unwrap_or_default();
+    let religion = shared_religion_cohesion(cultures, a, b);
+    let competition = resource_competition_signal(&ra, &rb) * (1.0 - religion * 0.35);
+    DiplomacySignal {
+        resource_competition: competition,
+        trade_volume: trade_volume_signal(&state.trade_routes, a, b),
+        proximity: proximity_signal(a, b, world, member_counts, &state.trade_routes),
+        combat_grievance: grief.get(a, b),
+        need_complementarity: need_complementarity_signal(&ra, &rb) + religion * 0.25,
+        scarcity_pressure: scarcity_pressure_signal(state.energy_budget_joules, &ra, &rb),
+    }
+}
+
 /// Deterministic goods label from exporter faction id (stable, integer-only).
 fn emergent_route_goods(from: u32) -> &'static str {
     match from % 3 {
@@ -4668,6 +5068,8 @@ pub struct SimulationSnapshot {
     pub births_this_tick: u32,
     pub deaths_this_tick: u32,
     pub diplomacy_events: Vec<DiplomacyEvent>,
+    /// Emergent pairwise faction relation scores (FR-DIPLOMACY).
+    pub faction_relations: Vec<FactionRelationSnapshot>,
     /// Per-good clearing prices in cents from [`MarketState`].
     pub market_prices: BTreeMap<String, i64>,
     /// Number of per-soldier combat damage pulses resolved during the most recent tick
@@ -6536,6 +6938,62 @@ mod tests {
         // The map is populated whenever there are aligned civilians with DNA.
         // Just verify the field is accessible and the type is correct.
         let _: &std::collections::BTreeMap<u32, f32> = &sim.faction_aggression;
+    }
+
+    /// FR-DIPLOMACY — neighboring factions competing for the same scarce resources
+    /// drift toward hostility over repeated diplomacy ticks.
+    #[test]
+    fn neighboring_resource_competitors_trend_hostile() {
+        let mut sim = Simulation::with_seed(77);
+        let a = 0u32;
+        let b = 1u32;
+        sim.state.factions = HashMap::from([(a, "Alpha".into()), (b, "Beta".into())]);
+        let scarce = Resources {
+            food: Fixed::from_num(40),
+            wood: Fixed::from_num(30),
+            metal: Fixed::from_num(25),
+            energy: Fixed::from_num(10),
+        };
+        sim.state.faction_resources.insert(a, scarce.clone());
+        sim.state.faction_resources.insert(b, scarce);
+        sim.state.energy_budget_joules = Fixed::from_num(50);
+
+        let initial = sim
+            .faction_relations
+            .record(faction_cluster_id(a), faction_cluster_id(b))
+            .map(|r| r.score)
+            .unwrap_or(0.0);
+
+        const TICKS: u64 = 30;
+        for _ in 0..TICKS {
+            sim.state.tick += 1;
+            sim.tick_faction_relation_drift();
+        }
+
+        let final_score = sim
+            .faction_relations
+            .record(faction_cluster_id(a), faction_cluster_id(b))
+            .expect("relation record")
+            .score;
+        let kind = sim.faction_relations.relation(faction_cluster_id(a), faction_cluster_id(b));
+
+        assert!(
+            final_score < initial,
+            "competing neighbors should trend more negative: initial={initial}, final={final_score}"
+        );
+        assert!(
+            final_score <= -0.20
+                || matches!(kind, RelationKind::Rivalry | RelationKind::War),
+            "expected Rivalry/War or score <= -0.20, got {kind:?} score={final_score}"
+        );
+
+        let snap = sim.snapshot();
+        assert!(
+            snap.faction_relations.iter().any(|row| {
+                row.faction_a == a && row.faction_b == b && row.score == final_score
+            }),
+            "snapshot should surface faction relations"
+        );
     }
 
     /// N9: faction pairs with high aggression clash at lower disparity than

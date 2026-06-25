@@ -230,6 +230,14 @@ impl Simulation {
                     .insert_one(entity, ClusterMember { cluster: *cluster });
             }
         }
+
+        let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *cluster_member_counts
+                .entry(member.cluster.0)
+                .or_insert(0) += 1;
+        }
+        self.rollup_emergent_settlements(&cluster_member_counts);
     }
 
     fn emergence_culture(&mut self) {

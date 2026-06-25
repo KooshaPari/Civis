@@ -2024,6 +2024,34 @@ impl Simulation {
         stock.add(Good::Food, food);
         self.cluster_stocks.insert(cluster_id, stock);
     }
+
+    /// HUD settlement projection + per-cluster commons from live co-location clusters.
+    pub(crate) fn rollup_emergent_settlements(
+        &mut self,
+        cluster_member_counts: &BTreeMap<u64, u32>,
+    ) {
+        let mut settlement_ids = Vec::new();
+        for (cluster_id, size) in cluster_member_counts {
+            if *size >= SETTLEMENT_MIN_MEMBERS {
+                settlement_ids.push(*cluster_id);
+            }
+        }
+        self.last_settlement_count = settlement_ids.len() as u32;
+
+        self.cluster_stocks
+            .retain(|id, _| settlement_ids.contains(id));
+        for cluster_id in settlement_ids {
+            let size = cluster_member_counts
+                .get(&cluster_id)
+                .copied()
+                .unwrap_or(0);
+            let production = i64::from(size) * CLUSTER_FOOD_PRODUCTION_PER_MEMBER;
+            let consumption = i64::from(size) * CLUSTER_FOOD_CONSUMPTION_PER_MEMBER;
+            let stock = self.cluster_stocks.entry(cluster_id).or_default();
+            stock.add(Good::Food, production);
+            stock.add(Good::Food, -consumption);
+        }
+    }
 }
 
 /// Maximum chronicle history lines retained in [`WorldState::chronicle`].

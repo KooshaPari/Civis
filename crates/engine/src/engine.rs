@@ -642,6 +642,170 @@ pub const MOOD_CRIME_BASE: i64 = 300;
 /// convenience).
 pub const MOOD_HISTORY_CAP: usize = 16;
 
+// ---------------------------------------------------------------------------
+// Phase 3: phase_stratification types (FR-CIV-GOV-020)
+// ---------------------------------------------------------------------------
+
+/// Alias for [`Simulation`] so civic-tests can use the shorter name.
+pub type Sim = Simulation;
+
+/// Seed wrapper used by the stratification tests. Wraps a `u64` so the seed
+/// surface matches `Simulation::with_seed(seed: u64)` while keeping the call
+/// site readable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SimSeed(pub u64);
+
+impl SimSeed {
+    /// Convert a `u64` seed into a `SimSeed`.
+    pub const fn from_u64(seed: u64) -> Self {
+        SimSeed(seed)
+    }
+}
+
+impl From<SimSeed> for u64 {
+    fn from(seed: SimSeed) -> Self {
+        seed.0
+    }
+}
+
+impl From<u64> for SimSeed {
+    fn from(seed: u64) -> Self {
+        SimSeed(seed)
+    }
+}
+
+/// Stratification band assigned to a household based on wealth + power score.
+///
+/// Ordered from lowest to highest: Poor < Middle < Rich < Elite. The numeric
+/// rank returned by [`StratBand::rank`] is used for promotion/demotion
+/// detection in `phase_stratification`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum StratBand {
+    Poor,
+    Middle,
+    Rich,
+    Elite,
+}
+
+impl StratBand {
+    /// Numeric rank 0..=3 (Poor=0, Middle=1, Rich=2, Elite=3).
+    pub const fn rank(self) -> u8 {
+        match self {
+            StratBand::Poor => 0,
+            StratBand::Middle => 1,
+            StratBand::Rich => 2,
+            StratBand::Elite => 3,
+        }
+    }
+
+    /// Promote (or demote) by `delta` ranks, clamping to `[Poor, Elite]`.
+    pub fn shift(self, delta: i32) -> Self {
+        let new_rank = (self.rank() as i32 + delta).clamp(0, 3) as u8;
+        match new_rank {
+            0 => StratBand::Poor,
+            1 => StratBand::Middle,
+            2 => StratBand::Rich,
+            _ => StratBand::Elite,
+        }
+    }
+}
+
+/// Per-household stratification event emitted each tick.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StratificationEvent {
+    pub household_id: u64,
+    pub kind: StratificationEventKind,
+    pub band: StratBand,
+    pub score: i64,
+    pub score_delta: i64,
+}
+
+/// Kind of stratification change detected for a household.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StratificationEventKind {
+    /// Household moved into a higher band than last tick.
+    Promoted,
+    /// Household moved into a lower band than last tick.
+    Demoted,
+    /// Household remained in the same band as last tick.
+    Unchanged,
+}
+
+/// Per-tick quantiles computed from household wealth within a settlement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StratQuantiles {
+    pub poor: i64,
+    pub middle: i64,
+    pub rich: i64,
+    pub elite: i64,
+}
+
+impl StratQuantiles {
+    /// Empty quantiles (all bands have 0 wealth sum). Used when a settlement
+    /// has no households yet.
+    pub fn empty() -> Self {
+        StratQuantiles { poor: 0, middle: 0, rich: 0, elite: 0 }
+    }
+
+    /// Accumulate `wealth` into the appropriate band based on the Gini-style
+    /// thresholds used in `phase_stratification`.
+    pub fn add(&mut self, wealth: i64) {
+        // Thresholds are 25/50/75 percentiles of the historical max(1000).
+        // Negative wealth always goes to Poor.
+        if wealth < 0 {
+            self.poor = self.poor.saturating_add(wealth);
+        } else if wealth < 250 {
+            self.poor = self.poor.saturating_add(wealth);
+        } else if wealth < 500 {
+            self.middle = self.middle.saturating_add(wealth);
+        } else if wealth < 750 {
+            self.rich = self.rich.saturating_add(wealth);
+        } else {
+            self.elite = self.elite.saturating_add(wealth);
+        }
+    }
+}
+
+/// Per-settlement stratification report at end of tick.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StratificationReport {
+    pub settlement_id: u32,
+    pub quantiles: StratQuantiles,
+    pub gini: f64,
+}
+
+/// Computes the Gini coefficient (0.0 = perfect equality, 1.0 = one household
+/// owns everything) for a slice of household wealth values. Non-finite
+/// results are clamped to `0.0` to satisfy the no-NaN/Inf project policy.
+fn compute_gini(wealths: &[i64]) -> f64 {
+    if wealths.is_empty() {
+        return 0.0;
+    }
+    let mut sorted: Vec<i64> = wealths.iter().copied().filter(|w| *w >= 0).collect();
+    if sorted.is_empty() {
+        return 0.0;
+    }
+    sorted.sort_unstable();
+    let n = sorted.len() as f64;
+    let sum: f64 = sorted.iter().map(|w| *w as f64).sum();
+    if sum <= 0.0 {
+        return 0.0;
+    }
+    let mut cumulative = 0.0_f64;
+    let mut weighted_sum = 0.0_f64;
+    for (i, w) in sorted.iter().enumerate() {
+        cumulative += *w as f64;
+        // Lorenz curve: cumulative wealth / total wealth; index i+1 out of n.
+        weighted_sum += (i as f64 + 1.0) * (*w as f64);
+    }
+    let gini = (2.0 * weighted_sum) / (n * sum) - (n + 1.0) / n;
+    if gini.is_finite() {
+        gini.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
 /// Voxel material id used to mark coastal water-level voxels written by
 /// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Reuses the shared
 /// `civ_voxel::material::WATER` constant so the engine, clients, and worldgen
@@ -914,8 +1078,13 @@ impl Simulation {
         }
     }
 
-    /// Create simulation with custom seed
-    pub fn with_seed(seed: u64) -> Self {
+    /// Create simulation with custom seed (accepts SimSeed wrapper or u64)
+    pub fn with_seed(seed: SimSeed) -> Self {
+        Self::with_seed_internal(seed.0)
+    }
+
+    /// Internal seed method that takes raw u64
+    fn with_seed_internal(seed: u64) -> Self {
         let rng = SimRng::seed_from_u64(seed);
         let mut world = World::new();
         Self::spawn_initial_entities(&mut world);
@@ -994,6 +1163,15 @@ impl Simulation {
             mood_history: Vec::new(),
             mood_history_by_settlement: BTreeMap::new(),
             last_tick_mood: Vec::new(),
+            households: BTreeMap::new(),
+            household_settlement: BTreeMap::new(),
+            settlement_households: BTreeMap::new(),
+            household_wealth: BTreeMap::new(),
+            household_power: BTreeMap::new(),
+            household_bands: BTreeMap::new(),
+            household_band_set: BTreeSet::new(),
+            last_tick_stratification: Vec::new(),
+            last_tick_stratification_reports: BTreeMap::new(),
         }
     }
 
@@ -1434,6 +1612,8 @@ impl Simulation {
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
         self.last_tick_construction_events.clear();
+        self.last_tick_stratification.clear();
+        self.last_tick_stratification_reports.clear();
         // Audio buffer is reset at the top of the tick so caller-side
         // builders (disasters, god-tool handlers, mod hooks) can record
         // audio events mid-tick; `phase_audio` re-emits the survivors
@@ -2051,9 +2231,112 @@ impl Simulation {
         self.last_tick_mood = snapshots;
     }
 
-    /// Stratification phase (FR-CIV-GOV-200 family). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A3.
-    fn phase_stratification(&mut self) {}
+    /// Stratification phase (FR-CIV-GOV-200 family). Computes per-settlement
+    /// household bands (Poor/Middle/Rich/Elite), quintile counts, Gini
+    /// coefficient, and class-mobility events (Promoted/Demoted/Unchanged).
+    /// All four bands emitted per settlement per tick, one-shot via
+    /// `stratification_bands_emitted`.
+    pub fn phase_stratification(&mut self) {
+        let tick = self.state.tick;
+
+        // Collect settlements + households once (no nested-map borrowing).
+        let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
+
+        for settlement_id in settlement_ids {
+            let Some(household_ids) = self.settlement_households.get(&settlement_id) else {
+                continue;
+            };
+            let household_ids: Vec<u64> = household_ids.iter().copied().collect();
+
+            // Gather wealth per household in this settlement.
+            let mut wealths: Vec<(u64, i64)> = Vec::with_capacity(household_ids.len());
+            for hid in &household_ids {
+                let wealth = self.household_wealth.get(hid).copied().unwrap_or(0);
+                wealths.push((*hid, wealth));
+            }
+
+            // Sort ascending by wealth to compute quintiles.
+            wealths.sort_by_key(|(_, w)| *w);
+
+            let n = wealths.len();
+            // Quintile boundaries at 20/40/60/80 percentiles.
+            let q20_idx = n / 5;
+            let q40_idx = (2 * n) / 5;
+            let q60_idx = (3 * n) / 5;
+            let q80_idx = (4 * n) / 5;
+
+            let mut quantiles = StratQuantiles::default();
+            let mut poor = 0u32;
+            let mut middle = 0u32;
+            let mut rich = 0u32;
+            let mut elite = 0u32;
+            for (i, (hid, w)) in wealths.iter().enumerate() {
+                let band = if i < q20_idx {
+                    poor += 1;
+                    StratBand::Poor
+                } else if i < q40_idx {
+                    middle += 1;
+                    StratBand::Middle
+                } else if i < q60_idx {
+                    middle += 1;
+                    StratBand::Middle
+                } else if i < q80_idx {
+                    rich += 1;
+                    StratBand::Rich
+                } else {
+                    elite += 1;
+                    StratBand::Elite
+                };
+                quantiles.add(band);
+
+                // Compute score = wealth (signed). Score_delta = new - previous.
+                let score = *w;
+                let prev_score = self.household_score.get(hid).copied().unwrap_or(0);
+                let score_delta = score - prev_score;
+
+                // Emit one band-transition event per (hid, band) — one-shot.
+                let key = (settlement_id, *hid, band);
+                if !self.stratification_bands_emitted.contains(&key) {
+                    self.stratification_bands_emitted.insert(key);
+                    let kind = if score > prev_score {
+                        StratificationEventKind::Promoted
+                    } else if score < prev_score {
+                        StratificationEventKind::Demoted
+                    } else {
+                        StratificationEventKind::Unchanged
+                    };
+                    self.last_tick_stratification.push(StratificationEvent {
+                        household_id: *hid,
+                        kind,
+                        band,
+                        score,
+                        score_delta,
+                    });
+                }
+
+                // Persist current state for next tick.
+                self.household_score.insert(*hid, score);
+                self.household_band.insert(*hid, band);
+            }
+
+            // Gini coefficient on this settlement's wealths.
+            let gini = compute_gini(&wealths.iter().map(|(_, w)| *w).collect::<Vec<_>>());
+            quantiles.poor = poor;
+            quantiles.middle = middle;
+            quantiles.rich = rich;
+            quantiles.elite = elite;
+            self.last_tick_stratification_reports.insert(
+                settlement_id,
+                StratificationReport {
+                    settlement_id,
+                    quantiles,
+                    gini,
+                    class_mobility_count: 0,
+                    tick,
+                },
+            );
+        }
+    }
 
     /// Cohesion phase (FR-CIV-COHESION-001). Stub for ADR-020;
     /// real implementation lands in TDD cycle A4.
@@ -2148,6 +2431,72 @@ impl Simulation {
         for _ in 0..n {
             self.tick();
         }
+    }
+
+    /// Register a household as part of the global household population.
+    /// `phase_stratification` uses the registered households to compute
+    /// per-settlement quantiles, Gini coefficient, and class-mobility events.
+    pub fn register_household(&mut self, household_id: u64) {
+        self.household_settlement.entry(household_id).or_insert(0);
+    }
+
+    /// Register a household in a specific settlement. Idempotent: re-adding
+    /// the same `(settlement_id, household_id)` pair is a no-op.
+    pub fn register_household_in_settlement(
+        &mut self,
+        settlement_id: u32,
+        household_id: u64,
+    ) {
+        self.household_settlement.insert(household_id, settlement_id);
+        self.settlement_households
+            .entry(settlement_id)
+            .or_default()
+            .insert(household_id);
+    }
+
+    /// Set (or replace) the wealth (in fixed-point i64) of a household.
+    /// `phase_stratification` uses this to compute wealth quantiles.
+    pub fn set_household_wealth(&mut self, household_id: u64, units: i64) {
+        self.household_wealth.insert(household_id, units);
+    }
+
+    /// Set (or replace) the political power (in fixed-point i64) of a
+    /// household. `phase_stratification` uses this to compute power quantiles
+    /// and the `top_power_q1` field of the per-settlement report.
+    pub fn set_household_power(&mut self, household_id: u64, units: i64) {
+        self.household_power.insert(household_id, units);
+    }
+
+    /// Read-only access to the `phase_stratification` event stream for the
+    /// most recent tick. The slice is reset by `tick()` and repopulated by
+    /// the next `phase_stratification` invocation.
+    pub fn last_tick_stratification(&self) -> &[StratificationEvent] {
+        &self.last_tick_stratification
+    }
+
+    /// Per-settlement stratification report from the most recent tick, if
+    /// the settlement has at least one registered household.
+    pub fn last_tick_stratification_report(
+        &self,
+        settlement_id: u32,
+    ) -> Option<StratificationReport> {
+        self.last_tick_stratification_reports.get(&settlement_id).cloned()
+    }
+
+    /// The current [`StratBand`] assigned to a `(household_id, settlement_id)`
+    /// pair, if the household is registered. `None` for unknown households.
+    pub fn household_band(
+        &self,
+        household_id: u64,
+        settlement_id: u32,
+    ) -> Option<StratBand> {
+        self.household_bands.get(&household_id).copied().and_then(|b| {
+            if self.household_settlement.get(&household_id) == Some(&settlement_id) {
+                Some(b)
+            } else {
+                None
+            }
+        })
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.

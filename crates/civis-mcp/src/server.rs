@@ -233,6 +233,62 @@ impl GodActionArgs {
     }
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GodActionVerbArgs {
+    /// Normalized map X in `[0, 1]`.
+    pub x: f32,
+    /// Normalized map Y in `[0, 1]`.
+    pub y: f32,
+    /// Optional legacy brush radius in voxels.
+    pub radius: Option<u32>,
+    /// Optional normalized radius for non-legacy verbs.
+    pub radius_norm: Option<f32>,
+    /// Optional energy for `smite`.
+    pub energy: Option<u32>,
+    /// Optional intensity / strength multiplier.
+    pub magnitude: Option<f32>,
+    /// Optional material id for terrain/material verbs.
+    pub material: Option<u32>,
+    /// Optional count for creature-spawn verbs.
+    pub count: Option<u32>,
+    /// Optional faction for creature/targeted verbs.
+    pub faction: Option<u32>,
+    /// Optional transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+impl GodActionVerbArgs {
+    fn to_params_with_action(&self, action: &'static str) -> Value {
+        let mut obj = serde_json::Map::new();
+        obj.insert("action".to_owned(), json!(action));
+        obj.insert("x".to_owned(), json!(self.x));
+        obj.insert("y".to_owned(), json!(self.y));
+        if let Some(radius) = self.radius {
+            obj.insert("radius".to_owned(), json!(radius));
+        }
+        if let Some(radius_norm) = self.radius_norm {
+            obj.insert("radius_norm".to_owned(), json!(radius_norm));
+        }
+        if let Some(energy) = self.energy {
+            obj.insert("energy".to_owned(), json!(energy));
+        }
+        if let Some(magnitude) = self.magnitude {
+            obj.insert("magnitude".to_owned(), json!(magnitude));
+        }
+        if let Some(material) = self.material {
+            obj.insert("material".to_owned(), json!(material));
+        }
+        if let Some(count) = self.count {
+            obj.insert("count".to_owned(), json!(count));
+        }
+        if let Some(faction) = self.faction {
+            obj.insert("target_faction".to_owned(), json!(faction));
+        }
+        Value::Object(obj)
+    }
+}
+
 // ── diplomacy verb argument types ────────────────────────────────────────
 
 /// Verb discriminator for `civis_diplomacy_action`
@@ -911,6 +967,123 @@ impl CivisMcpServer {
         }))
     }
 
+    /// Forward `sim.snapshot` and return the full snapshot payload.
+    /// This keeps a dedicated world-snapshot tool surface for callers
+    /// that want the broader alias name instead of reusing
+    /// `civis_snapshot`.
+    #[tool(
+        name = "civis_world_snapshot",
+        description = "Alias for sim.snapshot (full world snapshot payload)."
+    )]
+    async fn civis_world_snapshot(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.snapshot", json!({}), "civis_world_snapshot").map(Json)
+    }
+
+    /// Forward `psyche.snapshot` to civ-server.
+    #[tool(
+        name = "civis_psyche_snapshot",
+        description = "Forward psyche.snapshot to civ-server for per-agent sentience state."
+    )]
+    async fn civis_psyche_snapshot(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "psyche.snapshot", json!({}), "civis_psyche_snapshot").map(Json)
+    }
+
+    /// Forward `psyche.events` to civ-server.
+    #[tool(
+        name = "civis_psyche_events",
+        description = "Forward psyche.events to civ-server for sentience crossing telemetry."
+    )]
+    async fn civis_psyche_events(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "psyche.events", json!({}), "civis_psyche_events").map(Json)
+    }
+
+    /// Forward `psyche.snapshot` and project the belief axes.
+    #[tool(
+        name = "civis_psyche_beliefs",
+        description = "Forward psyche.snapshot and return the `beliefs` field for each entity."
+    )]
+    async fn civis_psyche_beliefs(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let snapshot = forward_rpc(&transport, "psyche.snapshot", json!({}), "civis_psyche_beliefs").map_err(|err| {
+            format!("civis_psyche_beliefs: {err}")
+        })?;
+
+        let beliefs = match snapshot.result {
+            Value::Array(entities) => Value::Array(
+                entities
+                    .into_iter()
+                    .map(|entry| {
+                        json!({
+                            "agent_id": entry.get("agent_id").cloned().unwrap_or(Value::Null),
+                            "beliefs": entry.get("beliefs").cloned().unwrap_or(Value::Null),
+                        })
+                    })
+                    .collect(),
+            ),
+            _ => json!([]),
+        };
+        Ok(Json(RpcForwardResult {
+            method: "civis_psyche_beliefs".to_string(),
+            url: snapshot.url,
+            result: beliefs,
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Forward `sim.snapshot` and project `disaster_events` telemetry.
+    #[tool(
+        name = "civis_disaster_events",
+        description = "Forward sim.snapshot and extract the `disaster_events` field."
+    )]
+    async fn civis_disaster_events(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let snapshot = forward_rpc(
+            &transport,
+            "sim.snapshot",
+            json!({}),
+            "civis_disaster_events",
+        )?;
+        let disasters = snapshot
+            .result
+            .get("disaster_events")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        Ok(Json(RpcForwardResult {
+            method: "civis_disaster_events".to_string(),
+            url: snapshot.url,
+            result: disasters,
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Alias to `sim.get_factions` for callers that expect cohesion-oriented
+    /// reads on the faction surface.
+    #[tool(
+        name = "civis_faction_cohesion",
+        description = "Alias to sim.get_factions (faction telemetry channel)."
+    )]
+    async fn civis_faction_cohesion(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut factions = forward_rpc(&transport, "sim.get_factions", json!({}), "civis_faction_cohesion")?;
+        factions.method = "civis_faction_cohesion".to_string();
+        Ok(Json(factions))
+    }
+
     /// Forward `sim.get_speed` to civ-server. Returns the current tick
     /// speed multiplier.
     #[tool(
@@ -1364,6 +1537,114 @@ impl CivisMcpServer {
             "sim.god_action",
             args.to_params(),
             "civis_god_action",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `smite`.
+    #[tool(
+        name = "civis_god_action_smite",
+        description = "Forward sim.god_action with verb=smite."
+    )]
+    async fn civis_god_action_smite(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&args.transport, "sim.god_action", args.to_params_with_action("smite"), "civis_god_action_smite").map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `heal`.
+    #[tool(
+        name = "civis_god_action_heal",
+        description = "Forward sim.god_action with verb=heal."
+    )]
+    async fn civis_god_action_heal(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&args.transport, "sim.god_action", args.to_params_with_action("heal"), "civis_god_action_heal").map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `place_terrain`.
+    #[tool(
+        name = "civis_god_action_place_terrain",
+        description = "Forward sim.god_action with verb=place_terrain."
+    )]
+    async fn civis_god_action_place_terrain(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("place_terrain"),
+            "civis_god_action_place_terrain",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `ignite`.
+    #[tool(
+        name = "civis_god_action_ignite",
+        description = "Forward sim.god_action with verb=ignite."
+    )]
+    async fn civis_god_action_ignite(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&args.transport, "sim.god_action", args.to_params_with_action("ignite"), "civis_god_action_ignite").map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `spawn_creature`.
+    #[tool(
+        name = "civis_god_action_spawn_creature",
+        description = "Forward sim.god_action with verb=spawn_creature."
+    )]
+    async fn civis_god_action_spawn_creature(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("spawn_creature"),
+            "civis_god_action_spawn_creature",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `bless`.
+    #[tool(
+        name = "civis_god_action_bless",
+        description = "Forward sim.god_action with verb=bless."
+    )]
+    async fn civis_god_action_bless(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("bless"),
+            "civis_god_action_bless",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` with verb `multiply_creatures`.
+    #[tool(
+        name = "civis_god_action_multiply_creatures",
+        description = "Forward sim.god_action with verb=multiply_creatures."
+    )]
+    async fn civis_god_action_multiply_creatures(
+        &self,
+        Parameters(args): Parameters<GodActionVerbArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params_with_action("multiply_creatures"),
+            "civis_god_action_multiply_creatures",
         )
         .map(Json)
     }

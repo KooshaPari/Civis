@@ -38,11 +38,13 @@ fn build_crash_log(info: &PanicInfo) -> String {
         Some(location) => format!("{}:{}", location.file(), location.line()),
         None => "<unknown location>".to_string(),
     };
-    let payload = info
-        .payload()
-        .downcast_ref::<&str>()
-        .or_else(|| info.payload().downcast_ref::<String>())
-        .map_or("<panic payload non-string>", |msg| *msg);
+    let payload = if let Some(message) = info.payload().downcast_ref::<&str>() {
+        *message
+    } else if let Some(message) = info.payload().downcast_ref::<String>() {
+        message.as_str()
+    } else {
+        "<panic payload non-string>"
+    };
     let backtrace = Backtrace::capture();
 
     format!(

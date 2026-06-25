@@ -4068,21 +4068,35 @@ mod tests {
         );
 
         for tick in 1..=32 {
+            // Only snapshot living cold entities: emergence (famine-driven
+            // lifecycle deaths feeding legends) may despawn a civilian during a
+            // tick, so an entity present this frame can be gone next frame.
             let before: std::collections::HashMap<hecs::Entity, u16> = cold_entities
                 .iter()
-                .map(|&entity| (entity, *sim.world.get::<&Wardrobe>(entity).unwrap()))
-                .map(|(entity, wardrobe)| (entity, wardrobe.era))
+                .filter_map(|&entity| {
+                    sim.world
+                        .get::<&Wardrobe>(entity)
+                        .ok()
+                        .map(|w| (entity, w.era))
+                })
                 .collect();
 
             sim.tick();
 
             for &entity in &cold_entities {
-                let after = sim.world.get::<&Wardrobe>(entity).unwrap().era;
-                if before[&entity] != after {
-                    assert!(
-                        should_tick_entity_with_policy(tick, LodTier::Cold, policy),
-                        "Cold-tier wardrobe changed on tick {tick} (off cadence)"
-                    );
+                // Skip entities that died this tick — only surviving cold
+                // entities are subject to the cadence invariant.
+                let Ok(wardrobe) = sim.world.get::<&Wardrobe>(entity) else {
+                    continue;
+                };
+                let after = wardrobe.era;
+                if let Some(&prev) = before.get(&entity) {
+                    if prev != after {
+                        assert!(
+                            should_tick_entity_with_policy(tick, LodTier::Cold, policy),
+                            "Cold-tier wardrobe changed on tick {tick} (off cadence)"
+                        );
+                    }
                 }
             }
         }

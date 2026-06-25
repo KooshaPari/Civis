@@ -1,4 +1,4 @@
-//! MCP server implementation: the three `civis_*` tools plus the rmcp
+//! MCP server implementation: the `civis_*` tools plus the rmcp
 //! `ServerHandler` glue. Lives in its own module so the
 //! `#[tool_router]`-generated code is isolated from the public library
 //! helpers in `lib.rs` (which intentionally avoid `rmcp` re-exports so
@@ -13,10 +13,19 @@ use rmcp::{
     tool, tool_handler, tool_router, Json,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
-/// MCP server that exposes the three `civis-cli` verification tools
-/// (`civis_verify`, `civis_pixels`, `civis_census`). The router is
-/// populated by the `#[tool_router]` macro on the impl block below.
+use civis_cli::census::CensusConfig;
+
+/// MCP server that exposes the verification tools (`civis_verify`,
+/// `civis_pixels`, `civis_census`) plus 12 thin JSON-RPC forwarders that
+/// proxy existing `civ-server` methods. The router is populated by the
+/// `#[tool_router]` macro on the impl block below.
+///
+/// Each forwarder wraps an existing `civ-server` JSON-RPC method (see
+/// `crates/server/src/jsonrpc.rs`). The shim does not invent backend
+/// semantics — it just builds the envelope, opens a short-lived WS, and
+/// returns the raw `result` JSON to the MCP caller.
 #[derive(Clone, Default)]
 pub struct CivisMcpServer {
     #[allow(dead_code)]
@@ -33,6 +42,43 @@ impl CivisMcpServer {
         }
     }
 }
+
+// ── shared argument types ────────────────────────────────────────────────
+
+/// Common transport-override block (host/port/timeout) used by every
+/// JSON-RPC forwarding tool. Mirrors `CensusArgs` so the existing
+/// `civis_census` tool stays in lockstep.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+pub struct RpcArgs {
+    /// Optional WebSocket host override. Default `127.0.0.1`.
+    #[schemars(description = "WebSocket host override (env: CIV_WS_HOST)")]
+    pub host: Option<String>,
+    /// Optional WebSocket port override. Default 3000.
+    #[schemars(description = "WebSocket port override (env: CIV_SERVER_PORT)")]
+    pub port: Option<u16>,
+    /// Optional per-request timeout in milliseconds. Default 5000.
+    #[schemars(description = "Per-request timeout in ms (env: CIV_CENSUS_TIMEOUT_MS)")]
+    pub timeout_ms: Option<u64>,
+}
+
+impl RpcArgs {
+    /// Build a [`CensusConfig`] from env defaults + this arg's overrides.
+    fn resolve_config(&self) -> CensusConfig {
+        let mut config = crate::census_config_with_url();
+        if let Some(host) = &self.host {
+            config.host = host.clone();
+        }
+        if let Some(port) = self.port {
+            config.port = port;
+        }
+        if let Some(timeout_ms) = self.timeout_ms {
+            config.timeout_ms = timeout_ms;
+        }
+        config
+    }
+}
+
+// ── existing argument types ──────────────────────────────────────────────
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct VerifyArgs {
@@ -73,6 +119,230 @@ pub struct CensusArgs {
     pub timeout_ms: Option<u64>,
 }
 
+// ── god-tool verb argument types ─────────────────────────────────────────
+
+/// Verb discriminator for `civis_god_action` (FR-CIV-GODTOOL). The
+/// underlying `sim.god_action` JSON-RPC accepts these strings:
+/// `smite | heal | place_terrain | ignite | spawn_creature | bless |
+/// multiply_creatures`. The MCP tool re-exports the same enum so agents
+/// get a typed payload instead of a free-form string.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GodActionKind {
+    /// `smite` — tactical damage blast at a normalized map point.
+    Smite,
+    /// `heal` — restore full health to every citizen near a point.
+    Heal,
+    /// `place_terrain` — paint voxels in a disk around a point with a
+    /// chosen material id.
+    PlaceTerrain,
+    /// `ignite` — shorthand for `place_terrain` with the LAVA material id.
+    Ignite,
+    /// `spawn_creature` — drop a single civilian into the world.
+    SpawnCreature,
+    /// `bless` — bump `welfare` and `ideology` of nearby citizens.
+    Bless,
+    /// `multiply_creatures` — spawn N civilians within a disk
+    /// (FR-CIV-GODTOOL-001).
+    MultiplyCreatures,
+}
+
+impl GodActionKind {
+    fn wire_name(self) -> &'static str {
+        match self {
+            Self::Smite => "smite",
+            Self::Heal => "heal",
+            Self::PlaceTerrain => "place_terrain",
+            Self::Ignite => "ignite",
+            Self::SpawnCreature => "spawn_creature",
+            Self::Bless => "bless",
+            Self::MultiplyCreatures => "multiply_creatures",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GodActionArgs {
+    /// Verb to invoke — see [`GodActionKind`].
+    pub action: GodActionKind,
+    /// Normalized map X in `[0, 1]`.
+    #[schemars(description = "Normalized map X in [0, 1]")]
+    pub x: f32,
+    /// Normalized map Y in `[0, 1]`.
+    #[schemars(description = "Normalized map Y in [0, 1]")]
+    pub y: f32,
+    /// Optional brush radius in voxels (`smite`/`place_terrain`/`ignite`).
+    #[schemars(description = "Brush radius in voxels (verb-specific clamp)")]
+    pub radius: Option<u32>,
+    /// Optional energy delivered by `smite` (clamped 0..=u32::MAX).
+    #[schemars(description = "Energy delivered (smite only)")]
+    pub energy: Option<u32>,
+    /// Optional affected-radius in normalized units (`heal`/`bless`/
+    /// `multiply_creatures`).
+    #[schemars(description = "Normalized radius (heal/bless/multiply_creatures)")]
+    pub radius_norm: Option<f32>,
+    /// Optional magnitude for `bless` (clamped 0..=1).
+    #[schemars(description = "Magnitude for bless verb (0..=1)")]
+    pub magnitude: Option<f32>,
+    /// Material id for `place_terrain` (0..=255).
+    #[schemars(description = "Material id for place_terrain (0..=255)")]
+    pub material: Option<u32>,
+    /// Number of civilians for `multiply_creatures` (1..=32).
+    #[schemars(description = "Civilian count for multiply_creatures (1..=32)")]
+    pub count: Option<u32>,
+    /// Faction id for `spawn_creature` / `multiply_creatures`.
+    #[schemars(description = "Owning faction id")]
+    pub faction: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+impl GodActionArgs {
+    /// Build the JSON-RPC params object the bridge expects. Unknown
+    /// fields are dropped server-side so we only forward what the
+    /// selected verb understands (matches `parse_god_action` in
+    /// `crates/server/src/jsonrpc.rs:2019`).
+    fn to_params(&self) -> Value {
+        let mut obj = serde_json::Map::new();
+        obj.insert("action".to_owned(), json!(self.action.wire_name()));
+        obj.insert("x".to_owned(), json!(self.x));
+        obj.insert("y".to_owned(), json!(self.y));
+        if let Some(radius) = self.radius {
+            obj.insert("radius".to_owned(), json!(radius));
+        }
+        if let Some(energy) = self.energy {
+            obj.insert("energy".to_owned(), json!(energy));
+        }
+        if let Some(radius_norm) = self.radius_norm {
+            obj.insert("radius_norm".to_owned(), json!(radius_norm));
+        }
+        if let Some(magnitude) = self.magnitude {
+            obj.insert("magnitude".to_owned(), json!(magnitude));
+        }
+        if let Some(material) = self.material {
+            obj.insert("material".to_owned(), json!(material));
+        }
+        if let Some(count) = self.count {
+            obj.insert("count".to_owned(), json!(count));
+        }
+        if let Some(faction) = self.faction {
+            obj.insert("faction".to_owned(), json!(faction));
+        }
+        Value::Object(obj)
+    }
+}
+
+// ── diplomacy verb argument types ────────────────────────────────────────
+
+/// Verb discriminator for `civis_diplomacy_action`
+/// (FR-CIV-CLIENT-006). The underlying `sim.diplomacy_action` method
+/// accepts `propose_treaty | declare_war | offer_trade`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DiplomacyActionKind {
+    /// `propose_treaty` — open a peace treaty proposal.
+    ProposeTreaty,
+    /// `declare_war` — start a conflict.
+    DeclareWar,
+    /// `offer_trade` — open a trade route proposal.
+    OfferTrade,
+}
+
+impl DiplomacyActionKind {
+    fn wire_name(self) -> &'static str {
+        match self {
+            Self::ProposeTreaty => "propose_treaty",
+            Self::DeclareWar => "declare_war",
+            Self::OfferTrade => "offer_trade",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct DiplomacyActionArgs {
+    /// Verb to invoke — see [`DiplomacyActionKind`].
+    pub action: DiplomacyActionKind,
+    /// Target faction id.
+    pub target_faction: u32,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+// ── spawn-palette argument types ─────────────────────────────────────────
+
+/// Palette kind for `civis_spawn_entity` (FR-CIV-UX-006). Matches the
+/// wire labels in `crates/server/src/jsonrpc.rs:SpawnEntityKind`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SpawnPaletteKind {
+    /// `civilian` — single civilian.
+    Civilian,
+    /// `vehicle` — military vehicle (Knight).
+    Vehicle,
+    /// `airport` — civic hub (CityCenter).
+    Airport,
+    /// `port` — harbor / trade port (Market).
+    Port,
+    /// `hangar` — hangar / barracks (Barracks).
+    Hangar,
+}
+
+impl SpawnPaletteKind {
+    fn wire_name(self) -> &'static str {
+        match self {
+            Self::Civilian => "civilian",
+            Self::Vehicle => "vehicle",
+            Self::Airport => "airport",
+            Self::Port => "port",
+            Self::Hangar => "hangar",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SpawnEntityArgs {
+    /// Palette kind — see [`SpawnPaletteKind`].
+    pub kind: SpawnPaletteKind,
+    /// Normalized map X in `[0, 1]`.
+    pub x: f32,
+    /// Normalized map Y in `[0, 1]`.
+    pub y: f32,
+    /// Owning faction id (defaults to 0 server-side).
+    #[schemars(description = "Owning faction id (defaults to 0)")]
+    pub faction: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+// ── tech / research / speed argument types ───────────────────────────────
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct QueueResearchArgs {
+    /// Tech name to queue. Valid values are documented in
+    /// `crates/server/src/jsonrpc.rs` (KNOWN_TECHS):
+    /// `pottery, masonry, writing, iron_working, currency, mathematics,
+    /// gunpowder, printing, banking, steam_power, electricity, railroad`.
+    pub tech: String,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SpeedSetArgs {
+    /// Tick speed multiplier — must be one of 0, 1, 2, 4, or 8
+    /// (`ALLOWED_SPEED_MULTIPLIERS` in `crates/server/src/jsonrpc.rs`).
+    pub multiplier: u32,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+// ── existing result types ───────────────────────────────────────────────
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PixelsResult {
     pub path: String,
@@ -98,6 +368,41 @@ pub struct VerifyResultTool {
     pub height: u32,
     pub harness_version: &'static str,
     pub bevy_version: &'static str,
+}
+
+// ── new shared result envelope for JSON-RPC forwarders ──────────────────
+
+/// Standard envelope returned by every JSON-RPC forwarding tool. Wraps
+/// the raw `result` value the bridge returned so MCP clients can correlate
+/// the tool call with the bridge wire shape (FR-CIV-MCP-003 contract test).
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct RpcForwardResult {
+    /// The JSON-RPC method that was invoked.
+    pub method: String,
+    /// The bridge URL the request was sent to.
+    pub url: String,
+    /// The raw `result` value the bridge returned (shape is method-specific).
+    pub result: serde_json::Value,
+    /// Harness version stamp so agents can correlate evidence packets.
+    pub harness_version: &'static str,
+}
+
+fn forward_rpc(
+    transport: &RpcArgs,
+    method: &str,
+    params: Value,
+    label: &str,
+) -> Result<RpcForwardResult, String> {
+    let config = transport.resolve_config();
+    let url = config.ws_url();
+    let result = crate::dispatch_rpc_method(&config, method, params)
+        .map_err(|err| format!("{label}: {err}"))?;
+    Ok(RpcForwardResult {
+        method: method.to_owned(),
+        url,
+        result,
+        harness_version: crate::HARNESS_VERSION,
+    })
 }
 
 #[tool_router]
@@ -209,6 +514,233 @@ impl CivisMcpServer {
             live: status.live,
             harness_version: crate::HARNESS_VERSION,
         }))
+    }
+
+    // ── JSON-RPC forwarders (FR-CIV-MCP-001) ────────────────────────────
+
+    /// Forward `health` to civ-server. Returns the bridge-reported tick
+    /// (or 0 when no simulation is loaded).
+    #[tool(
+        name = "civis_health",
+        description = "Probe civ-server liveness via the JSON-RPC `health` method. Returns the bridge tick as a sanity check."
+    )]
+    async fn civis_health(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "health", json!({}), "civis_health").map(Json)
+    }
+
+    /// Forward `sim.snapshot` to civ-server. Returns the full snapshot
+    /// (census + market prices + emergence + climate + spectator pins).
+    #[tool(
+        name = "civis_snapshot",
+        description = "Forward sim.snapshot to civ-server. Returns the full bridge snapshot (tick, population, building_count, energy_budget, market_prices, hash_chain_root, emergence block, climate, spectator pins)."
+    )]
+    async fn civis_snapshot(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.snapshot", json!({}), "civis_snapshot").map(Json)
+    }
+
+    /// Forward `sim.emergence` to civ-server. Returns the latest emergence
+    /// sample (or `null` for ticks 0..49 before the first sample boundary).
+    #[tool(
+        name = "civis_emergence",
+        description = "Forward sim.emergence to civ-server. Returns the latest civ-emergence-metrics sample (entropy_bits, entropy_norm, structure counts, branching regime, dashboard block)."
+    )]
+    async fn civis_emergence(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.emergence", json!({}), "civis_emergence").map(Json)
+    }
+
+    /// Forward `sim.snapshot` and project the `market_prices` field so
+    /// dashboards don't have to fetch the full snapshot just to read
+    /// clearing prices.
+    #[tool(
+        name = "civis_market_prices",
+        description = "Forward sim.snapshot and project the `market_prices` field. Returns `{<good>: <cents>}` for every good the bridge currently knows about (FR-CIV-EMERG-002 surface)."
+    )]
+    async fn civis_market_prices(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let config = transport.resolve_config();
+        let url = config.ws_url();
+        let snapshot = crate::dispatch_rpc_method(&config, "sim.snapshot", json!({}))
+            .map_err(|err| format!("civis_market_prices: {err}"))?;
+        let prices = snapshot
+            .get("market_prices")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        Ok(Json(RpcForwardResult {
+            method: "sim.snapshot".to_owned(),
+            url,
+            result: prices,
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Forward `sim.get_speed` to civ-server. Returns the current tick
+    /// speed multiplier.
+    #[tool(
+        name = "civis_speed_get",
+        description = "Forward sim.get_speed to civ-server. Returns the current tick speed multiplier (0/1/2/4/8)."
+    )]
+    async fn civis_speed_get(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_speed", json!({}), "civis_speed_get").map(Json)
+    }
+
+    /// Forward `sim.set_speed` to civ-server. Multiplier must be one of
+    /// 0/1/2/4/8 — the bridge rejects other values with `INVALID_PARAMS`.
+    #[tool(
+        name = "civis_speed_set",
+        description = "Forward sim.set_speed to civ-server. Multiplier must be 0, 1, 2, 4, or 8 (ALLOWED_SPEED_MULTIPLIERS)."
+    )]
+    async fn civis_speed_set(
+        &self,
+        Parameters(SpeedSetArgs {
+            multiplier,
+            transport,
+        }): Parameters<SpeedSetArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.set_speed",
+            json!({ "multiplier": multiplier }),
+            "civis_speed_set",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.god_action` to civ-server. Use [`GodActionKind`] for a
+    /// typed verb; the bridge parses the same verbs the Bevy/Godot/Unreal
+    /// clients do, so verb-specific clamps are enforced server-side.
+    #[tool(
+        name = "civis_god_action",
+        description = "Forward sim.god_action to civ-server. Sends a god-tool verb (smite, heal, place_terrain, ignite, spawn_creature, bless, multiply_creatures) at a normalized map point. Verb-specific clamps are enforced server-side (FR-CIV-GODTOOL)."
+    )]
+    async fn civis_god_action(
+        &self,
+        Parameters(args): Parameters<GodActionArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &args.transport,
+            "sim.god_action",
+            args.to_params(),
+            "civis_god_action",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.spawn_entity` to civ-server. Spawns a civilian,
+    /// vehicle, airport, port, or hangar at a normalized map point.
+    #[tool(
+        name = "civis_spawn_entity",
+        description = "Forward sim.spawn_entity to civ-server. Spawn a civilian / vehicle / airport / port / hangar at a normalized map point (FR-CIV-UX-006)."
+    )]
+    async fn civis_spawn_entity(
+        &self,
+        Parameters(SpawnEntityArgs {
+            kind,
+            x,
+            y,
+            faction,
+            transport,
+        }): Parameters<SpawnEntityArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("kind".to_owned(), json!(kind.wire_name()));
+        params.insert("x".to_owned(), json!(x));
+        params.insert("y".to_owned(), json!(y));
+        if let Some(faction) = faction {
+            params.insert("faction".to_owned(), json!(faction));
+        }
+        forward_rpc(
+            &transport,
+            "sim.spawn_entity",
+            Value::Object(params),
+            "civis_spawn_entity",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.diplomacy_action` to civ-server. Propose a treaty,
+    /// declare war, or offer a trade route to a target faction.
+    #[tool(
+        name = "civis_diplomacy_action",
+        description = "Forward sim.diplomacy_action to civ-server. Issue propose_treaty / declare_war / offer_trade against a target faction (FR-CIV-CLIENT-006)."
+    )]
+    async fn civis_diplomacy_action(
+        &self,
+        Parameters(DiplomacyActionArgs {
+            action,
+            target_faction,
+            transport,
+        }): Parameters<DiplomacyActionArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.diplomacy_action",
+            json!({
+                "action": action.wire_name(),
+                "target_faction": target_faction,
+            }),
+            "civis_diplomacy_action",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.queue_research` to civ-server. The bridge validates
+    /// the tech name against the 12 known FR-CIV-SERVER-003 names and
+    /// returns `INVALID_PARAMS` for unknowns.
+    #[tool(
+        name = "civis_research_queue",
+        description = "Forward sim.queue_research to civ-server. Queue one of the 12 known techs (pottery, masonry, writing, iron_working, currency, mathematics, gunpowder, printing, banking, steam_power, electricity, railroad)."
+    )]
+    async fn civis_research_queue(
+        &self,
+        Parameters(QueueResearchArgs { tech, transport }): Parameters<QueueResearchArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.queue_research",
+            json!({ "tech": tech }),
+            "civis_research_queue",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.tech_state` to civ-server. Returns the available,
+    /// researched, and in-progress techs.
+    #[tool(
+        name = "civis_tech_state",
+        description = "Forward sim.tech_state to civ-server. Returns the list of available techs plus the currently-researched and in-progress techs (FR-CIV-SERVER-003)."
+    )]
+    async fn civis_tech_state(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.tech_state", json!({}), "civis_tech_state").map(Json)
+    }
+
+    /// Forward `save.list` to civ-server. Returns the bridge `saves/`
+    /// directory contents (production slot archives).
+    #[tool(
+        name = "civis_save_list",
+        description = "Forward save.list to civ-server. Returns the bridge saves/ directory contents (production slot archives from CIV-1000 §13)."
+    )]
+    async fn civis_save_list(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "save.list", json!({}), "civis_save_list").map(Json)
     }
 }
 

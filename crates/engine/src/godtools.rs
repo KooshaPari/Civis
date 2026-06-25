@@ -129,6 +129,13 @@ pub struct TerraformRequest {
     /// Brush strength — for `Level`, the target height; for
     /// `Raise`/`Lower`, the Δ cap. Must be non-negative.
     pub strength: i32,
+    /// Optional auxiliary id (Phase 3 follow-up). For
+    /// `DropBiome` this is the target material id (the
+    /// "biome paint"). For other ops the field is ignored.
+    /// Defaults to 0 so older serialized requests keep
+    /// deserialising.
+    #[serde(default)]
+    pub aux_id: u32,
 }
 
 /// TERRAIN op kinds. Mirrors the 11 TERRAIN verbs from
@@ -163,6 +170,26 @@ pub enum TerraformOp {
     /// fixed-point units (positive = tilt up toward `+x`).
     /// The CA settles the result next tick.
     Slope,
+    /// `terrain.add_land` — write a chunky band of `STONE`
+    /// above the existing surface in the footprint.
+    /// `strength` is the band thickness in fixed-point units.
+    /// The CA re-settles the result next tick.
+    AddLand,
+    /// `terrain.dig_ocean` — chunky dig-down: for each column
+    /// in the footprint, find the topmost solid voxel; if it
+    /// is above the local sea level, dig down by `strength`
+    /// fixed-point units and fill the resulting cavity with
+    /// `WATER` so the fluid CA can hydrate it next tick.
+    /// `aux_id` is the sea-level band in fixed-point units
+    /// (defaults to `0` for "use the surface as sea level").
+    DigOcean,
+    /// `terrain.drop_biome` — re-paint the topmost solid
+    /// voxel of each (x, z) column in the footprint to the
+    /// material in `aux_id`. The "biome" is encoded as a
+    /// material id so the surface id (SAND, SNOW, GRASS, …)
+    /// is the canonical biome marker that downstream CAs and
+    /// inspectors already understand.
+    DropBiome,
 }
 
 /// MATERIAL verb parameters. Phase 3 ships all 7 MATERIAL ops
@@ -744,6 +771,21 @@ impl Simulation {
             // Phase 3: `terrain.slope` accepts any finite Δ-y
             // (positive tilts up toward `+x`, negative tilts
             // down). No validation needed beyond non-zero radius.
+            TerraformOp::AddLand if req.strength <= 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.add_land strength (band thickness) must be > 0".into(),
+                ));
+            }
+            TerraformOp::DigOcean if req.strength <= 0 => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.dig_ocean strength (dig depth) must be > 0".into(),
+                ));
+            }
+            TerraformOp::DropBiome if req.aux_id == 0 || req.aux_id > u32::from(u8::MAX) => {
+                return Err(GodToolError::InvalidRequest(
+                    "terrain.drop_biome aux_id must be a valid material id (1..=255)".into(),
+                ));
+            }
             _ => {}
         }
 
@@ -920,6 +962,116 @@ impl Simulation {
                                 z: col_z,
                             },
                             STONE,
+                        );
+                        writes = writes.saturating_add(1);
+                    }
+                }
+            }
+            TerraformOp::AddLand => {
+                // Chunky raise: for each (x, z) column in the
+                // footprint, find the topmost solid voxel via
+                // `scan_topmost_y` and write a `STONE` band of
+                // `strength` thickness above it. The CA will
+                // re-settle the band into a stable mass next
+                // tick. We use a hard-edged footprint (no
+                // falloff) so the result is a flat plateau that
+                // matches the in-game "add land" UI.
+                let thickness = req.strength as i64;
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        if dx * dx + dz * dz > r2 {
+                            continue;
+                        }
+                        let col_x = cx + dx * FIXED_SCALE;
+                        let col_z = cz + dz * FIXED_SCALE;
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        for dy in 1..=thickness {
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: col_x,
+                                    y: top_y + dy,
+                                    z: col_z,
+                                },
+                                STONE,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            TerraformOp::DigOcean => {
+                // Chunky dig-down: for each (x, z) column in the
+                // footprint, find the topmost solid voxel; if it
+                // is above the sea-level band (`req.aux_id`
+                // fixed-point units, or `cy` when zero), dig
+                // down by `strength` fixed-point units and fill
+                // the new cavity with `WATER` so the fluid CA
+                // can hydrate it next tick. Columns whose
+                // topmost voxel is at or below the sea-level
+                // band are left untouched (the verb never
+                // deepens an ocean floor; it only carves
+                // landward coastlines).
+                let dig_depth = req.strength as i64;
+                let sea_level = if req.aux_id == 0 {
+                    cy
+                } else {
+                    req.aux_id as i64
+                };
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        if dx * dx + dz * dz > r2 {
+                            continue;
+                        }
+                        let col_x = cx + dx * FIXED_SCALE;
+                        let col_z = cz + dz * FIXED_SCALE;
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        if top_y <= sea_level {
+                            continue;
+                        }
+                        let new_floor = top_y.saturating_sub(dig_depth).max(sea_level);
+                        for y in (new_floor + 1)..=top_y {
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: col_x,
+                                    y,
+                                    z: col_z,
+                                },
+                                WATER,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            TerraformOp::DropBiome => {
+                // Re-paint the topmost solid voxel of each
+                // (x, z) column in the footprint to the material
+                // in `aux_id`. The "biome" is encoded as a
+                // material id (SAND, SNOW, GRASS, …) so the
+                // surface id is the canonical biome marker that
+                // downstream CAs and inspectors already
+                // understand. CA re-settles / propagates the
+                // new surface next tick.
+                let target = MaterialId(req.aux_id as u8);
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        if dx * dx + dz * dz > r2 {
+                            continue;
+                        }
+                        let col_x = cx + dx * FIXED_SCALE;
+                        let col_z = cz + dz * FIXED_SCALE;
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        if top_y == cy {
+                            // Empty column — nothing to paint.
+                            continue;
+                        }
+                        self.push_voxel_write(
+                            WorldCoord {
+                                x: col_x,
+                                y: top_y,
+                                z: col_z,
+                            },
+                            target,
                         );
                         writes = writes.saturating_add(1);
                     }
@@ -2048,5 +2200,168 @@ mod tests {
             } => {}
             other => panic!("expected Material receipt, got {other:?}"),
         }
+    }
+
+    /// `terrain.add_land` must write a `STONE` band of
+    /// `strength` thickness above the existing surface in the
+    /// footprint. The verb reads the topmost solid voxel per
+    /// column via `scan_topmost_y` and writes `STONE` at
+    /// `top_y + 1 ..= top_y + thickness`.
+    #[test]
+    fn terrain_add_land_writes_stone_band_above_surface() {
+        let mut sim = Simulation::new();
+        // Pre-seed a STONE surface at y = FIXED_SCALE in a
+        // 1×1 column at the brush center.
+        let center = WorldCoord {
+            x: 4_000_000,
+            y: 0,
+            z: 4_000_000,
+        };
+        sim.voxel_mut().write(
+            WorldCoord {
+                x: center.x,
+                y: FIXED_SCALE,
+                z: center.z,
+            },
+            STONE,
+        );
+        let thickness = 2 * FIXED_SCALE;
+        let req = GodToolRequest::Terraform(TerraformRequest {
+            op: TerraformOp::AddLand,
+            center,
+            radius_voxels: 1,
+            strength: thickness as i32,
+            aux_id: 0,
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("terrain.add_land should succeed")
+        {
+            GodToolReceipt::Terraform {
+                op: TerraformOp::AddLand,
+                writes,
+            } => writes,
+            other => panic!("expected Terraform receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "add_land must write ≥1 STONE voxel");
+        // Top of the band sits at the original surface y plus
+        // the thickness.
+        assert_eq!(
+            sim.voxel().read(WorldCoord {
+                x: center.x,
+                y: FIXED_SCALE + thickness,
+                z: center.z,
+            }),
+            STONE,
+            "top of the add_land band should be STONE"
+        );
+    }
+
+    /// `terrain.dig_ocean` must carve a `WATER` cavity down to
+    /// the sea-level band in each (x, z) column of the
+    /// footprint. Columns whose topmost solid voxel sits at or
+    /// below the sea level are left untouched.
+    #[test]
+    fn terrain_dig_ocean_writes_water_cavity() {
+        let mut sim = Simulation::new();
+        // Pre-seed a STONE plateau at y = 5*FIXED_SCALE in a
+        // 1×1 column.
+        let center = WorldCoord {
+            x: 6_000_000,
+            y: 0,
+            z: 6_000_000,
+        };
+        let plateau_top = 5 * FIXED_SCALE;
+        sim.voxel_mut().write(
+            WorldCoord {
+                x: center.x,
+                y: plateau_top,
+                z: center.z,
+            },
+            STONE,
+        );
+        // Sea level = 1*FIXED_SCALE. Dig depth = 3*FIXED_SCALE.
+        // Expected new floor = plateau_top - 3*FIXED_SCALE =
+        // 2*FIXED_SCALE. Cells between (new_floor,
+        // plateau_top] become WATER.
+        let req = GodToolRequest::Terraform(TerraformRequest {
+            op: TerraformOp::DigOcean,
+            center,
+            radius_voxels: 1,
+            strength: 3 * FIXED_SCALE as i32,
+            aux_id: FIXED_SCALE as u32,
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("terrain.dig_ocean should succeed")
+        {
+            GodToolReceipt::Terraform {
+                op: TerraformOp::DigOcean,
+                writes,
+            } => writes,
+            other => panic!("expected Terraform receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "dig_ocean must write ≥1 WATER voxel");
+        // The cell at the original plateau top should now be
+        // WATER (the cavity extends up through that y).
+        assert_eq!(
+            sim.voxel().read(WorldCoord {
+                x: center.x,
+                y: plateau_top,
+                z: center.z,
+            }),
+            WATER,
+            "carved cavity should be filled with WATER at the original surface"
+        );
+    }
+
+    /// `terrain.drop_biome` must re-paint the topmost solid
+    /// voxel of each (x, z) column in the footprint to the
+    /// material in `aux_id`. Empty columns are skipped.
+    #[test]
+    fn terrain_drop_biome_paints_topmost_to_biome_material() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 7_000_000,
+            y: 0,
+            z: 7_000_000,
+        };
+        // Pre-seed a STONE surface at y = FIXED_SCALE in a
+        // 1×1 column.
+        sim.voxel_mut().write(
+            WorldCoord {
+                x: center.x,
+                y: FIXED_SCALE,
+                z: center.z,
+            },
+            STONE,
+        );
+        let req = GodToolRequest::Terraform(TerraformRequest {
+            op: TerraformOp::DropBiome,
+            center,
+            radius_voxels: 1,
+            strength: 0,
+            aux_id: u32::from(SAND.0),
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("terrain.drop_biome should succeed")
+        {
+            GodToolReceipt::Terraform {
+                op: TerraformOp::DropBiome,
+                writes,
+            } => writes,
+            other => panic!("expected Terraform receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "drop_biome must write ≥1 voxel");
+        assert_eq!(
+            sim.voxel().read(WorldCoord {
+                x: center.x,
+                y: FIXED_SCALE,
+                z: center.z,
+            }),
+            SAND,
+            "topmost voxel should be re-painted to SAND"
+        );
     }
 }

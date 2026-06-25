@@ -1323,8 +1323,23 @@ pub enum DispatchEffect {
         tech: String,
     },
     /// Apply a god action from the bridge UI.
+    ///
+    /// `FR-CLIENT-godbuttons`: the first click-to-fire button landed in
+    /// PR #762 (`sim.god_action` → `DispatchEffect::GodAction`) and routed
+    /// only the 5 legacy actions (`smite` / `earthquake` / `plague` /
+    /// `bless` / `miracle`). Many more god-tool verbs are now substrate-live
+    /// (`terrain.add_land` / `dig_ocean` / `drop_biome` /
+    /// `material.erase` / `pour_liquid` / `replace` / `surface_paint` /
+    /// `seed_snow` / `seed_ore` / `life.spawn_organism` / `life.spawn_herd`
+    /// / `disaster.wildfire` / `disaster.flood` — see
+    /// `crates/engine/src/godtools.rs` and `crates/powers/src/lib.rs`). The
+    /// Bevy panel can fire any of them through the **same** `sim.god_action`
+    /// JSON-RPC method by populating the optional `radius_voxels`,
+    /// `strength`, `material_id`, `drop_height`, `count`,
+    /// `seed_civilian_id` fields. Legacy 5-action calls keep their existing
+    /// field set; the new fields are `None` by default.
     GodAction {
-        /// Action identifier.
+        /// Action identifier (verb id, e.g. `terrain.add_land`).
         action: String,
         /// Normalized X coordinate, if provided.
         x: Option<f32>,
@@ -1334,6 +1349,27 @@ pub enum DispatchEffect {
         target_faction: Option<u32>,
         /// Optional magnitude slider.
         magnitude: Option<f32>,
+        /// Brush radius in voxels. Defaults to `3` when `None`.
+        /// Honoured by terrain / material / disaster verbs that take a
+        /// spherical footprint. Ignored by LIFE verbs and the legacy
+        /// 5-action set.
+        radius_voxels: Option<u8>,
+        /// Brush strength (verb-specific units). Defaults to `1` for
+        /// additive verbs and to `magnitude × FIXED_SCALE` when `None`
+        /// and `magnitude` is present.
+        strength: Option<i32>,
+        /// Target material id (0–255). Honoured by `material.*` and
+        /// `terrain.drop_biome` verbs; ignored otherwise.
+        material_id: Option<u32>,
+        /// Drop height (fixed-point units above `center.y`). Honoured by
+        /// `material.additive_drop` / `material.pour_liquid`; ignored
+        /// otherwise.
+        drop_height: Option<i32>,
+        /// Agent count for `life.spawn_herd` (defaults to 5).
+        count: Option<u32>,
+        /// Agent id seed for `life.spawn_organism` /
+        /// `life.spawn_civ_seed` (defaults to a tick-derived id).
+        seed_civilian_id: Option<u64>,
     },
 }
 
@@ -1925,7 +1961,11 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             // `sim.god_action` when the user clicks the button. We echo the
             // action and the tick so the HUD can confirm the round trip; the
             // bridge handles the actual `DispatchEffect::GodAction` (smite /
-            // bless / earthquake / plague / miracle).
+            // bless / earthquake / plague / miracle + the new
+            // FR-CLIENT-godbuttons verbs: terrain.add_land / dig_ocean /
+            // drop_biome, material.erase / pour_liquid / replace /
+            // surface_paint / seed_snow / seed_ore, life.spawn_organism /
+            // spawn_herd, disaster.wildfire / flood).
             let action = req
                 .params
                 .as_ref()
@@ -1957,12 +1997,57 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 .and_then(|p| p.get("magnitude"))
                 .and_then(|v| v.as_f64())
                 .map(|f| f as f32);
+            // FR-CLIENT-godbuttons: optional rich params that mirror the
+            // substrate `GodToolRequest` shape. Older clients keep sending
+            // the legacy 5-field shape and the new fields default to
+            // `None`; the ws_bridge then supplies sane per-verb defaults.
+            let radius_voxels = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("radius_voxels"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n.min(u64::from(u8::MAX)) as u8);
+            let strength = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("strength"))
+                .and_then(|v| v.as_i64())
+                .map(|n| n as i32);
+            let material_id = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("material_id"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let drop_height = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("drop_height"))
+                .and_then(|v| v.as_i64())
+                .map(|n| n as i32);
+            let count = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("count"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let seed_civilian_id = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("seed_civilian_id"))
+                .and_then(|v| v.as_u64());
             let result = serde_json::json!({
                 "action": action,
                 "x": x,
                 "y": y,
                 "target_faction": target_faction,
                 "magnitude": magnitude,
+                "radius_voxels": radius_voxels,
+                "strength": strength,
+                "material_id": material_id,
+                "drop_height": drop_height,
+                "count": count,
+                "seed_civilian_id": seed_civilian_id,
                 "accepted": true,
                 "tick": ctx.tick,
             });
@@ -1974,6 +2059,12 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     y,
                     target_faction,
                     magnitude,
+                    radius_voxels,
+                    strength,
+                    material_id,
+                    drop_height,
+                    count,
+                    seed_civilian_id,
                 },
             }
         }

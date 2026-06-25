@@ -80,6 +80,7 @@ pub mod native_backend;
 pub mod native_renderer;
 #[cfg(feature = "bevy")]
 pub mod sim_bridge;
+pub mod session;
 #[cfg(feature = "bevy")]
 pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]

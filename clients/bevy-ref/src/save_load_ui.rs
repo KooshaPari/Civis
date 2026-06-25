@@ -68,7 +68,9 @@ fn render_panel(
         return;
     }
 
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let mut open = panel.visible;
     let mut action: Option<SaveLoadAction> = None;
 
@@ -260,9 +262,10 @@ fn send_load_rpc(bridge: Option<&LiveAttachBridge>, slot: u8, seed: u64) {
         id = 2010 + u32::from(slot)
     );
     bridge.client.send_rpc_raw(load_json);
-    bridge
-        .client
-        .send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
+    let reset_json = format!(
+        r#"{{"jsonrpc":"2.0","id":2020,"method":"sim.reset","params":{{"seed":{seed}}}}}"#
+    );
+    bridge.client.send_rpc_raw(reset_json);
 }
 
 fn send_list_rpc(bridge: Option<&LiveAttachBridge>) {

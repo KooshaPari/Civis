@@ -118,6 +118,8 @@ fn main() {
     app.add_plugins(civ_bevy_ref::info_views::InfoViewsPlugin);
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::inspect::InspectPlugin);
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::entity_inspector::EntityInspectorPlugin);
 
     // Event-feed / toast notifications.
     #[cfg(feature = "egui")]

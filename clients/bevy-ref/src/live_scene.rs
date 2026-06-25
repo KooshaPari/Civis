@@ -20,9 +20,10 @@ use crate::live_minimap::{
 use crate::live_stream::apply_event_feed_frame;
 use crate::live_stream::{
     apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
-    apply_civilian_state_frame, apply_faction_state_frame, apply_voxel_delta_frame,
-    default_stream_meshes, AgentLabelConfig, LiveAgentTag, LiveBuildingTag, LiveChunkFade,
-    LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene, StreamCulling, LIVE_CHUNK_EDGE,
+    apply_civilian_state_frame, apply_climate_frame, apply_faction_state_frame,
+    apply_voxel_delta_frame, default_stream_meshes, AgentLabelConfig, LiveAgentTag,
+    LiveBuildingTag, LiveChunkFade, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
+    StreamCulling, LIVE_CHUNK_EDGE,
 };
 use crate::minimap::{MinimapCamera, MinimapDot, MinimapRoot, MINIMAP_SIZE};
 use crate::{chunk_fade_complete, AttachMode, DebugRender, LiveHudSnapshot};
@@ -135,16 +136,18 @@ fn apply_live_scene_frames(
             ),
             Frame3d::CivilianState(civilian) => apply_civilian_state_frame(&mut scene, civilian),
             Frame3d::FactionState(faction) => apply_faction_state_frame(&mut scene, faction),
+            // FR-CLIENT-render: capture the streamed climate snapshot (was
+            // previously dropped). Sky/lighting consumers in this binary
+            // read it via `latest_climate(&scene)`.
+            Frame3d::Climate(climate) => apply_climate_frame(&mut scene, climate),
             #[cfg(feature = "egui")]
             Frame3d::EventFeed(event_frame) => {
                 if let Some(feed) = event_feed.as_mut() {
                     apply_event_feed_frame(feed, event_frame);
                 }
             }
-            Frame3d::Climate(_) => {}
             #[cfg(not(feature = "egui"))]
             Frame3d::EventFeed(_) => {}
-            Frame3d::Climate(_) => {}
         }
     }
 }

@@ -81,6 +81,11 @@ serde_json = "1"
 # P2 visible-citizen-lifecycle test: the sim-side `hecs::Entity` is the unit
 # we despawn from the in-process sim world. Kept as a dev-dep only.
 hecs = "0.10"
+# Climate-frame apply tests (FR-CLIENT-render) construct a `civ_planet::Climate`
+# + `civ_planet::WeatherCell` so the test can drive the wire-typed `ClimateFrame`
+# end-to-end. `civ-planet` is already a transitive dep of `civ-protocol-3d`,
+# so this is a no-cost dev-dep.
+civ-planet = { path = "../../crates/planet" }
 
 [features]
 default = []

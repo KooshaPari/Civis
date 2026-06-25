@@ -51,6 +51,7 @@ members = [
   "crates/legends",
   "crates/civ-emergence-metrics",
   "crates/civ-institutions",
+  "crates/infra",
   "crates/physics-substrate",
   "crates/audio",
   "clients/bevy-ref",

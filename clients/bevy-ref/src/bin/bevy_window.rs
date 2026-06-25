@@ -287,6 +287,7 @@ fn main() {
             DiplomacyUiPlugin,
             GodPanelPlugin,
             GodActionsPlugin,
+            civ_bevy_ref::frame_budget::FrameBudgetPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
@@ -330,9 +331,6 @@ fn main() {
                 update_hud,
                 update_minimap,
                 update_presentation_lighting,
-            ),
-        )
-        .run();
             ),
         );
 

@@ -154,6 +154,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
+            .init_resource::<GodActionToast>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
             // Holocron motion state is intentionally NOT registered here yet —
@@ -169,7 +170,14 @@ impl Plugin for GameUiPlugin {
             .init_resource::<crate::info_views::InfoViewRegistry>()
             .init_resource::<ToolIcons>()
             .add_systems(Startup, queue_tool_icon_handles)
-            .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
+            .add_systems(
+                Update,
+                (
+                    handle_speed_shortcuts,
+                    handle_category_hotkeys,
+                    tick_god_action_toast,
+                ),
+            )
             // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
             // `load_tool_icons` registers the PNGs as egui textures and must run
             // before `draw_game_ui` consumes them. Bevy 0.18 dropped the
@@ -250,11 +258,91 @@ fn load_tool_icons(
     icons.registered = true;
 }
 
-            .add_plugins(crate::game_laws::GameLawsPlugin)
-            .add_systems(Startup, sync_initial_game_speed_from_settings)
-            .add_systems(Update, handle_speed_shortcuts)
-            .add_systems(EguiPrimaryContextPass, draw_game_ui);
+/// Seconds a god-action result toast stays visible in the HUD.
+pub const GOD_ACTION_TOAST_DURATION_SECS: f32 = 3.0;
+
+/// Transient HUD toast for god-mode action results (P1.2.2).
+#[derive(Resource, Debug, Clone, Default)]
+pub struct GodActionToast {
+    /// Result text shown in the toast card.
+    pub message: String,
+    /// Remaining visible time; `0` means hidden.
+    pub ttl_secs: f32,
+}
+
+impl GodActionToast {
+    /// Show `message` for [`GOD_ACTION_TOAST_DURATION_SECS`].
+    pub fn show(&mut self, message: impl Into<String>) {
+        self.message = message.into();
+        self.ttl_secs = GOD_ACTION_TOAST_DURATION_SECS;
     }
+
+    #[must_use]
+    pub fn visible(&self) -> bool {
+        !self.message.is_empty() && self.ttl_secs > 0.0
+    }
+}
+
+/// Tick down the god-action toast lifetime each frame.
+pub fn tick_god_action_toast(time: Res<Time>, mut toast: ResMut<GodActionToast>) {
+    if toast.ttl_secs <= 0.0 {
+        return;
+    }
+    toast.ttl_secs = (toast.ttl_secs - time.delta_secs()).max(0.0);
+    if toast.ttl_secs <= 0.0 {
+        toast.message.clear();
+    }
+}
+
+/// Bevy system wrapper for [`draw_god_action_toast`] (live attach window).
+pub fn draw_god_action_toast_system(
+    mut contexts: EguiContexts,
+    toast: Res<GodActionToast>,
+) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+    draw_god_action_toast(ctx, &toast);
+}
+
+/// Bottom-right glass card for the latest god-action result.
+pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
+    if !toast.visible() {
+        return;
+    }
+    let alpha_frac = (toast.ttl_secs / GOD_ACTION_TOAST_DURATION_SECS).clamp(0.0, 1.0);
+    let alpha = (alpha_frac * 235.0) as u8;
+    let accent = egui::Color32::from_rgb(126, 186, 181);
+    let fill = egui::Color32::from_rgba_premultiplied(17, 20, 31, alpha.saturating_add(30));
+    let text_color = egui::Color32::from_rgba_unmultiplied(220, 225, 235, alpha);
+    let accent_color = egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
+
+    egui::Area::new(egui::Id::new("civis_god_action_toast"))
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -120.0))
+        .order(egui::Order::Foreground)
+        .interactable(false)
+        .show(ctx, |ui| {
+            ui.set_max_width(340.0);
+            egui::Frame::NONE
+                .fill(fill)
+                .stroke(egui::Stroke::new(1.0, accent_color.gamma_multiply(0.6)))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::symmetric(10, 6))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new("⚡")
+                                .color(accent_color)
+                                .size(16.0),
+                        );
+                        ui.label(
+                            egui::RichText::new(&toast.message)
+                                .color(text_color)
+                                .size(13.0),
+                        );
+                    });
+                });
+        });
 }
 
 #[cfg(feature = "egui")]
@@ -323,6 +411,7 @@ fn draw_game_ui(
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
     mut building_kind: ResMut<BuildingSpawnKind>,
+    god_action_toast: Res<GodActionToast>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -347,6 +436,8 @@ fn draw_game_ui(
         .show(ctx, |ui| {
             tool_palette_ui(ui, &mut active_tool, &mut building_kind, &mut speed);
         });
+
+    draw_god_action_toast(ctx, &god_action_toast);
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).

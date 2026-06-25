@@ -11,11 +11,13 @@ use std::collections::HashSet;
 
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
+use bevy_egui::EguiPrimaryContextPass;
 use civ_protocol_3d::FactionTreasury3d;
 use civ_voxel::material::{AIR, FIRE, LAVA, STONE};
 use civ_voxel::{ChunkId, MaterialId};
 
 use crate::bevy_render::CHUNK_WIREFRAME_LINE_COLOR;
+use crate::game_ui::GodActionToast;
 use crate::god_panel::GodPanelState;
 use crate::live_focus::LiveSceneFocus;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
@@ -56,14 +58,20 @@ impl Plugin for GodActionsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<GodActionRequest>()
             .init_resource::<GodEffectMeshes>()
+            .init_resource::<GodActionToast>()
             .add_systems(
                 Update,
-                (
-                    apply_god_action_requests,
-                    tick_god_effect_flashes,
-                )
+                (apply_god_action_requests, tick_god_effect_flashes)
                     .chain()
                     .run_if(in_game),
+            )
+            .add_systems(
+                Update,
+                crate::game_ui::tick_god_action_toast.run_if(in_game),
+            )
+            .add_systems(
+                EguiPrimaryContextPass,
+                crate::game_ui::draw_god_action_toast_system.run_if(in_game),
             );
     }
 }
@@ -315,6 +323,7 @@ fn apply_god_action_requests(
     mut requests: MessageReader<GodActionRequest>,
     mut scene: ResMut<LiveStreamScene>,
     mut panel: ResMut<GodPanelState>,
+    mut toast: Option<ResMut<GodActionToast>>,
     focus: Res<LiveSceneFocus>,
     debug: Res<DebugRender>,
     effect_meshes: Res<GodEffectMeshes>,
@@ -420,7 +429,10 @@ fn apply_god_action_requests(
             }
             other => format!("Unknown god action: {other}"),
         };
-        panel.status = Some(status);
+        panel.status = Some(status.clone());
+        if let Some(toast) = toast.as_mut() {
+            toast.show(status);
+        }
     }
 }
 

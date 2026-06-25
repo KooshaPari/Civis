@@ -11,8 +11,8 @@ use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    Alignment, Civilian, ClusterMember, Interaction, Needs, Position3d, Psyche, SocialEvent,
-    SocialGraph,
+    cluster_by_colocation, Alignment, Civilian, ClusterId, ClusterMember, Interaction, Needs,
+    Position3d, Psyche, SocialEvent, SocialGraph,
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
@@ -192,13 +192,58 @@ impl Simulation {
         }
     }
 
-    fn emergence_culture(&mut self) {
-        let tick = self.state.tick;
-        let mut cluster_ids: BTreeMap<u64, u32> = BTreeMap::new();
-        for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_ids.entry(member.cluster.0).or_insert(0) += 1;
+    /// Co-location radius for emergent settlement clusters (matches the
+    /// engine's `SETTLEMENT_CLUSTER_RADIUS_FP` = 6% of one world unit).
+    const SETTLEMENT_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
+
+    /// Recompute emergent co-location clusters from live civilian positions and
+    /// stamp each civilian with its current [`ClusterMember`].
+    ///
+    /// This is the "life" rollup the culture phase depends on: civilians that
+    /// settle near one another form a settlement (connected component keyed by
+    /// the minimum agent id). Membership is re-derived every tick from actual
+    /// agent state, so clusters split and merge as the population migrates.
+    fn emergence_recluster(&mut self) {
+        let positions: Vec<(u64, Position3d)> = self
+            .world
+            .query::<(&Civilian, &Position3d)>()
+            .iter()
+            .map(|(_, (civ, pos))| (civ.id, *pos))
+            .collect();
+        if positions.is_empty() {
+            return;
         }
-        for (cluster_id, size) in &cluster_ids {
+        let assignments =
+            cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
+        let by_id: BTreeMap<u64, ClusterId> = assignments.into_iter().collect();
+
+        let entities: Vec<(Entity, u64)> = self
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .map(|(e, c)| (e, c.id))
+            .collect();
+        for (entity, id) in entities {
+            if let Some(cluster) = by_id.get(&id) {
+                let _ = self
+                    .world
+                    .insert_one(entity, ClusterMember { cluster: *cluster });
+            }
+        }
+
+        let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *cluster_member_counts
+                .entry(member.cluster.0)
+                .or_insert(0) += 1;
+        }
+        self.rollup_emergent_settlements(&cluster_member_counts);
+        self.emergence_accrue_cluster_cultures(&cluster_member_counts);
+    }
+
+    /// Form or retain a [`CultureProfile`] for every multi-member settlement cluster.
+    fn emergence_accrue_cluster_cultures(&mut self, cluster_member_counts: &BTreeMap<u64, u32>) {
+        for (cluster_id, size) in cluster_member_counts {
             if *size < 2 {
                 continue;
             }
@@ -214,6 +259,22 @@ impl Simulation {
                     ];
                     CultureProfile::new(seed)
                 });
+        }
+        self.emergence.cluster_cultures.retain(|cluster_id, _| {
+            cluster_member_counts
+                .get(cluster_id)
+                .copied()
+                .unwrap_or(0)
+                >= 2
+        });
+    }
+
+    fn emergence_culture(&mut self) {
+        self.emergence_recluster();
+        let tick = self.state.tick;
+        let mut cluster_ids: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *cluster_ids.entry(member.cluster.0).or_insert(0) += 1;
         }
         let mut profiles: Vec<CultureProfile> =
             self.emergence.cluster_cultures.values().cloned().collect();

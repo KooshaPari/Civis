@@ -1641,6 +1641,8 @@ impl Simulation {
             civilian.age = civilian.age.saturating_add(1);
             if self.state.resources.food.raw > 0 {
                 needs.food = (needs.food + 0.008).min(1.0);
+                self.state.resources.food =
+                    (self.state.resources.food - Fixed::from_num(1)).max(Fixed::ZERO);
             } else {
                 needs.food = (needs.food - 0.03).max(0.0);
             }
@@ -1680,6 +1682,7 @@ impl Simulation {
 
         let births_count = self.last_births.len() as u64;
         let deaths_count = self.last_deaths.len() as u64;
+        self.last_life_deaths = deaths_count as u32;
         self.state.population = self.state.population.saturating_add(births_count);
         self.state.population = self.state.population.saturating_sub(deaths_count);
     }
@@ -2023,6 +2026,34 @@ impl Simulation {
         let mut stock = ClusterStocks::default();
         stock.add(Good::Food, food);
         self.cluster_stocks.insert(cluster_id, stock);
+    }
+
+    /// HUD settlement projection + per-cluster commons from live co-location clusters.
+    pub(crate) fn rollup_emergent_settlements(
+        &mut self,
+        cluster_member_counts: &BTreeMap<u64, u32>,
+    ) {
+        let mut settlement_ids = Vec::new();
+        for (cluster_id, size) in cluster_member_counts {
+            if *size >= SETTLEMENT_MIN_MEMBERS {
+                settlement_ids.push(*cluster_id);
+            }
+        }
+        self.last_settlement_count = settlement_ids.len() as u32;
+
+        self.cluster_stocks
+            .retain(|id, _| settlement_ids.contains(id));
+        for cluster_id in settlement_ids {
+            let size = cluster_member_counts
+                .get(&cluster_id)
+                .copied()
+                .unwrap_or(0);
+            let production = i64::from(size) * CLUSTER_FOOD_PRODUCTION_PER_MEMBER;
+            let consumption = i64::from(size) * CLUSTER_FOOD_CONSUMPTION_PER_MEMBER;
+            let stock = self.cluster_stocks.entry(cluster_id).or_default();
+            stock.add(Good::Food, production);
+            stock.add(Good::Food, -consumption);
+        }
     }
 }
 

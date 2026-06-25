@@ -97,12 +97,23 @@ pub struct FrameBudgetMetrics {
     pub max_frame_ms: f32,
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 struct FrameBudgetState {
     window: [f32; FRAME_BUDGET_WINDOW],
     index: usize,
     filled: usize,
     last_warn_at: Option<f64>,
+}
+
+impl Default for FrameBudgetState {
+    fn default() -> Self {
+        Self {
+            window: [0.0; FRAME_BUDGET_WINDOW],
+            index: 0,
+            filled: 0,
+            last_warn_at: None,
+        }
+    }
 }
 
 #[derive(Resource, Default)]
@@ -156,8 +167,9 @@ fn enforce_frame_budget(
     metrics.frame_count = metrics.frame_count.saturating_add(1);
     metrics.max_frame_ms = metrics.max_frame_ms.max(frame_ms);
 
-    state.window[state.index] = frame_ms;
-    state.index = (state.index + 1) % FRAME_BUDGET_WINDOW;
+    let index = state.index;
+    state.window[index] = frame_ms;
+    state.index = (index + 1) % FRAME_BUDGET_WINDOW;
     if state.filled < FRAME_BUDGET_WINDOW {
         state.filled += 1;
     }

@@ -67,7 +67,7 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Sets terrain height to a picked target value across footprint.", PowerRequestKind::TerraformEdit),
     def_live("terrain.smooth", "Smooth", PowerTab::Terrain, PowerCategory::Mutating,
         "Averages neighbour heights under footprint; 3×3×3 window.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.slope", "Slope", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.slope", "Slope", PowerTab::Terrain, PowerCategory::Mutating,
         "Tilts height field toward a 2-click anchor gradient.", PowerRequestKind::TerraformEdit),
     def_near("terrain.flatten", "Flatten", PowerTab::Terrain, PowerCategory::Mutating,
         "Sets height equal to the majority surface under footprint.", PowerRequestKind::TerraformEdit),
@@ -83,21 +83,21 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Re-paints the surface material band to a chosen biome id.", PowerRequestKind::TerraformEdit),
 
     // ===================== MATERIAL (8) =====================
-    def_near("material.replace", "Replace", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.replace", "Replace", PowerTab::Material, PowerCategory::Mutating,
         "Sets voxels in footprint to selected material to depth.", PowerRequestKind::MaterialEdit),
-    def_near("material.additive_drop", "AdditiveDrop", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.additive_drop", "AdditiveDrop", PowerTab::Material, PowerCategory::Mutating,
         "Spawns material above the target; CA carries it down.", PowerRequestKind::MaterialEdit),
-    def_near("material.erase", "Erase", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.erase", "Erase", PowerTab::Material, PowerCategory::Mutating,
         "Writes Air/Empty to depth in footprint.", PowerRequestKind::MaterialEdit),
-    def_near("material.surface_paint", "SurfacePaint", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.surface_paint", "SurfacePaint", PowerTab::Material, PowerCategory::Mutating,
         "Writes material only on the topmost solid voxel per (x, z).", PowerRequestKind::MaterialEdit),
-    def_near("material.pour_liquid", "PourLiquid", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.pour_liquid", "PourLiquid", PowerTab::Material, PowerCategory::Mutating,
         "Spawns a flowing liquid at cursor + spreads via CA.", PowerRequestKind::MaterialEdit),
     def_near("material.seed_forest", "SeedForest", PowerTab::Material, PowerCategory::Mutating,
         "Spawns a herd of plant agents with seed-genome near footprint.", PowerRequestKind::ActorSpawn),
-    def_near("material.seed_ore", "SeedOreDeposit", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.seed_ore", "SeedOreDeposit", PowerTab::Material, PowerCategory::Mutating,
         "Writes a stochastic ore vein into the ore-density CA field.", PowerRequestKind::MaterialEdit),
-    def_near("material.seed_snow", "SeedSnow", PowerTab::Material, PowerCategory::Mutating,
+    def_live("material.seed_snow", "SeedSnow", PowerTab::Material, PowerCategory::Mutating,
         "Writes Snow voxels above the local snowline; thermo CA melts.", PowerRequestKind::MaterialEdit),
 
     // ===================== LIFE (8) =====================
@@ -333,16 +333,12 @@ mod tests {
         }
     }
 
-    /// Phase 1 names the 3-5 highest-value verbs explicitly: 3
-    /// TERRAIN ops (raise/lower/level), 1 LIFE (spawn_organism), 1
-    /// DISASTER (meteor), 1 INSPECT (probe). All marked `Live`.
-    ///
-    /// Phase 2 promotes 10 more verbs from `Near` to `Live` by
-    /// landing their substrate handlers in `civ-engine`:
-    /// `terrain.smooth`, `terrain.raise_mountain`,
-    /// `life.spawn_herd`, `life.bless`, `life.curse`, `life.heal`,
-    /// `life.extinct`, `disaster.flood`, `disaster.quake`,
-    /// `disaster.firestorm`.
+    /// Phase 3 promotes 8 more verbs from `Near` to `Live` by
+    /// landing their substrate handlers in `civ-engine`: the
+    /// 7 MATERIAL ops (`material.erase`, `material.replace`,
+    /// `material.surface_paint`, `material.additive_drop`,
+    /// `material.pour_liquid`, `material.seed_snow`,
+    /// `material.seed_ore`) and the `terrain.slope` TERRAIN op.
     #[test]
     fn phase1_live_verbs_are_present() {
         let live: Vec<&'static str> = default_powers()
@@ -369,17 +365,26 @@ mod tests {
             "disaster.flood",
             "disaster.quake",
             "disaster.firestorm",
+            // Phase 3 (8 more: 7 MATERIAL + 1 TERRAIN).
+            "material.erase",
+            "material.replace",
+            "material.surface_paint",
+            "material.additive_drop",
+            "material.pour_liquid",
+            "material.seed_snow",
+            "material.seed_ore",
+            "terrain.slope",
         ] {
             assert!(
                 live.contains(&expected),
-                "Phase 1/2 verb `{expected}` must be marked Live in the catalog (got {live:?})"
+                "Phase 1/2/3 verb `{expected}` must be marked Live in the catalog (got {live:?})"
             );
         }
-        // 6 (Phase 1) + 10 (Phase 2) = 16 Live verbs.
+        // 6 (Phase 1) + 10 (Phase 2) + 8 (Phase 3) = 24 Live verbs.
         assert_eq!(
             live.len(),
-            16,
-            "expected exactly 16 Live verbs after Phase 2 (6 Phase 1 + 10 Phase 2), got {} ({live:?})",
+            24,
+            "expected exactly 24 Live verbs after Phase 3 (6 + 10 + 8), got {} ({live:?})",
             live.len()
         );
     }

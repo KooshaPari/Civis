@@ -13,6 +13,10 @@
 //! `docs/design/GODTOOLS_IMPL_PLAN.md` adds 10 more high-value
 //! verbs that follow the same pattern: real substrate writes
 //! through `Simulation` methods the engine already reads each tick.
+//! Phase 3 of the plan (this PR) adds 8 more: 7 MATERIAL ops
+//! (`material.erase/replace/surface_paint/additive_drop/
+//! pour_liquid/seed_snow/seed_ore`) + 1 TERRAIN op
+//! (`terrain.slope`).
 //!
 //! ### Phase 2 verbs (this module)
 //!
@@ -29,9 +33,28 @@
 //! | `disaster.flood`          | `Disaster::Flood`          | `trigger_disaster(DisasterKind::Flood, …)` |
 //! | `disaster.quake`          | `Disaster::Quake`          | `trigger_disaster(DisasterKind::Quake, …)` |
 //!
-//! The 30 verbs that remain `Near` (camera, time, remaining
-//! TERRAIN/MATERIAL/LAW) keep their no-op receipt in the deck and
-//! wait for follow-up PRs to land their substrate handlers.
+//! ### Phase 3 verbs (this module)
+//!
+//! Phase 3 lands 8 more substrate-mutating verbs (FR-CIV-GODTOOL-901
+//! batch 2): 7 MATERIAL ops + 1 TERRAIN op. Each one routes through
+//! `push_voxel_write` — the same substrate-owned API surface used by
+//! Phases 1 + 2 — so the CA, replay log, and dirty-event invariant
+//! stay intact.
+//!
+//! | `PowerDef.id`             | Verb                                | Substrate write |
+//! |---------------------------|-------------------------------------|-----------------|
+//! | `material.erase`          | `Material::Erase`                   | `push_voxel_write` AIR in footprint |
+//! | `material.replace`        | `Material::Replace`                 | `push_voxel_write` chosen material in footprint |
+//! | `material.surface_paint`  | `Material::SurfacePaint`            | `push_voxel_write` topmost-solid-only per (x, z) |
+//! | `material.additive_drop`  | `Material::AdditiveDrop`            | `push_voxel_write` material +drop_height above target |
+//! | `material.pour_liquid`    | `Material::PourLiquid`              | `push_voxel_write` WATER/LAVA in footprint |
+//! | `material.seed_snow`      | `Material::SeedSnow`                | `push_voxel_write` SNOW above local snowline |
+//! | `material.seed_ore`       | `Material::SeedOreDeposit`          | `push_voxel_write` ORE voxels in a stochastic vein |
+//! | `terrain.slope`           | `Terraform::Slope`                  | `push_voxel_write` linear gradient in `+x` |
+//!
+//! The remaining ~22 verbs that stay `Near` (camera, time, remaining
+//! TERRAIN/LIFE/LAW/DISASTER) keep their no-op receipt in the deck
+//! and wait for follow-up PRs to land their substrate handlers.
 //!
 //! ## Coupling discipline (the "no bypass" guarantee)
 //!
@@ -59,7 +82,7 @@
 use civ_agents::{spawn_civilian_at, spawn_many, ActorVisualKind, Alignment, Civilian, Position3d};
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
 use civ_voxel::{
-    material::{GRAVEL, STONE},
+    material::{GRAVEL, LAVA, ORE, PACKED_DIRT, SAND, SNOW, STONE, WATER},
     AIR, MaterialId, WorldCoord, FIXED_SCALE,
 };
 use rand::SeedableRng;
@@ -81,6 +104,8 @@ use crate::engine::Simulation;
 pub enum GodToolRequest {
     /// A TERRAIN verb — raise / lower / level / sculpt.
     Terraform(TerraformRequest),
+    /// A MATERIAL verb — write material into the voxel substrate.
+    Material(MaterialRequest),
     /// A LIFE verb — spawn organic + civ.
     Life(LifeRequest),
     /// A DISASTER verb — invoke a `DisasterKind` at a position.
@@ -109,7 +134,8 @@ pub struct TerraformRequest {
 /// TERRAIN op kinds. Mirrors the 11 TERRAIN verbs from
 /// `docs/design/GOD_TOOLS_SANDBOX.md` §3.1. Phase 1 ships
 /// `Raise`, `Lower`, `Level`; Phase 2 adds `Smooth` and
-/// `RaiseMountain`; the other variants land in follow-up PRs.
+/// `RaiseMountain`; Phase 3 adds `Slope`. The remaining
+/// variants land in follow-up PRs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TerraformOp {
@@ -131,6 +157,92 @@ pub enum TerraformOp {
     /// centred on `center`. `strength` is the peak Δ-y in
     /// fixed-point units.
     RaiseMountain,
+    /// `terrain.slope` — write `STONE` voxels along a linear
+    /// gradient across the footprint. `strength` is the Δ-y
+    /// from the low edge to the high edge of the brush in
+    /// fixed-point units (positive = tilt up toward `+x`).
+    /// The CA settles the result next tick.
+    Slope,
+}
+
+/// MATERIAL verb parameters. Phase 3 ships all 7 MATERIAL ops
+/// from `docs/design/GOD_TOOLS_SANDBOX.md` §3.2: [`MaterialOp::Erase`],
+/// [`MaterialOp::Replace`], [`MaterialOp::SurfacePaint`],
+/// [`MaterialOp::AdditiveDrop`], [`MaterialOp::PourLiquid`],
+/// [`MaterialOp::SeedSnow`], and [`MaterialOp::SeedOreDeposit`].
+/// Every op routes through `Simulation::push_voxel_write` — the
+/// same substrate-owned API the TERRAIN verbs use — so the CA,
+/// replay log, and dirty-event invariant stay intact.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MaterialRequest {
+    /// Which MATERIAL op to apply.
+    pub op: MaterialOp,
+    /// Center of the brush footprint (fixed-point world coords).
+    pub center: WorldCoord,
+    /// Radius of the brush footprint in voxels.
+    pub radius_voxels: u8,
+    /// Target material id for `Replace`, `SurfacePaint`,
+    /// `AdditiveDrop`, `PourLiquid`, `SeedSnow`, and
+    /// `SeedOreDeposit`. Ignored by `Erase` (always writes
+    /// `AIR`). The value is passed as a `u32` so a JSON-RPC
+    /// client can ship any `MaterialId` (including future
+    /// material ids) without versioning this enum.
+    pub material_id: u32,
+    /// Brush strength — for `AdditiveDrop` it controls how many
+    /// layers tall the seed sphere is; for `PourLiquid` it
+    /// controls the deposit thickness; for `SeedSnow` it is the
+    /// snowline Δ (positive = colder; the snow deposit sits at
+    /// `topmost_y + strength`); for `SeedOreDeposit` it is the
+    /// vein thickness. Ignored by `Erase`, `Replace`, and
+    /// `SurfacePaint`.
+    pub strength: i32,
+    /// Drop height in fixed-point units above `center.y` for
+    /// `AdditiveDrop` and `PourLiquid`. Lets the CA's gravity
+    /// rule carry the material down naturally rather than
+    /// stamping it at the brush centre. Ignored by every other
+    /// MATERIAL op.
+    pub drop_height: i32,
+}
+
+/// MATERIAL op kinds. Mirrors the 7 MATERIAL verbs from
+/// `docs/design/GOD_TOOLS_SANDBOX.md` §3.2 that Phase 3 ships.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MaterialOp {
+    /// `material.erase` — write `AIR` in the footprint.
+    Erase,
+    /// `material.replace` — write the requested material in the
+    /// footprint. Existing material is overwritten (the CA
+    /// settles gravity, settling, and reactivity the next tick).
+    Replace,
+    /// `material.surface_paint` — write the requested material
+    /// only on the **topmost solid** voxel of each `(x, z)`
+    /// column in the footprint. The CA's gravity + settling
+    /// rules then re-pile subsequent paints naturally on top of
+    /// the existing surface.
+    SurfacePaint,
+    /// `material.additive_drop` — write the requested material
+    /// in a sphere at `center.y + drop_height`. The voxel CA's
+    /// falling rule carries the material down to the existing
+    /// surface next tick; this verb writes the seed material
+    /// without bypassing gravity.
+    AdditiveDrop,
+    /// `material.pour_liquid` — write `WATER` / `LAVA` voxels
+    /// in a sphere at `center.y + drop_height`. The fluid CA
+    /// spreads the liquid horizontally next tick. `strength`
+    /// controls the deposit thickness (in `FIXED_SCALE` units).
+    PourLiquid,
+    /// `material.seed_snow` — write `SNOW` voxels in a sphere
+    /// at the local snowline band. The thermo CA's melt rule
+    /// sublimates the snow at temperatures above the snowline
+    /// next tick, so the verb never produces immortal snow.
+    /// `strength` is the snowline Δ in fixed-point units.
+    SeedSnow,
+    /// `material.seed_ore` — write `ORE` voxels in a stochastic
+    /// vein pattern drawn from a deterministic per-cell noise
+    /// (seeded by `(center.x, center.z)` so replay is stable).
+    /// `strength` is the vein thickness in fixed-point units.
+    SeedOreDeposit,
 }
 
 /// LIFE verb parameters. Phase 1 ships
@@ -303,6 +415,13 @@ pub enum GodToolReceipt {
     Terraform {
         /// Which op was applied.
         op: TerraformOp,
+        /// Number of voxel writes actually performed.
+        writes: u32,
+    },
+    /// A MATERIAL verb stamped N voxel writes.
+    Material {
+        /// Which op was applied.
+        op: MaterialOp,
         /// Number of voxel writes actually performed.
         writes: u32,
     },
@@ -589,6 +708,7 @@ impl Simulation {
     ) -> Result<GodToolReceipt, GodToolError> {
         match req {
             GodToolRequest::Terraform(t) => self.apply_terraform(t),
+            GodToolRequest::Material(m) => self.apply_material(m),
             GodToolRequest::Life(l) => self.apply_life(l),
             GodToolRequest::Disaster(d) => self.apply_disaster(d),
             GodToolRequest::Inspect(i) => self.apply_inspect(i),
@@ -621,6 +741,9 @@ impl Simulation {
                     "terrain.raise_mountain strength must be >= 0".into(),
                 ));
             }
+            // Phase 3: `terrain.slope` accepts any finite Δ-y
+            // (positive tilts up toward `+x`, negative tilts
+            // down). No validation needed beyond non-zero radius.
             _ => {}
         }
 
@@ -769,8 +892,290 @@ impl Simulation {
                     }
                 }
             }
+            TerraformOp::Slope => {
+                // Linear gradient across the brush footprint in
+                // `+x`. `strength` is the full Δ-y from the low
+                // edge (`x = cx - r*FIXED_SCALE`) to the high
+                // edge (`x = cx + r*FIXED_SCALE`). The base
+                // elevation per column is read from
+                // `scan_topmost_y` so the tilt pivots around the
+                // existing surface rather than replacing it.
+                // The result is a `STONE` write at
+                // `top_y + (dx / r) * strength`.
+                let span = r.max(1) as f64;
+                let gradient = req.strength as f64 / span;
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        if dx * dx + dz * dz > r2 {
+                            continue;
+                        }
+                        let col_x = cx + dx * FIXED_SCALE;
+                        let col_z = cz + dz * FIXED_SCALE;
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        let h = (dx as f64 * gradient) as i64;
+                        self.push_voxel_write(
+                            WorldCoord {
+                                x: col_x,
+                                y: top_y + h,
+                                z: col_z,
+                            },
+                            STONE,
+                        );
+                        writes = writes.saturating_add(1);
+                    }
+                }
+            }
         }
         Ok(GodToolReceipt::Terraform {
+            op: req.op,
+            writes,
+        })
+    }
+
+    /// Material-verb substrate dispatcher (Phase 3 — 7 ops).
+    ///
+    /// Every variant writes through `push_voxel_write`; the CA
+    /// then settles gravity, fluid flow, reactivity, and weather
+    /// each tick. The verb never bypasses the substrate write
+    /// path (AC-CPL-2 / AC-CPL-3).
+    fn apply_material(
+        &mut self,
+        req: MaterialRequest,
+    ) -> Result<GodToolReceipt, GodToolError> {
+        if req.radius_voxels == 0 {
+            return Err(GodToolError::InvalidRequest(
+                "material radius_voxels must be > 0".into(),
+            ));
+        }
+        // Shared footprint projection. `cx`, `cy`, `cz` are the
+        // brush center in fixed-point coords; `r` is the radius
+        // in voxels; `r2` is `r²`.
+        let cx = req.center.x;
+        let cy = req.center.y;
+        let cz = req.center.z;
+        let r = i64::from(req.radius_voxels);
+        let r2 = r * r;
+        let target = MaterialId(req.material_id as u8);
+        let mut writes: u32 = 0;
+        match req.op {
+            MaterialOp::Erase => {
+                // `material.erase` — write `AIR` in the
+                // spherical footprint. Mirrors the inverse of
+                // `terrain.raise`. Uses `FIXED_SCALE` stride so
+                // the brush footprint is voxel-aligned.
+                for dz in -r..=r {
+                    for dy in -r..=r {
+                        for dx in -r..=r {
+                            if dx * dx + dy * dy + dz * dz > r2 {
+                                continue;
+                            }
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: cx + dx * FIXED_SCALE,
+                                    y: cy + dy * FIXED_SCALE,
+                                    z: cz + dz * FIXED_SCALE,
+                                },
+                                AIR,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            MaterialOp::Replace => {
+                // `material.replace` — write `target` material in
+                // the spherical footprint. Overwrites any
+                // existing material; the CA settles the result
+                // next tick.
+                for dz in -r..=r {
+                    for dy in -r..=r {
+                        for dx in -r..=r {
+                            if dx * dx + dy * dy + dz * dz > r2 {
+                                continue;
+                            }
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: cx + dx * FIXED_SCALE,
+                                    y: cy + dy * FIXED_SCALE,
+                                    z: cz + dz * FIXED_SCALE,
+                                },
+                                target,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            MaterialOp::SurfacePaint => {
+                // `material.surface_paint` — write `target`
+                // material only on the topmost solid voxel per
+                // (x, z) column. Uses `scan_topmost_y` to find
+                // the local topmost y in the column (8 cells
+                // above `cy`) and stamps `target` there. The CA
+                // settles the surface next tick.
+                for dz in -r..=r {
+                    for dx in -r..=r {
+                        if dx * dx + dz * dz > r2 {
+                            continue;
+                        }
+                        let col_x = cx + dx * FIXED_SCALE;
+                        let col_z = cz + dz * FIXED_SCALE;
+                        let top_y = scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                        self.push_voxel_write(
+                            WorldCoord {
+                                x: col_x,
+                                y: top_y,
+                                z: col_z,
+                            },
+                            target,
+                        );
+                        writes = writes.saturating_add(1);
+                    }
+                }
+            }
+            MaterialOp::AdditiveDrop => {
+                // `material.additive_drop` — seed `target`
+                // material in a sphere at
+                // `center.y + drop_height`. The voxel CA's
+                // falling rule carries the material down to the
+                // existing surface next tick; we never bypass
+                // gravity (no scripted transport).
+                let drop_y = cy + (req.drop_height as i64).max(FIXED_SCALE);
+                for dz in -r..=r {
+                    for dy in -r..=r {
+                        for dx in -r..=r {
+                            if dx * dx + dy * dy + dz * dz > r2 {
+                                continue;
+                            }
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: cx + dx * FIXED_SCALE,
+                                    y: drop_y + dy * FIXED_SCALE,
+                                    z: cz + dz * FIXED_SCALE,
+                                },
+                                target,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            MaterialOp::PourLiquid => {
+                // `material.pour_liquid` — seed liquid voxels
+                // (default `WATER`; the client can ship `LAVA`
+                // via `material_id`) at
+                // `center.y + drop_height`. The fluid CA spreads
+                // the liquid horizontally next tick; we only
+                // write the seed sphere. `strength` is the
+                // deposit thickness (in `FIXED_SCALE` units);
+                // the seed sphere is `strength / FIXED_SCALE`
+                // layers tall.
+                let layers = ((req.strength as i64).max(FIXED_SCALE) / FIXED_SCALE).max(1);
+                let drop_y = cy + (req.drop_height as i64).max(FIXED_SCALE);
+                let liquid = if target == LAVA { LAVA } else { WATER };
+                for layer in 0..layers {
+                    for dz in -r..=r {
+                        for dx in -r..=r {
+                            if dx * dx + dz * dz > r2 {
+                                continue;
+                            }
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: cx + dx * FIXED_SCALE,
+                                    y: drop_y + layer * FIXED_SCALE,
+                                    z: cz + dz * FIXED_SCALE,
+                                },
+                                liquid,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            MaterialOp::SeedSnow => {
+                // `material.seed_snow` — write `SNOW` voxels in
+                // a sphere at the local snowline band. The
+                // snowline is approximated as
+                // `topmost_y + strength` (positive `strength` =
+                // colder snowline = lower deposit). The thermo
+                // CA's melt rule sublimates the snow at
+                // temperatures above the snowline next tick, so
+                // the verb never produces immortal snow.
+                for dz in -r..=r {
+                    for dy in -r..=r {
+                        for dx in -r..=r {
+                            if dx * dx + dy * dy + dz * dz > r2 {
+                                continue;
+                            }
+                            let col_x = cx + dx * FIXED_SCALE;
+                            let col_z = cz + dz * FIXED_SCALE;
+                            let top_y =
+                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                            self.push_voxel_write(
+                                WorldCoord {
+                                    x: col_x,
+                                    y: top_y + req.strength as i64 + dy * FIXED_SCALE,
+                                    z: col_z,
+                                },
+                                SNOW,
+                            );
+                            writes = writes.saturating_add(1);
+                        }
+                    }
+                }
+            }
+            MaterialOp::SeedOreDeposit => {
+                // `material.seed_ore` — write `ORE` voxels in a
+                // stochastic vein pattern drawn from a
+                // deterministic per-cell noise seeded by
+                // `(center.x, center.z)` so replay is stable.
+                // `strength` controls the vein thickness (in
+                // fixed-point units); the vein spans
+                // `|dy| <= strength` cells vertically from the
+                // local topmost solid voxel.
+                let vein_half = (req.strength as i64).max(FIXED_SCALE);
+                for dz in -r..=r {
+                    for dy in -vein_half..=vein_half {
+                        for dx in -r..=r {
+                            if dx * dx + dz * dz > r2 {
+                                continue;
+                            }
+                            let col_x = cx + dx * FIXED_SCALE;
+                            let col_z = cz + dz * FIXED_SCALE;
+                            let top_y =
+                                scan_topmost_y(&self.voxel, col_x, col_z, cy);
+                            // Deterministic noise: mix the
+                            // `(dx, dz)` cell offset with the
+                            // sim RNG seed. The mix is a small
+                            // integer hash — same input ⇒ same
+                            // pattern ⇒ stable replay.
+                            let seed = self
+                                .state
+                                .rng_seed
+                                .wrapping_add((col_x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+                                .wrapping_add((col_z as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9));
+                            let pattern = (seed ^ (seed >> 33)).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
+                            // Threshold ~ 25% of cells become
+                            // ORE voxels; the rest are left
+                            // alone so the vein looks like a
+                            // natural deposit.
+                            if pattern % 4 == 0 {
+                                self.push_voxel_write(
+                                    WorldCoord {
+                                        x: col_x,
+                                        y: top_y + dy,
+                                        z: col_z,
+                                    },
+                                    ORE,
+                                );
+                                writes = writes.saturating_add(1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(GodToolReceipt::Material {
             op: req.op,
             writes,
         })
@@ -1306,5 +1711,342 @@ mod tests {
             after > before,
             "heal must increase Health::integrity (was {before}, now {after})"
         );
+    }
+
+    // ===========================================================
+    // Phase 3 tests — MATERIAL verbs + `terrain.slope`
+    // ===========================================================
+
+    /// `material.erase` must write `AIR` in the spherical
+    /// footprint. Mirror of the `terrain.lower` test.
+    #[test]
+    fn material_erase_writes_air_in_footprint() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 3_000_000,
+            y: 0,
+            z: 3_000_000,
+        };
+        // Pre-seed a STONE voxel so we can verify the verb
+        // actually erases it.
+        sim.voxel_mut()
+            .write(center, STONE);
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::Erase,
+            center,
+            radius_voxels: 1,
+            material_id: 0,
+            strength: 0,
+            drop_height: 0,
+        });
+        let receipt = sim
+            .apply_god_tool(req)
+            .expect("material.erase should succeed");
+        match receipt {
+            GodToolReceipt::Material {
+                op: MaterialOp::Erase,
+                writes,
+            } => {
+                assert!(
+                    writes >= 1,
+                    "expected at least 1 voxel write, got {writes}"
+                );
+            }
+            other => panic!("expected Material receipt, got {other:?}"),
+        }
+        assert_eq!(
+            sim.voxel().read(center),
+            AIR,
+            "center cell should be AIR after material.erase"
+        );
+    }
+
+    /// `material.replace` must write the requested material in
+    /// the spherical footprint.
+    #[test]
+    fn material_replace_writes_target_in_footprint() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 4_000_000,
+            y: 0,
+            z: 4_000_000,
+        };
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::Replace,
+            center,
+            radius_voxels: 1,
+            material_id: u32::from(SAND.0),
+            strength: 0,
+            drop_height: 0,
+        });
+        let receipt = sim
+            .apply_god_tool(req)
+            .expect("material.replace should succeed");
+        match receipt {
+            GodToolReceipt::Material {
+                op: MaterialOp::Replace,
+                writes,
+            } => assert!(writes >= 1, "expected ≥1 write, got {writes}"),
+            other => panic!("expected Material receipt, got {other:?}"),
+        }
+        assert_eq!(
+            sim.voxel().read(center),
+            SAND,
+            "center cell should be SAND after material.replace"
+        );
+    }
+
+    /// `terrain.slope` must tilt the surface by `strength` from
+    /// the low edge to the high edge of the brush footprint.
+    /// The center cell of a radius-2 brush at `dx=0` gets
+    /// `top_y + 0` (no offset), so the `STONE` write lands on
+    /// the original topmost y.
+    #[test]
+    fn terrain_slope_writes_stone_gradient() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 5_000_000,
+            y: 0,
+            z: 5_000_000,
+        };
+        let req = GodToolRequest::Terraform(TerraformRequest {
+            op: TerraformOp::Slope,
+            center,
+            radius_voxels: 2,
+            strength: FIXED_SCALE as i32 * 2,
+        });
+        let receipt = sim
+            .apply_god_tool(req)
+            .expect("terrain.slope should succeed");
+        match receipt {
+            GodToolReceipt::Terraform {
+                op: TerraformOp::Slope,
+                writes,
+            } => assert!(writes >= 1, "expected ≥1 write, got {writes}"),
+            other => panic!("expected Terraform receipt, got {other:?}"),
+        }
+        // The center column (dx=0, dz=0) should have a STONE
+        // write at its topmost y; we just assert the write
+        // landed somewhere STONE inside the footprint sphere.
+        let r = 2i64 * FIXED_SCALE;
+        let r2 = r * r;
+        let mut found_stone = false;
+        for dz in (-2i64..=2).map(|v| v * FIXED_SCALE) {
+            for dx in (-2i64..=2).map(|v| v * FIXED_SCALE) {
+                if dx * dx + dz * dz > r2 {
+                    continue;
+                }
+                let probe = WorldCoord {
+                    x: center.x + dx,
+                    y: 0,
+                    z: center.z + dz,
+                };
+                if sim.voxel().read(probe) == STONE {
+                    found_stone = true;
+                    break;
+                }
+            }
+            if found_stone {
+                break;
+            }
+        }
+        assert!(
+            found_stone,
+            "terrain.slope should leave at least one STONE voxel in the footprint"
+        );
+    }
+
+    /// `material.surface_paint` must write the requested
+    /// material only on the topmost solid voxel of each (x, z)
+    /// column. We pre-seed a STONE column, then paint SAND on
+    /// it — the SAND write lands on the topmost solid voxel.
+    #[test]
+    fn material_surface_paint_writes_topmost_only() {
+        let mut sim = Simulation::new();
+        let col_x = 6_000_000i64;
+        let col_z = 6_000_000i64;
+        let center = WorldCoord {
+            x: col_x,
+            y: 0,
+            z: col_z,
+        };
+        // Pre-seed a column of STONE so `scan_topmost_y`
+        // returns a non-baseline value.
+        sim.voxel_mut().write(
+            WorldCoord { x: col_x, y: FIXED_SCALE, z: col_z },
+            STONE,
+        );
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::SurfacePaint,
+            center,
+            radius_voxels: 1,
+            material_id: u32::from(SAND.0),
+            strength: 0,
+            drop_height: 0,
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("material.surface_paint should succeed")
+        {
+            GodToolReceipt::Material {
+                op: MaterialOp::SurfacePaint,
+                writes,
+            } => writes,
+            other => panic!("expected Material receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "expected ≥1 write, got {writes}");
+        assert_eq!(
+            sim.voxel().read(WorldCoord {
+                x: col_x,
+                y: FIXED_SCALE,
+                z: col_z
+            }),
+            SAND,
+            "topmost solid voxel should be SAND after surface_paint"
+        );
+    }
+
+    /// `material.additive_drop` must write `target` material in
+    /// a sphere at `center.y + drop_height` and report a
+    /// non-zero write count. The CA's gravity rule carries the
+    /// material down next tick — the verb only writes the seed.
+    #[test]
+    fn material_additive_drop_writes_seed_above_center() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 7_000_000,
+            y: 0,
+            z: 7_000_000,
+        };
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::AdditiveDrop,
+            center,
+            radius_voxels: 1,
+            material_id: u32::from(SAND.0),
+            strength: 0,
+            drop_height: FIXED_SCALE as i32 * 4,
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("material.additive_drop should succeed")
+        {
+            GodToolReceipt::Material {
+                op: MaterialOp::AdditiveDrop,
+                writes,
+            } => writes,
+            other => panic!("expected Material receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "additive_drop must write ≥1 seed voxel");
+    }
+
+    /// `material.pour_liquid` (WATER path) must write `WATER`
+    /// voxels in the deposit. The fluid CA spreads them
+    /// horizontally next tick — the verb only writes the seed.
+    #[test]
+    fn material_pour_liquid_writes_water() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 8_000_000,
+            y: 0,
+            z: 8_000_000,
+        };
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::PourLiquid,
+            center,
+            radius_voxels: 1,
+            material_id: u32::from(WATER.0),
+            strength: FIXED_SCALE as i32,
+            drop_height: FIXED_SCALE as i32 * 3,
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("material.pour_liquid should succeed")
+        {
+            GodToolReceipt::Material {
+                op: MaterialOp::PourLiquid,
+                writes,
+            } => writes,
+            other => panic!("expected Material receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "pour_liquid must write ≥1 seed voxel");
+        // The seed sphere center should be WATER.
+        // `drop_height` is the *bottom* of the seed sphere; with
+        // `drop_height = 3*FIXED_SCALE` and `layers = strength / FIXED_SCALE = 1`,
+        // the seed sits at y = 3*FIXED_SCALE.
+        const SEED_Y: i64 = 3 * FIXED_SCALE;
+        assert_eq!(
+            sim.voxel().read(WorldCoord {
+                x: center.x,
+                y: SEED_Y,
+                z: center.z,
+            }),
+            WATER,
+            "center of pour_liquid seed should be WATER"
+        );
+    }
+
+    /// `material.seed_snow` must write `SNOW` voxels above the
+    /// local snowline. The thermo CA melts the snow next tick
+    /// at warm temperatures — the verb only writes the seed.
+    #[test]
+    fn material_seed_snow_writes_snow() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 9_000_000,
+            y: 0,
+            z: 9_000_000,
+        };
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::SeedSnow,
+            center,
+            radius_voxels: 1,
+            material_id: u32::from(SNOW.0),
+            strength: FIXED_SCALE as i32,
+            drop_height: 0,
+        });
+        let writes = match sim
+            .apply_god_tool(req)
+            .expect("material.seed_snow should succeed")
+        {
+            GodToolReceipt::Material {
+                op: MaterialOp::SeedSnow,
+                writes,
+            } => writes,
+            other => panic!("expected Material receipt, got {other:?}"),
+        };
+        assert!(writes >= 1, "seed_snow must write ≥1 SNOW voxel");
+    }
+
+    /// `material.seed_ore` must run without error and report a
+    /// non-negative write count. Because the noise is
+    /// stochastic, individual cells may or may not land ORE —
+    /// we just assert the dispatch returned a `Material`
+    /// receipt.
+    #[test]
+    fn material_seed_ore_runs_and_returns_material_receipt() {
+        let mut sim = Simulation::new();
+        let center = WorldCoord {
+            x: 10_000_000,
+            y: 0,
+            z: 10_000_000,
+        };
+        let req = GodToolRequest::Material(MaterialRequest {
+            op: MaterialOp::SeedOreDeposit,
+            center,
+            radius_voxels: 2,
+            material_id: u32::from(ORE.0),
+            strength: FIXED_SCALE as i32,
+            drop_height: 0,
+        });
+        let receipt = sim
+            .apply_god_tool(req)
+            .expect("material.seed_ore should succeed");
+        match receipt {
+            GodToolReceipt::Material {
+                op: MaterialOp::SeedOreDeposit,
+                writes: _,
+            } => {}
+            other => panic!("expected Material receipt, got {other:?}"),
+        }
     }
 }

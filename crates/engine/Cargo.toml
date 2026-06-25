@@ -78,6 +78,9 @@ civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 # dependency.
 civ-audio = { path = "../audio" }
 
+# FR-CIV-GOV-001/002/003 (civ-007 institutions epic).
+civ-institutions = { path = "../civ-institutions" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.11"

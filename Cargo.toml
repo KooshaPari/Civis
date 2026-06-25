@@ -50,6 +50,7 @@ members = [
   "crates/hud",
   "crates/legends",
   "crates/civ-emergence-metrics",
+  "crates/civ-institutions",
   "crates/physics-substrate",
   "crates/audio",
   "clients/bevy-ref",

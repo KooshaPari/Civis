@@ -5,7 +5,7 @@
 //! legends ingest → civ-ai naming. Surfaced via [`EmergenceFeedEvent`] and getters
 //! on [`Simulation`].
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
@@ -34,6 +34,9 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
+use crate::culture::{
+    advance_faction_ideologies,
+};
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -188,11 +191,11 @@ impl Simulation {
 
     fn emergence_culture(&mut self) {
         let tick = self.state.tick;
-        let mut cluster_ids: BTreeMap<u64, u32> = BTreeMap::new();
+        let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
         for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_ids.entry(member.cluster.0).or_insert(0) += 1;
+            *cluster_member_counts.entry(member.cluster.0).or_insert(0) += 1;
         }
-        for (cluster_id, size) in &cluster_ids {
+        for (cluster_id, size) in &cluster_member_counts {
             if *size < 2 {
                 continue;
             }
@@ -209,6 +212,80 @@ impl Simulation {
                     CultureProfile::new(seed)
                 });
         }
+        let mut dominant_by_cluster: BTreeMap<u64, u32> = BTreeMap::new();
+        let mut faction_vote: BTreeMap<u64, BTreeMap<u32, u32>> = BTreeMap::new();
+        for (_, (civilian, member)) in self
+            .world
+            .query::<(&Civilian, &ClusterMember)>()
+            .iter()
+        {
+            let cluster_id = member.cluster.0;
+            let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
+            if members < 2 {
+                continue;
+            }
+            if let civ_agents::Alignment::Faction(faction_id) = civilian.alignment {
+                *faction_vote.entry(cluster_id).or_default().entry(faction_id).or_default() += 1;
+            }
+        }
+        for (cluster_id, by_faction) in faction_vote {
+            let mut best = None;
+            let mut best_count = 0u32;
+            for (&faction_id, &count) in &by_faction {
+                if count > best_count || (count == best_count && best.is_some_and(|id| faction_id < id)) {
+                    best = Some(faction_id);
+                    best_count = count;
+                }
+            }
+            if let Some(faction_id) = best {
+                dominant_by_cluster.insert(cluster_id, faction_id);
+            }
+        }
+        let mut settlement_positions: BTreeMap<u64, Vec<(i64, i64)>> = BTreeMap::new();
+        for (_, (member, position)) in self.world.query::<(&ClusterMember, &Position3d)>().iter() {
+            let cluster_id = member.cluster.0;
+            let members = cluster_member_counts.get(&cluster_id).copied().unwrap_or(0);
+            if members < 2 {
+                continue;
+            }
+            settlement_positions
+                .entry(cluster_id)
+                .or_default()
+                .push((position.coord.x, position.coord.z));
+        }
+        const EMERGENCE_CLUSTER_RADIUS_FP: i64 = (6 * FIXED_SCALE) / 100;
+        const EMERGENCE_CONTACT_RADIUS_FP: i64 = EMERGENCE_CLUSTER_RADIUS_FP * 2;
+        let contact_radius_sq =
+            i128::from(EMERGENCE_CONTACT_RADIUS_FP) * i128::from(EMERGENCE_CONTACT_RADIUS_FP);
+        let mut settlement_contacts = BTreeSet::new();
+        let cluster_ids: Vec<u64> = settlement_positions.keys().copied().collect();
+        for i in 0..cluster_ids.len() {
+            for j in (i + 1)..cluster_ids.len() {
+                let left = cluster_ids[i];
+                let right = cluster_ids[j];
+                let left_agents = match settlement_positions.get(&left) {
+                    Some(values) => values,
+                    None => continue,
+                };
+                let right_agents = match settlement_positions.get(&right) {
+                    Some(values) => values,
+                    None => continue,
+                };
+                let in_contact = left_agents.iter().any(|&(ax, az)| {
+                    right_agents
+                        .iter()
+                        .any(|&(bx, bz)| {
+                            let dx = i128::from(ax) - i128::from(bx);
+                            let dz = i128::from(az) - i128::from(bz);
+                            dx * dx + dz * dz <= contact_radius_sq
+                        })
+                });
+                if in_contact {
+                    settlement_contacts.insert((left.min(right), left.max(right)));
+                }
+            }
+        }
+
         let mut profiles: Vec<CultureProfile> =
             self.emergence.cluster_cultures.values().cloned().collect();
         if profiles.len() < 2 {
@@ -216,23 +293,85 @@ impl Simulation {
                 let one = std::slice::from_mut(p);
                 drift_populations(one, &[], self.rng_mut(), 0.02, 0.0, 0.85);
             }
-            return;
-        }
-        let keys: Vec<u64> = self.emergence.cluster_cultures.keys().copied().collect();
-        let mut edges = Vec::new();
-        for i in 0..keys.len() {
-            for j in (i + 1)..keys.len() {
+        } else {
+            let keys: Vec<u64> = self.emergence.cluster_cultures.keys().copied().collect();
+            let mut cluster_index = BTreeMap::new();
+            for (idx, cluster_id) in keys.iter().copied().enumerate() {
+                cluster_index.insert(cluster_id, idx);
+            }
+            let mut edges = Vec::new();
+            for &(left, right) in &settlement_contacts {
+                let from = match cluster_index.get(&left).copied() {
+                    Some(idx) => idx,
+                    None => continue,
+                };
+                let to = match cluster_index.get(&right).copied() {
+                    Some(idx) => idx,
+                    None => continue,
+                };
                 edges.push(ContactEdge {
-                    from: i,
-                    to: j,
+                    from,
+                    to,
                     weight: 0.15,
                 });
             }
+            let climate_pressure =
+                (self.climate.day_phase * 0.06 + self.climate.moon_phase * 0.04 + self.climate.tide_offset.abs() * 0.08)
+                    .clamp(0.0, 0.16);
+            let mutation_rate = 0.02 + climate_pressure;
+            let diffusion_rate = 0.08 + (self.state.tick % 1000) as f32 * 0.00001;
+            drift_populations(
+                &mut profiles,
+                &edges,
+                self.rng_mut(),
+                mutation_rate,
+                diffusion_rate,
+                0.85,
+            );
+            let keys: Vec<u64> = self.emergence.cluster_cultures.keys().copied().collect();
+            for (key, profile) in keys.into_iter().zip(profiles) {
+                self.emergence.cluster_cultures.insert(key, profile);
+            }
         }
-        drift_populations(&mut profiles, &edges, self.rng_mut(), 0.02, 0.08, 0.85);
-        for (key, profile) in keys.into_iter().zip(profiles) {
-            self.emergence.cluster_cultures.insert(key, profile);
+
+        let mut faction_religion: BTreeMap<u32, (f32, u32)> = BTreeMap::new();
+        for (_, &faction_id) in &dominant_by_cluster {
+            let monitor = self
+                .religious_profiles
+                .get(&faction_id)
+                .map(|religion| {
+                    religion.monitoring * 0.55 + religion.mythic_coherence * 0.45
+                })
+                .unwrap_or(0.45);
+            let entry = faction_religion.entry(faction_id).or_insert((0.0, 0));
+            entry.0 += monitor;
+            entry.1 += 1;
         }
+        let mut faction_religion_signal = BTreeMap::new();
+        for (faction_id, (monitor_sum, count)) in faction_religion {
+            if count > 0 {
+                faction_religion_signal
+                    .insert(faction_id, (monitor_sum / (count as f32)).clamp(0.0, 1.0));
+            }
+        }
+
+        self.faction_ideologies = advance_faction_ideologies(
+            tick,
+            &self.emergence.cluster_cultures,
+            &dominant_by_cluster,
+            &cluster_member_counts,
+            &settlement_contacts,
+            &self.climate,
+            &faction_religion_signal,
+            &self.era_progression.faction_ages,
+            &self.faction_ideologies,
+            self.rng_mut(),
+        );
+        self.faction_aggression.clear();
+        for (faction_id, state) in &self.faction_ideologies {
+            self.faction_aggression.insert(*faction_id, state.aggression);
+        }
+
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
             let n = self.emergence.cluster_cultures.len();
             self.emergence.push_feed(

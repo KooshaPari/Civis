@@ -61,6 +61,9 @@ use crate::language::{
     borrow_word, ensure_seeded_word, place_name, person_name, place_name_meaning, person_name_meaning,
     seeded_language_state, tick_language, LanguageState,
 };
+use crate::culture::{
+    culture_cooperation_signal, culture_openness_signal, FactionIdeologyState,
+};
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -471,6 +474,8 @@ pub struct Simulation {
     belief: u64,
     /// Per-cluster culture profiles (cluster_cultures key is the cluster id).
     pub cluster_cultures: BTreeMap<u64, CultureProfile>,
+    /// Per-faction cultural identity, norms, and behavior signals.
+    pub faction_ideologies: BTreeMap<u32, FactionIdeologyState>,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
     pub last_settlement_count: u32,
     /// Per-faction aggression (u32 faction id → average aggression).
@@ -1315,6 +1320,7 @@ impl Simulation {
             era_progression: crate::era::EraProgressionState::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
+            faction_ideologies: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
@@ -1428,6 +1434,7 @@ impl Simulation {
             era_progression: crate::era::EraProgressionState::default(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
+            faction_ideologies: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
             last_settlement_count: 0,
             faction_aggression: BTreeMap::new(),
@@ -1841,6 +1848,12 @@ impl Simulation {
     #[must_use]
     pub fn cluster_cultures(&self) -> &BTreeMap<u64, CultureProfile> {
         &self.cluster_cultures
+    }
+
+    /// Per-faction ideology and behavior-coupling vectors.
+    #[must_use]
+    pub fn faction_ideologies(&self) -> &BTreeMap<u32, FactionIdeologyState> {
+        &self.faction_ideologies
     }
 
     /// Apply scenario taxation rules to the economy phase.
@@ -3696,6 +3709,7 @@ impl Simulation {
                 &self.world,
                 &member_counts,
                 &self.cluster_cultures,
+                &self.faction_ideologies,
                 &self.grief_accumulator,
             );
             let outcome = self.faction_relations.apply_signal(
@@ -3735,6 +3749,8 @@ impl Simulation {
         let avg_affinity = avg_social_affinity(&self.world);
         let culture_bias =
             diplomacy_culture_threshold_bias(&self.cluster_cultures, a, b);
+        let openness_bias =
+            (culture_openness_signal(&self.faction_ideologies, a, b) * 1200.0).round() as i64;
         let lang_centroids = faction_language_centroids(
             &self.cluster_cultures,
             &settlement_dominant_factions(&self.world, &member_counts),
@@ -3749,6 +3765,7 @@ impl Simulation {
         let threshold = diplomacy_conflict_threshold(belief, unrest)
             + diplomacy_relation_threshold_bias(relation_score)
             + culture_bias
+            + openness_bias
             + affinity_threshold_bias(avg_affinity)
             + religious_unity_peace_bonus(has_shared_patron)
             + language_intelligibility_peace_bonus(lang_dist)
@@ -5491,19 +5508,24 @@ fn diplomacy_signal_for_pair(
     world: &World,
     member_counts: &BTreeMap<u64, u32>,
     cultures: &BTreeMap<u64, CultureProfile>,
+    faction_ideologies: &BTreeMap<u32, FactionIdeologyState>,
     grief: &GriefAccumulator,
 ) -> DiplomacySignal {
     let ra = state.faction_resources.get(&a).cloned().unwrap_or_default();
     let rb = state.faction_resources.get(&b).cloned().unwrap_or_default();
     let religion = shared_religion_cohesion(cultures, a, b);
+    let cooperation = culture_cooperation_signal(faction_ideologies, a, b);
+    let openness = culture_openness_signal(faction_ideologies, a, b);
     let competition = resource_competition_signal(&ra, &rb) * (1.0 - religion * 0.35);
     DiplomacySignal {
         resource_competition: competition,
         trade_volume: trade_volume_signal(&state.trade_routes, a, b),
         proximity: proximity_signal(a, b, world, member_counts, &state.trade_routes),
         combat_grievance: grief.get(a, b),
-        need_complementarity: need_complementarity_signal(&ra, &rb) + religion * 0.25,
-        scarcity_pressure: scarcity_pressure_signal(state.energy_budget_joules, &ra, &rb),
+        need_complementarity: need_complementarity_signal(&ra, &rb)
+            + religion * 0.25
+            + cooperation * 0.55,
+        scarcity_pressure: scarcity_pressure_signal(state.energy_budget_joules, &ra, &rb) - openness * 0.20,
     }
 }
 

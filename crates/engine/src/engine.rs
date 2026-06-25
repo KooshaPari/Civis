@@ -1230,6 +1230,10 @@ impl Simulation {
         self.phase_compact();
         self.phase_buildings();
         self.phase_diffusion();
+        self.phase_disasters();
+        self.phase_life();
+        self.phase_emergence();
+        self.phase_emergence_events_close();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

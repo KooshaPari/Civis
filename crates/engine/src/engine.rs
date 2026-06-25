@@ -1626,9 +1626,13 @@ impl Simulation {
         attach_citizen_to_agents(&mut self.world);
         self.last_births.clear();
         self.last_deaths.clear();
-        let population = count_civilians(&self.world) as f64;
+        let population = count_civilians(&self.world) as i64;
+        let food_consumption = Fixed::from_num(
+            CLUSTER_FOOD_CONSUMPTION_PER_MEMBER.saturating_mul(population),
+        );
+        self.state.resources.food = self.state.resources.food.saturating_sub(food_consumption);
         let max_pop = self.state.population.max(1) as f64;
-        let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
+        let overcrowding_factor = (population as f64 / max_pop).clamp(0.0, 1.0);
         let birth_chance = 0.003 * (1.0 - overcrowding_factor);
         let birth_window = self.state.tick % 200 == 0;
         let mut dead = Vec::new();

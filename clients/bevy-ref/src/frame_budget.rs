@@ -87,7 +87,7 @@ impl FrameBudgetRecovery {
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 struct FrameBudgetState {
     window: [f32; FRAME_BUDGET_WINDOW],
     index: usize,
@@ -95,6 +95,19 @@ struct FrameBudgetState {
     last_warn_at: Option<f64>,
     last_recovery_warn_at: Option<f64>,
     recent_drops: VecDeque<f64>,
+}
+
+impl Default for FrameBudgetState {
+    fn default() -> Self {
+        Self {
+            window: [0.0; FRAME_BUDGET_WINDOW],
+            index: 0,
+            filled: 0,
+            last_warn_at: None,
+            last_recovery_warn_at: None,
+            recent_drops: VecDeque::new(),
+        }
+    }
 }
 
 /// Registers frame-budget tracking against Bevy `frame_time` diagnostics.
@@ -135,8 +148,9 @@ fn enforce_frame_budget(
     metrics.frame_count = metrics.frame_count.saturating_add(1);
     metrics.max_frame_ms = metrics.max_frame_ms.max(frame_ms);
 
-    state.window[state.index] = frame_ms;
-    state.index = (state.index + 1) % FRAME_BUDGET_WINDOW;
+    let write_index = state.index;
+    state.window[write_index] = frame_ms;
+    state.index = (write_index + 1) % FRAME_BUDGET_WINDOW;
     if state.filled < FRAME_BUDGET_WINDOW {
         state.filled += 1;
     }
@@ -148,12 +162,7 @@ fn enforce_frame_budget(
     let avg_ms = state.window.iter().sum::<f32>() / FRAME_BUDGET_WINDOW as f32;
     let now = time.elapsed_secs_f64();
 
-    while let Some(&drop_at) = state.recent_drops.front() {
-        if now - drop_at <= FRAME_BUDGET_RECOVERY_WINDOW_SECS {
-            break;
-        }
-        let _ = state.recent_drops.pop_front();
-    }
+    prune_recent_drops(&mut state.recent_drops, now);
 
     if avg_ms <= FRAME_BUDGET_MS {
         let next = recovery_state_for_recent_drops(state.recent_drops.len());
@@ -167,13 +176,8 @@ fn enforce_frame_budget(
     }
 
     metrics.drop_count = metrics.drop_count.saturating_add(1);
-    state.recent_drops.push_back(now);
-    while let Some(&drop_at) = state.recent_drops.front() {
-        if now - drop_at <= FRAME_BUDGET_RECOVERY_WINDOW_SECS {
-            break;
-        }
-        let _ = state.recent_drops.pop_front();
-    }
+        state.recent_drops.push_back(now);
+        prune_recent_drops(&mut state.recent_drops, now);
 
     let next = recovery_state_for_recent_drops(state.recent_drops.len());
     if next != *recovery {
@@ -212,7 +216,7 @@ fn enforce_frame_budget(
 }
 
 #[must_use]
-const fn recovery_state_for_recent_drops(recent_drops: usize) -> FrameBudgetRecovery {
+fn recovery_state_for_recent_drops(recent_drops: usize) -> FrameBudgetRecovery {
     if recent_drops > FRAME_BUDGET_RECOVERY_SEVERE_THRESHOLD {
         FrameBudgetRecovery {
             active: true,
@@ -228,7 +232,21 @@ const fn recovery_state_for_recent_drops(recent_drops: usize) -> FrameBudgetReco
             severe: false,
         }
     } else {
-        FrameBudgetRecovery::default()
+        FrameBudgetRecovery {
+            active: false,
+            distance_scale: 1.0,
+            lod_scale: 1.0,
+            severe: false,
+        }
+    }
+}
+
+fn prune_recent_drops(recent_drops: &mut VecDeque<f64>, now: f64) {
+    while let Some(candidate) = recent_drops.pop_front() {
+        if now - candidate <= FRAME_BUDGET_RECOVERY_WINDOW_SECS {
+            recent_drops.push_front(candidate);
+            break;
+        }
     }
 }
 

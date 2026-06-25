@@ -85,6 +85,8 @@ pub mod spawn_tools;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tech_tree_ui;
 pub mod civ_history;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod god_actions;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;

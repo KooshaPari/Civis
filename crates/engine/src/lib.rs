@@ -85,6 +85,15 @@ pub use engine::{
     FabricTier, KinshipEdge, KinshipKind,
 };
 
+// FR-CIV-STRAT-001 (civ-007 stratification sub-epic). Re-exported so callers
+// can name the stratification types as `civ_engine::StratificationEvent` etc.
+// without pulling the private `engine` module path.
+pub use engine::{
+    last_tick_stratification, last_tick_stratification_report, household_band,
+    StratBand, StratificationEvent, StratificationEventKind, StratificationReport,
+    StratQuantiles,
+};
+
 // FR-CIV-UNREST-001 (civ-007 unrest sub-epic). Re-exported so callers
 // can name the unrest types as `civ_engine::UnrestEvent` etc.
 // without pulling the private `engine` module path.

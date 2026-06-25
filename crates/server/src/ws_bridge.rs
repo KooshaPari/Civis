@@ -23,7 +23,8 @@ use civ_build::ProductionEvent;
 use civ_engine::{
     decode_civreplay, encode_civreplay, job_type_for_civilian_id,
     scenario::{load_scenario, preset_scenario_path},
-    Citizen, CivSaveBundle, DiplomacyKind, JobType, Simulation,
+    Citizen, CivSaveBundle, CohesionEvent, DiplomacyKind, InstitutionEvent, JobType,
+    MoodSnapshot, Simulation, StratificationEvent, UnrestEvent,
 };
 use civ_protocol_3d::{
     encode_frame3d_binary, encode_frame3d_binary_from_json, AgentAppearanceFrame,
@@ -187,6 +188,21 @@ struct TickBroadcast {
     /// consume this list to play SFX cues. Replay log mirrors it via
     /// `audio_events` snapshot field.
     audio_events: Arc<[civ_engine::SfxTrigger]>,
+    /// Civic institution events (temple/garrison unlocked, etc.) from
+    /// the most recent tick (FR-CIV-GOV-001/002/003).
+    institution_events: Arc<[InstitutionEvent]>,
+    /// Per-settlement social-mood snapshots from the most recent tick
+    /// (FR-CIV-GOV-100).
+    mood: Arc<[MoodSnapshot]>,
+    /// Per-household stratification events (promotion/demotion/unchanged)
+    /// from the most recent tick (FR-CIV-STRAT-001).
+    stratification: Arc<[StratificationEvent]>,
+    /// Per-tick cohesion events (kinship, trust, fabric changes)
+    /// from the most recent tick (FR-CIV-GOV-030).
+    cohesion: Arc<[CohesionEvent]>,
+    /// Per-tick unrest events (protests, unrest level changes)
+    /// from the most recent tick (FR-CIV-UNREST-001).
+    unrest: Arc<[UnrestEvent]>,
 }
 
 fn resolve_session_id() -> String {
@@ -1533,12 +1549,47 @@ async fn advance_one_tick(state: &AppState) -> Result<(), String> {
                 .to_vec()
                 .into_boxed_slice(),
         );
+        // FR-CIV-GOV-001/002/003 — forward institution events from this tick.
+        let institution_events: Arc<[InstitutionEvent]> = Arc::from(
+            sim.last_tick_institution_events()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        // FR-CIV-GOV-100 — forward social-mood snapshots from this tick.
+        let mood: Arc<[MoodSnapshot]> = Arc::from(
+            sim.last_tick_mood_all()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        // FR-CIV-STRAT-001 — forward stratification events from this tick.
+        let stratification: Arc<[StratificationEvent]> = Arc::from(
+            sim.last_tick_stratification()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        // FR-CIV-GOV-030 — forward cohesion events from this tick.
+        let cohesion: Arc<[CohesionEvent]> = Arc::from(
+            sim.last_tick_cohesion()
+                .to_vec()
+                .into_boxed_slice(),
+        );
+        // FR-CIV-UNREST-001 — forward unrest events from this tick.
+        let unrest: Arc<[UnrestEvent]> = Arc::from(
+            sim.last_tick_unrest()
+                .to_vec()
+                .into_boxed_slice(),
+        );
         Arc::new(TickBroadcast {
             tick,
             frames: Arc::from(bundle),
             encoded,
             construction_events,
             audio_events,
+            institution_events,
+            mood,
+            stratification,
+            cohesion,
+            unrest,
         })
     };
 

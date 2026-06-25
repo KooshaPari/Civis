@@ -13,6 +13,8 @@ use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEv
 use civ_diffusion::DiffusionParams;
 use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
 use civ_economy::{collect_taxes, Taxation};
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
@@ -24,8 +26,6 @@ use civ_tactics::{
     FactionEngagementStats, MilitaryPhaseConfig, MilitaryUnitSample, NoopOperationalLayer,
     OperationalLayer,
 };
-use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
-use civ_genetics::Dna;
 use civ_voxel::{
     material::WATER,
     DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord, FIXED_SCALE,
@@ -39,6 +39,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
+use crate::language::{tick_language, LanguageState};
 use crate::lod::{should_tick_entity_with_policy, LodPolicy};
 use crate::policy::ControlSignals;
 use crate::policy::Policy;
@@ -50,8 +51,8 @@ use crate::replay_format::{load_civreplay, save_civreplay};
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
 /// CIV-0001 partial — engine-side deterministic transition. Server command intake
-/// and client broadcast are outside this crate. Keep in sync with the calls in
-/// [`Simulation::tick`].
+/// and client broadcast are outside this crate. **Single source of truth**:
+/// `Simulation::tick` dispatches each entry in this slice via [`Simulation::run_phase`].
 pub(crate) const PHASE_ORDER: &[&str] = &[
     "production",
     "citizen_lifecycle",
@@ -64,6 +65,20 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "voxel",
     "compact",
     "buildings",
+    "life",
+    "research",
+    "tech",
+    "belief",
+    "unrest",
+    "cohesion",
+    "social_mood",
+    "economic_focus_pre",
+    "stratification",
+    "institutions",
+    "economic_focus",
+    "emergence",
+    "language",
+    "sentience",
     "diffusion",
 ];
 
@@ -474,6 +489,22 @@ pub struct Simulation {
     /// Reset at the start of every [`Simulation::tick`]; surfaced through the
     /// JSON-RPC bridge so Bevy clients can render scaffolding + completion FX.
     last_tick_construction_events: Vec<ProductionEvent>,
+    /// Emergent language state (FR-CIV-LANG-001). Driven by
+    /// [`Simulation::phase_language`]; consumed by the diplomacy pipeline via
+    /// [`language_intelligibility_peace_bonus`].
+    language_state: LanguageState,
+    /// Per-tick sentience evaluation profile (FR-CIV-GENETICS / FR-CIV-LEGENDS).
+    /// Read by [`Simulation::phase_sentience`] to determine which lineages
+    /// cross the cognition threshold this tick.
+    sentience_profile: CognitionTraitProfile,
+    /// Per-tick sentience threshold (FR-CIV-GENETICS / FR-CIV-LEGENDS). Read by
+    /// [`Simulation::phase_sentience`]; mirrors the profile in
+    /// `EmergenceState::new`.
+    sentience_threshold: SentienceThreshold,
+    /// Sentience events produced by the most recent [`Simulation::phase_sentience`]
+    /// call (cleared at the start of every [`Simulation::tick`], alongside the
+    /// other `last_tick_*` buffers).
+    last_tick_sentience_events: Vec<crate::genetics::sentience::SentienceEvent>,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -515,6 +546,55 @@ fn default_faction_doctrines() -> Vec<DoctrineLibrary> {
             ],
         })
         .collect()
+}
+
+/// Minimum cognition score required for a lineage to cross the sentience
+/// threshold this tick (FR-CIV-GENETICS / FR-CIV-LEGENDS). Mirrors the
+/// threshold used by [`sentience_research_bonus`] above; the value lives in
+/// one place so the engine phase and the emergence coupling stay aligned.
+const SENTIENCE_MIN_COGNITION: f32 = 0.72;
+
+/// Default sentience profile used by [`Simulation::phase_sentience`] —
+/// three primary cognition slots (slots 0, 1, 2) plus a minor weight on
+/// slot 8 (a secondary social-trait byte). Matches the profile in
+/// [`sentience_research_bonus`] so the engine tick and the
+/// emergence→research coupling share the same DNA→cognition mapping.
+fn default_sentience_profile() -> CognitionTraitProfile {
+    CognitionTraitProfile::new(
+        "sapient-lineage",
+        vec![(0, 0.5), (1, 0.5), (2, 0.5), (8, 0.25)],
+    )
+}
+
+/// Mean inter-cluster language distance proxy used as `contact_pressure`
+/// for [`crate::language::tick_language`]. The phase scales the language
+/// drift rate by `(1 + contact_pressure)` so high-cross-cluster contact
+/// (low distance) drifts the language faster. Returns `0.0` when the world
+/// has fewer than two cultures (no contact to estimate).
+fn contact_pressure_for(
+    _world: &World,
+    cultures: &std::collections::BTreeMap<u64, CultureProfile>,
+) -> f32 {
+    if cultures.len() < 2 {
+        return 0.0;
+    }
+    let profiles: Vec<&CultureProfile> = cultures.values().collect();
+    let mut total = 0.0f32;
+    let mut pairs = 0u32;
+    for i in 0..profiles.len() {
+        for j in (i + 1)..profiles.len() {
+            total += language_distance(profiles[i].language, profiles[j].language);
+            pairs += 1;
+        }
+    }
+    if pairs == 0 {
+        0.0
+    } else {
+        // `language_distance ∈ [0, 1]` → normalize and use as pressure.
+        // Closer languages (lower distance) → higher pressure → faster drift.
+        let mean_distance = total / pairs as f32;
+        (1.0 - mean_distance).clamp(0.0, 1.0)
+    }
 }
 
 fn economy_state_from_world(world: &WorldState) -> EconomyState {
@@ -681,6 +761,10 @@ impl Simulation {
             weather_grid,
             build_sites: Vec::new(),
             last_tick_construction_events: Vec::new(),
+            language_state: LanguageState::default(),
+            sentience_profile: default_sentience_profile(),
+            sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
+            last_tick_sentience_events: Vec::new(),
         }
     }
 
@@ -749,6 +833,10 @@ impl Simulation {
             weather_grid,
             build_sites: Vec::new(),
             last_tick_construction_events: Vec::new(),
+            language_state: LanguageState::default(),
+            sentience_profile: default_sentience_profile(),
+            sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
+            last_tick_sentience_events: Vec::new(),
         }
     }
 
@@ -1179,7 +1267,10 @@ impl Simulation {
     ///
     /// Phases run in [`PHASE_ORDER`] (CIV-0001 partial — engine-side deterministic
     /// transition only; server command intake and client broadcast live outside this
-    /// crate). Exactly one [`ReplayEvent::Tick`] is appended after all phases finish.
+    /// crate). [`Self::run_phase`] is the single dispatch point that maps each
+    /// [`PHASE_ORDER`] entry to its `phase_*` method, so the order and the set of
+    /// phases can never drift apart. Exactly one [`ReplayEvent::Tick`] is appended
+    /// after all phases finish.
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
@@ -1187,32 +1278,14 @@ impl Simulation {
         self.last_tick_mod_lifecycle.clear();
         self.last_tick_construction_events.clear();
 
-        // Phases in PHASE_ORDER (CIV-0001 partial)
-        self.phase_production();
-        self.phase_citizen_lifecycle();
-        self.phase_military();
-        self.phase_policy();
-        self.phase_economy();
-        self.phase_planet();
+        // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
+        // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
+        // match arm — no risk of `tick` running a phase that's not in the list
+        // (or vice versa).
         self.diplomacy_events.clear();
-        self.phase_diplomacy();
-        self.phase_tactics();
-        self.phase_voxel();
-        self.phase_compact();
-        self.phase_buildings();
-        self.phase_life();                    // ADR-020 #1 — settlement commons
-        self.phase_research();                // ADR-020 #2 — research progress
-        self.phase_tech();                    // ADR-020 #3 — tier-derived tech unlocks
-        self.phase_belief();                  // ADR-020 #4 — faith reserve
-        self.phase_unrest();                  // ADR-020 #5 — societal unrest
-        self.phase_cohesion();                // ADR-020 #6 — social fabric
-        self.phase_social_mood();             // ADR-020 #7 — mean mood aggregate
-        self.phase_economic_focus_pre();      // ADR-020 #10a — first-pass focus seed
-        self.phase_stratification();          // ADR-020 #8 — dispossessed share
-        self.phase_institutions();            // ADR-020 #9 — temple + garrison levels
-        self.phase_economic_focus();          // ADR-020 #10 — settle pass
-        self.phase_emergence();               // ADR-020 orchestrator
-        self.phase_diffusion();
+        for phase in PHASE_ORDER {
+            self.run_phase(phase);
+        }
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -1220,6 +1293,44 @@ impl Simulation {
             crate::integrity::check_integrity(self).is_ok(),
             "simulation integrity violated"
         );
+    }
+
+    /// Dispatch a single [`PHASE_ORDER`] entry to the corresponding `phase_*`
+    /// method. This is the single source of truth linking the ordered phase
+    /// list to actual simulation work (FR-ENGINE-phaseorder).
+    ///
+    /// Adding a new phase means: extend [`PHASE_ORDER`], add a `phase_*` method,
+    /// and add a match arm here — three coupled edits in one file.
+    fn run_phase(&mut self, phase: &str) {
+        match phase {
+            "production" => self.phase_production(),
+            "citizen_lifecycle" => self.phase_citizen_lifecycle(),
+            "military" => self.phase_military(),
+            "policy" => self.phase_policy(),
+            "economy" => self.phase_economy(),
+            "planet" => self.phase_planet(),
+            "diplomacy" => self.phase_diplomacy(),
+            "tactics" => self.phase_tactics(),
+            "voxel" => self.phase_voxel(),
+            "compact" => self.phase_compact(),
+            "buildings" => self.phase_buildings(),
+            "life" => self.phase_life(),
+            "research" => self.phase_research(),
+            "tech" => self.phase_tech(),
+            "belief" => self.phase_belief(),
+            "unrest" => self.phase_unrest(),
+            "cohesion" => self.phase_cohesion(),
+            "social_mood" => self.phase_social_mood(),
+            "economic_focus_pre" => self.phase_economic_focus_pre(),
+            "stratification" => self.phase_stratification(),
+            "institutions" => self.phase_institutions(),
+            "economic_focus" => self.phase_economic_focus(),
+            "emergence" => self.phase_emergence(),
+            "language" => self.phase_language(),
+            "sentience" => self.phase_sentience(),
+            "diffusion" => self.phase_diffusion(),
+            other => panic!("Simulation::run_phase: unknown phase '{other}' in PHASE_ORDER"),
+        }
     }
 
     /// Borrow the replay log.
@@ -1572,6 +1683,61 @@ impl Simulation {
             count_civilians(&self.world) as u32
         );
         self.last_cohort_stats = Some(wardrobe_stats);
+    }
+
+    /// Language phase (FR-CIV-LANG-001) — drifts the emergent language
+    /// vocabulary by the configured rate scaled by contact pressure, then
+    /// merges near-identical phonemes. Runs AFTER [`Self::phase_emergence`]
+    /// because the emergence phase is the canonical producer of
+    /// `cluster_cultures` (which carries the language centroid consumed by
+    /// the diplomacy pipeline via [`language_intelligibility_peace_bonus`]).
+    ///
+    /// `contact_pressure` is derived from the current world state (mean
+    /// pairwise kinship acts as a proxy for inter-settlement contact); the
+    /// phase itself is deterministic given the language hash.
+    fn phase_language(&mut self) {
+        let contact_pressure = contact_pressure_for(&self.world, self.cluster_cultures());
+        tick_language(&mut self.language_state, contact_pressure);
+    }
+
+    /// Sentience phase (FR-CIV-GENETICS / FR-CIV-LEGENDS) — evaluates every
+    /// DNA-bearing agent against [`Self::sentience_threshold`]. Crossings
+    /// produce `SentienceEvent` records that downstream emergence coupling
+    /// (cohesion pulse, awakening→cohesion nudge, etc.) consumes.
+    ///
+    /// Runs AFTER [`Self::phase_emergence`] and [`Self::phase_language`] so
+    /// the dependent couplings observe the post-emergence agent state; runs
+    /// BEFORE [`Self::phase_diffusion`] so diffusion does not re-mutate the
+    /// just-evaluated agent set this tick. The set of crossings is captured
+    /// on `self.last_tick_sentience_events` for downstream phase + tests.
+    fn phase_sentience(&mut self) {
+        let mut events = Vec::new();
+        for (_, dna) in self.world.query::<&Dna>().iter() {
+            events.push(crate::genetics::sentience::evaluate_sentience(
+                None,
+                dna,
+                &self.sentience_profile,
+                self.sentience_threshold,
+            ));
+        }
+        self.last_tick_sentience_events = events;
+    }
+
+    /// Read-only view of the sentience events produced by the most recent
+    /// [`Self::phase_sentience`] call. Cleared at the start of every tick
+    /// (along with the other `last_tick_*` buffers) so callers observe only
+    /// the current tick's crossings.
+    #[must_use]
+    pub fn last_tick_sentience_events(&self) -> &[crate::genetics::sentience::SentienceEvent] {
+        &self.last_tick_sentience_events
+    }
+
+    /// Read-only view of the live language state owned by the simulation.
+    /// Exposed for tests + the JSON-RPC bridge (the `language` field on
+    /// `sim.snapshot` is fed from this accessor).
+    #[must_use]
+    pub fn language_state(&self) -> &LanguageState {
+        &self.language_state
     }
 
     /// Production phase - buildings produce resources
@@ -3369,7 +3535,10 @@ mod tests {
         }
     }
 
-    /// CIV-0001 partial — `PHASE_ORDER` matches the sequence in `Simulation::tick`.
+    /// CIV-0001 partial — `PHASE_ORDER` is the single source of truth for the
+    /// deterministic per-tick phase sequence. `Simulation::tick` dispatches over
+    /// this list, so adding a new phase here is sufficient to wire it in.
+    /// FR-ENGINE-phaseorder.
     #[test]
     fn phase_order_matches_tick_sequence() {
         assert_eq!(
@@ -3386,6 +3555,20 @@ mod tests {
                 "voxel",
                 "compact",
                 "buildings",
+                "life",
+                "research",
+                "tech",
+                "belief",
+                "unrest",
+                "economic_focus_pre",
+                "stratification",
+                "institutions",
+                "cohesion",
+                "social_mood",
+                "economic_focus",
+                "emergence",
+                "language",
+                "sentience",
                 "diffusion",
             ]
         );
@@ -3396,6 +3579,9 @@ mod tests {
     /// (cluster stocks, needs, settlements) before emergence runs.
     /// Closes FR-CIV-LEGENDS-INGEST-02, FR-CIV-PSYCHE-900/901, FR-CIV-PSYCHE-911,
     /// FR-CIV-PSYCHE-912, FR-CIV-GENETICS, FR-CIV-AI-006, FR-CIV-LEGENDS-QUERY-07.
+    /// FR-ENGINE-phaseorder: emergence is the final core emergence phase;
+    /// `language` and `sentience` are emergence-following couplings and are
+    /// placed AFTER emergence (and before `diffusion` propagation).
     #[test]
     fn phase_order_includes_emergence() {
         let emergence_idx = PHASE_ORDER
@@ -3411,13 +3597,32 @@ mod tests {
             "emergence (idx {emergence_idx}) must run after life (idx {life_idx}) \
              so agent state is finalized first"
         );
-        // And it must be the final phase in the deterministic core loop —
-        // anything reading emergence state downstream (saga belief gain,
-        // unrest, chronicle) depends on the phase having run.
-        assert_eq!(
-            emergence_idx,
-            PHASE_ORDER.len() - 1,
-            "emergence must be the final entry in PHASE_ORDER"
+        // emergence is the final deterministic CORE emergence phase —
+        // language and sentience are emergence-following couplings that
+        // depend on emergence output and therefore run after it. They must
+        // appear before `diffusion` so the diffusion phase can observe the
+        // language/sentience deltas.
+        assert!(
+            emergence_idx < PHASE_ORDER.len() - 3,
+            "emergence must be the last core emergence phase, with language, \
+             sentience, and diffusion following"
+        );
+        let language_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "language")
+            .expect("PHASE_ORDER must include 'language' (FR-ENGINE-phaseorder)");
+        let sentience_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "sentience")
+            .expect("PHASE_ORDER must include 'sentience' (FR-ENGINE-phaseorder)");
+        assert!(
+            language_idx > emergence_idx,
+            "language (idx {language_idx}) must run after emergence (idx {emergence_idx})"
+        );
+        assert!(
+            sentience_idx > language_idx,
+            "sentience (idx {sentience_idx}) must run after language (idx {language_idx}) \
+             so language-driven contact pressure is visible to the psyche evaluator"
         );
     }
 

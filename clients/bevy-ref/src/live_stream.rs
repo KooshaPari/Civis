@@ -18,6 +18,7 @@ use civ_protocol_3d::{
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
 use crate::{
@@ -54,8 +55,10 @@ pub const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 pub struct StreamCulling {
     /// Camera position in world space.
     pub eye: [f32; 3],
-    /// Maximum render distance in world units.
+    /// Maximum render distance in world units (already scaled for [`gpu_quality`]).
     pub max_distance: f32,
+    /// Active GPU quality recovery mode for chunk LOD selection.
+    pub gpu_quality: GpuQualityMode,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -575,7 +578,8 @@ pub fn apply_voxel_delta_frame(
         };
         let distance =
             chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod = LodLevel(mesh_lod_level(distance));
+        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
+        let lod = LodLevel(mesh_lod_level(lod_distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -1120,6 +1124,7 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
+            gpu_quality: GpuQualityMode::Full,
         };
 
         let mut scene = LiveStreamScene::default();

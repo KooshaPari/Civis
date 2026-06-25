@@ -341,6 +341,333 @@ pub struct SpeedSetArgs {
     pub transport: RpcArgs,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SimCommandAction {
+    /// No-op command for scheduling compatibility.
+    Noop,
+    /// Advance exactly one simulation tick.
+    Tick,
+}
+
+impl SimCommandAction {
+    fn wire_name(self) -> &'static str {
+        match self {
+            Self::Noop => "noop",
+            Self::Tick => "tick",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimCommandArgs {
+    /// JSON-RPC command action — `noop` or `tick`.
+    pub action: SimCommandAction,
+    /// Optional role to satisfy operator-gated server methods.
+    pub role: Option<String>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimResetArgs {
+    /// Seed for the next simulation session.
+    pub seed: u64,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimLoadScenarioArgs {
+    /// Scenario preset name.
+    pub preset: String,
+    /// Optional seed override; when omitted, server defaults apply.
+    pub seed: Option<u64>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimSetPolicyArgs {
+    /// Economy scarcity multiplier.
+    pub scarcity_multiplier: f64,
+    /// Optional base consumption policy override in joules.
+    pub base_consumption_joules: Option<u64>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimCommandlessArgs {
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SaveReplayArgs {
+    /// Relative replay path; validation is enforced by `crates/server/src/jsonrpc.rs`.
+    pub path: String,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SpawnCivilianArgs {
+    /// Normalized map X in `[0, 1]`.
+    pub x: f32,
+    /// Normalized map Y in `[0, 1]`.
+    pub y: f32,
+    /// Owning faction id (defaults to 0).
+    pub faction: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct PlaceVoxelArgs {
+    /// World tile X.
+    pub x: i64,
+    /// World tile Y.
+    pub y: i64,
+    /// World tile Z.
+    pub z: i64,
+    /// Target voxel material ID.
+    pub material: u16,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimDamageArgs {
+    /// World tile X (integer).
+    pub x: i64,
+    /// World tile Y (integer).
+    pub y: i64,
+    /// World tile Z (integer).
+    pub z: i64,
+    /// Radius in voxels.
+    pub radius: Option<u8>,
+    /// Damage energy.
+    pub energy: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct InspectTileArgs {
+    /// World tile X (integer).
+    pub x: i64,
+    /// World tile Y (integer).
+    pub y: i64,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SaveSlotArgs {
+    /// Save slot name.
+    pub slot_name: String,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimSubscriptionArgs {
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimInspectArgs {
+    /// Optional integer tile X for optional probe projection.
+    pub tile_x: Option<i64>,
+    /// Optional integer tile Y for optional probe projection.
+    pub tile_y: Option<i64>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimGetEmergenceArgs {
+    /// Include legacy coarse metrics from `sim.get_emergence_metrics`.
+    pub include_legacy: Option<bool>,
+    /// Include `emergence.dashboard`.
+    pub include_dashboard: Option<bool>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimStepArgs {
+    /// Number of ticks to advance (default 1).
+    pub ticks: Option<u64>,
+    /// Optional temporary pause at step end via `sim.set_speed`.
+    pub auto_pause: Option<bool>,
+    /// Role passed through for operator checks when enabled.
+    pub role: Option<String>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimRunUntilArgs {
+    /// Mandatory tick budget.
+    pub max_ticks: u64,
+    /// Optional stopping tick threshold.
+    pub target_tick: Option<u64>,
+    /// Optional stopping outcome label (`ongoing`, `victory`, `defeat`, `draw`).
+    pub target_outcome: Option<String>,
+    /// Optional max wall clock time while polling.
+    pub timeout_seconds: Option<u64>,
+    /// Poll interval in ticks (default 8).
+    pub poll_every: Option<u64>,
+    /// Role passed through for operator checks when enabled.
+    pub role: Option<String>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimSpawnArgs {
+    /// Spawn kind mapped to `sim.spawn_entity`.
+    pub kind: SpawnPaletteKind,
+    /// Normalized map X in `[0, 1]`.
+    pub x: f32,
+    /// Normalized map Y in `[0, 1]`.
+    pub y: f32,
+    /// Owning faction id (defaults to 0).
+    pub faction: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimSculptArgs {
+    /// World tile X (integer).
+    pub x: i64,
+    /// World tile Y (integer).
+    pub y: i64,
+    /// World tile Z (integer).
+    pub z: i64,
+    /// Material ID forwarded to `sim.place_voxel`.
+    pub material: u16,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimSpawnOrganismArgs {
+    /// Number of civilians to spawn.
+    pub count: u32,
+    /// Normalized map X in `[0, 1]`.
+    pub x: f32,
+    /// Normalized map Y in `[0, 1]`.
+    pub y: f32,
+    /// Optional owning faction id.
+    pub faction: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SimTerraformKind {
+    Raise,
+    Lower,
+    Level,
+    Smooth,
+    Slope,
+    Flatten,
+    Shift,
+    AddLand,
+    DigOcean,
+    RaiseMountain,
+    DropBiome,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimTerraformExtentArgs {
+    /// Brush center X in world coordinates.
+    pub x: i64,
+    /// Brush center Y in world coordinates.
+    pub y: i64,
+    /// Brush center Z in world coordinates.
+    pub z: i64,
+    /// Tool shape footprint, mapped to best-effort `sim.place_voxel` stamping.
+    pub op: SimTerraformKind,
+    /// Optional material id forwarded to `sim.place_voxel`.
+    pub material: Option<u16>,
+    /// Optional material stamp radius, ignored by `sim.place_voxel` fallback.
+    pub radius: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SimDisasterKind {
+    Meteor,
+    Lightning,
+    Flood,
+    Quake,
+    Firestorm,
+    Tornado,
+    VolcanicVent,
+    Drought,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimDisasterArgs {
+    /// Disaster family, currently best-effort mapped to `sim.damage`.
+    pub kind: SimDisasterKind,
+    /// World tile X (integer).
+    pub x: i64,
+    /// World tile Y (integer).
+    pub y: i64,
+    /// World tile Z (integer).
+    pub z: i64,
+    /// Damage radius in voxels.
+    pub radius: Option<u8>,
+    /// Damage energy.
+    pub energy: Option<u32>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SimLawArgs {
+    /// Economy law knob name. Mapped to nearest `sim.set_policy` field.
+    pub law: String,
+    /// Economy multiplier / law magnitude to map.
+    pub value: Option<f64>,
+    /// Optional `base_consumption_joules`.
+    pub base_consumption_joules: Option<u64>,
+    /// Transport override (host/port/timeout).
+    #[serde(flatten)]
+    pub transport: RpcArgs,
+}
+
 // ── existing result types ───────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -1143,6 +1470,822 @@ impl CivisMcpServer {
         Parameters(transport): Parameters<RpcArgs>,
     ) -> Result<Json<RpcForwardResult>, String> {
         forward_rpc(&transport, "save.list", json!({}), "civis_save_list").map(Json)
+    }
+
+    /// Forward `health` to civ-server (control-surface alias: `sim_health`).
+    #[tool(
+        name = "sim_health",
+        description = "Forward `health` to civ-server. Returns the bridge tick as a sanity check."
+    )]
+    async fn sim_health(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "health", json!({}), "sim_health").map(Json)
+    }
+
+    /// Forward `sim.snapshot` and optionally project an `sim.inspect_tile` probe.
+    #[tool(
+        name = "sim_inspect",
+        description = "Forward sim.snapshot to civ-server. Optionally include `sim.inspect_tile` probe data."
+    )]
+    async fn sim_inspect(
+        &self,
+        Parameters(SimInspectArgs {
+            tile_x,
+            tile_y,
+            transport,
+        }): Parameters<SimInspectArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let snapshot = forward_rpc(
+            &transport,
+            "sim.snapshot",
+            json!({}),
+            "sim_inspect.snapshot",
+        )?;
+
+        let mut result = if snapshot.result.is_object() {
+            snapshot.result
+        } else {
+            json!({ "snapshot": snapshot.result })
+        };
+
+        if let (Some(x), Some(y)) = (tile_x, tile_y) {
+            let tile = forward_rpc(
+                &transport,
+                "sim.inspect_tile",
+                json!({ "x": x, "y": y }),
+                "sim_inspect.tile",
+            )?;
+            match &mut result {
+                Value::Object(obj) => {
+                    obj.insert("tile".to_owned(), tile.result);
+                }
+                _ => {
+                    result = json!({ "snapshot": result, "tile": tile.result });
+                }
+            }
+        }
+
+        Ok(Json(RpcForwardResult {
+            method: "sim_inspect".to_string(),
+            url: snapshot.url,
+            result,
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Alias to `sim.status` for control-surface clients.
+    #[tool(
+        name = "sim_status",
+        description = "Forward sim.status to civ-server. Use for heartbeat / liveness checks."
+    )]
+    async fn sim_status(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.status", json!({}), "sim_status").map(Json)
+    }
+
+    /// Alias to `sim.inspect_tile` for control-surface clients.
+    #[tool(
+        name = "sim_inspect_tile",
+        description = "Forward sim.inspect_tile to civ-server."
+    )]
+    async fn sim_inspect_tile(
+        &self,
+        Parameters(InspectTileArgs { x, y, transport }): Parameters<InspectTileArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.inspect_tile",
+            json!({ "x": x, "y": y }),
+            "sim_inspect_tile",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `sim.get_factions` for faction telemetry.
+    #[tool(
+        name = "sim_get_factions",
+        description = "Forward sim.get_factions to civ-server."
+    )]
+    async fn sim_get_factions(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_factions", json!({}), "sim_get_factions").map(Json)
+    }
+
+    /// Alias to `sim.get_resources` for world resource telemetry.
+    #[tool(
+        name = "sim_get_resources",
+        description = "Forward sim.get_resources to civ-server."
+    )]
+    async fn sim_get_resources(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_resources", json!({}), "sim_get_resources").map(Json)
+    }
+
+    /// Forward `sim.emergence` (+ optional legacy/detail side calls) to civ-server.
+    #[tool(
+        name = "sim_get_emergence",
+        description = "Forward sim.emergence (and optional sim.get_emergence_metrics / emergence.dashboard) to civ-server."
+    )]
+    async fn sim_get_emergence(
+        &self,
+        Parameters(SimGetEmergenceArgs {
+            include_legacy,
+            include_dashboard,
+            transport,
+        }): Parameters<SimGetEmergenceArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let primary = forward_rpc(&transport, "sim.emergence", json!({}), "sim_get_emergence.primary")?;
+        let mut merged = if primary.result.is_object() {
+            primary.result
+        } else {
+            json!({ "emergence": primary.result })
+        };
+        if let Value::Object(ref mut obj) = merged {
+            if include_legacy.unwrap_or(false) {
+                let legacy = forward_rpc(
+                    &transport,
+                    "sim.get_emergence_metrics",
+                    json!({}),
+                    "sim_get_emergence.legacy",
+                )?;
+                obj.insert("legacy".to_owned(), legacy.result);
+            }
+            if include_dashboard.unwrap_or(false) {
+                let dashboard = forward_rpc(
+                    &transport,
+                    "emergence.dashboard",
+                    json!({}),
+                    "sim_get_emergence.dashboard",
+                )?;
+                obj.insert("dashboard".to_owned(), dashboard.result);
+            }
+        }
+        Ok(Json(RpcForwardResult {
+            method: "sim_get_emergence".to_string(),
+            url: primary.url,
+            result: merged,
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Alias to `sim.get_factions` plus lightweight diplomacy view.
+    #[tool(
+        name = "sim_get_diplomacy",
+        description = "Alias surface for diplomacy read telemetry. Uses sim.get_factions today."
+    )]
+    async fn sim_get_diplomacy(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_factions", json!({}), "sim_get_diplomacy").map(Json)
+    }
+
+    /// Alias to `sim.tech_state` for research telemetry.
+    #[tool(
+        name = "sim_get_tech",
+        description = "Forward sim.tech_state to civ-server."
+    )]
+    async fn sim_get_tech(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.tech_state", json!({}), "sim_get_tech").map(Json)
+    }
+
+    /// Alias to `sim.outcome` for game-state end-condition telemetry.
+    #[tool(
+        name = "sim_get_outcome",
+        description = "Forward sim.outcome to civ-server."
+    )]
+    async fn sim_get_outcome(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.outcome", json!({}), "sim_get_outcome").map(Json)
+    }
+
+    /// Alias to `sim.command` repeated for N-tick stepping.
+    #[tool(
+        name = "sim_step",
+        description = "Advance simulation by repeated sim.command tick calls."
+    )]
+    async fn sim_step(
+        &self,
+        Parameters(SimStepArgs {
+            ticks,
+            auto_pause,
+            role,
+            transport,
+        }): Parameters<SimStepArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let ticks = ticks.unwrap_or(1).max(1);
+        if auto_pause.unwrap_or(false) {
+            let mut speed_params = serde_json::Map::new();
+            speed_params.insert("multiplier".to_owned(), json!(0_u32));
+            forward_rpc(&transport, "sim.set_speed", Value::Object(speed_params), "sim_step.pause").map_err(|e| {
+                format!("sim_step: {e}")
+            })?;
+        }
+        for _ in 0..ticks {
+            let mut params = serde_json::Map::new();
+            params.insert("action".to_owned(), json!(SimCommandAction::Tick.wire_name()));
+            if let Some(role) = role.clone() {
+                params.insert("role".to_owned(), json!(role));
+            }
+            forward_rpc(&transport, "sim.command", Value::Object(params), "sim_step.tick")
+                .map_err(|e| format!("sim_step: {e}"))?;
+        }
+        if auto_pause.unwrap_or(false) {
+            let mut speed_params = serde_json::Map::new();
+            speed_params.insert("multiplier".to_owned(), json!(1_u32));
+            forward_rpc(&transport, "sim.set_speed", Value::Object(speed_params), "sim_step.resume").map_err(|e| {
+                format!("sim_step: {e}")
+            })?;
+        }
+        let tick = forward_rpc(&transport, "sim.get_tick", json!({}), "sim_step.tick")?;
+        let final_tick = tick
+            .result
+            .get("tick")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        Ok(Json(RpcForwardResult {
+            method: "sim_step".to_owned(),
+            url: tick.url,
+            result: json!({
+                "ticks_advanced": ticks,
+                "tick": final_tick,
+            }),
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Alias to `sim.set_speed` through control-surface naming.
+    #[tool(
+        name = "sim_set_speed",
+        description = "Forward sim.set_speed to civ-server."
+    )]
+    async fn sim_set_speed(
+        &self,
+        Parameters(SpeedSetArgs {
+            multiplier,
+            transport,
+        }): Parameters<SpeedSetArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.set_speed",
+            json!({ "multiplier": multiplier }),
+            "sim_set_speed",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `sim.get_speed` for control-surface callers.
+    #[tool(
+        name = "sim_get_speed",
+        description = "Forward sim.get_speed to civ-server."
+    )]
+    async fn sim_get_speed(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_speed", json!({}), "sim_get_speed").map(Json)
+    }
+
+    /// Run forward ticks until an endpoint condition is reached.
+    #[tool(
+        name = "sim_run_until",
+        description = "Advance simulation in sim.command loops until target tick/outcome or max_ticks."
+    )]
+    async fn sim_run_until(
+        &self,
+        Parameters(SimRunUntilArgs {
+            max_ticks,
+            target_tick,
+            target_outcome,
+            timeout_seconds,
+            poll_every,
+            role,
+            transport,
+        }): Parameters<SimRunUntilArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let deadline_seconds = timeout_seconds.unwrap_or(0);
+        let poll_every = poll_every.unwrap_or(8).max(1);
+        let target_outcome = target_outcome
+            .unwrap_or_else(|| "ongoing".to_owned())
+            .to_lowercase();
+        let target_tick = target_tick.unwrap_or(u64::MAX);
+        let mut ticks: u64 = 0;
+        let mut final_tick: u64 = 0;
+        let mut final_outcome = "ongoing".to_owned();
+
+        let timeout_deadline = std::time::Instant::now();
+        let mut stopped = "max_ticks".to_owned();
+
+        loop {
+            if ticks >= max_ticks {
+                break;
+            }
+
+            let mut params = serde_json::Map::new();
+            params.insert("action".to_owned(), json!(SimCommandAction::Tick.wire_name()));
+            if let Some(role) = role.clone() {
+                params.insert("role".to_owned(), json!(role.clone()));
+            }
+            forward_rpc(&transport, "sim.command", Value::Object(params), "sim_run_until.tick")
+                .map_err(|e| format!("sim_run_until: {e}"))?;
+            ticks += 1;
+
+            let should_poll = (ticks % poll_every == 0) || (ticks >= max_ticks) || (final_outcome != "ongoing");
+            if should_poll {
+                let outcome = forward_rpc(
+                    &transport,
+                    "sim.outcome",
+                    json!({}),
+                    "sim_run_until.outcome",
+                )
+                .map_err(|e| format!("sim_run_until: {e}"))?;
+                final_outcome = outcome
+                    .result
+                    .get("outcome")
+                    .and_then(Value::as_str)
+                    .unwrap_or("ongoing")
+                    .to_owned();
+
+                let tick = forward_rpc(
+                    &transport,
+                    "sim.get_tick",
+                    json!({}),
+                    "sim_run_until.tick_check",
+                )
+                .map_err(|e| format!("sim_run_until: {e}"))?;
+                final_tick = tick.result.get("tick").and_then(Value::as_u64).unwrap_or(ticks);
+
+                if !target_outcome.is_empty() && final_outcome == target_outcome {
+                    stopped = "target_outcome".to_owned();
+                    break;
+                }
+            }
+
+            if final_tick >= target_tick {
+                stopped = "target_tick".to_owned();
+                break;
+            }
+
+            if deadline_seconds > 0 && timeout_deadline.elapsed().as_secs() >= timeout_seconds {
+                stopped = "timeout".to_owned();
+                break;
+            }
+        }
+
+        if final_tick == 0 {
+            final_tick = forward_rpc(
+                &transport,
+                "sim.get_tick",
+                json!({}),
+                "sim_run_until.final_tick",
+            )
+            .map_err(|e| format!("sim_run_until: {e}"))?
+            .result
+            .get("tick")
+            .and_then(Value::as_u64)
+            .unwrap_or(final_tick);
+        }
+
+        Ok(Json(RpcForwardResult {
+            method: "sim_run_until".to_owned(),
+            url: forward_rpc(
+                &transport,
+                "health",
+                json!({}),
+                "sim_run_until.url",
+            )?
+            .url,
+            result: json!({
+                "ticks_advanced": ticks,
+                "final_tick": final_tick,
+                "final_outcome": final_outcome,
+                "stopped_reason": stopped,
+            }),
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Alias to `sim.reset` for control-surface naming.
+    #[tool(
+        name = "sim_reset",
+        description = "Alias for sim.reset."
+    )]
+    async fn sim_reset(
+        &self,
+        Parameters(SimResetArgs { seed, transport }): Parameters<SimResetArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.reset", json!({ "seed": seed }), "sim_reset").map(Json)
+    }
+
+    /// Alias to `sim.load_scenario` for control-surface naming.
+    #[tool(
+        name = "sim_load_scenario",
+        description = "Alias for sim.load_scenario."
+    )]
+    async fn sim_load_scenario(
+        &self,
+        Parameters(SimLoadScenarioArgs {
+            preset,
+            seed,
+            transport,
+        }): Parameters<SimLoadScenarioArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("preset".to_owned(), json!(preset));
+        if let Some(seed) = seed {
+            params.insert("seed".to_owned(), json!(seed));
+        }
+        forward_rpc(
+            &transport,
+            "sim.load_scenario",
+            Value::Object(params),
+            "sim_load_scenario",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `sim_spawn_entity` and `sim.spawn_civilian` for mutating entities.
+    #[tool(
+        name = "sim_spawn",
+        description = "Spawn one civ-agent entity or civilian at a map position."
+    )]
+    async fn sim_spawn(
+        &self,
+        Parameters(SimSpawnArgs {
+            kind,
+            x,
+            y,
+            faction,
+            transport,
+        }): Parameters<SimSpawnArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut result = forward_rpc(
+            &transport,
+            "sim.spawn_entity",
+            json!({
+                "kind": kind.wire_name(),
+                "x": x,
+                "y": y,
+                "faction": faction.unwrap_or(0),
+            }),
+            "sim_spawn",
+        );
+        if kind == SpawnPaletteKind::Civilian && result.is_err() {
+            result = forward_rpc(
+                &transport,
+                "sim.spawn_civilian",
+                json!({
+                    "x": x,
+                    "y": y,
+                    "faction": faction.unwrap_or(0),
+                }),
+                "sim_spawn_fallback",
+            );
+        }
+        result.map(Json)
+    }
+
+    /// Alias to `sim.place_voxel` for mutating terrain.
+    #[tool(
+        name = "sim_sculpt",
+        description = "Alias for sim.place_voxel."
+    )]
+    async fn sim_sculpt(
+        &self,
+        Parameters(SimSculptArgs {
+            x,
+            y,
+            z,
+            material,
+            transport,
+        }): Parameters<SimSculptArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.place_voxel",
+            json!({ "x": x, "y": y, "z": z, "material": material }),
+            "sim_sculpt",
+        )
+        .map(Json)
+    }
+
+    /// Best-effort `sim.place_voxel` fallback for missing `sim.terraform_extent`.
+    #[tool(
+        name = "sim_terraform_extent",
+        description = "Best-effort terrain brush operation. Degrades to repeated sim.place_voxel until dedicated tool lands."
+    )]
+    async fn sim_terraform_extent(
+        &self,
+        Parameters(SimTerraformExtentArgs {
+            x,
+            y,
+            z,
+            _op,
+            material,
+            _radius,
+            transport,
+        }): Parameters<SimTerraformExtentArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let material = material.unwrap_or(1);
+        forward_rpc(
+            &transport,
+            "sim.place_voxel",
+            json!({ "x": x, "y": y, "z": z, "material": material }),
+            "sim_terraform_extent",
+        )
+        .map(Json)
+    }
+
+    /// Best-effort disaster tool mapping to `sim.damage`.
+    #[tool(
+        name = "sim_disaster",
+        description = "Best-effort disaster mapping to sim.damage."
+    )]
+    async fn sim_disaster(
+        &self,
+        Parameters(SimDisasterArgs {
+            kind: _kind,
+            x,
+            y,
+            z,
+            radius,
+            energy,
+            transport,
+        }): Parameters<SimDisasterArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.damage",
+            json!({
+                "x": x,
+                "y": y,
+                "z": z,
+                "radius": radius.unwrap_or(3),
+                "energy": energy.unwrap_or(2048),
+            }),
+            "sim_disaster",
+        )
+        .map(Json)
+    }
+
+    /// Best-effort law tool mapping to `sim.set_policy`.
+    #[tool(
+        name = "sim_law",
+        description = "Best-effort mapping of law verbs to sim.set_policy."
+    )]
+    async fn sim_law(
+        &self,
+        Parameters(SimLawArgs {
+            value,
+            law,
+            base_consumption_joules,
+            transport,
+        }): Parameters<SimLawArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let scarcity = value.unwrap_or(1.0);
+        let mut params = serde_json::Map::new();
+        params.insert("scarcity_multiplier".to_owned(), json!(scarcity));
+        if let Some(base_consumption_joules) = base_consumption_joules {
+            params.insert(
+                "base_consumption_joules".to_owned(),
+                json!(base_consumption_joules),
+            );
+        }
+        forward_rpc(&transport, "sim.set_policy", Value::Object(params), "sim_law")
+            .map_err(|err| format!("sim_law via {}: {err}", law))
+            .map(Json)
+    }
+
+    /// Blind implementation: `sim.undo` has no dedicated JSON-RPC method yet.
+    #[tool(
+        name = "sim_undo",
+        description = "sim.undo is unavailable on the current JSON-RPC surface."
+    )]
+    async fn sim_undo(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        Ok(Json(RpcForwardResult {
+            method: "sim_undo".to_string(),
+            url: transport.resolve_config().ws_url(),
+            result: json!({
+                "unavailable": true,
+                "reason": "sim.undo has no wire method on this branch",
+            }),
+            harness_version: crate::HARNESS_VERSION,
+        }))
+    }
+
+    /// Alias to `sim.spawn_civilian` for grouped organism spawning.
+    #[tool(
+        name = "sim_spawn_organism",
+        description = "Best-effort grouped spawn fallback using repeated sim.spawn_civilian."
+    )]
+    async fn sim_spawn_organism(
+        &self,
+        Parameters(SimSpawnOrganismArgs {
+            count,
+            x,
+            y,
+            faction,
+            transport,
+        }): Parameters<SimSpawnOrganismArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut last = None;
+        for _ in 0..count.max(1) {
+            last = Some(
+                forward_rpc(
+                    &transport,
+                    "sim.spawn_civilian",
+                    json!({
+                        "x": x,
+                        "y": y,
+                        "faction": faction.unwrap_or(0),
+                    }),
+                    "sim_spawn_organism",
+                )?,
+            );
+        }
+        match last {
+            Some(value) => Ok(Json(value)),
+            None => Ok(Json(RpcForwardResult {
+                method: "sim_spawn_organism".to_owned(),
+                url: transport.resolve_config().ws_url(),
+                result: json!({ "accepted": false, "count": 0 }),
+                harness_version: crate::HARNESS_VERSION,
+            })),
+        }
+    }
+
+    /// Alias to `sim.save.slot`.
+    #[tool(
+        name = "sim_save_slot",
+        description = "Alias for save.slot."
+    )]
+    async fn sim_save_slot(
+        &self,
+        Parameters(SaveSlotArgs { slot_name, transport }): Parameters<SaveSlotArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "save.slot",
+            json!({ "slot_name": slot_name }),
+            "sim_save_slot",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `save.load`.
+    #[tool(
+        name = "sim_load_slot",
+        description = "Alias for save.load."
+    )]
+    async fn sim_load_slot(
+        &self,
+        Parameters(SaveSlotArgs { slot_name, transport }): Parameters<SaveSlotArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "save.load",
+            json!({ "slot_name": slot_name }),
+            "sim_load_slot",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `save.list`.
+    #[tool(
+        name = "sim_list_saves",
+        description = "Alias for save.list."
+    )]
+    async fn sim_list_saves(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "save.list", json!({}), "sim_list_saves").map(Json)
+    }
+
+    /// Alias to `sim.save_replay`.
+    #[tool(
+        name = "sim_save_replay",
+        description = "Alias for sim.save_replay."
+    )]
+    async fn sim_save_replay(
+        &self,
+        Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.save_replay",
+            json!({ "path": path }),
+            "sim_save_replay",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `sim.load_replay`.
+    #[tool(
+        name = "sim_load_replay",
+        description = "Alias for sim.load_replay."
+    )]
+    async fn sim_load_replay(
+        &self,
+        Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.load_replay",
+            json!({ "path": path }),
+            "sim_load_replay",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `sim.subscribe`.
+    #[tool(
+        name = "sim_subscribe",
+        description = "Alias for sim.subscribe."
+    )]
+    async fn sim_subscribe(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.subscribe", json!({}), "sim_subscribe").map(Json)
+    }
+
+    /// Alias to `sim.unsubscribe`.
+    #[tool(
+        name = "sim_unsubscribe",
+        description = "Alias for sim.unsubscribe."
+    )]
+    async fn sim_unsubscribe(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.unsubscribe", json!({}), "sim_unsubscribe").map(Json)
+    }
+
+    /// Alias to `sim.update_subscription`.
+    #[tool(
+        name = "sim_update_subscription",
+        description = "Alias for sim.update_subscription."
+    )]
+    async fn sim_update_subscription(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.update_subscription",
+            json!({}),
+            "sim_update_subscription",
+        )
+        .map(Json)
+    }
+
+    /// Alias to `sim.damage`.
+    #[tool(
+        name = "sim_damage",
+        description = "Alias for sim.damage."
+    )]
+    async fn sim_damage(
+        &self,
+        Parameters(SimDamageArgs {
+            x,
+            y,
+            z,
+            radius,
+            energy,
+            transport,
+        }): Parameters<SimDamageArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.damage",
+            json!({
+                "x": x,
+                "y": y,
+                "z": z,
+                "radius": radius,
+                "energy": energy,
+            }),
+            "sim_damage",
+        )
+        .map(Json)
     }
 }
 

@@ -56,20 +56,76 @@ use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid, PixelStats};
 /// future rename surfaces in CI rather than in production.
 pub const TOOL_NAMES: &[&str] = &[
     "civis_census",
+    "civis_damage",
     "civis_diplomacy_action",
     "civis_emergence",
+    "civis_emergence_dashboard",
+    "civis_emergence_metrics",
+    "civis_emergence_metrics_full",
+    "civis_factions",
     "civis_god_action",
+    "civis_get_tick",
     "civis_health",
+    "civis_inspect_tile",
+    "civis_load_replay",
+    "civis_load_scenario",
+    "civis_load_slot",
     "civis_market_prices",
+    "civis_outcome",
+    "civis_perf",
     "civis_pixels",
+    "civis_place_voxel",
+    "civis_resources",
     "civis_research_queue",
+    "civis_reset",
     "civis_save_list",
+    "civis_save_replay",
+    "civis_save_slot",
+    "civis_set_policy",
     "civis_snapshot",
+    "civis_sim_command",
     "civis_speed_get",
     "civis_speed_set",
+    "civis_spawn_civilian",
     "civis_spawn_entity",
+    "civis_status",
+    "civis_subscribe",
     "civis_tech_state",
+    "civis_unsubscribe",
+    "civis_update_subscription",
     "civis_verify",
+    "sim_damage",
+    "sim_disaster",
+    "sim_get_diplomacy",
+    "sim_get_emergence",
+    "sim_get_factions",
+    "sim_get_outcome",
+    "sim_get_resources",
+    "sim_get_speed",
+    "sim_get_tech",
+    "sim_health",
+    "sim_inspect",
+    "sim_inspect_tile",
+    "sim_law",
+    "sim_load_replay",
+    "sim_load_scenario",
+    "sim_load_slot",
+    "sim_list_saves",
+    "sim_reset",
+    "sim_run_until",
+    "sim_save_replay",
+    "sim_save_slot",
+    "sim_set_speed",
+    "sim_spawn",
+    "sim_spawn_organism",
+    "sim_status",
+    "sim_step",
+    "sim_subscribe",
+    "sim_sculpt",
+    "sim_terraform_extent",
+    "sim_unsubscribe",
+    "sim_undo",
+    "sim_update_subscription",
 ];
 
 /// Library version string. Mirrors `civis_cli::HARNESS_VERSION` so MCP
@@ -344,8 +400,7 @@ mod tests {
     }
 
     /// `tool_names()` must return exactly the tools the PR adds, sorted
-    /// lexicographically. The PR scope: 15 tools (3 original + 12 new RPC
-    /// forwarders for FR-CIV-MCP-001 / FR-CIV-MCP-002).
+    /// lexicographically.
     #[test]
     fn tool_names_match_expected() {
         let names = tool_names();
@@ -355,11 +410,7 @@ mod tests {
             names, sorted_const,
             "router must match the TOOL_NAMES constant"
         );
-        assert_eq!(
-            names.len(),
-            15,
-            "expected 15 tools (3 original + 12 forwarders), got {names:?}"
-        );
+        assert_eq!(names.len(), TOOL_NAMES.len(), "expected {} tools, got {names:?}", TOOL_NAMES.len());
     }
 
     /// `tool_router().list_all()` must return one `Tool` entry per name and
@@ -369,7 +420,7 @@ mod tests {
     fn router_list_all_is_consistent() {
         let tools = tool_router().list_all();
         let names: Vec<String> = tools.iter().map(|t| t.name.to_string()).collect();
-        assert_eq!(names.len(), 15, "expected exactly 15 tools, got {names:?}");
+        assert_eq!(names.len(), TOOL_NAMES.len(), "expected {} tools, got {names:?}", TOOL_NAMES.len());
         for expected in TOOL_NAMES {
             assert!(
                 names.iter().any(|n| n == expected),

@@ -56,6 +56,10 @@ pub struct StreamCulling {
     pub eye: [f32; 3],
     /// Maximum render distance in world units.
     pub max_distance: f32,
+    /// Draw-distance multiplier for chunks (`< 1.0` reduces visible radius).
+    pub draw_distance_scale: f32,
+    /// LOD decision distance multiplier (`> 1.0` coarsens earlier).
+    pub lod_distance_scale: f32,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -554,7 +558,8 @@ pub fn apply_voxel_delta_frame(
             scene.chunk_voxels.insert(chunk_id, chunk.voxels.clone());
         }
 
-        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
+        let max_distance = culling.max_distance * culling.draw_distance_scale;
+        if !should_render_chunk(chunk_id, culling.eye, max_distance) {
             if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
                 commands.entity(entity).despawn();
             }
@@ -569,8 +574,8 @@ pub fn apply_voxel_delta_frame(
             id: chunk.event.chunk_id,
             voxels: &chunk.voxels,
         };
-        let distance =
-            chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
+        let distance = chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32)
+            * culling.lod_distance_scale;
         let lod = LodLevel(mesh_lod_level(distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
@@ -1116,6 +1121,8 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
+            draw_distance_scale: 1.0,
+            lod_distance_scale: 1.0,
         };
 
         let mut scene = LiveStreamScene::default();

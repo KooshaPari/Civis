@@ -13,6 +13,7 @@ use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
+    frame_budget::FrameBudgetRecovery,
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
     },
@@ -844,6 +845,7 @@ fn apply_live_frames(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
+    frame_budget_recovery: Res<FrameBudgetRecovery>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -855,6 +857,8 @@ fn apply_live_frames(
     let culling = StreamCulling {
         eye,
         max_distance: orbit.distance,
+        draw_distance_scale: frame_budget_recovery.draw_distance_scale(),
+        lod_distance_scale: frame_budget_recovery.lod_distance_scale(),
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 

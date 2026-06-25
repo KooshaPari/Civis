@@ -73,13 +73,13 @@ pub static DEFAULT_POWERS: &[PowerDef] = &[
         "Sets height equal to the majority surface under footprint.", PowerRequestKind::TerraformEdit),
     def_near("terrain.shift", "Shift", PowerTab::Terrain, PowerCategory::Mutating,
         "Translates the height field under footprint by a vector.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.add_land", "AddLand", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.add_land", "AddLand", PowerTab::Terrain, PowerCategory::Mutating,
         "Chunky +Δ in a hard-edged footprint; god-brush ignores falloff.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.dig_ocean", "DigOcean", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.dig_ocean", "DigOcean", PowerTab::Terrain, PowerCategory::Mutating,
         "Chunky –Δ down to sea level; water CA fills the basin.", PowerRequestKind::TerraformEdit),
     def_live("terrain.raise_mountain", "RaiseMountain", PowerTab::Terrain, PowerCategory::Mutating,
         "AddLand with a Gaussian peak profile + height-noise dither.", PowerRequestKind::TerraformEdit),
-    def_near("terrain.drop_biome", "DropBiome", PowerTab::Terrain, PowerCategory::Mutating,
+    def_live("terrain.drop_biome", "DropBiome", PowerTab::Terrain, PowerCategory::Mutating,
         "Re-paints the surface material band to a chosen biome id.", PowerRequestKind::TerraformEdit),
 
     // ===================== MATERIAL (8) =====================
@@ -339,6 +339,10 @@ mod tests {
     /// `material.surface_paint`, `material.additive_drop`,
     /// `material.pour_liquid`, `material.seed_snow`,
     /// `material.seed_ore`) and the `terrain.slope` TERRAIN op.
+    ///
+    /// Phase 3b (this PR) promotes 3 more TERRAIN ops to `Live`:
+    /// `terrain.add_land`, `terrain.dig_ocean`, and
+    /// `terrain.drop_biome`.
     #[test]
     fn phase1_live_verbs_are_present() {
         let live: Vec<&'static str> = default_powers()
@@ -374,17 +378,21 @@ mod tests {
             "material.seed_snow",
             "material.seed_ore",
             "terrain.slope",
+            // Phase 3b (3 more TERRAIN: add_land, dig_ocean, drop_biome).
+            "terrain.add_land",
+            "terrain.dig_ocean",
+            "terrain.drop_biome",
         ] {
             assert!(
                 live.contains(&expected),
-                "Phase 1/2/3 verb `{expected}` must be marked Live in the catalog (got {live:?})"
+                "Phase 1/2/3/3b verb `{expected}` must be marked Live in the catalog (got {live:?})"
             );
         }
-        // 6 (Phase 1) + 10 (Phase 2) + 8 (Phase 3) = 24 Live verbs.
+        // 6 (Phase 1) + 10 (Phase 2) + 8 (Phase 3) + 3 (Phase 3b) = 27 Live verbs.
         assert_eq!(
             live.len(),
-            24,
-            "expected exactly 24 Live verbs after Phase 3 (6 + 10 + 8), got {} ({live:?})",
+            27,
+            "expected exactly 27 Live verbs after Phase 3b (6 + 10 + 8 + 3), got {} ({live:?})",
             live.len()
         );
     }

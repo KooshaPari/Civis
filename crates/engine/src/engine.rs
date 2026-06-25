@@ -51,6 +51,10 @@ use crate::policy::ControlSignals;
 use crate::policy::Policy;
 use crate::policy::PolicyInput;
 use crate::policy::DEFAULT_ECONOMY_POLICY;
+use crate::religion::{
+    apply_big_gods_response, last_religion_sample, substrate_gradients_for,
+    ReligionEvent, ReligionEventKind, ReligiousProfile, SubstrateGradients,
+};
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
 
@@ -575,6 +579,51 @@ pub struct Simulation {
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so
     /// clients can render the social-mood layer.
     last_tick_mood: Vec<MoodSnapshot>,
+
+    /// Per-settlement religious profile keyed by settlement id.
+    /// Populated by [`Simulation::phase_belief`] (FR-CIV-REL-001 §7).
+    /// One entry per settlement that has been observed by the belief phase;
+    /// settlements outside the religion design radius are not stored.
+    pub religious_profiles: BTreeMap<u32, ReligiousProfile>,
+
+    /// Per-tick buffer of religion events emitted by `phase_belief`. Cleared
+    /// at the top of each `tick()` (mirrors the `last_tick_mood` /
+    /// `last_tick_diffusion_events` pattern). Consumers (e.g. the
+    /// JSON-RPC `sim.snapshot.religion` method) read this buffer once per
+    /// tick.
+    pub last_tick_religion_events: Vec<ReligionEvent>,
+}
+
+/// Per-settlement religious event emitted by [`Simulation::phase_belief`]
+/// (FR-CIV-REL-001 §7 + §10 hooks). Consumed by the JSON-RPC bridge in
+/// `crates/server/src/ws_bridge.rs` to surface the religion layer.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ReligionEvent {
+    /// The settlement id this event pertains to.
+    pub settlement_id: u32,
+    /// Which cap was hit (or None if this is a regular profile update).
+    pub kind: ReligionEventKind,
+    /// The tick on which this event was emitted.
+    pub tick: u64,
+}
+
+/// Distinguishes the kinds of religion events the `phase_belief` loop can
+/// emit. JSON-RPC consumers use this to decide whether to surface a UI
+/// notification (caps hit) or just update the profile (regular).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReligionEventKind {
+    /// Regular per-tick profile update (no cap hit, no regime change).
+    TickUpdate,
+    /// `monitoring` deltas hit [`crate::religion::MAX_D_MONITORING_PER_TICK`].
+    MonitoringCapped,
+    /// `mythic_coherence` deltas hit [`crate::religion::MAX_D_COHERENCE_PER_TICK`].
+    CoherenceCapped,
+    /// `uncertainty_reduction` deltas hit [`crate::religion::MAX_D_UNCERT_REDUCTION_TICK`].
+    UncertaintyCapped,
+    /// The profile crossed the Norenzayan Big-Gods threshold upward.
+    BigGodsEmerged,
+    /// The profile collapsed below the dissolution threshold.
+    Dissolved,
 }
 
 /// Civic institution event emitted by [`Simulation::phase_institutions`]
@@ -1075,6 +1124,8 @@ impl Simulation {
             mood_history: Vec::new(),
             mood_history_by_settlement: BTreeMap::new(),
             last_tick_mood: Vec::new(),
+            religious_profiles: BTreeMap::new(),
+            last_tick_religion_events: Vec::new(),
         }
     }
 
@@ -1172,6 +1223,8 @@ impl Simulation {
             household_band_set: BTreeSet::new(),
             last_tick_stratification: Vec::new(),
             last_tick_stratification_reports: BTreeMap::new(),
+            religious_profiles: BTreeMap::new(),
+            last_tick_religion_events: Vec::new(),
         }
     }
 
@@ -2431,6 +2484,67 @@ impl Simulation {
         for _ in 0..n {
             self.tick();
         }
+    }
+
+    // ===== phase_cohesion (FR-CIV-GOV-030) =====
+
+    /// Register a kinship edge from `actor_id` to `target`. The edge contributes
+    /// to per-settlement fabric via `phase_cohesion`.
+    pub fn register_kinship(&mut self, actor_id: u64, kinship: KinshipEdge) {
+        self.kinship
+            .entry(actor_id)
+            .or_default()
+            .push(kinship);
+    }
+
+    /// Add (or subtract) trust between two actors. Negative `amount` erodes trust.
+    pub fn add_trust(&mut self, actor_id: u64, target: u64, amount: i64) {
+        let entry = self.trust.entry(actor_id).or_default();
+        entry.trust_sum = entry.trust_sum.saturating_add(amount);
+        entry.trust_count = entry.trust_count.saturating_add(1);
+        entry.targets.insert(target);
+    }
+
+    /// Pin an actor to a settlement so `phase_cohesion` can aggregate per-actor
+    /// contributions into per-settlement fabric.
+    pub fn set_settlement_actor(&mut self, actor_id: u64, settlement_id: u32) {
+        self.settlement_actors
+            .entry(settlement_id)
+            .or_default()
+            .insert(actor_id);
+        self.actor_settlement.insert(actor_id, settlement_id);
+    }
+
+    /// Set hardship for an actor (food scarcity, plague, war, etc.).
+    /// High hardship erodes cohesion fabric.
+    pub fn set_actor_in_settlement_hardship(&mut self, actor_id: u64, hardship: i64) {
+        self.actor_hardship.insert(actor_id, hardship.max(0));
+    }
+
+    /// Toggle whether an actor's settlement has a Temple and/or Garrison.
+    /// Both institutions mitigate hardship's impact on fabric.
+    pub fn set_actor_in_settlement_institutions(
+        &mut self,
+        actor_id: u64,
+        has_temple: bool,
+        has_garrison: bool,
+    ) {
+        let entry = self.actor_institutions.entry(actor_id).or_default();
+        entry.has_temple = has_temple;
+        entry.has_garrison = has_garrison;
+    }
+
+    /// Per-tick stream of `CohesionEvent`s, cleared at the start of every tick.
+    pub fn last_tick_cohesion(&self) -> &[CohesionEvent] {
+        &self.last_tick_cohesion_events
+    }
+
+    /// Per-settlement cohesion snapshot emitted by `phase_cohesion`.
+    pub fn last_tick_cohesion_settlement(
+        &self,
+        settlement_id: u32,
+    ) -> Option<CohesionSnapshot> {
+        self.last_tick_cohesion_snapshots.get(&settlement_id).copied()
     }
 
     /// Register a household as part of the global household population.

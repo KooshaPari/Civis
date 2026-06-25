@@ -70,3 +70,13 @@ pub use civ_institutions::{
 pub use engine::{
     MoodSnapshot, MOOD_CRIME_BASE, MOOD_HISTORY_CAP, MOOD_MAX, MOOD_MIN,
 };
+
+// FR-CIV-RELIGION (religion §7 wiring). Re-exported so callers
+// (server, clients, tests) can name `ReligiousProfile`, `SubstrateGradients`,
+// `ReligionEvent`, and the `apply_big_gods_response` /
+// `substrate_gradients_for` / `last_religion_sample` accessors without
+// pulling the `religion` module path.
+pub use religion::{
+    apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligionEvent,
+    ReligiousProfile, SubstrateGradients,
+};

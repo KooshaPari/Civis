@@ -295,8 +295,12 @@ pub fn parse_jsonrpc_snapshot_meta(text: &str) -> Option<WsSpectatorMeta> {
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 pub struct EmergenceHudData {
+    /// Shannon entropy (bits) over the live material histogram.
+    pub entropy_bits: f32,
     /// Normalised Shannon entropy (`0..=1`).
     pub entropy_norm: f32,
+    /// Rolling-mean branching ratio σ̄_W (charter §3.6).
+    pub branching_sigma: f32,
     /// Power-law exponent alpha for cluster-size distribution.
     pub power_law_alpha: f32,
     /// Novel config fingerprints per window per civilian.

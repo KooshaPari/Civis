@@ -7,7 +7,7 @@ use civ_agents::{
 };
 use civ_engine::{
     spawn::{spawn_airport_at, spawn_hangar_at, spawn_port_at},
-    Building, BuildingType, Simulation,
+    Building, BuildingType, Position, Simulation,
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -36,7 +36,7 @@ struct SimCivilianMarker {
 #[derive(Component)]
 struct SimBuildingMarker {
     building_type: BuildingType,
-    position: civ_engine::Position,
+    position: Position,
 }
 
 impl Default for SimState {
@@ -407,7 +407,7 @@ fn spawn_building_visual(
     building_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     building_type: BuildingType,
-    position: civ_engine::Position,
+    position: Position,
     world_pos: &Vec3,
 ) -> Entity {
     let Some(models) = models else {
@@ -485,7 +485,7 @@ fn spawn_building_visual(
     building_mesh: &Handle<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     building_type: BuildingType,
-    position: civ_engine::Position,
+    position: Position,
     world_pos: &Vec3,
 ) -> Entity {
     spawn_building_primitive(commands, building_mesh, materials, building_type, world_pos, position)
@@ -497,7 +497,7 @@ fn spawn_building_primitive(
     materials: &mut Assets<StandardMaterial>,
     building_type: BuildingType,
     world_pos: &Vec3,
-    position: civ_engine::Position,
+    position: Position,
 ) -> Entity {
     let color = building_color(building_type);
     let material = materials.add(StandardMaterial {

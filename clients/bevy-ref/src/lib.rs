@@ -97,8 +97,6 @@ pub mod tool_categories;
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]
@@ -283,6 +281,13 @@ pub struct OutcomeHudData {
     pub reason: String,
     pub tick: u64,
 }
+/// Wrapper resource so plugins in this crate (`civ_history`, `era_hud`, etc.) can read
+/// the same HUD snapshot that `civ-bevy-window` updates each frame.
+#[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
+#[derive(Debug, Clone, Default)]
+pub struct HudState {
+    pub snapshot: LiveHudSnapshot,
+}
 /// Headless-friendly snapshot for the live attach HUD (FPS / tick / socket / scene stats).
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Resource))]
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -308,7 +313,6 @@ pub struct LiveHudSnapshot {
     /// Factions tracked from `Frame3d::FactionState` wire frames.
     pub faction_count: usize,
     /// Max treasury balance across tracked factions (proxy for player wealth, from FactionStateEntry).
-    #[serde(default)]
     pub treasury: f32,
     /// Latest `sim.snapshot` round-trip time in milliseconds, when measured.
     pub ws_rtt_ms: Option<f32>,

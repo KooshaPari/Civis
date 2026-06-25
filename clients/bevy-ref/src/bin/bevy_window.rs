@@ -249,11 +249,6 @@ struct SimSpeedState {
 
 #[derive(Resource, Default)]
 struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
-}
 
 fn main() {
     let mut app = App::new();
@@ -779,6 +774,8 @@ fn speed_control_input(
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
+}
+
 fn action_pressed(
     #[cfg(feature = "egui")] settings: Option<&GameSettings>,
     action: &str,
@@ -1332,36 +1329,37 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-    // Right-click: open inspect popup
-    if mouse.just_pressed(MouseButton::Right) {
-        if let Ok((interaction, cursor)) = panels.single() {
-            if *interaction != Interaction::None {
-                if let Some(normalized) = cursor.normalized {
-                    let uv = inset_minimap_uv_from_cursor(normalized);
-                    let (tx, ty) = if cache.use_focus_bounds {
-                        if let Some(focus) = cache.focus {
-                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                            (x as i32, z as i32)
+        // Right-click: open inspect popup
+        if mouse.just_pressed(MouseButton::Right) {
+            if let Ok((interaction, cursor)) = panels.single() {
+                if *interaction != Interaction::None {
+                    if let Some(normalized) = cursor.normalized {
+                        let uv = inset_minimap_uv_from_cursor(normalized);
+                        let (tx, ty) = if cache.use_focus_bounds {
+                            if let Some(focus) = cache.focus {
+                                let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                                (x as i32, z as i32)
+                            } else {
+                                (0, 0)
+                            }
+                        } else if let Some(bounds) = cache.bounds {
+                            let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                            (cx, cz)
                         } else {
                             (0, 0)
-                        }
-                    } else if let Some(bounds) = cache.bounds {
-                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
-                        (cx, cz)
-                    } else {
-                        (0, 0)
-                    };
-                    popup.pending = Some((tx, ty));
+                        };
+                        popup.pending = Some((tx, ty));
+                    }
                 }
             }
+            return;
         }
-        return;
-    }
-    // Suppress unused warning — bridge is available for future left-click RPCs.
-    let _ = &bridge;
+        // Suppress unused warning — bridge is available for future left-click RPCs.
+        let _ = &bridge;
 
-    if !mouse.just_pressed(MouseButton::Left) {
-        return;
+        if !mouse.just_pressed(MouseButton::Left) {
+            return;
+        }
     }
 
     let Ok((interaction, cursor)) = panels.single() else {

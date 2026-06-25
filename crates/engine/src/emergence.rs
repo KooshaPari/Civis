@@ -16,9 +16,7 @@ use civ_agents::{
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
-    Dna, DnaClass,
-    spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary,
-    SeedSet,
+    Dna, DnaClass, spawn_genome_with_divergence, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
     EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
@@ -74,7 +72,7 @@ pub struct EmergenceState {
 }
 
 impl EmergenceState {
-    fn new(seed: u64) -> Self {
+    pub(crate) fn new(seed: u64) -> Self {
         let _ = seed;
         EmergenceState {
             legends: LegendsWorker::new(SagaGraph::new(LegendsConfig::default())),

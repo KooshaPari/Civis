@@ -62,12 +62,17 @@ fn tmp_dir() -> std::path::PathBuf {
 
 // ── tool registry ─────────────────────────────────────────────────────────
 
-/// Tool list must contain exactly 15 entries (3 verify-related + 12 new
-/// JSON-RPC forwarders), sorted lexicographically.
+/// Tool list must contain exactly as many entries as `TOOL_NAMES`, sorted
+/// lexicographically.
 #[test]
-fn tool_list_returns_fifteen_tools() {
+fn tool_list_matches_expected_count() {
     let names = tool_names();
-    assert_eq!(names.len(), 15, "expected exactly 15 tools, got {names:?}");
+    assert_eq!(
+        names.len(),
+        TOOL_NAMES.len(),
+        "expected {} tools, got {names:?}",
+        TOOL_NAMES.len()
+    );
 }
 
 /// Tool names must be sorted (the lib sorts them; callers rely on stable order).
@@ -121,28 +126,19 @@ fn every_tool_has_input_schema() {
     }
 }
 
-/// All 12 new JSON-RPC forwarder tools are present alongside the original 3.
+/// All MCP tools referenced by `TOOL_NAMES` are present in the registry.
 #[test]
 fn tool_names_contain_expected_entries() {
     let names = tool_names();
-    for expected in &[
-        "civis_verify",
-        "civis_pixels",
-        "civis_census",
-        // FR-CIV-MCP-001 forwarders (12):
-        "civis_health",
-        "civis_snapshot",
-        "civis_emergence",
-        "civis_market_prices",
-        "civis_speed_get",
-        "civis_speed_set",
-        "civis_god_action",
-        "civis_spawn_entity",
-        "civis_diplomacy_action",
-        "civis_research_queue",
-        "civis_tech_state",
-        "civis_save_list",
-    ] {
+    let mut expected_sorted = names.clone();
+    expected_sorted.sort();
+    let mut const_sorted: Vec<_> = TOOL_NAMES.iter().map(|name| name.to_string()).collect();
+    const_sorted.sort();
+    assert_eq!(
+        expected_sorted, const_sorted,
+        "TOOL_NAMES and registered tool list differ; expected exact match"
+    );
+    for expected in TOOL_NAMES {
         assert!(
             names.iter().any(|n| n == expected),
             "tool `{expected}` missing from registered router; got {names:?}"

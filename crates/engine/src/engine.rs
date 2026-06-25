@@ -533,10 +533,8 @@ pub struct Simulation {
     /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
     /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
     settlements: BTreeMap<u32, u32>,
-    /// Currently-active institutions per settlement, keyed by
-    /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
-    /// upgrades (FR-CIV-GOV-003).
-    institutions: BTreeMap<u32, civ_institutions::Institution>,
+    /// Currently-active institutions per settlement and kind (FR-CIV-GOV-001).
+    institutions: BTreeMap<(u32, civ_institutions::InstitutionKind), civ_institutions::Institution>,
     /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
@@ -546,6 +544,18 @@ pub struct Simulation {
     /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
     /// across population dips/rebounds (FR-CIV-GOV-003).
     institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+    /// Per-settlement food stock for `phase_social_mood` (FR-CIV-GOV-010).
+    settlement_food_stocked: BTreeMap<u32, i64>,
+    /// Per-settlement housing capacity for `phase_social_mood`.
+    settlement_housing_capacity: BTreeMap<u32, u32>,
+    /// Per-settlement crime pressure for `phase_social_mood`.
+    settlement_crime_pressure: BTreeMap<u32, i32>,
+    /// Mood snapshots from the most recent `phase_social_mood` call.
+    last_tick_mood: Vec<MoodSnapshot>,
+    /// Flat mood history (test convenience; capped).
+    mood_history: Vec<MoodSnapshot>,
+    /// Per-settlement mood history (capped per settlement).
+    mood_history_by_settlement: BTreeMap<u32, Vec<MoodSnapshot>>,
 }
 
 /// Civic institution event emitted by [`Simulation::phase_institutions`]
@@ -560,6 +570,29 @@ pub struct InstitutionEvent {
     /// The settlement id this event pertains to.
     pub settlement_id: u32,
 }
+
+/// Per-settlement social-mood snapshot from [`Simulation::phase_social_mood`]
+/// (FR-CIV-GOV-010).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MoodSnapshot {
+    pub settlement_id: u32,
+    pub mood: i64,
+    pub mood_delta: i64,
+    pub food_score: i64,
+    pub housing_score: i64,
+    pub crime_score: i64,
+    pub temple_bonus: i32,
+    pub garrison_bonus: i32,
+}
+
+/// Sub-score clamp for food/housing components in `phase_social_mood`.
+const MOOD_SCORE_MIN: i64 = -200;
+const MOOD_SCORE_MAX: i64 = 200;
+/// Total mood clamp (FR-CIV-GOV-010).
+const MOOD_MIN: i64 = -1000;
+const MOOD_MAX: i64 = 1000;
+const MOOD_CRIME_BASE: i64 = 300;
+const MOOD_HISTORY_CAP: usize = 16;
 
 /// Voxel material id used to mark coastal water-level voxels written by
 /// [`Simulation::apply_tide_offset`] (FR-CIV-PLANET-020). Reuses the shared
@@ -824,6 +857,16 @@ impl Simulation {
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
+            settlements: BTreeMap::new(),
+            institutions: BTreeMap::new(),
+            last_tick_institution_events: Vec::new(),
+            institution_levels_emitted: BTreeSet::new(),
+            settlement_food_stocked: BTreeMap::new(),
+            settlement_housing_capacity: BTreeMap::new(),
+            settlement_crime_pressure: BTreeMap::new(),
+            last_tick_mood: Vec::new(),
+            mood_history: Vec::new(),
+            mood_history_by_settlement: BTreeMap::new(),
         }
     }
 
@@ -901,6 +944,16 @@ impl Simulation {
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
+            settlements: BTreeMap::new(),
+            institutions: BTreeMap::new(),
+            last_tick_institution_events: Vec::new(),
+            institution_levels_emitted: BTreeSet::new(),
+            settlement_food_stocked: BTreeMap::new(),
+            settlement_housing_capacity: BTreeMap::new(),
+            settlement_crime_pressure: BTreeMap::new(),
+            last_tick_mood: Vec::new(),
+            mood_history: Vec::new(),
+            mood_history_by_settlement: BTreeMap::new(),
         }
     }
 
@@ -1809,16 +1862,10 @@ impl Simulation {
             // Already emitted this level for this settlement+kind - skip.
             return;
         }
-        // Update the institution record (insert if missing, replace if
-        // present but at a lower level).
-        self.institutions
-            .entry(sid)
-            .and_modify(|inst| {
-                if matches!(inst.kind, _k if std::mem::discriminant(&inst.kind) == std::mem::discriminant(&kind)) {
-                    inst.level = inst.level.max(new_level);
-                }
-            })
-            .or_insert(civ_institutions::Institution { kind, level: new_level });
+        self.institutions.insert(
+            (sid, kind),
+            civ_institutions::Institution { kind, level: new_level },
+        );
         // Only emit the event if this is the first time we've ever seen this
         // level for this settlement+kind. We mark the triple as emitted even
         // if the new_level is higher than what we've seen (e.g. L1 -> L2
@@ -1872,29 +1919,28 @@ impl Simulation {
                 .unwrap_or(0);
 
             // 1. food_score
-            let food_score = (stocked / 200).clamp(MOOD_MIN, MOOD_MAX);
+            let food_score = (stocked / 200).clamp(MOOD_SCORE_MIN, MOOD_SCORE_MAX);
 
             // 2. housing_score
             let housing_signed =
                 (capacity as i64).saturating_sub(population as i64).saturating_mul(2);
-            let housing_score = housing_signed.clamp(MOOD_MIN, MOOD_MAX);
+            let housing_score = housing_signed.clamp(MOOD_SCORE_MIN, MOOD_SCORE_MAX);
 
             // 3. crime_score (max(0, 300 - 4*pressure), bounded)
             let crime_signed = MOOD_CRIME_BASE.saturating_sub(4 * crime_pressure as i64);
             let crime_score = crime_signed.clamp(0, MOOD_CRIME_BASE);
 
-            // 4-5. institution bonuses (settlement may have 0 or 1 institution)
-            let (temple_bonus, garrison_bonus) = match self.institutions.get(&settlement_id) {
-                Some(inst) if inst.kind == InstitutionKind::Temple => (
-                    25 + 25 * (inst.level as i32),
-                    0,
-                ),
-                Some(inst) if inst.kind == InstitutionKind::Garrison => (
-                    0,
-                    15 + 15 * (inst.level as i32),
-                ),
-                _ => (0, 0),
-            };
+            // 4-5. institution bonuses (settlement may have Temple and/or Garrison)
+            let temple_bonus = self
+                .institutions
+                .get(&(settlement_id, civ_institutions::InstitutionKind::Temple))
+                .map(|inst| 25 + 25 * (inst.level as i32))
+                .unwrap_or(0);
+            let garrison_bonus = self
+                .institutions
+                .get(&(settlement_id, civ_institutions::InstitutionKind::Garrison))
+                .map(|inst| 15 + 15 * (inst.level as i32))
+                .unwrap_or(0);
 
             // 6. total mood (saturated)
             let total = food_score

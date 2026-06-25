@@ -173,9 +173,10 @@ fn fr_civ_gov_010_institution_bonuses_apply_when_settlement_has_temple_or_garris
         "Temple L1 should grant TEMPLE_BONUS to mood"
     );
 
-    // Now spawn a Garrison (pop >= 120).
+    // Now spawn a Garrison (pop >= 120). Institutions run after social_mood,
+    // so mood sees garrison from the prior tick's institutions phase.
     sim.set_settlement_population(0, 150);
-    sim.advance_ticks(1);
+    sim.advance_ticks(2);
     let snap_both = sim.last_tick_mood(0).unwrap();
     assert_eq!(snap_both.temple_bonus, TEMPLE_BONUS);
     assert_eq!(

@@ -70,6 +70,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "policy",
     "economy",
     "planet",
+    "disasters",
     "diplomacy",
     "tactics",
     "voxel",
@@ -481,6 +482,8 @@ pub struct Simulation {
     /// tick broadcast; clients translate each entry into a kira SFX
     /// trigger via [`civ_audio::triggers::trigger_to_sfx_requests`].
     last_tick_audio_events: Vec<civ_audio::triggers::SfxTrigger>,
+    /// Per-tick disaster events surfaced in snapshots.
+    last_tick_disaster_events: Vec<crate::disasters::DisasterTickEvent>,
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -1098,6 +1101,7 @@ impl Simulation {
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
+            last_tick_disaster_events: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed: 42,
@@ -1188,6 +1192,7 @@ impl Simulation {
             last_tick_engagements: Vec::new(),
             last_tick_mod_lifecycle: Vec::new(),
             last_tick_audio_events: Vec::new(),
+            last_tick_disaster_events: Vec::new(),
             operational: NoopOperationalLayer,
             replay_log: ReplayLog {
                 seed,
@@ -1711,6 +1716,7 @@ impl Simulation {
         // audio events mid-tick; `phase_audio` re-emits the survivors
         // alongside combat + construction events on the wire.
         self.last_tick_audio_events.clear();
+        self.last_tick_disaster_events.clear();
         // Social-mood buffer (FR-CIV-GOV-100). `phase_social_mood` overwrites
         // this with the per-settlement snapshots each tick; downstream
         // consumers (`last_tick_mood`, `last_tick_mood_all`) read a fresh
@@ -1748,6 +1754,7 @@ impl Simulation {
             "policy" => self.phase_policy(),
             "economy" => self.phase_economy(),
             "planet" => self.phase_planet(),
+            "disasters" => self.phase_disasters(),
             "diplomacy" => self.phase_diplomacy(),
             "tactics" => self.phase_tactics(),
             "voxel" => self.phase_voxel(),
@@ -3218,6 +3225,7 @@ impl Simulation {
             births_this_tick: self.last_births.len() as u32,
             deaths_this_tick: self.last_deaths.len() as u32,
             diplomacy_events: self.diplomacy_events.clone(),
+            disaster_events: self.last_tick_disaster_events.clone(),
             market_prices: self.market_state.prices().clone(),
             damage_events: self.last_tick_combat_pulses.len(),
             climate: self.climate,
@@ -4551,6 +4559,8 @@ pub struct SimulationSnapshot {
     /// Deterministic climate snapshot computed by `phase_planet` for the current tick
     /// (FR-CIV-PLANET-010 — bit-identical to `compute_climate(tick, planet, moon)`).
     pub climate: Climate,
+    /// Per-tick disaster outcomes for UI/debug surfaces.
+    pub disaster_events: Vec<crate::disasters::DisasterTickEvent>,
     /// Per-region weather grid for the current tick (FR-CIV-PLANET-030).
     ///
     /// Each entry is a [`WeatherCell`] with fixed-point temp and precipitation.
@@ -4670,6 +4680,7 @@ mod tests {
                 "policy",
                 "economy",
                 "planet",
+                "disasters",
                 "diplomacy",
                 "tactics",
                 "voxel",
@@ -4680,16 +4691,17 @@ mod tests {
                 "tech",
                 "belief",
                 "unrest",
+                "cohesion",
+                "social_mood",
                 "economic_focus_pre",
                 "stratification",
                 "institutions",
-                "cohesion",
-                "social_mood",
                 "economic_focus",
                 "emergence",
                 "language",
                 "sentience",
                 "diffusion",
+                "audio",
             ]
         );
     }

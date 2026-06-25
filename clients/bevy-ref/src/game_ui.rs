@@ -249,13 +249,6 @@ fn load_tool_icons(
     icons.registered = true;
 }
 
-            .add_plugins(crate::game_laws::GameLawsPlugin)
-            .add_systems(Startup, sync_initial_game_speed_from_settings)
-            .add_systems(Update, handle_speed_shortcuts)
-            .add_systems(EguiPrimaryContextPass, draw_game_ui);
-    }
-}
-
 #[cfg(feature = "egui")]
 fn sync_initial_game_speed_from_settings(
     settings: Option<Res<GameSettings>>,

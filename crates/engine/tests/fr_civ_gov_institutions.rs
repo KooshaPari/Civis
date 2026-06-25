@@ -19,7 +19,12 @@
 //!   FR-CIV-GOV-003 — upgrades are gated by settlement population thresholds
 //!                    (Temple L1→L2 at N1, Garrison L1→L2 at N2) and emit
 //!                    `InstitutionEvent::Upgraded` events.
-use civ_engine::{InstitutionEvent, InstitutionKind, Simulation, GENESIS};
+use civ_engine::{InstitutionEvent, InstitutionKind, Simulation};
+
+/// Deterministic seed used across all FR-CIV-GOV tests. Matches the first
+/// 8 bytes of `civ_engine::hash_chain::GENESIS` reinterpreted as `u64`,
+/// keeping tests independent of `hash_chain`'s internals.
+const GOV_SEED: u64 = 0;
 
 const TEMPLE_UNLOCK: u32 = 50;
 const GARRISON_UNLOCK: u32 = 120;
@@ -33,7 +38,7 @@ const GARRISON_L2_UNLOCK: u32 = 500;
 /// crosses `garrison_unlock_population`.
 #[test]
 fn fr_civ_gov_001_spawns_when_settlement_crosses_threshold() {
-    let mut sim = Simulation::with_seed(GENESIS);
+    let mut sim = Simulation::with_seed(GOV_SEED);
     // Pre-population: no institutions.
     assert!(
         sim.last_tick_institution_events()
@@ -84,7 +89,7 @@ fn fr_civ_gov_001_spawns_when_settlement_crosses_threshold() {
 /// the HUD and ws_bridge can render the civil layer.
 #[test]
 fn fr_civ_gov_002_events_accessible_via_accessor() {
-    let mut sim = Simulation::with_seed(GENESIS);
+    let mut sim = Simulation::with_seed(GOV_SEED);
 
     // Initial tick: no events (no settlement has reached any threshold).
     sim.advance_ticks(1);
@@ -129,7 +134,7 @@ fn fr_civ_gov_002_events_accessible_via_accessor() {
 /// `garrison_l2_unlock_population`) and MUST emit an `Upgraded` event.
 #[test]
 fn fr_civ_gov_003_upgrade_gated_by_population_threshold() {
-    let mut sim = Simulation::with_seed(GENESIS);
+    let mut sim = Simulation::with_seed(GOV_SEED);
 
     // Reach Temple L1.
     sim.set_settlement_population(0, TEMPLE_UNLOCK + 1);
@@ -186,7 +191,7 @@ fn fr_civ_gov_003_upgrade_gated_by_population_threshold() {
 /// `phase_institutions` implementation accidentally consuming non-seeded RNG.
 #[test]
 fn fr_civ_gov_determinism_same_seed_same_events() {
-    let seed = GENESIS;
+    let seed = GOV_SEED;
 
     let mut a = Simulation::with_seed(seed);
     a.set_settlement_population(0, TEMPLE_L2_UNLOCK + 1);

@@ -505,6 +505,36 @@ pub struct Simulation {
     /// call (cleared at the start of every [`Simulation::tick`], alongside the
     /// other `last_tick_*` buffers).
     last_tick_sentience_events: Vec<crate::genetics::sentience::SentienceEvent>,
+    /// Per-settlement population snapshot, settable by tests + scenario loaders
+    /// so `phase_institutions` can drive Temple/Garrison spawns deterministically
+    /// (FR-CIV-GOV-001). Keyed by settlement id (`u32`).
+    settlements: BTreeMap<u32, u32>,
+    /// Currently-active institutions per settlement, keyed by
+    /// `(settlement_id, kind)`. Tracks the latest known level so we can detect
+    /// upgrades (FR-CIV-GOV-003).
+    institutions: BTreeMap<u32, civ_institutions::Institution>,
+    /// Civic events emitted by the most recent [`Simulation::phase_institutions`]
+    /// call (cleared at the start of every [`Simulation::tick`], alongside the
+    /// other `last_tick_*` buffers). Surfaced to the JSON-RPC bridge so the
+    /// Bevy client can render the civil layer.
+    last_tick_institution_events: Vec<InstitutionEvent>,
+    /// Monotonic set of `(settlement_id, kind, level)` we have already emitted
+    /// as an `Upgraded` event. Guarantees one-shot upgrade emission even
+    /// across population dips/rebounds (FR-CIV-GOV-003).
+    institution_levels_emitted: BTreeSet<(u32, civ_institutions::InstitutionKind, u8)>,
+}
+
+/// Civic institution event emitted by [`Simulation::phase_institutions`]
+/// (FR-CIV-GOV-001/002/003). Consumed by the JSON-RPC bridge in
+/// `crates/server/src/ws_bridge.rs` to surface the civil layer to clients.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstitutionEvent {
+    /// The kind of institution that changed.
+    pub kind: civ_institutions::InstitutionKind,
+    /// The new level (1 = L1 / first spawn, 2 = L2 / first upgrade, ...).
+    pub level: u8,
+    /// The settlement id this event pertains to.
+    pub settlement_id: u32,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -1655,6 +1685,163 @@ impl Simulation {
     /// Count of completed buildings (FR-CIV-BUILD-001).
     pub fn completed_buildings(&self) -> usize {
         self.building_graph.completed_count()
+    }
+
+    // =======================================================================
+    // phase_institutions + the 11 phase_* stubs that ADR-020 declared as
+    // "tick() compiles" placeholders. The real implementations will land in
+    // subsequent TDD cycles (A2..A11). The stubs exist purely so the engine
+    // compiles against `run_phase`'s exhaustive match.
+    // =======================================================================
+
+    /// Civic-institutions phase (FR-CIV-GOV-001/002/003). Emits one
+    /// `InstitutionEvent` per settlement the moment it crosses a population
+    /// threshold (Temple at ≥ `TEMPLE_UNLOCK_POPULATION`, Garrison at ≥
+    /// `GARRISON_UNLOCK_POPULATION`), and a follow-up `Upgraded` event the
+    /// first time a settlement crosses the L2 threshold. Events are one-shot
+    /// per `(settlement_id, kind, level)` tuple so re-emission across
+    /// population dips is suppressed.
+    fn phase_institutions(&mut self) {
+        let mut new_events = Vec::new();
+        // Snapshot the settlements up front so we can mutate the institutions
+        // map without borrowing `self` in a way that fights the borrow
+        // checker.
+        let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
+        for sid in settlement_ids {
+            let pop = self.settlements[&sid];
+            // ---- Temple ----
+            if pop >= civ_institutions::TEMPLE_UNLOCK_POPULATION {
+                let new_level = if pop >= civ_institutions::TEMPLE_L2_POPULATION {
+                    2
+                } else {
+                    1
+                };
+                self.upsert_institution(
+                    sid,
+                    civ_institutions::InstitutionKind::Temple,
+                    new_level,
+                    &mut new_events,
+                );
+            }
+            // ---- Garrison ----
+            if pop >= civ_institutions::GARRISON_UNLOCK_POPULATION {
+                let new_level = if pop >= civ_institutions::GARRISON_L2_POPULATION {
+                    2
+                } else {
+                    1
+                };
+                self.upsert_institution(
+                    sid,
+                    civ_institutions::InstitutionKind::Garrison,
+                    new_level,
+                    &mut new_events,
+                );
+            }
+        }
+        self.last_tick_institution_events = new_events;
+    }
+
+    /// Internal helper: bump the institution's level to `new_level` and emit
+    /// exactly one `InstitutionEvent` if this is the first time we record
+    /// that `(sid, kind, level)` triple. No-op (no event) if we've already
+    /// emitted it, so transient population dips do not produce duplicate
+    /// upgrade notifications.
+    fn upsert_institution(
+        &mut self,
+        sid: u32,
+        kind: civ_institutions::InstitutionKind,
+        new_level: u8,
+        events: &mut Vec<InstitutionEvent>,
+    ) {
+        let key = (sid, kind, new_level);
+        if self.institution_levels_emitted.contains(&key) {
+            // Already emitted this level for this settlement+kind - skip.
+            return;
+        }
+        // Update the institution record (insert if missing, replace if
+        // present but at a lower level).
+        self.institutions
+            .entry(sid)
+            .and_modify(|inst| {
+                if matches!(inst.kind, _k if std::mem::discriminant(&inst.kind) == std::mem::discriminant(&kind)) {
+                    inst.level = inst.level.max(new_level);
+                }
+            })
+            .or_insert(civ_institutions::Institution { kind, level: new_level });
+        // Only emit the event if this is the first time we've ever seen this
+        // level for this settlement+kind. We mark the triple as emitted even
+        // if the new_level is higher than what we've seen (e.g. L1 -> L2
+        // upgrade) so the upgrade event is one-shot.
+        self.institution_levels_emitted.insert(key);
+        events.push(InstitutionEvent {
+            kind,
+            level: new_level,
+            settlement_id: sid,
+        });
+    }
+
+    /// Social-mood phase (FR-CIV-GOV-100 family). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A2.
+    fn phase_social_mood(&mut self) {}
+
+    /// Stratification phase (FR-CIV-GOV-200 family). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A3.
+    fn phase_stratification(&mut self) {}
+
+    /// Cohesion phase (FR-CIV-COHESION-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A4.
+    fn phase_cohesion(&mut self) {}
+
+    /// Unrest phase (FR-CIV-UNREST-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A5.
+    fn phase_unrest(&mut self) {}
+
+    /// Citizen-life phase (FR-CIV-LIFE-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A6.
+    fn phase_life(&mut self) {}
+
+    /// Research phase (FR-CIV-RESEARCH-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A7.
+    fn phase_research(&mut self) {}
+
+    /// Tech-tree phase (FR-CIV-TECH-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A8.
+    fn phase_tech(&mut self) {}
+
+    /// Belief phase (FR-CIV-BELIEF-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A9.
+    fn phase_belief(&mut self) {}
+
+    /// Economic-focus pre-pass (FR-CIV-ECON-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A10.
+    fn phase_economic_focus_pre(&mut self) {}
+
+    /// Economic-focus phase (FR-CIV-ECON-001). Stub for ADR-020;
+    /// real implementation lands in TDD cycle A11.
+    fn phase_economic_focus(&mut self) {}
+
+    /// Set (or replace) the population snapshot for a settlement. Used by
+    /// tests + scenario loaders to drive `phase_institutions` deterministically
+    /// (FR-CIV-GOV-001).
+    pub fn set_settlement_population(&mut self, settlement_id: u32, population: u32) {
+        self.settlements.insert(settlement_id, population);
+    }
+
+    /// Read-only view of the civic-institution events produced by the most
+    /// recent [`Self::phase_institutions`] call. Cleared at the start of
+    /// every [`Simulation::tick`].
+    #[must_use]
+    pub fn last_tick_institution_events(&self) -> &[InstitutionEvent] {
+        &self.last_tick_institution_events
+    }
+
+    /// Advance the simulation `n` ticks. Convenience wrapper for tests +
+    /// scenario runners so they can compress `n` ticks of `phase_*` work into
+    /// a single call. Calls [`Self::tick`] `n` times.
+    pub fn advance_ticks(&mut self, n: u32) {
+        for _ in 0..n {
+            self.tick();
+        }
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.

@@ -2435,6 +2435,7 @@ dependencies = [
  "civ-legends",
  "civ-mod-host",
  "civ-needs",
+ "civ-physics-substrate",
  "civ-planet",
  "civ-save-db",
  "civ-species",

@@ -57,6 +57,7 @@ use crate::religion::{
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
+use crate::research::EmergentResearchState;
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -446,6 +447,8 @@ pub struct Simulation {
     diplomacy_events: Vec<DiplomacyEvent>,
     next_civilian_id: u64,
     research_cache: ResearchCache,
+    /// Per-faction emergent knowledge and tech tiers (FR-TECH).
+    faction_research: EmergentResearchState,
     belief: u64,
     /// Per-cluster culture profiles (cluster_cultures key is the cluster id).
     pub cluster_cultures: BTreeMap<u64, CultureProfile>,
@@ -1086,6 +1089,7 @@ impl Simulation {
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            faction_research: EmergentResearchState::new(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
@@ -1177,6 +1181,7 @@ impl Simulation {
             diplomacy_events: Vec::new(),
             next_civilian_id: 1_000_000,
             research_cache: ResearchCache::default(),
+            faction_research: EmergentResearchState::new(),
             belief: 0,
             cluster_cultures: BTreeMap::new(),
             cluster_stocks: BTreeMap::new(),
@@ -1558,10 +1563,21 @@ impl Simulation {
         }
     }
 
-    /// Research tier derived from the number of completed techs.
+    /// Research tier derived from the highest faction emergent tech level.
     #[must_use]
     pub fn research_tier(&self) -> u64 {
-        self.research_cache.researched.len() as u64
+        u64::from(self.faction_research.max_tech_level())
+    }
+
+    /// Per-faction emergent research state (FR-TECH).
+    #[must_use]
+    pub fn faction_research(&self) -> &EmergentResearchState {
+        &self.faction_research
+    }
+
+    /// Mutable per-faction emergent research state (FR-TECH).
+    pub fn faction_research_mut(&mut self) -> &mut EmergentResearchState {
+        &mut self.faction_research
     }
 
     /// Most recent emergence sample, if any.
@@ -2449,13 +2465,22 @@ impl Simulation {
     /// real implementation lands in TDD cycle A6.
     fn phase_life(&mut self) {}
 
-    /// Research phase (FR-CIV-RESEARCH-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A7.
-    fn phase_research(&mut self) {}
+    /// Research phase (FR-CIV-RESEARCH-001 / FR-TECH) — accumulate faction
+    /// knowledge from population, surplus, and neighbor-pressure signals.
+    fn phase_research(&mut self) {
+        self.faction_research.tick_research(
+            &self.state,
+            &self.world,
+            &self.state.trade_routes,
+            &self.faction_aggression,
+        );
+    }
 
-    /// Tech-tree phase (FR-CIV-TECH-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A8.
-    fn phase_tech(&mut self) {}
+    /// Tech phase (FR-CIV-TECH-001 / FR-TECH) — emergent threshold unlocks.
+    fn phase_tech(&mut self) {
+        self.faction_research
+            .tick_tech(&mut self.research_cache);
+    }
 
     /// Belief phase (FR-CIV-BELIEF-001). Stub for ADR-020;
     /// real implementation lands in TDD cycle A9.
@@ -3244,6 +3269,7 @@ impl Simulation {
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
+            faction_tech_levels: self.faction_research.faction_tech_levels(),
         }
     }
 
@@ -4592,6 +4618,9 @@ pub struct SimulationSnapshot {
     ///
     /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
     pub geology_map: GeologyMap,
+    /// Per-faction emergent tech tier (FR-TECH); keyed by faction id.
+    #[serde(default)]
+    pub faction_tech_levels: BTreeMap<u32, u32>,
 }
 
 // ADR-020 phase stubs (FR-PLAY-click-to-fire prerequisite: tick() compiles).

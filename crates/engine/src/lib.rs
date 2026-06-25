@@ -22,6 +22,7 @@ pub mod policy;
 pub mod religion;
 pub mod replay;
 pub mod replay_format;
+pub mod research;
 pub mod save;
 pub mod save_bundle;
 pub mod scenario;

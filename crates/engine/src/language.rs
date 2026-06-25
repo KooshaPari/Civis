@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 
 const COSINE_MERGE_THRESHOLD: f32 = 0.95;
 const DEFAULT_DISTANCE_FOR_MISSING_PHONEME: f32 = 1.0;
+const PHONEME_FEATURES: usize = 6;
+const PLACE_NAME_NAMESPACE: u32 = 0x4e_50_54;
+const PERSON_NAME_NAMESPACE: u32 = 0x50_45_52;
+const NAMING_SYLLABLES: &[&str] = &[
+    "ba", "de", "fi", "gu", "ha", "jo", "li", "mu", "no", "sa", "ti", "za",
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Phoneme {
@@ -32,6 +38,37 @@ pub struct LanguageState {
     pub drift_rate: f32,
     pub split_threshold: f32,
     pub tick: u64,
+}
+
+pub fn seeded_language_state(seed: [f32; 4]) -> LanguageState {
+    let mut state = LanguageState::default();
+    ensure_seeded_word(&mut state, place_name_meaning(0, 0), seed);
+    ensure_seeded_word(&mut state, person_name_meaning(0, 0), seed);
+    state
+}
+
+pub fn place_name_meaning(faction_id: u32, place_id: u32) -> u32 {
+    PLACE_NAME_NAMESPACE
+        .wrapping_add(faction_id.rotate_left(13))
+        .wrapping_add(place_id.rotate_left(3))
+}
+
+pub fn person_name_meaning(faction_id: u32, person_id: u32) -> u32 {
+    PERSON_NAME_NAMESPACE
+        .wrapping_add(faction_id.rotate_left(9))
+        .wrapping_add(person_id.rotate_left(1))
+}
+
+pub fn ensure_seeded_word(language: &mut LanguageState, meaning: u32, seed: [f32; 4]) {
+    language.vocabulary.entry(meaning).or_insert_with(|| seeded_morpheme(seed, meaning));
+}
+
+pub fn place_name(language: &LanguageState, faction_id: u32, place_id: u32) -> String {
+    render_name(language, place_name_meaning(faction_id, place_id))
+}
+
+pub fn person_name(language: &LanguageState, faction_id: u32, person_id: u32) -> String {
+    render_name(language, person_name_meaning(faction_id, person_id))
 }
 
 impl Default for LanguageState {
@@ -91,6 +128,68 @@ fn seeded_rng(lang: &LanguageState, contact_pressure: f32) -> ChaCha8Rng {
         }
     }
 
+    ChaCha8Rng::from_seed(*hasher.finalize().as_bytes())
+}
+
+fn seeded_morpheme(seed: [f32; 4], meaning: u32) -> Morpheme {
+    let mut rng = seeded_rng_for_seed(seed, meaning);
+    let feature_len = 2 + (rng.next_u32() % 2) as usize;
+    let mut phonemes = Vec::with_capacity(feature_len);
+    for idx in 0..feature_len {
+        let mut features = [0.0_f32; PHONEME_FEATURES];
+        for i in 0..PHONEME_FEATURES {
+            let drift = (rng.next_u32() as f32 / u32::MAX as f32 - 0.5) * 0.4;
+            features[i] = (seed[i % 4] + drift).clamp(0.0, 1.0);
+        }
+        phonemes.push(Phoneme {
+            features,
+        });
+    }
+    Morpheme {
+        phonemes,
+        meaning: Some(meaning),
+    }
+}
+
+fn render_name(language: &LanguageState, meaning: u32) -> String {
+    let morpheme = match language.vocabulary.get(&meaning).or_else(|| language.vocabulary.values().next()) {
+        Some(m) => m,
+        None => {
+            let fallback = seeded_morpheme([0.5; 4], meaning);
+            return morpheme_to_text(&fallback);
+        }
+    };
+    morpheme_to_text(morpheme)
+}
+
+fn morpheme_to_text(morpheme: &Morpheme) -> String {
+    let syllables: Vec<String> = morpheme
+        .phonemes
+        .iter()
+        .map(phoneme_to_syllable)
+        .collect();
+    if syllables.is_empty() {
+        "na".to_string()
+    } else {
+        syllables.join("-")
+    }
+}
+
+fn phoneme_to_syllable(phoneme: &Phoneme) -> String {
+    let mut syllable = String::new();
+    for i in (0..PHONEME_FEATURES).step_by(2) {
+        let idx = ((phoneme.features[i] * NAMING_SYLLABLES.len() as f32) as usize) % NAMING_SYLLABLES.len();
+        syllable.push_str(NAMING_SYLLABLES[idx]);
+    }
+    syllable
+}
+
+fn seeded_rng_for_seed(seed: [f32; 4], meaning: u32) -> rand_chacha::ChaCha8Rng {
+    let mut hasher = blake3::Hasher::new();
+    for feature in &seed {
+        hasher.update(&feature.to_bits().to_le_bytes());
+    }
+    hasher.update(&meaning.to_le_bytes());
     ChaCha8Rng::from_seed(*hasher.finalize().as_bytes())
 }
 

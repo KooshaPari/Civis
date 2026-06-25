@@ -14,6 +14,7 @@ use crate::{
     Simulation, WorldState,
 };
 use civ_agents::{ClusterMember, LodTier, Needs, Position3d, Tools, Wardrobe};
+use crate::language::LanguageState;
 use civ_needs::Health as LifeHealth;
 use civ_voxel::{DirtyChunkEvent, MaterialId, VoxelWorld, WorldCoord};
 
@@ -44,6 +45,8 @@ struct SavedSimulation {
     last_life_deaths: u32,
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
     religious_profiles: BTreeMap<u32, ReligiousProfile>,
+    #[serde(default)]
+    faction_languages: BTreeMap<u32, LanguageState>,
     settlements: BTreeMap<u32, u32>,
     institutions: BTreeMap<u32, Institution>,
     institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
@@ -234,6 +237,7 @@ fn snapshot_sim(sim: &Simulation) -> SavedSimulation {
         last_tick_voxel_damage_count: sim.last_tick_voxel_damage_count(),
         last_tick_combat_pulses: sim.last_tick_combat_pulses().to_vec(),
         religious_profiles: sim.religious_profiles.clone(),
+        faction_languages: sim.faction_languages().clone(),
         settlements,
         institutions,
         institution_levels_emitted,
@@ -255,6 +259,7 @@ fn restore_sim(saved: SavedSimulation) -> Simulation {
         saved.institution_levels_emitted,
     );
     sim.restore_faction_doctrines(saved.faction_doctrines);
+    sim.set_faction_languages(saved.faction_languages);
     let _ = sim.restore_mod_guest_state(
         &civ_mod_host::ModGuestStateSave::from_json(&saved.mod_guest_state_json)
             .unwrap_or_default(),
@@ -359,6 +364,7 @@ mod tests {
         assert_eq!(restored_state.0, settlements);
         assert_eq!(restored_state.1, institutions);
         assert_eq!(restored_state.2, institution_levels_emitted);
+        assert_eq!(loaded.faction_languages(), sim.faction_languages());
         assert_eq!(loaded.religious_profiles, sim.religious_profiles);
         assert_eq!(loaded.last_settlement_count, sim.last_settlement_count);
         assert_eq!(loaded.last_life_deaths, sim.last_life_deaths);

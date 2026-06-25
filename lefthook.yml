@@ -42,3 +42,5 @@ pre-push:
           bash scripts/quality/emit-quality-manifest.sh
         fi
       stage_fixed: true
+    branch-clean:
+      run: node scripts/dev/branch-clean.mjs

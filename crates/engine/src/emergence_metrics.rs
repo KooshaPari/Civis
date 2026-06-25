@@ -49,7 +49,8 @@ use civ_emergence_metrics::branching::{
     classify_regime, rolling_mean_sigma, sigma_a, sigma_score, BranchingLedger, BranchingRegime,
     DEFAULT_BRANCHING_WINDOW, SIGMA_SUBCRITICAL, SIGMA_SUPERCRITICAL,
 };
-use civ_emergence_metrics::dashboard::TileDashboard;
+use civ_emergence_metrics::criticality::{criticality_indicator, CriticalityInputs};
+use civ_emergence_metrics::dashboard::{coupling_mi_estimate, novelty_score, TileDashboard};
 use civ_emergence_metrics::power_law::PowerLawFit;
 use civ_emergence_metrics::shannon::ShannonEntropy;
 use civ_emergence_metrics::structure::{ComponentSummary, Grid, StructureCount};
@@ -218,6 +219,32 @@ pub struct EmergenceSample {
     /// forward-compatibly deserialise samples produced by newer engine builds.
     #[serde(default)]
     pub mi_material_faction_norm: Option<f32>,
+    /// FR-EMERGENCE-dashboard: normalised novelty score in `[0, 1]`,
+    /// derived from `novelty_rate`. See
+    /// [`civ_emergence_metrics::dashboard::novelty_score`]. Surfaces
+    /// on the `emergence.metrics` JSON-RPC read alongside the raw
+    /// `novelty_rate` so dashboard tiles can render a single
+    /// traffic-light colour without a per-client scale.
+    #[serde(default)]
+    pub novelty_score: f32,
+    /// FR-EMERGENCE-dashboard: estimated coupling mutual
+    /// information in `[0, 1]`, derived from
+    /// `mi_material_faction_norm * entropy_norm`. See
+    /// [`civ_emergence_metrics::dashboard::coupling_mi_estimate`].
+    /// `0.0` when the raw MI is degenerate (`None` / non-finite /
+    /// ≤ 0).
+    #[serde(default)]
+    pub coupling_mi_estimate: f32,
+    /// FR-EMERGENCE-dashboard: edge-of-chaos / criticality
+    /// indicator in `[0, 1]`, combining `branching_sigma`,
+    /// `power_law_alpha`, and `entropy_norm` against the
+    /// operational bands documented in
+    /// [`civ_emergence_metrics::criticality`]. `1.0` when all three
+    /// signals sit inside their operational band, decays to `0.0`
+    /// as the worst signal moves away. `0.0` on any non-finite
+    /// input.
+    #[serde(default)]
+    pub criticality_indicator: f32,
 }
 
 impl Default for EmergenceSample {
@@ -241,6 +268,14 @@ impl Default for EmergenceSample {
             power_law_alpha: 0.0,
             novelty_rate: 0.0,
             mi_material_faction_norm: None,
+            // FR-EMERGENCE-dashboard: derived metrics default to
+            // the documented "no data" sentinel (`0.0`). The
+            // dashboard renders the "no data" tile in that
+            // case — a live sample is required for a non-zero
+            // value.
+            novelty_score: 0.0,
+            coupling_mi_estimate: 0.0,
+            criticality_indicator: 0.0,
         }
     }
 }
@@ -503,6 +538,24 @@ impl Simulation {
         let mi_material_faction_norm =
             compute_material_faction_mi(self).and_then(|value| value.is_finite().then_some(value));
 
+        // FR-EMERGENCE-dashboard: derive the three summary metrics
+        // from existing per-tick engine state. None of these
+        // introduce a new tick, an ECS scan, or a new wiring —
+        // they're pure functions of fields already on this sample.
+        let novelty_score = novelty_score(novelty_rate);
+        let coupling_mi_value = coupling_mi_estimate(
+            mi_material_faction_norm.unwrap_or(0.0),
+            entropy_norm,
+        );
+        let criticality = criticality_indicator(
+            CriticalityInputs {
+                branching_sigma: branching.sigma_bar,
+                power_law_alpha,
+                entropy_norm,
+            },
+            &Default::default(),
+        );
+
         let sample = EmergenceSample {
             tick,
             entropy_bits,
@@ -522,6 +575,9 @@ impl Simulation {
             power_law_alpha,
             novelty_rate,
             mi_material_faction_norm,
+            novelty_score,
+            coupling_mi_estimate: coupling_mi_value,
+            criticality_indicator: criticality,
         };
 
         // Single INFO line per sample. The cost budget is ~one log
@@ -546,6 +602,12 @@ impl Simulation {
             power_law_alpha = sample.power_law_alpha,
             novelty_rate = sample.novelty_rate,
             mi_material_faction = sample.mi_material_faction_norm.unwrap_or(f32::NAN),
+            // FR-EMERGENCE-dashboard: surface the three derived
+            // summary metrics in the boot log so a single sample
+            // line is enough to diagnose criticality.
+            novelty_score = sample.novelty_score,
+            coupling_mi_estimate = sample.coupling_mi_estimate,
+            criticality_indicator = sample.criticality_indicator,
             sample_dur_us = sample.sample_dur_us,
             "emergence sample"
         );
@@ -582,12 +644,15 @@ impl Simulation {
 
 fn emergence_sample_stdout_summary(sample: &EmergenceSample) -> String {
     format!(
-        "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4}",
+        "emergence sample: entropy={:.4} structures={} power_law_alpha={:.4} novelty_rate={:.6} mi_material_faction={:.4} novelty_score={:.4} coupling_mi_estimate={:.4} criticality={:.4}",
         sample.entropy_bits,
         sample.structure_count.unwrap_or(0),
         sample.power_law_alpha,
         sample.novelty_rate,
         sample.mi_material_faction_norm.unwrap_or(f32::NAN),
+        sample.novelty_score,
+        sample.coupling_mi_estimate,
+        sample.criticality_indicator,
     )
 }
 

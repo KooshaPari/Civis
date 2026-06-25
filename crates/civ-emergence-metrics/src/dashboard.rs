@@ -24,6 +24,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::criticality::{criticality_indicator as compute_criticality, CriticalityInputs};
 use crate::sample_snapshot::EmergenceSampleSnapshot;
 
 /// All five dashboard summary metrics computed from a single tick's
@@ -81,6 +82,14 @@ impl TileDashboard {
 }
 
 /// Transport-safe emergence dashboard view used by the JSON-RPC surface.
+///
+/// FR-EMERGENCE-dashboard: surfaces the three summary metrics
+/// `novelty_score`, `coupling_mi`, and `criticality_indicator` on
+/// top of the existing `power_law_alpha`, `shannon_entropy`, and
+/// `structure_count`. All three new fields are pure-function
+/// derivations of existing per-tick engine state; the struct is
+/// wire-flat (no nested blocks) so the L1 web dashboard and the
+/// L2 Bevy minimap can read each tile as a single JSON number.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct EmergenceDashboard {
     /// Power-law exponent for the cluster distribution.
@@ -89,22 +98,47 @@ pub struct EmergenceDashboard {
     pub shannon_entropy: f32,
     /// Connected structure count.
     pub structure_count: u32,
-    /// Normalised novelty score.
+    /// Normalised novelty score in `[0, 1]` derived from
+    /// [`novelty_score`].
     pub novelty_score: f32,
-    /// Mutual-information style coupling summary.
+    /// Estimated coupling mutual information in `[0, 1]` derived
+    /// from [`coupling_mi_estimate`].
     pub coupling_mi: f32,
+    /// Edge-of-chaos / criticality indicator in `[0, 1]` derived
+    /// from [`criticality_indicator`].
+    pub criticality_indicator: f32,
     /// Engine tick the snapshot was captured at.
     pub tick: u64,
 }
 
 impl From<EmergenceSampleSnapshot> for EmergenceDashboard {
     fn from(sample: EmergenceSampleSnapshot) -> Self {
+        // FR-EMERGENCE-dashboard: the three summary metrics
+        // (`novelty_score`, `coupling_mi`, `criticality_indicator`) are
+        // derived from existing per-tick engine state, *not* a
+        // 1:1 pass-through of the raw fields on the snapshot. See
+        // [`novelty_score`], [`coupling_mi_estimate`], and
+        // [`criticality_indicator`] for the per-metric contracts.
+        let novelty_score = novelty_score(sample.novelty_rate);
+        let coupling_mi = coupling_mi_estimate(
+            sample.coupling_strength,
+            sample.resource_entropy,
+        );
+        let criticality = compute_criticality(
+            CriticalityInputs {
+                branching_sigma: sample.branching_sigma,
+                power_law_alpha: sample.power_law_alpha,
+                entropy_norm: sample.resource_entropy.clamp(0.0, 1.0),
+            },
+            &Default::default(),
+        );
         Self {
-            power_law_alpha: sample.agent_count as f32,
+            power_law_alpha: sample.power_law_alpha,
             shannon_entropy: sample.resource_entropy,
             structure_count: sample.structure_count,
-            novelty_score: sample.novelty_rate,
-            coupling_mi: sample.coupling_strength,
+            novelty_score,
+            coupling_mi,
+            criticality_indicator: criticality,
             tick: sample.tick,
         }
     }
@@ -255,6 +289,110 @@ pub fn diplomacy_tension(pair_scores: &[f32]) -> f32 {
     }
     let mean_abs: f32 = pair_scores.iter().map(|v| v.abs()).sum::<f32>() / pair_scores.len() as f32;
     mean_abs.clamp(0.0, 1.0)
+}
+
+// ---------------------------------------------------------------------------
+// FR-EMERGENCE-dashboard: summary metrics surfaced on `emergence.dashboard`.
+// ---------------------------------------------------------------------------
+//
+// The three functions below are pure-function derivations of *existing*
+// per-tick engine state. They are computed in
+// `From<EmergenceSampleSnapshot> for EmergenceDashboard` and exposed on the
+// `emergence.dashboard` JSON-RPC read alongside the existing tiles.
+//
+// Design constraints:
+// * Each function returns a value in `[0, 1]` (or `0.0` on degenerate
+//   input) so the dashboard can colour the tile on a single
+//   normalised scale.
+// * Each function is side-effect-free, allocation-free, and
+//   deterministic — two runs of the same seed + the same inputs
+//   yield bit-equal results.
+// * Each function is a *derivation*, not a pass-through: the L1
+//   `emergence.metrics` JSON-RPC already exposes the raw `novelty_rate`
+//   and `mi_material_faction_norm` fields; the new tiles add
+//   normalised summaries that the dashboard's traffic-light widget
+//   can render without a custom scale.
+
+/// Operational ceiling for `novelty_rate` in **normalised units of
+/// "novel configs per W_nov tick per civilian"**.
+///
+/// The charter §3.4 footnote calls the operational novelty band
+/// `[0.01, 0.10]/tick`; we round the ceiling up to `0.10` and use
+/// it as the saturating upper bound for [`novelty_score`]. Anything
+/// at or above the ceiling maps to `1.0` (saturated novelty, the
+/// world is still producing new configurations at the maximum
+/// stable rate).
+///
+/// Picked in one place so the dashboard's "red" alarm doesn't drift
+/// if the engine raises the operational ceiling later.
+pub const NOVELTY_RATE_CEILING: f32 = 0.10;
+
+/// FR-EMERGENCE-dashboard: novelty score, a normalised `[0, 1]`
+/// summary of the per-tick `novelty_rate`.
+///
+/// Charter §3.4 reports `novelty_rate` as a raw per-capita rate
+/// (operational band `[0.01, 0.10]/tick`). The dashboard's tile
+/// wants a single normalised number for the traffic-light
+/// widget, so we saturate at [`NOVELTY_RATE_CEILING`]:
+///
+/// ```text
+/// novelty_score = clamp(novelty_rate / NOVELTY_RATE_CEILING, 0, 1)
+/// ```
+///
+/// Properties:
+/// * Monotonic in `novelty_rate` on `[0, NOVELTY_RATE_CEILING]`.
+/// * `0.0` for a "settled" world (no new configurations seen in
+///   the current `W_nov` window).
+/// * `1.0` at or above the operational ceiling.
+/// * `0.0` for `NaN` / negative / non-finite input (degenerate
+///   state — the dashboard renders the "no data" tile).
+#[must_use]
+pub fn novelty_score(novelty_rate: f32) -> f32 {
+    if !novelty_rate.is_finite() || novelty_rate <= 0.0 {
+        return 0.0;
+    }
+    (novelty_rate / NOVELTY_RATE_CEILING).clamp(0.0, 1.0)
+}
+
+/// FR-EMERGENCE-dashboard: estimated coupling mutual information.
+///
+/// Combines the existing per-tick `mi_material_faction_norm`
+/// (normalised mutual information between the voxel-material
+/// layer and the faction layer) with the existing normalised
+/// Shannon entropy `entropy_norm` (which captures how spread the
+/// material distribution itself is):
+///
+/// ```text
+/// coupling_mi_estimate = clamp(mi_material_faction * entropy_norm, 0, 1)
+/// ```
+///
+/// Rationale: MI(material; faction) on its own measures *whether*
+/// material and faction are coupled, but not *how much material
+/// structure* is doing the coupling. Multiplying by
+/// `entropy_norm` (the diversity of the material layer itself)
+/// yields a coupling summary in `[0, 1]` that captures the
+/// *amount* of coupled information — a tightly-coupled world
+/// with a flat material distribution has a smaller `coupling_mi`
+/// than the same MI on a high-entropy material world, because
+/// the material layer has fewer degrees of freedom to couple.
+///
+/// Degenerate-state handling:
+/// * `mi_material_faction` non-finite or negative → `0.0`.
+/// * `entropy_norm` non-finite, negative, or `> 1.0` → clamped
+///   to `[0, 1]` first, then `0.0` is returned when the
+///   material layer is fully collapsed (no diversity = nothing
+///   to couple).
+#[must_use]
+pub fn coupling_mi_estimate(mi_material_faction: f32, entropy_norm: f32) -> f32 {
+    if !mi_material_faction.is_finite() || mi_material_faction <= 0.0 {
+        return 0.0;
+    }
+    let h = if entropy_norm.is_finite() {
+        entropy_norm.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (mi_material_faction * h).clamp(0.0, 1.0)
 }
 
 #[cfg(test)]
@@ -484,21 +622,33 @@ mod tests {
 
     #[test]
     fn emerg_emerg_001_dashboard_from_sample_snapshot_maps_fields() {
+        // FR-EMERGENCE-dashboard: with the new derivation pipeline,
+        // the snapshot's `power_law_alpha` flows through unchanged,
+        // the `novelty_score` is the rate normalised by the
+        // [`NOVELTY_RATE_CEILING`] constant, the `coupling_mi` is
+        // `mi * entropy` clamped, and the `criticality_indicator` is
+        // the worst-signal-of-three distance to band centre.
         let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
             agent_count: 12,
             faction_count: 3,
-            resource_entropy: 0.25,
+            resource_entropy: 0.5,
             structure_count: 9,
-            novelty_rate: 0.5,
-            coupling_strength: 0.75,
+            novelty_rate: 0.05,        // → novelty_score = 0.5
+            coupling_strength: 0.6,    // → coupling_mi = 0.6 * 0.5 = 0.3
+            power_law_alpha: 1.7,      // inside alpha band [1.4, 2.0] ✓
+            branching_sigma: 0.95,     // inside sigma band [0.85, 1.05] ✓
             tick: 42,
         });
 
-        assert_eq!(dashboard.power_law_alpha, 12.0);
-        assert_eq!(dashboard.shannon_entropy, 0.25);
+        assert_eq!(dashboard.power_law_alpha, 1.7);
+        assert_eq!(dashboard.shannon_entropy, 0.5);
         assert_eq!(dashboard.structure_count, 9);
-        assert_eq!(dashboard.novelty_score, 0.5);
-        assert_eq!(dashboard.coupling_mi, 0.75);
+        approx(dashboard.novelty_score, 0.5);
+        approx(dashboard.coupling_mi, 0.3);
+        // All three signals inside their operational band → score = 1.0.
+        assert!((dashboard.criticality_indicator - 1.0).abs() < 1e-5,
+            "all on-target => criticality = 1.0, got {}",
+            dashboard.criticality_indicator);
         assert_eq!(dashboard.tick, 42);
     }
 
@@ -511,6 +661,8 @@ mod tests {
             structure_count: 7,
             novelty_rate: 0.2,
             coupling_strength: 0.3,
+            power_law_alpha: 1.7,
+            branching_sigma: 0.95,
             tick: 5,
         });
         let high = EmergenceDashboard::from(EmergenceSampleSnapshot {
@@ -520,15 +672,138 @@ mod tests {
             structure_count: 99,
             novelty_rate: 0.2,
             coupling_strength: 0.3,
+            power_law_alpha: 1.7,
+            branching_sigma: 0.95,
             tick: 500,
         });
 
         assert_ne!(low, high);
         assert_eq!(low.power_law_alpha, high.power_law_alpha);
         assert_eq!(low.shannon_entropy, high.shannon_entropy);
+        // novelty_score and coupling_mi are pure functions of the
+        // supplied novelty_rate / coupling_strength / entropy, so
+        // changing the snapshot's tick + structure_count alone must
+        // not move them.
         assert_eq!(low.novelty_score, high.novelty_score);
         assert_eq!(low.coupling_mi, high.coupling_mi);
+        assert_eq!(low.criticality_indicator, high.criticality_indicator);
         assert_ne!(low.structure_count, high.structure_count);
         assert_ne!(low.tick, high.tick);
+    }
+
+    // ---- FR-EMERGENCE-dashboard: novelty_score ----
+
+    /// FR-EMERGENCE-dashboard: a zero / negative / non-finite
+    /// novelty rate maps to `0.0` (degenerate state).
+    #[test]
+    fn novelty_score_zero_on_degenerate_input() {
+        assert_eq!(novelty_score(0.0), 0.0);
+        assert_eq!(novelty_score(-0.1), 0.0);
+        assert_eq!(novelty_score(f32::NAN), 0.0);
+        assert_eq!(novelty_score(f32::INFINITY), 0.0);
+        assert_eq!(novelty_score(f32::NEG_INFINITY), 0.0);
+    }
+
+    /// FR-EMERGENCE-dashboard: a novelty rate at the operational
+    /// ceiling maps to `1.0` (saturated).
+    #[test]
+    fn novelty_score_saturates_at_ceiling() {
+        assert!((novelty_score(NOVELTY_RATE_CEILING) - 1.0).abs() < 1e-6);
+        assert!((novelty_score(NOVELTY_RATE_CEILING * 2.0) - 1.0).abs() < 1e-6);
+    }
+
+    /// FR-EMERGENCE-dashboard: novelty score is monotonic and
+    /// exactly linear on `[0, NOVELTY_RATE_CEILING]`. We assert two
+    /// mid-range points.
+    #[test]
+    fn novelty_score_is_monotonic_and_linear() {
+        let quarter = novelty_score(NOVELTY_RATE_CEILING * 0.25);
+        let half = novelty_score(NOVELTY_RATE_CEILING * 0.5);
+        assert!((quarter - 0.25).abs() < 1e-6, "quarter: {quarter}");
+        assert!((half - 0.5).abs() < 1e-6, "half: {half}");
+        assert!(quarter < half, "quarter < half must hold");
+    }
+
+    // ---- FR-EMERGENCE-dashboard: coupling_mi_estimate ----
+
+    /// FR-EMERGENCE-dashboard: degenerate MI (non-finite, negative,
+    /// or zero) → `0.0`.
+    #[test]
+    fn coupling_mi_estimate_zero_on_degenerate_mi() {
+        assert_eq!(coupling_mi_estimate(0.0, 0.5), 0.0);
+        assert_eq!(coupling_mi_estimate(-0.1, 0.5), 0.0);
+        assert_eq!(coupling_mi_estimate(f32::NAN, 0.5), 0.0);
+    }
+
+    /// FR-EMERGENCE-dashboard: degenerate entropy → 0.0 coupling,
+    /// because there is no material diversity to couple.
+    #[test]
+    fn coupling_mi_estimate_zero_on_degenerate_entropy() {
+        assert_eq!(coupling_mi_estimate(0.5, 0.0), 0.0);
+        assert_eq!(coupling_mi_estimate(0.5, -0.1), 0.0);
+        assert_eq!(coupling_mi_estimate(0.5, f32::NAN), 0.0);
+    }
+
+    /// FR-EMERGENCE-dashboard: coupling is `mi * entropy_norm` in
+    /// the interior, clamped on either side. We assert two interior
+    /// points + a clamp case.
+    #[test]
+    fn coupling_mi_estimate_interior_is_product() {
+        approx(coupling_mi_estimate(0.5, 0.5), 0.25);
+        approx(coupling_mi_estimate(0.8, 0.7), 0.56);
+        // Clamp: mi * entropy > 1 is impossible when both in [0, 1],
+        // but a caller could pass entropy > 1 (engine bug); we clamp
+        // first, so the result must not exceed 1.
+        assert!(coupling_mi_estimate(1.5, 1.0) <= 1.0 + 1e-6);
+    }
+
+    // ---- FR-EMERGENCE-dashboard: criticality_indicator (drained via From) ----
+
+    /// FR-EMERGENCE-dashboard: when all three signals sit at the
+    /// centre of their operational band, the `criticality_indicator`
+    /// on the dashboard struct is `1.0` (full credit, exactly on
+    /// target).
+    #[test]
+    fn criticality_indicator_one_on_all_on_target() {
+        let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
+            agent_count: 0,
+            faction_count: 0,
+            resource_entropy: 0.75,    // centre of [0.6, 0.9]
+            structure_count: 0,
+            novelty_rate: 0.0,
+            coupling_strength: 0.0,
+            power_law_alpha: 1.7,      // centre of [1.4, 2.0]
+            branching_sigma: 0.95,     // centre of [0.85, 1.05]
+            tick: 0,
+        });
+        assert!(
+            (dashboard.criticality_indicator - 1.0).abs() < 1e-5,
+            "all on-target => 1.0, got {}",
+            dashboard.criticality_indicator
+        );
+    }
+
+    /// FR-EMERGENCE-dashboard: when any one signal is far from its
+    /// band, the `criticality_indicator` drops below `0.5` (the
+    /// "off-target" alarm on the L1 dashboard). This pins the
+    /// worst-signal-wins semantic of [`criticality_indicator`].
+    #[test]
+    fn criticality_indicator_drops_when_far_from_band() {
+        let dashboard = EmergenceDashboard::from(EmergenceSampleSnapshot {
+            agent_count: 0,
+            faction_count: 0,
+            resource_entropy: 0.0,    // far below entropy band [0.6, 0.9]
+            structure_count: 0,
+            novelty_rate: 0.0,
+            coupling_strength: 0.0,
+            power_law_alpha: 1.7,     // on target
+            branching_sigma: 0.95,    // on target
+            tick: 0,
+        });
+        assert!(
+            dashboard.criticality_indicator < 0.5,
+            "one far signal => criticality < 0.5, got {}",
+            dashboard.criticality_indicator
+        );
     }
 }

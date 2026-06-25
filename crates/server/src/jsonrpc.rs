@@ -1055,6 +1055,28 @@ pub struct EmergenceSampleFields {
     /// Normalised mutual information between material and faction distributions.
     #[serde(default)]
     pub mi_material_faction_norm: Option<f32>,
+    /// FR-EMERGENCE-dashboard: normalised novelty score in `[0, 1]`,
+    /// derived from `novelty_rate` (see
+    /// [`civ_emergence_metrics::dashboard::novelty_score`]).
+    /// Surfaces on the `emergence.metrics` read method alongside
+    /// the raw `novelty_rate`.
+    #[serde(default)]
+    pub novelty_score: f32,
+    /// FR-EMERGENCE-dashboard: estimated coupling mutual
+    /// information in `[0, 1]`, derived from
+    /// `mi_material_faction_norm * entropy_norm` (see
+    /// [`civ_emergence_metrics::dashboard::coupling_mi_estimate`]).
+    /// `0.0` when the raw MI is degenerate.
+    #[serde(default)]
+    pub coupling_mi_estimate: f32,
+    /// FR-EMERGENCE-dashboard: edge-of-chaos / criticality
+    /// indicator in `[0, 1]`, combining `branching_sigma`,
+    /// `power_law_alpha`, and `entropy_norm` against the
+    /// operational bands documented in
+    /// [`civ_emergence_metrics::criticality`]. `1.0` when all
+    /// three signals sit inside their operational band.
+    #[serde(default)]
+    pub criticality_indicator: f32,
 }
 
 /// Wire-friendly mirror of
@@ -1112,6 +1134,13 @@ impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFie
             power_law_alpha: s.power_law_alpha,
             novelty_rate: s.novelty_rate,
             mi_material_faction_norm: s.mi_material_faction_norm,
+            // FR-EMERGENCE-dashboard: pass through the three derived
+            // summary metrics unchanged. They were already computed
+            // on the engine side and live on the same `EmergenceSample`
+            // struct.
+            novelty_score: s.novelty_score,
+            coupling_mi_estimate: s.coupling_mi_estimate,
+            criticality_indicator: s.criticality_indicator,
         }
     }
 }
@@ -1642,18 +1671,33 @@ fn emergence_dashboard_snapshot_from_context(ctx: &DispatchContext) -> Emergence
         .and_then(|snapshot| snapshot.spectator.as_ref())
         .map(|spectator| spectator.factions.len() as u32)
         .unwrap_or(0);
-    let (resource_entropy, structure_count, novelty_rate, coupling_strength) = ctx
+    // FR-EMERGENCE-dashboard: the L2 dashboard pulls every
+    // existing per-tick engine signal needed to compute
+    // `novelty_score`, `coupling_mi_estimate`, and
+    // `criticality_indicator` from the cached sample. The
+    // derivation happens in `civ_emergence_metrics::dashboard`'s
+    // `From<EmergenceSampleSnapshot> for EmergenceDashboard` impl.
+    let (
+        resource_entropy,
+        structure_count,
+        novelty_rate,
+        coupling_strength,
+        power_law_alpha,
+        branching_sigma,
+    ) = ctx
         .emergence
         .as_ref()
         .map(|sample| {
             (
-                sample.entropy_bits,
+                sample.entropy_norm,
                 sample.structure_count.unwrap_or(0),
                 sample.novelty_rate,
                 sample.mi_material_faction_norm.unwrap_or(0.0),
+                sample.power_law_alpha,
+                sample.branching_sigma,
             )
         })
-        .unwrap_or((0.0, 0, 0.0, 0.0));
+        .unwrap_or((0.0, 0, 0.0, 0.0, 0.0, 0.0));
 
     EmergenceSampleSnapshot {
         agent_count,
@@ -1662,6 +1706,8 @@ fn emergence_dashboard_snapshot_from_context(ctx: &DispatchContext) -> Emergence
         structure_count,
         novelty_rate,
         coupling_strength,
+        power_law_alpha,
+        branching_sigma,
         tick: ctx.tick,
     }
 }
@@ -1888,27 +1934,33 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                     })
                 }
                 None => serde_json::to_value(EmergenceSampleFields {
-                    tick: ctx.tick,
-                    entropy_bits: 0.0,
-                    entropy_norm: 0.0,
-                    structure_count: Some(0),
-                    structure_largest: Some(0),
-                    structure_foreground: Some(0),
-                    histogram_total: 0,
-                    histogram_populated_bins: 0,
-                    sample_dur_us: 0,
-                    dashboard: None,
-                    branching_sigma: 0.0,
-                    branching_sigma_score: 0.0,
-                    branching_window: 0,
-                    avalanches_closed: 0,
-                    branching_regime: String::new(),
-                    power_law_alpha: 0.0,
-                    novelty_rate: 0.0,
-                    mi_material_faction_norm: None,
-                })
-                .unwrap_or_else(|_| serde_json::json!({ "tick": ctx.tick })),
-            };
+                tick: ctx.tick,
+                entropy_bits: 0.0,
+                entropy_norm: 0.0,
+                structure_count: Some(0),
+                structure_largest: Some(0),
+                structure_foreground: Some(0),
+                histogram_total: 0,
+                histogram_populated_bins: 0,
+                sample_dur_us: 0,
+                dashboard: None,
+                branching_sigma: 0.0,
+                branching_sigma_score: 0.0,
+                branching_window: 0,
+                avalanches_closed: 0,
+                branching_regime: String::new(),
+                power_law_alpha: 0.0,
+                novelty_rate: 0.0,
+                mi_material_faction_norm: None,
+                // FR-EMERGENCE-dashboard: zeroed defaults for the
+                // three derived summary metrics. The dashboard
+                // renders the "no data" tile when the live sample
+                // is absent.
+                novelty_score: 0.0,
+                coupling_mi_estimate: 0.0,
+                criticality_indicator: 0.0,
+            })
+            .unwrap_or_else(|_| serde_json::json!({ "tick": ctx.tick })),
             DispatchPlan {
                 response: JsonRpcResponse::success(req.id, result),
                 effect: DispatchEffect::None,
@@ -3057,6 +3109,12 @@ mod tests {
             power_law_alpha: 0.0,
             novelty_rate: 0.0,
             mi_material_faction_norm: None,
+            // FR-EMERGENCE-dashboard: zeroed summary metrics on the
+            // boot path; the live sample (somewhere in `ctx.emergence`)
+            // would carry real values.
+            novelty_score: 0.0,
+            coupling_mi_estimate: 0.0,
+            criticality_indicator: 0.0,
         };
         let plan = dispatch_request(
             req,
@@ -3133,6 +3191,12 @@ mod tests {
             power_law_alpha: 0.0,
             novelty_rate: 0.0,
             mi_material_faction_norm: None,
+            // FR-EMERGENCE-dashboard: zeroed summary metrics on the
+            // boot path; the live sample (somewhere in `ctx.emergence`)
+            // would carry real values.
+            novelty_score: 0.0,
+            coupling_mi_estimate: 0.0,
+            criticality_indicator: 0.0,
         };
         let plan = dispatch_request(
             req,
@@ -4623,6 +4687,13 @@ mod tests {
             power_law_alpha: 1.95,
             novelty_rate: 0.008,
             mi_material_faction_norm: Some(0.33),
+            // FR-EMERGENCE-dashboard: the three derived summary
+            // metrics carry through the From<EmergenceSample>
+            // conversion — populate them here so the conversion
+            // is exercised end-to-end.
+            novelty_score: 0.08,
+            coupling_mi_estimate: 0.0,
+            criticality_indicator: 0.5,
         };
         let fields = EmergenceSampleFields::from(sample);
         assert!(
@@ -4634,6 +4705,86 @@ mod tests {
             "novelty_rate mismatch"
         );
         assert_eq!(fields.mi_material_faction_norm, Some(0.33));
+    }
+
+    /// FR-EMERGENCE-dashboard: the `sim.emergence` JSON-RPC read
+    /// method (the surface the L2 dashboard polls) carries the three
+    /// derived summary metrics — `novelty_score`, `coupling_mi_estimate`,
+    /// `criticality_indicator` — when a live sample is present. This
+    /// pins the wire contract so a future refactor of the engine
+    /// sample can't drop a field silently.
+    #[test]
+    fn emerg_emerg_004_sim_emergence_surfaces_fr_emergence_dashboard_metrics() {
+        use civ_emergence_metrics::branching::BranchingRegime;
+        use civ_emergence_metrics::dashboard::EmergenceDashboard;
+        use civ_engine::emergence_metrics::EmergenceSample;
+
+        let sample = EmergenceSample {
+            tick: 100,
+            entropy_bits: 0.0,
+            entropy_norm: 0.0,
+            structure_count: None,
+            structure_largest: None,
+            structure_foreground: None,
+            histogram_total: 0,
+            histogram_populated_bins: 0,
+            sample_dur_us: 0,
+            dashboard: EmergenceDashboard::default(),
+            branching_sigma: 0.0,
+            branching_sigma_score: 0.0,
+            branching_window: 0,
+            avalanches_closed: 0,
+            branching_regime: BranchingRegime::EdgeOfChaos,
+            power_law_alpha: 1.7,
+            novelty_rate: 0.05,
+            mi_material_faction_norm: Some(0.6),
+            novelty_score: 0.5,
+            coupling_mi_estimate: 0.3,
+            criticality_indicator: 1.0,
+        };
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":99,"method":"sim.emergence","params":{}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 100,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: Some(sample),
+                faction_metrics: None,
+                tech_state: civ_engine::tech::TechState::default(),
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("result");
+        // FR-EMERGENCE-dashboard: the three derived summary metrics
+        // surface on the `emergence.metrics` JSON-RPC read method
+        // alongside the raw `novelty_rate` / `mi_material_faction_norm`.
+        assert!(
+            (result["novelty_score"].as_f64().expect("f64") - 0.5).abs() < 1e-6,
+            "novelty_score mismatch: {}",
+            result["novelty_score"]
+        );
+        assert!(
+            (result["coupling_mi_estimate"].as_f64().expect("f64") - 0.3).abs() < 1e-6,
+            "coupling_mi_estimate mismatch: {}",
+            result["coupling_mi_estimate"]
+        );
+        assert!(
+            (result["criticality_indicator"].as_f64().expect("f64") - 1.0).abs() < 1e-6,
+            "criticality_indicator mismatch: {}",
+            result["criticality_indicator"]
+        );
     }
 
     /// snapshot_result_json includes power_law_alpha, novelty_rate, mi_material_faction_norm
@@ -4659,6 +4810,9 @@ mod tests {
             power_law_alpha: 2.1,
             novelty_rate: 0.005,
             mi_material_faction_norm: Some(0.42),
+            novelty_score: 0.05,
+            coupling_mi_estimate: 0.021,
+            criticality_indicator: 0.0,
         };
         let fields = SnapshotFields {
             tick: 5,

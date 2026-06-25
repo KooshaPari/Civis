@@ -1185,13 +1185,29 @@ pub fn parse_replay_path(params: Option<&Value>) -> Result<String, JsonRpcError>
             data: None,
         })?;
 
+    // Validate the raw string platform-independently: `std::path` only
+    // recognizes Windows prefixes/separators when compiled for Windows, so
+    // on Linux (CI) a payload like `C:\\Windows\\...` or `C:replays/x`
+    // would otherwise parse as a single harmless component and slip
+    // through. Detect Windows drive prefixes (`C:` ...) and any backslash
+    // separator explicitly regardless of host OS.
+    let has_drive_prefix = {
+        let mut chars = path_str.chars();
+        matches!(
+            (chars.next(), chars.next()),
+            (Some(c), Some(':')) if c.is_ascii_alphabetic()
+        )
+    };
     let path = std::path::Path::new(path_str);
-    // Reject any path whose components include a parent directory
-    // traversal segment (`..`), an absolute prefix (`/`, `\`, or a
-    // Windows drive prefix like `C:`), or a root directory component.
+    // Reject any path that is absolute, starts with `/` or `\`, contains a
+    // backslash (Windows separator), carries a Windows drive prefix, or
+    // whose components include a parent-directory traversal (`..`), an
+    // absolute prefix, or a root-directory component.
     if !path.is_relative()
         || path_str.starts_with('/')
         || path_str.starts_with('\\')
+        || path_str.contains('\\')
+        || has_drive_prefix
         || path
             .components()
             .any(|c| matches!(
@@ -2118,7 +2134,10 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_sim_reset_rejects_missing_seed() {
+    fn dispatch_sim_reset_defaults_missing_seed() {
+        // Shipped contract (integration test `test_sim_reset_clears_state`):
+        // `sim.reset` with `params:{}` (no seed) must SUCCEED with the seed
+        // defaulting to 0 and `tick` reset to 0.
         let req = parse_request(r#"{"jsonrpc":"2.0","id":12,"method":"sim.reset","params":{}}"#)
             .expect("parse");
         let plan = dispatch_request(
@@ -2138,11 +2157,11 @@ mod tests {
                 outcome_fields: None,
             },
         );
-        assert_eq!(plan.effect, DispatchEffect::None);
-        assert_eq!(
-            plan.response.error.as_ref().map(|e| e.code),
-            Some(error_code::INVALID_PARAMS)
-        );
+        assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 0 });
+        assert!(plan.response.error.is_none());
+        let result = plan.response.result.expect("result");
+        assert_eq!(result.get("seed").and_then(|v| v.as_u64()), Some(0));
+        assert_eq!(result.get("tick").and_then(|v| v.as_u64()), Some(0));
     }
 
     #[test]

@@ -873,16 +873,28 @@ async fn ws_jsonrpc_sim_reset_replaces_simulation_and_zeroes_tick() {
 #[tokio::test]
 async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
     let sim = Arc::new(tokio::sync::Mutex::new(Simulation::with_seed(10)));
-    std::fs::create_dir_all("target/ws-smoke").expect("create ws smoke replay dir");
-    let replay_path = format!(
-        "target/ws-smoke/replay-{}.civreplay",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system time after epoch")
-            .as_nanos()
-    );
+    // The bridge resolves `path` under its `replays_dir` (canonicalize +
+    // containment). Use a dedicated temp `replays_dir` and a simple
+    // relative path so the saved file is deterministically locatable for
+    // the read-back assertion.
+    let replays_dir = tempfile::tempdir().expect("temp replays dir");
+    let replay_rel = "replay-roundtrip.civreplay";
+    let replay_path = replays_dir.path().join(replay_rel);
 
-    let addr = spawn_ws_bridge(sim, 4).await;
+    let addr = spawn_ws_bridge_with_config(
+        sim,
+        WsBridgeConfig {
+            addr: SocketAddr::from(([127, 0, 0, 1], 0)),
+            max_clients: 4,
+            require_role: false,
+            tick_broadcast_format: TickBroadcastFormat::Both,
+            saves_dir: tempfile::tempdir()
+                .expect("temp saves dir")
+                .keep(),
+            replays_dir: replays_dir.path().to_path_buf(),
+        },
+    )
+    .await;
     let url = format!("ws://{addr}/ws");
     let (mut socket, _) = connect_async(&url).await.expect("ws connect");
 
@@ -890,7 +902,7 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
         "jsonrpc": "2.0",
         "id": 20,
         "method": "sim.save_replay",
-        "params": { "path": replay_path }
+        "params": { "path": replay_rel }
     });
     socket
         .send(Message::Text(save_req.to_string()))
@@ -927,7 +939,7 @@ async fn ws_jsonrpc_sim_save_and_load_replay_roundtrip() {
         "jsonrpc": "2.0",
         "id": 21,
         "method": "sim.load_replay",
-        "params": { "path": replay_path }
+        "params": { "path": replay_rel }
     });
     socket
         .send(Message::Text(load_req.to_string()))

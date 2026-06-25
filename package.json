@@ -7,7 +7,10 @@
     "docs:build": "vitepress build docs",
     "docs:dev": "vitepress dev docs --port 5199",
     "lint": "oxlint",
-    "format": "oxfmt --write ."
+    "format": "oxfmt --write .",
+    "dev:status": "node scripts/dev/status.mjs",
+    "dev:smoke": "node scripts/dev/smoke.mjs --quick",
+    "dev:branch-clean": "node scripts/dev/branch-clean.mjs"
   },
   "dependencies": {
     "@phenotype/docs": "^0.1.0"

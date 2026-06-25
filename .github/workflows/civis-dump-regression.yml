@@ -27,4 +27,4 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
       - name: cargo test -p civis-cli (dump regression)
-        run: cargo test -p civis-cli dump::
+        run: "cargo test -p civis-cli dump::"

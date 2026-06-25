@@ -70,7 +70,6 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "compact",
     "buildings",
     "diffusion",
-    "life",
     "emergence",
 ];
 
@@ -1229,9 +1228,9 @@ impl Simulation {
         self.phase_voxel();
         self.phase_compact();
         self.phase_buildings();
+        // NOTE: emergence phase arms (life/research/tech/belief/unrest/cohesion/social_mood/economic_focus_pre/stratification/institutions/economic_focus) removed 2026-06-25 — re-add each arm COUPLED with its impl (see method doc). Premature wiring caused E0599 workspace compile failure.
         self.phase_diffusion();
         self.phase_disasters();
-        self.phase_life();
         self.phase_emergence();
         self.phase_emergence_events_close();
         self.replay_log.record_tick(self.state.tick);
@@ -3401,15 +3400,12 @@ mod tests {
                 "compact",
                 "buildings",
                 "diffusion",
-                "life",
                 "emergence",
             ]
         );
     }
 
-    /// L5-115 — `PHASE_ORDER` includes "emergence" and the phase is positioned
-    /// after `life` so the agent state that emergence depends on is finalized
-    /// (cluster stocks, needs, settlements) before emergence runs.
+    /// `PHASE_ORDER` includes "emergence" as the final entry.
     /// Closes FR-CIV-LEGENDS-INGEST-02, FR-CIV-PSYCHE-900/901, FR-CIV-PSYCHE-911,
     /// FR-CIV-PSYCHE-912, FR-CIV-GENETICS, FR-CIV-AI-006, FR-CIV-LEGENDS-QUERY-07.
     #[test]
@@ -3418,25 +3414,13 @@ mod tests {
             .iter()
             .position(|p| *p == "emergence")
             .expect("PHASE_ORDER must include 'emergence'");
-        let life_idx = PHASE_ORDER
-            .iter()
-            .position(|p| *p == "life")
-            .expect("PHASE_ORDER must include 'life'");
-        assert!(
-            emergence_idx > life_idx,
-            "emergence (idx {emergence_idx}) must run after life (idx {life_idx}) \
-             so agent state is finalized first"
-        );
-        // And it must be the final phase in the deterministic core loop —
-        // anything reading emergence state downstream (saga belief gain,
-        // unrest, chronicle) depends on the phase having run.
+        // emergence must be the final phase in the deterministic core loop
         assert_eq!(
             emergence_idx,
             PHASE_ORDER.len() - 1,
             "emergence must be the final entry in PHASE_ORDER"
         );
     }
-
     /// L5-115 — `Simulation::tick` invokes `phase_emergence` and the public
     /// accessors on `Simulation` (legends_graph, emergence_feed,
     /// cluster_cultures) are queryable after a tick. Two same-seed sims run

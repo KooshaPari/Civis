@@ -16,6 +16,7 @@ pub mod conditions;
 pub mod era;
 pub mod engine;
 pub mod emergence;
+pub mod disasters;
 pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;

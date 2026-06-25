@@ -6,10 +6,11 @@ use bevy::ui::RelativeCursorPosition;
 
 #[cfg(feature = "egui")]
 use crate::settings_ui::{GameSettings, KeyBinding, ACTION_SELECT_OR_PICK};
-use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
+use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag, LiveChunkTag};
 use crate::minimap::{MinimapCamera, MinimapRoot};
 use crate::{
     LiveEntityKind, SelectedLiveEntity, AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
+    VOXEL_CHUNK_EDGE,
 };
 
 /// Optional live selection for HUD overlays and inspectors.
@@ -56,6 +57,13 @@ pub const fn agent_marker_half_extents() -> [f32; 3] {
 #[must_use]
 pub const fn building_marker_half_extents() -> [f32; 3] {
     [1.0, 1.25, 1.0]
+}
+
+/// Half-extents of a streamed voxel chunk mesh (`VOXEL_CHUNK_EDGE` cube).
+#[must_use]
+pub const fn chunk_marker_half_extents() -> [f32; 3] {
+    let half = VOXEL_CHUNK_EDGE * 0.5;
+    [half, half, half]
 }
 
 /// Ray–AABB intersection distance along `direction` (normalized), if any.
@@ -125,6 +133,7 @@ pub fn pick_live_entity_along_ray(
     agents: &[(u64, Vec3, Vec3)],
     buildings: &[(u64, Vec3, Vec3)],
     graph_parcels: &[(u64, Vec3, Vec3)],
+    chunks: &[(u64, Vec3, Vec3)],
 ) -> Option<SelectedLiveEntity> {
     let dir_len_sq =
         direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2];
@@ -140,6 +149,7 @@ pub fn pick_live_entity_along_ray(
 
     let agent_half = agent_marker_half_extents();
     let building_half = building_marker_half_extents();
+    let chunk_half = chunk_marker_half_extents();
 
     let mut best: Option<(f32, SelectedLiveEntity)> = None;
 
@@ -203,6 +213,26 @@ pub fn pick_live_entity_along_ray(
                 t,
                 SelectedLiveEntity {
                     kind: LiveEntityKind::GraphParcel,
+                    id,
+                },
+            );
+        }
+    }
+
+    for &(id, centre, scale) in chunks {
+        if !centre.is_finite() || !scale.is_finite() || scale.min_element() <= 0.0 {
+            continue;
+        }
+        let half = [
+            chunk_half[0] * scale.x,
+            chunk_half[1] * scale.y,
+            chunk_half[2] * scale.z,
+        ];
+        if let Some(t) = ray_aabb_hit_distance(origin, dir, centre.to_array(), half) {
+            consider(
+                t,
+                SelectedLiveEntity {
+                    kind: LiveEntityKind::VoxelChunk,
                     id,
                 },
             );
@@ -301,6 +331,7 @@ fn pick_live_entity_on_release(
     agents: Query<(&LiveAgentTag, &GlobalTransform)>,
     buildings: Query<(&LiveBuildingTag, &GlobalTransform)>,
     graph_parcels: Query<(&LiveGraphParcelTag, &GlobalTransform)>,
+    chunks: Query<(&LiveChunkTag, &GlobalTransform)>,
 ) {
     let binding_released = settings
         .as_ref()
@@ -342,6 +373,10 @@ fn pick_live_entity_on_release(
         .iter()
         .map(|(tag, transform)| (tag.id, transform.translation(), transform.scale()))
         .collect();
+    let chunks: Vec<_> = chunks
+        .iter()
+        .map(|(tag, transform)| (tag.id.0, transform.translation(), transform.scale()))
+        .collect();
 
     selection.0 = pick_live_entity_along_ray(
         ray.origin.to_array(),
@@ -349,6 +384,7 @@ fn pick_live_entity_on_release(
         &agents,
         &buildings,
         &graph_parcels,
+        &chunks,
     );
 }
 
@@ -363,6 +399,7 @@ fn pick_live_entity_on_release(
     agents: Query<(&LiveAgentTag, &GlobalTransform)>,
     buildings: Query<(&LiveBuildingTag, &GlobalTransform)>,
     graph_parcels: Query<(&LiveGraphParcelTag, &GlobalTransform)>,
+    chunks: Query<(&LiveChunkTag, &GlobalTransform)>,
 ) {
     if !mouse.just_released(MouseButton::Left) || pointer.left_dragged {
         return;
@@ -396,6 +433,10 @@ fn pick_live_entity_on_release(
         .iter()
         .map(|(tag, transform)| (tag.id, transform.translation(), transform.scale()))
         .collect();
+    let chunks: Vec<_> = chunks
+        .iter()
+        .map(|(tag, transform)| (tag.id.0, transform.translation(), transform.scale()))
+        .collect();
 
     selection.0 = pick_live_entity_along_ray(
         ray.origin.to_array(),
@@ -403,6 +444,7 @@ fn pick_live_entity_on_release(
         &agents,
         &buildings,
         &graph_parcels,
+        &chunks,
     );
 }
 
@@ -438,7 +480,7 @@ mod tests {
         let agents = [(1_u64, Vec3::new(0.0, 1.0, 0.0), Vec3::ONE)];
         let buildings = [(9_u64, Vec3::new(0.0, 1.0, 5.0), Vec3::ONE)];
         let picked =
-            pick_live_entity_along_ray(origin, direction, &agents, &buildings, &[]).expect("pick");
+            pick_live_entity_along_ray(origin, direction, &agents, &buildings, &[], &[]).expect("pick");
         assert_eq!(picked.kind, LiveEntityKind::Agent);
         assert_eq!(picked.id, 1);
     }
@@ -469,7 +511,7 @@ mod tests {
     #[test]
     fn pick_live_entity_rejects_zero_direction() {
         assert!(
-            pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[]).is_none()
+            pick_live_entity_along_ray([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], &[], &[], &[], &[]).is_none()
         );
     }
 
@@ -485,6 +527,7 @@ mod tests {
         assert!(pick_live_entity_along_ray(
             [0.0, 0.0, 0.0],
             [f32::INFINITY, 0.0, 1.0],
+            &[],
             &[],
             &[],
             &[]

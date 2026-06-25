@@ -14,7 +14,6 @@ use crate::ui_theme::CHIP_FILL;
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
-use crate::live_pick::LiveSelection;
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
@@ -80,6 +79,8 @@ pub struct SelectedEntity {
 /// Display details for the selected entity.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct SelectedEntityDetails {
+    /// Entity category label (Agent, Building, Voxel, Cell, …).
+    pub entity_type: String,
     /// Name shown in the right panel.
     pub name: String,
     /// Faction label shown in the right panel.
@@ -316,9 +317,6 @@ fn handle_speed_shortcuts(
 fn draw_game_ui(
     mut contexts: EguiContexts,
     snapshot: Res<GameUiSnapshot>,
-    selected: Res<SelectedEntity>,
-    live_selection: Res<LiveSelection>,
-    details: Res<SelectedEntityDetails>,
     attach_mode: Res<AttachMode>,
     live_attach: Option<Res<crate::live_attach::LiveAttachState>>,
     mut laws_open: ResMut<GameLawsOpen>,
@@ -349,17 +347,6 @@ fn draw_game_ui(
         .show(ctx, |ui| {
             tool_palette_ui(ui, &mut active_tool, &mut building_kind, &mut speed);
         });
-
-    let show_live_inspector = *attach_mode == AttachMode::Server && live_selection.0.is_some();
-    if selected.entity.is_some() || show_live_inspector {
-        egui::SidePanel::right("civis_game_selected_panel")
-            .resizable(true)
-            .default_width(268.0)
-            .frame(panel_frame(egui::Margin::same(14)))
-            .show(ctx, |ui| {
-                inspector_ui(ui, &details);
-            });
-    }
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
@@ -418,6 +405,7 @@ pub fn inspector_details_from_civilian(entry: &CivilianStateEntry) -> SelectedEn
         entry.species.clone()
     };
     SelectedEntityDetails {
+        entity_type: "Civilian".to_string(),
         name: civilian_display_name(entry),
         faction: civilian_faction_label(entry),
         health: format_civilian_health_display(entry.health),
@@ -443,12 +431,33 @@ pub fn inspector_details_for_live_entity(
     let position = position
         .map(format_world_position)
         .unwrap_or_else(|| "—".to_string());
-    let (name, profession) = match entity.kind {
-        LiveEntityKind::Agent => (format!("Agent #{}", entity.id), "—".to_string()),
-        LiveEntityKind::Building => (format!("Building #{}", entity.id), "—".to_string()),
-        LiveEntityKind::GraphParcel => (format!("Parcel #{}", entity.id), "—".to_string()),
+    let (entity_type, name, profession) = match entity.kind {
+        LiveEntityKind::Agent => (
+            "Agent".to_string(),
+            format!("Agent #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::Building => (
+            "Building".to_string(),
+            format!("Building #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::GraphParcel => (
+            "Parcel".to_string(),
+            format!("Parcel #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::VoxelChunk => {
+            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(entity.id));
+            (
+                "Voxel".to_string(),
+                format!("Chunk ({cx}, {cy}, {cz})"),
+                "—".to_string(),
+            )
+        }
     };
     SelectedEntityDetails {
+        entity_type,
         name,
         faction: "—".to_string(),
         health: "—".to_string(),
@@ -725,57 +734,10 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
     ui.label(egui::RichText::new("Speed").color(DIM).small());
 }
 
-/// Right-side selection inspector card.
-fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
-    ui.heading(egui::RichText::new("\u{25a4} Selection").color(ACCENT));
-    ui.add_space(4.0);
-    ui.separator();
-    ui.add_space(6.0);
-
-    inspector_row(ui, "Name", &details.name);
-    inspector_row(ui, "Faction", &details.faction);
-
-    // Health rendered as a progress bar when it parses to a fraction.
-    ui.add_space(2.0);
-    ui.label(egui::RichText::new("Health").color(DIM).small());
-    if let Some(frac) = parse_health_fraction(&details.health) {
-        let color = if frac > 0.66 {
-            egui::Color32::from_rgb(120, 220, 130)
-        } else if frac > 0.33 {
-            egui::Color32::from_rgb(240, 200, 90)
-        } else {
-            egui::Color32::from_rgb(230, 90, 90)
-        };
-        ui.add(
-            egui::ProgressBar::new(frac)
-                .fill(color)
-                .text(details.health.clone()),
-        );
-    } else {
-        ui.label(egui::RichText::new(&details.health).strong());
-    }
-    ui.add_space(2.0);
-
-    inspector_row(ui, "Profession", &details.profession);
-    inspector_row(ui, "Species", &details.species);
-    inspector_row(ui, "Needs", &details.needs);
-    inspector_row(ui, "Position", &details.position);
-}
-
-/// A dimmed-label / bright-value inspector row.
-fn inspector_row(ui: &mut egui::Ui, name: &str, value: &str) {
-    ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(name).color(DIM).small());
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(egui::RichText::new(value).strong());
-        });
-    });
-}
-
 /// Parse a health string into a 0..=1 fraction.
 ///
 /// Accepts `"87"`, `"87%"`, `"87/100"`, or `"0.87"`; returns `None` otherwise.
-fn parse_health_fraction(raw: &str) -> Option<f32> {
+pub fn parse_health_fraction(raw: &str) -> Option<f32> {
     let s = raw.trim();
     if s.is_empty() {
         return None;

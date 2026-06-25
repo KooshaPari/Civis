@@ -40,7 +40,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
 
 use super::Fixed;
-use crate::language::{tick_language, LanguageState};
 
 /// Fixed-point decimal (16-bit signed integer + 16 fractional bits).
 /// Re-exported from the `fixed` crate; aliased here so callers can use
@@ -57,6 +56,10 @@ use crate::religion::{
 };
 use crate::replay::{ReplayError, ReplayLog};
 use crate::replay_format::{load_civreplay, save_civreplay};
+use crate::language::{
+    borrow_word, ensure_seeded_word, place_name, person_name, place_name_meaning, person_name_meaning,
+    seeded_language_state, tick_language, LanguageState,
+};
 
 /// Ordered phase identifiers executed once per [`Simulation::tick`].
 ///
@@ -524,6 +527,9 @@ pub struct Simulation {
     /// [`Simulation::phase_language`]; consumed by the diplomacy pipeline via
     /// [`language_intelligibility_peace_bonus`].
     language_state: LanguageState,
+    /// Per-faction emergent language states (FR-LANGUAGE-001) used for naming
+    /// and isolation-aware drift coupling.
+    faction_languages: BTreeMap<u32, LanguageState>,
     /// Per-tick sentience evaluation profile (FR-CIV-GENETICS / FR-CIV-LEGENDS).
     /// Read by [`Simulation::phase_sentience`] to determine which lineages
     /// cross the cognition threshold this tick.
@@ -1119,6 +1125,7 @@ impl Simulation {
             build_sites: Vec::new(),
             last_tick_construction_events: Vec::new(),
             language_state: LanguageState::default(),
+            faction_languages: BTreeMap::new(),
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
@@ -1210,6 +1217,7 @@ impl Simulation {
             build_sites: Vec::new(),
             last_tick_construction_events: Vec::new(),
             language_state: LanguageState::default(),
+            faction_languages: BTreeMap::new(),
             sentience_profile: default_sentience_profile(),
             sentience_threshold: SentienceThreshold::new(SENTIENCE_MIN_COGNITION),
             last_tick_sentience_events: Vec::new(),
@@ -2778,19 +2786,86 @@ impl Simulation {
             });
     }
 
-    /// Language phase (FR-CIV-LANG-001) — drifts the emergent language
-    /// vocabulary by the configured rate scaled by contact pressure, then
-    /// merges near-identical phonemes. Runs AFTER [`Self::phase_emergence`]
-    /// because the emergence phase is the canonical producer of
-    /// `cluster_cultures` (which carries the language centroid consumed by
-    /// the diplomacy pipeline via [`language_intelligibility_peace_bonus`]).
+    /// Language phase (FR-CIV-LANG-001 / FR-LANGUAGE-001) — per-faction language
+    /// emerges from current cluster culture vectors (`cluster_cultures`) and drifts
+    /// under isolation pressure.
     ///
-    /// `contact_pressure` is derived from the current world state (mean
-    /// pairwise kinship acts as a proxy for inter-settlement contact); the
-    /// phase itself is deterministic given the language hash.
+    /// Emergence flow is:
+    /// - seed / refresh each active faction's `LanguageState` from dominant
+    ///   settlement culture language centroids;
+    /// - apply isolation-aware drift (isolated groups drift faster, producing
+    ///   greater divergence);
+    /// - borrow naming words for contact-connected factions so contact zones
+    ///   reduce divergence.
     fn phase_language(&mut self) {
-        let contact_pressure = contact_pressure_for(&self.world, self.cluster_cultures());
-        tick_language(&mut self.language_state, contact_pressure);
+        let cluster_member_counts = settlement_member_counts(&self.world);
+        let dominant = settlement_dominant_factions(&self.world, &cluster_member_counts);
+        let centroids = faction_language_centroids(self.cluster_cultures(), &dominant, &cluster_member_counts);
+        let contacts = settlement_contact_pairs(
+            &self.world,
+            &cluster_member_counts,
+            SETTLEMENT_CONTACT_RADIUS_FP,
+        );
+        let faction_pairs = diplomacy_faction_pairs_from_settlement_contact(&dominant, &contacts);
+
+        for (&faction_id, signature) in &centroids {
+            let lang = self
+                .faction_languages
+                .entry(*faction_id)
+                .or_insert_with(|| seeded_language_state(*signature));
+            lang.drift_rate = 0.05;
+            lang.split_threshold = 0.35;
+            ensure_seeded_word(lang, place_name_meaning(*faction_id, 0), *signature);
+            ensure_seeded_word(lang, person_name_meaning(*faction_id, 0), *signature);
+            let isolation = faction_isolation_pressure(
+                *faction_id,
+                &dominant,
+                &cluster_member_counts,
+                &contacts,
+            );
+            tick_language(lang, isolation);
+        }
+
+        for (left, right) in faction_pairs {
+            if left == right {
+                continue;
+            }
+
+            let left_seed = centroids.get(&left).copied().unwrap_or([0.5; 4]);
+            let right_seed = centroids.get(&right).copied().unwrap_or([0.5; 4]);
+
+            let mut left_lang = self
+                .faction_languages
+                .get(&left)
+                .cloned()
+                .unwrap_or_else(|| seeded_language_state(left_seed));
+            let mut right_lang = self
+                .faction_languages
+                .get(&right)
+                .cloned()
+                .unwrap_or_else(|| seeded_language_state(right_seed));
+
+            let cross_left_place = place_name_meaning(left, right);
+            let cross_right_place = place_name_meaning(right, left);
+            let cross_left_person = person_name_meaning(left, right);
+            let cross_right_person = person_name_meaning(right, left);
+
+            ensure_seeded_word(&mut left_lang, cross_left_place, left_seed);
+            ensure_seeded_word(&mut left_lang, cross_left_person, left_seed);
+            ensure_seeded_word(&mut right_lang, cross_right_place, right_seed);
+            ensure_seeded_word(&mut right_lang, cross_right_person, right_seed);
+
+            borrow_word(&mut left_lang, &right_lang, cross_left_place);
+            borrow_word(&mut left_lang, &right_lang, cross_left_person);
+            borrow_word(&mut right_lang, &left_lang, cross_right_place);
+            borrow_word(&mut right_lang, &left_lang, cross_right_person);
+
+            let _ = self.faction_languages.insert(left, left_lang);
+            let _ = self.faction_languages.insert(right, right_lang);
+        }
+
+        let first_faction = self.faction_languages.values().next();
+        self.language_state = first_faction.cloned().unwrap_or_default();
     }
 
     /// Sentience phase (FR-CIV-GENETICS / FR-CIV-LEGENDS) — evaluates every
@@ -2831,6 +2906,46 @@ impl Simulation {
     #[must_use]
     pub fn language_state(&self) -> &LanguageState {
         &self.language_state
+    }
+
+    /// Read-only access to per-faction language state used for naming and
+    /// isolation-driven coupling diagnostics.
+    #[must_use]
+    pub fn faction_languages(&self) -> &BTreeMap<u32, LanguageState> {
+        &self.faction_languages
+    }
+
+    pub(crate) fn set_faction_languages(
+        &mut self,
+        faction_languages: BTreeMap<u32, LanguageState>,
+    ) {
+        self.faction_languages = faction_languages;
+        self.language_state = self
+            .faction_languages
+            .values()
+            .next()
+            .cloned()
+            .unwrap_or_default();
+    }
+
+    /// Deterministic place naming for a specific faction.
+    #[must_use]
+    pub fn faction_place_name(&self, faction_id: u32, place_id: u32) -> String {
+        if let Some(state) = self.faction_languages.get(&faction_id) {
+            place_name(state, faction_id, place_id)
+        } else {
+            place_name(&self.language_state, faction_id, place_id)
+        }
+    }
+
+    /// Deterministic person naming for a specific faction.
+    #[must_use]
+    pub fn faction_person_name(&self, faction_id: u32, person_id: u32) -> String {
+        if let Some(state) = self.faction_languages.get(&faction_id) {
+            person_name(state, faction_id, person_id)
+        } else {
+            person_name(&self.language_state, faction_id, person_id)
+        }
     }
 
     /// Production phase - buildings produce resources
@@ -4162,6 +4277,15 @@ fn diplomacy_culture_threshold_bias(
     (similarity * CULTURE_PEACE_SPAN).round() as i64
 }
 
+/// Total civilians per settlement cluster (N3).
+fn settlement_member_counts(world: &World) -> BTreeMap<u64, u32> {
+    let mut counts: BTreeMap<u64, u32> = BTreeMap::new();
+    for (_, member) in world.query::<&ClusterMember>().iter() {
+        *counts.entry(member.cluster.0).or_default() += 1;
+    }
+    counts
+}
+
 /// Dominant explicit faction alignment per multi-member settlement cluster (N3).
 fn settlement_dominant_factions(
     world: &World,
@@ -4202,6 +4326,64 @@ fn settlement_dominant_factions(
         }
     }
     dominant
+}
+
+/// Isolation pressure for a faction derived from current settlement contacts.
+///
+/// Returns `1.0` when a faction has no contact-bearing settlement edges,
+/// tapering toward `0.0` as cross-faction contacts increase. This value is used
+/// as drift pressure in `crate::language::tick_language`.
+fn faction_isolation_pressure(
+    target_faction_id: u32,
+    dominant: &BTreeMap<u64, u32>,
+    cluster_member_counts: &BTreeMap<u64, u32>,
+    settlement_contacts: &BTreeSet<(u64, u64)>,
+) -> f32 {
+    let mut target_members = 0u32;
+    let mut contacting_members = 0.0f32;
+
+    let mut target_settlements = BTreeSet::new();
+    for (&settlement_id, &faction_id) in dominant {
+        if faction_id == target_faction_id {
+            target_settlements.insert(settlement_id);
+            target_members = target_members.saturating_add(
+                cluster_member_counts.get(&settlement_id).copied().unwrap_or(0),
+            );
+        }
+    }
+
+    for &(left, right) in settlement_contacts {
+        let Some(&fa) = dominant.get(&left) else {
+            continue;
+        };
+        let Some(&fb) = dominant.get(&right) else {
+            continue;
+        };
+        if fa == fb {
+            continue;
+        }
+
+        if fa == target_faction_id && target_settlements.contains(&left) {
+            let local_members = cluster_member_counts.get(&left).copied().unwrap_or(0) as f32;
+            let foreign_members = cluster_member_counts.get(&right).copied().unwrap_or(0) as f32;
+            if foreign_members > 0.0 {
+                contacting_members += local_members / (foreign_members + 1.0);
+            }
+        }
+        if fb == target_faction_id && target_settlements.contains(&right) {
+            let local_members = cluster_member_counts.get(&right).copied().unwrap_or(0) as f32;
+            let foreign_members = cluster_member_counts.get(&left).copied().unwrap_or(0) as f32;
+            if foreign_members > 0.0 {
+                contacting_members += local_members / (foreign_members + 1.0);
+            }
+        }
+    }
+
+    if target_members == 0 {
+        return 0.0;
+    }
+    let ratio = (contacting_members / target_members as f32).clamp(0.0, 1.0);
+    (1.0 - ratio).clamp(0.0, 1.0)
 }
 
 /// Member-weighted per-faction language centroid (FR-CIV-LANG-001 / FR-CIV-PSYCHE-912).
@@ -6954,6 +7136,78 @@ mod tests {
             let bonus = language_intelligibility_peace_bonus(1.0);
             assert_eq!(bonus, 0, "missing language must not alter threshold");
         }
+    }
+
+    #[test]
+    fn language_names_diverge_for_isolated_factions_over_time() {
+        use civ_agents::{ClusterId, ClusterMember};
+        use civ_voxel::WorldCoord;
+
+        let mut sim = Simulation::new();
+        sim.world = World::new();
+        sim.cluster_cultures.clear();
+        sim.faction_languages.clear();
+        sim.language_state = LanguageState::default();
+
+        sim.cluster_cultures.insert(1, CultureProfile::new([0.15, 0.15, 0.15, 0.15]));
+        sim.cluster_cultures.insert(2, CultureProfile::new([0.85, 0.85, 0.85, 0.85]));
+
+        for (entity_id, cluster_id, faction_id, base_x) in [
+            (1_u64, 1_u64, 1_u32, 0_i64),
+            (2, 1, 1, 20),
+            (3, 1, 1, 40),
+            (4, 1, 1, 60),
+            (5, 2, 2, 200_000),
+            (6, 2, 2, 200_020),
+            (7, 2, 2, 200_040),
+            (8, 2, 2, 200_060),
+        ] {
+            let _ = sim.world.spawn((
+                AgentCivilian {
+                    id: entity_id,
+                    alignment: Alignment::Faction(faction_id),
+                    age: 20,
+                },
+                ClusterMember {
+                    cluster: ClusterId(cluster_id),
+                },
+                Position3d {
+                    coord: WorldCoord {
+                        x: base_x,
+                        y: 0,
+                        z: base_x / 2,
+                    },
+                },
+            ));
+        }
+
+        sim.phase_language();
+        let baseline_distance = average_language_distance(
+            sim.faction_languages().get(&1).expect("faction 1 language state must exist"),
+            sim.faction_languages().get(&2).expect("faction 2 language state must exist"),
+        );
+
+        for _ in 0..20 {
+            sim.phase_language();
+        }
+
+        let final_distance = average_language_distance(
+            sim.faction_languages().get(&1).expect("faction 1 language state must exist"),
+            sim.faction_languages().get(&2).expect("faction 2 language state must exist"),
+        );
+        assert!(
+            final_distance > baseline_distance,
+            "isolated cultures should diverge over time, {baseline_distance} -> {final_distance}"
+        );
+        assert!(
+            final_distance >= 0.5,
+            "isolated languages should stay meaningfully divergent, got {final_distance}"
+        );
+        assert_ne!(
+            sim.faction_place_name(1, 1),
+            sim.faction_place_name(2, 1),
+            "place names should diverge with isolated lexicons"
+        );
     }
 
     // ── AUDIO-wire (FR-AUDIO-wire) tests ────────────────────────────────────

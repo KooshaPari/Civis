@@ -109,6 +109,10 @@ pub enum JsonRpcMethod {
     SimOutcome,
     /// Apply a god action from the bridge UI (`sim.god_action`, FR-CIV-GAME-002).
     SimGodAction,
+    /// Per-entity sentience/psyche snapshot (`psyche.snapshot`, FR-PSYCHE-readapi).
+    PsycheSnapshot,
+    /// Per-tick sentience events (`psyche.events`, FR-PSYCHE-readapi).
+    PsycheEvents,
 }
 
 impl JsonRpcMethod {
@@ -150,6 +154,8 @@ impl JsonRpcMethod {
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
             Self::SimGodAction => "sim.god_action",
+            Self::PsycheSnapshot => "psyche.snapshot",
+            Self::PsycheEvents => "psyche.events",
         }
     }
 
@@ -191,6 +197,8 @@ impl JsonRpcMethod {
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
             "sim.god_action" => Some(Self::SimGodAction),
+            "psyche.snapshot" => Some(Self::PsycheSnapshot),
+            "psyche.events" => Some(Self::PsycheEvents),
             _ => None,
         }
     }
@@ -983,6 +991,12 @@ pub struct DispatchContext {
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
+    /// Per-entity psyche snapshot for `psyche.snapshot` (FR-PSYCHE-readapi).
+    /// Pre-computed by the bridge when the method matches.
+    pub psyche_snapshot: Option<Vec<PsycheEntitySnapshotWire>>,
+    /// Per-tick sentience events for `psyche.events` (FR-PSYCHE-readapi).
+    /// Pre-computed by the bridge when the method matches.
+    pub sentience_events: Option<Vec<SentienceEventWire>>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -1100,6 +1114,115 @@ impl From<civ_engine::emergence_metrics::EmergenceSample> for EmergenceSampleFie
             mi_material_faction_norm: s.mi_material_faction_norm,
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// PSYCHE / SENTIENCE read-API types (FR-PSYCHE-readapi)
+// ---------------------------------------------------------------------------
+
+/// Wire-friendly representation of one agent's psyche for `psyche.snapshot`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PsycheEntitySnapshotWire {
+    /// Stable agent entity id.
+    pub agent_id: u64,
+    /// Cognition score from the sentience evaluation `[0, 1]`.
+    pub cognition_score: f32,
+    /// Whether the cognition score crossed the sentience threshold this tick.
+    pub is_sentient: bool,
+    /// Current mood valence `[-1, 1]`.
+    pub mood_valence: f32,
+    /// Current mood arousal `[0, 1]`.
+    pub mood_arousal: f32,
+    /// Temperament axes.
+    pub reactivity: f32,
+    pub sociability: f32,
+    pub risk_tol: f32,
+    pub impulsivity: f32,
+    /// Four drive axes `[0, 1]`.
+    pub drives: [f32; 4],
+    /// Four belief axes `[0, 1]`.
+    pub beliefs: [f32; 4],
+    /// Maturity `[0, 1]`.
+    pub maturity: f32,
+}
+
+/// Wire-friendly representation of one sentience event for `psyche.events`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SentienceEventWire {
+    /// Optional lineage identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lineage_id: Option<u64>,
+    /// Measured cognition score.
+    pub cognition_score: f32,
+    /// Whether the threshold was crossed.
+    pub crossed: bool,
+}
+
+/// Build per-entity psyche snapshot from the simulation's ECS world and
+/// sentience events (FR-PSYCHE-readapi). Returns one entry per agent that
+/// carries a [`Psyche`] component, paired with the matching sentience event
+/// if one exists.
+pub fn psyche_snapshot_from_sim(
+    sim: &civ_engine::Simulation,
+    sentience_events: &[SentienceEventWire],
+) -> Vec<PsycheEntitySnapshotWire> {
+    use civ_agents::Civilian;
+    // Build a lookup: agent_id → sentience data
+    let mut sentience_by_lineage: std::collections::HashMap<u64, &SentienceEventWire> =
+        std::collections::HashMap::new();
+    // Sentience events don't carry agent_id directly; we match using the
+    // entity lineage id hash. For the initial read-API we use the ECS
+    // civilian id as the key.
+    let mut recorded_sentience: std::collections::HashMap<u64, f32> =
+        std::collections::HashMap::new();
+    let mut crossed: std::collections::HashSet<u64> = std::collections::HashSet::new();
+    // Sentience events don't have a direct entity id; we use lineage_id
+    // as a proxy. This is best-effort for display; the full mapping will
+    // improve when lineage→entity tracking is added.
+    for ev in sentience_events {
+        if let Some(lid) = ev.lineage_id {
+            recorded_sentience.insert(lid, ev.cognition_score);
+            if ev.crossed {
+                crossed.insert(lid);
+            }
+        }
+    }
+
+    let mut entities: Vec<PsycheEntitySnapshotWire> = Vec::new();
+    for (_, (civilian, psyche)) in sim.world.query::<(&Civilian, &civ_agents::Psyche)>().iter() {
+        let score = recorded_sentience
+            .get(&civilian.id)
+            .copied()
+            .unwrap_or(0.0);
+        let is_sentient = crossed.contains(&civilian.id);
+        entities.push(PsycheEntitySnapshotWire {
+            agent_id: civilian.id,
+            cognition_score: score,
+            is_sentient,
+            mood_valence: psyche.mood.valence,
+            mood_arousal: psyche.mood.arousal,
+            reactivity: psyche.temperament.reactivity,
+            sociability: psyche.temperament.sociability,
+            risk_tol: psyche.temperament.risk_tol,
+            impulsivity: psyche.temperament.impulsivity,
+            drives: psyche.drives,
+            beliefs: psyche.beliefs,
+            maturity: psyche.maturity,
+        });
+    }
+    entities
+}
+
+/// Convert engine sentience events to wire format.
+pub fn sentience_events_from_sim(sim: &civ_engine::Simulation) -> Vec<SentienceEventWire> {
+    sim.last_tick_sentience_events()
+        .iter()
+        .map(|ev| SentienceEventWire {
+            lineage_id: ev.lineage_id,
+            cognition_score: ev.cognition_score,
+            crossed: ev.crossed,
+        })
+        .collect()
 }
 
 /// Side effect the WebSocket bridge must apply after building the wire response.

@@ -619,6 +619,408 @@ impl CivisMcpServer {
         .map(Json)
     }
 
+    /// Forward `sim.status` to civ-server. Returns sim attachment details and
+    /// latest population summary when available.
+    #[tool(
+        name = "civis_status",
+        description = "Forward sim.status to civ-server. Returns sim status fields (population if snapshot exists, live flag, current tick)."
+    )]
+    async fn civis_status(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.status", json!({}), "civis_status").map(Json)
+    }
+
+    /// Forward `sim.get_tick` to civ-server. Returns current sim tick and
+    /// wall-clock game time.
+    #[tool(
+        name = "civis_get_tick",
+        description = "Forward sim.get_tick to civ-server. Returns the current simulation tick and wall-clock time metadata."
+    )]
+    async fn civis_get_tick(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_tick", json!({}), "civis_get_tick").map(Json)
+    }
+
+    /// Forward `sim.get_factions` to civ-server. Returns faction summaries.
+    #[tool(
+        name = "civis_factions",
+        description = "Forward sim.get_factions to civ-server. Returns faction summary rows from the current snapshot."
+    )]
+    async fn civis_factions(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_factions", json!({}), "civis_factions").map(Json)
+    }
+
+    /// Forward `sim.get_resources` to civ-server. Returns resource summaries.
+    #[tool(
+        name = "civis_resources",
+        description = "Forward sim.get_resources to civ-server. Returns world-level resource summaries."
+    )]
+    async fn civis_resources(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_resources", json!({}), "civis_resources").map(Json)
+    }
+
+    /// Forward `sim.get_emergence_metrics` to civ-server.
+    #[tool(
+        name = "civis_emergence_metrics",
+        description = "Forward sim.get_emergence_metrics to civ-server. Returns coarse, transport-safe emergence metrics."
+    )]
+    async fn civis_emergence_metrics(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.get_emergence_metrics", json!({}), "civis_emergence_metrics").map(Json)
+    }
+
+    /// Forward `emergence.metrics` to civ-server. Returns full emergence
+    /// analytics payload (`entropy_bits`, structure counts, power-law slope).
+    #[tool(
+        name = "civis_emergence_metrics_full",
+        description = "Forward emergence.metrics to civ-server. Returns the full FR-CIV-EMERG-001..005 analytic block."
+    )]
+    async fn civis_emergence_metrics_full(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "emergence.metrics", json!({}), "civis_emergence_metrics_full").map(Json)
+    }
+
+    /// Forward `emergence.dashboard` to civ-server.
+    #[tool(
+        name = "civis_emergence_dashboard",
+        description = "Forward emergence.dashboard to civ-server. Returns the compact dashboard sample for UI polling."
+    )]
+    async fn civis_emergence_dashboard(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "emergence.dashboard",
+            json!({}),
+            "civis_emergence_dashboard",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.command` to civ-server (`action`: `noop` or `tick`;
+    /// optional `role` passes through for operator-gated action checks).
+    #[tool(
+        name = "civis_sim_command",
+        description = "Forward sim.command to civ-server. Pass `action=tick` (optionally with role=operator) to advance simulation."
+    )]
+    async fn civis_sim_command(
+        &self,
+        Parameters(SimCommandArgs {
+            action,
+            role,
+            transport,
+        }): Parameters<SimCommandArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("action".to_owned(), json!(action.wire_name()));
+        if let Some(role) = role {
+            params.insert("role".to_owned(), json!(role));
+        }
+        forward_rpc(&transport, "sim.command", Value::Object(params), "civis_sim_command").map(Json)
+    }
+
+    /// Forward `sim.reset` to civ-server.
+    #[tool(
+        name = "civis_reset",
+        description = "Forward sim.reset to civ-server. Replace simulation with a fresh seeded instance."
+    )]
+    async fn civis_reset(
+        &self,
+        Parameters(SimResetArgs { seed, transport }): Parameters<SimResetArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.reset", json!({ "seed": seed }), "civis_reset").map(Json)
+    }
+
+    /// Forward `sim.load_scenario` to civ-server.
+    #[tool(
+        name = "civis_load_scenario",
+        description = "Forward sim.load_scenario to civ-server. Start a named scenario preset with optional seed override."
+    )]
+    async fn civis_load_scenario(
+        &self,
+        Parameters(SimLoadScenarioArgs {
+            preset,
+            seed,
+            transport,
+        }): Parameters<SimLoadScenarioArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("preset".to_owned(), json!(preset));
+        if let Some(seed) = seed {
+            params.insert("seed".to_owned(), json!(seed));
+        }
+        forward_rpc(
+            &transport,
+            "sim.load_scenario",
+            Value::Object(params),
+            "civis_load_scenario",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.set_policy` to civ-server.
+    #[tool(
+        name = "civis_set_policy",
+        description = "Forward sim.set_policy to civ-server. Update economy policy values (`scarcity_multiplier`, optional `base_consumption_joules`)."
+    )]
+    async fn civis_set_policy(
+        &self,
+        Parameters(SimSetPolicyArgs {
+            scarcity_multiplier,
+            base_consumption_joules,
+            transport,
+        }): Parameters<SimSetPolicyArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("scarcity_multiplier".to_owned(), json!(scarcity_multiplier));
+        if let Some(base_consumption_joules) = base_consumption_joules {
+            params.insert("base_consumption_joules".to_owned(), json!(base_consumption_joules));
+        }
+        forward_rpc(&transport, "sim.set_policy", Value::Object(params), "civis_set_policy").map(Json)
+    }
+
+    /// Forward `sim.save_replay` to civ-server.
+    #[tool(
+        name = "civis_save_replay",
+        description = "Forward sim.save_replay to civ-server. Persist in-memory replay log to a `.civreplay` file."
+    )]
+    async fn civis_save_replay(
+        &self,
+        Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.save_replay", json!({ "path": path }), "civis_save_replay").map(Json)
+    }
+
+    /// Forward `sim.load_replay` to civ-server.
+    #[tool(
+        name = "civis_load_replay",
+        description = "Forward sim.load_replay to civ-server. Reload simulation state from a `.civreplay` file."
+    )]
+    async fn civis_load_replay(
+        &self,
+        Parameters(SaveReplayArgs { path, transport }): Parameters<SaveReplayArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.load_replay", json!({ "path": path }), "civis_load_replay").map(Json)
+    }
+
+    /// Forward `sim.spawn_civilian` to civ-server.
+    #[tool(
+        name = "civis_spawn_civilian",
+        description = "Forward sim.spawn_civilian to civ-server. Spawn one civilian at normalized map coordinates."
+    )]
+    async fn civis_spawn_civilian(
+        &self,
+        Parameters(SpawnCivilianArgs {
+            x,
+            y,
+            faction,
+            transport,
+        }): Parameters<SpawnCivilianArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("x".to_owned(), json!(x));
+        params.insert("y".to_owned(), json!(y));
+        if let Some(faction) = faction {
+            params.insert("faction".to_owned(), json!(faction));
+        }
+        forward_rpc(
+            &transport,
+            "sim.spawn_civilian",
+            Value::Object(params),
+            "civis_spawn_civilian",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.place_voxel` to civ-server.
+    #[tool(
+        name = "civis_place_voxel",
+        description = "Forward sim.place_voxel to civ-server. Place or overwrite one voxel at integer world coordinates."
+    )]
+    async fn civis_place_voxel(
+        &self,
+        Parameters(PlaceVoxelArgs {
+            x,
+            y,
+            z,
+            material,
+            transport,
+        }): Parameters<PlaceVoxelArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.place_voxel",
+            json!({
+                "x": x,
+                "y": y,
+                "z": z,
+                "material": material,
+            }),
+            "civis_place_voxel",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.damage` to civ-server.
+    #[tool(
+        name = "civis_damage",
+        description = "Forward sim.damage to civ-server. Queue tactical damage at voxel coordinates."
+    )]
+    async fn civis_damage(
+        &self,
+        Parameters(SimDamageArgs {
+            x,
+            y,
+            z,
+            radius,
+            energy,
+            transport,
+        }): Parameters<SimDamageArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        let mut params = serde_json::Map::new();
+        params.insert("x".to_owned(), json!(x));
+        params.insert("y".to_owned(), json!(y));
+        params.insert("z".to_owned(), json!(z));
+        if let Some(radius) = radius {
+            params.insert("radius".to_owned(), json!(radius));
+        }
+        if let Some(energy) = energy {
+            params.insert("energy".to_owned(), json!(energy));
+        }
+        forward_rpc(&transport, "sim.damage", Value::Object(params), "civis_damage").map(Json)
+    }
+
+    /// Forward `sim.inspect_tile` to civ-server.
+    #[tool(
+        name = "civis_inspect_tile",
+        description = "Forward sim.inspect_tile to civ-server. Inspect faction/resource terrain details at a map tile."
+    )]
+    async fn civis_inspect_tile(
+        &self,
+        Parameters(InspectTileArgs { x, y, transport }): Parameters<InspectTileArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.inspect_tile",
+            json!({ "x": x, "y": y }),
+            "civis_inspect_tile",
+        )
+        .map(Json)
+    }
+
+    /// Forward `save.slot` to civ-server. Persists a production slot archive.
+    #[tool(
+        name = "civis_save_slot",
+        description = "Forward save.slot to civ-server. Persist the simulation into a production save slot."
+    )]
+    async fn civis_save_slot(
+        &self,
+        Parameters(SaveSlotArgs {
+            slot_name,
+            transport,
+        }): Parameters<SaveSlotArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "save.slot", json!({ "slot_name": slot_name }), "civis_save_slot").map(Json)
+    }
+
+    /// Forward `save.load` to civ-server. Restores from a named production slot.
+    #[tool(
+        name = "civis_load_slot",
+        description = "Forward save.load to civ-server. Restore the simulation from a production save slot."
+    )]
+    async fn civis_load_slot(
+        &self,
+        Parameters(SaveSlotArgs {
+            slot_name,
+            transport,
+        }): Parameters<SaveSlotArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "save.load", json!({ "slot_name": slot_name }), "civis_load_slot").map(Json)
+    }
+
+    /// Forward `sim.subscribe` to civ-server. Opens or updates a per-connection
+    /// subscription filter.
+    #[tool(
+        name = "civis_subscribe",
+        description = "Forward sim.subscribe to civ-server. Enable a per-connection event stream filter on current websocket session."
+    )]
+    async fn civis_subscribe(
+        &self,
+        Parameters(SimSubscriptionArgs { transport }): Parameters<SimSubscriptionArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.subscribe", json!({}), "civis_subscribe").map(Json)
+    }
+
+    /// Forward `sim.unsubscribe` to civ-server. Clears subscription filter.
+    #[tool(
+        name = "civis_unsubscribe",
+        description = "Forward sim.unsubscribe to civ-server. Clear the current per-connection tick broadcast filter."
+    )]
+    async fn civis_unsubscribe(
+        &self,
+        Parameters(SimSubscriptionArgs { transport }): Parameters<SimSubscriptionArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.unsubscribe", json!({}), "civis_unsubscribe").map(Json)
+    }
+
+    /// Forward `sim.update_subscription` to civ-server. Replaces a per-connection
+    /// subscription filter.
+    #[tool(
+        name = "civis_update_subscription",
+        description = "Forward sim.update_subscription to civ-server. Replace an existing per-connection filter."
+    )]
+    async fn civis_update_subscription(
+        &self,
+        Parameters(SimSubscriptionArgs { transport }): Parameters<SimSubscriptionArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(
+            &transport,
+            "sim.update_subscription",
+            json!({}),
+            "civis_update_subscription",
+        )
+        .map(Json)
+    }
+
+    /// Forward `sim.outcome` to civ-server.
+    #[tool(
+        name = "civis_outcome",
+        description = "Forward sim.outcome to civ-server. Returns precomputed game outcome block and win condition metadata."
+    )]
+    async fn civis_outcome(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.outcome", json!({}), "civis_outcome").map(Json)
+    }
+
+    /// Forward `sim.perf` to civ-server.
+    #[tool(
+        name = "civis_perf",
+        description = "Forward sim.perf to civ-server. Returns lightweight server-side timing counters."
+    )]
+    async fn civis_perf(
+        &self,
+        Parameters(transport): Parameters<RpcArgs>,
+    ) -> Result<Json<RpcForwardResult>, String> {
+        forward_rpc(&transport, "sim.perf", json!({}), "civis_perf").map(Json)
+    }
+
     /// Forward `sim.god_action` to civ-server. Use [`GodActionKind`] for a
     /// typed verb; the bridge parses the same verbs the Bevy/Godot/Unreal
     /// clients do, so verb-specific clamps are enforced server-side.

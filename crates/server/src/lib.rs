@@ -23,11 +23,12 @@ pub use autosave::{
 pub use jsonrpc::{
     dispatch_request, encode_response, error_code, forbidden_operator_role_error,
     parse_error_response, parse_replay_path, parse_request, parse_reset_seed, parse_role_param,
-    parse_sim_command_action, resolve_replay_path, role_allows_operator_tick,
-    set_sim_command_tick, snapshot_fields_from_sim, DispatchContext, DispatchEffect,
-    DispatchPlan, EmergenceSampleFields, JsonRpcError, JsonRpcMethod, JsonRpcParseError,
-    JsonRpcRequest, JsonRpcResponse, RequestId, SimCommandAction, SnapshotFields,
-    JSONRPC_VERSION, OPERATOR_ROLE,
+    parse_sim_command_action, psyche_fields_from_sim, resolve_replay_path,
+    role_allows_operator_tick, set_sim_command_tick, snapshot_fields_from_sim, DispatchContext,
+    DispatchEffect, DispatchPlan, EmergenceSampleFields, JsonRpcError, JsonRpcMethod,
+    JsonRpcParseError, JsonRpcRequest, JsonRpcResponse, PsycheAgentFields, PsycheFields,
+    PsycheMoodFields, PsycheTemperamentFields, RequestId, SentienceEventFields,
+    SimCommandAction, SnapshotFields, JSONRPC_VERSION, OPERATOR_ROLE,
 };
 pub use saves::{
     list_saves, most_recent_save_path, save_archive_path, validate_production_slot, SaveListEntry,

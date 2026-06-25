@@ -109,6 +109,18 @@ pub enum JsonRpcMethod {
     SimOutcome,
     /// Apply a god action from the bridge UI (`sim.god_action`, FR-CIV-GAME-002).
     SimGodAction,
+    /// Read emergent psyche state per agent (`psyche.snapshot`,
+    /// FR-PSYCHE-readapi). Surfaces the live `civ_agents::Psyche`
+    /// component (drives, temperament, mood, beliefs, maturity) for
+    /// every civilian that has been attached a psyche by the engine's
+    /// MOAT emergence phase. Pure read; no mutation.
+    PsycheSnapshot,
+    /// Read the most recent sentience-crossing events
+    /// (`psyche.events`, FR-PSYCHE-readapi). Mirrors
+    /// `Simulation::sentience_events()` so the client can paint
+    /// awakener FX without subscribing to the full event feed. Pure
+    /// read; no mutation.
+    PsycheEvents,
 }
 
 impl JsonRpcMethod {
@@ -150,6 +162,8 @@ impl JsonRpcMethod {
             Self::SimUpdateSubscription => "sim.update_subscription",
             Self::SimOutcome => "sim.outcome",
             Self::SimGodAction => "sim.god_action",
+            Self::PsycheSnapshot => "psyche.snapshot",
+            Self::PsycheEvents => "psyche.events",
         }
     }
 
@@ -191,6 +205,8 @@ impl JsonRpcMethod {
             "sim.update_subscription" => Some(Self::SimUpdateSubscription),
             "sim.outcome" => Some(Self::SimOutcome),
             "sim.god_action" => Some(Self::SimGodAction),
+            "psyche.snapshot" => Some(Self::PsycheSnapshot),
+            "psyche.events" => Some(Self::PsycheEvents),
             _ => None,
         }
     }
@@ -867,6 +883,63 @@ pub fn snapshot_fields_from_sim(
     }
 }
 
+/// Build [`PsycheFields`] for `psyche.snapshot` + `psyche.events`
+/// (FR-PSYCHE-readapi). Reads the live `civ_agents::Psyche` ECS
+/// component for every agent the engine's MOAT emergence phase has
+/// attached, plus the most recent sentience-crossing events from
+/// `Simulation::last_tick_sentience_events`. Pure read: no mutation,
+/// no new tick, no recomputation of mood or drives.
+pub fn psyche_fields_from_sim(sim: &civ_engine::Simulation) -> PsycheFields {
+    use civ_agents::{Alignment, Civilian, Psyche};
+
+    let tick = sim.state.tick;
+
+    let mut agents: Vec<PsycheAgentFields> = sim
+        .world
+        .query::<(&Civilian, &Psyche)>()
+        .iter()
+        .map(|(_, (civilian, psyche))| PsycheAgentFields {
+            agent_id: civilian.id,
+            faction: match civilian.alignment {
+                Alignment::Faction(faction_id) => Some(faction_id),
+                Alignment::None | Alignment::OtherEntity(_) => None,
+            },
+            drives: psyche.drives,
+            temperament: PsycheTemperamentFields {
+                reactivity: psyche.temperament.reactivity,
+                sociability: psyche.temperament.sociability,
+                risk_tol: psyche.temperament.risk_tol,
+                impulsivity: psyche.temperament.impulsivity,
+            },
+            mood: PsycheMoodFields {
+                valence: psyche.mood.valence,
+                arousal: psyche.mood.arousal,
+            },
+            beliefs: psyche.beliefs,
+            maturity: psyche.maturity,
+        })
+        .collect();
+    // Deterministic order for replay-stability.
+    agents.sort_by_key(|row| row.agent_id);
+
+    let sentience_events: Vec<SentienceEventFields> = sim
+        .last_tick_sentience_events()
+        .iter()
+        .map(|event| SentienceEventFields {
+            lineage_id: event.lineage_id,
+            cognition_score: event.cognition_score,
+            threshold_minimum_cognition: event.threshold.minimum_cognition,
+            crossed: event.crossed,
+        })
+        .collect();
+
+    PsycheFields {
+        tick,
+        agents,
+        sentience_events,
+    }
+}
+
 fn game_factions_from_sim(
     sim: &civ_engine::Simulation,
     spectator: &civ_engine::SpectatorView,
@@ -983,6 +1056,109 @@ pub struct DispatchContext {
     pub outcome_fields: Option<OutcomeFields>,
     /// Server-reported last tick wall-clock duration (ms) for sim.perf (FR-CIV-PERF-001).
     pub last_tick_ms: f64,
+    /// Cached read of the live `civ_agents::Psyche` per agent + most
+    /// recent sentience-crossing events (FR-PSYCHE-readapi). Populated
+    /// only for `psyche.snapshot` and `psyche.events` so the dispatch
+    /// path stays cheap for unrelated RPCs. `None` for everything else.
+    pub psyche: Option<PsycheFields>,
+}
+
+/// Transport-friendly mirror of `civ_agents::Mood` for the
+/// `psyche.snapshot` JSON-RPC surface (FR-PSYCHE-readapi).
+///
+/// Psyche state is owned by the engine (in the `civ_agents::Psyche` ECS
+/// component) and the server crate carries explicit wire-shape mirrors
+/// so the client never has to deserialize the engine's internal types
+/// directly. The mirror is a structural subset (valence / arousal); the
+/// engine remains the source of truth and may add fields over time
+/// without breaking the wire.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PsycheMoodFields {
+    /// Valence from `-1.0` misery to `+1.0` contentment.
+    pub valence: f32,
+    /// Arousal from calm to agitated.
+    pub arousal: f32,
+}
+
+/// Transport-friendly mirror of `civ_agents::Temperament` for the
+/// `psyche.snapshot` JSON-RPC surface (FR-PSYCHE-readapi).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PsycheTemperamentFields {
+    /// How strongly mood swings in response to events.
+    pub reactivity: f32,
+    /// Baseline pull toward social contact.
+    pub sociability: f32,
+    /// Willingness to tolerate safety risk.
+    pub risk_tol: f32,
+    /// Distance/effort discount in planning.
+    pub impulsivity: f32,
+}
+
+/// Transport-friendly mirror of `civ_agents::Psyche` for the
+/// `psyche.snapshot` JSON-RPC surface (FR-PSYCHE-readapi).
+///
+/// One row per agent that has a `Psyche` component attached. The
+/// engine's MOAT emergence phase attaches a psyche on the first tick
+/// after the genome phase, so a freshly-spawned civilian will show up
+/// here by tick `phase_emergence`'s second invocation. Rows are
+/// sorted by `agent_id` for determinism.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PsycheAgentFields {
+    /// Stable civilian id (matches `civ_agents::Civilian::id`).
+    pub agent_id: u64,
+    /// Faction id if the civilian has aligned, else `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub faction: Option<u32>,
+    /// Need-biasing drives in `[0, 1]`.
+    pub drives: [f32; civ_agents::PSYCHE_DIM],
+    /// Genomically-seeded reaction style.
+    pub temperament: PsycheTemperamentFields,
+    /// Current affect.
+    pub mood: PsycheMoodFields,
+    /// Culture-sampled personal beliefs in `[0, 1]`.
+    pub beliefs: [f32; civ_agents::PSYCHE_DIM],
+    /// Maturity in `[0, 1]`.
+    pub maturity: f32,
+}
+
+/// Transport-friendly mirror of
+/// `civ_genetics::sentience::SentienceEvent` for the
+/// `psyche.events` JSON-RPC surface (FR-PSYCHE-readapi).
+///
+/// `lineage_id` is `None` when the engine evaluated an entity without
+/// a stable agent id (e.g. the bare-DNA probe path in
+/// `phase_sentience`); the server copies it as `null` so clients can
+/// distinguish it from a real lineage id.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SentienceEventFields {
+    /// Optional lineage / agent id from the simulation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lineage_id: Option<u64>,
+    /// Measured cognition score in `[0, 1]`.
+    pub cognition_score: f32,
+    /// Threshold the lineage was evaluated against.
+    pub threshold_minimum_cognition: f32,
+    /// True when the score crosses the threshold.
+    pub crossed: bool,
+}
+
+/// Aggregate payload for `psyche.snapshot` + `psyche.events`
+/// (FR-PSYCHE-readapi). The bridge populates both fields in one sim
+/// lock pass; `psyche.snapshot` returns just the `agents` array and
+/// `psyche.events` returns just the `sentience_events` array.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PsycheFields {
+    /// Engine tick the snapshot was taken at (mirrors `sim.state.tick`).
+    pub tick: u64,
+    /// Per-agent psyche rows (sorted by `agent_id` for determinism).
+    /// Empty when the engine has not yet attached any psyche
+    /// components (boot tick before the MOAT emergence phase runs).
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub agents: Vec<PsycheAgentFields>,
+    /// Sentience-crossing events detected on the most recent tick.
+    /// Empty when no lineage crossed the threshold this tick.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub sentience_events: Vec<SentienceEventFields>,
 }
 
 /// JSON-RPC view of [`civ_engine::emergence_metrics::EmergenceSample`].
@@ -2191,6 +2367,52 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
             ),
             effect: DispatchEffect::None,
         },
+        JsonRpcMethod::PsycheSnapshot => {
+            // FR-PSYCHE-readapi: per-agent psyche snapshot for the
+            // read-API. The WS bridge populates `ctx.psyche` only when
+            // the method is `psyche.snapshot` or `psyche.events`; for
+            // any other RPC the field stays `None` so the dispatch
+            // path stays cheap. We mirror `psyche_fields_from_sim`'s
+            // output shape 1:1 onto the wire — clients that want the
+            // full per-agent psyche state can read either
+            // `psyche.snapshot` or `sim.snapshot.psyche` (once the
+            // bridge exposes the embedded block there too).
+            let result = match ctx.psyche.as_ref() {
+                Some(fields) => serde_json::json!({
+                    "tick": fields.tick,
+                    "agents": fields.agents,
+                }),
+                None => serde_json::json!({
+                    "tick": ctx.tick,
+                    "agents": serde_json::Value::Array(Vec::new()),
+                }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
+        JsonRpcMethod::PsycheEvents => {
+            // FR-PSYCHE-readapi: most recent sentience-crossing events.
+            // Mirrors `Simulation::last_tick_sentience_events()` so the
+            // client can paint awakener FX without subscribing to the
+            // full event feed. Empty array on a tick with no
+            // threshold-crossing events (the common case).
+            let result = match ctx.psyche.as_ref() {
+                Some(fields) => serde_json::json!({
+                    "tick": fields.tick,
+                    "sentience_events": fields.sentience_events,
+                }),
+                None => serde_json::json!({
+                    "tick": ctx.tick,
+                    "sentience_events": serde_json::Value::Array(Vec::new()),
+                }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimSubscribe
         | JsonRpcMethod::SimUpdateSubscription
         | JsonRpcMethod::SimUnsubscribe => DispatchPlan {
@@ -2444,6 +2666,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2483,6 +2706,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -2522,6 +2746,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::ResetSimulation { seed: 99 });
@@ -2550,6 +2775,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2579,6 +2805,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2609,6 +2836,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2639,6 +2867,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2665,6 +2894,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::AdvanceTick);
@@ -2775,6 +3005,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -2803,6 +3034,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.response.result, Some(serde_json::json!({ "tick": 1 })));
@@ -2981,6 +3213,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3100,6 +3333,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3224,6 +3458,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert!(matches!(plan.effect, DispatchEffect::ApplyDamage { .. }));
@@ -3264,6 +3499,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert!(matches!(
@@ -3315,6 +3551,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert!(matches!(
@@ -3399,6 +3636,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3481,6 +3719,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -3568,6 +3807,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -3613,6 +3853,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -3651,6 +3892,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -3687,6 +3929,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3716,6 +3959,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3787,6 +4031,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3856,6 +4101,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::SetSpeed { multiplier: 4 });
@@ -3886,6 +4132,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -3921,6 +4168,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -3949,6 +4197,7 @@ mod tests {
             in_progress_tech: None,
             last_tick_ms: 0.0,
             outcome_fields: None,
+            psyche: None,
         };
 
         let factions_req =
@@ -4000,6 +4249,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4036,6 +4286,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -4070,6 +4321,7 @@ mod tests {
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
                 outcome_fields: None,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4518,6 +4770,7 @@ mod tests {
                 in_progress_tech: None,
                 outcome_fields: None,
                 last_tick_ms: 0.0,
+                psyche: None,
             },
         );
         assert_eq!(
@@ -4552,6 +4805,7 @@ mod tests {
                 in_progress_tech: None,
                 outcome_fields: None,
                 last_tick_ms: 0.0,
+                psyche: None,
             },
         );
         assert_eq!(plan.effect, DispatchEffect::None);
@@ -4581,10 +4835,130 @@ mod tests {
                 in_progress_tech: None,
                 outcome_fields: None,
                 last_tick_ms: 0.0,
+                psyche: None,
             },
         );
         assert!(plan.response.result.is_some());
         let res = plan.response.result.expect("result");
         assert!(res["available"].as_array().map_or(false, |a| !a.is_empty()));
+    }
+
+    /// FR-PSYCHE-readapi — `psyche.snapshot` returns a stable wire shape
+    /// `{tick, agents: [...]}` whether or not the bridge populated
+    /// `ctx.psyche` (the "no psyche yet" branch is hit before the
+    /// engine's MOAT emergence phase runs).
+    #[test]
+    fn dispatch_psyche_snapshot_returns_empty_agents_without_context() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":40,"method":"psyche.snapshot"}"#).expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 0,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+                psyche: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let res = plan.response.result.expect("psyche.snapshot result");
+        assert_eq!(res["tick"], 0);
+        assert_eq!(res["agents"], serde_json::Value::Array(Vec::new()));
+    }
+
+    /// FR-PSYCHE-readapi — `psyche.events` mirrors
+    /// `last_tick_sentience_events()` and is empty on a fresh sim.
+    #[test]
+    fn dispatch_psyche_events_returns_empty_events_without_context() {
+        let req =
+            parse_request(r#"{"jsonrpc":"2.0","id":41,"method":"psyche.events"}"#).expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: 12,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+                psyche: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let res = plan.response.result.expect("psyche.events result");
+        assert_eq!(res["tick"], 12);
+        assert_eq!(
+            res["sentience_events"],
+            serde_json::Value::Array(Vec::new())
+        );
+    }
+
+    /// FR-PSYCHE-readapi — when the bridge populates `ctx.psyche`, both
+    /// `psyche.snapshot` and `psyche.events` echo the engine's live
+    /// psyche rows + sentience events on the wire.
+    #[test]
+    fn dispatch_psyche_methods_echo_ctx_psyche_when_populated() {
+        let sim = civ_engine::Simulation::with_seed(13);
+        let psyche_fields = psyche_fields_from_sim(&sim);
+        let ctx = DispatchContext {
+            tick: psyche_fields.tick,
+            population: None,
+            snapshot: None,
+            require_role: false,
+            speed_multiplier: 1,
+            connection_role: None,
+            saves_dir: None,
+            emergence: None,
+            researched: vec![],
+            in_progress_tech: None,
+            last_tick_ms: 0.0,
+            outcome_fields: None,
+            psyche: Some(psyche_fields.clone()),
+        };
+
+        let snap_req = parse_request(
+            r#"{"jsonrpc":"2.0","id":42,"method":"psyche.snapshot"}"#,
+        )
+        .expect("parse");
+        let snap_plan = dispatch_request(snap_req, ctx.clone());
+        assert_eq!(snap_plan.effect, DispatchEffect::None);
+        let snap_res = snap_plan.response.result.expect("psyche.snapshot result");
+        assert_eq!(snap_res["tick"], psyche_fields.tick);
+        let snap_agents = snap_res["agents"].as_array().expect("agents array");
+        assert_eq!(
+            snap_agents.len(),
+            psyche_fields.agents.len(),
+            "psyche.snapshot must echo all agents present in ctx.psyche"
+        );
+
+        let ev_req =
+            parse_request(r#"{"jsonrpc":"2.0","id":43,"method":"psyche.events"}"#).expect("parse");
+        let ev_plan = dispatch_request(ev_req, ctx);
+        assert_eq!(ev_plan.effect, DispatchEffect::None);
+        let ev_res = ev_plan.response.result.expect("psyche.events result");
+        assert_eq!(ev_res["tick"], psyche_fields.tick);
+        let ev_arr = ev_res["sentience_events"]
+            .as_array()
+            .expect("sentience_events array");
+        assert_eq!(
+            ev_arr.len(),
+            psyche_fields.sentience_events.len(),
+            "psyche.events must echo all sentience events present in ctx.psyche"
+        );
     }
 }

@@ -16,6 +16,14 @@ civ-protocol-3d = { path = "../protocol-3d" }
 civ-mod-host = { path = "../mod-host" }
 civ-save-db = { path = "../save-db" }
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
+# FR-PSYCHE-readapi: psyche.snapshot / psyche.events mirror the engine's
+# `civ_agents::Psyche` ECS component and the sentience-event log
+# produced by `phase_sentience`. The transport-friendly mirror types
+# (`PsycheAgentFields`, `SentienceEventFields`) live in
+# `jsonrpc.rs`; this dep is the source-of-truth for the underlying
+# types so the bridge can copy field-by-field without re-deriving
+# anything.
+civ-genetics = { path = "../genetics" }
 axum = { version = "0.7", features = ["ws"] }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }

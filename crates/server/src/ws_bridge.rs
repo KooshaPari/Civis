@@ -502,6 +502,19 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
+            // FR-PSYCHE-readapi: populate `ctx.psyche` only for the
+            // two psyche-specific read methods. Reading every agent's
+            // `civ_agents::Psyche` component on every RPC would be a
+            // hot-path regression; gating on `req.method` keeps the
+            // cost scoped to clients that explicitly asked.
+            let psyche = if req.method == JsonRpcMethod::PsycheSnapshot
+                || req.method == JsonRpcMethod::PsycheEvents
+            {
+                let sim = state.sim.lock().await;
+                Some(crate::jsonrpc::psyche_fields_from_sim(&sim))
+            } else {
+                None
+            };
             let (research_researched, research_in_progress) = {
                 let sim = state.sim.lock().await;
                 let cache = sim.research_cache();
@@ -536,6 +549,7 @@ async fn handle_jsonrpc_text(
                     in_progress_tech: research_in_progress,
                     outcome_fields,
                     last_tick_ms: 0.0,
+                    psyche,
                 },
             );
             apply_dispatch_effect(&mut plan.response, plan.effect, state).await;

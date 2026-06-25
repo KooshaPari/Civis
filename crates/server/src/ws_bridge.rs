@@ -1211,8 +1211,25 @@ async fn apply_dispatch_effect(
         DispatchEffect::QueueResearch { tech } => {
             state.sim.lock().await.research_cache_mut().queued.push_back(tech);
         }
-        DispatchEffect::GodAction { action, x, y, target_faction, magnitude } => {
+        DispatchEffect::GodAction {
+            action,
+            x,
+            y,
+            target_faction,
+            magnitude,
+            radius_voxels,
+            strength,
+            material_id,
+            drop_height,
+            count,
+            seed_civilian_id,
+        } => {
             use civ_engine::disasters::{trigger_disaster, DisasterKind};
+            use civ_engine::godtools::{
+                DisasterRequest, GodToolRequest, LifeRequest, MaterialOp, MaterialRequest,
+                SpawnHerdRequest, SpawnOrganismRequest, SpawnVisual, TerraformOp,
+                TerraformRequest,
+            };
             use civ_voxel::WorldCoord;
             let mut sim = state.sim.lock().await;
             let world_w = sim.voxel().width() as f32;
@@ -1221,6 +1238,11 @@ async fn apply_dispatch_effect(
             let wz = y.unwrap_or(0.5) * world_d;
             let pos = WorldCoord { x: wx as i64, y: 0, z: wz as i64 };
             let mag = magnitude.unwrap_or(0.5_f32).clamp(0.0, 1.0);
+            // FR-CLIENT-godbuttons: shared verb resolver. Legacy
+            // smite / earthquake / plague / bless / miracle keep their
+            // existing semantics; the substrate-live verbs are routed
+            // through `Simulation::apply_god_tool` so the same substrate
+            // write path the engine reads each tick handles them.
             match action.as_str() {
                 "smite" => trigger_disaster(&mut sim, DisasterKind::Meteor, pos),
                 "earthquake" => trigger_disaster(&mut sim, DisasterKind::Quake, pos),
@@ -1246,6 +1268,165 @@ async fn apply_dispatch_effect(
                     sim.add_belief(2000);
                     let boost = civ_engine::Fixed::from_num(mag * 200.0_f32);
                     for t in sim.state.faction_treasury.values_mut() { *t += boost; }
+                }
+                // ============ TERRAIN verbs (FR-CLIENT-godbuttons) ============
+                // The TERRAIN verbs default to `radius_voxels = 3` and
+                // `strength = (FIXED_SCALE * mag)` so the existing
+                // magnitude slider keeps driving the brush; rich
+                // params override when supplied.
+                "terrain.add_land" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength.unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::AddLand,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: s,
+                        aux_id: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "terrain.dig_ocean" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength.unwrap_or((mag * civ_voxel::FIXED_SCALE as f32 * 3.0) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::DigOcean,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: s,
+                        aux_id: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "terrain.drop_biome" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let mat = material_id.unwrap_or(civ_voxel::material::SAND.0 as u32);
+                    let req = GodToolRequest::Terraform(TerraformRequest {
+                        op: TerraformOp::DropBiome,
+                        center: pos,
+                        radius_voxels: r,
+                        strength: 0,
+                        aux_id: mat,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                // ============ MATERIAL verbs (FR-CLIENT-godbuttons) ============
+                "material.erase" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::Erase,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: 0,
+                        strength: 0,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.replace" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let mat = material_id.unwrap_or(civ_voxel::material::STONE.0 as u32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::Replace,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: mat,
+                        strength: 0,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.surface_paint" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let mat = material_id.unwrap_or(civ_voxel::material::SAND.0 as u32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SurfacePaint,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: mat,
+                        strength: 0,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.pour_liquid" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let layers = strength.unwrap_or((mag * civ_voxel::FIXED_SCALE as f32) as i32)
+                        .max(civ_voxel::FIXED_SCALE as i32);
+                    let mat = material_id.unwrap_or(civ_voxel::material::WATER.0 as u32);
+                    let dh = drop_height.unwrap_or((civ_voxel::FIXED_SCALE * 3) as i32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::PourLiquid,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: mat,
+                        strength: layers,
+                        drop_height: dh,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.seed_snow" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength.unwrap_or(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SeedSnow,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: civ_voxel::material::SNOW.0 as u32,
+                        strength: s,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "material.seed_ore" => {
+                    let r = radius_voxels.unwrap_or(3).max(1);
+                    let s = strength.unwrap_or(civ_voxel::FIXED_SCALE as i32);
+                    let req = GodToolRequest::Material(MaterialRequest {
+                        op: MaterialOp::SeedOreDeposit,
+                        center: pos,
+                        radius_voxels: r,
+                        material_id: civ_voxel::material::ORE.0 as u32,
+                        strength: s,
+                        drop_height: 0,
+                    });
+                    let _ = sim.apply_god_tool(req);
+                }
+                // ============ LIFE verbs (FR-CLIENT-godbuttons) ============
+                "life.spawn_organism" => {
+                    let id = seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let faction = target_faction.unwrap_or(0);
+                    let req = GodToolRequest::Life(LifeRequest::SpawnOrganism(
+                        SpawnOrganismRequest {
+                            id,
+                            faction,
+                            x: x.unwrap_or(0.5).clamp(0.0, 1.0),
+                            y: y.unwrap_or(0.5).clamp(0.0, 1.0),
+                            visual: SpawnVisual::Humanoid,
+                        },
+                    ));
+                    let _ = sim.apply_god_tool(req);
+                }
+                "life.spawn_herd" => {
+                    let n = count.unwrap_or(5).clamp(1, 64);
+                    let id = seed_civilian_id.unwrap_or(sim.state.tick.wrapping_add(1).max(1) as u64);
+                    let faction = target_faction.unwrap_or(0);
+                    let req = GodToolRequest::Life(LifeRequest::SpawnHerd(SpawnHerdRequest {
+                        count: n,
+                        seed_civilian_id: id,
+                        faction,
+                    }));
+                    let _ = sim.apply_god_tool(req);
+                }
+                // ============ DISASTER verbs (FR-CLIENT-godbuttons) ============
+                "disaster.wildfire" => {
+                    let req = GodToolRequest::Disaster(DisasterRequest::Wildfire { pos });
+                    let _ = sim.apply_god_tool(req);
+                }
+                "disaster.flood" => {
+                    let req = GodToolRequest::Disaster(DisasterRequest::Flood { pos });
+                    let _ = sim.apply_god_tool(req);
                 }
                 _ => {}
             }

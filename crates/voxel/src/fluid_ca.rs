@@ -360,15 +360,14 @@ impl CaGrid {
         let chunk_x: Vec<usize> = (0..self.dims[0]).map(|x| x / 16).collect();
         let chunk_y: Vec<usize> = (0..self.dims[1]).map(|y| y / 16).collect();
         let chunk_z: Vec<usize> = (0..self.dims[2]).map(|z| z / 16).collect();
-        for z in 0..self.dims[2] {
-            for y in 0..self.dims[1] {
-                for x in 0..self.dims[0] {
+        for (z, &cz_cell) in chunk_z.iter().enumerate() {
+            for (y, &cy_cell) in chunk_y.iter().enumerate() {
+                for (x, &cx_cell) in chunk_x.iter().enumerate() {
                     let id = self.get(x, y, z);
                     let phase = phase_of(reg, id);
                     if matches!(phase, Phase::Liquid | Phase::Powder | Phase::Gas) {
-                        self.dirty_chunks.insert(
-                            chunk_x[x] + chunk_y[y] * counts[0] + chunk_z[z] * counts[0] * counts[1],
-                        );
+                        self.dirty_chunks
+                            .insert(cx_cell + cy_cell * counts[0] + cz_cell * counts[0] * counts[1]);
                     }
                 }
             }

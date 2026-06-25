@@ -38,6 +38,28 @@ pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoor
     // raising belief (emergent disasters -> faith coupling, FR-CIV-EMERGENCE).
     const DISASTER_FAITH_GAIN: u64 = 50;
     sim.add_belief(DISASTER_FAITH_GAIN);
+    // Audio substrate (FR-AUDIO-wire): forward the disaster to the per-tick
+    // audio buffer so `phase_audio` emits a `SfxTrigger::Disaster` on the
+    // wire. Severity is derived from the disaster's terrain radius so a
+    // bigger storm sounds louder than a small fire; clamped to [0, 1] in
+    // `record_disaster_audio`.
+    let label = disaster_kind_label(kind);
+    let severity = (radius_for(kind) as f32 / (6.0 * civ_voxel::FIXED_SCALE as f32)).clamp(0.1, 1.0);
+    sim.record_disaster_audio(label, severity);
+}
+
+/// Wire-stable label for a [`DisasterKind`] used by the audio substrate
+/// (FR-AUDIO-wire). Mirrors the lowercase forms consumed by
+/// `civ_audio::SfxKind::for_disaster_label`.
+pub fn disaster_kind_label(kind: DisasterKind) -> &'static str {
+    match kind {
+        DisasterKind::Meteor => "meteor",
+        DisasterKind::Flood => "flood",
+        DisasterKind::Quake => "quake",
+        DisasterKind::Wildfire => "wildfire",
+        DisasterKind::Storm => "storm",
+        DisasterKind::Plague => "plague",
+    }
 }
 
 impl Simulation {

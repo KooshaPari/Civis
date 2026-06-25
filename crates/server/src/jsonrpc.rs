@@ -487,6 +487,14 @@ pub struct SnapshotFields {
     pub researched: Vec<String>,
     /// Currently-researching tech, if any (FR-CIV-SERVER-003).
     pub in_progress_tech: Option<String>,
+    /// Per-tick audio triggers emitted by `Simulation::phase_audio`
+    /// (FR-AUDIO-wire). Client audio surfaces (`clients/bevy-ref`,
+    /// `civ-watch` web) consume this list to play SFX cues without
+    /// needing a separate audio connection. The field is
+    /// `skip_serializing_if = "Vec::is_empty"` so a quiet tick stays
+    /// zero-bytes on the wire.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub audio_events: Vec<civ_engine::SfxTrigger>,
 }
 
 /// Tactical damage pulse for `sim.snapshot` (normalized map coords).
@@ -839,6 +847,10 @@ pub fn snapshot_fields_from_sim(
             .in_progress
             .as_ref()
             .map(|(tech, _)| tech.clone()),
+        // FR-AUDIO-wire — forward the engine's per-tick audio trigger
+        // list unchanged. Clients (Bevy, web) iterate this list and
+        // route each `SfxTrigger` to its `civ_audio::SfxKind`.
+        audio_events: sim.last_tick_audio_events().to_vec(),
     }
 }
 

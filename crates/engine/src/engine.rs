@@ -1068,6 +1068,62 @@ impl Simulation {
         0
     }
 
+    /// Civilisation-wide research tier (FR-CIV-0100 §3 downward causation).
+    ///
+    /// Derived from accumulated research progress: one tier per
+    /// [`TECHS_PER_RESEARCH_TIER`] discrete techs unlocked. Used by emergent
+    /// systems (e.g. wildfire-suppression mitigation in [`crate::disasters`]).
+    /// Baseline today is 0 because [`Self::researched_tech_count`] is itself a
+    /// baseline stub; it lifts automatically once tech accrual is wired.
+    pub(crate) fn research_tier(&self) -> u64 {
+        const TECHS_PER_RESEARCH_TIER: usize = 4;
+        (self.researched_tech_count() / TECHS_PER_RESEARCH_TIER) as u64
+    }
+
+    /// Read-only access to the current climate state (same-crate accessor so
+    /// sibling modules such as [`crate::disasters`] can read it without the
+    /// field being made `pub`).
+    pub(crate) fn climate_state(&self) -> &Climate {
+        &self.climate
+    }
+
+    /// Read-only access to the per-region weather grid (same-crate accessor;
+    /// see [`Self::climate_state`]).
+    pub(crate) fn weather_cells(&self) -> &[WeatherCell] {
+        &self.weather_grid
+    }
+
+    /// Inject a climate state (same-crate test/scenario hook so sibling-module
+    /// tests can stage environmental conditions without the field being `pub`).
+    pub(crate) fn set_climate_state(&mut self, climate: Climate) {
+        self.climate = climate;
+    }
+
+    /// Inject a weather grid (see [`Self::set_climate_state`]).
+    pub(crate) fn set_weather_cells(&mut self, cells: Vec<WeatherCell>) {
+        self.weather_grid = cells;
+    }
+
+    /// Current accumulated belief (faith) — the divine-powers currency.
+    pub fn belief(&self) -> u64 {
+        self.state.belief
+    }
+
+    /// Spend accumulated belief (faith) to invoke a divine power.
+    ///
+    /// Belief is the emergent currency of the disasters → faith →
+    /// divine-intervention loop (FR-CIV-EMERGENCE). If at least `cost` belief
+    /// has accumulated this is deducted and `true` returned; otherwise the
+    /// state is untouched and `false` returned (the gate stays closed).
+    pub(crate) fn try_invoke_divine_power(&mut self, cost: u64) -> bool {
+        if self.state.belief >= cost {
+            self.state.belief -= cost;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Mutably borrow the research cache.
     pub fn research_cache_mut(&mut self) -> &mut ResearchCache {
         &mut self.research_cache

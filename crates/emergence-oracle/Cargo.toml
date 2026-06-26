@@ -9,3 +9,4 @@ path = "src/bin/oracle_report.rs"
 
 [dependencies]
 civ-engine = { path = "../engine" }
+civ-agents = { path = "../agents" }

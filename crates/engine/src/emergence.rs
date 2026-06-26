@@ -11,7 +11,10 @@ use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
 use civ_agents::language::{
     name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
 };
-use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
+use civ_agents::psyche::{
+    cluster_belief_centroids, nudge_temperament, psyche_from_dna, update_beliefs, update_mood,
+    PSYCHE_DIM,
+};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
     cluster_by_colocation, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
@@ -96,6 +99,10 @@ pub struct EmergenceState {
     pub(crate) sentient_agents: HashSet<u64>,
     /// Settlement cluster ids already recorded in the saga graph.
     pub(crate) known_settlement_ids: HashSet<u64>,
+    /// Per-cluster belief centroids (FR-CIV-RELIGION / PSYCHE-911).
+    pub(crate) cluster_beliefs: BTreeMap<u64, [f32; PSYCHE_DIM]>,
+    /// True once a saga promotion crystallises shared veneration (FR-CIV-RELIGION-002).
+    pub(crate) has_patron: bool,
 }
 
 impl EmergenceState {
@@ -120,6 +127,8 @@ impl EmergenceState {
             sentience_threshold: SentienceThreshold::new(0.72),
             sentient_agents: HashSet::new(),
             known_settlement_ids: HashSet::new(),
+            cluster_beliefs: BTreeMap::new(),
+            has_patron: false,
         }
     }
 
@@ -195,6 +204,7 @@ impl Simulation {
         self.emergence_culture();
         self.emergence_social();
         self.emergence_psyche();
+        self.emergence_accrue_cluster_beliefs();
         self.emergence_genetics_sentience();
         self.emergence_legends();
         self.emergence_civ_ai();
@@ -902,6 +912,11 @@ impl Simulation {
             .min()
     }
 
+    /// Snapshot per-cluster belief centroids after psyche drift (FR-CIV-RELIGION).
+    fn emergence_accrue_cluster_beliefs(&mut self) {
+        self.emergence.cluster_beliefs = cluster_belief_centroids(&self.world);
+    }
+
     fn emergence_ingest_legend(&mut self, raw: RawSimEvent) -> IngestOutcome {
         self.emergence.legends.ingest(raw)
     }
@@ -910,6 +925,9 @@ impl Simulation {
         if promoted.is_empty() {
             return;
         }
+        const BELIEF_PER_LEGEND_PROMOTION: i64 = 3;
+        self.add_belief((promoted.len() as i64).saturating_mul(BELIEF_PER_LEGEND_PROMOTION));
+        self.emergence.has_patron = true;
         self.emergence.push_feed(
             tick,
             "legend_promotion",
@@ -1031,6 +1049,18 @@ impl Simulation {
         &self.emergence.cluster_cultures
     }
 
+    /// Per-cluster belief centroids (FR-CIV-RELIGION emergent doctrine).
+    #[must_use]
+    pub fn cluster_beliefs(&self) -> &BTreeMap<u64, [f32; PSYCHE_DIM]> {
+        &self.emergence.cluster_beliefs
+    }
+
+    /// Whether shared veneration has crystallised from saga promotions.
+    #[must_use]
+    pub fn has_religious_patron(&self) -> bool {
+        self.emergence.has_patron
+    }
+
     /// Per-cluster evolved lexicons (FR-CIV-LANG naming).
     #[must_use]
     pub fn cluster_lexicons(&self) -> &BTreeMap<u64, EvolvedLexicon> {
@@ -1135,6 +1165,27 @@ mod tests {
                 || first.beliefs != second.beliefs,
             "psyche should evolve"
         );
+    }
+
+    /// FR-CIV-RELIGION — cluster belief centroids diverge like culture profiles.
+    #[test]
+    fn cluster_beliefs_diverge_between_settlements() {
+        let mut sim_a = Simulation::with_seed(66);
+        let mut sim_b = Simulation::with_seed(66);
+        run_ticks(&mut sim_a, 200);
+        run_ticks(&mut sim_b, 200);
+        if sim_a.cluster_beliefs().len() >= 2 {
+            let values: Vec<_> = sim_a.cluster_beliefs().values().copied().collect();
+            assert_ne!(
+                values[0], values[1],
+                "cluster belief centroids should diverge"
+            );
+            assert_eq!(
+                sim_a.cluster_beliefs(),
+                sim_b.cluster_beliefs(),
+                "same seed must yield identical cluster beliefs at tick N"
+            );
+        }
     }
 
     /// FR-CIV-GENETICS / culture — cluster cultures diverge over ticks.

@@ -1,7 +1,7 @@
-# High-drift emergence: all eight species with chaotic divergence preset.
-# Species radiation is maximised; expect rapid sub-lineage formation.
+# Stable divergence preset (0.08): tight species clusters, slow sub-lineage formation.
+# All eight archetypes at equal weight with near-locked genomes at spawn.
 version: 1
-name: high-drift-emergence
+name: stable-divergence
 tick_start: 0
 population: 1000000
 base_consumption_joules: 5000000000
@@ -16,11 +16,11 @@ military:
 seeds:
   - scenarios/canonical_seeds.ron
 active_seed: raw_organism
-divergence_override: 1.0
+divergence_override: 0.08
 starting_conditions:
-  civilians_per_faction: 20
+  civilians_per_faction: 16
   faction_count: 8
-  quadrant_spread: 3000
+  quadrant_spread: 2500
   seed_mix:
     - seed: Ardani
       weight: 1.0

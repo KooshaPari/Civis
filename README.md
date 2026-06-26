@@ -65,7 +65,7 @@ The simulation core runs headlessly over WebSocket JSON-RPC + binary frames. Mul
 - **miracle** — +2000 belief + treasury boost across all factions
 
 ### World Presets
-- Ardani, Velthari, Grundak, Felmar — each with distinct biome seeds
+- Ardani, Velthari, Grundak, Felmar, Thornari — each with distinct biome seeds
 
 ### Victory / Defeat Conditions
 - Tech victory (all 12 researched), population victory, extinction defeat

@@ -4,7 +4,7 @@
 - [ ] 2.2 content variety (concrete tasks):
   - [ ] 2.2a biome variety: expand geology biome set + spawn affinity (crates/planet) — codex
   - [ ] 2.2b disaster variety: extend phase_disasters beyond wildfire (quake/flood/storm thresholds) (crates/engine disasters.rs) — codex
-  - [ ] 2.2c creature/species variety: more NamedSeeds + divergence presets (crates/genetics, scenarios) — cursor
+  - [x] 2.2c creature/species variety: more NamedSeeds + divergence presets (crates/genetics, scenarios) — cursor
 - [ ] 2.3 emergence dashboard LIVE in HUD: surface power-law alpha + entropy + structure-count + novelty from civ-emergence-metrics into a bevy HUD panel (clients/bevy-ref + read metrics) — cursor [HIGH VALUE: makes sandbox legible]
 - [ ] 2.4 sandbox UX: time controls (pause/speed already partial) + notifications/event-feed panel surfacing emergence_feed (clients/bevy-ref) — cursor
 - EPIC: `worldbox-sandbox`

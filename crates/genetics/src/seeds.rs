@@ -328,6 +328,12 @@ pub enum NamedSeed {
     /// Sylphine — wind-steppe nomads; XOR-scattered genome encoding aerial
     /// metabolism and high plasticity at spawn.
     Sylphine,
+    /// Felmar — volcanic marsh dwellers; prime-scattered heat-shock loci with
+    /// wetland tolerance markers in alternating bands.
+    Felmar,
+    /// Thornari — thorn-scrub and badland foragers; quadratic byte scatter
+    /// encoding drought resilience and low social hierarchy variance.
+    Thornari,
 }
 
 /// Stable ordering of every [`NamedSeed`] for round-robin spawn and tests.
@@ -338,6 +344,8 @@ pub const ALL_NAMED_SEEDS: &[NamedSeed] = &[
     NamedSeed::Kethari,
     NamedSeed::Nymari,
     NamedSeed::Sylphine,
+    NamedSeed::Felmar,
+    NamedSeed::Thornari,
 ];
 
 /// Return the canonical list of named-race archetypes.
@@ -350,6 +358,47 @@ pub fn all_named_seeds() -> &'static [NamedSeed] {
 #[must_use]
 pub fn named_seed_round_robin(spawn_index: usize) -> NamedSeed {
     ALL_NAMED_SEEDS[spawn_index % ALL_NAMED_SEEDS.len()]
+}
+
+/// One weighted entry in a scenario `seed_mix` block.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeightedNamedSeed {
+    /// Named archetype to draw from.
+    pub seed: NamedSeed,
+    /// Relative weight; must be finite and strictly positive.
+    pub weight: f32,
+}
+
+/// Choose a named seed for spawn index `spawn_index`.
+///
+/// * Empty `seed_mix` → [`named_seed_round_robin`].
+/// * Single entry → always that seed (deterministic monoculture).
+/// * Multiple entries → weighted sample via `rng` (caller must validate weights).
+#[must_use]
+pub fn choose_named_seed(
+    seed_mix: &[WeightedNamedSeed],
+    spawn_index: usize,
+    rng: &mut ChaCha8Rng,
+) -> NamedSeed {
+    if seed_mix.is_empty() {
+        return named_seed_round_robin(spawn_index);
+    }
+    if seed_mix.len() == 1 {
+        return seed_mix[0].seed;
+    }
+    use rand::distributions::{Distribution, WeightedIndex};
+    let weights: Vec<f32> = seed_mix.iter().map(|sw| sw.weight).collect();
+    let dist = WeightedIndex::new(&weights).expect("seed_mix weights must be valid");
+    seed_mix[dist.sample(rng)].seed
+}
+
+/// Resolve scenario divergence: explicit override wins, else seed default.
+#[must_use]
+pub fn effective_spawn_divergence(
+    seed: &SeedDefinition,
+    divergence_override: Option<f32>,
+) -> f32 {
+    divergence_override.unwrap_or(seed.divergence)
 }
 
 /// Curated scenario-level divergence dial presets (FR-CIV-EMERGENCE-004 nudge).
@@ -389,6 +438,16 @@ pub const DIVERGENCE_PRESETS: &[DivergencePreset] = &[
         id: "chaotic",
         divergence: 1.0,
         notes: "Full class mutation rate; maximum species radiation.",
+    },
+    DivergencePreset {
+        id: "stable",
+        divergence: 0.08,
+        notes: "Near-locked clusters; sub-species emerge only after many generations.",
+    },
+    DivergencePreset {
+        id: "radiant",
+        divergence: 0.75,
+        notes: "High drift between expressive and chaotic; rapid visible radiation.",
     },
 ];
 
@@ -450,6 +509,23 @@ pub fn archetype_dna(seed: NamedSeed) -> Dna {
         NamedSeed::Sylphine => (0..LEN as u8)
             .map(|i| i.wrapping_mul(13) ^ i.wrapping_add(200))
             .collect(),
+
+        // Felmar: prime-band marsh pattern — heat-shock alternating with wetland loci.
+        NamedSeed::Felmar => (0..LEN as u8)
+            .enumerate()
+            .map(|(idx, i)| {
+                let band = if idx % 3 == 0 { 29 } else { 11 };
+                i.wrapping_mul(band).wrapping_add(83) ^ (idx as u8)
+            })
+            .collect(),
+
+        // Thornari: quadratic scatter — drought markers with sparse hierarchy bytes.
+        NamedSeed::Thornari => (0..LEN as u8)
+            .map(|i| {
+                let q = u16::from(i) * u16::from(i);
+                (q.wrapping_add(41) % 251) as u8
+            })
+            .collect(),
     };
     Dna(bytes)
 }
@@ -508,6 +584,28 @@ pub fn archetype_seed(named: NamedSeed) -> SeedDefinition {
             ],
             0.30_f32,
             "Wind-steppe nomads; moderate-high drift, aerial metabolism.",
+        ),
+        NamedSeed::Felmar => (
+            "felmar",
+            "Felmar",
+            vec![
+                "Volcanic".to_string(),
+                "Marsh".to_string(),
+                "HotSprings".to_string(),
+            ],
+            0.22_f32,
+            "Volcanic marsh dwellers; moderate drift, heat and wetland affinity.",
+        ),
+        NamedSeed::Thornari => (
+            "thornari",
+            "Thornari",
+            vec![
+                "Scrubland".to_string(),
+                "Badlands".to_string(),
+                "Desert".to_string(),
+            ],
+            0.18_f32,
+            "Thorn-scrub foragers; low-moderate drift, drought resilience.",
         ),
     };
     let genome = archetype_dna(named).0;
@@ -942,15 +1040,85 @@ mod tests {
 
     #[test]
     fn all_named_seeds_round_robin_cycles() {
-        assert_eq!(ALL_NAMED_SEEDS.len(), 6);
+        assert_eq!(ALL_NAMED_SEEDS.len(), 8);
         for (i, &expected) in ALL_NAMED_SEEDS.iter().enumerate() {
             assert_eq!(named_seed_round_robin(i), expected);
         }
-        assert_eq!(named_seed_round_robin(6), NamedSeed::Ardani);
+        assert_eq!(named_seed_round_robin(8), NamedSeed::Ardani);
     }
 
     #[test]
-    fn named_archetype_seed_set_loads_all_six() {
+    fn choose_named_seed_empty_is_full_round_robin() {
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        for (i, &expected) in ALL_NAMED_SEEDS.iter().enumerate() {
+            assert_eq!(choose_named_seed(&[], i, &mut rng), expected);
+        }
+    }
+
+    #[test]
+    fn choose_named_seed_single_entry_is_monoculture() {
+        let mut rng = ChaCha8Rng::seed_from_u64(7);
+        let mix = [WeightedNamedSeed {
+            seed: NamedSeed::Felmar,
+            weight: 1.0,
+        }];
+        for i in 0..50 {
+            assert_eq!(choose_named_seed(&mix, i, &mut rng), NamedSeed::Felmar);
+        }
+    }
+
+    #[test]
+    fn choose_named_seed_weighted_favors_plurality() {
+        let mix = [
+            WeightedNamedSeed {
+                seed: NamedSeed::Ardani,
+                weight: 0.6,
+            },
+            WeightedNamedSeed {
+                seed: NamedSeed::Velthari,
+                weight: 0.3,
+            },
+            WeightedNamedSeed {
+                seed: NamedSeed::Grundak,
+                weight: 0.1,
+            },
+        ];
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let n = 2000usize;
+        let mut counts = [0usize; 3];
+        for i in 0..n {
+            match choose_named_seed(&mix, i, &mut rng) {
+                NamedSeed::Ardani => counts[0] += 1,
+                NamedSeed::Velthari => counts[1] += 1,
+                NamedSeed::Grundak => counts[2] += 1,
+                _ => {}
+            }
+        }
+        let ardani_frac = counts[0] as f32 / n as f32;
+        assert!(
+            (ardani_frac - 0.6).abs() < 0.08,
+            "Ardani fraction {ardani_frac:.3} not within ±0.08 of 0.6"
+        );
+        assert!(counts[0] > counts[1] && counts[0] > counts[2]);
+    }
+
+    #[test]
+    fn effective_spawn_divergence_prefers_override() {
+        let seed = archetype_seed(NamedSeed::Ardani);
+        assert!((effective_spawn_divergence(&seed, Some(0.55)) - 0.55).abs() < f32::EPSILON);
+        assert!(
+            (effective_spawn_divergence(&seed, None) - seed.divergence).abs() < f32::EPSILON
+        );
+    }
+
+    #[test]
+    fn divergence_presets_include_stable_and_radiant() {
+        assert_eq!(divergence_preset("stable"), Some(0.08));
+        assert_eq!(divergence_preset("radiant"), Some(0.75));
+    }
+
+    #[test]
+    fn named_archetype_seed_set_loads_all_eight() {
         let set = named_archetype_seed_set();
         assert_eq!(set.seeds.len(), ALL_NAMED_SEEDS.len());
         let lib = SeedLibrary::from_seed_set(set).expect("valid named set");

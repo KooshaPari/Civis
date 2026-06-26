@@ -703,7 +703,7 @@ mod tests {
         assert_eq!(classify_weather_cell(&cell, 0.05), BiomeKind::Beach);
 
         // Hot + wet shore → Mangrove.
-        let mut tropical = cell;
+        let mut tropical = cell.clone();
         tropical.temp_c_fp = 28_000;
         tropical.precip_mm_fp = 200_000;
         assert_eq!(classify_weather_cell(&tropical, 0.03), BiomeKind::Mangrove);
@@ -712,7 +712,7 @@ mod tests {
         assert_eq!(classify_weather_cell(&cell, 0.8), BiomeKind::Glacier);
 
         // Mountain at high elevation but not glacial (warm up the cell).
-        let mut warm = cell;
+        let mut warm = cell.clone();
         warm.temp_c_fp = 10_000;
         assert_eq!(classify_weather_cell(&warm, 0.7), BiomeKind::Mountain);
 

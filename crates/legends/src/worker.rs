@@ -26,18 +26,18 @@ impl LegendsWorker {
     }
 
     /// Ingest a single event and run epoch-boundary maintenance when the epoch advances.
-    pub fn ingest(&mut self, raw: RawSimEvent) {
+    pub fn ingest(&mut self, raw: RawSimEvent) -> crate::graph::IngestOutcome {
         let epoch = self.graph.config.epoch_of(raw.tick);
         if epoch.0 > self.last_maintained_epoch.0 {
             self.run_maintenance(epoch);
         }
-        self.graph.ingest(raw);
+        self.graph.ingest(raw)
     }
 
     /// Drain a batch of events (e.g. one bus poll) into the graph.
     pub fn drain<I: IntoIterator<Item = RawSimEvent>>(&mut self, events: I) {
         for raw in events {
-            self.ingest(raw);
+            let _ = self.ingest(raw);
         }
     }
 

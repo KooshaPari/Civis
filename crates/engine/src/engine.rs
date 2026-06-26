@@ -475,6 +475,8 @@ pub struct Simulation {
     last_tick_voxel_damage_count: usize,
     /// Per-soldier damage pulses from the most recent tactics phase (FR-CIV-TACTICS-024).
     last_tick_combat_pulses: Vec<CombatDamagePulse>,
+    /// Disasters resolved this tick (FR-CIV-LEGENDS ingest).
+    pub(crate) last_tick_disaster_pulses: Vec<crate::disasters::DisasterPulse>,
     /// Engagements resolved this tick (war bridge); feeds doctrine fitness.
     pub(crate) last_tick_engagements: Vec<CombatEngagement>,
     /// Per-faction mean aggression snapshot rebuilt during emergence.
@@ -484,6 +486,8 @@ pub struct Simulation {
     operational: NoopOperationalLayer,
     replay_log: ReplayLog,
     pub(crate) last_settlement_count: u32,
+    /// Cluster ids qualifying as settlements after the most recent life rollup.
+    pub(crate) last_settlement_ids: Vec<u64>,
     pub(crate) last_life_deaths: u32,
     cluster_stocks: BTreeMap<u64, ClusterStocks>,
     /// Scenario economy policy (`base_consumption_joules`, `scarcity_multiplier`).
@@ -701,6 +705,7 @@ impl Simulation {
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
+            last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
@@ -710,6 +715,7 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             last_settlement_count: 0,
+            last_settlement_ids: Vec::new(),
             last_life_deaths: 0,
             cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
@@ -775,6 +781,7 @@ impl Simulation {
             last_tick_voxel_events: Vec::new(),
             last_tick_voxel_damage_count: 0,
             last_tick_combat_pulses: Vec::new(),
+            last_tick_disaster_pulses: Vec::new(),
             last_tick_engagements: Vec::new(),
             faction_aggression: BTreeMap::new(),
             last_tick_mod_lifecycle: Vec::new(),
@@ -784,6 +791,7 @@ impl Simulation {
                 ..ReplayLog::default()
             },
             last_settlement_count: 0,
+            last_settlement_ids: Vec::new(),
             last_life_deaths: 0,
             cluster_stocks: BTreeMap::new(),
             economy_policy: DEFAULT_ECONOMY_POLICY,
@@ -1018,6 +1026,18 @@ impl Simulation {
     /// Normalized (0..1) map centers for damage events applied on the last tick.
     pub fn last_tick_combat_pulses(&self) -> &[CombatDamagePulse] {
         &self.last_tick_combat_pulses
+    }
+
+    /// Disasters resolved during the most recent tick.
+    #[must_use]
+    pub fn last_tick_disaster_pulses(&self) -> &[crate::disasters::DisasterPulse] {
+        &self.last_tick_disaster_pulses
+    }
+
+    /// Settlement cluster ids from the most recent life rollup.
+    #[must_use]
+    pub fn last_settlement_ids(&self) -> &[u64] {
+        &self.last_settlement_ids
     }
 
     /// Normalized damage centers (legacy helper over [`Self::last_tick_combat_pulses`]).
@@ -1268,6 +1288,7 @@ impl Simulation {
     pub fn tick(&mut self) {
         self.state.tick += 1;
         self.last_tick_combat_pulses.clear();
+        self.last_tick_disaster_pulses.clear();
         self.last_tick_engagements.clear();
         self.last_tick_mod_lifecycle.clear();
 
@@ -2040,6 +2061,7 @@ impl Simulation {
             }
         }
         self.last_settlement_count = settlement_ids.len() as u32;
+        self.last_settlement_ids = settlement_ids;
 
         self.cluster_stocks
             .retain(|id, _| settlement_ids.contains(id));

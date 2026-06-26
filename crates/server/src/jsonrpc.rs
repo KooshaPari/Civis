@@ -72,6 +72,8 @@ pub enum JsonRpcMethod {
     /// Read the latest civ-emergence-metrics sample
     /// (`sim.emergence`, stacked on PR #350; FR dashboard).
     SimEmergence,
+    /// Saga-graph read-only query (`sim.legends`, FR-CIV-LEGENDS-QUERY-07).
+    SimLegends,
     /// Inspect terrain + faction at a tile coordinate.
     /// (`sim.inspect_tile`, FR tile-inspector).
     SimInspectTile,
@@ -116,6 +118,7 @@ impl JsonRpcMethod {
             Self::LoadSlot => "save.load",
             Self::SaveList => "save.list",
             Self::SimEmergence => "sim.emergence",
+            Self::SimLegends => "sim.legends",
             Self::SimInspectTile => "sim.inspect_tile",
             Self::SimGodAction => "sim.god_action",
             Self::SimPerf => "sim.perf",
@@ -151,6 +154,7 @@ impl JsonRpcMethod {
             "save.load" => Some(Self::LoadSlot),
             "save.list" => Some(Self::SaveList),
             "sim.emergence" => Some(Self::SimEmergence),
+            "sim.legends" => Some(Self::SimLegends),
             "sim.inspect_tile" => Some(Self::SimInspectTile),
             "sim.god_action" => Some(Self::SimGodAction),
             "sim.perf" => Some(Self::SimPerf),
@@ -794,6 +798,8 @@ pub struct DispatchContext {
     /// Latest civ-emergence-metrics sample (PR #350 stack). `None` on a
     /// fresh simulation before the first 50-tick sample boundary.
     pub emergence: Option<EmergenceSampleFields>,
+    /// Latest saga-graph query payload for `sim.legends` (FR-CIV-LEGENDS-QUERY-07).
+    pub legends: Option<civ_engine::emergence::LegendsQueryResult>,
     /// Fully-researched techs from `ResearchCache` (FR-CIV-SERVER-003).
     pub researched: Vec<String>,
     /// Currently-researching tech name, if any (FR-CIV-SERVER-003).
@@ -1434,6 +1440,24 @@ pub fn dispatch_request(req: JsonRpcRequest, ctx: DispatchContext) -> DispatchPl
                 effect: DispatchEffect::None,
             }
         }
+        JsonRpcMethod::SimLegends => {
+            let result = match ctx.legends.as_ref() {
+                Some(payload) => serde_json::to_value(payload).unwrap_or(serde_json::json!({
+                    "tick": ctx.tick,
+                    "query_api_version": 1,
+                })),
+                None => serde_json::json!({
+                    "tick": ctx.tick,
+                    "query_api_version": 1,
+                    "node_count": 0,
+                    "emergence_feed": [],
+                }),
+            };
+            DispatchPlan {
+                response: JsonRpcResponse::success(req.id, result),
+                effect: DispatchEffect::None,
+            }
+        }
         JsonRpcMethod::SimInspectTile => {
             let x = req.params.as_ref().and_then(|p| p.get("x").and_then(|v| v.as_i64())).unwrap_or(0);
             let y = req.params.as_ref().and_then(|p| p.get("y").and_then(|v| v.as_i64())).unwrap_or(0);
@@ -2042,6 +2066,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2081,6 +2106,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2120,6 +2146,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2151,6 +2178,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2180,6 +2208,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2210,6 +2239,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2240,6 +2270,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2266,6 +2297,7 @@ mod tests {
                 connection_role: Some(OPERATOR_ROLE.to_owned()),
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2376,6 +2408,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2404,6 +2437,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2460,6 +2494,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2536,6 +2571,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: Some(sample),
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2582,6 +2618,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2593,6 +2630,42 @@ mod tests {
             plan.response.result,
             Some(serde_json::json!({ "tick": 12, "sample": serde_json::Value::Null }))
         );
+    }
+
+    /// FR-CIV-LEGENDS-QUERY-07 — `sim.legends` returns saga graph status.
+    #[test]
+    fn sim_legends_returns_query_payload() {
+        let mut sim = civ_engine::Simulation::with_seed(42);
+        for _ in 0..20 {
+            sim.tick();
+        }
+        let payload = sim.legends_query("status", None, None, None);
+        let req = parse_request(
+            r#"{"jsonrpc":"2.0","id":53,"method":"sim.legends","params":{"query":"status"}}"#,
+        )
+        .expect("parse");
+        let plan = dispatch_request(
+            req,
+            DispatchContext {
+                tick: sim.state.tick,
+                population: None,
+                snapshot: None,
+                require_role: false,
+                speed_multiplier: 1,
+                connection_role: None,
+                saves_dir: None,
+                emergence: None,
+                legends: Some(payload),
+                researched: vec![],
+                in_progress_tech: None,
+                last_tick_ms: 0.0,
+                outcome_fields: None,
+            },
+        );
+        assert_eq!(plan.effect, DispatchEffect::None);
+        let result = plan.response.result.expect("result");
+        assert_eq!(result.get("query_api_version").and_then(|v| v.as_u64()), Some(1));
+        assert!(result.get("node_count").and_then(|v| v.as_u64()).is_some());
     }
 
     #[test]
@@ -2700,6 +2773,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2740,6 +2814,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2791,6 +2866,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2862,6 +2938,7 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                legends: None,
                     researched: vec![],
                     in_progress_tech: None,
                 }),
@@ -2870,6 +2947,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -2939,6 +3017,7 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                legends: None,
                     researched: vec![],
                     in_progress_tech: None,
                 }),
@@ -2947,6 +3026,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3021,6 +3101,7 @@ mod tests {
                         tide_offset: 0.0,
                     },
                     emergence: None,
+                legends: None,
                     researched: vec![],
                     in_progress_tech: None,
                 }),
@@ -3029,6 +3110,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3074,6 +3156,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3112,6 +3195,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3148,6 +3232,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3177,6 +3262,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3248,6 +3334,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3317,6 +3404,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3347,6 +3435,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3382,6 +3471,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3418,6 +3508,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3452,6 +3543,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3559,6 +3651,10 @@ mod tests {
         assert_eq!(
             JsonRpcMethod::parse_name("sim.emergence"),
             Some(JsonRpcMethod::SimEmergence)
+        );
+        assert_eq!(
+            JsonRpcMethod::parse_name("sim.legends"),
+            Some(JsonRpcMethod::SimLegends)
         );
         assert_eq!(
             JsonRpcMethod::parse_name("sim.snapshot"),
@@ -3829,6 +3925,7 @@ mod tests {
                 tide_offset: 0.0,
             },
             emergence: Some(emergence),
+            legends: None,
             researched: vec![],
             in_progress_tech: None,
         };
@@ -3867,6 +3964,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3896,6 +3994,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,
@@ -3924,6 +4023,7 @@ mod tests {
                 connection_role: None,
                 saves_dir: None,
                 emergence: None,
+                legends: None,
                 researched: vec![],
                 in_progress_tech: None,
                 last_tick_ms: 0.0,

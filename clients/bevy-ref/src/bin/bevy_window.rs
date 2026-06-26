@@ -1511,7 +1511,6 @@ fn poll_emergence(
     for em in bridge.client.poll_emergence() {
         hud.snapshot.emergence = Some(em.clone());
         *emergence_res = em;
-        hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
     if timer.0 < 10.0 {

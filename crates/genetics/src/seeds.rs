@@ -845,6 +845,7 @@ pub fn example_seed_set() -> SeedSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::speciation_distance;
     use rand::SeedableRng;
 
     fn base_class() -> DnaClass {

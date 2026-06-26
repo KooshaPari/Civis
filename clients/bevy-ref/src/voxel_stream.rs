@@ -23,8 +23,9 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use civ_voxel::{
-    select_lod, ChunkCoord, ChunkView, CubicMesher, HeightFieldGen, LodLevel, LodPolicy,
-    MaterialId, StreamConfig, StreamStats, StreamingWorld, VoxelScaleMultiplier, CHUNK_EDGE_I32,
+    mesh_triangle_count, select_lod, ChunkCoord, ChunkView, CubicMesher, HeightFieldGen, LodLevel,
+    LodPolicy, MaterialId, RingIter, StreamConfig, StreamStats, StreamingWorld,
+    VoxelScaleMultiplier, CHUNK_EDGE_I32,
 };
 
 use crate::bevy_render::mesh_buffer_to_bevy;
@@ -130,18 +131,17 @@ fn chunk_center(coord: ChunkCoord) -> Vec3 {
 /// Build the desired chunk set around the camera (a horizontal disc × vertical band).
 fn desired_set(center: ChunkCoord) -> Vec<ChunkCoord> {
     let mut set = Vec::with_capacity(DESIRED_CHUNK_COUNT);
-    for dx in -STREAM_RADIUS..=STREAM_RADIUS {
-        for dz in -STREAM_RADIUS..=STREAM_RADIUS {
+    for ring in 0..=STREAM_RADIUS as u32 {
+        for coord in RingIter::new(center, ring, 1) {
+            let dx = coord.cx - center.cx;
+            let dz = coord.cz - center.cz;
             if dx * dx + dz * dz > STREAM_RADIUS * STREAM_RADIUS {
                 continue; // disc, not square — fewer far chunks
             }
-            for dy in -STREAM_VBAND..=STREAM_VBAND {
-                set.push(ChunkCoord {
-                    cx: center.cx + dx,
-                    cy: center.cy + dy,
-                    cz: center.cz + dz,
-                });
+            if (coord.cy - center.cy).abs() > STREAM_VBAND {
+                continue;
             }
+            set.push(coord);
         }
     }
     debug_assert_eq!(set.len(), DESIRED_CHUNK_COUNT);
@@ -387,5 +387,32 @@ mod tests {
             cy: 0,
             cz: STREAM_RADIUS
         }));
+    }
+
+    /// FR-CIV-SCALE — distant chunks mesh with fewer triangles after LOD selection.
+    #[test]
+    fn distant_chunks_have_fewer_triangles() {
+        let mut voxels = vec![MaterialId(0); 16 * 16 * 16];
+        for y in 0..16 {
+            for z in 0..16 {
+                for x in 0..16 {
+                    if (x + y + z) % 2 == 0 {
+                        voxels[x + y * 16 + z * 16 * 16] = MaterialId(1);
+                    }
+                }
+            }
+        }
+        let view = ChunkView {
+            id: civ_voxel::ChunkId(0),
+            voxels: &voxels,
+        };
+        let near = CubicMesher::mesh_cubic(view, LodLevel(0)).expect("near mesh");
+        let far = CubicMesher::mesh_cubic(view, LodLevel(2)).expect("far mesh");
+        assert!(
+            mesh_triangle_count(&far) < mesh_triangle_count(&near),
+            "far triangles {} should be fewer than near triangles {}",
+            mesh_triangle_count(&far),
+            mesh_triangle_count(&near)
+        );
     }
 }

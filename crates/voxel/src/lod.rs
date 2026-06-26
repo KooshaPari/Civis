@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use glam::IVec3;
 
-use crate::{select_lod, ChunkId, LodLevel, LodPolicy, VoxelScaleMultiplier};
+use crate::{select_lod, ChunkId, LodLevel, LodPolicy, MeshBuffer, VoxelScaleMultiplier};
 
 /// Why a chunk needs to be reprocessed by the remesh pipeline.
 ///
@@ -115,6 +115,15 @@ pub fn select_mesh_detail_level(
     policy: LodPolicy,
 ) -> LodLevel {
     select_lod(distance_metres, scale, policy)
+}
+
+/// Return the number of triangles encoded by a mesh buffer.
+///
+/// `CubicMesher` emits indexed triangle lists, so the index count is the stable
+/// proxy for face complexity and triangle count is `indices.len() / 3`.
+#[must_use]
+pub fn mesh_triangle_count(mesh: &MeshBuffer) -> usize {
+    mesh.indices.len() / 3
 }
 
 /// Build a render plan for the renderer after it has frustum-culled a chunk.
@@ -223,5 +232,14 @@ mod tests {
         assert!(drained[0].1.requires_storage_refresh());
         assert!(drained[2].1.requires_storage_refresh());
         assert!(!drained[1].1.requires_storage_refresh());
+    }
+
+    #[test]
+    fn mesh_triangle_count_uses_index_triplets() {
+        let mesh = MeshBuffer {
+            vertices: vec![],
+            indices: vec![0, 1, 2, 2, 3, 0],
+        };
+        assert_eq!(mesh_triangle_count(&mesh), 2);
     }
 }

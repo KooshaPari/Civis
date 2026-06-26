@@ -28,6 +28,8 @@ pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod inspect;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
@@ -103,6 +105,8 @@ pub mod perf_hud;
 pub mod frame_budget;
 #[cfg(feature = "bevy")]
 pub mod terrain;
+#[cfg(feature = "bevy")]
+pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -130,6 +134,8 @@ pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };
 pub use crash_handler::install_crash_handler;
+#[cfg(feature = "bevy")]
+pub use hud_state::HudState;
 
 /// Default orbit azimuth in radians (45° — camera south-east of centre).
 pub const DEFAULT_CAMERA_AZIMUTH_RAD: f32 = std::f32::consts::FRAC_PI_4;

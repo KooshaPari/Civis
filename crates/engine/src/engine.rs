@@ -1881,9 +1881,27 @@ impl Simulation {
         if faction_ids.len() < 2 {
             return;
         }
-        let a = faction_ids[(self.state.tick as usize) % faction_ids.len()];
-        let b = faction_ids[((self.state.tick as usize) + 1) % faction_ids.len()];
-        let kind = if self.rng.gen_bool(0.6) {
+        let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
+        for (_, member) in self.world.query::<&ClusterMember>().iter() {
+            *cluster_member_counts
+                .entry(member.cluster.0)
+                .or_insert(0) += 1;
+        }
+        let (a, b) = diplomacy_pair_from_settlement_overlap(
+            &self.world,
+            &cluster_member_counts,
+            &faction_ids,
+            self.state.tick,
+        );
+        let disparity =
+            faction_pair_treasury_disparity(&self.state.faction_treasury, a, b);
+        let threshold = diplomacy_peace_threshold(
+            self.state.belief,
+            self.state.cohesion,
+            self.state.unrest,
+            self.emergence.has_patron,
+        );
+        let kind = if disparity < threshold {
             DiplomacyKind::TradeAgreement
         } else {
             DiplomacyKind::Conflict
@@ -2861,7 +2879,7 @@ const COHESION_UNREST_DIVISOR: u64 = 50;
 /// balance of belief (binds, scaled gently) against unrest (frays, scaled
 /// harder, so disorder erodes cohesion faster than faith builds it). Returns a
 /// signed delta; the caller floors the running total at zero.
-pub(crate) fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
+pub fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
     let bind = (belief / COHESION_BELIEF_DIVISOR) as i64;
     let fray = (unrest / COHESION_UNREST_DIVISOR) as i64;
     bind - fray
@@ -3027,10 +3045,55 @@ const DIPLOMACY_MIN_CONFLICT_THRESHOLD: i64 = 2_000;
 /// unrest LOWERS it (internal discontent spills into external aggression). The
 /// threshold is bounded below by `DIPLOMACY_MIN_CONFLICT_THRESHOLD` so conflict
 /// always needs some disparity, and above at `2x` base so peace is never absolute.
-fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
+pub fn diplomacy_conflict_threshold(belief: u64, unrest: u64) -> i64 {
     let peace = (belief / BELIEF_PEACE_DIVISOR).min(BELIEF_PEACE_CAP as u64) as i64;
     let war = (unrest / UNREST_WAR_DIVISOR).min(UNREST_WAR_CAP as u64) as i64;
     (DIPLOMACY_BASE_CONFLICT_THRESHOLD + peace - war).max(DIPLOMACY_MIN_CONFLICT_THRESHOLD)
+}
+
+/// Cohesion-driven peace bonus for diplomacy threshold (FR-CIV-RELIGION-002).
+pub fn cohesion_peace_bonus(cohesion: u64) -> i64 {
+    (cohesion / COHESION_BELIEF_DIVISOR).min(BELIEF_PEACE_CAP as u64 / 2) as i64
+}
+
+/// Combined religion→diplomacy threshold: belief, cohesion, unrest, patron veneration.
+pub fn diplomacy_peace_threshold(
+    belief: u64,
+    cohesion: u64,
+    unrest: u64,
+    has_patron: bool,
+) -> i64 {
+    diplomacy_conflict_threshold(belief, unrest)
+        + cohesion_peace_bonus(cohesion)
+        + religious_unity_peace_bonus(has_patron)
+}
+
+/// Macro belief plus emergent cluster doctrine strength (FR-CIV-RELIGION / REL-003).
+pub fn institution_belief_signal(
+    macro_belief: u64,
+    cluster_beliefs: &BTreeMap<u64, [f32; 4]>,
+) -> u64 {
+    if cluster_beliefs.is_empty() {
+        return macro_belief;
+    }
+    let cluster_pulse: u64 = cluster_beliefs
+        .values()
+        .map(|centroid| (centroid[0] * 2_000.0) as u64)
+        .sum();
+    macro_belief.saturating_add(cluster_pulse / cluster_beliefs.len() as u64)
+}
+
+/// Pairwise treasury gap between two factions (currency units).
+fn faction_pair_treasury_disparity(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
+    let va = treasury
+        .get(&a)
+        .map(|t| t.raw / crate::SCALE)
+        .unwrap_or(0);
+    let vb = treasury
+        .get(&b)
+        .map(|t| t.raw / crate::SCALE)
+        .unwrap_or(0);
+    (va - vb).abs()
 }
 
 /// N9: maximum reduction to the conflict threshold from maximum aggression.
@@ -5266,6 +5329,58 @@ mod tests {
             let drift = 0.95 + 0.05 * maturity;
             assert!((drift - expected).abs() < 1e-6, "maturity={} drift={}", maturity, drift);
         }
+    }
+
+    #[test]
+    fn religion_diplomacy_coupling_phase_picks_trade_over_conflict() {
+        let disparity = DIPLOMACY_BASE_CONFLICT_THRESHOLD + 2_000;
+        let mut sim_peace = Simulation::with_seed(5);
+        sim_peace.state.tick = 500;
+        sim_peace.state.belief = 500_000;
+        sim_peace.state.cohesion = 200_000;
+        sim_peace.emergence.has_patron = true;
+        let mut faction_ids: Vec<u32> = sim_peace.state.factions.keys().copied().collect();
+        faction_ids.sort_unstable();
+        if faction_ids.len() < 2 {
+            return;
+        }
+        let (a, b) = (faction_ids[0], faction_ids[1]);
+        sim_peace
+            .state
+            .faction_treasury
+            .insert(a, Fixed::from_num(0));
+        sim_peace
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_peace.phase_diplomacy();
+        let peace_kind = sim_peace.diplomacy_events().last().expect("event").kind;
+
+        let mut sim_war = Simulation::with_seed(5);
+        sim_war.state.tick = 500;
+        sim_war.state.belief = 0;
+        sim_war.state.cohesion = 0;
+        sim_war
+            .state
+            .faction_treasury
+            .insert(a, Fixed::from_num(0));
+        sim_war
+            .state
+            .faction_treasury
+            .insert(b, Fixed::from_num(disparity));
+        sim_war.phase_diplomacy();
+        let war_kind = sim_war.diplomacy_events().last().expect("event").kind;
+
+        assert_eq!(
+            peace_kind,
+            DiplomacyKind::TradeAgreement,
+            "high belief+cohesion must bias toward peace at fixed disparity"
+        );
+        assert_eq!(
+            war_kind,
+            DiplomacyKind::Conflict,
+            "low belief must allow conflict at same disparity"
+        );
     }
 
     /// `canonical_faction_pair` always returns the pair in ascending order so

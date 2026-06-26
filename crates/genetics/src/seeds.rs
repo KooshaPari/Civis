@@ -319,6 +319,86 @@ pub enum NamedSeed {
     /// Grundak — subterranean lithomorphs; low divergence pressure, dense
     /// mineral-affinity encoding in mid-range bytes.
     Grundak,
+    /// Kethari — littoral and reef-dwellers; saline-tolerance markers in
+    /// wave-modulated mid bytes, moderate drift for coastal adaptation.
+    Kethari,
+    /// Nymari — glacial highlanders; inverted cold-adapted ramp with sparse
+    /// heat-shock loci in the tail.
+    Nymari,
+    /// Sylphine — wind-steppe nomads; XOR-scattered genome encoding aerial
+    /// metabolism and high plasticity at spawn.
+    Sylphine,
+}
+
+/// Stable ordering of every [`NamedSeed`] for round-robin spawn and tests.
+pub const ALL_NAMED_SEEDS: &[NamedSeed] = &[
+    NamedSeed::Ardani,
+    NamedSeed::Velthari,
+    NamedSeed::Grundak,
+    NamedSeed::Kethari,
+    NamedSeed::Nymari,
+    NamedSeed::Sylphine,
+];
+
+/// Return the canonical list of named-race archetypes.
+#[must_use]
+pub fn all_named_seeds() -> &'static [NamedSeed] {
+    ALL_NAMED_SEEDS
+}
+
+/// Round-robin helper used when a scenario ships no `seed_mix` override.
+#[must_use]
+pub fn named_seed_round_robin(spawn_index: usize) -> NamedSeed {
+    ALL_NAMED_SEEDS[spawn_index % ALL_NAMED_SEEDS.len()]
+}
+
+/// Curated scenario-level divergence dial presets (FR-CIV-EMERGENCE-004 nudge).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DivergencePreset {
+    /// Stable preset id referenced from scenario docs / tooling.
+    pub id: &'static str,
+    /// Override value in `[0, 1]` applied at spawn when selected.
+    pub divergence: f32,
+    /// Author-facing note.
+    pub notes: &'static str,
+}
+
+/// Named divergence presets for scenario authors.
+pub const DIVERGENCE_PRESETS: &[DivergencePreset] = &[
+    DivergencePreset {
+        id: "locked",
+        divergence: 0.0,
+        notes: "Genomes clamped to seed; no spawn-time drift.",
+    },
+    DivergencePreset {
+        id: "conservative",
+        divergence: 0.15,
+        notes: "Low drift; species clusters stay tight.",
+    },
+    DivergencePreset {
+        id: "balanced",
+        divergence: 0.35,
+        notes: "Default multicultural sandbox; moderate emergence.",
+    },
+    DivergencePreset {
+        id: "expressive",
+        divergence: 0.55,
+        notes: "Asymmetric weighting + visible sub-species within a generation.",
+    },
+    DivergencePreset {
+        id: "chaotic",
+        divergence: 1.0,
+        notes: "Full class mutation rate; maximum species radiation.",
+    },
+];
+
+/// Look up a divergence preset by id (case-sensitive).
+#[must_use]
+pub fn divergence_preset(id: &str) -> Option<f32> {
+    DIVERGENCE_PRESETS
+        .iter()
+        .find(|p| p.id == id)
+        .map(|p| p.divergence)
 }
 
 /// Return the canonical 64-byte [`Dna`] for a named race archetype.
@@ -355,6 +435,21 @@ pub fn archetype_dna(seed: NamedSeed) -> Dna {
         NamedSeed::Grundak => (0..LEN as u8)
             .map(|i| i.wrapping_mul(2).wrapping_add(128))
             .collect(),
+
+        // Kethari: prime-wave coastal pattern — saline markers throughout.
+        NamedSeed::Kethari => (0..LEN as u8)
+            .map(|i| i.wrapping_mul(23).wrapping_add(97))
+            .collect(),
+
+        // Nymari: inverted cold ramp — high bytes dominate, tail heat-shock loci.
+        NamedSeed::Nymari => (0..LEN as u8)
+            .map(|i| (255u8.wrapping_sub(i)).wrapping_mul(7).wrapping_add(19))
+            .collect(),
+
+        // Sylphine: XOR-scatter — high per-byte variance for steppe plasticity.
+        NamedSeed::Sylphine => (0..LEN as u8)
+            .map(|i| i.wrapping_mul(13) ^ i.wrapping_add(200))
+            .collect(),
     };
     Dna(bytes)
 }
@@ -384,6 +479,35 @@ pub fn archetype_seed(named: NamedSeed) -> SeedDefinition {
             vec!["Cave".to_string(), "Underground".to_string()],
             0.05_f32,
             "Subterranean lithomorphs; very low drift, mineral affinity.",
+        ),
+        NamedSeed::Kethari => (
+            "kethari",
+            "Kethari",
+            vec![
+                "Ocean".to_string(),
+                "Tidepool".to_string(),
+                "Coast".to_string(),
+            ],
+            0.25_f32,
+            "Littoral reef-dwellers; moderate drift, marine affinity.",
+        ),
+        NamedSeed::Nymari => (
+            "nymari",
+            "Nymari",
+            vec!["Tundra".to_string(), "Glacier".to_string(), "Alpine".to_string()],
+            0.20_f32,
+            "Glacial highlanders; low-moderate drift, cold adaptation.",
+        ),
+        NamedSeed::Sylphine => (
+            "sylphine",
+            "Sylphine",
+            vec![
+                "Grassland".to_string(),
+                "Savanna".to_string(),
+                "Highland".to_string(),
+            ],
+            0.30_f32,
+            "Wind-steppe nomads; moderate-high drift, aerial metabolism.",
         ),
     };
     let genome = archetype_dna(named).0;
@@ -451,6 +575,19 @@ pub fn raw_organism_primitive() -> SeedDefinition {
              This is the default when no seed is referenced."
                 .to_string(),
         ),
+    }
+}
+
+/// Seed set containing every [`NamedSeed`] archetype (no raw-organism primitive).
+#[must_use]
+pub fn named_archetype_seed_set() -> SeedSet {
+    SeedSet {
+        version: 1,
+        seeds: ALL_NAMED_SEEDS
+            .iter()
+            .copied()
+            .map(archetype_seed)
+            .collect(),
     }
 }
 
@@ -771,26 +908,75 @@ mod tests {
 
     #[test]
     fn test_named_seeds_differ() {
-        let ardani = archetype_dna(NamedSeed::Ardani);
-        let velthari = archetype_dna(NamedSeed::Velthari);
-        let grundak = archetype_dna(NamedSeed::Grundak);
-        assert_ne!(
-            ardani, velthari,
-            "Ardani and Velthari archetypes must differ on at least one byte"
-        );
-        assert_ne!(
-            ardani, grundak,
-            "Ardani and Grundak archetypes must differ on at least one byte"
-        );
-        assert_ne!(
-            velthari, grundak,
-            "Velthari and Grundak archetypes must differ on at least one byte"
-        );
+        for (i, &left) in ALL_NAMED_SEEDS.iter().enumerate() {
+            for &right in &ALL_NAMED_SEEDS[i + 1..] {
+                let a = archetype_dna(left);
+                let b = archetype_dna(right);
+                assert_ne!(
+                    a, b,
+                    "{left:?} and {right:?} archetypes must differ on at least one byte"
+                );
+            }
+        }
+    }
+
+    /// FR-CIV-EMERGENCE-004 — named archetypes are pairwise speciation-ready:
+    /// Hamming distance exceeds the default class threshold so distinct
+    /// species clusters are visible from spawn.
+    #[test]
+    fn fr_emergence_004_inter_archetype_speciation_ready() {
+        use crate::{speciation_distance, DnaClass};
+
+        let class = DnaClass::default();
+        let floor = class.speciation_threshold * 0.5;
+        for (i, &left) in ALL_NAMED_SEEDS.iter().enumerate() {
+            for &right in &ALL_NAMED_SEEDS[i + 1..] {
+                let dist = speciation_distance(&archetype_dna(left), &archetype_dna(right));
+                assert!(
+                    dist >= floor,
+                    "{left:?} vs {right:?}: distance {dist} below floor {floor}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn all_named_seeds_round_robin_cycles() {
+        assert_eq!(ALL_NAMED_SEEDS.len(), 6);
+        for (i, &expected) in ALL_NAMED_SEEDS.iter().enumerate() {
+            assert_eq!(named_seed_round_robin(i), expected);
+        }
+        assert_eq!(named_seed_round_robin(6), NamedSeed::Ardani);
+    }
+
+    #[test]
+    fn named_archetype_seed_set_loads_all_six() {
+        let set = named_archetype_seed_set();
+        assert_eq!(set.seeds.len(), ALL_NAMED_SEEDS.len());
+        let lib = SeedLibrary::from_seed_set(set).expect("valid named set");
+        assert_eq!(lib.len(), ALL_NAMED_SEEDS.len());
+        for &named in ALL_NAMED_SEEDS {
+            let id = archetype_seed(named).id;
+            assert!(lib.get(&id).is_some(), "missing seed id {id}");
+        }
+    }
+
+    #[test]
+    fn divergence_presets_are_valid_and_lookupable() {
+        for preset in DIVERGENCE_PRESETS {
+            assert!(
+                preset.divergence.is_finite() && (0.0..=1.0).contains(&preset.divergence),
+                "preset {} has invalid divergence",
+                preset.id
+            );
+            assert_eq!(divergence_preset(preset.id), Some(preset.divergence));
+        }
+        assert_eq!(divergence_preset("missing"), None);
     }
 
     #[test]
     fn archetype_seeds_validate() {
-        for named in [NamedSeed::Ardani, NamedSeed::Velthari, NamedSeed::Grundak] {
+        for &named in ALL_NAMED_SEEDS {
             let seed = archetype_seed(named);
             seed.validate()
                 .unwrap_or_else(|e| panic!("{named:?} archetype_seed failed validation: {e}"));

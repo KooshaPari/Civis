@@ -334,6 +334,18 @@ pub enum NamedSeed {
     /// Thornari — thorn-scrub and badland foragers; quadratic byte scatter
     /// encoding drought resilience and low social hierarchy variance.
     Thornari,
+    /// Lumari — bioluminescent cave-sea hybrids; oscillating sine-phase genome
+    /// encodes deep-dark adaptation with high empathic resonance markers.
+    Lumari,
+    /// Drakhari — volcanic highland apex predators; prime-stride heat-burst
+    /// pattern with aggression encoded in the leading quarter of the genome.
+    Drakhari,
+    /// Quelven — arboreal canopy weavers; Fibonacci-stride genome produces
+    /// rapid sub-clade divergence in the high-plasticity tail bytes.
+    Quelven,
+    /// Ashborn — post-eruption pioneer colonists; alternating-ash genome with
+    /// resilience loci in even bytes and high speciation pressure in odd bytes.
+    Ashborn,
 }
 
 /// Stable ordering of every [`NamedSeed`] for round-robin spawn and tests.
@@ -346,6 +358,10 @@ pub const ALL_NAMED_SEEDS: &[NamedSeed] = &[
     NamedSeed::Sylphine,
     NamedSeed::Felmar,
     NamedSeed::Thornari,
+    NamedSeed::Lumari,
+    NamedSeed::Drakhari,
+    NamedSeed::Quelven,
+    NamedSeed::Ashborn,
 ];
 
 /// Return the canonical list of named-race archetypes.
@@ -526,6 +542,57 @@ pub fn archetype_dna(seed: NamedSeed) -> Dna {
                 (q.wrapping_add(41) % 251) as u8
             })
             .collect(),
+
+        // Lumari: oscillating sine-phase via triangle-wave — deep-dark and empathic loci.
+        NamedSeed::Lumari => (0..LEN as u8)
+            .enumerate()
+            .map(|(idx, i)| {
+                // Triangle wave: ascend then descend in 16-byte periods.
+                let phase = idx % 16;
+                let tri: u8 = if phase < 8 {
+                    (phase as u8).wrapping_mul(17)
+                } else {
+                    (15u8.wrapping_sub(phase as u8)).wrapping_mul(17)
+                };
+                i.wrapping_mul(7).wrapping_add(tri).wrapping_add(61)
+            })
+            .collect(),
+
+        // Drakhari: prime-stride burst — leading-byte aggression, trailing heat-burst.
+        NamedSeed::Drakhari => (0..LEN as u8)
+            .enumerate()
+            .map(|(idx, i)| {
+                // First quarter: high aggression (leading bytes near 200-255).
+                if idx < LEN / 4 {
+                    i.wrapping_mul(5).wrapping_add(200)
+                } else {
+                    i.wrapping_mul(19).wrapping_add(47) ^ (idx as u8).wrapping_mul(3)
+                }
+            })
+            .collect(),
+
+        // Quelven: Fibonacci-stride — canopy-adapted, high tail plasticity.
+        NamedSeed::Quelven => {
+            let mut fib = [0u8; LEN];
+            fib[0] = 1;
+            fib[1] = 2;
+            for k in 2..LEN {
+                fib[k] = fib[k - 1].wrapping_add(fib[k - 2]).wrapping_add(k as u8);
+            }
+            fib.to_vec()
+        }
+
+        // Ashborn: alternating-ash pattern — even=resilience, odd=speciation loci.
+        NamedSeed::Ashborn => (0..LEN as u8)
+            .enumerate()
+            .map(|(idx, i)| {
+                if idx % 2 == 0 {
+                    i.wrapping_mul(3).wrapping_add(150)
+                } else {
+                    i.wrapping_mul(43).wrapping_add(7) ^ 0xA5
+                }
+            })
+            .collect(),
     };
     Dna(bytes)
 }
@@ -606,6 +673,50 @@ pub fn archetype_seed(named: NamedSeed) -> SeedDefinition {
             ],
             0.18_f32,
             "Thorn-scrub foragers; low-moderate drift, drought resilience.",
+        ),
+        NamedSeed::Lumari => (
+            "lumari",
+            "Lumari",
+            vec![
+                "DeepCave".to_string(),
+                "UnderwaterCave".to_string(),
+                "Abyss".to_string(),
+            ],
+            0.28_f32,
+            "Bioluminescent cave-sea hybrids; moderate drift, deep-dark and empathic loci.",
+        ),
+        NamedSeed::Drakhari => (
+            "drakhari",
+            "Drakhari",
+            vec![
+                "VolcanicHighland".to_string(),
+                "Caldera".to_string(),
+                "Volcanic".to_string(),
+            ],
+            0.12_f32,
+            "Volcanic highland apex predators; low drift, leading-byte aggression.",
+        ),
+        NamedSeed::Quelven => (
+            "quelven",
+            "Quelven",
+            vec![
+                "Canopy".to_string(),
+                "Rainforest".to_string(),
+                "TropicalForest".to_string(),
+            ],
+            0.40_f32,
+            "Arboreal canopy weavers; moderate-high drift, rapid sub-clade divergence.",
+        ),
+        NamedSeed::Ashborn => (
+            "ashborn",
+            "Ashborn",
+            vec![
+                "AshPlains".to_string(),
+                "PostEruption".to_string(),
+                "Badlands".to_string(),
+            ],
+            0.33_f32,
+            "Post-eruption pioneer colonists; moderate drift, high speciation pressure.",
         ),
     };
     let genome = archetype_dna(named).0;
@@ -1040,11 +1151,11 @@ mod tests {
 
     #[test]
     fn all_named_seeds_round_robin_cycles() {
-        assert_eq!(ALL_NAMED_SEEDS.len(), 8);
+        assert_eq!(ALL_NAMED_SEEDS.len(), 12);
         for (i, &expected) in ALL_NAMED_SEEDS.iter().enumerate() {
             assert_eq!(named_seed_round_robin(i), expected);
         }
-        assert_eq!(named_seed_round_robin(8), NamedSeed::Ardani);
+        assert_eq!(named_seed_round_robin(12), NamedSeed::Ardani);
     }
 
     #[test]
@@ -1118,7 +1229,7 @@ mod tests {
     }
 
     #[test]
-    fn named_archetype_seed_set_loads_all_eight() {
+    fn named_archetype_seed_set_loads_all() {
         let set = named_archetype_seed_set();
         assert_eq!(set.seeds.len(), ALL_NAMED_SEEDS.len());
         let lib = SeedLibrary::from_seed_set(set).expect("valid named set");
@@ -1217,5 +1328,132 @@ mod tests {
             s.notes.as_deref(),
             Some("Notes with \"quotes\" and \nnewlines.")
         );
+    }
+
+    // ── P2.2c: new species variety tests ──────────────────────────────────────
+
+    /// New seeds (Lumari, Drakhari, Quelven, Ashborn) produce distinct genomes
+    /// that differ from each other and from all pre-existing archetypes.
+    #[test]
+    fn p2_new_seeds_produce_distinct_genomes() {
+        let new_seeds = [
+            NamedSeed::Lumari,
+            NamedSeed::Drakhari,
+            NamedSeed::Quelven,
+            NamedSeed::Ashborn,
+        ];
+        // New seeds must differ from each other.
+        for (i, &a) in new_seeds.iter().enumerate() {
+            for &b in &new_seeds[i + 1..] {
+                assert_ne!(
+                    archetype_dna(a),
+                    archetype_dna(b),
+                    "{a:?} and {b:?} must produce distinct genomes"
+                );
+            }
+        }
+        // New seeds must differ from original 8.
+        let original = [
+            NamedSeed::Ardani,
+            NamedSeed::Velthari,
+            NamedSeed::Grundak,
+            NamedSeed::Kethari,
+            NamedSeed::Nymari,
+            NamedSeed::Sylphine,
+            NamedSeed::Felmar,
+            NamedSeed::Thornari,
+        ];
+        for &n in &new_seeds {
+            for &o in &original {
+                assert_ne!(
+                    archetype_dna(n),
+                    archetype_dna(o),
+                    "{n:?} must differ from pre-existing {o:?}"
+                );
+            }
+        }
+    }
+
+    /// Divergence increases measurably over generations: after N ticks with
+    /// divergence > 0, the genome drifts away from its archetype baseline.
+    #[test]
+    fn p2_divergence_increases_over_generations() {
+        let class = base_class();
+        let seeds_under_test = [
+            NamedSeed::Lumari,
+            NamedSeed::Drakhari,
+            NamedSeed::Quelven,
+            NamedSeed::Ashborn,
+        ];
+        for &named in &seeds_under_test {
+            let base = archetype_dna(named);
+            let mut rng = ChaCha8Rng::seed_from_u64(0x1234_5678_u64 ^ named as u64);
+            let seed_def = archetype_seed(named);
+            let mut cur = base.clone();
+            let initial_dist = speciation_distance(&base, &cur);
+            for _ in 0..500 {
+                cur = mutate_with_divergence(&cur, &mut rng, &class, seed_def.divergence);
+            }
+            let final_dist = speciation_distance(&base, &cur);
+            assert!(
+                final_dist > initial_dist,
+                "{named:?}: genome must drift from archetype over 500 ticks (initial={initial_dist}, final={final_dist})"
+            );
+        }
+    }
+
+    /// Each new seed is deterministic: same RNG seed → same genome every time.
+    #[test]
+    fn p2_new_seeds_are_deterministic() {
+        let class = base_class();
+        for &named in &[
+            NamedSeed::Lumari,
+            NamedSeed::Drakhari,
+            NamedSeed::Quelven,
+            NamedSeed::Ashborn,
+        ] {
+            let seed_def = archetype_seed(named);
+            let mut rng_a = ChaCha8Rng::seed_from_u64(0xFEED_DEAD_u64);
+            let mut rng_b = ChaCha8Rng::seed_from_u64(0xFEED_DEAD_u64);
+            let dna_a = spawn_genome_with_divergence(&mut rng_a, &class, &seed_def, seed_def.divergence);
+            let dna_b = spawn_genome_with_divergence(&mut rng_b, &class, &seed_def, seed_def.divergence);
+            assert_eq!(
+                dna_a, dna_b,
+                "{named:?}: spawn must be deterministic under identical RNG seed"
+            );
+        }
+    }
+
+    /// All 12 archetypes are pairwise speciation-ready (Hamming distance above
+    /// floor). Extends FR-CIV-EMERGENCE-004 to cover the new variants.
+    #[test]
+    fn p2_all_twelve_archetypes_speciation_ready() {
+        use crate::{speciation_distance, DnaClass};
+        let class = DnaClass::default();
+        let floor = class.speciation_threshold * 0.5;
+        for (i, &left) in ALL_NAMED_SEEDS.iter().enumerate() {
+            for &right in &ALL_NAMED_SEEDS[i + 1..] {
+                let dist = speciation_distance(&archetype_dna(left), &archetype_dna(right));
+                assert!(
+                    dist >= floor,
+                    "{left:?} vs {right:?}: distance {dist} below floor {floor}"
+                );
+            }
+        }
+    }
+
+    /// New seeds validate (dna_length == genome.len(), divergence in [0,1]).
+    #[test]
+    fn p2_new_archetype_seeds_validate() {
+        for &named in &[
+            NamedSeed::Lumari,
+            NamedSeed::Drakhari,
+            NamedSeed::Quelven,
+            NamedSeed::Ashborn,
+        ] {
+            let seed = archetype_seed(named);
+            seed.validate()
+                .unwrap_or_else(|e| panic!("{named:?} archetype_seed failed validation: {e}"));
+        }
     }
 }

@@ -3573,13 +3573,8 @@ fn choose_named_seed(
     spawn_index: usize,
     _rng: &mut rand_chacha::ChaCha8Rng,
 ) -> civ_genetics::NamedSeed {
-    // Stub for testing: round-robin through named seeds based on spawn_index.
-    use civ_genetics::NamedSeed;
-    match spawn_index % 3 {
-        0 => NamedSeed::Ardani,
-        1 => NamedSeed::Velthari,
-        _ => NamedSeed::Grundak,
-    }
+    // Stub for testing: round-robin through all 12 named seeds.
+    civ_genetics::named_seed_round_robin(spawn_index)
 }
 
 // ============================================================================
@@ -5712,18 +5707,18 @@ mod tests {
         let grundak_base = civ_genetics::archetype_dna(NamedSeed::Grundak);
 
         // Verify the three archetypes are distinct from each other —
-        // confirming the % 3 cycle will produce genuinely different seeds.
+        // confirming the round-robin cycle will produce genuinely different seeds.
         assert_ne!(ardani_base, velthari_base, "Ardani and Velthari must differ");
         assert_ne!(ardani_base, grundak_base, "Ardani and Grundak must differ");
         assert_ne!(velthari_base, grundak_base, "Velthari and Grundak must differ");
 
-        // With 128 civilians, each archetype slot is hit ~42-43 times.
+        // With 128 civilians and 12 named seeds, each archetype slot is hit ~10-11 times.
         let sim = Simulation::with_seed(1);
         let dna_list: Vec<Dna> = sim.world.query::<&Dna>().iter().map(|(_, d)| d.clone()).collect();
         assert_eq!(dna_list.len(), 128, "all 128 civilians must carry Dna");
 
-        // Verify that at minimum 3 distinct genomes are present, proving all
-        // three archetype branches were exercised (divergence prevents collisions).
+        // Verify that at minimum 3 distinct genomes are present, proving multiple
+        // archetype branches were exercised (divergence prevents collisions).
         let unique_count = {
             let mut seen: std::collections::HashSet<Vec<u8>> = std::collections::HashSet::new();
             for d in &dna_list {

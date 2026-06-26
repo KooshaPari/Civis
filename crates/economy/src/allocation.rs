@@ -73,7 +73,7 @@ impl AllocationEngine for JouleAllocator {
 /// `allocated = engine.allocate(budget, effective_demand)`
 ///
 /// If `labor_capacity_fraction <= 0.0`, the allocator returns 0 (no workers).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct LaborCapacityAllocator {
     /// Aggregate labor capacity fraction in `[0, 1]`. `1.0` means full adult
     /// productive workforce; `0.0` means no production (all children/elders

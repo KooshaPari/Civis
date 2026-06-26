@@ -304,6 +304,83 @@ pub struct PopulationEvent {
     pub y: f32,
 }
 
+#[derive(Clone)]
+struct CivilianLifecycleSample {
+    age: u16,
+    alignment: Alignment,
+    x: f32,
+    y: f32,
+    fertility_score: f32,
+    migration_pressure: f32,
+}
+
+fn lifecycle_distance(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
+    let dx = ax - bx;
+    let dy = ay - by;
+    (dx * dx + dy * dy).sqrt()
+}
+
+fn fertility_score(age: u16, needs: &Needs) -> f32 {
+    let age_factor = if (18..=42).contains(&age) {
+        1.0
+    } else if age < 18 {
+        (age as f32 / 18.0).clamp(0.0, 1.0)
+    } else {
+        (1.0 - ((age.saturating_sub(42) as f32) / 28.0)).clamp(0.0, 1.0)
+    };
+    let need_factor = ((needs.food + needs.rest + needs.safety + needs.belonging) * 0.25)
+        .clamp(0.0, 1.0);
+    (0.55 * age_factor + 0.45 * need_factor).clamp(0.0, 1.0)
+}
+
+fn migration_pressure(needs: &Needs, resource_pressure: f32) -> f32 {
+    let deprivation = 1.0
+        - ((needs.food + needs.rest + needs.safety + needs.belonging) * 0.25).clamp(0.0, 1.0);
+    (0.7 * deprivation + 0.3 * resource_pressure).clamp(0.0, 1.0)
+}
+
+fn apply_age_stage_effects(age: u16, needs: &mut Needs) {
+    if age < 18 {
+        needs.belonging = (needs.belonging + 0.01).min(1.0);
+        needs.safety = (needs.safety + 0.01).min(1.0);
+    } else if age < 50 {
+        needs.food = (needs.food + 0.005).min(1.0);
+    } else {
+        needs.rest = (needs.rest - 0.01).max(0.0);
+        needs.health = (needs.health - 0.01).max(0.0);
+    }
+}
+
+fn is_fertile_adult(entity: Entity, world: &World, sample: &CivilianLifecycleSample) -> bool {
+    let Ok(needs) = world.get::<&Needs>(entity) else {
+        return false;
+    };
+    sample.age >= 18
+        && sample.age <= 42
+        && sample.fertility_score >= 0.72
+        && needs.food >= 0.68
+        && needs.rest >= 0.55
+        && needs.safety >= 0.55
+        && needs.belonging >= 0.5
+}
+
+fn is_migratory_adult(entity: Entity, world: &World, sample: &CivilianLifecycleSample) -> bool {
+    let Ok(needs) = world.get::<&Needs>(entity) else {
+        return false;
+    };
+    sample.age >= 18
+        && sample.migration_pressure >= 0.68
+        && needs.food <= 0.45
+        && (needs.rest <= 0.75 || needs.safety <= 0.75 || needs.belonging <= 0.75)
+}
+
+fn settlement_anchor_for(settlement_id: u32, x: f32, y: f32) -> (f32, f32) {
+    let seed = settlement_id as f32 * 0.137_503_2;
+    let nx = (x + seed.sin() * 0.08).clamp(0.05, 0.95);
+    let ny = (y + seed.cos() * 0.08).clamp(0.05, 0.95);
+    (nx, ny)
+}
+
 /// Production capability
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Production {
@@ -2938,9 +3015,219 @@ impl Simulation {
         self.last_tick_unrest_snapshots = new_snapshots;
     }
 
-    /// Citizen-life phase (FR-CIV-LIFE-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A6.
-    fn phase_life(&mut self) {}
+    /// Citizen-life phase (FR-CIV-LIFE-001 / FR-CIV-LIFE-002).
+    ///
+    /// Active lifecycle loop:
+    /// - ages civilians every tick,
+    /// - applies stage-based need/stat pressure,
+    /// - births children from paired, well-fed adults,
+    /// - records family kinship between parents and offspring,
+    /// - migrates deprived adults into a new settlement under pressure.
+    fn phase_life(&mut self) {
+        attach_citizen_to_agents(&mut self.world);
+        self.last_births.clear();
+        self.last_deaths.clear();
+
+        let mut records: Vec<(Entity, u64, CivilianLifecycleSample)> = self
+            .world
+            .query::<(&AgentCivilian, &Position3d, &Needs)>()
+            .iter()
+            .map(|(entity, (civilian, pos, needs))| {
+                (
+                    entity,
+                    civilian.id,
+                    CivilianLifecycleSample {
+                        age: civilian.age,
+                        alignment: civilian.alignment,
+                        x: pos.coord.x as f32 / FIXED_SCALE as f32,
+                        y: pos.coord.z as f32 / FIXED_SCALE as f32,
+                        fertility_score: fertility_score(civilian.age, needs),
+                        migration_pressure: migration_pressure(needs, self.resource_pressure()),
+                    },
+                )
+            })
+            .collect();
+        records.sort_by_key(|(_, id, _)| *id);
+
+        let mut dead = Vec::new();
+        let mut births = Vec::new();
+        let mut paired_adults: BTreeSet<u64> = BTreeSet::new();
+        let mut found_new_settlements = Vec::new();
+        let mut next_settlement_id = self.next_settlement_id();
+
+        for (entity, id, sample) in records.iter() {
+            let next_age = {
+                let Ok(mut civilian) = self.world.get::<&mut AgentCivilian>(*entity) else {
+                    continue;
+                };
+                civilian.age = civilian.age.saturating_add(1);
+                civilian.age
+            };
+            let Ok(mut needs) = self.world.get::<&mut Needs>(*entity) else {
+                continue;
+            };
+            apply_age_stage_effects(next_age, &mut needs);
+
+            if sample.alignment == Alignment::None {
+                continue;
+            }
+
+            if sample.age >= 65 && needs.health <= 0.15 {
+                dead.push((*entity, *id, sample.x, sample.y));
+            }
+        }
+
+        for (left_idx, left) in records.iter().enumerate() {
+            if paired_adults.contains(&left.1) {
+                continue;
+            }
+            if !is_fertile_adult(left.0, &self.world, &left.2) {
+                continue;
+            }
+
+            let mut partner: Option<&(Entity, u64, CivilianLifecycleSample)> = None;
+            for right in records.iter().skip(left_idx + 1) {
+                if paired_adults.contains(&right.1) {
+                    continue;
+                }
+                if !is_fertile_adult(right.0, &self.world, &right.2) {
+                    continue;
+                }
+                if left.2.alignment != right.2.alignment {
+                    continue;
+                }
+                if lifecycle_distance(left.2.x, left.2.y, right.2.x, right.2.y) > 0.04 {
+                    continue;
+                }
+                partner = Some(right);
+                break;
+            }
+
+            let Some(right) = partner else {
+                continue;
+            };
+
+            let birth_pressure = ((left.2.fertility_score + right.2.fertility_score) * 0.5)
+                * (1.0 - left.2.migration_pressure.max(right.2.migration_pressure).clamp(0.0, 1.0));
+            if birth_pressure < 0.68 {
+                continue;
+            }
+
+            paired_adults.insert(left.1);
+            paired_adults.insert(right.1);
+
+            let child_id = self.next_civilian_id;
+            self.next_civilian_id += 1;
+            let x = ((left.2.x + right.2.x) * 0.5).clamp(0.01, 0.99);
+            let y = ((left.2.y + right.2.y) * 0.5).clamp(0.01, 0.99);
+            births.push((child_id, x, y, left.2.alignment, left.1, right.1));
+        }
+
+        for (entity, id, x, y) in dead {
+            let _ = self.world.despawn(entity);
+            self.last_deaths.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id: id,
+                x,
+                y,
+            });
+        }
+
+        let pressure = self.resource_pressure().max(self.unrest_pressure());
+        if pressure >= 0.55 {
+            let mut grouped: BTreeMap<u32, Vec<(Entity, u64, CivilianLifecycleSample)>> = BTreeMap::new();
+            for (entity, id, sample) in &records {
+                if paired_adults.contains(id) {
+                    continue;
+                }
+                if !is_migratory_adult(*entity, &self.world, sample) {
+                    continue;
+                }
+                let settlement_id = match sample.alignment {
+                    Alignment::Faction(fid) => fid,
+                    _ => 0,
+                };
+                grouped.entry(settlement_id).or_default().push((*entity, *id, sample.clone()));
+            }
+
+            for (settlement_id, mut candidates) in grouped {
+                candidates.sort_by_key(|(_, id, _)| *id);
+                let source_population = self.settlements.get(&settlement_id).copied().unwrap_or(0);
+                if candidates.len() < 2 || source_population < 2 {
+                    continue;
+                }
+
+                let migration_count = if pressure >= 0.8 {
+                    candidates.len().min(3)
+                } else {
+                    candidates.len().min(2)
+                };
+                let new_settlement_id = next_settlement_id;
+                next_settlement_id = next_settlement_id.saturating_add(1);
+                found_new_settlements.push((settlement_id, new_settlement_id, migration_count as u32));
+
+                for (entity, id, mut sample) in candidates.into_iter().take(migration_count) {
+                    if let Ok(mut civilian) = self.world.get::<&mut AgentCivilian>(entity) {
+                        civilian.alignment = Alignment::Faction(new_settlement_id);
+                    }
+                    if let Ok(mut pos) = self.world.get::<&mut Position3d>(entity) {
+                        let (nx, ny) = settlement_anchor_for(new_settlement_id, sample.x, sample.y);
+                        pos.coord.x = (nx * FIXED_SCALE as f32) as i64;
+                        pos.coord.z = (ny * FIXED_SCALE as f32) as i64;
+                        sample.x = nx;
+                        sample.y = ny;
+                    }
+                }
+            }
+        }
+
+        for (child_id, x, y, alignment, parent_a, parent_b) in births {
+            let _ = spawn_child_near(&mut self.world, child_id, alignment, x, y, &mut self.rng);
+            self.last_births.push(PopulationEvent {
+                tick: self.state.tick,
+                entity_id: child_id,
+                x,
+                y,
+            });
+            self.register_kinship(child_id, KinshipEdge { kind: KinshipKind::Family, target: parent_a });
+            self.register_kinship(child_id, KinshipEdge { kind: KinshipKind::Family, target: parent_b });
+            self.register_kinship(parent_a, KinshipEdge { kind: KinshipKind::Family, target: child_id });
+            self.register_kinship(parent_b, KinshipEdge { kind: KinshipKind::Family, target: child_id });
+            paired_adults.insert(parent_a);
+            paired_adults.insert(parent_b);
+        }
+
+        for (source_settlement_id, new_settlement_id, count) in found_new_settlements {
+            let source = self.settlements.entry(source_settlement_id).or_insert(0);
+            *source = source.saturating_sub(count);
+            self.settlements.insert(new_settlement_id, count);
+        }
+
+        let births_count = self.last_births.len() as u64;
+        let deaths_count = self.last_deaths.len() as u64;
+        self.state.population = self.state.population.saturating_add(births_count);
+        self.state.population = self.state.population.saturating_sub(deaths_count);
+    }
+
+    fn resource_pressure(&self) -> f32 {
+        let food = self.state.resources.food.raw.max(0) as f32;
+        let pressure = if food <= 0.0 { 1.0 } else { (1.0 / (1.0 + food / 250.0)).clamp(0.0, 1.0) };
+        pressure
+    }
+
+    fn unrest_pressure(&self) -> f32 {
+        let max_unrest = self
+            .last_tick_unrest_snapshots
+            .values()
+            .map(|snapshot| snapshot.score.max(0))
+            .max()
+            .unwrap_or(0) as f32;
+        (max_unrest / 500.0).clamp(0.0, 1.0)
+    }
+
+    fn next_settlement_id(&self) -> u32 {
+        self.settlements.keys().copied().max().unwrap_or(0).saturating_add(1)
+    }
 
     /// Research phase (FR-ERA): emergent per-faction research progress.
     fn phase_research(&mut self) {
@@ -8485,6 +8772,126 @@ mod tests {
                 .expect("seeded cluster 200 should persist");
             assert_ne!(cue_a_100, cue_b_100);
             assert_ne!(cue_a_200, cue_b_200);
+        }
+
+        #[test]
+        fn fed_stable_population_grows_via_births() {
+            use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian, Needs as AgentNeeds};
+
+            let mut sim = Simulation::new();
+            sim.state.resources.food = Fixed::from_num(100);
+            sim.set_settlement_population(1, 2);
+
+            let parent_a = spawn_civilian_at(
+                &mut sim.world,
+                1,
+                Alignment::Faction(1),
+                0.25,
+                0.25,
+                ActorVisualKind::Humanoid,
+                &mut sim.rng,
+            );
+            let parent_b = spawn_civilian_at(
+                &mut sim.world,
+                2,
+                Alignment::Faction(1),
+                0.27,
+                0.26,
+                ActorVisualKind::Humanoid,
+                &mut sim.rng,
+            );
+
+            for entity in [parent_a, parent_b] {
+                let mut civ = sim.world.get::<&mut AgentCivilian>(entity).unwrap();
+                civ.age = 28;
+                {
+                    let mut needs = sim.world.get::<&mut AgentNeeds>(entity).unwrap();
+                    needs.food = 0.96;
+                    needs.rest = 0.94;
+                    needs.safety = 0.93;
+                    needs.belonging = 0.95;
+                    needs.health = 0.97;
+                }
+            }
+
+            let before = sim.world.query::<&AgentCivilian>().iter().count();
+            sim.phase_life();
+            let after = sim.world.query::<&AgentCivilian>().iter().count();
+
+            assert!(after > before, "fed paired adults should produce at least one child");
+            assert!(!sim.last_births().is_empty(), "birth events should be recorded");
+
+            let child_id = sim.last_births().last().expect("child").entity_id;
+            let kinship = sim.kinship.get(&child_id).expect("child kinship");
+            assert!(
+                kinship.iter().any(|edge| matches!(edge.kind, KinshipKind::Family)),
+                "newborn should receive family kinship"
+            );
+        }
+
+        #[test]
+        fn starving_population_migrates_and_founds_settlement() {
+            use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian, Needs as AgentNeeds};
+
+            let mut sim = Simulation::new();
+            sim.state.resources.food = Fixed::from_num(0);
+            sim.set_settlement_population(7, 3);
+
+            let adults = [
+                spawn_civilian_at(
+                    &mut sim.world,
+                    11,
+                    Alignment::Faction(7),
+                    0.12,
+                    0.12,
+                    ActorVisualKind::Humanoid,
+                    &mut sim.rng,
+                ),
+                spawn_civilian_at(
+                    &mut sim.world,
+                    12,
+                    Alignment::Faction(7),
+                    0.13,
+                    0.14,
+                    ActorVisualKind::Humanoid,
+                    &mut sim.rng,
+                ),
+                spawn_civilian_at(
+                    &mut sim.world,
+                    13,
+                    Alignment::Faction(7),
+                    0.15,
+                    0.16,
+                    ActorVisualKind::Humanoid,
+                    &mut sim.rng,
+                ),
+            ];
+
+            for entity in adults {
+                let mut civ = sim.world.get::<&mut AgentCivilian>(entity).unwrap();
+                civ.age = 32;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(entity).unwrap();
+                needs.food = 0.08;
+                needs.rest = 0.22;
+                needs.safety = 0.24;
+                needs.belonging = 0.25;
+                needs.health = 0.85;
+            }
+
+            let before_settlements = sim.settlements.clone();
+            sim.phase_life();
+
+            assert_eq!(sim.settlements.get(&7).copied(), Some(1));
+            assert_eq!(sim.settlements.get(&8).copied(), Some(2));
+            assert_eq!(sim.settlements.len(), before_settlements.len() + 1);
+
+            let migrated = sim
+                .world
+                .query::<&AgentCivilian>()
+                .iter()
+                .filter(|(_, civ)| matches!(civ.alignment, Alignment::Faction(8)))
+                .count();
+            assert!(migrated >= 2, "starving adults should found a new settlement");
         }
     }
 }

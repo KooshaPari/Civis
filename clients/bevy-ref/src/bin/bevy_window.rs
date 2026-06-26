@@ -41,6 +41,7 @@ use civ_bevy_ref::{
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
+    sandbox_event_feed::SandboxEventFeedPlugin,
     ws_client::{WsClient, WsClientConfig},
     post_fx::PostFxPlugin,
     CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
@@ -269,7 +270,7 @@ fn main() {
             GodPanelPlugin,
             GodActionsPlugin,
         ))
-        .add_plugins(civ_bevy_ref::frame_budget::FrameBudgetPlugin)
+        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()

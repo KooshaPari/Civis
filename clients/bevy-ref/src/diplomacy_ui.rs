@@ -621,6 +621,7 @@ mod tests {
                     treasury: FactionTreasury3d::default(),
                 },
             ],
+            population_by_faction: Default::default(),
         };
         let mut counts = HashMap::new();
         counts.insert(0, 42);

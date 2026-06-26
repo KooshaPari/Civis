@@ -15,7 +15,7 @@
 
 mod crash_handler;
 
-#[cfg(feature = "bevy")]
+#[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;
@@ -41,6 +41,8 @@ pub mod emergence_dashboard;
 pub use emergence_dashboard::EmergenceDashboardPlugin;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod sandbox_event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]

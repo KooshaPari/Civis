@@ -1,0 +1,49 @@
+# Twelve-species balanced start: equal weight across all 12 named archetypes.
+# P2.2c: includes the four new species (Lumari, Drakhari, Quelven, Ashborn)
+# for maximum creature variety and emergent divergence from spawn.
+version: 1
+name: twelve-species-balanced
+tick_start: 0
+population: 1000000
+base_consumption_joules: 5000000000
+scarcity_multiplier: 1.0
+fog_vision_radius: 8
+fog_grid_size: 64
+military:
+  movement_cadence_ticks: 4
+  movement_pulses_per_cadence: 2
+  war_cadence_ticks: 16
+  engage_range_grid: 10
+seeds:
+  - scenarios/canonical_seeds.ron
+active_seed: raw_organism
+divergence_override: 0.35
+starting_conditions:
+  civilians_per_faction: 12
+  faction_count: 12
+  quadrant_spread: 2500
+  seed_mix:
+    - seed: Ardani
+      weight: 1.0
+    - seed: Velthari
+      weight: 1.0
+    - seed: Grundak
+      weight: 1.0
+    - seed: Kethari
+      weight: 1.0
+    - seed: Nymari
+      weight: 1.0
+    - seed: Sylphine
+      weight: 1.0
+    - seed: Felmar
+      weight: 1.0
+    - seed: Thornari
+      weight: 1.0
+    - seed: Lumari
+      weight: 1.0
+    - seed: Drakhari
+      weight: 1.0
+    - seed: Quelven
+      weight: 1.0
+    - seed: Ashborn
+      weight: 1.0

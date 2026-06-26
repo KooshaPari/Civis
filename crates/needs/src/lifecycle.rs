@@ -129,6 +129,93 @@ pub fn classify_lifecycle(
     }
 }
 
+/// Parameters governing active lifecycle events (birth and migration).
+///
+/// Birth and migration are threshold-driven, emergent transitions that respond
+/// to needs satisfaction and population stress. These are *not* scripted but
+/// deterministic, driven by continuous state.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ActiveLifecycleParams {
+    /// Minimum food satisfaction for a paired adult to consider reproduction.
+    pub birth_food_threshold: f32,
+    /// Minimum safety satisfaction for a paired adult to consider reproduction.
+    pub birth_safety_threshold: f32,
+    /// Minimum social satisfaction for a paired adult to consider reproduction.
+    pub birth_social_threshold: f32,
+    /// Base probability per tick that a viable pair produces a newborn.
+    pub birth_probability: f32,
+    /// Food satisfaction below which migration pressure activates.
+    pub migration_food_threshold: f32,
+    /// Safety satisfaction below which migration pressure activates.
+    pub migration_safety_threshold: f32,
+    /// Unrest level (aggregate need deprivation) above which agents migrate.
+    pub migration_unrest_threshold: f32,
+    /// Base probability per tick that a pressured agent migrates.
+    pub migration_probability: f32,
+}
+
+impl Default for ActiveLifecycleParams {
+    fn default() -> Self {
+        Self {
+            birth_food_threshold: 0.6,
+            birth_safety_threshold: 0.5,
+            birth_social_threshold: 0.4,
+            birth_probability: 0.02,
+            migration_food_threshold: 0.3,
+            migration_safety_threshold: 0.3,
+            migration_unrest_threshold: 0.5,
+            migration_probability: 0.05,
+        }
+    }
+}
+
+/// Evaluate whether a paired, fertile adult may reproduce under given needs state.
+///
+/// Birth is viable when all reproductive thresholds are met: food, safety, and
+/// social support are above configured levels. This is deterministic on needs
+/// state only; the caller supplies a seeded RNG for the stochastic roll.
+#[must_use]
+pub fn can_birth(
+    needs: &crate::Needs,
+    params: &ActiveLifecycleParams,
+) -> bool {
+    needs.food >= params.birth_food_threshold
+        && needs.safety >= params.birth_safety_threshold
+        && needs.social >= params.birth_social_threshold
+}
+
+/// Compute aggregate unrest as a weighted measure of need deprivation.
+///
+/// Unrest is the inverse of satisfaction; higher unrest means more critical
+/// needs. This drives migration pressure. The metric is the average
+/// deprivation across non-health needs (food, water, rest, safety, social).
+#[must_use]
+pub fn compute_unrest(needs: &crate::Needs) -> f32 {
+    let food_dep = (1.0 - needs.food).max(0.0);
+    let water_dep = (1.0 - needs.water).max(0.0);
+    let rest_dep = (1.0 - needs.rest).max(0.0);
+    let safety_dep = (1.0 - needs.safety).max(0.0);
+    let social_dep = (1.0 - needs.social).max(0.0);
+    (food_dep + water_dep + rest_dep + safety_dep + social_dep) / 5.0
+}
+
+/// Evaluate whether an agent is under migration pressure.
+///
+/// Migration pressure is activated when either food or safety falls below
+/// critical thresholds, or when aggregate unrest (deprivation) exceeds a limit.
+/// This is threshold-driven and deterministic; the caller supplies a seeded RNG
+/// for the stochastic migration roll.
+#[must_use]
+pub fn migration_pressure(
+    needs: &crate::Needs,
+    params: &ActiveLifecycleParams,
+) -> bool {
+    let unrest = compute_unrest(needs);
+    needs.food < params.migration_food_threshold
+        || needs.safety < params.migration_safety_threshold
+        || unrest > params.migration_unrest_threshold
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,5 +276,184 @@ mod tests {
         let high = age_threshold(&dna(200), &params);
         assert!((50..=120).contains(&low));
         assert!((50..=120).contains(&high));
+    }
+
+    // FR-CIV-LIFE active lifecycle tests
+
+    #[test]
+    fn birth_viable_when_all_thresholds_met() {
+        let params = ActiveLifecycleParams::default();
+        let sated = crate::Needs::sated();
+        assert!(can_birth(&sated, &params));
+    }
+
+    #[test]
+    fn birth_blocked_when_food_low() {
+        let params = ActiveLifecycleParams::default();
+        let mut needs = crate::Needs::sated();
+        needs.food = params.birth_food_threshold - 0.1;
+        assert!(!can_birth(&needs, &params));
+    }
+
+    #[test]
+    fn birth_blocked_when_safety_low() {
+        let params = ActiveLifecycleParams::default();
+        let mut needs = crate::Needs::sated();
+        needs.safety = params.birth_safety_threshold - 0.1;
+        assert!(!can_birth(&needs, &params));
+    }
+
+    #[test]
+    fn birth_blocked_when_social_low() {
+        let params = ActiveLifecycleParams::default();
+        let mut needs = crate::Needs::sated();
+        needs.social = params.birth_social_threshold - 0.1;
+        assert!(!can_birth(&needs, &params));
+    }
+
+    #[test]
+    fn birth_viable_at_exact_thresholds() {
+        let params = ActiveLifecycleParams::default();
+        let needs = crate::Needs {
+            food: params.birth_food_threshold,
+            water: 1.0,
+            rest: 1.0,
+            safety: params.birth_safety_threshold,
+            social: params.birth_social_threshold,
+            health: 1.0,
+        };
+        assert!(can_birth(&needs, &params));
+    }
+
+    #[test]
+    fn unrest_is_zero_when_all_needs_sated() {
+        let sated = crate::Needs::sated();
+        let unrest = compute_unrest(&sated);
+        assert!(unrest < 1e-6);
+    }
+
+    #[test]
+    fn unrest_is_one_when_all_needs_critical() {
+        let critical = crate::Needs {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 1.0,
+        };
+        let unrest = compute_unrest(&critical);
+        assert!(unrest > 0.99);
+    }
+
+    #[test]
+    fn unrest_is_half_when_all_needs_half() {
+        let half = crate::Needs {
+            food: 0.5,
+            water: 0.5,
+            rest: 0.5,
+            safety: 0.5,
+            social: 0.5,
+            health: 1.0,
+        };
+        let unrest = compute_unrest(&half);
+        assert!((unrest - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn migration_pressure_off_when_sated() {
+        let params = ActiveLifecycleParams::default();
+        let sated = crate::Needs::sated();
+        assert!(!migration_pressure(&sated, &params));
+    }
+
+    #[test]
+    fn migration_pressure_on_when_food_critical() {
+        let params = ActiveLifecycleParams::default();
+        let mut needs = crate::Needs::sated();
+        needs.food = params.migration_food_threshold - 0.1;
+        assert!(migration_pressure(&needs, &params));
+    }
+
+    #[test]
+    fn migration_pressure_on_when_safety_critical() {
+        let params = ActiveLifecycleParams::default();
+        let mut needs = crate::Needs::sated();
+        needs.safety = params.migration_safety_threshold - 0.1;
+        assert!(migration_pressure(&needs, &params));
+    }
+
+    #[test]
+    fn migration_pressure_on_when_unrest_high() {
+        let params = ActiveLifecycleParams::default();
+        let high_unrest = crate::Needs {
+            food: 0.1,
+            water: 0.1,
+            rest: 0.1,
+            safety: 0.1,
+            social: 0.1,
+            health: 1.0,
+        };
+        assert!(migration_pressure(&high_unrest, &params));
+    }
+
+    #[test]
+    fn migration_pressure_at_exact_thresholds() {
+        let params = ActiveLifecycleParams::default();
+        let at_boundary = crate::Needs {
+            food: params.migration_food_threshold,
+            water: 1.0,
+            rest: 1.0,
+            safety: params.migration_safety_threshold,
+            social: 1.0,
+            health: 1.0,
+        };
+        // Exactly at thresholds should NOT trigger (thresholds are exclusive lower bounds).
+        assert!(!migration_pressure(&at_boundary, &params));
+    }
+
+    #[test]
+    fn active_lifecycle_params_have_sensible_defaults() {
+        let params = ActiveLifecycleParams::default();
+        assert!(params.birth_food_threshold > 0.0 && params.birth_food_threshold <= 1.0);
+        assert!(params.birth_safety_threshold > 0.0 && params.birth_safety_threshold <= 1.0);
+        assert!(params.birth_social_threshold > 0.0 && params.birth_social_threshold <= 1.0);
+        assert!(params.birth_probability > 0.0 && params.birth_probability <= 0.5);
+        assert!(params.migration_food_threshold > 0.0 && params.migration_food_threshold <= 1.0);
+        assert!(params.migration_safety_threshold > 0.0 && params.migration_safety_threshold <= 1.0);
+        assert!(params.migration_unrest_threshold > 0.0 && params.migration_unrest_threshold <= 1.0);
+        assert!(params.migration_probability > 0.0 && params.migration_probability <= 0.5);
+    }
+
+    #[test]
+    fn fed_stable_population_can_reproduce() {
+        // Scenario: well-fed, safe population with high social cohesion.
+        let params = ActiveLifecycleParams::default();
+        let well_fed = crate::Needs {
+            food: 0.8,
+            water: 0.8,
+            rest: 0.8,
+            safety: 0.8,
+            social: 0.8,
+            health: 1.0,
+        };
+        assert!(can_birth(&well_fed, &params));
+        assert!(!migration_pressure(&well_fed, &params));
+    }
+
+    #[test]
+    fn starving_population_migrates() {
+        // Scenario: food-stressed population with moderate resource pressure.
+        let params = ActiveLifecycleParams::default();
+        let starving = crate::Needs {
+            food: 0.2,
+            water: 0.5,
+            rest: 0.3,
+            safety: 0.5,
+            social: 0.3,
+            health: 0.7,
+        };
+        assert!(!can_birth(&starving, &params));
+        assert!(migration_pressure(&starving, &params));
     }
 }

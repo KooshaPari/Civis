@@ -14,7 +14,8 @@ use civ_agents::language::{
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    cluster_by_colocation, Alignment, Civilian, ClusterId, ClusterMember, Interaction, Needs,
+    cluster_by_colocation, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
+    Interaction, Needs,
     Position3d, Psyche, SocialEvent, SocialGraph,
 };
 use civ_genetics::{
@@ -240,7 +241,7 @@ impl Simulation {
         }
         let assignments =
             cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
-        let by_id: BTreeMap<u64, ClusterId> = assignments.into_iter().collect();
+        let by_id: BTreeMap<u64, AgentsClusterId> = assignments.into_iter().collect();
 
         let entities: Vec<(Entity, u64)> = self
             .world
@@ -377,7 +378,7 @@ impl Simulation {
                         .get(id)
                         .and_then(|lex| {
                             self.emergence.cluster_cultures.get(id).and_then(|profile| {
-                                name_from_lexicon(lex, &profile.phonemes, LexemeKind::Settlement, *id)
+                                name_from_lexicon(lex, &profile.phonemes, LexemeKind::Settlement, **id)
                             })
                         })
                         .is_some()

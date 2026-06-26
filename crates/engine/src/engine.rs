@@ -2079,7 +2079,7 @@ impl Simulation {
             }
         }
         self.last_settlement_count = settlement_ids.len() as u32;
-        self.last_settlement_ids = settlement_ids;
+        self.last_settlement_ids = settlement_ids.clone();
 
         self.cluster_stocks
             .retain(|id, _| settlement_ids.contains(id));

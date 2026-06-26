@@ -40,8 +40,8 @@ pub use diplomacy::{
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
 pub use psyche::{
-    belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
-    PSYCHE_DIM,
+    belief_culture_exposure, ocean_from_psyche, psych_genome_profile, psyche_state_hash, Mood,
+    Ocean, PsychGenomeProfile, Psyche, Temperament, PSYCHE_DIM,
 };
 pub use social::{
     apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,

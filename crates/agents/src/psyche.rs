@@ -15,6 +15,70 @@ use crate::{culture, Needs};
 /// Shared psyche vector width.
 pub const PSYCHE_DIM: usize = 4;
 
+/// Five-factor OCEAN snapshot derived from emergent psyche (FR-CIV-PSYCHE-001).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Ocean {
+    /// Openness to experience.
+    pub openness: f32,
+    /// Conscientiousness / impulse control.
+    pub conscientiousness: f32,
+    /// Extraversion / sociability.
+    pub extraversion: f32,
+    /// Agreeableness / cooperativity.
+    pub agreeableness: f32,
+    /// Neuroticism / reactivity.
+    pub neuroticism: f32,
+}
+
+impl Ocean {
+    /// Neutral OCEAN prior.
+    #[must_use]
+    pub fn neutral() -> Self {
+        Self {
+            openness: 0.5,
+            conscientiousness: 0.5,
+            extraversion: 0.5,
+            agreeableness: 0.5,
+            neuroticism: 0.5,
+        }
+    }
+}
+
+/// Project the compact [`Psyche`] vector into OCEAN(5f) for legends / inspect.
+#[must_use]
+pub fn ocean_from_psyche(psyche: &Psyche) -> Ocean {
+    Ocean {
+        openness: psyche.drives[0],
+        conscientiousness: clamp01(1.0 - psyche.temperament.impulsivity),
+        extraversion: psyche.temperament.sociability,
+        agreeableness: psyche.drives[2],
+        neuroticism: psyche.temperament.reactivity,
+    }
+}
+
+/// Deterministic fingerprint for replay / FR-CIV-PSYCHE-900 acceptance.
+#[must_use]
+pub fn psyche_state_hash(psyche: &Psyche) -> u64 {
+    let ocean = ocean_from_psyche(psyche);
+    let mut state: u64 = 0xcbf2_9ce4_8422_2325;
+    for value in [
+        ocean.openness,
+        ocean.conscientiousness,
+        ocean.extraversion,
+        ocean.agreeableness,
+        ocean.neuroticism,
+        psyche.mood.valence,
+        psyche.mood.arousal,
+        psyche.maturity,
+    ] {
+        state ^= (value.to_bits() as u64).wrapping_mul(0x0100_0000_01b3);
+    }
+    for belief in &psyche.beliefs {
+        state ^= (*belief as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15);
+    }
+    state
+}
+
 /// Reactivity/sociability/risk/impulsivity temperament.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Temperament {
@@ -318,6 +382,31 @@ mod tests {
         nudge_temperament(&mut temperament, 1.0, 0.0, 0.2);
         assert!(temperament.reactivity >= 0.0 && temperament.reactivity <= 1.0);
         assert!(temperament.sociability >= 0.0 && temperament.sociability <= 1.0);
+    }
+
+    #[test]
+    fn ocean_projection_is_bounded_and_deterministic() {
+        let profile = psych_genome_profile();
+        let dna = Dna::zero(64);
+        let psyche = psyche_from_dna(&dna, &profile);
+        let ocean = ocean_from_psyche(&psyche);
+        assert!(ocean.openness >= 0.0 && ocean.openness <= 1.0);
+        assert!(ocean.conscientiousness >= 0.0 && ocean.conscientiousness <= 1.0);
+        assert!(ocean.extraversion >= 0.0 && ocean.extraversion <= 1.0);
+        assert!(ocean.agreeableness >= 0.0 && ocean.agreeableness <= 1.0);
+        assert!(ocean.neuroticism >= 0.0 && ocean.neuroticism <= 1.0);
+        assert_eq!(psyche_state_hash(&psyche), psyche_state_hash(&psyche));
+    }
+
+    /// FR-CIV-PSYCHE-900 — identical DNA seeds identical psyche hash before lived ticks.
+    #[test]
+    fn identical_dna_yields_identical_psyche_hash() {
+        let profile = psych_genome_profile();
+        let mut dna = Dna::zero(64);
+        dna.0[4] = 200;
+        let a = psyche_from_dna(&dna, &profile);
+        let b = psyche_from_dna(&dna, &profile);
+        assert_eq!(psyche_state_hash(&a), psyche_state_hash(&b));
     }
 
     #[test]

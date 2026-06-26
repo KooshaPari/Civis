@@ -71,6 +71,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "buildings",
     "diffusion",
     "emergence",
+    "psyche",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -1288,6 +1289,7 @@ impl Simulation {
         self.phase_diffusion();
         self.phase_disasters();
         self.phase_emergence();
+        self.phase_psyche();
         self.phase_emergence_events_close();
         self.replay_log.record_tick(self.state.tick);
 
@@ -3488,24 +3490,39 @@ mod tests {
                 "buildings",
                 "diffusion",
                 "emergence",
+                "psyche",
             ]
         );
     }
 
-    /// `PHASE_ORDER` includes "emergence" as the final entry.
-    /// Closes FR-CIV-LEGENDS-INGEST-02, FR-CIV-PSYCHE-900/901, FR-CIV-PSYCHE-911,
-    /// FR-CIV-PSYCHE-912, FR-CIV-GENETICS, FR-CIV-AI-006, FR-CIV-LEGENDS-QUERY-07.
+    /// `PHASE_ORDER` includes dedicated psyche phase after emergence (FR-CIV-PSYCHE-*).
     #[test]
-    fn phase_order_includes_emergence() {
+    fn phase_order_includes_psyche() {
         let emergence_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "emergence")
             .expect("PHASE_ORDER must include 'emergence'");
-        // emergence must be the final phase in the deterministic core loop
+        let psyche_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "psyche")
+            .expect("PHASE_ORDER must include 'psyche'");
+        assert!(
+            psyche_idx > emergence_idx,
+            "psyche must run after emergence (culture/social exposure)"
+        );
         assert_eq!(
-            emergence_idx,
+            psyche_idx,
             PHASE_ORDER.len() - 1,
-            "emergence must be the final entry in PHASE_ORDER"
+            "psyche must be the final entry in PHASE_ORDER"
+        );
+    }
+
+    /// Legacy wire-up check — emergence remains in the ordered phase list.
+    #[test]
+    fn phase_order_includes_emergence() {
+        assert!(
+            PHASE_ORDER.iter().any(|p| *p == "emergence"),
+            "PHASE_ORDER must include 'emergence'"
         );
     }
     /// L5-115 — `Simulation::tick` invokes `phase_emergence` and the public
@@ -3550,6 +3567,30 @@ mod tests {
             sim_a.cluster_cultures().len(),
             sim_b.cluster_cultures().len(),
             "phase_emergence must produce deterministic cluster_cultures"
+        );
+
+        // FR-CIV-PSYCHE-900 — `phase_psyche` attaches replay-stable psyche state.
+        let agent_id = sim_a
+            .world
+            .query::<&AgentCivilian>()
+            .iter()
+            .next()
+            .map(|(_, c)| c.id)
+            .expect("civilian");
+        assert!(
+            sim_a.agent_psyche(agent_id).is_some(),
+            "phase_psyche must attach psyche after emergence"
+        );
+        assert_eq!(
+            sim_a
+                .agent_psyche(agent_id)
+                .as_ref()
+                .map(civ_agents::psyche_state_hash),
+            sim_b
+                .agent_psyche(agent_id)
+                .as_ref()
+                .map(civ_agents::psyche_state_hash),
+            "phase_psyche must be deterministic across same-seed sims"
         );
     }
 

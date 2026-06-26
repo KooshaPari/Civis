@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
-use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
+use civ_agents::psyche::{nudge_temperament, psyche_from_dna, tick_maturity, update_beliefs, update_mood};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
     cluster_by_colocation, Alignment, Civilian, ClusterId, ClusterMember, Interaction, Needs,
@@ -26,6 +26,7 @@ use civ_planet::GeologyMap;
 use civ_voxel::FIXED_SCALE;
 use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
+use civ_needs::{Health as LifeHealth, LifecycleParams};
 use civ_species::express;
 use hecs::Entity;
 use rand::Rng;
@@ -157,9 +158,10 @@ impl Simulation {
         EmergenceState::new(seed)
     }
 
-    /// MOAT emergence — genetics, culture, social, psyche, legends, civ-ai.
+    /// MOAT emergence — genetics, culture, social, legends, civ-ai.
     ///
-    /// Runs after [`Self::phase_life`] so needs/clusters are current.
+    /// Psyche evolution runs in [`Simulation::phase_psyche`] after culture/social
+    /// have refreshed cluster exposure (FR-CIV-PSYCHE-*).
     pub(crate) fn phase_emergence(&mut self) {
         self.emergence.last_feed.clear();
         self.emergence.last_ai_decisions.clear();
@@ -168,7 +170,6 @@ impl Simulation {
         self.emergence_ensure_genomes();
         self.emergence_culture();
         self.emergence_social();
-        self.emergence_psyche();
         self.emergence_genetics_sentience();
         self.emergence_legends();
         self.emergence_civ_ai();
@@ -390,10 +391,16 @@ impl Simulation {
         }
     }
 
-    fn emergence_psyche(&mut self) {
+    /// FR-CIV-PSYCHE — OCEAN temperament/mood/belief evolution per agent.
+    ///
+    /// Runs after [`Self::phase_emergence`] culture/social so cluster exposure is
+    /// current. Attaches [`Psyche`] from DNA on first visit; no-ops when no
+    /// civilians are present.
+    pub(crate) fn phase_psyche(&mut self) {
         let tick = self.state.tick;
         let tick_u32 = tick.min(u32::MAX as u64) as u32;
         let profile = self.emergence.psych_profile.clone();
+        let lifecycle = LifecycleParams::default();
         let agents: Vec<(Entity, u64, Option<u64>)> = self
             .world
             .query::<(&Civilian, Option<&ClusterMember>)>()
@@ -459,7 +466,7 @@ impl Simulation {
                 belief_culture_exposure(&exposures)
             };
 
-            let (needs, life_needs) = {
+            let (needs, life_needs, life_health) = {
                 let agent_needs =
                     self.world
                         .get::<&Needs>(entity)
@@ -477,10 +484,18 @@ impl Simulation {
                     .ok()
                     .map(|n| *n)
                     .unwrap_or_else(LifeNeeds::sated);
-                (agent_needs, life)
+                let health = self
+                    .world
+                    .get::<&LifeHealth>(entity)
+                    .ok()
+                    .copied()
+                    .unwrap_or_default();
+                (agent_needs, life, health)
             };
 
             if let Ok(mut psyche) = self.world.get::<&mut Psyche>(entity) {
+                let critical = (1.0 - life_needs.safety).max(0.0);
+                tick_maturity(&mut psyche, &life_health, critical, &lifecycle);
                 let threat = (1.0 - life_needs.safety).max(0.0);
                 let delta_needs = (needs.food - 0.5).abs();
                 let temperament = psyche.temperament;
@@ -797,6 +812,7 @@ mod tests {
     use super::*;
     use crate::Fixed;
     use civ_agents::count_civilians;
+    use civ_agents::psyche_state_hash;
 
     fn run_ticks(sim: &mut Simulation, n: u64) {
         for _ in 0..n {
@@ -826,6 +842,41 @@ mod tests {
             after > before || !sim.emergence_feed().is_empty(),
             "expected saga graph growth or emergence feed entries"
         );
+    }
+
+    /// FR-CIV-PSYCHE-900 — same seed + history yields identical psyche fingerprints.
+    #[test]
+    fn psyche_phase_is_deterministic_under_fixed_seed() {
+        let mut sim_a = Simulation::with_seed(2026_06_26);
+        let mut sim_b = Simulation::with_seed(2026_06_26);
+        run_ticks(&mut sim_a, 40);
+        run_ticks(&mut sim_b, 40);
+
+        let agent_a = sim_a
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .next()
+            .map(|(_, c)| c.id)
+            .expect("agent");
+        let agent_b = sim_b
+            .world
+            .query::<&Civilian>()
+            .iter()
+            .next()
+            .map(|(_, c)| c.id)
+            .expect("agent");
+        assert_eq!(agent_a, agent_b);
+
+        let hash_a = sim_a
+            .agent_psyche(agent_a)
+            .map(|p| psyche_state_hash(&p))
+            .expect("psyche attached");
+        let hash_b = sim_b
+            .agent_psyche(agent_b)
+            .map(|p| psyche_state_hash(&p))
+            .expect("psyche attached");
+        assert_eq!(hash_a, hash_b, "phase_psyche must be replay-stable");
     }
 
     /// FR-CIV-PSYCHE — mood moves after repeated emergence ticks.

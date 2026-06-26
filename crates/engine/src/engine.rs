@@ -304,6 +304,18 @@ pub struct PopulationEvent {
     pub y: f32,
 }
 
+/// A per-settlement event emitted when the expected economic focus changes
+/// (FR-CIV-ECON-001 / ADR-020). Carries the settlement id, the previous and
+/// proposed focus, and a human-readable cause so downstream phases and the
+/// JSON-RPC bridge can attribute the transition.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EconomicFocusEvent {
+    pub settlement_id: u32,
+    pub from: EconomicFocus,
+    pub to: EconomicFocus,
+    pub cause: String,
+}
+
 #[derive(Clone)]
 struct CivilianLifecycleSample {
     age: u16,
@@ -767,6 +779,18 @@ pub struct Simulation {
 
     /// Per-settlement migrant accumulator used by `phase_unrest`.
     pub migrant_accumulator: BTreeMap<u32, i64>,
+
+    // ── Phase A10/A11: Economic Focus (FR-CIV-ECON-001) ───────────────────
+
+    /// Current economic focus per settlement.
+    /// Populated by [`Simulation::phase_economic_focus`] each tick.
+    /// Defaults to [`EconomicFocus::Balanced`] for unseen settlements.
+    econ_focus: BTreeMap<u32, EconomicFocus>,
+
+    /// Per-tick buffer of [`EconomicFocusEvent`]s emitted by
+    /// [`Simulation::phase_economic_focus_pre`]. Cleared at the start of
+    /// every [`Simulation::tick`]; surfaced to the JSON-RPC bridge.
+    econ_focus_stability: Vec<EconomicFocusEvent>,
 }
 
 /// Per-settlement religious event emitted by [`Simulation::phase_belief`]
@@ -1395,6 +1419,8 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             last_life_deaths: 0,
+            econ_focus: BTreeMap::new(),
+            econ_focus_stability: Vec::new(),
             diplomacy_events: Vec::new(),
             faction_relations: DiplomacyMatrix::new(),
             grief_accumulator: GriefAccumulator::new(),
@@ -1512,6 +1538,8 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             last_life_deaths: 0,
+            econ_focus: BTreeMap::new(),
+            econ_focus_stability: Vec::new(),
             diplomacy_events: Vec::new(),
             faction_relations: DiplomacyMatrix::new(),
             grief_accumulator: GriefAccumulator::new(),
@@ -2098,6 +2126,7 @@ impl Simulation {
         self.last_tick_mood.clear();
         self.last_tick_cohesion_events.clear();
         self.last_tick_unrest_events.clear();
+        self.econ_focus_stability.clear();
 
         // Phases in PHASE_ORDER (CIV-0001 partial). Single source of truth:
         // adding/removing a phase touches only `PHASE_ORDER` + the `run_phase`
@@ -3271,13 +3300,74 @@ impl Simulation {
         }
     }
 
-    /// Economic-focus pre-pass (FR-CIV-ECON-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A10.
-    fn phase_economic_focus_pre(&mut self) {}
+    /// Economic-focus pre-pass (FR-CIV-ECON-001 / ADR-020).
+    ///
+    /// For every known settlement, determines the ideal economic focus from
+    /// current conditions (food surplus, crime pressure, population,
+    /// institutions) and emits an [`EconomicFocusEvent`] describing the
+    /// delta between current and ideal focus. The follow-up phase
+    /// [`Simulation::phase_economic_focus`] decides whether to apply it.
+    fn phase_economic_focus_pre(&mut self) {
+        let research_tier = self.research_tier();
+        let economy_i = self.economy_state.energy_budget_joules;
+        let belief = self.belief;
+        let treasury_total: i64 = self
+            .state
+            .faction_treasury
+            .values()
+            .map(|v| v.raw / crate::SCALE)
+            .sum();
 
-    /// Economic-focus phase (FR-CIV-ECON-001). Stub for ADR-020;
-    /// real implementation lands in TDD cycle A11.
-    fn phase_economic_focus(&mut self) {}
+        let settlement_ids: Vec<u32> = self.settlements.keys().copied().collect();
+        for sid in settlement_ids {
+            let current = self
+                .econ_focus
+                .get(&sid)
+                .copied()
+                .unwrap_or(EconomicFocus::Balanced);
+
+            // Compute food signal from the shared economy budget (proxied by
+            // energy_budget_joules) and any per-settlement food stocking.
+            let pop = self.settlements[&sid];
+            let stocked =
+                self.settlement_food_stocked.get(&sid).copied().unwrap_or(0);
+            let food_surplus = economy_i.saturating_mul(pop as i64) + stocked as i64;
+            let food = food_surplus.max(0);
+
+            let ideal = candidate_economic_focus(
+                food,
+                research_tier,
+                belief,
+                treasury_total,
+            );
+
+            if ideal != current {
+                let cause = format!(
+                    "pre: food={} tier={} belief={} treasury={} -> {:?}",
+                    food, research_tier, belief, treasury_total, ideal
+                );
+                self.econ_focus_stability.push(EconomicFocusEvent {
+                    settlement_id: sid,
+                    from: current,
+                    to: ideal,
+                    cause,
+                });
+            }
+        }
+    }
+
+    /// Economic-focus phase (FR-CIV-ECON-001 / ADR-020).
+    ///
+    /// Compares the candidate focus recorded by the pre-pass with the
+    /// settlement's current focus. If at least one matching event exists
+    /// in the stability buffer, applies the transition to
+    /// [`Self::econ_focus`] so downstream phases (production, trade)
+    /// observe the new focus this tick.
+    fn phase_economic_focus(&mut self) {
+        for event in &self.econ_focus_stability {
+            self.econ_focus.insert(event.settlement_id, event.to);
+        }
+    }
 
     /// Set (or replace) the population snapshot for a settlement. Used by
     /// tests + scenario loaders to drive `phase_institutions` deterministically

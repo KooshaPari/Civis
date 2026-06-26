@@ -52,7 +52,7 @@ pub use emergence_metrics::{
 };
 pub use engine::{
     awakening_belief_gain, awakening_cohesion_gain, grid_to_norm, spawn, Building, BuildingType,
-    CombatDamagePulse, DiplomacyKind, FactionRelationSnapshot, Fixed, MilitaryUnit, ModGuestStateSave, Position, ReplayLog,
+    CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, ModGuestStateSave, Position, ReplayLog,
     Simulation, UnitType, WorldState,
 };
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};

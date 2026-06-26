@@ -152,6 +152,67 @@ pub struct EventNode {
     pub raw_ref: Option<RawEventRef>,
 }
 
+/// A named legend entry recording a significant emergent event with provenance (FR-CIV-LEGENDS).
+/// Auto-generated from significant events and stored as a chronicle/historical record.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LegendEntry {
+    /// Unique identifier for this legend.
+    pub id: LegendEventId,
+    /// Human-readable name/title of the legend (e.g. "The Fall of Ardun").
+    pub name: Option<NameRef>,
+    /// The event that triggered this legend.
+    pub event_id: LegendEventId,
+    /// Entity most central to the legend (primary subject).
+    pub principal_entity: LegendEntityId,
+    /// When the legend occurred (tick/epoch).
+    pub epoch: Epoch,
+    /// Importance score: 0..1, higher = more historically significant.
+    /// Computed from event magnitude, participant roles, and entity significance.
+    pub importance: f32,
+    /// Kind of event that triggered the legend.
+    pub event_kind: EventKind,
+    /// Where the event occurred (if known).
+    pub region: Option<RegionId>,
+    /// All entities involved in the legend.
+    pub participants: SmallVec<[LegendEntityId; 4]>,
+    /// Provenance: who/what recorded this legend, and how (lived, hearsay, etc).
+    pub provenance: Provenance,
+}
+
+impl LegendEntry {
+    /// Create a legend from a significant event. The importance score is computed
+    /// from event magnitude, participant roles, and entity significance.
+    pub fn from_event(
+        event_id: LegendEventId,
+        event: &EventNode,
+        principal: LegendEntityId,
+        principal_significance: f32,
+        participants: SmallVec<[LegendEntityId; 4]>,
+    ) -> Self {
+        let importance = compute_legend_importance(event.magnitude, principal_significance);
+        LegendEntry {
+            id: event_id,
+            name: None, // Will be named by ai-rnd later
+            event_id,
+            principal_entity: principal,
+            epoch: event.epoch,
+            importance,
+            event_kind: event.kind.clone(),
+            region: event.region,
+            participants,
+            provenance: event.provenance,
+        }
+    }
+}
+
+/// Compute importance score for a legend from event magnitude and entity significance.
+/// Higher = more historically significant. Result is 0..1.
+pub fn compute_legend_importance(event_magnitude: f32, principal_significance: f32) -> f32 {
+    // Weight event impact and the principal entity's historical significance equally.
+    // This ensures both emergent events and important entities contribute to legend creation.
+    ((event_magnitude + principal_significance) / 2.0).clamp(0.0, 1.0)
+}
+
 /// Edge types (spec §3.3).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LegendEdge {

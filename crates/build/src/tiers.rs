@@ -391,4 +391,242 @@ mod tests {
         assert_eq!(graph.parcels_in_cluster(7).len(), 2);
         assert_eq!(graph.settlement_cluster_count(), 1);
     }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-ARCH sub-feature A: style varies by culture + biome + era
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-ARCH-A-001 — different cultures produce different facade styles.
+    #[test]
+    fn fr_arch_a001_style_varies_by_culture() {
+        let tile_sets = default_architecture_tile_sets();
+        let demand = DemandSignals {
+            residential: 0.8,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        let key_a = EmergentStyleKey::new(0, 2, 500, BiomeStyleTag::NEUTRAL);
+        let key_b = EmergentStyleKey::new(2, 2, 500, BiomeStyleTag::NEUTRAL);
+        let style_a = facade_for_emergence(key_a, &demand, &tile_sets);
+        let style_b = facade_for_emergence(key_b, &demand, &tile_sets);
+        // Different cultures must resolve to different style names.
+        assert_ne!(
+            style_a.name, style_b.name,
+            "culture 0 and culture 2 should differ in style"
+        );
+    }
+
+    /// FR-CIV-ARCH-A-002 — different biomes produce different facade materials.
+    #[test]
+    fn fr_arch_a002_style_varies_by_biome() {
+        let tile_sets = default_architecture_tile_sets();
+        let demand = DemandSignals {
+            residential: 0.8,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        // Same culture + era, different biome.
+        let key_arid = EmergentStyleKey::new(1, 2, 500, BiomeStyleTag::ARID);
+        let key_forest = EmergentStyleKey::new(1, 2, 500, BiomeStyleTag::FOREST);
+        let style_arid = facade_for_emergence(key_arid, &demand, &tile_sets);
+        let style_forest = facade_for_emergence(key_forest, &demand, &tile_sets);
+        // Biome bias shifts material ids, so materials must differ.
+        assert_ne!(
+            style_arid.materials, style_forest.materials,
+            "arid and forest biomes should produce different material palettes"
+        );
+    }
+
+    /// FR-CIV-ARCH-A-003 — higher era yields a later facade style name.
+    #[test]
+    fn fr_arch_a003_style_varies_by_era() {
+        let tile_sets = default_architecture_tile_sets();
+        let demand = DemandSignals {
+            residential: 0.8,
+            commercial: 0.0,
+            industrial: 0.0,
+            civic: 0.0,
+        };
+        let key_early = EmergentStyleKey::new(0, 0, 500, BiomeStyleTag::NEUTRAL);
+        let key_late = EmergentStyleKey::new(0, 5, 500, BiomeStyleTag::NEUTRAL);
+        let style_early = facade_for_emergence(key_early, &demand, &tile_sets);
+        let style_late = facade_for_emergence(key_late, &demand, &tile_sets);
+        assert_ne!(
+            style_early.name, style_late.name,
+            "era 0 and era 5 should resolve to different style names"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-ARCH sub-feature B: settlement layout clustering
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-ARCH-B-001 — buildings assigned to a cluster appear in parcels_in_cluster.
+    #[test]
+    fn fr_arch_b001_layout_cluster_membership() {
+        let mut graph = BuildingGraph::new();
+        let ids: Vec<BuildingId> = (1..=5).map(BuildingId).collect();
+        for &id in &ids {
+            graph.assign_to_cluster(42, id);
+        }
+        let members = graph.parcels_in_cluster(42);
+        assert_eq!(members.len(), 5, "all five buildings should be in cluster 42");
+        for id in &ids {
+            assert!(members.contains(id), "building {id:?} must be in cluster");
+        }
+    }
+
+    /// FR-CIV-ARCH-B-002 — clustered_parcel_offset spreads buildings around centre.
+    #[test]
+    fn fr_arch_b002_cluster_offsets_diverge_from_centre() {
+        // Eight consecutive slots must not all map to the same offset.
+        let offsets: Vec<_> = (0..8)
+            .map(|i| clustered_parcel_offset(1, i, 16))
+            .collect();
+        // Collect unique (x, z) pairs.
+        let unique: std::collections::BTreeSet<(i64, i64)> =
+            offsets.iter().map(|o| (o.x, o.z)).collect();
+        assert!(
+            unique.len() > 1,
+            "different parcel slots must produce distinct offsets"
+        );
+    }
+
+    /// FR-CIV-ARCH-B-003 — settlement centroid is within bounding box of members.
+    #[test]
+    fn fr_arch_b003_cluster_centroid_within_bounds() {
+        let positions = vec![(0, 0, 0), (10, 0, 20), (20, 0, 40)];
+        let centroid = settlement_cluster_centroid(&positions);
+        assert!(centroid.x >= 0 && centroid.x <= 20);
+        assert!(centroid.z >= 0 && centroid.z <= 40);
+    }
+
+    /// FR-CIV-ARCH-B-004 — multiple clusters are tracked independently.
+    #[test]
+    fn fr_arch_b004_distinct_clusters_stay_separate() {
+        let mut graph = BuildingGraph::new();
+        graph.assign_to_cluster(1, BuildingId(10));
+        graph.assign_to_cluster(2, BuildingId(20));
+        graph.assign_to_cluster(2, BuildingId(21));
+        assert_eq!(graph.parcels_in_cluster(1).len(), 1);
+        assert_eq!(graph.parcels_in_cluster(2).len(), 2);
+        assert_eq!(graph.settlement_cluster_count(), 2);
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-ARCH sub-feature C: era-gated building unlocks
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-ARCH-C-001 — era gating suppresses demand signals for locked channels.
+    #[test]
+    fn fr_arch_c001_era_gate_suppresses_locked_demand_channels() {
+        let full = DemandSignals {
+            residential: 0.9,
+            commercial: 0.9,
+            industrial: 0.9,
+            civic: 0.9,
+        };
+        // At era 0: only residential is unlocked.
+        let era0 = era_gated_demand_signals(full, 0);
+        assert!(era0.residential > 0.0, "residential unlocked at era 0");
+        assert_eq!(era0.commercial, 0.0, "commercial locked at era 0");
+        assert_eq!(era0.industrial, 0.0, "industrial locked at era 0");
+        assert_eq!(era0.civic, 0.0, "civic locked at era 0");
+
+        // At era 2: residential + commercial + industrial unlocked, civic still locked.
+        let era2 = era_gated_demand_signals(full, 2);
+        assert!(era2.residential > 0.0);
+        assert!(era2.commercial > 0.0);
+        assert!(era2.industrial > 0.0);
+        assert_eq!(era2.civic, 0.0, "civic locked until era 3");
+
+        // At era 3: all channels unlocked.
+        let era3 = era_gated_demand_signals(full, 3);
+        assert!(era3.civic > 0.0, "civic unlocked at era 3");
+    }
+
+    /// FR-CIV-ARCH-C-002 — building_type_unlocked returns false below min_era.
+    #[test]
+    fn fr_arch_c002_building_type_below_min_era_is_locked() {
+        assert!(!building_type_unlocked("Mine", 0), "Mine needs era >= 1");
+        assert!(!building_type_unlocked("Market", 1), "Market needs era >= 2");
+        assert!(!building_type_unlocked("Temple", 2), "Temple needs era >= 3");
+        assert!(!building_type_unlocked("Barracks", 3), "Barracks needs era >= 4");
+    }
+
+    /// FR-CIV-ARCH-C-003 — building_type_unlocked returns true at exactly min_era.
+    #[test]
+    fn fr_arch_c003_building_type_at_min_era_is_unlocked() {
+        assert!(building_type_unlocked("Farm", 0));
+        assert!(building_type_unlocked("Mine", 1));
+        assert!(building_type_unlocked("Market", 2));
+        assert!(building_type_unlocked("Temple", 3));
+        assert!(building_type_unlocked("Barracks", 4));
+    }
+
+    /// FR-CIV-ARCH-C-004 — parcel_kind_unlocked mirrors spec min-era table.
+    #[test]
+    fn fr_arch_c004_parcel_kind_min_era_spec_table() {
+        use crate::ParcelKind;
+        assert_eq!(parcel_kind_min_era(ParcelKind::Residential), 0);
+        assert_eq!(parcel_kind_min_era(ParcelKind::Commercial), 1);
+        assert_eq!(parcel_kind_min_era(ParcelKind::Industrial), 2);
+        assert_eq!(parcel_kind_min_era(ParcelKind::Civic), 3);
+        assert!(!parcel_kind_unlocked(ParcelKind::Civic, 2));
+        assert!(parcel_kind_unlocked(ParcelKind::Civic, 3));
+    }
+
+    // -----------------------------------------------------------------------
+    // FR-CIV-ARCH determinism: same inputs → same outputs
+    // -----------------------------------------------------------------------
+
+    /// FR-CIV-ARCH-D-001 — facade_for_emergence is deterministic.
+    #[test]
+    fn fr_arch_d001_facade_for_emergence_is_deterministic() {
+        let tile_sets = default_architecture_tile_sets();
+        let demand = DemandSignals {
+            residential: 0.8,
+            commercial: 0.6,
+            industrial: 0.4,
+            civic: 0.2,
+        };
+        let key = EmergentStyleKey::new(1, 3, 800, BiomeStyleTag::COLD);
+        let first = facade_for_emergence(key, &demand, &tile_sets);
+        let second = facade_for_emergence(key, &demand, &tile_sets);
+        assert_eq!(first, second, "facade_for_emergence must be deterministic");
+    }
+
+    /// FR-CIV-ARCH-D-002 — clustered_parcel_offset is deterministic per cluster+index.
+    #[test]
+    fn fr_arch_d002_clustered_offset_is_deterministic() {
+        for cluster in [0_u64, 1, 42, u64::MAX / 2] {
+            for idx in 0_u32..16 {
+                let a = clustered_parcel_offset(cluster, idx, 8);
+                let b = clustered_parcel_offset(cluster, idx, 8);
+                assert_eq!(a, b, "offset must be identical for cluster={cluster} idx={idx}");
+            }
+        }
+    }
+
+    /// FR-CIV-ARCH-D-003 — era_index_from_pop_tech is deterministic.
+    #[test]
+    fn fr_arch_d003_era_index_is_deterministic() {
+        for (pop, tech) in [(0_u64, 0_usize), (500, 2), (10_000, 8), (50_000, 12)] {
+            let a = era_index_from_pop_tech(pop, tech);
+            let b = era_index_from_pop_tech(pop, tech);
+            assert_eq!(a, b);
+        }
+    }
+
+    /// FR-CIV-ARCH-D-004 — culture_id_from_traits is deterministic.
+    #[test]
+    fn fr_arch_d004_culture_id_is_deterministic() {
+        let traits = [0.25_f32, 0.5, 0.75, 1.0];
+        assert_eq!(
+            culture_id_from_traits(traits),
+            culture_id_from_traits(traits)
+        );
+    }
 }

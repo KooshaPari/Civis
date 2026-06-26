@@ -5791,6 +5791,7 @@ mod tests {
                 NamedSeed::Ardani => counts[0] += 1,
                 NamedSeed::Velthari => counts[1] += 1,
                 NamedSeed::Grundak => counts[2] += 1,
+                _ => {}
             }
         }
         let ardani_frac = counts[0] as f32 / n as f32;

@@ -60,6 +60,9 @@ civ-legends = { path = "../legends" }
 civ-genetics = { path = "../genetics" }
 civ-species = { path = "../species" }
 
+# Stress-driven population migration between clusters (FR-CIV-EMERGENCE-MIGRATION).
+civ-emergence-migration = { path = "../emergence-migration" }
+
 # Weak-emergence / criticality metrics consumed by the Emergence Dashboard
 # (see `docs/design/emergence-dashboard.md`). Stacked on PR #350
 # (scaffold + design): this PR wires the live sampling into the engine

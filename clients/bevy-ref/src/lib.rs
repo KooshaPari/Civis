@@ -90,6 +90,12 @@ pub mod spawn_tools;
 pub mod tech_tree_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod civ_history;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod god_actions;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod holocron_panel;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;

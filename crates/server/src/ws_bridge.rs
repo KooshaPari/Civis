@@ -504,6 +504,34 @@ async fn handle_jsonrpc_text(
             } else {
                 None
             };
+            let legends = if req.method == crate::jsonrpc::JsonRpcMethod::SimLegends {
+                let sim = state.sim.lock().await;
+                let query = req
+                    .params
+                    .as_ref()
+                    .and_then(|p| p.get("query"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("status");
+                let agent_id = req
+                    .params
+                    .as_ref()
+                    .and_then(|p| p.get("agent_id"))
+                    .and_then(|v| v.as_u64());
+                let top_n = req
+                    .params
+                    .as_ref()
+                    .and_then(|p| p.get("top_n"))
+                    .and_then(|v| v.as_u64())
+                    .map(|n| n as usize);
+                let epoch = req
+                    .params
+                    .as_ref()
+                    .and_then(|p| p.get("epoch"))
+                    .and_then(|v| v.as_u64());
+                Some(sim.legends_query(query, agent_id, top_n, epoch))
+            } else {
+                None
+            };
             let mut plan = dispatch_request(
                 req,
                 DispatchContext {
@@ -515,6 +543,7 @@ async fn handle_jsonrpc_text(
                     connection_role: connection_role.clone(),
                     saves_dir: Some(state.saves_dir.clone()),
                     emergence: None,
+                    legends,
                     researched: research_researched,
                     in_progress_tech: research_in_progress,
                     outcome_fields,

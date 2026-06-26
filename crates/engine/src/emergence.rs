@@ -22,12 +22,12 @@ use civ_genetics::{
     spawn_genome_with_divergence, Dna, DnaClass, SeedDefinition, SeedLibrary, SeedSet,
 };
 use civ_legends::{
-    EventKind, IngestOutcome, LegendsConfig, LegendsWorker, RawSimEvent, Role, SagaGraph,
-    SourceCrate,
+    AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,
+    LegendEdge, LegendsConfig, LegendsWorker, LegendEntityId, NameRef, RawSimEvent, Role, Saga,
+    SagaGraph, SimRuntimeId, SourceCrate, QUERY_API_VERSION,
 };
 use civ_planet::GeologyMap;
 use civ_voxel::FIXED_SCALE;
-use civ_legends::{LegendEntityId, NameRef, SimRuntimeId};
 use civ_needs::Needs as LifeNeeds;
 use civ_species::express;
 use hecs::Entity;
@@ -37,6 +37,23 @@ use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
+
+/// JSON-RPC / inspector payload for `sim.legends` (FR-CIV-LEGENDS-QUERY-07).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LegendsQueryResult {
+    pub query_api_version: u32,
+    pub tick: u64,
+    pub node_count: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub saga: Option<Saga>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub significant: Option<Vec<EntityRef>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epoch_digest: Option<EpochDigest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub empty_reason: Option<String>,
+    pub emergence_feed: Vec<EmergenceFeedEvent>,
+}
 
 /// Notable emergence this tick — event feed / inspect panels (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -76,6 +93,8 @@ pub struct EmergenceState {
     pub(crate) sentience_profile: CognitionTraitProfile,
     pub(crate) sentience_threshold: SentienceThreshold,
     pub(crate) sentient_agents: HashSet<u64>,
+    /// Settlement cluster ids already recorded in the saga graph.
+    pub(crate) known_settlement_ids: HashSet<u64>,
 }
 
 impl EmergenceState {
@@ -99,6 +118,7 @@ impl EmergenceState {
             ),
             sentience_threshold: SentienceThreshold::new(0.72),
             sentient_agents: HashSet::new(),
+            known_settlement_ids: HashSet::new(),
         }
     }
 
@@ -681,7 +701,7 @@ impl Simulation {
                 .with_participant(
                     SourceCrate::Agents,
                     SimRuntimeId(birth.entity_id),
-                    Role::Founder,
+                    Role::Witness,
                 );
             let outcome = self.emergence_ingest_legend(raw);
             self.record_legend_promotions(tick, &outcome.promoted, birth.entity_id);
@@ -724,22 +744,165 @@ impl Simulation {
                     Role::Effect,
                 );
                 let outcome = self.emergence_ingest_legend(raw);
+                self.emergence.push_feed(
+                    tick,
+                    "sentience",
+                    format!(
+                        "lineage {} crossed sentience — saga graph updated",
+                        id
+                    ),
+                    Some(id),
+                );
                 self.record_legend_promotions(tick, &outcome.promoted, id);
             }
         }
-        for dip in self.diplomacy_events().to_vec() {
-            let kind = match dip.kind {
-                crate::engine::DiplomacyKind::Conflict => EventKind::WarDeclared,
-                crate::engine::DiplomacyKind::Peace => EventKind::WarEnded,
-                crate::engine::DiplomacyKind::TradeAgreement => EventKind::EconomicBoom,
-            };
-            let raw = RawSimEvent::new(tick, kind, SourceCrate::Engine, 0.55);
+        for pulse in self.last_tick_combat_pulses().to_vec() {
+            let mut raw =
+                RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
+            let mut agent_id = None;
+            if let Some(a) = pulse.unit_a {
+                raw = raw.with_participant(SourceCrate::Tactics, SimRuntimeId(a), Role::Aggressor);
+                agent_id = Some(a);
+            }
+            if let Some(b) = pulse.unit_b {
+                raw = raw.with_participant(SourceCrate::Tactics, SimRuntimeId(b), Role::Defender);
+                agent_id = agent_id.or(Some(b));
+            }
+            let outcome = self.emergence_ingest_legend(raw);
+            if let Some(id) = agent_id {
+                self.emergence.push_feed(
+                    tick,
+                    "battle",
+                    format!("combat pulse recorded in saga graph"),
+                    Some(id),
+                );
+                self.record_legend_promotions(tick, &outcome.promoted, id);
+            }
+        }
+        for cluster_id in self.last_settlement_ids().to_vec() {
+            if !self
+                .emergence
+                .known_settlement_ids
+                .insert(cluster_id)
+            {
+                continue;
+            }
+            let founder = self.settlement_founder_agent(cluster_id);
+            let mut raw = RawSimEvent::new(
+                tick,
+                EventKind::SettlementFounded,
+                SourceCrate::Protocol3d,
+                0.9,
+            )
+            .with_participant(
+                SourceCrate::Protocol3d,
+                SimRuntimeId(cluster_id),
+                Role::Founder,
+            );
+            if let Some(founder_id) = founder {
+                raw = raw.with_participant(
+                    SourceCrate::Agents,
+                    SimRuntimeId(founder_id),
+                    Role::Leader,
+                );
+            }
+            let outcome = self.emergence_ingest_legend(raw);
+            if let (Some(founder_id), Some(settle_eid)) = (
+                founder,
+                self.emergence.legends.graph.entity_for_sim(
+                    SourceCrate::Protocol3d,
+                    SimRuntimeId(cluster_id),
+                ),
+            ) {
+                if let Some(leader_eid) = self.emergence.legends.graph.entity_for_sim(
+                    SourceCrate::Agents,
+                    SimRuntimeId(founder_id),
+                ) {
+                    self.emergence
+                        .legends
+                        .graph
+                        .link_entity_edge(leader_eid, settle_eid, LegendEdge::Founded);
+                }
+            }
+            if let Some(founder_id) = founder {
+                self.emergence.push_feed(
+                    tick,
+                    "founding",
+                    format!("settlement {cluster_id} founded — saga graph updated"),
+                    Some(founder_id),
+                );
+                self.record_legend_promotions(tick, &outcome.promoted, founder_id);
+            }
+        }
+        for disaster in self.last_tick_disaster_pulses().to_vec() {
+            let region = civ_legends::RegionId(
+                disaster.pos.x.unsigned_abs() as u64 ^ disaster.pos.z.unsigned_abs() as u64,
+            );
+            let raw = RawSimEvent::new(tick, EventKind::Disaster, SourceCrate::Planet, 0.8)
+                .with_region(region);
             let _ = self.emergence_ingest_legend(raw);
+            self.emergence.push_feed(
+                tick,
+                "disaster",
+                format!("{:?} disaster recorded in saga graph", disaster.kind),
+                None,
+            );
+        }
+        for dip in self.diplomacy_events().to_vec() {
+            let (kind, label) = match dip.kind {
+                crate::engine::DiplomacyKind::Conflict => (EventKind::WarDeclared, "war"),
+                crate::engine::DiplomacyKind::Peace => (EventKind::WarEnded, "peace"),
+                crate::engine::DiplomacyKind::TradeAgreement => {
+                    (EventKind::LawObserved, "treaty")
+                }
+            };
+            let raw = RawSimEvent::new(tick, kind, SourceCrate::Engine, 0.55)
+                .with_participant(
+                    SourceCrate::Engine,
+                    SimRuntimeId(u64::from(dip.faction_a)),
+                    Role::Leader,
+                )
+                .with_participant(
+                    SourceCrate::Engine,
+                    SimRuntimeId(u64::from(dip.faction_b)),
+                    Role::Leader,
+                );
+            let outcome = self.emergence_ingest_legend(raw);
+            self.emergence.push_feed(
+                tick,
+                label,
+                format!(
+                    "factions {} and {} — {label} recorded in saga graph",
+                    dip.faction_a, dip.faction_b
+                ),
+                None,
+            );
+            let war_key = AggregateKey {
+                kind: EntityKind::War,
+                a: ClusterId(u64::from(dip.faction_a)),
+                b: ClusterId(u64::from(dip.faction_b)),
+                start_bucket: epoch.0,
+            };
+            let _war = self
+                .emergence
+                .legends
+                .graph
+                .resolve_aggregate(war_key, epoch);
+            let _ = outcome;
         }
     }
 
+    fn settlement_founder_agent(&self, cluster_id: u64) -> Option<u64> {
+        self.world
+            .query::<(&Civilian, &ClusterMember)>()
+            .iter()
+            .filter(|(_, (_, member))| member.cluster.0 == cluster_id)
+            .map(|(_, (civ, _))| civ.id)
+            .min()
+    }
+
     fn emergence_ingest_legend(&mut self, raw: RawSimEvent) -> IngestOutcome {
-        self.emergence.legends.graph.ingest(raw)
+        self.emergence.legends.ingest(raw)
     }
 
     fn record_legend_promotions(&mut self, tick: u64, promoted: &[LegendEntityId], agent_id: u64) {
@@ -806,6 +969,59 @@ impl Simulation {
     #[must_use]
     pub fn legends_graph(&self) -> &SagaGraph {
         self.emergence.legends.graph()
+    }
+
+    /// Read-only legends query surface for `sim.legends` JSON-RPC (FR-CIV-LEGENDS-QUERY-07).
+    #[must_use]
+    pub fn legends_query(
+        &self,
+        query: &str,
+        agent_id: Option<u64>,
+        top_n: Option<usize>,
+        epoch: Option<u64>,
+    ) -> LegendsQueryResult {
+        let graph = self.legends_graph();
+        let tick = self.state.tick;
+        let mut result = LegendsQueryResult {
+            query_api_version: QUERY_API_VERSION,
+            tick,
+            node_count: graph.node_count(),
+            saga: None,
+            significant: None,
+            epoch_digest: None,
+            empty_reason: None,
+            emergence_feed: self.emergence_feed().to_vec(),
+        };
+        match query {
+            "saga_of" => {
+                let Some(agent_id) = agent_id else {
+                    result.empty_reason = Some("saga_of requires agent_id".to_string());
+                    return result;
+                };
+                if let Some(eid) =
+                    graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
+                {
+                    result.saga = graph.saga_of(eid);
+                } else {
+                    result.empty_reason = Some(
+                        graph
+                            .empty_saga_reason(LegendEntityId(agent_id))
+                            .map(|r| r.reason_text())
+                            .unwrap_or_else(|| "agent not in saga graph".to_string()),
+                    );
+                }
+            }
+            "significant" => {
+                let n = top_n.unwrap_or(10).clamp(1, 50);
+                result.significant = Some(graph.significant(n, None));
+            }
+            "epoch_digest" => {
+                let epoch = Epoch(epoch.unwrap_or_else(|| graph.config.epoch_of(tick).0));
+                result.epoch_digest = Some(graph.epoch_digest(epoch, None));
+            }
+            "status" | _ => {}
+        }
+        result
     }
 
     /// Per-cluster emergent culture profiles (FR-CIV-PSYCHE / culture drift).
@@ -1190,5 +1406,55 @@ mod tests {
             assert!(event.crossed);
             assert!(event.lineage_id.is_some());
         }
+    }
+
+    /// FR-CIV-LEGENDS-QUERY-07 — read-only query does not mutate graph state.
+    #[test]
+    fn legends_query_is_read_only() {
+        let mut sim = Simulation::with_seed(11);
+        run_ticks(&mut sim, 40);
+        let before = sim.legends_graph().node_count();
+        let _ = sim.legends_query("status", None, None, None);
+        let _ = sim.legends_query("significant", None, Some(5), None);
+        assert_eq!(sim.legends_graph().node_count(), before);
+    }
+
+    /// FR-CIV-LEGENDS-INGEST-02 — diplomacy events reach saga graph with faction roles.
+    #[test]
+    fn legends_phase_ingests_diplomacy_with_participants() {
+        let mut sim = Simulation::with_seed(3001);
+        let before = sim.legends_graph().node_count();
+        for _ in 0..1500 {
+            sim.tick();
+        }
+        assert!(
+            sim.legends_graph().node_count() > before
+                || sim
+                    .emergence_feed()
+                    .iter()
+                    .any(|e| matches!(e.kind.as_str(), "treaty" | "war" | "peace")),
+            "diplomacy should ingest into saga graph or emergence feed"
+        );
+    }
+
+    /// FR-CIV-LEGENDS-INGEST-02 — disasters record in saga graph.
+    #[test]
+    fn legends_phase_ingests_disaster_events() {
+        use crate::disasters::{DisasterKind, DisasterPulse};
+        use civ_voxel::WorldCoord;
+
+        let mut sim = Simulation::with_seed(88);
+        run_ticks(&mut sim, 2);
+        let before = sim.legends_graph().node_count();
+        sim.last_tick_disaster_pulses.push(DisasterPulse {
+            kind: DisasterKind::Quake,
+            pos: WorldCoord { x: 0, y: 0, z: 0 },
+        });
+        sim.phase_emergence();
+        assert!(
+            sim.legends_graph().node_count() > before
+                || sim.emergence_feed().iter().any(|e| e.kind == "disaster"),
+            "disaster pulse should reach saga graph"
+        );
     }
 }

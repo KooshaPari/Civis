@@ -34,6 +34,7 @@ pub mod spawn;
 pub mod spectator;
 
 pub use conditions::{check_outcome, GameOutcome};
+pub use emergence::LegendsQueryResult;
 pub use era::CivEra;
 pub use engine::{
     job_type_for_civilian_id, Building, BuildingType, Citizen, ClusterStocks, CombatDamagePulse, DiplomacyEvent,

@@ -34,6 +34,13 @@ pub enum DisasterKind {
     Plague,
 }
 
+/// One disaster resolved this tick — legends ingest + spectator feed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DisasterPulse {
+    pub kind: DisasterKind,
+    pub pos: WorldCoord,
+}
+
 /// Trigger a disaster immediately and apply its effects to terrain and agents.
 pub fn trigger_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
     apply_disaster(sim, kind, pos);
@@ -200,6 +207,7 @@ fn is_low_elevation(
 }
 
 fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
+    sim.last_tick_disaster_pulses.push(DisasterPulse { kind, pos });
     let radius = radius_for(kind);
     let affected = positions_in_radius(pos, radius);
     match kind {

@@ -114,16 +114,39 @@ pub const fn parcel_kind_unlocked(kind: ParcelKind, era: u16) -> bool {
 }
 
 /// Minimum build-era for engine [`BuildingType`] variants (few era-gated types).
+///
+/// Uses byte-slice comparison so this function can remain `const`.
 #[must_use]
-pub fn building_type_min_era(type_tag: &str) -> u16 {
-    match type_tag {
-        "Farm" | "House" | "CityCenter" => 0,
-        "Mine" => 1,
-        "Market" => 2,
-        "Temple" => 3,
-        "Barracks" => 4,
-        _ => 0,
+pub const fn building_type_min_era(type_tag: &str) -> u16 {
+    let b = type_tag.as_bytes();
+    // Match on byte slices — stable in const context unlike str matching.
+    if const_bytes_eq(b, b"Mine") {
+        1
+    } else if const_bytes_eq(b, b"Market") {
+        2
+    } else if const_bytes_eq(b, b"Temple") {
+        3
+    } else if const_bytes_eq(b, b"Barracks") {
+        4
+    } else {
+        // Farm, House, CityCenter, and all unknown types unlock at era 0.
+        0
     }
+}
+
+/// Byte-slice equality suitable for use in `const fn`.
+const fn const_bytes_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut i = 0;
+    while i < a.len() {
+        if a[i] != b[i] {
+            return false;
+        }
+        i += 1;
+    }
+    true
 }
 
 /// Returns true when `era` unlocks the named building type.

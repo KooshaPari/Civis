@@ -61,6 +61,63 @@ impl AllocationEngine for JouleAllocator {
     }
 }
 
+/// Lifecycle-weighted allocator (CIV-003 P4-A).
+///
+/// The labor-capacity of the producing population determines how much of the
+/// nominal `demand` the economy can actually convert into output in one tick.
+/// Children (<18) and elders (>=65) cannot produce; only `Adult` civilians
+/// contribute, and even those contribute at most their `labor_capacity`
+/// fraction (in `[0, 1]`).
+///
+/// `effective_demand = floor(demand * labor_capacity_fraction)`
+/// `allocated = engine.allocate(budget, effective_demand)`
+///
+/// If `labor_capacity_fraction <= 0.0`, the allocator returns 0 (no workers).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LaborCapacityAllocator {
+    /// Aggregate labor capacity fraction in `[0, 1]`. `1.0` means full adult
+    /// productive workforce; `0.0` means no production (all children/elders
+    /// or dead). `fraction` is clamped to `[0, 1]` on read.
+    pub labor_fraction: f64,
+}
+
+impl LaborCapacityAllocator {
+    /// Construct a labor-capacity allocator from raw `fraction` (clamped).
+    pub fn new(fraction: f64) -> Self {
+        Self {
+            labor_fraction: if fraction.is_finite() {
+                fraction.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+        }
+    }
+}
+
+impl AllocationEngine for LaborCapacityAllocator {
+    fn allocate(&self, budget: i64, demand: i64) -> i64 {
+        if demand <= 0 || budget <= 0 {
+            return 0;
+        }
+        let frac = if self.labor_fraction.is_finite() {
+            self.labor_fraction.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        if frac <= 0.0 {
+            return 0;
+        }
+        // Saturating cast: demand is non-positive-gated above; for the
+        // typical CIV budget magnitudes (<< i64::MAX), `as i64` is exact.
+        let eff_demand = ((demand as f64) * frac).floor().max(0.0) as i64;
+        let eff_demand = eff_demand.min(demand);
+        if eff_demand <= 0 {
+            return 0;
+        }
+        CapitalistAllocator.allocate(budget, eff_demand)
+    }
+}
+
 /// Consumer priority tiers, highest priority first (declaration order = ranking).
 /// Subsistence demand is fully met before any lower tier receives a unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -389,6 +446,49 @@ mod tests {
     #[test]
     fn joule_allocator_matches_planned_at_single_good() {
         assert_eq!(JouleAllocator.allocate(40, 100), PlannedAllocator.allocate(40, 100));
+    }
+
+    // FR-CIV-LIFE P4-A: LaborCapacityAllocator
+    #[test]
+    fn labor_allocator_full_labor_meets_capitalist_curve() {
+        let alloc = LaborCapacityAllocator::new(1.0);
+        // Full labor == same as base capitalist allocator
+        assert_eq!(alloc.allocate(100, 50), CapitalistAllocator.allocate(100, 50));
+        assert_eq!(alloc.allocate(50, 100), CapitalistAllocator.allocate(50, 100));
+    }
+
+    #[test]
+    fn labor_allocator_partial_labor_scales_demand() {
+        // 0.5 labor, demand 100, budget 100 -> effective_demand=50 -> filled=50
+        let alloc = LaborCapacityAllocator::new(0.5);
+        assert_eq!(alloc.allocate(100, 100), 50);
+        // 0.5 labor, demand 10, budget 5 -> effective_demand=5 -> budget-cap=5
+        assert_eq!(alloc.allocate(5, 10), 5);
+    }
+
+    #[test]
+    fn labor_allocator_zero_labor_returns_zero() {
+        let alloc = LaborCapacityAllocator::new(0.0);
+        assert_eq!(alloc.allocate(1_000, 1_000), 0);
+    }
+
+    #[test]
+    fn labor_allocator_clamps_invalid_fractions() {
+        // > 1.0 clamps to 1.0
+        let alloc = LaborCapacityAllocator::new(1.5);
+        assert_eq!(alloc.allocate(100, 100), 100);
+        // < 0.0 clamps to 0.0
+        let alloc = LaborCapacityAllocator::new(-0.5);
+        assert_eq!(alloc.allocate(100, 100), 0);
+        // NaN -> 0.0
+        let alloc = LaborCapacityAllocator::new(f64::NAN);
+        assert_eq!(alloc.allocate(100, 100), 0);
+    }
+
+    #[test]
+    fn labor_allocator_never_exceeds_budget() {
+        let alloc = LaborCapacityAllocator::new(0.7);
+        assert!(alloc.allocate(30, 1_000) <= 30);
     }
 
     #[test]

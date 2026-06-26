@@ -60,7 +60,7 @@ impl EmergentStance {
 
 /// Per-faction territory footprint. Border friction emerges from overlap of
 /// these cells; the diplomacy layer never reads the map directly.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Territory {
     /// Owner.
     pub owner: PolityId,

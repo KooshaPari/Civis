@@ -5,14 +5,16 @@
 //! Micro psyche/culture/social run inside [`super::emergence::Simulation::phase_emergence`];
 //! this module owns the scalar religion loop and upward psyche→belief coupling.
 
+use civ_agents::max_cluster_belief_divergence;
+
 use super::{
     Simulation,
     engine::{
         add_unrest_delta, agent_misery_unrest, avg_psyche_maturity, cohesion_delta,
         cohesion_unrest_damp, commodity_unrest_delta, energy_scarcity_unrest,
-        institution_belief_signal, institution_step, institution_target_level,
-        kinship_cohesion_boost, micro_cohesion_delta, research_unrest_mitigation, unrest_delta,
-        FOOD_SCARCITY_BASELINE,
+        institution_belief_signal, institution_divergence_boost, institution_step,
+        institution_target_level, kinship_cohesion_boost, micro_cohesion_delta,
+        research_unrest_mitigation, unrest_delta, FOOD_SCARCITY_BASELINE,
     },
 };
 
@@ -64,12 +66,19 @@ impl Simulation {
     ///
     /// Temple growth reads macro belief plus per-cluster doctrine centroids so
     /// institutions tie to emergent belief communities, not population alone.
+    /// Isolated clusters that develop divergent belief accelerate temple growth
+    /// further via [`institution_divergence_boost`] (FR-CIV-RELIGION cluster divergence).
     pub(crate) fn phase_institutions(&mut self) {
         let belief_signal = institution_belief_signal(
             self.state.belief,
             &self.emergence.cluster_beliefs,
         );
-        let temple_target = institution_target_level(belief_signal, BELIEF_PER_TEMPLE_LEVEL);
+        // Cluster divergence amplifies temple growth: isolated belief communities
+        // invest more heavily in local religious institutions.
+        let centroids: Vec<[f32; 4]> = self.emergence.cluster_beliefs.values().copied().collect();
+        let divergence = max_cluster_belief_divergence(&centroids);
+        let boosted_signal = institution_divergence_boost(belief_signal, divergence);
+        let temple_target = institution_target_level(boosted_signal, BELIEF_PER_TEMPLE_LEVEL);
         let garrison_target =
             institution_target_level(self.state.unrest, UNREST_PER_GARRISON_LEVEL);
         self.state.temple_level = institution_step(self.state.temple_level, temple_target);

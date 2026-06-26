@@ -40,7 +40,8 @@ pub use emergence::LegendsQueryResult;
 pub use era::CivEra;
 pub use engine::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
-    institution_belief_signal, job_type_for_civilian_id, Building, BuildingType, Citizen,
+    institution_belief_signal, institution_divergence_boost, job_type_for_civilian_id, Building,
+    BuildingType, Citizen,
     ClusterStocks, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType, MilitaryUnit,
     PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
     SimulationSnapshot, TradeRoute, UnitType, WorldState,
@@ -58,6 +59,7 @@ pub use civ_mod_host::{
     ModUnloadedRecord,
 };
 pub use civ_planet::{BiomeKind, Climate, GeologyMap, MoonConfig, PlanetConfig, RegionBiome};
+pub use civ_voxel::WorldCoord;
 pub use civ_tactics::{
     apply_damage, bfs_next_step, evolve_doctrine, formation_offsets, grid_to_world_coord,
     line_of_sight, score_doctrine_fitness, tick_operational_movement, tick_war_bridge,

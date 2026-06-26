@@ -266,6 +266,42 @@ pub fn belief_culture_exposure(exposures: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; 
     out
 }
 
+/// Belief divergence factor `[0.0, 1.0]` driven by cluster isolation.
+///
+/// `contact_weights` maps each cluster-pair `(min_id, max_id)` to a contact
+/// intensity `[0.0, 1.0]` where `0.0` = fully isolated and `1.0` = full
+/// contact. Clusters with zero contact drift at maximum divergence rate;
+/// high contact suppresses drift toward the convergence floor.
+///
+/// Used to deepening `phase_institutions` and cluster divergence tests
+/// (FR-CIV-RELIGION acceptance contract — cluster divergence rises with isolation).
+///
+/// # Algorithm
+/// For each cluster pair `(i, j)`:
+/// - isolation = `1.0 - contact_weights.get((i,j)).unwrap_or(0.0)`
+/// - pair divergence = `belief_distance(centroids[i], centroids[j]) * isolation`
+/// Returns the maximum pair divergence (mirrors `max_cluster_belief_divergence`
+/// but weighted by isolation).
+#[must_use]
+pub fn isolation_weighted_belief_divergence(
+    centroids: &std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]>,
+    contact_weights: &std::collections::BTreeMap<(u64, u64), f32>,
+) -> f32 {
+    let ids: Vec<u64> = centroids.keys().copied().collect();
+    let mut max = 0.0f32;
+    for i in 0..ids.len() {
+        for j in (i + 1)..ids.len() {
+            let (a, b) = (ids[i], ids[j]);
+            let key = (a.min(b), a.max(b));
+            let contact = contact_weights.get(&key).copied().unwrap_or(0.0);
+            let isolation = 1.0 - contact.clamp(0.0, 1.0);
+            let dist = belief_distance(centroids[&a], centroids[&b]);
+            max = max.max(dist * isolation);
+        }
+    }
+    max
+}
+
 /// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
 #[must_use]
 pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {

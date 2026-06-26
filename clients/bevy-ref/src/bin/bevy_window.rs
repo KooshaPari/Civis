@@ -239,29 +239,6 @@ struct ScenarioPresetLabel;
 #[derive(Component)]
 struct ScenarioStartButton;
 
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
-}
-
-#[derive(Resource, Default)]
-struct SimSpeedState {
-    multiplier: u32,
-}
-
-#[derive(Resource)]
-#[derive(Resource, Default)]
-struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
-}
-
 fn main() {
     let mut app = App::new();
     app.add_plugins((

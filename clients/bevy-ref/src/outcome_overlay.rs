@@ -50,7 +50,9 @@ fn draw_outcome_overlay(
     let Some(ref outcome) = state.outcome.clone() else { return };
     if state.dismissed { return }
 
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
 
     let is_victory = outcome.tag == "victory";
     let header_color = if is_victory {

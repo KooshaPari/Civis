@@ -67,6 +67,19 @@ impl CivAge {
             CivAge::Industrial => "(peak age reached)",
         }
     }
+
+    /// Tech floor that meaningfully supports the age.
+    #[must_use]
+    pub fn min_tech_level(self) -> u32 {
+        match self {
+            CivAge::Stone => 0,
+            CivAge::Bronze => 1,
+            CivAge::Iron => 3,
+            CivAge::Classical => 5,
+            CivAge::Medieval => 8,
+            CivAge::Industrial => 12,
+        }
+    }
 }
 
 /// Legacy six-era enum kept for backward-compatible call sites.
@@ -142,6 +155,35 @@ pub struct FactionEraSnapshot {
     pub resource_surplus: i64,
 }
 
+/// Gameplay gates derived from emergent tech.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TechGate {
+    pub min_tech_level: u32,
+    pub production_multiplier_permille: u32,
+    pub military_tier: u32,
+}
+
+impl TechGate {
+    /// Baseline gates increase gradually with technology.
+    #[must_use]
+    pub fn for_tech_level(tech_level: u32) -> Self {
+        let production_multiplier_permille = 1_000 + tech_level.saturating_mul(125).min(1_000);
+        let military_tier = match tech_level {
+            0 => 0,
+            1..=2 => 1,
+            3..=4 => 2,
+            5..=7 => 3,
+            8..=11 => 4,
+            _ => 5,
+        };
+        Self {
+            min_tech_level: tech_level,
+            production_multiplier_permille,
+            military_tier,
+        }
+    }
+}
+
 /// Mutable emergent era/tech state carried on [`Simulation`].
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EraProgressionState {
@@ -212,6 +254,17 @@ impl EraProgressionState {
         }
         rows
     }
+
+    /// Deterministic gameplay gates for a faction's current tech state.
+    #[must_use]
+    pub fn tech_gate_for_faction(&self, faction_id: u32) -> TechGate {
+        let tech_level = self
+            .faction_tech
+            .get(&faction_id)
+            .map(|t| t.tech_level)
+            .unwrap_or(0);
+        TechGate::for_tech_level(tech_level)
+    }
 }
 
 /// Research phase hook (FR-ERA): emergent progress from economy + population.
@@ -230,6 +283,7 @@ pub fn phase_tech(sim: &mut Simulation) {
 mod tests {
     use super::*;
     use crate::engine::Fixed;
+    use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment};
 
     fn thriving_stagnant_sim() -> Simulation {
         let mut sim = Simulation::with_seed(42);
@@ -297,5 +351,85 @@ mod tests {
             snapshot.faction_eras.get(&0).map(|s| s.age) > snapshot.faction_eras.get(&1).map(|s| s.age),
             "snapshot must surface higher era for thriving faction"
         );
+    }
+
+    /// FR-TECH-gating: a prosperous faction out-researches, then diffusion lifts a neighbor later.
+    #[test]
+    fn prosperous_faction_out_researches_and_diffuses_to_neighbor() {
+        let mut sim = thriving_stagnant_sim();
+        let mut rng = sim.rng_mut().clone();
+
+        for id in 0..12 {
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                10_000 + id,
+                Alignment::Faction(0),
+                0.20,
+                0.20,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        for id in 0..2 {
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                20_000 + id,
+                Alignment::Faction(1),
+                0.80,
+                0.80,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        *sim.rng_mut() = rng;
+
+        let start_0 = sim
+            .era_progression()
+            .faction_tech
+            .get(&0)
+            .cloned()
+            .unwrap_or_default();
+        let start_1 = sim
+            .era_progression()
+            .faction_tech
+            .get(&1)
+            .cloned()
+            .unwrap_or_default();
+
+        let mut advanced_0_tick = None;
+        for _ in 0..40 {
+            sim.advance_ticks(1);
+            let tick = sim.state.tick;
+            let tech_0 = sim
+                .era_progression()
+                .faction_tech
+                .get(&0)
+                .cloned()
+                .unwrap_or_default();
+            let tech_1 = sim
+                .era_progression()
+                .faction_tech
+                .get(&1)
+                .cloned()
+                .unwrap_or_default();
+            if advanced_0_tick.is_none() && tech_0.tech_level > start_0.tech_level {
+                advanced_0_tick = Some(tick);
+            }
+            if let Some(leader_tick) = advanced_0_tick {
+                if tech_1.tech_level > start_1.tech_level {
+                    assert!(
+                        tick > leader_tick,
+                        "neighbor should gain tech via diffusion after the leader advances"
+                    );
+                    assert!(
+                        tech_1.tech_level >= 1,
+                        "neighbor should eventually gain at least one tech level"
+                    );
+                    return;
+                }
+            }
+        }
+
+        panic!("neighbor never gained tech via diffusion");
     }
 }

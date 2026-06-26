@@ -234,13 +234,13 @@ pub fn tick_seeded_phoneme_drift(
 ///
 /// Entity ids are deterministic under a fixed seed because `EvolvedLexicon::coin` is
 /// idempotent: calling it twice for the same `(kind, entity_id)` returns the existing entry.
-pub fn coin_evolved(
-    lexicon: &mut EvolvedLexicon,
+pub fn coin_evolved<'a>(
+    lexicon: &'a mut EvolvedLexicon,
     inventory: &PhonemeInventory,
     kind: LexemeKind,
     entity_id: u64,
     entity_seed: u64,
-) -> &Lexeme {
+) -> &'a Lexeme {
     let key = (kind, entity_id);
     if !lexicon.entries.contains_key(&key) {
         let mut rng = ChaCha8Rng::seed_from_u64(entity_seed ^ entity_id);

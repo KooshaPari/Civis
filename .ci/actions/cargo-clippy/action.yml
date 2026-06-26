@@ -1,0 +1,18 @@
+name: "cargo-clippy"
+description: "Run cargo clippy with no-deps and warn on warnings"
+inputs:
+  package:
+    description: "Package to clippy (optional, empty = all)"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Run cargo clippy
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.package }}" ]; then
+          cargo clippy --workspace --no-deps -j 4
+        else
+          cargo clippy -p ${{ inputs.package }} --no-deps -j 4
+        fi

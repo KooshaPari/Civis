@@ -111,4 +111,63 @@ mod tests {
             assert!(!v.detail.is_empty(), "detail must not be empty for {}", v.fr_id);
         }
     }
+
+    /// After 300 ticks the architecture oracle must pass unconditionally: the
+    /// initial world spawns 6 buildings (1 CityCenter + 5 Farms) which exceeds
+    /// the threshold of 3.
+    #[test]
+    fn architecture_oracle_passes_after_300_ticks() {
+        let mut sim = Simulation::new();
+        for _ in 0..300 {
+            sim.tick();
+        }
+        let registry = OracleRegistry::with_defaults();
+        let verdicts = registry.run_all(&sim);
+        let arch = verdicts
+            .iter()
+            .find(|v| v.fr_id == "FR-EMG-007")
+            .expect("FR-EMG-007 must be present");
+        assert!(
+            arch.passed,
+            "Architecture oracle must pass after 300 ticks; detail: {}",
+            arch.detail
+        );
+    }
+
+    /// At tick 0 every oracle must pass (no emergence has had time to run).
+    #[test]
+    fn all_oracles_pass_at_tick_zero() {
+        let sim = Simulation::new();
+        let registry = OracleRegistry::with_defaults();
+        let verdicts = registry.run_all(&sim);
+        for v in &verdicts {
+            assert!(
+                v.passed,
+                "Oracle {} must pass at tick 0; detail: {}",
+                v.fr_id, v.detail
+            );
+        }
+    }
+
+    /// Verdicts must expose numeric thresholds (not NaN or negative infinity).
+    #[test]
+    fn verdicts_have_finite_thresholds() {
+        let sim = Simulation::new();
+        let registry = OracleRegistry::with_defaults();
+        let verdicts = registry.run_all(&sim);
+        for v in &verdicts {
+            assert!(
+                v.threshold.is_finite(),
+                "threshold for {} must be finite, got {}",
+                v.fr_id,
+                v.threshold
+            );
+            assert!(
+                v.measured.is_finite(),
+                "measured for {} must be finite, got {}",
+                v.fr_id,
+                v.measured
+            );
+        }
+    }
 }

@@ -189,7 +189,10 @@ fn is_low_elevation(
         .is_some_and(|r| {
             matches!(
                 r.biome,
-                BiomeKind::Ocean | BiomeKind::Beach | BiomeKind::Wetland
+                BiomeKind::Ocean
+                    | BiomeKind::Beach
+                    | BiomeKind::Wetland
+                    | BiomeKind::Mangrove
             )
         });
     let voxel_low = pos.y <= civ_voxel::FIXED_SCALE || sim.voxel().read(pos) == WATER;

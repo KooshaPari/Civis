@@ -2094,6 +2094,11 @@ impl Simulation {
             climate: self.climate,
             weather_grid: self.weather_grid.clone(),
             geology_map: GeologyMap::seed(&self.planet),
+            gameplay_outcome: {
+                let gs = crate::gameplay::compute_gameplay_state(self);
+                gs.resolved_outcome.unwrap_or(crate::conditions::GameOutcome::Ongoing)
+            },
+            faction_scores: crate::gameplay::compute_scores(self),
         }
     }
 
@@ -3548,6 +3553,11 @@ pub struct SimulationSnapshot {
     ///
     /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
     pub geology_map: GeologyMap,
+    /// Current gameplay outcome (victory / defeat / ongoing) for client HUD
+    /// (FR-CIV-GAME-002). Derived from [`crate::gameplay::compute_gameplay_state`].
+    pub gameplay_outcome: crate::conditions::GameOutcome,
+    /// Per-faction scores for leaderboard display (FR-CIV-GAME-002).
+    pub faction_scores: Vec<crate::gameplay::FactionScore>,
 }
 
 // ============================================================================

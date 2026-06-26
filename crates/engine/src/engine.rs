@@ -2155,7 +2155,7 @@ const FOOD_MARKET_PRESSURE_SCALE: i64 = 500_000;
 
 /// Baseline food clearing price (cents) at which births are unaffected by
 /// scarcity. Matches `MarketState::default()`'s food price.
-const FOOD_SCARCITY_BASELINE: i64 = 1_000;
+pub(crate) const FOOD_SCARCITY_BASELINE: i64 = 1_000;
 
 /// Tech unlock bits (irreversible, set-only).
 pub const TECH_IRRIGATION: u64 = 1 << 0;
@@ -2211,7 +2211,7 @@ fn food_scarcity_birth_factor(food_price: i64) -> f64 {
 /// shortfall (bounded per tick so it walks rather than jumps); at or below
 /// baseline it decays toward contentment by a fixed step. The caller floors the
 /// running total at zero.
-fn unrest_delta(food_price: i64) -> i64 {
+pub(crate) fn unrest_delta(food_price: i64) -> i64 {
     /// Largest single-tick rise, so a price spike can't instantly max unrest.
     const MAX_RISE: i64 = 50;
     /// Cents of shortfall that map to one unit of unrest rise.
@@ -2229,7 +2229,7 @@ fn unrest_delta(food_price: i64) -> i64 {
 /// FR-CIV-ECON: scarcity in NON-food commodities adds bounded unrest
 /// (cost-of-living). Food is owned by unrest_delta(); skipped here to avoid
 /// double-counting. Per-tick clamped to [-DECAY, MAX_RISE] — no runaway.
-fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
+pub(crate) fn commodity_unrest_delta(prices: &std::collections::BTreeMap<String, i64>) -> i64 {
     const BASELINE: i64 = 1_000;
     const CENTS_PER_UNREST: i64 = 40;
     const MAX_RISE: i64 = 15;
@@ -2277,7 +2277,7 @@ fn faction_unrest_delta_from_shadow(scarcity_shadow: i64) -> i64 {
 /// A fully-drained energy budget (blackout) adds a fixed unrest increment this
 /// tick; a solvent budget adds none. An acute shock that bypasses the gradual
 /// food-scarcity damping.
-fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
+pub(crate) fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
     const BLACKOUT_UNREST: i64 = 15;
     if energy_budget <= Fixed::ZERO {
         BLACKOUT_UNREST
@@ -2289,7 +2289,7 @@ fn energy_scarcity_unrest(energy_budget: Fixed) -> i64 {
 /// Upward causation (FR-CIV-0100 §3): the mean MISERY of agents (negative Psyche
 /// mood valence) adds to societal unrest. Reuses the ECS Psyche component — the
 /// agent emotional layer feeding the macro web. Returns 0..MAX, bounded.
-fn agent_misery_unrest(world: &hecs::World) -> i64 {
+pub(crate) fn agent_misery_unrest(world: &hecs::World) -> i64 {
     const MAX_MISERY_UNREST: i64 = 30;
     let (sum, n) = world
         .query::<&Psyche>()
@@ -2304,7 +2304,7 @@ fn agent_misery_unrest(world: &hecs::World) -> i64 {
 
 /// Upward causation (FR-CIV-0100 §3): micro ideology consensus (`Psyche.beliefs[0]`)
 /// binds macro cohesion; polarization frays it. Pure `hecs::World` scan, capped i64.
-fn micro_cohesion_delta(world: &hecs::World) -> i64 {
+pub(crate) fn micro_cohesion_delta(world: &hecs::World) -> i64 {
     const MICRO_BIND_CAP: i64 = 12;
     const MICRO_FRAY_CAP: i64 = 18;
     const MIN_AGENTS: u32 = 2;
@@ -2359,7 +2359,7 @@ fn micro_social_trust_permille(world: &hecs::World) -> u64 {
 
 /// Upward causation (FR-CIV-EMERGENCE-N11): average psyche maturity across all agents.
 /// Mature populations stabilize belief (wisdom = stability). Pure `hecs::World` scan.
-fn avg_psyche_maturity(world: &hecs::World) -> f32 {
+pub(crate) fn avg_psyche_maturity(world: &hecs::World) -> f32 {
     let mut total = 0.0;
     let mut count = 0u32;
     for (_, psyche) in world.query::<&Psyche>().iter() {
@@ -2388,14 +2388,14 @@ fn avg_faction_kinship(world: &hecs::World) -> f32 {
 }
 
 /// Kinship upward boost applied in [`crate::dormant_phases::Simulation::phase_cohesion`].
-fn kinship_cohesion_boost(world: &hecs::World) -> i64 {
+pub(crate) fn kinship_cohesion_boost(world: &hecs::World) -> i64 {
     const KINSHIP_RATE: f32 = 0.02;
     const KINSHIP_SCALE: f32 = 100_000.0;
     (avg_faction_kinship(world) * KINSHIP_RATE * KINSHIP_SCALE) as i64
 }
 
 /// Apply a signed unrest delta, flooring at zero.
-fn add_unrest_delta(unrest: &mut u64, delta: i64) {
+pub(crate) fn add_unrest_delta(unrest: &mut u64, delta: i64) {
     if delta >= 0 {
         *unrest = unrest.saturating_add(delta as u64);
     } else {
@@ -2651,13 +2651,13 @@ pub const MAX_INSTITUTION_LEVEL: u32 = 5;
 
 /// Institution level that a driver signal supports: one level per THRESHOLD of
 /// the signal, capped at MAX_INSTITUTION_LEVEL.
-fn institution_target_level(signal: u64, per_level: u64) -> u32 {
+pub(crate) fn institution_target_level(signal: u64, per_level: u64) -> u32 {
     (signal / per_level.max(1)).min(MAX_INSTITUTION_LEVEL as u64) as u32
 }
 
 /// One-step decay toward target (max 1 level change per tick, so growth/decay
 /// is gradual — hysteresis).
-fn institution_step(current: u32, target: u32) -> u32 {
+pub(crate) fn institution_step(current: u32, target: u32) -> u32 {
     if target > current {
         current + 1
     } else if target < current {
@@ -2689,7 +2689,7 @@ fn dispossession_unrest(dispossessed_permille: u64) -> i64 {
 /// untouched. The mitigation is bounded (tier capped at 9 → at most a 10x
 /// reduction) and floored at 1, so technology calms a society but never makes
 /// it immune to hardship. Returns the research-adjusted unrest delta.
-fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
+pub(crate) fn research_unrest_mitigation(rise: i64, research_tier: u64) -> i64 {
     if rise <= 0 {
         return rise;
     }
@@ -2861,7 +2861,7 @@ const COHESION_UNREST_DIVISOR: u64 = 50;
 /// balance of belief (binds, scaled gently) against unrest (frays, scaled
 /// harder, so disorder erodes cohesion faster than faith builds it). Returns a
 /// signed delta; the caller floors the running total at zero.
-fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
+pub(crate) fn cohesion_delta(belief: u64, unrest: u64) -> i64 {
     let bind = (belief / COHESION_BELIEF_DIVISOR) as i64;
     let fray = (unrest / COHESION_UNREST_DIVISOR) as i64;
     bind - fray
@@ -2900,7 +2900,7 @@ pub(crate) fn awakening_belief_gain(awakenings_this_tick: usize) -> i64 {
 
 /// Cohesion absorbs hardship: a strong social fabric damps the per-tick unrest
 /// rise (cohesion -> calmer society), bounded and floored at 1. Decay passes through.
-fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
+pub(crate) fn cohesion_unrest_damp(rise: i64, cohesion: u64) -> i64 {
     if rise <= 0 {
         return rise;
     }
@@ -3475,8 +3475,6 @@ pub struct SimulationSnapshot {
     /// Derived from `PlanetConfig` alone; identical for every tick of the same planet.
     pub geology_map: GeologyMap,
 }
-
-mod dormant_phases;
 
 // ============================================================================
 // TEST HELPERS & STUBS

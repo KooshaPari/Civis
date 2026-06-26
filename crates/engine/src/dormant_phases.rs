@@ -6,10 +6,13 @@
 //! this module owns the scalar religion loop and upward psyche→belief coupling.
 
 use super::{
-    add_unrest_delta, avg_psyche_maturity, cohesion_delta, cohesion_unrest_damp,
-    commodity_unrest_delta, energy_scarcity_unrest, institution_step, institution_target_level,
-    kinship_cohesion_boost, micro_cohesion_delta, unrest_delta, Simulation,
-    FOOD_SCARCITY_BASELINE,
+    Simulation,
+    engine::{
+        add_unrest_delta, agent_misery_unrest, avg_psyche_maturity, cohesion_delta,
+        cohesion_unrest_damp, commodity_unrest_delta, energy_scarcity_unrest,
+        institution_step, institution_target_level, kinship_cohesion_boost,
+        micro_cohesion_delta, research_unrest_mitigation, unrest_delta, FOOD_SCARCITY_BASELINE,
+    },
 };
 
 /// Belief units required per temple level (FR-CIV-REL-003 / emergent-systems-tracelinks).
@@ -37,9 +40,9 @@ impl Simulation {
             .unwrap_or(FOOD_SCARCITY_BASELINE);
         let mut delta = unrest_delta(food_price);
         delta = delta.saturating_add(commodity_unrest_delta(self.market_state.prices()));
-        delta = delta.saturating_add(super::agent_misery_unrest(&self.world));
+        delta = delta.saturating_add(agent_misery_unrest(&self.world));
         delta = delta.saturating_add(energy_scarcity_unrest(self.state.energy_budget_joules));
-        delta = super::research_unrest_mitigation(delta, self.research_tier());
+        delta = research_unrest_mitigation(delta, self.research_tier());
         delta = cohesion_unrest_damp(delta, self.state.cohesion);
         add_unrest_delta(&mut self.state.unrest, delta);
 

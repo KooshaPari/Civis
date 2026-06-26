@@ -126,7 +126,7 @@ impl BuildingType {
 
     /// Minimum build-era required before this type may be placed.
     #[must_use]
-    pub const fn min_era(self) -> u16 {
+    pub fn min_era(self) -> u16 {
         civ_build::building_type_min_era(self.as_str())
     }
 }

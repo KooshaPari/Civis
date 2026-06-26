@@ -40,7 +40,8 @@ pub use emergence::LegendsQueryResult;
 pub use era::CivEra;
 pub use engine::{
     cohesion_delta, diplomacy_conflict_threshold, diplomacy_peace_threshold,
-    institution_belief_signal, job_type_for_civilian_id, Building, BuildingType, Citizen,
+    institution_belief_signal, institution_divergence_boost, job_type_for_civilian_id, Building,
+    BuildingType, Citizen,
     ClusterStocks, CombatDamagePulse, DiplomacyEvent, DiplomacyKind, JobType, MilitaryUnit,
     PopulationEvent, Position, Production, ResourceType, Resources, Simulation,
     SimulationSnapshot, TradeRoute, UnitType, WorldState,

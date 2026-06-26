@@ -3083,6 +3083,17 @@ pub fn institution_belief_signal(
     macro_belief.saturating_add(cluster_pulse / cluster_beliefs.len() as u64)
 }
 
+/// Cluster-divergence temple boost: isolated clusters that develop distinct doctrines
+/// independently accelerate local institution growth (FR-CIV-RELIGION cluster divergence).
+///
+/// `divergence` is the max pairwise belief distance `[0.0, 1.0]` from
+/// [`civ_agents::max_cluster_belief_divergence`]. Returns extra belief units to
+/// add to the macro signal, capped so the boost can at most double the signal.
+pub fn institution_divergence_boost(macro_signal: u64, divergence: f32) -> u64 {
+    let bonus = (macro_signal as f32 * divergence.clamp(0.0, 1.0)) as u64;
+    macro_signal.saturating_add(bonus)
+}
+
 /// Pairwise treasury gap between two factions (currency units).
 fn faction_pair_treasury_disparity(treasury: &HashMap<u32, Fixed>, a: u32, b: u32) -> i64 {
     let va = treasury

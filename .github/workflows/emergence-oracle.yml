@@ -1,5 +1,9 @@
 name: Emergence Oracle FR-Validation
 
+# Hard-fail gate: validates that FR contracts remain passing.
+# The oracle binary exits non-zero if passing contracts fall below BASELINE (8).
+# This prevents silent emergence regressions from landing on feat/civis-platform.
+
 on:
   push:
     branches:
@@ -25,5 +29,5 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
           cache-all-crates: true
-      - name: Run oracle_report (FR visibility gate)
+      - name: Run oracle_report (FR hard gate — exits 1 if passed < baseline 8)
         run: cargo run -p emergence-oracle --bin oracle_report

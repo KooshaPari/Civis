@@ -364,6 +364,47 @@ mod tests {
     }
 
     #[test]
+    fn cluster_belief_centroids_average_clusters_with_two_or_more_members() {
+        use hecs::World;
+
+        use crate::{ClusterId, ClusterMember};
+
+        fn sample_psyche(belief_axis: f32) -> Psyche {
+            Psyche {
+                drives: [0.5; PSYCHE_DIM],
+                temperament: Temperament::neutral(),
+                mood: Mood::neutral(),
+                beliefs: [belief_axis, 0.5, 0.5, 0.5],
+                maturity: 0.0,
+            }
+        }
+
+        let mut world = World::new();
+        world.spawn((
+            ClusterMember {
+                cluster: ClusterId(1),
+            },
+            sample_psyche(0.0),
+        ));
+        world.spawn((
+            ClusterMember {
+                cluster: ClusterId(1),
+            },
+            sample_psyche(1.0),
+        ));
+        world.spawn((
+            ClusterMember {
+                cluster: ClusterId(2),
+            },
+            sample_psyche(0.25),
+        ));
+
+        let centroids = cluster_belief_centroids(&world);
+        assert_eq!(centroids.len(), 1, "singleton clusters are excluded");
+        assert!((centroids[&1][0] - 0.5).abs() < 0.05);
+    }
+
+    #[test]
     fn weighted_belief_centroid_averages_members() {
         let centroid = weighted_belief_centroid(&[
             (1.0, [0.0, 0.0, 0.0, 0.0]),

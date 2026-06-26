@@ -851,13 +851,16 @@ impl Simulation {
             );
             let raw = RawSimEvent::new(tick, EventKind::Disaster, SourceCrate::Planet, 0.8)
                 .with_region(region);
-            let _ = self.emergence_ingest_legend(raw);
+            let outcome = self.emergence_ingest_legend(raw);
             self.emergence.push_feed(
                 tick,
                 "disaster",
                 format!("{:?} disaster recorded in saga graph", disaster.kind),
                 None,
             );
+            if !outcome.promoted.is_empty() {
+                self.record_legend_promotions(tick, &outcome.promoted, 0);
+            }
         }
         for dip in self.diplomacy_events().to_vec() {
             let (kind, label) = match dip.kind {
@@ -899,7 +902,11 @@ impl Simulation {
                 .legends
                 .graph
                 .resolve_aggregate(war_key, epoch);
-            let _ = outcome;
+            self.record_legend_promotions(
+                tick,
+                &outcome.promoted,
+                u64::from(dip.faction_a),
+            );
         }
     }
 

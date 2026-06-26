@@ -23,7 +23,7 @@ impl FeatureOracle for LanguageOracle {
         let lexicons = sim.cluster_lexicons();
 
         // Count clusters that have at least one coined lexeme.
-        let active_clusters = lexicons.values().filter(|lex| !lex.is_empty()).count();
+        let active_clusters = lexicons.values().filter(|lex| !(*lex).is_empty()).count();
         let total_clusters = lexicons.len();
         let measured = active_clusters as f64;
 

@@ -740,6 +740,8 @@ fn speed_control_input(
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
+}
+
 fn action_pressed(
     #[cfg(feature = "egui")] settings: Option<&GameSettings>,
     action: &str,
@@ -753,9 +755,11 @@ fn action_pressed(
             .and_then(|s| s.key_for(action))
             .unwrap_or(default)
             .is_pressed(keys, mouse_buttons)
+    }
     #[cfg(not(feature = "egui"))]
     {
         default.is_pressed(keys, mouse_buttons)
+    }
 }
 
 fn sync_chunk_debug_render(

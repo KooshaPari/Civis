@@ -23,8 +23,6 @@ pub mod atmosphere;
 pub mod camera;
 #[cfg(feature = "bevy")]
 pub mod decorations;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod animation;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod entity_inspector;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -45,8 +43,6 @@ pub mod event_feed;
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod game_ui;
-#[cfg(all(feature = "bevy", feature = "models"))]
-pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
 pub mod game_laws;
@@ -109,6 +105,14 @@ pub mod terrain;
 pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod notifications;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod terraform_brush;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod disaster_tools;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod material_brush_ui;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]

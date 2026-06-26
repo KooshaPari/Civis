@@ -19,6 +19,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "firepass-kimi")]
 pub mod firepass;
 
+/// Cached, offline-safe LLM-garnish hook for deterministic flavor-text/name generation.
+/// Implements FR-CIV-LLM: zero network calls, all results from seeded cache/lookup.
+pub mod garnish;
+
 /// Schema version for `civ-research`. Bumped on breaking changes.
 pub const SCHEMA_VERSION: u32 = 0;
 

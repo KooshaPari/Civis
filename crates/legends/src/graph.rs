@@ -59,6 +59,11 @@ pub struct SagaGraph {
     // --- loud-gap tracking (§7) ---
     last_seen_epoch: HashMap<SourceCrate, Epoch>,
 
+    // --- legend tracking (FR-CIV-LEGENDS) ---
+    /// Named legend entries auto-generated from significant events.
+    /// Keyed by event_id for fast lookup and deduplication.
+    pub(crate) legends: HashMap<LegendEventId, LegendEntry>,
+
     // --- id allocators ---
     next_entity: u64,
     next_event: u64,
@@ -130,6 +135,7 @@ impl SagaGraph {
             region_buckets: HashMap::new(),
             significant_set: BTreeSet::new(),
             last_seen_epoch: HashMap::new(),
+            legends: HashMap::new(),
             next_entity: 1,
             next_event: 1,
             cur_epoch: Epoch(0),
@@ -650,6 +656,72 @@ impl SagaGraph {
     }
     pub(crate) fn significant_desc(&self) -> impl Iterator<Item = LegendEntityId> + '_ {
         self.significant_set.iter().rev().map(|(_, id)| *id)
+    }
+
+    /// Auto-generate a legend from a significant emergent event (FR-CIV-LEGENDS).
+    /// Records the event with provenance (who/where/when-tick/cause) and an importance score.
+    /// Only creates a legend if the event is "significant enough" (magnitude + principal significance).
+    /// Returns true if the legend was created, false if it already existed or didn't meet threshold.
+    pub fn create_legend_from_event(
+        &mut self,
+        event_id: LegendEventId,
+        principal_entity: LegendEntityId,
+    ) -> bool {
+        // Already have a legend for this event
+        if self.legends.contains_key(&event_id) {
+            return false;
+        }
+
+        // Look up the event
+        let Some(event_idx) = self.event_idx(event_id) else {
+            return false;
+        };
+        let Some(event) = self.g[event_idx].as_event() else {
+            return false;
+        };
+
+        // Look up the principal entity to get its significance
+        let principal_significance = self
+            .entity_idx(principal_entity)
+            .and_then(|idx| self.g[idx].as_entity())
+            .map(|e| e.significance)
+            .unwrap_or(0.0);
+
+        // Compute importance; only create legend if importance is above a threshold.
+        let importance = crate::model::compute_legend_importance(event.magnitude, principal_significance);
+        let significance_threshold = 0.3; // Legend creation threshold (tunable config)
+        if importance < significance_threshold {
+            return false;
+        }
+
+        // Create the legend entry
+        let legend = LegendEntry::from_event(
+            event_id,
+            event,
+            principal_entity,
+            principal_significance,
+            event.participants.clone(),
+        );
+        self.legends.insert(event_id, legend);
+        true
+    }
+
+    /// Query all legends sorted by importance (descending).
+    /// Returns top N legends by importance score.
+    pub fn top_legends(&self, limit: usize) -> Vec<&LegendEntry> {
+        let mut entries: Vec<_> = self.legends.values().collect();
+        entries.sort_by(|a, b| b.importance.partial_cmp(&a.importance).unwrap_or(std::cmp::Ordering::Equal));
+        entries.into_iter().take(limit).collect()
+    }
+
+    /// Get a single legend by event id.
+    pub fn legend(&self, event_id: LegendEventId) -> Option<&LegendEntry> {
+        self.legends.get(&event_id)
+    }
+
+    /// Get all legends.
+    pub fn all_legends(&self) -> Vec<&LegendEntry> {
+        self.legends.values().collect()
     }
 }
 

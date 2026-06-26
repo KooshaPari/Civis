@@ -31,8 +31,8 @@ pub use ids::{
     SimRef, SimRuntimeId, SourceCrate,
 };
 pub use model::{
-    summary_key, EntityKind, EntityNode, EventKind, EventNode, HistoricalEvent, LegendEdge,
-    LegendNode, RawSimEvent, Role, Tag,
+    compute_legend_importance, summary_key, EntityKind, EntityNode, EventKind, EventNode,
+    HistoricalEvent, LegendEdge, LegendEntry, LegendNode, RawSimEvent, Role, Tag,
 };
 pub use query::{CausalDag, DigestEvent, EntityRef, EpochDigest, Saga, QUERY_API_VERSION};
 pub use rumor::{

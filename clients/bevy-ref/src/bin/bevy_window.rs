@@ -1482,10 +1482,13 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Window::new("Tile Actions")
         .collapsible(false)
         .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
                 let json = format!(

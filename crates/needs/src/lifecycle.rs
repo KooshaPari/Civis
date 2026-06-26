@@ -214,6 +214,7 @@ pub fn migration_pressure(
     needs.food < params.migration_food_threshold
         || needs.safety < params.migration_safety_threshold
         || unrest > params.migration_unrest_threshold
+}
 
 /// Per-tick probability that a given civilian reproduces, derived from
 /// lifecycle state. Returns 0.0 for civilians that cannot reproduce
@@ -586,4 +587,5 @@ mod tests {
         assert!(crowded > packed);
         assert_eq!(packed, 0.0, "full overcrowding must drive probability to zero");
     }
+}
 }

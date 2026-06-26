@@ -275,6 +275,7 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 | FR-CIV-DIPLO-006 | War goal selection taxonomy | `crates/diplomacy/src/lib.rs` | diplomacy tests | Selected goal matches unrest/belief drivers | code-only |
 | FR-CIV-DIPLO-007 | Treaty duration and expiry | `crates/diplomacy/src/lib.rs` | diplomacy tests | Treaty expires at tick T+duration | code-only |
 | FR-CIV-DIPLO-008 | Accept/reject/counter integration | `crates/diplomacy/src/lib.rs` | 8 diplomacy tests | Counter offer resets FSM to negotiating | code-only |
+| FR-CIV-DIPLOMACY | Emergent stance/treaties/reputation from history | `crates/diplomacy/src/emergent.rs` | `emergent::tests` | Stance derives from shared-enemy/trade/border/culture; treaty forms ≥ ally_threshold and breaks ≤ break_threshold → `EventKind::Treaty`/`Betrayal` to legends; betrayal lowers betrayer reputation globally; same inputs ⇒ identical state+events | code-only |
 
 ---
 

@@ -1378,6 +1378,7 @@ mod tests {
     /// divergence > 0, the genome drifts away from its archetype baseline.
     #[test]
     fn p2_divergence_increases_over_generations() {
+        use crate::speciation_distance;
         let class = base_class();
         let seeds_under_test = [
             NamedSeed::Lumari,

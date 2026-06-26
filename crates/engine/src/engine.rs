@@ -71,6 +71,11 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "buildings",
     "diffusion",
     "emergence",
+    "belief",
+    "unrest",
+    "cohesion",
+    "institutions",
+    "psyche",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -357,6 +362,12 @@ pub struct WorldState {
     pub cohesion: u64,
     /// Global unrest pressure used by emergence coupling.
     pub unrest: u64,
+    /// Temple institution level (religion → belief loop, FR-CIV-REL-003).
+    #[serde(default)]
+    pub temple_level: u32,
+    /// Garrison institution level (unrest → defense loop).
+    #[serde(default)]
+    pub garrison_level: u32,
     /// Emergent trade routes that should be retained while active.
     pub emergent_trade_route_keys: BTreeSet<(u32, u32, String)>,
     /// Idle-tick counters for emergent trade routes.
@@ -433,6 +444,8 @@ impl Default for WorldState {
             belief: 0,
             cohesion: 0,
             unrest: 0,
+            temple_level: 0,
+            garrison_level: 0,
             emergent_trade_route_keys: BTreeSet::new(),
             trade_route_idle_ticks: BTreeMap::new(),
             resources: Resources::default(),
@@ -1289,6 +1302,11 @@ impl Simulation {
         self.phase_disasters();
         self.phase_emergence();
         self.phase_emergence_events_close();
+        self.phase_belief();
+        self.phase_unrest();
+        self.phase_cohesion();
+        self.phase_institutions();
+        self.phase_psyche();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]
@@ -2306,6 +2324,22 @@ fn avg_faction_kinship(world: &hecs::World) -> f32 {
         0.0
     } else {
         total_kinship / count as f32
+    }
+}
+
+/// Kinship upward boost applied in [`crate::dormant_phases::Simulation::phase_cohesion`].
+fn kinship_cohesion_boost(world: &hecs::World) -> i64 {
+    const KINSHIP_RATE: f32 = 0.02;
+    const KINSHIP_SCALE: f32 = 100_000.0;
+    (avg_faction_kinship(world) * KINSHIP_RATE * KINSHIP_SCALE) as i64
+}
+
+/// Apply a signed unrest delta, flooring at zero.
+fn add_unrest_delta(unrest: &mut u64, delta: i64) {
+    if delta >= 0 {
+        *unrest = unrest.saturating_add(delta as u64);
+    } else {
+        *unrest = unrest.saturating_sub((-delta) as u64);
     }
 }
 
@@ -3378,6 +3412,8 @@ pub struct SimulationSnapshot {
     pub geology_map: GeologyMap,
 }
 
+mod dormant_phases;
+
 // ============================================================================
 // TEST HELPERS & STUBS
 // ============================================================================
@@ -3488,24 +3524,54 @@ mod tests {
                 "buildings",
                 "diffusion",
                 "emergence",
+                "belief",
+                "unrest",
+                "cohesion",
+                "institutions",
+                "psyche",
             ]
         );
     }
 
-    /// `PHASE_ORDER` includes "emergence" as the final entry.
-    /// Closes FR-CIV-LEGENDS-INGEST-02, FR-CIV-PSYCHE-900/901, FR-CIV-PSYCHE-911,
-    /// FR-CIV-PSYCHE-912, FR-CIV-GENETICS, FR-CIV-AI-006, FR-CIV-LEGENDS-QUERY-07.
+    /// `PHASE_ORDER` includes dormant religion/psyche phases after emergence.
+    #[test]
+    fn phase_order_includes_dormant_religion_psyche() {
+        let emergence_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "emergence")
+            .expect("PHASE_ORDER must include 'emergence'");
+        let psyche_idx = PHASE_ORDER
+            .iter()
+            .position(|p| *p == "psyche")
+            .expect("PHASE_ORDER must include 'psyche'");
+        assert!(
+            emergence_idx < psyche_idx,
+            "emergence must precede dormant religion/psyche phases"
+        );
+        assert_eq!(
+            psyche_idx,
+            PHASE_ORDER.len() - 1,
+            "psyche must be the final entry in PHASE_ORDER"
+        );
+        for name in ["belief", "unrest", "cohesion", "institutions"] {
+            assert!(
+                PHASE_ORDER.contains(&name),
+                "PHASE_ORDER must include dormant phase '{name}'"
+            );
+        }
+    }
+
+    /// Legacy name — emergence is no longer the final phase; see
+    /// `phase_order_includes_dormant_religion_psyche`.
     #[test]
     fn phase_order_includes_emergence() {
         let emergence_idx = PHASE_ORDER
             .iter()
             .position(|p| *p == "emergence")
             .expect("PHASE_ORDER must include 'emergence'");
-        // emergence must be the final phase in the deterministic core loop
-        assert_eq!(
-            emergence_idx,
-            PHASE_ORDER.len() - 1,
-            "emergence must be the final entry in PHASE_ORDER"
+        assert!(
+            emergence_idx > 0,
+            "emergence must be present in PHASE_ORDER"
         );
     }
     /// L5-115 — `Simulation::tick` invokes `phase_emergence` and the public
@@ -5207,7 +5273,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Simulation::cohesion() not implemented"]
     fn n10_kinship_coupling_boosts_cohesion_basic() {
         use civ_agents::Tie;
         let mut sim = Simulation::new();

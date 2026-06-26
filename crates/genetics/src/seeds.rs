@@ -1378,16 +1378,18 @@ mod tests {
     /// divergence > 0, the genome drifts away from its archetype baseline.
     #[test]
     fn p2_divergence_increases_over_generations() {
+        use crate::speciation_distance;
         let class = base_class();
         let seeds_under_test = [
-            NamedSeed::Lumari,
-            NamedSeed::Drakhari,
-            NamedSeed::Quelven,
-            NamedSeed::Ashborn,
+            (NamedSeed::Lumari, 0u64),
+            (NamedSeed::Drakhari, 1u64),
+            (NamedSeed::Quelven, 2u64),
+            (NamedSeed::Ashborn, 3u64),
         ];
-        for &named in &seeds_under_test {
+        for (named, idx) in &seeds_under_test {
+            let named = *named;
             let base = archetype_dna(named);
-            let mut rng = ChaCha8Rng::seed_from_u64(0x1234_5678_u64 ^ named as u64);
+            let mut rng = ChaCha8Rng::seed_from_u64(0x1234_5678_u64 ^ idx);
             let seed_def = archetype_seed(named);
             let mut cur = base.clone();
             let initial_dist = speciation_distance(&base, &cur);

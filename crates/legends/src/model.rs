@@ -34,12 +34,12 @@ pub enum EventKind {
     Discovery,
     LawObserved,
     GodAct,
+    /// A treaty/alliance formed between two polities (emergent diplomacy).
+    Treaty,
+    /// A treaty was broken — a betrayal (emergent diplomacy).
+    Betrayal,
     /// "X rose to prominence" — emitted by the engine itself on promotion (§4.3).
     Promotion,
-    /// Two factions signed a peace or diplomatic agreement.
-    Treaty,
-    /// An actor turned against a former ally.
-    Betrayal,
     /// A civilization completed a monument, technology, or cultural achievement.
     GreatWork,
     /// A disease swept through a population.

@@ -27,7 +27,7 @@ impl FeatureOracle for PsycheOracle {
         // has had psyche states written into it.
         let active_clusters = beliefs
             .values()
-            .filter(|centroid| (*centroid).iter().any(|&v| v != 0.0))
+            .filter(|centroid| centroid.iter().any(|&v| v != 0.0_f32))
             .count();
 
         let measured = active_clusters as f64;

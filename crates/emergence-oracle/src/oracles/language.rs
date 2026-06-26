@@ -8,6 +8,7 @@
 //! one coined lexeme (non-empty `EvolvedLexicon`). Threshold: ≥ 2 such
 //! clusters after tick > 0, demonstrating independent divergence paths.
 
+use civ_agents::language::EvolvedLexicon;
 use crate::{FeatureOracle, OracleVerdict};
 use civ_engine::Simulation;
 
@@ -23,7 +24,10 @@ impl FeatureOracle for LanguageOracle {
         let lexicons = sim.cluster_lexicons();
 
         // Count clusters that have at least one coined lexeme.
-        let active_clusters = lexicons.values().filter(|lex| !(*lex).is_empty()).count();
+        let active_clusters = lexicons
+            .values()
+            .filter(|lex: &&EvolvedLexicon| !lex.is_empty())
+            .count();
         let total_clusters = lexicons.len();
         let measured = active_clusters as f64;
 

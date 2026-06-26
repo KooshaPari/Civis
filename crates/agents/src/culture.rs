@@ -8,6 +8,8 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+use crate::language::{drift_phonemes, phoneme_inventory_distance, PhonemeInventory};
+
 /// Fixed-size cultural meme vector.
 ///
 /// Values are normalized to `[0, 1]` and are intentionally generic: the
@@ -22,6 +24,8 @@ pub struct CultureProfile {
     /// Language drift vector. Different enough vectors represent distinct
     /// dialects or languages.
     pub language: TraitVector,
+    /// Drifted phoneme inventory for this cluster dialect.
+    pub phonemes: PhonemeInventory,
     /// How much contact this population has with others in the current step.
     pub contact: f32,
     /// How much kinship insulation this population has. Higher values reduce
@@ -36,6 +40,7 @@ impl CultureProfile {
         Self {
             traits: seed,
             language: seed,
+            phonemes: PhonemeInventory::from_trait_seed(seed),
             contact: 0.0,
             kinship: 0.0,
         }
@@ -87,9 +92,18 @@ pub fn cultural_distance(a: TraitVector, b: TraitVector) -> f32 {
     (sum / 4.0).sqrt().min(1.0)
 }
 
-/// Returns a normalized language distance in `[0, 1]`.
+/// Returns a normalized language distance in `[0, 1]` from trait vectors alone.
 pub fn language_distance(a: TraitVector, b: TraitVector) -> f32 {
     cultural_distance(a, b)
+}
+
+/// Cluster divergence: cultural distance drives language distance (FR-CIV-LANG).
+#[must_use]
+pub fn cluster_language_distance(a: &CultureProfile, b: &CultureProfile) -> f32 {
+    let cult = cultural_distance(a.traits, b.traits);
+    let phon = phoneme_inventory_distance(&a.phonemes, &b.phonemes);
+    let raw = language_distance(a.language, b.language);
+    clamp01((cult * 0.5 + phon * 0.3 + raw * 0.2).max(cult * 0.7))
 }
 
 /// Diffuses culture and language across a contact graph for one step.
@@ -113,6 +127,7 @@ pub fn drift_populations(
         for (idx, profile) in profiles.iter_mut().enumerate() {
             profile.traits = mutate_traits(rng, base[idx].traits, mutation_rate);
             profile.language = mutate_traits(rng, base[idx].language, mutation_rate * 0.5);
+            let _ = drift_phonemes(rng, &mut profile.phonemes, mutation_rate * 0.4, 50);
             profile.contact = 0.0;
         }
         return;
@@ -149,6 +164,7 @@ pub fn drift_populations(
 
         profile.traits = traits;
         profile.language = language;
+        let _ = drift_phonemes(rng, &mut profile.phonemes, mutation_rate * 0.4, 50);
     }
 
     // Creolization is a second pass so contact zones blend the already-drifted
@@ -239,12 +255,14 @@ mod tests {
                 language: [0.0, 0.0, 0.0, 0.0],
                 contact: 0.0,
                 kinship: 0.95,
+                ..CultureProfile::new([0.0, 0.0, 0.0, 0.0])
             },
             CultureProfile {
                 traits: [1.0, 1.0, 1.0, 1.0],
                 language: [1.0, 1.0, 1.0, 1.0],
                 contact: 0.0,
                 kinship: 0.0,
+                ..CultureProfile::new([1.0, 1.0, 1.0, 1.0])
             },
         ];
         let edges = [ContactEdge {
@@ -257,5 +275,29 @@ mod tests {
 
         assert!(cultural_distance(profiles[0].traits, [0.0, 0.0, 0.0, 0.0]) < 0.2);
         assert!(profiles[0].contact < 0.2);
+    }
+
+    #[test]
+    fn cluster_language_distance_tracks_cultural_divergence() {
+        let near_a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let near_b = CultureProfile::new([0.52, 0.48, 0.51, 0.49]);
+        let far_a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
+        let far_b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
+        let near = cluster_language_distance(&near_a, &near_b);
+        let far = cluster_language_distance(&far_a, &far_b);
+        assert!(far > near, "cultural divergence must raise language distance");
+    }
+
+    #[test]
+    fn phoneme_vectors_diverge_with_isolated_drift() {
+        let mut rng = rng(31);
+        let mut profiles = vec![
+            CultureProfile::new([0.2, 0.2, 0.2, 0.2]),
+            CultureProfile::new([0.8, 0.8, 0.8, 0.8]),
+        ];
+        for _ in 0..24 {
+            drift_populations(&mut profiles, &[], &mut rng, 0.06, 0.0, 0.85);
+        }
+        assert_ne!(profiles[0].phonemes, profiles[1].phonemes);
     }
 }

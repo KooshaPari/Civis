@@ -1087,6 +1087,10 @@ impl Simulation {
         &self.building_graph
     }
 
+    pub(crate) fn building_graph_mut(&mut self) -> &mut BuildingGraph {
+        &mut self.building_graph
+    }
+
     /// Borrow the most recent cohort diffusion statistics.
     pub fn last_cohort_stats(&self) -> Option<&CohortStats> {
         self.last_cohort_stats.as_ref()
@@ -1572,37 +1576,71 @@ impl Simulation {
         }
     }
 
-    /// Buildings phase - expands the parcel graph on a fixed cadence when demand is high.
+    /// Buildings phase — emergent demand, culture+biome+era facades, settlement clustering.
     fn phase_buildings(&mut self) {
-        if self.state.tick % 16 != 0 {
+        let research_tier = self.research_tier();
+        if self.state.tick % building_cadence(research_tier) != 0 {
+            return;
+        }
+        self.run_building_emergence_tick();
+    }
+
+    fn run_building_emergence_tick(&mut self) {
+        use crate::building_emergence::{
+            apply_emergence_facades, emergent_style_key_for_sim, emergence_demand_signals,
+            settlement_build_anchor,
+        };
+        use civ_planet::GeologyMap;
+
+        let research_tier = self.research_tier();
+        let capacity = self.building_graph.total_capacity() as i64;
+        let raw = building_demand_signals(
+            self.state.population,
+            capacity,
+            self.state.cohesion,
+            research_tier,
+            self.state.unrest,
+            self.state.resources.wood,
+            self.state.resources.metal,
+        );
+        let era = civ_build::era_index_from_pop_tech(
+            self.state.population,
+            self.researched_tech_count(),
+        );
+        self.target_era = era;
+        let signals = emergence_demand_signals(self, raw, era);
+        let affordable = building_affordable_parcel_count(
+            self.state.resources.wood,
+            self.state.resources.metal,
+        );
+        let limited = building_signals_limited(signals, affordable);
+        let parcel_count = building_parcel_count(&limited);
+        if parcel_count == 0
+            || !building_materials_affordable(
+                self.state.resources.wood,
+                self.state.resources.metal,
+                parcel_count,
+            )
+        {
             return;
         }
 
-        let signals = DemandSignals {
-            residential: 0.75,
-            commercial: 0.25,
-            industrial: 0.25,
-            civic: 0.75,
-        };
-
-        if [
-            signals.residential,
-            signals.commercial,
-            signals.industrial,
-            signals.civic,
-        ]
-        .iter()
-        .any(|signal| *signal > 0.5)
-        {
-            let origin = civ_voxel::WorldCoord { x: 0, y: 0, z: 0 };
-            let _ = self.allocator.allocate(
-                &mut self.building_graph,
-                &signals,
-                self.target_era,
-                origin,
-                16,
-            );
-        }
+        let (cluster_id, anchor) = settlement_build_anchor(&self.world);
+        let geology = GeologyMap::seed(&self.planet);
+        let style = emergent_style_key_for_sim(self, cluster_id, &geology, &anchor);
+        let before = self.building_graph.parcels.len();
+        let allocated = self.allocator.allocate(
+            &mut self.building_graph,
+            &limited,
+            era,
+            anchor,
+            16,
+        );
+        apply_emergence_facades(self, cluster_id, style, limited, &allocated);
+        let (wood_cost, metal_cost) = building_material_cost(parcel_count);
+        self.state.resources.wood = self.state.resources.wood.saturating_sub(wood_cost);
+        self.state.resources.metal = self.state.resources.metal.saturating_sub(metal_cost);
+        debug_assert!(self.building_graph.parcels.len() >= before);
     }
 
     /// Diffusion phase - propagates wardrobe and tools eras across civilians.
@@ -4106,6 +4144,8 @@ mod tests {
     #[test]
     fn phase_buildings_allocates_over_time_when_signals_are_high() {
         let mut sim = Simulation::with_seed(77);
+        sim.state.resources.wood = Fixed::from_num(800);
+        sim.state.resources.metal = Fixed::from_num(800);
         let before = sim.building_graph().parcels.len();
 
         for _ in 0..200 {
@@ -4113,6 +4153,30 @@ mod tests {
         }
 
         assert!(sim.building_graph().parcels.len() > before);
+    }
+
+    /// FR-CIV-ARCH — emergence facades differ when culture profiles diverge.
+    #[test]
+    fn phase_buildings_applies_emergence_facades() {
+        use civ_agents::culture::CultureProfile;
+
+        let mut sim = Simulation::with_seed(91);
+        sim.state.resources.wood = Fixed::from_num(900);
+        sim.state.resources.metal = Fixed::from_num(900);
+        sim.emergence.cluster_cultures.insert(
+            1,
+            CultureProfile::new([0.1, 0.2, 0.3, 0.4]),
+        );
+        for _ in 0..300 {
+            sim.tick();
+        }
+        let names: std::collections::BTreeSet<String> = sim
+            .building_graph()
+            .facades
+            .values()
+            .map(|f| f.name.clone())
+            .collect();
+        assert!(!names.is_empty());
     }
 
     /// FR-CIV-ENGINE-INT-012 — diffusion advances civilian wardrobe eras over time.

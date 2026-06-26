@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, WorldState};
+use crate::gameplay::ScenarioObjective;
 use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
 
@@ -136,6 +137,13 @@ pub struct Scenario {
     /// defaults to the no-op policy as well.
     #[serde(default)]
     pub policy: ScenarioPolicy,
+    /// Victory/defeat objectives for this scenario (FR-CIV-GAME-002).
+    ///
+    /// Each objective specifies a [`VictoryCondition`] and an optional tick
+    /// deadline.  An empty list (the default) means the session runs indefinitely
+    /// with only the global `check_outcome` conditions applying.
+    #[serde(default)]
+    pub objectives: Vec<ScenarioObjective>,
 }
 
 /// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
@@ -528,6 +536,7 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
+            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -558,6 +567,7 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
+            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -666,6 +676,7 @@ mods:
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
+            objectives: Vec::new(),
         };
 
         let mut zero_scarcity = base.clone();

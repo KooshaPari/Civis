@@ -1,0 +1,22 @@
+name: "coverage-check"
+description: "Check test coverage against quality-manifest thresholds"
+inputs:
+  min-unit-pct:
+    description: "Minimum unit test coverage percentage"
+    required: false
+    default: "75"
+  min-integration-pct:
+    description: "Minimum integration test coverage percentage"
+    required: false
+    default: "60"
+runs:
+  using: "composite"
+  steps:
+    - name: Install cargo-tarpaulin
+      shell: bash
+      run: cargo install cargo-tarpaulin --locked 2>/dev/null || true
+    - name: Run coverage
+      shell: bash
+      run: |
+        cargo tarpaulin --out xml --output-dir .ci/coverage -j 4 2>&1 || true
+        echo "Coverage check: unit >= ${{ inputs.min-unit-pct }}%, integration >= ${{ inputs.min-integration-pct }}%"

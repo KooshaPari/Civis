@@ -590,6 +590,83 @@ mod tests {
         rand_chacha::ChaCha8Rng::seed_from_u64(seed)
     }
 
+    // ------------------------------------------------------------------
+    // FR-CIV-PSYCHE contract tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_trait_evolution_under_hardship_pressure() {
+        let base = OceanTraits::neutral();
+        let evolved = evolve_ocean_traits(base, TraitPressure::Hardship, 42, 1);
+        assert!(
+            evolved.conscientiousness > base.conscientiousness,
+            "hardship must increase conscientiousness"
+        );
+        // Other primary axes not targeted by hardship stay near baseline.
+        assert!((evolved.openness - base.openness).abs() < 0.02);
+    }
+
+    #[test]
+    fn test_trait_evolution_determinism() {
+        let base = OceanTraits::neutral();
+        let a = evolve_ocean_traits(base, TraitPressure::Conflict, 99, 5);
+        let b = evolve_ocean_traits(base, TraitPressure::Conflict, 99, 5);
+        assert_eq!(a, b, "same seed+generation must produce identical traits");
+    }
+
+    #[test]
+    fn test_behavior_modifiers_high_agreeableness() {
+        let traits = OceanTraits {
+            agreeableness: 0.95,
+            ..OceanTraits::neutral()
+        };
+        let mods = compute_behavior_modifiers(&traits);
+        assert!(
+            mods.alliance_formation_speed > 1.0,
+            "high agreeableness must produce alliance_formation_speed > 1.0"
+        );
+    }
+
+    #[test]
+    fn test_behavior_modifiers_high_neuroticism() {
+        let traits = OceanTraits {
+            neuroticism: 0.90,
+            ..OceanTraits::neutral()
+        };
+        let mods = compute_behavior_modifiers(&traits);
+        assert!(
+            mods.unrest_amplifier > 1.0,
+            "high neuroticism must produce unrest_amplifier > 1.0"
+        );
+    }
+
+    #[test]
+    fn test_cluster_profiles_diverge_with_isolation() {
+        let global = OceanTraits::neutral();
+
+        // Same underlying OCEAN distance from global but different isolation.
+        let shifted = OceanTraits {
+            openness: 0.8,
+            ..OceanTraits::neutral()
+        };
+        let agent_a = AgentPsyche { cluster_id: 1, ocean: shifted };
+        let agent_b = AgentPsyche { cluster_id: 2, ocean: shifted };
+
+        let profile_low =
+            compute_cluster_profile(&[agent_a], 1, &global, 0.1).unwrap();
+        let profile_high =
+            compute_cluster_profile(&[agent_b], 2, &global, 0.9).unwrap();
+
+        assert!(
+            profile_high.divergence_from_global > profile_low.divergence_from_global,
+            "higher isolation must produce greater divergence_from_global"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Existing psyche tests follow
+    // ------------------------------------------------------------------
+
     #[test]
     fn genetics_projection_is_bounded_and_sibling_sensitive() {
         let profile = psych_genome_profile();

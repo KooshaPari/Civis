@@ -1,0 +1,12 @@
+[1;38m{[m
+  [1;34m"additions"[m[1;38m:[m 185[1;38m,[m
+  [1;34m"baseRefName"[m[1;38m:[m [32m"feat/civis-platform"[m[1;38m,[m
+  [1;34m"changedFiles"[m[1;38m:[m 4[1;38m,[m
+  [1;34m"deletions"[m[1;38m:[m 0[1;38m,[m
+  [1;34m"headRefName"[m[1;38m:[m [32m"feat/oracle-hard-gate"[m[1;38m,[m
+  [1;34m"mergeStateStatus"[m[1;38m:[m [32m"DIRTY"[m[1;38m,[m
+  [1;34m"mergeable"[m[1;38m:[m [32m"CONFLICTING"[m[1;38m,[m
+  [1;34m"number"[m[1;38m:[m 926[1;38m,[m
+  [1;34m"state"[m[1;38m:[m [32m"OPEN"[m[1;38m,[m
+  [1;34m"title"[m[1;38m:[m [32m"ci(oracle): hard-fail the emergence-oracle gate on contract regression (baseline 8/8)"[m
+[1;38m}[m

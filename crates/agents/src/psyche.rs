@@ -414,6 +414,73 @@ pub fn evolve_ocean_traits(
     out
 }
 
+// ---------------------------------------------------------------------------
+// Trait → behaviour coupling (FR-CIV-PSYCHE-900 / FR-CIV-EMERGENCE-N12)
+// ---------------------------------------------------------------------------
+
+/// Scalar multipliers derived from an agent's OCEAN profile that modulate
+/// macro-level civic outcomes.
+///
+/// # Integration hooks
+/// - `alliance_formation_speed` — multiply the base alliance-proposal rate in
+///   `crates/diplomacy/src/lib.rs` (`DiplomacyMatrix::apply_signal`) before
+///   computing the new relation score.
+/// - `unrest_amplifier` — multiply the unrest delta in
+///   `crates/engine/src/engine.rs` (`phase_unrest` / `phase_institutions`)
+///   before accumulating civic unrest.
+/// - `cohesion_bonus` — add to the faction-cohesion score computed in
+///   `crates/agents/src/lib.rs` (`form_faction` / cohesion threshold check).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PsycheBehaviorModifiers {
+    /// Multiplier on alliance formation speed; `>1.0` means faster proposals.
+    pub alliance_formation_speed: f32,
+    /// Multiplier on per-tick unrest delta; `>1.0` means higher volatility.
+    pub unrest_amplifier: f32,
+    /// Additive bonus to faction cohesion accumulator.
+    pub cohesion_bonus: f32,
+}
+
+impl PsycheBehaviorModifiers {
+    /// Identity modifiers — no behavioural change from baseline.
+    #[must_use]
+    pub fn identity() -> Self {
+        Self {
+            alliance_formation_speed: 1.0,
+            unrest_amplifier: 1.0,
+            cohesion_bonus: 0.0,
+        }
+    }
+}
+
+/// Derive behaviour multipliers from an agent's OCEAN trait snapshot.
+///
+/// Thresholds follow the FR-CIV-PSYCHE acceptance contract:
+/// - agreeableness  > 0.7 ⇒ `alliance_formation_speed` > 1.0
+/// - neuroticism    > 0.7 ⇒ `unrest_amplifier` > 1.0
+/// - conscientiousness     ⇒ linear `cohesion_bonus` in `[0, 0.3]`
+#[must_use]
+pub fn compute_behavior_modifiers(traits: &OceanTraits) -> PsycheBehaviorModifiers {
+    let alliance_formation_speed = if traits.agreeableness > 0.7 {
+        1.0 + (traits.agreeableness - 0.7) * (1.0 / 0.3)
+    } else {
+        1.0
+    };
+
+    let unrest_amplifier = if traits.neuroticism > 0.7 {
+        1.0 + (traits.neuroticism - 0.7) * (1.0 / 0.3)
+    } else {
+        1.0
+    };
+
+    let cohesion_bonus = traits.conscientiousness * 0.3;
+
+    PsycheBehaviorModifiers {
+        alliance_formation_speed,
+        unrest_amplifier,
+        cohesion_bonus,
+    }
+}
+
 /// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
 #[must_use]
 pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {

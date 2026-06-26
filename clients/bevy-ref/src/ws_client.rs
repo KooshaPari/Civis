@@ -1,5 +1,8 @@
 use std::{
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
     thread,
     time::Duration,
 };
@@ -33,12 +36,13 @@ impl Default for WsClientConfig {
 }
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
+#[derive(Clone)]
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
     meta_rx: Receiver<WsSpectatorMeta>,
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
-    latest_state: AtomicU32,
+    latest_state: Arc<AtomicU32>,
     cmd_tx: Sender<String>,
     /// Channel for outbound JSON-RPC text frames (fire-and-forget).
     send_tx: Sender<String>,
@@ -84,17 +88,12 @@ impl WsClient {
             meta_rx,
             rtt_rx,
             state_rx,
-            latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
+            latest_state: Arc::new(AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected))),
             cmd_tx,
             send_tx,
             emergence_rx,
             outcome_rx,
         }
-    }
-
-    /// Enqueue an outbound JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
-    pub fn send_rpc(&self, json: String) {
-        let _ = self.send_tx.send(json);
     }
 
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames

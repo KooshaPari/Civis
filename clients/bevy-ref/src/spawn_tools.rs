@@ -24,6 +24,8 @@ pub enum SpawnTool {
     Terraform,
     /// Remove the entity nearest the clicked point.
     Destroy,
+    /// Arm the material-paint brush to apply a selected voxel material.
+    PaintMaterial,
 }
 
 /// Currently active tool.

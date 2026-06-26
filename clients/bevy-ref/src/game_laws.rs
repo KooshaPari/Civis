@@ -170,10 +170,10 @@ fn draw_game_laws_panel(mut contexts: EguiContexts, mut open: ResMut<GameLawsOpe
             );
             ui.add_space(8.0);
             egui::ScrollArea::vertical().show(ui, |ui| {
-                let mut current_category = "";
+                let mut current_category = String::new();
                 for law in GameLawsPanel::laws() {
                     if current_category != law.category {
-                        current_category = law.category;
+                        current_category = law.category.clone();
                         ui.label(
                             egui::RichText::new(law.category)
                                 .color(ui_theme::ACCENT)

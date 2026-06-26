@@ -738,8 +738,8 @@ mod plugin {
                 egui::Frame::none()
                     .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 200))
                     .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(126, 186, 181)))
-                    .rounding(egui::Rounding::same(8.0))
-                    .inner_margin(egui::Margin::symmetric(16.0, 10.0))
+                    .corner_radius(egui::CornerRadius::same(8))
+                    .inner_margin(egui::Margin::symmetric(16_i8, 10_i8))
                     .show(ui, |ui| {
                         ui.set_min_width(440.0);
                         ui.label(

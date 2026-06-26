@@ -94,6 +94,8 @@ pub mod tech_tree_ui;
 pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
+#[cfg(feature = "bevy")]
+pub mod procedural_actor;
 pub mod god_panel;
 pub mod tutorial;
 pub mod perf_hud;
@@ -107,8 +109,6 @@ pub mod tool_categories;
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod ui_theme;
 #[cfg(all(feature = "bevy", feature = "vfx"))]
 pub mod vfx;
 #[cfg(all(feature = "bevy", feature = "voxel"))]

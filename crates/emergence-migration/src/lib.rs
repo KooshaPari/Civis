@@ -123,9 +123,6 @@ impl MigrationEngine {
             return MigrationResult::default();
         }
 
-        // Total opportunity weight for weighted random selection.
-        let total_opp: f32 = destinations.iter().map(|c| c.opportunity).sum();
-
         let mut transfers: Vec<PopulationTransfer> = Vec::new();
         let mut culture_blends: Vec<CultureBlendDelta> = Vec::new();
         let mut total_migrated: u64 = 0;
@@ -140,7 +137,7 @@ impl MigrationEngine {
             }
 
             // Pick destination by opportunity-weighted selection.
-            let dest = pick_destination(&mut rng, &destinations, source.id, total_opp);
+            let dest = pick_destination(&mut rng, &destinations, source.id);
             if dest.id == source.id {
                 continue;
             }
@@ -185,7 +182,6 @@ fn pick_destination<'a>(
     rng: &mut ChaCha8Rng,
     destinations: &[&'a ClusterSnapshot],
     exclude_id: u64,
-    total_opp: f32,
 ) -> &'a ClusterSnapshot {
     use rand::Rng as _;
 

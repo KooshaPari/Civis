@@ -96,6 +96,8 @@ pub mod tech_tree_ui;
 pub mod civ_history;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod god_actions;
+#[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod holocron_panel;
 #[cfg(feature = "bevy")]
 pub mod procedural_actor;
 pub mod god_panel;

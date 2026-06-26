@@ -33,6 +33,7 @@ pub mod fluid_ca;
 pub mod hud;
 pub mod lod;
 pub mod material;
+pub mod material_ca;
 pub mod material_pbr;
 pub mod reactions;
 pub mod scale_budget;

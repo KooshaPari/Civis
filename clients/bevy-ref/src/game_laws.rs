@@ -175,16 +175,16 @@ fn draw_game_laws_panel(mut contexts: EguiContexts, mut open: ResMut<GameLawsOpe
                     if current_category != law.category {
                         current_category = law.category.clone();
                         ui.label(
-                            egui::RichText::new(law.category)
+                            egui::RichText::new(law.category.as_str())
                                 .color(ui_theme::ACCENT)
                                 .strong(),
                         );
                         ui.add_space(2.0);
                     }
                     ui.group(|ui| {
-                        ui.label(egui::RichText::new(law.title).strong().color(ui_theme::TEXT));
+                        ui.label(egui::RichText::new(law.title.as_str()).strong().color(ui_theme::TEXT));
                         ui.label(
-                            egui::RichText::new(law.description)
+                            egui::RichText::new(law.description.as_str())
                                 .small()
                                 .color(ui_theme::DIM),
                         );

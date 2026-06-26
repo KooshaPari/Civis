@@ -350,7 +350,7 @@ impl WinMode {
             ),
             Self::Fullscreen => bevy::window::WindowMode::Fullscreen(
                 bevy::window::MonitorSelection::Current,
-                bevy::window::VideoModeSelection::Auto,
+                bevy::window::VideoModeSelection::Current,
             ),
         }
     }

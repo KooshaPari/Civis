@@ -5,7 +5,7 @@
 //! 1 tick has exercised the legends phase.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct LegendsOracle;
 

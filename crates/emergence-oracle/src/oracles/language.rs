@@ -4,7 +4,7 @@
 //! present. Proxied by citizen count: language drift requires living speakers.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct LanguageOracle;
 

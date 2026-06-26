@@ -5,7 +5,7 @@
 //! need living members before diplomacy can emerge.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct DiplomacyOracle;
 

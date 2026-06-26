@@ -5,7 +5,7 @@
 //! creature-class entities present in the initial world.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct CreatureOracle;
 

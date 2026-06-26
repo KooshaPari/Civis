@@ -4,7 +4,7 @@
 //! by building count from the simulation snapshot.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct ArchitectureOracle;
 

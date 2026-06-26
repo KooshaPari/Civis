@@ -4,7 +4,7 @@
 //! count: individual psyche states exist only while citizens exist.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct PsycheOracle;
 

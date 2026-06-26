@@ -6,7 +6,7 @@
 
 pub mod oracles;
 
-use engine::Simulation;
+use civ_engine::Simulation;
 
 /// Result of a single oracle check against a running simulation.
 #[derive(Debug, Clone)]

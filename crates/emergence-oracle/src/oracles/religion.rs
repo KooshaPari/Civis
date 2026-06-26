@@ -5,7 +5,7 @@
 //! A non-zero belief score at any tick >= 1 confirms the religion pillar is live.
 
 use crate::{FeatureOracle, OracleVerdict};
-use engine::Simulation;
+use civ_engine::Simulation;
 
 pub struct ReligionOracle;
 

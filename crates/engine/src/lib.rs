@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod building_layouts;
 pub mod command_queue;
 pub mod conditions;
 pub mod culture;
@@ -54,6 +55,13 @@ pub use engine::{
     awakening_belief_gain, awakening_cohesion_gain, grid_to_norm, spawn, Building, BuildingType,
     CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, ModGuestStateSave, Position, ReplayLog,
     Simulation, UnitType, WorldState,
+};
+
+// FR-CIV-ARCH: Emergent building layouts re-export so callers can use
+// `civ_engine::EmergentLayout` and `civ_engine::LayoutStrategy` without
+// directly depending on the private `building_layouts` module.
+pub use building_layouts::{
+    EmergentLayout, LayoutStrategy,
 };
 pub use era::{CivAge, CivEra, EraProgressionState, FactionEraSnapshot};
 pub use history::{EraHistory, EraTransition};

@@ -19,6 +19,7 @@ pub mod engine;
 pub mod emergence;
 pub mod disasters;
 pub mod dormant_phases;
+pub mod phase_migration;
 pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;

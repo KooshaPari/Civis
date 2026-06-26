@@ -1,0 +1,30 @@
+# Kethari-dominant coastal start: 50/25/25 split with expressive divergence.
+# Shows aquatic-heavy weighting alongside inland archetypes.
+version: 1
+name: kethari-dominant
+tick_start: 0
+population: 1000000
+base_consumption_joules: 5000000000
+scarcity_multiplier: 1.0
+fog_vision_radius: 8
+fog_grid_size: 64
+military:
+  movement_cadence_ticks: 4
+  movement_pulses_per_cadence: 2
+  war_cadence_ticks: 16
+  engage_range_grid: 10
+seeds:
+  - scenarios/canonical_seeds.ron
+active_seed: raw_organism
+divergence_override: 0.55
+starting_conditions:
+  civilians_per_faction: 28
+  faction_count: 5
+  quadrant_spread: 2200
+  seed_mix:
+    - seed: Kethari
+      weight: 0.5
+    - seed: Nymari
+      weight: 0.25
+    - seed: Sylphine
+      weight: 0.25

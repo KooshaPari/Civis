@@ -115,7 +115,7 @@ pub const fn parcel_kind_unlocked(kind: ParcelKind, era: u16) -> bool {
 
 /// Minimum build-era for engine [`BuildingType`] variants (few era-gated types).
 #[must_use]
-pub const fn building_type_min_era(type_tag: &str) -> u16 {
+pub fn building_type_min_era(type_tag: &str) -> u16 {
     match type_tag {
         "Farm" | "House" | "CityCenter" => 0,
         "Mine" => 1,

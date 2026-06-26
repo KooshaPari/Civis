@@ -15,7 +15,7 @@
 
 mod crash_handler;
 
-#[cfg(feature = "bevy")]
+#[cfg(all(feature = "bevy", feature = "models"))]
 pub mod animation;
 #[cfg(feature = "bevy")]
 pub mod atmosphere;

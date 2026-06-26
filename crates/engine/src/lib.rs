@@ -23,6 +23,7 @@ pub mod lod;
 pub mod metrics;
 pub mod perf;
 pub mod policy;
+pub mod psyche_behavior;
 pub mod religion;
 pub mod replay;
 pub mod replay_format;
@@ -111,3 +112,8 @@ pub use religion::{
     apply_big_gods_response, last_religion_sample, substrate_gradients_for, ReligionEvent,
     ReligiousProfile, SubstrateGradients,
 };
+
+// FR-CIV-PSYCHE (psyche-driven behavior gap). Re-exported so callers
+// (server, tests, CLI) can use `behavior_from_psyche` and `EmotionDrivenBehavior`
+// without pulling the `psyche_behavior` module path directly.
+pub use psyche_behavior::{behavior_from_psyche, EmotionDrivenBehavior};

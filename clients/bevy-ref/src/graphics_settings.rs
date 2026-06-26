@@ -57,10 +57,10 @@
 //! Bevy resources only**.  No value from this resource must enter simulation
 //! state (voxel world, agent data, CA ticks).
 
-use bevy::core_pipeline::bloom::Bloom;
-use bevy::core_pipeline::motion_blur::MotionBlur;
+use bevy::post_process::bloom::Bloom;
+use bevy::post_process::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::pbr::DirectionalLightShadowMap;
+use bevy::light::DirectionalLightShadowMap;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};

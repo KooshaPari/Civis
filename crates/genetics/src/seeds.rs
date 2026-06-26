@@ -1390,11 +1390,11 @@ mod tests {
             let mut rng = ChaCha8Rng::seed_from_u64(0x1234_5678_u64 ^ named as u64);
             let seed_def = archetype_seed(named);
             let mut cur = base.clone();
-            let initial_dist = speciation_distance(&base, &cur);
+            let initial_dist = crate::speciation_distance(&base, &cur);
             for _ in 0..500 {
                 cur = mutate_with_divergence(&cur, &mut rng, &class, seed_def.divergence);
             }
-            let final_dist = speciation_distance(&base, &cur);
+            let final_dist = crate::speciation_distance(&base, &cur);
             assert!(
                 final_dist > initial_dist,
                 "{named:?}: genome must drift from archetype over 500 ticks (initial={initial_dist}, final={final_dist})"

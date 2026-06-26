@@ -481,6 +481,84 @@ pub fn compute_behavior_modifiers(traits: &OceanTraits) -> PsycheBehaviorModifie
     }
 }
 
+// ---------------------------------------------------------------------------
+// Cluster psychological profiles (FR-CIV-PSYCHE-911 / isolation divergence)
+// ---------------------------------------------------------------------------
+
+/// Aggregate psychological fingerprint for one cluster.
+///
+/// Extends the `isolation_weighted_belief_divergence` pattern to cover the
+/// full OCEAN vector so downstream systems (diplomacy, unrest) can query the
+/// cluster's collective personality rather than just its belief distance.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClusterPsychProfile {
+    /// Owning cluster.
+    pub cluster_id: usize,
+    /// Mean OCEAN traits across all members.
+    pub centroid: OceanTraits,
+    /// Isolation score in `[0.0, 1.0]` — `0.0` = fully connected.
+    pub isolation_score: f32,
+    /// L2 distance from the global population centroid, weighted by isolation.
+    pub divergence_from_global: f32,
+}
+
+/// Per-agent psyche snapshot used as input to cluster-profile computation.
+///
+/// Kept as a plain data struct so the computation can run off ECS-extracted
+/// slices without taking a lock on the world.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct AgentPsyche {
+    /// Which cluster this agent belongs to.
+    pub cluster_id: usize,
+    /// Agent's current OCEAN trait vector.
+    pub ocean: OceanTraits,
+}
+
+/// Compute the psychological profile for a single cluster.
+///
+/// The centroid is the unweighted mean of member OCEAN vectors.
+/// `divergence_from_global` mirrors the `isolation_weighted_belief_divergence`
+/// pattern: OCEAN L2 distance from `global_centroid` scaled by `isolation`
+/// so isolated clusters that also diverge score highest.
+///
+/// Returns `None` when no agents in `agents` belong to `cluster_id`.
+#[must_use]
+pub fn compute_cluster_profile(
+    agents: &[AgentPsyche],
+    cluster_id: usize,
+    global_centroid: &OceanTraits,
+    isolation: f32,
+) -> Option<ClusterPsychProfile> {
+    let members: Vec<OceanTraits> = agents
+        .iter()
+        .filter(|a| a.cluster_id == cluster_id)
+        .map(|a| a.ocean)
+        .collect();
+
+    if members.is_empty() {
+        return None;
+    }
+
+    let n = members.len() as f32;
+    let centroid = OceanTraits {
+        openness: members.iter().map(|o| o.openness).sum::<f32>() / n,
+        conscientiousness: members.iter().map(|o| o.conscientiousness).sum::<f32>() / n,
+        extraversion: members.iter().map(|o| o.extraversion).sum::<f32>() / n,
+        agreeableness: members.iter().map(|o| o.agreeableness).sum::<f32>() / n,
+        neuroticism: members.iter().map(|o| o.neuroticism).sum::<f32>() / n,
+    };
+
+    let isolation_score = isolation.clamp(0.0, 1.0);
+    let divergence_from_global = centroid.distance(*global_centroid) * isolation_score;
+
+    Some(ClusterPsychProfile {
+        cluster_id,
+        centroid,
+        isolation_score,
+        divergence_from_global,
+    })
+}
+
 /// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
 #[must_use]
 pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {

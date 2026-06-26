@@ -1,8 +1,3 @@
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-﻿use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
@@ -47,11 +42,9 @@ use civ_bevy_ref::{
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, WsConnectionState,
-    VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
-    CameraTarget, DebugRender, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds, VOXEL_CHUNK_EDGE,
+    CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
+    VOXEL_CHUNK_EDGE, WsConnectionState,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -156,12 +149,6 @@ impl OrbitCamera {
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
     }
-}
-
-#[derive(Resource)]
-struct HudState {
-    snapshot: LiveHudSnapshot,
-    text: Entity,
 }
 
 #[derive(Component)]

@@ -106,6 +106,24 @@ pub fn cluster_language_distance(a: &CultureProfile, b: &CultureProfile) -> f32 
     clamp01((cult * 0.5 + phon * 0.3 + raw * 0.2).max(cult * 0.7))
 }
 
+/// Language divergence accelerated by isolation (FR-CIV-LANG-003 / FR-CIV-LANG-005).
+///
+/// Models how isolated clusters accumulate linguistic divergence beyond what cultural
+/// drift alone produces: `isolation_ticks` acts as a multiplier on baseline distance so
+/// populations that were once in contact and then separated grow further apart over time.
+/// Returns a value in `[0, 1]`.
+#[must_use]
+pub fn language_divergence_from_isolation(
+    a: &CultureProfile,
+    b: &CultureProfile,
+    isolation_ticks: u32,
+) -> f32 {
+    let base = cluster_language_distance(a, b);
+    // Isolation accumulator: saturates at 1.0; half-saturation at 200 ticks.
+    let isolation_factor = isolation_ticks as f32 / (isolation_ticks as f32 + 200.0);
+    clamp01(base + (1.0 - base) * isolation_factor * 0.5)
+}
+
 /// Diffuses culture and language across a contact graph for one step.
 ///
 /// Isolated populations drift through mutation. Contact-linked populations
@@ -299,5 +317,54 @@ mod tests {
             drift_populations(&mut profiles, &[], &mut rng, 0.06, 0.0, 0.85);
         }
         assert_ne!(profiles[0].phonemes, profiles[1].phonemes);
+    }
+
+    // --- Sub-feature 3: cluster language divergence mirrors culture/religion pattern ---
+
+    #[test]
+    fn language_divergence_rises_with_isolation_ticks() {
+        let a = CultureProfile::new([0.3, 0.4, 0.3, 0.4]);
+        let b = CultureProfile::new([0.7, 0.6, 0.7, 0.6]);
+        let dist_0 = language_divergence_from_isolation(&a, &b, 0);
+        let dist_100 = language_divergence_from_isolation(&a, &b, 100);
+        let dist_500 = language_divergence_from_isolation(&a, &b, 500);
+        assert!(
+            dist_500 >= dist_100 && dist_100 >= dist_0,
+            "language divergence must be monotone in isolation_ticks"
+        );
+        assert!(dist_500 > dist_0, "long isolation must produce strictly more divergence");
+    }
+
+    #[test]
+    fn language_divergence_bounded_in_unit_interval() {
+        let a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
+        let b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
+        for ticks in [0u32, 1, 50, 200, 1000, u32::MAX / 2] {
+            let d = language_divergence_from_isolation(&a, &b, ticks);
+            assert!((0.0..=1.0).contains(&d), "divergence must be in [0,1] at ticks={ticks}");
+        }
+    }
+
+    #[test]
+    fn language_divergence_correlates_with_cultural_distance() {
+        // Near pair vs far pair at same isolation
+        let near_a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let near_b = CultureProfile::new([0.52, 0.48, 0.51, 0.49]);
+        let far_a = CultureProfile::new([0.0, 0.0, 0.0, 0.0]);
+        let far_b = CultureProfile::new([1.0, 1.0, 1.0, 1.0]);
+        let near_div = language_divergence_from_isolation(&near_a, &near_b, 100);
+        let far_div = language_divergence_from_isolation(&far_a, &far_b, 100);
+        assert!(
+            far_div > near_div,
+            "culturally distant clusters must have larger language divergence"
+        );
+    }
+
+    #[test]
+    fn identical_clusters_no_divergence_without_drift() {
+        let a = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let b = CultureProfile::new([0.5, 0.5, 0.5, 0.5]);
+        let d0 = language_divergence_from_isolation(&a, &b, 0);
+        assert_eq!(d0, 0.0, "identical clusters must have zero divergence at t=0");
     }
 }

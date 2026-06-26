@@ -59,6 +59,21 @@ use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
 
+const NAMED_SEEDS: &[(&str, u64)] = &[
+    ("Ember Ridge", 42),
+    ("Solace Basin", 137),
+    ("Thornwall", 2024),
+    ("Crescent Flats", 999),
+    ("Ironmore", 7331),
+];
+const SPEED_OPTIONS: &[(&str, u32)] = &[
+    ("Glacial", 1),
+    ("Steady", 4),
+    ("Brisk", 8),
+    ("Rapid", 16),
+    ("Blitz", 32),
+];
+const PRESET_OPTIONS: &[&str] = &["standard", "warlike", "peaceful", "survival", "sandbox"];
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
@@ -103,7 +118,6 @@ struct ScenarioPanel {
 impl Default for ScenarioPanel {
     fn default() -> Self {
         Self { seed_index: 0, speed_index: 0, preset_index: 0 }
-        Self { seed_index: 0, speed_index: 0 }
     }
 }
 
@@ -204,6 +218,8 @@ struct MinimapPopup {
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
+    paused: bool,
+    speed_idx: usize,
 }
 
 #[derive(Resource)]
@@ -252,8 +268,8 @@ fn main() {
             DiplomacyUiPlugin,
             GodPanelPlugin,
             GodActionsPlugin,
-            civ_bevy_ref::frame_budget::FrameBudgetPlugin,
         ))
+        .add_plugins(civ_bevy_ref::frame_budget::FrameBudgetPlugin)
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
@@ -271,7 +287,7 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-        .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
+        .add_systems(Update, sync_perf_metrics.run_if(civ_bevy_ref::menus::in_game))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
@@ -350,7 +366,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild seed label
-    if let Ok(mut text) = seed_labels.get_single_mut() {
+    if let Ok(mut text) = seed_labels.single_mut() {
         let label = NAMED_SEEDS
             .iter()
             .enumerate()
@@ -361,7 +377,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild speed label
-    if let Ok(mut text) = speed_labels.get_single_mut() {
+    if let Ok(mut text) = speed_labels.single_mut() {
         let label = SPEED_OPTIONS
             .iter()
             .enumerate()
@@ -372,7 +388,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild preset label
-    if let Ok(mut text) = preset_labels.get_single_mut() {
+    if let Ok(mut text) = preset_labels.single_mut() {
         let label = PRESET_OPTIONS
             .iter()
             .enumerate()
@@ -384,7 +400,7 @@ fn scenario_panel_input(
 
     // Launch on button click or Enter key
     let clicked = start_buttons
-        .get_single()
+        .single()
         .map(|i| *i == Interaction::Pressed)
         .unwrap_or(false);
     if clicked || keys.just_pressed(KeyCode::Enter) {
@@ -491,7 +507,7 @@ fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOver
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn(); }
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -736,10 +752,12 @@ fn speed_control_input(
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx].1 };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
+}
+
 fn action_pressed(
     #[cfg(feature = "egui")] settings: Option<&GameSettings>,
     action: &str,
@@ -753,9 +771,11 @@ fn action_pressed(
             .and_then(|s| s.key_for(action))
             .unwrap_or(default)
             .is_pressed(keys, mouse_buttons)
+    }
     #[cfg(not(feature = "egui"))]
     {
         default.is_pressed(keys, mouse_buttons)
+    }
 }
 
 fn sync_chunk_debug_render(
@@ -1310,6 +1330,7 @@ fn minimap_click_focus(
         }
         return;
     }
+    }
     // Suppress unused warning — bridge is available for future left-click RPCs.
     let _ = &bridge;
 
@@ -1455,10 +1476,7 @@ fn minimap_popup_ui(
         .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
-                let json = format!(
-                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
-                );
-                bridge.client.send_rpc(json);
+                bridge.client.send_rpc("sim.inspect_tile", serde_json::json!({"x": tx, "y": ty}));
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1493,14 +1511,11 @@ fn poll_emergence(
     for em in bridge.client.poll_emergence() {
         hud.snapshot.emergence = Some(em.clone());
         *emergence_res = em;
-        hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
     if timer.0 < 10.0 {
         return;
     }
     timer.0 = 0.0;
-    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
-    bridge.client.send_rpc(json);
-}
+    bridge.client.send_rpc("sim.emergence", serde_json::Value::Null);
 }

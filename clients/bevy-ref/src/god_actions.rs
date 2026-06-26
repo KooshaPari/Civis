@@ -197,7 +197,7 @@ fn apply_terrain_verb(
     );
     let mut changed = 0usize;
     let mut dirty = HashSet::new();
-    let edge = LIVE_CHUNK_EDGE as i32;
+    let edge = LIVE_CHUNK_EDGE as i64;
     for dz in -ri..=ri {
         for dy in -ri..=ri {
             for dx in -ri..=ri {
@@ -209,9 +209,9 @@ fn apply_terrain_verb(
                     continue;
                 }
                 let chunk_id = encode_chunk_id(
-                    wx.div_euclid(edge),
-                    wy.div_euclid(edge),
-                    wz.div_euclid(edge),
+                    wx.div_euclid(edge) as i32,
+                    wy.div_euclid(edge) as i32,
+                    wz.div_euclid(edge) as i32,
                 );
                 ensure_chunk_ready(cache, chunk_id);
                 let lx = wx.rem_euclid(edge) as usize;
@@ -253,7 +253,7 @@ fn apply_bless(scene: &mut LiveStreamScene, faction: u32, magnitude: f32) -> Str
             id: faction,
             era: 0,
             government: civ_protocol_3d::Government3d::Republic,
-            treasury: FactionTreasury3d { amount: boost },
+            treasury: FactionTreasury3d { amount: boost, currency: String::new() },
         });
         scene.factions.insert(faction);
     }

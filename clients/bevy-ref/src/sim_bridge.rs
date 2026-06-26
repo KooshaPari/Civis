@@ -278,6 +278,7 @@ fn sync_visible_gameplay(
                 &mut commands,
                 model_resource,
                 &marker_meshes.civilian,
+                &mut meshes,
                 &mut materials,
                 civilian.id,
                 faction_id,

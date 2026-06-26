@@ -3,5 +3,9 @@ name = "emergence-oracle"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "oracle_report"
+path = "src/bin/oracle_report.rs"
+
 [dependencies]
 civ-engine = { path = "../engine" }

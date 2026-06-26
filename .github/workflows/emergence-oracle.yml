@@ -1,0 +1,29 @@
+name: Emergence Oracle FR-Validation
+
+on:
+  push:
+    branches:
+      - feat/civis-platform
+      - feat/oracle-ci-gate
+  pull_request:
+    branches:
+      - feat/civis-platform
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  oracle-report:
+    name: oracle-report (emergence-oracle FR contracts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          cache-all-crates: true
+      - name: Run oracle_report (FR visibility gate)
+        run: cargo run -p emergence-oracle --bin oracle_report

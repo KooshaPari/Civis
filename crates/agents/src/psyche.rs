@@ -302,6 +302,118 @@ pub fn isolation_weighted_belief_divergence(
     max
 }
 
+// ---------------------------------------------------------------------------
+// OCEAN trait model (FR-CIV-PSYCHE-900 / FR-CIV-PSYCHE-001)
+// ---------------------------------------------------------------------------
+
+/// Five-factor OCEAN personality traits for a civilian agent.
+///
+/// All values are normalised to `[0.0, 1.0]`.  The struct mirrors
+/// `civ_legends::rumor::Ocean` but lives here so the `agents` crate remains
+/// engine-free and legends-free (no dependency cycle).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct OceanTraits {
+    /// Curiosity, creativity, willingness to try new things.
+    pub openness: f32,
+    /// Discipline, goal-directedness, reliability.
+    pub conscientiousness: f32,
+    /// Sociability and positive affect.
+    pub extraversion: f32,
+    /// Cooperativeness and empathy.
+    pub agreeableness: f32,
+    /// Emotional instability and stress-reactivity.
+    pub neuroticism: f32,
+}
+
+impl OceanTraits {
+    /// Flat "average mind" baseline.
+    #[must_use]
+    pub fn neutral() -> Self {
+        Self {
+            openness: 0.5,
+            conscientiousness: 0.5,
+            extraversion: 0.5,
+            agreeableness: 0.5,
+            neuroticism: 0.5,
+        }
+    }
+
+    /// Normalised L2 distance between two OCEAN vectors in `[0, 1]`.
+    #[must_use]
+    pub fn distance(self, other: Self) -> f32 {
+        let sum = (self.openness - other.openness).powi(2)
+            + (self.conscientiousness - other.conscientiousness).powi(2)
+            + (self.extraversion - other.extraversion).powi(2)
+            + (self.agreeableness - other.agreeableness).powi(2)
+            + (self.neuroticism - other.neuroticism).powi(2);
+        (sum / 5.0_f32).sqrt().min(1.0)
+    }
+}
+
+/// Environmental / social conditions that exert selection pressure on OCEAN
+/// traits across generations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TraitPressure {
+    /// Resource scarcity, repeated disasters, sustained unmet needs.
+    Hardship,
+    /// Plentiful resources and stable conditions.
+    Abundance,
+    /// Sustained inter-cluster or inter-faction warfare.
+    Conflict,
+    /// Geographic or social separation from other clusters.
+    Isolation,
+}
+
+/// Evolve a set of OCEAN traits under a given selection pressure.
+///
+/// The function is deterministic for the same `(seed, generation)` pair and
+/// uses a lightweight `u64` hash rather than a seeded PRNG object so
+/// callers do not need to thread PRNG state through the call chain.
+///
+/// # Selection rules
+/// - `Hardship`   → conscientiousness increases (discipline under scarcity)
+/// - `Abundance`  → openness increases (curiosity when survival is easy)
+/// - `Conflict`   → neuroticism increases (chronic stress)
+/// - `Isolation`  → agreeableness decreases (less cooperative pressure)
+///
+/// Shift magnitude is bounded to 0.04 per generation to prevent runaway drift.
+#[must_use]
+pub fn evolve_ocean_traits(
+    traits: OceanTraits,
+    pressure: TraitPressure,
+    seed: u64,
+    generation: u32,
+) -> OceanTraits {
+    // Deterministic per-axis noise in [-0.01, +0.01].
+    let noise = |axis: u64| -> f32 {
+        let h = seed
+            .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+            .wrapping_add(generation as u64)
+            .wrapping_mul(0x6c62_272e_07bb_0142)
+            .wrapping_add(axis);
+        let bits = ((h >> 48) & 0xffff) as f32 / 65535.0;
+        (bits - 0.5) * 0.02
+    };
+
+    const SHIFT: f32 = 0.04;
+    let mut out = traits;
+    match pressure {
+        TraitPressure::Hardship => {
+            out.conscientiousness = clamp01(traits.conscientiousness + SHIFT + noise(0));
+        }
+        TraitPressure::Abundance => {
+            out.openness = clamp01(traits.openness + SHIFT + noise(1));
+        }
+        TraitPressure::Conflict => {
+            out.neuroticism = clamp01(traits.neuroticism + SHIFT + noise(2));
+        }
+        TraitPressure::Isolation => {
+            out.agreeableness = clamp01(traits.agreeableness - SHIFT + noise(3));
+        }
+    }
+    out
+}
+
 /// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
 #[must_use]
 pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {

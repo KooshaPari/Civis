@@ -187,6 +187,14 @@ fn select_seed_for_position<'a>(
     active_seed
 }
 
+/// Belief gained when a battle is recorded in the saga graph (collective awe/fear → faith).
+/// FR-CIV-RELIGION belief-from-events contract.
+const BELIEF_GAIN_BATTLE: i64 = 5;
+/// Belief gained when a new settlement is founded (communal milestone → veneration).
+const BELIEF_GAIN_FOUNDING: i64 = 20;
+/// Belief gained when a legend-ranked agent's death is recorded (martyrdom → faith surge).
+const BELIEF_GAIN_LEGEND_DEATH: i64 = 15;
+
 impl Simulation {
     pub(crate) fn default_emergence_state(seed: u64) -> EmergenceState {
         EmergenceState::new(seed)
@@ -725,6 +733,12 @@ impl Simulation {
                     Role::Victim,
                 );
             let outcome = self.emergence_ingest_legend(raw);
+            let already_legend = self
+                .emergence
+                .legends
+                .graph
+                .entity_for_sim(SourceCrate::Agents, SimRuntimeId(death.entity_id))
+                .is_some();
             if let Some(eid) = self
                 .emergence
                 .legends
@@ -732,6 +746,10 @@ impl Simulation {
                 .entity_for_sim(SourceCrate::Agents, SimRuntimeId(death.entity_id))
             {
                 self.emergence.legends.graph.mark_died(eid, epoch);
+            }
+            // Death of a legend-ranked agent triggers a martyrdom faith surge (FR-CIV-RELIGION).
+            if already_legend {
+                self.add_belief(BELIEF_GAIN_LEGEND_DEATH);
             }
             self.emergence.push_feed(
                 tick,
@@ -781,6 +799,8 @@ impl Simulation {
             }
             let outcome = self.emergence_ingest_legend(raw);
             if let Some(id) = agent_id {
+                // Battle: collective awe/fear drives faith (FR-CIV-RELIGION belief-from-events).
+                self.add_belief(BELIEF_GAIN_BATTLE);
                 self.emergence.push_feed(
                     tick,
                     "battle",
@@ -836,6 +856,8 @@ impl Simulation {
                 }
             }
             if let Some(founder_id) = founder {
+                // Settlement founding: communal milestone breeds shared veneration (FR-CIV-RELIGION).
+                self.add_belief(BELIEF_GAIN_FOUNDING);
                 self.emergence.push_feed(
                     tick,
                     "founding",

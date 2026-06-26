@@ -1,0 +1,21 @@
+name: 'Cargo Test'
+description: 'Runs cargo test on a specified package with consistent flags.'
+inputs:
+  package:
+    description: 'Package to test (optional; runs workspace if omitted).'
+    required: false
+    default: ''
+  test_flags:
+    description: 'Additional test flags (e.g. --tests --lib).'
+    required: false
+    default: '--no-fail-fast'
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        if [ -z "${{ inputs.package }}" ]; then
+          cargo test --workspace ${{ inputs.test_flags }} -j 2
+        else
+          cargo test -p "${{ inputs.package }}" ${{ inputs.test_flags }} -j 2
+        fi

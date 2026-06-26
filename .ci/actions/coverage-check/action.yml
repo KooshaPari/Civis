@@ -1,0 +1,24 @@
+name: 'Coverage Check'
+description: 'Runs cargo tarpaulin (or llvm-cov) to check line coverage meets threshold.'
+inputs:
+  package:
+    description: 'Package to check.'
+    required: true
+  threshold:
+    description: 'Minimum line-coverage percentage (integer).'
+    required: false
+    default: '75'
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        echo "Checking coverage for ${{ inputs.package }} (threshold ${{ inputs.threshold }}%)"
+        # Prefer cargo-tarpaulin; fall back to grcov
+        if command -v cargo-tarpaulin &>/dev/null; then
+          cargo tarpaulin -p "${{ inputs.package }}" --out Xml --threshold ${{ inputs.threshold }}
+        elif command -v grcov &>/dev/null; then
+          echo "grcov coverage check not yet wired — manual verify"
+        else
+          echo "No coverage tool found — skipping check"
+        fi

@@ -1,0 +1,20 @@
+name: 'Cargo Clippy'
+description: 'Runs clippy with --no-deps on specified crates.'
+inputs:
+  package:
+    description: 'Package or comma-separated list of packages.'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        if [ -z "${{ inputs.package }}" ]; then
+          cargo clippy --workspace --no-deps -j 2
+        else
+          IFS=',' read -ra pkgs <<< "${{ inputs.package }}"
+          for pkg in "${pkgs[@]}"; do
+            cargo clippy -p "$pkg" --no-deps -j 2 || exit 1
+          done
+        fi

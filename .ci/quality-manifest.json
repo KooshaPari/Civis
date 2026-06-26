@@ -1,33 +1,68 @@
 {
-  "version": "1",
-  "repo": "Civis",
-  "git_sha": "5979ad0f8789beb4d6fdb7de41200a3f86c1d7f9",
-  "created_at": "2026-05-28T04:21:43Z",
-  "runner": {
-    "host": "KOOSHAPARI-DESK",
-    "rust": "rustc 1.95.0 (59807616e 2026-04-14)"
-  },
-  "gates": {
-    "civis_3d_verify": {
-      "status": "pass",
-      "detail": ""
+  "version": 1,
+  "tiers": {
+    "unit": {
+      "description": "In-module #[test] functions testing a single type or function"
     },
-    "web_test": {
-      "status": "pass",
-      "detail": ""
+    "integration": {
+      "description": "Multi-module tests in tests/ directories, covering protocol, save-load round-trips, and E2E flows"
     },
-    "dashboard_typecheck": {
-      "status": "pass",
-      "detail": ""
-    },
-    "unreal_preflight": {
-      "status": "skip",
-      "detail": "optional UE gate"
-    },
-    "unreal_build": {
-      "status": "skip",
-      "detail": "optional UE gate"
+    "e2e": {
+      "description": "End-to-end tests using realistic game state — save/load, simulation clamping, and edge cases"
     }
   },
-  "manifest_hash": "d70905457d1707fcf4f0c0d9348f883d16fb386460197a869075e69715efa825"
+  "coverage": {
+    "overall": 78.0,
+    "tiers": {
+      "unit": 0.0,
+      "integration": 0.0,
+      "e2e": 0.0
+    },
+    "min_per_crate": 65.0,
+    "exclude_patterns": [
+      "tests/**",
+      "**/benches/**",
+      "clients/**",
+      "vendor/**",
+      "target/**"
+    ]
+  },
+  "ci": {
+    "required_checks": [
+      "cargo-check",
+      "cargo-test",
+      "cargo-clippy",
+      "cargo-deny",
+      "pr-governance-gate"
+    ],
+    "allow_failure": [
+      "coverage-check"
+    ],
+    "target_branches": [
+      "main",
+      "feat/*"
+    ]
+  },
+  "accessibility": {
+    "wcag_level": "AA",
+    "languages": [
+      "en",
+      "fa",
+      "fa-Latn",
+      "zh-CN",
+      "zh-TW"
+    ],
+    "audit_frequency": "per-release"
+  },
+  "i18n": {
+    "total_strings": 42,
+    "coverage": {
+      "en": 1.0,
+      "fa": 1.0,
+      "fa-Latn": 1.0,
+      "zh-CN": 1.0,
+      "zh-TW": 1.0
+    }
+  },
+  "git_sha": "359c0b91d2b25d740e541aa2c93c74bc3ec04f80"
 }

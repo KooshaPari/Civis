@@ -199,6 +199,20 @@ Mapped to `crates/economy/src/market.rs` and `FR-ECON-003` (strategic matrix tra
 
 ---
 
+## Migration (FR-CIV-MIGRATION-*)
+
+Emergent population migration: flows computed from cluster state (scarcity/disaster/war/overpopulation push vs. surplus/safety/capacity pull), reshaping settlements, mixing culture, and surging on disaster/war. Implemented in `crates/emergence-migration/`.
+
+| FR-ID | Requirement (1-line) | Crate/File path | Test pattern | Acceptance Contract | Status |
+|-------|------------------------|-----------------|--------------|---------------------|--------|
+| FR-CIV-MIGRATION-001 | Push/pull engine — populations flow from high-stress to high-opportunity clusters | `crates/emergence-migration/src/lib.rs` | `population_flows_from_stress_to_opportunity` | Stressed cluster loses pop, opportunity cluster gains; total conserved | code-only |
+| FR-CIV-MIGRATION-002 | Settlement reshaping — arrivals/departures resize cluster populations | `crates/emergence-migration/src/lib.rs` | `population_flows_*` / `*conserves_population` | `emigrants_from(src) == immigrants_to(dst)`; sum invariant per tick | code-only |
+| FR-CIV-MIGRATION-003 | Cultural mixing counters language/religion divergence | `crates/emergence-migration/src/lib.rs` | `migration_mixes_culture_and_reduces_divergence` | Language + belief divergence between src/dst decreases after migration ticks | code-only |
+| FR-CIV-MIGRATION-004 | Refugee surges on disaster/war; decay over time | `crates/emergence-migration/src/lib.rs` | `disaster_triggers_surge`, `war_triggers_surge`, `surge_decays_over_time` | Event ⇒ flow spike vs. baseline; surge monotonically decays toward 1.0 | code-only |
+| FR-CIV-MIGRATION-005 | Deterministic per seed | `crates/emergence-migration/src/lib.rs` | `determinism_same_seed_same_outcome` | Same seed+state ⇒ identical flows and engine state | code-only |
+
+---
+
 ## AI providers (FR-CIV-AI-*)
 
 | FR-ID | Requirement (1-line) | Crate/File path | Test pattern | Acceptance Contract | Status |

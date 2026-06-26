@@ -27,6 +27,7 @@ members = [
   "crates/legends",
   "crates/civ-emergence-metrics",
   "crates/emergence-oracle",
+  "crates/emergence-migration",
   "crates/audio",
   "crates/climate",
   "clients/bevy-ref",

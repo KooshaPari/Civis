@@ -392,6 +392,7 @@ fn fr_civ_bevy_026_era_zero_allocates_zero() {
 #[test]
 fn fr_civ_bio_001_round_trip_parcel_facade() {
     let graph = BuildingGraph {
+        settlement_clusters: std::collections::BTreeMap::new(),
         parcels: vec![Parcel {
             id: BuildingId(99),
             kind: ParcelKind::Industrial,
@@ -419,6 +420,7 @@ fn fr_civ_bio_001_round_trip_parcel_facade() {
 #[test]
 fn fr_civ_bio_002_capacity_counts_only_residential() {
     let graph = BuildingGraph {
+        settlement_clusters: std::collections::BTreeMap::new(),
         parcels: vec![
             Parcel {
                 id: BuildingId(1),
@@ -449,6 +451,7 @@ fn fr_civ_bio_002_capacity_counts_only_residential() {
 #[test]
 fn fr_civ_bio_003_occupied_counts_residential() {
     let graph = BuildingGraph {
+        settlement_clusters: std::collections::BTreeMap::new(),
         parcels: vec![
             Parcel {
                 id: BuildingId(1),

@@ -13,6 +13,7 @@ pub mod era;
 pub mod history;
 pub mod tech;
 pub mod faction_emergence;
+pub mod faction_decisions;
 pub mod godtools;
 pub mod hash_chain;
 pub mod integrity;

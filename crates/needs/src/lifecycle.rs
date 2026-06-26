@@ -214,6 +214,65 @@ pub fn migration_pressure(
     needs.food < params.migration_food_threshold
         || needs.safety < params.migration_safety_threshold
         || unrest > params.migration_unrest_threshold
+
+/// Per-tick probability that a given civilian reproduces, derived from
+/// lifecycle state. Returns 0.0 for civilians that cannot reproduce
+/// (children, elders, dead, or any civilian whose needs fall below the
+/// configured food/safety thresholds).
+///
+/// Returns values in `[0.0, 1.0]`. Callers should still apply their own
+/// external birth-window gating (e.g., a 200-tick birth window) on top of
+/// this probability.
+///
+/// FR-CIV-LIFE-003 (reproduction gating).
+#[must_use]
+pub fn should_reproduce(
+    age: u16,
+    health: &Health,
+    needs_food: f32,
+    needs_safety: f32,
+    overcrowding_factor: f32,
+    params: &LifecycleParams,
+) -> f32 {
+    // Gate 1: lifecycle label. Only Adult-classified civilians can reproduce.
+    // Elders are explicitly excluded — the spec treats the elder phase as a
+    // post-reproductive window. Children are also excluded.
+    if health.is_dead() {
+        return 0.0;
+    }
+    if age < 18 || age >= 65 {
+        return 0.0;
+    }
+    if health.integrity < 0.3 {
+        return 0.0;
+    }
+
+    // Gate 2: needs thresholds from LifecycleParams. Both food and safety
+    // must clear their respective thresholds.
+    if needs_food < params.fertility_food_threshold {
+        return 0.0;
+    }
+    if needs_safety < params.fertility_safety_threshold {
+        return 0.0;
+    }
+
+    // Gate 3: fertility score from age curve (matches the existing
+    // `fertility_score` helper in the engine, but uses the lifecycle params
+    // so the curve is configurable).
+    let age_factor = if age <= 30 {
+        (age as f32 / 30.0).clamp(0.0, 1.0)
+    } else if age <= 42 {
+        1.0
+    } else {
+        (1.0 - ((age as f32 - 42.0) / 23.0)).clamp(0.0, 1.0)
+    };
+
+    // Gate 4: need-quality factor. Mean of food + safety, mapped to [0, 1].
+    let need_factor = ((needs_food + needs_safety) * 0.5).clamp(0.0, 1.0);
+
+    // Combine into a base probability and dampen by overcrowding.
+    let base = 0.55 * age_factor + 0.45 * need_factor;
+    (base * (1.0 - overcrowding_factor.clamp(0.0, 1.0))).clamp(0.0, 1.0)
 }
 
 #[cfg(test)]
@@ -455,5 +514,76 @@ mod tests {
         };
         assert!(!can_birth(&starving, &params));
         assert!(migration_pressure(&starving, &params));
+
+    fn healthy() -> Health {
+        Health {
+            integrity: 1.0,
+            ..Health::default()
+        }
+    }
+
+    #[test]
+    fn should_reproduce_blocks_children_elders_and_dead() {
+        let params = LifecycleParams::default();
+        let h = healthy();
+        // Children
+        assert_eq!(should_reproduce(10, &h, 1.0, 1.0, 0.0, &params), 0.0);
+        // Elders (post-reproductive window)
+        assert_eq!(should_reproduce(70, &h, 1.0, 1.0, 0.0, &params), 0.0);
+        // Dead
+        let dead = Health {
+            integrity: 0.0,
+            ..h
+        };
+        assert_eq!(should_reproduce(30, &dead, 1.0, 1.0, 0.0, &params), 0.0);
+        // Critically degraded integrity
+        let crit = Health {
+            integrity: 0.2,
+            ..h
+        };
+        assert_eq!(should_reproduce(30, &crit, 1.0, 1.0, 0.0, &params), 0.0);
+    }
+
+    #[test]
+    fn should_reproduce_blocks_when_needs_below_thresholds() {
+        let params = LifecycleParams::default();
+        let h = healthy();
+        // Food below threshold
+        assert!(
+            should_reproduce(30, &h, params.fertility_food_threshold - 0.1, 1.0, 0.0, &params)
+                == 0.0
+        );
+        // Safety below threshold
+        assert!(
+            should_reproduce(30, &h, 1.0, params.fertility_safety_threshold - 0.1, 0.0, &params)
+                == 0.0
+        );
+    }
+
+    #[test]
+    fn should_reproduce_peaks_in_adult_fertile_band() {
+        let params = LifecycleParams::default();
+        let h = healthy();
+        let prime = should_reproduce(30, &h, 1.0, 1.0, 0.0, &params);
+        let edge_young = should_reproduce(19, &h, 1.0, 1.0, 0.0, &params);
+        let edge_old = should_reproduce(60, &h, 1.0, 1.0, 0.0, &params);
+        assert!(prime > edge_young);
+        assert!(prime > edge_old);
+        // All must be valid probabilities.
+        assert!((0.0..=1.0).contains(&prime));
+        assert!((0.0..=1.0).contains(&edge_young));
+        assert!((0.0..=1.0).contains(&edge_old));
+    }
+
+    #[test]
+    fn should_reproduce_dampens_with_overcrowding() {
+        let params = LifecycleParams::default();
+        let h = healthy();
+        let open = should_reproduce(30, &h, 1.0, 1.0, 0.0, &params);
+        let crowded = should_reproduce(30, &h, 1.0, 1.0, 0.5, &params);
+        let packed = should_reproduce(30, &h, 1.0, 1.0, 1.0, &params);
+        assert!(open > crowded);
+        assert!(crowded > packed);
+        assert_eq!(packed, 0.0, "full overcrowding must drive probability to zero");
     }
 }

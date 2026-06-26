@@ -235,7 +235,7 @@ pub fn weighted_belief_centroid(members: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; P
 /// Maximum pairwise belief distance across cluster centroids.
 #[must_use]
 pub fn max_cluster_belief_divergence(centroids: &[[f32; PSYCHE_DIM]]) -> f32 {
-    let mut max = 0.0;
+    let mut max = 0.0f32;
     for i in 0..centroids.len() {
         for j in (i + 1)..centroids.len() {
             max = max.max(belief_distance(centroids[i], centroids[j]));

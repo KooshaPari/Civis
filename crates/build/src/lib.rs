@@ -8,6 +8,16 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod tiers;
+
+pub use tiers::{
+    apply_biome_facade_bias, building_type_min_era, building_type_unlocked, clustered_parcel_offset,
+    culture_id_from_traits, default_architecture_tile_sets, era_gated_demand_signals,
+    era_index_from_pop_tech, facade_for_emergence, facade_histogram_l1, parcel_kind_min_era,
+    parcel_kind_unlocked, settlement_cluster_centroid, wealth_permille_from_stocks, BiomeStyleTag,
+    EmergentStyleKey,
+};
+
 use std::collections::BTreeMap;
 
 use civ_voxel::{MaterialId, WorldCoord};
@@ -251,6 +261,9 @@ pub struct BuildingGraph {
     pub facades: BTreeMap<BuildingId, FacadeStyle>,
     /// Provenance tag per parcel.
     pub provenance: BTreeMap<BuildingId, BuildingProvenance>,
+    /// Settlement-cluster layout: cluster id → parcel ids (`FR-CIV-ARCH`).
+    #[serde(default)]
+    pub settlement_clusters: BTreeMap<u64, Vec<BuildingId>>,
 }
 
 impl BuildingGraph {
@@ -1078,34 +1091,40 @@ mod tests {
     /// FR-CIV-ARCH-008 — measurable facade histogram tracks culture vector divergence.
     #[test]
     fn fr_arch_008_facade_histogram_tracks_culture_vector_divergence() {
+        use crate::facade_histogram_l1;
+
         let tile_sets = sample_tile_sets();
         let demands = sample_demand_signals();
         let vector_a = CultureEraWealthVector::new(0, 1, 20_000);
         let vector_b = CultureEraWealthVector::new(1, 1, 20_000);
 
-        let mut histogram = BTreeMap::new();
-        let styles = [
-            facade_for_vector(
-                &vector_a,
-                &demands,
-                &tile_sets,
-                ArchitectureMode::Canonical,
-                None,
-            ),
-            facade_for_vector(
-                &vector_b,
-                &demands,
-                &tile_sets,
-                ArchitectureMode::Canonical,
-                None,
-            ),
-        ];
+        let mut histogram_a = BTreeMap::new();
+        let mut histogram_b = BTreeMap::new();
+        *histogram_a
+            .entry(
+                facade_for_vector(
+                    &vector_a,
+                    &demands,
+                    &tile_sets,
+                    ArchitectureMode::Canonical,
+                    None,
+                )
+                .name,
+            )
+            .or_insert(0_u32) += 1;
+        *histogram_b
+            .entry(
+                facade_for_vector(
+                    &vector_b,
+                    &demands,
+                    &tile_sets,
+                    ArchitectureMode::Canonical,
+                    None,
+                )
+                .name,
+            )
+            .or_insert(0_u32) += 1;
 
-        for style in styles {
-            *histogram.entry(style.name).or_insert(0_u32) += 1;
-        }
-
-        let total_unique = histogram.len();
-        assert_eq!(total_unique, 2);
+        assert!(facade_histogram_l1(&histogram_a, &histogram_b) > 0);
     }
 }

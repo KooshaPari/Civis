@@ -11,6 +11,7 @@
 //! - `metrics` - Tyranny/legitimacy metrics
 //! - `io` - File I/O utilities
 
+pub mod building_emergence;
 pub mod command_queue;
 pub mod conditions;
 pub mod era;

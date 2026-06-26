@@ -10,8 +10,9 @@ use super::{
     engine::{
         add_unrest_delta, agent_misery_unrest, avg_psyche_maturity, cohesion_delta,
         cohesion_unrest_damp, commodity_unrest_delta, energy_scarcity_unrest,
-        institution_step, institution_target_level, kinship_cohesion_boost,
-        micro_cohesion_delta, research_unrest_mitigation, unrest_delta, FOOD_SCARCITY_BASELINE,
+        institution_belief_signal, institution_step, institution_target_level,
+        kinship_cohesion_boost, micro_cohesion_delta, research_unrest_mitigation, unrest_delta,
+        FOOD_SCARCITY_BASELINE,
     },
 };
 
@@ -60,9 +61,15 @@ impl Simulation {
     }
 
     /// Temple/garrison levels step toward belief/unrest targets (FR-CIV-REL-003).
+    ///
+    /// Temple growth reads macro belief plus per-cluster doctrine centroids so
+    /// institutions tie to emergent belief communities, not population alone.
     pub(crate) fn phase_institutions(&mut self) {
-        let temple_target =
-            institution_target_level(self.state.belief, BELIEF_PER_TEMPLE_LEVEL);
+        let belief_signal = institution_belief_signal(
+            self.state.belief,
+            &self.emergence.cluster_beliefs,
+        );
+        let temple_target = institution_target_level(belief_signal, BELIEF_PER_TEMPLE_LEVEL);
         let garrison_target =
             institution_target_level(self.state.unrest, UNREST_PER_GARRISON_LEVEL);
         self.state.temple_level = institution_step(self.state.temple_level, temple_target);
@@ -131,6 +138,27 @@ mod tests {
         assert_eq!(
             sim.state.belief, 3,
             "temple_level adds +level belief per tick"
+        );
+    }
+
+    #[test]
+    fn phase_institutions_cluster_doctrine_boosts_temple() {
+        let mut sim = Simulation::with_seed(42);
+        sim.state.belief = 4_000;
+        sim.state.temple_level = 0;
+        sim.emergence
+            .cluster_beliefs
+            .insert(1, [0.9, 0.5, 0.5, 0.5]);
+        sim.phase_institutions();
+        let with_cluster = sim.state.temple_level;
+
+        let mut baseline = Simulation::with_seed(42);
+        baseline.state.belief = 4_000;
+        baseline.state.temple_level = 0;
+        baseline.phase_institutions();
+        assert!(
+            with_cluster >= baseline.state.temple_level,
+            "cluster doctrine must not slow temple growth vs macro belief alone"
         );
     }
 

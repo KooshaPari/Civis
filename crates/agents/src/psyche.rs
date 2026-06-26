@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use civ_genetics::{sentience::CognitionTraitProfile, Dna};
 use civ_needs::{Health as LifeHealth, LifecycleParams};
 
-use crate::{culture, Needs};
+use crate::{culture, ClusterMember, Needs};
 
 /// Shared psyche vector width.
 pub const PSYCHE_DIM: usize = 4;
@@ -215,6 +215,35 @@ pub fn update_beliefs(
     *beliefs = culture::mutate_traits(rng, mixed, 0.01);
 }
 
+/// Normalized L2 distance between belief vectors in `[0, 1]`.
+#[must_use]
+pub fn belief_distance(a: [f32; PSYCHE_DIM], b: [f32; PSYCHE_DIM]) -> f32 {
+    let mut sum = 0.0;
+    for i in 0..PSYCHE_DIM {
+        let d = a[i] - b[i];
+        sum += d * d;
+    }
+    (sum / PSYCHE_DIM as f32).sqrt().min(1.0)
+}
+
+/// Weighted mean of member belief vectors (cluster centroid).
+#[must_use]
+pub fn weighted_belief_centroid(members: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; PSYCHE_DIM] {
+    belief_culture_exposure(members)
+}
+
+/// Maximum pairwise belief distance across cluster centroids.
+#[must_use]
+pub fn max_cluster_belief_divergence(centroids: &[[f32; PSYCHE_DIM]]) -> f32 {
+    let mut max = 0.0;
+    for i in 0..centroids.len() {
+        for j in (i + 1)..centroids.len() {
+            max = max.max(belief_distance(centroids[i], centroids[j]));
+        }
+    }
+    max
+}
+
 /// Expose the culture vector sampled through an agent's social ties.
 #[must_use]
 pub fn belief_culture_exposure(exposures: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; PSYCHE_DIM] {
@@ -235,6 +264,28 @@ pub fn belief_culture_exposure(exposures: &[(f32, [f32; PSYCHE_DIM])]) -> [f32; 
         }
     }
     out
+}
+
+/// Per-cluster belief centroids from live agent `Psyche` components (≥2 members).
+#[must_use]
+pub fn cluster_belief_centroids(world: &hecs::World) -> std::collections::BTreeMap<u64, [f32; PSYCHE_DIM]> {
+    use std::collections::BTreeMap;
+
+    let mut by_cluster: BTreeMap<u64, Vec<[f32; PSYCHE_DIM]>> = BTreeMap::new();
+    for (_, (member, psyche)) in world.query::<(&ClusterMember, &Psyche)>().iter() {
+        by_cluster
+            .entry(member.cluster.0)
+            .or_default()
+            .push(psyche.beliefs);
+    }
+    by_cluster
+        .into_iter()
+        .filter(|(_, members)| members.len() >= 2)
+        .map(|(cluster_id, beliefs)| {
+            let weighted: Vec<_> = beliefs.into_iter().map(|b| (1.0, b)).collect();
+            (cluster_id, weighted_belief_centroid(&weighted))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -297,6 +348,28 @@ mod tests {
         update_beliefs(&mut beliefs, exposure, 1.0, &mut rng(7));
         assert!(beliefs.iter().all(|v| (0.0..=1.0).contains(v)));
         assert!(beliefs[0] > 0.0);
+    }
+
+    #[test]
+    fn belief_distance_zero_for_identical_vectors() {
+        let v = [0.2, 0.4, 0.6, 0.8];
+        assert!((belief_distance(v, v)).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn max_cluster_belief_divergence_tracks_separation() {
+        let close = [[0.5; PSYCHE_DIM], [0.55; PSYCHE_DIM]];
+        let far = [[0.0; PSYCHE_DIM], [1.0; PSYCHE_DIM]];
+        assert!(max_cluster_belief_divergence(&far) > max_cluster_belief_divergence(&close));
+    }
+
+    #[test]
+    fn weighted_belief_centroid_averages_members() {
+        let centroid = weighted_belief_centroid(&[
+            (1.0, [0.0, 0.0, 0.0, 0.0]),
+            (1.0, [1.0, 1.0, 1.0, 1.0]),
+        ]);
+        assert!((centroid[0] - 0.5).abs() < 0.01);
     }
 
     #[test]

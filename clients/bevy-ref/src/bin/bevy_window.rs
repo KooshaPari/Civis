@@ -239,29 +239,6 @@ struct ScenarioPresetLabel;
 #[derive(Component)]
 struct ScenarioStartButton;
 
-#[derive(Component)]
-struct ScenarioStartButton;
-
-#[derive(Resource, Default)]
-struct MinimapPopup {
-    /// Pending right-click tile coords; None when popup is closed.
-    pending: Option<(i32, i32)>,
-}
-
-#[derive(Resource, Default)]
-struct SimSpeedState {
-    multiplier: u32,
-}
-
-#[derive(Resource)]
-#[derive(Resource, Default)]
-struct EmergencePollTimer(f32);
-impl Default for EmergencePollTimer {
-    fn default() -> Self {
-        Self(0.0)
-    }
-}
-
 fn main() {
     let mut app = App::new();
     app.add_plugins((
@@ -1482,10 +1459,13 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Window::new("Tile Actions")
         .collapsible(false)
         .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
                 let json = format!(

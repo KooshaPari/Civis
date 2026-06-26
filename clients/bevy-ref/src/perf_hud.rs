@@ -60,7 +60,9 @@ fn draw_perf_hud(
     let fps = metrics.fps;
     let frame_ms = if fps > 0.0 { 1000.0 / fps } else { 0.0 };
 
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let screen = ctx.screen_rect();
 
     egui::Area::new(egui::Id::new("perf_hud"))

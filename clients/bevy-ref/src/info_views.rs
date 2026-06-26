@@ -728,7 +728,9 @@ mod plugin {
         };
         let summary = format_nearby_counts_line(&counts);
 
-        let ctx = contexts.ctx_mut();
+        let Ok(ctx) = contexts.ctx_mut() else {
+            return;
+        };
         let screen = ctx.screen_rect();
         egui::Area::new(egui::Id::new("nearby_counts_overlay"))
             .fixed_pos(egui::pos2(screen.center().x - 220.0, 72.0))

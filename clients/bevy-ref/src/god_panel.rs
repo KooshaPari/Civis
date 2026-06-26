@@ -49,7 +49,9 @@ fn draw_god_panel(
     mut requests: MessageWriter<GodActionRequest>,
 ) {
     if !state.visible { return; }
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let screen = ctx.screen_rect();
 
     let mut fire: Option<String> = None;

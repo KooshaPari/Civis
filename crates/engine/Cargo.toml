@@ -66,6 +66,11 @@ civ-species = { path = "../species" }
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
 
+# Shared physics substrate (T, M, E, F, P, B) — FR-CIV-PHYS-SUBSTRATE-001;
+# the only coupling channel between emergent layers (see
+# `docs/design/PHYSICS_COUPLING_SUBSTRATE.md`). Sprint 1 = skeleton.
+civ-physics-substrate = { path = "../physics-substrate" }
+
 [dev-dependencies]
 civ-economy = { path = "../economy" }
 proptest = "1.11"

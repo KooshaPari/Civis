@@ -20,7 +20,7 @@ use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
-    PlanetConfig, WeatherCell,
+    PlanetConfig, WeatherCell, WorldgenConfig,
 };
 use civ_tactics::{
     apply_damage, evolve_doctrine, score_doctrine_fitness, tick_operational_movement,
@@ -449,6 +449,7 @@ pub struct Simulation {
     rng: SimRng,
     planet: PlanetConfig,
     moon: MoonConfig,
+    worldgen: WorldgenConfig,
     pub climate: Climate,
     pending_damage: Vec<DamageEvent>,
     tick_modulo_compact: u64,
@@ -1293,6 +1294,7 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let worldgen = WorldgenConfig::new(42, 128, 0.42, 0.9);
         let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState::default();
 
@@ -1304,6 +1306,7 @@ impl Simulation {
             rng,
             planet,
             moon,
+            worldgen,
             climate,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
@@ -1405,6 +1408,7 @@ impl Simulation {
 
         let (planet, moon) = defaults_earthlike();
         let climate = compute_climate(0, &planet, &moon);
+        let worldgen = WorldgenConfig::new(seed, 128, 0.42, 0.9);
         let weather_grid = compute_weather(&climate, 0, 16);
         let state = WorldState {
             rng_seed: seed,
@@ -1419,6 +1423,7 @@ impl Simulation {
             rng,
             planet,
             moon,
+            worldgen,
             climate,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
@@ -1693,6 +1698,11 @@ impl Simulation {
     /// Borrow the immutable moon config.
     pub fn moon(&self) -> &MoonConfig {
         &self.moon
+    }
+
+    /// Borrow the immutable worldgen bootstrap config.
+    pub fn worldgen(&self) -> &WorldgenConfig {
+        &self.worldgen
     }
 
     /// Borrow the last climate computed by the planet phase.

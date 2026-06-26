@@ -1458,7 +1458,7 @@ fn minimap_popup_ui(
                 let json = format!(
                     r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
                 );
-                bridge.client.send_rpc(json);
+                bridge.client.send_rpc_json(json);
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1501,6 +1501,6 @@ fn poll_emergence(
     }
     timer.0 = 0.0;
     let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
-    bridge.client.send_rpc(json);
+    bridge.client.send_rpc_json(json);
 }
 }

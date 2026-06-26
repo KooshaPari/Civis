@@ -619,8 +619,10 @@ pub fn apply_gfx_settings(
         // MSAA — only applicable when not TAA
         if let Some(mut msaa) = msaa_opt {
             let desired = match settings.aa.msaa_samples() {
-                Some(s) => Msaa::Sample(s),
-                None => Msaa::Off,
+                Some(2) => Msaa::Sample2,
+                Some(4) => Msaa::Sample4,
+                Some(8) => Msaa::Sample8,
+                _ => Msaa::Off,
             };
             if *msaa != desired {
                 *msaa = desired;

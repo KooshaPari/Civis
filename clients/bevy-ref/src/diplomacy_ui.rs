@@ -620,6 +620,7 @@ mod tests {
                     treasury: FactionTreasury3d::default(),
                 },
             ],
+            ..Default::default()
         };
         let mut counts = HashMap::new();
         counts.insert(0, 42);

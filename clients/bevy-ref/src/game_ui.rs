@@ -302,7 +302,10 @@ fn load_tool_icons(
     for ((key, _), handle) in TOOL_ICON_PATHS.iter().zip(handles) {
         // egui keeps a strong handle; our `ToolIcons.handles` also retains one so
         // the image is never unloaded for the lifetime of the app.
-        let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(handle));
+        let id = contexts.add_image(bevy_egui::EguiTextureHandle::Strong(
+            format!("tool_icon_{key}"),
+            handle,
+        ));
         icons.ids.insert(key, id);
     }
     icons.registered = true;

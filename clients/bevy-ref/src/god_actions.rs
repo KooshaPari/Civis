@@ -253,7 +253,7 @@ fn apply_bless(scene: &mut LiveStreamScene, faction: u32, magnitude: f32) -> Str
             id: faction,
             era: 0,
             government: civ_protocol_3d::Government3d::Republic,
-            treasury: FactionTreasury3d { amount: boost },
+            treasury: FactionTreasury3d { amount: boost, ..Default::default() },
         });
         scene.factions.insert(faction);
     }

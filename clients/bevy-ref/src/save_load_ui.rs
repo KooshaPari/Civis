@@ -10,13 +10,36 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
+use std::collections::HashMap;
+
 use crate::live_attach::LiveAttachBridge;
 
-/// Panel visibility + last echo line.
+/// Panel visibility + last echo line + cached slot metadata.
 #[derive(Resource, Default)]
 pub struct SaveLoadPanel {
     pub visible: bool,
     pub last_status: String,
+    /// Cached save-list entries (populated by `List`).
+    pub slots: Vec<SlotInfo>,
+    /// Timestamp of the last `List` request for expiry.
+    pub last_list_ms: f64,
+}
+
+/// Metadata for a single save slot returned by `save.list`.
+#[derive(Debug, Clone, Default)]
+pub struct SlotInfo {
+    pub name: String,
+    pub tick: Option<u64>,
+    pub world_age: Option<String>,
+    pub map_size: Option<String>,
+    pub population: Option<u64>,
+    pub size_bytes: Option<u64>,
+    pub settled: Option<String>,
+    pub religion: Option<String>,
+}
+
+fn fmt_opt(val: &Option<impl std::fmt::Display>, fallback: &str) -> String {
+    val.as_ref().map(|v| v.to_string()).unwrap_or_else(|| fallback.to_string())
 }
 
 /// Registers the save/load panel systems.
@@ -39,6 +62,7 @@ fn toggle_panel(keys: Res<ButtonInput<KeyCode>>, mut panel: ResMut<SaveLoadPanel
 enum SaveLoadAction {
     Save(u8),
     Load(u8),
+    Delete(u8),
     List,
 }
 
@@ -74,12 +98,35 @@ fn render_panel(
                         action = Some(SaveLoadAction::Load(slot));
                     }
                 });
+
+                // Show metadata if cached
+                if let Some(info) = panel.slots.iter().find(|s| s.name == format!("slot-{slot}")) {
+                    ui.vertical(|ui| {
+                        ui.label(format!("  tick: {} | pop: {} | age: {}",
+                            fmt_opt(&info.tick, "-"),
+                            fmt_opt(&info.population, "-"),
+                            fmt_opt(&info.world_age, "-")));
+                        ui.label(format!("  map: {} | size: {} | settlements: {}",
+                            fmt_opt(&info.map_size, "-"),
+                            info.size_bytes.map(|b| {
+                                if b < 1024 { format!("{b} B") }
+                                else if b < 1024*1024 { format!("{:.1} KB", b as f64 / 1024.0) }
+                                else { format!("{:.1} MB", b as f64 / (1024.0*1024.0)) }
+                            }).unwrap_or_else(|| "-".to_string()),
+                            fmt_opt(&info.settled, "-")));
+                    });
+                }
             }
 
             ui.separator();
-            if ui.button("List Saves").clicked() {
-                action = Some(SaveLoadAction::List);
-            }
+            ui.horizontal(|ui| {
+                if ui.button("List Saves").clicked() {
+                    action = Some(SaveLoadAction::List);
+                }
+                if ui.button("Refresh").clicked() {
+                    action = Some(SaveLoadAction::List);
+                }
+            });
 
             if !panel.last_status.is_empty() {
                 ui.separator();
@@ -106,10 +153,17 @@ fn render_panel(
                     format!("save.load → {name}"),
                 )
             }
-            SaveLoadAction::List => (
+            SaveLoadAction::List | SaveLoadAction::Refresh => (
                 r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string(),
                 "save.list requested".to_string(),
             ),
+            SaveLoadAction::Delete(slot) => {
+                let name = format!("slot-{slot}");
+                (
+                    format!(r#"{{"jsonrpc":"2.0","id":{id},"method":"save.delete","params":{{"slot_name":"{name}"}}}}"#, id = 2020 + slot as u32),
+                    format!("save.delete → {name}"),
+                )
+            }
         };
         bridge.client.send_rpc_raw(json);
         panel.last_status = status;

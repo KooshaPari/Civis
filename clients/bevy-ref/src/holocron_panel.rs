@@ -5,17 +5,17 @@
 //! * **CommandKOverlay** — full‑screen Spotlight‑style overlay, fuzzy token‑substring
 //!   search, <200 ms keystroke‑to‑fire, Esc dismisses.
 //!
-//! Both consume `civ_holocron::VerbRegistry` (Phase 1 substrate) through a
+//! Both consume `holocron::VerbRegistry` (Phase 1 substrate) through a
 //! `HolocronState` resource so the registry is available in every frame without
 //! re‑building.
 //!
 //! Refs: FR‑HOLOCRON‑keycap, FR‑UX‑discoverability, ADR‑012, ADR‑009.
 
 use bevy::prelude::*;
-use civ_holocron::descriptor::VerbDescriptor;
-use civ_holocron::group::VerbGroup;
-use civ_holocron::registry::VerbRegistry;
-use civ_holocron::risk::RiskTier;
+use holocron::descriptor::VerbDescriptor;
+use holocron::group::VerbGroup;
+use holocron::registry::VerbRegistry;
+use holocron::risk::RiskTier;
 
 // ---------------------------------------------------------------------------
 // Resource — shared Holocron state kept across frames

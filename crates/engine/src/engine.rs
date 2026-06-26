@@ -18,6 +18,7 @@ use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
+use civ_needs::LifecycleParams;
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell, WorldgenConfig,
@@ -327,6 +328,56 @@ struct CivilianLifecycleSample {
     migration_pressure: f32,
 }
 
+/// Per-tick rollup of [`civ_needs::LifecycleLabel`] counts produced by
+/// [`Simulation::phase_life`]. Surfaced via
+/// [`Simulation::last_tick_lifecycle_metrics`] so dashboards / clients can
+/// observe the lifecycle composition of the population (FR-CIV-LIFE-001/002/003).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LifecycleCounters {
+    /// Civilians classified as [`civ_needs::LifecycleLabel::Child`].
+    pub children: u32,
+    /// Civilians classified as [`civ_needs::LifecycleLabel::Adult`].
+    pub adults: u32,
+    /// Civilians classified as [`civ_needs::LifecycleLabel::Elder`].
+    pub elders: u32,
+    /// Civilians classified as [`civ_needs::LifecycleLabel::Dead`].
+    pub dead: u32,
+}
+
+impl LifecycleCounters {
+    /// Total civilians observed across all labels.
+    #[must_use]
+    pub fn total(&self) -> u32 {
+        self.children + self.adults + self.elders + self.dead
+    }
+
+    /// Working-age fraction (adults / total). Returns `0.0` when empty.
+    #[must_use]
+    pub fn adult_fraction(&self) -> f32 {
+        let t = self.total();
+        if t == 0 {
+            0.0
+        } else {
+            self.adults as f32 / t as f32
+        }
+    }
+}
+
+/// Map an `AgentCivilian` age + `civ_agents::Needs` to a `civ_needs::Health`
+/// value. `Health.integrity` is the mean of the four agent needs (`food`,
+/// `shelter`, `safety`, `belonging`); the rest of `Health` is left at its
+/// `Default::default()` so the lifecycle classifier uses the integrity axis
+/// deterministically. Public so the test module can reuse the mapping without
+/// duplicating the formula.
+fn civilian_to_health(needs: &Needs) -> civ_needs::Health {
+    let integrity = ((needs.food + needs.shelter + needs.safety + needs.belonging) * 0.25)
+        .clamp(0.0, 1.0);
+    civ_needs::Health {
+        integrity,
+        ..civ_needs::Health::default()
+    }
+}
+
 fn lifecycle_distance(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
     let dx = ax - bx;
     let dy = ay - by;
@@ -551,6 +602,13 @@ pub struct Simulation {
     last_births: Vec<PopulationEvent>,
     last_deaths: Vec<PopulationEvent>,
     pub last_life_deaths: u32,
+    /// Per-tick lifecycle label rollup (FR-CIV-LIFE-001/002/003 wiring).
+    /// Populated by [`Simulation::phase_life`] from
+    /// [`civ_needs::classify_lifecycle`] over each civilian's age,
+    /// `civ_needs::Health` (derived from `Needs`), `Psyche::maturity`,
+    /// and [`civ_needs::labor_capacity`]. Public accessor:
+    /// [`Simulation::last_tick_lifecycle_metrics`].
+    last_tick_lifecycle_metrics: LifecycleCounters,
     diplomacy_events: Vec<DiplomacyEvent>,
     /// Pairwise emergent faction relations (FR-DIPLOMACY / CIV-007).
     faction_relations: DiplomacyMatrix,
@@ -1420,6 +1478,7 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             last_life_deaths: 0,
+            last_tick_lifecycle_metrics: LifecycleCounters::default(),
             econ_focus: BTreeMap::new(),
             econ_focus_stability: Vec::new(),
             diplomacy_events: Vec::new(),
@@ -1539,6 +1598,7 @@ impl Simulation {
             last_births: Vec::new(),
             last_deaths: Vec::new(),
             last_life_deaths: 0,
+            last_tick_lifecycle_metrics: LifecycleCounters::default(),
             econ_focus: BTreeMap::new(),
             econ_focus_stability: Vec::new(),
             diplomacy_events: Vec::new(),
@@ -3238,6 +3298,37 @@ impl Simulation {
         let deaths_count = self.last_deaths.len() as u64;
         self.state.population = self.state.population.saturating_add(births_count);
         self.state.population = self.state.population.saturating_sub(deaths_count);
+
+        // FR-CIV-LIFE-001/002/003 wiring: classify each surviving civilian via
+        // `civ_needs::classify_lifecycle` and roll up the per-tick label counts.
+        // Reads use the `Psyche::maturity` value attached to the entity (when
+        // present) so the classifier can distinguish Child vs Adult per the
+        // spec §1.2 maturity-integrity-capacity gate. DNA is currently absent
+        // from the agent archetype, so we fall back to a deterministic
+        // zero-DNA default — labor_capacity's `cognition` axis clamps to the
+        // elder floor and the classifier still works correctly for the
+        // age/integrity predicates.
+        let mut counters = LifecycleCounters::default();
+        let params = civ_needs::LifecycleParams::default();
+        for (_, (civilian, needs, psyche_opt)) in self
+            .world
+            .query::<(&AgentCivilian, &Needs, Option<&Psyche>)>()
+            .iter()
+        {
+            let age = civilian.age;
+            let health = civilian_to_health(needs);
+            let maturity = psyche_opt.copied().map_or(0.0, |p| p.maturity);
+            let dna = civ_genetics::Dna::default();
+            let capacity = civ_needs::labor_capacity(age, &health, &dna, &params);
+            let label = civ_needs::classify_lifecycle(age, &health, maturity, capacity);
+            match label {
+                civ_needs::LifecycleLabel::Child => counters.children += 1,
+                civ_needs::LifecycleLabel::Adult => counters.adults += 1,
+                civ_needs::LifecycleLabel::Elder => counters.elders += 1,
+                civ_needs::LifecycleLabel::Dead => counters.dead += 1,
+            }
+        }
+        self.last_tick_lifecycle_metrics = counters;
     }
 
     fn resource_pressure(&self) -> f32 {
@@ -4516,6 +4607,16 @@ impl Simulation {
     #[must_use]
     pub fn cluster_stocks(&self) -> &BTreeMap<u64, ClusterStocks> {
         &self.cluster_stocks
+    }
+
+    /// Per-tick lifecycle label counts populated by [`Simulation::phase_life`]
+    /// (FR-CIV-LIFE-001/002/003). Counts each surviving civilian once,
+    /// classified via [`civ_needs::classify_lifecycle`]. Read by the HUD
+    /// `LifecyclePanel` and the emergence-dashboard consumer; cleared implicitly
+    /// each tick by being re-populated.
+    #[must_use]
+    pub fn last_tick_lifecycle_metrics(&self) -> &LifecycleCounters {
+        &self.last_tick_lifecycle_metrics
     }
 
     #[cfg(test)]
@@ -8984,6 +9085,136 @@ mod tests {
                 .filter(|(_, civ)| matches!(civ.alignment, Alignment::Faction(8)))
                 .count();
             assert!(migrated >= 2, "starving adults should found a new settlement");
+        }
+
+        // FR-CIV-LIFE-001/002/003: classifier wiring smoke test. Spawn three
+        // civilians spanning the Child / Adult / Elder axis, run `phase_life`
+        // once, then assert `last_tick_lifecycle_metrics()` contains the
+        // expected counts. This is the contract-level check that the
+        // classifier is reachable from the engine tick loop, not a deep
+        // classifier correctness test (that lives in `civ_needs::lifecycle`).
+        #[test]
+        fn lifecycle_classifiers_wired_into_phase_life() {
+            use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian, Needs as AgentNeeds};
+
+            let mut sim = Simulation::new();
+
+            let child = spawn_civilian_at(
+                &mut sim.world,
+                101,
+                Alignment::None,
+                0.30,
+                0.30,
+                ActorVisualKind::Humanoid,
+                &mut sim.rng,
+            );
+            {
+                let mut civ = sim.world.get::<&mut AgentCivilian>(child).unwrap();
+                civ.age = 5;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(child).unwrap();
+                needs.food = 0.9;
+                needs.shelter = 0.9;
+                needs.safety = 0.9;
+                needs.belonging = 0.9;
+            }
+
+            let adult = spawn_civilian_at(
+                &mut sim.world,
+                102,
+                Alignment::None,
+                0.31,
+                0.31,
+                ActorVisualKind::Humanoid,
+                &mut sim.rng,
+            );
+            {
+                let mut civ = sim.world.get::<&mut AgentCivilian>(adult).unwrap();
+                civ.age = 28;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(adult).unwrap();
+                needs.food = 0.95;
+                needs.shelter = 0.95;
+                needs.safety = 0.95;
+                needs.belonging = 0.95;
+            }
+
+            let elder = spawn_civilian_at(
+                &mut sim.world,
+                103,
+                Alignment::None,
+                0.32,
+                0.32,
+                ActorVisualKind::Humanoid,
+                &mut sim.rng,
+            );
+            {
+                let mut civ = sim.world.get::<&mut AgentCivilian>(elder).unwrap();
+                civ.age = 70;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(elder).unwrap();
+                needs.food = 0.85;
+                needs.shelter = 0.85;
+                needs.safety = 0.85;
+                needs.belonging = 0.85;
+            }
+
+            // Default counters (before any phase_life run) should be all zero.
+            let pre = *sim.last_tick_lifecycle_metrics();
+            assert_eq!(pre.total(), 0, "default lifecycle counters must be zero");
+
+            sim.phase_life();
+
+            let post = *sim.last_tick_lifecycle_metrics();
+            assert!(
+                post.total() >= 3,
+                "phase_life should classify the three spawned civilians (got total={})",
+                post.total()
+            );
+            assert!(
+                post.children >= 1,
+                "age=5 civilian should classify as Child"
+            );
+            assert!(
+                post.adults >= 1,
+                "age=28 healthy civilian should classify as Adult"
+            );
+            assert!(
+                post.elders >= 1,
+                "age=70 civilian should classify as Elder"
+            );
+        }
+
+        // FR-CIV-LIFE-002: maturity growth wiring smoke test. A healthy adult
+        // (maturity starts at 0) should remain `Adult`-classifiable after the
+        // classifier pass even without an attached `Psyche`, since the
+        // classifier treats missing maturity as 0.0 and the age/integrity
+        // branch alone still puts a 28-year-old healthy civilian in the
+        // Adult bucket.
+        #[test]
+        fn phase_life_classifier_handles_missing_psyche() {
+            use civ_agents::{spawn_civilian_at, ActorVisualKind, Alignment, Civilian as AgentCivilian, Needs as AgentNeeds};
+
+            let mut sim = Simulation::new();
+            let entity = spawn_civilian_at(
+                &mut sim.world,
+                200,
+                Alignment::None,
+                0.40,
+                0.40,
+                ActorVisualKind::Humanoid,
+                &mut sim.rng,
+            );
+            {
+                let mut civ = sim.world.get::<&mut AgentCivilian>(entity).unwrap();
+                civ.age = 28;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(entity).unwrap();
+                needs.food = 0.95;
+                needs.shelter = 0.95;
+                needs.safety = 0.95;
+                needs.belonging = 0.95;
+            }
+            // Deliberately do NOT attach a `Psyche` component.
+            sim.phase_life();
+            let counters = *sim.last_tick_lifecycle_metrics();
+            assert!(counters.adults >= 1, "adult should be classified even without Psyche");
         }
     }
 }

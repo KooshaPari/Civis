@@ -47,8 +47,8 @@ pub use language::{
 pub use culture::cluster_language_distance;
 pub use psyche::{
     belief_culture_exposure, belief_distance, cluster_belief_centroids,
-    max_cluster_belief_divergence, psych_genome_profile, weighted_belief_centroid, Mood,
-    PsychGenomeProfile, Psyche, Temperament, PSYCHE_DIM,
+    isolation_weighted_belief_divergence, max_cluster_belief_divergence, psych_genome_profile,
+    weighted_belief_centroid, Mood, PsychGenomeProfile, Psyche, Temperament, PSYCHE_DIM,
 };
 pub use social::{
     apply_social_event, decay_social_graph, relation_label, Interaction, RelationLabel,

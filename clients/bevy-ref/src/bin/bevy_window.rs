@@ -266,12 +266,11 @@ fn main() {
             EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
-            SandboxEventFeedPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
             GodActionsPlugin,
         ))
-        .add_plugins(civ_bevy_ref::frame_budget::FrameBudgetPlugin)
+        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()

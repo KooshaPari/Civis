@@ -9,6 +9,7 @@ use crate::material::{
     MaterialRegistry, Phase, ACID, AIR, ICE, LAVA, MOLTEN_METAL, MUD, OIL, SALT_WATER, SNOW, STEAM,
     WATER,
 };
+use crate::material_ca;
 use crate::{MaterialId, VoxelWorld, WorldCoord};
 use std::cmp::Reverse;
 use std::collections::HashSet;
@@ -1226,8 +1227,15 @@ fn run_rule_passes(
     // strictly better than the legacy per-pass `grid.clone()`. The reads
     // see the latest live state; the writes are immediately visible to
     // the next pass.
+
+    // Material-specific CA rules: water flow, fire spread, sand physics (FR-CIV-CA).
     grid.refresh_scratch();
     let mut scratch = grid.scratch_view();
+    material_ca::material_rules_pass(grid, &scratch, reg, tick);
+    grid.restore_scratch(scratch);
+
+    grid.refresh_scratch();
+    scratch = grid.scratch_view();
     fluid_thermo_pass(grid, &scratch, reg, boundary, &cells);
     grid.restore_scratch(scratch);
     grid.refresh_scratch();

@@ -353,6 +353,78 @@ mod tests {
         );
     }
 
+    /// FR-TECH-gating: prosperous faction accrues more research than stagnant.
+    #[test]
+    fn prosperous_faction_accrues_more_research() {
+        let mut sim = thriving_stagnant_sim();
+        let mut rng = sim.rng_mut().clone();
+        for id in 0..12 {
+            let _ = spawn_civilian_at(
+                &mut sim.world,
+                10_000 + id,
+                Alignment::Faction(0),
+                0.20,
+                0.20,
+                ActorVisualKind::Humanoid,
+                &mut rng,
+            );
+        }
+        *sim.rng_mut() = rng;
+
+        let start_prosperous = sim
+            .era_progression()
+            .faction_tech
+            .get(&0)
+            .cloned()
+            .unwrap_or_default()
+            .research_points;
+        let start_stagnant = sim
+            .era_progression()
+            .faction_tech
+            .get(&1)
+            .cloned()
+            .unwrap_or_default()
+            .research_points;
+
+        sim.advance_ticks(10);
+
+        let end_prosperous = sim
+            .era_progression()
+            .faction_tech
+            .get(&0)
+            .cloned()
+            .unwrap_or_default()
+            .research_points;
+        let end_stagnant = sim
+            .era_progression()
+            .faction_tech
+            .get(&1)
+            .cloned()
+            .unwrap_or_default()
+            .research_points;
+
+        let accrued_prosperous = end_prosperous.saturating_sub(start_prosperous);
+        let accrued_stagnant = end_stagnant.saturating_sub(start_stagnant);
+
+        assert!(
+            accrued_prosperous > accrued_stagnant,
+            "prosperous faction should accrue more research ({}) than stagnant ({})",
+            accrued_prosperous,
+            accrued_stagnant
+        );
+    }
+
+    /// FR-TECH-gating: can_unlock predicate gates tech level advancement.
+    #[test]
+    fn can_unlock_gates_tech_advancement() {
+        use crate::tech::can_unlock;
+        assert!(can_unlock(0, 0), "level 0 can unlock tech 0");
+        assert!(can_unlock(3, 2), "level 3 can unlock tech 2");
+        assert!(can_unlock(5, 5), "level 5 can unlock tech 5");
+        assert!(!can_unlock(2, 3), "level 2 cannot unlock tech 3");
+        assert!(!can_unlock(0, 1), "level 0 cannot unlock tech 1");
+    }
+
     /// FR-TECH-gating: a prosperous faction out-researches, then diffusion lifts a neighbor later.
     #[test]
     fn prosperous_faction_out_researches_and_diffuses_to_neighbor() {

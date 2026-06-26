@@ -69,6 +69,13 @@ pub fn diffusion_delta(
         .max(1)
 }
 
+/// Gating predicate: can a faction with `current_level` unlock tech requiring `required_level`?
+/// Deterministic check based on emergent research accumulation.
+#[must_use]
+pub fn can_unlock(current_level: u32, required_level: u32) -> bool {
+    current_level >= required_level
+}
+
 /// Neighbor diffusion is anchored to faction-id adjacency in sorted order.
 #[must_use]
 pub fn neighboring_factions(faction_ids: &[u32], faction_id: u32) -> impl Iterator<Item = u32> + '_ {

@@ -15,11 +15,61 @@ use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
+use crate::tool_categories::ActiveSubTool;
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
     ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_10X, ACTION_SPEED_2X,
     ACTION_SPEED_5X, GameSettings, KeyBinding,
 };
+use std::collections::HashMap;
+
+/// Active left-panel cluster tab.
+///
+/// Tracks which top-level tab is selected in the left inspector cluster
+/// (Civilians / Economy / Legends). Initialised as `Default` (Civilians).
+#[derive(Resource, Debug, Clone, Default)]
+pub struct LeftClusterTab {
+    /// 0 = Civilians, 1 = Economy, 2 = Legends (extensible).
+    pub index: usize,
+}
+
+/// Tool-icon asset handles + registered egui texture IDs (FR-CIV-RELIGION-002 HUD).
+///
+/// Loaded on [`Startup`] by `queue_tool_icon_handles`; promoted to egui texture IDs
+/// during [`EguiPrimaryContextPass`] by `load_tool_icons` once all images are ready.
+#[derive(Resource, Default)]
+pub struct ToolIcons {
+    /// Bevy strong handles keeping PNGs alive (one per [`TOOL_ICON_PATHS`] entry).
+    pub handles: Vec<Handle<Image>>,
+    /// Registered egui texture IDs keyed by the path stem from [`TOOL_ICON_PATHS`].
+    pub ids: HashMap<&'static str, egui::TextureId>,
+    /// `true` once all images have been registered with egui.
+    pub registered: bool,
+}
+
+/// (path-stem, asset path) pairs for each tool-category icon PNG.
+///
+/// Extend this list to add icon assets; the stem becomes the lookup key in
+/// [`ToolIcons::ids`].
+const TOOL_ICON_PATHS: &[(&str, &str)] = &[
+    ("spawn", "icons/tool_spawn.png"),
+    ("destroy", "icons/tool_destroy.png"),
+    ("disaster", "icons/tool_disaster.png"),
+    ("terraform", "icons/tool_terraform.png"),
+    ("laws", "icons/tool_laws.png"),
+];
+
+/// Handle keyboard category-hotkey shortcuts (number-row / hotbar bindings).
+///
+/// Currently a no-op stub — the full mapping from key → [`ActiveSubTool`] will
+/// be wired in the next tool-taxonomy pass. The system exists so `GameUiPlugin`
+/// can register it in `Update` without conditional compilation.
+pub fn handle_category_hotkeys(
+    _keys: Res<ButtonInput<KeyCode>>,
+    _active: ResMut<ActiveSubTool>,
+) {
+    // TODO(tool-taxonomy-P2): map F1–F5 / Q-E-R-T-Y to SubTool categories.
+}
 
 /// Lightweight sim snapshot consumed by the HUD.
 #[derive(Resource, Debug, Clone)]

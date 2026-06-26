@@ -38,6 +38,8 @@ pub mod save_load_ui;
 pub mod gltf_models;
 pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub use emergence_dashboard::EmergenceDashboardPlugin;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;

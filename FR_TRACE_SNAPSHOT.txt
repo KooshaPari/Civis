@@ -47,6 +47,12 @@ COVERED SAMPLE (first 15 alphabetically)
   FR-CIV-DIPLO-002  test=crates/diplomacy/src/lib.rs:916
   FR-CIV-DIPLO-003  test=crates/diplomacy/src/lib.rs:967
 
+COVERED TRACE STATUS (FR-CIV-LIFE life-sim lifecycle; matrix-2026-06-26)
+------------------------------------------------------------------------
+  FR-CIV-LIFE-001  status=traced-implemented  spec=FUNCTIONAL_REQUIREMENTS.md:393-397  impl=crates/needs/src/lib.rs:31-142  test=crates/needs/src/lib.rs:340-357
+  FR-CIV-LIFE-002  status=traced-implemented  spec=FUNCTIONAL_REQUIREMENTS.md:399-403  impl=crates/needs/src/lib.rs:178-246  test=crates/needs/src/lib.rs:489-558
+  FR-CIV-LIFE-003  status=traced-implemented  spec=FUNCTIONAL_REQUIREMENTS.md:405-409  impl=crates/needs/src/lib.rs:259-320  test=crates/needs/src/lib.rs:432-457
+
 SPEC-ONLY EPIC ROLLUP (prefixes with >=5 SPEC-ONLY IDs)
 ------------------------------------------------------------------------
   FR-CIV-TACTICS: 37

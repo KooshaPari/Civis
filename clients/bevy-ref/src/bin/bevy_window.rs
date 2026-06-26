@@ -1330,6 +1330,7 @@ fn minimap_click_focus(
         }
         return;
     }
+    }
     // Suppress unused warning — bridge is available for future left-click RPCs.
     let _ = &bridge;
 

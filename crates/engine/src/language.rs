@@ -431,4 +431,69 @@ mod tests {
 
         assert_eq!(target.vocabulary.get(&42), source.vocabulary.get(&42));
     }
+
+    #[test]
+    fn isolated_cultures_lexicons_diverge_over_n_ticks() {
+        // FR-CIV-LANG: isolated cultures' lexicons MUST diverge over time
+        // Two cultures start identically, then are isolated (no contact).
+        // After N ticks of independent drift, they should have measurably different lexicons.
+
+        let seed = [0.5; 4];
+        let mut culture_a = seeded_language_state(seed);
+        let mut culture_b = seeded_language_state(seed);
+
+        // Both cultures start with identical lexicons
+        let initial_distance = average_language_distance(&culture_a, &culture_b);
+        assert!(initial_distance < 0.01, "Initial distance should be near-zero: {}", initial_distance);
+
+        // Evolve both cultures independently with no contact (contact_pressure = 0)
+        for _ in 0..50 {
+            tick_language(&mut culture_a, 0.0); // No contact
+            tick_language(&mut culture_b, 0.0); // No contact
+        }
+
+        // After 50 independent ticks with non-zero drift_rate (0.05 default),
+        // the lexicons should diverge significantly
+        let final_distance = average_language_distance(&culture_a, &culture_b);
+        assert!(final_distance > 0.05,
+            "Isolated cultures should diverge after 50 ticks; distance={}", final_distance);
+    }
+
+    #[test]
+    fn same_culture_lexicon_stays_stable_without_contact() {
+        // FR-CIV-LANG: same culture's lexicon under zero drift should remain stable.
+        // A single culture with drift_rate=0 and no contact should maintain its lexicon.
+
+        let seed = [0.3; 4];
+        let mut culture = seeded_language_state(seed);
+
+        // Override drift rate to zero for this test
+        culture.drift_rate = 0.0;
+
+        let initial_vocab = culture.vocabulary.clone();
+        let initial_distance_before = average_language_distance(&culture, &culture);
+        assert_eq!(initial_distance_before, 0.0, "Self-distance must be zero");
+
+        // Evolve with zero drift for 20 ticks
+        for _ in 0..20 {
+            tick_language(&mut culture, 0.0); // No drift, no contact
+        }
+
+        // Lexicon should remain identical (zero drift = no phoneme drift)
+        let final_vocab = culture.vocabulary.clone();
+
+        // Verify all morphemes remain unchanged
+        for (meaning, morpheme) in &initial_vocab {
+            let final_morpheme = &final_vocab[meaning];
+            assert_eq!(final_morpheme.phonemes.len(), morpheme.phonemes.len(),
+                "Morpheme length should remain constant for meaning {}", meaning);
+            for (idx, phoneme) in morpheme.phonemes.iter().enumerate() {
+                let final_phoneme = &final_morpheme.phonemes[idx];
+                for feat_idx in 0..6 {
+                    assert!((final_phoneme.features[feat_idx] - phoneme.features[feat_idx]).abs() < f32::EPSILON,
+                        "Phoneme features must not drift when drift_rate=0");
+                }
+            }
+        }
+    }
 }

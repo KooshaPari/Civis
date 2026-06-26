@@ -72,6 +72,7 @@ mod tests {
                 radius_voxels: radius,
                 energy: 100,
             },
+            target_index: 0,
         }
     }
 

@@ -41,10 +41,11 @@ pub use diplomacy::{
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
 pub use language::{
-    drift_phonemes, name_from_lexicon, phoneme_inventory_distance, render_lexeme, EvolvedLexicon,
-    Lexeme, LexemeKind, Phoneme, PhonemeInventory, DEFAULT_INVENTORY_SIZE, PHONEME_FEATURES,
+    coin_evolved, drift_phonemes, name_from_lexicon, phoneme_inventory_distance, render_lexeme,
+    tick_seeded_phoneme_drift, EvolvedLexicon, Lexeme, LexemeKind, Phoneme, PhonemeInventory,
+    DEFAULT_INVENTORY_SIZE, PHONEME_FEATURES,
 };
-pub use culture::cluster_language_distance;
+pub use culture::{cluster_language_distance, language_divergence_from_isolation};
 pub use psyche::{
     belief_culture_exposure, belief_distance, cluster_belief_centroids,
     isolation_weighted_belief_divergence, max_cluster_belief_divergence, psych_genome_profile,

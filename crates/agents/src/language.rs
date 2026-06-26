@@ -209,6 +209,46 @@ pub fn name_from_lexicon(
         .map(|lexeme| render_lexeme(lexeme, inventory))
 }
 
+/// Deterministic phoneme drift accumulated per `inventory_seed` and `tick` (FR-CIV-LANG-002).
+///
+/// Unlike `drift_phonemes` which takes an external RNG, this function derives its own RNG
+/// from `inventory_seed ^ tick` so two calls with identical arguments are bitwise-equal.
+/// Returns the drifted inventory without mutating the original.
+#[must_use]
+pub fn tick_seeded_phoneme_drift(
+    base: &PhonemeInventory,
+    inventory_seed: u64,
+    tick: u64,
+    rate: f32,
+    max_drift_permille: u32,
+) -> PhonemeInventory {
+    let rng_seed = inventory_seed.wrapping_add(tick.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+    let mut rng = ChaCha8Rng::seed_from_u64(rng_seed);
+    let mut out = base.clone();
+    drift_phonemes(&mut rng, &mut out, rate, max_drift_permille);
+    out.tick = tick;
+    out
+}
+
+/// Coin a lexeme from a post-drift evolved inventory (FR-CIV-LANG-002 + FR-CIV-LANG-009).
+///
+/// Entity ids are deterministic under a fixed seed because `EvolvedLexicon::coin` is
+/// idempotent: calling it twice for the same `(kind, entity_id)` returns the existing entry.
+pub fn coin_evolved(
+    lexicon: &mut EvolvedLexicon,
+    inventory: &PhonemeInventory,
+    kind: LexemeKind,
+    entity_id: u64,
+    entity_seed: u64,
+) -> &Lexeme {
+    let key = (kind, entity_id);
+    if !lexicon.entries.contains_key(&key) {
+        let mut rng = ChaCha8Rng::seed_from_u64(entity_seed ^ entity_id);
+        lexicon.coin(&mut rng, inventory, kind, entity_id);
+    }
+    lexicon.entries.get(&key).expect("coined evolved lexeme")
+}
+
 fn phoneme_distance(a: &Phoneme, b: &Phoneme) -> f32 {
     let mut sum = 0.0f32;
     for i in 0..PHONEME_FEATURES {
@@ -289,5 +329,74 @@ mod tests {
             phoneme_inventory_distance(&a, &b) > 0.05,
             "isolated drift must diverge inventories"
         );
+    }
+
+    // --- Sub-feature 1: deterministic phoneme inventory drift per seed+tick ---
+
+    #[test]
+    fn tick_seeded_phoneme_drift_bitwise_equal_across_runs() {
+        let base = PhonemeInventory::seed_from(42);
+        let a = tick_seeded_phoneme_drift(&base, 42, 100, 0.05, 50);
+        let b = tick_seeded_phoneme_drift(&base, 42, 100, 0.05, 50);
+        assert_eq!(a, b, "same seed+tick must yield bitwise-equal phoneme vectors");
+    }
+
+    #[test]
+    fn tick_seeded_phoneme_drift_differs_across_ticks() {
+        let base = PhonemeInventory::seed_from(7);
+        let t10 = tick_seeded_phoneme_drift(&base, 7, 10, 0.1, 100);
+        let t20 = tick_seeded_phoneme_drift(&base, 7, 20, 0.1, 100);
+        assert_ne!(t10.phonemes, t20.phonemes, "different ticks must produce different drift");
+    }
+
+    #[test]
+    fn tick_seeded_phoneme_drift_accumulates_over_ticks() {
+        let base = PhonemeInventory::seed_from(13);
+        // Drift 50 ticks forward; distance should be > 0
+        let t0_dist = phoneme_inventory_distance(&base, &base);
+        let t50 = tick_seeded_phoneme_drift(&base, 13, 50, 0.08, 80);
+        let dist_after = phoneme_inventory_distance(&base, &t50);
+        assert!(t0_dist == 0.0, "distance from self must be zero");
+        assert!(dist_after > 0.0, "drift must accumulate and move phonemes");
+    }
+
+    // --- Sub-feature 2: lexicon growth with evolved phonemes ---
+
+    #[test]
+    fn lexicon_grows_with_evolved_phoneme_set() {
+        let base = PhonemeInventory::seed_from(55);
+        // Evolve the inventory forward 30 ticks
+        let evolved = tick_seeded_phoneme_drift(&base, 55, 30, 0.07, 70);
+        let mut lex = EvolvedLexicon::default();
+        coin_evolved(&mut lex, &evolved, LexemeKind::Settlement, 1, 1001);
+        coin_evolved(&mut lex, &evolved, LexemeKind::Faction, 2, 2002);
+        coin_evolved(&mut lex, &evolved, LexemeKind::Event, 3, 3003);
+        assert_eq!(lex.len(), 3, "lexicon must grow to 3 entries after coining 3 concepts");
+        let name = name_from_lexicon(&lex, &evolved, LexemeKind::Settlement, 1).unwrap();
+        assert!(!name.is_empty(), "coined name must be non-empty");
+        assert!(name.chars().next().unwrap().is_uppercase(), "name must start uppercase");
+    }
+
+    #[test]
+    fn lexicon_coin_evolved_idempotent_for_same_entity() {
+        let inv = PhonemeInventory::seed_from(88);
+        let mut lex = EvolvedLexicon::default();
+        coin_evolved(&mut lex, &inv, LexemeKind::Faction, 10, 42);
+        coin_evolved(&mut lex, &inv, LexemeKind::Faction, 10, 42);
+        assert_eq!(lex.len(), 1, "coining same entity twice must not duplicate");
+    }
+
+    #[test]
+    fn lexicon_names_stable_after_evolved_inventory_drift() {
+        let base = PhonemeInventory::seed_from(33);
+        let evolved = tick_seeded_phoneme_drift(&base, 33, 15, 0.06, 60);
+        let mut lex_a = EvolvedLexicon::default();
+        let mut lex_b = EvolvedLexicon::default();
+        // Same entity_seed → same name
+        coin_evolved(&mut lex_a, &evolved, LexemeKind::Event, 500, 9999);
+        coin_evolved(&mut lex_b, &evolved, LexemeKind::Event, 500, 9999);
+        let na = name_from_lexicon(&lex_a, &evolved, LexemeKind::Event, 500).unwrap();
+        let nb = name_from_lexicon(&lex_b, &evolved, LexemeKind::Event, 500).unwrap();
+        assert_eq!(na, nb, "same evolved inventory + same entity_seed must yield same name");
     }
 }

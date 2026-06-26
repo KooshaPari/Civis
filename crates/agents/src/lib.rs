@@ -23,6 +23,7 @@
 
 pub mod cluster;
 pub mod culture;
+pub mod language;
 pub mod daily_path;
 pub mod diplomacy;
 pub mod psyche;
@@ -39,6 +40,11 @@ pub use daily_path::{
 pub use diplomacy::{
     DiplomacyMatrix, DiplomacyOutcome, DiplomacySignal, RelationKind, RelationRecord,
 };
+pub use language::{
+    drift_phonemes, name_from_lexicon, phoneme_inventory_distance, render_lexeme, EvolvedLexicon,
+    Lexeme, LexemeKind, Phoneme, PhonemeInventory, DEFAULT_INVENTORY_SIZE, PHONEME_FEATURES,
+};
+pub use culture::cluster_language_distance;
 pub use psyche::{
     belief_culture_exposure, psych_genome_profile, Mood, PsychGenomeProfile, Psyche, Temperament,
     PSYCHE_DIM,

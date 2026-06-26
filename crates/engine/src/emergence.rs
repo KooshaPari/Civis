@@ -8,6 +8,9 @@
 use std::collections::{BTreeMap, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
+use civ_agents::language::{
+    name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
+};
 use civ_agents::psyche::{nudge_temperament, psyche_from_dna, update_beliefs, update_mood};
 use civ_agents::{
     apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
@@ -61,6 +64,7 @@ pub struct CivAiDecision {
 pub struct EmergenceState {
     pub(crate) legends: LegendsWorker,
     pub(crate) cluster_cultures: BTreeMap<u64, CultureProfile>,
+    pub(crate) cluster_lexicons: BTreeMap<u64, EvolvedLexicon>,
     pub(crate) last_feed: Vec<EmergenceFeedEvent>,
     pub(crate) last_ai_decisions: Vec<CivAiDecision>,
     pub(crate) last_sentience: Vec<SentienceEvent>,
@@ -80,6 +84,7 @@ impl EmergenceState {
         EmergenceState {
             legends: LegendsWorker::new(SagaGraph::new(LegendsConfig::default())),
             cluster_cultures: BTreeMap::new(),
+            cluster_lexicons: BTreeMap::new(),
             last_feed: Vec::new(),
             last_ai_decisions: Vec::new(),
             last_sentience: Vec::new(),
@@ -283,6 +288,7 @@ impl Simulation {
                 let one = std::slice::from_mut(p);
                 drift_populations(one, &[], self.rng_mut(), 0.02, 0.0, 0.85);
             }
+            self.emergence_language_lexicon(tick);
             return;
         }
         let keys: Vec<u64> = self.emergence.cluster_cultures.keys().copied().collect();
@@ -300,6 +306,7 @@ impl Simulation {
         for (key, profile) in keys.into_iter().zip(profiles) {
             self.emergence.cluster_cultures.insert(key, profile);
         }
+        self.emergence_language_lexicon(tick);
         if tick % 128 == 0 && !self.emergence.cluster_cultures.is_empty() {
             let n = self.emergence.cluster_cultures.len();
             self.emergence.push_feed(
@@ -308,6 +315,62 @@ impl Simulation {
                 format!("{n} settlement cultures drifted"),
                 None,
             );
+        }
+    }
+
+    /// Coin settlement/faction/event lexemes from drifted phoneme inventories.
+    fn emergence_language_lexicon(&mut self, tick: u64) {
+        let seed = self.state.rng_seed;
+        for (cluster_id, profile) in &self.emergence.cluster_cultures {
+            let lexicon = self
+                .emergence
+                .cluster_lexicons
+                .entry(*cluster_id)
+                .or_default();
+            let mut rng = ChaCha8Rng::seed_from_u64(seed ^ cluster_id ^ tick);
+            lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Settlement, *cluster_id);
+            if tick % 128 == 0 {
+                lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Event, tick);
+            }
+        }
+        let fallback = self
+            .emergence
+            .cluster_cultures
+            .values()
+            .next()
+            .map(|p| p.phonemes.clone())
+            .unwrap_or_else(|| PhonemeInventory::seed_from(seed));
+        for (&faction_id, _) in &self.state.factions {
+            let fid = u64::from(faction_id);
+            let lexicon = self.emergence.cluster_lexicons.entry(fid).or_default();
+            let mut rng = ChaCha8Rng::seed_from_u64(seed ^ fid ^ 0xFAC1_0000);
+            lexicon.coin(&mut rng, &fallback, LexemeKind::Faction, fid);
+        }
+        if tick >= 250 && self.emergence.cluster_cultures.len() >= 2 {
+            let region_count = self
+                .emergence
+                .cluster_cultures
+                .keys()
+                .filter(|id| {
+                    self.emergence
+                        .cluster_lexicons
+                        .get(id)
+                        .and_then(|lex| {
+                            self.emergence.cluster_cultures.get(id).and_then(|profile| {
+                                name_from_lexicon(lex, &profile.phonemes, LexemeKind::Settlement, *id)
+                            })
+                        })
+                        .is_some()
+                })
+                .count();
+            if region_count >= 1 {
+                self.emergence.push_feed(
+                    tick,
+                    "language_region",
+                    format!("{region_count} emergent dialect regions"),
+                    None,
+                );
+            }
         }
     }
 
@@ -751,6 +814,12 @@ impl Simulation {
         &self.emergence.cluster_cultures
     }
 
+    /// Per-cluster evolved lexicons (FR-CIV-LANG naming).
+    #[must_use]
+    pub fn cluster_lexicons(&self) -> &BTreeMap<u64, EvolvedLexicon> {
+        &self.emergence.cluster_lexicons
+    }
+
     /// Civ-ai decisions from the most recent tick.
     #[must_use]
     pub fn civ_ai_decisions(&self) -> &[CivAiDecision] {
@@ -854,15 +923,31 @@ mod tests {
     /// FR-CIV-GENETICS / culture — cluster cultures diverge over ticks.
     #[test]
     fn culture_phase_drifts_cluster_profiles() {
-        let mut sim = Simulation::with_seed(99);
-        run_ticks(&mut sim, 200);
+        let mut sim_a = Simulation::with_seed(99);
+        let mut sim_b = Simulation::with_seed(99);
+        run_ticks(&mut sim_a, 200);
+        run_ticks(&mut sim_b, 200);
         assert!(
-            !sim.cluster_cultures().is_empty() || count_civilians(&sim.world) > 0,
+            !sim_a.cluster_cultures().is_empty() || count_civilians(&sim_a.world) > 0,
             "expected cultures or civilians"
         );
-        if sim.cluster_cultures().len() >= 2 {
-            let values: Vec<_> = sim.cluster_cultures().values().map(|p| p.traits).collect();
+        if sim_a.cluster_cultures().len() >= 2 {
+            let values: Vec<_> = sim_a.cluster_cultures().values().map(|p| p.traits).collect();
             assert_ne!(values[0], values[1], "cultures should diverge");
+            let phon_a: Vec<_> = sim_a
+                .cluster_cultures()
+                .values()
+                .map(|p| p.phonemes.clone())
+                .collect();
+            let phon_b: Vec<_> = sim_b
+                .cluster_cultures()
+                .values()
+                .map(|p| p.phonemes.clone())
+                .collect();
+            assert_eq!(
+                phon_a, phon_b,
+                "same seed must yield identical phoneme vectors at tick N"
+            );
         }
     }
 

@@ -18,6 +18,18 @@ pub enum CivEra {
 }
 
 impl CivEra {
+    /// Fractional progress through the era ladder, from earliest to latest.
+    pub fn era_progress_fraction(self) -> f32 {
+        match self {
+            CivEra::Prehistoric => 0.0,
+            CivEra::Ancient => 0.2,
+            CivEra::Classical => 0.4,
+            CivEra::Medieval => 0.6,
+            CivEra::Renaissance => 0.8,
+            CivEra::Modern => 1.0,
+        }
+    }
+
     /// Evaluate the current era from live simulation state.
     /// Conditions are first-match from most-advanced downward.
     pub fn evaluate(sim: &Simulation) -> Self {
@@ -60,6 +72,30 @@ impl CivEra {
             CivEra::Medieval    => "pop >= 10,000 or 10 techs researched",
             CivEra::Renaissance => "all 12 techs researched",
             CivEra::Modern      => "(peak era reached)",
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CivEra;
+
+    #[test]
+    fn era_progress_fraction_is_earliest_latest_and_monotonic() {
+        let eras = [
+            CivEra::Prehistoric,
+            CivEra::Ancient,
+            CivEra::Classical,
+            CivEra::Medieval,
+            CivEra::Renaissance,
+            CivEra::Modern,
+        ];
+
+        assert_eq!(eras[0].era_progress_fraction(), 0.0);
+        assert_eq!(eras[eras.len() - 1].era_progress_fraction(), 1.0);
+
+        for window in eras.windows(2) {
+            assert!(window[0].era_progress_fraction() < window[1].era_progress_fraction());
         }
     }
 }

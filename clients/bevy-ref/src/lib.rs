@@ -130,6 +130,12 @@ pub mod voxel_triplanar;
 #[cfg(feature = "bevy")]
 pub mod window_icon;
 
+/// Central HUD panel registry — add new panels here, not in the bin files.
+#[cfg(feature = "bevy")]
+pub mod hud_panels;
+#[cfg(feature = "bevy")]
+pub use hud_panels::HudPanelsPlugin;
+
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };

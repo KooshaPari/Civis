@@ -18,11 +18,9 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
-    save_load_ui::SaveLoadUiPlugin,
-    tutorial::TutorialPlugin,
-    perf_hud::{PerfHudPlugin, PerfMetrics},
-    live_pick::{LivePickPlugin, LiveSelection},
+    faction_hud::PlayerFactionId,
+    perf_hud::PerfMetrics,
+    live_pick::LiveSelection,
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
@@ -32,17 +30,15 @@ use civ_bevy_ref::{
         StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
-    god_panel::GodPanelPlugin,
-    god_actions::GodActionsPlugin,
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    event_feed::{EventFeed, EventFeedPlugin},
-    emergence_dashboard::EmergenceDashboardPlugin,
+    event_feed::EventFeed,
     ws_client::{WsClient, WsClientConfig},
     post_fx::PostFxPlugin,
+    HudPanelsPlugin,
     CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
     VOXEL_CHUNK_EDGE, WsConnectionState,
 };
@@ -54,7 +50,7 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
+use civ_bevy_ref::diplomacy_ui::DiplomacyBridge;
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
@@ -241,18 +237,10 @@ fn main() {
             WireframePlugin::default(),
             PostFxPlugin,
             GpuFeaturesPlugin,
-            LivePickPlugin,
-            FactionHudPlugin,
-            SaveLoadUiPlugin,
-            TutorialPlugin,
-            PerfHudPlugin,
             EguiPlugin::default(),
-            EventFeedPlugin,
-            EmergenceDashboardPlugin,
-            DiplomacyUiPlugin,
-            GodPanelPlugin,
-            GodActionsPlugin,
             civ_bevy_ref::frame_budget::FrameBudgetPlugin,
+            // All HUD panels in one stable call — see src/hud_panels.rs to add panels.
+            HudPanelsPlugin,
         ))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()

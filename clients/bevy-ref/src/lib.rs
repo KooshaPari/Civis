@@ -71,6 +71,10 @@ pub mod live_scene;
 pub mod live_stream;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
+/// Per-material-type PBR `StandardMaterial` look-up table (no textures required).
+/// The [`MaterialType`] enum and its const accessors are always compiled; the
+/// Bevy `material_for` fn is gated behind `#[cfg(feature = "bevy")]`.
+pub mod pbr_materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
 #[cfg(feature = "bevy")]

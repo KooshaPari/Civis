@@ -30,6 +30,8 @@ pub enum DisasterKind {
     Storm,
     /// Sustained aridity: crop stress and parched terrain.
     Drought,
+    /// Severe settlement food collapse.
+    Famine,
     /// Disease pressure that mostly hits people rather than terrain.
     Plague,
 }
@@ -94,6 +96,8 @@ impl Simulation {
         const DROUGHT_PRECIP_FP: i32 = 150;
         /// Drought onset: sustained high air temperature (fixed-point milli-°C).
         const DROUGHT_TEMP_FP: i32 = 30_000; // 30 °C
+        /// Famine onset: critically low food stock in a settlement cluster.
+        const FAMINE_FOOD_STOCK_FP: i64 = 100;
 
         // FR-CIV-CLIMATE: Compute seasonal modifiers so disasters cluster by season.
         // Droughts peak in summer dry season; floods peak in spring wet season;
@@ -136,6 +140,7 @@ impl Simulation {
         let mut floods = Vec::new();
         let mut storms = Vec::new();
         let mut droughts = Vec::new();
+        let mut famines = Vec::new();
         for cell in self.weather_cells() {
             let pos = WorldCoord {
                 x: i64::from(cell.region_id),
@@ -165,6 +170,15 @@ impl Simulation {
                 droughts.push(pos);
             }
         }
+        for (&cluster_id, stock) in self.cluster_stocks() {
+            if cluster_food_stock(stock) <= FAMINE_FOOD_STOCK_FP {
+                famines.push(WorldCoord {
+                    x: i64::try_from(cluster_id).unwrap_or(i64::MAX),
+                    y: 0,
+                    z: 0,
+                });
+            }
+        }
 
         for pos in wildfires {
             trigger_disaster(self, DisasterKind::Wildfire, pos);
@@ -181,6 +195,9 @@ impl Simulation {
         for pos in droughts {
             trigger_disaster(self, DisasterKind::Drought, pos);
         }
+        for pos in famines {
+            trigger_disaster(self, DisasterKind::Famine, pos);
+        }
     }
 }
 
@@ -196,6 +213,14 @@ fn scale_threshold(base: i64, modifier_fp: i64, fp_scale: i64) -> i64 {
     let scaled = base.saturating_mul(fp_scale) / modifier_fp;
     // Bound between 25% and 400% of base so seasonal swings stay physical.
     scaled.clamp(base / 4, base * 4)
+}
+
+fn cluster_food_stock(stock: &crate::ClusterStocks) -> i64 {
+    serde_json::to_value(stock)
+        .ok()
+        .and_then(|value| value.get("goods").cloned())
+        .and_then(|goods| goods.get("Food").and_then(|v| v.as_i64()))
+        .unwrap_or(0)
 }
 
 /// Fire-suppression technology raises the temperature required to ignite a
@@ -330,6 +355,14 @@ fn apply_disaster(sim: &mut Simulation, kind: DisasterKind, pos: WorldCoord) {
                 DisasterEffect::new(0.08, 0.15, 0.50, 0.30, true),
             );
         }
+        DisasterKind::Famine => {
+            hit_agents(
+                sim,
+                pos,
+                radius,
+                DisasterEffect::new(0.05, 0.12, 0.70, 0.22, false),
+            );
+        }
         DisasterKind::Plague => {
             hit_agents(
                 sim,
@@ -349,6 +382,7 @@ fn radius_for(kind: DisasterKind) -> i64 {
         DisasterKind::Wildfire => 4 * civ_voxel::FIXED_SCALE,
         DisasterKind::Storm => 6 * civ_voxel::FIXED_SCALE,
         DisasterKind::Drought => 5 * civ_voxel::FIXED_SCALE,
+        DisasterKind::Famine => 5 * civ_voxel::FIXED_SCALE,
         DisasterKind::Plague => 2 * civ_voxel::FIXED_SCALE,
     }
 }
@@ -803,6 +837,41 @@ mod tests {
         assert!(
             has_drought_effects,
             "Drought should parch terrain under sustained low precip and high temp"
+        );
+    }
+
+    /// Famine emerges when a settlement's food stock is critically low.
+    #[test]
+    fn phase_disasters_triggers_famine_on_low_food_stock() {
+        let mut sim = Simulation::with_seed(111);
+
+        sim.set_climate_state(Climate {
+            tick: 800,
+            day_phase: 0.4,
+            year_phase: 0.5,
+            moon_phase: 0.0,
+            tide_offset: 0.0,
+        });
+        sim.set_weather_cells(vec![WeatherCell {
+            region_id: 0,
+            latitude_fp: 0,
+            season: civ_planet::SeasonKind::Spring,
+            kind: WeatherKind::Clear,
+            temp_c_fp: 20_000,
+            precip_mm_fp: 500,
+            storm_intensity_fp: 100,
+        }]);
+        sim.test_clear_cluster_stocks();
+        sim.test_set_cluster_food_stock(0, 0);
+
+        sim.state.tick = 800;
+        sim.phase_disasters();
+
+        assert!(
+            sim.last_tick_disaster_pulses()
+                .iter()
+                .any(|pulse| pulse.kind == DisasterKind::Famine),
+            "Famine should emerge when cluster food is critically low"
         );
     }
 }

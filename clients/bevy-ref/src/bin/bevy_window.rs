@@ -295,6 +295,11 @@ fn main() {
                 update_orbit_camera_transform,
                 apply_live_frames,
                 sync_agent_labels_from_civilians.after(apply_live_frames),
+            ),
+        )
+        .add_systems(
+            Update,
+            (
                 apply_spectator_meta,
                 sync_live_hud_stats,
                 sync_live_pick_detail,
@@ -615,7 +620,7 @@ fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
     mut lights: Query<&mut DirectionalLight>,
-    mut ambient: ResMut<AmbientLight>,
+    mut ambient: ResMut<GlobalAmbientLight>,
     mut clear: ResMut<ClearColor>,
 ) {
     let target = presentation_day_factor_target(presentation.is_day);

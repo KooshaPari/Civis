@@ -1,7 +1,7 @@
 //! Population migration phase — stress-driven cluster flows with cultural blending.
 //!
 //! Runs every [`MIGRATION_CADENCE`] ticks via [`Simulation::phase_migration`].
-//! Translates per-cluster ECS state into [`ClusterSnapshot`]s, delegates to
+//! Translates per-cluster ECS state into [`ClusterMigration`]s, delegates to
 //! [`civ_emergence_migration::MigrationEngine`], then writes population transfers
 //! and cultural blends back into the simulation's emergence state.
 //!
@@ -19,7 +19,11 @@
 use std::collections::BTreeMap;
 
 use civ_agents::{culture::CultureProfile, ClusterId, ClusterMember};
-use civ_emergence_migration::{ClusterSnapshot, MigrationEngine, CULTURE_DIM};
+use civ_emergence_migration::{
+    ClusterMigration, MigrationConfig, MigrationEngine, MigrationOpportunity, MigrationStress,
+    ATTR_DIM,
+};
+use rand_chacha::{rand_core::SeedableRng, ChaCha8Rng};
 
 use crate::engine::Simulation;
 
@@ -36,20 +40,20 @@ impl Simulation {
             return;
         }
 
-        let snapshots = self.build_cluster_snapshots();
-        if snapshots.len() < 2 {
+        let mut engine = self.build_migration_engine();
+        if engine.len() < 2 {
             return;
         }
 
-        let engine = MigrationEngine::new();
         let tick_seed = self.state.tick ^ self.state.rng_seed;
-        let result = engine.process(&snapshots, tick_seed);
+        let mut rng = ChaCha8Rng::seed_from_u64(tick_seed);
+        let report = engine.tick(&mut rng);
 
         // Apply population transfers by re-assigning ClusterMember components.
-        for transfer in &result.transfers {
-            let from_id = ClusterId(transfer.from_id);
-            let to_id = ClusterId(transfer.to_id);
-            let to_move = transfer.count;
+        for flow in &report.flows {
+            let from_id = ClusterId(flow.from.0);
+            let to_id = ClusterId(flow.to.0);
+            let to_move = flow.count;
 
             let movers: Vec<hecs::Entity> = self
                 .world
@@ -72,89 +76,105 @@ impl Simulation {
             }
         }
 
-        // Apply cultural blends to destination clusters.
-        for blend in &result.culture_blends {
-            if let Some(profile) = self
-                .emergence
-                .cluster_cultures
-                .get_mut(&blend.cluster_id)
-            {
-                for i in 0..CULTURE_DIM {
-                    profile.traits[i] = (profile.traits[i] + blend.delta[i]).clamp(0.0, 1.0);
+        // Sync cultural blends back: read updated cluster culture from engine.
+        for flow in &report.flows {
+            let dest_key = flow.to.0;
+            if let Some(post) = engine.cluster(flow.to) {
+                if let Some(profile) = self.emergence.cluster_cultures.get_mut(&dest_key) {
+                    for i in 0..ATTR_DIM {
+                        profile.traits[i] = post.culture[i].clamp(0.0, 1.0);
+                    }
                 }
             }
         }
 
-        if result.total_migrated > 0 {
+        if report.total_moved > 0 {
             tracing::debug!(
                 tick = self.state.tick,
-                migrated = result.total_migrated,
-                transfers = result.transfers.len(),
-                "phase_migration: {} people moved across {} cluster transfers",
-                result.total_migrated,
-                result.transfers.len(),
+                migrated = report.total_moved,
+                flows = report.flows.len(),
+                "phase_migration: {} people moved across {} cluster flows",
+                report.total_moved,
+                report.flows.len(),
             );
         }
     }
 
-    /// Assemble [`ClusterSnapshot`]s from live ECS and emergence state.
-    fn build_cluster_snapshots(&self) -> Vec<ClusterSnapshot> {
+    /// Assemble a [`MigrationEngine`] populated with per-cluster state from ECS.
+    fn build_migration_engine(&self) -> MigrationEngine {
         // Count members per cluster from ECS.
         let mut cluster_pops: BTreeMap<u64, u64> = BTreeMap::new();
         for (_, member) in self.world.query::<&ClusterMember>().iter() {
             *cluster_pops.entry(member.cluster.0).or_insert(0) += 1;
         }
 
-        if cluster_pops.is_empty() {
-            return Vec::new();
+        let global_unrest_stress = (self.state.unrest as f32 / 10_000.0_f32).clamp(0.0, 1.0);
+        let mut engine = MigrationEngine::new(MigrationConfig::default());
+
+        for (&cluster_id, &pop) in &cluster_pops {
+            let mig_id = civ_emergence_migration::ClusterId(cluster_id);
+
+            let culture_arr: [f32; ATTR_DIM] = self
+                .emergence
+                .cluster_cultures
+                .get(&cluster_id)
+                .map(|p| culture_to_attr(p))
+                .unwrap_or([0.5; ATTR_DIM]);
+
+            // Max belief deviation from neutral (0.5) → per-cluster stress.
+            let belief_stress = self
+                .emergence
+                .cluster_beliefs
+                .get(&cluster_id)
+                .map(|b| {
+                    b.iter()
+                        .map(|v| (v - 0.5_f32).abs() * 2.0)
+                        .fold(0.0_f32, f32::max)
+                })
+                .unwrap_or(0.3);
+
+            let stress_val =
+                (global_unrest_stress * 0.4 + belief_stress * 0.6).clamp(0.0, 1.0);
+            let openness = culture_arr[0];
+            let opportunity_val =
+                ((1.0 - stress_val) * 0.7 + openness * 0.3).clamp(0.0, 1.0);
+
+            // ponytail: carrying capacity estimated as 2× current population when
+            // not tracked; upgrade when civ-voxel exposes per-cluster capacity.
+            let capacity = (pop * 2).max(1);
+            let spare = capacity - pop.min(capacity);
+            let capacity_score = spare as f32 / capacity as f32;
+
+            let mut cluster = ClusterMigration::new(mig_id, pop, capacity);
+            cluster.stress = MigrationStress {
+                scarcity: stress_val,
+                disaster_severity: 0.0,
+                war_intensity: 0.0,
+                overpopulation_ratio: pop as f32 / capacity as f32,
+            };
+            cluster.opportunity = MigrationOpportunity {
+                surplus: opportunity_val,
+                safety: 1.0 - stress_val,
+                capacity: capacity_score,
+            };
+            cluster.culture = culture_arr;
+
+            engine.upsert(cluster);
         }
 
-        // Stress proxy: distribute global unrest across clusters, amplified by
-        // per-cluster belief deviation.
-        let global_unrest_stress = (self.state.unrest as f32 / 10_000.0_f32).clamp(0.0, 1.0);
-
-        cluster_pops
-            .iter()
-            .map(|(&cluster_id, &pop)| {
-                let culture_arr = self
-                    .emergence
-                    .cluster_cultures
-                    .get(&cluster_id)
-                    .map(culture_to_array)
-                    .unwrap_or([0.5; CULTURE_DIM]);
-
-                // Max belief deviation from neutral (0.5) → per-cluster stress.
-                let belief_stress = self
-                    .emergence
-                    .cluster_beliefs
-                    .get(&cluster_id)
-                    .map(|b| {
-                        b.iter()
-                            .map(|v| (v - 0.5_f32).abs() * 2.0)
-                            .fold(0.0_f32, f32::max)
-                    })
-                    .unwrap_or(0.3);
-
-                let stress = (global_unrest_stress * 0.4 + belief_stress * 0.6).clamp(0.0, 1.0);
-                // Opportunity: inverse of stress blended with culture openness.
-                let openness = culture_arr[0];
-                let opportunity = ((1.0 - stress) * 0.7 + openness * 0.3).clamp(0.0, 1.0);
-
-                ClusterSnapshot {
-                    id: cluster_id,
-                    population: pop,
-                    stress,
-                    opportunity,
-                    culture: culture_arr,
-                }
-            })
-            .collect()
+        engine
     }
 }
 
-/// Convert a [`CultureProfile`] traits array into a fixed `[f32; CULTURE_DIM]`.
-fn culture_to_array(profile: &CultureProfile) -> [f32; CULTURE_DIM] {
-    profile.traits
+/// Convert a [`CultureProfile`] traits array into a fixed `[f32; ATTR_DIM]` vector.
+fn culture_to_attr(profile: &CultureProfile) -> [f32; ATTR_DIM] {
+    let t = profile.traits;
+    [
+        t.get(0).copied().unwrap_or(0.5),
+        t.get(1).copied().unwrap_or(0.5),
+        t.get(2).copied().unwrap_or(0.5),
+        t.get(3).copied().unwrap_or(0.5),
+    ]
 }
 
 #[cfg(test)]

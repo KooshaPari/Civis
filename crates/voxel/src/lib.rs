@@ -33,7 +33,10 @@ pub mod fluid_ca;
 pub mod hud;
 pub mod lod;
 pub mod material;
-pub mod material_ca;
+pub use material::{
+    AIR, BEDROCK, CLAY, DIRT, GRAVEL, ICE, LAVA, MOLTEN_METAL, OIL, ORE, PACKED_DIRT, SAND,
+    SALT_WATER, STEAM, STONE, WATER,
+};
 pub mod material_pbr;
 pub mod reactions;
 pub mod scale_budget;
@@ -71,9 +74,7 @@ pub use window::plan::{
 };
 pub use window::ring_iter::RingIter;
 pub use window::{ring_distance, ChunkState, EvictionKey, PolicyError, SimCohort, WindowPolicy};
-pub use lod::{
-    drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, mesh_triangle_count, ChunkDirty,
-};
+pub use lod::{drain_dirty_chunks, mark_lod_dirty, mark_storage_dirty, ChunkDirty};
 pub use worldgen::HeightFieldGen;
 
 /// Civis-side schema version. Independent of the kernel's `SCHEMA_VERSION` so we can

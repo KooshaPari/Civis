@@ -116,6 +116,9 @@ fn main() {
     // Event-feed / toast notifications.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::notifications::NotificationsPlugin);
+    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
+    #[cfg(all(feature = "bevy", feature = "egui"))]
+    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
 
     // Terrain sculpting brush (raise/lower/flatten); bevy-only, no egui needed.
     #[cfg(feature = "bevy")]

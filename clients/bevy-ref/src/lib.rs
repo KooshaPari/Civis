@@ -29,6 +29,7 @@ pub mod animation;
 pub mod diplomacy_ui;
 pub mod outcome_overlay;
 pub mod faction_hud;
+pub mod gameplay_hud;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]

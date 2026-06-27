@@ -2420,6 +2420,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "civ-emergence-migration"
+version = "0.1.0"
+dependencies = [
+ "rand 0.8.6",
+ "rand_chacha 0.3.1",
+ "serde",
+]
+
+[[package]]
 name = "civ-engine"
 version = "0.1.0"
 dependencies = [
@@ -2431,6 +2440,7 @@ dependencies = [
  "civ-diffusion",
  "civ-economy",
  "civ-emergence-metrics",
+ "civ-emergence-migration",
  "civ-genetics",
  "civ-legends",
  "civ-mod-host",

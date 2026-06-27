@@ -46,6 +46,7 @@ civ-voxel = { path = "../voxel" }
 # Planet and tactics foundations.
 civ-planet = { path = "../planet" }
 civ-tactics = { path = "../tactics" }
+civ-emergence-migration = { path = "../emergence-migration" }
 
 # Economy layer (CIV-0100); engine syncs joule budget each tick.
 civ-economy = { path = "../economy" }

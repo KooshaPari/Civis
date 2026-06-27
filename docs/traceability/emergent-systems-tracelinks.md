@@ -136,3 +136,32 @@ resources, not one-way API calls.
 - Wire these test names into `docs/audits/_id_inventory_v3.json` on the next matrix refresh.
 - Candidate next couplings: `TECH_STORAGE` / `TECH_METALLURGY` gameplay effects beyond
   bitmask presence; institution upkeep → faction inequality feedback.
+
+---
+
+## Cross-reference to next-phase FR rows (2026-06-27)
+
+Each of the 11 systems documented in this ledger has concrete FR-CIV-EMERGENCE-NNN rows in `fr-emergence-matrix.md` (Section B) covering 155 emergence-batch IDs across 14 families. The 4 charter integration rows (Section C, FR-CIV-0100-int1..int4) promote the §3.3 charter umbrella into concrete cross-family emergence points.
+
+Per-system batch-row index:
+
+| System | Batch row range | Coverage |
+|---|---|---|
+| civ-linguabridge | FR-CIV-EMERGENCE-100..110 | 11 rows |
+| civ-factions | FR-CIV-EMERGENCE-111..118 | 8 rows |
+| civ-religion | FR-CIV-EMERGENCE-119..123 | 5 rows |
+| civ-market | FR-CIV-EMERGENCE-124..131 | 8 rows |
+| civ-urban | FR-CIV-EMERGENCE-132..140 | 9 rows |
+| civ-climate | FR-CIV-EMERGENCE-141..143 | 3 rows |
+| civ-econ | FR-CIV-EMERGENCE-144..150 | 7 rows |
+| civ-demographics | FR-CIV-EMERGENCE-151..167 | 17 rows |
+| civ-psyche | FR-CIV-EMERGENCE-168..197 | 30 rows |
+| civ-legends | FR-CIV-EMERGENCE-198..220 | 23 rows |
+| civ-ai | FR-CIV-EMERGENCE-221..235 | 15 rows |
+| civ-culture | FR-CIV-EMERGENCE-236..238 | 3 rows |
+| civ-social | FR-CIV-EMERGENCE-239..240 | 2 rows |
+| civ-diplomacy | FR-CIV-EMERGENCE-241..248 | 8 rows |
+| civ-laws | FR-CIV-EMERGENCE-249..254 | 6 rows |
+| **Total** | | **155 rows** |
+
+The 11-systems × 30-couplings matrix documented above is the **test surface** that promotes each of these 158 dormant IDs to `covered` status (i.e., spec + code + test triple).

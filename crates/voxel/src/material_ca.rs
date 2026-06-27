@@ -10,8 +10,7 @@
 //! and works with dense voxel grids (crates/voxel/src/fluid_ca.rs `CaGrid`).
 
 use crate::fluid_ca::{CaGrid, ScratchView};
-use crate::material::{MaterialRegistry, Phase, AIR, ASH, FIRE, SAND, WATER};
-use crate::MaterialId;
+use crate::material::{MaterialRegistry, AIR, ASH, FIRE, SAND, WATER};
 
 /// Material-specific per-tick CA rules: water flow, fire spread, sand gravity.
 ///

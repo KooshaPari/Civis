@@ -100,14 +100,14 @@ bevy = [
     "dep:civ-protocol-3d",
     "dep:civ-engine",
     "dep:civ-diplomacy",
-    "dep:holocron",
+    "dep:civ-holocron",
     "dep:civ-laws",
     "dep:rand",
     "dep:rand_chacha",
     "dep:image",
     "dep:winit",
 ]
-egui = ["bevy", "dep:bevy_egui", "dep:holocron"]
+egui = ["bevy", "dep:bevy_egui", "dep:civ-holocron"]
 # Embed the multi-size civis.ico onto the Windows .exe (build.rs). Off by default
 # so the standard/CI build needs no Windows resource compiler. Release only.
 exe-icon = []

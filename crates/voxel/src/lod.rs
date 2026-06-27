@@ -200,7 +200,11 @@ impl DownsampledChunk {
     /// ```
     #[must_use]
     pub fn new(lod_level: LodLevel, original_edge_size: usize) -> Self {
-        let stride = 1_usize.saturating_shl(lod_level.0 as u32);
+        // MSRV 1.75 doesn't have `usize::saturating_shl` (stabilized in 1.86),
+        // so emulate it with `checked_shl` + sentinel `usize::MAX`.
+        let stride = 1_usize
+            .checked_shl(lod_level.0 as u32)
+            .unwrap_or(usize::MAX);
         let sampled_edge = (original_edge_size + stride - 1) / stride;
         let expected_sample_count = sampled_edge.pow(3);
         Self {

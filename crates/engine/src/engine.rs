@@ -18,6 +18,7 @@ use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
+use civ_needs::{should_reproduce, Health as CivNeedsHealth, LifecycleParams};
 use civ_planet::{
     compute_climate, compute_weather, defaults_earthlike, Climate, GeologyMap, MoonConfig,
     PlanetConfig, WeatherCell, WorldgenConfig,
@@ -3926,7 +3927,13 @@ impl Simulation {
         let population = count_civilians(&self.world) as f64;
         let max_pop = self.state.population.max(1) as f64;
         let overcrowding_factor = (population / max_pop).clamp(0.0, 1.0);
-        let birth_chance = 0.003 * (1.0 - overcrowding_factor);
+        // FR-CIV-LIFE-003: birth probability is now derived per-civilian from
+        // `civ_needs::should_reproduce`, which consults the lifecycle label
+        // (Adult only), the food/safety thresholds, and the configurable
+        // `LifecycleParams` fertility curves. The previous hardcoded
+        // `0.003 * (1 - overcrowding_factor)` formula is gone; it ignored
+        // lifecycle and food/safety entirely.
+        let lifecycle_params = LifecycleParams::default();
         let birth_window = self.state.tick % 200 == 0;
         let mut dead = Vec::new();
         let mut births = Vec::new();
@@ -3945,13 +3952,30 @@ impl Simulation {
                 dead.push((entity, civilian.id, pos.coord));
                 continue;
             }
-            if birth_window && civilian.age > 18 && self.rng.gen_bool(birth_chance.clamp(0.0, 1.0))
-            {
-                let child_id = self.next_civilian_id;
-                self.next_civilian_id += 1;
-                let x = pos.coord.x as f32 / FIXED_SCALE as f32;
-                let y = pos.coord.z as f32 / FIXED_SCALE as f32;
-                births.push((child_id, x, y));
+            if birth_window && civilian.age > 18 {
+                // Map the agent's need/integrity state to a `civ_needs::Health`
+                // so the gating logic stays in one place. Reuses the same
+                // 4-need mean formula as `civilian_to_health` for consistency.
+                let health = CivNeedsHealth {
+                    integrity: ((needs.food + needs.shelter + needs.safety + needs.belonging) * 0.25)
+                        .clamp(0.0, 1.0),
+                    ..CivNeedsHealth::default()
+                };
+                let birth_chance = should_reproduce(
+                    civilian.age,
+                    &health,
+                    needs.food,
+                    needs.safety,
+                    overcrowding_factor as f32,
+                    &lifecycle_params,
+                );
+                if self.rng.gen_bool(birth_chance.clamp(0.0, 1.0)) {
+                    let child_id = self.next_civilian_id;
+                    self.next_civilian_id += 1;
+                    let x = pos.coord.x as f32 / FIXED_SCALE as f32;
+                    let y = pos.coord.z as f32 / FIXED_SCALE as f32;
+                    births.push((child_id, x, y));
+                }
             }
         }
 
@@ -8984,6 +9008,54 @@ mod tests {
                 .filter(|(_, civ)| matches!(civ.alignment, Alignment::Faction(8)))
                 .count();
             assert!(migrated >= 2, "starving adults should found a new settlement");
+        }
+
+        // FR-CIV-LIFE-003: smoke test that `phase_citizen_lifecycle` runs
+        // through the new `should_reproduce` path without panicking. We
+        // advance the sim through several birth windows and verify that
+        // the civilian count grows over time when there is food available
+        // and adults exist.
+        #[test]
+        fn phase_citizen_lifecycle_uses_should_reproduce() {
+            let mut sim = Simulation::new();
+            // Spawn three adults at well-fed state so reproduction can fire.
+            for (i, id) in [700u64, 701, 702].iter().enumerate() {
+                let entity = spawn_civilian_at(
+                    &mut sim.world,
+                    *id,
+                    Alignment::None,
+                    0.20 + (i as f32) * 0.01,
+                    0.20 + (i as f32) * 0.01,
+                    ActorVisualKind::Humanoid,
+                    &mut sim.rng,
+                );
+                let mut civ = sim.world.get::<&mut AgentCivilian>(entity).unwrap();
+                civ.age = 30;
+                let mut needs = sim.world.get::<&mut AgentNeeds>(entity).unwrap();
+                needs.food = 0.95;
+                needs.shelter = 0.95;
+                needs.safety = 0.95;
+                needs.belonging = 0.95;
+            }
+            // Ensure resources are non-zero so the food regen branch runs
+            // (and so the early-death branch is not triggered).
+            sim.state.resources.food.raw = 1000;
+            sim.state.population = sim.state.population.max(count_civilians(&sim.world) as u64);
+
+            // Run several birth windows (every 200 ticks).
+            for tick in 0..600 {
+                sim.state.tick = tick;
+                sim.phase_citizen_lifecycle();
+            }
+
+            // After 600 ticks, with three fertile adults and food available,
+            // at least one birth should have occurred.
+            let final_pop = count_civilians(&sim.world) as u64;
+            assert!(
+                final_pop >= 4,
+                "should_reproduce should have produced at least one child (got {})",
+                final_pop
+            );
         }
     }
 }

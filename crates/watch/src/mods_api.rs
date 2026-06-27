@@ -967,7 +967,10 @@ mod tests {
             url_hash_cache_id("https://x"),
             url_hash_cache_id("  https://x  ")
         );
-        assert_ne!(url_hash_cache_id("https://a"), url_hash_cache_id("https://b"));
+        assert_ne!(
+            url_hash_cache_id("https://a"),
+            url_hash_cache_id("https://b")
+        );
     }
 
     #[test]
@@ -1055,15 +1058,22 @@ mod tests {
             require_registry: true,
             entries: vec![entry("https://trusted.example/")],
         };
-        assert!(validate_remote_fetch_against_registry(&reg, "https://evil.example/m", None).is_err());
-        assert!(validate_remote_fetch_against_registry(&reg, "https://trusted.example/m", None).is_ok());
+        assert!(
+            validate_remote_fetch_against_registry(&reg, "https://evil.example/m", None).is_err()
+        );
+        assert!(
+            validate_remote_fetch_against_registry(&reg, "https://trusted.example/m", None).is_ok()
+        );
     }
 
     #[test]
     fn validate_remote_fetch_enforces_mod_id_match() {
         let mut e = entry("https://trusted.example/");
         e.mod_id = Some("expected-id".to_string());
-        let reg = RemoteModRegistry { require_registry: false, entries: vec![e] };
+        let reg = RemoteModRegistry {
+            require_registry: false,
+            entries: vec![e],
+        };
         let url = "https://trusted.example/m";
         assert!(validate_remote_fetch_against_registry(&reg, url, Some("wrong-id")).is_err());
         assert!(validate_remote_fetch_against_registry(&reg, url, Some("expected-id")).is_ok());
@@ -1087,12 +1097,23 @@ mod tests {
         e.allowed_pubkeys = vec!["AABB".to_string()];
 
         // archive id mismatch
-        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("other", Some("AABB"))).is_err());
+        assert!(
+            validate_remote_mod_against_registry(Some(&e), &manifest("other", Some("AABB")))
+                .is_err()
+        );
         // signature required but missing
-        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", None)).is_err());
+        assert!(
+            validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", None)).is_err()
+        );
         // pubkey not in allowlist
-        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", Some("CCDD"))).is_err());
+        assert!(
+            validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", Some("CCDD")))
+                .is_err()
+        );
         // happy path: id matches, signed, pubkey allowed (case-insensitive)
-        assert!(validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", Some("aabb"))).is_ok());
+        assert!(
+            validate_remote_mod_against_registry(Some(&e), &manifest("the-mod", Some("aabb")))
+                .is_ok()
+        );
     }
 }

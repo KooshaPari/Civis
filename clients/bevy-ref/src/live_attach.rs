@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use crate::atmosphere::DayNightCycle;
 use crate::live_pick::{LivePickPlugin, LiveSelection};
 use crate::live_scene::LiveScenePlugin;
-use crate::live_stream::{LiveAgentTag, LiveBuildingTag, LiveGraphParcelTag};
 use crate::ws_client::{WsClient, WsClientConfig};
 use crate::{resolve_live_ws_url, AttachMode, LiveHudSnapshot, WsSpectatorMeta};
 
@@ -61,7 +60,6 @@ impl Plugin for LiveAttachPlugin {
                 (
                     sync_live_connection_toasts,
                     sync_live_game_ui,
-                    sync_live_selection_to_inspector,
                     sync_diplomacy_panel_from_scene,
                 )
                     .chain(),
@@ -182,78 +180,14 @@ fn sync_diplomacy_panel_from_scene(
     let frame = civ_protocol_3d::FactionStateFrame {
         tick: 0,
         factions: scene.faction_entries.clone(),
-        population_by_faction: scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect(),
+        population_by_faction: Default::default(),
     };
-    let population_by_faction: std::collections::HashMap<u32, u32> =
-        scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect();
+    let population_by_faction: std::collections::HashMap<u32, u32> = scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect();
     crate::live_stream::sync_diplomacy_from_faction_frame(
         &mut diplomacy,
         &frame,
         &population_by_faction,
     );
-}
-
-#[cfg(feature = "egui")]
-fn sync_live_selection_to_inspector(
-    attach: Res<AttachMode>,
-    selection: Res<LiveSelection>,
-    scene: Res<crate::live_stream::LiveStreamScene>,
-    agents: Query<(&LiveAgentTag, &GlobalTransform)>,
-    buildings: Query<(&LiveBuildingTag, &GlobalTransform)>,
-    graph_parcels: Query<(&LiveGraphParcelTag, &GlobalTransform)>,
-    mut details: ResMut<crate::game_ui::SelectedEntityDetails>,
-) {
-    if *attach != AttachMode::Server || !selection.is_changed() {
-        return;
-    }
-
-    let Some(selected) = selection.0 else {
-        *details = crate::game_ui::SelectedEntityDetails::default();
-        return;
-    };
-
-    let position = live_entity_world_position(selected, &agents, &buildings, &graph_parcels);
-
-    *details = if selected.kind == crate::LiveEntityKind::Agent {
-        scene
-            .civilian_entries
-            .get(&selected.id)
-            .map(|entry| {
-                let mut rows = crate::game_ui::inspector_details_from_civilian(entry);
-                if let Some(pos) = position {
-                    rows.position = crate::game_ui::format_world_position(pos);
-                }
-                rows
-            })
-            .unwrap_or_else(|| {
-                crate::game_ui::inspector_details_for_live_entity(selected, position)
-            })
-    } else {
-        crate::game_ui::inspector_details_for_live_entity(selected, position)
-    };
-}
-
-#[cfg(feature = "egui")]
-fn live_entity_world_position(
-    selected: crate::SelectedLiveEntity,
-    agents: &Query<(&LiveAgentTag, &GlobalTransform)>,
-    buildings: &Query<(&LiveBuildingTag, &GlobalTransform)>,
-    graph_parcels: &Query<(&LiveGraphParcelTag, &GlobalTransform)>,
-) -> Option<Vec3> {
-    match selected.kind {
-        crate::LiveEntityKind::Agent => agents
-            .iter()
-            .find(|(tag, _)| tag.id == selected.id)
-            .map(|(_, transform)| transform.translation()),
-        crate::LiveEntityKind::Building => buildings
-            .iter()
-            .find(|(tag, _)| tag.id == selected.id)
-            .map(|(_, transform)| transform.translation()),
-        crate::LiveEntityKind::GraphParcel => graph_parcels
-            .iter()
-            .find(|(tag, _)| tag.id == selected.id)
-            .map(|(_, transform)| transform.translation()),
-    }
 }
 
 #[cfg(feature = "egui")]

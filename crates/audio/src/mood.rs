@@ -13,64 +13,6 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Deterministic, culture-tied music-cue parameters surfaced by engine snapshot.
-///
-/// Values are clamped to small, client-safe ranges so these can be used
-/// directly by renderer glue without additional normalization. The cargo crate
-/// owns the parameter derivation, while the engine owns when/where these cues
-/// are sampled (per tick from current culture + state).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct MusicCue {
-    /// 12-tone mode index (`0..11`) selected from emergent culture drift.
-    pub scale: u8,
-    /// Tempo in beats-per-minute (`60.0..=180.0`).
-    pub tempo_bpm: f32,
-    /// Rhythm density in `[0.0, 1.0]`.
-    pub rhythm: f32,
-}
-
-impl Default for MusicCue {
-    fn default() -> Self {
-        Self {
-            scale: 0,
-            tempo_bpm: 90.0,
-            rhythm: 0.5,
-        }
-    }
-}
-
-/// Deterministically derive music-cue parameters from a culture profile.
-///
-/// `culture` uses normalized traits in `[0.0, 1.0]`. `cluster_id` keeps each
-/// cluster culturally unique even when traits converge. `faction_aggression`
-/// couples the cue to faction state so the same traits can shift the score
-/// subtly when diplomacy/war posture changes.
-///
-/// `tick` is included so the motif drifts over time; it remains deterministic
-/// with the same inputs and preserves replay consistency.
-#[must_use]
-pub fn derive_music_cue(
-    culture: [f32; 4],
-    cluster_id: u64,
-    faction_aggression: f32,
-    tick: u64,
-) -> MusicCue {
-    let mut seed = 0.0f32;
-    for (i, v) in culture.iter().enumerate() {
-        seed += v * [0.31, 0.29, 0.17, 0.23][i];
-    }
-    let aggression = faction_aggression.clamp(0.0, 1.0);
-    let pulse = ((tick as f32 * 0.017 + cluster_id as f32 * 0.07 + seed * 6.0 + aggression).sin()
-        + 1.0)
-        * 0.5;
-    MusicCue {
-        scale: (((seed + 0.17 * pulse + cluster_id as f32 * 0.13).fract()).max(0.0) * 12.0)
-            .floor() as u8,
-        tempo_bpm: (60.0 + seed * 65.0 + aggression * 25.0 + pulse * 20.0).clamp(60.0, 180.0),
-        rhythm: (0.15 + culture[1] * 0.5 + aggression * 0.2 + pulse * 0.15).clamp(0.0, 1.0),
-    }
-}
-
 /// Continuous sim-mood readouts that drive stem gains.
 ///
 /// Each component is in `[0.0, 1.0]`. A value of `0.0` is "no
@@ -438,21 +380,6 @@ mod tests {
             let (_, _, fired) = cad.step(mood, 0.0);
             assert!(!fired);
         }
-    }
-
-    #[test]
-    fn fr_music_cue_derivation_drifts_over_time() {
-        let culture = [0.18, 0.61, 0.43, 0.09];
-        let tick1 = derive_music_cue(culture, 4, 0.25, 1);
-        let tick2 = derive_music_cue(culture, 4, 0.25, 64);
-        assert_ne!(tick1, tick2, "tick changes must drift the motif surface");
-    }
-
-    #[test]
-    fn fr_music_cue_distinguishes_profiles() {
-        let a = derive_music_cue([0.1, 0.2, 0.3, 0.4], 7, 0.2, 42);
-        let b = derive_music_cue([0.91, 0.2, 0.3, 0.4], 7, 0.2, 42);
-        assert_ne!(a, b);
     }
 
     #[test]

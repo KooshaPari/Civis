@@ -10,19 +10,66 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 use crate::ui_theme::CHIP_FILL;
-use crate::menus::AppState;
 
 use civ_protocol_3d::{CivilianNeeds3d, CivilianStateEntry};
 
 use crate::game_laws::GameLawsOpen;
-use crate::live_pick::LiveSelection;
 use crate::spawn_tools::{ActiveTool, BuildingSpawnKind, SpawnTool};
-use crate::tool_categories::{ActiveSubTool, LeftClusterTab, ToolIcons, TOOL_ICON_PATHS, handle_category_hotkeys};
+use crate::tool_categories::ActiveSubTool;
 use crate::{AttachMode, LiveEntityKind, SelectedLiveEntity};
 use crate::settings_ui::{
     ACTION_CYCLE_SIM_SPEED, ACTION_PAUSE_SIM, ACTION_SPEED_1X, ACTION_SPEED_10X, ACTION_SPEED_2X,
     ACTION_SPEED_5X, GameSettings, KeyBinding,
 };
+use std::collections::HashMap;
+
+/// Active left-panel cluster tab.
+///
+/// Tracks which top-level tab is selected in the left inspector cluster
+/// (Civilians / Economy / Legends). Initialised as `Default` (Civilians).
+#[derive(Resource, Debug, Clone, Default)]
+pub struct LeftClusterTab {
+    /// 0 = Civilians, 1 = Economy, 2 = Legends (extensible).
+    pub index: usize,
+}
+
+/// Tool-icon asset handles + registered egui texture IDs (FR-CIV-RELIGION-002 HUD).
+///
+/// Loaded on [`Startup`] by `queue_tool_icon_handles`; promoted to egui texture IDs
+/// during [`EguiPrimaryContextPass`] by `load_tool_icons` once all images are ready.
+#[derive(Resource, Default)]
+pub struct ToolIcons {
+    /// Bevy strong handles keeping PNGs alive (one per [`TOOL_ICON_PATHS`] entry).
+    pub handles: Vec<Handle<Image>>,
+    /// Registered egui texture IDs keyed by the path stem from [`TOOL_ICON_PATHS`].
+    pub ids: HashMap<&'static str, egui::TextureId>,
+    /// `true` once all images have been registered with egui.
+    pub registered: bool,
+}
+
+/// (path-stem, asset path) pairs for each tool-category icon PNG.
+///
+/// Extend this list to add icon assets; the stem becomes the lookup key in
+/// [`ToolIcons::ids`].
+const TOOL_ICON_PATHS: &[(&str, &str)] = &[
+    ("spawn", "icons/tool_spawn.png"),
+    ("destroy", "icons/tool_destroy.png"),
+    ("disaster", "icons/tool_disaster.png"),
+    ("terraform", "icons/tool_terraform.png"),
+    ("laws", "icons/tool_laws.png"),
+];
+
+/// Handle keyboard category-hotkey shortcuts (number-row / hotbar bindings).
+///
+/// Currently a no-op stub — the full mapping from key → [`ActiveSubTool`] will
+/// be wired in the next tool-taxonomy pass. The system exists so `GameUiPlugin`
+/// can register it in `Update` without conditional compilation.
+pub fn handle_category_hotkeys(
+    _keys: Res<ButtonInput<KeyCode>>,
+    _active: ResMut<ActiveSubTool>,
+) {
+    // TODO(tool-taxonomy-P2): map F1–F5 / Q-E-R-T-Y to SubTool categories.
+}
 
 /// Lightweight sim snapshot consumed by the HUD.
 #[derive(Resource, Debug, Clone)]
@@ -82,6 +129,8 @@ pub struct SelectedEntity {
 /// Display details for the selected entity.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct SelectedEntityDetails {
+    /// Entity category label (Agent, Building, Voxel, Cell, …).
+    pub entity_type: String,
     /// Name shown in the right panel.
     pub name: String,
     /// Faction label shown in the right panel.
@@ -155,6 +204,7 @@ impl Plugin for GameUiPlugin {
             .init_resource::<SelectedEntity>()
             .init_resource::<SelectedEntityDetails>()
             .init_resource::<GameSpeed>()
+            .init_resource::<GodActionToast>()
             .init_resource::<ActiveSubTool>()
             .init_resource::<LeftClusterTab>()
             // Holocron motion state is intentionally NOT registered here yet —
@@ -170,7 +220,14 @@ impl Plugin for GameUiPlugin {
             .init_resource::<crate::info_views::InfoViewRegistry>()
             .init_resource::<ToolIcons>()
             .add_systems(Startup, queue_tool_icon_handles)
-            .add_systems(Update, (handle_speed_shortcuts, handle_category_hotkeys))
+            .add_systems(
+                Update,
+                (
+                    handle_speed_shortcuts,
+                    handle_category_hotkeys,
+                    tick_god_action_toast,
+                ),
+            )
             // EguiPrimaryContextPass is REQUIRED: moving draw to Update panics.
             // `load_tool_icons` registers the PNGs as egui textures and must run
             // before `draw_game_ui` consumes them. Bevy 0.18 dropped the
@@ -251,6 +308,93 @@ fn load_tool_icons(
     icons.registered = true;
 }
 
+/// Seconds a god-action result toast stays visible in the HUD.
+pub const GOD_ACTION_TOAST_DURATION_SECS: f32 = 3.0;
+
+/// Transient HUD toast for god-mode action results (P1.2.2).
+#[derive(Resource, Debug, Clone, Default)]
+pub struct GodActionToast {
+    /// Result text shown in the toast card.
+    pub message: String,
+    /// Remaining visible time; `0` means hidden.
+    pub ttl_secs: f32,
+}
+
+impl GodActionToast {
+    /// Show `message` for [`GOD_ACTION_TOAST_DURATION_SECS`].
+    pub fn show(&mut self, message: impl Into<String>) {
+        self.message = message.into();
+        self.ttl_secs = GOD_ACTION_TOAST_DURATION_SECS;
+    }
+
+    #[must_use]
+    pub fn visible(&self) -> bool {
+        !self.message.is_empty() && self.ttl_secs > 0.0
+    }
+}
+
+/// Tick down the god-action toast lifetime each frame.
+pub fn tick_god_action_toast(time: Res<Time>, mut toast: ResMut<GodActionToast>) {
+    if toast.ttl_secs <= 0.0 {
+        return;
+    }
+    toast.ttl_secs = (toast.ttl_secs - time.delta_secs()).max(0.0);
+    if toast.ttl_secs <= 0.0 {
+        toast.message.clear();
+    }
+}
+
+/// Bevy system wrapper for [`draw_god_action_toast`] (live attach window).
+pub fn draw_god_action_toast_system(
+    mut contexts: EguiContexts,
+    toast: Res<GodActionToast>,
+) {
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
+    draw_god_action_toast(ctx, &toast);
+}
+
+/// Bottom-right glass card for the latest god-action result.
+pub fn draw_god_action_toast(ctx: &egui::Context, toast: &GodActionToast) {
+    if !toast.visible() {
+        return;
+    }
+    let alpha_frac = (toast.ttl_secs / GOD_ACTION_TOAST_DURATION_SECS).clamp(0.0, 1.0);
+    let alpha = (alpha_frac * 235.0) as u8;
+    let accent = egui::Color32::from_rgb(126, 186, 181);
+    let fill = egui::Color32::from_rgba_premultiplied(17, 20, 31, alpha.saturating_add(30));
+    let text_color = egui::Color32::from_rgba_unmultiplied(220, 225, 235, alpha);
+    let accent_color = egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), alpha);
+
+    egui::Area::new(egui::Id::new("civis_god_action_toast"))
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -120.0))
+        .order(egui::Order::Foreground)
+        .interactable(false)
+        .show(ctx, |ui| {
+            ui.set_max_width(340.0);
+            egui::Frame::NONE
+                .fill(fill)
+                .stroke(egui::Stroke::new(1.0, accent_color.gamma_multiply(0.6)))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(egui::Margin::symmetric(10, 6))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new("⚡")
+                                .color(accent_color)
+                                .size(16.0),
+                        );
+                        ui.label(
+                            egui::RichText::new(&toast.message)
+                                .color(text_color)
+                                .size(13.0),
+                        );
+                    });
+                });
+        });
+}
+
 #[cfg(feature = "egui")]
 fn sync_initial_game_speed_from_settings(
     settings: Option<Res<GameSettings>>,
@@ -310,25 +454,15 @@ fn handle_speed_shortcuts(
 #[allow(clippy::too_many_arguments)]
 fn draw_game_ui(
     mut contexts: EguiContexts,
-    state: Option<Res<State<AppState>>>,
     snapshot: Res<GameUiSnapshot>,
-    selected: Res<SelectedEntity>,
-    live_selection: Res<LiveSelection>,
-    details: Res<SelectedEntityDetails>,
     attach_mode: Res<AttachMode>,
     live_attach: Option<Res<crate::live_attach::LiveAttachState>>,
     mut laws_open: ResMut<GameLawsOpen>,
     mut speed: ResMut<GameSpeed>,
     mut active_tool: ResMut<ActiveTool>,
     mut building_kind: ResMut<BuildingSpawnKind>,
+    god_action_toast: Res<GodActionToast>,
 ) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::Playing {
-        return;
-    }
-
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -353,16 +487,7 @@ fn draw_game_ui(
             tool_palette_ui(ui, &mut active_tool, &mut building_kind, &mut speed);
         });
 
-    let show_live_inspector = *attach_mode == AttachMode::Server && live_selection.0.is_some();
-    if selected.entity.is_some() || show_live_inspector {
-        egui::SidePanel::right("civis_game_selected_panel")
-            .resizable(true)
-            .default_width(268.0)
-            .frame(panel_frame(egui::Margin::same(14)))
-            .show(ctx, |ui| {
-                inspector_ui(ui, &details);
-            });
-    }
+    draw_god_action_toast(ctx, &god_action_toast);
 }
 
 /// Compact needs line for the selection inspector (`F 82% · S 70% · …`).
@@ -421,6 +546,7 @@ pub fn inspector_details_from_civilian(entry: &CivilianStateEntry) -> SelectedEn
         entry.species.clone()
     };
     SelectedEntityDetails {
+        entity_type: "Civilian".to_string(),
         name: civilian_display_name(entry),
         faction: civilian_faction_label(entry),
         health: format_civilian_health_display(entry.health),
@@ -446,12 +572,33 @@ pub fn inspector_details_for_live_entity(
     let position = position
         .map(format_world_position)
         .unwrap_or_else(|| "—".to_string());
-    let (name, profession) = match entity.kind {
-        LiveEntityKind::Agent => (format!("Agent #{}", entity.id), "—".to_string()),
-        LiveEntityKind::Building => (format!("Building #{}", entity.id), "—".to_string()),
-        LiveEntityKind::GraphParcel => (format!("Parcel #{}", entity.id), "—".to_string()),
+    let (entity_type, name, profession) = match entity.kind {
+        LiveEntityKind::Agent => (
+            "Agent".to_string(),
+            format!("Agent #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::Building => (
+            "Building".to_string(),
+            format!("Building #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::GraphParcel => (
+            "Parcel".to_string(),
+            format!("Parcel #{}", entity.id),
+            "—".to_string(),
+        ),
+        LiveEntityKind::VoxelChunk => {
+            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(entity.id));
+            (
+                "Voxel".to_string(),
+                format!("Chunk ({cx}, {cy}, {cz})"),
+                "—".to_string(),
+            )
+        }
     };
     SelectedEntityDetails {
+        entity_type,
         name,
         faction: "—".to_string(),
         health: "—".to_string(),
@@ -728,57 +875,10 @@ fn speed_control_ui(ui: &mut egui::Ui, speed: &mut GameSpeed) {
     ui.label(egui::RichText::new("Speed").color(DIM).small());
 }
 
-/// Right-side selection inspector card.
-fn inspector_ui(ui: &mut egui::Ui, details: &SelectedEntityDetails) {
-    ui.heading(egui::RichText::new("\u{25a4} Selection").color(ACCENT));
-    ui.add_space(4.0);
-    ui.separator();
-    ui.add_space(6.0);
-
-    inspector_row(ui, "Name", &details.name);
-    inspector_row(ui, "Faction", &details.faction);
-
-    // Health rendered as a progress bar when it parses to a fraction.
-    ui.add_space(2.0);
-    ui.label(egui::RichText::new("Health").color(DIM).small());
-    if let Some(frac) = parse_health_fraction(&details.health) {
-        let color = if frac > 0.66 {
-            egui::Color32::from_rgb(120, 220, 130)
-        } else if frac > 0.33 {
-            egui::Color32::from_rgb(240, 200, 90)
-        } else {
-            egui::Color32::from_rgb(230, 90, 90)
-        };
-        ui.add(
-            egui::ProgressBar::new(frac)
-                .fill(color)
-                .text(details.health.clone()),
-        );
-    } else {
-        ui.label(egui::RichText::new(&details.health).strong());
-    }
-    ui.add_space(2.0);
-
-    inspector_row(ui, "Profession", &details.profession);
-    inspector_row(ui, "Species", &details.species);
-    inspector_row(ui, "Needs", &details.needs);
-    inspector_row(ui, "Position", &details.position);
-}
-
-/// A dimmed-label / bright-value inspector row.
-fn inspector_row(ui: &mut egui::Ui, name: &str, value: &str) {
-    ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(name).color(DIM).small());
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(egui::RichText::new(value).strong());
-        });
-    });
-}
-
 /// Parse a health string into a 0..=1 fraction.
 ///
 /// Accepts `"87"`, `"87%"`, `"87/100"`, or `"0.87"`; returns `None` otherwise.
-fn parse_health_fraction(raw: &str) -> Option<f32> {
+pub fn parse_health_fraction(raw: &str) -> Option<f32> {
     let s = raw.trim();
     if s.is_empty() {
         return None;

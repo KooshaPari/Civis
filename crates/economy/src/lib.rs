@@ -11,26 +11,29 @@
 #![warn(missing_docs)]
 
 mod allocation;
-mod extraction;
 mod institution;
 mod market;
+mod prices;
+mod shocks;
+mod specialization;
 mod stocks;
-mod trade_routes;
+mod trade;
 
-pub use allocation::{AllocationEngine, CapitalistAllocator};
-pub use extraction::{
-    find_extraction_site, tick_extraction, ExtractionSite, Extractor, ResourceKind,
+pub use allocation::{
+    allocate_by_priority, allocate_with, AllocationEngine, AllocationRegime,
+    CapitalistAllocator, JouleAllocator, PlannedAllocator, PriorityTier,
 };
 pub use institution::{
-    collect_taxes, step_institutions, InstitutionAccount, InstitutionId, InstitutionKind,
-    InstitutionLedger, InstitutionLedgerError, InstitutionPosting, LedgerSide, Taxation,
-    INSTITUTION_MARKET, INSTITUTION_TREASURY,
+    step_institutions, InstitutionAccount, InstitutionId, InstitutionKind, InstitutionLedger,
+    InstitutionLedgerError, InstitutionPosting, LedgerSide, INSTITUTION_MARKET,
+    INSTITUTION_TREASURY,
 };
 pub use market::{GoodId, MarketState, MultiGoodMarket, Order, OrderBook, Side, Trade};
-pub use stocks::{Good, Stocks};
-pub use trade_routes::{
-    compute_trade_routes, route_flow, routes_lexicographic, Settlement, SettlementId, TradeRoute,
-};
+pub use prices::{compute_price, update_cluster_prices, ClusterId, PriceState};
+pub use shocks::{apply_shock, MarketShock};
+pub use specialization::{update_specialization, SpecializationProfile};
+pub use stocks::Stocks;
+pub use trade::{compute_trade_flows, TradeFlow};
 
 use serde::{Deserialize, Serialize};
 
@@ -71,9 +74,6 @@ pub struct EconomyState {
     /// Institution accounts and posting log (CIV-0100 §3d stub).
     #[serde(default)]
     pub institutions: InstitutionLedger,
-    /// Per-good material stocks consumed and produced by completed buildings.
-    #[serde(default)]
-    pub stocks: Stocks,
     /// Budget at the previous [`step`] boundary (tick-close reconciliation).
     #[serde(default)]
     last_step_budget_joules: i64,
@@ -87,16 +87,6 @@ impl EconomyState {
             last_step_budget_joules: energy_budget_joules,
             ..Default::default()
         }
-    }
-
-    /// Returns a shared reference to the per-good material stocks.
-    pub fn stocks(&self) -> &Stocks {
-        &self.stocks
-    }
-
-    /// Returns a mutable reference to the per-good material stocks.
-    pub fn stocks_mut(&mut self) -> &mut Stocks {
-        &mut self.stocks
     }
 }
 

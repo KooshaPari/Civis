@@ -3,31 +3,39 @@
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
-#[cfg(feature = "models")]
-use civ_bevy_ref::animation::ActorAnimationPlugin;
-#[cfg(feature = "models")]
-use civ_bevy_ref::gltf_models::GltfModelsPlugin;
-#[cfg(feature = "gi")]
-use civ_bevy_ref::lighting_gi::SolariGiPlugin;
 #[cfg(feature = "voxel")]
 use civ_bevy_ref::ocean::OceanPlugin;
-#[cfg(feature = "egui")]
-use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
 use civ_bevy_ref::{
+    post_fx::PostFxSettings,
     atmosphere::{animate_water, setup_atmosphere, update_lighting, DayNightCycle, WaterSurface},
     camera::{camera_input, update_camera, CameraRig},
     decorations::spawn_decorations,
     gpu_features::GpuFeaturesPlugin,
     live_attach::LiveAttachPlugin,
     native_backend::native_render_plugin,
-    post_fx::PostFxSettings,
     resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
     AttachMode,
 };
+#[cfg(feature = "gi")]
+use civ_bevy_ref::lighting_gi::SolariGiPlugin;
+#[cfg(feature = "egui")]
+use civ_bevy_ref::settings_ui::{AntiAliasing, GameSettings, SettingsPlugin};
+#[cfg(feature = "models")]
+use civ_bevy_ref::animation::ActorAnimationPlugin;
+#[cfg(feature = "models")]
+use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 
 fn main() {
+    civ_bevy_ref::install_crash_handler();
+
     let attach_mode = resolve_attach_mode_from_env();
+
+    if let Err(message) = civ_bevy_ref::preflight::run_startup_preflight(attach_mode) {
+        eprintln!("{message}");
+        std::process::exit(1);
+    }
+
     let window_title = match attach_mode {
         AttachMode::Standalone => "Civis — Bevy standalone".to_string(),
         AttachMode::Server => "Civis — Bevy standalone (live attach)".to_string(),
@@ -49,21 +57,23 @@ fn main() {
                 .set(native_render_plugin()),
         )
         .add_plugins(GpuFeaturesPlugin)
-        .add_plugins(civ_bevy_ref::AgentNeedsPlugin)
         // Frame diagnostics: emit `FrameTime` + `SystemInformation` once per
         // second at INFO so the 90s frame-budget profile has a measurable
         // signal. See `docs/audits/frame-budget-baseline-2026-06-10.md`.
         .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        .add_plugins(civ_bevy_ref::frame_budget::FrameBudgetPlugin)
         // Civis app/window icon (graphite + neon voxel-world glyph). Sets the
         // embedded icon on the primary winit window at startup.
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
         .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
+        .add_plugins(civ_bevy_ref::emergence_dashboard::EmergenceDashboardPlugin)
         .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
         .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
         .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
+        .add_plugins(civ_bevy_ref::sandbox_event_feed::SandboxEventFeedPlugin)
         .add_plugins(civ_bevy_ref::menus::MenusPlugin)
         .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
         .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
@@ -107,11 +117,13 @@ fn main() {
         app.add_plugins(civ_bevy_ref::materials::BiomeMaterialsPlugin);
     }
 
-    // Perception layer: CS2-style info-view overlays (Tab) + click-to-inspect.
+    // Perception layer: CS2-style terrain overlays + Tab nearby-counts HUD + inspect.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::info_views::InfoViewsPlugin);
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::inspect::InspectPlugin);
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::entity_inspector::EntityInspectorPlugin);
 
     // Event-feed / toast notifications.
     #[cfg(feature = "egui")]
@@ -132,6 +144,10 @@ fn main() {
 
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
+
+    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
 
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]
@@ -189,7 +205,10 @@ fn main() {
 }
 
 #[cfg(feature = "egui")]
-fn sync_post_fx_from_settings(settings: Res<GameSettings>, mut post_fx: ResMut<PostFxSettings>) {
+fn sync_post_fx_from_settings(
+    settings: Res<GameSettings>,
+    mut post_fx: ResMut<PostFxSettings>,
+) {
     let graphics = &settings.graphics;
     post_fx.aces = graphics.anti_aliasing != AntiAliasing::Off;
     post_fx.bloom = graphics.bloom;

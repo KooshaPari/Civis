@@ -57,10 +57,10 @@
 //! Bevy resources only**.  No value from this resource must enter simulation
 //! state (voxel world, agent data, CA ticks).
 
-use bevy::core_pipeline::bloom::Bloom;
-use bevy::core_pipeline::motion_blur::MotionBlur;
+use bevy::post_process::bloom::Bloom;
+use bevy::post_process::motion_blur::MotionBlur;
 use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::pbr::DirectionalLightShadowMap;
+use bevy::light::DirectionalLightShadowMap;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
@@ -350,6 +350,7 @@ impl WinMode {
             ),
             Self::Fullscreen => bevy::window::WindowMode::Fullscreen(
                 bevy::window::MonitorSelection::Current,
+                bevy::window::VideoModeSelection::Current,
             ),
         }
     }
@@ -581,7 +582,7 @@ pub fn apply_gfx_settings(
         }
         if settings.window_mode == WinMode::Windowed {
             let (w, h) = settings.resolution.dimensions();
-            let target = bevy::window::WindowResolution::new(w as f32, h as f32);
+            let target = bevy::window::WindowResolution::new(w, h);
             if window.resolution.width() as u32 != w
                 || window.resolution.height() as u32 != h
             {
@@ -619,7 +620,7 @@ pub fn apply_gfx_settings(
         // MSAA — only applicable when not TAA
         if let Some(mut msaa) = msaa_opt {
             let desired = match settings.aa.msaa_samples() {
-                Some(s) => Msaa::Sample(s),
+                Some(s) => Msaa::from_samples(s),
                 None => Msaa::Off,
             };
             if *msaa != desired {

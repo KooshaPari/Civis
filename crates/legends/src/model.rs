@@ -34,8 +34,16 @@ pub enum EventKind {
     Discovery,
     LawObserved,
     GodAct,
+    /// A treaty/alliance formed between two polities (emergent diplomacy).
+    Treaty,
+    /// A treaty was broken — a betrayal (emergent diplomacy).
+    Betrayal,
     /// "X rose to prominence" — emitted by the engine itself on promotion (§4.3).
     Promotion,
+    /// A civilization completed a monument, technology, or cultural achievement.
+    GreatWork,
+    /// A disease swept through a population.
+    Plague,
     /// Escape hatch so producers can extend the taxonomy without an engine change.
     Other(String),
 }
@@ -127,6 +135,8 @@ pub struct EntityNode {
     pub significance: f32,
     /// Crossed the significance threshold at least once (monotonic, §4.3).
     pub promoted: bool,
+    /// Human-readable legend title assigned by `promote_to_legend` (§4.3 deepening).
+    pub title: Option<String>,
     pub home_region: Option<RegionId>,
     pub cluster: Option<ClusterId>,
     /// Back-pointer so the inspector can pull live components.
@@ -152,67 +162,6 @@ pub struct EventNode {
     pub raw_ref: Option<RawEventRef>,
 }
 
-/// A named legend entry recording a significant emergent event with provenance (FR-CIV-LEGENDS).
-/// Auto-generated from significant events and stored as a chronicle/historical record.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct LegendEntry {
-    /// Unique identifier for this legend.
-    pub id: LegendEventId,
-    /// Human-readable name/title of the legend (e.g. "The Fall of Ardun").
-    pub name: Option<NameRef>,
-    /// The event that triggered this legend.
-    pub event_id: LegendEventId,
-    /// Entity most central to the legend (primary subject).
-    pub principal_entity: LegendEntityId,
-    /// When the legend occurred (tick/epoch).
-    pub epoch: Epoch,
-    /// Importance score: 0..1, higher = more historically significant.
-    /// Computed from event magnitude, participant roles, and entity significance.
-    pub importance: f32,
-    /// Kind of event that triggered the legend.
-    pub event_kind: EventKind,
-    /// Where the event occurred (if known).
-    pub region: Option<RegionId>,
-    /// All entities involved in the legend.
-    pub participants: SmallVec<[LegendEntityId; 4]>,
-    /// Provenance: who/what recorded this legend, and how (lived, hearsay, etc).
-    pub provenance: Provenance,
-}
-
-impl LegendEntry {
-    /// Create a legend from a significant event. The importance score is computed
-    /// from event magnitude, participant roles, and entity significance.
-    pub fn from_event(
-        event_id: LegendEventId,
-        event: &EventNode,
-        principal: LegendEntityId,
-        principal_significance: f32,
-        participants: SmallVec<[LegendEntityId; 4]>,
-    ) -> Self {
-        let importance = compute_legend_importance(event.magnitude, principal_significance);
-        LegendEntry {
-            id: event_id,
-            name: None, // Will be named by ai-rnd later
-            event_id,
-            principal_entity: principal,
-            epoch: event.epoch,
-            importance,
-            event_kind: event.kind.clone(),
-            region: event.region,
-            participants,
-            provenance: event.provenance,
-        }
-    }
-}
-
-/// Compute importance score for a legend from event magnitude and entity significance.
-/// Higher = more historically significant. Result is 0..1.
-pub fn compute_legend_importance(event_magnitude: f32, principal_significance: f32) -> f32 {
-    // Weight event impact and the principal entity's historical significance equally.
-    // This ensures both emergent events and important entities contribute to legend creation.
-    ((event_magnitude + principal_significance) / 2.0).clamp(0.0, 1.0)
-}
-
 /// Edge types (spec §3.3).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LegendEdge {
@@ -235,6 +184,29 @@ pub enum LegendEdge {
     Destroyed,
     Ruled,
     Built,
+    /// Self-referential edge marking an entity as a named legend (promotion deepening §4.3).
+    Lineage,
+}
+
+/// Thresholds that trigger automatic promotion to a named legend (§4.3 deepening).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PromotionCriteria {
+    /// Minimum count of high-impact events (significance contribution >= `min_magnitude`).
+    pub min_impact_events: u32,
+    /// Minimum number of sim ticks the entity must have been alive.
+    pub min_life_ticks: u64,
+    /// Minimum offspring / descendant entity count.
+    pub min_descendants: u32,
+}
+
+impl Default for PromotionCriteria {
+    fn default() -> Self {
+        Self {
+            min_impact_events: 3,
+            min_life_ticks: 500,
+            min_descendants: 5,
+        }
+    }
 }
 
 /// Producer contract: the minimal payload emitted onto the `crates/watch` bus

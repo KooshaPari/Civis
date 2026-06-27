@@ -23,7 +23,6 @@ civ-engine = { path = "../../crates/engine", optional = true }
 # section of the Diplomacy panel. Optional, gated behind the `bevy` feature
 # alongside `civ-engine` because the bridge ingests from `civ_engine::DiplomacyEvent`.
 civ-diplomacy = { path = "../../crates/diplomacy", optional = true }
-civ-holocron = { path = "../../crates/holocron", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
@@ -82,11 +81,6 @@ serde_json = "1"
 # P2 visible-citizen-lifecycle test: the sim-side `hecs::Entity` is the unit
 # we despawn from the in-process sim world. Kept as a dev-dep only.
 hecs = "0.10"
-# Climate-frame apply tests (FR-CLIENT-render) construct a `civ_planet::Climate`
-# + `civ_planet::WeatherCell` so the test can drive the wire-typed `ClimateFrame`
-# end-to-end. `civ-planet` is already a transitive dep of `civ-protocol-3d`,
-# so this is a no-cost dev-dep.
-civ-planet = { path = "../../crates/planet" }
 
 [features]
 default = []
@@ -100,14 +94,13 @@ bevy = [
     "dep:civ-protocol-3d",
     "dep:civ-engine",
     "dep:civ-diplomacy",
-    "dep:civ-holocron",
     "dep:civ-laws",
     "dep:rand",
     "dep:rand_chacha",
     "dep:image",
     "dep:winit",
 ]
-egui = ["bevy", "dep:bevy_egui", "dep:civ-holocron"]
+egui = ["bevy", "dep:bevy_egui"]
 # Embed the multi-size civis.ico onto the Windows .exe (build.rs). Off by default
 # so the standard/CI build needs no Windows resource compiler. Release only.
 exe-icon = []
@@ -137,9 +130,10 @@ voxel_stream = ["voxel"]
 models = ["bevy"]
 # Ambient soundscape + UI/event SFX via bevy_kira_audio. See src/audio.rs
 # (CivisAudioPlugin). OFF by default; CC0 clips drop into assets/audio/.
-# `dep:serde_json` is required by the FR-AUDIO-wire snapshot parser in
-# `audio::parse_audio_events_from_snapshot_json`.
-audio = ["bevy", "dep:bevy_kira_audio", "dep:serde_json"]
+audio = ["bevy", "dep:bevy_kira_audio"]
+# Empty placeholder for the `vfx` feature. The actual implementation
+# (bevy_hanabi integration) is DEFERRED: `src/vfx.rs` and the
+# `#[cfg(feature = "vfx")]` blocks in `bin/standalone.rs` + `lib.rs` still
 # exist, but they fail to compile because the `bevy_hanabi` dep is not
 # declared. Defining the (empty) feature silences the `unexpected_cfgs`
 # warning that those guards produce today; enabling the feature on the
@@ -148,6 +142,7 @@ audio = ["bevy", "dep:bevy_kira_audio", "dep:serde_json"]
 # `bevy_hanabi` + the `vfx` feature together in a single PR (see
 # `docs/development-guide/fr-vfx.md` TBD).
 vfx = []
+# `pbr-textures` — enable PBR texture asset loading (normal/roughness/AO maps) on
 # top of the base material pipeline (src/materials.rs). OFF by default so CI builds
 # stay fast and texture assets are optional. Enable: `--features pbr-textures`.
 pbr-textures = ["bevy"]

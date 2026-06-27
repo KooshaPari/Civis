@@ -62,7 +62,7 @@ pub mod ui_sound;
 pub use ambient::{AmbientBed, AmbientBlend, BedWeights, BiomeFootprint};
 pub use bus::{BusId, BusLevels};
 pub use mix::{AudioMix, AudioMixPreset, MIX_SCHEMA_VERSION};
-pub use mood::{derive_music_cue, MusicCue, MoodVector, ScoreCadence, ScoreStem, StemMix};
+pub use mood::{MoodVector, ScoreCadence, ScoreStem, StemMix};
 pub use sfx::{SfxCoalescer, SfxKind, SfxQueue, SfxRequest, COALESCE_CAP_PER_KIND};
 
 /// Marker version of this crate's public schema.

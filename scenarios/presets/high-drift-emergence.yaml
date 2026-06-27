@@ -1,0 +1,40 @@
+# High-drift emergence: all eight species with chaotic divergence preset.
+# Species radiation is maximised; expect rapid sub-lineage formation.
+version: 1
+name: high-drift-emergence
+tick_start: 0
+population: 1000000
+base_consumption_joules: 5000000000
+scarcity_multiplier: 1.0
+fog_vision_radius: 8
+fog_grid_size: 64
+military:
+  movement_cadence_ticks: 4
+  movement_pulses_per_cadence: 2
+  war_cadence_ticks: 16
+  engage_range_grid: 10
+seeds:
+  - scenarios/canonical_seeds.ron
+active_seed: raw_organism
+divergence_override: 1.0
+starting_conditions:
+  civilians_per_faction: 20
+  faction_count: 8
+  quadrant_spread: 3000
+  seed_mix:
+    - seed: Ardani
+      weight: 1.0
+    - seed: Velthari
+      weight: 1.0
+    - seed: Grundak
+      weight: 1.0
+    - seed: Kethari
+      weight: 1.0
+    - seed: Nymari
+      weight: 1.0
+    - seed: Sylphine
+      weight: 1.0
+    - seed: Felmar
+      weight: 1.0
+    - seed: Thornari
+      weight: 1.0

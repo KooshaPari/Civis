@@ -392,6 +392,7 @@ fn fr_civ_bevy_026_era_zero_allocates_zero() {
 #[test]
 fn fr_civ_bio_001_round_trip_parcel_facade() {
     let graph = BuildingGraph {
+        settlement_clusters: std::collections::BTreeMap::new(),
         parcels: vec![Parcel {
             id: BuildingId(99),
             kind: ParcelKind::Industrial,
@@ -419,6 +420,7 @@ fn fr_civ_bio_001_round_trip_parcel_facade() {
 #[test]
 fn fr_civ_bio_002_capacity_counts_only_residential() {
     let graph = BuildingGraph {
+        settlement_clusters: std::collections::BTreeMap::new(),
         parcels: vec![
             Parcel {
                 id: BuildingId(1),
@@ -449,6 +451,7 @@ fn fr_civ_bio_002_capacity_counts_only_residential() {
 #[test]
 fn fr_civ_bio_003_occupied_counts_residential() {
     let graph = BuildingGraph {
+        settlement_clusters: std::collections::BTreeMap::new(),
         parcels: vec![
             Parcel {
                 id: BuildingId(1),
@@ -754,4 +757,71 @@ fn fr_civ_core_020_select_tile_set_deterministic_with_no_primitive() {
         None,
     );
     assert_eq!(selected, selected_again);
+}
+
+/// Covers FR-CIV-CORE-021.
+#[test]
+fn fr_civ_core_021_missing_primitive_id_falls_back_deterministically() {
+    let tiles_a = vec![
+        TileSetProfile {
+            id: 20,
+            culture: 7,
+            era: 2,
+            wealth_bucket: 8,
+            facade: FacadeStyle {
+                name: "fallback-a".to_string(),
+                era: 2,
+                materials: vec![MaterialId(6)],
+                roof_pitch_deg: 10,
+                window_density: 1,
+            },
+            adjacency_weights: [(41, 3)].into_iter().collect(),
+        },
+        TileSetProfile {
+            id: 21,
+            culture: 7,
+            era: 2,
+            wealth_bucket: 8,
+            facade: FacadeStyle {
+                name: "fallback-b".to_string(),
+                era: 2,
+                materials: vec![MaterialId(7)],
+                roof_pitch_deg: 14,
+                window_density: 2,
+            },
+            adjacency_weights: [(41, 5)].into_iter().collect(),
+        },
+    ];
+    let mut tiles_b = tiles_a.clone();
+    tiles_b.reverse();
+    let vector = CultureEraWealthVector::new(7, 2, 16_000);
+    let demand = signals();
+
+    let selected_a = resolve_tile_set(
+        &vector,
+        &tiles_a,
+        civ_build::ArchitectureMode::Primitive,
+        Some(999),
+    )
+    .expect("expected deterministic fallback");
+    let selected_b = resolve_tile_set(
+        &vector,
+        &tiles_b,
+        civ_build::ArchitectureMode::Primitive,
+        Some(999),
+    )
+    .expect("expected deterministic fallback from reversed input");
+
+    assert_eq!(selected_a.id, 21);
+    assert_eq!(selected_b.id, 21);
+    assert_eq!(
+        pick_tile_set(
+            &vector,
+            &demand,
+            &tiles_b,
+            civ_build::ArchitectureMode::Primitive,
+            Some(999),
+        ),
+        Some(21)
+    );
 }

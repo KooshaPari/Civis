@@ -28,7 +28,16 @@ export function statusLabel(status: ConnectionStatus): string {
 }
 
 export function statusClass(status: ConnectionStatus): string {
-  return `status-${status}`;
+  switch (status) {
+    case Status.IDLE:
+    case Status.CONNECTING:
+    case Status.OPEN:
+    case Status.CLOSED:
+    case Status.ERROR:
+      return `status-${status}`;
+    default:
+      return "status-unknown";
+  }
 }
 
 export function buildHealthProbe(id = 1): string {
@@ -41,7 +50,7 @@ export function buildHealthProbe(id = 1): string {
 }
 
 export function httpBaseFromWsUrl(wsUrl: string): string {
-  const normalized = wsUrl.replace(/^ws:/i, "http:");
+  const normalized = wsUrl.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:");
   const url = new URL(normalized);
   return `${url.protocol}//${url.host}`;
 }
@@ -58,14 +67,22 @@ export function connectionDetail(
   status: ConnectionStatus,
   attachMode: "watch" | "server",
 ): string {
+  if (status === Status.IDLE || status === Status.CLOSED) {
+    return attachMode === "watch"
+      ? "Not connected to civ-watch SSE"
+      : "Not connected to civ-server WebSocket";
+  }
   if (status === Status.OPEN) {
-    return attachMode === "watch" ? "SSE stream active" : "WebSocket open";
+    return attachMode === "watch"
+      ? "Connected to civ-watch SSE"
+      : "Connected to civ-server WebSocket";
   }
   if (status === Status.CONNECTING) {
-    return attachMode === "watch" ? "Opening SSE stream…" : "Opening connection…";
-  }
-  if (status === Status.CLOSED) {
-    return "Not connected";
+    return attachMode === "watch"
+      ? "Opening civ-watch SSE stream…"
+      : "Opening civ-server WebSocket…";
   }
   return statusLabel(status);
 }
+
+export const attachConnectionDetail = connectionDetail;

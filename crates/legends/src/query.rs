@@ -79,6 +79,21 @@ pub struct EpochDigest {
     pub digest_hash: [u8; 32],
 }
 
+/// Summary of a single named (titled) legend entity.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NamedEntitySummary {
+    pub entity_id: LegendEntityId,
+    pub title: Option<String>,
+    pub saga_length: usize,
+}
+
+/// Result of `query_named_legends` — all titled entities in the saga graph.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NamedLegendsResult {
+    pub named_entities: Vec<NamedEntitySummary>,
+    pub event_count: usize,
+}
+
 const HEADLINE_CAP: usize = 20;
 
 /// The query API surface from `docs/design/legends-engine.md` §6
@@ -347,6 +362,37 @@ impl SagaGraph {
             causal_notes,
             digest_hash,
         }
+    }
+
+    /// Return all entities that have been given a legend title via `promote_to_legend`.
+    /// Used by the HUD and the engine's named-legend belief/cohesion hook.
+    ///
+    /// `query_named_legends` — FR-CIV-LEGENDS deepening query surface.
+    pub fn query_named_legends(&self) -> NamedLegendsResult {
+        let mut named_entities: Vec<NamedEntitySummary> = self
+            .graph()
+            .node_indices()
+            .filter_map(|i| self.graph()[i].as_entity())
+            .filter(|e| e.title.is_some())
+            .map(|e| {
+                let saga_length = self
+                    .saga_of(e.id)
+                    .map(|s| s.events.len())
+                    .unwrap_or(0);
+                NamedEntitySummary {
+                    entity_id: e.id,
+                    title: e.title.clone(),
+                    saga_length,
+                }
+            })
+            .collect();
+        named_entities.sort_by_key(|s| s.entity_id.0);
+        let event_count = self
+            .graph()
+            .node_indices()
+            .filter(|i| self.graph()[*i].as_event().is_some())
+            .count();
+        NamedLegendsResult { named_entities, event_count }
     }
 }
 

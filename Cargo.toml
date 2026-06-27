@@ -1,32 +1,9 @@
-[package]
-name = "civis"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-rust-version.workspace = true
-publish = false
-
-[dev-dependencies]
-criterion = "0.6"
-hecs = "0.10"
-rand = "0.8.6"
-rand_chacha = "0.3"
-civ-agents = { path = "crates/agents" }
-civ-economy = { path = "crates/economy" }
-civ-voxel = { path = "crates/voxel" }
-
-[[bench]]
-name = "civis_perf"
-harness = false
-
 [workspace]
 members = [
-  ".",
   "crates/engine",
+  "crates/civ-traffic",
   "crates/server",
   "crates/voxel",
-  "crates/voxel-bridge",
   "crates/build",
   "crates/genetics",
   "crates/economy",
@@ -37,28 +14,25 @@ members = [
   "crates/diplomacy",
   "crates/laws",
   "crates/research",
+  "crates/ai",
   "crates/tactics",
-  "crates/planet",
-  "crates/protocol-3d",
-  "crates/mod-host",
-  "crates/civlab-sdk",
-  "crates/civis-cli",
-  "crates/civis-mcp",
-  "crates/powers",
-  "crates/watch",
+    "crates/planet",
+    "crates/protocol-3d",
+    "crates/mod-host",
+    "crates/civlab-sdk",
+    "crates/civis-cli",
+    "crates/civis-mcp",
+    "crates/watch",
   "crates/save-db",
-  "crates/hud",
   "crates/legends",
   "crates/civ-emergence-metrics",
-  "crates/civ-institutions",
-  "crates/infra",
-  "crates/physics-substrate",
+  "crates/emergence-oracle",
+  "crates/emergence-migration",
   "crates/audio",
-  "crates/holocron",
+  "crates/climate",
   "clients/bevy-ref",
-  # "clients/fyrox-ref" - excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
+  # "clients/fyrox-ref", — excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]
-default-members = ["."]
 exclude = [
   "clients/godot-ref/rust",
   "clients/unreal-show/Source/Civis/rust-shim",
@@ -78,7 +52,7 @@ rust-version = "1.75"
 [profile.dev]
 # Our own crates: opt-level 0 = fastest possible compile (the code we edit).
 opt-level = 0
-# Lightweight line-table debuginfo only - full DWARF is the slowest part of a
+# Lightweight line-table debuginfo only — full DWARF is the slowest part of a
 # dev link. `debug = 1` keeps backtraces/line numbers while shrinking link time.
 debug = 1
 # Split debuginfo out of the object files so the linker copies less. On Windows
@@ -93,7 +67,7 @@ split-debuginfo = "packed"
 # not bloat and incremental re-links stay cheap.
 #
 # `debug = 1` keeps line tables so breakpoints / backtraces inside bevy_ecs,
-# wgpu, and kira work when stepping through a sim issue - without paying for
+# wgpu, and kira work when stepping through a sim issue — without paying for
 # full inline DWARF on the first build.
 [profile.dev.package.bevy]
 opt-level = 3
@@ -106,8 +80,3 @@ debug = 1
 [profile.dev.package.bevy_kira_audio]
 opt-level = 3
 debug = 1
-
-[patch.crates-io]
-metal = { path = "vendor/metal" }
-kira = { path = "vendor/kira" }
-simba = { path = "vendor/simba" }

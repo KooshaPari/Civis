@@ -1,0 +1,15 @@
+[package]
+name = "civ-emergence-migration"
+description = "Emergent push/pull population migration: settlement reshaping, cultural mixing, and refugee surges (deterministic, seeded). FR-CIV-MIGRATION."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+rand = "0.8.6"
+rand_chacha = "0.3"
+
+[dev-dependencies]
+proptest = "1.11"

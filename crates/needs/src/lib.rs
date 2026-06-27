@@ -875,8 +875,10 @@ mod tests {
             deprivation_streak: 0,
         };
         let mut rng = rng(2);
-        let mut rates = DecayRates::default();
-        rates.food = 0.0;
+        let rates = DecayRates {
+            food: 0.0,
+            ..Default::default()
+        };
         let params = HealthParams {
             critical: 0.5,
             damage_per_critical: 0.0,
@@ -947,13 +949,14 @@ mod tests {
             sick: false,
             deprivation_streak: 0,
         };
-        let mut rates = DecayRates::default();
-        rates.food = 0.0;
-        rates.water = 0.0;
-        rates.rest = 0.0;
-        rates.safety = 0.0;
-        rates.social = 0.0;
-        rates.health = 0.0;
+        let rates = DecayRates {
+            food: 0.0,
+            water: 0.0,
+            rest: 0.0,
+            safety: 0.0,
+            social: 0.0,
+            health: 0.0,
+        };
         let mut rng = rng(5);
         let params = HealthParams {
             critical: 1.0,

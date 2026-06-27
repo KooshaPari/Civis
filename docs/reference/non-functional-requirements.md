@@ -197,7 +197,7 @@ NFRs are stable identifiers; once assigned, IDs are never reused.
 
 **Measurable Target:** Each tier passes its tick-budget criterion benchmark before the corresponding milestone tag is cut.
 
-**Verification Method:** `cargo bench --bench tick_scaling_series` reporting all three tier results; milestone release checklist requires all three passing.
+**Verification Method:** `cargo bench --bench tick_scaling_series` reporting all three tier results; the milestone release checklist must record the passing tier results before the tag is cut.
 
 **Constrained FRs:** FR-CORE-001, FR-CORE-002, FR-CORE-007, NFR-CIV-PERF-003, NFR-CIV-PERF-004
 

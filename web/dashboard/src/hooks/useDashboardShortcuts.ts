@@ -1,23 +1,16 @@
-import { useEffect } from "react";
-import { postControl } from "../control";
+import { useEffect, useRef } from "react";
+import { DASHBOARD_SHORTCUTS, postControl } from "../control";
 import { useDashboardStore, type TimeSpeed } from "../store";
+import { isDashboardShortcutTarget } from "../../../src/shortcutTarget.mjs";
 
-const SPEED_KEYS: Record<string, TimeSpeed> = {
-  "1": 1,
-  "2": 2,
-  "3": 4,
-};
+export { isDashboardShortcutTarget };
 
-function isTextInput(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return (
-    target.isContentEditable ||
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
-    tag === "SELECT"
-  );
-}
+const SPEED_KEYS: Record<string, TimeSpeed> = DASHBOARD_SHORTCUTS.reduce((acc, shortcut) => {
+  if (shortcut.keys === "1") acc["1"] = 1;
+  if (shortcut.keys === "2") acc["2"] = 2;
+  if (shortcut.keys === "3") acc["3"] = 4;
+  return acc;
+}, {} as Record<string, TimeSpeed>);
 
 async function setSpeed(speed: TimeSpeed) {
   await postControl("/control/speed", { speed });
@@ -25,19 +18,26 @@ async function setSpeed(speed: TimeSpeed) {
 
 export function useDashboardShortcuts() {
   const { state, dispatch } = useDashboardStore();
+  const speedRef = useRef(state.speed);
+
+  useEffect(() => {
+    speedRef.current = state.speed;
+  }, [state.speed]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || event.defaultPrevented) return;
+      if (event.repeat || event.defaultPrevented || event.isComposing) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isTextInput(event.target)) return;
+      if (isDashboardShortcutTarget(event.target)) return;
 
       const key = event.key.toLowerCase();
+      const isSpace = event.code === "Space" || key === " ";
 
-      if (event.code === "Space") {
+      if (isSpace) {
         event.preventDefault();
-        void setSpeed(state.speed === 0 ? 1 : 0)
-          .then(() => dispatch({ type: "set_speed", speed: state.speed === 0 ? 1 : 0 }))
+        const nextSpeed = speedRef.current === 0 ? 1 : 0;
+        void setSpeed(nextSpeed)
+          .then(() => dispatch({ type: "set_speed", speed: nextSpeed }))
           .catch(() => dispatch({ type: "set_toast", message: "sim.set_speed failed" }));
         return;
       }
@@ -75,5 +75,5 @@ export function useDashboardShortcuts() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dispatch, state.speed]);
+  }, [dispatch]);
 }

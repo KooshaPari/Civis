@@ -507,7 +507,7 @@ impl RumorMill {
             return;
         }
 
-        let spread_budget = (self.rumors.len().min(4)).max(1);
+        let spread_budget = self.rumors.len().clamp(1, 4);
         let total_rumors = self.rumors.len();
         for _ in 0..spread_budget {
             if self.rumors.is_empty() || total_rumors == 0 {
@@ -569,23 +569,6 @@ mod tests {
             provenance: crate::ids::Provenance::Lived,
             raw_ref: None,
         }
-    }
-
-    fn event_stream(events: usize) -> Vec<EventNode> {
-        (0..events)
-            .map(|idx| EventNode {
-                id: LegendEventId(idx as u64),
-                epoch: Epoch(idx as u64),
-                region: None,
-                kind: EventKind::WarDeclared,
-                magnitude: 0.7,
-                participants: SmallVec::from_iter([LegendEntityId(idx as u64 + 1)]),
-                summary_key: [0; 32],
-                source_crate: crate::ids::SourceCrate::Agents,
-                provenance: crate::ids::Provenance::Lived,
-                raw_ref: None,
-            })
-            .collect()
     }
 
     #[test]

@@ -10,13 +10,9 @@ publish = false
 # Random number generation with seeding
 rand = "0.8.6"
 rand_chacha = "0.3"
-glam = "0.30.10"
 
 # Entity Component System (ECS)
 hecs = "0.10"
-
-# Fixed-point arithmetic (16-bit signed with 16 fractional bits).
-fixed = "1.28"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -24,7 +20,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 serde_path_to_error = "0.1"
 ron = "0.8"
-bincode-next = { version = "3.1.1", features = ["serde"] }
+bincode = "1.3"
 blake3 = "1"
 sha2 = "0.10"
 thiserror = "1"
@@ -69,17 +65,6 @@ civ-species = { path = "../species" }
 # (scaffold + design): this PR wires the live sampling into the engine
 # tick and exposes the latest sample over the WS JSON-RPC surface.
 civ-emergence-metrics = { path = "../civ-emergence-metrics" }
-
-# Audio substrate (CIV-0800 / FR-CIV-AUDIO-005 / FR-AUDIO-wire): pure-Rust
-# reactive SFX trigger mapping. Engine ingests per-tick substrate events
-# (combat pulses, construction events, disasters) and emits a
-# `last_tick_audio_events` list the JSON-RPC bridge surfaces to clients.
-# No engine deps in `civ-audio` so this stays an additive, lightweight
-# dependency.
-civ-audio = { path = "../audio" }
-
-# FR-CIV-GOV-001/002/003 (civ-007 institutions epic).
-civ-institutions = { path = "../civ-institutions" }
 
 [dev-dependencies]
 civ-economy = { path = "../economy" }

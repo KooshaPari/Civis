@@ -298,10 +298,6 @@ bench:
 ca-bench:
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-dirty-chunk-bench.ps1
 
-# CA dirty-chunk benchmark report.
-ca-report:
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-bench-report.ps1
-
 # CA dirty-chunk profiling.
 ca-flamegraph:
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ca-flamegraph.ps1

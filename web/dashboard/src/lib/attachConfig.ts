@@ -12,6 +12,7 @@ export function resolveAuthoringEnabled(search = ""): boolean {
 /** Resolve attach mode for the dashboard. */
 
 export type AttachMode = "watch" | "server";
+export type AttachTargetLabel = "civ-server" | "civ-watch";
 
 export const DEFAULT_WS_PREFER_BINARY = true;
 
@@ -53,6 +54,18 @@ export function resolveAttachMode(search = ""): AttachMode {
   const attach = new URLSearchParams(query).get("attach")?.trim().toLowerCase();
   if (attach === "server" || attach === "watch") return attach;
   return "server";
+}
+
+export function attachModeLabel(mode: AttachMode): AttachTargetLabel {
+  return mode === "server" ? "civ-server" : "civ-watch";
+}
+
+export function attachEndpointLabel(mode: AttachMode): string {
+  return mode === "server" ? "WebSocket endpoint" : "SSE endpoint";
+}
+
+export function attachEndpointUrl(mode: AttachMode, wsUrl: string, origin: string): string {
+  return mode === "server" ? wsUrl : `${origin}/events`;
 }
 
 /** WebSocket URL: use Vite proxy in dev (`/ws` → civ-server). */

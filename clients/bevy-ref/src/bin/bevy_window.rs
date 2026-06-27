@@ -1,5 +1,5 @@
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy_egui::{egui, EguiContexts};
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::*;
@@ -8,6 +8,7 @@ use civ_bevy_ref::{
     bevy_render::{apply_chunk_material, spawn_default_scene, CHUNK_WIREFRAME_LINE_COLOR},
     chunk_fade_complete, chunk_raycast_terrain, chunk_to_minimap_uv, focused_chunk_at_grid,
     gpu_features::GpuFeaturesPlugin,
+    frame_budget::{scaled_cull_distance, GpuQualityMode},
     live_focus::{
         compute_live_scene_focus, minimap_uv_to_world_xz, LiveSceneFocus, LIVE_FOCUS_LERP_SPEED,
     },
@@ -18,22 +19,22 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
-    god_panel::GodPanelPlugin,
-    game_ui::GameUiPlugin,
-    menus::{AppState, GameUiMode, MainMenuCommand, MainMenuSaves, MenuCommand, WorldSetupParams},
-    save_load_ui::{SaveLoadPanel, SaveLoadUiPlugin},
+    gameplay_hud::GameplayHudPlugin,
+    save_load_ui::SaveLoadUiPlugin,
+    tutorial::TutorialPlugin,
+    perf_hud::{PerfHudPlugin, PerfMetrics},
     live_pick::{LivePickPlugin, LiveSelection},
     live_stream::{
-        apply_agent_appearance_frame_with_labels_and_eye, apply_building_diff_frame,
-        apply_civilian_state_frame, apply_climate_frame, apply_event_feed_frame,
-        apply_faction_state_frame, apply_voxel_delta_frame, apply_water_deltas_for_frame,
-        default_stream_meshes, default_water_meshes,
-        format_event_feed_message, latest_climate, push_event_feed_to_hud_summary,
-        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBuildingTag,
+        apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
+        apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
+        default_stream_meshes, format_event_feed_message, push_event_feed_to_hud_summary,
+        sync_agent_labels_from_civilians, AgentLabelConfig, LiveAgentTag, LiveBridge, LiveBuildingTag,
         LiveChunkFade, LiveChunkTag, LiveGraphParcelTag, LiveStreamMeshes, LiveStreamScene,
-        LiveWaterMeshes, StreamCulling,
+        StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
+    god_panel::GodPanelPlugin,
+    god_actions::GodActionsPlugin,
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
@@ -41,11 +42,11 @@ use civ_bevy_ref::{
     presentation_day_factor_target, resolve_live_ws_url,
     event_feed::{EventFeed, EventFeedPlugin},
     emergence_dashboard::EmergenceDashboardPlugin,
-    world_stats_dashboard::WorldStatsDashboardPlugin,
+    sandbox_event_feed::SandboxEventFeedPlugin,
     ws_client::{WsClient, WsClientConfig},
-    CameraTarget, DebugRender, EmergenceHudData, LiveHudSnapshot, MinimapBounds,
-    VOXEL_CHUNK_EDGE,
     post_fx::PostFxPlugin,
+    CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
+    VOXEL_CHUNK_EDGE, WsConnectionState,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -60,6 +61,21 @@ use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
 
+const NAMED_SEEDS: &[(&str, u64)] = &[
+    ("Ember Ridge", 42),
+    ("Solace Basin", 137),
+    ("Thornwall", 2024),
+    ("Crescent Flats", 999),
+    ("Ironmore", 7331),
+];
+const SPEED_OPTIONS: &[(&str, u32)] = &[
+    ("Glacial", 1),
+    ("Steady", 4),
+    ("Brisk", 8),
+    ("Rapid", 16),
+    ("Blitz", 32),
+];
+const PRESET_OPTIONS: &[&str] = &["standard", "warlike", "peaceful", "survival", "sandbox"];
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
@@ -76,20 +92,37 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
-const WORLDGEN_PRESETS: [&str; 4] = [
-    "single-race-ardani",
-    "three-race-balanced",
-    "ardani-dominant",
-    "lush-frontier",
-];
-const WORLDGEN_SPEED_STEPS: [u32; 3] = [1, 2, 5];
-const WORLDGEN_DEFAULT_SEED: u64 = 0xC1F1_5EED_D3AD_BEEF;
+
+// FR-CIV-CLIENT-001
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum AppState {
+    #[default]
+    Connecting,
+    InGame,
+    ConnectionLost,
+}
 
 #[derive(Resource, Default)]
-struct SaveListState {
-    /// Requested one-time save list query.
-    pub queried: bool,
+struct ConnectionOverlay {
+    root: Option<Entity>,
+    tick: u32,
 }
+
+#[derive(Component)]
+struct SplashSpinner;
+#[derive(Resource, Debug, Clone)]
+struct ScenarioPanel {
+    seed_index: usize,
+    speed_index: usize,
+    preset_index: usize,
+}
+
+impl Default for ScenarioPanel {
+    fn default() -> Self {
+        Self { seed_index: 0, speed_index: 0, preset_index: 0 }
+    }
+}
+
 
 #[derive(Resource, Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -132,17 +165,6 @@ impl OrbitCamera {
         self.centre[0] += right * cos + forward * sin;
         self.centre[2] += -right * sin + forward * cos;
     }
-}
-
-#[derive(Resource)]
-struct LiveBridge {
-    client: WsClient,
-}
-
-#[derive(Resource)]
-struct HudState {
-    snapshot: LiveHudSnapshot,
-    text: Entity,
 }
 
 #[derive(Component)]
@@ -198,12 +220,29 @@ struct MinimapPopup {
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
-    speed_idx: usize,
     paused: bool,
+    speed_idx: usize,
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 struct EmergencePollTimer(f32);
+impl Default for EmergencePollTimer {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
+
+#[derive(Component)]
+struct ScenarioSeedLabel;
+
+#[derive(Component)]
+struct ScenarioSpeedLabel;
+
+#[derive(Component)]
+struct ScenarioPresetLabel;
+
+#[derive(Component)]
+struct ScenarioStartButton;
 
 fn main() {
     let mut app = App::new();
@@ -222,68 +261,68 @@ fn main() {
             GpuFeaturesPlugin,
             LivePickPlugin,
             FactionHudPlugin,
+            GameplayHudPlugin,
             SaveLoadUiPlugin,
             TutorialPlugin,
             PerfHudPlugin,
+            EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
-            WorldStatsDashboardPlugin,
-            civ_bevy_ref::AgentNeedsPlugin,
             DiplomacyUiPlugin,
             GodPanelPlugin,
-            MenusPlugin,
-            GameUiPlugin,
+            GodActionsPlugin,
         ))
-        .init_state::<AppState>()
+        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin, GameplayHudPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
+        .init_resource::<ConnectionOverlay>()
+        .init_resource::<ScenarioPanel>()
         .init_resource::<MinimapPopup>()
         .init_resource::<SimSpeedState>()
         .init_resource::<EmergencePollTimer>()
         .init_resource::<EmergenceHudData>()
-        .init_resource::<SaveListState>()
         .insert_resource(ScenePresentation::default())
         .insert_resource(DebugRender::default())
         .insert_resource(OrbitCamera::from_target(CameraTarget::default()))
         .add_systems(Startup, setup)
-        .add_systems(Update, (consume_menu_commands, update_mainmenu_saves, sync_app_state_with_game_mode))
+        .add_systems(OnEnter(AppState::Connecting), spawn_connecting_overlay)
+        .add_systems(OnExit(AppState::Connecting), despawn_connection_overlay)
+        .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
+        .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
+        .add_systems(Update, drive_app_state)
+        .add_systems(Update, sync_perf_metrics.run_if(civ_bevy_ref::menus::in_game))
+        .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
+        .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
             Update,
             (
-                worldgen_to_playing,
-                (
-                    debug_render_input,
-                    orbit_camera_input,
-                    minimap_click_focus,
-                    minimap_popup_ui,
-                    poll_emergence,
-                    viewport_chunk_raycast,
-                    update_orbit_camera_transform,
-                    apply_live_frames,
-                    sync_agent_labels_from_civilians.after(apply_live_frames),
-                    apply_spectator_meta,
-                    sync_live_hud_stats,
-                    sync_live_pick_detail,
-                    update_live_focus,
-                    follow_live_orbit_focus,
-                    sync_chunk_debug_render,
-                    update_chunk_fade,
-                    update_hud,
-                    update_minimap,
-                    // FR-CLIENT-render: climate frame → presentation.is_day.
-                    // Must run after `apply_live_frames` (which records the
-                    // climate snapshot) and before `update_presentation_lighting`
-                    // (which consumes the flag).
-                    sync_presentation_from_climate.after(apply_live_frames),
-                    update_presentation_lighting,
-                ).run_if(in_state(AppState::Playing)),
+                debug_render_input,
+                orbit_camera_input,
+                minimap_click_focus,
+                minimap_popup_ui,
+                poll_emergence,
+                viewport_chunk_raycast,
+                update_orbit_camera_transform,
+                apply_live_frames,
+                sync_agent_labels_from_civilians.after(apply_live_frames),
+                apply_spectator_meta,
+                sync_live_hud_stats,
+                sync_live_pick_detail,
+                update_live_focus,
+                follow_live_orbit_focus,
+                sync_chunk_debug_render,
+                update_chunk_fade,
+                update_hud,
+                update_minimap,
+                update_presentation_lighting,
             ),
-        )
-        .run();
+        );
 
     #[cfg(feature = "egui")]
     {
         app.add_plugins(SettingsPlugin);
+        app.add_plugins(civ_bevy_ref::entity_inspector::EntityInspectorPlugin);
+        app.add_plugins(civ_bevy_ref::outcome_overlay::OutcomeOverlayPlugin);
     }
 
     #[cfg(feature = "models")]
@@ -299,182 +338,194 @@ fn main() {
     app.run();
 }
 
-fn consume_menu_commands(
-    mut menu_command: ResMut<MenuCommand>,
-    state: Option<Res<State<AppState>>>,
-    mut next_state: ResMut<NextState<AppState>>,
+fn scenario_panel_input(
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    mut panel: ResMut<ScenarioPanel>,
     bridge: Res<LiveBridge>,
-    mut speed: ResMut<SimSpeedState>,
-    mut save_panel: ResMut<SaveLoadPanel>,
-    saves: Res<MainMenuSaves>,
-    params: Res<WorldSetupParams>,
-    mut game_mode: ResMut<GameUiMode>,
-    mut exit: MessageWriter<AppExit>,
+    mut seed_labels: Query<&mut Text, (With<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
+    mut speed_labels: Query<&mut Text, (With<ScenarioSpeedLabel>, Without<ScenarioSeedLabel>, Without<ScenarioStartButton>)>,
+    mut preset_labels: Query<&mut Text, (With<ScenarioPresetLabel>, Without<ScenarioSeedLabel>, Without<ScenarioSpeedLabel>, Without<ScenarioStartButton>)>,
+    start_buttons: Query<&Interaction, With<ScenarioStartButton>>,
 ) {
-    let Some(state) = state else {
-        return;
-    };
-    if menu_command.action == MainMenuCommand::None {
-        return;
+    // Keyboard shortcuts: Left/Right cycle seeds; Up/Down cycle speeds; Enter launches.
+    if keys.just_pressed(KeyCode::ArrowRight) {
+        panel.seed_index = (panel.seed_index + 1) % NAMED_SEEDS.len();
+    }
+    if keys.just_pressed(KeyCode::ArrowLeft) {
+        panel.seed_index = panel.seed_index.checked_sub(1).unwrap_or(NAMED_SEEDS.len() - 1);
+    }
+    if keys.just_pressed(KeyCode::ArrowDown) {
+        panel.speed_index = (panel.speed_index + 1) % SPEED_OPTIONS.len();
+    }
+    if keys.just_pressed(KeyCode::ArrowUp) {
+        panel.speed_index = panel.speed_index.checked_sub(1).unwrap_or(SPEED_OPTIONS.len() - 1);
+    }
+    if keys.just_pressed(KeyCode::KeyP) {
+        panel.preset_index = (panel.preset_index + 1) % PRESET_OPTIONS.len();
+    }
+    if keys.just_pressed(KeyCode::KeyO) {
+        panel.preset_index = panel.preset_index.checked_sub(1).unwrap_or(PRESET_OPTIONS.len() - 1);
     }
 
-    let action = menu_command.action;
-    menu_command.action = MainMenuCommand::None;
-    match action {
-        MainMenuCommand::None => {}
-        MainMenuCommand::NewWorld => {
-            let preset = WORLDGEN_PRESETS
-                .get(params.world_size % WORLDGEN_PRESETS.len())
-                .copied()
-                .unwrap_or(WORLDGEN_PRESETS[0]);
-            start_world_boot(
-                &bridge,
-                preset,
-                params.seed,
-                speed.as_mut(),
-                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)],
-            );
-            next_state.set(AppState::WorldGen);
-        }
-        MainMenuCommand::Continue => {
-            let slot_name = saves
-                .preferred_slot
-                .as_deref()
-                .unwrap_or("slot-1")
-                .to_string();
-            let slot_id = slot_name
-                .strip_prefix("slot-")
-                .and_then(|raw| raw.parse::<u32>().ok())
-                .map(|slot| 2010 + slot)
-                .unwrap_or(2010);
-            let json = serde_json::json!({
-                "jsonrpc": "2.0",
-                "id": slot_id,
-                "method": "save.load",
-                "params": { "slot_name": slot_name },
-            })
-            .to_string();
-            bridge.client.send_rpc_raw(json);
-            next_state.set(AppState::WorldGen);
-        }
-        MainMenuCommand::Resume => {
-            if *state == AppState::Paused {
-                next_state.set(AppState::Playing);
-            }
-        }
-        MainMenuCommand::OpenSettings => {}
-        MainMenuCommand::OpenSavePanel => {
-            save_panel.visible = true;
-        }
-        MainMenuCommand::ExitToMainMenu => {
-            next_state.set(AppState::MainMenu);
-            *game_mode = GameUiMode::Playing;
-        }
-        MainMenuCommand::Quit => {
-            *game_mode = GameUiMode::Playing;
-            exit.write(AppExit::Success);
-        }
+    // Rebuild seed label
+    if let Ok(mut text) = seed_labels.single_mut() {
+        let label = NAMED_SEEDS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _))| if i == panel.seed_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Race: {label}"));
+    }
+
+    // Rebuild speed label
+    if let Ok(mut text) = speed_labels.single_mut() {
+        let label = SPEED_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _))| if i == panel.speed_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Speed: {label}"));
+    }
+
+    // Rebuild preset label
+    if let Ok(mut text) = preset_labels.single_mut() {
+        let label = PRESET_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, name)| if i == panel.preset_index { format!("[ {name} ]") } else { name.to_string() })
+            .collect::<Vec<_>>()
+            .join("  ");
+        *text = Text::new(format!("Preset: {label}"));
+    }
+
+    // Launch on button click or Enter key
+    let clicked = start_buttons
+        .single()
+        .map(|i| *i == Interaction::Pressed)
+        .unwrap_or(false);
+    if clicked || keys.just_pressed(KeyCode::Enter) {
+        let (_, seed) = NAMED_SEEDS[panel.seed_index];
+        let (_, speed) = SPEED_OPTIONS[panel.speed_index];
+        let preset = PRESET_OPTIONS[panel.preset_index];
+        bridge.client.send_rpc(
+            "sim.load_scenario",
+            serde_json::json!({ "preset": preset, "seed": seed }),
+        );
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
+        bridge.client.send_rpc("sim.reset", serde_json::json!({ "seed": seed }));
+        bridge.client.send_rpc("sim.set_speed", serde_json::json!({ "speed": speed }));
+        info!("scenario launch: preset={preset} seed={seed} speed={speed}");
     }
 }
 
-fn worldgen_to_playing(
-    state: Option<Res<State<AppState>>>,
-    scene: Res<LiveStreamScene>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::WorldGen {
-        return;
-    }
-    if live_stream_has_content(&scene) {
-        next_state.set(AppState::Playing);
-    }
-}
 
-fn sync_app_state_with_game_mode(
-    state: Option<Res<State<AppState>>>,
-    mode: Res<GameUiMode>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    match (*mode, state.get()) {
-        (GameUiMode::Paused, AppState::Playing) => next_state.set(AppState::Paused),
-        (GameUiMode::Playing, AppState::Paused) => next_state.set(AppState::Playing),
+fn drive_app_state(bridge: Res<LiveBridge>, current: Res<State<AppState>>, mut next: ResMut<NextState<AppState>>) {
+    let ws = bridge.client.latest_connection_state();
+    match (current.get(), ws) {
+        (AppState::Connecting, WsConnectionState::Connected) => { next.set(AppState::InGame); }
+        (AppState::InGame, WsConnectionState::Reconnecting) | (AppState::InGame, WsConnectionState::Disconnected) => { next.set(AppState::ConnectionLost); }
+        (AppState::ConnectionLost, WsConnectionState::Connected) => { next.set(AppState::InGame); }
         _ => {}
     }
 }
 
-fn update_mainmenu_saves(
-    bridge: Res<LiveBridge>,
-    state: Option<Res<State<AppState>>>,
-    mut saves: ResMut<MainMenuSaves>,
-    mut query: ResMut<SaveListState>,
-) {
-    let Some(state) = state else {
-        return;
-    };
-    if *state != AppState::MainMenu {
-        return;
-    }
-    if !query.queried {
-        bridge
-            .client
-            .send_rpc_raw(r#"{"jsonrpc":"2.0","id":2099,"method":"save.list","params":{}}"#.to_string());
-        query.queried = true;
-    }
-
-    let mut preferred = None;
-    for entry in bridge.client.poll_save_list() {
-        if entry.save_type != "slot" {
-            continue;
-        }
-        match &preferred {
-            Some((_, tick)) if entry.tick <= *tick => {}
-            _ => preferred = Some((entry.name, entry.tick)),
-        }
-    }
-    saves.can_continue = preferred.is_some();
-    saves.preferred_slot = preferred.map(|entry| entry.0);
+fn spawn_connecting_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0), left: Val::Px(0.0),
+            width: Val::Percent(100.0), height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(12.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgb(0.035, 0.039, 0.047)),
+        ZIndex(100),
+    )).with_children(|p| {
+        p.spawn((
+            Text::new("CIVIS"),
+            TextFont::from_font_size(72.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+        ));
+        p.spawn((
+            Text::new("An Emergent Civilization"),
+            TextFont::from_font_size(20.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.45)),
+        ));
+        p.spawn((
+            Text::new("⠋"),
+            TextFont::from_font_size(28.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+            SplashSpinner,
+        ));
+        p.spawn((
+            Text::new("Connecting to simulation server..."),
+            TextFont::from_font_size(14.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ));
+    }).id();
+    overlay.root = Some(root);
+    overlay.tick = 0;
 }
 
-fn start_world_boot(
-    bridge: &LiveBridge,
-    preset: &str,
-    seed: u64,
-    speed: &mut SimSpeedState,
-    multiplier: u32,
-) {
-    if speed.speed_idx >= WORLDGEN_SPEED_STEPS.len() || WORLDGEN_SPEED_STEPS[speed.speed_idx] != multiplier {
-        if let Some(speed_idx) = WORLDGEN_SPEED_STEPS.iter().position(|value| *value == multiplier) {
-            speed.speed_idx = speed_idx;
-        } else {
-            speed.speed_idx = 0;
-        }
-    }
-    speed.multiplier = multiplier;
-    let init_seed = if seed == 0 { WORLDGEN_DEFAULT_SEED } else { seed };
-    bridge.client.send_rpc(
-        "sim.load_scenario",
-        serde_json::json!({ "preset": preset, "seed": init_seed }),
-    );
-    bridge.client.send_rpc(
-        "sim.set_speed",
-        serde_json::json!({ "multiplier": multiplier }),
-    );
-    bridge.client.send_rpc(
-        "sim.reset",
-        serde_json::json!({ "seed": init_seed }),
-    );
-    bridge.client.send_rpc(
-        "sim.set_speed",
-        serde_json::json!({ "multiplier": multiplier }),
-    );
+fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    let root = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(0.0), left: Val::Px(0.0),
+            width: Val::Percent(100.0), height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            row_gap: Val::Px(12.0),
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.18, 0.02, 0.02, 0.92)),
+        ZIndex(100),
+    )).with_children(|p| {
+        p.spawn((
+            Text::new("CIVIS"),
+            TextFont::from_font_size(72.0),
+            TextColor(Color::srgb(0.494, 0.729, 0.710)),
+        ));
+        p.spawn((
+            Text::new("Connection lost. Retrying..."),
+            TextFont::from_font_size(22.0),
+            TextColor(Color::srgb(1.0, 0.35, 0.35)),
+        ));
+        p.spawn((
+            Text::new("The simulation will resume when the server is reachable."),
+            TextFont::from_font_size(14.0),
+            TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ));
+    }).id();
+    overlay.root = Some(root);
+    overlay.tick = 0;
 }
 
+fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn(); }
+}
+
+const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+fn animate_splash(
+    mut overlay: ResMut<ConnectionOverlay>,
+    mut spinners: Query<&mut Text, With<SplashSpinner>>,
+) {
+    overlay.tick = overlay.tick.wrapping_add(1);
+    if overlay.tick % 4 != 0 { return; }
+    let frame = SPINNER_FRAMES[((overlay.tick / 4) as usize) % SPINNER_FRAMES.len()];
+    for mut text in &mut spinners {
+        **text = frame.to_string();
+    }
+}
 fn apply_spectator_meta(
     bridge: Res<LiveBridge>,
     mut presentation: ResMut<ScenePresentation>,
@@ -485,22 +536,6 @@ fn apply_spectator_meta(
         if let Some(tick) = meta.tick {
             hud.snapshot.tick = Some(tick);
             hud.snapshot.connected = true;
-        }
-        if let Some(population) = meta.population {
-            hud.snapshot.world_stats.population = population;
-        }
-        if let Some(building_count) = meta.building_count {
-            hud.snapshot.world_stats.building_count = building_count;
-        }
-        if let Some(speed_multiplier) = meta.speed_multiplier {
-            hud.snapshot.world_stats.speed_multiplier = speed_multiplier;
-            hud.snapshot.speed_multiplier = speed_multiplier;
-        }
-        if let Some(market_prices) = meta.market_prices {
-            hud.snapshot.world_stats.market_prices = market_prices;
-        }
-        if let Some(factions) = meta.factions {
-            hud.snapshot.world_stats.factions = factions;
         }
     }
     if let Some(rtt) = bridge.client.latest_rtt_ms() {
@@ -537,6 +572,14 @@ fn sync_live_hud_stats(
     }
 }
 
+
+fn sync_perf_metrics(hud: Res<HudState>, mut metrics: ResMut<PerfMetrics>) {
+    metrics.fps = hud.snapshot.fps;
+    metrics.tick = hud.snapshot.tick.unwrap_or(0);
+    metrics.civilian_count = hud.snapshot.civilian_count;
+    metrics.faction_count = hud.snapshot.faction_count;
+    metrics.tick_ms = hud.snapshot.tick_ms;
+}
 fn live_stream_has_content(scene: &LiveStreamScene) -> bool {
     !scene.chunks.is_empty()
         || !scene.agents.is_empty()
@@ -602,32 +645,9 @@ fn update_presentation_lighting(
     clear.0 = Color::srgb(clear_rgb[0], clear_rgb[1], clear_rgb[2]);
 }
 
-/// FR-CLIENT-render: when the live scene has observed a climate frame, the
-/// presentation's `is_day` flag is driven by the snapshot's `day_phase`
-/// instead of being a static default. Falls through to the existing
-/// `is_day=true` default when no climate frame has been observed yet so
-/// pre-snapshot behaviour is preserved.
-fn sync_presentation_from_climate(
-    scene: Res<LiveStreamScene>,
-    mut presentation: ResMut<ScenePresentation>,
-) {
-    let Some((snap, _)) = latest_climate(&scene) else {
-        return;
-    };
-    presentation.is_day = snap.day_phase.is_day_band();
-}
-
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     spawn_default_scene(&mut commands);
     commands.insert_resource(default_stream_meshes(&mut meshes));
-    // FR-CLIENT-render: parallel to `LiveStreamMeshes`, insert the shared
-    // water-surface quad + tinted material handles so the streamed world
-    // snapshot can drive water companions on every voxel delta.
-    commands.insert_resource(default_water_meshes(&mut meshes, &mut materials));
     let ws_client = WsClient::spawn_with_config(resolve_live_ws_url(), WsClientConfig::default());
     commands.insert_resource(DiplomacyBridge::new(ws_client.rpc_sender()));
     commands.insert_resource(LiveBridge { client: ws_client });
@@ -728,18 +748,14 @@ fn speed_control_input(
     if toggle_pause {
         speed.paused = !speed.paused;
     } else if speed_up {
-        speed.speed_idx = (speed.speed_idx + 1).min(WORLDGEN_SPEED_STEPS.len() - 1);
+        speed.speed_idx = (speed.speed_idx + 1).min(SPEED_OPTIONS.len() - 1);
         speed.paused = false;
     } else {
         speed.speed_idx = speed.speed_idx.saturating_sub(1);
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused {
-        0
-    } else {
-        WORLDGEN_SPEED_STEPS[speed.speed_idx]
-    };
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx].1 };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
@@ -812,10 +828,10 @@ fn apply_live_frames(
     orbit: Res<OrbitCamera>,
     debug: Res<DebugRender>,
     assets: Res<LiveStreamMeshes>,
-    water_meshes: Res<LiveWaterMeshes>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut feed: ResMut<EventFeed>,
+    gpu_quality: Option<Res<GpuQualityMode>>,
 ) {
     let frames = bridge.client.poll();
     if !frames.is_empty() {
@@ -824,53 +840,35 @@ fn apply_live_frames(
 
     let target = orbit.as_target();
     let eye = target.orbit_position();
+    let quality = gpu_quality.as_deref().copied().unwrap_or_default();
     let culling = StreamCulling {
         eye,
-        max_distance: orbit.distance,
+        max_distance: scaled_cull_distance(orbit.distance, quality),
+        gpu_quality: quality,
     };
     let wireframe_color = debug.wireframe.then_some(CHUNK_WIREFRAME_LINE_COLOR);
 
     for frame in frames {
         hud.snapshot.tick = Some(frame.tick());
         match frame {
-            Frame3d::VoxelDelta(delta) => {
-                apply_voxel_delta_frame(
-                    &mut commands,
-                    &mut scene,
-                    &mut meshes,
-                    &mut materials,
-                    culling,
-                    debug.as_ref(),
-                    delta.clone(),
-                    wireframe_color,
-                );
-                // FR-CLIENT-render: pair the chunk-mesh update with a
-                // water-surface companion update so the streamed water
-                // plane tracks the chunk's voxel composition on every
-                // delta (re-uses the same delta payload + culling eye).
-                apply_water_deltas_for_frame(
-                    &mut commands,
-                    &mut scene,
-                    water_meshes.as_ref(),
-                    culling.eye,
-                    culling.max_distance,
-                    &delta,
-                );
-            }
-            Frame3d::AgentAppearance(agents) => {
-                // FR-CLIENT-render: pass the camera eye so far-away agents
-                // get a distance-LOD scale attenuation (otherwise they punch
-                // through the terrain near the horizon).
-                apply_agent_appearance_frame_with_labels_and_eye(
-                    &mut commands,
-                    &mut scene,
-                    &mut materials,
-                    assets.as_ref(),
-                    agents,
-                    AgentLabelConfig { enabled: true },
-                    Some(eye),
-                );
-            }
+            Frame3d::VoxelDelta(delta) => apply_voxel_delta_frame(
+                &mut commands,
+                &mut scene,
+                &mut meshes,
+                &mut materials,
+                culling,
+                debug.as_ref(),
+                delta,
+                wireframe_color,
+            ),
+            Frame3d::AgentAppearance(agents) => apply_agent_appearance_frame_with_labels(
+                &mut commands,
+                &mut scene,
+                &mut materials,
+                assets.as_ref(),
+                agents,
+                AgentLabelConfig { enabled: true },
+            ),
             Frame3d::BuildingDiff(building) => apply_building_diff_frame(
                 &mut commands,
                 &mut scene,
@@ -891,10 +889,7 @@ fn apply_live_frames(
                 push_event_feed_to_hud_summary(&mut hud.snapshot, event_frame);
                 apply_event_feed_frame(&mut feed, event_frame.clone());
             }
-            // FR-CLIENT-render: route the streamed climate frame into the
-            // live scene (was previously dropped). Downstream sky/sun/
-            // ambient systems consume it via `latest_climate(&scene)`.
-            Frame3d::Climate(climate) => apply_climate_frame(&mut scene, climate),
+            Frame3d::Climate(_) => {}
         }
     }
 }
@@ -1313,37 +1308,37 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-        // Right-click: open inspect popup
-        if mouse.just_pressed(MouseButton::Right) {
-            if let Ok((interaction, cursor)) = panels.single() {
-                if *interaction != Interaction::None {
-                    if let Some(normalized) = cursor.normalized {
-                        let uv = inset_minimap_uv_from_cursor(normalized);
-                        let (tx, ty) = if cache.use_focus_bounds {
-                            if let Some(focus) = cache.focus {
-                                let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                                (x as i32, z as i32)
-                            } else {
-                                (0, 0)
-                            }
-                        } else if let Some(bounds) = cache.bounds {
-                            let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
-                            (cx, cz)
+    // Right-click: open inspect popup
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Ok((interaction, cursor)) = panels.single() {
+            if *interaction != Interaction::None {
+                if let Some(normalized) = cursor.normalized {
+                    let uv = inset_minimap_uv_from_cursor(normalized);
+                    let (tx, ty) = if cache.use_focus_bounds {
+                        if let Some(focus) = cache.focus {
+                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                            (x as i32, z as i32)
                         } else {
                             (0, 0)
-                        };
-                        popup.pending = Some((tx, ty));
-                    }
+                        }
+                    } else if let Some(bounds) = cache.bounds {
+                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                        (cx, cz)
+                    } else {
+                        (0, 0)
+                    };
+                    popup.pending = Some((tx, ty));
                 }
             }
-            return;
         }
-        // Suppress unused warning — bridge is available for future left-click RPCs.
-        let _ = &bridge;
+        return;
+    }
+    }
+    // Suppress unused warning — bridge is available for future left-click RPCs.
+    let _ = &bridge;
 
-        if !mouse.just_pressed(MouseButton::Left) {
-            return;
-        }
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
     }
 
     let Ok((interaction, cursor)) = panels.single() else {
@@ -1475,16 +1470,16 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Window::new("Tile Actions")
         .collapsible(false)
         .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
-                let json = format!(
-                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
-                );
-                bridge.client.send_rpc_raw(json);
+                bridge.client.send_rpc("sim.inspect_tile", serde_json::json!({"x": tx, "y": ty}));
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1519,13 +1514,11 @@ fn poll_emergence(
     for em in bridge.client.poll_emergence() {
         hud.snapshot.emergence = Some(em.clone());
         *emergence_res = em;
-        hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
     if timer.0 < 10.0 {
         return;
     }
     timer.0 = 0.0;
-    let json = r#"{"jsonrpc":"2.0","id":3,"method":"emergence.metrics","params":null}"#.to_string();
-    bridge.client.send_rpc_raw(json);
+    bridge.client.send_rpc("sim.emergence", serde_json::Value::Null);
 }

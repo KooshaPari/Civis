@@ -153,8 +153,7 @@ optional_extras_gate() {
 optional_extras_gate || true
 
 export MANIFEST_PATH="${MANIFEST}"
-QUALITY_GATE_RESULTS="$(printf '%s\n' "${RESULTS[@]}")"
-export QUALITY_GATE_RESULTS
+export QUALITY_GATE_RESULTS="$(printf '%s\n' "${RESULTS[@]}")"
 GATES_JSON="$(python3 - <<'PY'
 import json
 import os

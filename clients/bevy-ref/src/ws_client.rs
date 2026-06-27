@@ -1,28 +1,23 @@
-//! Bevy-side WebSocket client for live `civ-server` attach.
-//!
-//! - Spawns a background tokio task with a reconnect loop.
-//! - Drains `Frame3d`, `WsSpectatorMeta`, `WsConnectionState`, `EmergenceHudData`,
-//!   and `OutcomeHudData` into channels Bevy systems poll each frame.
-//! - Exposes `send_rpc` (structured) and `send_rpc_raw` (pre-formatted JSON) for
-//!   the click-to-fire / scenario-launch / speed-control / god-panel systems.
-
 use std::{
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
     thread,
     time::Duration,
 };
 
 use civ_protocol_3d::Frame3d;
-use crossbeam_channel::{Receiver, Sender};
-use futures_util::{SinkExt, StreamExt};
-use serde_json;
-use tokio::runtime::Builder;
-use tokio_tungstenite::tungstenite::Message;
 
 use crate::{
     parse_jsonrpc_snapshot_meta, parse_ws_payload, ws_prefer_binary_from_env, EmergenceHudData,
     OutcomeHudData, WsConnectionState, WsSpectatorMeta,
 };
+use crossbeam_channel::{Receiver, Sender};
+use futures_util::{SinkExt, StreamExt};
+use serde_json;
+use tokio::runtime::Builder;
+use tokio_tungstenite::tungstenite::Message;
 
 /// Live attach WebSocket client preferences.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,16 +36,15 @@ impl Default for WsClientConfig {
 }
 
 /// WebSocket client that bridges the tokio network task to Bevy systems.
+#[derive(Clone)]
 pub struct WsClient {
     frame_rx: Receiver<Frame3d>,
     meta_rx: Receiver<WsSpectatorMeta>,
     rtt_rx: Receiver<f32>,
     state_rx: Receiver<WsConnectionState>,
-    save_list_rx: Receiver<Vec<SaveListEntry>>,
-    latest_state: AtomicU32,
-    /// Outbound raw text frame channel — for `send_rpc_raw` callers.
+    latest_state: Arc<AtomicU32>,
     cmd_tx: Sender<String>,
-    /// Channel for outbound JSON-RPC text frames (fire-and-forget, structured).
+    /// Channel for outbound JSON-RPC text frames (fire-and-forget).
     send_tx: Sender<String>,
     /// Inbound parsed EmergenceHudData from id=2 sim.emergence responses.
     emergence_rx: crossbeam_channel::Receiver<EmergenceHudData>,
@@ -69,11 +63,11 @@ impl WsClient {
         let (meta_tx, meta_rx) = crossbeam_channel::unbounded();
         let (rtt_tx, rtt_rx) = crossbeam_channel::unbounded();
         let (state_tx, state_rx) = crossbeam_channel::unbounded();
-        let (save_list_tx, save_list_rx) = crossbeam_channel::unbounded::<Vec<SaveListEntry>>();
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<String>();
         let (send_tx, send_rx) = crossbeam_channel::unbounded::<String>();
         let (emergence_tx, emergence_rx) = crossbeam_channel::unbounded::<EmergenceHudData>();
         let (outcome_tx, outcome_rx) = crossbeam_channel::unbounded::<OutcomeHudData>();
+
         thread::spawn(move || {
             run_client(
                 url,
@@ -82,42 +76,24 @@ impl WsClient {
                 meta_tx,
                 rtt_tx,
                 state_tx,
-                save_list_tx,
                 cmd_rx,
                 send_rx,
                 emergence_tx,
                 outcome_tx,
             );
         });
+
         Self {
             frame_rx,
             meta_rx,
             rtt_rx,
             state_rx,
-            save_list_rx,
-            latest_state: AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected)),
+            latest_state: Arc::new(AtomicU32::new(state_to_atomic(WsConnectionState::Disconnected))),
             cmd_tx,
             send_tx,
             emergence_rx,
             outcome_rx,
         }
-    }
-
-    /// Enqueue a pre-formatted JSON-RPC text frame. Drops silently if disconnected.
-    pub fn send_rpc_raw(&self, json: String) {
-        let _ = self.cmd_tx.send(json);
-    }
-
-    /// Build and enqueue a JSON-RPC request from `method` + `params`.
-    pub fn send_rpc(&self, method: &str, params: serde_json::Value) {
-        let msg = serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": method,
-            "params": params,
-        })
-        .to_string();
-        let _ = self.send_tx.send(msg);
     }
 
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
@@ -137,7 +113,6 @@ impl WsClient {
         out
     }
 
-    /// Drain any parsed `sim.outcome` responses (id=9003) from the background thread.
     #[must_use]
     pub fn poll_outcome(&self) -> Option<OutcomeHudData> {
         let mut latest = None;
@@ -157,7 +132,6 @@ impl WsClient {
         frames
     }
 
-    /// Drain `sim.snapshot` JSON-RPC metadata (day/night, tick).
     #[must_use]
     pub fn poll_meta(&self) -> Vec<WsSpectatorMeta> {
         let mut metas = Vec::new();
@@ -165,16 +139,6 @@ impl WsClient {
             metas.push(meta);
         }
         metas
-    }
-
-    /// Drain any parsed `save.list` responses (id=2099).
-    #[must_use]
-    pub fn poll_save_list(&self) -> Vec<SaveListEntry> {
-        let mut entries = Vec::new();
-        while let Ok(batch) = self.save_list_rx.try_recv() {
-            entries.extend(batch);
-        }
-        entries
     }
 
     /// Latest measured `sim.snapshot` round-trip time in milliseconds, if any.
@@ -195,6 +159,27 @@ impl WsClient {
                 .store(state_to_atomic(state), Ordering::Relaxed);
         }
         atomic_to_state(self.latest_state.load(Ordering::Relaxed))
+    }
+
+    /// Send a fire-and-forget pre-formatted JSON-RPC command string.
+    /// Drops silently if the WebSocket background task has not connected yet.
+    pub fn send_rpc_raw(&self, json: String) {
+        let _ = self.cmd_tx.send(json);
+    }
+
+    /// Send a JSON-RPC request over the live WebSocket connection.
+    ///
+    /// The message is queued; the background thread forwards it on the next
+    /// write iteration. Silently drops if the background thread has exited.
+    pub fn send_rpc(&self, method: &str, params: serde_json::Value) {
+        let msg = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        })
+        .to_string();
+        let _ = self.cmd_tx.send(msg);
     }
 }
 
@@ -258,7 +243,6 @@ fn run_client(
     meta_tx: Sender<WsSpectatorMeta>,
     rtt_tx: Sender<f32>,
     state_tx: Sender<WsConnectionState>,
-    save_list_tx: Sender<Vec<SaveListEntry>>,
     cmd_rx: Receiver<String>,
     send_rx: crossbeam_channel::Receiver<String>,
     emergence_tx: Sender<EmergenceHudData>,
@@ -273,21 +257,20 @@ fn run_client(
         publish_state(&state_tx, WsConnectionState::Disconnected);
         loop {
             publish_state(&state_tx, WsConnectionState::Reconnecting);
-            let result = connect_and_stream(
+            match connect_and_stream(
                 &url,
                 config,
                 &frame_tx,
                 &meta_tx,
                 &rtt_tx,
                 &state_tx,
-                &save_list_tx,
                 &cmd_rx,
                 &send_rx,
                 &emergence_tx,
                 &outcome_tx,
             )
-            .await;
-            match result {
+            .await
+            {
                 Ok(()) => {
                     backoff.reset();
                 }
@@ -323,21 +306,24 @@ fn record_snapshot_rtt(snapshot_ping: &mut Option<std::time::Instant>, rtt_tx: &
     }
 }
 
-/// Parse a sim.emergence / emergence.metrics response into `EmergenceHudData`.
+/// Parse a sim.emergence (id=2) JSON-RPC response into `EmergenceHudData`.
 fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
-    let id = v.get("id").and_then(|i| i.as_i64())?;
-    if !matches!(id, 2 | 3) {
+    if v.get("id").and_then(|i| i.as_i64()) != Some(2) {
         return None;
     }
     let result = v.get("result")?;
     Some(EmergenceHudData {
+        entropy_bits: result
+            .get("entropy_bits")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32,
         entropy_norm: result
             .get("entropy_norm")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
-        entropy_bits: result
-            .get("entropy_bits")
+        branching_sigma: result
+            .get("branching_sigma")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
         power_law_alpha: result
@@ -346,18 +332,6 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
             .unwrap_or(0.0) as f32,
         novelty_rate: result
             .get("novelty_rate")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        novelty_score: result
-            .get("novelty_score")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        coupling_mi_estimate: result
-            .get("coupling_mi_estimate")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32,
-        criticality_indicator: result
-            .get("criticality_indicator")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0) as f32,
         mi_material_faction_norm: result
@@ -376,7 +350,6 @@ fn parse_emergence_response(text: &str) -> Option<EmergenceHudData> {
     })
 }
 
-/// Parse a sim.outcome (id=9003) JSON-RPC response into `OutcomeHudData`.
 fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
     if v.get("id").and_then(|i| i.as_i64()) != Some(9003) {
@@ -398,44 +371,6 @@ fn parse_outcome_response(text: &str) -> Option<OutcomeHudData> {
     })
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SaveListEntry {
-    pub name: String,
-    pub tick: u64,
-    pub save_type: String,
-}
-
-fn parse_save_list_response(text: &str) -> Option<Vec<SaveListEntry>> {
-    let v: serde_json::Value = serde_json::from_str(text).ok()?;
-    let id_is_2099 = match v.get("id")?.as_u64() {
-        Some(2099) => true,
-        None => match v.get("id").and_then(|i| i.as_i64()) {
-            Some(2099) => true,
-            None | Some(_) => false,
-        },
-    };
-    if !id_is_2099 {
-        return None;
-    }
-    let entries = v.get("result")?.as_array()?;
-    let mut out = Vec::new();
-    for entry in entries {
-        let Some(name) = entry.get("name").and_then(|v| v.as_str()) else {
-            continue;
-        };
-        let Some(save_type) = entry.get("save_type").and_then(|v| v.as_str()) else {
-            continue;
-        };
-        let tick = entry.get("tick").and_then(|v| v.as_u64()).unwrap_or(0);
-        out.push(SaveListEntry {
-            name: name.to_string(),
-            tick,
-            save_type: save_type.to_string(),
-        });
-    }
-    Some(out)
-}
-
 async fn connect_and_stream(
     url: &str,
     config: WsClientConfig,
@@ -443,7 +378,6 @@ async fn connect_and_stream(
     meta_tx: &Sender<WsSpectatorMeta>,
     rtt_tx: &Sender<f32>,
     state_tx: &Sender<WsConnectionState>,
-    save_list_tx: &Sender<Vec<SaveListEntry>>,
     cmd_rx: &Receiver<String>,
     send_rx: &crossbeam_channel::Receiver<String>,
     emergence_tx: &Sender<EmergenceHudData>,
@@ -462,15 +396,16 @@ async fn connect_and_stream(
     let mut last_snapshot = std::time::Instant::now();
     let mut last_outcome = std::time::Instant::now();
 
-    while let Some(msg) = read.next().await {
-        // Flush outbound commands (speed/pause RPCs) before processing the next inbound frame.
+    loop {
+        // Flush outbound commands (speed/pause RPCs) before blocking on next inbound frame.
         while let Ok(cmd) = cmd_rx.try_recv() {
             write
                 .send(Message::Text(cmd.into()))
                 .await
                 .map_err(|e| e.to_string())?;
         }
-        // Drain any outbound structured RPC frames queued by Bevy systems.
+
+        // Drain any outbound RPC frames queued by Bevy systems.
         while let Ok(json) = send_rx.try_recv() {
             write
                 .send(Message::Text(json.into()))
@@ -490,7 +425,10 @@ async fn connect_and_stream(
             last_snapshot = std::time::Instant::now();
         }
 
-        let msg = msg.map_err(|err| err.to_string())?;
+        let msg = match read.next().await {
+            Some(msg) => msg.map_err(|err| err.to_string())?,
+            None => break,
+        };
         match msg {
             Message::Text(text) => {
                 if let Some(meta) = parse_jsonrpc_snapshot_meta(&text) {
@@ -502,10 +440,6 @@ async fn connect_and_stream(
                 }
                 if let Some(em) = parse_emergence_response(&text) {
                     let _ = emergence_tx.send(em);
-                    continue;
-                }
-                if let Some(entries) = parse_save_list_response(&text) {
-                    let _ = save_list_tx.send(entries);
                     continue;
                 }
                 if let Some(oc) = parse_outcome_response(&text) {

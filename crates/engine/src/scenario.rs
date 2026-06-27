@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Simulation, WorldState};
+use crate::gameplay::ScenarioObjective;
 use crate::policy::policy_from_kind;
 use crate::policy::PolicyInput;
 
@@ -136,6 +137,13 @@ pub struct Scenario {
     /// defaults to the no-op policy as well.
     #[serde(default)]
     pub policy: ScenarioPolicy,
+    /// Victory/defeat objectives for this scenario (FR-CIV-GAME-002).
+    ///
+    /// Each objective specifies a [`VictoryCondition`] and an optional tick
+    /// deadline.  An empty list (the default) means the session runs indefinitely
+    /// with only the global `check_outcome` conditions applying.
+    #[serde(default)]
+    pub objectives: Vec<ScenarioObjective>,
 }
 
 /// Per-institution tax rates from scenario YAML (FR-ECON-004 partial).
@@ -278,6 +286,37 @@ impl Scenario {
     /// Headless simulation seeded from scenario starting conditions.
     pub fn into_simulation(self, rng_seed: u64) -> Simulation {
         let mut sim = Simulation::with_seed(rng_seed);
+
+        // If starting_conditions differ from defaults (32/4/2500), respawn civilians with custom config
+        let needs_respawn = self.starting_conditions.civilians_per_faction != 32
+            || self.starting_conditions.faction_count != 4
+            || self.starting_conditions.quadrant_spread != 2500;
+
+        if needs_respawn {
+            // Clear existing civilians
+            let mut to_remove = Vec::new();
+            for (entity, _) in sim.world.query::<&civ_agents::Civilian>().iter() {
+                to_remove.push(entity);
+            }
+            for entity in to_remove {
+                let _ = sim.world.despawn(entity);
+            }
+
+            // Respawn with scenario config
+            let mut spawn_rng = sim.rng_mut().clone();
+            crate::engine::spawn_faction_civilians_custom(
+                &mut sim.world,
+                &mut spawn_rng,
+                self.starting_conditions.civilians_per_faction,
+                self.starting_conditions.faction_count,
+                self.starting_conditions.quadrant_spread,
+            );
+            crate::engine::attach_citizen_to_agents(&mut sim.world);
+
+            // Update population to match actual spawned count
+            sim.state.population = civ_agents::count_civilians(&sim.world) as u64;
+        }
+
         self.apply_world_state(&mut sim.state);
         sim.economy_policy = self.policy_input();
         sim.configure_military_fog(self.fog_vision_radius, self.fog_grid_size);
@@ -497,6 +536,7 @@ mod tests {
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
+            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         assert_eq!(sim.military_phase_config().war.fog_vision_radius, Some(6));
@@ -525,7 +565,9 @@ mod tests {
             active_seed: None,
             divergence_override: None,
             starting_conditions: ScenarioStartingConditions::default(),
+            taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
+            objectives: Vec::new(),
         };
         let sim = scenario.into_simulation(1);
         let cfg = sim.military_phase_config();
@@ -634,6 +676,7 @@ mods:
             starting_conditions: ScenarioStartingConditions::default(),
             taxation: ScenarioTaxation::default(),
             policy: ScenarioPolicy::default(),
+            objectives: Vec::new(),
         };
 
         let mut zero_scarcity = base.clone();

@@ -45,6 +45,15 @@ pub enum BiomeKind {
     Glacier,
     /// Waterlogged temperate lowland (marsh / bog / swamp).
     Wetland,
+    // ── P2.2a climate-emergent biomes (additive; `classify_biome` only) ───────
+    /// Hot semi-arid scrub between desert and savanna.
+    Shrubland,
+    /// Cold semi-arid grassland (dry cold band).
+    Steppe,
+    /// Cold high-elevation terrain below the glacial line.
+    Alpine,
+    /// Tropical coastal wetland (hot + wet shore).
+    Mangrove,
 }
 
 // ── Whittaker classification thresholds ──────────────────────────────────────
@@ -67,6 +76,8 @@ const TEMP_COLD: f32 = 0.0;
 /// Temperature (°C) below which a cell is "very cold" (Tundra / Glacier).
 const TEMP_VERY_COLD: f32 = -5.0;
 
+/// Moisture (mm/year) below which a hot-band cell is hyper-arid desert.
+const MOIST_ARID: f32 = 15.0;
 /// Moisture (mm/year) below which a cell is "dry".
 const MOIST_DRY: f32 = 30.0;
 /// Moisture (mm/year) above which a temperate cell is "moderately wet".
@@ -90,49 +101,83 @@ const FP_SCALE: f32 = 1_000.0;
 /// * `moisture`    — annual precipitation in **mm/year**.
 ///
 /// # Rule priority
-/// 1. Elevation overrides: Ocean → Beach → Glacier (cold) → Mountain.
+/// 1. Elevation overrides: Ocean → Mangrove/Beach → Glacier → Alpine/Mountain.
 /// 2. Temperature × moisture grid (hot / temperate / cold / very-cold).
 pub fn classify_biome(elevation: f32, temperature: f32, moisture: f32) -> BiomeKind {
-    // ── 1. Elevation overrides ───────────────────────────────────────────────
     if elevation < ELEV_SEA_LEVEL {
         return BiomeKind::Ocean;
     }
     if elevation <= ELEV_BEACH_MAX {
-        return BiomeKind::Beach;
+        return classify_coastal(temperature, moisture);
     }
+    if let Some(biome) = classify_high_elevation(elevation, temperature) {
+        return biome;
+    }
+    classify_climate_band(temperature, moisture)
+}
+
+fn classify_coastal(temperature: f32, moisture: f32) -> BiomeKind {
+    if temperature > TEMP_HOT && moisture >= MOIST_WET {
+        BiomeKind::Mangrove
+    } else {
+        BiomeKind::Beach
+    }
+}
+
+fn classify_high_elevation(elevation: f32, temperature: f32) -> Option<BiomeKind> {
     if elevation >= ELEV_GLACIER_MIN && temperature <= TEMP_VERY_COLD {
-        return BiomeKind::Glacier;
+        return Some(BiomeKind::Glacier);
     }
     if elevation >= ELEV_MOUNTAIN_MIN {
-        return BiomeKind::Mountain;
+        return Some(if temperature < TEMP_COLD {
+            BiomeKind::Alpine
+        } else {
+            BiomeKind::Mountain
+        });
     }
+    None
+}
 
-    // ── 2. Temperature × moisture grid ──────────────────────────────────────
-    if temperature > TEMP_HOT {
-        // Hot band
-        if moisture < MOIST_DRY {
-            BiomeKind::Desert
-        } else if moisture < MOIST_WET {
-            BiomeKind::Savanna
-        } else {
-            BiomeKind::Rainforest
-        }
-    } else if temperature >= TEMP_COLD {
-        // Temperate band (0 °C .. 20 °C]
-        if moisture < MOIST_DRY {
-            BiomeKind::Grassland
-        } else if moisture < MOIST_MODERATE {
-            BiomeKind::Forest
-        } else if moisture >= MOIST_WET {
-            BiomeKind::Wetland
-        } else {
-            BiomeKind::Forest
-        }
-    } else if temperature >= TEMP_VERY_COLD {
-        // Cold band (-5 °C .. 0 °C)
-        BiomeKind::Taiga
+fn classify_hot_band(moisture: f32) -> BiomeKind {
+    if moisture < MOIST_ARID {
+        BiomeKind::Desert
+    } else if moisture < MOIST_DRY {
+        BiomeKind::Shrubland
+    } else if moisture < MOIST_WET {
+        BiomeKind::Savanna
     } else {
-        // Very cold band (< -5 °C)
+        BiomeKind::Rainforest
+    }
+}
+
+fn classify_temperate_band(moisture: f32) -> BiomeKind {
+    if moisture < MOIST_DRY {
+        BiomeKind::Grassland
+    } else if moisture < MOIST_MODERATE {
+        BiomeKind::Forest
+    } else if moisture >= MOIST_WET {
+        BiomeKind::Wetland
+    } else {
+        BiomeKind::Forest
+    }
+}
+
+fn classify_cold_band(moisture: f32) -> BiomeKind {
+    if moisture < MOIST_DRY {
+        BiomeKind::Steppe
+    } else {
+        BiomeKind::Taiga
+    }
+}
+
+fn classify_climate_band(temperature: f32, moisture: f32) -> BiomeKind {
+    if temperature > TEMP_HOT {
+        classify_hot_band(moisture)
+    } else if temperature >= TEMP_COLD {
+        classify_temperate_band(moisture)
+    } else if temperature >= TEMP_VERY_COLD {
+        classify_cold_band(moisture)
+    } else {
         BiomeKind::Tundra
     }
 }
@@ -163,6 +208,31 @@ pub struct GeologyMap {
 }
 
 impl BiomeKind {
+    /// Primary `spawn_biome_affinity` labels scenario authors should use for
+    /// this biome archetype.
+    #[must_use]
+    pub fn spawn_biome_affinity(self) -> &'static [&'static str] {
+        match self {
+            BiomeKind::Ocean => &["Ocean", "Sea", "DeepOcean"],
+            BiomeKind::Plains => &["Plains", "Prairie"],
+            BiomeKind::Forest => &["Forest", "TemperateForest"],
+            BiomeKind::Mountain => &["Mountain", "Highland", "Volcano"],
+            BiomeKind::Desert => &["Desert", "Arid", "Badlands"],
+            BiomeKind::Tundra => &["Tundra", "Arctic", "Permafrost"],
+            BiomeKind::Beach => &["Beach", "Coast", "Shore"],
+            BiomeKind::Savanna => &["Savanna", "Drylands"],
+            BiomeKind::Grassland => &["Grassland", "Meadow", "Prairie"],
+            BiomeKind::Rainforest => &["Rainforest", "Jungle", "TropicalForest"],
+            BiomeKind::Taiga => &["Taiga", "BorealForest"],
+            BiomeKind::Glacier => &["Glacier", "Ice", "Icecap"],
+            BiomeKind::Wetland => &["Wetland", "Marsh", "Bog"],
+            BiomeKind::Shrubland => &["Shrubland", "Scrubland", "Chaparral"],
+            BiomeKind::Steppe => &["Steppe", "ColdDesert", "Prairie"],
+            BiomeKind::Alpine => &["Alpine", "Montane", "Highland"],
+            BiomeKind::Mangrove => &["Mangrove", "Estuary", "CoastalWetland"],
+        }
+    }
+
     /// Return `true` when the affinity label string from a [`SeedDefinition`]
     /// is considered a match for this biome archetype.
     ///
@@ -178,22 +248,24 @@ impl BiomeKind {
                 "Forest" | "TemperateForest" | "TropicalForest" | "Jungle"
             ),
             BiomeKind::Ocean => matches!(label, "Ocean" | "Tidepool" | "DeepOcean" | "Sea"),
-            BiomeKind::Mountain => {
-                matches!(label, "Mountain" | "Alpine" | "Highland" | "Volcano")
-            }
+            BiomeKind::Mountain => matches!(label, "Mountain" | "Highland" | "Volcano"),
             BiomeKind::Desert => matches!(label, "Desert" | "Arid" | "Badlands" | "Dunes"),
             BiomeKind::Tundra => {
-                matches!(label, "Tundra" | "Arctic" | "Boreal" | "Taiga" | "Permafrost")
+                matches!(
+                    label,
+                    "Tundra" | "Arctic" | "Boreal" | "Taiga" | "Permafrost"
+                )
             }
             BiomeKind::Plains => {
-                matches!(label, "Plains" | "Grassland" | "Savanna" | "Steppe" | "Prairie")
+                matches!(label, "Plains" | "Grassland" | "Savanna" | "Prairie")
             }
             BiomeKind::Grassland => {
-                matches!(label, "Grassland" | "Plains" | "Steppe" | "Prairie" | "Meadow")
+                matches!(
+                    label,
+                    "Grassland" | "Plains" | "Steppe" | "Prairie" | "Meadow"
+                )
             }
-            BiomeKind::Savanna => {
-                matches!(label, "Savanna" | "Grassland" | "Scrubland" | "Drylands")
-            }
+            BiomeKind::Savanna => matches!(label, "Savanna" | "Grassland" | "Drylands"),
             BiomeKind::Rainforest => {
                 matches!(label, "Rainforest" | "Jungle" | "TropicalForest" | "Forest")
             }
@@ -208,6 +280,24 @@ impl BiomeKind {
             }
             BiomeKind::Glacier => {
                 matches!(label, "Glacier" | "Ice" | "Icecap" | "Arctic")
+            }
+            BiomeKind::Shrubland => {
+                matches!(
+                    label,
+                    "Shrubland" | "Scrubland" | "Chaparral" | "DryScrub" | "Badlands"
+                )
+            }
+            BiomeKind::Steppe => {
+                matches!(label, "Steppe" | "ColdDesert" | "Prairie" | "Grassland")
+            }
+            BiomeKind::Alpine => {
+                matches!(label, "Alpine" | "Montane" | "Highland" | "Mountain")
+            }
+            BiomeKind::Mangrove => {
+                matches!(
+                    label,
+                    "Mangrove" | "Estuary" | "CoastalWetland" | "Coastal" | "Swamp"
+                )
             }
         }
     }
@@ -292,6 +382,101 @@ impl GeologyMap {
     }
 }
 
+// ── FR-CIV-CLIMATE: Climate Drift ────────────────────────────────────────────
+
+/// Long-term climate drift direction.
+///
+/// A drift trend accumulates over many simulation years and shifts the
+/// effective temperature / moisture of each region, potentially reclassifying
+/// biomes. A desert can expand into plains; a rainforest can retreat to
+/// savanna. Drift is deterministic from the starting seed and elapsed years.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClimateDrift {
+    /// Cumulative temperature offset in fixed-point Celsius (scale 1 000).
+    /// Positive → warming trend; negative → cooling trend.
+    pub temp_delta_fp: i32,
+    /// Cumulative moisture offset in fixed-point mm/year (scale 1 000).
+    /// Positive → wetting trend; negative → drying trend.
+    pub moisture_delta_fp: i32,
+}
+
+impl ClimateDrift {
+    /// No drift — baseline state.
+    pub const NONE: Self = Self {
+        temp_delta_fp: 0,
+        moisture_delta_fp: 0,
+    };
+
+    /// Advance the drift by one year step using a deterministic linear trend.
+    ///
+    /// `seed` distinguishes independent planet instances.
+    /// `warming_rate_fp` and `drying_rate_fp` are per-year deltas (fixed-point
+    /// 1 000 scale). Positive `warming_rate_fp` means the world warms; positive
+    /// `drying_rate_fp` means the world dries out.
+    ///
+    /// Drift is clamped to `[-60_000, 55_000]` for temperature (matches
+    /// `WeatherCell` clamp) and `[-5_000, 5_000]` for moisture.
+    #[must_use]
+    pub fn advance(&self, warming_rate_fp: i32, drying_rate_fp: i32) -> Self {
+        let new_temp = (self.temp_delta_fp.saturating_add(warming_rate_fp)).clamp(-60_000, 55_000);
+        let new_moist =
+            (self.moisture_delta_fp.saturating_add(-drying_rate_fp)).clamp(-5_000, 5_000);
+        Self {
+            temp_delta_fp: new_temp,
+            moisture_delta_fp: new_moist,
+        }
+    }
+
+    /// Derive the biome for a cell under the accumulated drift, given its base
+    /// elevation, temperature (°C), and moisture (mm/year).
+    ///
+    /// Applies the cumulative delta before re-classifying with [`classify_biome`].
+    #[must_use]
+    pub fn classify_with_drift(
+        &self,
+        elevation: f32,
+        base_temp_c: f32,
+        base_moisture_mm: f32,
+    ) -> BiomeKind {
+        const FP: f32 = 1_000.0;
+        let drifted_temp = base_temp_c + self.temp_delta_fp as f32 / FP;
+        let drifted_moisture = (base_moisture_mm + self.moisture_delta_fp as f32 / FP).max(0.0);
+        classify_biome(elevation, drifted_temp, drifted_moisture)
+    }
+}
+
+/// Compute deterministic climate drift after `elapsed_years` of simulation.
+///
+/// The drift direction is seeded by `planet_seed` so each planet has a unique
+/// long-term trajectory.  Rate constants are small to ensure decades of
+/// simulation produce noticeable but not catastrophic shifts.
+///
+/// # Determinism
+/// Identical `(planet_seed, elapsed_years, warming_rate_fp, drying_rate_fp)`
+/// always produce the same [`ClimateDrift`].
+#[must_use]
+pub fn compute_drift(
+    planet_seed: u64,
+    elapsed_years: u64,
+    warming_rate_fp: i32,
+    drying_rate_fp: i32,
+) -> ClimateDrift {
+    // Seed-derived sign flip so different planets drift in different directions.
+    let temp_sign: i32 = if planet_seed % 2 == 0 { 1 } else { -1 };
+    let moist_sign: i32 = if (planet_seed / 3) % 2 == 0 { 1 } else { -1 };
+
+    let years = elapsed_years.min(i32::MAX as u64) as i32;
+    let temp_delta = (warming_rate_fp.saturating_mul(years) * temp_sign)
+        .clamp(-60_000, 55_000);
+    let moisture_delta = (drying_rate_fp.saturating_mul(years) * moist_sign)
+        .clamp(-5_000, 5_000);
+
+    ClimateDrift {
+        temp_delta_fp: temp_delta,
+        moisture_delta_fp: moisture_delta,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,10 +502,49 @@ mod tests {
         assert!(BiomeKind::Tundra.matches_affinity("Boreal"));
         assert!(BiomeKind::Plains.matches_affinity("Grassland"));
         assert!(BiomeKind::Plains.matches_affinity("Savanna"));
-        assert!(BiomeKind::Mountain.matches_affinity("Alpine"));
-        // Unknown label never matches anything.
-        assert!(!BiomeKind::Plains.matches_affinity("Bog"));
+        assert!(BiomeKind::Alpine.matches_affinity("Alpine"));
+        assert!(!BiomeKind::Mountain.matches_affinity("Alpine"));
+        assert!(BiomeKind::Shrubland.matches_affinity("Scrubland"));
+        assert!(BiomeKind::Steppe.matches_affinity("Steppe"));
+        assert!(BiomeKind::Mangrove.matches_affinity("Mangrove"));
+        assert!(BiomeKind::Wetland.matches_affinity("Bog"));
         assert!(!BiomeKind::Desert.matches_affinity(""));
+    }
+
+    /// Every `BiomeKind` exposes at least one primary spawn affinity label.
+    #[test]
+    fn spawn_biome_affinity_labels_non_empty() {
+        use std::mem::Discriminant;
+        let variants = [
+            BiomeKind::Ocean,
+            BiomeKind::Plains,
+            BiomeKind::Forest,
+            BiomeKind::Mountain,
+            BiomeKind::Desert,
+            BiomeKind::Tundra,
+            BiomeKind::Beach,
+            BiomeKind::Savanna,
+            BiomeKind::Grassland,
+            BiomeKind::Rainforest,
+            BiomeKind::Taiga,
+            BiomeKind::Glacier,
+            BiomeKind::Wetland,
+            BiomeKind::Shrubland,
+            BiomeKind::Steppe,
+            BiomeKind::Alpine,
+            BiomeKind::Mangrove,
+        ];
+        let unique: std::collections::HashSet<Discriminant<BiomeKind>> =
+            variants.iter().map(std::mem::discriminant).collect();
+        assert_eq!(unique.len(), variants.len(), "fixture must cover every variant");
+        for biome in variants {
+            let labels = biome.spawn_biome_affinity();
+            assert!(!labels.is_empty(), "{biome:?} must expose spawn labels");
+            assert!(
+                biome.matches_affinity(labels[0]),
+                "primary label must round-trip via matches_affinity"
+            );
+        }
     }
 
     /// biome_at_normalized returns polar biomes near edges and equatorial near centre.
@@ -417,6 +641,34 @@ mod tests {
 
     // ── Whittaker per-cell classifier (`classify_biome`) ─────────────────────
 
+    /// FR-CIV-PLANET-050 — hot + semi-arid → Shrubland.
+    #[test]
+    fn classify_shrubland_hot_semiarid() {
+        assert_eq!(classify_biome(0.3, 30.0, 20.0), BiomeKind::Shrubland);
+        assert_eq!(classify_biome(0.2, 25.0, 15.0), BiomeKind::Shrubland);
+    }
+
+    /// FR-CIV-PLANET-050 — cold + dry → Steppe.
+    #[test]
+    fn classify_steppe_cold_dry() {
+        assert_eq!(classify_biome(0.3, -2.0, 10.0), BiomeKind::Steppe);
+        assert_eq!(classify_biome(0.1, -4.0, 20.0), BiomeKind::Steppe);
+    }
+
+    /// FR-CIV-PLANET-050 — high elevation + cold (non-glacial) → Alpine.
+    #[test]
+    fn classify_alpine_high_cold() {
+        assert_eq!(classify_biome(0.70, -2.0, 50.0), BiomeKind::Alpine);
+        assert_eq!(classify_biome(0.65, -1.0, 80.0), BiomeKind::Alpine);
+    }
+
+    /// FR-CIV-PLANET-050 — hot + wet shore → Mangrove.
+    #[test]
+    fn classify_mangrove_coastal_hot_wet() {
+        assert_eq!(classify_biome(0.03, 28.0, 200.0), BiomeKind::Mangrove);
+        assert_eq!(classify_biome(0.0, 22.0, 160.0), BiomeKind::Mangrove);
+    }
+
     /// FR-CIV-PLANET-050 — hot + very wet → Rainforest.
     #[test]
     fn classify_rainforest_hot_wet() {
@@ -424,7 +676,7 @@ mod tests {
         assert_eq!(classify_biome(0.2, 21.0, 160.0), BiomeKind::Rainforest);
     }
 
-    /// FR-CIV-PLANET-050 — cold + wet → Taiga.
+    /// FR-CIV-PLANET-050 — cold + wet → Taiga (moist cold band only).
     #[test]
     fn classify_taiga_cold_wet() {
         assert_eq!(classify_biome(0.3, -2.0, 200.0), BiomeKind::Taiga);
@@ -485,7 +737,206 @@ mod tests {
         assert_eq!(classify_biome(0.3, 15.0, 200.0), BiomeKind::Wetland);
 
         assert_eq!(classify_biome(0.3, 25.0, 10.0), BiomeKind::Desert);
+        assert_eq!(classify_biome(0.3, 25.0, 20.0), BiomeKind::Shrubland);
         assert_eq!(classify_biome(0.3, 25.0, 80.0), BiomeKind::Savanna);
         assert_eq!(classify_biome(0.3, 25.0, 200.0), BiomeKind::Rainforest);
+
+        assert_eq!(classify_biome(0.3, -2.0, 10.0), BiomeKind::Steppe);
+        assert_eq!(classify_biome(0.3, -2.0, 80.0), BiomeKind::Taiga);
+    }
+
+    // ── `classify_weather_cell` (terrain / heightfield bridge) ──────────────
+    //
+    // `classify_weather_cell` is the only public function in the crate that
+    // integrates a per-cell `WeatherCell` (fixed-point temp + precip) with a
+    // caller-supplied terrain elevation to produce a `BiomeKind`. It is the
+    // primary terrain/heightfield bridge between civ-weather and the biome
+    // taxonomy, so it gets dedicated direct coverage here.
+
+    /// `classify_weather_cell` must be exactly equivalent to `classify_biome`
+    /// after dividing the cell's fixed-point temp/precip by `FP_SCALE` (1 000).
+    #[test]
+    fn classify_weather_cell_matches_classify_biome() {
+        let cell = crate::weather::WeatherCell {
+            region_id: 0,
+            latitude_fp: 0,
+            season: crate::weather::SeasonKind::Summer,
+            kind: crate::weather::WeatherKind::Clear,
+            temp_c_fp: 25_000,
+            precip_mm_fp: 200_000,
+            storm_intensity_fp: 0,
+        };
+
+        for elevation in [-0.25_f32, 0.0, 0.04, 0.3, 0.7, 0.8, 0.95] {
+            let direct = classify_biome(elevation, 25.0, 200.0);
+            let via_cell = classify_weather_cell(&cell, elevation);
+            assert_eq!(
+                via_cell, direct,
+                "classify_weather_cell must agree with classify_biome at elevation={elevation}"
+            );
+        }
+    }
+
+    /// Elevation-override branches (Ocean / Beach / Glacier / Mountain) survive
+    /// the fixed-point conversion unchanged.
+    #[test]
+    fn classify_weather_cell_respects_elevation_overrides() {
+        // Sub-sea-level elevation always wins, regardless of weather.
+        let cell = crate::weather::WeatherCell {
+            region_id: 7,
+            latitude_fp: 12_000,
+            season: crate::weather::SeasonKind::Winter,
+            kind: crate::weather::WeatherKind::Snow,
+            temp_c_fp: -20_000,
+            precip_mm_fp: 300_000,
+            storm_intensity_fp: 5_000,
+        };
+        assert_eq!(classify_weather_cell(&cell, -0.1), BiomeKind::Ocean);
+
+        // Beach band (0 < elev <= 0.05) when not hot+wet.
+        assert_eq!(classify_weather_cell(&cell, 0.0), BiomeKind::Beach);
+        assert_eq!(classify_weather_cell(&cell, 0.05), BiomeKind::Beach);
+
+        // Hot + wet shore → Mangrove.
+        let mut tropical = cell.clone();
+        tropical.temp_c_fp = 28_000;
+        tropical.precip_mm_fp = 200_000;
+        assert_eq!(classify_weather_cell(&tropical, 0.03), BiomeKind::Mangrove);
+
+        // Glacier at high elevation + very cold (temp_c_fp <= -5_000 → -5 °C).
+        assert_eq!(classify_weather_cell(&cell, 0.8), BiomeKind::Glacier);
+
+        // Mountain at high elevation but not glacial (warm up the cell).
+        let mut warm = cell.clone();
+        warm.temp_c_fp = 10_000;
+        assert_eq!(classify_weather_cell(&warm, 0.7), BiomeKind::Mountain);
+
+        // Alpine at high elevation + sub-freezing but above glacial threshold.
+        assert_eq!(classify_weather_cell(&cell, 0.7), BiomeKind::Alpine);
+    }
+
+    /// Hot + wet WeatherCell → Rainforest (Whittaker hot/wet band survives the
+    /// fixed-point divide by 1 000 without off-by-one errors at the boundary).
+    #[test]
+    fn classify_weather_cell_hot_wet_is_rainforest() {
+        let cell = crate::weather::WeatherCell {
+            region_id: 3,
+            latitude_fp: 0,
+            season: crate::weather::SeasonKind::Summer,
+            kind: crate::weather::WeatherKind::Rain,
+            temp_c_fp: 28_000,     // 28.0 °C
+            precip_mm_fp: 300_000, // 300 mm/year
+            storm_intensity_fp: 0,
+        };
+        assert_eq!(classify_weather_cell(&cell, 0.3), BiomeKind::Rainforest);
+    }
+
+    /// Temperate + very-wet WeatherCell → Wetland.
+    #[test]
+    fn classify_weather_cell_temperate_wet_is_wetland() {
+        let cell = crate::weather::WeatherCell {
+            region_id: 5,
+            latitude_fp: 25_000,
+            season: crate::weather::SeasonKind::Spring,
+            kind: crate::weather::WeatherKind::Rain,
+            temp_c_fp: 12_000,     // 12 °C
+            precip_mm_fp: 200_000, // 200 mm/year
+            storm_intensity_fp: 1_000,
+        };
+        assert_eq!(classify_weather_cell(&cell, 0.2), BiomeKind::Wetland);
+    }
+
+    /// Round-trip via a real `compute_weather` snapshot: every cell of an
+    /// earthlike climate vector classifies to one of the canonical biome
+    /// archetypes — never panics, never returns an out-of-range enum value.
+    /// This is the integration test that exercises the weather→biome terrain
+    /// pipeline end-to-end.
+    #[test]
+    fn classify_weather_cell_end_to_end_with_compute_weather() {
+        let (planet, moon) = defaults_earthlike();
+        let climate = crate::compute_climate(123_456, &planet, &moon);
+        let cells = crate::compute_weather(&climate, 123_456, 16);
+
+        // Sweep a coarse normalised elevation grid across all 16 cells.
+        for elev_idx in 0..=10 {
+            let elevation = elev_idx as f32 / 10.0; // 0.0 .. 1.0
+            for cell in &cells {
+                let biome = classify_weather_cell(cell, elevation);
+                // Result must always be one of the defined BiomeKind variants.
+                // We assert this by checking against itself + Debug formatting,
+                // since `BiomeKind` is `Copy` and has no "invalid" sentinel.
+                let debug = format!("{biome:?}");
+                assert!(
+                    !debug.is_empty(),
+                    "classify_weather_cell returned an invalid biome"
+                );
+            }
+        }
+    }
+
+    // ── FR-CIV-CLIMATE: Climate Drift tests ──────────────────────────────────
+
+    /// FR-CIV-CLIMATE drift is deterministic: same seed + years = same output.
+    #[test]
+    fn compute_drift_is_deterministic() {
+        let a = compute_drift(42, 100, 10, 5);
+        let b = compute_drift(42, 100, 10, 5);
+        assert_eq!(a, b);
+    }
+
+    /// FR-CIV-CLIMATE drift with zero years = zero delta (baseline unchanged).
+    #[test]
+    fn zero_years_produces_no_drift() {
+        let drift = compute_drift(7, 0, 20, 10);
+        assert_eq!(drift, ClimateDrift::NONE);
+    }
+
+    /// FR-CIV-CLIMATE drift shifts biomes over long runs.
+    /// A hot/dry trend applied for enough years should shift a Plains biome
+    /// toward Desert (temperature rises, moisture drops).
+    #[test]
+    fn climate_drift_shifts_biome_over_long_run() {
+        // Start: temperate plains (15 °C, 60 mm) → Forest under classify_biome
+        let elevation = 0.3_f32;
+        let base_temp = 15.0_f32;
+        let base_moisture = 60.0_f32;
+
+        let no_drift = ClimateDrift::NONE;
+        let initial_biome = no_drift.classify_with_drift(elevation, base_temp, base_moisture);
+        assert_eq!(initial_biome, BiomeKind::Forest);
+
+        // After 200 years of warming (+30 °C) + strong drying (-50 mm):
+        // effective temp ≈ 45 °C, moisture ≈ 10 mm → Desert
+        let long_drift = compute_drift(0, 200, 150, 250); // 150 fp/yr * 200 = 30_000 fp (30°C)
+        let shifted_biome = long_drift.classify_with_drift(elevation, base_temp, base_moisture);
+        assert_ne!(
+            shifted_biome, initial_biome,
+            "200 years of warming/drying must shift the biome"
+        );
+        assert_eq!(
+            shifted_biome,
+            BiomeKind::Desert,
+            "extreme warming+drying at mid-elevation must produce Desert"
+        );
+    }
+
+    /// FR-CIV-CLIMATE: ClimateDrift::advance accumulates correctly.
+    #[test]
+    fn drift_advance_accumulates() {
+        let mut drift = ClimateDrift::NONE;
+        for _ in 0..10 {
+            drift = drift.advance(100, 0); // +0.1 °C per step
+        }
+        assert_eq!(drift.temp_delta_fp, 1_000); // 10 * 100 = 1000 fp = 1.0 °C
+    }
+
+    /// FR-CIV-CLIMATE: Different seeds produce different drift directions.
+    #[test]
+    fn different_seeds_produce_different_drift_directions() {
+        let even_seed = compute_drift(0, 50, 100, 50);
+        let odd_seed = compute_drift(1, 50, 100, 50);
+        // Even seed: temp_sign=+1; odd seed: temp_sign=-1
+        assert!(even_seed.temp_delta_fp > 0);
+        assert!(odd_seed.temp_delta_fp < 0);
     }
 }

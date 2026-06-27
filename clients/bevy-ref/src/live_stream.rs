@@ -12,29 +12,27 @@ use bevy::text::{TextColor, TextFont};
 use civ_protocol_3d::{
     agent_world_translation, map_build_provenance, AgentAppearanceFrame, BattleEvent3d,
     BirthEvent3d, BuildingDiffFrame, BuildingGraph, BuildingKind3d, BuildingProvenance,
-    CivilianStateEntry, CivilianStateFrame, ClimateFrame, DeathEvent3d, DisasterEvent3d,
-    EventFeedMessage3d, FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame,
-    WorldXZ,
+    CivilianStateEntry, CivilianStateFrame, DeathEvent3d, DisasterEvent3d, EventFeedMessage3d,
+    FacadeStyle, FactionStateFrame, ParcelKind, TechEvent3d, VoxelDeltaFrame, WorldXZ,
 };
 use civ_voxel::{ChunkId, ChunkView, CubicMesher, LodLevel, MaterialId};
 
 use crate::bevy_render::{apply_chunk_material, mesh_buffer_to_bevy};
+use crate::frame_budget::{scaled_cull_distance, scaled_mesh_lod_distance, GpuQualityMode};
 use crate::game_ui::civilian_display_name;
 use crate::live_ground::{live_ground_y, ChunkVoxelCache};
-use crate::ws_client::WsClient;
 use crate::{
     agent_color_from_id, agent_scale_multiplier, chunk_distance_from_camera, decode_chunk_id,
     mesh_lod_level, should_render_chunk, DebugRender, LiveEntityKind, SelectedLiveEntity,
     AGENT_MARKER_DEPTH, AGENT_MARKER_HEIGHT, AGENT_MARKER_WIDTH,
 };
+use crate::ws_client::WsClient;
 
 /// Bevy resource wrapping a [`WsClient`] so egui plugins can send JSON-RPC calls
-/// to `civ-server` without taking a direct dependency on the transport layer.
-/// The `civ-bevy-window` binary inserts a concrete instance at startup; tests
-/// and headless binaries may substitute a fake.
+/// to `civ-server` without depending on the window binary crate.
 #[derive(Resource, Clone)]
 pub struct LiveBridge {
-    /// The shared WebSocket client used for live JSON-RPC + frame traffic.
+    /// Shared WebSocket client for live JSON-RPC + frame traffic.
     pub client: WsClient,
 }
 
@@ -42,150 +40,6 @@ pub struct LiveBridge {
 pub const LIVE_CHUNK_EDGE: usize = 16;
 /// Default chunk albedo for streamed meshes.
 pub const LIVE_CHUNK_BASE_COLOR: [f32; 3] = [0.72, 0.69, 0.62];
-
-/// Per-region weather kind observed in the latest `Frame3d::Climate`.
-/// Tracked as a flat `u8` tag mirroring the well-known set in `civ_planet::WeatherKind`
-/// (Clear=0, Cloudy=1, Rain=2, Storm=3, Snow=4, Sandstorm=5, Fog=6) so we don't
-/// pull in a transitive dep just to label the client sky tint (FR-CLIENT-render).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct WeatherKindSnapshot(pub u8);
-
-/// Flat copy of `civ_planet::Climate` for the renderer's sky/lighting pass.
-/// Only the four phase floats + tick + tide offset are needed downstream;
-/// carrying a `ClimateFrame` here would force the client crate to depend on
-/// `civ-planet` just for the type alias (FR-CLIENT-render).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ClimateSnapshot {
-    /// Server tick this climate frame belongs to.
-    pub tick: u64,
-    /// Sun position on the 0..1 daily cycle (0 = midnight, 0.5 = noon).
-    pub day_phase: f32,
-    /// Position on the 0..1 yearly cycle (used for seasonal tint blending).
-    pub year_phase: f32,
-    /// Moon phase in 0..1 (e.g. for night sky ambient).
-    pub moon_phase: f32,
-    /// Tide offset, useful for shoreline shoreline vertex animation hooks.
-    pub tide_offset: f32,
-}
-
-impl ClimateSnapshot {
-    /// `true` when the snapshot's `day_phase` is in the daylight band
-    /// (FR-CLIENT-render). Used by the Bevy presentation system to flip
-    /// `ScenePresentation.is_day` as the planet rotates.
-    ///
-    /// Day band is `[0.20, 0.80]`; outside that (and for non-finite
-    /// phases) the snapshot reads as night. `rem_euclid(1.0)` wraps
-    /// out-of-range phases so the answer stays meaningful for
-    /// server-side overflow.
-    #[must_use]
-    pub fn is_day_band(&self) -> bool {
-        if !self.day_phase.is_finite() {
-            return false;
-        }
-        let p = self.day_phase.rem_euclid(1.0);
-        (0.20..0.80).contains(&p)
-    }
-}
-
-/// Stable biome-to-RGB tint lookup (FR-CLIENT-render).
-/// Maps a small set of `MaterialId` tags to a per-chunk base albedo so that
-/// terrain streaming visibly tracks the underlying material composition
-/// (e.g. a chunk dominated by `SAND` reads warm tan, a chunk dominated by
-/// `SNOW` reads cool white) without making the renderer aware of the full
-/// material registry.
-///
-/// The mapping is intentionally tiny and only covers the visually
-/// distinctive materials the client cares about; anything not listed
-/// resolves to [`LIVE_CHUNK_BASE_COLOR`].
-#[must_use]
-pub fn material_tint(material: MaterialId) -> [f32; 3] {
-    use civ_voxel::{
-        ASH, BEDROCK, BRICK, CLAY, COAL, CRYSTAL, DIRT, FIRE, GLASS, GRANITE, GRAVEL, ICE, MOSS,
-        MUD, ORE, PACKED_DIRT, PLANT, SALT, SAND, SMOKE, SNOW, STONE, WATER, WOOD,
-    };
-    let id = material.0;
-    match id {
-        x if x == SAND.0 => [0.92, 0.83, 0.58],
-        x if x == SNOW.0 => [0.95, 0.97, 1.00],
-        x if x == ICE.0 => [0.78, 0.88, 0.95],
-        x if x == DIRT.0 => [0.55, 0.42, 0.30],
-        x if x == PACKED_DIRT.0 => [0.50, 0.38, 0.27],
-        x if x == CLAY.0 => [0.72, 0.50, 0.40],
-        x if x == MUD.0 => [0.42, 0.30, 0.20],
-        x if x == GRAVEL.0 => [0.62, 0.58, 0.54],
-        x if x == STONE.0 => [0.55, 0.55, 0.55],
-        x if x == GRANITE.0 => [0.60, 0.58, 0.56],
-        x if x == BEDROCK.0 => [0.32, 0.30, 0.30],
-        x if x == BRICK.0 => [0.68, 0.30, 0.22],
-        x if x == WOOD.0 => [0.55, 0.36, 0.18],
-        x if x == COAL.0 => [0.18, 0.18, 0.20],
-        x if x == ORE.0 => [0.78, 0.62, 0.28],
-        x if x == CRYSTAL.0 => [0.70, 0.85, 0.95],
-        x if x == GLASS.0 => [0.80, 0.88, 0.92],
-        x if x == WATER.0 => [0.30, 0.50, 0.78],
-        x if x == PLANT.0 => [0.30, 0.55, 0.22],
-        x if x == MOSS.0 => [0.34, 0.52, 0.24],
-        x if x == SALT.0 => [0.92, 0.90, 0.82],
-        x if x == ASH.0 => [0.55, 0.52, 0.50],
-        x if x == FIRE.0 => [0.95, 0.45, 0.10],
-        x if x == SMOKE.0 => [0.45, 0.42, 0.42],
-        _ => LIVE_CHUNK_BASE_COLOR,
-    }
-}
-
-/// Computes a stable biome tint for a chunk by counting the most
-/// common non-air material id in the voxel payload (FR-CLIENT-render).
-///
-/// `voxels` is expected to be the flat
-/// `LIVE_CHUNK_EDGE^3` slice produced by [`CubicMesher`]. Air and the
-/// non-renderable fluid/material ids are filtered out so that a chunk
-/// whose bulk is empty space falls back to [`LIVE_CHUNK_BASE_COLOR`]
-/// instead of "air" (which is invisible anyway).
-///
-/// Returns `None` when the chunk has no renderable material — callers
-/// should fall back to [`LIVE_CHUNK_BASE_COLOR`].
-#[must_use]
-pub fn chunk_biome_tint(voxels: &[MaterialId]) -> Option<[f32; 3]> {
-    use civ_voxel::{AIR, METHANE, PLASMA, SMOKE, STEAM, TOXIC_GAS};
-    use std::collections::HashMap;
-    let mut counts: HashMap<u8, u32> = HashMap::new();
-    for v in voxels {
-        if v.0 == AIR.0
-            || v.0 == SMOKE.0
-            || v.0 == STEAM.0
-            || v.0 == METHANE.0
-            || v.0 == TOXIC_GAS.0
-            || v.0 == PLASMA.0
-        {
-            continue;
-        }
-        *counts.entry(v.0).or_insert(0) += 1;
-    }
-    let (id, _) = counts.into_iter().max_by_key(|(_, c)| *c)?;
-    Some(material_tint(MaterialId(id)))
-}
-
-/// Per-agent distance LOD scale (FR-CLIENT-render). The wire agent scale
-/// is further attenuated by a smooth function of camera distance so that
-/// far-away agents visually compress into the terrain instead of
-/// punching through it. Returns at least `min_scale` and at most
-/// `max_scale` (defaults match the existing `agent_scale_multiplier`
-/// envelope so HUD spacing is unaffected).
-#[must_use]
-pub fn agent_distance_lod(
-    wire_scale: f32,
-    distance: f32,
-    min_scale: f32,
-    max_scale: f32,
-) -> f32 {
-    if !wire_scale.is_finite() || !distance.is_finite() {
-        return min_scale;
-    }
-    // `1 / (1 + d*k)` falls off gently: ~1.0 at d=0, ~0.5 at d=10, ~0.25 at d=30.
-    let falloff = 1.0 / (1.0 + distance.max(0.0) * 0.05);
-    let s = wire_scale * falloff;
-    s.clamp(min_scale, max_scale)
-}
 
 /// Vertical offset for streamed agent markers above ground.
 pub const AGENT_GROUND_Y: f32 = 0.8;
@@ -201,8 +55,10 @@ pub const AGENT_LABEL_Y_OFFSET: f32 = 1.05;
 pub struct StreamCulling {
     /// Camera position in world space.
     pub eye: [f32; 3],
-    /// Maximum render distance in world units.
+    /// Maximum render distance in world units (already scaled for [`gpu_quality`]).
     pub max_distance: f32,
+    /// Active GPU quality recovery mode for chunk LOD selection.
+    pub gpu_quality: GpuQualityMode,
 }
 
 /// Marker for a streamed voxel chunk entity.
@@ -261,11 +117,6 @@ pub struct LiveGraphParcelTag {
 #[derive(Resource)]
 pub struct LiveStreamScene {
     pub chunks: HashMap<u64, Entity>,
-    /// Water surface companion entities keyed by raw chunk id (FR-CLIENT-render).
-    /// The water entity is a transparent quad that follows the parent chunk
-    /// transform and is repositioned every snapshot delta so the water surface
-    /// visibly tracks the underlying voxel stream.
-    pub water_entities: HashMap<u64, Entity>,
     pub chunk_voxels: ChunkVoxelCache,
     pub agents: HashMap<u64, Entity>,
     pub buildings: HashMap<u64, Entity>,
@@ -286,28 +137,12 @@ pub struct LiveStreamScene {
     pub faction_era: u16,
     /// Civilian count per faction id from the latest FactionState frame (FR-CIV-PROTO-001).
     pub population_by_faction: std::collections::BTreeMap<u32, u32>,
-    /// Latest climate snapshot from `Frame3d::Climate` (FR-CLIENT-render).
-    /// Driven by the planetary sim and read by client-side lighting/sky systems.
-    /// Storing a flat copy (instead of [`civ_protocol_3d::ClimateFrame`])
-    /// keeps `civ-bevy-ref` free of a `civ-planet` dep — the renderer only
-    /// needs the four phase floats + tide offset for sky/sun blending.
-    pub latest_climate: Option<ClimateSnapshot>,
-    /// Last tick at which a climate frame was observed (matches
-    /// `latest_climate.as_ref().map(|f| f.tick)`; tracked explicitly so the
-    /// day/night HUD + skybox blend systems don't need to clone the frame).
-    pub latest_climate_tick: Option<u64>,
-    /// Last observed per-region weather grid (FR-CLIENT-render). Kept as the
-    /// raw `WeatherCell` list so the renderer can drive per-region particle
-    /// FX / sky tinting without re-asking the server.
-    #[cfg_attr(not(feature = "bevy"), allow(dead_code))]
-    pub latest_weather_kinds: Vec<WeatherKindSnapshot>,
 }
 
 impl Default for LiveStreamScene {
     fn default() -> Self {
         Self {
             chunks: HashMap::default(),
-            water_entities: HashMap::default(),
             chunk_voxels: ChunkVoxelCache::default(),
             agents: HashMap::default(),
             buildings: HashMap::default(),
@@ -325,9 +160,6 @@ impl Default for LiveStreamScene {
             faction_entries: Vec::new(),
             faction_era: 0,
             population_by_faction: std::collections::BTreeMap::new(),
-            latest_climate: None,
-            latest_climate_tick: None,
-            latest_weather_kinds: Vec::new(),
         }
     }
 }
@@ -357,51 +189,6 @@ pub fn apply_faction_state_frame(scene: &mut LiveStreamScene, frame: FactionStat
         .factions
         .extend(scene.faction_entries.iter().map(|entry| entry.id));
     scene.population_by_faction = frame.population_by_faction;
-}
-
-/// Records a `Frame3d::Climate` snapshot into [`LiveStreamScene`]
-/// (FR-CLIENT-render). Flattens the wire `ClimateFrame` into a
-/// [`ClimateSnapshot`] + per-region `WeatherKind` list so the renderer can
-/// drive sky/sun/ambient tinting without touching `civ-planet` directly.
-///
-/// Stale frames (older than the last-seen tick) are dropped — climate frames
-/// arrive at a much lower cadence than voxel deltas, so this is the only
-/// ordering check we need to prevent the day/night HUD from flickering
-/// backwards on retransmits.
-pub fn apply_climate_frame(scene: &mut LiveStreamScene, frame: ClimateFrame) {
-    let new_tick = frame.climate.tick;
-    if let Some(prev) = scene.latest_climate_tick {
-        if new_tick < prev {
-            return;
-        }
-    }
-    let snapshot = ClimateSnapshot {
-        tick: frame.climate.tick,
-        day_phase: frame.climate.day_phase,
-        year_phase: frame.climate.year_phase,
-        moon_phase: frame.climate.moon_phase,
-        tide_offset: frame.climate.tide_offset,
-    };
-    let weather = frame
-        .weather
-        .iter()
-        .map(|cell| WeatherKindSnapshot(cell.kind as u8))
-        .collect();
-    scene.latest_climate = Some(snapshot);
-    scene.latest_climate_tick = Some(snapshot.tick);
-    scene.latest_weather_kinds = weather;
-}
-
-/// Convenience getter used by client render systems (FR-CLIENT-render).
-/// Returns the most recent [`ClimateSnapshot`] together with the per-region
-/// weather tags, if any frame has been observed.
-#[must_use]
-pub fn latest_climate(
-    scene: &LiveStreamScene,
-) -> Option<(ClimateSnapshot, &[WeatherKindSnapshot])> {
-    scene
-        .latest_climate
-        .map(|snap| (snap, scene.latest_weather_kinds.as_slice()))
 }
 
 /// Maps a `FactionState` wire frame into [`DiplomacyState`] for the egui panel.
@@ -478,6 +265,10 @@ pub fn format_live_pick_hud_line(
             .or_else(|| Some(format!("Agent #{}", selected.id))),
         LiveEntityKind::Building => Some(format!("Building #{}", selected.id)),
         LiveEntityKind::GraphParcel => Some(format!("Parcel #{}", selected.id)),
+        LiveEntityKind::VoxelChunk => {
+            let (cx, cy, cz) = crate::decode_chunk_id(civ_voxel::ChunkId(selected.id));
+            Some(format!("Chunk ({cx}, {cy}, {cz})"))
+        }
     }
 }
 
@@ -707,183 +498,50 @@ fn chunk_transform(id: ChunkId) -> Transform {
     )
 }
 
-// ----------------------------------------------------------------------
-// FR-CLIENT-render — water surface companion (FR-CLIENT-render extension)
-// ----------------------------------------------------------------------
-//
-// The voxel delta frame already streams water voxels (MaterialId(1)) inside
-// every chunk payload. The chunk mesher only emits faces between air and
-// solid voxels, so the water surface itself is invisible to the cubic
-// mesher when a water cell is fully bounded by more water above (no solid
-// boundary to expose). To make the streamed world *look* like it has a
-// shoreline we spawn a parallel water-surface quad that:
-//   * shares the parent chunk's transform,
-//   * sits at the topmost water Y for the chunk,
-//   * uses a single shared quad mesh + a stable water material,
-//   * is respawned/repositioned on every snapshot delta via the existing
-//     voxel-delta hook (no separate frame flow, no new poll path).
-//
-// This is purely additive: when the chunk has no water, the water
-// companion is despawned. The chunk mesh path is untouched.
-
-/// Marker component for a water-surface companion entity (FR-CLIENT-render).
-///
-/// Lives alongside the parent chunk's [`LiveChunkTag`] entity in the
-/// scene graph so scene systems can iterate over water companions
-/// (e.g. for HUD counts) by querying the tag without joining on the
-/// chunk transform.
-#[derive(Component)]
-pub struct LiveWaterTag {
-    /// Chunk id whose voxel payload produced this water surface.
-    pub chunk: ChunkId,
-}
-
-/// Single shared water surface mesh + material handle (FR-CLIENT-render).
-///
-/// Bevy `Handle<Mesh>` and `Handle<StandardMaterial>` are interned via
-/// `Arc`; cloning the handle per chunk entity means the GPU keeps one
-/// mesh upload + one material uniform block for every chunk in the
-/// scene. The instancing surface is the same pattern the agent /
-/// building marker meshes already use in [`LiveStreamMeshes`].
-#[derive(Resource, Clone)]
-pub struct LiveWaterMeshes {
-    /// Single shared quad mesh used for every chunk's water surface.
-    pub surface_mesh: Handle<Mesh>,
-    /// Single shared water-tinted material handle.
-    pub surface_material: Handle<StandardMaterial>,
-}
-
-/// Tint applied to streamed water surface (sRGB, FR-CLIENT-render).
-/// Mirrors the `WATER` biome tint from [`material_tint`] so the companion
-/// visually agrees with the chunk's biome-derived albedo.
-pub const WATER_SURFACE_TINT: [f32; 3] = [0.30, 0.50, 0.78];
-/// Alpha for the streamed water surface (semi-transparent over the
-/// chunk mesh). Tuned so the underlying terrain shows through clearly
-/// while still reading as a coherent plane.
-pub const WATER_SURFACE_ALPHA: f32 = 0.62;
-/// Per-chunk surface bias in world units (small lift so the water plane
-/// does not Z-fight with the topmost water voxel face).
-pub const WATER_SURFACE_LIFT: f32 = 0.05;
-
-/// Build the default water surface mesh + material (FR-CLIENT-render).
-/// One quad per chunk keeps the math simple and matches the existing
-/// Bevy mesh-and-material path used by the chunk / agent / building
-/// renderers.
-#[must_use]
-pub fn default_water_meshes(
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-) -> LiveWaterMeshes {
-    let surface_mesh = meshes.add(Mesh::from(
-        bevy::math::primitives::Plane3d::default().mesh().size(
-            LIVE_CHUNK_EDGE as f32,
-            LIVE_CHUNK_EDGE as f32,
-        ),
-    ));
-    let surface_material = materials.add(StandardMaterial {
-        base_color: Color::srgba(
-            WATER_SURFACE_TINT[0],
-            WATER_SURFACE_TINT[1],
-            WATER_SURFACE_TINT[2],
-            WATER_SURFACE_ALPHA,
-        ),
-        perceptual_roughness: 0.35,
-        metallic: 0.0,
-        alpha_mode: AlphaMode::Blend,
-        double_sided: true,
-        ..default()
-    });
-    LiveWaterMeshes {
-        surface_mesh,
-        surface_material,
-    }
-}
-
-/// Returns `true` if any voxel in the chunk payload is water (or salt
-/// water) — used to decide whether the water companion should be
-/// (re)created. Cheap: short-circuits on the first hit.
-#[must_use]
-pub fn chunk_has_water(voxels: &[MaterialId]) -> bool {
-    use civ_voxel::material::{SALT_WATER, WATER};
-    voxels.iter().any(|v| v.0 == WATER.0 || v.0 == SALT_WATER.0)
-}
-
-/// Topmost world-Y of the water column inside the chunk (the Y at which
-/// the surface quad should sit). Returns `None` when the chunk has no
-/// water voxels. Iterates top-down to short-circuit.
-#[must_use]
-pub fn chunk_water_top_y(voxels: &[MaterialId], chunk_origin_y: i32) -> Option<f32> {
-    use civ_voxel::material::{SALT_WATER, WATER};
-    if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
-        return None;
-    }
-    let edge = LIVE_CHUNK_EDGE as usize;
-    for iy in (0..LIVE_CHUNK_EDGE).rev() {
-        for ix in 0..LIVE_CHUNK_EDGE {
-            for iz in 0..LIVE_CHUNK_EDGE {
-                // Canonical voxel layout (matches `voxel_index` in
-                // `live_ground.rs` / `live_stream.rs`): idx = ix + iy * E + iz * E * E.
-                let idx = ix + iy * edge * edge + iz * edge;
-                let v = voxels[idx];
-                if v.0 == WATER.0 || v.0 == SALT_WATER.0 {
-                    return Some(
-                        (chunk_origin_y * LIVE_CHUNK_EDGE as i32 + iy as i32 + 1) as f32
-                            + WATER_SURFACE_LIFT,
-                    );
-                }
-            }
-        }
-    }
-    None
-}
-
-/// Spawn or update the water companion for one chunk (FR-CLIENT-render).
-///
-/// Behaviour matches the chunk entity's lifecycle:
-/// * If the chunk has water voxels, (re)position the surface at the
-///   computed top Y and reuse the existing entity (or spawn a new one).
-/// * If the chunk has no water voxels, despawn the existing water entity
-///   (if any) so the scene reflects the latest snapshot.
-pub fn apply_water_for_chunk(
+/// Re-mesh cached chunks after a local god-tool mutation (client-side preview).
+pub fn remesh_cached_chunks(
     commands: &mut Commands,
     scene: &mut LiveStreamScene,
-    meshes: &LiveWaterMeshes,
-    chunk_id: ChunkId,
-    voxels: &[MaterialId],
+    mesh_assets: &mut Assets<Mesh>,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
 ) {
-    let (cx, cy, cz) = decode_chunk_id(chunk_id);
-    let _ = (cx, cz);
+    use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, WriteSeq};
 
-    if !chunk_has_water(voxels) {
-        if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
-            commands.entity(entity).despawn();
-        }
+    let deltas: Vec<VoxelChunkDelta> = chunk_ids
+        .iter()
+        .filter_map(|chunk_id| {
+            scene
+                .chunk_voxels
+                .get_chunk(*chunk_id)
+                .map(|voxels| VoxelChunkDelta {
+                    event: DirtyChunkEvent {
+                        chunk_id: *chunk_id,
+                        write_seq: WriteSeq(1),
+                    },
+                    voxels: voxels.to_vec(),
+                })
+        })
+        .collect();
+    if deltas.is_empty() {
         return;
     }
-
-    let Some(surface_y) = chunk_water_top_y(voxels, cy) else {
-        return;
-    };
-
-    let chunk_origin = chunk_transform(chunk_id);
-    let transform = Transform::from_xyz(chunk_origin.translation.x, surface_y, chunk_origin.translation.z);
-
-    let entity = *scene
-        .water_entities
-        .entry(chunk_id.0)
-        .or_insert_with(|| {
-            commands
-                .spawn((
-                    LiveWaterTag { chunk: chunk_id },
-                    Transform::default(),
-                ))
-                .id()
-        });
-    commands.entity(entity).insert((
-        Mesh3d(meshes.surface_mesh.clone()),
-        MeshMaterial3d(meshes.surface_material.clone()),
-        transform,
-    ));
+    apply_voxel_delta_frame(
+        commands,
+        scene,
+        mesh_assets,
+        material_assets,
+        culling,
+        debug,
+        VoxelDeltaFrame {
+            tick: 0,
+            deltas,
+        },
+        wireframe_line_color,
+    );
 }
 
 /// Applies a voxel delta frame (caches voxels, meshes in-range chunks).
@@ -920,7 +578,8 @@ pub fn apply_voxel_delta_frame(
         };
         let distance =
             chunk_distance_from_camera(chunk.event.chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
-        let lod = LodLevel(mesh_lod_level(distance));
+        let lod_distance = scaled_mesh_lod_distance(distance, culling.gpu_quality);
+        let lod = LodLevel(mesh_lod_level(lod_distance));
         let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
             continue;
         };
@@ -930,15 +589,9 @@ pub fn apply_voxel_delta_frame(
             metallic: 0.0,
             ..default()
         };
-        // FR-CLIENT-render: pick a biome-derived base color from the chunk's
-        // voxel composition so the streamed mesh visibly tracks the
-        // underlying material (sand reads tan, snow reads cool, etc.).
-        // Falls back to `LIVE_CHUNK_BASE_COLOR` for empty / unmapped chunks.
-        let base_rgb =
-            chunk_biome_tint(&chunk.voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
         apply_chunk_material(
             &mut material,
-            base_rgb,
+            LIVE_CHUNK_BASE_COLOR,
             debug.wireframe,
             Some(0.0),
         );
@@ -978,52 +631,6 @@ pub fn apply_voxel_delta_frame(
     }
 }
 
-/// Applies the water-surface companion updates for one voxel delta frame
-/// (FR-CLIENT-render). This is the additive hook that pairs with
-/// [`apply_voxel_delta_frame`] — callers that want the streamed water
-/// surface to track chunk composition invoke this right after the chunk
-/// mesh update loop returns, sharing the same `delta` payload and Bevy
-/// `Commands` buffer. Behaviour:
-///
-/// * If a chunk delta carries water voxels (or salt-water), spawn (or
-///   reposition) a [`LiveWaterTag`] entity whose `Transform.y` matches
-///   the topmost water Y for that chunk.
-/// * If a chunk delta carries no water voxels but the companion exists
-///   from a previous snapshot, despawn it.
-/// * Chunks skipped by distance culling keep their cached voxels but
-///   their water companion is removed (same lifecycle rule as the chunk
-///   mesh, so the surface never lags behind the camera).
-///
-/// This function is the single per-delta entry point used by the Bevy
-/// frame consumer; it is intentionally not gated by culling so the
-/// surface can be evicted even when the chunk itself would otherwise
-/// re-appear on the next frame.
-pub fn apply_water_deltas_for_frame(
-    commands: &mut Commands,
-    scene: &mut LiveStreamScene,
-    water_meshes: &LiveWaterMeshes,
-    culling_eye: [f32; 3],
-    culling_max_distance: f32,
-    delta: &VoxelDeltaFrame,
-) {
-    for chunk in &delta.deltas {
-        let chunk_id = chunk.event.chunk_id;
-        let in_range = should_render_chunk(chunk_id, culling_eye, culling_max_distance);
-        if !in_range {
-            // Mirror the chunk-entity eviction rule: drop the water
-            // companion even if voxels would otherwise make it visible.
-            if let Some(entity) = scene.water_entities.remove(&chunk_id.0) {
-                commands.entity(entity).despawn();
-            }
-            continue;
-        }
-        if chunk.voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
-            continue;
-        }
-        apply_water_for_chunk(commands, scene, water_meshes, chunk_id, &chunk.voxels);
-    }
-}
-
 /// Applies an agent appearance frame to the live stream scene.
 pub fn apply_agent_appearance_frame(
     commands: &mut Commands,
@@ -1051,58 +658,17 @@ pub fn apply_agent_appearance_frame_with_labels(
     agents: AgentAppearanceFrame,
     labels: AgentLabelConfig,
 ) {
-    apply_agent_appearance_frame_with_labels_and_eye(
-        commands,
-        scene,
-        materials,
-        meshes,
-        agents,
-        labels,
-        None,
-    );
-}
-
-/// Applies an agent appearance frame with optional name labels and a
-/// camera `eye` position (FR-CLIENT-render).
-///
-/// When `camera_eye` is `Some`, the per-agent render scale is further
-/// attenuated by [`agent_distance_lod`] so far-away agents visually
-/// compress into the terrain instead of punching through it. `None`
-/// preserves the original (uniform) marker scale so existing callers
-/// (and the live_scene helper) keep their current behavior.
-pub fn apply_agent_appearance_frame_with_labels_and_eye(
-    commands: &mut Commands,
-    scene: &mut LiveStreamScene,
-    materials: &mut Assets<StandardMaterial>,
-    meshes: &LiveStreamMeshes,
-    agents: AgentAppearanceFrame,
-    labels: AgentLabelConfig,
-    camera_eye: Option<[f32; 3]>,
-) {
     for update in agents.updates {
         let rgb = agent_color_from_id(update.agent_id);
-        let wire_scale = agent_scale_multiplier(update.scale);
+        let scale = agent_scale_multiplier(update.scale);
         let (x, _, z) = agent_world_translation(&update, 0.0);
-        if !x.is_finite() || !z.is_finite() || !wire_scale.is_finite() {
+        if !x.is_finite() || !z.is_finite() || !scale.is_finite() {
             continue;
         }
         let y = live_ground_y(&scene.chunk_voxels, x, z, AGENT_GROUND_Y);
         if !y.is_finite() {
             continue;
         }
-        // FR-CLIENT-render: distance-LOD the agent marker scale when we know
-        // the camera position. Clamp envelope matches the existing
-        // `agent_scale_multiplier` (i.e. no upper bound, lower bound 0.05 so
-        // agents never disappear entirely).
-        let scale = match camera_eye {
-            Some(eye) => {
-                let dx = x - eye[0];
-                let dz = z - eye[2];
-                let d = (dx * dx + dz * dz).sqrt();
-                agent_distance_lod(wire_scale, d, 0.05, f32::MAX)
-            }
-            None => wire_scale,
-        };
         let transform = Transform::from_xyz(x, y, z).with_scale(Vec3::splat(scale));
 
         let material_handle = scene
@@ -1167,7 +733,7 @@ pub fn sync_agent_labels_from_civilians(
             .get(&agent.id)
             .map(civilian_display_name)
             .unwrap_or_else(|| format!("#{}", agent.id));
-        for &child in children.iter() {
+        for child in children.iter() {
             let Ok(mut text) = labels.get_mut(child) else {
                 continue;
             };
@@ -1416,7 +982,6 @@ mod tests {
     use crate::encode_chunk_id;
     use crate::live_ground::{live_ground_y, live_voxel_surface_y, ChunkVoxelCache};
     use civ_protocol_3d::{DirtyChunkEvent, VoxelChunkDelta, VoxelDeltaFrame, WriteSeq};
-    use civ_voxel::material::WATER;
     use civ_voxel::MaterialId;
 
     const CHUNK_VOXELS: usize = LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE;
@@ -1427,7 +992,7 @@ mod tests {
 
     fn solid_chunk_voxels() -> Vec<MaterialId> {
         let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(4, 3, 5)] = WATER;
+        voxels[voxel_index(4, 3, 5)] = MaterialId(1);
         voxels
     }
 
@@ -1559,6 +1124,7 @@ mod tests {
         let culling = StreamCulling {
             eye: [8.0, 8.0, 8.0],
             max_distance: 512.0,
+            gpu_quality: GpuQualityMode::Full,
         };
 
         let mut scene = LiveStreamScene::default();
@@ -1576,146 +1142,6 @@ mod tests {
 
         assert_eq!(scene.chunks.len(), 1);
         assert!(scene.chunk_voxels.chunks().contains_key(&chunk_id.0));
-    }
-
-    /// FR-CLIENT-render: detects water voxels in a chunk payload.
-    #[test]
-    fn chunk_has_water_detects_water_material() {
-        use civ_voxel::material::SALT_WATER;
-        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        assert!(!chunk_has_water(&voxels));
-
-        voxels[voxel_index(2, 0, 2)] = WATER;
-        assert!(chunk_has_water(&voxels));
-
-        voxels[voxel_index(5, 4, 1)] = SALT_WATER;
-        assert!(chunk_has_water(&voxels));
-    }
-
-    /// FR-CLIENT-render: surface Y is `cy*E + iy_top + 1 + LIFT`.
-    #[test]
-    fn chunk_water_top_y_matches_topmost_water_cell() {
-        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        // Place water at iy=7 (not the top, so the function has to iterate down).
-        voxels[voxel_index(0, 7, 0)] = WATER;
-        // Topmost water at iy=14.
-        voxels[voxel_index(3, 14, 5)] = WATER;
-        let top = chunk_water_top_y(&voxels, 0).expect("water present");
-        let expected = (0 * LIVE_CHUNK_EDGE as i32 + 14 + 1) as f32 + WATER_SURFACE_LIFT;
-        assert!((top - expected).abs() < 1e-4);
-    }
-
-    /// FR-CLIENT-render: `None` when no water is present.
-    #[test]
-    fn chunk_water_top_y_none_for_dry_chunk() {
-        let voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        assert!(chunk_water_top_y(&voxels, 5).is_none());
-    }
-
-    /// FR-CLIENT-render: spawning and re-applying reuses one entity.
-    #[test]
-    fn apply_water_for_chunk_reuses_entity_on_repeat_delta() {
-        use bevy::prelude::*;
-
-        let mut world = World::new();
-        let mut mesh_assets = Assets::<Mesh>::default();
-        let mut material_assets = Assets::<StandardMaterial>::default();
-        let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
-
-        let chunk_id = encode_chunk_id(0, 0, 0);
-        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(0, 8, 0)] = WATER;
-
-        let mut scene = LiveStreamScene::default();
-        let mut commands = world.commands();
-        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &voxels);
-        let first_entity = *scene
-            .water_entities
-            .get(&chunk_id.0)
-            .expect("water companion spawned");
-
-        // Apply again — should reuse the same entity, not spawn a new one.
-        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &voxels);
-        let second_entity = *scene
-            .water_entities
-            .get(&chunk_id.0)
-            .expect("water companion retained");
-        assert_eq!(first_entity, second_entity);
-        assert_eq!(scene.water_entities.len(), 1);
-    }
-
-    /// FR-CLIENT-render: drying the chunk despawns the companion.
-    #[test]
-    fn apply_water_for_chunk_despawns_when_voxels_dry() {
-        use bevy::prelude::*;
-
-        let mut world = World::new();
-        let mut mesh_assets = Assets::<Mesh>::default();
-        let mut material_assets = Assets::<StandardMaterial>::default();
-        let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
-
-        let chunk_id = encode_chunk_id(0, 0, 0);
-        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(0, 8, 0)] = WATER;
-
-        let mut scene = LiveStreamScene::default();
-        let mut commands = world.commands();
-        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &voxels);
-        assert!(scene.water_entities.contains_key(&chunk_id.0));
-
-        let dry = vec![MaterialId(0); CHUNK_VOXELS];
-        apply_water_for_chunk(&mut commands, &mut scene, &water_meshes, chunk_id, &dry);
-        assert!(!scene.water_entities.contains_key(&chunk_id.0));
-    }
-
-    /// FR-CLIENT-render: out-of-range chunks lose their companion.
-    #[test]
-    fn apply_water_deltas_for_frame_drops_out_of_range_companion() {
-        use bevy::prelude::*;
-
-        let mut world = World::new();
-        let mut mesh_assets = Assets::<Mesh>::default();
-        let mut material_assets = Assets::<StandardMaterial>::default();
-        let water_meshes = default_water_meshes(&mut mesh_assets, &mut material_assets);
-
-        let chunk_id = encode_chunk_id(2048, 0, 0); // far from eye
-        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        voxels[voxel_index(0, 5, 0)] = WATER;
-
-        let delta = VoxelDeltaFrame {
-            tick: 1,
-            deltas: vec![VoxelChunkDelta {
-                event: DirtyChunkEvent {
-                    chunk_id,
-                    write_seq: WriteSeq(1),
-                },
-                voxels: voxels.clone(),
-            }],
-        };
-
-        let mut scene = LiveStreamScene::default();
-        let mut commands = world.commands();
-        // First spawn one (in range).
-        apply_water_deltas_for_frame(
-            &mut commands,
-            &mut scene,
-            &water_meshes,
-            [0.0, 0.0, 0.0],
-            512.0,
-            &delta,
-        );
-        assert!(scene.water_entities.contains_key(&chunk_id.0));
-
-        // Then move eye away so chunk is out of range.
-        apply_water_deltas_for_frame(
-            &mut commands,
-            &mut scene,
-            &water_meshes,
-            [0.0, 0.0, 0.0],
-            0.5, // tiny max_distance evicts everything far from origin
-            &delta,
-        );
-        assert!(!scene.water_entities.contains_key(&chunk_id.0));
     }
 
     #[test]
@@ -2118,6 +1544,7 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
+                population_by_faction: Default::default(),
             },
         );
 
@@ -2146,6 +1573,7 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
+            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,
@@ -2155,101 +1583,5 @@ mod tests {
         assert!(diplomacy.open);
         assert_eq!(diplomacy.factions.len(), 1);
         assert_eq!(diplomacy.factions[0].name, "Junta #1");
-    }
-
-    // ---- FR-CLIENT-render ----------------------------------------------------
-
-    #[test]
-    fn apply_climate_frame_records_snapshot_and_drops_stale() {
-        use civ_planet::{Climate, SeasonKind, WeatherCell, WeatherKind};
-        let mut scene = LiveStreamScene::default();
-        let frame1 = ClimateFrame {
-            tick: 10,
-            climate: Climate {
-                tick: 10,
-                day_phase: 0.25,
-                year_phase: 0.5,
-                moon_phase: 0.1,
-                tide_offset: 0.0,
-            },
-            weather: vec![WeatherCell {
-                region_id: 0,
-                latitude_fp: 0,
-                season: SeasonKind::Spring,
-                kind: WeatherKind::Clear,
-                temp_c_fp: 20,
-                precip_mm_fp: 0,
-                storm_intensity_fp: 0,
-            }],
-        };
-        apply_climate_frame(&mut scene, frame1);
-        let (snap, weather) = latest_climate(&scene).expect("climate recorded");
-        assert_eq!(snap.tick, 10);
-        assert_eq!(snap.day_phase, 0.25);
-        assert_eq!(weather.len(), 1);
-
-        // Stale frame (older tick) must be a no-op.
-        let stale = ClimateFrame {
-            tick: 5,
-            climate: Climate {
-                tick: 5,
-                day_phase: 0.99,
-                year_phase: 0.99,
-                moon_phase: 0.99,
-                tide_offset: 0.0,
-            },
-            weather: vec![],
-        };
-        apply_climate_frame(&mut scene, stale);
-        let (snap, _) = latest_climate(&scene).expect("still recorded");
-        assert_eq!(snap.tick, 10, "stale frame must not overwrite");
-        assert_eq!(snap.day_phase, 0.25);
-    }
-
-    #[test]
-    fn chunk_biome_tint_picks_dominant_solid_material() {
-        use civ_voxel::{GRANITE, SAND, SNOW};
-        let mut voxels = vec![MaterialId(0); CHUNK_VOXELS];
-        // Sand fills ~80% of the chunk.
-        for v in voxels.iter_mut().take(CHUNK_VOXELS * 4 / 5) {
-            *v = SAND;
-        }
-        // Granite flecks.
-        voxels[10] = GRANITE;
-        voxels[20] = GRANITE;
-        // Snow top crust.
-        for x in 0..LIVE_CHUNK_EDGE {
-            for z in 0..LIVE_CHUNK_EDGE {
-                voxels[voxel_index(x, LIVE_CHUNK_EDGE - 1, z)] = SNOW;
-            }
-        }
-        let tint = chunk_biome_tint(&voxels).expect("has renderable material");
-        // Sand tint is the dominant material by count.
-        let sand = material_tint(SAND);
-        assert_eq!(tint, sand);
-
-        // All-air chunk returns None so callers fall back to base color.
-        let air = vec![MaterialId(0); CHUNK_VOXELS];
-        assert!(chunk_biome_tint(&air).is_none());
-    }
-
-    #[test]
-    fn agent_distance_lod_falls_off_gently_and_clamps() {
-        // At distance 0 the wire scale passes through (modulo the gentle
-        // 1/(1 + d*0.05) envelope, ~1.0).
-        let near = agent_distance_lod(1.0, 0.0, 0.05, f32::MAX);
-        assert!((near - 1.0).abs() < 1e-3, "near scale ~1.0, got {near}");
-
-        // At distance 20 the falloff is ~0.5.
-        let mid = agent_distance_lod(1.0, 20.0, 0.05, f32::MAX);
-        assert!(mid > 0.4 && mid < 0.6, "mid scale ~0.5, got {mid}");
-
-        // Lower bound clamps very-far agents to min_scale.
-        let far = agent_distance_lod(1.0, 1_000.0, 0.05, f32::MAX);
-        assert!((far - 0.05).abs() < 1e-4, "far clamps to min, got {far}");
-
-        // Non-finite inputs degrade to min_scale.
-        assert_eq!(agent_distance_lod(f32::NAN, 1.0, 0.05, f32::MAX), 0.05);
-        assert_eq!(agent_distance_lod(1.0, f32::NAN, 0.05, f32::MAX), 0.05);
     }
 }

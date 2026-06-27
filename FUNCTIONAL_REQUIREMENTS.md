@@ -490,7 +490,6 @@
 - **FR-CIV-AUDIO-006** — v1 SHALL ship four material archetype instruments (metal/wood/hide/reed) with spatial kira playback.
 - **FR-CIV-AUDIO-007** — Mix tree SHALL expose four duckable buses per `docs/design/audio-direction.md` (ambient/score/sfx/ui).
 - **FR-CIV-AUDIO-008** — Missing audio assets SHALL warn once and play silence without crashing (locked invariant).
-- **FR-CIV-AUDIO-wire** — Per-tick substrate events SHALL be translated into `civ-audio` `SfxTrigger`s inside the engine's `phase_audio`, surfaced on the JSON-RPC `sim.snapshot.audio_events` field and the WebSocket tick broadcast, and parsed by clients (Bevy, web) into one-shot SFX. Disaster / combat / construction → trigger mapping; no synthesis in the engine.
 
 ### FR-CIV-LEGENDS — History, rumor drift, cultural register (`crates/legends`)
 

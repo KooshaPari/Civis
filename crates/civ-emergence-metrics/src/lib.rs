@@ -47,19 +47,15 @@
 #![warn(missing_docs)]
 
 pub mod branching;
-pub mod criticality;
 pub mod dashboard;
 pub mod mutual_information;
 pub mod power_law;
 pub mod shannon;
-pub mod sample_snapshot;
 pub mod structure;
 
 pub use mutual_information::{
     mutual_information_bits, mutual_information_normalised, JointHistogram,
 };
-
-pub use criticality::{criticality_indicator, CriticalityBands, CriticalityInputs};
 
 /// Marker version of this crate's public schema. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.5.0-power-law-alpha";

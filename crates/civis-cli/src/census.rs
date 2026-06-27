@@ -295,6 +295,11 @@ mod tests {
             connection_role: None,
             saves_dir: None,
             emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_fields: None,
+            last_tick_ms: 0.0,
         };
         let response = dispatch_sim_status_for_test(&ctx);
         let result = validate_sim_status(&response).expect("valid");
@@ -314,6 +319,11 @@ mod tests {
             connection_role: None,
             saves_dir: None,
             emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_fields: None,
+            last_tick_ms: 0.0,
         };
         let response = dispatch_sim_status_for_test(&ctx);
         let result = validate_sim_status(&response).expect("valid");
@@ -359,6 +369,11 @@ mod tests {
             connection_role: None,
             saves_dir: None,
             emergence: None,
+            legends: None,
+            researched: vec![],
+            in_progress_tech: None,
+            outcome_fields: None,
+            last_tick_ms: 0.0,
         };
         let plan = jsonrpc::dispatch_request(
             JsonRpcRequest {

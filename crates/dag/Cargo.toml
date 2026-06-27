@@ -1,0 +1,34 @@
+[package]
+name = "civ-dag"
+description = "Master-DAG substrate for the Civis godgame — parses CIVIS_GAME_DAG.md, plans waves, dispatches parallel task agents, renders sponsor reports"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[features]
+# Default: pure library. `cli` activates the `civ-dag` binary entry point.
+default = []
+cli = []
+
+[lib]
+name = "civ_dag"
+path = "src/lib.rs"
+
+[[bin]]
+name = "civ-dag"
+path = "src/bin/civ-dag.rs"
+required-features = ["cli"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
+async-trait = "0.1"
+
+[dev-dependencies]
+tempfile = "3"

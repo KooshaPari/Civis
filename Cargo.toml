@@ -24,8 +24,8 @@ harness = false
 members = [
   ".",
   "crates/engine",
+  "crates/dag",
   "crates/server",
-  "crates/voxel",
   "crates/voxel-bridge",
   "crates/build",
   "crates/genetics",
@@ -55,6 +55,7 @@ members = [
   "crates/physics-substrate",
   "crates/audio",
   "crates/holocron",
+  "crates/i18n",
   "clients/bevy-ref",
   # "clients/fyrox-ref" - excluded until fyrox 1.x API is wired (see docs/research/fyrox-evaluation.md)
 ]

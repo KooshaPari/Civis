@@ -24,6 +24,8 @@ pub enum SpawnTool {
     Terraform,
     /// Remove the entity nearest the clicked point.
     Destroy,
+    /// Arm the material-paint brush for voxel surface painting.
+    PaintMaterial,
 }
 
 /// Currently active tool.
@@ -277,6 +279,7 @@ fn handle_spawn_tool_clicks(
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }
+        SpawnTool::PaintMaterial => {}
     }
 }
 

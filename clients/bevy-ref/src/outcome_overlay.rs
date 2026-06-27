@@ -76,7 +76,7 @@ fn draw_outcome_overlay(
                         .fill(egui::Color32::from_rgba_unmultiplied(9, 10, 12, 240))
                         .stroke(egui::Stroke::new(1.5, header_color))
                         .inner_margin(egui::Margin::same(40))
-                        .rounding(egui::Rounding::same(8.0))
+                        .rounding(egui::Rounding::same(8_u8))
                         .show(ui, |ui| {
                             ui.set_max_width(500.0);
                             ui.spacing_mut().item_spacing.y = 16.0;

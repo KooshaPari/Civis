@@ -209,7 +209,7 @@ fn sync_live_game_ui(
     } else {
         tick.to_string()
     };
-    snapshot.set_sim_state(tick, population, factions, era, 1);
+    snapshot.set_sim_state(tick, population, factions, era, 1.0_f32);
     snapshot.live_hud_overlay = Some(hud.format_overlay());
 }
 

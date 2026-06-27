@@ -136,6 +136,12 @@ pub mod hud_panels;
 #[cfg(feature = "bevy")]
 pub use hud_panels::HudPanelsPlugin;
 
+// These modules self-gate via inner #![cfg(feature = "bevy")] / #![cfg(all(...))]
+pub mod disaster_tools;
+pub mod material_brush_ui;
+pub mod notifications;
+pub mod terraform_brush;
+
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,
 };

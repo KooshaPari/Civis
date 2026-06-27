@@ -15,12 +15,20 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::stocks::{deficit, surplus, Good};
+use crate::trade_routes::{Settlement, SettlementId};
+
 /// Default clearing price (cents) for goods inserted on first sighting.
 pub const DEFAULT_PRICE_CENTS: i64 = 1_000;
 /// Maximum absolute price change per `apply_pressure` call, in cents.
 pub const MAX_PRESSURE_DELTA_CENTS: i64 = 100;
 /// Minimum a price can ever be after `apply_pressure` (cents).
 pub const MIN_PRICE_CENTS: i64 = 1;
+/// Default smoothing factor for FR-CIV-MARKET price updates.
+///
+/// Higher values make price changes smaller per tick while keeping the
+/// signal deterministic and integer-only.
+pub const DEFAULT_SMOOTHING_FACTOR: i64 = 8;
 
 /// Per-good clearing prices in fixed-point cents (stub; full clearing in CIV-0100 §3c).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,34 +70,41 @@ impl MarketState {
 
     /// Apply supply/demand pressure to a single good's price.
     ///
-    /// Computes `pressure = (demand - supply) / max(supply, 1)`, clamped to
-    /// `[-1, 1]`, then nudges the price by `pressure * MAX_PRESSURE_DELTA_CENTS`
-    /// (saturating). Goods missing from the price book are seeded at
-    /// [`DEFAULT_PRICE_CENTS`] first (self-healing — engine code can pass new
-    /// good ids without silent failure).
+    /// Computes a deterministic price delta from the demand/supply imbalance,
+    /// then smooths the move by [`DEFAULT_SMOOTHING_FACTOR`]. Goods missing
+    /// from the price book are seeded at [`DEFAULT_PRICE_CENTS`] first
+    /// (self-healing — engine code can pass new good ids without silent
+    /// failure).
     ///
     /// Returns the new price in cents.
     pub fn apply_pressure(&mut self, good: &str, supply: i64, demand: i64) -> i64 {
+        self.apply_pressure_with_smoothing(good, supply, demand, DEFAULT_SMOOTHING_FACTOR)
+    }
+
+    /// Apply supply/demand pressure with an explicit smoothing factor.
+    ///
+    /// FR-CIV-MARKET: the price rises when demand exceeds supply and falls on
+    /// surplus. The smoothing factor dampens the per-tick adjustment so the
+    /// update is emergent instead of binary.
+    pub fn apply_pressure_with_smoothing(
+        &mut self,
+        good: &str,
+        supply: i64,
+        demand: i64,
+        smoothing_factor: i64,
+    ) -> i64 {
         let supply = supply.max(0);
         let demand = demand.max(0);
-        let denom = supply.max(1);
-        let raw = demand - supply;
-        // Clamp pressure to [-9, 9] in fixed-point integer math (0.9 max magnitude).
-        let pressure = if raw >= denom {
-            9
-        } else if raw <= -denom {
-            -9
-        } else {
-            // raw in [-denom+1, denom-1]; scale to [-9, 9] keeping sign.
-            let sign = raw.signum();
-            let abs_pressure = (raw.abs() * 10) / denom; // 0..=9 (max = 9 since raw < denom)
-            sign * abs_pressure.clamp(0, 9)
-        };
-        // delta = pressure * (MAX_PRESSURE_DELTA_CENTS / 10). Pressure is in [-9, 9]
-        // so delta is in [-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS].
-        let delta = pressure
-            .saturating_mul(MAX_PRESSURE_DELTA_CENTS / 10)
-            .clamp(-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS);
+        let smoothing_factor = smoothing_factor.max(1);
+        let imbalance = demand - supply;
+        let baseline = supply.saturating_add(demand).max(1);
+        // Integer-only smoothing: move toward the scarcity signal in small
+        // deterministic steps. Positive imbalance raises price, negative
+        // imbalance lowers it.
+        let delta = imbalance
+            .saturating_mul(MAX_PRESSURE_DELTA_CENTS)
+            / baseline.saturating_mul(smoothing_factor);
+        let delta = delta.clamp(-MAX_PRESSURE_DELTA_CENTS, MAX_PRESSURE_DELTA_CENTS);
         let current = self.ensure_good(good);
         let new_price = current.saturating_add(delta).max(MIN_PRICE_CENTS);
         self.prices.insert(good.to_string(), new_price);
@@ -138,6 +153,80 @@ fn deterministic_price_delta(tick: u64, good: &str) -> i64 {
     (mix % 13) as i64 + 1
 }
 
+/// FR-CIV-MARKET: deterministic low-price -> high-price settlement flow.
+///
+/// When one settlement's price is lower than another's for the same good, the
+/// lower-price settlement is the supplier and the higher-price settlement is
+/// the buyer. The flow quantity is bounded by:
+///
+/// * the supplier's post-tick surplus,
+/// * the buyer's post-tick deficit, and
+/// * the price gap damped by the smoothing factor.
+///
+/// The result is deterministic and uses only integer math.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SettlementTradeFlow {
+    /// Source settlement id.
+    pub from_settlement: SettlementId,
+    /// Destination settlement id.
+    pub to_settlement: SettlementId,
+    /// Good being moved.
+    pub good: Good,
+    /// Quantity transferred.
+    pub qty: i64,
+    /// Source settlement price in cents.
+    pub low_price_cents: i64,
+    /// Destination settlement price in cents.
+    pub high_price_cents: i64,
+    /// Settled midpoint price in cents.
+    pub settled_price_cents: i64,
+}
+
+/// Compute a deterministic low-to-high price trade flow for a single good.
+///
+/// The caller provides the current price estimates for both settlements. The
+/// returned quantity is the emergent trade volume that should move from the
+/// cheaper settlement to the more expensive one.
+pub fn settlement_trade_flow(
+    low: &Settlement,
+    high: &Settlement,
+    good: Good,
+    low_price_cents: i64,
+    high_price_cents: i64,
+    smoothing_factor: i64,
+) -> Option<SettlementTradeFlow> {
+    if low.id == high.id {
+        return None;
+    }
+    if low_price_cents >= high_price_cents {
+        return None;
+    }
+
+    let supply = surplus(&low.stocks, &low.profile, good).max(0);
+    let demand = deficit(&high.stocks, &high.profile, good).max(0);
+    if supply <= 0 || demand <= 0 {
+        return None;
+    }
+
+    let smoothing_factor = smoothing_factor.max(1);
+    let price_gap = high_price_cents - low_price_cents;
+    let gap_limited_qty = (price_gap / smoothing_factor).max(1);
+    let qty = supply.min(demand).min(gap_limited_qty);
+    if qty <= 0 {
+        return None;
+    }
+
+    Some(SettlementTradeFlow {
+        from_settlement: low.id,
+        to_settlement: high.id,
+        good,
+        qty,
+        low_price_cents,
+        high_price_cents,
+        settled_price_cents: (low_price_cents + high_price_cents) / 2,
+    })
+}
+
 #[cfg(test)]
 fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
     for &tick in ticks {
@@ -148,6 +237,7 @@ fn run_tick_sequence(market: &mut MarketState, ticks: &[u64]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stocks::{ProductionProfile, Stocks};
     use proptest::prelude::*;
 
     #[test]
@@ -377,6 +467,70 @@ mod tests {
         market.apply_pressure("a", 0, 1_000); // strong demand => price up
         let after = market.mean_clearing_price();
         assert!(after.unwrap() > before.unwrap());
+    }
+
+    fn settlement_with_profile(
+        id: u32,
+        food_stock: i64,
+        production: [i64; 6],
+        consumption: [i64; 6],
+    ) -> Settlement {
+        let mut settlement = Settlement::new(id, glam::IVec3::ZERO);
+        let mut stocks = Stocks::default();
+        stocks.set(Good::Food, food_stock);
+        settlement.stocks = stocks;
+        settlement.profile = ProductionProfile::new(production, consumption);
+        settlement
+    }
+
+    /// FR-CIV-MARKET — scarcity lifts price, surplus lowers it, and the
+    /// resulting low-price -> high-price flow narrows the spread
+    /// deterministically.
+    #[test]
+    fn fr_civ_market_scarcity_surplus_and_trade_equalize() {
+        let mut market = MarketState::default();
+
+        let scarce_before = market.apply_pressure_with_smoothing("food", 10, 100, 4);
+        let surplus_before = market.apply_pressure_with_smoothing("wood", 100, 10, 4);
+
+        assert!(scarce_before > DEFAULT_PRICE_CENTS);
+        assert!(surplus_before < DEFAULT_PRICE_CENTS);
+
+        let supplier = settlement_with_profile(
+            1,
+            12,
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+        );
+        let buyer = settlement_with_profile(
+            2,
+            0,
+            [0, 0, 0, 0, 0, 0],
+            [8, 0, 0, 0, 0, 0],
+        );
+
+        let low_price = 90;
+        let high_price = 150;
+        let flow = settlement_trade_flow(
+            &supplier,
+            &buyer,
+            Good::Food,
+            low_price,
+            high_price,
+            DEFAULT_SMOOTHING_FACTOR,
+        )
+        .expect("expected deterministic low->high flow");
+
+        assert_eq!(flow.from_settlement, supplier.id);
+        assert_eq!(flow.to_settlement, buyer.id);
+        assert!(flow.qty > 0);
+        assert!(flow.settled_price_cents > low_price);
+        assert!(flow.settled_price_cents < high_price);
+        assert_eq!(flow.settled_price_cents, 120);
+
+        let after_gap = (high_price - flow.settled_price_cents)
+            .saturating_sub(flow.settled_price_cents - low_price);
+        assert!(after_gap < (high_price - low_price));
     }
 }
 

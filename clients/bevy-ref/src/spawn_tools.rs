@@ -103,6 +103,11 @@ pub struct CursorMarker {
     pub visible: bool,
 }
 
+/// Whether the egui UI is currently consuming the pointer (mouse is over a panel).
+/// Tools should skip terrain hit-tests when this is `true`.
+#[derive(Resource, Debug, Default, Clone, Copy)]
+pub struct PointerOverUi(pub bool);
+
 /// Request to spawn a civilian at the clicked point.
 #[derive(Message, Debug, Clone, Copy, PartialEq)]
 pub struct SpawnCivilianRequest {
@@ -142,6 +147,7 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
+            .init_resource::<PointerOverUi>()
             .add_message::<SpawnCivilianRequest>()
             .add_message::<SpawnBuildingRequest>()
             .add_message::<SelectEntityRequest>()

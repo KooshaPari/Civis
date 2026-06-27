@@ -190,10 +190,6 @@ fn select_seed_for_position<'a>(
 /// Belief gained when a battle is recorded in the saga graph (collective awe/fear → faith).
 /// FR-CIV-RELIGION belief-from-events contract.
 const BELIEF_GAIN_BATTLE: i64 = 5;
-/// Belief gained per named legend entity each tick (FR-CIV-LEGENDS deepening).
-const BELIEF_PER_NAMED_LEGEND: i64 = 2;
-/// Cohesion gained per named legend entity each tick (FR-CIV-LEGENDS deepening).
-const COHESION_PER_NAMED_LEGEND: i64 = 3;
 /// Belief gained when a new settlement is founded (communal milestone → veneration).
 const BELIEF_GAIN_FOUNDING: i64 = 20;
 /// Belief gained when a legend-ranked agent's death is recorded (martyrdom → faith surge).
@@ -934,25 +930,6 @@ impl Simulation {
                 u64::from(dip.faction_a),
             );
         }
-        // Named legend belief/cohesion influence (FR-CIV-LEGENDS deepening).
-        self.apply_named_legend_influence();
-    }
-
-    /// Apply per-tick belief/cohesion boost from named legends (FR-CIV-LEGENDS deepening).
-    /// Each entity with a non-None title contributes BELIEF_PER_NAMED_LEGEND belief and
-    /// COHESION_PER_NAMED_LEGEND cohesion. Called at the end of `emergence_legends`.
-    fn apply_named_legend_influence(&mut self) {
-        let named_count = self
-            .emergence
-            .legends
-            .graph
-            .query_named_legends()
-            .named_entities
-            .len() as i64;
-        if named_count > 0 {
-            self.add_belief(named_count.saturating_mul(BELIEF_PER_NAMED_LEGEND));
-            self.add_cohesion(named_count.saturating_mul(COHESION_PER_NAMED_LEGEND));
-        }
     }
 
     fn settlement_founder_agent(&self, cluster_id: u64) -> Option<u64> {
@@ -1559,37 +1536,6 @@ mod tests {
             sim.legends_graph().node_count() > before
                 || sim.emergence_feed().iter().any(|e| e.kind == "disaster"),
             "disaster pulse should reach saga graph"
-        );
-    }
-
-    /// FR-CIV-LEGENDS deepening — named legend entities boost belief/cohesion.
-    #[test]
-    fn named_legend_boosts_belief_cohesion() {
-        use civ_legends::{LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SourceCrate, SimRuntimeId};
-
-        let mut sim = Simulation::with_seed(77);
-        // Ingest a high-significance event so an entity gets promoted.
-        let raw = RawSimEvent::new(1, civ_legends::EventKind::Battle, SourceCrate::Tactics, 1.0)
-            .with_participant(SourceCrate::Tactics, SimRuntimeId(99), Role::Aggressor);
-        sim.emergence.legends.ingest(raw);
-
-        // Manually promote an entity to named legend.
-        let graph = &mut sim.emergence.legends.graph;
-        let entity_id = graph.entity_for_sim(SourceCrate::Tactics, SimRuntimeId(99));
-        if let Some(eid) = entity_id {
-            let _ = graph.promote_to_legend(eid, "The Iron-Fisted".to_string(), Role::Leader);
-        }
-
-        let belief_before = sim.state.belief;
-        let cohesion_before = sim.state.cohesion;
-        sim.apply_named_legend_influence();
-        assert!(
-            sim.state.belief >= belief_before,
-            "belief should not decrease after named legend influence"
-        );
-        assert!(
-            sim.state.cohesion >= cohesion_before,
-            "cohesion should not decrease after named legend influence"
         );
     }
 }

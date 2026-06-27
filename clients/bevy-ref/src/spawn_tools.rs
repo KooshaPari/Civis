@@ -24,14 +24,9 @@ pub enum SpawnTool {
     Terraform,
     /// Remove the entity nearest the clicked point.
     Destroy,
-    /// Arm the material-paint brush to apply a selected voxel material.
+    /// Arm the material-paint brush for voxel surface painting.
     PaintMaterial,
 }
-
-/// Marker resource indicating the cursor is currently over an egui UI panel.
-/// When set, pointer events should not propagate to the 3-D scene.
-#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct PointerOverUi(pub bool);
 
 /// Currently active tool.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,6 +103,11 @@ pub struct CursorMarker {
     pub visible: bool,
 }
 
+/// Whether the egui UI is currently consuming the pointer (mouse is over a panel).
+/// Tools should skip terrain hit-tests when this is `true`.
+#[derive(Resource, Debug, Default, Clone, Copy)]
+pub struct PointerOverUi(pub bool);
+
 /// Request to spawn a civilian at the clicked point.
 #[derive(Message, Debug, Clone, Copy, PartialEq)]
 pub struct SpawnCivilianRequest {
@@ -147,6 +147,7 @@ impl Plugin for SpawnToolsPlugin {
             .init_resource::<BuildingSpawnKind>()
             .init_resource::<SelectedEntity>()
             .init_resource::<CursorMarker>()
+            .init_resource::<PointerOverUi>()
             .add_message::<SpawnCivilianRequest>()
             .add_message::<SpawnBuildingRequest>()
             .add_message::<SelectEntityRequest>()
@@ -281,10 +282,10 @@ fn handle_spawn_tool_clicks(
             });
         }
         SpawnTool::Terraform => {}
-        SpawnTool::PaintMaterial => {}
         SpawnTool::Destroy => {
             destroy_entity.write(DestroyEntityRequest { position });
         }
+        SpawnTool::PaintMaterial => {}
     }
 }
 

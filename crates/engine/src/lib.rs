@@ -12,15 +12,14 @@
 //! - `io` - File I/O utilities
 
 pub mod building_emergence;
-pub mod technology;
 pub mod command_queue;
 pub mod conditions;
-pub mod gameplay;
 pub mod era;
 pub mod engine;
 pub mod emergence;
 pub mod disasters;
 pub mod dormant_phases;
+pub mod phase_migration;
 pub mod emergence_metrics;
 pub mod hash_chain;
 pub mod integrity;
@@ -38,13 +37,6 @@ pub mod spawn;
 pub mod spectator;
 
 pub use conditions::{check_outcome, GameOutcome};
-pub use gameplay::{
-    check_collapse, check_cultural, check_domination, check_economic, check_scientific,
-    compute_gameplay_state, compute_scores, scenario_cultural_dominance, scenario_survive_1000,
-    DefeatCondition, FactionProgress, FactionScore, GameplayState, ScenarioObjective,
-    VictoryCondition, VictoryType, CULTURAL_BELIEF_THRESHOLD, DOMINATION_TERRITORY_THRESHOLD,
-    ECONOMIC_RESOURCE_THRESHOLD, SCIENTIFIC_TECH_TIER,
-};
 pub use emergence::LegendsQueryResult;
 pub use era::CivEra;
 pub use engine::{

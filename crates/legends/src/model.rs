@@ -34,16 +34,8 @@ pub enum EventKind {
     Discovery,
     LawObserved,
     GodAct,
-    /// A treaty/alliance formed between two polities (emergent diplomacy).
-    Treaty,
-    /// A treaty was broken — a betrayal (emergent diplomacy).
-    Betrayal,
     /// "X rose to prominence" — emitted by the engine itself on promotion (§4.3).
     Promotion,
-    /// A civilization completed a monument, technology, or cultural achievement.
-    GreatWork,
-    /// A disease swept through a population.
-    Plague,
     /// Escape hatch so producers can extend the taxonomy without an engine change.
     Other(String),
 }
@@ -135,8 +127,6 @@ pub struct EntityNode {
     pub significance: f32,
     /// Crossed the significance threshold at least once (monotonic, §4.3).
     pub promoted: bool,
-    /// Human-readable legend title assigned by `promote_to_legend` (§4.3 deepening).
-    pub title: Option<String>,
     pub home_region: Option<RegionId>,
     pub cluster: Option<ClusterId>,
     /// Back-pointer so the inspector can pull live components.
@@ -184,29 +174,6 @@ pub enum LegendEdge {
     Destroyed,
     Ruled,
     Built,
-    /// Self-referential edge marking an entity as a named legend (promotion deepening §4.3).
-    Lineage,
-}
-
-/// Thresholds that trigger automatic promotion to a named legend (§4.3 deepening).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PromotionCriteria {
-    /// Minimum count of high-impact events (significance contribution >= `min_magnitude`).
-    pub min_impact_events: u32,
-    /// Minimum number of sim ticks the entity must have been alive.
-    pub min_life_ticks: u64,
-    /// Minimum offspring / descendant entity count.
-    pub min_descendants: u32,
-}
-
-impl Default for PromotionCriteria {
-    fn default() -> Self {
-        Self {
-            min_impact_events: 3,
-            min_life_ticks: 500,
-            min_descendants: 5,
-        }
-    }
 }
 
 /// Producer contract: the minimal payload emitted onto the `crates/watch` bus

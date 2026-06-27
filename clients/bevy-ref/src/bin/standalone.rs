@@ -16,6 +16,7 @@ use civ_bevy_ref::{
     resolve_attach_mode_from_env,
     terrain::{terrain_mesh, WORLD_SIZE},
     AttachMode,
+    HudPanelsPlugin,
 };
 #[cfg(feature = "gi")]
 use civ_bevy_ref::lighting_gi::SolariGiPlugin;
@@ -68,15 +69,8 @@ fn main() {
         .add_plugins(civ_bevy_ref::window_icon::WindowIconPlugin)
         .add_plugins(civ_bevy_ref::sim_bridge::SimBridgePlugin)
         .add_plugins(civ_bevy_ref::post_fx::PostFxPlugin)
-        .add_plugins(civ_bevy_ref::game_ui::GameUiPlugin)
-        .add_plugins(civ_bevy_ref::emergence_dashboard::EmergenceDashboardPlugin)
-        .add_plugins(civ_bevy_ref::tech_tree_ui::TechTreeUiPlugin)
-        .add_plugins(civ_bevy_ref::diplomacy_ui::DiplomacyUiPlugin)
-        .add_plugins(civ_bevy_ref::event_feed::EventFeedPlugin)
-        .add_plugins(civ_bevy_ref::sandbox_event_feed::SandboxEventFeedPlugin)
-        .add_plugins(civ_bevy_ref::menus::MenusPlugin)
-        .add_plugins(civ_bevy_ref::spawn_tools::SpawnToolsPlugin)
-        .add_plugins(civ_bevy_ref::minimap::MinimapPlugin)
+        // All HUD panels in one stable call — see src/hud_panels.rs to add panels.
+        .add_plugins(HudPanelsPlugin)
         .init_resource::<civ_bevy_ref::game_ui::GameUiSnapshot>()
         .add_systems(Startup, setup_atmosphere)
         .add_systems(
@@ -142,12 +136,7 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
 
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
-
-    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
+    // GameLawsPlugin now registers via HudPanelsPlugin (see src/hud_panels.rs).
 
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]

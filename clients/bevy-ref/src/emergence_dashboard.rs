@@ -21,23 +21,15 @@ const CYAN: egui::Color32 = egui::Color32::from_rgb(80, 200, 240);
 
 // ── Resource ──────────────────────────────────────────────────────────────────
 
-/// State resource for the emergence dashboard HUD (P2.3).
+/// Whether the emergence dashboard is open.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct EmergenceDashboardState {
-    /// Whether the panel is currently visible (F7 toggles).
-    pub visible: bool,
-}
+pub struct EmergenceDashboardOpen(pub bool);
 
-impl Default for EmergenceDashboardState {
+impl Default for EmergenceDashboardOpen {
     fn default() -> Self {
-        Self { visible: false }
+        Self(false)
     }
 }
-
-/// Whether the emergence dashboard is open.
-///
-/// Alias kept for compatibility with internal callers.
-pub type EmergenceDashboardOpen = EmergenceDashboardState;
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
@@ -45,7 +37,7 @@ pub struct EmergenceDashboardPlugin;
 
 impl Plugin for EmergenceDashboardPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<EmergenceDashboardState>()
+        app.init_resource::<EmergenceDashboardOpen>()
             .add_systems(Update, toggle_emergence_dashboard)
             .add_systems(EguiPrimaryContextPass, draw_emergence_dashboard);
     }
@@ -55,19 +47,19 @@ impl Plugin for EmergenceDashboardPlugin {
 
 fn toggle_emergence_dashboard(
     keys: Res<ButtonInput<KeyCode>>,
-    mut state: ResMut<EmergenceDashboardState>,
+    mut open: ResMut<EmergenceDashboardOpen>,
 ) {
-    if keys.just_pressed(KeyCode::F7) || keys.just_pressed(KeyCode::KeyE) {
-        state.visible = !state.visible;
+    if keys.just_pressed(KeyCode::KeyE) {
+        open.0 = !open.0;
     }
 }
 
 fn draw_emergence_dashboard(
     mut contexts: EguiContexts,
-    state: Res<EmergenceDashboardState>,
+    open: Res<EmergenceDashboardOpen>,
     emergence_data: Option<Res<EmergenceHudData>>,
 ) {
-    if !state.visible {
+    if !open.0 {
         return;
     }
     let Ok(ctx) = contexts.ctx_mut() else {
@@ -97,7 +89,7 @@ fn draw_emergence_dashboard(
                         .size(14.0),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new("[F7] hide").color(DIM).small().italics());
+                    ui.label(egui::RichText::new("[E] hide").color(DIM).small().italics());
                 });
             });
             ui.add_space(4.0);
@@ -264,15 +256,5 @@ fn regime_badge(regime: &str) -> (&'static str, egui::Color32) {
         ("SUBCRITICAL", BLUE)
     } else {
         ("EDGE OF CHAOS", GREEN)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::EmergenceDashboardState;
-
-    #[test]
-    fn test_emergence_dashboard_default_state() {
-        assert!(!EmergenceDashboardState::default().visible);
     }
 }

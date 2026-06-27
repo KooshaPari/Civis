@@ -18,12 +18,9 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_AGENT_COLOR, LIVE_MINIMAP_CAMERA_COLOR, LIVE_MINIMAP_CHUNK_FOCUSED_COLOR,
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
-    faction_hud::{FactionHudPlugin, PlayerFactionId},
-    gameplay_hud::GameplayHudPlugin,
-    save_load_ui::SaveLoadUiPlugin,
-    tutorial::TutorialPlugin,
-    perf_hud::{PerfHudPlugin, PerfMetrics},
-    live_pick::{LivePickPlugin, LiveSelection},
+    faction_hud::PlayerFactionId,
+    perf_hud::PerfMetrics,
+    live_pick::LiveSelection,
     live_stream::{
         apply_agent_appearance_frame_with_labels, apply_building_diff_frame,
         apply_civilian_state_frame, apply_event_feed_frame, apply_faction_state_frame, apply_voxel_delta_frame,
@@ -33,18 +30,15 @@ use civ_bevy_ref::{
         StreamCulling,
         LIVE_CHUNK_BASE_COLOR, LIVE_CHUNK_EDGE,
     },
-    god_panel::GodPanelPlugin,
-    god_actions::GodActionsPlugin,
     minimap::MinimapRoot,
     minimap_uv_to_chunk_grid,
     native_backend::native_render_plugin,
     presentation_ambient_brightness, presentation_ambient_color_rgb, presentation_clear_color_rgb,
     presentation_day_factor_target, resolve_live_ws_url,
-    event_feed::{EventFeed, EventFeedPlugin},
-    emergence_dashboard::EmergenceDashboardPlugin,
-    sandbox_event_feed::SandboxEventFeedPlugin,
+    event_feed::EventFeed,
     ws_client::{WsClient, WsClientConfig},
     post_fx::PostFxPlugin,
+    HudPanelsPlugin,
     CameraTarget, DebugRender, EmergenceHudData, HudState, LiveHudSnapshot, MinimapBounds,
     VOXEL_CHUNK_EDGE, WsConnectionState,
 };
@@ -56,26 +50,11 @@ use civ_bevy_ref::animation::ActorAnimationPlugin;
 use civ_bevy_ref::gltf_models::GltfModelsPlugin;
 #[cfg(feature = "egui")]
 use civ_bevy_ref::settings_ui::{GameSettings, KeyBinding, SettingsPlugin};
-use civ_bevy_ref::diplomacy_ui::{DiplomacyBridge, DiplomacyUiPlugin};
+use civ_bevy_ref::diplomacy_ui::DiplomacyBridge;
 use civ_protocol_3d::Frame3d;
 use civ_voxel::ChunkId;
 use serde_json;
 
-const NAMED_SEEDS: &[(&str, u64)] = &[
-    ("Ember Ridge", 42),
-    ("Solace Basin", 137),
-    ("Thornwall", 2024),
-    ("Crescent Flats", 999),
-    ("Ironmore", 7331),
-];
-const SPEED_OPTIONS: &[(&str, u32)] = &[
-    ("Glacial", 1),
-    ("Steady", 4),
-    ("Brisk", 8),
-    ("Rapid", 16),
-    ("Blitz", 32),
-];
-const PRESET_OPTIONS: &[&str] = &["standard", "warlike", "peaceful", "survival", "sandbox"];
 const CHUNK_BASE_COLOR: [f32; 3] = LIVE_CHUNK_BASE_COLOR;
 const ORBIT_DRAG_SENSITIVITY: f32 = 0.005;
 const ORBIT_SCROLL_SENSITIVITY: f32 = 2.0;
@@ -92,6 +71,26 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     inset: MINIMAP_INSET,
     plot_margin_dot: MINIMAP_DOT,
 };
+
+/// Named scenario seeds shown in the pre-game panel.
+const NAMED_SEEDS: &[(&str, u64)] = &[
+    ("Genesis",   0xC1F1_5EED_D3AD_BEEF),
+    ("Ember",     0x0123_4567_89AB_CDEF),
+    ("Verdant",   0xFEDC_BA98_7654_3210),
+    ("Arid",      0xDEAD_BEEF_CAFE_1234),
+    ("Glacial",   0x1111_2222_3333_4444),
+];
+
+/// Speed options (label, multiplier) for the pre-game panel.
+const SPEED_OPTIONS: &[(&str, u32)] = &[
+    ("1×", 1),
+    ("2×", 2),
+    ("4×", 4),
+    ("8×", 8),
+];
+
+/// World preset names for the pre-game panel.
+const PRESET_OPTIONS: &[&str] = &["Standard", "Tiny", "Large"];
 
 // FR-CIV-CLIENT-001
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -259,20 +258,11 @@ fn main() {
             WireframePlugin::default(),
             PostFxPlugin,
             GpuFeaturesPlugin,
-            LivePickPlugin,
-            FactionHudPlugin,
-            GameplayHudPlugin,
-            SaveLoadUiPlugin,
-            TutorialPlugin,
-            PerfHudPlugin,
             EguiPlugin::default(),
-            EventFeedPlugin,
-            EmergenceDashboardPlugin,
-            DiplomacyUiPlugin,
-            GodPanelPlugin,
-            GodActionsPlugin,
+            civ_bevy_ref::frame_budget::FrameBudgetPlugin,
+            // All HUD panels in one stable call — see src/hud_panels.rs to add panels.
+            HudPanelsPlugin,
         ))
-        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin, GameplayHudPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()
@@ -290,7 +280,7 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-        .add_systems(Update, sync_perf_metrics.run_if(civ_bevy_ref::menus::in_game))
+        .add_systems(Update, sync_perf_metrics.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
@@ -305,6 +295,11 @@ fn main() {
                 update_orbit_camera_transform,
                 apply_live_frames,
                 sync_agent_labels_from_civilians.after(apply_live_frames),
+            ),
+        )
+        .add_systems(
+            Update,
+            (
                 apply_spectator_meta,
                 sync_live_hud_stats,
                 sync_live_pick_detail,
@@ -898,8 +893,8 @@ fn orbit_camera_input(
     time: Res<Time>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion_events: MessageReader<MouseMotion>,
-    mut scroll_events: MessageReader<MouseWheel>,
+    mut motion_events: EventReader<MouseMotion>,
+    mut scroll_events: EventReader<MouseWheel>,
     #[cfg(feature = "egui")]
     settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
@@ -1308,34 +1303,34 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-    // Right-click: open inspect popup
-    if mouse.just_pressed(MouseButton::Right) {
-        if let Ok((interaction, cursor)) = panels.single() {
-            if *interaction != Interaction::None {
-                if let Some(normalized) = cursor.normalized {
-                    let uv = inset_minimap_uv_from_cursor(normalized);
-                    let (tx, ty) = if cache.use_focus_bounds {
-                        if let Some(focus) = cache.focus {
-                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                            (x as i32, z as i32)
+        // Right-click: open inspect popup
+        if mouse.just_pressed(MouseButton::Right) {
+            if let Ok((interaction, cursor)) = panels.single() {
+                if *interaction != Interaction::None {
+                    if let Some(normalized) = cursor.normalized {
+                        let uv = inset_minimap_uv_from_cursor(normalized);
+                        let (tx, ty) = if cache.use_focus_bounds {
+                            if let Some(focus) = cache.focus {
+                                let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                                (x as i32, z as i32)
+                            } else {
+                                (0, 0)
+                            }
+                        } else if let Some(bounds) = cache.bounds {
+                            let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                            (cx, cz)
                         } else {
                             (0, 0)
-                        }
-                    } else if let Some(bounds) = cache.bounds {
-                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
-                        (cx, cz)
-                    } else {
-                        (0, 0)
-                    };
-                    popup.pending = Some((tx, ty));
+                        };
+                        popup.pending = Some((tx, ty));
+                    }
                 }
             }
         }
+        // Suppress unused warning — bridge is available for future left-click RPCs.
+        let _ = &bridge;
         return;
     }
-    }
-    // Suppress unused warning — bridge is available for future left-click RPCs.
-    let _ = &bridge;
 
     if !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -1479,7 +1474,10 @@ fn minimap_popup_ui(
         .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
-                bridge.client.send_rpc("sim.inspect_tile", serde_json::json!({"x": tx, "y": ty}));
+                let json = format!(
+                    r#"{{"jsonrpc":"2.0","id":1,"method":"sim.inspect_tile","params":{{"x":{tx},"y":{ty}}}}}"#
+                );
+                bridge.client.send_rpc_json(json);
                 popup.pending = None;
             }
             if ui.button("Center camera").clicked() {
@@ -1512,13 +1510,14 @@ fn poll_emergence(
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em.clone());
-        *emergence_res = em;
+        *emergence_res = em.clone();
+        hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
     if timer.0 < 10.0 {
         return;
     }
     timer.0 = 0.0;
-    bridge.client.send_rpc("sim.emergence", serde_json::Value::Null);
+    let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
+    bridge.client.send_rpc_json(json);
 }

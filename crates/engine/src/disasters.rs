@@ -6,7 +6,7 @@
 
 use civ_agents::Position3d;
 use civ_needs::{Health as LifeHealth, Needs as LifeNeeds};
-use civ_planet::{seasonal_modifiers, BiomeKind, GeologyMap, SeasonKind};
+use civ_planet::{BiomeKind, GeologyMap};
 use civ_voxel::material::{AIR, GRAVEL, ICE, LAVA, STEAM, STONE, WATER};
 use civ_voxel::WorldCoord;
 
@@ -95,31 +95,6 @@ impl Simulation {
         /// Drought onset: sustained high air temperature (fixed-point milli-°C).
         const DROUGHT_TEMP_FP: i32 = 30_000; // 30 °C
 
-        // FR-CIV-CLIMATE: Compute seasonal modifiers so disasters cluster by season.
-        // Droughts peak in summer dry season; floods peak in spring wet season;
-        // wildfires peak in summer/autumn; storms cluster in summer/autumn.
-        // We use a representative Plains biome (the most common) and the current
-        // season derived from the global climate year_phase.
-        let current_season = {
-            let yp = self.climate_state().year_phase;
-            match yp.rem_euclid(1.0) {
-                p if p < 0.25 => SeasonKind::Spring,
-                p if p < 0.5 => SeasonKind::Summer,
-                p if p < 0.75 => SeasonKind::Autumn,
-                _ => SeasonKind::Winter,
-            }
-        };
-        let season_mods = seasonal_modifiers(current_season, BiomeKind::Plains);
-        // FP_SCALE = 1_000. Lower disaster_likelihood_fp → raise threshold (rare);
-        // higher → lower threshold (more likely). Use inverse scaling:
-        //   effective_threshold = base * 1000 / modifier_fp
-        // Clamp to at least base / 4 to prevent divide-by-zero / ridiculous scaling.
-        let fp = civ_planet::seasonal::FP_SCALE as i64;
-        let season_drought_threshold = scale_threshold(DROUGHT_PRECIP_FP as i64, season_mods.drought_likelihood_fp as i64, fp);
-        let season_flood_threshold = scale_threshold(FLOOD_PRECIP_FP as i64, season_mods.flood_likelihood_fp as i64, fp);
-        let season_wildfire_temp = scale_threshold(WILDFIRE_TEMP_FP as i64, season_mods.wildfire_likelihood_fp as i64, fp);
-        let season_storm_threshold = scale_threshold(STORM_INTENSITY_FP as i64, season_mods.storm_likelihood_fp as i64, fp);
-
         // Collect onset sites first so the immutable weather borrow is released
         // before we mutate the simulation via trigger_disaster. Disasters emerge
         // from physical state: heat+drought -> wildfire; tidal stress at a
@@ -129,7 +104,7 @@ impl Simulation {
         // Research mitigates nature: fire-suppression tech raises the ignition
         // threshold (research -> fewer disasters). Computed before the weather
         // borrow so the immutable grow iteration holds no `&self` method call.
-        let wildfire_temp_threshold = wildfire_ignition_temp_fp(season_wildfire_temp as i32, self.research_tier());
+        let wildfire_temp_threshold = wildfire_ignition_temp_fp(WILDFIRE_TEMP_FP, self.research_tier());
         let geology = GeologyMap::seed(self.planet());
         let mut wildfires = Vec::new();
         let mut quakes = Vec::new();
@@ -150,16 +125,16 @@ impl Simulation {
             if tidal_stress >= QUAKE_TIDE_THRESHOLD && cell.latitude_fp.abs() >= QUAKE_LATITUDE_FP {
                 quakes.push(pos);
             }
-            if cell.precip_mm_fp >= season_flood_threshold as i32
+            if cell.precip_mm_fp >= FLOOD_PRECIP_FP
                 && is_low_elevation(self, &geology, cell.region_id, pos)
             {
                 floods.push(pos);
             }
-            if cell.storm_intensity_fp >= season_storm_threshold as i32 {
+            if cell.storm_intensity_fp >= STORM_INTENSITY_FP {
                 storms.push(pos);
             }
             if !would_wildfire
-                && cell.precip_mm_fp <= season_drought_threshold as i32
+                && cell.precip_mm_fp <= DROUGHT_PRECIP_FP
                 && cell.temp_c_fp >= DROUGHT_TEMP_FP
             {
                 droughts.push(pos);
@@ -182,20 +157,6 @@ impl Simulation {
             trigger_disaster(self, DisasterKind::Drought, pos);
         }
     }
-}
-
-/// FR-CIV-CLIMATE: Scale a disaster onset threshold by a seasonal likelihood modifier.
-///
-/// Higher `modifier_fp` (> `fp_scale`) means the disaster is more likely this season,
-/// so the effective threshold is *lowered* (easier to trigger). Lower modifier raises it.
-/// Formula: `base * fp_scale / modifier_fp`, bounded to prevent extreme values.
-fn scale_threshold(base: i64, modifier_fp: i64, fp_scale: i64) -> i64 {
-    if modifier_fp <= 0 {
-        return base * 4; // effectively never triggers
-    }
-    let scaled = base.saturating_mul(fp_scale) / modifier_fp;
-    // Bound between 25% and 400% of base so seasonal swings stay physical.
-    scaled.clamp(base / 4, base * 4)
 }
 
 /// Fire-suppression technology raises the temperature required to ignite a

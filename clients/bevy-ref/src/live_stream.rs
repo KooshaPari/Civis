@@ -1544,7 +1544,6 @@ mod tests {
             FactionStateFrame {
                 tick: 3,
                 factions: vec![entry(0, 2), entry(4, 5)],
-                population_by_faction: Default::default(),
             },
         );
 
@@ -1573,7 +1572,6 @@ mod tests {
                 government: Government3d::Junta,
                 treasury: FactionTreasury3d::default(),
             }],
-            population_by_faction: Default::default(),
         };
         let mut diplomacy = crate::diplomacy_ui::DiplomacyState {
             open: true,

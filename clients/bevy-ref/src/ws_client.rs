@@ -96,6 +96,11 @@ impl WsClient {
         }
     }
 
+    /// Enqueue a pre-serialised JSON-RPC text frame (fire-and-forget; drops silently if disconnected).
+    pub fn send_rpc_json(&self, json: String) {
+        let _ = self.send_tx.send(json);
+    }
+
     /// Clone the outbound RPC sender so other Bevy resources can enqueue frames
     /// without holding a reference to the full `WsClient`.
     #[must_use]

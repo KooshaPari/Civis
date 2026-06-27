@@ -71,7 +71,7 @@ fn draw_perf_hud(
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_premultiplied(9, 10, 12, 210))
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 45, 55)))
-                .corner_radius(egui::CornerRadius::same(6))
+                .rounding(egui::Rounding::same(6_u8))
                 .inner_margin(egui::Margin::symmetric(10_i8, 6_i8))
                 .show(ui, |ui| {
                     ui.set_width(210.0);

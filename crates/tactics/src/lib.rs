@@ -19,18 +19,7 @@ mod operational;
 mod pathfinding;
 mod war_bridge;
 
-pub mod doctrine_evolution;
-pub mod war_economy;
-pub mod war_from_diplomacy;
-pub mod war_legends;
-
-pub use doctrine_evolution::{accumulate_faction_stats, evolve_doctrine_from_battle};
 pub use doctrine_fitness::{score_doctrine_fitness, FactionEngagementStats};
-pub use war_economy::{apply_war_drain, compute_war_economy_drain, WarEconomyDrain};
-pub use war_from_diplomacy::{
-    apply_rivalry_friction, check_war_onset, engagements_to_diplomacy_events, WarState,
-};
-pub use war_legends::{battle_to_legend_event, BattleSummary};
 pub use fog_of_war::FogOfWar;
 pub use formation::{
     formation_offsets, formation_positions, rotate_offsets, Facing, FormationKind,

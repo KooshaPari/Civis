@@ -29,9 +29,10 @@ pub mod entity_inspector;
 pub mod inspect;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod diplomacy_ui;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod outcome_overlay;
+#[cfg(feature = "bevy")]
 pub mod faction_hud;
-pub mod gameplay_hud;
 pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
@@ -39,11 +40,7 @@ pub mod save_load_ui;
 pub mod gltf_models;
 pub mod emergence_dashboard;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub use emergence_dashboard::EmergenceDashboardPlugin;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod event_feed;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod sandbox_event_feed;
 #[cfg(all(feature = "bevy", feature = "gi"))]
 pub mod lighting_gi;
 #[cfg(all(feature = "bevy", feature = "egui"))]
@@ -72,10 +69,6 @@ pub mod live_scene;
 pub mod live_stream;
 #[cfg(feature = "pbr-textures")]
 pub mod materials;
-/// Per-material-type PBR `StandardMaterial` look-up table (no textures required).
-/// The [`MaterialType`] enum and its const accessors are always compiled; the
-/// Bevy `material_for` fn is gated behind `#[cfg(feature = "bevy")]`.
-pub mod pbr_materials;
 #[cfg(feature = "bevy")]
 pub mod post_fx;
 #[cfg(feature = "bevy")]
@@ -115,14 +108,6 @@ pub mod hud_state;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod tool_categories;
 #[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod notifications;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod terraform_brush;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod disaster_tools;
-#[cfg(all(feature = "bevy", feature = "egui"))]
-pub mod material_brush_ui;
-#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_cluster;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod ui_holo;
@@ -142,6 +127,18 @@ pub mod voxel_stream;
 pub mod voxel_triplanar;
 #[cfg(feature = "bevy")]
 pub mod window_icon;
+
+/// Central HUD panel registry — add new panels here, not in the bin files.
+#[cfg(feature = "bevy")]
+pub mod hud_panels;
+#[cfg(feature = "bevy")]
+pub use hud_panels::HudPanelsPlugin;
+
+// These modules self-gate via inner #![cfg(feature = "bevy")] / #![cfg(all(...))]
+pub mod disaster_tools;
+pub mod material_brush_ui;
+pub mod notifications;
+pub mod terraform_brush;
 
 pub use civ_voxel::{
     ChunkId, CubicMesher, MaterialId, MeshBuffer, MeshVertex, VoxelWorld, WorldCoord,

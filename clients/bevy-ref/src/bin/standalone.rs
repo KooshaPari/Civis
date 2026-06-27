@@ -145,6 +145,10 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
 
+    // Gameplay HUD: faction leaderboard + victory progress + outcome banner (F9).
+    #[cfg(feature = "egui")]
+    app.add_plugins(civ_bevy_ref::gameplay_hud::GameplayHudPlugin);
+
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::settings_ui::SettingsPlugin);

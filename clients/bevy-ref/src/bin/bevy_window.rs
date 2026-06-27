@@ -19,6 +19,7 @@ use civ_bevy_ref::{
         LIVE_MINIMAP_CHUNK_LOADED_COLOR, LIVE_MINIMAP_DOT, LIVE_MINIMAP_GRAPH_DOT_SCALE,
     },
     faction_hud::{FactionHudPlugin, PlayerFactionId},
+    gameplay_hud::GameplayHudPlugin,
     save_load_ui::SaveLoadUiPlugin,
     tutorial::TutorialPlugin,
     perf_hud::{PerfHudPlugin, PerfMetrics},
@@ -270,7 +271,7 @@ fn main() {
             GodPanelPlugin,
             GodActionsPlugin,
         ))
-        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
+        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin, GameplayHudPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()

@@ -268,10 +268,9 @@ fn main() {
             EguiPlugin::default(),
             EventFeedPlugin,
             EmergenceDashboardPlugin,
-            DiplomacyUiPlugin,
-            GodPanelPlugin,
-            GodActionsPlugin,
         ))
+        // ponytail: split across two add_plugins to stay within Bevy's 15-element tuple limit
+        .add_plugins((DiplomacyUiPlugin, GodPanelPlugin, GodActionsPlugin))
         .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()

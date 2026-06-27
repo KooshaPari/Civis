@@ -162,6 +162,27 @@ flagged:
 | P-A1 | diffusion stub | FR-CIV-DIFFUSION-000 | see NFR doc | Stub compiles | `crates/diffusion/` | `diffusion::schema_version_stub` | Bevy/Godot/Unreal | Done |
 | P-A1 | S-curve | FR-CIV-DIFFUSION-001 | see NFR doc | Bass/Rogers S-curve matches closed-form within tolerance | `crates/diffusion/`, `engine.rs` `phase_diffusion` | `diffusion::s_curve_adoption` | Bevy | Done |
 
+### Life-Sim — P-LS (crates `civ-needs`, `civ-agents`, `civ-economy`; wired via `phase_citizen_lifecycle`)
+
+> Life-sim lifecycle family: emergent agent needs decay, deprivation→sickness→death
+> pipeline, utility-AI POI daily path, mercantile resource stocks, and emergent
+> cluster membership. Spec text in `FUNCTIONAL_REQUIREMENTS.md:391-427`. Design
+> intent in `docs/design/civ-003-emergent-lifecycle.md`. Trace coverage is
+> **partial**: the unit-level decay / sickness / death / daily-path / stocks /
+> cluster primitives are well-traced by their inline tests, but no engine-tick
+> integration test exercises the `phase_citizen_lifecycle` → `phase_economy` →
+> `phase_diffusion` chain end-to-end yet (GAP: add `phase_life_*` integration
+> tests in `crates/engine/src/engine.rs`).
+
+| Epic/Phase | User Story | FR ID | NFR ID(s) | Acceptance Criteria (concise) | Implementing crate/module | Verifying test(s) | Client(s) | Status |
+|---|---|---|---|---|---|---|---|---|
+| P-LS | needs decay | FR-CIV-LIFE-001 | see NFR doc | `Needs` 6-vector decays deterministically per tick per `DecayRates`; `satisfy` clamps to `[0,1]`; `most_pressing` picks lowest | `crates/needs/src/lib.rs:31-142` | `needs_decay_toward_zero`, `decay_clamps_at_zero`, `decay_preserves_need_bounds`, `most_pressing_picks_lowest`, `satisfy_raises_and_clamps` | Bevy (HUD) / Godot / Unreal | Partial — unit tests pass; no `phase_citizen_lifecycle` integration test |
+| P-LS | sickness from deprivation | FR-CIV-LIFE-002 | see NFR doc | Sustained unmet needs accumulate `deprivation_streak`; past `sickness_onset_ticks`, seeded RNG roll triggers `Health::sick`; sickness accelerates integrity loss | `crates/needs/src/lib.rs:178-246`, `crates/needs/src/lib.rs:259-320` | `sickness_onset_respects_threshold`, `sickness_recovery_requires_high_integrity`, `deprivation_triggers_sickness`, `pipeline_is_deterministic` | Bevy (HUD) / Godot / Unreal | Partial — unit tests pass; no engine-tick integration test |
+| P-LS | death from unmet needs | FR-CIV-LIFE-003 | see NFR doc | Health integrity falls to 0 (death) under prolonged deprivation/sickness; sated agent never dies; dead agent is a no-op | `crates/needs/src/lib.rs:259-320` | `unmet_needs_cause_death`, `critical_boundary_triggers_damage`, `sated_agent_survives`, `dead_agent_is_a_noop`, `health_stays_bounded_and_dead_is_terminal` | Bevy (HUD) / Godot / Unreal | Partial — unit tests pass; no engine-tick integration test |
+| P-LS | utility-AI daily path / POI | FR-CIV-LIFE-010..014 | see NFR doc | Daily target selected via utility scoring over `Needs` against `PoiRegistry`; POI serving highest-pressure need wins; greedy fixed-point `path_step` | `crates/agents/src/daily_path.rs:1-50`, `crates/agents/src/daily_path.rs:304-426` | 7 inline tests (`nearest_of_kind_picks_closest`, `pick_target_chooses_highest_pressure_need`, `path_step_moves_toward_target_without_overshoot`, `scoring_is_deterministic`, `empty_registry_returns_none`, `satisfied_needs_do_not_seek`, `wander_anchor_stays_local`) | Bevy (live_scene) / Godot | Partial — daily-path primitives unit-tested; no engine-tick integration test |
+| P-LS | mercantile resource stocks | FR-CIV-LIFE-020..025 | see NFR doc | Integer-conserved `Stocks` track per-actor / settlement / faction goods; surplus/deficit, comparative advantage, mutually-beneficial trade conserve total | `crates/economy/src/stocks.rs:1-100`, `crates/economy/src/stocks.rs:333-543` | 8 inline tests (`deficit_was_clamped_detects_only_real_clamps`, `step_conserves_and_clamps_to_zero`, `production_and_consumption_getters_return_profile_rates`, `surplus_and_deficit_signs_are_correct`, `comparative_advantage_picks_max_surplus_good`, `trade_gain_reflects_specialization_difference`, `apply_trade_conserves_total_stock`, `propose_trade_returns_none_without_mutual_benefit`) | Bevy (live_scene) / Godot / Unreal | Partial — stock primitives unit-tested; no engine-tick integration test |
+| P-LS | emergent clusters (join/leave) | FR-CIV-LIFE-030..035 | see NFR doc | `ClusterId` membership from deterministic single-link co-location clustering; agents JOIN on net-positive `MembershipPayoff` and LEAVE when payoff drops below threshold | `crates/agents/src/cluster.rs:1-60`, `crates/agents/src/cluster.rs:181-310` | 6 inline tests (`co_located_agents_cluster_together`, `far_apart_agents_get_different_clusters`, `cluster_id_is_min_id_and_deterministic`, `join_and_leave_respect_threshold`, `reconcile_joins_positive_and_leaves_negative`, `clustering_is_order_independent`) | Bevy (live_scene) / Godot | Partial — cluster primitives unit-tested; no engine-tick integration test |
+
 ### Laws — P-L1 (crate `civ-laws`; library + watch only, **not in engine tick**)
 
 | Epic/Phase | User Story | FR ID | NFR ID(s) | Acceptance Criteria (concise) | Implementing crate/module | Verifying test(s) | Client(s) | Status |
@@ -300,6 +321,7 @@ flagged:
 | FR-CIV-SPECIES | 2 | 0 | 2 | 0 | 2 | 100% |
 | FR-CIV-AGENTS | 3 | 3 | 0 | 0 | 3 | 100% |
 | FR-CIV-DIFFUSION | 2 | 2 | 0 | 0 | 2 | 100% |
+| FR-CIV-LIFE | 6 | 0 | 6 | 0 | 6 | 100% |
 | FR-CIV-LAWS | 3 | 0 | 3 | 0 | 3 | 100% |
 | FR-CIV-RESEARCH | 4 | 0 | 4 | 0 | 4 | 100% |
 | FR-CIV-TACTICS | 56 | 56 | 0 | 0 | 56 | 100% |
@@ -307,7 +329,7 @@ flagged:
 | FR-CIV-PROTO3D | 3 | 3 | 0 | 0 | 3 | 100% |
 | FR-CIV-UX | 5 | 5 | 0 | 0 | 5 | 100% |
 | FR-CIV-BEVY | 3 | 3 | 0 | 0 | 3 | 100% |
-| **TOTAL** | **126** | **88** | **35** | **11** (web) | **116** | **~92%** |
+| **TOTAL** | **132** | **88** | **41** | **11** (web) | **122** | **~92%** |
 
 > FR-CIV-TACTICS count (56) and FR-CIV-UX count (5) include the `-int` / `-int2` / `-int3`
 > integration sub-IDs and the rolled-up `FR-CIV-GODOT-ATTACH-000..004` row, matching
@@ -315,25 +337,30 @@ flagged:
 
 ### Headline metrics
 
-- **Total FR IDs tracked:** **126** (27 strategic core + METRICS, 99 `FR-CIV-*`).
-- **Done:** **88** (≈70%) — overwhelmingly the 3D extension families, where tactics alone
+- **Total FR IDs tracked:** **132** (27 strategic core + METRICS, 105 `FR-CIV-*`).
+- **Done:** **88** (≈67%) — overwhelmingly the 3D extension families, where tactics alone
   contributes 56.
-- **Partial:** **35** (≈28%) — all 24 strategic core FRs that are implemented-but-not-fully
+- **Partial:** **41** (≈31%) — all 24 strategic core FRs that are implemented-but-not-fully
   wired/AC-covered, plus the 13 `FR-CIV-*` rows in genetics/species/laws/research whose
   crates are tested but **not yet reachable from `Simulation::tick`** (see engine tick
-  wiring in engine.rs; there is no standalone tick-integration plan doc).
+  wiring in engine.rs; there is no standalone tick-integration plan doc), plus the new
+  6 `FR-CIV-LIFE` rows that have unit-tested primitives but no `phase_citizen_lifecycle`
+  end-to-end integration test yet.
 - **Planned:** **11** — the Python research API (FR-API-002/003/004), several protocol
   handshake/filter/queue FRs, and the deprecated web TS client (FR-CLIENT-002).
-- **% with at least one verifying test:** **~92%** (116/126). The **10 GAP rows** (no
+- **% with at least one verifying test:** **~92%** (122/132). The **10 GAP rows** (no
   test) are all strategic core: FR-CORE-004, -006, -007, FR-PROTO-003, -005,
   FR-API-002/003/004, plus partial-coverage gaps noted inline on FR-ECON-002/004/005,
   FR-PROTO-001/002/004, FR-CLIENT-003, FR-METRICS-002 (these have *some* test but miss a
   specific AC).
-- **% surfaced in Bevy (primary client):** **~83%** (105/126). Bevy is the primary desktop
+- **% surfaced in Bevy (primary client):** **~83%** (110/132). Bevy is the primary desktop
   target and surfaces every voxel/build/agent/diffusion/planet/tactics/proto3d FR plus the
   Bevy-specific client FRs. Rows **not** surfaced in Bevy yet: genetics (4), species (2),
   laws (3), research (4) — library-only crates awaiting engine-tick + render wiring — and
-  the server-only / web-only / Python rows.
+  the server-only / web-only / Python rows. `FR-CIV-LIFE-*` rows are flagged as `Partial`
+  because the unit-tested primitives are reachable in principle via the engine tick (the
+  engine reads `civ-needs` through `phase_citizen_lifecycle`) but lack an end-to-end tick
+  integration test asserting their wiring.
 - **Three clients exist:** `clients/bevy-ref` (primary), `clients/godot-ref` (UX spawn
   reference), `clients/unreal-show` (showcase). Most gameplay FRs surface in all three via
   the shared `civ-server` snapshot/`civ-protocol-3d` transport; Godot owns the UX spawn FRs

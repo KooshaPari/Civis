@@ -77,3 +77,7 @@ Format:
 | FR-CIV-VOXEL-004 | `crates/voxel/src/lib.rs` | `scale_multiplier_lod` | `71752001` |
 | FR-CIV-VOXEL-005 | `crates/voxel/src/lib.rs` | `voxel_world_replay_is_bit_identical_through_reexport` | `d800e400` |
 | FR-CIV-VOXEL-010 | `crates/voxel/src/lib.rs` | `mesher_watertight`, `voxel_world_to_cubic_mesh_end_to_end` | `ae76e455`, `71752001` |
+
+## Commit log
+
+- `feat(trace): add FR-CIV-LIFE row to full-traceability-matrix.md (matrix-2026-06-26)` — adds `### Life-Sim — P-LS` section to `docs/traceability/full-traceability-matrix.md` covering FR-CIV-LIFE-001/002/003 (needs decay / sickness / death in `crates/needs/src/lib.rs`), FR-CIV-LIFE-010..014 (utility-AI daily path / POI in `crates/agents/src/daily_path.rs`), FR-CIV-LIFE-020..025 (mercantile resource stocks in `crates/economy/src/stocks.rs`), and FR-CIV-LIFE-030..035 (emergent clusters in `crates/agents/src/cluster.rs`); updates coverage summary + headline metrics; matrix snapshot updated to reflect 6 new `Partial` rows (unit-tested primitives, no engine-tick integration test yet).

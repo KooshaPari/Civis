@@ -76,6 +76,7 @@ pub(crate) const PHASE_ORDER: &[&str] = &[
     "cohesion",
     "institutions",
     "psyche",
+    "migration",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -1332,6 +1333,7 @@ impl Simulation {
         self.phase_cohesion();
         self.phase_institutions();
         self.phase_psyche();
+        self.phase_migration();
         self.replay_log.record_tick(self.state.tick);
 
         #[cfg(debug_assertions)]

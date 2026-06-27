@@ -41,6 +41,12 @@ impl Temperament {
     }
 }
 
+impl Default for Temperament {
+    fn default() -> Self {
+        Self::neutral()
+    }
+}
+
 /// Fast-moving affect state.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Mood {
@@ -61,6 +67,12 @@ impl Mood {
     }
 }
 
+impl Default for Mood {
+    fn default() -> Self {
+        Self::neutral()
+    }
+}
+
 /// Compact psyche vector for one agent.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Psyche {
@@ -74,6 +86,18 @@ pub struct Psyche {
     pub beliefs: [f32; PSYCHE_DIM],
     /// Maturity in `[0, 1]`.
     pub maturity: f32,
+}
+
+impl Default for Psyche {
+    fn default() -> Self {
+        Self {
+            drives: [0.5; PSYCHE_DIM],
+            temperament: Temperament::default(),
+            mood: Mood::default(),
+            beliefs: [0.5; PSYCHE_DIM],
+            maturity: 0.0,
+        }
+    }
 }
 
 /// Data-driven genome projection for psyche axes.

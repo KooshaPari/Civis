@@ -245,6 +245,20 @@ pub struct TickOutcome {
     pub died: bool,
 }
 
+/// Outcome of one FR-CIV-LIFE needs tick.
+///
+/// The decay step is applied first, then the agent selects the most-deprived
+/// need as its satisfaction priority. This keeps the control loop deterministic
+/// and gives higher-pressure needs (especially hunger / safety / social) a
+/// stable ordering for downstream planners.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NeedsTickOutcome {
+    /// Need chosen for satisfaction next.
+    pub priority: NeedKind,
+    /// Satisfaction level after decay, before any replenishment.
+    pub priority_level: f32,
+}
+
 /// Decay every need by its per-tick rate (no satisfaction added). Health is
 /// mirrored from the supplied integrity so utility-AI sees a unified vector.
 pub fn decay(needs: &mut Needs, rates: &DecayRates) {
@@ -254,6 +268,22 @@ pub fn decay(needs: &mut Needs, rates: &DecayRates) {
     needs.safety = (needs.safety - rates.safety).max(0.0);
     needs.social = (needs.social - rates.social).max(0.0);
     needs.health = (needs.health - rates.health).max(0.0);
+}
+
+/// Advance needs by one deterministic FR-CIV-LIFE tick.
+///
+/// This is intentionally pure apart from the mutation of `needs`: decay is
+/// applied in place, then the agent selects the most-deprived need to satisfy
+/// next. The returned priority is stable under identical inputs, which keeps
+/// replay and AI planning deterministic.
+#[must_use]
+pub fn tick_needs(needs: &mut Needs, rates: &DecayRates) -> NeedsTickOutcome {
+    decay(needs, rates);
+    let (priority, priority_level) = needs.most_pressing();
+    NeedsTickOutcome {
+        priority,
+        priority_level,
+    }
 }
 
 /// Advance one living item by a single tick: decay needs, then drive health
@@ -275,7 +305,7 @@ pub fn tick(
         };
     }
 
-    decay(needs, rates);
+    let _needs_tick = tick_needs(needs, rates);
 
     let critical_count = NEED_KINDS
         .iter()
@@ -418,6 +448,34 @@ mod tests {
             health: 1.0,
         };
         assert_eq!(needs.most_pressing(), (NeedKind::Water, 0.2));
+    }
+
+    /// Covers FR-CIV-LIFE-001 — a tick decays needs before selecting the next priority.
+    #[test]
+    fn fr_civ_life_001_tick_needs_decays_then_prioritizes() {
+        let mut needs = Needs {
+            food: 0.5,
+            water: 0.5,
+            rest: 0.5,
+            safety: 0.12,
+            social: 0.13,
+            health: 1.0,
+        };
+        let rates = DecayRates {
+            food: 0.01,
+            water: 0.01,
+            rest: 0.01,
+            safety: 0.02,
+            social: 0.03,
+            health: 0.0,
+        };
+
+        let out = tick_needs(&mut needs, &rates);
+
+        assert_eq!(out.priority, NeedKind::Safety);
+        assert!((out.priority_level - 0.10).abs() < 1e-6);
+        assert!((needs.safety - 0.10).abs() < 1e-6);
+        assert!((needs.social - 0.10).abs() < 1e-6);
     }
 
     /// Covers FR-CIV-LIFE-001 — satisfying a need raises it and clamps at 1.0.

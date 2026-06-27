@@ -72,6 +72,26 @@ const MINIMAP_HUD_LAYOUT: MinimapDotLayout = MinimapDotLayout::InsetHud {
     plot_margin_dot: MINIMAP_DOT,
 };
 
+/// Named scenario seeds shown in the pre-game panel.
+const NAMED_SEEDS: &[(&str, u64)] = &[
+    ("Genesis",   0xC1F1_5EED_D3AD_BEEF),
+    ("Ember",     0x0123_4567_89AB_CDEF),
+    ("Verdant",   0xFEDC_BA98_7654_3210),
+    ("Arid",      0xDEAD_BEEF_CAFE_1234),
+    ("Glacial",   0x1111_2222_3333_4444),
+];
+
+/// Speed options (label, multiplier) for the pre-game panel.
+const SPEED_OPTIONS: &[(&str, u32)] = &[
+    ("1×", 1),
+    ("2×", 2),
+    ("4×", 4),
+    ("8×", 8),
+];
+
+/// World preset names for the pre-game panel.
+const PRESET_OPTIONS: &[&str] = &["Standard", "Tiny", "Large"];
+
 // FR-CIV-CLIENT-001
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 enum AppState {
@@ -99,7 +119,6 @@ struct ScenarioPanel {
 impl Default for ScenarioPanel {
     fn default() -> Self {
         Self { seed_index: 0, speed_index: 0, preset_index: 0 }
-        Self { seed_index: 0, speed_index: 0 }
     }
 }
 
@@ -200,6 +219,8 @@ struct MinimapPopup {
 #[derive(Resource, Default)]
 struct SimSpeedState {
     multiplier: u32,
+    paused: bool,
+    speed_idx: usize,
 }
 
 #[derive(Resource)]
@@ -259,7 +280,7 @@ fn main() {
         .add_systems(OnEnter(AppState::ConnectionLost), spawn_lost_overlay)
         .add_systems(OnExit(AppState::ConnectionLost), despawn_connection_overlay)
         .add_systems(Update, drive_app_state)
-        .add_systems(Update, sync_perf_metrics.run_if(crate::menus::in_game))
+        .add_systems(Update, sync_perf_metrics.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_splash.run_if(in_state(AppState::Connecting)))
         .add_systems(Update, scenario_panel_input.run_if(in_state(AppState::Connecting)))
         .add_systems(
@@ -338,7 +359,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild seed label
-    if let Ok(mut text) = seed_labels.get_single_mut() {
+    if let Ok(mut text) = seed_labels.single_mut() {
         let label = NAMED_SEEDS
             .iter()
             .enumerate()
@@ -349,7 +370,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild speed label
-    if let Ok(mut text) = speed_labels.get_single_mut() {
+    if let Ok(mut text) = speed_labels.single_mut() {
         let label = SPEED_OPTIONS
             .iter()
             .enumerate()
@@ -360,7 +381,7 @@ fn scenario_panel_input(
     }
 
     // Rebuild preset label
-    if let Ok(mut text) = preset_labels.get_single_mut() {
+    if let Ok(mut text) = preset_labels.single_mut() {
         let label = PRESET_OPTIONS
             .iter()
             .enumerate()
@@ -372,7 +393,7 @@ fn scenario_panel_input(
 
     // Launch on button click or Enter key
     let clicked = start_buttons
-        .get_single()
+        .single()
         .map(|i| *i == Interaction::Pressed)
         .unwrap_or(false);
     if clicked || keys.just_pressed(KeyCode::Enter) {
@@ -479,7 +500,7 @@ fn spawn_lost_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOver
 }
 
 fn despawn_connection_overlay(mut commands: Commands, mut overlay: ResMut<ConnectionOverlay>) {
-    if let Some(root) = overlay.root.take() { commands.entity(root).despawn_recursive(); }
+    if let Some(root) = overlay.root.take() { commands.entity(root).despawn(); }
 }
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -594,7 +615,7 @@ fn update_presentation_lighting(
     time: Res<Time>,
     mut presentation: ResMut<ScenePresentation>,
     mut lights: Query<&mut DirectionalLight>,
-    mut ambient: ResMut<GlobalAmbientLight>,
+    mut ambient: ResMut<AmbientLight>,
     mut clear: ResMut<ClearColor>,
 ) {
     let target = presentation_day_factor_target(presentation.is_day);
@@ -724,7 +745,7 @@ fn speed_control_input(
         speed.paused = false;
     }
 
-    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx] };
+    speed.multiplier = if speed.paused { 0 } else { SPEED_OPTIONS[speed.speed_idx].1 };
     let json = format!(r#"{{"jsonrpc":"2.0","id":1,"method":"sim.set_speed","params":{{"multiplier":{}}}}}"#, speed.multiplier);
     bridge.client.send_rpc_raw(json);
     hud.snapshot.speed_multiplier = speed.multiplier;
@@ -867,8 +888,8 @@ fn orbit_camera_input(
     time: Res<Time>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion_events: MessageReader<MouseMotion>,
-    mut scroll_events: MessageReader<MouseWheel>,
+    mut motion_events: EventReader<MouseMotion>,
+    mut scroll_events: EventReader<MouseWheel>,
     #[cfg(feature = "egui")]
     settings: Option<Res<GameSettings>>,
     mut orbit: ResMut<OrbitCamera>,
@@ -1277,33 +1298,34 @@ fn minimap_click_focus(
         &mouse,
     );
     if !select_pressed {
-    // Right-click: open inspect popup
-    if mouse.just_pressed(MouseButton::Right) {
-        if let Ok((interaction, cursor)) = panels.single() {
-            if *interaction != Interaction::None {
-                if let Some(normalized) = cursor.normalized {
-                    let uv = inset_minimap_uv_from_cursor(normalized);
-                    let (tx, ty) = if cache.use_focus_bounds {
-                        if let Some(focus) = cache.focus {
-                            let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
-                            (x as i32, z as i32)
+        // Right-click: open inspect popup
+        if mouse.just_pressed(MouseButton::Right) {
+            if let Ok((interaction, cursor)) = panels.single() {
+                if *interaction != Interaction::None {
+                    if let Some(normalized) = cursor.normalized {
+                        let uv = inset_minimap_uv_from_cursor(normalized);
+                        let (tx, ty) = if cache.use_focus_bounds {
+                            if let Some(focus) = cache.focus {
+                                let (x, z) = minimap_uv_to_world_xz(Vec2::new(uv[0], uv[1]), focus);
+                                (x as i32, z as i32)
+                            } else {
+                                (0, 0)
+                            }
+                        } else if let Some(bounds) = cache.bounds {
+                            let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
+                            (cx, cz)
                         } else {
                             (0, 0)
-                        }
-                    } else if let Some(bounds) = cache.bounds {
-                        let (cx, cz) = minimap_uv_to_chunk_grid(inset_minimap_uv_from_cursor(normalized), bounds);
-                        (cx, cz)
-                    } else {
-                        (0, 0)
-                    };
-                    popup.pending = Some((tx, ty));
+                        };
+                        popup.pending = Some((tx, ty));
+                    }
                 }
             }
         }
+        // Suppress unused warning — bridge is available for future left-click RPCs.
+        let _ = &bridge;
         return;
     }
-    // Suppress unused warning — bridge is available for future left-click RPCs.
-    let _ = &bridge;
 
     if !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -1483,8 +1505,7 @@ fn poll_emergence(
     hud.snapshot.speed_multiplier = speed.multiplier;
     // Apply any parsed emergence responses received from the server.
     for em in bridge.client.poll_emergence() {
-        hud.snapshot.emergence = Some(em.clone());
-        *emergence_res = em;
+        *emergence_res = em.clone();
         hud.snapshot.emergence = Some(em);
     }
     timer.0 += time.delta_secs();
@@ -1494,5 +1515,4 @@ fn poll_emergence(
     timer.0 = 0.0;
     let json = r#"{"jsonrpc":"2.0","id":2,"method":"sim.emergence","params":null}"#.to_string();
     bridge.client.send_rpc_json(json);
-}
 }

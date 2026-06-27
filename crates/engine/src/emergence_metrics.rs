@@ -631,12 +631,6 @@ impl Simulation {
             sample.dashboard.sentience_fraction,
             sample.dashboard.psyche_stability,
             sample.dashboard.diplomacy_tension,
-            sample.branching_sigma,
-            sample.branching_sigma_score,
-            sample.branching_regime.label(),
-            sample.power_law_alpha,
-            sample.novelty_rate,
-            sample.mi_material_faction_norm,
         );
         true
     }

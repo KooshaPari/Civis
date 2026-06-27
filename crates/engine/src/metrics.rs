@@ -47,8 +47,7 @@ pub struct MetricsFixed {
 pub fn compute_fixed(energy_budget_joules: Fixed, consumption_joules: Fixed) -> MetricsFixed {
     let energy_budget_joules = energy_budget_joules.max(Fixed::ZERO);
     let consumption_joules = consumption_joules.max(Fixed::ZERO);
-    let tenth = Fixed::from_num(1) / Fixed::from_num(10);
-    let waste = (consumption_joules * tenth).max(Fixed::ZERO);
+    let waste = (consumption_joules / Fixed::from_num(10)).max(Fixed::ZERO);
     let surplus = (energy_budget_joules - consumption_joules).max(Fixed::ZERO);
     let denominator = energy_budget_joules + Fixed::ONE;
     let tyranny = (consumption_joules / denominator).min(Fixed::ONE);
@@ -107,28 +106,28 @@ mod tests {
             );
 
             assert!(
-                (float_m.waste_joules - fixed_m.waste_joules.to_f64()).abs() < EPS,
+                (float_m.waste_joules - fixed_m.waste_joules.to_num::<f64>()).abs() < EPS,
                 "waste: float={}, fixed={}",
                 float_m.waste_joules,
-                fixed_m.waste_joules.to_f64()
+                fixed_m.waste_joules.to_num::<f64>()
             );
             assert!(
-                (float_m.surplus_joules - fixed_m.surplus_joules.to_f64()).abs() < EPS,
+                (float_m.surplus_joules - fixed_m.surplus_joules.to_num::<f64>()).abs() < EPS,
                 "surplus: float={}, fixed={}",
                 float_m.surplus_joules,
-                fixed_m.surplus_joules.to_f64()
+                fixed_m.surplus_joules.to_num::<f64>()
             );
             assert!(
-                (float_m.tyranny_index - fixed_m.tyranny_index.to_f64()).abs() < EPS,
+                (float_m.tyranny_index - fixed_m.tyranny_index.to_num::<f64>()).abs() < EPS,
                 "tyranny: float={}, fixed={}",
                 float_m.tyranny_index,
-                fixed_m.tyranny_index.to_f64()
+                fixed_m.tyranny_index.to_num::<f64>()
             );
             assert!(
-                (float_m.legitimacy_index - fixed_m.legitimacy_index.to_f64()).abs() < EPS,
+                (float_m.legitimacy_index - fixed_m.legitimacy_index.to_num::<f64>()).abs() < EPS,
                 "legitimacy: float={}, fixed={}",
                 float_m.legitimacy_index,
-                fixed_m.legitimacy_index.to_f64()
+                fixed_m.legitimacy_index.to_num::<f64>()
             );
         }
     }

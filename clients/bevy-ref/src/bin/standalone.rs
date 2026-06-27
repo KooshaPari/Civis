@@ -136,8 +136,7 @@ fn main() {
     #[cfg(feature = "egui")]
     app.add_plugins(civ_bevy_ref::material_brush_ui::MaterialBrushPlugin);
 
-    #[cfg(feature = "egui")]
-    app.add_plugins(civ_bevy_ref::game_laws::GameLawsPlugin);
+    // GameLawsPlugin now registers via HudPanelsPlugin (see src/hud_panels.rs).
 
     // Settings / options panel (RON-persisted); bevy+egui.
     #[cfg(feature = "egui")]

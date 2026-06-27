@@ -50,8 +50,10 @@ pub use material_pbr::{
     AtlasSlice, AttestationError, BuildFlavour, Cc0Source, ColorSpace, ColorSpacePolicy,
     GreedyAtlasPlan, LicenseAttestation, LodDistanceConfig, LodRenderPlan, ManifestError,
     MaterialMode, MaterialOverride, MaterialSeedManifest, MissingTexturePolicy,
-    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction, TextureChannelMap,
-    TriplanarLayer, TriplanarSplatPlan, SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
+    MissingTextureReport, PbrChannel, PolicyAction, RenderMode, RuntimeAction,
+    TextureChannelMap, TriplanarAxisSample, TriplanarLayer, TriplanarPbrBlend,
+    TriplanarSplatPlan, blend_triplanar_pbr, triplanar_axis_weights,
+    SCHEMA_VERSION as PBR_MANIFEST_SCHEMA_VERSION,
 };
 
 pub use scale_budget::{

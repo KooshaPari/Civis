@@ -729,6 +729,115 @@ impl Default for TriplanarSplatPlan {
 }
 
 // ---------------------------------------------------------------------------
+// FR-CIV-PBR-009 — pure triplanar PBR blend helper
+// ---------------------------------------------------------------------------
+
+/// A single axis sample for a triplanar PBR blend.
+///
+/// The helper is intentionally engine-agnostic and deterministic: callers
+/// provide the three axis samples already fetched from their texture sources,
+/// and this module blends them without I/O, RNG, or hidden state.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TriplanarAxisSample {
+    /// sRGB albedo converted to linear before blending by the caller.
+    pub albedo_linear: [f32; 3],
+    /// Perceptual roughness in the inclusive `0.0..=1.0` range.
+    pub perceptual_roughness: f32,
+    /// World-space or tangent-space normal, expected to be unit length.
+    pub normal: [f32; 3],
+}
+
+/// Output of [`blend_triplanar_pbr`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TriplanarPbrBlend {
+    /// Blended linear albedo.
+    pub albedo_linear: [f32; 3],
+    /// Blended perceptual roughness.
+    pub perceptual_roughness: f32,
+    /// Renormalized blended normal.
+    pub normal: [f32; 3],
+}
+
+/// Compute deterministic triplanar axis weights from a world-space normal.
+///
+/// The weights are the absolute normal components normalized to sum to `1.0`.
+/// Degenerate zero vectors fall back to equal axis weights to keep the helper
+/// total and replay-safe.
+#[must_use]
+pub fn triplanar_axis_weights(world_normal: [f32; 3]) -> [f32; 3] {
+    let wx = world_normal[0].abs();
+    let wy = world_normal[1].abs();
+    let wz = world_normal[2].abs();
+    let sum = wx + wy + wz;
+    if sum > 0.0 {
+        [wx / sum, wy / sum, wz / sum]
+    } else {
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]
+    }
+}
+
+/// Pure deterministic blend for triplanar PBR samples.
+///
+/// Albedo and roughness are blended linearly by the axis weights. Normals are
+/// blended linearly and then renormalized so the result remains suitable for a
+/// shading pipeline.
+#[must_use]
+pub fn blend_triplanar_pbr(
+    axis_weights: [f32; 3],
+    x_axis: TriplanarAxisSample,
+    y_axis: TriplanarAxisSample,
+    z_axis: TriplanarAxisSample,
+) -> TriplanarPbrBlend {
+    let albedo_linear = [
+        x_axis.albedo_linear[0] * axis_weights[0]
+            + y_axis.albedo_linear[0] * axis_weights[1]
+            + z_axis.albedo_linear[0] * axis_weights[2],
+        x_axis.albedo_linear[1] * axis_weights[0]
+            + y_axis.albedo_linear[1] * axis_weights[1]
+            + z_axis.albedo_linear[1] * axis_weights[2],
+        x_axis.albedo_linear[2] * axis_weights[0]
+            + y_axis.albedo_linear[2] * axis_weights[1]
+            + z_axis.albedo_linear[2] * axis_weights[2],
+    ];
+
+    let perceptual_roughness = x_axis.perceptual_roughness * axis_weights[0]
+        + y_axis.perceptual_roughness * axis_weights[1]
+        + z_axis.perceptual_roughness * axis_weights[2];
+
+    let blended_normal = [
+        x_axis.normal[0] * axis_weights[0]
+            + y_axis.normal[0] * axis_weights[1]
+            + z_axis.normal[0] * axis_weights[2],
+        x_axis.normal[1] * axis_weights[0]
+            + y_axis.normal[1] * axis_weights[1]
+            + z_axis.normal[1] * axis_weights[2],
+        x_axis.normal[2] * axis_weights[0]
+            + y_axis.normal[2] * axis_weights[1]
+            + z_axis.normal[2] * axis_weights[2],
+    ];
+
+    let normal_len_sq = blended_normal[0] * blended_normal[0]
+        + blended_normal[1] * blended_normal[1]
+        + blended_normal[2] * blended_normal[2];
+    let normal = if normal_len_sq > 0.0 {
+        let inv_len = normal_len_sq.sqrt().recip();
+        [
+            blended_normal[0] * inv_len,
+            blended_normal[1] * inv_len,
+            blended_normal[2] * inv_len,
+        ]
+    } else {
+        [0.0, 0.0, 1.0]
+    };
+
+    TriplanarPbrBlend {
+        albedo_linear,
+        perceptual_roughness,
+        normal,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // FR-CIV-PBR-004 — greedy mesh + texture-array atlas for built voxels
 // ---------------------------------------------------------------------------
 
@@ -1239,6 +1348,46 @@ mod tests {
         let ch_full = TextureChannelMap::standalone("a", "n", "mr", "ao");
         plan.insert(TriplanarLayer::new(MaterialId(1), ch_full, 1.0));
         assert!(plan.is_complete(), "all layers complete -> plan complete");
+    }
+
+    /// FR-CIV-PBR-009 — `triplanar_axis_weights` and `blend_triplanar_pbr`
+    /// deterministically blend albedo / roughness / normal across the three
+    /// axes and renormalize the normal.
+    #[test]
+    fn fr_pbr_009_triplanar_pbr_blend_is_deterministic_and_normalized() {
+        let world_normal = [2.0, 1.0, 1.0];
+        let weights = triplanar_axis_weights(world_normal);
+        assert_eq!(weights, [0.5, 0.25, 0.25]);
+
+        let x = TriplanarAxisSample {
+            albedo_linear: [1.0, 0.0, 0.0],
+            perceptual_roughness: 0.2,
+            normal: [1.0, 0.0, 0.0],
+        };
+        let y = TriplanarAxisSample {
+            albedo_linear: [0.0, 1.0, 0.0],
+            perceptual_roughness: 0.6,
+            normal: [0.0, 1.0, 0.0],
+        };
+        let z = TriplanarAxisSample {
+            albedo_linear: [0.0, 0.0, 1.0],
+            perceptual_roughness: 1.0,
+            normal: [0.0, 0.0, 1.0],
+        };
+
+        let blended = blend_triplanar_pbr(weights, x, y, z);
+        assert_eq!(blended.albedo_linear, [0.5, 0.25, 0.25]);
+        assert!((blended.perceptual_roughness - 0.45).abs() < 1e-6);
+        assert!(
+            (blended.normal[0] * blended.normal[0]
+                + blended.normal[1] * blended.normal[1]
+                + blended.normal[2] * blended.normal[2]
+                - 1.0)
+                .abs()
+                < 1e-6
+        );
+        assert!(blended.normal[0] > blended.normal[1]);
+        assert!(blended.normal[1] >= blended.normal[2]);
     }
 
     // -- FR-CIV-PBR-004 -----------------------------------------------

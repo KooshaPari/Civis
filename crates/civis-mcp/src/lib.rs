@@ -1,41 +1,23 @@
 //! `civis-mcp` — MCP (Model Context Protocol) server for the `civis-cli`
-//! verification harness + JSON-RPC bridge to a running civ-server.
+//! verification harness.
 //!
-//! Tools exposed to MCP clients:
+//! Three tools are exposed to MCP clients:
 //!
-//! | Tool                       | Backing JSON-RPC method            | Notes |
-//! |----------------------------|------------------------------------|-------|
-//! | `civis_verify`             | (Bevy frame capture)               | Requires `bevy` feature |
-//! | `civis_pixels`             | (offline PNG decode + stats)       | Pure offline — no network |
-//! | `civis_census`             | `sim.status`                       | Wraps existing census transport |
-//! | `civis_health`             | `health`                           | Liveness tick probe |
-//! | `civis_snapshot`           | `sim.snapshot`                     | Full sim snapshot (census/markets/emergence) |
-//! | `civis_emergence`          | `sim.emergence`                    | Five-tile emergence dashboard block |
-//! | `civis_market_prices`      | `sim.snapshot` (subset)            | `market_prices` field only |
-//! | `civis_speed_get`          | `sim.get_speed`                    | Read tick speed multiplier |
-//! | `civis_speed_set`          | `sim.set_speed`                    | Write tick speed multiplier |
-//! | `civis_god_action`         | `sim.god_action`                   | Forward a god-tool verb (smite/heal/...) |
-//! | `civis_spawn_entity`       | `sim.spawn_entity`                 | Spawn civilian/vehicle/airport/port/hangar |
-//! | `civis_diplomacy_action`   | `sim.diplomacy_action`             | propose_treaty/declare_war/offer_trade |
-//! | `civis_research_queue`     | `sim.queue_research`               | Queue a known tech |
-//! | `civis_tech_state`         | `sim.tech_state`                   | Read available/researched/in-progress |
-//! | `civis_save_list`          | `save.list`                        | List bridge saves/ directory |
+//! | Tool            | Backing `civis-cli` API                                 |
+//! |-----------------|----------------------------------------------------------|
+//! | `civis_verify`  | `civis_cli::verify::run_verify` (requires `bevy` feature) |
+//! | `civis_pixels`  | `civis_cli::pixels::{sample_rgb_grid, compute_pixel_stats}` |
+//! | `civis_census`  | `civis_cli::census::{build_sim_status_request, decode_response, validate_sim_status}` over the civ-server WS bridge |
 //!
 //! The MCP shim calls the `civis-cli` library functions directly — there is
 //! no `cargo run` shell-out. The only time the shim touches a child process
 //! is when `civis_verify` (feature-gated) delegates to Bevy, which already
 //! spawns its own windowed renderer; even there the call is in-process.
 //!
-//! Every JSON-RPC forwarding tool calls [`dispatch_rpc_method`] which opens
-//! a short-lived WebSocket to the configured civ-server and returns the
-//! raw `result` JSON. The shim is a thin proxy (FR-CIV-MCP-001) — it never
-//! invents backend semantics, only exposes what `civ-server` already
-//! implements in `crates/server/src/jsonrpc.rs`.
-//!
 //! The non-MCP helper surface (`tool_names`, `pixels_for_png`,
-//! `census_sim_status`, `dispatch_rpc_method`) is exposed here so unit
-//! tests can verify the tool schema and the synthetic image path without
-//! standing up an rmcp transport.
+//! `census_sim_status`) is exposed here so unit tests can verify the tool
+//! schema and the synthetic image path without standing up an rmcp
+//! transport.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -54,91 +36,7 @@ use civis_cli::pixels::{compute_pixel_stats, sample_rgb_grid, PixelStats};
 /// Canonical names of the MCP tools this crate registers. The PR description
 /// references this list; tests assert the rmcp router matches it exactly so a
 /// future rename surfaces in CI rather than in production.
-pub const TOOL_NAMES: &[&str] = &[
-    "civis_census",
-    "civis_damage",
-    "civis_diplomacy_action",
-    "civis_emergence",
-    "civis_emergence_dashboard",
-    "civis_emergence_metrics",
-    "civis_emergence_metrics_full",
-    "civis_faction_cohesion",
-    "civis_factions",
-    "civis_god_action_bless",
-    "civis_god_action_ignite",
-    "civis_god_action_multiply_creatures",
-    "civis_god_action_place_terrain",
-    "civis_god_action_spawn_creature",
-    "civis_god_action_smite",
-    "civis_god_action",
-    "civis_get_tick",
-    "civis_health",
-    "civis_inspect_tile",
-    "civis_disaster_events",
-    "civis_psyche_beliefs",
-    "civis_psyche_events",
-    "civis_psyche_snapshot",
-    "civis_load_replay",
-    "civis_load_scenario",
-    "civis_load_slot",
-    "civis_market_prices",
-    "civis_world_snapshot",
-    "civis_outcome",
-    "civis_perf",
-    "civis_pixels",
-    "civis_place_voxel",
-    "civis_resources",
-    "civis_research_queue",
-    "civis_reset",
-    "civis_save_list",
-    "civis_save_replay",
-    "civis_save_slot",
-    "civis_set_policy",
-    "civis_snapshot",
-    "civis_sim_command",
-    "civis_speed_get",
-    "civis_speed_set",
-    "civis_spawn_civilian",
-    "civis_spawn_entity",
-    "civis_status",
-    "civis_subscribe",
-    "civis_tech_state",
-    "civis_unsubscribe",
-    "civis_update_subscription",
-    "civis_verify",
-    "sim_damage",
-    "sim_disaster",
-    "sim_get_diplomacy",
-    "sim_get_emergence",
-    "sim_get_factions",
-    "sim_get_outcome",
-    "sim_get_resources",
-    "sim_get_speed",
-    "sim_get_tech",
-    "sim_health",
-    "sim_inspect",
-    "sim_inspect_tile",
-    "sim_law",
-    "sim_load_replay",
-    "sim_load_scenario",
-    "sim_load_slot",
-    "sim_list_saves",
-    "sim_reset",
-    "sim_run_until",
-    "sim_save_replay",
-    "sim_save_slot",
-    "sim_set_speed",
-    "sim_spawn",
-    "sim_spawn_organism",
-    "sim_status",
-    "sim_step",
-    "sim_subscribe",
-    "sim_sculpt",
-    "sim_terraform_extent",
-    "sim_unsubscribe",
-    "sim_undo",
-    "sim_update_subscription",
-];
+pub const TOOL_NAMES: &[&str] = &["civis_verify", "civis_pixels", "civis_census"];
 
 /// Library version string. Mirrors `civis_cli::HARNESS_VERSION` so MCP
 /// clients can correlate evidence packets with the harness build.
@@ -281,78 +179,6 @@ pub fn pixels_tool_payload(path: &Path, grid: usize) -> Result<Value, String> {
     }))
 }
 
-/// Build a JSON-RPC 2.0 outbound text frame for the given method + params.
-///
-/// Mirrors `civis_cli::census::build_sim_status_request` but generic over
-/// method name and parameters. The harness pins `id=1` so a single inflight
-/// call is enough for the current MCP surface (the bridge matches by
-/// `RequestId` already, but the wire contract is identical to the
-/// census builder's).
-pub fn build_rpc_request(method: &str, params: Value) -> String {
-    serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": method,
-        "params": params,
-    })
-    .to_string()
-}
-
-/// Send a single JSON-RPC request to the civ-server WebSocket bridge and
-/// return the raw `result` JSON value.
-///
-/// Used by the `civis_*` tools that wrap `civ-server` JSON-RPC methods
-/// (snapshot, emergence, health, god_action, ...). Each call opens a
-/// short-lived WebSocket so the MCP shim stays stateless (FR-CIV-MCP-001):
-/// the shim is a thin forwarder and never holds connection state.
-pub fn dispatch_rpc_method(
-    config: &CensusConfig,
-    method: &str,
-    params: Value,
-) -> Result<Value, String> {
-    let url = config.ws_url();
-    let frame = build_rpc_request(method, params);
-
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .map_err(|err| format!("build rpc runtime: {err}"))?;
-
-    runtime.block_on(async move {
-        let connect = tokio_tungstenite::connect_async(&url)
-            .await
-            .map_err(|err| format!("WS connect {url}: {err}"))?;
-        let (mut ws, _response) = connect;
-        use futures_util::{SinkExt, StreamExt};
-        ws.send(tokio_tungstenite::tungstenite::Message::Text(frame))
-            .await
-            .map_err(|err| format!("WS send {method}: {err}"))?;
-        let response = tokio::time::timeout(config.timeout(), ws.next())
-            .await
-            .map_err(|_| format!("timed out waiting for {url}"))?
-            .ok_or_else(|| "server closed the connection".to_string())?
-            .map_err(|err| format!("WS read: {err}"))?;
-        let text = match response {
-            tokio_tungstenite::tungstenite::Message::Text(t) => t,
-            tokio_tungstenite::tungstenite::Message::Binary(b) => {
-                String::from_utf8(b).map_err(|err| format!("binary frame utf-8: {err}"))?
-            }
-            other => return Err(format!("unexpected frame {other:?}")),
-        };
-        let parsed = decode_response(&text).map_err(|err| format!("decode: {err:?}"))?;
-        if let Some(err) = &parsed.error {
-            return Err(format!(
-                "RPC {method} failed (code {}): {}",
-                err.code, err.message
-            ));
-        }
-        parsed
-            .result
-            .ok_or_else(|| format!("RPC {method} returned neither result nor error"))
-    })
-}
-
 #[doc(hidden)]
 pub use server::CivisMcpServer;
 
@@ -365,18 +191,12 @@ mod tests {
     //! Two test families:
     //!
     //! 1. **Schema tests** assert the rmcp `ToolRouter` registers exactly
-    //!    the tools the PR description promises, with the expected names
-    //!    and descriptions. They catch renames / regressions without
+    //!    the three tools the PR description promises, with the expected
+    //!    names and descriptions. They catch renames / regressions without
     //!    needing a live MCP client.
     //! 2. **Pixels unit test** exercises the `civis_pixels` MCP tool's
     //!    library path against a synthetic RGB buffer (decoded from a
     //!    hand-built PNG) so the test stays deterministic and offline.
-    //!
-    //! The new RPC dispatcher (`dispatch_rpc_method`) is exercised
-    //! indirectly by the existing `census_unreachable_host_returns_error`
-    //! integration test (in `tests/mcp_integration.rs`) — that test pokes
-    //! the same WS transport against an unreachable port and expects a
-    //! connection-failure error string.
 
     use super::*;
 
@@ -411,18 +231,23 @@ mod tests {
         writer.finish().expect("png finish");
     }
 
-    /// `tool_names()` must return exactly the tools the PR adds, sorted
-    /// lexicographically.
+    /// `tool_names()` must return exactly the three verify-related tools,
+    /// sorted lexicographically.
     #[test]
     fn tool_names_match_expected() {
         let names = tool_names();
-        let mut sorted_const: Vec<String> = TOOL_NAMES.iter().map(|s| (*s).to_string()).collect();
-        sorted_const.sort();
         assert_eq!(
-            names, sorted_const,
-            "router must match the TOOL_NAMES constant"
+            names,
+            vec![
+                "civis_census".to_string(),
+                "civis_pixels".to_string(),
+                "civis_verify".to_string(),
+            ]
         );
-        assert_eq!(names.len(), TOOL_NAMES.len(), "expected {} tools, got {names:?}", TOOL_NAMES.len());
+        // Sanity: the constant table in lib.rs matches the router.
+        let mut const_names: Vec<String> = TOOL_NAMES.iter().map(|s| (*s).to_string()).collect();
+        const_names.sort();
+        assert_eq!(names, const_names);
     }
 
     /// `tool_router().list_all()` must return one `Tool` entry per name and
@@ -432,43 +257,13 @@ mod tests {
     fn router_list_all_is_consistent() {
         let tools = tool_router().list_all();
         let names: Vec<String> = tools.iter().map(|t| t.name.to_string()).collect();
-        assert_eq!(names.len(), TOOL_NAMES.len(), "expected {} tools, got {names:?}", TOOL_NAMES.len());
+        assert_eq!(names.len(), 3, "expected exactly 3 tools, got {names:?}");
         for expected in TOOL_NAMES {
             assert!(
                 names.iter().any(|n| n == expected),
                 "missing tool `{expected}` in {names:?}"
             );
         }
-    }
-
-    /// `build_rpc_request` produces a valid JSON-RPC 2.0 envelope with the
-    /// expected `jsonrpc`, `id`, `method`, and `params` fields.
-    #[test]
-    fn build_rpc_request_envelope() {
-        let frame = build_rpc_request("sim.snapshot", json!({}));
-        let parsed: Value = serde_json::from_str(&frame).expect("json");
-        assert_eq!(parsed["jsonrpc"], "2.0");
-        assert_eq!(parsed["id"], 1);
-        assert_eq!(parsed["method"], "sim.snapshot");
-        assert!(parsed["params"].is_object());
-    }
-
-    /// `build_rpc_request` round-trips params so a caller can attach god-
-    /// tool verb payloads without losing nested fields (e.g. `x`, `y`,
-    /// `radius`).
-    #[test]
-    fn build_rpc_request_preserves_verb_payload() {
-        let frame = build_rpc_request(
-            "sim.god_action",
-            json!({"action": "smite", "x": 0.5, "y": 0.25, "radius": 8, "energy": 1000}),
-        );
-        let parsed: Value = serde_json::from_str(&frame).expect("json");
-        assert_eq!(parsed["method"], "sim.god_action");
-        assert_eq!(parsed["params"]["action"], "smite");
-        assert!((parsed["params"]["x"].as_f64().unwrap() - 0.5).abs() < 1e-9);
-        assert!((parsed["params"]["y"].as_f64().unwrap() - 0.25).abs() < 1e-9);
-        assert_eq!(parsed["params"]["radius"], 8);
-        assert_eq!(parsed["params"]["energy"], 1000);
     }
 
     /// `civis_pixels` must produce sensible statistics on a synthetic

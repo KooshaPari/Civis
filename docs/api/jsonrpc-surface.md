@@ -8,23 +8,35 @@
 
 ---
 
-## Method catalog (17)
+## Method catalog (29)
 
 | Method | Role (when `require_role`) | Params | Success result (dispatch; bridge may enrich) | `ws_smoke` integration test |
 |--------|----------------------------|--------|---------------------------------------------|------------------------------|
 | `health` | — | `{}` or omit | `{ "tick": <u64> }` | [`ws_jsonrpc_health_returns_tick`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.status` | — | `{}` or omit | `{ "tick": <u64> }`; adds `"population"` when bridge has sim | [`ws_jsonrpc_sim_status_returns_tick_and_population`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.snapshot` | — | `{}` or omit | Full snapshot when sim available (see [Snapshot result](#simsnapshot-result)); else `{ "tick", "speed_multiplier" }` | [`ws_jsonrpc_sim_snapshot_returns_snapshot_fields`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.emergence` | — | `{}` or omit | Latest emergence sample when available; else `{ "tick", "sample": null }` | Unit: `sim_emergence_*` in `jsonrpc.rs` |
+| `sim.perf` | — | `{}` or omit | `{ "tick", "last_tick_ms", "agent_count", "ca_steps", "stub" }` | Unit/dispatch coverage in `jsonrpc.rs` |
+| `sim.outcome` | — | `{}` or omit | `{ "outcome", "reason", "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
+| `sim.subscribe` | — | `{ "frame_kinds"? \| "filter"? \| "filter_types"?, "tick_stride"?, "max_framerate_hz"?, "subscription_id"? }` | WebSocket only: `{ "subscribed": true, "subscription_id", "filter_active", "frame_kinds", "tick_stride", "current_tick" }`; plain dispatch returns `-32603` | [`ws_sim_subscribe_limits_tick_broadcast_frames`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.update_subscription` | — | Same as `sim.subscribe` | WebSocket only: replaces the per-connection filter and returns the same shape as `sim.subscribe`; plain dispatch returns `-32603` | Unit: `handle_sim_update_subscription_*` in `ws_bridge.rs` |
+| `sim.unsubscribe` | — | `{}` or omit | WebSocket only: `{ "unsubscribed": true }`; plain dispatch returns `-32603` | Unit: `handle_sim_unsubscribe_*` in `ws_bridge.rs` |
 | `sim.command` | `noop`: —; `tick`: **operator** | `{ "action": "noop" \| "tick", "role"? }` | `noop`: `{ "accepted": true }`; `tick`: `{ "accepted": true, "tick": <u64> }` (tick updated after advance) | `tick`: [`ws_jsonrpc_sim_command_tick_advances_tick`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_command_tick_rejects_missing_role_when_required`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_command_tick_accepts_x_civis_role_header`](../../crates/server/tests/ws_smoke.rs); F3D0 broadcast: `ws_sim_command_tick_broadcasts_f3d0_*` |
 | `sim.save_replay` | — | `{ "path": <non-empty string> }` | `{ "saved": true, "path": <string> }` | [`ws_jsonrpc_sim_save_and_load_replay_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.load_replay` | — | `{ "path": <non-empty string> }` | `{ "loaded": true, "tick": <u64> }` | [`ws_jsonrpc_sim_save_and_load_replay_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.reset` | — | `{ "seed": <u64> }` **required** | `{ "seed": <u64>, "tick": 0 }` | [`ws_jsonrpc_sim_reset_replaces_simulation_and_zeroes_tick`](../../crates/server/tests/ws_smoke.rs) |
+| `sim.load_scenario` | — | `{ "preset": <string>, "seed"?: <u64> }` | `{ "preset", "seed", "tick": 0 }` | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.set_policy` | — | `{ "scarcity_multiplier": <f64≥0>, "base_consumption_joules"? }` | `{ "updated": true, "scarcity_multiplier": <f64> }`; bridge adds `base_consumption_joules` after apply | [`ws_jsonrpc_sim_set_policy_rejects_nan_scarcity`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_set_policy_zero_scarcity_tick_preserves_energy_budget`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.set_speed` | — | `{ "multiplier": 0 \| 1 \| 2 \| 4 \| 8 }` | `{ "accepted": true, "multiplier": <u32> }` | [`ws_jsonrpc_sim_set_speed_accepts_valid_multiplier`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_sim_set_speed_rejects_invalid_multiplier`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.get_speed` | — | omit or `{}` | `{ "multiplier": <u32> }` | [`ws_jsonrpc_sim_set_speed_accepts_valid_multiplier`](../../crates/server/tests/ws_smoke.rs) (paired with set) |
+| `sim.tech_state` | — | `{}` or omit | `{ "available", "researched", "in_progress", "tick" }` | Unit: `sim_tech_state_*` in `jsonrpc.rs` |
+| `sim.queue_research` | — | `{ "tech": <known tech id> }` | `{ "queued": <tech>, "tick" }` | Unit: `dispatch_queue_research_*` in `jsonrpc.rs` |
 | `sim.spawn_civilian` | **operator** | `{ "x", "y": <f64 normalized 0–1>, "faction"? }` default faction `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "entity_id" }` | [`ws_jsonrpc_sim_spawn_civilian_returns_entity_id`](../../crates/server/tests/ws_smoke.rs), [`ws_jsonrpc_spawn_civilian_pin_appears_in_snapshot`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.spawn_entity` | **operator** | `{ "kind", "x", "y", "faction"? }` — `kind`: `civilian` \| `vehicle` \| `airport` \| `port` \| `hangar` | Dispatch: `{ "accepted": true, "kind": <wire label> }`; bridge adds `ok`, `entity_id` | [`ws_jsonrpc_sim_spawn_entity_vehicle_returns_entity_id`](../../crates/server/tests/ws_smoke.rs) |
 | `sim.place_voxel` | **operator** | `{ "x", "y", "z": <i64 world>, "material"? }` default `0` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok": true }` | — (unit: `parse_place_voxel_params_reads_coords` in `jsonrpc.rs`) |
+| `sim.inspect_tile` | — | `{ "x"?: <i64>, "y"?: <i64> }` | `{ "x", "y", "stub": true }` | Unit/dispatch coverage in `jsonrpc.rs` |
+| `sim.god_action` | **operator** | `{ "action", "x"?, "y"?, "target_faction"?, "magnitude"? }` | `{ "ok": true, "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
+| `sim.diplomacy_action` | — | `{ "action"?, "target_faction"? }` | `{ "action", "target_faction", "stub": true, "tick" }` | Unit/dispatch coverage in `jsonrpc.rs` |
 | `sim.damage` | **operator** | `{ "x", "y", "z": <i64>, "radius"? }` default `8` clamped 1–32, `"energy"?` default `1000` | Dispatch: `{ "accepted": true }`; bridge: `{ "accepted", "ok", "queued": true }` (applied next tick) | [`ws_jsonrpc_sim_damage_accepts_event`](../../crates/server/tests/ws_smoke.rs) |
 | `save.slot` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "saved": true, "slot_name", "tick", "path" }` (writes `{saves_dir}/{slot_name}.civsave.zst`) | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |
 | `save.load` | — | `{ "slot_name": "slot-1" … "slot-5" }` | `{ "loaded": true, "slot_name", "tick" }` | [`ws_jsonrpc_save_slot_roundtrip`](../../crates/server/tests/ws_smoke.rs) |

@@ -41,9 +41,10 @@ export function chunkToMinimapUv(chunkId, bounds) {
   const [minX, minZ, maxX, maxZ] = bounds;
   const spanX = Math.max(maxX - minX + 1, 1);
   const spanZ = Math.max(maxZ - minZ + 1, 1);
+  const clampUv = (value) => Math.min(Math.max(value, 0), 1);
   return [
-    (cx - minX) / spanX + 0.5 / spanX,
-    (cz - minZ) / spanZ + 0.5 / spanZ,
+    clampUv((cx - minX) / spanX + 0.5 / spanX),
+    clampUv((cz - minZ) / spanZ + 0.5 / spanZ),
   ];
 }
 
@@ -56,8 +57,10 @@ export function minimapUvToChunkGrid(uv, bounds) {
   const [minX, minZ, maxX, maxZ] = bounds;
   const spanX = Math.max(maxX - minX + 1, 1);
   const spanZ = Math.max(maxZ - minZ + 1, 1);
-  const cx = Math.floor(uv[0] * spanX + minX);
-  const cz = Math.floor(uv[1] * spanZ + minZ);
+  const u = Number.isFinite(uv[0]) ? uv[0] : 0;
+  const v = Number.isFinite(uv[1]) ? uv[1] : 0;
+  const cx = Math.floor(u * spanX + minX);
+  const cz = Math.floor(v * spanZ + minZ);
   return [
     Math.min(Math.max(cx, minX), maxX),
     Math.min(Math.max(cz, minZ), maxZ),
@@ -108,12 +111,21 @@ export function findChunkAtGrid(chunkIds, cx, cz) {
  */
 export function noteChunkIds(seen, recent, ids, recentCap = 5) {
   if (!ids.length) return { count: seen.size, recentIds: [...recent] };
+  const cap = Math.max(0, Math.trunc(recentCap));
+  if (cap === 0) {
+    for (const id of ids) seen.add(id);
+    return { count: seen.size, recentIds: [] };
+  }
 
-  let nextRecent = [...recent];
+  const nextRecent = [...recent];
   for (const id of ids) {
     seen.add(id);
-    nextRecent = [id, ...nextRecent.filter((value) => value !== id)];
+    const existing = nextRecent.indexOf(id);
+    if (existing !== -1) {
+      nextRecent.splice(existing, 1);
+    }
+    nextRecent.unshift(id);
   }
-  if (nextRecent.length > recentCap) nextRecent.length = recentCap;
+  if (nextRecent.length > cap) nextRecent.length = cap;
   return { count: seen.size, recentIds: nextRecent };
 }

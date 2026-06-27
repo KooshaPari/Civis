@@ -17,6 +17,7 @@ import {
 } from "./lib/civisServer";
 import { getActiveServerSocket } from "./lib/civisSocket";
 import { mergeServerSnapshot } from "./lib/mergeSnapshot";
+import { DASHBOARD_SHORTCUTS } from "./control";
 import {
   useDashboardStore,
   type FormationKind,
@@ -410,8 +411,39 @@ export function BottomBar() {
     </div>
   );
 
+  const liveSelection =
+    state.selectedMilitaryIndex != null
+      ? `Military unit #${state.selectedMilitaryIndex + 1}`
+      : state.selectedTool
+        ? `Tool: ${state.selectedTool}`
+        : "None";
+
+  const liveSpeed = state.speed === 0 ? "Paused" : `${state.speed}x`;
+
   return (
     <footer className="bottom-bar">
+      <div
+        className="control-group"
+        style={{
+          padding: "10px 12px",
+          border: "1px solid var(--line)",
+          borderRadius: 14,
+          background: "rgba(255, 255, 255, 0.03)",
+        }}
+      >
+        <span className="control-label">Controls legend</span>
+        <div className="tool-row" aria-label="Live control state">
+          <LegendChip label="Speed" value={liveSpeed} />
+          <LegendChip label="Selection" value={liveSelection} />
+          <LegendChip label="Pause" value={state.speed === 0 ? "On" : "Off"} />
+        </div>
+        <div className="tool-row" aria-label="Shortcut list">
+          {DASHBOARD_SHORTCUTS.map((shortcut) => (
+            <LegendChip key={shortcut.keys} label={shortcut.keys} value={shortcut.action} />
+          ))}
+        </div>
+      </div>
+
       <div className="control-group">
         <span className="control-label">View</span>
         <div className="tool-row">
@@ -795,6 +827,25 @@ function ToolButton({
       <span aria-hidden>{emoji}</span>
       <small>{title}</small>
     </button>
+  );
+}
+
+function LegendChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "inline-grid",
+        gap: 2,
+        padding: "8px 10px",
+        minWidth: 92,
+        borderRadius: 12,
+        border: "1px solid var(--line)",
+        background: "rgba(255, 255, 255, 0.04)",
+      }}
+    >
+      <strong style={{ fontSize: 12, lineHeight: 1.1 }}>{label}</strong>
+      <span style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.2 }}>{value}</span>
+    </div>
   );
 }
 

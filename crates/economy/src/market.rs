@@ -113,6 +113,18 @@ impl MarketState {
         if self.prices.is_empty() {
             return;
         }
+        if self.prices.len() == 1 {
+            let key = self
+                .prices
+                .first_key_value()
+                .expect("non-empty prices")
+                .0
+                .clone();
+            let delta = deterministic_price_delta(tick, &key);
+            let price = self.prices.get_mut(&key).expect("key from first_key_value");
+            *price = price.saturating_add(delta);
+            return;
+        }
         let len = self.prices.len();
         let idx = tick as usize % len;
         let key = self
@@ -208,7 +220,7 @@ mod tests {
     fn apply_pressure_raises_price_when_demand_exceeds_supply() {
         let mut market = MarketState::default();
         let before = market.prices["food"];
-        market.apply_pressure("food", 1_000, 100);
+        market.apply_pressure("food", 100, 1_000);
         assert!(market.prices["food"] > before);
     }
 
@@ -217,8 +229,17 @@ mod tests {
     fn apply_pressure_lowers_price_when_supply_exceeds_demand() {
         let mut market = MarketState::default();
         let before = market.prices["food"];
-        market.apply_pressure("food", 100, 1_000);
+        market.apply_pressure("food", 1_000, 100);
         assert!(market.prices["food"] < before);
+    }
+
+    /// FR-CIV-0100 §3d — exact clearing leaves the price unchanged.
+    #[test]
+    fn apply_pressure_keeps_price_when_demand_equals_supply() {
+        let mut market = MarketState::default();
+        let before = market.prices["food"];
+        market.apply_pressure("food", 500, 500);
+        assert_eq!(market.prices["food"], before);
     }
 
     #[test]
@@ -240,7 +261,7 @@ mod tests {
         let mut market = MarketState {
             prices: BTreeMap::from([("food".to_string(), 1)]),
         };
-        market.apply_pressure("food", 0, 1_000_000);
+        market.apply_pressure("food", 1_000_000, 0);
         assert_eq!(market.prices["food"], 1);
     }
 

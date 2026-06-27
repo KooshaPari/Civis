@@ -371,6 +371,7 @@ pub fn step_chains(stocks: &mut crate::stocks::Stocks, book: &ChainBook) -> Chai
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use super::*;
     use crate::stocks::{Good, Stocks};
@@ -820,11 +821,11 @@ mod tests {
         stocks.add(Good::Food, 2);
         stocks.add(Good::Water, 2);
         let report = step_chains(&mut stocks, &book);
-        assert!(report.outcomes.iter().any(|o| o.name == "reshape" && o.fired));
         assert!(report
             .outcomes
             .iter()
-            .all(|o| o.name != "mint" || !o.fired));
+            .any(|o| o.name == "reshape" && o.fired));
+        assert!(report.outcomes.iter().all(|o| o.name != "mint" || !o.fired));
         report
             .verify_conservation(&stocks)
             .expect("reshape conserves stock non-negativity");
@@ -865,10 +866,7 @@ mod tests {
         let err = report
             .verify_reserve_reshuffle(&book)
             .expect_err("mint recipe must fail strict reshuffle check");
-        assert_eq!(
-            err,
-            ChainConservationError::ValueMinted { joule_delta: 10 }
-        );
+        assert_eq!(err, ChainConservationError::ValueMinted { joule_delta: 10 });
     }
 
     /// COVERAGE §1 — zero-yield imbalanced legs yield `RecipeImbalance` even when

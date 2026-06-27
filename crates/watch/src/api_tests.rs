@@ -1403,7 +1403,9 @@ async fn fr_save_load_missing_save_is_error() {
                 .method("POST")
                 .uri("/control/load")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"filename":"definitely-does-not-exist-xyz"}"#))
+                .body(Body::from(
+                    r#"{"filename":"definitely-does-not-exist-xyz"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -1433,10 +1435,7 @@ async fn post_control_spawn_entity_unknown_kind_is_rejected() {
     assert_eq!(response.status(), StatusCode::OK);
     let json = body_json(response).await;
     assert_eq!(json["ok"], false);
-    assert!(json["message"]
-        .as_str()
-        .unwrap_or("")
-        .contains("civilian"));
+    assert!(json["message"].as_str().unwrap_or("").contains("civilian"));
 }
 
 #[tokio::test]
@@ -1448,9 +1447,7 @@ async fn post_control_spawn_entity_herd_returns_ok() {
                 .method("POST")
                 .uri("/control/spawn_entity")
                 .header("content-type", "application/json")
-                .body(Body::from(
-                    r#"{"kind":"herd","x":0.3,"y":0.7,"faction":2}"#,
-                ))
+                .body(Body::from(r#"{"kind":"herd","x":0.3,"y":0.7,"faction":2}"#))
                 .unwrap(),
         )
         .await
@@ -1597,7 +1594,9 @@ async fn post_control_mods_publish_rejects_non_mods_source() {
                 .method("POST")
                 .uri("/control/mods/publish")
                 .header("content-type", "application/json")
-                .body(Body::from(serde_json::json!({ "source": "../escape" }).to_string()))
+                .body(Body::from(
+                    serde_json::json!({ "source": "../escape" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await

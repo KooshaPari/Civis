@@ -53,11 +53,11 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
     let total_treasury: f64 = state
         .faction_treasury
         .values()
-        .map(|v| f64::from(v.to_num::<f32>().max(0.0)))
+        .map(|v| v.to_f64().max(0.0))
         .sum();
     if total_treasury > 0.0 {
         for (_, wealth) in &state.faction_treasury {
-            let share = f64::from(wealth.to_num::<f32>().max(0.0)) / total_treasury;
+            let share = wealth.to_f64().max(0.0) / total_treasury;
             if share >= TYRANNY_POPULATION_SHARE && tick >= TYRANNY_TICKS_THRESHOLD {
                 return GameOutcome::Defeat("Tyranny".to_owned());
             }
@@ -80,7 +80,7 @@ pub fn check_outcome(sim: &Simulation) -> GameOutcome {
     }
 
     // ── Victory: all 12 techs researched ────────────────────────────────────
-    if sim.research_cache().researched.len() >= TECH_VICTORY_COUNT {
+    if sim.researched_tech_count() >= TECH_VICTORY_COUNT {
         return GameOutcome::Victory("Age of Enlightenment".to_owned());
     }
 
@@ -94,20 +94,20 @@ mod tests {
 
     #[test]
     fn ongoing_on_fresh_sim() {
-        let sim = Simulation::new(42);
+        let sim = Simulation::with_seed(42);
         assert_eq!(check_outcome(&sim), GameOutcome::Ongoing);
     }
 
     #[test]
     fn victory_population_threshold() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = POPULATION_VICTORY;
         assert!(matches!(check_outcome(&sim), GameOutcome::Victory(_)));
     }
 
     #[test]
     fn defeat_extinction() {
-        let mut sim = Simulation::new(42);
+        let mut sim = Simulation::with_seed(42);
         sim.state.population = 0;
         assert!(matches!(check_outcome(&sim), GameOutcome::Defeat(_)));
     }

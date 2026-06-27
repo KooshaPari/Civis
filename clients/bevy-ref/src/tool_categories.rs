@@ -23,7 +23,7 @@
 //! player picked (carrying full semantic identity); it is kept in lockstep with
 //! `spawn_tools::ActiveTool` (the coarse backing variant) by the HUD.
 
-use bevy::prelude::{Handle, Image, Res, ResMut, Resource};
+use bevy::prelude::Resource;
 
 use crate::spawn_tools::SpawnTool;
 use crate::ui_theme;
@@ -389,32 +389,6 @@ impl ActiveSubTool {
             .iter()
             .position(|c| c.subtools.contains(&self.current))
     }
-}
-
-/// Identifier for the currently selected left-cluster tab (Inspect/Tools/Laws).
-#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct LeftClusterTab(pub u8);
-
-/// Loaded tool-icon handles keyed by [`SubTool`] (one PNG per tool).
-#[derive(Resource, Debug, Default)]
-pub struct ToolIcons {
-    /// Bevy image handles keyed by SubTool variant.
-    pub handles: Vec<Handle<Image>>,
-    /// egui texture ids keyed by SubTool variant (filled in by `load_tool_icons`).
-    pub ids: std::collections::HashMap<SubTool, bevy_egui::egui::TextureId>,
-    /// True once every handle has been registered with egui.
-    pub registered: bool,
-}
-
-/// `(SubTool, asset path)` pairs used by `queue_tool_icon_handles` to load PNGs.
-pub const TOOL_ICON_PATHS: &[(SubTool, &str)] = &[];
-
-/// No-op keyboard shortcut handler that is wired into `GameUiPlugin` but left
-/// inert until per-category hotkeys are decided.
-pub fn handle_category_hotkeys(
-    _keys: Res<bevy::prelude::ButtonInput<bevy::prelude::KeyCode>>,
-    _active: ResMut<ActiveSubTool>,
-) {
 }
 
 #[cfg(test)]

@@ -2,6 +2,8 @@
 # Source: https://github.com/KooshaPari/phenotype-tooling/blob/main/templates/gitignore-node
 
 /target
+/target-godot-smoke/
+crates/server/target/
 /target-audit/
 *.db
 !**/*.db.example

@@ -1,7 +1,7 @@
 //! Property-based economy invariant checks after simulation ticks.
 
 use civ_economy::verify_ledger_conservation;
-use civ_engine::Simulation;
+use civ_engine::{Fixed, Simulation};
 use proptest::prelude::*;
 
 proptest! {
@@ -26,6 +26,12 @@ proptest! {
                 "economy energy budget negative after tick {}: {}",
                 sim.state.tick,
                 sim.economy_state.energy_budget_joules,
+            );
+            prop_assert_eq!(
+                sim.state.energy_budget_joules,
+                Fixed::from_num(sim.economy_state.energy_budget_joules),
+                "world and economy energy budgets diverged after tick {}",
+                sim.state.tick,
             );
 
             verify_ledger_conservation(&sim.economy_state).map_err(|e| {

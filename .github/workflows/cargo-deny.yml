@@ -25,7 +25,7 @@ on:
 permissions:
   contents: read
 
-# Cancel in-progress runs for the same PR/branch when a new commit lands â€”
+# Cancel in-progress runs for the same PR/branch when a new commit lands —
 # keeps the queue short and feedback fast.
 concurrency:
   group: cargo-deny-${{ github.ref }}
@@ -44,7 +44,7 @@ jobs:
         with:
           toolchain: stable
       - name: Cache cargo-deny
-        uses: Swatinem/rust-cache@baf1a810e98b6a3001d0d7234864ed75a17c42fb
+        uses: Swatinem/rust-cache@82e0640c10b16e16b3049b531e1771638dca14eb
         with:
           workspaces: |
             ~/.cargo/advisory-db

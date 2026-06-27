@@ -5,6 +5,7 @@
 set -euo pipefail
 
 # --- Configuration ---
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 CONFIG_FILE="${QUALITY_GATE_CONFIG:-${PROJECT_DIR}/quality-gate.yml}"
 
@@ -113,7 +114,6 @@ load_config() {
     COVERAGE_THRESHOLD=$(yq -r '.thresholds.coverage // 80' "${CONFIG_FILE}" 2>/dev/null || echo 80)
     CYCLOMATIC_MAX=$(yq -r '.thresholds.cyclomatic_complexity // 10' "${CONFIG_FILE}" 2>/dev/null || echo 10)
     COGNITIVE_MAX=$(yq -r '.thresholds.cognitive_complexity // 15' "${CONFIG_FILE}" 2>/dev/null || echo 15)
-    # shellcheck disable=SC2034
     MAX_FUNCTION_LINES=$(yq -r '.thresholds.max_function_lines // 40' "${CONFIG_FILE}" 2>/dev/null || echo 40)
     DUPLICATION_THRESHOLD=$(yq -r '.thresholds.duplication_pct // 5' "${CONFIG_FILE}" 2>/dev/null || echo 5)
     TIMEOUT_PER_GATE=$(yq -r '.thresholds.timeout_per_gate // 60' "${CONFIG_FILE}" 2>/dev/null || echo 60)

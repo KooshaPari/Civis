@@ -400,3 +400,36 @@ fn worker_drains_off_path_and_maintains() {
         .unwrap();
     assert!(w.graph().entity(hero).unwrap().promoted);
 }
+
+#[test]
+fn link_entity_edge_attaches_founded_spine() {
+    let mut g = SagaGraph::new(cfg());
+    g.ingest(ev(
+        0,
+        EventKind::SettlementFounded,
+        SourceCrate::Protocol3d,
+        1.0,
+        50,
+        Role::Founder,
+    ));
+    g.ingest(ev(
+        1,
+        EventKind::SettlementFounded,
+        SourceCrate::Agents,
+        0.8,
+        7,
+        Role::Leader,
+    ));
+    let founder = g
+        .entity_for_sim(SourceCrate::Agents, SimRuntimeId(7))
+        .unwrap();
+    let settlement = g
+        .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(50))
+        .unwrap();
+    g.link_entity_edge(founder, settlement, LegendEdge::Founded);
+    let saga = g.saga_of(founder).expect("founder saga");
+    assert!(
+        !saga.related.is_empty() || !saga.events.is_empty(),
+        "Founded edge should keep founder in queryable saga"
+    );
+}

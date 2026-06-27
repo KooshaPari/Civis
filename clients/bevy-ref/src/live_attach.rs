@@ -180,6 +180,7 @@ fn sync_diplomacy_panel_from_scene(
     let frame = civ_protocol_3d::FactionStateFrame {
         tick: 0,
         factions: scene.faction_entries.clone(),
+        population_by_faction: Default::default(),
     };
     let population_by_faction: std::collections::HashMap<u32, u32> = scene.population_by_faction.iter().map(|(&k, &v)| (k, v)).collect();
     crate::live_stream::sync_diplomacy_from_faction_frame(

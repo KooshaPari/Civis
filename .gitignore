@@ -112,3 +112,11 @@ yarn-error.log*
 /*_API_FACTS.md
 /*_FACTS.md
 /TEST_SPECS_*.md
+
+# Stray shell-tool output files dropped during git fetch --unshallow attempts
+/_un.out
+/_un.err
+/_fch.out
+/_fch.err
+/_cv_clone.out
+/_cv_clone.err

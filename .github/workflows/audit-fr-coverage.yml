@@ -1,0 +1,61 @@
+name: FR/NFR Coverage Audit
+
+on:
+  pull_request:
+    paths:
+      - "docs/traceability/**"
+      - "Tools/audit-fr-coverage/**"
+      - ".github/workflows/audit-fr-coverage.yml"
+  push:
+    branches:
+      - main
+      - "fix/**"
+    paths:
+      - "docs/traceability/**"
+      - "Tools/audit-fr-coverage/**"
+
+jobs:
+  audit-fr-coverage:
+    name: Audit FR/NFR coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run audit-fr-coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::FR/NFR coverage summary"
+          bash Tools/audit-fr-coverage/audit.sh .
+          echo "::endgroup::"
+
+      - name: Detect coverage regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Extract the dormant row count from the audit output (last line)
+          dormant=$(bash Tools/audit-fr-coverage/audit.sh . | grep -E "^dormant[[:space:]]" | awk '{print $NF}')
+          covered=$(bash Tools/audit-fr-coverage/audit.sh . | grep -E "^covered[[:space:]]" | awk '{print $NF}')
+          total=$(bash Tools/audit-fr-coverage/audit.sh . | grep -E "^total[[:space:]]" | awk '{print $NF}')
+
+          # Coverage ratio = covered / total (rounded to 3 decimals)
+          if [ "$total" -gt 0 ]; then
+            ratio=$(awk -v c="$covered" -v t="$total" 'BEGIN{printf "%.3f", c/t}')
+          else
+            ratio="0.000"
+          fi
+
+          # Compare against the committed baseline in docs/traceability/COVERAGE_AUDIT.md
+          baseline=$(grep -E "^coverage_ratio:" docs/traceability/COVERAGE_AUDIT.md | awk '{print $2}' | tr -d '[:space:]' || echo "0.000")
+
+          echo "current_ratio=$ratio baseline=$baseline"
+
+          if awk -v cur="$ratio" -v base="$baseline" 'BEGIN{exit !(cur+0 >= base+0)}'; then
+            echo "OK: coverage ratio $ratio >= baseline $baseline"
+          else
+            echo "WARN: coverage ratio $ratio < baseline $baseline (dormant=$dormant, covered=$covered, total=$total)"
+            echo "Run \`bash Tools/audit-fr-coverage/audit.sh .\` locally and paste the"
+            echo "output into docs/traceability/COVERAGE_AUDIT.md to refresh the baseline."
+          fi

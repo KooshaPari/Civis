@@ -11,7 +11,11 @@ causation), never scripted silos. See `project_civis_emergence_charter`,
 `project_civis_emergence_design_layer`.
 
 Spec roots: `docs/specs/CIV-0100-economy-v1.md`, `CIV-0107-joule-economy-system-v1.md`,
-emergence charter (FR-CIV-0100 §3 emergence).
+emergence charter (FR-CIV-0100 §3 emergence). Concrete matrix row: see
+`docs/traceability/fr-emergence-matrix.md` Section A → row **FR-CIV-0100**
+(charter umbrella). Batch sub-rows that promote these systems to COVERED
+live in the same matrix under sub-cluster headers (`§3.1` emergence
+phases) and are listed below by FR ID.
 
 Tick order (emergence tail): `phase_disasters` → `phase_life` → `phase_emergence`
 → `phase_research` → `phase_tech` → `phase_belief` → `phase_unrest` →
@@ -131,8 +135,30 @@ resources, not one-way API calls.
 
 ## Open traceability gaps (next lanes)
 
-- Add explicit `FR-CIV-0100-§N` IDs to the spec doc so the matrix generator links these
-  rows as COVERED rather than CODE-ONLY-no-spec.
-- Wire these test names into `docs/audits/_id_inventory_v3.json` on the next matrix refresh.
-- Candidate next couplings: `TECH_STORAGE` / `TECH_METALLURGY` gameplay effects beyond
-  bitmask presence; institution upkeep → faction inequality feedback.
+The 11 systems and 30 couplings above are CODE-ONLY-no-spec at the row-level — each
+maps to `FR-CIV-0100 §N` in prose, but no discrete spec row exists in the emergence
+matrix. The next lanes (per `fr-emergence-matrix.md` Section A) are:
+
+- **FR-CIV-0100-int1** (charter umbrella): index row that the 11 systems + 30 couplings
+  hook into. Status: `dormant`. Owner: `phase_orchestration`.
+- **FR-CIV-0100-int2** (cohesion hub): rows #9 (cohesion) + couplings #16 (cohesion ↔
+  belief/unrest), #13 (cohesion damp), #17 (cohesion → stratification), #30 (cohesion →
+  military morale). Status: `dormant`. Owner: `cohesion_engine`.
+- **FR-CIV-0100-int3** (research hub): rows #1–2 (research, tech-unlocks) + couplings #1–5
+  (research upstream + capacity), #12 (research damp), #25–27 (production/building/wildfire).
+  Status: `dormant`. Owner: `research_engine`.
+- **FR-CIV-0100-int4** (belief hub): rows #3 + #6 (belief, divine spend) + couplings #15
+  (unrest → belief), #19 (temple → belief), #28–29 (disasters ↔ belief ↔ divine).
+  Status: `dormant`. Owner: `belief_engine`.
+
+Until each charter integration row has its own discrete spec section in
+`FUNCTIONAL_REQUIREMENTS.md` AND a discrete FR-CIV-0100-§N in `fr-emergence-matrix.md`,
+the 11 systems / 30 couplings remain CODE-ONLY-no-spec rows. Coverage audit
+(`Tools/audit-fr-coverage/audit.sh`, gated by `.github/workflows/audit-fr-coverage.yml`)
+flags any new CODE-ONLY-no-spec rows on every PR.
+
+Candidate next couplings (currently implied but not coded):
+- `TECH_STORAGE` / `TECH_METALLURGY` gameplay effects beyond bitmask presence.
+- Institution upkeep → faction inequality feedback (current: institution drains
+  treasury; does not push `faction_treasury_spread`).
+- Diplomatic treaty memory across save/load cycles (current: in-tick only).

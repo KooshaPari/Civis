@@ -4,5 +4,6 @@ pub mod diplomacy;
 pub mod economy;
 pub mod language;
 pub mod legends;
+pub mod migration;
 pub mod psyche;
 pub mod religion;

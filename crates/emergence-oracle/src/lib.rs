@@ -1,7 +1,7 @@
 //! Emergence Oracle — programmatic FR verification for Civis emergence systems.
 //!
 //! Each [`FeatureOracle`] implementation maps to a specific FR-EMG-* requirement.
-//! [`OracleRegistry::with_defaults`] wires all 8 domain oracles and [`OracleRegistry::run_all`]
+//! [`OracleRegistry::with_defaults`] wires all 9 domain oracles and [`OracleRegistry::run_all`]
 //! batch-verifies them against a live [`Simulation`].
 
 pub mod oracles;
@@ -49,12 +49,13 @@ impl OracleRegistry {
         self.oracles.push(oracle);
     }
 
-    /// Create a registry pre-loaded with all 8 domain oracles.
+    /// Create a registry pre-loaded with all 9 domain oracles.
     pub fn with_defaults() -> Self {
         use oracles::{
             architecture::ArchitectureOracle, creature::CreatureOracle,
             diplomacy::DiplomacyOracle, economy::EconomyOracle, language::LanguageOracle,
-            legends::LegendsOracle, psyche::PsycheOracle, religion::ReligionOracle,
+            legends::LegendsOracle, migration::MigrationOracle, psyche::PsycheOracle,
+            religion::ReligionOracle,
         };
         let mut registry = Self::new();
         registry.register(Box::new(ReligionOracle));
@@ -65,6 +66,7 @@ impl OracleRegistry {
         registry.register(Box::new(PsycheOracle));
         registry.register(Box::new(ArchitectureOracle));
         registry.register(Box::new(CreatureOracle));
+        registry.register(Box::new(MigrationOracle));
         registry
     }
 
@@ -85,11 +87,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn oracle_registry_runs_all_eight() {
+    fn oracle_registry_runs_all_nine() {
         let sim = Simulation::new();
         let registry = OracleRegistry::with_defaults();
         let verdicts = registry.run_all(&sim);
-        assert_eq!(verdicts.len(), 8, "Expected 8 oracle verdicts");
+        assert_eq!(verdicts.len(), 9, "Expected 9 oracle verdicts");
     }
 
     #[test]

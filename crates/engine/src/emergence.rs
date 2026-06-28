@@ -1765,3 +1765,51 @@ mod unrest_pressure_tests {
     }
 }
 
+pub fn tech_diffusion_rate(neighbor_tech_level: f32, contact_intensity: f32) -> f32 {
+    if !neighbor_tech_level.is_finite() || !contact_intensity.is_finite() {
+        return 0.0;
+    }
+
+    let tech_factor = neighbor_tech_level.clamp(0.0, 1.0);
+    let contact_factor = contact_intensity.clamp(0.0, 1.0);
+    (tech_factor * contact_factor).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod tech_diffusion_rate_tests {
+    use super::tech_diffusion_rate;
+
+    #[test]
+    fn guards_nan_and_scales_with_inputs() {
+        assert_eq!(tech_diffusion_rate(f32::NAN, 0.5), 0.0);
+        assert_eq!(tech_diffusion_rate(0.5, f32::INFINITY), 0.0);
+        assert_eq!(tech_diffusion_rate(1.0, 1.0), 1.0);
+        assert!(tech_diffusion_rate(0.5, 0.5) > 0.0);
+        assert!((0.0..=1.0).contains(&tech_diffusion_rate(0.75, 0.6)));
+    }
+}
+
+pub fn trade_war_intensity(tariff_pressure: f32, dependency: f32) -> f32 {
+    if !tariff_pressure.is_finite() || !dependency.is_finite() {
+        return 0.0;
+    }
+
+    let pressure_factor = tariff_pressure.clamp(0.0, 1.0);
+    let dependency_factor = dependency.clamp(0.0, 1.0);
+    (pressure_factor * dependency_factor).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod trade_war_intensity_tests {
+    use super::trade_war_intensity;
+
+    #[test]
+    fn guards_nan_and_multiplies_factors() {
+        assert_eq!(trade_war_intensity(f32::NAN, 0.5), 0.0);
+        assert_eq!(trade_war_intensity(0.8, f32::INFINITY), 0.0);
+        assert_eq!(trade_war_intensity(1.0, 1.0), 1.0);
+        assert_eq!(trade_war_intensity(0.0, 0.5), 0.0);
+        assert!((0.0..=1.0).contains(&trade_war_intensity(0.6, 0.8)));
+    }
+}
+

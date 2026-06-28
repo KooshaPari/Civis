@@ -59,6 +59,33 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn festival_intensity(food_surplus: f32, shared_belief: f32) -> f32 {
+    let food = if food_surplus.is_finite() {
+        food_surplus.max(0.0)
+    } else {
+        0.0
+    };
+    let belief = if shared_belief.is_finite() {
+        shared_belief.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    ((food / (1.0 + food)) * 0.6 + belief * 0.4).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod festival_intensity_tests {
+    use super::festival_intensity;
+
+    #[test]
+    fn clamps_and_ignores_non_finite_inputs() {
+        assert_eq!(festival_intensity(f32::NAN, f32::NAN), 0.0);
+        assert_eq!(festival_intensity(-10.0, 2.0), 0.4);
+        assert_eq!(festival_intensity(1.0e9, 1.0), 1.0);
+    }
+}
+
 pub fn settlement_plague_risk(density: f32, trade_connectivity: f32) -> bool {
     plague_outbreak(density, trade_connectivity).0 > 0.5
 }

@@ -247,6 +247,7 @@ struct ScenarioStartButton;
 fn main() {
     let mut app = App::new();
     app.add_plugins((
+        (
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
@@ -262,6 +263,8 @@ fn main() {
             LivePickPlugin,
             FactionHudPlugin,
             GameplayHudPlugin,
+        ),
+        (
             SaveLoadUiPlugin,
             TutorialPlugin,
             PerfHudPlugin,
@@ -271,8 +274,9 @@ fn main() {
             DiplomacyUiPlugin,
             GodPanelPlugin,
             GodActionsPlugin,
-        ))
-        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin, GameplayHudPlugin))
+        ),
+    ))
+        .add_plugins((SandboxEventFeedPlugin, civ_bevy_ref::frame_budget::FrameBudgetPlugin))
         .init_resource::<LiveStreamScene>()
         .init_resource::<LiveSceneFocus>()
         .init_resource::<ConnectionOverlay>()

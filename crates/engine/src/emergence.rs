@@ -8,18 +8,15 @@
 use std::collections::{BTreeMap, HashSet};
 
 use civ_agents::culture::{drift_populations, ContactEdge, CultureProfile};
-use civ_agents::language::{
-    name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory,
-};
+use civ_agents::language::{name_from_lexicon, EvolvedLexicon, LexemeKind, PhonemeInventory};
 use civ_agents::psyche::{
     cluster_belief_centroids, nudge_temperament, psyche_from_dna, update_beliefs, update_mood,
     PSYCHE_DIM,
 };
 use civ_agents::{
-    apply_social_event, belief_culture_exposure, decay_social_graph, psych_genome_profile,
-    cluster_by_colocation, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
-    Interaction, Needs,
-    Position3d, Psyche, SocialEvent, SocialGraph,
+    apply_social_event, belief_culture_exposure, cluster_by_colocation, decay_social_graph,
+    psych_genome_profile, Alignment, Civilian, ClusterId as AgentsClusterId, ClusterMember,
+    Interaction, Needs, Position3d, Psyche, SocialEvent, SocialGraph,
 };
 use civ_genetics::{
     sentience::{evaluate_sentience, CognitionTraitProfile, SentienceEvent, SentienceThreshold},
@@ -27,20 +24,20 @@ use civ_genetics::{
 };
 use civ_legends::{
     AggregateKey, ClusterId, EntityKind, EntityRef, Epoch, EpochDigest, EventKind, IngestOutcome,
-    LegendEdge, LegendsConfig, LegendsWorker, LegendEntityId, NameRef, RawSimEvent, Role, Saga,
+    LegendEdge, LegendEntityId, LegendsConfig, LegendsWorker, NameRef, RawSimEvent, Role, Saga,
     SagaGraph, SimRuntimeId, SourceCrate, QUERY_API_VERSION,
 };
-use civ_planet::GeologyMap;
-use civ_voxel::FIXED_SCALE;
 use civ_needs::Needs as LifeNeeds;
+use civ_planet::GeologyMap;
 use civ_species::express;
+use civ_voxel::FIXED_SCALE;
 use hecs::Entity;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::engine::{Simulation, awakening_belief_gain, awakening_cohesion_gain};
+use crate::engine::{awakening_belief_gain, awakening_cohesion_gain, Simulation};
 
 /// JSON-RPC / inspector payload for `sim.legends` (FR-CIV-LEGENDS-QUERY-07).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -261,8 +258,7 @@ impl Simulation {
         if positions.is_empty() {
             return;
         }
-        let assignments =
-            cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
+        let assignments = cluster_by_colocation(&positions, Self::SETTLEMENT_CLUSTER_RADIUS_FP);
         let by_id: BTreeMap<u64, AgentsClusterId> = assignments.into_iter().collect();
 
         let entities: Vec<(Entity, u64)> = self
@@ -281,9 +277,7 @@ impl Simulation {
 
         let mut cluster_member_counts: BTreeMap<u64, u32> = BTreeMap::new();
         for (_, member) in self.world.query::<&ClusterMember>().iter() {
-            *cluster_member_counts
-                .entry(member.cluster.0)
-                .or_insert(0) += 1;
+            *cluster_member_counts.entry(member.cluster.0).or_insert(0) += 1;
         }
         self.rollup_emergent_settlements(&cluster_member_counts);
         self.emergence_accrue_cluster_cultures(&cluster_member_counts);
@@ -309,11 +303,7 @@ impl Simulation {
                 });
         }
         self.emergence.cluster_cultures.retain(|cluster_id, _| {
-            cluster_member_counts
-                .get(cluster_id)
-                .copied()
-                .unwrap_or(0)
-                >= 2
+            cluster_member_counts.get(cluster_id).copied().unwrap_or(0) >= 2
         });
     }
 
@@ -324,6 +314,7 @@ impl Simulation {
         for (_, member) in self.world.query::<&ClusterMember>().iter() {
             *cluster_ids.entry(member.cluster.0).or_insert(0) += 1;
         }
+        self.emergence_plague_outbreaks(tick, &cluster_ids);
         let mut profiles: Vec<CultureProfile> =
             self.emergence.cluster_cultures.values().cloned().collect();
         if profiles.len() < 2 {
@@ -361,6 +352,39 @@ impl Simulation {
         }
     }
 
+    fn emergence_plague_outbreaks(
+        &mut self,
+        tick: u64,
+        cluster_member_counts: &BTreeMap<u64, u32>,
+    ) {
+        const OUTBREAK_FEED_THRESHOLD: f32 = 0.58;
+
+        let settlement_count = cluster_member_counts.len() as f32;
+        for (cluster_id, population) in cluster_member_counts {
+            if *population < 2 {
+                continue;
+            }
+
+            let density = (*population as f32) * 24.0;
+            let trade_connectivity = (settlement_count - 1.0).max(0.0);
+            let (outbreak_probability, population_loss) =
+                plague_outbreak(density, trade_connectivity);
+
+            if outbreak_probability >= OUTBREAK_FEED_THRESHOLD {
+                self.emergence.push_feed(
+                    tick,
+                    "plague_outbreak",
+                    format!(
+                        "settlement {cluster_id} plague risk {:.0}% with impact {}",
+                        outbreak_probability * 100.0,
+                        population_loss
+                    ),
+                    self.settlement_founder_agent(*cluster_id),
+                );
+            }
+        }
+    }
+
     /// Coin settlement/faction/event lexemes from drifted phoneme inventories.
     fn emergence_language_lexicon(&mut self, tick: u64) {
         let seed = self.state.rng_seed;
@@ -371,7 +395,12 @@ impl Simulation {
                 .entry(*cluster_id)
                 .or_default();
             let mut rng = ChaCha8Rng::seed_from_u64(seed ^ cluster_id ^ tick);
-            lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Settlement, *cluster_id);
+            lexicon.coin(
+                &mut rng,
+                &profile.phonemes,
+                LexemeKind::Settlement,
+                *cluster_id,
+            );
             if tick % 128 == 0 {
                 lexicon.coin(&mut rng, &profile.phonemes, LexemeKind::Event, tick);
             }
@@ -400,7 +429,12 @@ impl Simulation {
                         .get(id)
                         .and_then(|lex| {
                             self.emergence.cluster_cultures.get(id).and_then(|profile| {
-                                name_from_lexicon(lex, &profile.phonemes, LexemeKind::Settlement, **id)
+                                name_from_lexicon(
+                                    lex,
+                                    &profile.phonemes,
+                                    LexemeKind::Settlement,
+                                    **id,
+                                )
                             })
                         })
                         .is_some()
@@ -600,12 +634,7 @@ impl Simulation {
                     0.0,
                 );
                 let arousal = psyche.mood.arousal;
-                nudge_temperament(
-                    &mut psyche.temperament,
-                    arousal,
-                    needs.belonging,
-                    maturity,
-                );
+                nudge_temperament(&mut psyche.temperament, arousal, needs.belonging, maturity);
             }
             let sociability = self
                 .world
@@ -780,18 +809,14 @@ impl Simulation {
                 self.emergence.push_feed(
                     tick,
                     "sentience",
-                    format!(
-                        "lineage {} crossed sentience — saga graph updated",
-                        id
-                    ),
+                    format!("lineage {} crossed sentience — saga graph updated", id),
                     Some(id),
                 );
                 self.record_legend_promotions(tick, &outcome.promoted, id);
             }
         }
         for pulse in self.last_tick_combat_pulses().to_vec() {
-            let mut raw =
-                RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
+            let mut raw = RawSimEvent::new(tick, EventKind::Battle, SourceCrate::Tactics, 0.75);
             let mut agent_id = None;
             if let Some(a) = pulse.unit_a {
                 raw = raw.with_participant(SourceCrate::Tactics, SimRuntimeId(a), Role::Aggressor);
@@ -815,11 +840,7 @@ impl Simulation {
             }
         }
         for cluster_id in self.last_settlement_ids().to_vec() {
-            if !self
-                .emergence
-                .known_settlement_ids
-                .insert(cluster_id)
-            {
+            if !self.emergence.known_settlement_ids.insert(cluster_id) {
                 continue;
             }
             let founder = self.settlement_founder_agent(cluster_id);
@@ -844,19 +865,22 @@ impl Simulation {
             let outcome = self.emergence_ingest_legend(raw);
             if let (Some(founder_id), Some(settle_eid)) = (
                 founder,
-                self.emergence.legends.graph.entity_for_sim(
-                    SourceCrate::Protocol3d,
-                    SimRuntimeId(cluster_id),
-                ),
+                self.emergence
+                    .legends
+                    .graph
+                    .entity_for_sim(SourceCrate::Protocol3d, SimRuntimeId(cluster_id)),
             ) {
-                if let Some(leader_eid) = self.emergence.legends.graph.entity_for_sim(
-                    SourceCrate::Agents,
-                    SimRuntimeId(founder_id),
-                ) {
-                    self.emergence
-                        .legends
-                        .graph
-                        .link_entity_edge(leader_eid, settle_eid, LegendEdge::Founded);
+                if let Some(leader_eid) = self
+                    .emergence
+                    .legends
+                    .graph
+                    .entity_for_sim(SourceCrate::Agents, SimRuntimeId(founder_id))
+                {
+                    self.emergence.legends.graph.link_entity_edge(
+                        leader_eid,
+                        settle_eid,
+                        LegendEdge::Founded,
+                    );
                 }
             }
             if let Some(founder_id) = founder {
@@ -892,9 +916,7 @@ impl Simulation {
             let (kind, label) = match dip.kind {
                 crate::engine::DiplomacyKind::Conflict => (EventKind::WarDeclared, "war"),
                 crate::engine::DiplomacyKind::Peace => (EventKind::WarEnded, "peace"),
-                crate::engine::DiplomacyKind::TradeAgreement => {
-                    (EventKind::LawObserved, "treaty")
-                }
+                crate::engine::DiplomacyKind::TradeAgreement => (EventKind::LawObserved, "treaty"),
             };
             let raw = RawSimEvent::new(tick, kind, SourceCrate::Engine, 0.55)
                 .with_participant(
@@ -928,11 +950,7 @@ impl Simulation {
                 .legends
                 .graph
                 .resolve_aggregate(war_key, epoch);
-            self.record_legend_promotions(
-                tick,
-                &outcome.promoted,
-                u64::from(dip.faction_a),
-            );
+            self.record_legend_promotions(tick, &outcome.promoted, u64::from(dip.faction_a));
         }
         // Named legend belief/cohesion influence (FR-CIV-LEGENDS deepening).
         self.apply_named_legend_influence();
@@ -1069,8 +1087,7 @@ impl Simulation {
                     result.empty_reason = Some("saga_of requires agent_id".to_string());
                     return result;
                 };
-                if let Some(eid) =
-                    graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
+                if let Some(eid) = graph.entity_for_sim(SourceCrate::Agents, SimRuntimeId(agent_id))
                 {
                     result.saga = graph.saga_of(eid);
                 } else {
@@ -1252,7 +1269,11 @@ mod tests {
             "expected cultures or civilians"
         );
         if sim_a.cluster_cultures().len() >= 2 {
-            let values: Vec<_> = sim_a.cluster_cultures().values().map(|p| p.traits).collect();
+            let values: Vec<_> = sim_a
+                .cluster_cultures()
+                .values()
+                .map(|p| p.traits)
+                .collect();
             assert_ne!(values[0], values[1], "cultures should diverge");
             let phon_a: Vec<_> = sim_a
                 .cluster_cultures()
@@ -1396,7 +1417,9 @@ mod tests {
             id: "human_baseline".to_string(),
             display_name: "Human Baseline".to_string(),
             dna_length: dna_len,
-            genome: (0..dna_len as u8).map(|i| i.wrapping_mul(7).wrapping_add(13)).collect(),
+            genome: (0..dna_len as u8)
+                .map(|i| i.wrapping_mul(7).wrapping_add(13))
+                .collect(),
             divergence: 0.1,
             spawn_biome_affinity: vec!["TemperateForest".to_string()],
             notes: None,
@@ -1408,12 +1431,8 @@ mod tests {
         let lib = SeedLibrary::from_seed_set(set).expect("valid seed set");
 
         // select_seed_for_position should prefer the forest seed over the fallback.
-        let chosen = select_seed_for_position(
-            &lib,
-            Some(&active_seed),
-            &geology_map,
-            &equatorial_pos,
-        );
+        let chosen =
+            select_seed_for_position(&lib, Some(&active_seed), &geology_map, &equatorial_pos);
         assert_eq!(
             chosen.map(|s| s.id.as_str()),
             Some("human_baseline"),
@@ -1565,7 +1584,9 @@ mod tests {
     /// FR-CIV-LEGENDS deepening — named legend entities boost belief/cohesion.
     #[test]
     fn named_legend_boosts_belief_cohesion() {
-        use civ_legends::{LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SourceCrate, SimRuntimeId};
+        use civ_legends::{
+            LegendEntityId, LegendsConfig, RawSimEvent, Role, SagaGraph, SimRuntimeId, SourceCrate,
+        };
 
         let mut sim = Simulation::with_seed(77);
         // Ingest a high-significance event so an entity gets promoted.
@@ -1594,7 +1615,6 @@ mod tests {
     }
 }
 
-
 /// Computes a deterministic plague outbreak estimate from local density and trade exposure.
 ///
 /// Returns `(outbreak_probability, population_loss)`, where probability is clamped to
@@ -1616,8 +1636,8 @@ pub fn plague_outbreak(density: f32, trade_connectivity: f32) -> (f32, u32) {
     let outbreak_probability =
         (0.08 + density_pressure * 0.52 + trade_pressure * 0.32).clamp(0.0, 1.0);
 
-    let population_loss = (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round()
-        as u32;
+    let population_loss =
+        (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round() as u32;
 
     (outbreak_probability, population_loss)
 }
@@ -1637,7 +1657,10 @@ mod plague_tests {
     #[test]
     fn plague_outbreak_clamps_invalid_and_negative_inputs() {
         assert_eq!(plague_outbreak(-10.0, f32::NAN), (0.08, 0));
-        assert_eq!(plague_outbreak(f32::INFINITY, 3.0), plague_outbreak(0.0, 3.0));
+        assert_eq!(
+            plague_outbreak(f32::INFINITY, 3.0),
+            plague_outbreak(0.0, 3.0)
+        );
     }
 
     #[test]

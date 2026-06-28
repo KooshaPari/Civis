@@ -1765,3 +1765,56 @@ mod unrest_pressure_tests {
     }
 }
 
+
+pub fn climate_stress_index(temperature_anomaly: f32, drought_severity: f32) -> f32 {
+    if temperature_anomaly.is_nan() || drought_severity.is_nan() {
+        return 0.0;
+    }
+
+    ((temperature_anomaly.abs() + drought_severity) * 0.5).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod climate_stress_index_tests {
+    use super::climate_stress_index;
+
+    #[test]
+    fn clamps_and_handles_nan() {
+        assert_eq!(climate_stress_index(0.0, 0.0), 0.0);
+        assert_eq!(climate_stress_index(2.0, 2.0), 1.0);
+        assert_eq!(climate_stress_index(f32::NAN, 0.5), 0.0);
+        assert_eq!(climate_stress_index(0.5, f32::NAN), 0.0);
+    }
+}
+
+
+pub fn coastal_flood_risk(sea_level_rise: f32, coastal_population: f32) -> (f32, u32) {
+    let risk = if sea_level_rise.is_nan() || coastal_population.is_nan() {
+        0.0
+    } else {
+        (sea_level_rise * 0.5).clamp(0.0, 1.0)
+    };
+
+    let displaced = if coastal_population.is_nan() || coastal_population < 0.0 {
+        0
+    } else {
+        (coastal_population * risk) as u32
+    };
+
+    (risk, displaced)
+}
+
+#[cfg(test)]
+mod coastal_flood_risk_tests {
+    use super::coastal_flood_risk;
+
+    #[test]
+    fn computes_risk_and_displacement() {
+        assert_eq!(coastal_flood_risk(0.0, 1000.0), (0.0, 0));
+        assert_eq!(coastal_flood_risk(2.0, 1000.0), (1.0, 1000));
+        assert_eq!(coastal_flood_risk(1.0, 500.0), (0.5, 250));
+        assert_eq!(coastal_flood_risk(f32::NAN, 1000.0), (0.0, 0));
+        assert_eq!(coastal_flood_risk(1.0, f32::NAN), (0.5, 0));
+    }
+}
+

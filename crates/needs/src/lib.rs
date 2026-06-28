@@ -21,8 +21,10 @@ use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 
+pub mod decay;
 pub mod lifecycle;
 
+pub use decay::{apply_resource, tick_rise, NeedChannel, NeedLevel, RiseRates};
 pub use lifecycle::{classify_lifecycle, age_threshold, labor_capacity, LifecycleLabel, LifecycleParams};
 
 /// Schema version. Bumped on breaking changes.

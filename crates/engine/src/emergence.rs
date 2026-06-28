@@ -59,6 +59,26 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn unrest_pressure(inequality: f32, scarcity: f32) -> f32 {
+    if inequality.is_nan() || scarcity.is_nan() {
+        return 0.0;
+    }
+
+    ((inequality + scarcity) * 0.5).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod unrest_pressure_tests {
+    use super::unrest_pressure;
+
+    #[test]
+    fn clamps_and_handles_nan() {
+        assert_eq!(unrest_pressure(-0.5, 0.0), 0.0);
+        assert_eq!(unrest_pressure(1.5, 1.5), 1.0);
+        assert_eq!(unrest_pressure(f32::NAN, 0.5), 0.0);
+    }
+}
+
 pub fn settlement_plague_risk(density: f32, trade_connectivity: f32) -> bool {
     plague_outbreak(density, trade_connectivity).0 > 0.5
 }

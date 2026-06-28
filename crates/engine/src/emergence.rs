@@ -59,6 +59,27 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn famine_severity(food_deficit: f32, population: f32) -> (f32, u32) {
+    let severity = if food_deficit.is_finite() && population.is_finite() && population > 0.0 {
+        (food_deficit / population).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let population_loss = (severity * population.max(0.0) * 0.2).round() as u32;
+    (severity, population_loss)
+}
+
+#[cfg(test)]
+mod famine_severity_tests {
+    use super::famine_severity;
+
+    #[test]
+    fn severity_is_clamped() {
+        let (severity, _) = famine_severity(500.0, 100.0);
+        assert!((0.0..=1.0).contains(&severity));
+    }
+}
+
 pub fn settlement_plague_risk(density: f32, trade_connectivity: f32) -> bool {
     plague_outbreak(density, trade_connectivity).0 > 0.5
 }

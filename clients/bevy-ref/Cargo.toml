@@ -23,7 +23,7 @@ civ-engine = { path = "../../crates/engine", optional = true }
 # section of the Diplomacy panel. Optional, gated behind the `bevy` feature
 # alongside `civ-engine` because the bridge ingests from `civ_engine::DiplomacyEvent`.
 civ-diplomacy = { path = "../../crates/diplomacy", optional = true }
-holocron = { path = "../../crates/holocron", optional = true }
+civ-holocron = { path = "../../crates/holocron", package = "holocron", optional = true }
 civ-voxel = { path = "../../crates/voxel" }
 crossbeam-channel = "0.5"
 serde = { version = "1", features = ["derive"] }
@@ -100,14 +100,14 @@ bevy = [
     "dep:civ-protocol-3d",
     "dep:civ-engine",
     "dep:civ-diplomacy",
-    "dep:holocron",
+    "dep:civ-holocron",
     "dep:civ-laws",
     "dep:rand",
     "dep:rand_chacha",
     "dep:image",
     "dep:winit",
 ]
-egui = ["bevy", "dep:bevy_egui", "dep:holocron"]
+egui = ["bevy", "dep:bevy_egui", "dep:civ-holocron"]
 # Embed the multi-size civis.ico onto the Windows .exe (build.rs). Off by default
 # so the standard/CI build needs no Windows resource compiler. Release only.
 exe-icon = []

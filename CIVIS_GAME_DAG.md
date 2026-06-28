@@ -148,12 +148,15 @@ Each lane is independent; agents self-report into `CIVIS_GAME_DAG.md` tick log. 
 | `merge-harvest` | harvest MERGEABLE PRs | global | none (parallel-safe) |
 | `dispatch-lanes` | worktree-add + parallel features | per-FR | partition by lane-id |
 | `build-retry` | cargo check/test/clippy | workspace | exclusive on `.cargo/`, `target/` |
+| **`oracle`** | **policy / governance / config-edit** (deny.toml, quality-manifest, ADR-009, FORGE_AGENTS contract, kani/oracle reviewers) | **per-config-file** | **exclusive** on `deny.toml`, `.ci/quality-manifest.json`, `.github/workflows/` |
 | `oracle-gate` | LLM/quality-gate reviews | per-PR | exclusive on `.github/workflows/` |
 | `spec` | ADR / FR / design docs | per-doc | none |
 | `qa` | clippy/test/deny | workspace | exclusive on `target/` |
 | `cleanup` | stash/worktree/target hygiene | global | none |
 
 **Concurrency rule:** at most 1 lane mutates `Cargo.toml` / `Cargo.lock` per tick. At most 1 lane pushes to `main`. All others self-report into the DAG tick log.
+
+**`oracle` lane (canonical policy lane):** the single owner of policy / governance / config files (`deny.toml`, `.ci/quality-manifest.json`, `.github/workflows/pr-governance-gate.yml`, ADR-009, FORGE_AGENTS contract, kani/oracle reviewers). The 5 canonical lanes are: `build`, `merge`, `oracle`, `spec`, `qa`. `oracle` is exclusive — at most 1 oracle PR in flight at a time. Add new lanes via the loader (it accepts any `Lane(String)`); document the new lane in this table to keep the dispatch contract canonical.
 
 ## 8 · Tick log (append-only, agents self-report here)
 

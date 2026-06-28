@@ -37,6 +37,7 @@ pub use material::{
     AIR, BEDROCK, CLAY, DIRT, GRAVEL, ICE, LAVA, MOLTEN_METAL, OIL, ORE, PACKED_DIRT, SAND,
     SALT_WATER, STEAM, STONE, WATER,
 };
+pub mod material_ca;
 pub mod material_pbr;
 pub mod reactions;
 pub mod scale_budget;

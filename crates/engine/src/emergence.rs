@@ -1692,3 +1692,31 @@ mod plague_tests {
         assert!((0.0..=1.0).contains(&high.0));
     }
 }
+
+pub fn seafaring_drive(coastal_population: f32, food_surplus: f32) -> f32 {
+    if !coastal_population.is_finite() || !food_surplus.is_finite() {
+        return 0.0;
+    }
+
+    let population_signal = (coastal_population / 1_000.0).clamp(0.0, 1.0);
+    let surplus_signal = (food_surplus / 100.0).clamp(0.0, 1.0);
+
+    ((population_signal * 0.65) + (surplus_signal * 0.35)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod seafaring_drive_tests {
+    use super::seafaring_drive;
+
+    #[test]
+    fn seafaring_drive_is_deterministic_clamped_and_nan_guarded() {
+        assert_eq!(seafaring_drive(f32::NAN, 50.0), 0.0);
+        assert_eq!(seafaring_drive(2_000.0, 200.0), 1.0);
+        assert_eq!(seafaring_drive(-50.0, -10.0), 0.0);
+
+        let first = seafaring_drive(500.0, 50.0);
+        let second = seafaring_drive(500.0, 50.0);
+        assert_eq!(first, second);
+        assert!((0.0..=1.0).contains(&first));
+    }
+}

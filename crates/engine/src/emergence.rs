@@ -59,6 +59,70 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn diplomacy_warmth(trust: f32, shared_belief: f32) -> f32 {
+    if !trust.is_finite() || !shared_belief.is_finite() {
+        return 0.0;
+    }
+    ((trust.clamp(0.0, 1.0) * 0.65) + (shared_belief.clamp(0.0, 1.0) * 0.35)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod diplomacy_warmth_tests {
+    use super::*;
+
+    #[test]
+    fn diplomacy_warmth_is_bounded_and_nan_guarded() {
+        assert_eq!(diplomacy_warmth(f32::NAN, 1.0), 0.0);
+        assert_eq!(diplomacy_warmth(1.0, f32::INFINITY), 0.0);
+        assert_eq!(diplomacy_warmth(-1.0, 0.0), 0.0);
+        assert_eq!(diplomacy_warmth(1.0, 1.0), 1.0);
+        assert!((0.0..=1.0).contains(&diplomacy_warmth(0.7, 0.4)));
+    }
+}
+
+pub fn alliance_stability(mutual_benefit: f32, external_threat: f32) -> f32 {
+    if !mutual_benefit.is_finite() || !external_threat.is_finite() {
+        return 0.0;
+    }
+    ((mutual_benefit.clamp(0.0, 1.0) * 0.75) + (external_threat.clamp(0.0, 1.0) * 0.25))
+        .clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod alliance_stability_tests {
+    use super::*;
+
+    #[test]
+    fn alliance_stability_is_bounded_and_nan_guarded() {
+        assert_eq!(alliance_stability(f32::NAN, 1.0), 0.0);
+        assert_eq!(alliance_stability(1.0, f32::NEG_INFINITY), 0.0);
+        assert_eq!(alliance_stability(-1.0, 0.0), 0.0);
+        assert_eq!(alliance_stability(1.0, 1.0), 1.0);
+        assert!((0.0..=1.0).contains(&alliance_stability(0.5, 0.8)));
+    }
+}
+
+pub fn war_escalation(grievance: f32, military_ratio: f32) -> f32 {
+    if !grievance.is_finite() || !military_ratio.is_finite() {
+        return 0.0;
+    }
+    ((grievance.clamp(0.0, 1.0) * 0.7) + (military_ratio.clamp(0.0, 1.0) * 0.3)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod war_escalation_tests {
+    use super::*;
+
+    #[test]
+    fn war_escalation_is_bounded_and_nan_guarded() {
+        assert_eq!(war_escalation(f32::NAN, 1.0), 0.0);
+        assert_eq!(war_escalation(1.0, f32::INFINITY), 0.0);
+        assert_eq!(war_escalation(-1.0, 0.0), 0.0);
+        assert_eq!(war_escalation(1.0, 1.0), 1.0);
+        assert!((0.0..=1.0).contains(&war_escalation(0.9, 0.6)));
+    }
+}
+
 pub fn festival_intensity(food_surplus: f32, shared_belief: f32) -> f32 {
     let food = if food_surplus.is_finite() {
         food_surplus.max(0.0)
@@ -1812,4 +1876,3 @@ mod trade_war_intensity_tests {
         assert!((0.0..=1.0).contains(&trade_war_intensity(0.6, 0.8)));
     }
 }
-

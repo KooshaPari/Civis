@@ -1765,3 +1765,153 @@ mod unrest_pressure_tests {
     }
 }
 
+/// Naval expansion pressure — a coastal societys capacity to project fleets.
+///
+/// Combines the coastal population share with an economic/logistics surplus.
+/// Both inputs are NaN-guarded: non-finite values fall back to `0.0`. The
+/// result is purely a function of its inputs (no RNG, no clock, no mut) and
+/// is clamped to `0..1` so downstream consumers can treat it as a normalised
+/// pressure score.
+pub fn naval_expansion(coastal_pop: f32, surplus: f32) -> f32 {
+    let coastal = if coastal_pop.is_finite() {
+        coastal_pop.max(0.0).min(1.0)
+    } else {
+        0.0
+    };
+    let logistics = if surplus.is_finite() {
+        surplus.max(0.0)
+    } else {
+        0.0
+    };
+
+    // Logistics saturates at 1.0 over `1 + logistics`, blended 60/40 with the
+    // coastal share. Saturating form keeps the result bounded as `surplus`
+    // grows without bound.
+    let logistics_term = logistics / (1.0 + logistics);
+    let raw = coastal * 0.6 + logistics_term * 0.4;
+    if raw.is_finite() {
+        raw.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+/// Urbanisation index — combined pressuredensity, surplus, and trade.
+///
+/// Each input is independently NaN-guarded to `0.0`; densities are clamped to
+/// `0..1` before being blended. Pure, deterministic (no RNG, no state), and
+/// the result is clamped to `0..1`.
+pub fn urbanization_index(density: f32, surplus: f32, trade: f32) -> f32 {
+    let dens = if density.is_finite() {
+        density.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let sup = if surplus.is_finite() { surplus.max(0.0) } else { 0.0 };
+    let trd = if trade.is_finite() { trade.max(0.0).min(1.0) } else { 0.0 };
+
+    // Saturating surplus — dens contribution is linear (already normalised),
+    // trade uses saturation so very large trade flows don't blow past 1.0.
+    let surplus_term = sup / (1.0 + sup);
+    let raw = dens * 0.5 + surplus_term * 0.3 + trd * 0.2;
+    if raw.is_finite() {
+        raw.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+/// Revolt likelihood given unrest vs. perceived legitimacy.
+///
+/// `unrest` is the 0..1 unrest pressure acting on the polity, and `legitimacy`
+/// is the 0..1 institutional legitimacy cushioning against revolt. The
+/// function subtracts legitimacy from unrest and then maps through a saturating
+/// curve so neither extreme produces NaN/Inf.
+///
+/// Both inputs are NaN-guarded to `0.0`. The result is clamped to `0..1`.
+pub fn revolt_likelihood(unrest: f32, legitimacy: f32) -> f32 {
+    let u = if unrest.is_finite() { unrest.clamp(0.0, 1.0) } else { 0.0 };
+    let l = if legitimacy.is_finite() {
+        legitimacy.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    // Positive net pressure drives revolt; legitimate rule cancels out unrest
+    // one-for-one. The saturating form keeps the result in [0, 1] and is
+    // well-behaved for all finite inputs.
+    let net = (u - l).max(0.0);
+    let raw = net / (1.0 + net);
+    if raw.is_finite() {
+        raw.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+#[cfg(test)]
+mod naval_expansion_tests {
+    use super::naval_expansion;
+
+    #[test]
+    fn clamp_and_nan_guard() {
+        assert_eq!(naval_expansion(f32::NAN, f32::NAN), 0.0);
+        assert_eq!(naval_expansion(-1.0, -2.0), 0.0);
+        assert_eq!(naval_expansion(2.0, 3.0), 1.0);
+        // coastal share saturated at 1, logistics→0.4/(1+0.4)
+        let v = naval_expansion(1.0, 0.4);
+        assert!(v.is_finite());
+        assert!(v > 0.6 && v < 0.7, "got {v}");
+    }
+
+    #[test]
+    fn deterministic() {
+        let a = naval_expansion(0.3, 1.5);
+        let b = naval_expansion(0.3, 1.5);
+        assert_eq!(a, b);
+    }
+}
+
+#[cfg(test)]
+mod urbanization_index_tests {
+    use super::urbanization_index;
+
+    #[test]
+    fn clamp_and_nan_guard() {
+        assert_eq!(urbanization_index(f32::NAN, f32::NAN, f32::NAN), 0.0);
+        assert_eq!(urbanization_index(-1.0, -2.0, -3.0), 0.0);
+        assert_eq!(urbanization_index(2.0, 3.0, 4.0), 1.0);
+        let v = urbanization_index(0.5, 1.0, 0.5);
+        assert!(v.is_finite());
+        assert!(v > 0.5 && v < 1.0, "got {v}");
+    }
+
+    #[test]
+    fn deterministic() {
+        let a = urbanization_index(0.4, 0.7, 0.2);
+        let b = urbanization_index(0.4, 0.7, 0.2);
+        assert_eq!(a, b);
+    }
+}
+
+#[cfg(test)]
+mod revolt_likelihood_tests {
+    use super::revolt_likelihood;
+
+    #[test]
+    fn clamp_and_nan_guard() {
+        assert_eq!(revolt_likelihood(f32::NAN, f32::NAN), 0.0);
+        assert_eq!(revolt_likelihood(0.0, 1.0), 0.0);
+        assert_eq!(revolt_likelihood(1.0, 0.0), 0.5);
+        assert_eq!(revolt_likelihood(1.0, 1.0), 0.0);
+        assert_eq!(revolt_likelihood(2.0, -1.0), 0.5);
+    }
+
+    #[test]
+    fn deterministic() {
+        let a = revolt_likelihood(0.7, 0.3);
+        let b = revolt_likelihood(0.7, 0.3);
+        assert_eq!(a, b);
+    }
+}
+

@@ -17,7 +17,7 @@ use std::io::{self, Write};
 use std::process::{Command, Stdio};
 
 use civ_dag::gate::{gate_for, summary_json, Gate, GateMode, SkipReason};
-use civ_dag::loader::load_plan;
+use civ_dag::loader::load_from_markdown;
 use civ_dag::model::Plan;
 
 fn main() {
@@ -30,27 +30,38 @@ fn main() {
         }
     };
 
-    let plan = match load_plan(&parsed.plan_path) {
+    // Build the gate set first, then execute; emit_json gets Gate values + the outcome struct.
+    let plan_contents = std::fs::read_to_string(&parsed.plan_path)
+        .unwrap_or_else(|e| {
+            eprintln!("civ-dag-gate: failed to read plan file {:?}: {}", parsed.plan_path, e);
+            std::process::exit(2);
+        });
+    let plan = match load_from_markdown(&plan_contents, parsed.plan_path.clone()) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("civ-dag-gate: failed to load plan {}: {}", parsed.plan_path.display(), e);
+            eprintln!("civ-dag-gate: failed to parse plan: {}", e);
             std::process::exit(2);
         }
     };
 
-    let selected = select_nodes(&plan, &parsed);
-    let mut results: Vec<(String, GateOutcome)> = Vec::new();
-    for node in &selected {
-        let gate = gate_for(node, parsed.mode);
-        let outcome = match &gate {
-            Gate::Run { crate_name, mode, .. } => {
-                let cmd = cargo_command(*crate_name, *mode);
-                run_cargo(cmd)
-            }
-            Gate::Skip { reason } => GateOutcome::Skip(reason_text(reason)),
-        };
-        results.push((node.id.clone(), outcome));
-    }
+    let plan_gates: Vec<(String, Gate)> = select_nodes(&plan, &parsed)
+        .into_iter()
+        .map(|n| (n.id.clone(), gate_for(&n, parsed.mode)))
+        .collect();
+
+    let results: Vec<(String, Gate, GateOutcome)> = plan_gates
+        .into_iter()
+        .map(|(id, gate)| {
+            let outcome = match &gate {
+                Gate::Run { crate_name, mode, .. } => {
+                    let cmd = cargo_command(crate_name, *mode);
+                    run_cargo(cmd)
+                }
+                Gate::Skip { reason } => GateOutcome::Skip(reason_text(reason)),
+            };
+            (id, gate, outcome)
+        })
+        .collect();
 
     if parsed.json {
         emit_json(&results);
@@ -60,7 +71,7 @@ fn main() {
 
     let any_fail = results
         .iter()
-        .any(|(_, o)| matches!(o, GateOutcome::Fail(_, _)));
+        .any(|(_, _, o)| matches!(o, GateOutcome::Fail(_, _)));
     std::process::exit(if any_fail { 1 } else { 0 });
 }
 
@@ -150,10 +161,10 @@ fn reason_text(r: &SkipReason) -> &'static str {
     }
 }
 
-fn emit_json(results: &[(String, GateOutcome)]) {
+fn emit_json(results: &[(String, Gate, GateOutcome)]) {
     let runs: Vec<serde_json::Value> = results
         .iter()
-        .map(|(id, o)| match o {
+        .map(|(id, _gate, o)| match o {
             GateOutcome::Pass(cmd, _) => serde_json::json!({"node_id": id, "result": "pass", "cmd": cmd}),
             GateOutcome::Fail(cmd, _) => serde_json::json!({"node_id": id, "result": "fail", "cmd": cmd}),
             GateOutcome::Skip(why) => serde_json::json!({"node_id": id, "result": "skip", "why": why}),
@@ -172,14 +183,14 @@ fn emit_json(results: &[(String, GateOutcome)]) {
     let _ = writeln!(handle, "{}", serde_json::to_string_pretty(&report).unwrap_or_default());
 }
 
-fn emit_table(results: &[(String, GateOutcome)]) {
-    let n_pass = results.iter().filter(|(_, o)| matches!(o, GateOutcome::Pass(_, _))).count();
-    let n_fail = results.iter().filter(|(_, o)| matches!(o, GateOutcome::Fail(_, _))).count();
-    let n_skip = results.iter().filter(|(_, o)| matches!(o, GateOutcome::Skip(_))).count();
+fn emit_table(results: &[(String, Gate, GateOutcome)]) {
+    let n_pass = results.iter().filter(|(_, _, o)| matches!(o, GateOutcome::Pass(_, _))).count();
+    let n_fail = results.iter().filter(|(_, _, o)| matches!(o, GateOutcome::Fail(_, _))).count();
+    let n_skip = results.iter().filter(|(_, _, o)| matches!(o, GateOutcome::Skip(_))).count();
     let stdout = io::stdout();
     let mut handle = stdout.lock();
     let _ = writeln!(handle, "civ-dag-gate: {} nodes ({} pass, {} fail, {} skip)", results.len(), n_pass, n_fail, n_skip);
-    for (id, o) in results {
+    for (id, _gate, o) in results {
         let status = match o {
             GateOutcome::Pass(_, _) => "PASS",
             GateOutcome::Fail(_, _) => "FAIL",

@@ -1593,3 +1593,60 @@ mod tests {
         );
     }
 }
+
+
+/// Computes a deterministic plague outbreak estimate from local density and trade exposure.
+///
+/// Returns `(outbreak_probability, population_loss)`, where probability is clamped to
+/// `0.0..=1.0` and population loss is an abstract deterministic impact score.
+pub fn plague_outbreak(density: f32, trade_connectivity: f32) -> (f32, u32) {
+    let density = if density.is_finite() {
+        density.max(0.0)
+    } else {
+        0.0
+    };
+    let trade_connectivity = if trade_connectivity.is_finite() {
+        trade_connectivity.max(0.0)
+    } else {
+        0.0
+    };
+
+    let density_pressure = density / (density + 100.0);
+    let trade_pressure = trade_connectivity / (trade_connectivity + 10.0);
+    let outbreak_probability =
+        (0.08 + density_pressure * 0.52 + trade_pressure * 0.32).clamp(0.0, 1.0);
+
+    let population_loss = (outbreak_probability * density * (1.0 + trade_pressure) * 0.18).round()
+        as u32;
+
+    (outbreak_probability, population_loss)
+}
+
+#[cfg(test)]
+mod plague_tests {
+    use super::plague_outbreak;
+
+    #[test]
+    fn plague_outbreak_is_deterministic() {
+        let first = plague_outbreak(120.0, 4.0);
+        let second = plague_outbreak(120.0, 4.0);
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn plague_outbreak_clamps_invalid_and_negative_inputs() {
+        assert_eq!(plague_outbreak(-10.0, f32::NAN), (0.08, 0));
+        assert_eq!(plague_outbreak(f32::INFINITY, 3.0), plague_outbreak(0.0, 3.0));
+    }
+
+    #[test]
+    fn plague_outbreak_scales_with_density_and_trade() {
+        let low = plague_outbreak(10.0, 0.5);
+        let high = plague_outbreak(180.0, 8.0);
+
+        assert!(high.0 > low.0);
+        assert!(high.1 > low.1);
+        assert!((0.0..=1.0).contains(&high.0));
+    }
+}

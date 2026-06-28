@@ -59,6 +59,70 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn innovation_rate(surplus: f32, population: f32) -> f32 {
+    if !surplus.is_finite() || !population.is_finite() {
+        return 0.0;
+    }
+
+    let surplus = surplus.max(0.0);
+    let population = population.max(0.0);
+    let surplus_signal = surplus / (surplus + 100.0);
+    let population_signal = population / (population + 10_000.0);
+    (0.65 * surplus_signal + 0.35 * population_signal).clamp(0.0, 1.0)
+}
+
+pub fn literacy_growth(institutions: f32, surplus: f32) -> f32 {
+    if !institutions.is_finite() || !surplus.is_finite() {
+        return 0.0;
+    }
+
+    let institutions = institutions.max(0.0);
+    let surplus = surplus.max(0.0);
+    let institution_signal = institutions / (institutions + 10.0);
+    let surplus_signal = surplus / (surplus + 100.0);
+    (0.7 * institution_signal + 0.3 * surplus_signal).clamp(0.0, 1.0)
+}
+
+pub fn currency_adoption(trade_volume: f32, trust: f32) -> f32 {
+    if !trade_volume.is_finite() || !trust.is_finite() {
+        return 0.0;
+    }
+
+    let trade_volume = trade_volume.max(0.0);
+    let trust = trust.clamp(0.0, 1.0);
+    let trade_signal = trade_volume / (trade_volume + 1_000.0);
+    (0.75 * trade_signal + 0.25 * trust).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod emergence_emergent_functions_tests {
+    use super::*;
+
+    #[test]
+    fn innovation_rate_is_bounded_and_nan_safe() {
+        assert_eq!(innovation_rate(f32::NAN, 10.0), 0.0);
+        assert_eq!(innovation_rate(10.0, f32::INFINITY), 0.0);
+        assert!((0.0..=1.0).contains(&innovation_rate(0.0, 0.0)));
+        assert!((0.0..=1.0).contains(&innovation_rate(250.0, 50_000.0)));
+    }
+
+    #[test]
+    fn literacy_growth_is_bounded_and_nan_safe() {
+        assert_eq!(literacy_growth(f32::NAN, 10.0), 0.0);
+        assert_eq!(literacy_growth(10.0, f32::NEG_INFINITY), 0.0);
+        assert!((0.0..=1.0).contains(&literacy_growth(0.0, 0.0)));
+        assert!((0.0..=1.0).contains(&literacy_growth(20.0, 500.0)));
+    }
+
+    #[test]
+    fn currency_adoption_is_bounded_and_nan_safe() {
+        assert_eq!(currency_adoption(f32::NAN, 0.5), 0.0);
+        assert_eq!(currency_adoption(10.0, f32::NAN), 0.0);
+        assert!((0.0..=1.0).contains(&currency_adoption(0.0, 0.0)));
+        assert!((0.0..=1.0).contains(&currency_adoption(5_000.0, 0.9)));
+    }
+}
+
 pub fn festival_intensity(food_surplus: f32, shared_belief: f32) -> f32 {
     let food = if food_surplus.is_finite() {
         food_surplus.max(0.0)
@@ -1812,4 +1876,3 @@ mod trade_war_intensity_tests {
         assert!((0.0..=1.0).contains(&trade_war_intensity(0.6, 0.8)));
     }
 }
-

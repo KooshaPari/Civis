@@ -1665,18 +1665,3 @@ mod plague_tests {
         assert!((0.0..=1.0).contains(&high.0));
     }
 }
-
-pub fn settlement_plague_risk(density: f32, trade_connectivity: f32) -> bool {
-    plague_outbreak(density, trade_connectivity).0 > 0.5
-}
-
-#[cfg(test)]
-mod settlement_plague_risk_tests {
-    use super::settlement_plague_risk;
-
-    #[test]
-    fn settlement_plague_risk_tracks_outbreak_probability_threshold() {
-        assert!(settlement_plague_risk(180.0, 8.0));
-        assert!(!settlement_plague_risk(10.0, 0.5));
-    }
-}

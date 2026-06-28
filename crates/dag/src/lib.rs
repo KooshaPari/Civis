@@ -18,11 +18,13 @@
 //! let exec = WaveExecutor::new(plan);
 //! ```
 
+pub mod gate;
 pub mod loader;
 pub mod model;
 pub mod reporter;
 pub mod wave;
 
+pub use gate::{Gate, GateMode, gate_for, gates_for_all, lane_to_crate, summary_json, SkipReason};
 pub use model::{Layer, Lane, Node, NodeState, Plan, PlanMeta, PlanStatus};
 pub use reporter::{DagEvent, NoopReporter, ReportSnapshot, Reporter};
 pub use wave::{AgentRunner, NodeReport, RetryPolicy, WaveContext, WaveExecutor};

@@ -59,6 +59,29 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn trade_connectivity_score(neighbor_count: u32, total_surplus: f32) -> f32 {
+    if neighbor_count == 0 || !total_surplus.is_finite() || total_surplus <= 0.0 {
+        return 0.0;
+    }
+
+    let neighbor_factor = (neighbor_count.min(8) as f32) / 8.0;
+    let surplus_factor = (total_surplus / 100.0).clamp(0.0, 1.0);
+    (neighbor_factor * surplus_factor).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod trade_connectivity_score_tests {
+    use super::trade_connectivity_score;
+
+    #[test]
+    fn clamps_and_guards_nan() {
+        assert_eq!(trade_connectivity_score(4, f32::NAN), 0.0);
+        assert_eq!(trade_connectivity_score(0, 50.0), 0.0);
+        assert_eq!(trade_connectivity_score(16, 250.0), 1.0);
+        assert!((0.0..=1.0).contains(&trade_connectivity_score(3, 40.0)));
+    }
+}
+
 pub fn settlement_plague_risk(density: f32, trade_connectivity: f32) -> bool {
     plague_outbreak(density, trade_connectivity).0 > 0.5
 }

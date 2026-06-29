@@ -361,16 +361,19 @@ impl Simulation {
             }
         }
 
+        let cluster_cultures = self.emergence.cluster_cultures.clone();
+        let era_faction_ages = self.era_progression.faction_ages.clone();
+        let faction_ideologies = self.faction_ideologies.clone();
         self.faction_ideologies = advance_faction_ideologies(
             tick,
-            &self.emergence.cluster_cultures,
+            &cluster_cultures,
             &dominant_by_cluster,
             &cluster_member_counts,
             &settlement_contacts,
             &self.climate,
             &faction_religion_signal,
-            &self.era_progression.faction_ages,
-            &self.faction_ideologies,
+            &era_faction_ages,
+            &faction_ideologies,
             self.rng_mut(),
         );
         self.faction_aggression.clear();

@@ -51,7 +51,7 @@ fn evaluate_faction(sim: &Simulation, faction_id: u32) -> FactionDecision {
     let max_unrest = sim
         .last_tick_unrest_snapshots
         .values()
-        .map(|snapshot| snapshot.level as f32)
+        .map(|snapshot| snapshot.level.to_rank() as f32 / 3.0)
         .fold(0.0, f32::max);
 
     if max_unrest > 0.7 {

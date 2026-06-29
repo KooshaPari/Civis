@@ -1230,7 +1230,7 @@ impl FabricTier {
 }
 
 /// Per-settlement cohesion summary produced every tick.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CohesionSnapshot {
     pub settlement_id: u32,
     pub fabric: FabricTier,
@@ -1287,11 +1287,11 @@ pub struct UnrestEvent {
     pub score_delta: i32,
     pub mood: i32,
     pub gini_x100: i32,
-    pub fabric: i32,
+    pub fabric: FabricTier,
 }
 
 /// Per-settlement unrest snapshot for the last tick.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct UnrestSnapshot {
     pub settlement_id: u32,
     pub level: UnrestLevel,
@@ -1510,6 +1510,7 @@ impl Simulation {
         let state = WorldState::default();
 
         Self {
+            current_tick: 0,
             economy_state: economy_state_from_world(&state),
             market_state: MarketState::default(),
             state,
@@ -1657,6 +1658,7 @@ impl Simulation {
             moon,
             worldgen,
             climate,
+            current_tick: 0,
             pending_damage: Vec::new(),
             tick_modulo_compact: 64,
             building_graph: BuildingGraph::new(),
@@ -2623,7 +2625,7 @@ impl Simulation {
         // Each completed building begins producing on the same tick it
         // finishes; run the production chain against the live economy state.
         let mut events = std::mem::take(&mut self.last_tick_construction_events);
-        for site in self.build_sites.iter() {
+        for site in self.build_sites.iter_mut() {
             if completed_ids.contains(&site.id()) {
                 events.extend(site.produce_and_collect(&mut self.economy_state, tick));
             }
@@ -3101,7 +3103,7 @@ impl Simulation {
         for (&sid, _) in &self.settlement_gini {
             settlement_ids.insert(sid);
         }
-        for (&sid, _) in &self.actor_settlement {
+        for (_, &sid) in &self.actor_settlement {
             settlement_ids.insert(sid);
         }
 
@@ -3156,7 +3158,7 @@ impl Simulation {
                     score_delta: level_delta,
                     mood,
                     gini_x100,
-                    fabric: fabric_x100,
+                    fabric,
                 });
             }
             if prev_level <= UnrestLevel::Restless && level >= UnrestLevel::Rioting {
@@ -3170,7 +3172,7 @@ impl Simulation {
                     score_delta: level_delta,
                     mood,
                     gini_x100,
-                    fabric: fabric_x100,
+                    fabric,
                 });
             }
 
@@ -3756,7 +3758,7 @@ impl Simulation {
     /// range are clamped.
     pub fn set_settlement_gini(&mut self, settlement_id: u32, gini: f64) {
         let clamped = if gini.is_nan() { 0.0 } else { gini.clamp(0.0, 1.0) };
-        self.settlement_gini.insert(settlement_id, clamped);
+        self.settlement_gini.insert(settlement_id, (clamped * 100.0).round() as i32);
     }
 
     /// Read-only access to the `phase_unrest` event stream for the most
@@ -4154,7 +4156,7 @@ impl Simulation {
                     ..CivNeedsHealth::default()
                 };
                 let should_birth = should_reproduce(
-                    civilian.age,
+                    civilian.age as f32,
                     &health,
                     needs.food,
                     needs.safety,
@@ -6139,7 +6141,7 @@ fn trade_volume_signal(routes: &[TradeRoute], a: u32, b: u32) -> f32 {
             (route.from_faction == a && route.to_faction == b)
                 || (route.from_faction == b && route.to_faction == a)
         })
-        .map(|route| route.volume.to_bits())
+        .map(|route| i64::from(route.volume.to_bits()))
         .sum();
     ((volume as f64) / 1_000_000.0).clamp(0.0, 1.0) as f32
 }

@@ -48,7 +48,7 @@ struct SavedSimulation {
     faction_languages: BTreeMap<u32, LanguageState>,
     settlements: BTreeMap<u32, u32>,
     institutions: BTreeMap<u32, Institution>,
-    institution_levels_emitted: BTreeSet<(u32, InstitutionKind, u8)>,
+    institution_levels_emitted: BTreeSet<(u32, u8, u8)>,
     faction_doctrines: Vec<DoctrineLibrary>,
 }
 

@@ -1364,7 +1364,7 @@ impl Simulation {
                 // downstream CAs and inspectors already
                 // understand. CA re-settles / propagates the
                 // new surface next tick.
-                let target = MaterialId(req.aux_id as u8);
+                let target = MaterialId(req.aux_id);
                 for dz in -r..=r {
                     for dx in -r..=r {
                         if dx * dx + dz * dz > r2 {
@@ -1476,7 +1476,7 @@ impl Simulation {
         let cz = req.center.z;
         let r = i64::from(req.radius_voxels);
         let r2 = r * r;
-        let target = MaterialId(req.material_id as u8);
+        let target = MaterialId(req.material_id);
         let mut writes: u32 = 0;
         match req.op {
             MaterialOp::Erase => {
@@ -1938,7 +1938,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Meteor, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Meteor,
+                    disaster: DisasterKind::Meteor,
                     fired,
                 })
             }
@@ -1946,7 +1946,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Wildfire, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Wildfire,
+                    disaster: DisasterKind::Wildfire,
                     fired,
                 })
             }
@@ -1954,7 +1954,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Flood, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Flood,
+                    disaster: DisasterKind::Flood,
                     fired,
                 })
             }
@@ -1962,7 +1962,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Quake, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Quake,
+                    disaster: DisasterKind::Quake,
                     fired,
                 })
             }
@@ -1970,7 +1970,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Storm, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Storm,
+                    disaster: DisasterKind::Storm,
                     fired,
                 })
             }
@@ -1978,7 +1978,7 @@ impl Simulation {
                 trigger_disaster(self, DisasterKind::Plague, pos);
                 let fired = self.belief() >= prev_belief;
                 Ok(GodToolReceipt::Disaster {
-                    kind: DisasterKind::Plague,
+                    disaster: DisasterKind::Plague,
                     fired,
                 })
             }
@@ -2461,7 +2461,7 @@ mod tests {
             .expect("disaster.meteor should succeed");
         match receipt {
             GodToolReceipt::Disaster {
-                kind: DisasterKind::Meteor,
+                disaster: DisasterKind::Meteor,
                 ..
             } => {}
             other => panic!("expected Disaster receipt, got {other:?}"),
@@ -3565,3 +3565,4 @@ mod tests {
         );
     }
 }
+

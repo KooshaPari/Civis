@@ -42,8 +42,13 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod faction_split;
 pub mod legitimacy;
 
+pub use faction_split::{
+    maybe_split_faction, splinter_id, splinter_name, Faction, FactionSplitEvent, InstitutionCohesion,
+    DEFAULT_COHESION_THRESHOLD, MAX_COHESION, MIN_COHESION,
+};
 pub use legitimacy::{
     GovernanceOutcome, InstitutionLegitimacy, DEFAULT_LEGITIMACY, LEGITIMACY_COLLAPSE_THRESHOLD,
     MAX_LEGITIMACY, MIN_LEGITIMACY,

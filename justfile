@@ -321,4 +321,4 @@ register-startmenu:
 # Autograder loop for engine build-green: compile + acceptance tests must pass.
 build-green-engine:
     cargo check -p civ-engine
-    cargo check -p civ-bevy-ref --features "bevy egui" --bin civ-bevy-window  # REAL playable gate
+    cargo build --release -p civ-bevy-ref --features "bevy egui" --bin civ-bevy-window  # REAL playable gate (release build, not check)

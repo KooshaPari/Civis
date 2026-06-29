@@ -222,6 +222,8 @@ fn main() {
             PostFxPlugin,
             GpuFeaturesPlugin,
             LivePickPlugin,
+        ))
+        .add_plugins((
             FactionHudPlugin,
             SaveLoadUiPlugin,
             TutorialPlugin,
@@ -328,12 +330,13 @@ fn consume_menu_commands(
                 .get(params.world_size % WORLDGEN_PRESETS.len())
                 .copied()
                 .unwrap_or(WORLDGEN_PRESETS[0]);
+            let speed_step = WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)];
             start_world_boot(
                 &bridge,
                 preset,
                 params.seed,
                 speed.as_mut(),
-                WORLDGEN_SPEED_STEPS[speed.speed_idx.min(WORLDGEN_SPEED_STEPS.len() - 1)],
+                speed_step,
             );
             next_state.set(AppState::WorldGen);
         }
@@ -1477,10 +1480,13 @@ fn minimap_popup_ui(
     let Some((tx, ty)) = popup.pending else {
         return;
     };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     egui::Window::new("Tile Actions")
         .collapsible(false)
         .resizable(false)
-        .show(contexts.ctx_mut(), |ui| {
+        .show(ctx, |ui| {
             ui.label(format!("Tile ({tx}, {ty})"));
             if ui.button("Inspect tile").clicked() {
                 let json = format!(

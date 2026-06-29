@@ -21,11 +21,13 @@ pub mod key_palette;
 pub mod notifications;
 pub mod overlay_legend;
 pub mod overlay_registry;
+pub mod society_overlay;
 pub mod tile_inspector;
 pub mod tokens;
 pub mod top_bar;
 
 pub use env_overlay::*;
+pub use society_overlay::*;
 pub use god_tool_state::{
     GodToolDef, GodToolId, GodToolParamKind, GodToolParamSpec, GodToolParamValue, GodToolRegistry,
     GodToolState,

@@ -978,6 +978,50 @@ pub fn apply_voxel_delta_frame(
     }
 }
 
+/// Rebuilds cached chunk meshes for a set of dirty chunks already present in the scene cache.
+pub fn remesh_cached_chunks(
+    commands: &mut Commands,
+    scene: &mut LiveStreamScene,
+    mesh_assets: &mut Assets<Mesh>,
+    material_assets: &mut Assets<StandardMaterial>,
+    culling: StreamCulling,
+    debug: &DebugRender,
+    chunk_ids: &[ChunkId],
+    wireframe_line_color: Option<Color>,
+) {
+    for &chunk_id in chunk_ids {
+        let Some(voxels) = scene.chunk_voxels.get(&chunk_id) else {
+            continue;
+        };
+        if !should_render_chunk(chunk_id, culling.eye, culling.max_distance) {
+            if let Some(entity) = scene.chunks.remove(&chunk_id.0) {
+                commands.entity(entity).despawn();
+            }
+            continue;
+        }
+        if voxels.len() != LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE * LIVE_CHUNK_EDGE {
+            continue;
+        }
+        let chunk_view = ChunkView { id: chunk_id, voxels };
+        let distance = chunk_distance_from_camera(chunk_id, culling.eye, LIVE_CHUNK_EDGE as f32);
+        let lod = LodLevel(mesh_lod_level(distance));
+        let Ok(mesh_buffer) = CubicMesher::mesh_cubic(chunk_view, lod) else {
+            continue;
+        };
+        let mesh = mesh_assets.add(mesh_buffer_to_bevy(&mesh_buffer));
+        let mut material = StandardMaterial { perceptual_roughness: 0.85, metallic: 0.0, ..default() };
+        let base_rgb = chunk_biome_tint(voxels).unwrap_or(LIVE_CHUNK_BASE_COLOR);
+        apply_chunk_material(&mut material, base_rgb, debug.wireframe, wireframe_line_color);
+        let material_handle = material_assets.add(material);
+        let transform = chunk_transform(chunk_id);
+        let entity = *scene
+            .chunks
+            .entry(chunk_id.0)
+            .or_insert_with(|| commands.spawn((LiveChunkTag { id: chunk_id }, Transform::default())).id());
+        commands.entity(entity).insert((Mesh3d(mesh), MeshMaterial3d(material_handle), transform));
+    }
+}
+
 /// Applies the water-surface companion updates for one voxel delta frame
 /// (FR-CLIENT-render). This is the additive hook that pairs with
 /// [`apply_voxel_delta_frame`] — callers that want the streamed water

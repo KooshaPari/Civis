@@ -12,6 +12,7 @@
 //! Refs: FR‑HOLOCRON‑keycap, FR‑UX‑discoverability, ADR‑012, ADR‑009.
 
 use bevy::prelude::*;
+use bevy_egui::egui;
 use holocron::descriptor::VerbDescriptor;
 use holocron::group::VerbGroup;
 use holocron::registry::VerbRegistry;

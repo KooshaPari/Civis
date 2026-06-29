@@ -46,6 +46,8 @@ pub mod game_ui;
 pub mod gltf_models;
 #[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod graphics_settings;
+#[cfg(feature = "bevy")]
+pub mod frame_budget;
 pub mod game_laws;
 pub mod map2d;
 #[cfg(feature = "bevy")]

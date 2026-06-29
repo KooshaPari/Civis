@@ -13,7 +13,7 @@ use civ_audio::{derive_music_cue, mood::MusicCue, triggers::SfxTrigger};
 use civ_agents::culture::{cultural_distance, language_distance, CultureProfile};
 use civ_build::{Allocator, BuildingGraph, BuildSite, DemandSignals, ProductionEvent};
 use civ_diffusion::DiffusionParams;
-use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, MarketState};
+use civ_economy::{AllocationEngine, CapitalistAllocator, EconomyState, LaborCapacityAllocator, MarketState};
 use civ_economy::{collect_taxes, Taxation};
 use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
 use civ_genetics::Dna;

@@ -1,0 +1,4 @@
+[1m[91merror[0m: failed to create directory `E:\civis-target \debug`
+
+Caused by:
+  The system cannot find the path specified. (os error 3)

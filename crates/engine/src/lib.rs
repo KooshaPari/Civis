@@ -56,11 +56,12 @@ pub use conditions::{check_outcome, GameOutcome};
 pub use emergence::{CivAiDecision, EmergenceFeedEvent, EmergenceState};
 pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
-    job_type_for_civilian_id, Building, BuildingType, Citizen, CombatDamagePulse, DiplomacyKind,
-    EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, InstitutionEvent, JobType,
-    MilitaryUnit, Position, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
-    PsycheDrivenBehavior, StratBand, StratificationEvent, StratificationEventKind,
-    StratificationReport, TileInspection, TradeRoute, UnitType, WorldState,
+    awakening_belief_gain, awakening_cohesion_gain, job_type_for_civilian_id, Building,
+    BuildingType, Citizen, CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent,
+    FactionRelationSnapshot, Fixed, InstitutionEvent, JobType, MilitaryUnit, Position,
+    PsycheDrivenBehavior, ResourceType, Resources, Sim, SimSeed, Simulation, SimulationSnapshot,
+    StratBand, StratificationEvent, StratificationEventKind, StratificationReport, TileInspection,
+    TradeRoute, UnitType, WorldState,
 };
 pub use hash_chain::hash_hex;
 pub use replay::ReplayLog;

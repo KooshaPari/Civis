@@ -4,8 +4,8 @@
 //! simulation — confirming that cultural emotions and social sentiment dynamics
 //! are functioning within the world.
 //!
-//! Measurement: aggregate mood sentiment score from cultural subsystems.
-//! Threshold: ≥ -1.0 (lenient threshold; passes on a healthy sim).
+//! Measurement: presence of both citizens and buildings (mood requires social structures and gatherings).
+//! Threshold: ≥ 1 citizen AND ≥ 1 building after tick > 0 (meaningful sentiment dynamics need both agents and venues).
 
 use crate::{FeatureOracle, OracleVerdict};
 use civ_engine::Simulation;
@@ -21,16 +21,16 @@ impl FeatureOracle for MoodOracle {
         let tick = sim.state.tick;
         let snap = sim.snapshot();
 
-        // Count mood sentiment activity recorded in the culture subsystem (simplified:
-        // check total population and cultural health as proxy for mood sentiment activity).
-        // Mood sentiment is expected when there are creatures and sufficient cultural presence.
-        let has_creatures = snap.population > 0;
-        let measured = if has_creatures { snap.population as f64 } else { 0.0 };
+        // Mood and sentiment emergence requires both citizens AND social structures.
+        // Isolated agents cannot form collective mood; social venues enable gathering and sentiment formation.
+        let has_citizens = snap.citizen_count > 0;
+        let has_structures = snap.building_count > 0;
+        let measured = (snap.citizen_count * snap.building_count) as f64;
 
-        // At tick 0 no mood sentiment has been established yet; any state is acceptable.
-        // After tick 0, if there are creatures, we assume mood sentiment has been possible (lenient threshold).
-        let threshold = if tick == 0 { 0.0 } else { -1.0 };
-        let passed = tick == 0 || has_creatures;
+        // At tick 0 no emergence has occurred yet; any state is acceptable.
+        // After tick 0, require both citizens AND structures (social venue for mood formation).
+        let threshold = if tick == 0 { 0.0 } else { 1.0 };
+        let passed = tick == 0 || (has_citizens && has_structures);
 
         OracleVerdict {
             fr_id: self.fr_id().to_string(),
@@ -38,9 +38,10 @@ impl FeatureOracle for MoodOracle {
             measured,
             threshold,
             detail: format!(
-                "Mood emergence: creatures_present={} population={} at tick={tick}",
-                if has_creatures { "true" } else { "false" },
-                snap.population
+                "Mood emergence: citizens={} buildings={} (citizen×building={}) at tick={tick}",
+                snap.citizen_count,
+                snap.building_count,
+                measured as u32
             ),
         }
     }

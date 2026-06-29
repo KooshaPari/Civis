@@ -352,7 +352,7 @@ fn apply_disaster_resource_loss(kind: DisasterKind, terrain_cells: u32) -> Resou
 }
 
 fn consume(pool: &mut Fixed, requested: &mut Fixed) {
-    let spent = pool.min(*requested);
+    let spent = (*pool).min(*requested);
     *pool -= spent;
     *requested = spent;
 }

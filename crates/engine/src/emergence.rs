@@ -548,6 +548,8 @@ impl Simulation {
                             shelter: 0.5,
                             safety: 0.5,
                             belonging: 0.5,
+                            rest: 0.5,
+                            health: 0.5,
                         });
                 let life = self
                     .world

@@ -59,6 +59,80 @@ pub struct LegendsQueryResult {
     pub emergence_feed: Vec<EmergenceFeedEvent>,
 }
 
+pub fn exploration_drive(curiosity: f32, surplus: f32) -> f32 {
+    let curiosity = if curiosity.is_finite() {
+        curiosity.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let surplus = if surplus.is_finite() {
+        surplus.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    ((curiosity * 0.65) + (surplus * 0.35)).clamp(0.0, 1.0)
+}
+
+pub fn colonization_pressure(population_density: f32, frontier_opportunity: f32) -> f32 {
+    let population_density = if population_density.is_finite() {
+        population_density.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let frontier_opportunity = if frontier_opportunity.is_finite() {
+        frontier_opportunity.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    ((population_density * 0.55) + (frontier_opportunity * 0.45)).clamp(0.0, 1.0)
+}
+
+pub fn frontier_lawlessness(distance_from_core: f32, enforcement: f32) -> f32 {
+    let distance_from_core = if distance_from_core.is_finite() {
+        distance_from_core.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let enforcement = if enforcement.is_finite() {
+        enforcement.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+
+    (distance_from_core * (1.0 - enforcement)).clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod appended_emergence_tests {
+    use super::*;
+
+    #[test]
+    fn exploration_drive_is_bounded_and_nan_guarded() {
+        assert_eq!(exploration_drive(f32::NAN, 1.0), 0.35);
+        assert_eq!(exploration_drive(f32::INFINITY, 1.0), 0.35);
+        assert_eq!(exploration_drive(1.0, 1.0), 1.0);
+        assert!((0.0..=1.0).contains(&exploration_drive(-1.0, 2.0)));
+    }
+
+    #[test]
+    fn colonization_pressure_is_bounded_and_nan_guarded() {
+        assert_eq!(colonization_pressure(f32::NAN, 1.0), 0.45);
+        assert_eq!(colonization_pressure(1.0, f32::NEG_INFINITY), 0.55);
+        assert_eq!(colonization_pressure(1.0, 1.0), 1.0);
+        assert!((0.0..=1.0).contains(&colonization_pressure(-1.0, 2.0)));
+    }
+
+    #[test]
+    fn frontier_lawlessness_is_bounded_and_nan_guarded() {
+        assert_eq!(frontier_lawlessness(f32::NAN, 0.0), 0.0);
+        assert_eq!(frontier_lawlessness(1.0, f32::INFINITY), 1.0);
+        assert_eq!(frontier_lawlessness(1.0, 1.0), 0.0);
+        assert!((0.0..=1.0).contains(&frontier_lawlessness(-1.0, 2.0)));
+    }
+}
+
 pub fn heresy_emergence(doctrinal_strain: f32, literacy: f32) -> f32 {
     if !doctrinal_strain.is_finite() || !literacy.is_finite() {
         return 0.0;

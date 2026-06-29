@@ -72,6 +72,9 @@ pub struct EmergenceState {
     pub(crate) sentience_profile: CognitionTraitProfile,
     pub(crate) sentience_threshold: SentienceThreshold,
     pub(crate) sentient_agents: HashSet<u64>,
+    pub(crate) novelty_window_start_tick: u64,
+    pub(crate) novelty_window_new: u32,
+    pub(crate) seen_config_hashes: HashSet<u64>,
 }
 
 impl EmergenceState {
@@ -91,6 +94,9 @@ impl EmergenceState {
             ),
             sentience_threshold: SentienceThreshold::new(0.72),
             sentient_agents: HashSet::new(),
+            novelty_window_start_tick: 0,
+            novelty_window_new: 0,
+            seen_config_hashes: HashSet::new(),
         }
     }
 

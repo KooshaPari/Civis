@@ -41,9 +41,6 @@ pub use war_bridge::{
     MilitaryUnitSample, WarBridge, WarBridgeConfig,
 };
 
-// Re-export MilitaryUnit so it can be named as `civ_tactics::MilitaryUnit`.
-pub use crate::MilitaryUnit;
-
 use civ_voxel::{MaterialId, VoxelWorld, WorldCoord};
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;

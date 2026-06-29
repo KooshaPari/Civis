@@ -28,6 +28,9 @@ pub mod worker;
 mod chronicle;
 pub use chronicle::{Chronicle, ChronicleEntry, ChronicleEventKind};
 
+mod myth_formation;
+pub use myth_formation::{Myth, MythFormationConfig, MythId, MythIndex};
+
 pub use config::LegendsConfig;
 pub use decay::{DecayConfig, Prominence, ProminenceTracker};
 pub use graph::{AggregateKey, EmptySagaReason, GapReport, IngestOutcome, SagaGraph};

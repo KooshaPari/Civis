@@ -3,9 +3,9 @@
 //! Validates that disease/epidemic emergence systems are active in the
 //! simulation — confirming that epidemic dynamics can spread and emerge.
 //!
-//! Measurement: presence of disease metrics or epidemic indicators in the simulation.
-//! Threshold: ≥ 0 (epidemic detection passes at tick 0 or when population present,
-//! lenient to allow healthy states).
+//! Measurement: presence of both citizens and settlements (buildings).
+//! Threshold: ≥ 1 citizen AND ≥ 1 building after tick > 0 (epidemic transmission requires
+//! population spread across settlements to facilitate disease spread).
 
 use crate::{FeatureOracle, OracleVerdict};
 use civ_engine::Simulation;
@@ -21,15 +21,16 @@ impl FeatureOracle for EpidemicOracle {
         let tick = sim.state.tick;
         let snap = sim.snapshot();
 
-        // Count population as epidemiological baseline (simplified: check population present).
-        // At higher ticks, epidemic dynamics have had opportunity to emerge if population exists.
-        let has_creatures = snap.population > 0;
-        let measured = if has_creatures { snap.population as f64 } else { 0.0 };
+        // Epidemic transmission requires both population and settlement infrastructure.
+        // Citizens distributed across buildings indicates epidemic emergence pathways are possible.
+        let has_citizens = snap.citizen_count > 0;
+        let has_settlements = snap.building_count > 0;
+        let measured = (snap.citizen_count * snap.building_count) as f64;
 
         // At tick 0 no epidemic has emerged yet; any state is acceptable.
-        // After tick 0, if there are creatures, we assume epidemic emergence potential exists (lenient threshold).
-        let threshold = if tick == 0 { 0.0 } else { 0.0 };
-        let passed = tick == 0 || has_creatures;
+        // After tick 0, require both citizens AND buildings (meaningful settlement for transmission).
+        let threshold = if tick == 0 { 0.0 } else { 1.0 };
+        let passed = tick == 0 || (has_citizens && has_settlements);
 
         OracleVerdict {
             fr_id: self.fr_id().to_string(),
@@ -37,9 +38,10 @@ impl FeatureOracle for EpidemicOracle {
             measured,
             threshold,
             detail: format!(
-                "Epidemic emergence: creatures_present={} population={} at tick={tick}",
-                if has_creatures { "true" } else { "false" },
-                snap.population
+                "Epidemic emergence: citizens={} buildings={} (citizen×building={}) at tick={tick}",
+                snap.citizen_count,
+                snap.building_count,
+                measured as u32
             ),
         }
     }

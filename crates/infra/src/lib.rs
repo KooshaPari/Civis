@@ -15,6 +15,14 @@ pub mod nats;
 #[cfg(feature = "pg")]
 pub mod pg;
 
+/// Desire-path emergence tracker (FR-CIV-ROAD-900). Pure-logic, no Bevy
+/// dependency; tracks accumulated traversal weight between world cells and
+/// decays unused paths back to bare ground.
+pub mod desire_paths;
+pub use desire_paths::{
+    DesireEdge, DesireEdgeKey, DesirePathConfig, DesirePathTracker, PathState,
+};
+
 /// Unified infrastructure error.
 #[derive(Debug, thiserror::Error)]
 pub enum InfraError {

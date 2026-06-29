@@ -13,6 +13,11 @@ use serde::{Deserialize, Serialize};
 
 pub use civ_genetics::Dna;
 
+pub mod speciation;
+pub use speciation::{
+    split_diverged_populations, PopulationSplit, SpeciesRecord, SpeciationError,
+};
+
 /// Schema version. Bumped on breaking changes.
 pub const SCHEMA_VERSION: &str = "0.1.0-stub";
 

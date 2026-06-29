@@ -34,6 +34,8 @@ pub mod faction_hud;
 pub mod gameplay_hud;
 pub mod session;
 #[cfg(all(feature = "bevy", feature = "egui"))]
+pub mod script_hud;
+#[cfg(all(feature = "bevy", feature = "egui"))]
 pub mod save_load_ui;
 #[cfg(all(feature = "bevy", feature = "models"))]
 pub mod gltf_models;

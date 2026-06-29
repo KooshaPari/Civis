@@ -1,0 +1,196 @@
+#![cfg(all(feature = "bevy", feature = "egui"))]
+//! In-world faction emergent-glyph sigils: render each faction's lead glyph as a
+//! floating egui overlay at each building's projected screen position.
+//!
+//! **Approach:** Egui layer overlay with world-to-viewport projection. For each
+//! faction with buildings, compute the lead glyph (glyphs_for_language seed → [0]),
+//! project a building's center to screen space, and draw that glyph (scaled small,
+//! ~20px) as a faction sigil via egui painter. Offscreen glyphs are culled. No mesh
+//! overhead; cheap (one glyph per faction per frame).
+
+use bevy::prelude::*;
+use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
+use civ_engine::writing::{glyphs_for_language, Glyph};
+
+use crate::live_stream::{LiveBuildingTag, LiveStreamScene};
+
+// ── Systems ───────────────────────────────────────────────────────────────────
+
+/// Draw faction emergent-glyph sigils in-world (egui overlay, world-to-screen projection).
+fn draw_world_faction_glyphs(
+    mut contexts: EguiContexts,
+    scene: Res<LiveStreamScene>,
+    camera_q: Query<&GlobalTransform, With<Camera>>,
+    building_q: Query<&GlobalTransform, With<LiveBuildingTag>>,
+) {
+    let Ok(ctx) = contexts.ctx_mut() else { return };
+
+    // Guard: if no factions or no camera, skip
+    if scene.faction_entries.is_empty() {
+        return;
+    }
+
+    let camera_global = match camera_q.iter().next() {
+        Some(global) => global,
+        _ => return,
+    };
+
+    // Create a custom layer for faction glyphs (rendered on top of other egui)
+    let painter = ctx.layer_painter(egui::LayerId::new(
+        egui::Order::Foreground,
+        egui::Id::new("faction_glyphs"),
+    ));
+
+    let glyph_size = 20.0;
+    let margin = glyph_size + 4.0;
+
+    // For each faction, find a building and render the lead glyph
+    for faction_entry in scene.faction_entries.iter() {
+        // Find a building world position (any building; for MVP, use the first)
+        let building_world_pos = scene
+            .buildings
+            .values()
+            .filter_map(|&building_entity| {
+                building_q
+                    .get(building_entity)
+                    .ok()
+                    .map(|transform| transform.translation())
+            })
+            .next();
+
+        let Some(building_world_pos) = building_world_pos else {
+            continue;
+        };
+
+        // Generate the faction's lead glyph from its seed
+        let faction_seed = faction_entry.id as u64;
+        let glyphs = glyphs_for_language(faction_seed, 8, 1);
+        let Some(lead_glyph) = glyphs.first() else {
+            continue;
+        };
+
+        // Project building world position to screen (viewport) coordinates.
+        // Simplified: use camera position and direction for a basic projection.
+        // For now, use a fixed screen-space fallback based on building offset from camera.
+        // TODO: wire proper camera query with Projection component for real world_to_viewport.
+        let camera_pos = camera_global.translation();
+        let delta = building_world_pos - camera_pos;
+
+        // Simple depth check: if building is behind camera, skip
+        if delta.z >= 0.0 {
+            continue;
+        }
+
+        // Rough screen projection: assume 16:9 aspect, ~60 degree FOV
+        // X and Y screen coords based on horizontal/vertical offsets; scale by depth.
+        let depth = -delta.z; // Positive depth away from camera
+        let screen_x = 960.0 + (delta.x / depth) * 500.0; // 960 = 1920/2
+        let screen_y = 540.0 - (delta.y / depth) * 500.0; // 540 = 1080/2; invert Y
+
+        let screen_pos = egui::pos2(screen_x as f32, screen_y as f32);
+
+        // Cull if off-screen (add margin for glyph size)
+        if screen_pos.x < -margin
+            || screen_pos.x > painter.clip_rect().width() + margin
+            || screen_pos.y < -margin
+            || screen_pos.y > painter.clip_rect().height() + margin
+        {
+            continue;
+        }
+
+        // Draw the glyph sigil at the projected position
+        draw_glyph_sigil(
+            &painter,
+            screen_pos,
+            glyph_size,
+            lead_glyph,
+            faction_entry.id,
+        );
+    }
+}
+
+/// Draw a single glyph as a faction sigil at a screen position (egui painter).
+fn draw_glyph_sigil(
+    painter: &egui::Painter,
+    screen_pos: egui::Pos2,
+    size_px: f32,
+    glyph: &Glyph,
+    faction_id: u32,
+) {
+    if glyph.strokes.is_empty() {
+        return;
+    }
+
+    // Glyph bounding box for normalization
+    let (min_x, min_y, max_x, max_y) = glyph.bounding_box();
+    let width = (max_x - min_x).max(0.01);
+    let height = (max_y - min_y).max(0.01);
+
+    // Scale to fit the sigil size, maintaining aspect ratio
+    let scale_x = size_px / width;
+    let scale_y = size_px / height;
+    let scale = scale_x.min(scale_y);
+
+    let scaled_width = width * scale;
+    let scaled_height = height * scale;
+
+    // Center the glyph at screen_pos
+    let offset_x = screen_pos.x - scaled_width / 2.0;
+    let offset_y = screen_pos.y - scaled_height / 2.0;
+
+    // Stroke color based on faction (deterministic from faction_id)
+    let stroke_color = faction_color_from_id(faction_id);
+    let stroke_width = 1.5;
+
+    // Draw each stroke
+    for stroke in &glyph.strokes {
+        let p0 = egui::pos2(
+            offset_x + (stroke.x0 - min_x) * scale,
+            offset_y + (stroke.y0 - min_y) * scale,
+        );
+        let p1 = egui::pos2(
+            offset_x + (stroke.x1 - min_x) * scale,
+            offset_y + (stroke.y1 - min_y) * scale,
+        );
+
+        // Draw straight lines (curvature ignored for MVP)
+        painter.line_segment(
+            [p0, p1],
+            egui::Stroke::new(stroke_width, stroke_color),
+        );
+    }
+
+    // Optional: add a small circle marker behind the glyph
+    let marker_radius = size_px / 4.0;
+    painter.circle_stroke(
+        screen_pos,
+        marker_radius,
+        egui::Stroke::new(0.8, egui::Color32::from_rgba_unmultiplied(100, 100, 100, 80)),
+    );
+}
+
+/// Deterministic faction color from faction ID (egui Color32).
+fn faction_color_from_id(faction_id: u32) -> egui::Color32 {
+    let colors = [
+        egui::Color32::from_rgb(255, 200, 100), // Gold
+        egui::Color32::from_rgb(150, 200, 255), // Blue
+        egui::Color32::from_rgb(200, 100, 255), // Purple
+        egui::Color32::from_rgb(100, 255, 150), // Green
+        egui::Color32::from_rgb(255, 100, 150), // Pink
+        egui::Color32::from_rgb(255, 255, 100), // Yellow
+        egui::Color32::from_rgb(100, 200, 200), // Cyan
+        egui::Color32::from_rgb(200, 150, 100), // Brown
+    ];
+    colors[(faction_id as usize) % colors.len()]
+}
+
+// ── Plugin ────────────────────────────────────────────────────────────────────
+
+/// Registers the in-world faction glyph rendering system.
+pub struct WorldFactionGlyphsPlugin;
+
+impl Plugin for WorldFactionGlyphsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(EguiPrimaryContextPass, draw_world_faction_glyphs);
+    }
+}

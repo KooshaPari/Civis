@@ -50,9 +50,8 @@ pub use civ_audio::triggers::SfxTrigger;
 pub use emergence::{
     CivAiDecision, EmergenceFeedEvent, EmergenceState,
 };
-pub use emergence_metrics::{
-    BranchingRegime, EmergenceBranchingState, EmergenceSample,
-};
+pub use civ_emergence_metrics::branching::BranchingRegime;
+pub use emergence_metrics::{EmergenceBranchingState, EmergenceSample};
 pub use engine::{
     awakening_belief_gain, awakening_cohesion_gain, Building, BuildingType,
     CombatDamagePulse, DiplomacyKind, EconomicFocus, EconomicFocusEvent, FactionRelationSnapshot, Fixed, MilitaryUnit, Position,

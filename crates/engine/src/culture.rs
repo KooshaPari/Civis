@@ -30,6 +30,8 @@ pub struct FactionIdeologyState {
     pub tradition: f32,
 }
 
+pub type CultureSnapshot = FactionIdeologyState;
+
 impl Default for FactionIdeologyState {
     fn default() -> Self {
         Self {

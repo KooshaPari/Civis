@@ -769,6 +769,18 @@ pub struct Simulation {
     /// clients can render the social-mood layer.
     last_tick_mood: Vec<MoodSnapshot>,
 
+    households: BTreeMap<u64, ()>,
+    household_settlement: BTreeMap<u64, u32>,
+    settlement_households: BTreeMap<u32, BTreeSet<u64>>,
+    household_wealth: BTreeMap<u64, i64>,
+    household_power: BTreeMap<u64, i64>,
+    household_bands: BTreeMap<u64, StratBand>,
+    household_score: BTreeMap<u64, i64>,
+    household_band_set: BTreeSet<(u32, u64, StratBand)>,
+    stratification_bands_emitted: BTreeSet<(u32, u64, StratBand)>,
+    last_tick_stratification: Vec<StratificationEvent>,
+    last_tick_stratification_reports: BTreeMap<u32, StratificationReport>,
+
     /// Per-settlement religious profile keyed by settlement id.
     /// Populated by [`Simulation::phase_belief`] (FR-CIV-REL-001 §7).
     /// One entry per settlement that has been observed by the belief phase;
@@ -810,12 +822,15 @@ pub struct Simulation {
     /// to detect delta and emit [`CohesionEvent`]s.
     last_actor_fabric: BTreeMap<u64, i64>,
 
+    settlement_actors: BTreeMap<u32, BTreeSet<u64>>,
+
     /// Per-tick buffer of [`CohesionEvent`]s emitted by `phase_cohesion`.
     last_tick_cohesion_events: Vec<CohesionEvent>,
 
     /// Per-settlement snapshot emitted by `phase_cohesion` on the most
     /// recent tick. Surfaced via [`Simulation::last_tick_cohesion`].
     last_tick_cohesion: BTreeMap<u32, CohesionSnapshot>,
+    last_tick_cohesion_snapshots: BTreeMap<u32, CohesionSnapshot>,
 
     // ── Phase A5: Unrest (FR-CIV-UNREST-001) ─────────────────────────────
 
@@ -827,6 +842,9 @@ pub struct Simulation {
 
     /// Per-tick buffer of unrest events emitted by `phase_unrest`.
     pub last_tick_unrest: Vec<UnrestEvent>,
+    last_tick_unrest_events: Vec<UnrestEvent>,
+    last_tick_unrest_levels: BTreeMap<u32, UnrestLevel>,
+    settlement_gini: BTreeMap<u32, i32>,
 
     /// Per-settlement unrest snapshot keyed by settlement id. Populated by
     /// `phase_unrest` whenever a settlement's level changes.
@@ -1044,10 +1062,10 @@ pub enum StratificationEventKind {
 /// Per-tick quantiles computed from household wealth within a settlement.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StratQuantiles {
-    pub poor: i64,
-    pub middle: i64,
-    pub rich: i64,
-    pub elite: i64,
+    pub poor: u32,
+    pub middle: u32,
+    pub rich: u32,
+    pub elite: u32,
 }
 
 impl StratQuantiles {
@@ -1059,20 +1077,19 @@ impl StratQuantiles {
 
     /// Accumulate `wealth` into the appropriate band based on the Gini-style
     /// thresholds used in `phase_stratification`.
-    pub fn add(&mut self, wealth: i64) {
-        // Thresholds are 25/50/75 percentiles of the historical max(1000).
-        // Negative wealth always goes to Poor.
-        if wealth < 0 {
-            self.poor = self.poor.saturating_add(wealth);
-        } else if wealth < 250 {
-            self.poor = self.poor.saturating_add(wealth);
-        } else if wealth < 500 {
-            self.middle = self.middle.saturating_add(wealth);
-        } else if wealth < 750 {
-            self.rich = self.rich.saturating_add(wealth);
-        } else {
-            self.elite = self.elite.saturating_add(wealth);
+    pub fn add(&mut self, band: StratBand) {
+        match band {
+            StratBand::Poor => self.poor = self.poor.saturating_add(1),
+            StratBand::Middle => self.middle = self.middle.saturating_add(1),
+            StratBand::Rich => self.rich = self.rich.saturating_add(1),
+            StratBand::Elite => self.elite = self.elite.saturating_add(1),
         }
+    }
+}
+
+impl Default for StratQuantiles {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -1082,6 +1099,8 @@ pub struct StratificationReport {
     pub settlement_id: u32,
     pub quantiles: StratQuantiles,
     pub gini: f64,
+    pub class_mobility_count: u32,
+    pub tick: u64,
 }
 
 /// Computes the Gini coefficient (0.0 = perfect equality, 1.0 = one household
@@ -1200,9 +1219,11 @@ impl FabricTier {
 pub struct CohesionSnapshot {
     pub settlement_id: u32,
     pub fabric: FabricTier,
-    pub kin_count: u32,
+    pub kin_count: u64,
     pub trust_sum: i64,
     pub fragmentation_events: u32,
+    pub fragmentations: u64,
+    pub faction_count: u64,
 }
 
 // ---------------------------------------------------------------------------
@@ -1231,6 +1252,15 @@ impl UnrestLevel {
             UnrestLevel::Revolting
         }
     }
+
+    pub const fn to_rank(self) -> u8 {
+        match self {
+            UnrestLevel::Stable => 0,
+            UnrestLevel::Restless => 1,
+            UnrestLevel::Rioting => 2,
+            UnrestLevel::Revolting => 3,
+        }
+    }
 }
 
 /// A per-tick event emitted when a settlement's unrest state changes.
@@ -1242,7 +1272,7 @@ pub struct UnrestEvent {
     pub score_delta: i32,
     pub mood: i32,
     pub gini_x100: i32,
-    pub fabric: FabricTier,
+    pub fabric: i32,
 }
 
 /// Per-settlement unrest snapshot for the last tick.
@@ -1252,6 +1282,9 @@ pub struct UnrestSnapshot {
     pub level: UnrestLevel,
     pub score: i32,
     pub events_count: u32,
+    pub riots_count: u64,
+    pub migrants_count: u64,
+    pub mob_size: u64,
 }
 
 /// Voxel material id used to mark coastal water-level voxels written by
@@ -1536,6 +1569,17 @@ impl Simulation {
             mood_history: Vec::new(),
             mood_history_by_settlement: BTreeMap::new(),
             last_tick_mood: Vec::new(),
+            households: BTreeMap::new(),
+            household_settlement: BTreeMap::new(),
+            settlement_households: BTreeMap::new(),
+            household_wealth: BTreeMap::new(),
+            household_power: BTreeMap::new(),
+            household_bands: BTreeMap::new(),
+            household_score: BTreeMap::new(),
+            household_band_set: BTreeSet::new(),
+            stratification_bands_emitted: BTreeSet::new(),
+            last_tick_stratification: Vec::new(),
+            last_tick_stratification_reports: BTreeMap::new(),
             religious_profiles: BTreeMap::new(),
             last_tick_religion_events: Vec::new(),
             unrest_settlement_gini: BTreeMap::new(),
@@ -1550,11 +1594,13 @@ impl Simulation {
             kinship: BTreeMap::new(),
             trust: BTreeMap::new(),
             last_actor_fabric: BTreeMap::new(),
+            settlement_actors: BTreeMap::new(),
             last_tick_cohesion_events: Vec::new(),
             last_tick_cohesion: BTreeMap::new(),
+            last_tick_cohesion_snapshots: BTreeMap::new(),
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
-            last_tick_unrest: BTreeMap::new(),
+            last_tick_unrest_levels: BTreeMap::new(),
         }
     }
 
@@ -1662,7 +1708,9 @@ impl Simulation {
             household_wealth: BTreeMap::new(),
             household_power: BTreeMap::new(),
             household_bands: BTreeMap::new(),
+            household_score: BTreeMap::new(),
             household_band_set: BTreeSet::new(),
+            stratification_bands_emitted: BTreeSet::new(),
             last_tick_stratification: Vec::new(),
             last_tick_stratification_reports: BTreeMap::new(),
             religious_profiles: BTreeMap::new(),
@@ -1679,11 +1727,13 @@ impl Simulation {
             kinship: BTreeMap::new(),
             trust: BTreeMap::new(),
             last_actor_fabric: BTreeMap::new(),
+            settlement_actors: BTreeMap::new(),
             last_tick_cohesion_events: Vec::new(),
             last_tick_cohesion: BTreeMap::new(),
+            last_tick_cohesion_snapshots: BTreeMap::new(),
             settlement_gini: BTreeMap::new(),
             last_tick_unrest_events: Vec::new(),
-            last_tick_unrest: BTreeMap::new(),
+            last_tick_unrest_levels: BTreeMap::new(),
         }
     }
 
@@ -2873,7 +2923,7 @@ impl Simulation {
 
                 // Persist current state for next tick.
                 self.household_score.insert(*hid, score);
-                self.household_band.insert(*hid, band);
+                self.household_bands.insert(*hid, band);
             }
 
             // Gini coefficient on this settlement's wealths.
@@ -3543,9 +3593,8 @@ impl Simulation {
     /// Add (or subtract) trust between two actors. Negative `amount` erodes trust.
     pub fn add_trust(&mut self, actor_id: u64, target: u64, amount: i64) {
         let entry = self.trust.entry(actor_id).or_default();
-        entry.trust_sum = entry.trust_sum.saturating_add(amount);
-        entry.trust_count = entry.trust_count.saturating_add(1);
-        entry.targets.insert(target);
+        let current = entry.get(&target).copied().unwrap_or(0);
+        entry.insert(target, current.saturating_add(amount));
     }
 
     /// Pin an actor to a settlement so `phase_cohesion` can aggregate per-actor
@@ -3573,8 +3622,7 @@ impl Simulation {
         has_garrison: bool,
     ) {
         let entry = self.actor_institutions.entry(actor_id).or_default();
-        entry.has_temple = has_temple;
-        entry.has_garrison = has_garrison;
+        *entry = (has_temple, has_garrison);
     }
 
     /// Per-tick stream of `CohesionEvent`s, cleared at the start of every tick.
@@ -3587,7 +3635,7 @@ impl Simulation {
         &self,
         settlement_id: u32,
     ) -> Option<CohesionSnapshot> {
-        self.last_tick_cohesion_snapshots.get(&settlement_id).copied()
+        self.last_tick_cohesion_snapshots.get(&settlement_id).cloned()
     }
 
     /// Register a household as part of the global household population.

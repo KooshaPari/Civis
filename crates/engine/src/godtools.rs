@@ -634,7 +634,7 @@ pub enum GodToolReceipt {
     /// A DISASTER verb fired.
     Disaster {
         /// `DisasterKind` that was applied.
-        kind: DisasterKind,
+        disaster: DisasterKind,
         /// `true` when the disaster actually triggered.
         fired: bool,
     },

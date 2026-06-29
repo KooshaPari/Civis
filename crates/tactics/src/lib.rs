@@ -14,6 +14,7 @@ mod formation;
 mod grid_obstacles;
 mod los;
 mod military_phase;
+mod morale;
 mod movement;
 mod operational;
 mod pathfinding;
@@ -27,6 +28,7 @@ pub use formation::{
 pub use grid_obstacles::{grid_cell_blocked, grid_cell_impassable, grid_cell_occupied};
 pub use los::line_of_sight;
 pub use military_phase::MilitaryPhaseConfig;
+pub use morale::*;
 pub use movement::{
     operational_movement_pulse, tick_operational_movement, GridMove, OperationalMovementConfig,
 };

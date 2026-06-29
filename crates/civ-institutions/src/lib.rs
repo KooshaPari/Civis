@@ -42,6 +42,13 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod legitimacy;
+
+pub use legitimacy::{
+    GovernanceOutcome, InstitutionLegitimacy, DEFAULT_LEGITIMACY, LEGITIMACY_COLLAPSE_THRESHOLD,
+    MAX_LEGITIMACY, MIN_LEGITIMACY,
+};
+
 use serde::{Deserialize, Serialize};
 
 /// Temple institution — religious / civic center. Spawns when a settlement

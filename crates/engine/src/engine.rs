@@ -21,7 +21,7 @@ use civ_economy::{
     Good, LaborCapacityAllocator, MarketState, SettlementTradeFlow,
 };
 use civ_economy::{collect_taxes, Taxation};
-use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold};
+use civ_genetics::sentience::{cognition_score, CognitionTraitProfile, SentienceThreshold, SentienceEvent};
 use civ_genetics::Dna;
 use civ_mod_host::ModHost;
 use civ_needs::{Health as CivNeedsHealth, LifecycleParams, should_reproduce};
@@ -10252,4 +10252,10 @@ mod tests {
             );
         }
     }
+}
+
+/// Re-export of genetics module so callers can use `crate::engine::genetics::...`.
+pub mod genetics {
+    /// Re-export of SentienceEvent from civ_genetics.
+    pub use civ_genetics::sentience::SentienceEvent;
 }
